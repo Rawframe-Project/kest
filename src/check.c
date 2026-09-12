@@ -1801,9 +1801,58 @@ static void cannot_be_told(Checker *checker, KestSpan where, const char *name,
                        name);
 }
 
-static void told_two_ways(Checker *checker, KestSpan where, const char *what) {
-    report(checker, where, "K0363",
-           "two %s disagree about what a type name is", what);
+// Which two, and what each of them makes it. A reader told only that two
+// arguments disagree has to work out which two and what each said, and both are
+// known here: the walk remembers the position that bound each name, and what
+// this position makes it comes of unifying this one on its own. The name is
+// what the sentence is about, so it is in the sentence; the two places are what
+// the notes are for. See D761.
+//
+// `what` is `argument` or `field`, because the two walks are two and a builder's
+// places are its fields. `at` is the position that would not agree, and `was`
+// is what the bindings were before it was asked.
+static void told_two_ways(Checker *checker, KestExpr *expr, const char *what,
+                          const KestType *wanted, KestType *given,
+                          const char **names, KestType **was, uint32_t *from,
+                          uint32_t generics, uint32_t at) {
+    KestType *alone[16] = {0};
+    uint32_t room = generics < 16 ? generics : 16;
+    kest_unify(wanted, given, names, alone, room);
+    for (uint32_t g = 0; g < room; g++) {
+        if (was[g] == NULL || alone[g] == NULL || from[g] == 0 ||
+            kest_type_equal(was[g], alone[g])) {
+            continue;
+        }
+        report(checker, expr->span, "K0363",
+               "two %ss disagree about what `%s` is", what, names[g]);
+        kest_diags_note(checker->program->diags, checker->program->source,
+                        expr->call.args[from[g] - 1]->span,
+                        "this one makes it `%s`", type_name(checker, was[g]));
+        kest_diags_note(checker->program->diags, checker->program->source,
+                        expr->call.args[at]->span, "and this one `%s`",
+                        type_name(checker, alone[g]));
+        return;
+    }
+    // Nothing to pin it to. Every way of reaching this that anybody has
+    // written is a name two places bound differently, because a shape that
+    // does not fit at all is what `K0310` answers with the type it wanted
+    // written out -- so this is the sentence with the name and without the
+    // places, rather than a second sentence nobody can be made to read.
+    report(checker, expr->span, "K0363",
+           "two %ss disagree about what `%s` is", what, names[0]);
+}
+
+// The position that bound each name, so a disagreement can say which two. Set
+// where a name goes from nothing to something, and read where one is given
+// something else.
+static void bound_at(uint32_t *from, KestType **was, KestType **bindings,
+                     uint32_t generics, uint32_t at) {
+    uint32_t room = generics < 16 ? generics : 16;
+    for (uint32_t g = 0; g < room; g++) {
+        if (was[g] == NULL && bindings[g] != NULL) {
+            from[g] = at + 1;
+        }
+    }
 }
 
 // Which copy of a generic struct is being built. What each type name stands
@@ -1840,9 +1889,24 @@ static KestType *copy_wanted(Checker *checker, KestExpr *expr, KestType *shape,
         bindings[g] = NULL;
     }
     bool agreed = true;
+    uint32_t from[16] = {0};
+    uint32_t said = 0;
     for (uint32_t i = 0; i < count && i < shape->member_count; i++) {
-        agreed = kest_unify(shape->members[i].type, given[i], names, bindings,
-                            generics) && agreed;
+        KestType *was[16] = {0};
+        for (uint32_t g = 0; g < generics && g < 16; g++) {
+            was[g] = bindings[g];
+        }
+        if (!kest_unify(shape->members[i].type, given[i], names, bindings,
+                        generics)) {
+            agreed = false;
+            if (said == 0) {
+                told_two_ways(checker, expr, "field",
+                              shape->members[i].type, given[i], names, was,
+                              from, generics, i);
+                said = 1;
+            }
+        }
+        bound_at(from, was, bindings, generics, i);
     }
     for (uint32_t g = 0; g < generics; g++) {
         if (bindings[g] == NULL) {
@@ -1852,7 +1916,6 @@ static KestType *copy_wanted(Checker *checker, KestExpr *expr, KestType *shape,
         }
     }
     if (!agreed) {
-        told_two_ways(checker, expr->span, "fields");
         return NULL;
     }
     return kest_struct_of(program, shape, bindings, generics);
@@ -1902,6 +1965,8 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
         bindings[g] = NULL;
     }
     bool agreed = true;
+    uint32_t from[16] = {0};
+    uint32_t said = 0;
     // A function passed here may be one of several with that name, and which
     // one it is depends on what the other arguments settled. So the ones that
     // say plainly what they are go first, and a function is asked again with
@@ -1915,8 +1980,21 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
             callee->params[i]->tag == KEST_T_FN) {
             continue;
         }
-        agreed = kest_unify(callee->params[i], given[i], names, bindings,
-                            generics) && agreed;
+        KestType *was[16] = {0};
+        for (uint32_t g = 0; g < generics && g < 16; g++) {
+            was[g] = bindings[g];
+        }
+        if (!kest_unify(callee->params[i], given[i], names,
+                        bindings, generics)) {
+            agreed = false;
+            if (said == 0) {
+                told_two_ways(checker, expr, "argument",
+                              callee->params[i], given[i], names,
+                              was, from, generics, i);
+                said = 1;
+            }
+        }
+        bound_at(from, was, bindings, generics, i);
     }
     for (uint32_t i = 0; i < count && i < callee->param_count; i++) {
         if (callee->params[i] == NULL ||
@@ -1928,8 +2006,21 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
         kest_diags_mute(diags, true);
         given[i] = check_expr(checker, expr->call.args[i], wanted);
         kest_diags_mute(diags, false);
-        agreed = kest_unify(callee->params[i], given[i], names, bindings,
-                            generics) && agreed;
+        KestType *was[16] = {0};
+        for (uint32_t g = 0; g < generics && g < 16; g++) {
+            was[g] = bindings[g];
+        }
+        if (!kest_unify(callee->params[i], given[i], names,
+                        bindings, generics)) {
+            agreed = false;
+            if (said == 0) {
+                told_two_ways(checker, expr, "argument",
+                              callee->params[i], given[i], names,
+                              was, from, generics, i);
+                said = 1;
+            }
+        }
+        bound_at(from, was, bindings, generics, i);
     }
     // A name that appears only in what it gives back is taken from where the
     // value is going, which is what `array()` and `store()` already do.
@@ -1949,7 +2040,6 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
         }
     }
     if (!agreed) {
-        told_two_ways(checker, expr->span, "arguments");
         return error_type(checker);
     }
 

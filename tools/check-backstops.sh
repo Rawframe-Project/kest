@@ -10373,6 +10373,19 @@ fn main() -> i32 {
         "caught": "K0343 said",
     },
     {
+        # Which two places disagree, and what each of them makes the name. A
+        # reader told only that two arguments disagree has to work out which
+        # two and what each said, and both are known where the walk gives up.
+        "what": "two places that disagree, and which two not said",
+        "file": "src/check.c",
+        "from": """                        "this one makes it `%s`", type_name(checker, was[g]));""",
+        "to": """                        "this one makes it `%s`", type_name(checker, alone[g]));""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0363 said",
+    },
+    {
         # A rule said without the name it is about. A reader holding `Empty<T>`
         # was once shown `let p: Pair<i32, text> = Pair(1, "a")`, which names
         # neither their shape nor their type name; what is left to get wrong is

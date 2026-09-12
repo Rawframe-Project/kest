@@ -21508,3 +21508,43 @@ message above had just quoted — so a reader following the suggestion had to
 carry the name down from the line before. D758 took a fixed example out of the
 builder's wording for naming somebody else's shape; this is the same fault one
 step smaller, and the same answer.
+
+## D761: which two, and what each of them makes it
+
+*Argued.* `K0363` said `two arguments disagree about what a type name is` and
+pointed at the whole call. A reader holding that knows a disagreement happened
+and has to find which two places and which name themselves — which for a call
+of two arguments is quick and for one of eight is the work the compiler just
+did.
+
+Everything wanted is there when the walk gives up. The walk remembers the
+position that bound each name as it goes; what the position that would not agree
+makes the name comes of unifying that one on its own into a fresh set of
+bindings. So:
+
+```
+error[K0363]: two arguments disagree about what `A` is
+  |
+8 |     return pair(1, "x")
+  |            ^^^^^^^^^^^^
+  |                 ^ this one makes it `i32`
+  |                    ^^^ and this one `text`
+```
+
+The name is what the sentence is about, so it is in the sentence. The two places
+are what the notes are for — the same division D756 settled for the qualified
+name and the declaration.
+
+*Said where it happens rather than after.* It used to be reported once at the
+end, from a `bool` that had collected every failure, which is why it could not
+say which one: by then the walk had gone past. It is said at the position that
+would not agree, and only the first, because a second disagreement about the
+same name is the same disagreement seen again.
+
+*What cannot be pinned down.* If no name was bound before and given something
+else, there is nothing to point at and the sentence is said with the name and
+without the places. Nothing in this tree reaches that: a shape that does not fit
+at all is `K0310` with the type it wanted written out, measured on a parameter
+`[T]` given an `i32` both ways round, and a name nothing settles is `K0343`. It
+is one sentence either way rather than a second sentence nobody can be made to
+read.

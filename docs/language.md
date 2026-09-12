@@ -3976,10 +3976,12 @@ annotation, a `return` type, or the argument of another call. A builder and a
 call are told the same thing because the same thing is true of both.
 
 ```
-error[K0363]: two arguments disagree about what a type name is
+error[K0363]: two arguments disagree about what `A` is
   |
 8 |     return pair(1, "x")
   |            ^^^^^^^^^^^^
+  |                 ^ this one makes it `i32`
+  |                    ^^^ and this one `text`
 ```
 
 What it says to write is the names the shape is waiting for, and not a form

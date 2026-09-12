@@ -3327,8 +3327,9 @@ K0317|struct N {\n    n: i32\n}\n\nfn main() -> i32 {\n    let w: store<N> = sto
 K0320|fn main() -> i32 {\n    let v: [i32; 2] = [1, 2, 3]\n    return v[0]\n}|this holds 2 and 3 are written
 K0323|fn main() -> i32 {\n    let a = 1\n    while let x = a {\n        return x\n    }\n    return 0\n}|`while let` opens an optional, found `i32`
 K0332|enum D {\n    A\n    B\n}\n\nfn main() -> i32 {\n    let d = D.A\n    return match d {\n        A -> 0\n        A -> 1\n        B -> 2\n    }\n}|this arm is already answered above
-K0363|fn pair<A>(a: A, b: A) -> i32 {\n    return 1\n}\n\nfn main() -> i32 {\n    return pair(1, "x")\n}|two arguments disagree about what a type name is
-K0363|struct Pair<A> {\n    a: A\n    b: A\n}\n\nfn main() -> i32 {\n    let p = Pair(1, "x")\n    return 0\n}|two fields disagree about what a type name is
+K0363|fn pair<A>(a: A, b: A) -> i32 {\n    return 1\n}\n\nfn main() -> i32 {\n    return pair(1, "x")\n}|two arguments disagree about what `A` is
+K0363|fn pair<A>(a: A, b: A) -> i32 {\n    return 1\n}\n\nfn main() -> i32 {\n    return pair(1, "x")\n}|this one makes it `i32`
+K0363|struct Pair<A> {\n    a: A\n    b: A\n}\n\nfn main() -> i32 {\n    let p = Pair(1, "x")\n    return 0\n}|two fields disagree about what `A` is
 K0343|struct Box<T> {\n    it: T\n}\n\nfn main() -> i32 {\n    let b = Box()\n    return 0\n}|what `T` is here cannot be told from what this is built with
 K0343|struct Holder<Held> {\n    it: Held\n}\n\nfn main() -> i32 {\n    let h = Holder()\n    return 0\n}|what tells `Held` is what is passed, or where the value is going
 K0343|fn only<T>(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    return only(1)\n}|what `T` is here cannot be told from what was passed

@@ -990,8 +990,15 @@ walk_the_ladder() {
         # never starts. That is the machine refusing rather than this compiler,
         # and it is where the ladder ends. Kept, because it is the bottom of
         # every other walk this check makes as well. See D652.
+        #
+        # There are two ways the loader says it, and only one of them mentions
+        # a shared library: below the level where it can map one is a level
+        # where it cannot make the first thread's own storage, and that says
+        # `cannot allocate TLS data structures`. Which of the two a run meets
+        # depends on how big the binary is, so a compiler that grows by a few
+        # hundred bytes walks from one into the other. See D761.
         case "$out" in
-        *"loading shared libraries"*)
+        *"loading shared libraries"*|*"TLS data structures"*)
             library_goes=$level
             break
             ;;
@@ -1315,7 +1322,7 @@ for program in examples/*.kest "$scratch"/steps.kest "$scratch"/chains.kest; do
               ./kest run "$program" 2>&1 </dev/null)
         while [ $low -lt $high ]; do
             case "$out" in
-            *"loading shared libraries"*) ;;
+            *"loading shared libraries"*|*"TLS data structures"*) ;;
             *) break ;;
             esac
             low=$((low + 100))

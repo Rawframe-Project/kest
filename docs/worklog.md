@@ -29004,3 +29004,49 @@ the program. `K0363` has no suggestion at all — `two arguments disagree about
 what a type name is` says what happened and nothing about what to do, and a
 reader holding it does not know which two. Find what it would take to say which
 two and what each of them said.
+
+## Everything wanted was there when the walk gave up
+
+The walk remembers the position that bound each name as it goes, and what the
+position that would not agree makes the name comes of unifying that one on its
+own into a fresh set of bindings:
+
+```
+error[K0363]: two arguments disagree about what `A` is
+  |
+8 |     return pair(1, "x")
+  |            ^^^^^^^^^^^^
+  |                 ^ this one makes it `i32`
+  |                    ^^^ and this one `text`
+```
+
+The name is what the sentence is about, so it is in the sentence; the two places
+are what the notes are for. It used to be reported once at the end from a `bool`
+that had collected every failure, which is why it could not say which one — by
+then the walk had gone past. It is said at the position that would not agree now,
+and only the first, because a second disagreement about the same name is the
+same disagreement seen again.
+
+If no name was bound before and given something else there is nothing to point
+at, and the sentence is said with the name and without the places. Nothing here
+reaches that: a shape that does not fit at all is `K0310` with the type it
+wanted written out — measured on a parameter `[T]` given an `i32` both ways
+round — and a name nothing settles is `K0343`.
+
+The ladder found something on the way past. Below the level where the loader can
+map a shared library is a level where it cannot make the first thread's own
+storage, and it says `cannot allocate TLS data structures for initial thread`.
+The ladder knew one of the two and read the other as a rung that neither ran nor
+refused; which a run meets depends on how big the binary is, so this turn's few
+hundred extra bytes walked it out of one and into the other. Both are the machine
+refusing before the program starts, which is where the ladder ends. Recorded as
+D761.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the notes say `this one makes it `i32`` and `and this one `text``,
+which reads as a pair and is two sentences that only work in that order. A
+diagnostic's notes are sorted by where they point, and nothing holds these two
+in the order they were written — a call whose later argument is on an earlier
+line would read backwards. Find whether the order a note is written in survives
+being sorted, and what a note should say when it cannot lean on the one before.
