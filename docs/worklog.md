@@ -28240,3 +28240,34 @@ goes — which, measured, is nothing in particular. `fn f(v: main)` is told
 `unknown type `main`` while the program plainly has a `main`. Find what the type
 walk says when the name it cannot resolve is a name the program does have, and
 whether the pair `K0344` has is worth a code of its own.
+
+## It was worth a code
+
+`K0360`: `` `SIZE` is a constant, and this wants a type ``, and `` `helper` is a
+function `` for the other kind, with the declaration noted. Which of the two it
+is comes from the type rather than from `is_const`, which is set for a function
+too — what that marks is a name that cannot be written to, not a name for a
+value. A function is the thing with a signature.
+
+Only a constant gets a suggestion, and it names the mistake worth guessing at:
+`[i32; SIZE]`, a count that lost its run. Writing a name down is naming it, so
+the file is no longer told to take out the constant it has just written — the
+rule D735 settled for imports, the same shape here. Recorded as D740.
+
+What it does not reach is a signature naming another file's function. A
+signature is resolved while its own file's functions are being declared, so it
+sees the files read before this one and `std.io` is read after the file that
+imports it. In a body every name is registered and the refusal is complete.
+Making it complete in a signature too means declaring every function before
+resolving any signature, and a signature is where a function's own types are
+resolved — one pass, not two.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** four codes now say what a word is when it is not the kind of thing
+wanted — a type where a value goes, a module in each of the two places, a value
+where a type goes. What none of them say is the reverse trip: `let x: i32 = P`
+where `P` is a shape gets `K0344`, and `struct Row { x: main }` gets `K0360`,
+but a *type parameter* written where a value goes inside a generic body is its
+own question and has not been looked at. Find what a generic's own type name
+does when it is written where a value goes.

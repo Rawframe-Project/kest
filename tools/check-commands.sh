@@ -1115,6 +1115,31 @@ case "$bare" in
     ;;
 esac
 
+# A constant written where a type goes. Writing it down is naming it, whatever
+# it was named for, so the file is not also told to take out the line it has
+# just written -- which would leave the mistake with nothing to point at.
+# See D740.
+cat > "$crossing/counted.kest" <<'EOF'
+module counted
+
+const SIZE: i32 = 4
+
+fn g(v: SIZE) -> i32 {
+    return 0
+}
+
+fn main() -> i32 {
+    return 0
+}
+EOF
+counted=$("$kest" check "$crossing/counted.kest" 2>&1 </dev/null)
+case "$counted" in
+*K0508*)
+    complain "a file was told to take out the constant it named"
+    printf '%s\n' "$counted" | sed 's/^/    /' | head -4
+    ;;
+esac
+
 itself=$("$kest" check "$crossing/itself.kest" 2>&1 </dev/null)
 case "$itself" in
 *"did you mean \`len\`?"*)
@@ -3511,6 +3536,8 @@ K0301|check|fn area(v: vec.Vec2) -> f32 {\n    return v.x\n}\n\nfn main() -> i32
 K0301|check|import std.vec\n\nfn area(v: vec.Vec9) -> f32 {\n    return v.x\n}\n\nfn main() -> i32 {\n    return 0\n}|did you mean `vec.Vec2`
 K0358|check|import std.io\n\nfn main() -> i32 {\n    return io\n}|is a module, and this wants a value
 K0359|check|import std.vec\n\nfn area(v: vec) -> f32 {\n    return 1.0\n}\n\nfn main() -> i32 {\n    return 0\n}|is a module, and this wants a type
+K0360|check|fn helper() -> i32 {\n    return 1\n}\n\nfn f(v: helper) -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}|is a function, and this wants a type
+K0360|check|const SIZE: i32 = 4\n\nfn g(v: SIZE) -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}|a constant counts a run rather than naming one
 K0346|check|struct P {\n    x: i32\n}\n\nfn touch(p: P) {\n    p.x = 1\n}\n\nfn main() -> i32 {\n    let q = P(0)\n    touch(q)\n    return q.x\n}|is a value here, so this is discarded
 K0627|call count 3|fn count<T>(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    return 0\n}|takes types, and a copy of it exists where one is called
 K0601|run|fn main() -> i32 {\n    let z = 0\n    return 1 / z\n}|division by zero

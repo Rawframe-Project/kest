@@ -10160,6 +10160,32 @@ fn main() -> i32 {
         "caught": "K0359 said",
     },
     {
+        # A name the program has, written where a type goes, read as unknown.
+        # A reader told `unknown` about a word they declared goes looking for a
+        # spelling mistake in a name they spelt right.
+        "what": "a name the program has, written as a type, called unknown",
+        "file": "src/types.c",
+        "from": """    KestSymbol *held = kest_lookup_global(program, name, length);""",
+        "to": """    KestSymbol *held = kest_lookup_global(program, name, 0);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0360 said",
+    },
+    {
+        # And the constant behind it, left unnamed. Writing a name down is
+        # naming it: a file told to take out the constant it has just written
+        # would be left with a mistake pointing at nothing.
+        "what": "a constant written as a type, and called unnamed",
+        "file": "src/types.c",
+        "from": """        held->named = true;""",
+        "to": """        held->named = false;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a file was told to take out the constant it named",
+    },
+    {
         # A module written where a type goes, with nothing under it reached:
         # the import is written to and nothing marked it, so the file is told
         # to take out the line it wrote.

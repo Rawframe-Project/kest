@@ -20653,3 +20653,44 @@ with a type under the module named rather than a function, since a type is what
 was asked for and a module of shapes has nothing else. Naming a module is
 writing to it, so the import is marked reached — the file whose one use of an
 import was the module's own name had been told to take the line out.
+
+## D740: a name spelt right is not an unknown name
+
+*Measured.* `K0344` has said `` `P` is a type, and this wants a value `` for a
+long time. The other half of it said nothing in particular: a function, or a
+constant, written where a type goes was `unknown type`, about a word the reader
+had declared four lines above.
+
+```
+error[K0360]: `SIZE` is a constant, and this wants a type
+  |
+4 | fn g(v: SIZE) -> i32 {
+  |         ^^^^ a constant counts a run rather than naming one: `[i32; SIZE]`
+  |
+2 | const SIZE: i32 = 4
+  |       ^^^^ declared here
+```
+
+Which of the two it is comes from the type, not from `is_const` — that is set
+for a function too, because what it marks is a name that cannot be written to
+rather than a name for a value. A function is the thing with a signature, and
+that is what `is_a_function` asks.
+
+The suggestion is only for a constant, and it names the mistake worth guessing
+at: `[i32; SIZE]`. A constant written where a type goes is nearly always a
+count that lost its run. For a function there is nothing to guess, so nothing is
+said beyond where it was declared.
+
+Writing a name down is naming it, which is the rule D735 settled for imports and
+is the same here: the file was being told to take out the constant it had just
+written, which would leave the mistake pointing at nothing.
+
+*What it does not reach.* A signature is resolved while its own file's functions
+are being declared, so what it can see is the names of files read before this
+one. `fn f(v: io.write)` in a file that imports `std.io` is still `unknown
+type`, because `std.io` is read after the file that imports it. In a body every
+name is registered and the refusal is complete. Fixing the signature case means
+declaring every function in the program before resolving any signature, and a
+signature is where a function's own types are resolved — so the two are one
+pass and cannot be put in that order without splitting it. Not worth it for the
+shape it buys.

@@ -3908,6 +3908,23 @@ error[K0359]: `vec` is a module, and this wants a type
   |            ^^^ a module is a place to look and not a type: `vec.Vec2` is one of the names under it
 ```
 
+And the pair of the refusal above them both — a name for a value, written where
+a type goes:
+
+```
+error[K0360]: `SIZE` is a constant, and this wants a type
+  |
+4 | fn g(v: SIZE) -> i32 {
+  |         ^^^^ a constant counts a run rather than naming one: `[i32; SIZE]`
+  |
+2 | const SIZE: i32 = 4
+  |       ^^^^ declared here
+```
+
+In a signature this knows about the names declared before this file was reached,
+which is what a signature is resolved among; in a body it knows about all of
+them.
+
 A diagnostic about more than one place says both:
 
 ```

@@ -1393,6 +1393,14 @@ static KestType *compose(KestProgram *program, KestTypeTag tag,
     return type;
 }
 
+// Which of the two kinds of name a global is. `is_const` does not say: a
+// function is declared with it set, because what it marks is a name that
+// cannot be written to rather than a name for a value. What a function has
+// that nothing else does is a signature. See D740.
+static bool is_a_function(const KestSymbol *symbol) {
+    return symbol->type != NULL && symbol->type->tag == KEST_T_FN;
+}
+
 static KestType *error_type(KestProgram *program) {
     return new_type(program, KEST_T_ERROR);
 }
@@ -1449,6 +1457,32 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
             }
         }
         return type;
+    }
+
+    // A name the program has, written where a type goes: the other half of
+    // the refusal the name walk makes for a type written where a value goes.
+    // Saying `unknown` about a name a reader has declared sends them looking
+    // for a spelling mistake in a word they spelt right. See D740.
+    KestSymbol *held = kest_lookup_global(program, name, length);
+    if (held != NULL) {
+        kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0360", ref->name,
+                       "`%.*s` is %s, and this wants a type", (int)length, name,
+                       is_a_function(held) ? "a function" : "a constant");
+        // Written down is named, which is what keeps a reader from being told
+        // to take out the constant they have just written. See D735.
+        held->named = true;
+        kest_import_reached(program, name, length);
+        if (!is_a_function(held)) {
+            kest_diags_suggest(program->diags,
+                               "a constant counts a run rather than naming "
+                               "one: `[i32; %.*s]`",
+                               (int)length, name);
+        }
+        if (held->source != NULL) {
+            kest_diags_note(program->diags, held->source, held->span,
+                            "declared here");
+        }
+        return error_type(program);
     }
 
     // A module written where a type goes. `io` is the half of `io.Colour`
