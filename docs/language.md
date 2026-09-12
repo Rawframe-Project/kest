@@ -338,6 +338,21 @@ error[K0308]: `i32` is not a function
    |    ^^^^ this file calls something else by that name
 ```
 
+A file may take one of the language's own names the same way. `len`, `get`,
+`set`, `find`, `add` and `remove` are written without a module in front, so a
+file that declares one of them is adding to what the name answers to rather than
+covering it: what the name means is settled by what it is handed, the file's one
+for the shapes it takes and the language's for the rest. `std.table` and
+`std.vec` each do it, and so do two of the examples. A call that fits neither is
+told what the language wanted and pointed at the other:
+
+```
+error[K0310]: `len` counts an array, a store or text, found `i32`
+   |
+ 3 | fn len(xs: [i32]) -> i32 no.alloc {
+   |    ^^^ this file calls something else by that name
+```
+
 Where a name came from is written at every use of it. Two modules whose names
 end the same way would put their names under the same one, and that is refused
 for the whole program rather than mixed. The table those names go in is the

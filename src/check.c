@@ -1870,12 +1870,49 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
     return check_arguments(checker, expr, instance->type);
 }
 
+// What else this file calls by a name, said beside a refusal about the other
+// one. The note is the same sentence a body that gives a name away is told
+// (D730), because it is the same situation one step out: two things answer to
+// one name and the message named the one the reader was not asking about.
+static void note_the_other(Checker *checker, KestSpan where) {
+    const char *name = span_text(checker, where);
+    char joined[256];
+    int written = checker->program->alias[0] == '\0'
+                      ? 0
+                      : snprintf(joined, sizeof(joined), "%s.%.*s",
+                                 checker->program->alias, (int)where.length,
+                                 name);
+    const KestSymbol *other =
+        kest_lookup_global(checker->program, name, where.length);
+    if (other == NULL && written > 0 && (size_t)written < sizeof(joined)) {
+        other = kest_lookup_global(checker->program, joined, (size_t)written);
+    }
+    if (other == NULL || other->type == NULL ||
+        other->type->tag != KEST_T_FN) {
+        return;
+    }
+    kest_diags_note(checker->program->diags, other->source, other->span,
+                    "this file calls something else by that name");
+}
+
 static KestType *check_call(Checker *checker, KestExpr *expr,
                             const KestType *expected) {
     if (expr->call.callee->kind == KEST_EXPR_NAME) {
         bool handled = false;
+        uint32_t said = checker->program->diags->count;
         KestType *result = check_builtin(checker, expr, expected, &handled);
         if (handled) {
+            // And what else the file calls by that name, when the language's
+            // own refused. A file may declare `len` or `get` — this tree does
+            // it eight times, in `table`, `vec` and two examples — and what a
+            // name of that kind means is settled by what it is handed: the
+            // file's one for the shapes it takes, the language's for the rest.
+            // So a call that fits neither is told what the language wanted and
+            // left to notice the other, which is the one the reader is most
+            // likely to have meant. See D731.
+            if (checker->program->diags->count > said) {
+                note_the_other(checker, expr->call.callee->span);
+            }
             return result;
         }
     }

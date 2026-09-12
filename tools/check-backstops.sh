@@ -9965,6 +9965,26 @@ fn main() -> i32 {
         "caught": "K0308 said",
     },
     {
+        # A call that fits neither the language's own name nor the file's,
+        # told about the language's and left to notice the other. What a name
+        # of that kind means is settled by what it is handed — this tree
+        # declares `len`, `get`, `set`, `find`, `add` and `remove` of its own,
+        # eight times over — so the one the reader meant is as often the
+        # file's as the language's.
+        "what": "a builtin refusal that does not say what else the file calls that",
+        "file": "src/check.c",
+        "from": """            if (checker->program->diags->count > said) {
+                note_the_other(checker, expr->call.callee->span);
+            }""",
+        "to": """            if (checker->program->diags->count > said + 100) {
+                note_the_other(checker, expr->call.callee->span);
+            }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0310 said",
+    },
+    {
         # The position a `for` binds beside an element, left out of what is
         # asked about. It is the third of the three a program had another way
         # to write — `for x in xs` is the same walk without it — and a walk

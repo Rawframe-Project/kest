@@ -20374,3 +20374,28 @@ which names everything except the thing the reader is looking for. It now points
 at the function it shadowed and writes out how to call it from there. A file that
 names no module gets the note and not the spelling, because there is nothing to
 put in front of a name that lives under nothing.
+
+## D731: two things answer to one name, one step out
+
+*Argued.* D730 was a body taking a name the file uses. The same question asked of
+the file and what it reads has three answers, and only the third was worth
+anything.
+
+A file's own name beside an imported one is D730 again with the spelling changed:
+`fn min(a: i32, b: i32)` beside `math.min` resolves to the file's where it is
+written plain and the library's where the module is written, and both are
+reachable. Nothing to say that the module system does not already say.
+
+A file's own name beside one of the language's own is not shadowing at all. `len`,
+`get`, `set`, `find`, `add` and `remove` take no module, and a file that declares
+one is adding to the set the name answers to: what it means is settled by what it
+is handed. This tree does it eight times — `table.find`, `table.get`, `table.set`,
+`table.remove`, `vec.add` twice, `flags.set`, `lookup.find` — and every one of
+them is good code that would have to be renamed if this were refused. Only an
+exact match of shape takes a builtin's place for that shape, which is a thing a
+program does on purpose.
+
+What is left is the reader. A call that fits neither the file's nor the
+language's was told what the language wanted and nothing else, and the one the
+reader meant is as often the file's: it is pointed at now, with the sentence
+D730 uses for the same situation a scope in.

@@ -28008,3 +28008,33 @@ whole program, and a file's own declaration beside an imported one is not — th
 file's wins where it is written, and the import's is still there under its
 module. Find whether that is the same answer as this one or a different shape,
 and whether anything says which of the two a reader is looking at.
+
+## Three shapes, and only the third had anything in it
+
+A file's own name beside an imported one is yesterday's answer with the spelling
+changed: `fn min` beside `math.min` resolves to the file's written plain and the
+library's written with the module, and both are reachable. Measured and left
+alone.
+
+A file's own name beside one of the language's own is not shadowing at all.
+`len`, `get`, `set`, `find`, `add` and `remove` take no module, and a file that
+declares one adds to what the name answers to — what it means is settled by what
+it is handed, the file's for the shapes it takes and the language's for the rest.
+This tree does it eight times, twice in the library, and every one is good code.
+Only an exact match of shape takes the language's place for that shape, and that
+is a thing a program does on purpose.
+
+What was left is the reader: a call that fits neither was told what the language
+wanted and nothing else, though the one meant is as often the file's. It is
+pointed at now, with the same sentence D730 uses one scope in. Recorded as D731.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** three turns have added a note that says what else answers to a name,
+and each was written where a message named the wrong one of two. The one message
+of that shape left is the first a reader ever meets: a name that is not there at
+all. `K0305` offers the nearest thing a reader could have meant — a local, a
+builtin, a global — and it offers one name, or two when two are equally near.
+Find whether what it offers is the right kind of thing: a nearest name from
+another module that this file has not imported is a suggestion a reader cannot
+write, and one it could write is a different sentence.
