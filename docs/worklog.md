@@ -27977,3 +27977,34 @@ a name a program writes twice. Shadowing is refused inside a body — at any poi
 one name means one thing — and nothing says anything about a local that shadows a
 global, which is legal and reads as though the global were being changed. Find
 whether that shape is worth a word, and how often this tree writes one.
+
+## Thirteen times, and all of them fine
+
+Written as a warning first, then measured: thirteen places in eight files, and
+every one reads naturally. `fn pick<T>(a: T, b: T, first: bool)` beside
+`fn first(raw: [u8])`; `let worst` inside `worn` beside `fn worst`. A body that
+wants a number called `first` is not wrong to have one, and a warning about them
+is one complaint per program that named things well — the D723 shape, caught this
+time before it was committed rather than after.
+
+The hazard it would have been about is not there either: the file's name is still
+written, with the module in front of it. `q.size()` inside a body that has a
+local called `size` is the function, and it works. That is what the reference did
+not say, and it says it now.
+
+What is worth saying is said where it bites. A body that gives a name away and
+then calls it was told the type of its local — `` `i32` is not a function `` —
+which names everything except what the reader is looking for. It points at the
+function it shadowed now and writes out how to call it from there; a file with no
+module gets the note without the spelling, because there is nothing to put in
+front of a name that lives under nothing. Recorded as D730.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same question one step out. A file may give a name to something the
+*library* already has: `fn min(a: i32, b: i32)` beside `math.min`, or a module
+called `text` of its own. Two modules whose names end alike are refused for the
+whole program, and a file's own declaration beside an imported one is not — the
+file's wins where it is written, and the import's is still there under its
+module. Find whether that is the same answer as this one or a different shape,
+and whether anything says which of the two a reader is looking at.

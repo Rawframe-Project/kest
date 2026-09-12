@@ -20349,3 +20349,28 @@ The advice names no name. It read better with one — "write `for one in ...`" �
 and the name to hand where the warning is raised is the position's, not the
 element's, so writing it out said the wrong word. A sentence that cannot be wrong
 is worth more than one that reads well when it happens to be right.
+
+## D730: a body's names are its own, and the file's are still there
+
+*Argued.* A local may take a name the file has already given to a constant or a
+function. Two locals may not — at any point in a body one name means one thing —
+and that rule stops at the edge of the body, which is where this question starts.
+
+Measured before deciding: thirteen places in this tree do it, in eight files.
+`fn pick<T>(a: T, b: T, first: bool)` beside `fn first(raw: [u8])`; `let worst`
+inside `worn` beside `fn worst`. Every one of them reads naturally, and none is a
+mistake — a body that wants a number called `first` is not wrong to have one.
+A warning about them would be the D723 shape again: one complaint per program
+that named things well.
+
+And the hazard the warning would have been about is not there. The file's name is
+still written, with the module in front of it: `q.size()` inside a body that has
+a local called `size` is the function, and it works. That was worth finding out
+before writing anything, and it is the thing the reference did not say.
+
+What is worth saying is said where it bites. A body that gives the name away and
+then calls it is told the type of its local — `` `i32` is not a function `` —
+which names everything except the thing the reader is looking for. It now points
+at the function it shadowed and writes out how to call it from there. A file that
+names no module gets the note and not the spelling, because there is nothing to
+put in front of a name that lives under nothing.

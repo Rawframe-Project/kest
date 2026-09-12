@@ -2073,6 +2073,45 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
     if (callee->tag != KEST_T_FN) {
         report(checker, expr->call.callee->span, "K0308",
                "`%s` is not a function", type_name(checker, callee));
+        // And whether the file has a function of that name that this body has
+        // given the name to something else. A local may take a name the file
+        // uses — a body's names are its own — and the file's one is still
+        // there, written with the module in front of it. Without this the
+        // reader is told the type of the local and left to work out that the
+        // function they wrote is the one three lines up. See D730.
+        if (expr->call.callee->kind == KEST_EXPR_NAME) {
+            KestSpan where = expr->call.callee->span;
+            const char *name = span_text(checker, where);
+            // Under the module the file names, where its own declarations
+            // live, and under nothing for a file that names none.
+            char joined[256];
+            int written = checker->program->alias[0] == '\0'
+                              ? 0
+                              : snprintf(joined, sizeof(joined), "%s.%.*s",
+                                         checker->program->alias,
+                                         (int)where.length, name);
+            const KestSymbol *shadowed =
+                kest_lookup_global(checker->program, name, where.length);
+            if (shadowed == NULL && written > 0 &&
+                (size_t)written < sizeof(joined)) {
+                shadowed = kest_lookup_global(checker->program, joined,
+                                              (size_t)written);
+            }
+            if (shadowed != NULL && shadowed->type != NULL &&
+                shadowed->type->tag == KEST_T_FN) {
+                kest_diags_note(checker->program->diags, shadowed->source,
+                                shadowed->span,
+                                "this file calls something else by that name");
+                // The way to write it here, which a file that names a module
+                // has and one that does not has not: there is nothing to put
+                // in front of a name that lives under nothing.
+                if (written > 0 && (size_t)written < sizeof(joined)) {
+                    suggest(checker, "write `%s` for that one", joined);
+                } else {
+                    suggest(checker, "give one of them a name of its own");
+                }
+            }
+        }
         return error_type(checker);
     }
 

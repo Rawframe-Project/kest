@@ -321,7 +321,24 @@ error[K0703]: `mism/helper.kest` calls itself `mism.helpers`
 
 Its names live under the last part of what it calls itself, so a file that imports
 it writes `render.draw` and `render.Sprite`, and the file itself may write
-`draw` and `Sprite`. Where a name came from is written at every use of it. Two modules whose names
+`draw` and `Sprite`. A body may give one of those names to something of its own:
+a `let` or a parameter called `draw` is what `draw` means from there on, which is
+refused between two locals — at any point in a body one name means one thing —
+and allowed here, because a body's names are its own. Nothing is out of reach
+when it happens. `render.draw` is how the file's one is written inside that body,
+and a file that names no module has nothing to put in front of it, so there the
+two names cannot both be written. Calling the name the body took says which is
+which:
+
+```
+error[K0308]: `i32` is not a function
+      write `game.size` for that one
+   |
+ 3 | fn size() -> i32 no.alloc {
+   |    ^^^^ this file calls something else by that name
+```
+
+Where a name came from is written at every use of it. Two modules whose names
 end the same way would put their names under the same one, and that is refused
 for the whole program rather than mixed. The table those names go in is the
 program's — `math.min` is one entry however many modules end in `math` — so

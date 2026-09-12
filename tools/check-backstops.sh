@@ -9950,6 +9950,21 @@ fn main() -> i32 {
         "caught": "K0512 said",
     },
     {
+        # A name a body gave to something else, called as what the file calls
+        # it. The body's own name wins — that is what a local is — so what a
+        # reader is told is the type of the local, and the function they wrote
+        # is three lines up with nothing pointing at it.
+        "what": "a call of a name the body gave away, told only the type",
+        "file": "src/check.c",
+        "from": """            if (shadowed != NULL && shadowed->type != NULL &&
+                shadowed->type->tag == KEST_T_FN) {""",
+        "to": """            if (false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0308 said",
+    },
+    {
         # The position a `for` binds beside an element, left out of what is
         # asked about. It is the third of the three a program had another way
         # to write — `for x in xs` is the same walk without it — and a walk
