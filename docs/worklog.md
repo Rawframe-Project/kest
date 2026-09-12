@@ -28788,3 +28788,42 @@ is when it is not the kind of thing wanted, and the one they do not cover is the
 reverse of `K0344`: a *type* written where a type goes but with the wrong number
 of type names — `Vec2<f32>` where `Vec2` takes none, or `Held` where it takes
 one. `K0302` says the second of those. Find what is said for the first.
+
+## Both halves of it were wrong
+
+```
+error[K0302]: unknown generic type `Plain`
+  |            ^^^^^ did you mean `Plain`?
+```
+
+`Plain` is not unknown — it is declared four lines up — and the suggestion is the
+word under the caret, which is D737's mistake in the other walk.
+
+One condition. The walk that makes a copy of a shape asked `shape != NULL &&
+shape->type_param_count > 0`, so a shape that exists and takes none fell past it
+into the arm for a generic nobody declared. Answered where it is found now:
+
+```
+error[K0302]: `a.Plain` takes no types, and 1 is written here
+  |
+7 | fn take(p: Plain<i32>) -> i32 {
+  |            ^^^^^^^^^^ write it without them: `Plain`
+  |
+3 | struct Plain {
+  |        ^^^^^ declared here
+```
+
+The span is the whole of what was written, brackets and all, because the brackets
+are the mistake; the suggestion names what the reader wrote and the note carries
+where it was declared, which `unknown` could never have. A primitive falls out of
+it for free — `i32<f32>` says `` `i32` takes no types `` — because a primitive is
+a type that takes none. Recorded as D755.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the three shapes of that mistake are said in three wordings and two of
+them name the shape differently — `` `Box` takes 1 type, and none are written
+here `` uses the name as written and `` `c.Pair` takes 2 types, found 1 `` uses
+the qualified one. A reader meeting both in one file is told about two things.
+Find whether the three are one sentence, and what a diagnostic should call a
+shape when the reader wrote it bare.

@@ -10299,6 +10299,21 @@ fn main() -> i32 {
         "caught": "K0361 said",
     },
     {
+        # A shape written with types it does not take, read as a generic type
+        # nobody declared. It is declared, and what is wrong is the angle
+        # brackets -- and the walk that answers an unknown one offers the
+        # nearest declared name, which for a name that is exactly right is the
+        # name itself.
+        "what": "a shape written with types it does not take, called unknown",
+        "file": "src/types.c",
+        "from": """            if (shape != NULL && shape->tag != KEST_T_ERROR) {""",
+        "to": """            if (shape != NULL && shape->tag == KEST_T_ERROR) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0302 said",
+    },
+    {
         # A copy made per call rather than per set of types. Sixty calls of one
         # generic would then be sixty copies, and what a program pays for
         # reusing one would be what it pays for writing sixty.

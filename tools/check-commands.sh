@@ -3539,6 +3539,7 @@ K0359|check|import std.vec\n\nfn area(v: vec) -> f32 {\n    return 1.0\n}\n\nfn 
 K0360|check|fn helper() -> i32 {\n    return 1\n}\n\nfn f(v: helper) -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}|is a function, and this wants a type
 K0360|check|const SIZE: i32 = 4\n\nfn g(v: SIZE) -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}|a constant counts a run rather than naming one
 K0361|check|fn f<T>(x: T) -> i32 {\n    let n = T\n    return n\n}\n\nfn main() -> i32 {\n    return f(1)\n}|is a type name, and this wants a value
+K0302|check|struct Plain {\n    n: i32\n}\n\nfn take(p: Plain<i32>) -> i32 {\n    return p.n\n}\n\nfn main() -> i32 {\n    return 0\n}|takes no types, and 1 is written here
 K0346|check|struct P {\n    x: i32\n}\n\nfn touch(p: P) {\n    p.x = 1\n}\n\nfn main() -> i32 {\n    let q = P(0)\n    touch(q)\n    return q.x\n}|is a value here, so this is discarded
 K0627|call count 3|fn count<T>(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    return 0\n}|takes types, and a copy of it exists where one is called
 K0601|run|fn main() -> i32 {\n    let z = 0\n    return 1 / z\n}|division by zero

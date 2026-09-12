@@ -21253,3 +21253,46 @@ whatever the stack held, and the gate said it in the one way that cannot be
 argued with: `what this program runs marks 8159aa468647ccbe and the same program
 built again marks 14366806dbc3e62b`. The promise an arena keeps is the one thing
 to remember when taking something off it.
+
+## D755: a shape that takes no types is not an unknown generic shape
+
+*Measured.* Four codes say what a word is when it is not the kind of thing
+wanted. The one case left was a type written where a type goes with the wrong
+number of type names after it. Two of the three shapes of that were already
+said: `Box` where `Box<T>` was wanted is told to write them, and `Pair<i32>`
+where two were wanted is told how many it found. The third said this:
+
+```
+error[K0302]: unknown generic type `Plain`
+  |
+7 | fn take(p: Plain<i32>) -> i32 {
+  |            ^^^^^ did you mean `Plain`?
+```
+
+Both halves wrong. `Plain` is not unknown — it is declared four lines up — and
+the suggestion is the word under the caret, which is D737's mistake in the other
+walk: a name offered back as itself says nothing.
+
+What was wrong in the code is one condition. The walk that makes a copy of a
+shape asked `shape != NULL && shape->type_param_count > 0`, and a shape that
+exists and takes none fell past it into the arm for a generic nobody declared.
+It is answered where it is found now:
+
+```
+error[K0302]: `a.Plain` takes no types, and 1 is written here
+  |
+7 | fn take(p: Plain<i32>) -> i32 {
+  |            ^^^^^^^^^^ write it without them: `Plain`
+  |
+3 | struct Plain {
+  |        ^^^^^ declared here
+```
+
+The span is the whole of what was written, brackets and all, because the
+brackets are the mistake. The suggestion names what the reader wrote rather than
+the qualified name, and the note carries where it was declared, which is the
+thing `unknown` could never have.
+
+A primitive is answered the same way, since a primitive is a type that takes no
+types: `i32<f32>` says `` `i32` takes no types ``. That was not written for and
+is what falls out of asking about the shape rather than about the brackets.

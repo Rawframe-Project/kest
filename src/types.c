@@ -1848,6 +1848,26 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                 }
                 return kest_struct_of(program, shape, args, count);
             }
+            // A shape that takes none, written with some. It is not an
+            // unknown generic type -- it is a type, and what is wrong is the
+            // angle brackets -- and the walk below would offer the name back
+            // as itself, which is D737's mistake in the other walk.
+            // See D755.
+            if (shape != NULL && shape->tag != KEST_T_ERROR) {
+                kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0302",
+                               ref->span, "`%s` takes no types, and %u %s "
+                               "written here",
+                               shape->name, ref->arg_count,
+                               ref->arg_count == 1 ? "is" : "are");
+                kest_diags_suggest(program->diags,
+                                   "write it without them: `%.*s`",
+                                   (int)ref->name.length, name);
+                if (shape->declared_in != NULL) {
+                    kest_diags_note(program->diags, shape->declared_in,
+                                    shape->span, "declared here");
+                }
+                return error_type(program);
+            }
             kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0302",
                            ref->name, "unknown generic type `%.*s`",
                            (int)ref->name.length, name);

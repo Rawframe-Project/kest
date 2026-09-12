@@ -3939,6 +3939,21 @@ error[K0361]: `T` is a type name, and this wants a value
   |            ^^^^ this copy was asked for here, where `T` is `i32`
 ```
 
+The last of these is a type written where a type goes, with the wrong number of
+type names after it. A shape that takes one and is written with none is told to
+write them; one that takes none and is written with some is told the other way
+round, because a shape that is not generic is not an unknown generic shape:
+
+```
+error[K0302]: `a.Plain` takes no types, and 1 is written here
+  |
+7 | fn take(p: Plain<i32>) -> i32 {
+  |            ^^^^^^^^^^ write it without them: `Plain`
+  |
+3 | struct Plain {
+  |        ^^^^^ declared here
+```
+
 A diagnostic about more than one place says both:
 
 ```
