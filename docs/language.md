@@ -3898,6 +3898,16 @@ error[K0358]: `io` is a module, and this wants a value
   |            ^^ a module is a place to look and not a value: `io.write` is one of the names under it
 ```
 
+Where a type is wanted it is the same mistake, and the same sentence about the
+other kind of thing that is not one:
+
+```
+error[K0359]: `vec` is a module, and this wants a type
+  |
+5 | fn area(v: vec) -> f32 {
+  |            ^^^ a module is a place to look and not a type: `vec.Vec2` is one of the names under it
+```
+
 A diagnostic about more than one place says both:
 
 ```

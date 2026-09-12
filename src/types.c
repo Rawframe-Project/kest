@@ -192,6 +192,63 @@ bool kest_file_reaches(KestProgram *program, const char *alias,
     return false;
 }
 
+// A module is not a thing in the program: it is what the names under it have
+// in common. So a name is a module this file can reach when something is
+// declared under it and the file imported it.
+bool kest_under_module(const char *whole, const char *name, size_t length) {
+    return strlen(whole) > length + 1 && whole[length] == '.' &&
+           memcmp(whole, name, length) == 0;
+}
+
+// Where a module was read from, which is the file the first thing under it was
+// declared in. A program built against one library and read with another gets
+// a message about a name that is not there and no word about which `io` it
+// looked in; the file is the answer to that.
+const KestSymbol *kest_first_under(KestProgram *program, const char *name,
+                                   size_t length) {
+    const KestSymbol *any = NULL;
+    for (uint32_t i = 0; i < program->global_count; i++) {
+        const KestSymbol *symbol = &program->globals[i];
+        if (!kest_under_module(symbol->name, name, length) ||
+            kest_needs_import(program, symbol->name,
+                              strlen(symbol->name))) {
+            continue;
+        }
+        // A name under the module and nothing further: `io.print` rather than
+        // `io.Io.write`, which is a crossing the module declares and not the
+        // name anybody reaches for first. One with another dot in it is kept
+        // in case there is no plainer one, because pointing at the file is
+        // the whole of what the other caller wants. See D738.
+        if (strchr(symbol->name + length + 1, '.') == NULL) {
+            return symbol;
+        }
+        if (any == NULL) {
+            any = symbol;
+        }
+    }
+    return any;
+}
+
+bool kest_module_named(KestProgram *program, const char *name,
+                       size_t length) {
+    for (uint32_t i = 0; i < program->global_count; i++) {
+        const char *whole = program->globals[i].name;
+        if (kest_under_module(whole, name, length) &&
+            !kest_needs_import(program, whole, strlen(whole))) {
+            return true;
+        }
+    }
+    // A module may declare nothing but types, and a type is not a global.
+    for (uint32_t i = 0; i < program->type_count; i++) {
+        const char *whole = program->types[i]->name;
+        if (whole != NULL && kest_under_module(whole, name, length) &&
+            !kest_needs_import(program, whole, strlen(whole))) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool kest_needs_import(KestProgram *program, const char *name, size_t length) {
     const char *dot = memchr(name, '.', length);
     if (dot == NULL || program->unit == NULL) {
@@ -1392,6 +1449,43 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
             }
         }
         return type;
+    }
+
+    // A module written where a type goes. `io` is the half of `io.Colour`
+    // that says where to look, and the program has it -- so it is not an
+    // unknown type and not a spelling to guess at. The same refusal the name
+    // walk makes, about the same word, asked of the one place that knows what
+    // a module is. See D739.
+    if (kest_module_named(program, name, length)) {
+        kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0359", ref->name,
+                       "`%.*s` is a module, and this wants a type", (int)length,
+                       name);
+        // Naming it is writing to it. See D735.
+        kest_import_reached_by(program, name, length);
+        // A type under it first, which is what was asked for -- and what a
+        // module of shapes has nothing but. Signatures resolve before bodies,
+        // so the functions under a module may not be registered yet where a
+        // type is asked for, which is the other reason to look here. See D739.
+        const char *example = NULL;
+        for (uint32_t i = 0; i < program->type_count; i++) {
+            const char *whole = program->types[i]->name;
+            if (whole != NULL && kest_under_module(whole, name, length) &&
+                !kest_needs_import(program, whole, strlen(whole))) {
+                example = whole;
+                break;
+            }
+        }
+        if (example == NULL) {
+            const KestSymbol *under = kest_first_under(program, name, length);
+            example = under == NULL ? NULL : under->name;
+        }
+        if (example != NULL) {
+            kest_diags_suggest(program->diags,
+                               "a module is a place to look and not a type: "
+                               "`%s` is one of the names under it",
+                               example);
+        }
+        return error_type(program);
     }
 
     // The module in front of the name was written to, whatever answers under

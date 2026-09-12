@@ -1094,6 +1094,27 @@ fn main() -> i32 {
     return len
 }
 EOF
+# And a file whose one use of an import is the module name on its own, written
+# where a type goes. Nothing under it was reached, so nothing had marked the
+# import, and the file was told to take out the line it wrote. See D739.
+cat > "$crossing/bare.kest" <<'EOF'
+module bare
+
+import std.io
+
+fn main() -> i32 {
+    let x: io = 0
+    return 0
+}
+EOF
+bare=$("$kest" check "$crossing/bare.kest" 2>&1 </dev/null)
+case "$bare" in
+*K0511*)
+    complain "a file was told to take out the import it wrote to"
+    printf '%s\n' "$bare" | sed 's/^/    /' | head -4
+    ;;
+esac
+
 itself=$("$kest" check "$crossing/itself.kest" 2>&1 </dev/null)
 case "$itself" in
 *"did you mean \`len\`?"*)
@@ -3489,6 +3510,7 @@ K0306|check|fn main() -> i32 {\n    io.print("hi")\n    return 0\n}|is in the li
 K0301|check|fn area(v: vec.Vec2) -> f32 {\n    return v.x\n}\n\nfn main() -> i32 {\n    return 0\n}|is in the library
 K0301|check|import std.vec\n\nfn area(v: vec.Vec9) -> f32 {\n    return v.x\n}\n\nfn main() -> i32 {\n    return 0\n}|did you mean `vec.Vec2`
 K0358|check|import std.io\n\nfn main() -> i32 {\n    return io\n}|is a module, and this wants a value
+K0359|check|import std.vec\n\nfn area(v: vec) -> f32 {\n    return 1.0\n}\n\nfn main() -> i32 {\n    return 0\n}|is a module, and this wants a type
 K0346|check|struct P {\n    x: i32\n}\n\nfn touch(p: P) {\n    p.x = 1\n}\n\nfn main() -> i32 {\n    let q = P(0)\n    touch(q)\n    return q.x\n}|is a value here, so this is discarded
 K0627|call count 3|fn count<T>(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    return 0\n}|takes types, and a copy of it exists where one is called
 K0601|run|fn main() -> i32 {\n    let z = 0\n    return 1 / z\n}|division by zero

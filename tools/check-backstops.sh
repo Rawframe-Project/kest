@@ -10138,14 +10138,41 @@ fn main() -> i32 {
         # look, written without the half that says what.
         "what": "a module named where a value goes, called unknown",
         "file": "src/check.c",
-        "from": """    if (names_a_module(checker, name, length)) {
+        "from": """    if (kest_module_named(checker->program, name, length)) {
         report(checker, expr->span, "K0358",""",
-        "to": """    if (names_a_module(checker, name, 0)) {
+        "to": """    if (kest_module_named(checker->program, name, 0)) {
         report(checker, expr->span, "K0358",""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
         "caught": "a module named where a value goes was called an unknown name",
+    },
+    {
+        # The same word where a type goes, read as an unknown type. It is the
+        # other half of one mistake, and the two walks are two.
+        "what": "a module named where a type goes, called unknown",
+        "file": "src/types.c",
+        "from": """    if (kest_module_named(program, name, length)) {""",
+        "to": """    if (kest_module_named(program, name, 0)) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0359 said",
+    },
+    {
+        # A module written where a type goes, with nothing under it reached:
+        # the import is written to and nothing marked it, so the file is told
+        # to take out the line it wrote.
+        "what": "a module named as a type, and the import called unused",
+        "file": "src/types.c",
+        "from": """        // Naming it is writing to it. See D735.
+        kest_import_reached_by(program, name, length);""",
+        "to": """        // Naming it is writing to it. See D735.
+        kest_import_reached_by(program, name, 0);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a file was told to take out the import it wrote to",
     },
     {
         # The position a `for` binds beside an element, left out of what is

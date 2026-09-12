@@ -20622,3 +20622,34 @@ after the module, keeping the other as the answer when there is no plainer one.
 That also moves the note `K0353` puts at the file a module was read from, from
 the `extern` line to the function beside it, which is the better place to be
 pointed at for the same reason.
+
+## D739: the walks stay two, the knowledge stops being two
+
+*Argued.* Four sentences in a row have been written into the name walk and then
+carried by hand into the type walk: a name one import away (D732, D733), a
+module the library has (D734), what a file may reach (D736), and a module named
+where a value goes (D738), which had not been carried at all — `let x: io = 0`
+still said `unknown type `io``.
+
+The question the fourth one raises is whether the two walks should be one. They
+should not. They look in different tables, they are reached at different times —
+a signature resolves before any body — and the thing they have to say is
+different at the end: `this wants a value` against `this wants a type`. A walk
+that answered both would be a walk with a flag in it, and the flag would be
+read in every line.
+
+What was actually being carried was not the walk. It was the knowledge: what a
+module is, whether this file can reach one, and which name under it to say out
+loud. That lived in `check.c`, next to one of the two walks, as three statics —
+so the other walk could not ask, and every sentence had to be written twice.
+
+They are `kest_under_module`, `kest_module_named` and `kest_first_under` now,
+beside `kest_needs_import` and `kest_file_reaches` in `types.c`, which is where
+everything else that answers about the program already is. Both walks ask. The
+next sentence about modules is written once.
+
+`K0359` is what asking bought: `` `vec` is a module, and this wants a type ``,
+with a type under the module named rather than a function, since a type is what
+was asked for and a module of shapes has nothing else. Naming a module is
+writing to it, so the import is marked reached — the file whose one use of an
+import was the module's own name had been told to take the line out.

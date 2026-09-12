@@ -334,6 +334,25 @@ void kest_import_reached_by(KestProgram *program, const char *alias,
 // question turned round, and asks this. See D736.
 bool kest_file_reaches(KestProgram *program, const char *alias, size_t length);
 
+// A module is not a thing in the program: it is what the names under it have in
+// common. These three ask about that, and they live here rather than beside one
+// walk because both walks ask them -- a module written where a value goes and a
+// module written where a type goes are one mistake said twice. See D739.
+//
+// Whether a registered name is one of the names under this module.
+bool kest_under_module(const char *whole, const char *name, size_t length);
+
+// Whether this file can reach a module of this name, which is so when
+// something reachable is declared under it.
+bool kest_module_named(KestProgram *program, const char *name, size_t length);
+
+// One of the names under it, preferring a name with nothing further after the
+// module, and NULL when the file reaches no such module. What it is for is
+// being said out loud and being pointed at: the file it was declared in is the
+// answer to which `io` a program was read with.
+const KestSymbol *kest_first_under(KestProgram *program, const char *name,
+                                   size_t length);
+
 // One copy of a generic struct per set of types, made the first time that set
 // is written and found again after that.
 KestType *kest_struct_of(KestProgram *program, KestType *shape,

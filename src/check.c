@@ -592,12 +592,6 @@ static KestType *copy_for_shape(Checker *checker, const KestType *callee,
                                 const KestType *expected, KestSpan where);
 static bool literal_fits(Checker *checker, const KestExpr *expr,
                          const KestType *type);
-// Declared up here because the two questions a name walk gives up with are
-// asked far apart: what a module is, and which file it was read from, are
-// worked out where a field is looked up and wanted where a name is. See D738.
-static bool names_a_module(Checker *checker, const char *name, size_t length);
-static const KestSymbol *first_under(Checker *checker, const char *name,
-                                     size_t length);
 
 static KestType *check_name(Checker *checker, KestExpr *expr,
                             const KestType *expected) {
@@ -669,14 +663,14 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
     // an unknown name -- the program has it -- and it is not a spelling to
     // guess at either. The neighbouring mistake, a type named where a value
     // goes, is refused just above. See D738.
-    if (names_a_module(checker, name, length)) {
+    if (kest_module_named(checker->program, name, length)) {
         report(checker, expr->span, "K0358",
                "`%.*s` is a module, and this wants a value", (int)length,
                name);
         // Naming it is writing to it, so the import it came through is not an
         // import nothing writes. See D735.
         kest_import_reached_by(checker->program, name, length);
-        const KestSymbol *under = first_under(checker, name, length);
+        const KestSymbol *under = kest_first_under(checker->program, name, length);
         if (under != NULL) {
             suggest(checker,
                     "a module is a place to look and not a value: `%s` is one "
@@ -2356,62 +2350,6 @@ static const char *names_a_function(Checker *checker, KestSpan name) {
     return NULL;
 }
 
-// A module is not a thing in the program: it is what the names under it have
-// in common. So a name is a module this file can reach when something is
-// declared under it and the file imported it.
-static bool under_module(const char *whole, const char *name, size_t length) {
-    return strlen(whole) > length + 1 && whole[length] == '.' &&
-           memcmp(whole, name, length) == 0;
-}
-
-// Where a module was read from, which is the file the first thing under it was
-// declared in. A program built against one library and read with another gets
-// a message about a name that is not there and no word about which `io` it
-// looked in; the file is the answer to that.
-static const KestSymbol *first_under(Checker *checker, const char *name,
-                                     size_t length) {
-    const KestSymbol *any = NULL;
-    for (uint32_t i = 0; i < checker->program->global_count; i++) {
-        const KestSymbol *symbol = &checker->program->globals[i];
-        if (!under_module(symbol->name, name, length) ||
-            kest_needs_import(checker->program, symbol->name,
-                              strlen(symbol->name))) {
-            continue;
-        }
-        // A name under the module and nothing further: `io.print` rather than
-        // `io.Io.write`, which is a crossing the module declares and not the
-        // name anybody reaches for first. One with another dot in it is kept
-        // in case there is no plainer one, because pointing at the file is
-        // the whole of what the other caller wants. See D738.
-        if (strchr(symbol->name + length + 1, '.') == NULL) {
-            return symbol;
-        }
-        if (any == NULL) {
-            any = symbol;
-        }
-    }
-    return any;
-}
-
-static bool names_a_module(Checker *checker, const char *name, size_t length) {
-    for (uint32_t i = 0; i < checker->program->global_count; i++) {
-        const char *whole = checker->program->globals[i].name;
-        if (under_module(whole, name, length) &&
-            !kest_needs_import(checker->program, whole, strlen(whole))) {
-            return true;
-        }
-    }
-    // A module may declare nothing but types, and a type is not a global.
-    for (uint32_t i = 0; i < checker->program->type_count; i++) {
-        const char *whole = checker->program->types[i]->name;
-        if (whole != NULL && under_module(whole, name, length) &&
-            !kest_needs_import(checker->program, whole, strlen(whole))) {
-            return true;
-        }
-    }
-    return false;
-}
-
 // The nearest name under one module, given back the way it is written: under
 // its module, because that is where it was being written.
 static const char *nearest_under(Checker *checker, const char *module,
@@ -2433,7 +2371,7 @@ static const char *nearest_under(Checker *checker, const char *module,
                 ? checker->program->globals[i].name
                 : checker->program->types[i - checker->program->global_count]
                       ->name;
-        if (whole == NULL || !under_module(whole, module, module_length)) {
+        if (whole == NULL || !kest_under_module(whole, module, module_length)) {
             continue;
         }
         const char *member = whole + module_length + 1;
@@ -2552,7 +2490,7 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
         const char *module = span_text(checker, owner);
         if (find_local(checker, module, owner.length) == NULL &&
             kest_lookup_global(checker->program, module, owner.length) == NULL &&
-            names_a_module(checker, module, owner.length)) {
+            kest_module_named(checker->program, module, owner.length)) {
             const char *member = span_text(checker, expr->field.name);
             report(checker, expr->field.name, "K0353",
                    "`%.*s` has nothing called `%.*s`", (int)owner.length,
@@ -2570,7 +2508,7 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
             // so a file whose only use of it is the one that was spelt wrong
             // is not a file with an import nothing writes. See D735.
             kest_import_reached_by(checker->program, module, owner.length);
-            const KestSymbol *read = first_under(checker, module, owner.length);
+            const KestSymbol *read = kest_first_under(checker->program, module, owner.length);
             if (read != NULL && read->source != NULL) {
                 kest_diags_note(checker->program->diags, read->source, read->span,
                                 "this is the `%.*s` that was read",

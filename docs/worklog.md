@@ -28210,3 +28210,33 @@ the name walk was in this morning. The two walks have been two all week and each
 sentence added to one has had to be carried over by hand; this is the fourth.
 Find whether the type walk can be told about modules, and whether four times is
 enough to say the carrying should stop.
+
+## What was being carried was not the walk
+
+The walks should stay two. They look in different tables, they are reached at
+different times — a signature resolves before any body — and what they have to
+say differs at the end: `this wants a value` against `this wants a type`. One
+walk answering both would be a walk with a flag in it, read in every line.
+
+What was being carried was the knowledge. What a module is, whether this file
+can reach one, and which name under it to say out loud lived in `check.c` beside
+one of the two walks, as three statics — so the other could not ask, and every
+sentence had to be written twice. They are `kest_under_module`,
+`kest_module_named` and `kest_first_under` now, in `types.c` beside
+`kest_needs_import` and `kest_file_reaches`, where everything else that answers
+about the program already is.
+
+Asking bought `K0359`: `` `vec` is a module, and this wants a type ``, naming a
+type under the module rather than a function, since a type is what was asked for
+and a module of shapes has nothing else. Naming a module is writing to it, so
+the import is marked — a file whose one use of an import was the module's own
+name had been told to take the line out. Recorded as D739.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `K0358` and `K0359` are the same finding said twice, and so are `K0344`
+and whatever the type walk says when a *value's* name is written where a type
+goes — which, measured, is nothing in particular. `fn f(v: main)` is told
+`unknown type `main`` while the program plainly has a `main`. Find what the type
+walk says when the name it cannot resolve is a name the program does have, and
+whether the pair `K0344` has is worth a code of its own.
