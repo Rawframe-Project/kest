@@ -9863,6 +9863,27 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "K0654",
     },
     {
+        # One of the three doors that answer into a `KestLimits` leaving the
+        # field none of them knows as it found it. The heap is not a number a
+        # program has, and a field an answer does not touch is one a caller
+        # cannot tell from one it did: a host that reuses one of these carries
+        # its old cap into a machine and calls it what the program asked for.
+        "what": "an answer that leaves a field as it found it",
+        "file": "src/build.c",
+        "from": """    least->heap_bytes = 0;
+    return true;
+}
+
+bool kest_needs_of(""",
+        "to": """    return true;
+}
+
+bool kest_needs_of(""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "written where nothing was answered",
+    },
+    {
         # A lend at no address at all, given to the program as an array. The
         # machine cannot tell a bad address from a good one and this is the
         # one address it can: what a host with nothing to lend has is a count

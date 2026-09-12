@@ -20186,3 +20186,30 @@ What is left is what was already true. `kest_needs` says what a program reaches,
 `kest_allowed` says what a machine was given, and a host that wants the two
 compared can compare them in one line. The run-time refusal stays what it is: the
 answer for a host that did not ask and did not mean it.
+
+## D724: what a program cannot say, said the same way by all three doors
+
+*Argued.*
+
+Can a program be asked what a frame of it costs? For the stack, yes, and
+`kest_needs` has answered that since D575. For the heap, no: what a program
+allocates is what it is given to work on, and a loop over four events and a loop
+over four thousand are the same program. `no.alloc` is the one thing that can be
+said about a frame's cost without running it, and a host can already ask it of
+any entry.
+
+So the three doors that answer into a `KestLimits` answer two of its three
+fields — and until now they did not agree about the third. `kest_needs_from` wrote
+nought into the heap; `kest_needs` and `kest_needs_of` left it as they found it.
+Three doors, one shape, two answers about the one field none of them knows.
+
+A field an answer does not touch is one a caller cannot tell from one it did.
+A host that keeps a `KestLimits` between frames, or fills one from somewhere else
+and then asks, carries its old cap through an answer that looks like it came from
+the program. Both hosts here set the heap after asking and would never have
+noticed; that is what makes it worth writing down rather than leaving to whoever
+does notice.
+
+All three write nought now, the header says so where a host reads it, and
+`examples/embed.c` asks both of the two that changed with a heap already written
+in and holds what comes back.

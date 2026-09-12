@@ -2114,9 +2114,20 @@ int main(int argc, char **argv) {
     // What the program needs, rather than a number this host guessed. A
     // program that can reach itself has no answer, and then a guess is all
     // there is.
-    KestLimits limits = {0, 0, 0};
+    // Asked with a heap already written in, which is what a host that reuses
+    // one of these has. What comes back is nought there: the heap is not a
+    // number a program has, and all three of these doors say that the same way
+    // rather than one of them leaving the field as it found it. A host's own
+    // cap goes on after asking, which is what this one does below. See D724.
+    KestLimits limits = {0, 0, 64};
     KestReason why = {KEST_REACH_UNASKED, NULL};
     if (kest_needs(build, &limits, &why)) {
+        if (limits.heap_bytes != 0) {
+            fprintf(stderr, "asking what a program needs left %zu bytes of "
+                            "heap written where nothing was answered\n",
+                    limits.heap_bytes);
+            return 1;
+        }
         // What the program needs for one call in. This host calls back in
         // from inside one, so it asks for room for another on top: what the
         // program says covers the call it makes, and the one made from inside
@@ -2128,7 +2139,17 @@ int main(int argc, char **argv) {
         // deepest of the ones it never will; this one asks, prints the
         // difference and then takes the whole program's number anyway,
         // because it calls more than one.
-        KestLimits stepping = {0, 0, 0};
+        // The same asking of one function, with the same heap written in
+        // first: three doors, one shape, one answer about the field none of
+        // them knows.
+        KestLimits stepping = {0, 0, 64};
+        if (kest_needs_of(build, "step", &stepping, NULL) &&
+            stepping.heap_bytes != 0) {
+            fprintf(stderr, "asking what `step` needs left %zu bytes of heap "
+                            "written where nothing was answered\n",
+                    stepping.heap_bytes);
+            return 1;
+        }
         if (kest_needs_of(build, "step", &stepping, NULL) &&
             stepping.stack_slots < limits.stack_slots) {
             printf("  `step` alone needs %u slots and %u frame%s\n",

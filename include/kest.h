@@ -244,6 +244,14 @@ typedef struct {
 // It answers for one call in. A host whose bound function calls back in adds
 // room for what that starts, because how many times it will is the host's to
 // know and not the program's.
+//
+// The heap it answers is nought, and so do the two below: what a program
+// allocates is what it is given to work on, and a loop over four events and a
+// loop over four thousand are the same program. Nought is written rather than
+// left alone, because a field an answer does not touch is one a caller cannot
+// tell from one it did — a host's own cap goes on after asking, and what a host
+// that has not measured one has is a machine that says what it reached for when
+// it runs out. See D724.
 bool kest_needs(KestBuild *build, KestLimits *least, KestReason *why);
 
 // The least for one function and what it reaches, for a host that knows which

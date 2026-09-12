@@ -27793,3 +27793,31 @@ over four events and one over four thousand are the same program. So a host
 writes a heap from nothing at all, and the machine takes it. Find whether a
 program can be asked what a frame of it costs, or whether the honest answer is
 that a host has to measure its own.
+
+## A host measures its own, and three doors now say so alike
+
+For the stack it can be asked and has been since D575. For the heap it cannot:
+what a program allocates is what it is given to work on. `no.alloc` is the one
+thing about a frame's cost that can be said without running it, and a host can
+already ask it of any entry.
+
+Reading the three doors that answer into a `KestLimits` to write that down turned
+up that they did not agree about the field none of them knows: `kest_needs_from`
+wrote nought into the heap and the other two left it as they found it. A field an
+answer does not touch is one a caller cannot tell from one it did — a host that
+keeps one of these between frames, or fills one from somewhere else and then
+asks, carries its old cap through an answer that looks like the program's. Both
+hosts here set the heap after asking and would never have noticed.
+
+All three write nought now, the header says so, and this host asks both of the
+two that changed with a heap already written in. Recorded as D724.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `no.alloc` is what a program says about a frame's cost, and what a host
+can do with it is ask one entry at a time. An engine picking where a function
+goes — a frame step, a loading screen, nowhere at all — wants the other shape of
+the same question: which of the names it binds promise nothing, asked once at the
+start rather than one call at a time. `kest_entry_promises` answers for one entry
+and a host walks the names it looked up to get the rest, which is what this one
+does. Find whether that walk is the host's work or the machine's.

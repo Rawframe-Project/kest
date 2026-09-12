@@ -2413,6 +2413,14 @@ stamp:
   error[K0653]: this host lent 9 `u8` at an address this machine owns
   ```
 
+- What a program reaches is two numbers and not three. `kest_needs` and the two
+  beside it answer the slots and the frames and write nought for the heap: what
+  a program allocates is what it is given to work on, and a loop over four
+  events and a loop over four thousand are the same program. Nought is written
+  rather than left as it was found, so a host that reuses one of these cannot
+  carry an old cap into a machine and call it what the program asked for. A
+  host's own cap goes on after asking, and a host that has not measured one gets
+  a machine that says what it reached for when it runs out. See D724.
 - What a machine is given is what it gets. A host may size one smaller than the
   program reaches, and nothing says so: a machine sized for one function is how
   an engine keeps a program out of the rest of its frame, and a machine cannot

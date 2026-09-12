@@ -370,6 +370,14 @@ bool kest_needs(KestBuild *build, KestLimits *least, KestReason *why) {
     why->reach = KEST_REACH_KNOWN;
     least->stack_slots = walked->slots;
     least->call_depth = walked->frames;
+    // And nought for the heap, which is not a number a program has: what one
+    // allocates is what it is given to work on, and a loop over four events
+    // and a loop over four thousand are the same program. Written rather than
+    // left alone, because a field an answer does not touch is one a caller
+    // cannot tell from one it did — and these three doors answer into the same
+    // shape, so all three say the same nothing about the one thing none of
+    // them knows. A host's own cap goes on after asking. See D724.
+    least->heap_bytes = 0;
     return true;
 }
 
@@ -391,9 +399,13 @@ bool kest_needs_of(KestBuild *build, const char *name, KestLimits *least,
         why->reach = KEST_REACH_NO_NAME;
         return false;
     }
-    return kest_module_needs(&build->module, build->arena, found,
-                             &least->stack_slots, &least->call_depth, NULL,
-                             NULL, NULL, why);
+    if (!kest_module_needs(&build->module, build->arena, found,
+                           &least->stack_slots, &least->call_depth, NULL, NULL,
+                           NULL, why)) {
+        return false;
+    }
+    least->heap_bytes = 0;
+    return true;
 }
 
 bool kest_needs_from(KestBuild *build, const char *name, KestLimits *inside,
