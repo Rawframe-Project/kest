@@ -28271,3 +28271,31 @@ where `P` is a shape gets `K0344`, and `struct Row { x: main }` gets `K0360`,
 but a *type parameter* written where a value goes inside a generic body is its
 own question and has not been looked at. Find what a generic's own type name
 does when it is written where a value goes.
+
+## The compiler knew and said it did not
+
+`unknown name `T``, with a note under it reading `this copy was asked for here,
+where `T` is `i32``. The bindings were known in one place only: `resolve_named`,
+the walk over a written type. The walk over a written name never asked — the
+D739 shape again, one question answered beside one of the two walks.
+
+`kest_bound_type` is that question in `types.c`, asked by both, and `K0361` is
+what the name walk says with it: `` `T` is a type name, and this wants a value ``.
+A code of its own rather than `K0344`, because the advice differs: a declared
+type can be built and `K0344` says so, while `T(...)` is not a thing to write and
+in this copy `T` may be `i32`, which has no builder either. What is left to say
+is that a type name stands for a type, and the note already says which.
+
+This was the worst of the four this week. The other three sent a reader to a
+declaration that exists somewhere; this one sent them looking for a declaration
+of `T`, which is the one thing there will never be. Recorded as D741.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the copy note is now carried by five refusals that name a type, and it
+is built by walking every binding into one string on the arena — `room` counted,
+`snprintf` into it, once per copy that said anything. What has never been asked
+is what happens when a copy says fifty things: the note is built once and
+attached to each, which is right, but the string is rebuilt for every copy
+whether it said anything or not. Measure what the note costs on a program that
+makes many copies, and find whether it is built for copies that were quiet.

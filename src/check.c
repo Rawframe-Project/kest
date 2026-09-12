@@ -658,6 +658,21 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
         return error_type(checker);
     }
 
+    // And a type name a generic brought into scope, which is not in the type
+    // table at all: it stands for whatever this copy was given. Saying
+    // `unknown` about it sends a reader looking for a declaration of `T`,
+    // which is the one thing there will never be. See D741.
+    KestType *bound = kest_bound_type(checker->program, name, length);
+    if (bound != NULL) {
+        report(checker, expr->span, "K0361",
+               "`%.*s` is a type name, and this wants a value", (int)length,
+               name);
+        suggest(checker,
+                "a generic's type name stands for a type and not for a value: "
+                "name a value of it instead");
+        return error_type(checker);
+    }
+
     // A module named where a value goes: `io` is the half of `io.print` that
     // says where to look, written without the half that says what. It is not
     // an unknown name -- the program has it -- and it is not a spelling to

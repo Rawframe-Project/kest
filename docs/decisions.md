@@ -20694,3 +20694,36 @@ declaring every function in the program before resolving any signature, and a
 signature is where a function's own types are resolved — so the two are one
 pass and cannot be put in that order without splitting it. Not worth it for the
 shape it buys.
+
+## D741: a name that stands for a type is not an unknown name
+
+*Measured.* Inside a generic body, the generic's own type name written where a
+value goes said `unknown name `T``. The note under it, which every diagnostic in
+a copy already carries, said `this copy was asked for here, where `T` is `i32``
+— so the compiler knew what `T` was while telling the reader it had never heard
+of it.
+
+It knew in one place only. The bindings a copy was given are read in
+`resolve_named`, which is the walk over a written *type*, and the walk over a
+written name never asked. That is the D739 shape again: one question, answered
+beside one of the two walks.
+
+`kest_bound_type` is that question, in `types.c`, asked by both. `K0361` is what
+the name walk says with it:
+
+```
+error[K0361]: `T` is a type name, and this wants a value
+  |
+4 |     let n = T
+  |             ^ a generic's type name stands for a type and not for a value: name a value of it instead
+```
+
+It is a code of its own rather than `K0344`, because the advice differs. A type
+declared somewhere can be built — `K0344` says `build one: `P(...)``. A type
+name cannot: `T(...)` is not a thing to write, and in this copy `T` may be `i32`,
+which has no builder either. What is left to say is that a type name stands for
+a type, and the note already says which.
+
+Saying `unknown` about it was the worst of the four this week, because the other
+three sent a reader to a declaration that exists somewhere. This one sent them
+looking for a declaration of `T`, which is the one thing there will never be.

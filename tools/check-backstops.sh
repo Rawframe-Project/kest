@@ -10186,6 +10186,19 @@ fn main() -> i32 {
         "caught": "a file was told to take out the constant it named",
     },
     {
+        # A generic's own type name, written where a value goes and read as an
+        # unknown name. There will never be a declaration of `T` to find, so a
+        # reader sent looking for one is sent nowhere.
+        "what": "a type name a generic brought in, called unknown",
+        "file": "src/check.c",
+        "from": """    KestType *bound = kest_bound_type(checker->program, name, length);""",
+        "to": """    KestType *bound = kest_bound_type(checker->program, name, 0);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0361 said",
+    },
+    {
         # A module written where a type goes, with nothing under it reached:
         # the import is written to and nothing marked it, so the file is told
         # to take out the line it wrote.

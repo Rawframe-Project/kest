@@ -346,6 +346,13 @@ bool kest_under_module(const char *whole, const char *name, size_t length);
 // something reachable is declared under it.
 bool kest_module_named(KestProgram *program, const char *name, size_t length);
 
+// What a generic's own type name stands for while a signature or a copy's body
+// is being resolved, and NULL for a name that is not one of them. Asked where a
+// type is written and where a value is: a name that stands for a type is not an
+// unknown name wherever it is written. See D741.
+KestType *kest_bound_type(KestProgram *program, const char *name,
+                          size_t length);
+
 // One of the names under it, preferring a name with nothing further after the
 // module, and NULL when the file reaches no such module. What it is for is
 // being said out loud and being pointed at: the file it was declared in is the

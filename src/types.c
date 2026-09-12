@@ -1405,17 +1405,26 @@ static KestType *error_type(KestProgram *program) {
     return new_type(program, KEST_T_ERROR);
 }
 
+KestType *kest_bound_type(KestProgram *program, const char *name,
+                          size_t length) {
+    for (uint32_t i = 0; i < program->bound_count; i++) {
+        if (strlen(program->bound_names[i]) == length &&
+            memcmp(program->bound_names[i], name, length) == 0) {
+            return program->bound_types[i];
+        }
+    }
+    return NULL;
+}
+
 static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     const char *name = program->source->text + ref->name.offset;
     size_t length = ref->name.length;
 
     // A type name a generic function brought into scope stands for whatever
     // this instance was given, or for itself while the signature is declared.
-    for (uint32_t i = 0; i < program->bound_count; i++) {
-        if (strlen(program->bound_names[i]) == length &&
-            memcmp(program->bound_names[i], name, length) == 0) {
-            return program->bound_types[i];
-        }
+    KestType *bound = kest_bound_type(program, name, length);
+    if (bound != NULL) {
+        return bound;
     }
 
     KestType *type = kest_lookup_type(program, name, length);

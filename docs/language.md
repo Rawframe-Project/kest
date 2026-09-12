@@ -3925,6 +3925,20 @@ In a signature this knows about the names declared before this file was reached,
 which is what a signature is resolved among; in a body it knows about all of
 them.
 
+A generic's own type name is the one of these that is in no table at all — it
+stands for whatever the copy being checked was given, and there will never be a
+declaration of it to find:
+
+```
+error[K0361]: `T` is a type name, and this wants a value
+  |
+4 |     let n = T
+  |             ^ a generic's type name stands for a type and not for a value: name a value of it instead
+  |
+9 |     return f(1)
+  |            ^^^^ this copy was asked for here, where `T` is `i32`
+```
+
 A diagnostic about more than one place says both:
 
 ```
