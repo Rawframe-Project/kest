@@ -27855,3 +27855,36 @@ uses; a `let` that nothing reads is the same thing inside a function, with no
 host to ask for it and no other file to name it — the one of the four where
 nobody at all can be relying on it. Find whether the checker knows a local was
 read, and what it costs to say so.
+
+## The fourth of the family, and a bug under it
+
+The checker did not know, and telling it costs a bit on the record it already
+keeps for every local: whether a `let` declared it and whether anything has read
+it since. Writing to one is not reading it, so the checker is told which of the
+two it is in while an assignment's target is worked out — and only when that
+target is a plain name, because `p.x = 1` reads `p` to find the field. What a
+`for` binds and what a `match` case binds are not asked: one is how a program
+says how many times to go round, and the other is the only way to write the case
+at all, since a payload is bound by position and `_` here is a name like any
+other.
+
+`K0512` says it, and the scan over every example and library file finds none —
+so the warning is asked for by the commands check rather than by anything in the
+tree.
+
+Writing it turned up something older. A local was filled field by field into an
+array that outlives the body it was filled for, and a scope is dropped by
+rewinding a count rather than by clearing what is past it — so every field the
+writing forgot was whatever the last name at that place had left behind. The two
+new fields inherited "was read" from a parameter of the function before, and the
+warning fired only in the first function of a file. A local is written whole now,
+and a hole puts the old writing back. Recorded as D726.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `_` is a name like any other, which is what makes a `match` arm that
+ignores its payload write two names it will never read and what stops this
+warning from asking about them. Every other language with this warning has a
+wildcard for it. Find whether this one wants one — a name that may be written
+more than once in a binding and never read — or whether the cases the warning
+steps around are few enough that a wildcard is a keyword bought for nothing.

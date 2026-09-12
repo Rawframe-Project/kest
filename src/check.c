@@ -18,6 +18,14 @@ typedef struct {
     // A parameter, which is a value the caller handed over. Writing a field of
     // one changes this frame's copy and nothing the caller can see.
     bool is_parameter;
+    // Whether a `let` declared it, and whether anything has read it since. The
+    // two together are what says a name in a body was written for nothing: a
+    // local is the one name in this language nobody outside the body can be
+    // relying on. A loop's binding and a case's are not `let`s — one is how a
+    // program says how many times to go round and the other is the only way to
+    // write the case at all — so neither is asked. See D726.
+    bool from_let;
+    bool read;
 } Local;
 
 typedef struct {
@@ -37,6 +45,11 @@ typedef struct {
     // Set while the thing being called is worked out, because a generic
     // function may be named there and nowhere else.
     bool naming_callee;
+    // Set while the whole of an assignment's target is worked out, where that
+    // target is a name and nothing else: writing to a local is not reading it,
+    // and the same walk checks both. A field or an index is not one of these —
+    // `p.x = 1` reads `p` to find the field. See D726.
+    bool writing_to_a_name;
     // Where the copy being checked was asked for, when one is. A copy asked
     // for inside a copy is asked for by whoever asked for that one: the reader
     // wrote `table.set(t, Key(1), 5)` and the library wrote everything under
@@ -180,6 +193,27 @@ static Local *find_local(Checker *checker, const char *name, size_t length) {
     return NULL;
 }
 
+// Dropping a scope, and what nothing in it read. A local is a name for a value
+// in one body: no host can ask for one and no other file can name one, so a
+// `let` nothing reads is the one name in this language nobody at all can be
+// relying on. See D726.
+static void drop_locals(Checker *checker, uint32_t mark) {
+    for (uint32_t i = checker->local_count; i > mark; i--) {
+        const Local *local = &checker->locals[i - 1];
+        if (local->read || !local->from_let) {
+            continue;
+        }
+        kest_diags_add(checker->program->diags, KEST_SEVERITY_WARNING, "K0512",
+                       local->span, "nothing in this body reads `%s`",
+                       local->name);
+        kest_diags_suggest(checker->program->diags,
+                           "take it out: a local is a name for a value in one "
+                           "body, and one nothing reads is a value nobody "
+                           "asked for");
+    }
+    checker->local_count = mark;
+}
+
 static void declare_local(Checker *checker, KestSpan span, KestType *type) {
     const char *name = kest_arena_strndup(
         checker->program->arena, span_text(checker, span), span.length);
@@ -215,14 +249,15 @@ static void declare_local(Checker *checker, KestSpan span, KestType *type) {
         checker->local_capacity = grown;
     }
 
+    // Written whole rather than field by field. The array outlives the body it
+    // was filled for — a scope is dropped by rewinding a count, not by
+    // clearing what is past it — so a field this forgets is one the last name
+    // at that place left behind, and the last name at that place was read.
+    // See D726.
     Local *local = &checker->locals[checker->local_count++];
-    local->name = name;
-    local->type = type;
-    local->span = span;
-    local->depth = checker->depth;
-    local->is_loop_element = false;
-    local->is_loop_index = false;
-    local->is_parameter = false;
+    Local fresh = {name, type, span, checker->depth, false, false, false,
+                   false, false};
+    *local = fresh;
 }
 
 // Whether writing through this path can be seen after the statement. An array
@@ -538,6 +573,12 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
 
     Local *local = find_local(checker, name, length);
     if (local != NULL) {
+        // Read, unless this is the whole of what is being written to. The same
+        // walk checks a target and a value, and a name written to is not a
+        // name read. See D726.
+        if (!checker->writing_to_a_name) {
+            local->read = true;
+        }
         return local->type;
     }
 
@@ -3023,7 +3064,7 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
             check_block(checker, &arm->body);
         }
         checker->depth--;
-        checker->local_count = mark;
+        drop_locals(checker, mark);
     }
 
     // Every combination answered, or an `else` saying the rest are one answer.
@@ -3443,7 +3484,7 @@ static KestType *check_branch(Checker *checker, KestExpr *expr,
         check_block(checker, &branch->then_body);
     }
     checker->depth--;
-    checker->local_count = mark;
+    drop_locals(checker, mark);
 
     KestType *other = NULL;
     if (branch->otherwise != NULL) {
@@ -3457,7 +3498,7 @@ static KestType *check_branch(Checker *checker, KestExpr *expr,
             checker->depth++;
             check_block(checker, &branch->else_body);
             checker->depth--;
-            checker->local_count = mark;
+            drop_locals(checker, mark);
         }
     }
 
@@ -3530,12 +3571,19 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         }
         declare_local(checker, stmt->let.name,
                       declared != NULL ? declared : value);
+        if (checker->local_count > 0) {
+            checker->locals[checker->local_count - 1].from_let = true;
+        }
         break;
     }
 
     case KEST_STMT_ASSIGN: {
         char spelling[8];
+        bool was_writing = checker->writing_to_a_name;
+        checker->writing_to_a_name =
+            stmt->assign.target->kind == KEST_EXPR_NAME;
         KestType *target = check_expr(checker, stmt->assign.target, NULL);
+        checker->writing_to_a_name = was_writing;
         KestType *value = check_expr(checker, stmt->assign.value, target);
         const KestExpr *root = NULL;
         bool is_index = false;
@@ -3668,7 +3716,7 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         checker->loop_depth--;
         if (stmt->loop.binding.length > 0) {
             checker->depth--;
-            checker->local_count = mark;
+            drop_locals(checker, mark);
         }
         break;
     }
@@ -3781,7 +3829,7 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         check_block(checker, &stmt->each.body);
         checker->loop_depth--;
         checker->depth--;
-        checker->local_count = mark;
+        drop_locals(checker, mark);
         break;
     }
 
@@ -3831,7 +3879,7 @@ static void check_block(Checker *checker, KestBlock *block) {
     }
     checker->depth--;
     // Dropping the scope is what lets a sibling block reuse a name.
-    checker->local_count = mark;
+    drop_locals(checker, mark);
 }
 
 // Whether control cannot fall off the end of a block. A branch counts only
@@ -3906,7 +3954,12 @@ static bool check_function(KestProgram *program, Checker *checker,
         }
     }
 
+    uint32_t body = checker->local_count;
     check_block(checker, (KestBlock *)&decl->function.body);
+    // What the body itself declared, which is the one scope nothing else
+    // rewinds: a block inside it is dropped where it ends, and this is where
+    // the outermost one does. See D726.
+    drop_locals(checker, body);
 
     // Nothing is said about a result nobody could read. A signature already
     // refused is a signature this has no opinion about, and saying `can end

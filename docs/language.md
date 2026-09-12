@@ -4103,7 +4103,21 @@ bytes of the compiler's memory, measured on the two-line program that is the res
 of this paragraph. What says an import is worth its place is a name written
 through it — a call, a type, a case of an enum — and nothing else does.
 
-All three are said about the file that was named and not about what it imported,
+And a local nothing reads:
+
+```
+warning[K0512]: nothing in this body reads `spare`
+      take it out: a local is a name for a value in one body, and one nothing reads is a value nobody asked for
+```
+
+That is the one of these nobody at all can be relying on: no host can ask for a
+local and no other file can name one, so a `let` nothing reads is a value worked
+out for nobody. Writing to one is not reading it — `x = 6` and nothing else still
+says this — and the names a `for` binds and a `match` case binds are not `let`s:
+one is how a program says how many times to go round, and the other is the only
+way to write the case at all.
+
+All four are said about the file that was named and not about what it imported,
 since a library is named by whoever imports it and would light up from end to
 end. They are warnings rather than refusals because a declaration nobody uses
 is not wrong.

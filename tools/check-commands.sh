@@ -2702,15 +2702,19 @@ done
 # the host to it — this host included, which is the one place where what
 # somebody typed at a shell is checked against what the compiler's own C does.
 mkdir "$scratch"/promises
-for promising in "Io.read() -> text|let t = Io.read()|takes" \
-                 "Engine.name() -> text|let t = Engine.name()|takes" \
-                 "Host.samples() -> [f32]|let s = Host.samples()|takes" \
+# What each of them is called with is the call and nothing else. It used to be
+# `let n = Engine.decide(1)`, which is a local nothing reads — the thing K0512
+# says something about — so a check about promises was writing a program with a
+# second thing wrong with it. See D726.
+for promising in "Io.read() -> text|Io.read()|takes" \
+                 "Engine.name() -> text|Engine.name()|takes" \
+                 "Host.samples() -> [f32]|Host.samples()|takes" \
                  "Io.write(value: text)|Io.write(\"\")|keeps" \
-                 "Engine.decide(h: i32) -> i32|let n = Engine.decide(1)|keeps" \
-                 "Host.sqrt(v: f64) -> f64|let n = Host.sqrt(4.0)|keeps" \
+                 "Engine.decide(h: i32) -> i32|Engine.decide(1)|keeps" \
+                 "Host.sqrt(v: f64) -> f64|Host.sqrt(4.0)|keeps" \
                  "Host.write(value: text)|Host.write(\"\")|keeps" \
-                 "Host.clock() -> i64|let n = Host.clock()|keeps" \
-                 "Host.sample(i: i32) -> f32|let n = Host.sample(0)|keeps"; do
+                 "Host.clock() -> i64|Host.clock()|keeps" \
+                 "Host.sample(i: i32) -> f32|Host.sample(0)|keeps"; do
     declares=${promising%%|*}
     rest=${promising#*|}
     calls=${rest%|*}
@@ -3345,6 +3349,7 @@ K0504|emit|const N: i32 = M + 1\nconst M: i32 = N + 1\n\nfn main() -> i32 {\n   
 K0508|check|const N: i32 = 1\n\nfn main() -> i32 {\n    return 0\n}|nothing in this program reads
 K0509|check|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    return 0\n}|nothing in this program names
 K0511|check|import std.sort\n\nfn main() -> i32 {\n    return 0\n}|nothing in this file writes
+K0512|check|fn first(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    let spare = 5\n    return first(1)\n}|nothing in this body reads
 K0346|check|struct P {\n    x: i32\n}\n\nfn touch(p: P) {\n    p.x = 1\n}\n\nfn main() -> i32 {\n    let q = P(0)\n    touch(q)\n    return q.x\n}|is a value here, so this is discarded
 K0627|call count 3|fn count<T>(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    return 0\n}|takes types, and a copy of it exists where one is called
 K0601|run|fn main() -> i32 {\n    let z = 0\n    return 1 / z\n}|division by zero

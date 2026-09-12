@@ -9880,6 +9880,29 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "K0511",
     },
     {
+        # A local written field by field into an array that outlives the body
+        # it was filled for. A scope is dropped by rewinding a count, so what
+        # is past it is still there: a field the writing forgets is one the
+        # last name at that place left behind, and whether that one was read
+        # is exactly the field this warning turns on.
+        "what": "a local that keeps what the last one at its place left",
+        "file": "src/check.c",
+        "from": """    Local fresh = {name, type, span, checker->depth, false, false, false,
+                   false, false};
+    *local = fresh;""",
+        "to": """    local->name = name;
+    local->type = type;
+    local->span = span;
+    local->depth = checker->depth;
+    local->is_loop_element = false;
+    local->is_loop_index = false;
+    local->is_parameter = false;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0512",
+    },
+    {
         # One of the three doors that answer into a `KestLimits` leaving the
         # field none of them knows as it found it. The heap is not a number a
         # program has, and a field an answer does not touch is one a caller

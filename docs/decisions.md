@@ -20243,3 +20243,32 @@ resolves through a lookup for a single symbol; one that is several resolves
 through the overloads, and the first answers nothing for those. Written with only
 the first, seven examples in this tree were told to take out an import they use —
 `math.abs` is two functions, and asking for it went the other way round.
+
+## D726: a local nothing reads
+
+*Argued.* The fourth of the family, and the one with nobody on the other side of
+it. A constant nothing reads (`K0508`) or a shape nothing names (`K0509`) might
+still be something another file will want; an import nothing writes (`K0511`)
+costs a module read for nothing. A local is a name for a value in one body: no
+host can ask for one, no other file can name one, and nothing outside the braces
+it was written in can be relying on it. A `let` nothing reads is a value worked
+out for nobody.
+
+Writing to one is not reading it. The same walk checks an assignment's target and
+its value, so the checker is told which of the two it is in while the target is a
+plain name — a field or an index is not one of those, because `p.x = 1` reads `p`
+to find the field.
+
+What a `for` binds and what a `match` case binds are not asked. The first is how
+a program says how many times to go round; the second is the only way to write
+the case at all, since a payload is bound by position and `_` in this language is
+a name like any other. Only a `let` is asked, which is the one a program could
+always have left out.
+
+Writing it turned up something older and worse. A local was filled in field by
+field into an array that outlives the body it was filled for — a scope is dropped
+by rewinding a count, not by clearing what is past it — so every field the
+writing forgot was whatever the last name at that place had left behind. Adding
+two fields to that record made the new warning inherit "was read" from a
+parameter of the function before it, and the warning fired only in the first
+function of a file. A local is written whole now.
