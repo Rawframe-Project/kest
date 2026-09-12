@@ -5438,6 +5438,26 @@ int main(int argc, char **argv) {
     printf("and text the file was written with is the one a host may keep: "
            "`%s`, still there after the heap went\n", written.text);
 
+    // And the same text handed back as a run of bytes, which is a host lending
+    // the machine its own memory. What a program holds of text is a pointer
+    // into the heap or into the build, and a lend is memory a program may write
+    // into — so this would make the one thing this language says cannot be
+    // written into a thing that can, and a literal rewritten that way stays
+    // rewritten for every machine the build starts. Asked for on purpose,
+    // because a host holding a piece of text and a length has everything it
+    // needs to do it by accident. See D720.
+    if (kest_borrow(engine.runtime, (void *)(uintptr_t)written.text,
+                    (uint32_t)strlen(written.text), "u8", 1)
+            .object != NULL) {
+        fprintf(stderr, "the machine lent this host its own memory back\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0653",
+                   "at an address this machine owns")) {
+        return 1;
+    }
+    printf("and text of the program's own lent back as bytes was refused\n");
+
     // And the same question of a lend, which is neither of the two answers
     // above. The block is this host's own and outlasts anything the machine
     // does; the header in front of it is on the heap and goes with it. A host

@@ -2401,6 +2401,18 @@ stamp:
   ```
 
   A host is worth running against that build once for exactly this.
+- The block a host lends is the host's own. An address the machine handed out
+  is not: text a program gave a host is a pointer into the heap or into the
+  build, and a lend is memory a program may write into, so lending those bytes
+  back as a run of numbers would make the one thing this language says cannot
+  be written into a thing that can — and a literal rewritten that way stays
+  rewritten for every machine the build starts. It is refused in every build,
+  because whose memory an address is is a thing the machine knows:
+
+  ```
+  error[K0653]: this host lent 9 `u8` at an address this machine owns
+  ```
+
 - What a host bound a context with is the host's own memory. The machine keeps
   the pointer and not what it points at, so it has to outlive every machine
   started with that list. See D325.

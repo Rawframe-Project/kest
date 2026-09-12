@@ -744,6 +744,26 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
         return value;
     }
 
+    // Whose memory it is. A lend is the host's block, read where it sits and
+    // written where it sits — so a host that hands back an address the machine
+    // gave it is handing the machine its own memory as something a program may
+    // write to. The one that arrives that way is text: a program that is given
+    // a piece of it holds a pointer into the heap or into the build, and a host
+    // that lends those bytes as a run of numbers has made the one thing this
+    // language says cannot be written into a thing that can. A literal rewritten
+    // that way stays rewritten for every machine the build starts. See D720.
+    if (data != NULL && (kest_arena_holds(runtime->heap, data) ||
+                         kest_arena_holds(runtime->module->arena, data))) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0653", nowhere,
+                       "this host lent %u `%s` at an address this machine owns",
+                       length, element);
+        kest_diags_suggest(runtime->diags,
+                           "a lend is the host's own memory; what a program "
+                           "gave a host is the program's, and copying it out "
+                           "is what a host does with one");
+        return value;
+    }
+
     // Where the host put it. The size says how far apart two of them are and
     // the pieces say what is inside one; neither says the address is one the
     // program may read a field from. It is the only thing about a lend that

@@ -20066,3 +20066,57 @@ goes, because a tag in the kinds says that by itself. And `embed.kest` gains
 `Engine.who`, a crossing that answers with a name and a number — the first to
 answer with a shape at all, without which the reach of this would have been a
 claim with nothing standing on it.
+
+## D720: a lend is the host's memory, and the machine knows its own
+
+*Argued.*
+
+Asking what a lend can be held to turned up an answer that was already there and
+one that was not. The count is held: `MAX_COUNTED` says a lend longer than the
+program can count to is refused in every build, and the build that checks itself
+is told where every block a host has ends, so a host lending what it does not own
+is refused there. That is D286, and the worklog said otherwise before this went
+looking.
+
+The address is where the hole was. A lend is the host's block, and the machine
+took any address as one — including its own. A program that is given a piece of
+text holds a pointer into the heap or into the build it was compiled from; a host
+that hands those bytes back as `[u8]` gets a run of numbers a program may write
+into. Measured: a program wrote an `X` over the first byte of one of its own
+literals, and the literal stays written for every machine that build starts.
+
+Nothing else at this crossing can be got wrong in a way that reaches the
+machine's own memory, which is what makes this worth a check of its own rather
+than a line in the reference. Whose memory an address is is the one thing about a
+lend the machine does know — it is the same question the door asks of a handle —
+so it is asked in every build rather than only in the one that checks itself, and
+it is one walk of the blocks per lend, where the alignment is checked.
+
+`K0653` says it, and the host asks for the refusal on purpose: a host holding a
+piece of text and a length has everything it needs to do this by accident.
+
+## D721: the command line owns what it lends
+
+*Argued.*
+
+D720 refused a lend at an address the machine owns, and the first host it caught
+was this one. `kest tick` lends the program a run of events, and it was taking
+that run out of the arena the program was compiled into — convenient, and the one
+address a lend may not have, because what a program holds of text is a pointer
+into that same arena.
+
+Nothing was wrong with what it did: the buffer was scratch the command line made
+for the purpose and nothing in the program could reach the rest of the arena
+through it. What was wrong is that it is not a thing a host can do. The command
+line is a host like any other — it says so in the reference, and everything else
+it does it does through the public header — so a lend of memory it does not own
+is a host doing what the library has just said hosts may not.
+
+It owns the run now: `calloc` before the events are written, `kest_lend_ends`
+before the block goes, and `free` on every way out of the walk. That is what any
+host lending its own memory does, in the order it has to do it.
+
+The alternative was to narrow D720 so that the build's own arena is allowed,
+which would have meant the rule reading "a lend may not be at an address the
+machine owns, except the one the command line finds handy". A rule with a host's
+convenience written into it is a rule the next host reads as permission.

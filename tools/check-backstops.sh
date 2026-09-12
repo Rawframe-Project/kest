@@ -2617,12 +2617,14 @@ for file in "$@"; do""",
         "file": "src/main.c",
         "from": r"""            if (reset) {
                 if (!kest_heap_reset(runtime)) {
+                    free(events);
                     return;
                 }
                 out->thrown++;
             }""",
         "to": r"""            if (reset || true) {
                 if (!kest_heap_reset(runtime)) {
+                    free(events);
                     return;
                 }
                 out->thrown++;
@@ -9480,6 +9482,7 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "what": "a heap between events that nothing throws away",
         "file": "src/main.c",
         "from": """                if (!kest_heap_reset(runtime)) {
+                    free(events);
                     return;
                 }
                 out->thrown++;""",
@@ -9831,6 +9834,22 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "make": ["embed-debug"],
         "host": "examples/embed-debug",
         "caught": "does not own that many",
+    },
+    {
+        # A lend of the machine's own memory, taken. What a program holds of
+        # text is a pointer into the heap or into the build, and a lend is
+        # memory a program may write into — so a host handing text back as a
+        # run of bytes makes the one thing this language says cannot be
+        # written into a thing that can, and a literal rewritten that way
+        # stays rewritten for every machine the build starts.
+        "what": "a lend of memory the machine handed out",
+        "file": "src/vm.c",
+        "from": """    if (data != NULL && (kest_arena_holds(runtime->heap, data) ||
+                         kest_arena_holds(runtime->module->arena, data))) {""",
+        "to": """    if (false) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "the machine lent this host its own memory back",
     },
     {
         # A lend at no address at all, given to the program as an array. The

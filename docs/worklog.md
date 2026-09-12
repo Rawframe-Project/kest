@@ -27681,3 +27681,46 @@ which it cannot see, and not the address against anything but its alignment. A
 host that says four and lends three has said the one thing at that crossing
 nothing can check. Find whether a lend can be held to its count at all, and what
 a host gets for saying it.
+
+## The count was already held; the address was not
+
+The premise above was wrong, and reading the crossing said so: a lend longer than
+the program can count to is refused in every build, and the build that checks
+itself is told where every block a host has ends, so a host lending what it does
+not own is refused there and a hole has been making it happen since D286. What a
+host gets for saying a count is that.
+
+What nothing asked was whose memory the address is. A program given a piece of
+text holds a pointer into the heap or into the build; a host that hands those
+bytes back as `[u8]` gets a run of numbers a program may write into. Measured: a
+program wrote an `X` over the first byte of one of its own literals, and the
+literal stays written for every machine that build starts — the one thing this
+language says cannot be written into, written into.
+
+Whose memory an address is is the one thing about a lend the machine does know,
+so it is asked in every build, in the walk of blocks the alignment check already
+sits beside. `K0653` says it, and the host asks for the refusal on purpose
+because a host holding a piece of text and a length has everything it needs to do
+it by accident. Recorded as D720.
+
+The first host it caught was the command line. `kest tick` lends the program a
+run of events and took that run out of the arena the program was compiled into,
+which is the one address a lend may not have. Nothing was wrong with what it did
+— the buffer was its own scratch — but it is not a thing a host can do, and the
+command line is a host like any other. It owns the run now: `calloc`,
+`kest_lend_ends` before the block goes, and `free` on every way out. Narrowing
+the rule to let the arena through was the other way, and a rule with a host's
+convenience written into it is a rule the next host reads as permission.
+Recorded as D721.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same question about the other direction of that crossing. A host
+hands the machine its own memory at `kest_borrow` and is refused now; at
+`kest_text` it hands bytes to copy, which is safe whatever they are, and at
+`kest_host_bind` it hands a context the machine keeps a pointer to and never
+reads. The reference says that context has to outlive every machine started with
+the list, and nothing holds it — a host that binds a stack variable and returns
+is a machine reading somebody else's frame. Find whether the machine can tell
+that a context is not going to be there, or whether the reference is the whole of
+what can be said.

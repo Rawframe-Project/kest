@@ -611,9 +611,13 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
     // allowed — a quarter of a megabyte of the command line's own bytes,
     // there whether it was asked for one event or none, and mutable state
     // hanging off nothing, which this project does not keep.
-    int32_t *events = count > 0 ? KEST_ARENA_ARRAY(arena, int32_t,
-                                                   (uint32_t)count)
-                                : NULL;
+    // The command line's own memory, because a lend is the host's block and
+    // this command is a host. It used to take the arena the program was
+    // compiled into, which is the machine's own — convenient, and the one
+    // address a lend may not have (D720), because what a program holds of text
+    // is a pointer into that arena and a lend is memory a program may write
+    // into. A host owns what it lends. See D721.
+    int32_t *events = count > 0 ? calloc((size_t)count, sizeof(int32_t)) : NULL;
     if (count > 0 && events == NULL) {
         return;
     }
@@ -651,6 +655,7 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
         if (out->near == NULL) {
             out->near = kest_nearest_global(program, bulk, strlen(bulk));
         }
+        free(events);
         return;
     }
 
@@ -663,13 +668,17 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
     bool gives = bulk_gives;
     if (bulk_at >= 0) {
         KestValue frame[1];
-        frame[0] = kest_borrow(runtime, events, (uint32_t)count, "i32",
-                               sizeof(int32_t));
+        KestValue lent = kest_borrow(runtime, events, (uint32_t)count, "i32",
+                                     sizeof(int32_t));
+        frame[0] = lent;
         if (kest_call(runtime, bulk_at, frame, 1)) {
             out->bulk = true;
             out->bulk_gives = gives;
             out->bulk_gave = gives ? frame[0].integer : 0;
         }
+        // Given back before the block is, which is what a host that lends its
+        // own memory has to do in that order.
+        kest_lend_ends(runtime, lent);
     }
 
     gives = single_gives;
@@ -680,6 +689,7 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
             KestValue frame[1];
             frame[0].integer = events[i];
             if (!kest_call(runtime, single_at, frame, 1)) {
+                free(events);
                 return;
             }
             if (gives) {
@@ -692,6 +702,7 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
             // them there is nothing left pointing at the heap.
             if (reset) {
                 if (!kest_heap_reset(runtime)) {
+                    free(events);
                     return;
                 }
                 out->thrown++;
@@ -703,6 +714,7 @@ static void drive_events(KestRuntime *runtime, KestBuild *build, int32_t count,
         out->single_gave = total;
         out->peak = peak;
     }
+    free(events);
 }
 
 typedef enum {
