@@ -646,11 +646,9 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
                "`%.*s` is a type, and this wants a value", (int)length, name);
         if (named->type_param_count > 0) {
             suggest(checker,
-                    "a generic takes its types from where it is going: "
-                    "`let b: %s = %.*s(...)`",
-                    kest_type_shape(checker->program, checker->program->arena,
-                                    named),
-                    (int)length, name);
+                    "a generic takes its types from where it is going: write "
+                    "a type for each of %s",
+                    kest_type_names(checker->program->arena, named));
         } else {
             suggest(checker, "build one: `%.*s(...)`, or name a value of it",
                     (int)length, name);

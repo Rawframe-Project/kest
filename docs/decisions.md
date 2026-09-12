@@ -21336,3 +21336,47 @@ takes none is told to write it without them; one that takes some is told what
 they are, which for a declared shape is `kest_type_shape` and for the two the
 language has is `ref<T>` and `store<T>`. Those two were the fourth wording and
 are not a special case of anything: what they take is one.
+
+## D757: the names a shape waits for, said as names
+
+*Found by asking what a suggestion is for.* `kest_type_shape` built the form of
+a shape out of the declaration's own type names — `Box<T>`, `Pair<A, B>` — and
+the comment above it said why: a suggestion that shows one type for a shape that
+takes two does not compile, and this exists to avoid that.
+
+It avoided that and walked into the worse one. A form is code, and `T` is a
+placeholder only where the declaration wrote it. In a program that also declares
+a `struct T`:
+
+```
+error[K0302]: `Box` takes 1 type, and none are written here
+   |
+12 |     let b: Box = Box(1)
+   |            ^^^ write them: `Box<T>`
+```
+
+`Box<T>` compiles there. It means a box of the struct `T`, which is not what
+anybody was reaching for, and a reader who pastes it gets a program that builds
+and is wrong. A suggestion that does not compile is a suggestion somebody fixes;
+one that compiles and is wrong is a suggestion somebody keeps.
+
+So the names are said as names, and the note says where they were written:
+
+```
+   |            ^^^ write a type for each of them: `T`
+  --> a.kest:7:8
+   |
+ 7 | struct Box<T> {
+   |        ^^^ declared here
+```
+
+`kest_type_names` is what does it — `` `T` `` for one, `` `A` and `B `` for two,
+a comma and an `and` for more, which is the list a person reads rather than the
+list a compiler writes. `kest_type_shape` is gone, and with it the last place
+this compiler put code in a reader's mouth.
+
+*Three places asked it.* Both arms of the wrong-count sentence, and `K0344` for
+a generic named where a value goes — which said `` `let b: Box<T> = Box(...)` ``
+and now says `write a type for each of `T``. The two the language has take one
+each and are told the same thing, which is what they should have been told when
+they had a wording of their own.

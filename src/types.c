@@ -1320,44 +1320,41 @@ static const char *nearest_type(KestProgram *program, const char *name,
 // front of it when the module is the file's own, and with its own names for
 // the types it takes. A suggestion showing one type for a shape that takes two
 // is a suggestion that does not compile.
-const char *kest_type_shape(const KestProgram *program, KestArena *arena,
-                            const KestType *type) {
-    const char *name = type->name;
-    size_t prefix = program->alias == NULL ? 0 : strlen(program->alias);
-    if (prefix > 0 && strncmp(name, program->alias, prefix) == 0 &&
-        name[prefix] == '.') {
-        name += prefix + 1;
-    }
+const char *kest_type_names(KestArena *arena, const KestType *type) {
     if (type->type_param_count == 0) {
-        return name;
+        return NULL;
     }
-
-    // In the arena and as long as it is. This was a hundred and twenty-eight
-    // bytes of a caller's, and a name long enough to fill them came back with
-    // one type where the shape takes two — a suggestion that does not compile,
-    // which is the thing the sentence above says this exists to avoid.
-    size_t room = strlen(name) + 3;
+    // In the arena and as long as it is. What this used to build was a form --
+    // `Box<T>` -- and a form is code: `T` is a placeholder where the
+    // declaration wrote it, so a program that also declares a `struct T` makes
+    // that form compile and mean a box of something else. A suggestion that
+    // compiles and is wrong is worse than one that does not. So the names are
+    // said as names, and where they were written is what the note carries.
+    // See D757.
+    size_t room = 1;
     for (uint32_t i = 0; i < type->type_param_count; i++) {
         const char *held = type->type_param_names == NULL
                                ? NULL
                                : type->type_param_names[i];
-        room += strlen(held == NULL ? "T" : held) + 2;
+        room += strlen(held == NULL ? "T" : held) + strlen("`` and ");
     }
     char *out = kest_arena_alloc(arena, room, 1);
     if (out == NULL) {
-        return name;
+        return NULL;
     }
-
-    size_t used = (size_t)snprintf(out, room, "%s<", name);
+    size_t used = 0;
     for (uint32_t i = 0; i < type->type_param_count; i++) {
         const char *held = type->type_param_names == NULL
                                ? NULL
                                : type->type_param_names[i];
-        used += (size_t)snprintf(out + used, room - used, "%s%s",
-                                 i == 0 ? "" : ", ", held == NULL ? "T" : held);
+        // A list a person reads: nothing before the first, ` and ` before the
+        // last, a comma between the rest.
+        const char *before = i == 0                                ? ""
+                             : i + 1 == type->type_param_count     ? " and "
+                                                                   : ", ";
+        used += (size_t)snprintf(out + used, room - used, "%s`%s`", before,
+                                 held == NULL ? "T" : held);
     }
-    out[used++] = '>';
-    out[used] = '\0';
     return out;
 }
 
@@ -1449,7 +1446,8 @@ static void wrong_type_count(KestProgram *program, KestSpan where,
         kest_diags_suggest(program->diags, "write it without them: `%.*s`",
                            (int)length, name);
     } else if (written_as != NULL) {
-        kest_diags_suggest(program->diags, "write them: `%s`", written_as);
+        kest_diags_suggest(program->diags, "write a type for each of them: %s",
+                           written_as);
     }
     if (shape != NULL && shape->declared_in != NULL) {
         kest_diags_note(program->diags, shape->declared_in, shape->span,
@@ -1472,7 +1470,7 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     if (type != NULL && type->type_param_count > 0) {
         wrong_type_count(program, ref->name, name, length,
                          type->type_param_count, 0, type,
-                         kest_type_shape(program, program->arena, type));
+                         kest_type_names(program->arena, type));
         return error_type(program);
     }
     // The absence of a value is registered under a name so the compiler can
@@ -1880,8 +1878,7 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                                      ref->name.length,
                                      shape->type_param_count, ref->arg_count,
                                      shape,
-                                     kest_type_shape(program, program->arena,
-                                                     shape));
+                                     kest_type_names(program->arena, shape));
                     return error_type(program);
                 }
                 return kest_struct_of(program, shape, args, count);
@@ -1918,7 +1915,7 @@ KestType *kest_resolve_type_ref(KestProgram *program,
         if (ref->arg_count != 1) {
             wrong_type_count(program, ref->span, name, ref->name.length, 1,
                              ref->arg_count, NULL,
-                             is_ref ? "ref<T>" : "store<T>");
+                             "`T`");
             return error_type(program);
         }
         return compose(program, is_ref ? KEST_T_REF : KEST_T_STORE,

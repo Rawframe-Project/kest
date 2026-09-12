@@ -3245,7 +3245,7 @@ K0340|enum Door {\n    Shut\n    Open(i32)\n}\n\nfn main() -> i32 {\n    let d =
 K0341|fn main() -> i32 {\n    let t = 0\n    let one: f32 = 1.0\n    for i in one..one {\n        t += 1\n    }\n    return t\n}|runs between integers
 K0342|extern fn Host.now() -> i32 no.alloc\n\nfn main() -> i32 {\n    let f = Host.now\n    return 0\n}|is the host's, so it is called and not named
 K0704|module one\n\nimport one\n\nfn main() -> i32 {\n    return 0\n}|imports itself
-K0302|struct Box<T> {\n    it: T\n}\n\nfn main() -> i32 {\n    let b: Box = Box(1)\n    return b.it\n}|none are written here
+K0302|struct Box<T> {\n    it: T\n}\n\nfn main() -> i32 {\n    let b: Box = Box(1)\n    return b.it\n}|write a type for each of them: `T`
 K0307|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let p = P(1)\n    return p.y\n}|has no field
 K0308|fn main() -> i32 {\n    let a = 1\n    return a(2)\n}|is not a function
 K0309|enum Door {\n    Open(i32)\n}\n\nfn main() -> i32 {\n    let d = Door.Open(1, 2)\n    return 0\n}|carries 1 thing, found 2

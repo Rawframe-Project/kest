@@ -3959,6 +3959,13 @@ One sentence for the four ways of getting that number wrong, `ref<T>` and
 named as the reader wrote it — a diagnostic about what somebody wrote calls it
 what they called it — and where it came from is what the note carries.
 
+What it says to write is the names the shape is waiting for, and not a form
+built out of them. `Box<T>` is code: `T` is a placeholder where the declaration
+wrote it, so a program that also declares a `struct T` makes that form compile
+and mean a box of something else. A suggestion that compiles and is wrong is
+worse than one that does not, so the names are said as names — `` `T` ``, or
+`` `A` and `B` `` — and where they were written is what the note carries.
+
 A diagnostic about more than one place says both:
 
 ```

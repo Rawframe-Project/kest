@@ -28865,3 +28865,42 @@ that has never been given types has not been looked at — `Pair<A, B>` is what 
 said here, which is the declaration's own type names rather than anything the
 reader wrote. Find whether that is what a reader wants told, or whether the
 names in it should be the ones they were reaching for.
+
+## It was code, and code is the one thing it must not be
+
+`kest_type_shape` built the form out of the declaration's type names, and the
+comment above it said why: a suggestion showing one type for a shape that takes
+two does not compile. It avoided that and walked into the worse one. In a program
+that also declares a `struct T`:
+
+```
+   |            ^^^ write them: `Box<T>`
+```
+
+`Box<T>` compiles there, and means a box of the struct `T`. A suggestion that
+does not compile is one somebody fixes; one that compiles and is wrong is one
+somebody keeps.
+
+The names are said as names now, and the note says where they were written:
+
+```
+   |            ^^^ write a type for each of them: `T`
+ 7 | struct Box<T> {
+   |        ^^^ declared here
+```
+
+`kest_type_names` gives `` `T` ``, `` `A` and `B` ``, a comma and an `and` for
+more — the list a person reads. `kest_type_shape` is gone, and with it the last
+place this compiler put code in a reader's mouth. Three sites asked it: both arms
+of the wrong-count sentence and `K0344` for a generic named where a value goes,
+which said `` `let b: Box<T> = Box(...)` ``. Recorded as D757.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `K0344` now says `a generic takes its types from where it is going:
+write a type for each of `T``, which is two sentences in one — where the types
+come from, and what they are. The first half is the interesting one and is not
+true of every place a generic is named: `let b: Box<i32> = Box(1)` takes them
+from the left, and `count(xs)` takes them from what it was handed. Find what a
+generic's types are actually taken from, and whether the sentence is true where
+it is said.

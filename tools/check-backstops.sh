@@ -10329,6 +10329,21 @@ fn main() -> i32 {
         "caught": "K0302 said",
     },
     {
+        # The names a shape is waiting for, said as a form rather than as
+        # names. `Box<T>` is code, and a program that also declares a
+        # `struct T` makes it compile and mean a box of something else -- a
+        # suggestion that compiles and is wrong, which is worse than one that
+        # does not.
+        "what": "the names a shape waits for, said as code",
+        "file": "src/types.c",
+        "from": """        used += (size_t)snprintf(out + used, room - used, "%s`%s`", before,""",
+        "to": """        used += (size_t)snprintf(out + used, room - used, "%s<%s>", before,""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0302 said",
+    },
+    {
         # A copy made per call rather than per set of types. Sixty calls of one
         # generic would then be sixty copies, and what a program pays for
         # reusing one would be what it pays for writing sixty.
