@@ -2801,10 +2801,15 @@ static bool measure_all(KestProgram *program) {
     return true;
 }
 
-static bool declare_enums(KestProgram *program, const KestUnit *unit) {
+// One walk for the two shapes that are a name and a list of cases. An enum and
+// a set of flags are declared the same way and differ in the tag each carries,
+// and it was written out twice until a check read the two bodies as one shape.
+// See D770.
+static bool declare_cased(KestProgram *program, const KestUnit *unit,
+                          KestDeclKind wanted, KestTypeTag tag) {
     for (uint32_t i = 0; i < unit->count; i++) {
         const KestDecl *decl = unit->items[i];
-        if (decl->kind != KEST_DECL_ENUM) {
+        if (decl->kind != wanted) {
             continue;
         }
         const char *name = qualified(program, decl->name);
@@ -2819,39 +2824,7 @@ static bool declare_enums(KestProgram *program, const KestUnit *unit) {
                             existing->span, "the first one");
             continue;
         }
-        KestType *type = new_type(program, KEST_T_ENUM);
-        if (type == NULL || !register_type(program, type)) {
-            return false;
-        }
-        type->name = name;
-        type->span = decl->name;
-        type->declared_in = program->source;
-    }
-    return true;
-}
-
-// A set of named bits. The names are the cases, in order, and the bit a case
-// stands for is its position: nothing is written down that could be counted,
-// and there are no powers of two to get wrong.
-static bool declare_flags(KestProgram *program, const KestUnit *unit) {
-    for (uint32_t i = 0; i < unit->count; i++) {
-        const KestDecl *decl = unit->items[i];
-        if (decl->kind != KEST_DECL_FLAGS) {
-            continue;
-        }
-        const char *name = qualified(program, decl->name);
-        if (name == NULL) {
-            return false;
-        }
-        KestType *existing = kest_find_type(program, name, strlen(name));
-        if (existing != NULL) {
-            kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0304",
-                           decl->name, "`%s` is already declared", name);
-            kest_diags_note(program->diags, existing->declared_in,
-                            existing->span, "the first one");
-            continue;
-        }
-        KestType *type = new_type(program, KEST_T_FLAGS);
+        KestType *type = new_type(program, tag);
         if (type == NULL || !register_type(program, type)) {
             return false;
         }
@@ -3641,8 +3614,10 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
         kest_program_in(program, &units->items[i]);
         kest_diags_in(diags, program->source);
         if (!declare_structs(program, &units->items[i].unit) ||
-            !declare_enums(program, &units->items[i].unit) ||
-            !declare_flags(program, &units->items[i].unit)) {
+            !declare_cased(program, &units->items[i].unit, KEST_DECL_ENUM,
+                           KEST_T_ENUM) ||
+            !declare_cased(program, &units->items[i].unit, KEST_DECL_FLAGS,
+                           KEST_T_FLAGS)) {
             return false;
         }
     }

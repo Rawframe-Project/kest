@@ -371,12 +371,25 @@ static bool is_error(const KestType *type) {
 // Whether a literal can take a type from its context rather than its default.
 // `let x: f64 = 1.5` and `let n: u8 = 200` both work because of this, and
 // nothing else in the language converts silently.
-static bool is_literal(const KestExpr *expr) {
+// What a literal is, before anything has told it otherwise. A number with a
+// minus in front of it is one: the minus is how it is written rather than
+// something done to it afterwards.
+static const KestExpr *literal_of(const KestExpr *expr) {
     if (expr->kind == KEST_EXPR_INT || expr->kind == KEST_EXPR_FLOAT) {
-        return true;
+        return expr;
     }
-    return expr->kind == KEST_EXPR_UNARY &&
-           expr->unary.op == KEST_TOK_MINUS && is_literal(expr->unary.operand);
+    if (expr->kind == KEST_EXPR_UNARY && expr->unary.op == KEST_TOK_MINUS) {
+        return literal_of(expr->unary.operand);
+    }
+    return NULL;
+}
+
+// And whether there is one. This was written out twice more -- once under this
+// name and once as `takes_a_type`, which is what a literal does rather than
+// what it is -- and three walks over one question is three answers the day any
+// of them moves. See D770.
+static bool is_literal(const KestExpr *expr) {
+    return literal_of(expr) != NULL;
 }
 
 // A name that is several functions is one of them here, and which one is
@@ -1555,27 +1568,9 @@ static uint32_t find_callable(Checker *checker, const KestExpr *expr,
 // A literal has no type of its own to lose, so it is the one thing that may
 // take a type from the function that was chosen rather than the other way
 // round.
-static bool takes_a_type(const KestExpr *expr) {
-    if (expr->kind == KEST_EXPR_INT || expr->kind == KEST_EXPR_FLOAT) {
-        return true;
-    }
-    return expr->kind == KEST_EXPR_UNARY &&
-           expr->unary.op == KEST_TOK_MINUS && takes_a_type(expr->unary.operand);
-}
-
 static KestType *check_arguments(Checker *checker, KestExpr *expr,
                                  const KestType *callee);
 
-// What a literal is, before anything has told it otherwise.
-static const KestExpr *literal_of(const KestExpr *expr) {
-    if (expr->kind == KEST_EXPR_INT || expr->kind == KEST_EXPR_FLOAT) {
-        return expr;
-    }
-    if (expr->kind == KEST_EXPR_UNARY && expr->unary.op == KEST_TOK_MINUS) {
-        return literal_of(expr->unary.operand);
-    }
-    return NULL;
-}
 
 // What a literal is when nothing says otherwise: a whole number is an `i32`,
 // and a number with a fraction is an `f32`, which is the working precision of
@@ -1637,7 +1632,7 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
             }
             bool fits = true;
             for (uint32_t i = 0; i < argument_count && fits; i++) {
-                if (takes_a_type(expr->call.args[i])) {
+                if (is_literal(expr->call.args[i])) {
                     fits = literal_suits(checker, expr->call.args[i],
                                          type->params[i], pass == 1);
                 } else if (given[i] != NULL && given[i]->tag == KEST_T_FN &&
@@ -3454,7 +3449,7 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
             // The first arm that has a type of its own settles what the match
             // is; a literal takes it, the way a literal always does.
             if (given == NULL ||
-                (!takes_a_type(arm->value) && takes_a_type(
+                (!is_literal(arm->value) && is_literal(
                      choose->arms[0].value) && given->tag == value->tag)) {
                 given = value;
             }
@@ -3544,7 +3539,7 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
         if (value == NULL) {
             continue;
         }
-        if (takes_a_type(value) && value->type != NULL &&
+        if (is_literal(value) && value->type != NULL &&
             value->type->tag == given->tag) {
             value->type = given;
             continue;
@@ -3923,7 +3918,7 @@ static KestType *check_branch(Checker *checker, KestExpr *expr,
     }
     // A literal in one arm takes the shape the other arm settled on, which is
     // what makes `if c -> 1 else -> x` work when `x` is an `f32`.
-    if (takes_a_type(branch->then_value) && other != NULL &&
+    if (is_literal(branch->then_value) && other != NULL &&
         !is_error(other) && other->tag == given->tag) {
         given = other;
         branch->then_value->type = given;
@@ -3931,7 +3926,7 @@ static KestType *check_branch(Checker *checker, KestExpr *expr,
     KestExpr *second = branch->otherwise != NULL ? branch->otherwise
                                                  : branch->else_value;
     if (second != NULL) {
-        if (takes_a_type(second) && second->type != NULL &&
+        if (is_literal(second) && second->type != NULL &&
             second->type->tag == given->tag) {
             second->type = given;
         } else if (!kest_type_equal(second->type, given)) {
@@ -4138,7 +4133,7 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
             // `0..count` counts in whatever `count` is. It is the rule an
             // operator already follows, and the node is corrected so the
             // compiler reads the same type the checker settled on.
-            if (!kest_type_equal(from, to) && takes_a_type(stmt->each.sequence) &&
+            if (!kest_type_equal(from, to) && is_literal(stmt->each.sequence) &&
                 !is_error(to) && from != NULL && from->tag == to->tag) {
                 from = to;
                 stmt->each.sequence->type = to;

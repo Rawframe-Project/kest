@@ -10533,6 +10533,38 @@ fn main() -> i32 {
         "caught": "written down as said twice and is not",
     },
     {
+        # Two walks of one shape with other names in them. A body read for its
+        # words alone reads those as two, and they are two answers to one
+        # question all the same -- which is what D739 and D770 found by hand.
+        "what": "two walks of one shape, with other names in them",
+        "file": "src/build.c",
+        "from": """    if (build == NULL || at >= build->units.count) {
+        return NULL;
+    }
+    return build->units.items[at].source.path;""",
+        "to": """    if (build == NULL || at >= build->units.count) {
+        return 0;
+    }
+    return build->units.items[at].source.path;""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "are one shape with other names in them",
+    },
+    {
+        # A group written down as one shape and not there. A reason beside a
+        # group holds the group; a reason beside nothing reads as one thing
+        # held and is nothing.
+        "what": "a group written down as one shape and not",
+        "file": "tools/check-tables.sh",
+        "from": """    frozenset(("math_atan2", "math_pow")):""",
+        "to": """    frozenset(("math_atan2", "math_powered")):""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "are written down as one shape and are not",
+    },
+    {
         # The exact pass asked where the family pass found nothing, which is a
         # walk that cannot find anything: what fits exactly fits the family.
         # Asked where the first left more than one standing is the whole of

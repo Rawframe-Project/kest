@@ -1825,6 +1825,54 @@ for name in sorted(holding):
 # makes somebody write, and two of those are not one thing said twice.
 SAME_BODY = {}
 
+# And the four that are one shape with other names in them, each with what the
+# other name is for. A shape is weaker evidence than a body, so it is read only
+# of bodies over sixty characters, and these four are what is left above that
+# line. See D770.
+SAME_SHAPE = {
+    frozenset(("kest_entry_name", "kest_entry_wrote")):
+        "an accessor's own bounds, which D584 and D609 settled: a host walking "
+        "to the end is reading the end rather than asking about a function "
+        "that is not there",
+    frozenset(("kest_build_read_bytes", "kest_build_read_mark")):
+        "the same, for the two things a host asks about a file it read",
+    frozenset(("math_atan2", "math_pow")):
+        "two of the library's crossings that take two numbers, each handing "
+        "them to a different function of the C library",
+    frozenset(("math_ceil", "math_cos", "math_floor", "math_sin",
+               "math_sqrt")):
+        "and five that take one, the same way",
+}
+
+# What a body's words are once the names in it are numbered by where they first
+# appear. Keywords and numbers stay, because a walk over `unit->count` and a
+# walk over `module->count` are one shape and a width of 32 and a width of 64
+# are two things.
+BODY_KEYWORDS = set("""
+auto break case char const continue default do double else enum extern float
+for goto if inline int long register restrict return short signed sizeof static
+struct switch typedef union unsigned void volatile while bool true false NULL
+size_t uint8_t uint16_t uint32_t uint64_t int8_t int16_t int32_t int64_t
+""".split())
+
+
+def body_shape(text):
+    body_seen = {}
+    body_said = []
+    for body_word in re.findall(
+            r'[A-Za-z_][A-Za-z_0-9]*|"(?:[^"\\]|\\.)*"|\d+|\S', text):
+        if re.match(r"^[A-Za-z_]", body_word):
+            if body_word in BODY_KEYWORDS:
+                body_said.append(body_word)
+                continue
+            body_seen.setdefault(body_word, "#%u" % (len(body_seen) + 1))
+            body_said.append(body_seen[body_word])
+        elif body_word.startswith('"'):
+            body_said.append('""')
+        else:
+            body_said.append(body_word)
+    return " ".join(body_said)
+
 
 def body_bare(text):
     """A body with what a reader adds taken out of it."""
@@ -1857,22 +1905,31 @@ def body_list(path):
                 if body_depth == 0 and body_to > body_from:
                     break
                 body_to += 1
+            body_name = re.findall(r"([A-Za-z_][A-Za-z_0-9]*)\s*\(",
+                                   body_head)
             body_found.append((body_bare("\n".join(body_held[:-1])),
-                               body_from + 1))
+                               body_from + 1,
+                               body_name[0] if body_name else body_head))
             body_from = body_to
         body_from += 1
     return body_found
 
 
 body_places = {}
+body_shapes = {}
 bodies = 0
+shapes = 0
 for body_path in sorted(glob.glob(os.path.join("src", "*.c"))):
-    for body_text, body_line in body_list(body_path):
+    for body_text, body_line, body_called in body_list(body_path):
         if len(body_text) < 20:
             continue
         bodies += 1
         body_places.setdefault(body_text, []).append(
             "%s:%u" % (body_path, body_line))
+        if len(body_text) < 60:
+            continue
+        shapes += 1
+        body_shapes.setdefault(body_shape(body_text), []).append(body_called)
 some("the bodies of `src`", body_places)
 for body_text, body_where in sorted(body_places.items()):
     if len(body_where) < 2 or body_text in SAME_BODY:
@@ -1883,6 +1940,23 @@ for body_text, body_where in sorted(body_places.items()):
 for body_text in SAME_BODY:
     if len(body_places.get(body_text, [])) < 2:
         print("bodies: a body is written down as said twice and is not")
+        failed = 1
+some("the shapes of `src`", body_shapes)
+body_named = set()
+for body_text, body_by in sorted(body_shapes.items()):
+    if len(body_by) < 2:
+        continue
+    body_named.add(frozenset(body_by))
+    if frozenset(body_by) in SAME_SHAPE:
+        continue
+    print("bodies: %s are one shape with other names in them, and one walk "
+          "written twice is two the day either moves"
+          % " and ".join(sorted(body_by)))
+    failed = 1
+for body_group in SAME_SHAPE:
+    if body_group not in body_named:
+        print("bodies: %s are written down as one shape and are not"
+              % " and ".join(sorted(body_group)))
         failed = 1
 
 FROM_A_MACHINE = ("check-costs.sh", "check-ceilings.sh", "check.sh")
@@ -1911,13 +1985,14 @@ if not failed:
           "and %u pairs of widths "
           "in %u module(s) written in both, and %u answers a host is given "
           "read by every host that reads one, and %u bodies of `src` are each "
-          "written once"
+          "written once, %u of them long enough to be read for their shape as "
+          "well, with %u group(s) of one shape and a reason beside each"
           % (len(ops), len(toks), len(held), len(checked), len(writable),
              len(reasons), len(listed),
              len(tools), pythons, shells, len(reading), len(only_a_hole),
              len(NOT_REACHED),
              len(every_code), sentences, len(HELD), halves // 2,
-             len(in_widths), len(ANSWERS), bodies))
+             len(in_widths), len(ANSWERS), bodies, shapes, len(SAME_SHAPE)))
 
 sys.exit(failed)
 PY

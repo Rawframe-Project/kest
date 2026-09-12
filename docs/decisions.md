@@ -21813,3 +21813,42 @@ refused too, the way every other list in this check is held.
 else, and one of them made the inference walk answer wrongly about a name I had
 not touched. Every local in the new part carries the word `body` now. A check
 that holds a rule is held by it.
+
+## D770: two walks of one shape, found the same way
+
+*Argued and measured.* D769's check reads a body's words, so two functions that
+differ only in a name they use come out as two. That is the shape D739 found by
+hand — one walk over `program->types` beside one over `program->globals` — and
+the words alone cannot see it.
+
+So the words are numbered. Every name that is not a keyword becomes `#1`, `#2`,
+`#3` by where it first appears, and two bodies are one shape when what is left
+is the same. Keywords stay, and so do numbers: a walk over `unit->count` and one
+over `module->count` are one shape, and a width of 32 and a width of 64 are two
+things. A shape is weaker evidence than a body, so it is read only of bodies
+over sixty characters — three hundred and seven of the three hundred and
+sixty-nine.
+
+*Six groups, and two of them were real.*
+
+`declare_enums` and `declare_flags` were one walk written twice: find the
+declarations of a kind, refuse a name already declared with a note at the first
+one, make a type of a tag and register it. What differed was `KEST_DECL_ENUM`
+against `KEST_DECL_FLAGS` and `KEST_T_ENUM` against `KEST_T_FLAGS` — two
+arguments. `declare_cased` takes them.
+
+`is_literal` and `takes_a_type` were one predicate written twice, and
+`literal_of` beside them was the same question answered a third way: whether
+there is a literal under the minus signs. `is_literal` asks `literal_of` now and
+`takes_a_type` is gone — what it named was what a literal *does* rather than
+what it *is*, which is why it looked like a second question.
+
+The other four are named with what the other name is for: two pairs of
+accessors that keep their own bounds because a host walking to the end is
+reading the end (D584, D609), and the library's crossings into the C library's
+maths, which are one shape because taking a number and handing it to a function
+is one shape.
+
+*What holds the list.* A group with no reason beside it is refused, and a reason
+beside a group that is not there is refused too — the same two ways round every
+other list in this check is held.

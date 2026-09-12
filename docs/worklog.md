@@ -29296,3 +29296,34 @@ in a name they use — one walking `program->types` where the other walks
 `program->globals` — come out as two bodies and are two answers to one question
 all the same, which is what D739 found by hand. Find whether a body said twice
 with one word changed can be found, and what the cost of asking is.
+
+## Number the names, and six groups come out
+
+Every name that is not a keyword becomes `#1`, `#2`, `#3` by where it first
+appears, and two bodies are one shape when what is left is the same. Keywords
+stay and so do numbers: a walk over `unit->count` and one over `module->count`
+are one shape, and a width of 32 and a width of 64 are two things. A shape is
+weaker evidence than a body, so it is read only of bodies over sixty characters
+— three hundred and seven of the three hundred and sixty-nine.
+
+Six groups, and two were real. `declare_enums` and `declare_flags` were one walk
+written twice, differing in `KEST_DECL_ENUM` against `KEST_DECL_FLAGS` and
+`KEST_T_ENUM` against `KEST_T_FLAGS`; `declare_cased` takes them as arguments.
+`is_literal` and `takes_a_type` were one predicate written twice, with
+`literal_of` beside them answering the same question a third way — `is_literal`
+asks `literal_of` now and `takes_a_type` is gone, because what it named was what
+a literal does rather than what it is.
+
+The other four are named with what the other name is for: two pairs of accessors
+keeping their own bounds because a host walking to the end is reading the end,
+and the library's crossings into the C library's maths. A group with no reason
+is refused and a reason with no group is refused, the same two ways round every
+other list in that check is held. Recorded as D770.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the scan stops at one file. `print_op` in `ast.c` and `print_operator`
+in `fmt.c` are two walks over a token's name that came within a hair of matching
+and did not, and the tree that writes a program back and the tree that prints it
+for a reader have more than that in common. Find what the two walks over one
+syntax share, and whether either is written from the other.
