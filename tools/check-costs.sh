@@ -649,14 +649,15 @@ compiling = what_it_cost('emit', LIBRARY)
 WIDEST = 7
 compiled = what_it_said('emit', LIBRARY, 'functions') or []
 code_bytes = sum(one['bytes'] for one in compiled)
-# And the room that code is in. A chunk's arrays double from a floor of
-# thirty-two as a body is written, so the room a body ends in is between what it
-# took and twice that, plus the floor for a body that never filled one — and
-# beside every byte of code are four bytes saying where in the source it came
-# from, which is four fifths of what a module holds of a function. Held so that
+# And the room that code is in. A chunk's arrays double from a floor measured
+# against what a body holds, so the room a body ends in is between what it took
+# and twice that, plus the floor for a body that never filled one. Held so that
 # a floor or a doubling changed without measuring is caught by the room it
-# leaves. See D750.
+# leaves. See D750 and D753.
 room_taken = sum(one['room'] for one in compiled)
+# And how many constants a body keeps, which is the measurement the constants'
+# own floor rests on: four, because the middle body has three.
+constants_kept = sum(one['constants'] for one in compiled)
 ends_inside = bool(compiled)
 for one in compiled:
     if not one['code']:
@@ -666,11 +667,13 @@ for one in compiled:
                    1 <= one['bytes'] - one['code'][-1]['at'] <= WIDEST)
 if (not code_bytes or not ends_inside or compiling is None or
         compiling < code_bytes * 40 or room_taken < code_bytes or
-        room_taken > code_bytes * 2 + len(compiled) * 32):
+        room_taken > code_bytes * 2 + len(compiled) * 128 or
+        constants_kept > code_bytes // 4):
     print("costs: that library compiled to %u byte(s) of code in %u "
-          "function(s) held in %u byte(s) of room and cost %s to compile, and "
-          "what a run says its code takes is where its instructions end"
-          % (code_bytes, len(compiled), room_taken, compiling))
+          "function(s) held in %u byte(s) of room, keeping %u constant(s), and "
+          "cost %s to compile, and what a run says its code takes is where its "
+          "instructions end"
+          % (code_bytes, len(compiled), room_taken, constants_kept, compiling))
     failed = 1
 
 # And what is given back, which is everything a stage made that the stages after
@@ -775,7 +778,8 @@ if not failed:
           "prints, %u for one that makes text and %u for one that uses five "
           "of that module rather than one, and its arena was asked %u time(s) "
           "for all of it, and it compiled to %u bytes of "
-          "code in %u bytes of room, and it holds %u of what it cost "
+          "code in %u bytes of room with %u constant(s), and it holds %u of "
+          "what it cost "
           "when it is done against %u checked and not compiled, and it "
           "compiled to %u bytes of "
           "code, which is %u bytes of memory for every byte of it, "
@@ -792,7 +796,7 @@ if not failed:
              compiling * 100 // source_bytes, source_bytes,
              alone_costs,
              printing_costs, making_text_costs, using_five_costs,
-             askings, code_bytes, room_taken,
+             askings, code_bytes, room_taken, constants_kept,
              holding, checked_holds, code_bytes, compiling // code_bytes,
              flat, flat_checked, deep, deep_checked,
              COPIES, COPIES, one_copy_costs, many_copies_costs))

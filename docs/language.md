@@ -4420,9 +4420,11 @@ provide, what the machine needs before any of it runs, and every function with
 its code as an offset, a name and the numbers after it. `bytes` is what that
 code takes, which a reader could otherwise only get by adding up the
 instructions and knowing how wide each of them is — and the last one listed
-starts inside it. `room` is what it is held in: a chunk's arrays double from a
-floor as a body is written, so the room a body ends in is between what it took
-and twice that. Beside every byte of code are four bytes saying where in the
+starts inside it. `room` is what it is held in, and `constants` how many of
+them it keeps: a chunk's arrays double from a floor measured against what a body
+holds — the middle one is ninety-two bytes of code in thirty instructions with
+three constants — so the room a body ends in is between what it took and twice
+that, and half of them never double at all. Beside every byte of code are four bytes saying where in the
 source it came from, which is what a message at the line that asked is read off. What it needs is the
 two numbers `kest_needs` answers with, and they are null when there is no
 answer — a run of calls that comes back round has no deepest frame, and a call
@@ -4449,7 +4451,8 @@ shape:
     {
       "name": "doc.onEvent#i32",
       "bytes": 7,
-      "room": 8,
+      "room": 128,
+      "constants": 1,
       "parameterSlots": 1,
       "slots": 1,
       "deep": 2,

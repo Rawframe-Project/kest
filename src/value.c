@@ -54,9 +54,27 @@ int kest_write_real(char *buffer, size_t size, double value, bool narrow) {
     return written;
 }
 
-static void *grow(KestArena *arena, void *items, uint32_t count,
-                  uint32_t *capacity, size_t size) {
-    uint32_t grown = *capacity == 0 ? 32 : *capacity * 2;
+// What an array starts at. Everything an arena hands out and never takes back
+// is kept, including every size an array grew through, so a floor too low costs
+// the sizes under it and a floor too high costs the room over it. The module's
+// own lists are few and long and one number in bytes does for them; the arrays
+// a chunk holds are three shapes of thing and each has its own, measured.
+// See D753.
+#define FLOOR_BYTES 64
+
+// What a body holds, measured over the library and the examples: the middle
+// body is ninety-two bytes of code in thirty instructions with three
+// constants, and nine in ten are under two hundred and thirty bytes in
+// eighty-five instructions with nine constants. A floor at the middle, so half
+// of them never double and the rest double once. See D753.
+#define FLOOR_CODE 128
+#define FLOOR_ORIGINS 32
+#define FLOOR_CONSTANTS 4
+
+static void *grow_from(KestArena *arena, void *items, uint32_t count,
+                       uint32_t *capacity, size_t size, uint32_t floor) {
+    uint32_t grown = *capacity == 0 ? (floor == 0 ? 1 : floor)
+                                    : *capacity * 2;
     void *moved = kest_arena_alloc(arena, size * grown, 16);
     if (moved == NULL) {
         return NULL;
@@ -68,6 +86,12 @@ static void *grow(KestArena *arena, void *items, uint32_t count,
     }
     *capacity = grown;
     return moved;
+}
+
+static void *grow(KestArena *arena, void *items, uint32_t count,
+                  uint32_t *capacity, size_t size) {
+    return grow_from(arena, items, count, capacity, size,
+                     (uint32_t)(FLOOR_BYTES / size));
 }
 
 void kest_module_init(KestModule *module, KestArena *arena) {
@@ -562,8 +586,8 @@ bool kest_chunk_emit(KestModule *module, KestChunk *chunk, uint8_t byte,
                      uint32_t origin) {
     if (chunk->code_count == chunk->code_capacity) {
         uint32_t capacity = chunk->code_capacity;
-        void *code = grow(module->arena, chunk->code, chunk->code_count,
-                          &capacity, sizeof(uint8_t));
+        void *code = grow_from(module->arena, chunk->code, chunk->code_count,
+                               &capacity, sizeof(uint8_t), FLOOR_CODE);
         if (code == NULL) {
             module->out_of_room = true;
             return false;
@@ -578,9 +602,9 @@ bool kest_chunk_emit(KestModule *module, KestChunk *chunk, uint8_t byte,
     if (chunk->code_count == chunk->next_instruction) {
         if (chunk->origin_count == chunk->origin_capacity) {
             uint32_t capacity = chunk->origin_capacity;
-            void *origins = grow(module->arena, chunk->origins,
-                                 chunk->origin_count, &capacity,
-                                 sizeof(uint32_t));
+            void *origins = grow_from(module->arena, chunk->origins,
+                                      chunk->origin_count, &capacity,
+                                      sizeof(uint32_t), FLOOR_ORIGINS);
             if (origins == NULL) {
                 module->out_of_room = true;
                 return false;
@@ -647,13 +671,13 @@ uint32_t kest_chunk_constant_run(KestModule *module, KestChunk *chunk,
     for (uint32_t i = 0; i < count; i++) {
         if (chunk->constant_count == chunk->constant_capacity) {
             uint32_t capacity = chunk->constant_capacity;
-            void *held =
-                grow(module->arena, chunk->constants, chunk->constant_count,
-                     &capacity, sizeof(KestValue));
+            void *held = grow_from(module->arena, chunk->constants,
+                                   chunk->constant_count, &capacity,
+                                   sizeof(KestValue), FLOOR_CONSTANTS);
             uint32_t class_capacity = chunk->constant_capacity;
-            void *kinds = grow(module->arena, chunk->constant_classes,
-                               chunk->constant_count, &class_capacity,
-                               sizeof(uint8_t));
+            void *kinds = grow_from(module->arena, chunk->constant_classes,
+                                    chunk->constant_count, &class_capacity,
+                                    sizeof(uint8_t), FLOOR_CONSTANTS);
             if (held == NULL || kinds == NULL) {
                 module->out_of_room = true;
                 return 0;
@@ -683,12 +707,13 @@ uint32_t kest_chunk_constant(KestModule *module, KestChunk *chunk,
     }
     if (chunk->constant_count == chunk->constant_capacity) {
         uint32_t capacity = chunk->constant_capacity;
-        void *values = grow(module->arena, chunk->constants,
-                            chunk->constant_count, &capacity, sizeof(KestValue));
+        void *values = grow_from(module->arena, chunk->constants,
+                                 chunk->constant_count, &capacity,
+                                 sizeof(KestValue), FLOOR_CONSTANTS);
         uint32_t class_capacity = chunk->constant_capacity;
-        void *classes =
-            grow(module->arena, chunk->constant_classes, chunk->constant_count,
-                 &class_capacity, sizeof(uint8_t));
+        void *classes = grow_from(module->arena, chunk->constant_classes,
+                                  chunk->constant_count, &class_capacity,
+                                  sizeof(uint8_t), FLOOR_CONSTANTS);
         if (values == NULL || classes == NULL) {
             module->out_of_room = true;
             return 0;
@@ -1767,12 +1792,12 @@ void kest_module_disassemble_json(const KestModule *module,
         // A reader with both can see what a module holds of a function against
         // what it wrote. See D750.
         fprintf(out,
-                ",\"bytes\":%u,\"room\":%u"
+                ",\"bytes\":%u,\"room\":%u,\"constants\":%u"
                 ",\"parameterSlots\":%u,\"slots\":%u,\"deep\":%u"
                 ",\"folded\":%u,\"foldedSlots\":%u"
                 ",\"noAlloc\":%s,\"why\":",
                 chunk->code_count, chunk->code_capacity,
-                chunk->param_slots, chunk->slot_count, chunk->stack_needed,
+                chunk->constant_count, chunk->param_slots, chunk->slot_count, chunk->stack_needed,
                 chunk->folded, chunk->folded_slots,
                 chunk->no_alloc ? "true" : "false");
         if (reasons != NULL && reasons[i].reach != 0) {

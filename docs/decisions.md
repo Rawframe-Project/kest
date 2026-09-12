@@ -21167,3 +21167,43 @@ the program has in it and not with how big any of it is — twenty askings for
 every function it declared and every type it made, against the eight it
 measures. A doubling that does not double is a `malloc` with a block underneath
 it, and that is what the check catches.
+
+## D753: a floor is measured against what a body holds
+
+*Measured, and the first answer was wrong.* Compiling holds 30602 for 2668
+bytes of code. Broken down: registering the chunks is 3747 of it, working out
+the constants is nothing, and writing the bodies is the rest — 23573 bytes in
+396 askings. Of those askings, the ones for powers of two are 21760 bytes,
+which is nine tenths of it. The other 140 are between one and nine bytes each
+and come to seven hundred: the `classes` array a constant run is described with,
+kept after being copied into the chunk. Not worth an arena.
+
+So it is the three arrays a chunk holds, and every size they grew through. The
+floor was thirty-two *entries* for all of them, and the entries are one byte
+wide for the code, four for an origin and sixteen for a constant — so one floor
+meant three floors varying sixteenfold in what they cost. Thirty-two constants
+is five hundred and forty-four bytes for a body that uses three.
+
+A floor in bytes rather than entries was the obvious fix and it was worth two
+and a half thousand: sixty-four bytes measured best of 32, 64, 128, 256 and 512.
+But it gives the origins sixteen entries where a body has thirty, so they double
+twice, and the code sixty-four bytes where a body has ninety-two, so it doubles
+once. One number cannot serve three shapes of thing.
+
+*What a body holds, measured over the library and the examples:* the middle one
+is ninety-two bytes of code in thirty instructions with three constants; nine in
+ten are under two hundred and thirty bytes, eighty-five instructions and nine
+constants. So the floors are 128, 32 and 4 — the middle, so half never double
+and the rest double once — and the module's own lists, which are few and long,
+keep one floor in bytes.
+
+| | cost | held |
+|---|---|---|
+| before | 178977 | 71793 |
+| one floor in entries | — | — |
+| after | 173121 | 65937 |
+
+Eight per cent off what a build holds. The room the code ends in is 4608 for
+2668 bytes written, which the check holds between what was written and twice it
+plus a floor a function, and the constants a body keeps are said beside them
+because that is the measurement the floor rests on.

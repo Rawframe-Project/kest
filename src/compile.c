@@ -3522,8 +3522,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
         kest_unbind_types(program);
     }
 
-    
-// Every element type a signature mentions gets a layout, whether or not a
+    // Every element type a signature mentions gets a layout, whether or not a
     // body ever reached one. What a host can be handed is what the program
     // says it takes, and that is written in the declarations rather than in
     // what the bodies happened to compile to. See D068.

@@ -28703,3 +28703,43 @@ are 2760 of it and the code 2668; the origins are 3816 exact and more than that
 in the room they grew through. Find the rest — the constants a chunk keeps, the
 layouts and their pieces, what `kest_module_needs` walks with, and what
 `kest_module_prove` leaves behind.
+
+## Three shapes of thing, three floors
+
+Registering the chunks is 3747 of compiling, working out the constants is
+nothing, and writing the bodies is the rest: 23573 bytes in 396 askings. The
+askings for powers of two are 21760 of those bytes — nine tenths. The other 140
+are one to nine bytes each and come to seven hundred: the `classes` array a
+constant run is described with, kept after being copied into the chunk.
+
+So it is the three arrays a chunk holds and every size they grew through. The
+floor was thirty-two entries for all of them, and an entry is one byte for the
+code, four for an origin and sixteen for a constant — one floor meaning three,
+varying sixteenfold. Thirty-two constants is five hundred and forty-four bytes
+for a body that uses three.
+
+A floor in bytes was worth two and a half thousand (sixty-four measured best of
+32, 64, 128, 256, 512) and is still one number for three shapes: it gives the
+origins sixteen entries where a body has thirty. Measured over the library and
+the examples, the middle body is ninety-two bytes of code in thirty instructions
+with three constants, so the floors are 128, 32 and 4 — half never double and
+the rest double once.
+
+| | cost | held |
+|---|---|---|
+| before | 178977 | 71793 |
+| after | 173121 | 65937 |
+
+Eight per cent off what a build holds. `emit --json` says `constants` beside
+`bytes` and `room` now, because that is the measurement the floor rests on.
+Recorded as D753.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** what a build holds is 65937 for a file of 14801 bytes, and four turns
+of measuring have taken it from 92583. The source is 22 per cent of it now and
+the types 15. What has not been asked is whether the source has to be held at
+all: every diagnostic points into it, but a diagnostic is written the moment it
+is made and a host reads the words rather than the file. Find what still reads
+the source after a build has answered, and whether a host that has taken its
+diagnostics needs it.
