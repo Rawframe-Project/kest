@@ -344,8 +344,9 @@ void kest_diags_suggest(KestDiags *diags, const char *format, ...) {
 // diagnostic and a note about one further back are the same thing said to a
 // different item.
 static void note_on(KestDiags *diags, KestDiag *diag, const KestSource *source,
-                    KestSpan span, const char *format, va_list args) {
-    if (diag->note_count == KEST_MOST_PLACES) {
+                    KestSpan span, const char *format, va_list args, bool kept) {
+    bool full = diag->note_count == KEST_MOST_PLACES;
+    if (full && !kept) {
         // Counted rather than dropped. What a caller does about it is the
         // caller's — several of them keep room for a note that says what is
         // under it — and what happens to one that does not is this.
@@ -356,7 +357,16 @@ static void note_on(KestDiags *diags, KestDiag *diag, const KestSource *source,
     if (label == NULL) {
         return;
     }
-    KestNote *note = &diag->notes[diag->note_count++];
+    // A note that frames the whole diagnostic takes the last place rather than
+    // being the one thing left out. Which copy of a generic a body's sentences
+    // are about is not the ninth thing a reader wants: it is what the other
+    // eight are about, and it used to go last and be dropped first. What is
+    // counted instead is the candidate it displaced. See D762.
+    KestNote *note = full ? &diag->notes[KEST_MOST_PLACES - 1]
+                          : &diag->notes[diag->note_count++];
+    if (full) {
+        diag->left_out++;
+    }
     note->span = span;
     note->source = source == NULL ? diags->source : source;
     note->label = label;
@@ -369,7 +379,8 @@ void kest_diags_note(KestDiags *diags, const KestSource *source, KestSpan span,
     }
     va_list args;
     va_start(args, format);
-    note_on(diags, &diags->items[diags->count - 1], source, span, format, args);
+    note_on(diags, &diags->items[diags->count - 1], source, span, format,
+            args, false);
     va_end(args);
 }
 
@@ -381,7 +392,10 @@ void kest_diags_note_at(KestDiags *diags, uint32_t which,
     }
     va_list args;
     va_start(args, format);
-    note_on(diags, &diags->items[which], source, span, format, args);
+    // Kept, because a note put on a diagnostic that is already finished is a
+    // note about the whole of it rather than one more place in it: nothing
+    // reaches back to a diagnostic to add a ninth candidate. See D762.
+    note_on(diags, &diags->items[which], source, span, format, args, true);
     va_end(args);
 }
 

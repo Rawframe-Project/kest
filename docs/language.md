@@ -3991,6 +3991,13 @@ and mean a box of something else. A suggestion that compiles and is wrong is
 worse than one that does not, so the names are said as names — `` `T` ``, or
 `` `A` and `B` `` — and where they were written is what the note carries.
 
+A diagnostic holds eight places and counts what it could not show — `and 2 more
+places` in the words, `leftOut` in the JSON. A note put on a diagnostic that is
+already finished takes the last place rather than being left out, because what
+reaches back to one is a sentence about the whole of it: which copy of a generic
+a body's sentences are about is not the ninth thing a reader wants, it is what
+the other eight are about.
+
 A diagnostic about more than one place says both:
 
 ```

@@ -187,6 +187,12 @@ void kest_diags_note(KestDiags *diags, const KestSource *source, KestSpan span,
 // The same, to one further back. What is said about a copy of a generic is
 // said about everything that copy's body reported, and a body reports more
 // than one thing.
+// A note on one further back takes the last place rather than being the one
+// thing left out. What reaches back to a diagnostic that is already finished is
+// a sentence about the whole of it -- which copy of a generic a body's
+// sentences are about is not the ninth thing a reader wants, it is what the
+// other eight are about -- and nothing reaches back to add one more place. The
+// note it displaces is counted, the same as one that never fitted. See D762.
 void kest_diags_note_at(KestDiags *diags, uint32_t which,
                         const KestSource *source, KestSpan span,
                         const char *format, ...) KEST_SAYS(5, 6);

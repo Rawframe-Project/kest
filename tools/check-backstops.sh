@@ -10386,6 +10386,19 @@ fn main() -> i32 {
         "caught": "K0363 said",
     },
     {
+        # The note that says which copy a body's sentences are about, left out
+        # because it is written last and a diagnostic holds eight. It is not
+        # the ninth thing a reader wants: it is what the other eight are about.
+        "what": "the note that frames a diagnostic, dropped for a ninth place",
+        "file": "src/diag.c",
+        "from": """    note_on(diags, &diags->items[which], source, span, format, args, true);""",
+        "to": """    note_on(diags, &diags->items[which], source, span, format, args, false);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0329 said",
+    },
+    {
         # A rule said without the name it is about. A reader holding `Empty<T>`
         # was once shown `let p: Pair<i32, text> = Pair(1, "a")`, which names
         # neither their shape nor their type name; what is left to get wrong is

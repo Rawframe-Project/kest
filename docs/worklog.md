@@ -29050,3 +29050,39 @@ diagnostic's notes are sorted by where they point, and nothing holds these two
 in the order they were written — a call whose later argument is on an earlier
 line would read backwards. Find whether the order a note is written in survives
 being sorted, and what a note should say when it cannot lean on the one before.
+
+## The order holds, and the note beside it did not
+
+Notes are not sorted — `kest_diags_sort` sorts diagnostics — so the pair keeps
+the order it was written in. It could not read backwards even if they were: the
+position that bound a name is always the earlier one, because arguments are
+written in the order they are passed.
+
+What the asking turned up is next to it. A diagnostic holds eight places and
+counts what it could not show, in both forms: `and 2 more places` in the words
+and `leftOut` in the JSON. But the note that says which copy of a generic a
+body's sentences are about is written after everything the body said, so it is
+the ninth note of a busy diagnostic and the first thing dropped. Measured on a
+generic body calling an overloaded name with ten candidates: `and 3 more
+places`, and one of the three was the only sentence saying this is a copy and
+which call asked for it.
+
+A note on one further back takes the last place rather than being left out now,
+and the candidate it displaces is counted the same as one that never fitted —
+the count does not change, and what is in the eight does.
+
+It is `kest_diags_note_at` itself rather than a second function beside it. The
+first version added one and left the old for everybody else, and the gate
+answered that nobody else was there: `nothing outside diag.o calls
+kest_diags_note_at`. Which is the argument — what reaches back to a diagnostic
+already finished is a sentence about the whole of it, and nothing reaches back
+to add one more place. Recorded as D762.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** eight places is where a diagnostic stops, and `and 3 more places` is
+what it says instead. The machine's own call chain says `and %u more under it`
+and names the function at the end of what it shows; the overload refusal says
+the count and nothing about what is in it. Find whether a reader who is told
+three more places were left out can do anything with that, and what the eight
+shown should be chosen by.

@@ -4537,8 +4537,8 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
                 // `where`, because the names are the ones written in the body
                 // above and not in the line this note is on: a reader looking
                 // at `K` is looking at the frame the message opened with.
-                kest_diags_note_at(program->diags, d, instance->site_source,
-                                   instance->site,
+                kest_diags_note_at(program->diags, d,
+                                   instance->site_source, instance->site,
                                    "this copy was asked for here, where %s",
                                    which);
             }

@@ -21557,3 +21557,46 @@ other as a rung that neither ran nor refused. Which of them a run meets depends
 on how big the binary is, so a compiler that grows by a few hundred bytes walks
 out of one and into the other — this turn's few hundred did it. Both are the
 machine refusing before the program starts, which is where the ladder ends.
+
+## D762: the note that frames a diagnostic is not the one to leave out
+
+*Asked about the order of two notes, and found something else.* The two notes
+`K0363` writes read as a pair — `this one makes it `i32`` and `and this one
+`text`` — and a diagnostic's notes are not sorted, so the pair keeps the order
+it was written in. It could not read backwards even if they were: the position
+that bound a name is always the earlier one, because arguments are written in
+the order they are passed. Both halves of the worry are answered by how the
+thing is built.
+
+What the asking turned up is next to it. A diagnostic holds eight places and
+counts what it could not show: `and 2 more places` in the words, `leftOut` in
+the JSON — measured on a call with ten candidates, and both forms say it. But
+the note that says which copy of a generic a body's sentences are about is
+written after everything the body said, so it is the ninth note of a busy
+diagnostic and the first thing dropped:
+
+```
+error[K0329]: no `pick` takes these
+   |            ^^^^^^^^^ inside `box<T>`, with eight candidates shown
+   and 3 more places
+```
+
+Three more places, and one of them was the only sentence saying this is a copy
+and which call asked for it. A reader is left with a refusal inside a generic
+body and no word that it is one.
+
+So a note on one further back takes the last place rather than being left out,
+and the candidate it displaces is counted the same as one that never fitted —
+the count does not change, and what is in the eight does.
+
+*It is `kest_diags_note_at` itself rather than a second function beside it.* The
+first version added `kest_diags_note_kept` and left the old one for everybody
+else, and the gate answered that nobody else was there: `nothing outside diag.o
+calls kest_diags_note_at`. Which is the argument. What reaches back to a
+diagnostic that is already finished is a sentence about the whole of it —
+nothing reaches back to add one more place — so the function that does that is
+the function that keeps its place, and there is no flag to get wrong.
+
+The call chain a machine walks keeps room for its own last note and says `and %u
+more under it`, which is the same rule arrived at from the other side: the
+sentence that says how much was left out is worth a place of its own.
