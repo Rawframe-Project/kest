@@ -28393,3 +28393,42 @@ nodes, against 62684 for the tokens it was made from. A node is fifty-six bytes
 and there are 975 of them, which is 54600 — and parsing cost 93141 over lexing.
 Find where the other forty thousand goes, and whether a tree of 975 nodes is
 really 975 allocations.
+
+## The other forty thousand was the room, not the lists
+
+A list grew in the arena by doubling from eight, and the arena gives nothing
+back — so a block of two statements cost eight pointers, and every size a longer
+list passed through was left behind. The comment above it said the abandoned
+copies cost only address space, which is true of a program that frees the arena
+in one call and is not true of the bytes it holds while it runs, which is the
+whole of what `cost` measures.
+
+Lowering the floor was measured at 1, 2, 3, 4, 8 and 16. Two is the best of them
+and saves about eight per cent, because almost every list is short — but it
+makes a list of five cost fourteen pointers where eight cost it before, which is
+paying for the short ones with the long ones.
+
+What is taken instead is a list that holds sixteen on the C stack and spills
+past that, handed over as exactly what it holds:
+
+| | text.kest | embed.kest | table.kest |
+|---|---|---|---|
+| growing in the arena | 93141 | 140333 | 38201 |
+| floor of two | 85605 | 123949 | 34153 |
+| held and handed over | 83461 | 120925 | 33009 |
+
+Ten to fourteen per cent off the tree. The held buffer is on the C stack, so a
+list whose items escape without `list_taken` points into a frame that has
+returned: all twelve places a list is kept go through it, and what would catch a
+thirteenth is the sanitised build the gate runs over every file. The tree's own
+ceiling is tightened from four times its nodes to five thirds — seventeen tenths
+before, fifteen now. Recorded as D745.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same shape is in `types.c` and `check.c`, where `grow` doubles an
+array into the same arena for globals, types, instances and the counted names.
+Those are program-wide rather than per-file, so there are few of them and each
+is long — the opposite of a block's two statements, and the case doubling is
+actually for. Measure whether the checker's arrays are where its 179512 goes at
+all, before assuming the answer is the same one twice.

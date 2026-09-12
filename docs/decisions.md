@@ -20818,3 +20818,54 @@ unless something else holds it. What holds `bytes` is the instructions listed
 beside it: the last one starts inside that number and no further back than the
 widest instruction there is, which is seven. A `bytes` that is anything else —
 the slot count, say — is caught by the code it claims to measure.
+
+## D745: a list is handed over as what it holds
+
+*Measured.* A tree of 975 nodes cost 93141 bytes over the tokens it was made
+from. The nodes themselves are 54600 of that. The other 38541 is the lists — a
+block's statements, a call's arguments, a shape's fields — and most of it was
+not the lists at all but the sizes they grew through.
+
+A list grew in the arena by doubling from eight, and the arena gives nothing
+back. So a block of two statements cost eight pointers and a list of twenty cost
+fifty-six, and every size passed through on the way was left behind. The comment
+above it said the abandoned copies "cost only address space", which is true of a
+program that frees the arena in one call and is not true of the bytes it holds
+while it runs — that is the whole of what `cost` measures.
+
+Two things were tried. Lowering the floor from eight was measured at 1, 2, 3, 4,
+8 and 16: two is the best of them on this tree and saves about eight per cent,
+because almost every list is short. But it makes a list of five cost fourteen
+pointers where eight cost it before, which is paying for the short ones with the
+long ones.
+
+What is taken instead is a list that holds sixteen on the C stack and spills to
+the arena only past that, handed over by `list_taken` as exactly what it holds.
+A list of two costs two pointers. A list of twenty costs thirty-two on the way
+and twenty at the end, which is the same shape as before and rarer.
+
+| | text.kest | embed.kest | table.kest |
+|---|---|---|---|
+| growing in the arena | 93141 | 140333 | 38201 |
+| floor of two | 85605 | 123949 | 34153 |
+| held and handed over | 83461 | 120925 | 33009 |
+
+Ten to fourteen per cent off the tree, which is ten per cent of the sixty-eight
+hundredths of every compile that happens before an instruction is written.
+
+*What holds it.* The held buffer is on the C stack, so a list whose items escape
+without `list_taken` is a pointer into a frame that has returned. Every one of
+the twelve places a list is kept goes through it, and what would catch a
+thirteenth is the sanitised build the gate already runs over every file. What
+holds the bytes is the tree's own ceiling, tightened from four times its nodes
+to five thirds: it was seventeen tenths while lists grew in the arena and is
+fifteen tenths now, so the number between them is the one written down.
+
+*One thing moved that was not the point.* The ladder `check-ceilings.sh` walks
+counts every example by the ceiling it meets first, and one of them used to meet
+its input: at the rung where it ran out of room being read, what it said was that
+the standard input would not be read. Reading a file grew ten per cent cheaper,
+so at that rung it now gets far enough to want a machine instead, and no program
+in the tree wants its input any more. The backstop that was asked of that code is
+asked of the one a run out of room reports, which the ladder reaches at every
+rung.

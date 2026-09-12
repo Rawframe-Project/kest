@@ -562,6 +562,12 @@ parsing = what_it_cost('parse', LIBRARY)
 # beside them is the lists a block and an argument list are. The floor here is
 # what the smallest of those is, because a file of nothing but expressions is
 # the cheapest tree there is. See D641 and D642.
+#
+# The ceiling is five thirds of the floor, and what it holds is that a list is
+# handed over as exactly what it holds rather than as whatever size it grew to:
+# a tree was seventeen tenths of its nodes while lists grew in the arena and is
+# fifteen tenths now, so the number between them is the one worth writing down.
+# See D745.
 nodes = what_it_said('parse', LIBRARY, 'nodes')
 # And what checking made, which is types: one for every signature, every
 # optional and every run of something, beside the ones that have names. A type
@@ -599,7 +605,7 @@ weighs = what_it_said('parse', LIBRARY, 'nodeBytes') or {}
 smallest = weighs.get('expression')
 if (nodes is None or lexing is None or parsing is None or nodes == 0 or
         smallest is None or parsing - lexing < nodes * smallest or
-        parsing - lexing > nodes * smallest * 4):
+        parsing - lexing > nodes * smallest * 5 // 3):
     print("costs: a tree of %s nodes cost %s bytes over the tokens it was made "
           "from, and the smallest node of this compiler is %s bytes"
           % (nodes, None if parsing is None or lexing is None

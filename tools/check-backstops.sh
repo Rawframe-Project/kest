@@ -4833,6 +4833,23 @@ fn main() -> i32 {
         "caught": "the smallest node of this compiler is",
     },
     {
+        # A list handed over as whatever size it grew to rather than as what it
+        # holds. The arena gives nothing back, so a list that grew in it leaves
+        # every size it passed through behind, and a list of two leaves eight.
+        "what": "a list handed over as the room it took",
+        "file": "src/parser.c",
+        "from": """        if (list->capacity == 0) {
+            list->items = list->held;
+            list->capacity = LIST_HELD;""",
+        "to": """        if (list->capacity == 0) {
+            list->items = KEST_ARENA_ARRAY(parser->arena, void *, LIST_HELD);
+            list->capacity = list->items == NULL ? 0 : LIST_HELD;""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "the smallest node of this compiler is",
+    },
+    {
         # What reading a file costs, answered with nought. `lex` and `parse`
         # stop where they stop, so the two numbers beside `check` and `emit`
         # are what each stage of reading costs — and a nought there is a stage
@@ -8750,10 +8767,16 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # refused wherever it is run, or never refused at all — and a program
         # that meets some other ceiling first would otherwise leave quietly,
         # with the weighing one program smaller and nothing said about which.
+        #
+        # Asked of the code a run out of room reports, because that is the one
+        # the ladder reaches at every rung. It used to be asked of the code a
+        # program that wanted its input reports, and no program wants its input
+        # any more: reading a file grew cheaper and the one that did gets far
+        # enough to want a machine instead. See D745.
         "what": "a program left out for a reason nothing names",
-        "file": "src/main.c",
-        "from": """KEST_SEVERITY_ERROR, "K0642", nowhere,""",
-        "to": """KEST_SEVERITY_ERROR, "K0641", nowhere,""",
+        "file": "src/diag.h",
+        "from": '#define KEST_STARVED_CODE "K0639"',
+        "to": '#define KEST_STARVED_CODE "K0640"',
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "which is not a reason this names",

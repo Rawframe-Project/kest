@@ -24,29 +24,64 @@ typedef struct {
     uint32_t nesting;
 } Parser;
 
-// A pointer list that grows by copying into the arena. Compilation frees the
-// arena in one call, so the abandoned copies cost only address space.
+// How many a list holds before it needs the arena at all. A block, an argument
+// list, a set of fields: almost all of them are shorter than this, and one that
+// is not is a list where a copy costs nothing beside what it holds. Sixteen
+// pointers is a hundred and twenty-eight bytes of the C stack per list being
+// read, and lists are read one inside another only as deep as an expression
+// nests, which has a ceiling. See D745.
+#define LIST_HELD 16
+
+// A pointer list that fills up here and spills into the arena, and is handed
+// over as exactly what it holds. Nothing it grew through is kept: the arena
+// never gives anything back, so a list that grew in it left every size it
+// passed through behind, and a list of two left eight. See D745.
 typedef struct {
     void **items;
     uint32_t count;
     uint32_t capacity;
+    void *held[LIST_HELD];
 } List;
 
 static void list_push(Parser *parser, List *list, void *item) {
     if (list->count == list->capacity) {
-        uint32_t capacity = list->capacity == 0 ? 8 : list->capacity * 2;
-        void **items = KEST_ARENA_ARRAY(parser->arena, void *, capacity);
-        if (items == NULL) {
-            parser->out_of_memory = true;
-            return;
-        }
-        if (list->count > 0) {
+        if (list->capacity == 0) {
+            list->items = list->held;
+            list->capacity = LIST_HELD;
+        } else {
+            uint32_t capacity = list->capacity * 2;
+            void **items = KEST_ARENA_ARRAY(parser->arena, void *, capacity);
+            if (items == NULL) {
+                parser->out_of_memory = true;
+                return;
+            }
             memcpy(items, list->items, sizeof(void *) * list->count);
+            list->items = items;
+            list->capacity = capacity;
         }
-        list->items = items;
-        list->capacity = capacity;
     }
     list->items[list->count++] = item;
+}
+
+// What the tree keeps, which is the list and nothing it grew through. A list
+// still being read is on the C stack, so this is the one way what it holds may
+// outlive the reading of it. Nothing for a list of nothing, which is what an
+// empty one was before there was anywhere else to put it.
+static void **list_taken(Parser *parser, List *list) {
+    if (list->count == 0) {
+        return NULL;
+    }
+    void **items = KEST_ARENA_ARRAY(parser->arena, void *, list->count);
+    if (items == NULL) {
+        parser->out_of_memory = true;
+        // Nothing, and nothing in it. Every caller writes the count beside
+        // what it was handed, and a count beside no list is a walk over
+        // nothing that reads whatever is at nought.
+        list->count = 0;
+        return NULL;
+    }
+    memcpy(items, list->items, sizeof(void *) * list->count);
+    return items;
 }
 
 static KestToken peek(Parser *parser) {
@@ -405,7 +440,7 @@ static KestTypeRef *parse_type(Parser *parser) {
             } while (match(parser, KEST_TOK_COMMA));
         }
         expect(parser, KEST_TOK_RPAREN);
-        type->args = (KestTypeRef **)args.items;
+        type->args = (KestTypeRef **)list_taken(parser, &args);
         type->arg_count = args.count;
         if (match(parser, KEST_TOK_ARROW)) {
             type->element = parse_type(parser);
@@ -459,7 +494,7 @@ static KestTypeRef *parse_type(Parser *parser) {
                 list_push(parser, &args, parse_type(parser));
             } while (match(parser, KEST_TOK_COMMA));
             close_generic(parser);
-            type->args = (KestTypeRef **)args.items;
+            type->args = (KestTypeRef **)list_taken(parser, &args);
             type->arg_count = args.count;
         }
     } else {
@@ -803,7 +838,7 @@ static KestExpr *parse_match(Parser *parser) {
     if (expr == NULL) {
         return NULL;
     }
-    expr->choose.subjects = (KestExpr **)subjects.items;
+    expr->choose.subjects = (KestExpr **)list_taken(parser, &subjects);
     expr->choose.subject_count = subjects.count;
     expr->choose.gives = gives;
     expr->choose.arms =
@@ -1002,7 +1037,7 @@ static KestExpr *parse_primary(Parser *parser) {
         if (array == NULL) {
             return NULL;
         }
-        array->array.items = (KestExpr **)items.items;
+        array->array.items = (KestExpr **)list_taken(parser, &items);
         array->array.count = items.count;
         return array;
     }
@@ -1129,7 +1164,7 @@ static KestExpr *parse_postfix(Parser *parser) {
                 return NULL;
             }
             call->call.callee = expr;
-            call->call.args = (KestExpr **)args.items;
+            call->call.args = (KestExpr **)list_taken(parser, &args);
             call->call.arg_count = args.count;
             expr = call;
         } else if (match(parser, KEST_TOK_DOT)) {
@@ -1571,7 +1606,7 @@ static bool parse_block(Parser *parser, KestBlock *block) {
     }
     expect(parser, KEST_TOK_RBRACE);
 
-    block->items = (KestStmt **)items.items;
+    block->items = (KestStmt **)list_taken(parser, &items);
     block->count = items.count;
     return true;
 }
@@ -1704,7 +1739,7 @@ static KestDecl *parse_function(Parser *parser, KestSpan start, bool is_extern) 
         } while (match(parser, KEST_TOK_COMMA));
     }
     expect(parser, KEST_TOK_RPAREN);
-    decl->function.params = (KestField **)params.items;
+    decl->function.params = (KestField **)list_taken(parser, &params);
     decl->function.param_count = params.count;
 
     if (match(parser, KEST_TOK_ARROW)) {
@@ -1812,7 +1847,7 @@ static KestDecl *parse_declaration(Parser *parser) {
         KestSpan close = current_span(parser);
         expect(parser, KEST_TOK_RBRACE);
 
-        decl->record.fields = (KestField **)fields.items;
+        decl->record.fields = (KestField **)list_taken(parser, &fields);
         decl->record.field_count = fields.count;
         decl->span = span_between(start, close);
         return decl;
@@ -1855,7 +1890,7 @@ static KestDecl *parse_declaration(Parser *parser) {
                     } while (match(parser, KEST_TOK_COMMA));
                 }
                 expect(parser, KEST_TOK_RPAREN);
-                variant->payload = (KestTypeRef **)types.items;
+                variant->payload = (KestTypeRef **)list_taken(parser, &types);
                 variant->payload_count = types.count;
             }
             list_push(parser, &cases, variant);
@@ -1868,7 +1903,7 @@ static KestDecl *parse_declaration(Parser *parser) {
         KestSpan close = current_span(parser);
         expect(parser, KEST_TOK_RBRACE);
 
-        decl->choice.cases = (KestVariant **)cases.items;
+        decl->choice.cases = (KestVariant **)list_taken(parser, &cases);
         decl->choice.case_count = cases.count;
         decl->span = span_between(start, close);
         return decl;
@@ -1918,7 +1953,7 @@ static KestDecl *parse_declaration(Parser *parser) {
         KestSpan close = current_span(parser);
         expect(parser, KEST_TOK_RBRACE);
 
-        decl->choice.cases = (KestVariant **)cases.items;
+        decl->choice.cases = (KestVariant **)list_taken(parser, &cases);
         decl->choice.case_count = cases.count;
         decl->span = span_between(start, close);
         return decl;
@@ -2017,8 +2052,8 @@ bool kest_parse(KestArena *arena, const KestSource *source, KestDiags *diags,
         }
     }
 
-    unit->items = (KestDecl **)items.items;
+    unit->items = (KestDecl **)list_taken(&parser, &items);
     unit->count = items.count;
     unit->nodes = parser.nodes;
-    return true;
+    return !parser.out_of_memory;
 }
