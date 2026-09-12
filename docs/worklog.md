@@ -29262,3 +29262,37 @@ each was found by reading the two side by side rather than by anything holding
 them together. `check-tables.sh` holds that a name in `tools/` stands for one
 thing; nothing holds that a body in `src/` is written once. Find whether two
 functions with one body can be found by a check rather than by hand.
+
+## They can, and there were two left
+
+Every function body in `src/*.c`, with the comments and the spacing taken out of
+it: three hundred and sixty-nine of them, and any two that come out the same are
+refused. The scan found two pairs, both real.
+
+The command line bound `sqrt` twice — `host_sqrt` under `Host.sqrt` for a
+program that declares the crossing itself, and `math_sqrt` under `Math.sqrt` for
+the library's — with one body written out twice. The same for `write`. What a
+program asked for was the difference, not what happened, so one body is bound
+under both names now: a function pointer given to `kest_host_bind` twice is what
+two names for one behaviour is.
+
+A body under twenty characters is not read, because `return NULL;` and
+`(void)runtime;` are what a signature makes somebody write and two of those are
+not one thing said twice. Above that line there is nothing left to excuse, so
+the list of pairs with a reason beside them is empty — and a reason beside a
+pair that is not there is refused too, the way every other list in that check
+is held.
+
+The check caught itself on the way in: it holds that a name in `tools/` stands
+for one thing, and the first version used `written`, `at` and then `reading` —
+each already a name in that file for something else, and one of them made the
+inference walk answer wrongly about a name I had not touched. Every local in the
+new part carries the word `body` now. Recorded as D769.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the scan reads bodies and nothing else. Two functions that differ only
+in a name they use — one walking `program->types` where the other walks
+`program->globals` — come out as two bodies and are two answers to one question
+all the same, which is what D739 found by hand. Find whether a body said twice
+with one word changed can be found, and what the cost of asking is.

@@ -225,16 +225,6 @@ static void dump_tokens(KestArena *arena, const KestToken *tokens,
     }
 }
 
-static void host_sqrt(KestValue *frame, KestRuntime *runtime, void *context) {
-    (void)runtime;
-    (void)context;
-    frame[0].real = sqrt(frame[0].real);
-}
-
-static void host_write(KestValue *frame, KestRuntime *runtime, void *context) {
-    (void)runtime;
-    fputs(frame[0].text, (FILE *)context);
-}
 
 // What `std.io` declares. Where it goes is the host's, which is the whole
 // point of it being the host's: when the caller asked for JSON on standard
@@ -248,6 +238,10 @@ static void host_write(KestValue *frame, KestRuntime *runtime, void *context) {
 // a flag kept by hand at every write. See D344.
 static FILE *program_wrote_to = NULL;
 
+// Bound twice, under `Io.write` and under `Host.write`: a program may declare
+// the crossing itself or reach the library's, and what happens is the same
+// thing. One body, because two with one body is a body that can be changed in
+// one of them. See D769.
 static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
     fputs(frame[0].text, (FILE *)context);
@@ -255,6 +249,7 @@ static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
 
 // What the standard library declares and every host has to provide. A program
 // that never reaches one of these never asks for it.
+// And this one under `Math.sqrt` and `Host.sqrt`, for the same reason.
 static void math_sqrt(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
     (void)context;
@@ -458,8 +453,8 @@ static KestHost *make_host(FILE *output) {
     if (host == NULL) {
         return NULL;
     }
-    if (!kest_host_bind(host, "Host.sqrt", host_sqrt, NULL) ||
-        !kest_host_bind(host, "Host.write", host_write, output) ||
+    if (!kest_host_bind(host, "Host.sqrt", math_sqrt, NULL) ||
+        !kest_host_bind(host, "Host.write", io_write, output) ||
         !kest_host_bind(host, "Host.clock", host_clock, NULL) ||
         !kest_host_bind(host, "Host.samples", host_samples_view, NULL) ||
         !kest_host_bind(host, "Host.sample", host_sample, NULL) ||

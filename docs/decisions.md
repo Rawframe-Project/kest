@@ -21778,3 +21778,38 @@ same value. It answers one when they are not, which is what the hole makes it
 do — and a comparison of two floats for equality, which is usually a thing to
 be careful about, is exactly right here: the question is whether two roads to
 one literal end in the same bits.
+
+## D769: a body in `src` is written once, and a check says so
+
+*Argued, after three turns of finding it by hand.* D766 found the default width
+of a literal answered in two places, D767 found whether a literal fits answered
+in two, D768 found whether a type is the narrower float answered in two. Every
+one was found by reading the two side by side. `check-tables.sh` holds that a
+name in `tools/` stands for one thing; nothing held that a body in `src/` is
+written once, and two bodies with one answer are two answers the day either
+moves.
+
+So it is read: every function body in `src/*.c`, with the comments and the
+spacing taken out of it, and any two that come out the same are refused. Three
+hundred and sixty-nine bodies, and the scan found two pairs.
+
+*Both were real and both are gone.* The command line bound `sqrt` twice —
+`host_sqrt` under `Host.sqrt` for a program that declares the crossing itself,
+and `math_sqrt` under `Math.sqrt` for the library's — with one body written out
+twice. The same for `write`. What a program asked for was the difference, not
+what happened, so one body is bound under both names. A function pointer given
+to `kest_host_bind` twice is what two names for one behaviour is.
+
+*What is not read.* A body under twenty characters once the comments and the
+spacing are out of it: `return NULL;` and `(void)runtime;` are what a signature
+makes somebody write, and two of those are not one thing said twice. Above that
+line there is nothing the tree has to excuse, so the list of pairs with a reason
+beside them is empty — and a reason written beside a pair that is not there is
+refused too, the way every other list in this check is held.
+
+*The check caught itself on the way in.* `check-tables.sh` holds that a name in
+`tools/` stands for one thing, and the first version of this used `written`,
+`at` and then `reading` — each of them already a name in that file for something
+else, and one of them made the inference walk answer wrongly about a name I had
+not touched. Every local in the new part carries the word `body` now. A check
+that holds a rule is held by it.

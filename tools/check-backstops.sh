@@ -10507,6 +10507,32 @@ fn main() -> i32 {
         "caught": "rounded two ways",
     },
     {
+        # Two functions with one body. Three turns running found one question
+        # answered in two places, each by reading the two side by side, and
+        # two bodies with one answer are two answers the day either moves.
+        "what": "two functions with one body",
+        "file": "src/types.c",
+        "from": """    return type != NULL && type->tag == KEST_T_INT && !type->is_signed;""",
+        "to": """    return type != NULL && type->tag == KEST_T_FLOAT && type->width == 32;""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "are written the same",
+    },
+    {
+        # A body written down as one said twice, which is not. A reason beside
+        # a pair holds the pair; a reason beside nothing reads as one thing
+        # held and is nothing.
+        "what": "a body written down as said twice and not",
+        "file": "tools/check-tables.sh",
+        "from": """SAME_BODY = {}""",
+        "to": """SAME_BODY = {"return 0;"}""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "written down as said twice and is not",
+    },
+    {
         # The exact pass asked where the family pass found nothing, which is a
         # walk that cannot find anything: what fits exactly fits the family.
         # Asked where the first left more than one standing is the whole of

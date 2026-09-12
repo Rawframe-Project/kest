@@ -1814,6 +1814,77 @@ for name in sorted(holding):
           "they are held in step" % (name, where, holding[name]))
     failed = 1
 
+# And a body in `src` written once. Three turns running found one question
+# answered in two places -- the default width of a literal, whether a literal
+# fits, whether a type is the narrower float -- and each was found by reading
+# the two side by side. Nothing held them together, and two bodies with one
+# answer are two answers the day either moves. See D769.
+#
+# A body under twenty characters once the comments and the spacing are out of
+# it is not read: `return NULL;` and `(void)runtime;` are what a signature
+# makes somebody write, and two of those are not one thing said twice.
+SAME_BODY = {}
+
+
+def body_bare(text):
+    """A body with what a reader adds taken out of it."""
+    text = re.sub(r"//[^\n]*", "", text)
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def body_list(path):
+    """Every function body in a file, by the line its head begins on."""
+    body_lines = open(path).read().split("\n")
+    body_found = []
+    body_from = 0
+    while body_from < len(body_lines):
+        body_head = body_lines[body_from]
+        # A definition starts at the margin and opens its body on the same
+        # line, which is what this tree's own form does with every one of
+        # them. A declaration ends in a semicolon and never gets here.
+        if (body_head and not body_head[0].isspace()
+                and body_head.rstrip().endswith("{") and "(" in body_head
+                and not body_head.startswith(("#", "//", "}"))):
+            body_depth = 0
+            body_held = []
+            body_to = body_from
+            while body_to < len(body_lines):
+                body_depth += (body_lines[body_to].count("{")
+                               - body_lines[body_to].count("}"))
+                if body_to > body_from:
+                    body_held.append(body_lines[body_to])
+                if body_depth == 0 and body_to > body_from:
+                    break
+                body_to += 1
+            body_found.append((body_bare("\n".join(body_held[:-1])),
+                               body_from + 1))
+            body_from = body_to
+        body_from += 1
+    return body_found
+
+
+body_places = {}
+bodies = 0
+for body_path in sorted(glob.glob(os.path.join("src", "*.c"))):
+    for body_text, body_line in body_list(body_path):
+        if len(body_text) < 20:
+            continue
+        bodies += 1
+        body_places.setdefault(body_text, []).append(
+            "%s:%u" % (body_path, body_line))
+some("the bodies of `src`", body_places)
+for body_text, body_where in sorted(body_places.items()):
+    if len(body_where) < 2 or body_text in SAME_BODY:
+        continue
+    print("bodies: %s are written the same, and one body said twice is two "
+          "the day either moves" % " and ".join(body_where))
+    failed = 1
+for body_text in SAME_BODY:
+    if len(body_places.get(body_text, [])) < 2:
+        print("bodies: a body is written down as said twice and is not")
+        failed = 1
+
 FROM_A_MACHINE = ("check-costs.sh", "check-ceilings.sh", "check.sh")
 for named in FROM_A_MACHINE:
     where = os.path.join("tools", named)
@@ -1839,13 +1910,14 @@ if not failed:
           "said, "
           "and %u pairs of widths "
           "in %u module(s) written in both, and %u answers a host is given "
-          "read by every host that reads one"
+          "read by every host that reads one, and %u bodies of `src` are each "
+          "written once"
           % (len(ops), len(toks), len(held), len(checked), len(writable),
              len(reasons), len(listed),
              len(tools), pythons, shells, len(reading), len(only_a_hole),
              len(NOT_REACHED),
              len(every_code), sentences, len(HELD), halves // 2,
-             len(in_widths), len(ANSWERS)))
+             len(in_widths), len(ANSWERS), bodies))
 
 sys.exit(failed)
 PY
