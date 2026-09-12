@@ -26,6 +26,10 @@ typedef struct {
     // write the case at all — so neither is asked. See D726.
     bool from_let;
     bool read;
+    // And whether it was an `if let` rather than a `let`, which changes what
+    // to do about it: a `let` nothing reads comes out, and an `if let` nothing
+    // reads is a question asked the long way. See D728.
+    bool from_if_let;
 } Local;
 
 typedef struct {
@@ -206,10 +210,16 @@ static void drop_locals(Checker *checker, uint32_t mark) {
         kest_diags_add(checker->program->diags, KEST_SEVERITY_WARNING, "K0512",
                        local->span, "nothing in this body reads `%s`",
                        local->name);
-        kest_diags_suggest(checker->program->diags,
-                           "take it out: a local is a name for a value in one "
-                           "body, and one nothing reads is a value nobody "
-                           "asked for");
+        if (local->from_if_let) {
+            kest_diags_suggest(checker->program->diags,
+                               "ask whether it holds anything instead: "
+                               "`if what != none`");
+        } else {
+            kest_diags_suggest(checker->program->diags,
+                               "take it out: a local is a name for a value in "
+                               "one body, and one nothing reads is a value "
+                               "nobody asked for");
+        }
     }
     checker->local_count = mark;
 }
@@ -256,7 +266,7 @@ static void declare_local(Checker *checker, KestSpan span, KestType *type) {
     // See D726.
     Local *local = &checker->locals[checker->local_count++];
     Local fresh = {name, type, span, checker->depth, false, false, false,
-                   false, false};
+                   false, false, false};
     *local = fresh;
 }
 
@@ -3501,6 +3511,15 @@ static KestType *check_branch(Checker *checker, KestExpr *expr,
     checker->depth++;
     if (held != NULL) {
         declare_local(checker, branch->binding, held);
+        // Asked about like a `let`, because an `if let` whose name nothing
+        // reads is a program that meant `!= none` and had no way to write it
+        // until D727. A `while let` is not asked: a loop that runs while there
+        // is something has no other form, since a condition that only asks
+        // takes nothing out and runs for ever. See D728.
+        if (checker->local_count > 0) {
+            checker->locals[checker->local_count - 1].from_let = true;
+            checker->locals[checker->local_count - 1].from_if_let = true;
+        }
     }
     KestType *given = NULL;
     if (branch->then_value != NULL) {

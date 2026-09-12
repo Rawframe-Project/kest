@@ -27922,3 +27922,31 @@ the answer and not the value has no way to say so — `while newest(queue) != no
 is an infinite loop, because nothing takes the thing out. Find whether that shape
 exists in this tree, and whether the answer is a loop that asks or a program that
 was going to take the value anyway.
+
+## It does not exist, and the reason is the rule
+
+There is one `while let` in this tree and it reads what it binds. The shape the
+question was about — a loop that runs while there is something and never looks at
+it — has no other form to be written in: a condition that only asks takes nothing
+out of what it is asking about, so it runs for ever. The name is not decoration
+there; it is what makes the loop end.
+
+That is the rule the last three turns have been circling, said once: a warning is
+worth making only where the program had another way to say it. So `while let`
+stays unasked, and `if let` — which was on that list for the same reason until
+`!= none` existed — is asked about now, and told something else than a `let` is.
+A `let` nothing reads comes out; an `if let` nothing reads is a question asked
+the long way, and taking the binding out would take the question with it.
+
+The tree is clean of both, because yesterday's twenty-one rewrites were exactly
+this warning's work done by hand. Recorded as D728.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same rule, asked of what a `for` binds. `for i, x in xs` binds a
+position and an element, and a program that wants only the element writes a name
+for the position it never reads — which does have another form, `for x in xs`,
+so the rule says ask. What a `for` binds when there is only one name does not:
+`for x in xs` with nothing reading `x` is how a program says how many times to go
+round. Find whether the position is worth asking about, and how often this tree
+writes one it does not read.

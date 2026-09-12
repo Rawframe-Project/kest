@@ -9888,7 +9888,7 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "what": "a local that keeps what the last one at its place left",
         "file": "src/check.c",
         "from": """    Local fresh = {name, type, span, checker->depth, false, false, false,
-                   false, false};
+                   false, false, false};
     *local = fresh;""",
         "to": """    local->name = name;
     local->type = type;
@@ -9933,6 +9933,21 @@ fn main() -> i32 {
 }
 """,
         "caught": "left the stack one along",
+    },
+    {
+        # An `if let` whose name nothing reads, asked about like any other
+        # local and told to come out. What to do about one is not what to do
+        # about a `let`: the question it is asking the long way has a short
+        # way now, and a program told to take the binding out would lose the
+        # question with it.
+        "what": "an `if let` nothing reads, told what a `let` is told",
+        "file": "src/check.c",
+        "from": """            checker->locals[checker->local_count - 1].from_if_let = true;""",
+        "to": """            checker->locals[checker->local_count - 1].from_let = true;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0512 said",
     },
     {
         # One of the three doors that answer into a `KestLimits` leaving the

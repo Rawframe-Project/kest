@@ -20304,3 +20304,27 @@ Twenty-one places are written the new way now, and the two library functions are
 one line each: `return find(subject, needle) != none`. What is left of the 33 is
 what a `for` binds and what a `match` case binds, which are the two D726 does not
 ask about.
+
+## D728: asked where there was another way to say it
+
+*Argued.* D726 asked about a `let` nothing reads and left every other binding
+alone, because a `for`'s name is how a program says how many times to go round
+and a case's name is the only way to write the case at all. An `if let` was in
+that list for the same reason — there was no other way to ask an optional whether
+it holds anything — and D727 took the reason away.
+
+So an `if let` whose name nothing reads is asked about now, and told something
+else than a `let` is: a `let` nothing reads comes out, and this one is a question
+asked the long way. Telling it to take the binding out would be telling it to
+take the question with it.
+
+A `while let` stays unasked, and the line is the same one: a loop that runs while
+there is something has no other form. A condition that only asks takes nothing
+out of what it is asking about, so it runs for ever — the name is not decoration
+there, it is what makes the loop end. The one in this tree reads what it binds
+anyway.
+
+The rule under all three is that a warning is worth making only where the program
+had another way to say it. That is why this could not have been written before
+yesterday and why it is worth writing today, and it is the same measurement:
+twenty-one places in this tree were the long way round, and there are none left.

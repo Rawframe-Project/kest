@@ -4128,9 +4128,24 @@ warning[K0512]: nothing in this body reads `spare`
 That is the one of these nobody at all can be relying on: no host can ask for a
 local and no other file can name one, so a `let` nothing reads is a value worked
 out for nobody. Writing to one is not reading it — `x = 6` and nothing else still
-says this — and the names a `for` binds and a `match` case binds are not `let`s:
-one is how a program says how many times to go round, and the other is the only
-way to write the case at all.
+says this.
+
+An `if let` whose name nothing reads is asked about too, and told something else:
+
+```
+warning[K0512]: nothing in this body reads `there`
+      ask whether it holds anything instead: `if what != none`
+```
+
+because that one is a question asked the long way rather than a value nobody
+wanted, and taking the binding out would take the question with it. A `while let`
+is not asked. A loop that runs while there is something has no other form — a
+condition that only asks takes nothing out and runs for ever — so a name it never
+reads is the only way to write what it writes.
+
+The names a `for` binds and a `match` case binds are not asked either: one is how
+a program says how many times to go round, and the other is the only way to write
+the case at all.
 
 All four are said about the file that was named and not about what it imported,
 since a library is named by whoever imports it and would light up from end to
