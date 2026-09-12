@@ -10399,6 +10399,20 @@ fn main() -> i32 {
         "caught": "K0329 said",
     },
     {
+        # Which eight of the candidates a diagnostic shows. The first eight
+        # declared are eight in an order that has nothing to do with what was
+        # called, so the one a reader meant can be the one left out.
+        "what": "the eight candidates shown chosen by nothing",
+        "file": "src/check.c",
+        "from": """            scored[c] = (type->param_count == expr->call.arg_count ? 64 : 0) +
+                        agrees;""",
+        "to": """            scored[c] = 0 * agrees;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0329 said",
+    },
+    {
         # A rule said without the name it is about. A reader holding `Empty<T>`
         # was once shown `let p: Pair<i32, text> = Pair(1, "a")`, which names
         # neither their shape nor their type name; what is left to get wrong is

@@ -1654,19 +1654,58 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
                             : "more than one `%.*s` takes these",
                (int)expr->call.callee->span.length,
                span_text(checker, expr->call.callee->span));
-        for (uint32_t c = 0; c < count; c++) {
+        // Which eight. A diagnostic holds eight places and counts the rest,
+        // and the first eight declared are eight in an order that has nothing
+        // to do with what was called: a reader is looking for the one they
+        // meant, so the near misses go first. Taking as many as were passed
+        // counts for more than agreeing about any of them, because a call of
+        // the wrong length is a different mistake from a call of the wrong
+        // kinds. Ties keep the order they were declared in, which is the only
+        // order that is not this compiler's opinion. See D763.
+        uint32_t order[16];
+        uint32_t scored[16];
+        uint32_t listed = count < 16 ? count : 16;
+        for (uint32_t c = 0; c < listed; c++) {
+            const KestType *type = candidates[c]->type;
+            uint32_t agrees = 0;
+            for (uint32_t i = 0; i < argument_count && i < type->param_count;
+                 i++) {
+                if (given[i] != NULL &&
+                    kest_type_equal(given[i], type->params[i])) {
+                    agrees++;
+                }
+            }
+            scored[c] = (type->param_count == expr->call.arg_count ? 64 : 0) +
+                        agrees;
+            order[c] = c;
+        }
+        for (uint32_t a = 0; a + 1 < listed; a++) {
+            uint32_t best = a;
+            for (uint32_t b = a + 1; b < listed; b++) {
+                if (scored[order[b]] > scored[order[best]]) {
+                    best = b;
+                }
+            }
+            uint32_t moved = order[best];
+            for (uint32_t b = best; b > a; b--) {
+                order[b] = order[b - 1];
+            }
+            order[a] = moved;
+        }
+        for (uint32_t c = 0; c < listed; c++) {
+            const KestSymbol *one = candidates[order[c]];
             char shape[256];
             int used = 0;
-            for (uint32_t p = 0; p < candidates[c]->type->param_count &&
-                                 used >= 0 && (size_t)used < sizeof(shape);
+            for (uint32_t p = 0; p < one->type->param_count && used >= 0 &&
+                                 (size_t)used < sizeof(shape);
                  p++) {
                 used += snprintf(shape + used, sizeof(shape) - (size_t)used,
                                  "%s%s", p == 0 ? "" : ", ",
                                  kest_type_name(checker->program->arena,
-                                                candidates[c]->type->params[p]));
+                                                one->type->params[p]));
             }
             shape[used < 0 ? 0 : used] = '\0';
-            kest_diags_note(diags, candidates[c]->source, candidates[c]->span,
+            kest_diags_note(diags, one->source, one->span,
                             "this one takes (%s)", shape);
         }
         for (uint32_t i = 0; i < expr->call.arg_count; i++) {

@@ -21600,3 +21600,38 @@ the function that keeps its place, and there is no flag to get wrong.
 The call chain a machine walks keeps room for its own last note and says `and %u
 more under it`, which is the same rule arrived at from the other side: the
 sentence that says how much was left out is worth a place of its own.
+
+## D763: the eight a refusal shows are the near misses
+
+*Argued.* `K0329` lists what it found when a call names several functions of one
+name and none of them fits. It listed them in the order they were declared, and
+a diagnostic holds eight, so a program with ten of them showed the first eight
+and counted the rest.
+
+The order they were declared in has nothing to do with what was called. Ten
+`pick`s, nine taking two numbers and the tenth taking one piece of text, called
+with `pick(true)`: the only one that takes as many arguments as were passed is
+the tenth, and it was the one left out. A reader is told `no `pick` takes these`,
+shown eight that take two of something, and told there are two more places
+somewhere.
+
+So the near misses go first. Taking as many as were passed counts for more than
+agreeing about any of them, because a call of the wrong length is a different
+mistake from a call of the wrong kinds; within that, the ones that agree about
+most of the arguments. Ties keep the order they were declared in, which is the
+only order that is not this compiler's opinion.
+
+```
+error[K0329]: no `pick` takes these
+   |            ^^^^^^^^^^
+  --> near.kest:39:4
+   |
+39 | fn pick(a: text) -> i32 {
+   |    ^^^^ this one takes (text)
+```
+
+*What this does not do is guess.* The ordering says which eight to show and
+nothing else: no candidate is named as the one that was meant, because a refusal
+that says none of them fits and then points at one is two answers. What a reader
+gets is the eight worth reading, which is what the eight were always supposed to
+be.

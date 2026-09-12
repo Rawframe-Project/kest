@@ -3992,7 +3992,11 @@ worse than one that does not, so the names are said as names — `` `T` ``, or
 `` `A` and `B` `` — and where they were written is what the note carries.
 
 A diagnostic holds eight places and counts what it could not show — `and 2 more
-places` in the words, `leftOut` in the JSON. A note put on a diagnostic that is
+places` in the words, `leftOut` in the JSON. Which eight is not the order they
+were declared in: where a refusal lists what it found, the near misses go first.
+A call that named several functions of one name is shown the ones that take as
+many arguments as were passed before the ones that do not, and of those the ones
+that agree about most of them. A note put on a diagnostic that is
 already finished takes the last place rather than being left out, because what
 reaches back to one is a sentence about the whole of it: which copy of a generic
 a body's sentences are about is not the ninth thing a reader wants, it is what

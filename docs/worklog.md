@@ -29086,3 +29086,31 @@ and names the function at the end of what it shows; the overload refusal says
 the count and nothing about what is in it. Find whether a reader who is told
 three more places were left out can do anything with that, and what the eight
 shown should be chosen by.
+
+## By how near they are
+
+`K0329` listed the candidates in the order they were declared, and the order
+they were declared in has nothing to do with what was called. Ten `pick`s, nine
+taking two numbers and the tenth taking one piece of text, called with
+`pick(true)`: the only one that takes as many arguments as were passed is the
+tenth, and it was the one left out. A reader was told `no `pick` takes these`,
+shown eight that take two of something, and told there were two more places
+somewhere.
+
+The near misses go first now. Taking as many as were passed counts for more than
+agreeing about any of them, because a call of the wrong length is a different
+mistake from a call of the wrong kinds; within that, the ones that agree about
+most of the arguments; ties keep the order they were declared in, which is the
+only order that is not this compiler's opinion.
+
+It says which eight to show and nothing else — no candidate is named as the one
+that was meant, because a refusal that says none of them fits and then points at
+one is two answers. Recorded as D763.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `no `pick` takes these` says what was not found and never what was
+passed. A reader holding it can read the eight shapes and has to work out which
+of them their own call was, which is the one thing the compiler already knows:
+it settled every argument's type before it went looking. Find what it would take
+to say what the call looks like beside what the candidates take.
