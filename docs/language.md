@@ -3835,7 +3835,9 @@ error[K0307]: `player.Player` has no field `healt`
   |                  ^^^^^ did you mean `health`?
 ```
 
-What it offers is something the file can write. A name from a module this file
+What it offers is something the file can write, and never the word that was
+written: `unknown name `vec`, did you mean `vec`?` is a sentence disagreeing with
+itself, and what is wrong there is not the spelling. A name from a module this file
 has not imported is not a spelling to try, so it is not offered as one — and a
 name that is exactly the one asked for, one import away, is not a spelling
 mistake at all:

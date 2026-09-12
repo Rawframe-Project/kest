@@ -570,6 +570,15 @@ static const char *nearest_name(Checker *checker, const char *name,
         }
     }
 
+    // A name offered back as itself says nothing: what was written is what is
+    // unknown. It is the module loop above that reaches this, where a file
+    // writes the name it calls itself somewhere a value goes -- and what is
+    // wrong there is not the spelling. Nothing else can be level with it,
+    // since a word is no distance from itself. See D737.
+    if (found.best != NULL && strlen(found.best) == length &&
+        memcmp(found.best, name, length) == 0) {
+        return NULL;
+    }
     if (found.level > 2) {
         return NULL;
     }

@@ -28152,3 +28152,34 @@ ask it separately — the name walk, the type walk, and `kest_needs_import` behi
 the suggestion machine. Whether they agree is not written down anywhere, and a
 file that imports a module under a name the module does not call itself is the
 shape where they could differ. Find whether one file's reach has one answer.
+
+## They did not agree
+
+`kest_needs_import` had always counted two things as putting a name in reach —
+an import the file wrote, and the module the file itself is — and
+`kest_file_imports`, written last turn, counted only the first. The shape that
+shows it is a file whose own module is named like one the library has: `module
+vec`, declaring `Vec2` itself, was told `` `std.vec` is in the library, and this
+file does not import it `` — advice to import a module that would collide with
+its own name, in place of `did you mean `Vec2`?`.
+
+So the question is asked once now. `kest_file_reaches` answers whether a file
+may write an alias in front of a name, and `kest_needs_import` is that question
+turned round: one line. Three walks, one answer, and it cannot drift because
+there is only one of it. Recorded as D736.
+
+Measuring that turned up a second thing. A file writing the name it calls itself
+where a value goes now reached the spelling machine, which offers module names —
+and a file's own module is one it may write, at no distance from what was
+written. `unknown name `vec`, did you mean `vec`?`. A candidate spelling the same
+as what was asked about is dropped, and nothing is said; nothing can be level
+with it, since a word is no distance from itself. Recorded as D737.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** what that file is actually doing is naming a module where a value
+goes, and nothing says so — the error is `unknown name`, which is true and is
+not what happened. There is already a refusal for the neighbouring mistake, a
+type named where a value goes, and it reads `` `P` is a type, and this wants a
+value ``. Find whether a module can be told apart from an unknown name at the
+point the name walk gives up, and what it would cost to know.

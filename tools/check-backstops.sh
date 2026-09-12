@@ -10115,6 +10115,24 @@ fn main() -> i32 {
         "caught": "a file was told to import the module it is",
     },
     {
+        # A spelling offered back as what was written. `unknown name `vec`,
+        # did you mean `vec`?` is two halves of one sentence disagreeing.
+        "what": "a name suggested as itself",
+        "file": "src/check.c",
+        "from": """    if (found.best != NULL && strlen(found.best) == length &&
+        memcmp(found.best, name, length) == 0) {
+        return NULL;
+    }""",
+        "to": """    if (found.best != NULL && strlen(found.best) == length &&
+        memcmp(found.best, name, length) == 0) {
+        found.level = 1;
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a name was offered back as itself",
+    },
+    {
         # The position a `for` binds beside an element, left out of what is
         # asked about. It is the third of the three a program had another way
         # to write — `for x in xs` is the same walk without it — and a walk

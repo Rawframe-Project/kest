@@ -20560,3 +20560,30 @@ cannot drift because there is only one of it.
 The name for it is the reason it exists. `kest_file_imports` asked about
 imports, which is why it was written without the other half; `kest_file_reaches`
 asks what the file may write, which is the question all three walks have.
+
+## D737: a name offered back as itself says nothing
+
+*Found while measuring D736.* With the reach question answered once, a file
+writing the name it calls itself where a value goes reached the spelling machine
+and got this:
+
+```
+error[K0306]: unknown name `vec`
+   |
+16 |     return vec
+   |            ^^^ did you mean `vec`?
+```
+
+The two halves of that disagree. The suggestion comes from the walk that offers
+module names — a module is not declared anywhere to be found in a list, so what
+says one is there is a name registered under it — and a file's own module is a
+name it may write, so it is offered. At no distance from what was written.
+
+A candidate that spells the same as the name asked about is dropped, and nothing
+is said. Nothing else can be level with it: a word is no distance from itself, so
+there is no second answer being thrown away with it.
+
+What is actually wrong in that file is that a module was named where a value
+goes, which is a thing worth saying and is not said yet. Saying nothing is the
+smaller mistake, and what this decision buys is that the sentence no longer
+argues with itself.
