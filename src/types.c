@@ -1416,6 +1416,47 @@ KestType *kest_bound_type(KestProgram *program, const char *name,
     return NULL;
 }
 
+// One sentence for every way a type can be written with the wrong number of
+// type names after it. It was three, and two of them named the shape
+// differently -- `Box` as the reader wrote it and `c.Pair` qualified -- so a
+// reader meeting both in one file was told about two things. It is one thing
+// that happened: what the shape takes, and what was written. The shape is
+// named as the reader wrote it, because a diagnostic about what somebody wrote
+// calls it what they called it, and where it came from is what the note is
+// for. See D756.
+static void wrong_type_count(KestProgram *program, KestSpan where,
+                             const char *name, size_t length, uint32_t takes,
+                             uint32_t written, const KestType *shape,
+                             const char *written_as) {
+    char wanted[32];
+    char given[32];
+    if (takes == 0) {
+        snprintf(wanted, sizeof(wanted), "no types");
+    } else {
+        snprintf(wanted, sizeof(wanted), "%u type%s", takes,
+                 takes == 1 ? "" : "s");
+    }
+    if (written == 0) {
+        snprintf(given, sizeof(given), "none are");
+    } else {
+        snprintf(given, sizeof(given), "%u %s", written,
+                 written == 1 ? "is" : "are");
+    }
+    kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0302", where,
+                   "`%.*s` takes %s, and %s written here", (int)length, name,
+                   wanted, given);
+    if (takes == 0) {
+        kest_diags_suggest(program->diags, "write it without them: `%.*s`",
+                           (int)length, name);
+    } else if (written_as != NULL) {
+        kest_diags_suggest(program->diags, "write them: `%s`", written_as);
+    }
+    if (shape != NULL && shape->declared_in != NULL) {
+        kest_diags_note(program->diags, shape->declared_in, shape->span,
+                        "declared here");
+    }
+}
+
 static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     const char *name = program->source->text + ref->name.offset;
     size_t length = ref->name.length;
@@ -1429,12 +1470,9 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
 
     KestType *type = kest_lookup_type(program, name, length);
     if (type != NULL && type->type_param_count > 0) {
-        kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0302", ref->name,
-                       "`%.*s` takes %u type%s, and none are written here",
-                       (int)length, name, type->type_param_count,
-                       type->type_param_count == 1 ? "" : "s");
-        kest_diags_suggest(program->diags, "write them: `%s`",
-                           kest_type_shape(program, program->arena, type));
+        wrong_type_count(program, ref->name, name, length,
+                         type->type_param_count, 0, type,
+                         kest_type_shape(program, program->arena, type));
         return error_type(program);
     }
     // The absence of a value is registered under a name so the compiler can
@@ -1838,12 +1876,12 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                     args[i] = kest_resolve_type_ref(program, ref->args[i]);
                 }
                 if (ref->arg_count != shape->type_param_count) {
-                    kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0302",
-                                   ref->span,
-                                   "`%s` takes %u type%s, found %u",
-                                   shape->name, shape->type_param_count,
-                                   shape->type_param_count == 1 ? "" : "s",
-                                   ref->arg_count);
+                    wrong_type_count(program, ref->span, name,
+                                     ref->name.length,
+                                     shape->type_param_count, ref->arg_count,
+                                     shape,
+                                     kest_type_shape(program, program->arena,
+                                                     shape));
                     return error_type(program);
                 }
                 return kest_struct_of(program, shape, args, count);
@@ -1854,18 +1892,8 @@ KestType *kest_resolve_type_ref(KestProgram *program,
             // as itself, which is D737's mistake in the other walk.
             // See D755.
             if (shape != NULL && shape->tag != KEST_T_ERROR) {
-                kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0302",
-                               ref->span, "`%s` takes no types, and %u %s "
-                               "written here",
-                               shape->name, ref->arg_count,
-                               ref->arg_count == 1 ? "is" : "are");
-                kest_diags_suggest(program->diags,
-                                   "write it without them: `%.*s`",
-                                   (int)ref->name.length, name);
-                if (shape->declared_in != NULL) {
-                    kest_diags_note(program->diags, shape->declared_in,
-                                    shape->span, "declared here");
-                }
+                wrong_type_count(program, ref->span, name, ref->name.length, 0,
+                                 ref->arg_count, shape, NULL);
                 return error_type(program);
             }
             kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0302",
@@ -1888,9 +1916,9 @@ KestType *kest_resolve_type_ref(KestProgram *program,
             return error_type(program);
         }
         if (ref->arg_count != 1) {
-            kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0302",
-                           ref->span, "`%s` takes one type argument, found %u",
-                           is_ref ? "ref" : "store", ref->arg_count);
+            wrong_type_count(program, ref->span, name, ref->name.length, 1,
+                             ref->arg_count, NULL,
+                             is_ref ? "ref<T>" : "store<T>");
             return error_type(program);
         }
         return compose(program, is_ref ? KEST_T_REF : KEST_T_STORE,

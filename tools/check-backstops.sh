@@ -10314,6 +10314,21 @@ fn main() -> i32 {
         "caught": "K0302 said",
     },
     {
+        # The four ways of getting the number of type names wrong, said in four
+        # sentences again. They are one thing that happened, and two of the
+        # four named the shape differently -- as the reader wrote it, and
+        # qualified -- so a reader meeting both in one file was told about two
+        # things.
+        "what": "one mistake about type names, said more than one way",
+        "file": "src/types.c",
+        "from": """                   "`%.*s` takes %s, and %s written here", (int)length, name,""",
+        "to": """                   "`%.*s` takes %s, and %s here", (int)length, name,""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0302 said",
+    },
+    {
         # A copy made per call rather than per set of types. Sixty calls of one
         # generic would then be sixty copies, and what a program pays for
         # reusing one would be what it pays for writing sixty.

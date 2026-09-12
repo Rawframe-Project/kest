@@ -21296,3 +21296,43 @@ thing `unknown` could never have.
 A primitive is answered the same way, since a primitive is a type that takes no
 types: `i32<f32>` says `` `i32` takes no types ``. That was not written for and
 is what falls out of asking about the shape rather than about the brackets.
+
+## D756: one mistake about type names, said once
+
+*Argued, from what a reader would meet.* There were four ways to get the number
+of type names after a type wrong, and four sentences for them:
+
+```
+`Box` takes 1 type, and none are written here
+`c.Pair` takes 2 types, found 1
+`a.Plain` takes no types, and 1 is written here
+`ref` takes one type argument, found 2
+```
+
+One thing has happened in all four — a shape takes some number of type names and
+some other number was written — and the four said it four ways. Two of them named
+the shape as the reader wrote it and two qualified, so a reader who met both in
+one file was told about two things: `Box` and `c.Pair` do not look like the same
+kind of name. One said `found 1` and one said `1 is written here`. One counted
+in words and three in numbers.
+
+It is one sentence now, from one place:
+
+```
+`Plain` takes no types, and 1 is written here
+`Box` takes 1 type, and none are written here
+`Pair` takes 2 types, and 1 is written here
+`ref` takes 1 type, and 2 are written here
+```
+
+*What a diagnostic calls a shape.* As the reader wrote it. A diagnostic about
+what somebody wrote calls it what they called it — the qualified name is about
+where it came from, and where it came from is what the note is for. So the note
+carries the declaration, which the qualified name was standing in for and did
+worse: `c.Pair` says which module and not which line.
+
+*And the suggestion follows the count rather than the sentence.* A shape that
+takes none is told to write it without them; one that takes some is told what
+they are, which for a declared shape is `kest_type_shape` and for the two the
+language has is `ref<T>` and `store<T>`. Those two were the fourth wording and
+are not a special case of anything: what they take is one.

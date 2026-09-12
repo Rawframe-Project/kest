@@ -3200,7 +3200,7 @@ K0106|fn main() -> i32 {\n    let b = 'a\n    return 0\n}|closing quote
 K0203|fn main() -> 3 {\n    return 0\n}|expected a type
 K0206|fn Host.name() -> i32 {\n    return 0\n}|names a receiver
 K0301|fn main() -> i32 {\n    let x: Nope = 1\n    return x\n}|unknown type `Nope`
-K0302|struct Box<T> {\n    it: T\n}\n\nfn main() -> i32 {\n    let b: Box<i32, i32> = Box(1)\n    return b.it + 0\n}|takes 1 type, found 2
+K0302|struct Box<T> {\n    it: T\n}\n\nfn main() -> i32 {\n    let b: Box<i32, i32> = Box(1)\n    return b.it + 0\n}|takes 1 type, and 2 are written here
 K0302|fn main() -> i32 {\n    let b: Nope<i32> = 1\n    return 0\n}|unknown generic type `Nope`
 K0309|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let p = P(1, 2)\n    return p.x\n}|has 1 field, found 2
 K0309|enum Door {\n    Open(i32, i32)\n}\n\nfn main() -> i32 {\n    let d = Door.Open(1, 2)\n    return match d {\n        Open(a) -> a\n    }\n}|carries 2 things, and 1 name was given
@@ -3297,7 +3297,7 @@ K0356|fn note(n: i32) {\n}\n\nfn main() -> i32 {\n    let a = note(1)\n    retur
 K0356|fn note(n: i32) {\n}\n\nfn main() -> i32 {\n    let a = [note(1)]\n    return len(a)\n}|this gives nothing back, and an array holds values
 K0357|fn f() -> void {\n}\n\nfn main() -> i32 {\n    f()\n    return 0\n}|`void` is not a type this language writes
 K0345|enum D {\n    A\n    B\n}\n\nfn main() -> i32 {\n    let d = D.A\n    let a = match d {\n        A { 1 }\n        B { 2 }\n    }\n    return a\n}|this `match` gives nothing, and every arm ends in a value
-K0302|fn main() -> i32 {\n    let r: ref<i32, i32> = 0\n    return 0\n}|`ref` takes one type argument, found 2
+K0302|fn main() -> i32 {\n    let r: ref<i32, i32> = 0\n    return 0\n}|`ref` takes 1 type, and 2 are written here
 K0303|enum D {\n    A\n    A\n}\n\nfn main() -> i32 {\n    let d = D.A\n    return 0\n}|case `A` is declared twice in `D`
 K0303|flags S: u8 {\n    A\n    A\n}\n\nfn main() -> i32 {\n    let s = S.A\n    return 0\n}|flag `A` is declared twice in `S`
 K0307|struct E {\n}\n\nfn main() -> i32 {\n    let e = E()\n    return e.x\n}|`E` has no field `x`

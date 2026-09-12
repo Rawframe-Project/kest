@@ -28827,3 +28827,41 @@ here `` uses the name as written and `` `c.Pair` takes 2 types, found 1 `` uses
 the qualified one. A reader meeting both in one file is told about two things.
 Find whether the three are one sentence, and what a diagnostic should call a
 shape when the reader wrote it bare.
+
+## Four, and they are one
+
+There were four, not three — `ref` and `store` had a wording of their own:
+
+```
+`Box` takes 1 type, and none are written here
+`c.Pair` takes 2 types, found 1
+`a.Plain` takes no types, and 1 is written here
+`ref` takes one type argument, found 2
+```
+
+Two named the shape as the reader wrote it and two qualified; one said `found 1`
+and one `1 is written here`; one counted in words. One thing had happened in all
+four. It is one sentence from one place now:
+
+```
+`Plain` takes no types, and 1 is written here
+`Box` takes 1 type, and none are written here
+`Pair` takes 2 types, and 1 is written here
+`ref` takes 1 type, and 2 are written here
+```
+
+What a diagnostic calls a shape is what the reader called it. The qualified name
+is about where it came from, and the note carries that better than the name did:
+`c.Pair` says which module, a note says which line. The suggestion follows the
+count rather than the sentence — write it without them, or write them, which for
+a declared shape is its own form and for the two the language has is `ref<T>`
+and `store<T>`. Recorded as D756.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `kest_type_shape` is what the suggestion writes a shape's form with,
+and it is asked for the shape a reader got wrong. What it answers for a generic
+that has never been given types has not been looked at — `Pair<A, B>` is what it
+said here, which is the declaration's own type names rather than anything the
+reader wrote. Find whether that is what a reader wants told, or whether the
+names in it should be the ones they were reaching for.

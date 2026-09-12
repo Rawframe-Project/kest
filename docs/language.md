@@ -3945,7 +3945,7 @@ write them; one that takes none and is written with some is told the other way
 round, because a shape that is not generic is not an unknown generic shape:
 
 ```
-error[K0302]: `a.Plain` takes no types, and 1 is written here
+error[K0302]: `Plain` takes no types, and 1 is written here
   |
 7 | fn take(p: Plain<i32>) -> i32 {
   |            ^^^^^^^^^^ write it without them: `Plain`
@@ -3953,6 +3953,11 @@ error[K0302]: `a.Plain` takes no types, and 1 is written here
 3 | struct Plain {
   |        ^^^^^ declared here
 ```
+
+One sentence for the four ways of getting that number wrong, `ref<T>` and
+`store<T>` included: what the shape takes, and what was written. The shape is
+named as the reader wrote it — a diagnostic about what somebody wrote calls it
+what they called it — and where it came from is what the note carries.
 
 A diagnostic about more than one place says both:
 
