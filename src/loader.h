@@ -51,6 +51,12 @@ typedef struct {
     // for a read that follows no imports, which has no library to speak of.
     // See D734.
     const char *library;
+    // Where the trees are, which is not where everything else is. A tree is
+    // read by the checker and by the compiler and by nothing after them, so it
+    // is given back when the last copy has been compiled. NULL for a read that
+    // parses into whatever arena it was handed, which is what the commands
+    // that stop at a tree want. See D748.
+    KestArena *trees;
 } KestUnits;
 
 // Reads a file, follows its imports, and parses everything reachable. An

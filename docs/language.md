@@ -4041,10 +4041,13 @@ cost.
 
 `held` is what is still held when the answer is written, against `cost` which is
 what was asked for on the way to it. They differ by what a stage left behind for
-nobody: the tokens a file is read into are dead the moment its tree is made — a
-node holds a span into the source and never a token — so they are read into an
-arena of their own and given back there. A ceiling refuses against `cost`,
-because what a host was asked for is the same number whether it was kept or not.
+nobody. The tokens a file is read into are dead the moment its tree is made — a
+node holds a span into the source and never a token — and the tree is dead once
+the last copy of every generic has been compiled and the promise has been held
+against what was emitted. Both are read into arenas of their own and given back
+where the stage that reads them ends, which is about half of what compiling a
+program asks for. A ceiling refuses against `cost`, because what a host was
+asked for is the same number whether it was kept or not.
 
 `nodeBytes` is what one weighs on the machine that answered: fifty-six bytes for
 an expression here, and something else where a pointer is another width. It is

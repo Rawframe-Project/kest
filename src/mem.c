@@ -64,6 +64,12 @@ struct KestArena {
     // ceiling is refused against both, because what a build asked the host for
     // is the same number whether it kept it or not. See D747.
     size_t also;
+    // And how many of those have been given back. What is asked for and what
+    // is held apart by exactly this: an arena taken on another's behalf is
+    // charged where it grows, because a ceiling refuses there, and returned
+    // where it is freed, because that is when the host has the room again.
+    // See D748.
+    size_t returned;
     // How many times it has handed something out. What a block has given away
     // is what was asked for plus the gap the sanitised build keeps after it,
     // so the two numbers agree only when the number of gaps is known. Kept for
@@ -450,11 +456,15 @@ size_t kest_arena_used(const KestArena *arena) {
 }
 
 size_t kest_arena_held(const KestArena *arena) {
-    return arena->handed;
+    return arena->handed + arena->also - arena->returned;
 }
 
 void kest_arena_charge(KestArena *arena, size_t bytes) {
     arena->also += bytes;
+}
+
+void kest_arena_returned(KestArena *arena, size_t bytes) {
+    arena->returned += bytes;
 }
 
 size_t kest_arena_ceiling_left(const KestArena *arena) {

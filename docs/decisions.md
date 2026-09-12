@@ -20944,3 +20944,53 @@ What is not accounted is the block the scratch takes from the host before it has
 a ceiling at all — sixty-four kilobytes, once per file, given straight back. The
 ladder measures what a build asked for rather than what the host gave it, and
 that was true before this too.
+
+## D748: the trees are given back when the last copy is compiled
+
+*Asked of everything, answered by one thing.* What else a stage makes that is
+dead when the stage is: the tree. Two stages read one — the checker and the
+compiler — and nothing after them does. A chunk holds a span and a source
+pointer, a diagnostic holds a span and a source pointer, and the source outlives
+both. So the trees go in an arena of their own, made where the files are loaded
+and freed at the end of `kest_build_emit`, after `kest_module_prove` has held
+the promise against what was emitted.
+
+| | cost | held before | held now |
+|---|---|---|---|
+| `lib/std/text.kest` | 199767 | 175191 | 92583 |
+| `examples/embed.kest` | 590254 | 510399 | 304966 |
+
+A build holds a little over half of what it asked for. A host that compiles at
+startup and keeps the build around was holding every tree of every file it read,
+for nothing.
+
+*Three numbers, because two were not enough.* D747 said an arena counts what it
+asked for and what it holds, and charged a scratch arena to the arena it was
+taken for. That was right for the tokens, which are charged and freed in the
+same breath, and wrong for anything held longer: charging alone made the trees
+look given back from the moment they were made. The backstop found it — the hole
+that keeps the trees caught nothing, because nothing had ever been counted as
+holding them.
+
+So an arena counts three: what it handed out, what was handed out on its behalf,
+and how much of that has come back. Charged where a scratch grows, because that
+is where a ceiling refuses; returned where it is freed, because that is when the
+host has the room again. `used` is the first two and `held` is all three.
+
+*What holds it.* The tree arena is capped at what the build's ceiling leaves,
+re-capped before each file, so a program too big is refused at the file that
+broke it and not a file later. A first version capped at what was already there
+whenever the build had no ceiling at all — nought is what an arena with no
+ceiling answers, and capping at nought-plus-what-is-there is a ceiling of nothing
+left. Every import after the first was refused, and what said so was `math.kest`
+being told it does not import `std.io`.
+
+*And a parser with nothing left says nothing about what it was reading.* The
+walk out of a node that could not be made looks exactly like the walk out of a
+file that is wrong — a NULL where a node goes — so at 4500K a program was told
+`expected end of line, found `let`` about `lib/std/text.kest`, which is in this
+tree and is not wrong. It said `K0639` before this turn and said it again after
+`error_at` was taught to say nothing once the parser is out of memory. What
+changed was where the last block came from: a tree arena of its own asks the
+host for one, and the ladder walked over the rung where that is the ask that
+fails.

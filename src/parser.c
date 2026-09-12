@@ -134,6 +134,16 @@ static void error_at(Parser *parser, KestSpan span, const char *code,
     if (parser->recovering) {
         return;
     }
+    // A parser with nothing left says nothing about what it was reading. The
+    // walk out of a node that could not be made looks exactly like the walk
+    // out of a file that is wrong -- a NULL where a node goes -- so what a
+    // reader would be told is that a line they wrote is bad, about a machine
+    // that ran out. The one thing that happened is said by whoever notices
+    // the answer is no. See D748.
+    if (parser->out_of_memory) {
+        parser->recovering = true;
+        return;
+    }
     // A token the lexer could not read has already been reported, by the one
     // that knows what is wrong with it. Saying something else about the same
     // place is saying it twice, and the second thing is always vaguer.
@@ -2049,6 +2059,7 @@ bool kest_parse(KestArena *arena, const KestSource *source, KestDiags *diags,
         // The bytes it did ask for before it ran out, which is what a ceiling
         // was refusing against.
         kest_arena_charge(arena, kest_arena_used(reading));
+        kest_arena_returned(arena, kest_arena_used(reading));
         kest_arena_free(reading);
         return false;
     }
@@ -2066,6 +2077,7 @@ bool kest_parse(KestArena *arena, const KestSource *source, KestDiags *diags,
         skip_newlines(&parser);
         if (parser.out_of_memory) {
             kest_arena_charge(arena, kest_arena_used(reading));
+            kest_arena_returned(arena, kest_arena_used(reading));
             kest_arena_free(reading);
             return false;
         }
@@ -2076,6 +2088,7 @@ bool kest_parse(KestArena *arena, const KestSource *source, KestDiags *diags,
     unit->nodes = parser.nodes;
     bool read = !parser.out_of_memory;
     kest_arena_charge(arena, kest_arena_used(reading));
+    kest_arena_returned(arena, kest_arena_used(reading));
     kest_arena_free(reading);
     return read;
 }

@@ -4875,11 +4875,30 @@ fn main() -> i32 {
         "what": "a build holding everything it ever asked for",
         "file": "src/mem.c",
         "from": """size_t kest_arena_held(const KestArena *arena) {
-    return arena->handed;
+    return arena->handed + arena->also - arena->returned;
 }""",
         "to": """size_t kest_arena_held(const KestArena *arena) {
     return arena->handed + arena->also;
 }""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "what a stage leaves behind for nobody is given back",
+    },
+    {
+        # The trees, kept after the last stage that reads one. A host that
+        # compiles at startup and keeps the build would then be holding every
+        # tree of every file it read, for nothing: the checker reads a tree and
+        # the compiler reads a tree and nothing after them does.
+        "what": "a tree kept after the last stage that reads it",
+        "file": "src/build.c",
+        "from": """    if (build->units.trees != NULL) {
+        kest_arena_returned(build->arena, kest_arena_used(build->units.trees));
+        kest_arena_free(build->units.trees);
+        build->units.trees = NULL;
+    }
+    return build->compiled;""",
+        "to": """    return build->compiled;""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],

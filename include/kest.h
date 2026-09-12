@@ -783,8 +783,11 @@ size_t kest_build_cost(const KestBuild *build);
 // And what it is still holding, which is what a host that keeps a build around
 // is paying for now rather than what it paid to make one. The two differ by
 // what a stage left behind for nobody: the tokens a file is read into are dead
-// the moment its tree is made, and are given back where they are made. Nought
-// for no build. See D747.
+// the moment its tree is made, and the trees are dead once every copy has been
+// compiled, so both are given back where the stage that reads them ends. A
+// build that was checked and not compiled still holds its trees, because the
+// compiler is one of the two stages that read them. Nought for no build.
+// See D747 and D748.
 size_t kest_build_held(const KestBuild *build);
 
 // Which files that cost was paid for, by position, or NULL past the last of

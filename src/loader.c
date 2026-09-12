@@ -323,7 +323,30 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
     }
 
     kest_diags_in(diags, &info->source);
-    if (!kest_parse(arena, &info->source, diags, &info->unit)) {
+    // The tree goes where the trees go, and what it costs is charged here
+    // rather than when they are given back: a ceiling refuses against what a
+    // build asked for, and a build that asked while reading its fourth file
+    // has to be refused at the fourth file. See D748.
+    KestArena *into = units->trees == NULL ? arena : units->trees;
+    size_t was = units->trees == NULL ? 0 : kest_arena_used(units->trees);
+    // Nought is what an arena with no ceiling answers, and capping at what is
+    // already there is a ceiling of nothing left. Only a build that has one
+    // hands it on.
+    size_t left = units->trees == NULL ? 0 : kest_arena_ceiling_left(arena);
+    if (left != 0) {
+        kest_arena_cap(units->trees, was + left);
+    }
+    bool read = kest_parse(into, &info->source, diags, &info->unit);
+    if (units->trees != NULL) {
+        kest_arena_charge(arena, kest_arena_used(units->trees) - was);
+    }
+    if (!read) {
+        // A tree that could not be made is the host having nothing left, which
+        // is the one thing `kest_parse` answers no for. It used to be the
+        // build's own arena that ran out and the stage above that said so;
+        // the trees have an arena of their own now, and nothing above it is
+        // watching one. See D748.
+        kest_diags_starve(diags);
         return false;
     }
 
@@ -451,6 +474,10 @@ bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
                     char **paths, int count, KestUnits *units) {
     units->library = library;
     if (count <= 0) {
+        return false;
+    }
+    units->trees = kest_arena_new();
+    if (units->trees == NULL) {
         return false;
     }
     const char *root = directory_of(arena, paths[0]);

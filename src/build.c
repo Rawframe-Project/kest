@@ -62,6 +62,14 @@ bool kest_build_emit(KestBuild *build) {
         kest_module_prove(&build->module, build->arena, &build->diags);
     }
     build->compiled = build->diags.error_count == 0;
+    // And the trees, which nothing reads once every copy has been compiled and
+    // the promise has been held against what was emitted. What it cost is
+    // already counted, where each file was read. See D748.
+    if (build->units.trees != NULL) {
+        kest_arena_returned(build->arena, kest_arena_used(build->units.trees));
+        kest_arena_free(build->units.trees);
+        build->units.trees = NULL;
+    }
     return build->compiled;
 }
 
@@ -299,6 +307,12 @@ bool kest_build_free(KestBuild *build) {
                            "free every machine this build made, and then the "
                            "build");
         return false;
+    }
+    // A build that was never compiled still has its trees, because what gives
+    // them back is the last stage that reads them. See D748.
+    if (build->units.trees != NULL) {
+        kest_arena_free(build->units.trees);
+        build->units.trees = NULL;
     }
     kest_arena_free(build->arena);
     return true;

@@ -664,18 +664,23 @@ if (not code_bytes or not ends_inside or compiling is None or
           % (code_bytes, len(compiled), compiling))
     failed = 1
 
-# And what is given back. The tokens a file is read into are dead the moment its
-# tree is made — a node holds a span into the source and never a token — so they
-# are read into an arena of their own and freed where they are made. What the
-# build says it cost is the same number either way, because a ceiling refuses
-# against what was asked for and not against what is still held; what moves is
-# what it holds when it is done. At least one file's tokens, because the library
-# is read with everything it imports and every one of them gives its own back.
-# See D747.
+# And what is given back, which is everything a stage made that the stages after
+# it do not read. The tokens a file is read into are dead the moment its tree is
+# made — a node holds a span into the source and never a token — and the tree is
+# dead when the last copy of every generic has been compiled and the promise has
+# been held against what was emitted. What the build says it cost is the same
+# number either way, because a ceiling refuses against what was asked for and
+# not against what is still held; what moves is what it holds when it is done.
+# At least this file's tokens and this file's nodes, and more than that, because
+# the library is read with everything it imports and every one of them gives its
+# own back. See D747 and D748.
 holding = what_it_said('emit', LIBRARY, 'held')
-if (holding is None or compiling is None or holding >= compiling or
-        token_bytes is None or tokens_read is None or
-        compiling - holding < len(tokens_read) * token_bytes):
+given_back = None
+if holding is not None and compiling is not None:
+    given_back = compiling - holding
+if (given_back is None or given_back <= 0 or token_bytes is None or
+        tokens_read is None or nodes is None or smallest is None or
+        given_back < len(tokens_read) * token_bytes + nodes * smallest):
     print("costs: that library cost %s to read the whole way and holds %s of "
           "it, and what a stage leaves behind for nobody is given back"
           % (compiling, holding))

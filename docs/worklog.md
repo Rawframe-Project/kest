@@ -28504,3 +28504,45 @@ candidate and it is not like the tokens: the checker reads the tree, and so does
 the compiler, and a generic's body is read once per copy — so nothing can be
 given back until every copy is compiled. Find whether anything else a stage
 makes is dead when the stage is, and whether `held` can be made to fall twice.
+
+## It fell twice, and the second one was half
+
+The tree is read by two stages and by nothing after them: a chunk holds a span
+and a source pointer, a diagnostic holds a span and a source pointer, and the
+source outlives both. So the trees go in an arena of their own, freed at the end
+of `kest_build_emit` once `kest_module_prove` has held the promise against what
+was emitted.
+
+| | cost | held before | held now |
+|---|---|---|---|
+| `lib/std/text.kest` | 199767 | 175191 | 92583 |
+| `examples/embed.kest` | 590254 | 510399 | 304966 |
+
+A build holds a little over half of what it asked for. A host that compiles at
+startup was holding every tree of every file it read, for nothing.
+
+Two numbers were not enough. Charging a scratch arena to the one it was taken
+for is right for the tokens, which are charged and freed in the same breath, and
+wrong for anything held longer — it made the trees look given back from the
+moment they were made. The backstop found it: the hole that keeps the trees
+caught nothing, because nothing had ever counted them as held. An arena counts
+three now — handed out, handed out on its behalf, and come back — and `held` is
+all three.
+
+The ceiling ladder found the other one. A parser walks out of a node it could
+not make exactly the way it walks out of a file that is wrong — a NULL where a
+node goes — so at 4500K a program was told `expected end of line, found `let``
+about a library file that is not wrong. `error_at` says nothing once the parser
+is out of memory now. What changed was where the last block came from: a tree
+arena of its own asks the host for one, and the ladder walks over the rung where
+that is the ask that fails. Recorded as D748.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** what is left held is the source, the types and the code. The code is a
+tenth of it and the machine cannot run without it. The source is fifteen
+thousand bytes a file and every diagnostic points into it, so it stays. That
+leaves the types, which the compiler reads and the machine does not — a layout
+is copied into the module, and a chunk names what it calls by symbol. Find
+whether a program's types are dead once it is compiled, and what a host would
+lose by not having them.

@@ -98,6 +98,11 @@ size_t kest_arena_held(const KestArena *arena);
 // the same thing it always meant, and that a ceiling refuses the same programs.
 void kest_arena_charge(KestArena *arena, size_t bytes);
 
+// And says those bytes are the host's again, which is what tells `used` from
+// `held`. Charged where a scratch arena grows, because that is where a ceiling
+// refuses; returned where it is freed, because that is when the room is back.
+void kest_arena_returned(KestArena *arena, size_t bytes);
+
 // How much room a ceiling leaves, for capping a scratch arena the same way:
 // work moved out of this arena is work that must still be refused where this
 // one would have refused it. Nought when there is no ceiling, and one when
