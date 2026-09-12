@@ -664,6 +664,23 @@ if (not code_bytes or not ends_inside or compiling is None or
           % (code_bytes, len(compiled), compiling))
     failed = 1
 
+# And what is given back. The tokens a file is read into are dead the moment its
+# tree is made — a node holds a span into the source and never a token — so they
+# are read into an arena of their own and freed where they are made. What the
+# build says it cost is the same number either way, because a ceiling refuses
+# against what was asked for and not against what is still held; what moves is
+# what it holds when it is done. At least one file's tokens, because the library
+# is read with everything it imports and every one of them gives its own back.
+# See D747.
+holding = what_it_said('emit', LIBRARY, 'held')
+if (holding is None or compiling is None or holding >= compiling or
+        token_bytes is None or tokens_read is None or
+        compiling - holding < len(tokens_read) * token_bytes):
+    print("costs: that library cost %s to read the whole way and holds %s of "
+          "it, and what a stage leaves behind for nobody is given back"
+          % (compiling, holding))
+    failed = 1
+
 was_read = what_it_said('check', LIBRARY, 'read') or []
 source_bytes = what_it_said('check', LIBRARY, 'source')
 on_disk = sum(os.path.getsize(one['file']) for one in was_read)
@@ -711,7 +728,8 @@ if not failed:
           "every hundred of the %u bytes of source it read — "
           "against %u bytes for a program of four lines, %u for one that "
           "prints, %u for one that makes text and %u for one that uses five "
-          "of that module rather than one, and it compiled to %u bytes of "
+          "of that module rather than one, and it holds %u of what it cost "
+          "when it is done, and it compiled to %u bytes of "
           "code, which is %u bytes of memory for every byte of it, "
           "and what one copy of a generic "
           "is made of, which is %u bytes to compile and %u to check for a "
@@ -726,7 +744,7 @@ if not failed:
              compiling * 100 // source_bytes, source_bytes,
              alone_costs,
              printing_costs, making_text_costs, using_five_costs,
-             code_bytes, compiling // code_bytes,
+             holding, code_bytes, compiling // code_bytes,
              flat, flat_checked, deep, deep_checked,
              COPIES, COPIES, one_copy_costs, many_copies_costs))
 sys.exit(failed)

@@ -59,6 +59,11 @@ struct KestArena {
     // allocation and walking the blocks to answer would make an arena slower
     // the longer a program runs.
     size_t handed;
+    // And what was handed out on its behalf by an arena that has since been
+    // given back: the tokens a file is read into live in one of those. A
+    // ceiling is refused against both, because what a build asked the host for
+    // is the same number whether it kept it or not. See D747.
+    size_t also;
     // How many times it has handed something out. What a block has given away
     // is what was asked for plus the gap the sanitised build keeps after it,
     // so the two numbers agree only when the number of gaps is known. Kept for
@@ -320,7 +325,8 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
     // is left with a hole in it has handed that hole out to nobody.
     size_t taking = fresh ? size : offset + size - arena->head->used;
     // Asked before a block is taken from the host, so a refusal costs nothing.
-    if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
+    if (arena->ceiling != 0 &&
+        arena->handed + arena->also + taking > arena->ceiling) {
         arena->refused = taking;
         arena->refused_by_ceiling = true;
         return NULL;
@@ -376,7 +382,8 @@ void *kest_arena_extend(KestArena *arena, void *last, size_t was,
     }
     size_t offset = (size_t)((unsigned char *)last - block->data);
     size_t taking = want - was;
-    if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
+    if (arena->ceiling != 0 &&
+        arena->handed + arena->also + taking > arena->ceiling) {
         arena->refused = taking;
         arena->refused_by_ceiling = true;
         return NULL;
@@ -439,7 +446,27 @@ bool kest_arena_refused_by_ceiling(const KestArena *arena) {
 }
 
 size_t kest_arena_used(const KestArena *arena) {
+    return arena->handed + arena->also;
+}
+
+size_t kest_arena_held(const KestArena *arena) {
     return arena->handed;
+}
+
+void kest_arena_charge(KestArena *arena, size_t bytes) {
+    arena->also += bytes;
+}
+
+size_t kest_arena_ceiling_left(const KestArena *arena) {
+    if (arena->ceiling == 0) {
+        return 0;
+    }
+    size_t used = arena->handed + arena->also;
+    // One rather than nought for an arena already at its ceiling, because
+    // nought is what an arena with no ceiling says and the two are not the
+    // same thing: a scratch that may have nothing is not a scratch that may
+    // have everything.
+    return arena->ceiling > used ? arena->ceiling - used : 1;
 }
 
 void kest_arena_cap(KestArena *arena, size_t bytes) {

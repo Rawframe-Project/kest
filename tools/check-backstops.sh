@@ -4312,7 +4312,8 @@ _Static_assert(MAX_EXTERNS > 1024, "a program may ask for plenty of names");""",
         # never a budget.
         "what": "a heap ceiling nothing is held to",
         "file": "src/mem.c",
-        "from": '''    if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
+        "from": '''    if (arena->ceiling != 0 &&
+        arena->handed + arena->also + taking > arena->ceiling) {
         arena->refused = taking;
         arena->refused_by_ceiling = true;
         return NULL;
@@ -4652,13 +4653,15 @@ const char *kest_scalar_name(uint8_t kind) {""",
         # same message otherwise, and they are not the same problem.
         "what": "a refusal that does not say what it refused",
         "file": "src/mem.c",
-        "from": """    if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
+        "from": """    if (arena->ceiling != 0 &&
+        arena->handed + arena->also + taking > arena->ceiling) {
         arena->refused = taking;
         arena->refused_by_ceiling = true;
         return NULL;
     }
     if (fresh) {""",
-        "to": """    if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
+        "to": """    if (arena->ceiling != 0 &&
+        arena->handed + arena->also + taking > arena->ceiling) {
         arena->refused_by_ceiling = true;
         return NULL;
     }
@@ -4865,14 +4868,33 @@ fn main() -> i32 {
         "caught": "token(s) it was read into are",
     },
     {
+        # A build that says it holds everything it ever asked for. The tokens a
+        # file is read into are given back where its tree is made, and a number
+        # that does not notice is a number nobody can read a stage's leavings
+        # off.
+        "what": "a build holding everything it ever asked for",
+        "file": "src/mem.c",
+        "from": """size_t kest_arena_held(const KestArena *arena) {
+    return arena->handed;
+}""",
+        "to": """size_t kest_arena_held(const KestArena *arena) {
+    return arena->handed + arena->also;
+}""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "what a stage leaves behind for nobody is given back",
+    },
+    {
         # What reading a file costs, answered with nought. `lex` and `parse`
         # stop where they stop, so the two numbers beside `check` and `emit`
         # are what each stage of reading costs — and a nought there is a stage
         # that looks free, which is the one thing a measurement must not be.
         "what": "a stage of reading that looks free",
         "file": "src/main.c",
-        "from": """                fprintf(stdout, ",\\"cost\\":%zu", kest_arena_used(arena));""",
-        "to": """                fprintf(stdout, ",\\"cost\\":%u", 0U);""",
+        "from": """                fprintf(stdout, ",\\"cost\\":%zu,\\"held\\":%zu",
+                        kest_arena_used(arena), kest_arena_held(arena));""",
+        "to": """                fprintf(stdout, ",\\"cost\\":%u,\\"held\\":%u", 0U, 0U);""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
@@ -5890,8 +5912,10 @@ static int run(const char *command,""",
         # amounts of work say the same thing.
         "what": "a run saying its own work cost nothing",
         "file": "src/main.c",
-        "from": """        fprintf(stdout, ",\\"cost\\":%zu", kest_build_cost(build));""",
-        "to": """        fprintf(stdout, ",\\"cost\\":%zu", (size_t)0);""",
+        "from": """        fprintf(stdout, ",\\"cost\\":%zu,\\"held\\":%zu",
+                kest_build_cost(build), kest_build_held(build));""",
+        "to": """        fprintf(stdout, ",\\"cost\\":%zu,\\"held\\":%zu",
+                (size_t)0, (size_t)0);""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
@@ -9236,13 +9260,15 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # program that was inside a number it chose.
         "what": "a ceiling kept that answers as the machine underneath",
         "file": "src/mem.c",
-        "from": """    if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
+        "from": """    if (arena->ceiling != 0 &&
+        arena->handed + arena->also + taking > arena->ceiling) {
         arena->refused = taking;
         arena->refused_by_ceiling = true;
         return NULL;
     }
     if (fresh) {""",
-        "to": """    if (arena->ceiling != 0 && arena->handed + taking > arena->ceiling) {
+        "to": """    if (arena->ceiling != 0 &&
+        arena->handed + arena->also + taking > arena->ceiling) {
         arena->refused = taking;
         arena->refused_by_ceiling = false;
         return NULL;

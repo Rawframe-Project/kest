@@ -20905,3 +20905,42 @@ a node weighs and for the reason D688 gives. The file plus its tokens is what
 lexing may cost, and a quarter over that is the room left in the last doubling —
 a run's worth of tokens never reached. At 1.087 now and 1.65 before, the number
 between them is what the check is written at.
+
+## D747: the tokens are given back where the tree is made
+
+*Asked and answered.* Can a stage's leavings be given back? For the tokens, yes,
+and the reason is a thing the tree already decided: a node holds a `KestSpan`
+into the source and never a token. The source outlives everything, because a
+diagnostic renders the line it points at. So the moment `kest_parse` returns,
+nothing in the program can reach a token again.
+
+*What it cost is one arena.* `kest_parse` makes one for the tokens and frees it
+where it returns. Nothing else changes: the parser reads the array the same way,
+including the places it scans arbitrarily far ahead to tell a compound
+assignment from a comparison, which is why a streaming lexer with a ring buffer
+is not the answer here — the parser wants the whole file at once, and the
+question is only who holds it and for how long.
+
+*Two numbers where there was one.* An arena said how many bytes it had handed
+out. That number is what a ceiling refuses against and what every check in this
+tree is written on, and giving memory back must not move it — a build that asked
+the host for a megabyte asked for a megabyte. So the scratch's usage is charged
+to the arena it was taken for, `kest_arena_used` means exactly what it meant, and
+`kest_arena_held` is the new one: what is still there when the answer is written.
+
+| | cost | held | given back |
+|---|---|---|---|
+| `lib/std/text.kest` | 199767 | 175191 | 24576 |
+| `examples/embed.kest` | 590271 | 510399 | 79872 |
+
+Seventeen per cent of `embed.kest` handed back. And its `cost` fell as well,
+from 617906, which was not the point: a file's token array is the last thing in
+its own arena from the first token to the last, so the extension D746 added never
+fails now, where before another file's allocations could come between.
+
+*The ceiling moves with the work.* A scratch arena is capped at what the build's
+ceiling leaves, so a file too big to read is refused where it was refused before.
+What is not accounted is the block the scratch takes from the host before it has
+a ceiling at all — sixty-four kilobytes, once per file, given straight back. The
+ladder measures what a build asked for rather than what the host gave it, and
+that was true before this too.

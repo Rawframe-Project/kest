@@ -28468,3 +28468,39 @@ is made of them, and after that nothing looks at a token again — but they are 
 the same arena as everything else and live until the build is freed. Find whether
 a stage's leavings can be given back, and what it would cost to have two arenas
 where there is one.
+
+## They can, and it cost one arena
+
+A node holds a span into the source and never a token, and the source outlives
+everything because a diagnostic renders the line it points at — so the moment
+`kest_parse` returns, nothing can reach a token again. It makes an arena for
+them and frees it where it returns.
+
+A streaming lexer would have been better still and is not available: the parser
+scans arbitrarily far ahead in places, to tell a compound assignment from a
+comparison and a generic call from a comparison, so it wants the whole file at
+once. The question was only who holds it and for how long.
+
+Two numbers where there was one. An arena said how many bytes it had handed out,
+which is what a ceiling refuses against and what every check here is written on;
+giving memory back must not move it. So the scratch is charged to the arena it
+was taken for, `kest_arena_used` means what it meant, and `kest_arena_held` is
+the new one.
+
+| | cost | held | given back |
+|---|---|---|---|
+| `lib/std/text.kest` | 199767 | 175191 | 24576 |
+| `examples/embed.kest` | 590271 | 510399 | 79872 |
+
+Seventeen per cent of `embed.kest` handed back — and its `cost` fell from 617906
+as well, which was not the point: a file's token array is now the last thing in
+its own arena from first token to last, so D746's extension never fails, where
+before another file's allocations could come between. Recorded as D747.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `held` is a number with one thing in it. The tree is the next
+candidate and it is not like the tokens: the checker reads the tree, and so does
+the compiler, and a generic's body is read once per copy — so nothing can be
+given back until every copy is compiled. Find whether anything else a stage
+makes is dead when the stage is, and whether `held` can be made to fall twice.

@@ -87,6 +87,23 @@ char *kest_arena_strndup(KestArena *arena, const char *text, size_t len);
 // rather than a thing to argue about.
 size_t kest_arena_used(const KestArena *arena);
 
+// And how many it is still holding, which is the same number until something
+// is given back. What a stage leaves behind for the next one is the difference:
+// the tokens a file is read into are dead the moment its tree is made, and an
+// arena that has given them back says so here and not above. See D747.
+size_t kest_arena_held(const KestArena *arena);
+
+// Counts bytes handed out by an arena that has since been freed as bytes this
+// one asked the host for. What it keeps true is that `kest_arena_used` means
+// the same thing it always meant, and that a ceiling refuses the same programs.
+void kest_arena_charge(KestArena *arena, size_t bytes);
+
+// How much room a ceiling leaves, for capping a scratch arena the same way:
+// work moved out of this arena is work that must still be refused where this
+// one would have refused it. Nought when there is no ceiling, and one when
+// there is a ceiling with nothing left under it.
+size_t kest_arena_ceiling_left(const KestArena *arena);
+
 // Whether the last refusal was the ceiling rather than the host. The number
 // above is the same number either way and the two are not the same thing to do
 // anything about: one is a promise this arena kept and the other is the

@@ -102,6 +102,10 @@ size_t kest_build_cost(const KestBuild *build) {
     return build == NULL ? 0 : kest_arena_used(build->arena);
 }
 
+size_t kest_build_held(const KestBuild *build) {
+    return build == NULL ? 0 : kest_arena_held(build->arena);
+}
+
 const char *kest_build_read(const KestBuild *build, uint32_t at) {
     // Past the last one is NULL rather than a refusal, because walking to the
     // end is how a host learns how many there are: a walk that has to ask the

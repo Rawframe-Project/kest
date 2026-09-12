@@ -780,6 +780,13 @@ void kest_build_report(KestBuild *build, FILE *out, KestForm form);
 // reload is reading the same number it read the first time. See D573.
 size_t kest_build_cost(const KestBuild *build);
 
+// And what it is still holding, which is what a host that keeps a build around
+// is paying for now rather than what it paid to make one. The two differ by
+// what a stage left behind for nobody: the tokens a file is read into are dead
+// the moment its tree is made, and are given back where they are made. Nought
+// for no build. See D747.
+size_t kest_build_held(const KestBuild *build);
+
 // Which files that cost was paid for, by position, or NULL past the last of
 // them. A host walks from zero until NULL to learn every one.
 //

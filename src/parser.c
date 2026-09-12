@@ -2031,8 +2031,25 @@ bool kest_parse(KestArena *arena, const KestSource *source, KestDiags *diags,
     parser.arena = arena;
     parser.source = source;
     parser.diags = diags;
-    parser.tokens = kest_lex_all(arena, source, diags, &parser.count);
+
+    // The tokens go in an arena of their own, because nothing wants them once
+    // this returns: a node holds a span into the source and never a token, and
+    // the source outlives everything. What the parser is holding while it
+    // works is one file's tokens rather than every file's. See D747.
+    KestArena *reading = kest_arena_new();
+    if (reading == NULL) {
+        return false;
+    }
+    // The same ceiling, so a file too big to read is refused where it was
+    // refused before: work moved out of an arena is not work moved out of what
+    // a host allowed.
+    kest_arena_cap(reading, kest_arena_ceiling_left(arena));
+    parser.tokens = kest_lex_all(reading, source, diags, &parser.count);
     if (parser.tokens == NULL) {
+        // The bytes it did ask for before it ran out, which is what a ceiling
+        // was refusing against.
+        kest_arena_charge(arena, kest_arena_used(reading));
+        kest_arena_free(reading);
         return false;
     }
 
@@ -2048,6 +2065,8 @@ bool kest_parse(KestArena *arena, const KestSource *source, KestDiags *diags,
         }
         skip_newlines(&parser);
         if (parser.out_of_memory) {
+            kest_arena_charge(arena, kest_arena_used(reading));
+            kest_arena_free(reading);
             return false;
         }
     }
@@ -2055,5 +2074,8 @@ bool kest_parse(KestArena *arena, const KestSource *source, KestDiags *diags,
     unit->items = (KestDecl **)list_taken(&parser, &items);
     unit->count = items.count;
     unit->nodes = parser.nodes;
-    return !parser.out_of_memory;
+    bool read = !parser.out_of_memory;
+    kest_arena_charge(arena, kest_arena_used(reading));
+    kest_arena_free(reading);
+    return read;
 }
