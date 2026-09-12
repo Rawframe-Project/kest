@@ -21723,3 +21723,29 @@ fractions are asked the same way with `f32` and `f64`.
 The backstop is the sharing rather than the value: the default changed in the
 one place changes both, which is the point, so what the hole does is put the
 second answer back.
+
+## D767: whether a literal fits is asked once
+
+*Found by asking what two names for one question were doing.* `literal_fits`
+answers whether a whole number written down fits a type; `check_literal_fits`
+worked the same thing out again — the width, the sign, the one further down than
+up, the sixty-four-bit edge — and reported when it did not. Two walks over one
+rule, agreeing because they had been written the same way twice.
+
+Read side by side they are the same predicate. Unsigned and not negating, both
+are `value <= (1 << width) - 1` with sixty-four handled apart. Unsigned and
+negating, both say no. Signed, both are `value <= (1 << (width - 1))` with one
+taken off when the sign is not there. Overflow, both say no. Nothing was wrong
+with either; what was wrong is that there were two.
+
+`check_literal_fits` asks now, and what is left in it is the words: which of the
+two things happened and what to say about it. A number below nought where there
+is no room below nought at all is told that rather than a size, because the size
+is not what is wrong with it. A number too big to hold at all is told it does
+not fit and not offered the conversion, because there is no value to narrow.
+
+*Measured at the edges, which is where a predicate written twice comes apart:*
+`i8` takes -128 and 127 and refuses 128 and -129; `u64` takes
+18446744073709551615 and refuses a number with more digits than that; `u8`
+refuses -1 in its own words. Every one of those is the same answer it gave
+before.

@@ -29205,3 +29205,30 @@ being given, and `literal_fits` is asked the same thing by the overload walk
 under another name. Two names for one question is what D766 just took out of the
 defaults. Find whether those two are one, and what each of them does that the
 other does not.
+
+## They are the same predicate, written twice
+
+Read side by side: unsigned and not negating, both are `value <= (1 << width) -
+1` with sixty-four handled apart; unsigned and negating, both say no; signed,
+both are `value <= (1 << (width - 1))` with one taken off when the sign is not
+there; overflow, both say no. Nothing was wrong with either. What was wrong is
+that there were two.
+
+`check_literal_fits` asks `literal_fits` now, and what is left in it is the
+words: which of the two things happened and what to say about it. A number below
+nought where there is no room below nought at all is told that rather than a
+size, because the size is not what is wrong with it; a number too big to hold at
+all is not offered the conversion, because there is no value to narrow.
+
+Measured at the edges, which is where a predicate written twice comes apart:
+`i8` takes -128 and 127 and refuses 128 and -129, `u64` takes
+18446744073709551615 and refuses a longer number, `u8` refuses -1 in its own
+words. Every one the same answer as before. Recorded as D767.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `literal_fits` reads the number out of the source every time it is
+asked — `kest_token_integer` over the span — and the overload walk asks it once
+per candidate. Eight candidates is eight readings of the same digits, and the
+refusal that follows reads them a ninth time for the message. Find what a
+literal's value costs to ask for, and whether the answer is worth keeping.

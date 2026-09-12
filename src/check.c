@@ -3204,35 +3204,31 @@ static bool literal_fits(Checker *checker, const KestExpr *expr,
 
 // A literal is written in a type, and one that does not fit in it is a
 // mistake the reader made rather than a value the machine should wrap.
+//
+// Whether it fits is `literal_fits` and nothing else. This worked the limits
+// out again -- the width, the sign, the one further down than up -- and the two
+// agreed by having been written the same way twice, which is what D766 took out
+// of the defaults. What is left here is the words: which of the two things
+// happened, and what to say about it. See D767.
 static void check_literal_fits(Checker *checker, const KestExpr *expr,
                                const KestType *type) {
     if (type == NULL || type->tag != KEST_T_INT) {
         return;
     }
-
-    bool overflow = false;
-    uint64_t value = kest_token_integer(span_text(checker, expr->span),
-                                        expr->span.length, &overflow);
-
-    uint64_t limit;
-    if (!type->is_signed) {
-        if (checker->negating) {
-            report(checker, expr->span, "K0326",
-                   "`%s` holds no negative numbers", type_name(checker, type));
-            return;
-        }
-        limit = type->width == 64 ? UINT64_MAX
-                                  : ((uint64_t)1 << type->width) - 1;
-    } else {
-        // One further down than up, which is why the sign is part of the
-        // question rather than applied to the answer.
-        limit = (uint64_t)1 << (type->width - 1);
-        if (!checker->negating) {
-            limit -= 1;
-        }
+    if (literal_fits(checker, expr, type)) {
+        return;
     }
-
-    if (overflow || value > limit) {
+    // A number below nought where there is no room below nought at all. What
+    // is wrong is not the size of it, so it is not told a size.
+    if (!type->is_signed && checker->negating) {
+        report(checker, expr->span, "K0326", "`%s` holds no negative numbers",
+               type_name(checker, type));
+        return;
+    }
+    bool overflow = false;
+    kest_token_integer(span_text(checker, expr->span), expr->span.length,
+                       &overflow);
+    {
         report(checker, expr->span, "K0326", "%s%.*s does not fit in `%s`",
                checker->negating ? "-" : "", (int)expr->span.length,
                span_text(checker, expr->span), type_name(checker, type));

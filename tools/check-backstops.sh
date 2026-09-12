@@ -10471,6 +10471,24 @@ fn main() -> i32 {
         "caught": "settled on",
     },
     {
+        # Whether a literal fits the type it is written in, worked out twice:
+        # once to answer and once to say so. The two agreed by having been
+        # written the same way, which is the drift D766 took out of the
+        # defaults.
+        "what": "whether a literal fits, worked out twice",
+        "file": "src/check.c",
+        "from": """    if (literal_fits(checker, expr, type)) {
+        return;
+    }""",
+        "to": """    if (literal_fits(checker, expr, type) || type->width >= 8) {
+        return;
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0326 said",
+    },
+    {
         # The exact pass asked where the family pass found nothing, which is a
         # walk that cannot find anything: what fits exactly fits the family.
         # Asked where the first left more than one standing is the whole of
