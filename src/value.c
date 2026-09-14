@@ -184,6 +184,47 @@ int32_t kest_module_entry(const KestModule *module, const char *name) {
     return kest_module_find(module, qualified);
 }
 
+// What making a copy per set of types costs a module, by the rule D612 already
+// wrote down: two chunks written the same and declared in one place are one
+// generic compiled twice. `bodies` comes back as how many were copied at all
+// and the answer as how many chunks those became, so the difference between
+// them is what the rule cost over compiling each body once, and `bytes` is
+// what that difference is in code.
+uint32_t kest_module_copied(const KestModule *module, uint32_t *bodies,
+                            uint32_t *bytes) {
+    uint32_t made = 0;
+    *bodies = 0;
+    *bytes = 0;
+    for (uint32_t i = 0; i < module->count; i++) {
+        const KestChunk *one = module->functions[i];
+        uint32_t same = 0;
+        bool first = true;
+        for (uint32_t j = 0; j < module->count; j++) {
+            const KestChunk *other = module->functions[j];
+            if (one->source != other->source ||
+                one->declared.offset != other->declared.offset ||
+                !kest_word_same(one->wrote, other->wrote,
+                                strlen(other->wrote))) {
+                continue;
+            }
+            if (j < i) {
+                first = false;
+            }
+            same++;
+        }
+        if (same < 2) {
+            continue;
+        }
+        made++;
+        if (first) {
+            (*bodies)++;
+        } else {
+            *bytes += one->code_count;
+        }
+    }
+    return made;
+}
+
 uint32_t kest_module_copies(const KestModule *module, const char *name,
                             int32_t *found, uint32_t room) {
     size_t length = strlen(name);

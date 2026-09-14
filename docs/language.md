@@ -4231,8 +4231,17 @@ than hiding it.
 
 ```json
 { "diagnostics": [], "errors": 0, "cost": 230607, "codeMark": "d02b0a4a1e5c3f81",
-  "folds": 3, "asked": 7 }
+  "folds": 3, "asked": 7, "copies": 66, "copiedBodies": 23,
+  "copiedBytes": 3887 }
 ```
+
+`copies`, `copiedBodies` and `copiedBytes` are what one body written for many
+types cost this program. A copy exists per set of types a generic is called
+with, so the price is the program's rather than the compiler's: `copies` counts
+the chunks that are one of several compiled from one body, `copiedBodies` how
+many bodies those came from, and `copiedBytes` what the ones past the first are
+in code. Two chunks written the same and declared in one place are one generic
+compiled twice, which is the same rule a reader of the list below reads them by.
 
 `folds` is how many values this compiler worked out where they were written: one
 per constant, whatever a program reads it. A constant is worked out at its

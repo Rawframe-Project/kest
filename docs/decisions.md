@@ -22185,3 +22185,54 @@ demonstrates by running.
 *What this says about reading a document against its compiler.* It is worth
 doing once and it is not worth automating, and the way to tell which is to do
 it once and count.
+
+## D778: what one body for many types costs, measured
+
+*Read the document for weight rather than for gaps.* D777 found the document an
+accurate map, so the question turned from where it is wrong to what it is
+expensive. Every rule in this language costs something to keep, and most of them
+cost it once: a refusal is a walk, a warning is a walk, the one form is a walk.
+One rule is different. **One body, many types** is paid per set of types a
+generic is called with, so what it costs a program is not a property of the
+compiler but of the program — and nothing said what it was.
+
+*Time is not the axis.* Reading the library as tokens, as a tree, into types and
+into code is sixty to seventy-five milliseconds over forty runs, which is
+mostly the process starting. Memory is what this tree has measured itself in
+since D745, and the arena already says `cost`, `held`, `askings`, `folds` and
+`asked`. This is the fifth thing worth saying beside them.
+
+*Three numbers, because one cannot be divided by anything.* `copies` is how
+many chunks are one of several compiled from one body; `copiedBodies` is how
+many bodies those came from; `copiedBytes` is what the ones past the first are
+in code. The difference between the first two is what the rule cost over
+compiling each body once.
+
+Which chunks those are is not a new question. D612 already wrote the rule down
+— *two chunks written the same and declared in one place are one generic
+compiled twice* — for a reader of the emitted JSON, and `kest_module_copied`
+asks it of the module directly. Counting by name instead says forty copies from
+sixteen bodies where the module says thirty-three from nine, because an
+overload carries a `#` too and is not a copy of anything. A rule written down
+for a reader is a rule the compiler can be asked.
+
+*What it costs, over the examples as they stand.* Sixty-six copies from
+twenty-three bodies. The forty-three past the first are **3887 of 77810 bytes of
+code, five per cent**, and six of the forty files use a generic at all. The
+worst is `examples/inventory.kest`, where copies are twenty-nine per cent of the
+code — which is what a program that leans on the rule looks like, and is the
+number to remember rather than the five.
+
+*What it buys, counted the same way.* **Fifty of the sixty-six copies promise
+`no.alloc`.** That is the answer to whether the rule is worth it, and it is not
+an argument: a generic that boxed its argument would reach the heap to do it, so
+`no.alloc` through one would be a promise nothing could check. Three quarters of
+what the rule costs is spent on code carrying a proof that the alternative
+cannot make. The remaining quarter buys exact layouts and no indirection per
+field, which are worth something and are not what settles it.
+
+*Held.* `check-costs.sh` says all five numbers and refuses if copies stop
+outnumbering bodies — the rule costing nothing would mean it is not being
+measured — or if fewer than half of them promise anything. The second is the
+one that matters: a day when most of what this costs stops carrying a promise
+is a day to ask the question again, and the check is what will say so.

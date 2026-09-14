@@ -1806,6 +1806,21 @@ static int run(const char *command, const char *executable, char **paths,
                     build->program->folds,
                     build->program->asked_for_nothing);
         }
+        // And what one body written for many types costs this program, which
+        // is the one rule in this language whose price is paid per call site
+        // rather than per line written. Three numbers because one is not
+        // enough to divide by: how many chunks are copies of something, how
+        // many bodies those came from, and how many bytes of code the ones
+        // past the first are. A reader with all three can say what the rule
+        // cost here rather than what it costs in general. See D778.
+        {
+            uint32_t bodies = 0;
+            uint32_t bytes = 0;
+            uint32_t made = kest_module_copied(&build->module, &bodies, &bytes);
+            fprintf(stdout, ",\"copies\":%u,\"copiedBodies\":%u"
+                            ",\"copiedBytes\":%u",
+                    made, bodies, bytes);
+        }
         // And what that cost was paid for: every file this build read, and how
         // many bytes each of them is. A cost on its own is a number with
         // nothing to divide it by — a program that imports the library costs

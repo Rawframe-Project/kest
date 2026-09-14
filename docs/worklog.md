@@ -29557,3 +29557,38 @@ to be an accurate map of the language rather than a list of debts. So stop
 reading it for gaps and read it for weight: find the rule that costs the most to
 keep — in what the compiler does per program, not in lines of it — and measure
 whether what it buys is worth what it costs.
+
+## What one body for many types costs
+
+The document turned out to be an accurate map, so the question became what it
+is expensive to keep rather than where it is wrong. Most rules here cost one
+walk. One is different: a generic is paid for per set of types it is called
+with, so what it costs is a property of the program, and nothing said what.
+
+Time is not the axis — reading the library through every stage is tens of
+milliseconds over forty runs, mostly the process starting. Memory is, and the
+arena already says `cost`, `held`, `askings`, `folds` and `asked`. So a build
+now also says `copies`, `copiedBodies` and `copiedBytes`, asked of the module
+by the rule D612 already wrote down for a reader: two chunks written the same
+and declared in one place are one generic compiled twice. Counting by name
+instead says forty copies from sixteen bodies where the module says thirty-three
+from nine, because an overload carries a `#` and is not a copy.
+
+Over the examples: sixty-six copies from twenty-three bodies, the forty-three
+past the first being 3887 of 77810 bytes of code — five per cent, with six of
+forty files using a generic at all, and `inventory.kest` at twenty-nine per
+cent.
+
+And what it buys, counted the same way: fifty of the sixty-six promise
+`no.alloc`. A generic that boxed its argument would reach the heap to do it, so
+that promise could not exist without the copy. Three quarters of what the rule
+costs is spent on code carrying a proof the alternative cannot make.
+`check-costs.sh` says all five numbers and refuses if fewer than half of them
+promise anything, which is the day to ask again. Recorded as D778.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `inventory.kest` spends twenty-nine per cent of its code on copies,
+from nine bodies. Find which nine, and whether any of them is copied for types
+that make no difference to what is emitted — two copies whose code is the same
+bytes are a copy the rule did not have to make.

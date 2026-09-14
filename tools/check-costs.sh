@@ -457,6 +457,55 @@ def per_copy(command, lines):
 
 
 flat = per_copy('emit', 1)
+# And what the rule costs the tree as it stands, rather than what it costs a
+# program written to show it costing something. A copy is what monomorphising
+# is: `copies` is how many chunks are one of several compiled from one body,
+# `copiedBodies` how many bodies those came from, and `copiedBytes` what the
+# ones past the first are in code. The difference between the first two is what
+# the rule cost over compiling each body once.
+#
+# Measured so the two sides can be read against each other. What it costs is
+# the bytes; what it buys is that a copy is compiled against real types, which
+# is the only way a promise can be proved through one — a generic that boxed
+# its argument would allocate, and `no.alloc` through it would be a promise
+# nothing could check. So the promises are counted beside the bytes, and a day
+# when most of what the rule costs stops carrying one is a day to ask again.
+# See D778.
+copied_total = 0
+copied_bodies = 0
+copied_bytes = 0
+copied_code = 0
+copied_quiet = 0
+for copied_path in sorted(glob.glob(os.path.join('examples', '*.kest'))):
+    copied_ran = subprocess.run(['./kest', 'emit', '--json', copied_path],
+                                capture_output=True, text=True,
+                                stdin=subprocess.DEVNULL,
+                                env=dict(os.environ, KEST_LIB='lib'))
+    copied_said = (json.loads(copied_ran.stdout)
+                   if copied_ran.returncode == 0 else None)
+    if copied_said is None:
+        continue
+    copied_code += sum(one['bytes'] for one in copied_said.get('functions', []))
+    copied_total += copied_said.get('copies', 0)
+    copied_bodies += copied_said.get('copiedBodies', 0)
+    copied_bytes += copied_said.get('copiedBytes', 0)
+    copied_where = {}
+    for one in copied_said.get('functions', []):
+        copied_where.setdefault(
+            (one.get('file'), one.get('line'), one.get('wrote')), []).append(one)
+    for copied_group in copied_where.values():
+        if len(copied_group) > 1:
+            copied_quiet += sum(1 for one in copied_group if one.get('noAlloc'))
+if (copied_total == 0 or copied_bodies == 0 or copied_bytes == 0 or
+        copied_total <= copied_bodies or
+        copied_quiet * 2 <= copied_total):
+    print("costs: %u copies came from %u bodies and the ones past the first "
+          "are %u of %u bytes of code, and %u of them promise `no.alloc` — "
+          "which is what a copy per set of types is for"
+          % (copied_total, copied_bodies, copied_bytes, copied_code,
+             copied_quiet))
+    failed = 1
+
 deep = per_copy('emit', 20)
 flat_checked = per_copy('check', 1)
 deep_checked = per_copy('check', 20)
@@ -809,7 +858,10 @@ if not failed:
           "its body, and its body is paid for when it is compiled — and %u "
           "calls of one generic "
           "against %u generics called once is %u against %u, because a copy "
-          "is paid for and a call is not, all of it measured on the machine "
+          "is paid for and a call is not, and what that rule costs the "
+          "examples as they stand is %u copies from %u bodies, the ones past "
+          "the first being %u of %u bytes of code, of which %u promise "
+          "`no.alloc`, all of it measured on the machine "
           "this ran on"
           % (asked, len(left_to_the_host), driven, proved, kept, len(alone),
              lexing, parsing, nodes, loops, checking, types_made, compiling,
@@ -819,6 +871,8 @@ if not failed:
              askings, code_bytes, room_taken, constants_kept,
              holding, checked_holds, code_bytes, compiling // code_bytes,
              flat, flat_checked, deep, deep_checked,
-             COPIES, COPIES, one_copy_costs, many_copies_costs))
+             COPIES, COPIES, one_copy_costs, many_copies_costs,
+             copied_total, copied_bodies, copied_bytes, copied_code,
+             copied_quiet))
 sys.exit(failed)
 PY

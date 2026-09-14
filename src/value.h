@@ -451,6 +451,9 @@ int32_t kest_module_find(const KestModule *module, const char *name);
 // copy is named `sort#i32`, which is one place in the program and is not a
 // name anybody wrote; this is that place, so that looking a name up and
 // saying why the lookup could not answer agree about what a copy is.
+uint32_t kest_module_copied(const KestModule *module, uint32_t *bodies,
+                            uint32_t *bytes);
+
 uint32_t kest_module_copies(const KestModule *module, const char *name,
                             int32_t *found, uint32_t room);
 // The name a program writes, out of the one a function was compiled under.

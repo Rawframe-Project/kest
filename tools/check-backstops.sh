@@ -1205,6 +1205,21 @@ yield""",
         "caught": "did not all fit in a hole",
     },
     {
+        # A copy counted as a body, which makes the rule look free: every
+        # group of copies would report one body and one copy, and the
+        # difference the check reads -- what monomorphising cost over
+        # compiling each body once -- would be nought. See D778.
+        "what": "a copy of a generic counted as its own body",
+        "file": "src/value.c",
+        "from": r"""        if (first) {
+            (*bodies)++;""",
+        "to": r"""        if (first) {
+            (*bodies) += same;""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "copies came from",
+    },
+    {
         # What a division leaves over, for a float, giving back the sign of
         # what it was divided by rather than the sign of what was divided.
         # Every answer stays right except the negative ones. See D776.
@@ -9270,8 +9285,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # say it is the sentence they read.
         "what": "a machine's numbers said as though they were anybody's",
         "file": "tools/check-costs.sh",
-        "from": '          "is paid for and a call is not, all of it measured on the machine "\n          "this ran on"',
-        "to": '          "is paid for and a call is not"',
+        "from": '          "`no.alloc`, all of it measured on the machine "\n          "this ran on"',
+        "to": '          "`no.alloc`"',
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "caught": "says numbers a machine gave it and does not say",
