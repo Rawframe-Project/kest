@@ -29784,3 +29784,33 @@ question has not been asked of the one arena that is kept rather than given
 back: `held` is 63975 of that 149195. Count what is still held when a build is
 done, by what asked for it, and find whether any of it is dead the moment the
 answer is written.
+
+## What a build holds, by what asked for it
+
+Four entries cut what a build costs by finding room asked for and not used, all
+in arenas given back. What is kept had never been looked at: `held` said 63975
+for the library and nothing said which part was what.
+
+Both halves say now. Of that 63975: the source is 14801 (23.1%), types 7560,
+origins 5632, code 4608, chunks 3384, globals 2304, constants 1024, layouts 564,
+the name table 256, the composed list 64 — and 23778, thirty-seven per cent,
+still unnamed.
+
+Is any of it dead? Almost none. Origins are read when a program fails at the
+line that asked; types are read by the machine asking a layout what it is of;
+globals and the table are read by `kest call`; the source is read by every
+message. The one dead thing is `composed`, the list that makes two `[text]` one
+type — nothing asks it after checking, and it is sixty-four bytes, which is a
+rounding error to build a mechanism for.
+
+What this found is the thirty-seven per cent. Everything the compiler itself
+holds comes to under two thirds; the rest is the loader's — paths, units, and
+where every line of every file begins. Recorded as D784.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the loader holds thirty-seven per cent of what a finished build keeps
+and none of it is named. Four bytes a line for where each line begins is held
+for the life of a build so a message can say `12:7` without counting newlines.
+Count what the loader keeps, the way the module and the checker now do, and find
+what of it outlives the reading.

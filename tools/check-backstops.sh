@@ -1245,6 +1245,17 @@ yield""",
         "caught": "say which type they are the layout of",
     },
     {
+        # A part of what a build holds counted twice, which makes the parts
+        # come to more than the whole and the breakdown say nothing. See D784.
+        "what": "a part of what a build holds counted twice",
+        "file": "src/value.c",
+        "from": r"""        *code += chunk->code_capacity;""",
+        "to": r"""        *code += chunk->code_capacity * 64;""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "a part that is not part of the whole is counted twice",
+    },
+    {
         # A token array doubled again, which is what an array that copies
         # itself grows by. This one grows where it stands, so doubling buys
         # nothing and leaves a third of every array never written to. See D783.

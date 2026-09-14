@@ -22522,3 +22522,54 @@ against one a run writes, and holds no value. That is a gap and it is written
 down rather than closed, because the numbers a document shows are illustrations
 of a shape and holding every one of them to a run would make an example of a
 program into a measurement of this machine.
+
+## D784: what a build holds, by what asked for it
+
+*A total is a number with nothing under it.* Four entries cut what a build costs
+from 171159 to 149195 by finding room asked for and not used, all of it in
+arenas that are given back. What is *kept* had never been looked at: `held` said
+63975 for `lib/std/text.kest` and nothing said which part of that was code,
+which was types, and which was the source it was all cut from.
+
+*So the two halves say what they are holding.* The module says its code and the
+room it sits in, where every instruction came from, the values worked out where
+they stood, the layouts a host is told about, and the chunks those hang off. The
+checker says the types it made, the names it registered, the table it finds them
+in, and the composed types it keeps so that two of one are one.
+
+| | bytes | of `held` |
+| --- | --- | --- |
+| the source it was cut from | 14801 | 23.1% |
+| types | 7560 | 11.8% |
+| origins | 5632 | 8.8% |
+| code | 4608 | 7.2% |
+| chunks | 3384 | 5.3% |
+| globals | 2304 | 3.6% |
+| constants | 1024 | 1.6% |
+| layouts | 564 | 0.9% |
+| found by | 256 | 0.4% |
+| composed | 64 | 0.1% |
+| still unnamed | 23778 | 37.2% |
+
+*Is any of it dead?* That was the question, and the answer is almost none of it.
+The origins are read when a program fails, at the line that asked. The types are
+read by the machine, which asks a layout what it is of to pack a value across
+the host boundary. The globals and the table are read by `kest call`, which
+finds a function by the name somebody typed. The source is read by every
+message. The code, the chunks, the constants and the layouts are the answer.
+
+The one thing that is dead is `composed`, the list that makes two `[text]` one
+type (D780): nothing asks it once checking is done. It is sixty-four bytes.
+Freeing it on its own would be a mechanism for a rounding error, so it is
+written down instead.
+
+*What this found is the thirty-seven per cent.* Everything named above is the
+compiler's own and adds to under two thirds. The rest belongs to the loader —
+the paths it kept, the units it read, and where every line of every file begins,
+which is four bytes a line held for the life of a build so that a message can
+say `12:7` without counting newlines. That is the next thing to weigh, and it
+could not be seen at all until the rest was named.
+
+*Held.* Every number `holds` gives is part of `held`, so the sum of them and the
+source cannot pass it. A part that is not part of the whole is a part counted
+twice, and `check-costs.sh` refuses it.

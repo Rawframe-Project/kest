@@ -62,6 +62,20 @@ double kest_left_over(double left, double right) {
     return left < 0.0 ? -rest : rest;
 }
 
+// What the checker still holds when a build is done, beside what the module
+// does. The types it made, the names it registered and the table it finds them
+// in, the composed types it keeps so that two of one are one, and the copies of
+// generic shapes. Everything left over after these and the module's four is
+// text: names kept out of spans, and the source they were cut from. See D784.
+void kest_program_holds(const KestProgram *program, uint32_t *types,
+                        uint32_t *globals, uint32_t *found_by,
+                        uint32_t *composed) {
+    *types = (uint32_t)(program->types_made * sizeof(KestType));
+    *globals = (uint32_t)(program->global_capacity * sizeof(KestSymbol));
+    *found_by = (uint32_t)(program->by_name_slots * sizeof(uint32_t));
+    *composed = (uint32_t)(program->composed_capacity * sizeof(KestType *));
+}
+
 static const char *span_string(KestProgram *program, KestSpan span) {
     const char *kept = kest_arena_strndup(
         program->arena, kest_span_text(program->source, span), span.length);

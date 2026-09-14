@@ -190,6 +190,36 @@ int32_t kest_module_entry(const KestModule *module, const char *name) {
 // and the answer as how many chunks those became, so the difference between
 // them is what the rule cost over compiling each body once, and `bytes` is
 // what that difference is in code.
+// What a module still holds when a build is done, by what asked for it. Four
+// numbers because a total is a number with nothing to divide it by: the code
+// itself and the room it sits in, where every instruction came from, the values
+// worked out where they stood, and the layouts a host is told about. Everything
+// a build holds that is not one of these is the program's rather than the
+// module's -- its source, its types, the names it registered. See D784.
+void kest_module_holds(const KestModule *module, uint32_t *code,
+                       uint32_t *origins, uint32_t *constants,
+                       uint32_t *layouts, uint32_t *chunks) {
+    *code = 0;
+    *origins = 0;
+    *constants = 0;
+    // The chunks themselves and the list they are found in, which is what a
+    // module is when the four arrays below are taken out of it.
+    *chunks = (uint32_t)(module->capacity * sizeof(KestChunk *) +
+                         module->count * sizeof(KestChunk) +
+                         module->extern_capacity * sizeof(KestExtern));
+    *layouts = (uint32_t)(module->layout_capacity * sizeof(KestLayout));
+    for (uint32_t i = 0; i < module->layout_count; i++) {
+        *layouts += (uint32_t)(module->layouts[i].count * sizeof(KestPiece));
+    }
+    for (uint32_t i = 0; i < module->count; i++) {
+        const KestChunk *chunk = module->functions[i];
+        *code += chunk->code_capacity;
+        *origins += (uint32_t)(chunk->origin_capacity * sizeof(uint32_t));
+        *constants +=
+            (uint32_t)(chunk->constant_capacity * sizeof(KestValue));
+    }
+}
+
 uint32_t kest_module_copied(const KestModule *module, uint32_t *bodies,
                             uint32_t *bytes) {
     uint32_t made = 0;

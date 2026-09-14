@@ -298,6 +298,11 @@ struct KestInstance {
 // beyond it. The folder here and the machine ask the one function, which is
 // what makes the folded answer and the run one the same by construction rather
 // than by two people writing the same twenty lines. See D668, D776.
+// What the checker still holds when a build is done. See D784.
+void kest_program_holds(const KestProgram *program, uint32_t *types,
+                        uint32_t *globals, uint32_t *found_by,
+                        uint32_t *composed);
+
 double kest_left_over(double left, double right);
 
 bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,

@@ -1821,6 +1821,31 @@ static int run(const char *command, const char *executable, char **paths,
             fprintf(stdout, ",\"copies\":%u,\"copiedBodies\":%u"
                             ",\"copiedBytes\":%u",
                     made, bodies, bytes);
+            // And what the module itself is still holding, which is the part
+            // of `held` that has somewhere to be looked up rather than being
+            // a number with nothing under it. See D784.
+            uint32_t of_code = 0;
+            uint32_t of_origins = 0;
+            uint32_t of_constants = 0;
+            uint32_t of_layouts = 0;
+            uint32_t of_chunks = 0;
+            kest_module_holds(&build->module, &of_code, &of_origins,
+                              &of_constants, &of_layouts, &of_chunks);
+            uint32_t of_types = 0;
+            uint32_t of_globals = 0;
+            uint32_t of_found_by = 0;
+            uint32_t of_composed = 0;
+            if (build->program != NULL) {
+                kest_program_holds(build->program, &of_types, &of_globals,
+                                   &of_found_by, &of_composed);
+            }
+            fprintf(stdout, ",\"holds\":{\"code\":%u,\"origins\":%u"
+                            ",\"constants\":%u,\"layouts\":%u"
+                            ",\"types\":%u,\"globals\":%u"
+                            ",\"foundBy\":%u,\"composed\":%u,\"chunks\":%u}",
+                    of_code, of_origins, of_constants, of_layouts,
+                    of_types, of_globals, of_found_by, of_composed,
+                    of_chunks);
         }
         // And what that cost was paid for: every file this build read, and how
         // many bytes each of them is. A cost on its own is a number with

@@ -4238,8 +4238,21 @@ than hiding it.
 ```json
 { "diagnostics": [], "errors": 0, "cost": 230607, "codeMark": "d02b0a4a1e5c3f81",
   "folds": 3, "asked": 7, "copies": 66, "copiedBodies": 23,
-  "copiedBytes": 3887 }
+  "copiedBytes": 3887,
+  "holds": { "code": 4608, "origins": 5632, "constants": 1024,
+             "layouts": 564, "chunks": 3384, "types": 7560,
+             "globals": 2304, "foundBy": 256, "composed": 64 } }
 ```
+
+`holds` is what is still held when the answer is written, by what asked for it.
+`held` on its own is a number with nothing under it: the code and the room it
+sits in, where every instruction came from, the values worked out where they
+stood, the layouts a host is told about and the chunks they hang off are the
+module's; the types made, the names registered, the table they are found in and
+the composed types kept so that two of one are one are the checker's. What is
+left over is the source every one of them was cut from, which `read` says, and
+the loader's own — the paths, the units and where each line of each file begins.
+Every number here is part of `held` and none of them is all of it.
 
 `copies`, `copiedBodies` and `copiedBytes` are what one body written for many
 types cost this program. A copy exists per set of types a generic is called

@@ -476,6 +476,25 @@ flat = per_copy('emit', 1)
 # it leaves rather than for a copy it is not making, and it is bounded by the
 # bytes left to read because the shortest token there is is one byte. Doubling
 # left a third of every array never written to. See D783.
+# And what a build still holds when it is done, by what asked for it. A total
+# is a number with nothing under it: `held` said 63975 for the library and
+# nothing said which part of it was the code, which the types and which the
+# source it was all cut from. Every number `holds` gives is part of `held`, so
+# the sum of them and the source they came from cannot pass it -- one that does
+# is a number counted twice. See D784.
+held_ran = subprocess.run(['./kest', 'emit', 'lib/std/text.kest', '--json'],
+                          capture_output=True, text=True,
+                          stdin=subprocess.DEVNULL)
+held_said = json.loads(held_ran.stdout) if held_ran.returncode == 0 else {}
+held_parts = held_said.get('holds', {})
+held_source = sum(one['bytes'] for one in held_said.get('read', []))
+held_named = sum(held_parts.values()) + held_source
+if not held_parts or held_named > held_said.get('held', 0):
+    print("costs: what a build holds is %u and the parts of it named come to "
+          "%u, and a part that is not part of the whole is counted twice"
+          % (held_said.get('held', 0), held_named))
+    failed = 1
+
 room_tokens = 0
 room_slots = 0
 for room_path in sorted(glob.glob(os.path.join('examples', '*.kest'))):
