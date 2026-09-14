@@ -370,10 +370,11 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
         if (units->items[self].unit.items[i]->kind == KEST_DECL_MODULE) {
             module = units->items[self].unit.items[i];
             units->items[self].alias = last_segment(
-                arena, units->items[self].source.text + module->name.offset,
+                arena,
+                kest_span_text(&units->items[self].source, module->name),
                 module->name.length);
             units->items[self].from_library = is_library(
-                units->items[self].source.text + module->name.offset,
+                kest_span_text(&units->items[self].source, module->name),
                 module->name.length);
         }
     }
@@ -435,7 +436,8 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
 
     for (uint32_t i = 0; i < units->items[self].unit.count; i++) {
         const KestDecl *decl = units->items[self].unit.items[i];
-        const char *name = units->items[self].source.text + decl->name.offset;
+        const char *name =
+            kest_span_text(&units->items[self].source, decl->name);
 
         if (decl->kind != KEST_DECL_IMPORT || !follow) {
             continue;
@@ -473,7 +475,7 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
         const KestDecl *decl = loaded->unit.items[i];
         if (decl->kind == KEST_DECL_IMPORT) {
             loaded->imports[loaded->import_count++] = last_segment(
-                arena, loaded->source.text + decl->name.offset,
+                arena, kest_span_text(&loaded->source, decl->name),
                 decl->name.length);
         }
     }

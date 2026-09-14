@@ -1930,6 +1930,39 @@ for body_path in sorted(glob.glob(os.path.join("src", "*.c"))):
             continue
         shapes += 1
         body_shapes.setdefault(body_shape(body_text), []).append(body_called)
+# Where a span becomes text is one place. `kest_span_text` says it, and a file
+# that adds an offset to a source's bytes for itself is a file that will still
+# be doing it the day a span starts counting from somewhere else -- which is
+# how D772 found the same arithmetic in seventeen places and left nineteen
+# more, because what found it was a grep and a grep only sees what it was
+# written to see. So the files that do it by hand are named here with why what
+# they hold is not a span. See D772.
+SPAN_BY_HAND = {
+    "src/diag.c": "`kest_span_text` is the one place, and this is it",
+    "src/lexer.c": "the lexer is what makes spans, so while it is still "
+                   "cutting a token it holds an offset and a length and has "
+                   "nothing to ask with yet",
+}
+
+span_by_hand = {}
+for span_path in sorted(glob.glob(os.path.join("src", "*.c"))):
+    for span_at, span_line in enumerate(open(span_path).read().split("\n"), 1):
+        if re.search(r"(?:->|\.)text\s*\+", span_line):
+            span_by_hand.setdefault(span_path, []).append(span_at)
+some("the places `src` reads a span by hand", span_by_hand)
+for span_path in sorted(span_by_hand):
+    if span_path in SPAN_BY_HAND:
+        continue
+    print("spans: %s reads a source's bytes at an offset itself, at line(s) "
+          "%s, and where a span becomes text is `kest_span_text`"
+          % (span_path, ", ".join(str(n) for n in span_by_hand[span_path])))
+    failed = 1
+for span_path in SPAN_BY_HAND:
+    if span_path not in span_by_hand:
+        print("spans: %s is written down as reading a span by hand and does "
+              "not" % span_path)
+        failed = 1
+
 some("the bodies of `src`", body_places)
 for body_text, body_where in sorted(body_places.items()):
     if len(body_where) < 2 or body_text in SAME_BODY:
@@ -1984,7 +2017,9 @@ if not failed:
           "said, "
           "and %u pairs of widths "
           "in %u module(s) written in both, and %u answers a host is given "
-          "read by every host that reads one, and %u bodies of `src` are each "
+          "read by every host that reads one, and a span becomes text in "
+          "one place with %u file(s) named for reading one by hand, and %u "
+          "bodies of `src` are each "
           "written once, %u of them long enough to be read for their shape as "
           "well, with %u group(s) of one shape and a reason beside each"
           % (len(ops), len(toks), len(held), len(checked), len(writable),
@@ -1992,7 +2027,8 @@ if not failed:
              len(tools), pythons, shells, len(reading), len(only_a_hole),
              len(NOT_REACHED),
              len(every_code), sentences, len(HELD), halves // 2,
-             len(in_widths), len(ANSWERS), bodies, shapes, len(SAME_SHAPE)))
+             len(in_widths), len(ANSWERS), len(SPAN_BY_HAND), bodies, shapes,
+             len(SAME_SHAPE)))
 
 sys.exit(failed)
 PY

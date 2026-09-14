@@ -4317,7 +4317,7 @@ static bool check_unit(KestProgram *program, KestUnit *unit);
 // type names bound, which is what makes a copy not a special case.
 static bool check_function(KestProgram *program, Checker *checker,
                            const KestDecl *decl, KestType *signature) {
-    const char *name = program->source->text + decl->name.offset;
+    const char *name = kest_span_text(program->source, decl->name);
     checker->local_count = 0;
     checker->depth = 0;
     checker->loop_depth = 0;
@@ -4739,7 +4739,7 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
             if (decl->kind != KEST_DECL_IMPORT) {
                 continue;
             }
-            const char *wrote = named->source.text + decl->name.offset;
+            const char *wrote = kest_span_text(&named->source, decl->name);
             size_t length = decl->name.length;
             const char *last = wrote;
             for (size_t at = 0; at < length; at++) {

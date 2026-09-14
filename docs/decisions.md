@@ -21993,3 +21993,35 @@ asking what a pair of values is *for* rather than what a function looks like.
 wrongly is a compiler that cannot find `len`, cannot find a field, cannot find a
 local and cannot find `main`; the hole gives it back the wrong answer for names
 of one length and `make check` stops at the first example.
+
+## D774: the rest of the sweep, and a check so there is no next one
+
+*What the grep left.* D772 said a span becomes text in seventeen places and
+made them one. It was wrong about the number. The sweep was run with a pattern
+that matched `span.offset` and `spans[i].offset`, so it never saw
+`decl->name.offset`, `tokens[i].span.offset`, `expr->field.name.offset`,
+`ref->count.offset` or `module->name.offset` — nineteen more places, the same
+arithmetic under a longer name, in five files. They are `kest_span_text` now
+too.
+
+That is the second time in three decisions that a finding was as good as the
+grep that found it, and the answer both times has been to write the rule into
+`tools/` rather than to write a better grep. D773 could not be held that way —
+"is this the word" is a question a reader recognises and a check cannot — but
+this one can: the shape is `->text +` or `.text +`, and either it is
+`kest_span_text` or the file says why not.
+
+*Two files say why not, and both of them are the lexer's side of the line.*
+`diag.c` is where the answer lives. `lexer.c` is what *makes* spans: while it is
+still cutting a token it holds an offset and a length and has nothing to ask
+with yet, which is not a stage reading a span by hand but a stage upstream of
+spans. Everything else in `src` asks.
+
+*Held the same two ways round as every other list in `check-tables.sh`.* A file
+that reads one by hand without a reason beside it is refused, and a reason
+beside a file that has stopped reading one by hand is refused too — the second
+because a reason left standing over nothing is how an allow-list turns into a
+list of files nobody has looked at since.
+
+*What it cost.* Nothing measurable: the scan is one regular expression over the
+sixteen files of `src`, run inside a check that already reads all of them.

@@ -1205,6 +1205,33 @@ yield""",
         "caught": "did not all fit in a hole",
     },
     {
+        # A stage reading a source's bytes at an offset for itself, which is
+        # what every one of them did before there was somewhere to ask. See
+        # D772.
+        "what": "a span read by hand in a file that has no reason to",
+        "file": "src/types.c",
+        "from": r"""    const char *name = kest_span_text(program->source, ref->name);
+    size_t length = ref->name.length;""",
+        "to": r"""    const char *name = program->source->text + ref->name.offset;
+    size_t length = ref->name.length;""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "reads a source's bytes at an offset itself",
+    },
+    {
+        # A file named as reading a span by hand after it stopped doing it,
+        # which leaves a reason standing over nothing -- the same way round
+        # every other list in this check is held.
+        "what": "a reason for reading a span by hand where none is read",
+        "file": "tools/check-tables.sh",
+        "from": r"""    "src/diag.c": "`kest_span_text` is the one place, and this is it",""",
+        "to": r"""    "src/diag.c": "`kest_span_text` is the one place, and this is it",
+    "src/vm.c": "nothing, which is the point of this break",""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "is written down as reading a span by hand and does not",
+    },
+    {
         # The word test answering yes to a name that is a prefix of a longer
         # one: `n` becomes the keyword `none`, and nothing after that is the
         # program anybody wrote. Thirty places asked this by hand before it was

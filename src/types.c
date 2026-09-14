@@ -445,7 +445,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
     case KEST_EXPR_INT: {
         bool overflow = false;
         out->integer = (int64_t)kest_token_integer(
-            program->source->text + expr->span.offset, expr->span.length,
+            kest_span_text(program->source, expr->span), expr->span.length,
             &overflow);
         return true;
     }
@@ -480,7 +480,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
         // A constant made of itself has no value to work out, which the depth
         // catches; this is only for a name that is not a constant at all.
         const KestExpr *written = constant_written(
-            program, program->source->text + expr->span.offset,
+            program, kest_span_text(program->source, expr->span),
             expr->span.length);
         return written != NULL && fold(program, written, out, depth + 1, why);
     }
@@ -582,7 +582,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
     // wrote. See D665.
     case KEST_EXPR_FIELD: {
         KestSymbol *elsewhere = kest_lookup_global(
-            program, program->source->text + expr->span.offset,
+            program, kest_span_text(program->source, expr->span),
             expr->span.length);
         if (elsewhere == NULL || !elsewhere->is_const) {
             *why = "a constant is a name for a value, and this is a field of "
@@ -830,7 +830,7 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
     if (expr->kind == KEST_EXPR_NAME && type != NULL &&
         (type->tag == KEST_T_STRUCT || type->tag == KEST_T_FIXED)) {
         const KestExpr *written = constant_written(
-            program, program->source->text + expr->span.offset,
+            program, kest_span_text(program->source, expr->span),
             expr->span.length);
         if (written != NULL) {
             return fold_slots(program, written, out, room, depth + 1, why);
@@ -867,7 +867,8 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
             room < type->slots) {
             return 0;
         }
-        const char *word = program->source->text + named->field.name.offset;
+        const char *word =
+            kest_span_text(program->source, named->field.name);
         uint32_t written = named->field.name.length;
         const KestVariantType *which = NULL;
         uint32_t at = 0;
@@ -1458,7 +1459,7 @@ static void wrong_type_count(KestProgram *program, KestSpan where,
 }
 
 static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
-    const char *name = program->source->text + ref->name.offset;
+    const char *name = kest_span_text(program->source, ref->name);
     size_t length = ref->name.length;
 
     // A type name a generic function brought into scope stands for whatever
@@ -1932,7 +1933,7 @@ KestType *kest_resolve_type_ref(KestProgram *program,
         // literal because a name could be a size that changes; a constant is
         // worked out where it is written and cannot, and a program with the
         // same number in five places is the thing that changes wrongly.
-        const char *digits = program->source->text + ref->count.offset;
+        const char *digits = kest_span_text(program->source, ref->count);
         uint64_t how_many = 0;
         if (digits[0] >= '0' && digits[0] <= '9') {
             for (uint32_t i = 0; i < ref->count.length; i++) {

@@ -29427,3 +29427,28 @@ it found seventeen places and left nineteen — `decl->name.offset`,
 `tokens[i].span.offset`, `expr->field.name.offset` and the rest, all the same
 arithmetic under a longer name. Finish it, and work out whether the tree can be
 held to say it only through `kest_span_text`.
+
+## The rest of the sweep, and a check so there is no next one
+
+D772 said seventeen places and was wrong. Its grep matched `span.offset` and
+`spans[i].offset` and never saw `decl->name.offset`, `tokens[i].span.offset`,
+`expr->field.name.offset`, `ref->count.offset` or `module->name.offset` —
+nineteen more, the same arithmetic under a longer name, across five files. They
+ask `kest_span_text` now.
+
+Twice in three entries a finding has been only as good as the grep that found
+it, so this one is written into `tools/` instead. `check-tables.sh` refuses any
+`->text +` or `.text +` in `src` unless the file is named with why what it holds
+is not a span. Two are: `diag.c`, where the answer lives, and `lexer.c`, which
+is what makes spans — while it is still cutting a token it has an offset and a
+length and nothing to ask with yet. A reason beside a file that has stopped
+reading one by hand is refused too, the same way round every other list in that
+check is held. Two holes, one each way. Recorded as D774.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `kest_word_same` has no check behind it — thirty places were found by
+reading, and the thirty-first will be written by hand the same way. The shape is
+`strlen(` within two lines of `memcmp(`, which the tree has three honest uses
+of. Find whether that is a check worth having or a rule that only a reader can
+tell apart, and say which in the log either way.

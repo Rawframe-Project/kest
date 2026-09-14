@@ -163,7 +163,8 @@ static void dump_tokens_json(KestArena *arena, const KestToken *tokens,
         kest_json_text(kest_token_name(tokens[i].kind), out);
         fprintf(out, ",\"line\":%u,\"column\":%u,\"text\":", line, column);
         char *text = kest_arena_strndup(
-            arena, source->text + tokens[i].span.offset, tokens[i].span.length);
+            arena, kest_span_text(source, tokens[i].span),
+            tokens[i].span.length);
         kest_json_text(text == NULL ? "" : text, out);
         // Whether a line ending here carries on to the next. It is the one
         // thing about a token that a tool cannot work out from the token: the
@@ -208,12 +209,12 @@ static void dump_tokens(KestArena *arena, const KestToken *tokens,
             kest_source_locate(source, comments[said].offset, &at, &from);
             printf("%4u:%-3u %-14s %.*s\n", at, from, "comment",
                    (int)comments[said].length,
-                   source->text + comments[said].offset);
+                   kest_span_text(source, comments[said]));
             said++;
         }
         printf("%4u:%-3u %-14s %.*s\n", line, column,
                kest_token_name(tokens[i].kind), (int)tokens[i].span.length,
-               source->text + tokens[i].span.offset);
+               kest_span_text(source, tokens[i].span));
     }
     for (; said < written; said++) {
         uint32_t at = 0;
@@ -221,7 +222,7 @@ static void dump_tokens(KestArena *arena, const KestToken *tokens,
         kest_source_locate(source, comments[said].offset, &at, &from);
         printf("%4u:%-3u %-14s %.*s\n", at, from, "comment",
                (int)comments[said].length,
-               source->text + comments[said].offset);
+               kest_span_text(source, comments[said]));
     }
 }
 
