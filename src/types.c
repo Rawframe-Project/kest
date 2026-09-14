@@ -1412,7 +1412,7 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                                 const KestTypeRef *ref);
 
 static KestType *compose(KestProgram *program, KestTypeTag tag,
-                         KestType *element) {
+                         KestType *element, uint32_t count) {
     // What it is made of is all it is, so one already made of the same thing
     // is the same type. Asked by what went in rather than by what came out:
     // `kest_type_equal` is assignability and would answer yes for a
@@ -1420,7 +1420,8 @@ static KestType *compose(KestProgram *program, KestTypeTag tag,
     // a different question. See D780.
     for (uint32_t i = 0; i < program->composed_count; i++) {
         KestType *already = program->composed[i];
-        if (already->tag == tag && already->element == element) {
+        if (already->tag == tag && already->element == element &&
+            already->count == count) {
             return already;
         }
     }
@@ -1439,6 +1440,7 @@ static KestType *compose(KestProgram *program, KestTypeTag tag,
     }
     program->composed[program->composed_count++] = type;
     type->element = element;
+    type->count = count;
     // A reference and an array are one handle. An optional carries a tag
     // beside whatever it holds, which is what lets a lookup that finds
     // nothing cost no allocation.
@@ -1692,15 +1694,15 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
 }
 
 KestType *kest_array_of(KestProgram *program, KestType *element) {
-    return compose(program, KEST_T_ARRAY, element);
+    return compose(program, KEST_T_ARRAY, element, 0);
 }
 
 KestType *kest_optional_of(KestProgram *program, KestType *element) {
-    return compose(program, KEST_T_OPTIONAL, element);
+    return compose(program, KEST_T_OPTIONAL, element, 0);
 }
 
 KestType *kest_ref_of(KestProgram *program, KestType *element) {
-    return compose(program, KEST_T_REF, element);
+    return compose(program, KEST_T_REF, element, 0);
 }
 
 // That many of something, laid out where it stands. Unlike an array it is a
@@ -1711,12 +1713,14 @@ KestType *kest_fixed_of(KestProgram *program, KestType *element,
     // Composed like an array or an optional, and like them not registered:
     // it has no name to be found under and two of them are one type by what
     // they hold rather than by being the same one.
-    KestType *type = new_type(program, KEST_T_FIXED);
+    // What it is made of is the element and how many, so two of them are one
+    // type, the same way an array of one thing is. Asked through the same
+    // lookup, which is why that one takes a count: everything else composed
+    // here has none, and nought is what they all agree on. See D781.
+    KestType *type = compose(program, KEST_T_FIXED, element, count);
     if (type == NULL) {
         return error_type(program);
     }
-    type->element = element;
-    type->count = count;
     if (element != NULL) {
         type->slots = (uint16_t)(element->slots * count);
         type->byte_size = (uint16_t)(element->byte_size * count);
@@ -1988,13 +1992,13 @@ KestType *kest_resolve_type_ref(KestProgram *program,
             return error_type(program);
         }
         return compose(program, is_ref ? KEST_T_REF : KEST_T_STORE,
-                       kest_resolve_type_ref(program, ref->args[0]));
+                       kest_resolve_type_ref(program, ref->args[0]), 0);
     }
 
     case KEST_TYPE_ARRAY: {
         KestType *element = kest_resolve_type_ref(program, ref->element);
         if (ref->count.length == 0) {
-            return compose(program, KEST_T_ARRAY, element);
+            return compose(program, KEST_T_ARRAY, element, 0);
         }
         // A number, or the name of a constant that is one. D064 asked for a
         // literal because a name could be a size that changes; a constant is
@@ -2145,7 +2149,7 @@ KestType *kest_resolve_type_ref(KestProgram *program,
 
     case KEST_TYPE_OPTIONAL:
         return compose(program, KEST_T_OPTIONAL,
-                       kest_resolve_type_ref(program, ref->element));
+                       kest_resolve_type_ref(program, ref->element), 0);
     }
     return error_type(program);
 }
@@ -3136,7 +3140,7 @@ KestType *kest_substitute(KestProgram *program, KestType *type,
     case KEST_T_STORE:
         return compose(
             program, KEST_T_STORE,
-            kest_substitute(program, type->element, names, bindings, count));
+            kest_substitute(program, type->element, names, bindings, count), 0);
     case KEST_T_FN: {
         KestType *params[16];
         uint32_t used = type->param_count < 16 ? type->param_count : 16;

@@ -29664,3 +29664,42 @@ two numbers disagree about how much was saved. Find where the rest of a type's
 cost goes — 168 bytes is the widest struct here and most of a program's types
 are two or three tags — and whether the struct is paying for fields most of its
 inhabitants never use.
+
+## A function type is not only its shape
+
+D780 left function types uninterned because only three reached a layout twice.
+Wrong thing to count: of the 2378 types this tree's programs make, **1474 —
+sixty-two per cent — are function types**. Whole numbers are 13.5% and nothing
+else is above four. The one kind left out was the only kind that mattered.
+
+Interning them by parameters, result and promise compiles and runs and sorts
+`examples/words.kest` wrongly — `sort.by(words, sort.ascending)` leaves
+`words[0]` not `"cook"` and the program answers 5. A function type carries
+`symbol`, which is *which function it is*: the compiler reads it to find the
+chunk a function value stands for, the contract proof to follow a call, the
+command line to call one by name, and the checker writes it on after the type
+exists. Two values of one signature naming two functions are one structure and
+two types.
+
+Third predicate in this arc with something hidden in it — the word test had a
+right way round, `kest_type_equal` was assignability, and now this — and each
+time what found it was a wrong answer from a program, not a reading of the code.
+
+What was done instead: `kest_fixed_of` was the last maker outside the lookup and
+is purely what it holds and how many, so it asks the same lookup now, which is
+why that lookup takes a count. Seven fewer types for `embed.kest`.
+
+And what a type pays for: of a hundred and sixty-eight bytes, about ninety-six
+serve types somebody declared, and structs, enums and flag sets together are
+3.3% of what a program makes. Real, and not where the memory goes — forty-five
+types is 7.5K of the 171K that compiling `lib/std/text.kest` costs, against
+41180 for the tokens and 83461 for the tree. Recorded as D781.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the tree is 83461 bytes of the 171159 that compiling the library
+costs — half of it, and twice what checking and compiling add together. A
+`KestExpr` is 56 bytes and a `KestStmt` 64. Count what kinds of node a real
+program is made of, the way the types were counted here, and find whether the
+same thing is true of them: a wide shape carrying fields most of its
+inhabitants never use.

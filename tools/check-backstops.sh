@@ -1210,7 +1210,8 @@ yield""",
         # holds becomes whatever the first of its kind held. See D780.
         "what": "a composed type found by its kind alone",
         "file": "src/types.c",
-        "from": r"""        if (already->tag == tag && already->element == element) {""",
+        "from": r"""        if (already->tag == tag && already->element == element &&
+            already->count == count) {""",
         "to": r"""        if (already->tag == tag) {""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",

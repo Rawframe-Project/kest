@@ -22341,3 +22341,58 @@ how many were "a type already laid out". It cannot know that: it reads the name
 each layout says it is of, and two `T`s in two instantiations are written the
 same and are not the same type. It says "written the same as one already laid
 out" now, which is what it counts. A count of things that look alike, again.
+
+## D781: a function type is not only its shape
+
+*The question, and a judgement to revisit.* D780 interned the composed types and
+left function types alone, on the grounds that only three of them reached a
+layout twice. That was the wrong thing to count. Counting what is *made* rather
+than what is laid out: of the 2378 types this tree's programs build,
+**1474 — sixty-two per cent — are function types.** Everything else is a tail:
+whole numbers 13.5%, arrays 3.8%, optionals and type parameters 3.6% each,
+floats 3.4%, structs 2.9%, and nothing else above two.
+
+So the one kind left out was the only kind that mattered, and the number that
+said otherwise was counting the wrong thing.
+
+*Interned, and it gave a wrong answer.* `fn_of` is asked forty-three times by
+`examples/inventory.kest` for twenty-one distinct signatures. Interning by what
+a function type is made of — its parameters, what it gives back, what it
+promises — compiles, runs, and sorts `examples/words.kest` into the wrong order:
+`sort.by(words, sort.ascending)` comes back with `words[0]` not `"cook"`, and
+the program answers 5 where it answers nought.
+
+*Why.* A function type carries `symbol`, which is **which function it is**.
+`compile_function_value` reads it to find the chunk a named function value
+stands for, the contract proof reads it to follow a call, and the command line
+reads it to call one by name. It is written onto the type *after* the type
+exists, at three places in the checker. Two values of one signature naming two
+functions are therefore one structure and two types, and sharing them lets
+whichever instantiation ran last decide what both of them call.
+
+That is the third predicate in this arc with something hidden in it: the word
+test had a right way round (D773), `kest_type_equal` turned out to be
+assignability rather than equality (D780), and a function type turns out not to
+be made only of what it is made of. The pattern is the same each time — a thing
+that looks like a value and carries an identity — and each time what found it
+was a program giving a wrong answer rather than a reading of the code.
+
+*What was done instead.* `kest_fixed_of` was the last maker outside the lookup,
+and it is purely what it holds and how many: no symbol, nothing written to it
+afterwards. It asks the same lookup now, which is why that lookup takes a count
+— everything else composed there has none, and nought is what they agree on.
+Seven fewer types for `examples/embed.kest`.
+
+*What a type is paying for.* `KestType` is a hundred and sixty-eight bytes:
+fifteen pointers, six counts, three widths, a span and seven one-byte fields.
+Roughly ninety-six of those bytes are for types somebody declared — `cases`,
+`members`, `declared_in`, `decl`, `unit`, `shape`, `type_args`, their counts,
+`span`, `foreign_name` and the flags beside them — and structs, enums and sets
+of bits together are **3.3%** of what a program makes. The other ninety-seven
+per cent carry them and never look.
+
+That is a real cost and it is not where a build's memory goes: forty-five types
+is seven and a half kilobytes of the hundred and seventy-one that compiling
+`lib/std/text.kest` costs, so halving the struct would save two per cent. The
+tokens are 41180 and the tree is 83461 of the same total. Written down here so
+the next reading of this starts from the numbers.
