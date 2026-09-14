@@ -22290,3 +22290,54 @@ which is correct and is not waste. `[text]` appears three times in
 per cent, made right by printing the field the thing already carried. The
 correction is the entry: a count of things that look alike is a count of
 nothing until what tells them apart is written down beside them.
+
+## D780: a composed type, made once
+
+*The lookup was already there.* D779 left a hundred and fifty-seven layouts
+that were a type already laid out, and asked whether the module could look one
+up instead of writing it again. It already does: `kest_module_layout` scans
+`layout_types` and hands back the index it finds. The duplicates were never a
+missing lookup. They were the same type arriving as different objects —
+`[text]` written in three places was three `KestType`s, so the scan found
+nothing to match.
+
+*The obvious tool was the wrong one.* `kest_type_equal` looks like structural
+equality and is not. For a function it ends `return a->no_alloc || !b->no_alloc;`
+— a value that promises more fits where less is asked for — and it answers true
+for a `NULL` and for an error against anything. It is **assignability**, called
+as `(given, wanted)`, and its own comment says so. Interning with it would make
+`fn() no.alloc` and `fn()` one type. That is the right answer to a question
+nobody was asking here, and this is the second time in ten decisions that a
+predicate has had a right way round (D773).
+
+*What a composed type is.* `compose` is the one place an array, a reference, a
+store and an optional are made, and it takes a tag and an element and nothing
+else. Everything it works out — how many slots, how many bytes, what alignment
+— is worked out from those two. So two calls with the same tag and the same
+element pointer cannot produce anything that differs, and the lookup is by what
+went in rather than by what came out: **exact, and not a structural comparison
+at all.**
+
+*Measured before.* `examples/embed.kest` composed eighty-three times for
+nineteen distinct — sixty-four repeats, at a hundred and sixty-eight bytes each,
+which is the widest struct this compiler has.
+
+*Measured after.* Types made for that program fall from 248 to 184.
+`lib/std/text.kest` falls from 58 to 45, and what it costs to compile falls by
+1962 bytes with fourteen fewer askings of the arena. Across the tree the layout
+tables fall from **541 to 393**, and the ones written the same as one already
+laid out from **157 to 9**.
+
+*What the nine are, and why they stay.* Six are `T` — a type parameter standing
+for something, and two copies of one generic bind two of them. They print alike
+and are two types; interning them would be the bug this entry is about. Three
+are function types, which `fn_of` makes out of a list of parameters, so finding
+one already made is a walk of the list rather than a pointer against a pointer.
+Three across the whole tree is not yet worth that walk, and the number is
+written here so the day it is, there is something to compare against.
+
+*And a correction that follows from it.* The gate's layouts line used to say
+how many were "a type already laid out". It cannot know that: it reads the name
+each layout says it is of, and two `T`s in two instantiations are written the
+same and are not the same type. It says "written the same as one already laid
+out" now, which is what it counts. A count of things that look alike, again.

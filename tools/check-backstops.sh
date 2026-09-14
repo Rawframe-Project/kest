@@ -1205,6 +1205,19 @@ yield""",
         "caught": "did not all fit in a hole",
     },
     {
+        # A composed type found by its tag and not by what it is made of, so
+        # `[i32]` is handed back where `[text]` was asked for. Everything one
+        # holds becomes whatever the first of its kind held. See D780.
+        "what": "a composed type found by its kind alone",
+        "file": "src/types.c",
+        "from": r"""        if (already->tag == tag && already->element == element) {""",
+        "to": r"""        if (already->tag == tag) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/words.kest"],
+        "caught": "a name written in one shape and nowhere else",
+    },
+    {
         # A layout list that does not say which type each one is of, which
         # leaves every `[T]` reading as every other and a reader counting
         # what a module wrote twice counting what it wrote once. See D779.
@@ -9313,8 +9326,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # machine needs to know which half moved.
         "what": "what a shape takes said as though it were anybody's",
         "file": "tools/check.sh",
-        "from": '      "%u of them a type already laid out, laid out for the machine this ran on"',
-        "to": '      "%u of them a type already laid out"',
+        "from": '      "%u written the same as one already laid out, laid out for the machine "\n      "this ran on"',
+        "to": '      "%u written the same as one already laid out"',
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "caught": "says numbers a machine gave it and does not say",

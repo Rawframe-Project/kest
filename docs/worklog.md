@@ -29626,3 +29626,41 @@ layouts line says both counts. Recorded as D779.
 is a type laid out per use rather than per type. Find where a layout is added
 and whether asking for one of a type it already has is a lookup this module can
 do, and what it saves against what the lookup costs.
+
+## A composed type, made once
+
+The lookup D779 asked for was already there — `kest_module_layout` scans and
+reuses. The duplicates were the same type arriving as different objects:
+`[text]` written in three places was three `KestType`s, so the scan found
+nothing to match.
+
+The obvious tool was the wrong one. `kest_type_equal` ends, for a function,
+`return a->no_alloc || !b->no_alloc` — it is assignability called as `(given,
+wanted)`, not equality, and answers true for a `NULL` against anything.
+Interning with it would make `fn() no.alloc` and `fn()` one type. Second time
+in ten decisions that a predicate has had a right way round.
+
+What a composed type is settles it without needing equality at all: `compose`
+takes a tag and an element and works everything else out from those two, so two
+calls with the same pair cannot differ. The lookup is by what went in.
+
+`embed.kest` composed eighty-three times for nineteen distinct. After: types
+made fall 248 to 184 there and 58 to 45 for `lib/std/text.kest`, whose compile
+cost falls 1962 bytes over fourteen fewer askings. Layout tables across the tree
+fall 541 to 393, and those written the same as one already laid out 157 to 9.
+
+Six of the nine are `T` — two copies of one generic bind two type parameters
+that print alike and are two types, and interning those would be the bug this
+entry is about. Three are function types, made out of a list, so finding one is
+a walk rather than a pointer compare; three is not yet worth it. The gate's
+layouts line now says "written the same as one already laid out", because that
+is what reading a name can tell. Recorded as D780.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** interning cut what `lib/std/text.kest` costs to compile by 1962 bytes
+of 173121, which is one per cent, while cutting the types made by a fifth. The
+two numbers disagree about how much was saved. Find where the rest of a type's
+cost goes — 168 bytes is the widest struct here and most of a program's types
+are two or three tags — and whether the struct is paying for fields most of its
+inhabitants never use.

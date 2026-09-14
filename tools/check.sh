@@ -508,7 +508,11 @@ for path in sys.argv[1:]:
 if shapes == 0 or widest is None:
     print("layouts: nothing here says what a value is laid out as")
     raise SystemExit(1)
-# And every layout a module writes says which type it is the layout of. Two
+# And every layout a module writes says which type it is the layout of. What
+# comes back beside it is how many are written the same as one already laid
+# out, which is not the same as how many are the same type: two `T` standing
+# for two things in two copies of one generic are two types that print alike.
+# See D779, D780. Two
 # that differ only in that read as one without it -- every `[T]` is one word
 # whatever `T` is -- so a reader counting what a module holds counts wrongly,
 # and the machine that packs a value across the boundary reads the very field
@@ -540,7 +544,8 @@ if told == 0:
 print("%u shape(s) take %u slots of stack and %u bytes of memory, %u slots if "
       "a slot held whatever fitted, and the widest gap is `%s` at %u slots "
       "against %u bytes, and %u layout(s) each saying which type they are of, "
-      "%u of them a type already laid out, laid out for the machine this ran on"
+      "%u written the same as one already laid out, laid out for the machine "
+      "this ran on"
       % (shapes, slots, bytes_of, packed, widest[0], widest[2], widest[3],
          told, twice))
 LAYOUTS

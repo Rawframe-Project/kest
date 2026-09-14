@@ -215,6 +215,17 @@ typedef struct {
     uint32_t type_count;
     uint32_t type_capacity;
 
+    // And the ones nothing declared: `[text]`, `Item?`, `ref<Npc>`. A composed
+    // type is what it is made of and nothing else, so two written in two
+    // places are one type rather than two that answer the same — which is
+    // what the layout table found out the long way round, by holding a
+    // hundred and fifty-seven layouts of a type it had already laid out. Kept
+    // apart from `types` because those have names and are found by them, and
+    // these have none. See D780.
+    KestType **composed;
+    uint32_t composed_count;
+    uint32_t composed_capacity;
+
     KestSymbol *globals;
     uint32_t global_count;
     uint32_t global_capacity;

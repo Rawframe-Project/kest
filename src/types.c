@@ -1413,10 +1413,31 @@ KestType *kest_resolve_type_ref(KestProgram *program,
 
 static KestType *compose(KestProgram *program, KestTypeTag tag,
                          KestType *element) {
+    // What it is made of is all it is, so one already made of the same thing
+    // is the same type. Asked by what went in rather than by what came out:
+    // `kest_type_equal` is assignability and would answer yes for a
+    // `fn() no.alloc` where a `fn()` was wanted, which is the right answer to
+    // a different question. See D780.
+    for (uint32_t i = 0; i < program->composed_count; i++) {
+        KestType *already = program->composed[i];
+        if (already->tag == tag && already->element == element) {
+            return already;
+        }
+    }
+    if (program->composed_count == program->composed_capacity) {
+        void *moved = grow(program->arena, program->composed,
+                           program->composed_count,
+                           &program->composed_capacity, sizeof(KestType *));
+        if (moved == NULL) {
+            return NULL;
+        }
+        program->composed = moved;
+    }
     KestType *type = new_type(program, tag);
     if (type == NULL) {
         return NULL;
     }
+    program->composed[program->composed_count++] = type;
     type->element = element;
     // A reference and an array are one handle. An optional carries a tag
     // beside whatever it holds, which is what lets a lookup that finds
