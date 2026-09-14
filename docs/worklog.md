@@ -29389,3 +29389,41 @@ stay and now say only which source they hold. Recorded as D772.
 caller holds the length separately — `(int)span.length` beside the pointer in
 nine places, `memcmp` with it in others. Find whether the pair wants to travel
 together, and what a reader that holds both would cost against `%.*s`.
+
+## Is this the word, asked once
+
+The pair does travel together — all seventeen callers of `kest_span_text` hold
+the length too — but the pair was not the thing worth naming. The question they
+were held to ask was.
+
+Of the fifty-two `memcmp`s in `src`, thirty were one sentence: `strlen(word) ==
+length && memcmp(word, bytes, length) == 0`, which asks whether a name this
+compiler holds is the same word as a run of bytes a file was written with. Eight
+files wrote that join out for themselves. `kest_word_same` is in `diag.h` beside
+`kest_word_distance`, and the thirteen `memcmp`s left are three other questions:
+prefix tests, two counted runs against each other, and the machine comparing
+values by their bytes.
+
+The function has a right way round: a name ending at a nought first, a counted
+run second. Two compiler sites were handed a counted run in the first slot —
+`name_is` and the `let` walk beside it compare one word a file wrote against
+another — so `strlen` read to the end of the file, the test never matched, and
+`boxes`, `lookup` and `shapes` compiled to programs that answered wrongly and
+said nothing. `check-commands.sh` caught all three. Both are written out again
+with a comment saying which question they ask.
+
+Three predicates turned out to be one. `is_word` in the parser, `is_builtin` in
+the checker and `builtin_named` in the compiler each wrapped the sentence in a
+stage's shape, and `builtin_named` took a `Compiler *` it never read to look
+local. It is gone and its eighteen callers ask outright. `name_is` lost its
+`length` argument in the same move — the length belongs to the span and the
+nought to the name — and one of its three callers had been handing it a length
+belonging to another name. Recorded as D773.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** D772's sweep was run with a grep that only matched `span.offset`, so
+it found seventeen places and left nineteen — `decl->name.offset`,
+`tokens[i].span.offset`, `expr->field.name.offset` and the rest, all the same
+arithmetic under a longer name. Finish it, and work out whether the tree can be
+held to say it only through `kest_span_text`.

@@ -1205,9 +1205,23 @@ yield""",
         "caught": "did not all fit in a hole",
     },
     {
+        # The word test answering yes to a name that is a prefix of a longer
+        # one: `n` becomes the keyword `none`, and nothing after that is the
+        # program anybody wrote. Thirty places asked this by hand before it was
+        # one function. See D773.
+        "what": "a word test that says yes to a shorter name",
+        "file": "src/diag.c",
+        "from": r"""    return strlen(word) == length && memcmp(word, bytes, length) == 0;""",
+        "to": r"""    return strlen(word) >= length && memcmp(word, bytes, length) == 0;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "was written error[K0201]",
+    },
+    {
         # A caret drawn to where the span ends rather than to where the line
         # does, which is what this did before: forty of them under a line
-        # fourteen long. See D539.
+        # fourteen long. See D539."""
         "what": "a caret that runs past the end of its line",
         "file": "src/diag.c",
         "from": r"""    if (at + width > shown.end) {""",
@@ -10204,12 +10218,10 @@ fn main() -> i32 {
         # like a library module was told to import itself.
         "what": "a file's own module, left out of what it reaches",
         "file": "src/types.c",
-        "from": """    if (strlen(program->alias) == length &&
-        memcmp(program->alias, alias, length) == 0) {
+        "from": """    if (kest_word_same(program->alias, alias, length)) {
         return true;
     }""",
-        "to": """    if (strlen(program->alias) == length &&
-        memcmp(program->alias, alias, length) == 0) {
+        "to": """    if (kest_word_same(program->alias, alias, length)) {
         return false;
     }""",
         "make": ["kest"],
@@ -10222,12 +10234,10 @@ fn main() -> i32 {
         # did you mean `vec`?` is two halves of one sentence disagreeing.
         "what": "a name suggested as itself",
         "file": "src/check.c",
-        "from": """    if (found.best != NULL && strlen(found.best) == length &&
-        memcmp(found.best, name, length) == 0) {
+        "from": """    if (found.best != NULL && kest_word_same(found.best, name, length)) {
         return NULL;
     }""",
-        "to": """    if (found.best != NULL && strlen(found.best) == length &&
-        memcmp(found.best, name, length) == 0) {
+        "to": """    if (found.best != NULL && kest_word_same(found.best, name, length)) {
         found.level = 1;
     }""",
         "make": ["kest"],

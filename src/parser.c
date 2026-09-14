@@ -124,9 +124,9 @@ static const char *span_text(Parser *parser, KestSpan span) {
 // Whether the identifier at `ahead` is spelled `word`.
 static bool is_word(Parser *parser, uint32_t ahead, const char *word) {
     KestToken token = peek_at(parser, ahead);
-    size_t length = strlen(word);
-    return token.kind == KEST_TOK_IDENT && token.span.length == length &&
-           memcmp(span_text(parser, token.span), word, length) == 0;
+    return token.kind == KEST_TOK_IDENT &&
+           kest_word_same(word, span_text(parser, token.span),
+                          token.span.length);
 }
 
 static void error_at(Parser *parser, KestSpan span, const char *code,

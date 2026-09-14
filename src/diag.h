@@ -129,6 +129,14 @@ bool kest_source_init(KestSource *source, KestArena *arena, const char *path,
 uint32_t kest_word_distance(const char *a, size_t a_len, const char *b,
                             size_t b_len, uint32_t limit);
 
+// Whether a name this compiler holds is the same word as a run of bytes a
+// file was written with. The two sides are spelled differently because they
+// come from different places: a name the compiler knows ends at a nought, and
+// a word a program wrote is an offset and a length into the source with no
+// terminator anywhere near it. Asking the question is what everything from the
+// lexer to the machine does with those two once it has them. See D773.
+bool kest_word_same(const char *word, const char *bytes, size_t length);
+
 void kest_source_locate(const KestSource *source, uint32_t offset,
                         uint32_t *line, uint32_t *column);
 

@@ -21932,3 +21932,64 @@ source it has, which is the one thing about it that is local.
 program whose every name is spelt wrong, and the parser says so before anything
 else gets a chance to. Nothing new is asked of `tools/` for this, which is why
 no hole is added — a break here cannot reach a check quietly.
+
+## D773: is this the word, asked once
+
+*What the pair travels for.* D772 asked whether a span's text wants to travel
+with its length, since `kest_span_text` hands back a run of bytes that does not
+end at a nought and every caller holds the length separately. Every one of the
+seventeen callers does hold both. But the pair is not what wanted naming — what
+wanted naming is the question they are held to ask.
+
+There were fifty-two `memcmp`s in `src`. **Thirty** of them were one sentence:
+
+```c
+strlen(word) == length && memcmp(word, bytes, length) == 0
+```
+
+*Is a name this compiler holds the same word as a run of bytes a file was
+written with?* The two sides are spelled differently because they come from
+different places — a name the compiler knows ends at a nought, and a word a
+program wrote is an offset and a length into the source with no terminator
+anywhere near it — and every stage from the lexer to the machine, eight files of
+them, wrote the join out for itself.
+
+`kest_word_same(word, bytes, length)` is in `diag.h` beside
+`kest_word_distance`, which is the other thing everybody asks about a word the
+reader wrote. Thirteen `memcmp`s are left: the prefix tests (`is_library`,
+`kest_under_module`, `module_of`), the two counted runs compared against each
+other, and the machine comparing values by their bytes. Those are three other
+questions and they stay written out.
+
+*Three predicates were the same predicate.* `is_word` in the parser, `is_builtin`
+in the checker and `builtin_named` in the compiler each wrapped the sentence in
+a stage's own shape, and `builtin_named` had to take a `Compiler *` it never
+read — `(void)compiler;` on the line above the answer — to look like it belonged
+where it was. It is gone; its eighteen callers ask `kest_word_same` outright.
+`name_is` in the compiler lost its `length` argument in the same move: the
+length belongs to the span and the nought to the name, so handing in both was
+handing in one of them twice, and one of its three callers was passing a length
+that belonged to a different name.
+
+*The function has a right way round, and finding that out cost three
+examples.* `kest_word_same` takes a name ending at a nought first and a counted
+run second, and two sites in the compiler were handed a counted run in the first
+slot: `name_is` and the `let` walk beside it compare one word a file wrote
+against another, both of them runs of the source with nothing terminating
+either. `strlen` on one of those reads to the end of the file, so the test never
+matched, the walk that decides whether a loop body only reads fields said yes
+when it should have said no, and `boxes`, `lookup` and `shapes` compiled to
+programs that gave the wrong answer and said nothing. `check-commands.sh` caught
+all three. Those two sites are written out again with a comment saying which
+question they are asking, and comparing two counted runs stays a fourth thing
+this does not name.
+
+*The shape scan could not have found this.* D770 reads bodies over sixty
+characters and numbers the names; these are two-line conditions inside larger
+loops, not bodies, and they are in eight different files. What found it was
+asking what a pair of values is *for* rather than what a function looks like.
+
+*What holds it* is every name any program writes. A word test that answers
+wrongly is a compiler that cannot find `len`, cannot find a field, cannot find a
+local and cannot find `main`; the hole gives it back the wrong answer for names
+of one length and `make check` stops at the first example.

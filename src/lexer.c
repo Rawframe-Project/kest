@@ -374,8 +374,7 @@ static KestToken scan_ident(KestLexer *lexer, uint32_t start) {
     size_t length = lexer->offset - start;
     const char *text = lexer->source->text + start;
     for (size_t i = 0; i < sizeof(KEYWORDS) / sizeof(KEYWORDS[0]); i++) {
-        if (strlen(KEYWORDS[i].text) == length &&
-            memcmp(KEYWORDS[i].text, text, length) == 0) {
+        if (kest_word_same(KEYWORDS[i].text, text, length)) {
             return make(lexer, KEYWORDS[i].kind, start);
         }
     }

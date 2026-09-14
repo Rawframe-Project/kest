@@ -308,8 +308,7 @@ static Local *find_local(Compiler *compiler, KestSpan span) {
     const char *name = span_text(compiler, span);
     for (uint16_t i = compiler->local_count; i > 0; i--) {
         Local *local = &compiler->locals[i - 1];
-        if (strlen(local->name) == span.length &&
-            memcmp(local->name, name, span.length) == 0) {
+        if (kest_word_same(local->name, name, span.length)) {
             return local;
         }
     }
@@ -429,8 +428,7 @@ static const KestMember *find_member(const KestType *type, const char *name,
         return NULL;
     }
     for (uint32_t i = 0; i < type->member_count; i++) {
-        if (strlen(type->members[i].name) == length &&
-            memcmp(type->members[i].name, name, length) == 0) {
+        if (kest_word_same(type->members[i].name, name, length)) {
             return &type->members[i];
         }
     }
@@ -819,6 +817,10 @@ static bool reads_only_fields(Compiler *compiler, const KestBlock *block,
                               const char *name, size_t length,
                               bool fields_are_fine);
 
+// Both sides here are runs of the source with no nought at either end, which
+// is why this is written out rather than asking `kest_word_same`: that one
+// takes a name this compiler holds against a word a file wrote, and the walk
+// this serves is comparing one word a file wrote against another. See D773.
 static bool name_is(Compiler *compiler, const KestExpr *expr, const char *name,
                     size_t length) {
     return expr != NULL && expr->kind == KEST_EXPR_NAME &&
@@ -1440,19 +1442,11 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
 
 }
 
-// A builtin is what a name means when nothing was declared under it, which
-// the checker decided and left on the callee.
-static bool builtin_named(Compiler *compiler, const char *name, size_t length,
-                          const char *word) {
-    (void)compiler;
-    return strlen(word) == length && memcmp(name, word, length) == 0;
-}
-
 // The arguments are already on the stack in the order they were written, so
 // each of these is one instruction over them.
 static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
                             const char *name, size_t length) {
-    if (builtin_named(compiler, name, length, "len")) {
+    if (kest_word_same("len", name, length)) {
         const KestType *subject =
             expr->call.arg_count > 0 ? expr->call.args[0]->type : NULL;
         // How many of them is written in the type, so the answer is a
@@ -1478,28 +1472,28 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         return true;
     }
 
-    if (builtin_named(compiler, name, length, "slice")) {
+    if (kest_word_same("slice", name, length)) {
         stack_pop(compiler, 3);
         stack_push(compiler, 1);
         emit(compiler, KEST_OP_TEXT_SLICE, expr->span);
         return true;
     }
 
-    if (builtin_named(compiler, name, length, "matches")) {
+    if (kest_word_same("matches", name, length)) {
         stack_pop(compiler, 3);
         stack_push(compiler, 1);
         emit(compiler, KEST_OP_TEXT_MATCHES, expr->span);
         return true;
     }
 
-    if (builtin_named(compiler, name, length, "rest")) {
+    if (kest_word_same("rest", name, length)) {
         stack_pop(compiler, 2);
         stack_push(compiler, 1);
         emit(compiler, KEST_OP_TEXT_REST, expr->span);
         return true;
     }
 
-    if (builtin_named(compiler, name, length, "find")) {
+    if (kest_word_same("find", name, length)) {
         // Where to look from, which is the beginning when it was not said.
         // The instruction takes three either way, so there is one of it.
         if (expr->call.arg_count < 3) {
@@ -1512,7 +1506,7 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         return true;
     }
 
-    if (builtin_named(compiler, name, length, "array")) {
+    if (kest_word_same("array", name, length)) {
         const KestType *element =
             expr->type == NULL ? NULL : expr->type->element;
         // An empty one has nothing to fill it with, and the instruction reads
@@ -1537,18 +1531,18 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         expr->call.arg_count > 0 ? expr->call.args[0]->type : NULL;
     // `remove` answers for a store too, further down, so this asks what it was
     // handed rather than only what it was called.
-    if ((builtin_named(compiler, name, length, "pop") ||
-         builtin_named(compiler, name, length, "remove") ||
-         builtin_named(compiler, name, length, "clear")) &&
+    if ((kest_word_same("pop", name, length) ||
+         kest_word_same("remove", name, length) ||
+         kest_word_same("clear", name, length)) &&
         shrinking != NULL && shrinking->tag == KEST_T_ARRAY) {
         const KestType *array = shrinking;
         const KestType *element = array->element;
-        if (builtin_named(compiler, name, length, "clear")) {
+        if (kest_word_same("clear", name, length)) {
             stack_pop(compiler, 1);
             emit(compiler, KEST_OP_CLEAR, expr->span);
             return true;
         }
-        bool taking = builtin_named(compiler, name, length, "remove");
+        bool taking = kest_word_same("remove", name, length);
         stack_pop(compiler, taking ? 2 : 1);
         stack_push(compiler,
                    (uint16_t)(value_slots(element) + (taking ? 0 : 1)));
@@ -1557,7 +1551,7 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         return true;
     }
 
-    if (builtin_named(compiler, name, length, "hash")) {
+    if (kest_word_same("hash", name, length)) {
         const KestType *of =
             expr->call.arg_count > 0 ? expr->call.args[0]->type : NULL;
         if (of != NULL && of->tag == KEST_T_ENUM) {
@@ -1575,7 +1569,7 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         return true;
     }
 
-    if (builtin_named(compiler, name, length, "push")) {
+    if (kest_word_same("push", name, length)) {
         const KestType *array =
             expr->call.arg_count > 0 ? expr->call.args[0]->type : NULL;
         const KestType *element = array == NULL ? NULL : array->element;
@@ -1585,7 +1579,7 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         return true;
     }
 
-    if (builtin_named(compiler, name, length, "store")) {
+    if (kest_word_same("store", name, length)) {
         uint16_t stride = expr->type == NULL || expr->type->element == NULL
                               ? 1
                               : value_slots(expr->type->element);
@@ -1603,10 +1597,10 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         return true;
     }
 
-    bool adding = builtin_named(compiler, name, length, "add");
-    bool getting = builtin_named(compiler, name, length, "get");
-    bool setting = builtin_named(compiler, name, length, "set");
-    bool removing = builtin_named(compiler, name, length, "remove");
+    bool adding = kest_word_same("add", name, length);
+    bool getting = kest_word_same("get", name, length);
+    bool setting = kest_word_same("set", name, length);
+    bool removing = kest_word_same("remove", name, length);
     if (!adding && !getting && !setting && !removing) {
         return false;
     }
@@ -1681,8 +1675,7 @@ static void compile_conversion(Compiler *compiler, const KestExpr *expr,
 static const KestVariantType *case_named(const KestType *choice,
                                          const char *name, size_t length) {
     for (uint32_t i = 0; i < choice->case_count; i++) {
-        if (strlen(choice->cases[i].name) == length &&
-            memcmp(choice->cases[i].name, name, length) == 0) {
+        if (kest_word_same(choice->cases[i].name, name, length)) {
             return &choice->cases[i];
         }
     }
@@ -1779,8 +1772,8 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
     if (!is_a_function && only != NULL && only->kind == KEST_EXPR_NAME &&
         only->type != NULL && only->type->tag == KEST_T_FIXED &&
         callee->kind == KEST_EXPR_NAME &&
-        builtin_named(compiler, span_text(compiler, callee->span),
-                      callee->span.length, "len")) {
+        kest_word_same("len", span_text(compiler, callee->span),
+                       callee->span.length)) {
         KestValue how_many = {0};
         how_many.integer = only->type->count;
         stack_push(compiler, 1);

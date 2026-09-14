@@ -83,8 +83,7 @@ static const char *span_text(Graph *graph, KestSpan span) {
 
 static int32_t find_exact(Graph *graph, const char *text, size_t length) {
     for (uint32_t i = 0; i < graph->count; i++) {
-        if (strlen(graph->functions[i].name) == length &&
-            memcmp(graph->functions[i].name, text, length) == 0) {
+        if (kest_word_same(graph->functions[i].name, text, length)) {
             return (int32_t)i;
         }
     }
@@ -203,8 +202,8 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
                 {"store", "`store()` makes something that can grow"},
             };
             for (uint32_t i = 0; i < sizeof(REACHES) / sizeof(REACHES[0]); i++) {
-                if (strlen(REACHES[i].name) != callee->span.length ||
-                    memcmp(REACHES[i].name, text, callee->span.length) != 0) {
+                if (!kest_word_same(REACHES[i].name, text,
+                                    callee->span.length)) {
                     continue;
                 }
                 if (REACHES[i].why == NULL) {
@@ -217,7 +216,7 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
             // pieces are gathered free and paid for once. It is a conversion
             // and not a builtin, which is why it is asked about here rather
             // than in the table the builtins are held to.
-            if (callee->span.length == 4 && memcmp("text", text, 4) == 0) {
+            if (kest_word_same("text", text, callee->span.length)) {
                 reaches(function, expr->span,
                         "`text` copies the bytes it is given");
             }

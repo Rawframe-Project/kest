@@ -154,7 +154,7 @@ void kest_import_reached_by(KestProgram *program, const char *alias,
     // written. See D725.
     for (uint32_t i = 0; i < program->unit->import_count; i++) {
         const char *imported = program->unit->imports[i];
-        if (strlen(imported) == length && memcmp(imported, alias, length) == 0) {
+        if (kest_word_same(imported, alias, length)) {
             program->unit->import_reached[i] = true;
             return;
         }
@@ -179,13 +179,12 @@ bool kest_file_reaches(KestProgram *program, const char *alias,
     // of one of its own names has written nothing that needs bringing into
     // reach, and is the one shape where asking only about imports answers no
     // to a file that may write it. See D736.
-    if (strlen(program->alias) == length &&
-        memcmp(program->alias, alias, length) == 0) {
+    if (kest_word_same(program->alias, alias, length)) {
         return true;
     }
     for (uint32_t i = 0; i < program->unit->import_count; i++) {
         const char *imported = program->unit->imports[i];
-        if (strlen(imported) == length && memcmp(imported, alias, length) == 0) {
+        if (kest_word_same(imported, alias, length)) {
             return true;
         }
     }
@@ -280,8 +279,7 @@ KestType *kest_find_type(KestProgram *program, const char *name,
         const char *candidate = program->types[i]->name;
         // A composed type has no name of its own; `kest_type_name` builds one
         // on demand and nothing looks it up by that.
-        if (candidate != NULL && strlen(candidate) == length &&
-            memcmp(candidate, name, length) == 0) {
+        if (candidate != NULL && kest_word_same(candidate, name, length)) {
             return program->types[i];
         }
     }
@@ -334,9 +332,10 @@ static const KestDecl *constant_in_file(KestProgram *program, const char *name,
     const KestUnit *unit = program->unit == NULL ? NULL : &program->unit->unit;
     for (uint32_t i = 0; unit != NULL && i < unit->count; i++) {
         const KestDecl *decl = unit->items[i];
-        if (decl->kind == KEST_DECL_CONST && decl->name.length == length &&
-            memcmp(program->source->text + decl->name.offset, name, length) ==
-                0) {
+        if (decl->kind == KEST_DECL_CONST &&
+            decl->name.length == length &&
+            memcmp(kest_span_text(program->source, decl->name), name,
+                   length) == 0) {
             return decl;
         }
     }
@@ -356,15 +355,16 @@ static const KestDecl *constant_in_module(KestProgram *program,
     const KestUnits *files = program->files;
     for (uint32_t f = 0; files != NULL && f < files->count; f++) {
         const KestUnitInfo *info = &files->items[f];
-        if (info->alias == NULL || strlen(info->alias) != module_length ||
-            memcmp(info->alias, module, module_length) != 0) {
+        if (info->alias == NULL ||
+            !kest_word_same(info->alias, module, module_length)) {
             continue;
         }
         for (uint32_t i = 0; i < info->unit.count; i++) {
             const KestDecl *decl = info->unit.items[i];
-            if (decl->kind == KEST_DECL_CONST && decl->name.length == length &&
-                memcmp(info->source.text + decl->name.offset, name, length) ==
-                    0) {
+            if (decl->kind == KEST_DECL_CONST &&
+                decl->name.length == length &&
+                memcmp(kest_span_text(&info->source, decl->name), name,
+                       length) == 0) {
                 *read_in = &info->source;
                 return decl;
             }
@@ -504,7 +504,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
             const char *called =
                 kest_span_text(program->source, expr->call.callee->span);
             uint32_t length = expr->call.callee->span.length;
-            if (length == 3 && memcmp(called, "len", 3) == 0) {
+            if (kest_word_same("len", called, length)) {
                 const KestType *of = expr->call.arg_count == 1
                                          ? expr->call.args[0]->type
                                          : NULL;
@@ -518,7 +518,7 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
                 out->integer = of->count;
                 return true;
             }
-            if (length == 4 && memcmp(called, "hash", 4) == 0 &&
+            if (kest_word_same("hash", called, length) &&
                 expr->call.arg_count == 1) {
                 // Over the value laid out flat, which is what the machine
                 // hashes and what this works out: one walk, asked of slots
@@ -872,8 +872,7 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
         const KestVariantType *which = NULL;
         uint32_t at = 0;
         for (; at < type->case_count; at++) {
-            if (strlen(type->cases[at].name) == written &&
-                memcmp(type->cases[at].name, word, written) == 0) {
+            if (kest_word_same(type->cases[at].name, word, written)) {
                 which = &type->cases[at];
                 break;
             }
@@ -951,10 +950,10 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
             const KestMember *member = NULL;
             for (uint32_t i = 0; i < held->member_count; i++) {
                 if (held->members[i].name != NULL &&
-                    strlen(held->members[i].name) == expr->field.name.length &&
-                    memcmp(held->members[i].name,
-                           program->source->text + expr->field.name.offset,
-                           expr->field.name.length) == 0) {
+                    kest_word_same(held->members[i].name,
+                                   kest_span_text(program->source,
+                                                  expr->field.name),
+                                   expr->field.name.length)) {
                     member = &held->members[i];
                     break;
                 }
@@ -1409,8 +1408,7 @@ static KestType *error_type(KestProgram *program) {
 KestType *kest_bound_type(KestProgram *program, const char *name,
                           size_t length) {
     for (uint32_t i = 0; i < program->bound_count; i++) {
-        if (strlen(program->bound_names[i]) == length &&
-            memcmp(program->bound_names[i], name, length) == 0) {
+        if (kest_word_same(program->bound_names[i], name, length)) {
             return program->bound_types[i];
         }
     }
@@ -1589,8 +1587,7 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
         }
         // The module ends at the first dot, which is what says where to look.
         const char *dot = strchr(whole, '.');
-        if (dot == NULL || strlen(dot + 1) != length ||
-            memcmp(dot + 1, name, length) != 0 ||
+        if (dot == NULL || !kest_word_same(dot + 1, name, length) ||
             !kest_needs_import(program, whole, strlen(whole))) {
             continue;
         }
@@ -1860,9 +1857,9 @@ KestType *kest_resolve_type_ref(KestProgram *program,
         return resolve_named(program, ref);
 
     case KEST_TYPE_GENERIC: {
-        const char *name = program->source->text + ref->name.offset;
-        bool is_ref = ref->name.length == 3 && memcmp(name, "ref", 3) == 0;
-        bool is_store = ref->name.length == 5 && memcmp(name, "store", 5) == 0;
+        const char *name = kest_span_text(program->source, ref->name);
+        bool is_ref = kest_word_same("ref", name, ref->name.length);
+        bool is_store = kest_word_same("store", name, ref->name.length);
         if (!is_ref && !is_store) {
             // `Pair<i32, text>`: a copy of a shape, made the first time it is
             // written and found again after that.
@@ -1990,8 +1987,8 @@ KestType *kest_resolve_type_ref(KestProgram *program,
                          !anywhere;
                          f++) {
                         const char *called = program->files->items[f].alias;
-                        anywhere = called != NULL && strlen(called) == named &&
-                                   memcmp(called, digits, named) == 0;
+                        anywhere = called != NULL &&
+                                   kest_word_same(called, digits, named);
                     }
                     if (!anywhere) {
                         kest_diags_add(program->diags, KEST_SEVERITY_ERROR,
@@ -2317,8 +2314,7 @@ uint32_t kest_overloads(KestProgram *program, const char *name, size_t length,
     uint32_t slot = name_hash(name, length) & mask;
     while (program->by_name[slot] != 0 && count < room) {
         KestSymbol *one = &program->globals[program->by_name[slot] - 1];
-        if (strlen(one->name) == length &&
-            memcmp(one->name, name, length) == 0 &&
+        if (kest_word_same(one->name, name, length) &&
             one->type->tag == KEST_T_FN) {
             found[count++] = one;
         }
@@ -2351,8 +2347,7 @@ KestSymbol *kest_find_global(KestProgram *program, const char *name,
     uint32_t slot = name_hash(name, length) & mask;
     while (program->by_name[slot] != 0) {
         KestSymbol *one = &program->globals[program->by_name[slot] - 1];
-        if (strlen(one->name) == length &&
-            memcmp(one->name, name, length) == 0) {
+        if (kest_word_same(one->name, name, length)) {
             return one;
         }
         slot = (slot + 1) & mask;
@@ -3354,7 +3349,7 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
             for (uint32_t seen = 0; seen < p; seen++) {
                 const KestField *earlier = decl->function.params[seen];
                 if (earlier->name.length == param->name.length &&
-                    memcmp(program->source->text + earlier->name.offset,
+                    memcmp(kest_span_text(program->source, earlier->name),
                            param_name, param->name.length) == 0) {
                     kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0305",
                                    param->name,

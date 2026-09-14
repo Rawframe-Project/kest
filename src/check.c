@@ -189,8 +189,7 @@ static Local *find_local(Checker *checker, const char *name, size_t length) {
     // Backwards, so the innermost declaration of a name is the one found.
     for (uint32_t i = checker->local_count; i > 0; i--) {
         Local *local = &checker->locals[i - 1];
-        if (strlen(local->name) == length &&
-            memcmp(local->name, name, length) == 0) {
+        if (kest_word_same(local->name, name, length)) {
             return local;
         }
     }
@@ -588,8 +587,7 @@ static const char *nearest_name(Checker *checker, const char *name,
     // writes the name it calls itself somewhere a value goes -- and what is
     // wrong there is not the spelling. Nothing else can be level with it,
     // since a word is no distance from itself. See D737.
-    if (found.best != NULL && strlen(found.best) == length &&
-        memcmp(found.best, name, length) == 0) {
+    if (found.best != NULL && kest_word_same(found.best, name, length)) {
         return NULL;
     }
     if (found.level > 2) {
@@ -717,8 +715,8 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
            name);
     // Saying something is the host's to do, and it is the first thing anybody
     // reaches for, so the one place it lives is worth naming outright.
-    if ((length == 5 && memcmp(name, "print", 5) == 0) ||
-        (length == 5 && memcmp(name, "write", 5) == 0)) {
+    if (kest_word_same("print", name, length) ||
+        kest_word_same("write", name, length)) {
         suggest(checker, "`import std.io` and call `io.%.*s`", (int)length,
                 name);
         return error_type(checker);
@@ -736,8 +734,7 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
         // crossing the file declares — and what a reader would write for that
         // is `math.Math.floor`, not `floor`. See D732.
         const char *dot = strchr(whole, '.');
-        if (dot == NULL || strlen(dot + 1) != length ||
-            memcmp(dot + 1, name, length) != 0 ||
+        if (dot == NULL || !kest_word_same(dot + 1, name, length) ||
             !kest_needs_import(checker->program, whole, strlen(whole))) {
             continue;
         }
@@ -836,8 +833,7 @@ static const KestVariantType *find_case(Checker *checker, const KestType *choice
                                         KestSpan name) {
     const char *text = span_text(checker, name);
     for (uint32_t i = 0; i < choice->case_count; i++) {
-        if (strlen(choice->cases[i].name) == name.length &&
-            memcmp(choice->cases[i].name, text, name.length) == 0) {
+        if (kest_word_same(choice->cases[i].name, text, name.length)) {
             // The cases belong to the type and this is the one door to them,
             // whether the name is being built, tested or answered.
             choice->cases[i].named = true;
@@ -1059,8 +1055,7 @@ static bool has_equality(const KestType *type, const KestType **without) {
 static bool is_builtin(Checker *checker, KestExpr *expr, KestSpan name,
                        const char *word) {
     size_t length = strlen(word);
-    if (name.length != length ||
-        memcmp(span_text(checker, name), word, length) != 0) {
+    if (!kest_word_same(word, span_text(checker, name), name.length)) {
         return false;
     }
     // Written bare here, registered under the module it was declared in, so
@@ -2568,8 +2563,7 @@ static KestType *check_arguments(Checker *checker, KestExpr *expr,
 static const char *names_a_function(Checker *checker, KestSpan name) {
     const char *written = span_text(checker, name);
     for (uint32_t i = 0; i < sizeof(BUILTINS) / sizeof(BUILTINS[0]); i++) {
-        if (strlen(BUILTINS[i]) == name.length &&
-            memcmp(BUILTINS[i], written, name.length) == 0) {
+        if (kest_word_same(BUILTINS[i], written, name.length)) {
             return BUILTINS[i];
         }
     }
@@ -2588,8 +2582,7 @@ static const char *names_a_function(Checker *checker, KestSpan name) {
         }
         const char *dot = strrchr(one->name, '.');
         const char *last = dot == NULL ? one->name : dot + 1;
-        if (strlen(last) == name.length &&
-            memcmp(last, written, name.length) == 0) {
+        if (kest_word_same(last, written, name.length)) {
             return one->name;
         }
     }
@@ -2774,8 +2767,7 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
 
     if (object->tag == KEST_T_STRUCT) {
         for (uint32_t i = 0; i < object->member_count; i++) {
-            if (strlen(object->members[i].name) == length &&
-                memcmp(object->members[i].name, name, length) == 0) {
+            if (kest_word_same(object->members[i].name, name, length)) {
                 return object->members[i].type;
             }
         }
@@ -2808,8 +2800,7 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
         object->element->tag == KEST_T_STRUCT) {
         const KestType *named = object->element;
         for (uint32_t i = 0; i < named->member_count; i++) {
-            if (strlen(named->members[i].name) == length &&
-                memcmp(named->members[i].name, name, length) == 0) {
+            if (kest_word_same(named->members[i].name, name, length)) {
                 if (object->tag == KEST_T_OPTIONAL) {
                     say_if_let(checker, object, NULL);
                 } else {
@@ -4447,9 +4438,8 @@ static void check_entry(KestProgram *program, KestUnit *unit) {
         if (decl->kind != KEST_DECL_FN || decl->function.is_extern) {
             continue;
         }
-        const char *name = program->source->text + decl->name.offset;
-        if (decl->name.length != strlen(KEST_MAIN) ||
-            memcmp(name, KEST_MAIN, decl->name.length) != 0) {
+        const char *name = kest_span_text(program->source, decl->name);
+        if (!kest_word_same(KEST_MAIN, name, decl->name.length)) {
             continue;
         }
         if (first_main == NULL) {
@@ -4758,8 +4748,7 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
                 }
             }
             size_t tail = length - (size_t)(last - wrote);
-            if (strlen(named->imports[i]) == tail &&
-                memcmp(named->imports[i], last, tail) == 0) {
+            if (kest_word_same(named->imports[i], last, tail)) {
                 where = decl->name;
             }
         }

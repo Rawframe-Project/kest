@@ -322,7 +322,7 @@ checked = some("the builtins the checker asks about",
                      r'is_builtin\(checker, expr, name, "([a-z]+)"'))
 emitted = some("the builtins the compiler emits for",
                words('src/compile.c',
-                     r'builtin_named\(compiler, name, length, "([a-z]+)"'))
+                     r'kest_word_same\("([a-z]+)", name, length\)'))
 suggested = some("the builtins a message suggests from", sorted(set(spelled(
     table('src/check.c',
           r'static const char \*const BUILTINS\[\] = \{(.*?)\n\};')))))
