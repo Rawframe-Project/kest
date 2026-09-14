@@ -29452,3 +29452,32 @@ reading, and the thirty-first will be written by hand the same way. The shape is
 `strlen(` within two lines of `memcmp(`, which the tree has three honest uses
 of. Find whether that is a check worth having or a rule that only a reader can
 tell apart, and say which in the log either way.
+
+## The word test, held the same way
+
+The last entry asked whether `kest_word_same` could be held by a check or
+whether "is this the word" is a thing only a reader can tell. It can be held,
+and the way to find out was to run the candidate against the tree as it stood
+before D773 and count.
+
+What gives one away is a `strlen` compared for equality beside a `memcmp` — the
+length of a name ending at a nought against the length of a run that does not.
+Against the old tree that finds twenty-nine of the thirty-one, and nothing that
+is not one. The two it misses bind the `strlen` to a local a line earlier, and
+both of those already wore a name — `is_word` and `is_builtin` — which is the
+form a reader notices anyway.
+
+It does not catch `kest_under_module`, and should not: `strlen(whole) > length +
+1` asks whether one name begins with another. A looser draft did catch it;
+requiring the `strlen` and its comparison to be adjacent lost no real test. The
+question asked with a counted literal has no `strlen` to see, and that limit is
+written into the log rather than papered over. Held both ways round, with
+`diag.c` the one file named. Recorded as D775.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** three entries have gone to the same place — a question two stages
+answered separately, then a check so it stays answered once. The roadmap says
+types, compile, value, vm, and nothing has been added to the language itself in
+four. Read `docs/language.md` against what the checker refuses and find the
+nearest thing a program cannot say yet that the machine could already run.

@@ -1930,6 +1930,47 @@ for body_path in sorted(glob.glob(os.path.join("src", "*.c"))):
             continue
         shapes += 1
         body_shapes.setdefault(body_shape(body_text), []).append(body_called)
+# Whether a name this compiler holds is the same word as a run of bytes a file
+# wrote is `kest_word_same`, and before there was one there were thirty of it
+# written out by hand across eight files. What gives one away is a `strlen`
+# compared for equality beside a `memcmp`: the length of a name that ends at a
+# nought, held against the length of a run that does not.
+#
+# Measured against the tree as it stood before D773: twenty-nine of the
+# thirty-one hand-written tests, and nothing that was not one. The two it
+# cannot see bind the `strlen` to a local a line earlier, and both of those had
+# already been given a name -- `is_word` and `is_builtin` -- which is the form a
+# reader was going to notice anyway. `kest_under_module` is not caught and
+# should not be: `strlen(whole) > length + 1` asks whether one name begins with
+# another, which is a different question and stays written out. See D775.
+WORD_BY_HAND = {
+    "src/diag.c": "`kest_word_same` is the one place, and this is it",
+}
+
+word_by_hand = {}
+for word_path in sorted(glob.glob(os.path.join("src", "*.c"))):
+    word_lines = open(word_path).read().split("\n")
+    for word_at, word_line in enumerate(word_lines, 1):
+        if "memcmp(" not in word_line:
+            continue
+        word_near = "\n".join(word_lines[max(0, word_at - 3):word_at + 2])
+        if re.search(r"strlen\((?:[^()]|\([^()]*\))*\)\s*[=!]=|[=!]=\s*strlen\(",
+                     word_near):
+            word_by_hand.setdefault(word_path, []).append(word_at)
+some("the places `src` asks if a word is the word by hand", word_by_hand)
+for word_path in sorted(word_by_hand):
+    if word_path in WORD_BY_HAND:
+        continue
+    print("words: %s measures a name against a run of bytes itself, at "
+          "line(s) %s, and whether a word is the word is `kest_word_same`"
+          % (word_path, ", ".join(str(n) for n in word_by_hand[word_path])))
+    failed = 1
+for word_path in WORD_BY_HAND:
+    if word_path not in word_by_hand:
+        print("words: %s is written down as asking if a word is the word by "
+              "hand and does not" % word_path)
+        failed = 1
+
 # Where a span becomes text is one place. `kest_span_text` says it, and a file
 # that adds an offset to a source's bytes for itself is a file that will still
 # be doing it the day a span starts counting from somewhere else -- which is
@@ -2018,7 +2059,9 @@ if not failed:
           "and %u pairs of widths "
           "in %u module(s) written in both, and %u answers a host is given "
           "read by every host that reads one, and a span becomes text in "
-          "one place with %u file(s) named for reading one by hand, and %u "
+          "one place with %u file(s) named for reading one by hand, and "
+          "whether a word is the word is asked in one with %u named for "
+          "asking it by hand, and %u "
           "bodies of `src` are each "
           "written once, %u of them long enough to be read for their shape as "
           "well, with %u group(s) of one shape and a reason beside each"
@@ -2027,8 +2070,8 @@ if not failed:
              len(tools), pythons, shells, len(reading), len(only_a_hole),
              len(NOT_REACHED),
              len(every_code), sentences, len(HELD), halves // 2,
-             len(in_widths), len(ANSWERS), len(SPAN_BY_HAND), bodies, shapes,
-             len(SAME_SHAPE)))
+             len(in_widths), len(ANSWERS), len(SPAN_BY_HAND),
+             len(WORD_BY_HAND), bodies, shapes, len(SAME_SHAPE)))
 
 sys.exit(failed)
 PY

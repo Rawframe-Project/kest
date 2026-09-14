@@ -1205,6 +1205,30 @@ yield""",
         "caught": "did not all fit in a hole",
     },
     {
+        # A stage measuring a name against a run of bytes for itself, which is
+        # what thirty places did before there was somewhere to ask. See D775.
+        "what": "a word test written out in a file that has no reason to",
+        "file": "src/check.c",
+        "from": r"""        if (kest_word_same(local->name, name, length)) {""",
+        "to": r"""        if (strlen(local->name) == length &&
+            memcmp(local->name, name, length) == 0) {""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "measures a name against a run of bytes itself",
+    },
+    {
+        # A file named as asking by hand after it stopped, which leaves a
+        # reason standing over nothing.
+        "what": "a reason for a word test written out where none is",
+        "file": "tools/check-tables.sh",
+        "from": r"""    "src/diag.c": "`kest_word_same` is the one place, and this is it",""",
+        "to": r"""    "src/diag.c": "`kest_word_same` is the one place, and this is it",
+    "src/vm.c": "nothing, which is the point of this break",""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "is written down as asking if a word is the word by hand",
+    },
+    {
         # A stage reading a source's bytes at an offset for itself, which is
         # what every one of them did before there was somewhere to ask. See
         # D772.

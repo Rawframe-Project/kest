@@ -22025,3 +22025,40 @@ list of files nobody has looked at since.
 
 *What it cost.* Nothing measurable: the scan is one regular expression over the
 sixteen files of `src`, run inside a check that already reads all of them.
+
+## D775: the word test, held the same way
+
+*The question the last entry left.* D774 wrote a rule into `tools/` because a
+finding had twice been only as good as the grep that found it, and asked whether
+`kest_word_same` could be held the same way or whether "is this the word" is a
+thing only a reader can tell from its neighbours. It can be held, and the way to
+find out was to run the candidate check against the tree as it stood before
+D773 and count.
+
+*What gives a hand-written word test away* is a `strlen` compared for equality
+beside a `memcmp`: the length of a name that ends at a nought, measured against
+the length of a run of bytes that does not. Against the tree before D773 that
+pattern finds **twenty-nine of the thirty-one**, and nothing that is not one.
+
+The two it cannot see bind the `strlen` to a local a line earlier —
+`size_t length = strlen(word);` and then `name.length != length` further down —
+and both of those had already been given a name, `is_word` in the parser and
+`is_builtin` in the checker. A word test wearing a name is the form a reader was
+going to notice anyway; the twenty-nine written out inline are the ones that
+hid.
+
+*What it does not catch, and should not.* `kest_under_module` asks
+`strlen(whole) > length + 1 && whole[length] == '.'` before its `memcmp`, which
+is whether one name begins with another — a different question, and it stays
+written out. An earlier draft of the pattern let the strlen and its comparison
+drift apart and caught that one; tightening it to require them adjacent lost no
+real test and gained no false one. And the question asked with a counted literal
+— `length == 5 && memcmp(name, "print", 5)` — has no `strlen` to see, so nothing
+here sees it. That is written down rather than papered over: it is the same
+question with the length spelled out by hand, and the only thing holding it is a
+reader.
+
+*Held both ways round*, like `SPAN_BY_HAND` beside it and every other list in
+`check-tables.sh`: a file that asks by hand without a reason is refused, and a
+reason beside a file that has stopped is refused too. One file has a reason,
+`diag.c`, and its reason is that the answer lives there.
