@@ -301,7 +301,7 @@ static void emit_loop(Compiler *compiler, uint32_t start, KestSpan origin) {
 }
 
 static const char *span_text(Compiler *compiler, KestSpan span) {
-    return compiler->program->source->text + span.offset;
+    return kest_span_text(compiler->program->source, span);
 }
 
 static Local *find_local(Compiler *compiler, KestSpan span) {

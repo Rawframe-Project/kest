@@ -154,6 +154,10 @@ uint32_t kest_word_distance(const char *a, size_t a_len, const char *b,
     return previous[b_len];
 }
 
+const char *kest_span_text(const KestSource *source, KestSpan span) {
+    return source->text + span.offset;
+}
+
 void kest_source_locate(const KestSource *source, uint32_t offset,
                         uint32_t *line, uint32_t *column) {
     uint32_t low = 0;

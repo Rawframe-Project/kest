@@ -92,7 +92,7 @@ static void indent(Printer *printer) {
 }
 
 static void print_span(Printer *printer, KestSpan span) {
-    put_bytes(printer, printer->source->text + span.offset, span.length);
+    put_bytes(printer, kest_span_text(printer->source, span), span.length);
 }
 
 // One blank line where the author left one or more, and none where they left

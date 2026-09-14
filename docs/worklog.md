@@ -29353,3 +29353,39 @@ near-miss list was run by hand across all of them. Find what it costs to read
 every file against every other — the scan is three hundred bodies, so the pairs
 are forty-five thousand — and whether the near-misses are worth a check or only
 worth looking at once.
+
+## Every file against every other, and one fact under the floor
+
+Three hundred and seven bodies over sixty characters make forty-six thousand
+nine hundred and seventy-one pairs, and reading every one against every other
+takes 0.66 seconds. Cost is not why the scan reads one file at a time.
+
+What it finds is. Ten pairs match at nine tenths or better and every one is
+already reasoned about in `SAME_SHAPE`: the two host accessor families,
+`kest_is_narrow` beside `kest_is_unsigned`, `print_op` beside `print_operator`,
+and one pair across files — `has_equality` in `check.c` against
+`kest_type_has_text` in `types.c`, which walk one list of tags and part at
+`KEST_T_OPTIONAL`, exactly as the comment beside one of them says and D541
+decided. Worth running once, not worth a refusal.
+
+The sixty-character floor was picked without a measurement, so it was swept to
+forty-five, thirty-five and twenty-five. Five groups appear and hold all the way
+down, and every one is a one-line wrapper whose whole content is which thing it
+hands on. Naming what a wrapper hands on is what a wrapper is for; the floor
+stays, now with a number under it.
+
+The find was under the floor. `span_text` is written four times — `contract.c`,
+`parser.c`, `compile.c`, `check.c` — and the arithmetic itself is in seventeen
+places across eleven files: the lexer reading a literal, the formatter writing a
+span back, the loader comparing a module name against what an import asked for,
+the checker naming a declaration, the tree printer, the command line. That is
+one fact about what a span is, worked out by every stage that needed it.
+`kest_span_text` is in `diag.h` beside `kest_source_locate`; the four wrappers
+stay and now say only which source they hold. Recorded as D772.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `kest_span_text` hands back text that is not terminated and every
+caller holds the length separately — `(int)span.length` beside the pointer in
+nine places, `memcmp` with it in others. Find whether the pair wants to travel
+together, and what a reader that holds both would cost against `%.*s`.

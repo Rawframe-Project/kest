@@ -5,7 +5,7 @@ static void indent(FILE *out, int depth) {
 }
 
 static void print_span(const KestSource *source, KestSpan span, FILE *out) {
-    fprintf(out, "%.*s", (int)span.length, source->text + span.offset);
+    fprintf(out, "%.*s", (int)span.length, kest_span_text(source, span));
 }
 
 static void print_op(KestTokenKind kind, FILE *out) {

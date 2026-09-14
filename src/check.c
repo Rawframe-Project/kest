@@ -87,7 +87,7 @@ static KestType *error_type(Checker *checker) {
 }
 
 static const char *span_text(Checker *checker, KestSpan span) {
-    return checker->program->source->text + span.offset;
+    return kest_span_text(checker->program->source, span);
 }
 
 // A number the compiler can work out where it stands, for the places where
@@ -180,7 +180,7 @@ static void expected_for(Checker *checker, KestSpan span, const KestType *want,
         return;
     }
     report(checker, span, "K0310", "`%.*s` expects `%s`, found `%s`",
-           (int)name.length, declared_in->text + name.offset,
+           (int)name.length, kest_span_text(declared_in, name),
            type_name(checker, want), type_name(checker, got));
     say_if_let(checker, got, want);
 }

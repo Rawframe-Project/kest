@@ -139,8 +139,8 @@ static void dump_comments_json(KestArena *arena, const KestSource *source,
         kest_source_locate(source, spans[i].offset, &line, &column);
         fprintf(out, "%s{\"line\":%u,\"column\":%u,\"text\":", i > 0 ? "," : "",
                 line, column);
-        char *text = kest_arena_strndup(arena, source->text + spans[i].offset,
-                                        spans[i].length);
+        char *text = kest_arena_strndup(
+            arena, kest_span_text(source, spans[i]), spans[i].length);
         kest_json_text(text == NULL ? "" : text, out);
         fputc('}', out);
     }

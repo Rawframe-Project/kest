@@ -21877,3 +21877,58 @@ is not the file that was read, and `check-fmt.sh` says so of every file in the
 tree — which is the hole: a walk that keeps the backticks makes `fmt` refuse its
 own output. The third caller is held by what it says, since a message naming an
 operator names it the way a program writes it.
+
+## D772: every file against every other, and what was under the floor
+
+*What the all-pairs scan costs.* D770 reads shapes within one file because that
+is where a walk written twice is most likely to be. D771 was found the other
+way — a near-miss list run by hand across the whole tree — so the question is
+what reading every body against every other costs, and whether it is worth a
+check.
+
+Three hundred and seven bodies over sixty characters make forty-six thousand
+nine hundred and seventy-one pairs, and the whole scan takes **0.66 seconds**.
+Cost is not the reason to leave it out.
+
+*What it finds is the reason.* Ten pairs match at nine tenths or better, and
+every one of them is already reasoned about in `SAME_SHAPE`: the two families of
+host accessors that keep their own bounds (D584, D609), `kest_is_narrow` beside
+`kest_is_unsigned`, `print_op` beside `print_operator` — both two-line wrappers
+since D771 — and one pair across files, `has_equality` in `check.c` against
+`kest_type_has_text` in `types.c`. Those two walk the same list of tags and part
+at exactly `KEST_T_OPTIONAL`, which the comment beside one of them already says
+and D541 already decided: an optional can be written and cannot be compared, and
+`a == b` on two of them is refused with K0314. A check that says only what is
+already written down is a check that says nothing.
+
+So the all-pairs scan is worth running and is not worth a refusal. It is in this
+log rather than in `tools/`.
+
+*The floor swept, and why sixty stays.* Sixty characters was picked without a
+measurement, so it was swept: forty-five, thirty-five, twenty-five. Five groups
+appear and are stable all the way down, and every one of them is a one-line
+wrapper whose whole content is *which* thing it hands on — `type_name`,
+`parse_real`, `fold` beside `fold_number`, and the four accessors for what a
+build cost and held. Naming what a wrapper hands on is what a wrapper is for, so
+the floor stays at sixty, now with a reason and a number under it.
+
+*The one real find was under the floor.* `span_text` is written four times — in
+`contract.c`, `parser.c`, `compile.c` and `check.c` — each `return
+…->source->text + span.offset;`, each too short for the shape scan to read. And
+once the arithmetic is looked for rather than the shape, it is in seventeen
+places across eleven files: the lexer reading a literal, the formatter writing a
+span back, the loader comparing what a file is called against what an import
+asked for, the checker naming a declaration, the tree printer, the command line.
+
+That is not four stages handing something on. It is one fact about what a span
+*is* — an offset and a length into one source, with no terminator at the end and
+every reader already holding the length — worked out separately by every stage
+that needed it. `kest_span_text(source, span)` lives in `diag.h` beside
+`kest_source_locate`, which is where the other thing everyone knows about spans
+already lives, and the four `span_text` wrappers stay: each now says only which
+source it has, which is the one thing about it that is local.
+
+*What holds it* is what holds every span: a span read from one byte along is a
+program whose every name is spelt wrong, and the parser says so before anything
+else gets a chance to. Nothing new is asked of `tools/` for this, which is why
+no hole is added — a break here cannot reach a check quietly.

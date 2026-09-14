@@ -392,7 +392,7 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
         kest_diags_suggest(diags,
                            "a file that is imported says what it is called: "
                            "`module %.*s`",
-                           (int)blame.length, blamed_in->text + blame.offset);
+                           (int)blame.length, kest_span_text(blamed_in, blame));
         return true;
     }
 
@@ -401,9 +401,9 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
     // land where nobody wrote them, and the only message was `unknown name`
     // at every use of one, in the file that did nothing wrong.
     if (blamed_in != NULL && module != NULL) {
-        const char *called = units->items[self].source.text +
-                             module->name.offset;
-        const char *asked = blamed_in->text + blame.offset;
+        const char *called =
+            kest_span_text(&units->items[self].source, module->name);
+        const char *asked = kest_span_text(blamed_in, blame);
         if (module->name.length != blame.length ||
             memcmp(called, asked, blame.length) != 0) {
             kest_diags_in(diags, blamed_in);
@@ -426,8 +426,9 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
         *root_out = root_of(arena, path,
                             module == NULL
                                 ? NULL
-                                : units->items[self].source.text +
-                                      module->name.offset,
+                                : kest_span_text(
+                                      &units->items[self].source,
+                                      module->name),
                             module == NULL ? 0 : module->name.length);
         root = *root_out;
     }

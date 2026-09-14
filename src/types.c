@@ -25,7 +25,7 @@ static void *grow(KestArena *arena, void *items, uint32_t count,
 
 static const char *span_string(KestProgram *program, KestSpan span) {
     const char *kept = kest_arena_strndup(
-        program->arena, program->source->text + span.offset, span.length);
+        program->arena, kest_span_text(program->source, span), span.length);
     if (kept == NULL) {
         // Every reader of this keeps what comes back as a name and measures it
         // later, so nothing is what none of them can be given. An empty name
@@ -49,7 +49,7 @@ static const char *qualified(KestProgram *program, KestSpan span) {
         return NULL;
     }
     snprintf(name, room, "%s.%.*s", program->alias, (int)span.length,
-             program->source->text + span.offset);
+             kest_span_text(program->source, span));
     return name;
 }
 
@@ -501,8 +501,8 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
             // a value, which this language promises does not move. Both are
             // worked out here rather than run, so a program may have a table
             // of them before it starts. See D670.
-            const char *called = program->source->text +
-                                 expr->call.callee->span.offset;
+            const char *called =
+                kest_span_text(program->source, expr->call.callee->span);
             uint32_t length = expr->call.callee->span.length;
             if (length == 3 && memcmp(called, "len", 3) == 0) {
                 const KestType *of = expr->call.arg_count == 1

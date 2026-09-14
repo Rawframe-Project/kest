@@ -118,7 +118,7 @@ static bool match(Parser *parser, KestTokenKind kind) {
 }
 
 static const char *span_text(Parser *parser, KestSpan span) {
-    return parser->source->text + span.offset;
+    return kest_span_text(parser->source, span);
 }
 
 // Whether the identifier at `ahead` is spelled `word`.

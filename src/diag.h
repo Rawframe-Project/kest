@@ -132,6 +132,14 @@ uint32_t kest_word_distance(const char *a, size_t a_len, const char *b,
 void kest_source_locate(const KestSource *source, uint32_t offset,
                         uint32_t *line, uint32_t *column);
 
+// Where a span begins in the file it was cut from. A span is an offset and a
+// length into one source, so the text is not a copy and is not terminated at
+// the span's end: every caller already knows the length and reads that many
+// bytes. Four stages worked this out for themselves before this was written,
+// which is four places that would have had to be found again had a span ever
+// started counting from somewhere else. See D772.
+const char *kest_span_text(const KestSource *source, KestSpan span);
+
 void kest_diags_init(KestDiags *diags, KestArena *arena);
 
 // Says which file the spans of the diagnostics reported next are in.

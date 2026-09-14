@@ -86,7 +86,7 @@ static const char *escapes_written(KestArena *arena) {
 
 const char *kest_literal_text(KestArena *arena, const KestSource *source,
                               KestSpan span) {
-    const char *raw = source->text + span.offset;
+    const char *raw = kest_span_text(source, span);
     size_t length = span.length;
 
     char *text = kest_arena_alloc(arena, length + 1, 1);
@@ -114,7 +114,7 @@ const char *kest_literal_text(KestArena *arena, const KestSource *source,
 double kest_literal_real(const KestSource *source, KestSpan span) {
     char buffer[64];
     size_t length = span.length < sizeof(buffer) - 1 ? span.length : 0;
-    memcpy(buffer, source->text + span.offset, length);
+    memcpy(buffer, kest_span_text(source, span), length);
     buffer[length] = '\0';
     return strtod(buffer, NULL);
 }

@@ -78,7 +78,7 @@ static void reaches(Function *function, KestSpan span, const char *why) {
 }
 
 static const char *span_text(Graph *graph, KestSpan span) {
-    return graph->program->source->text + span.offset;
+    return kest_span_text(graph->program->source, span);
 }
 
 static int32_t find_exact(Graph *graph, const char *text, size_t length) {
