@@ -23,6 +23,45 @@ static void *grow(KestArena *arena, void *items, uint32_t count,
     return moved;
 }
 
+double kest_left_over(double left, double right) {
+    // A nought to divide by, either side not a number, or an infinity being
+    // divided: C answers all of those with what is not a number, and this is
+    // where a float differs from a whole number, which stops instead.
+    double nothing = 0.0;
+    if (left != left || right != right || right == 0.0 ||
+        left - left != 0.0) {
+        return nothing / nothing;
+    }
+    double divisor = right < 0.0 ? -right : right;
+    // An infinity to divide by leaves the whole of what was divided.
+    if (divisor - divisor != 0.0) {
+        return left;
+    }
+    double rest = left < 0.0 ? -left : left;
+    if (rest < divisor) {
+        return left;
+    }
+    // Double the divisor until one more would pass what is left, then take it
+    // away and halve back down. Every step is exact in binary: doubling and
+    // halving only move the exponent, and every subtraction here is of two
+    // numbers close enough together that nothing is rounded off. Which is why
+    // this is written out rather than asking C for `fmod`: the engine is held
+    // to libc and nothing beyond it, and this is arithmetic. See D776.
+    double scaled = divisor;
+    while (scaled <= rest * 0.5) {
+        scaled += scaled;
+    }
+    while (scaled >= divisor) {
+        if (rest >= scaled) {
+            rest -= scaled;
+        }
+        scaled *= 0.5;
+    }
+    // What is left over carries the sign of what was divided, the way a whole
+    // number already does.
+    return left < 0.0 ? -rest : rest;
+}
+
 static const char *span_string(KestProgram *program, KestSpan span) {
     const char *kept = kest_arena_strndup(
         program->arena, kest_span_text(program->source, span), span.length);
@@ -657,6 +696,13 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
                     return false;
                 }
                 out->real = a / b;
+                break;
+            case KEST_TOK_PERCENT:
+                if (b == 0.0) {
+                    *why = "this divides by nought";
+                    return false;
+                }
+                out->real = kest_left_over(a, b);
                 break;
             case KEST_TOK_LT:
                 out->integer = a < b;

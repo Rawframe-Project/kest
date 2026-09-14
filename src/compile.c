@@ -1390,7 +1390,10 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
         emit_narrow(compiler, operand, span);
         break;
     case KEST_TOK_PERCENT:
-        emit(compiler, unsigned_int ? KEST_OP_MOD_U : KEST_OP_MOD_I, span);
+        emit(compiler,
+             real ? (narrow ? KEST_OP_MOD_F32 : KEST_OP_MOD_F)
+                  : (unsigned_int ? KEST_OP_MOD_U : KEST_OP_MOD_I),
+             span);
         break;
     case KEST_TOK_AMP:
         emit(compiler, KEST_OP_AND_I, span);

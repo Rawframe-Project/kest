@@ -282,6 +282,13 @@ struct KestInstance {
 
 // Resolves declarations, their field types and their signatures, reporting
 // what it cannot resolve. Returns false only when the host is out of memory.
+// What a division leaves over, for a float: the same answer C's `fmod` gives,
+// worked out out of arithmetic because the engine is held to libc and nothing
+// beyond it. The folder here and the machine ask the one function, which is
+// what makes the folded answer and the run one the same by construction rather
+// than by two people writing the same twenty lines. See D668, D776.
+double kest_left_over(double left, double right);
+
 bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
                 KestProgram **out);
 

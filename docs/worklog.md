@@ -29481,3 +29481,45 @@ answered separately, then a check so it stays answered once. The roadmap says
 types, compile, value, vm, and nothing has been added to the language itself in
 four. Read `docs/language.md` against what the checker refuses and find the
 nearest thing a program cannot say yet that the machine could already run.
+
+## `%` on a float, because the language already said so
+
+Four entries running had been the same move and none of them had added anything
+to the language, so `docs/language.md` was read against what a program is
+allowed to say. The gap it named was its own sentence: *"`/` and `%` go
+together: what a division leaves over is what `%` gives, and the two answer the
+same way at every end of a width."* `/` worked on a float and `%` was `K0314`.
+
+D018 said which answer to give — match C where C has an answer — and C has
+`fmod`. `7.5 % 2.0` is `1.5`, `-7.5 % 2.0` is `-1.5` because the sign follows
+what is being divided the way a whole number already does, and a nought on the
+right gives what is not a number, beside the infinity `/` already gives there.
+
+Two instructions, `mod.f` and `mod.f32`, since a float has two widths here and
+every other arithmetic already has two; one line in the checker, one arm in the
+compiler, one case in the folder, two in the machine.
+
+The first version called `fmod` and the smallest host stopped linking.
+`check-header.sh` says why in a comment older than this: no `-lm`, the library
+needs libc and nothing beyond it. A host provides `Math.sqrt` because
+`std.math` declares it and leaves it to whoever runs the program — but `%` is
+an operator, so the machine answers it out of arithmetic. `kest_left_over`
+doubles the divisor until one more would pass what is left, then subtracts and
+halves back down; every step only moves an exponent or subtracts two close
+numbers, so it is bit for bit what `fmod` gives. It sits in `types.c` because
+the folder and the machine both reach it there, and because a folder and a
+machine asking one function cannot drift the way two copies would.
+`examples/numbers.kest` holds it — the answer, its sign, the narrow width, and
+the nought, that last one checked by asking whether the answer equals itself.
+
+Looked at and left alone: a `match` over a number, a text or a truth, which the
+machine could run today out of instructions it has, and which the document
+argues against in as many words. A gap the document argues for is not a gap.
+Recorded as D776.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `%` on a float went in because the document promised it. Read the rest
+of `docs/language.md` the same way — every sentence that says what the language
+does, against what it does — and write down every place they have come apart,
+before fixing any of them.

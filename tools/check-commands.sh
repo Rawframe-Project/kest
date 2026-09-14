@@ -3529,7 +3529,7 @@ K0310|fn main() -> i32 {\n    let a: [i32] = array("x", 0)\n    return len(a)\n}
 K0310|fn f() -> i32 {\n    return\n}\n\nfn main() -> i32 {\n    return f()\n}|this function returns `i32`, so `return` needs a value
 K0310|fn f() {\n    return 1\n}\n\nfn main() -> i32 {\n    f()\n    return 0\n}|this function returns nothing, so `return` takes no value
 K0310|fn main() -> i32 {\n    let a: [i32] = array()\n    return hash(a) + 0\n}|this return expects `i32`, found `u64`
-K0314|fn main() -> i32 {\n    let a = 1.0\n    let b = 2.0\n    return i32(a % b)\n}|`%` does not apply to `f32`
+K0314|fn main() -> i32 {\n    let a: text = "x"\n    let b: text = "y"\n    return len(a % b)\n}|`%` does not apply to `text`
 K0314|fn main() -> i32 {\n    let a = 1.0\n    return i32(~a)\n}|`~` does not apply to `f32`
 K0314|fn main() -> i32 {\n    let a: i32 = 1\n    let b: i64 = 2\n    return i32(a + b)\n}|`+` needs both sides to have one type, found `i32` and `i64`
 K0315|fn main() -> i32 {\n    let v: [i32; 2] = [1, 2]\n    return v[5]\n}|5 is outside 2 of them

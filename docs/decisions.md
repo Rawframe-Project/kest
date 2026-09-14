@@ -22062,3 +22062,71 @@ reader.
 `check-tables.sh`: a file that asks by hand without a reason is refused, and a
 reason beside a file that has stopped is refused too. One file has a reason,
 `diag.c`, and its reason is that the answer lives there.
+
+## D776: `%` on a float, because the language already said so
+
+*Read the document against what the checker refuses.* Four decisions running
+had been the same move — one question answered in two places, then a check so
+it stays answered once — and nothing had been added to the language in any of
+them. So `docs/language.md` was read against what a program is actually allowed
+to say, and the gap it named was its own sentence:
+
+> `/` and `%` go together: what a division leaves over is what `%` gives, and
+> the two answer the same way at every end of a width.
+
+`/` works on a float. `%` was `K0314`, "`%` does not apply to `f64`". The two
+did not go together, and the document said they did.
+
+*D018 says which answer.* Match C where C has an answer, and answer where it
+has none. C has `fmod`, and it answers for every pair a float can be: `7.5 %
+2.0` is `1.5`, `-7.5 % 2.0` is `-1.5` — the sign follows the number being
+divided, which is what a whole number in this language already does — and a
+nought on the right gives what is not a number, standing beside the infinity
+that `/` already gives there. Nothing had to be invented; the rule was written
+down four hundred lines above the gap.
+
+*What it cost, and what it could not cost.* Two instructions, `mod.f` and
+`mod.f32`, because a float comes in two widths here and every other arithmetic
+already comes in two. One line in the checker — the refusal now lets
+`KEST_T_FLOAT` through beside `KEST_T_INT` — one arm in the compiler beside the
+one for `/`, one case in the constant folder, and two in the machine.
+
+The first version of all that called `fmod`, and the smallest host stopped
+linking: *"undefined reference to `fmod`"*. `check-header.sh` says why, in a
+comment older than this entry — **"No `-lm` and nothing else: the library is
+meant to need libc and nothing beyond it."** A host that wants `Math.sqrt`
+provides it, because `std.math` declares what cannot be written in Kest and
+leaves it to whoever runs the program. But `%` is an operator, not a library
+call: the machine has to answer it, so the machine has to answer it out of
+arithmetic.
+
+`kest_left_over` is that answer, and it is the textbook one: take the absolute
+values, double the divisor until one more doubling would pass what is left,
+then subtract and halve back down. Every step is exact in binary — doubling and
+halving only move the exponent, and every subtraction is of two numbers close
+enough together that nothing is rounded off — so what comes out is bit for bit
+what `fmod` gives. The narrow width asks the same function in double and rounds
+once, which is exact because a `f32` remainder of two `f32`s is a `f32`.
+
+It lives in `types.c`, which is neither where the machine is nor where the
+compiler is, because those two are below `types` in the pipeline and can reach
+it while it cannot reach them. That turned out to be the right place for a
+better reason than the include order: D668 says the same expression folded and
+run has to be the same number, and a folder and a machine asking one function
+cannot drift apart the way two copies of twenty lines would.
+
+*What it is held by.* `examples/numbers.kest`, which is the example that walks
+every edge of every width and holds what was folded against what was run
+(D668). Four more pairs there: the answer, its sign, the narrow width, and a
+nought on the right, which is checked by asking whether the answer equals
+itself.
+
+*What was looked at and left alone.* A `match` over a number, a piece of text or
+a truth is refused by the parser, and the machine could run all three — a chain
+of `eq.i` or `eq.t` and jumps it already has. It stays refused, because the
+document is explicit about it: *"An arm names a case. There are no arms for
+values… because what a `match` chooses between is the cases of an enum and
+nothing else has a list of them to be exhausted."* A gap the document argues
+for is not a gap. Also left: `slice` over an array, which would need the
+machine to learn something new, and a function declared inside another, which
+nothing in the document asks for.

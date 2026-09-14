@@ -608,7 +608,7 @@ tokens   what a token is and what it carries""",
                  r"""    {"return", U16}, {"return.none", U16},"""],
         "make": [],
         "tool": "tools/check-tables.sh",
-        "caught": "instructions: 146 kinds and 147 names",
+        "caught": "instructions: 148 kinds and 149 names",
     },
     {
         # And the same for the tokens, which is the other list this rule was
@@ -1203,6 +1203,19 @@ yield""",
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
         "caught": "did not all fit in a hole",
+    },
+    {
+        # What a division leaves over, for a float, giving back the sign of
+        # what it was divided by rather than the sign of what was divided.
+        # Every answer stays right except the negative ones. See D776.
+        "what": "a float remainder that takes the wrong sign",
+        "file": "src/types.c",
+        "from": r"""    return left < 0.0 ? -rest : rest;""",
+        "to": r"""    return right < 0.0 ? -rest : rest;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/numbers.kest"],
+        "caught": "exit 73",
     },
     {
         # A stage measuring a name against a run of bytes for itself, which is

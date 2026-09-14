@@ -2708,6 +2708,12 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_DIV_F:
             BINARY_I(real, left.real / right.real);
             break;
+        case KEST_OP_MOD_F:
+            // Nought on the right is not stopped here the way it is for a
+            // whole number: the answer is what is not a number, which is what
+            // `/` already gives beside it. See D776.
+            BINARY_I(real, kest_left_over(left.real, right.real));
+            break;
         case KEST_OP_NEG_F:
             top[-1].real = -top[-1].real;
             break;
@@ -2723,6 +2729,11 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         case KEST_OP_DIV_F32:
             BINARY_I(real, (double)((float)left.real / (float)right.real));
+            break;
+        case KEST_OP_MOD_F32:
+            BINARY_I(real, (double)(float)kest_left_over(
+                               (double)(float)left.real,
+                               (double)(float)right.real));
             break;
         case KEST_OP_NEG_F32:
             top[-1].real = (double)(-(float)top[-1].real);

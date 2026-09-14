@@ -1324,6 +1324,15 @@ let over = total / many
 let left = total % many
 ```
 
+They go together for a float as well. What `7.5 % 2.0` leaves over is `1.5`,
+and what is left over carries the sign of the number being divided rather than
+the sign of what it is divided by, which is what a whole number already does:
+`-7.5 % 2.0` is `-1.5`.
+
+```kest
+let wrapped = angle % 360.0
+```
+
 The least whole number divided by minus one is the other place C has no
 answer. There is one number it cannot be — the answer is one past the top of
 the width — so it wraps to itself, the way every other arithmetic at the end of
@@ -1334,7 +1343,9 @@ already does.
 Dividing by nought is two different things. A whole number has no answer, so it
 is `K0601` and the program stops; a float has one and it is the one C has, an
 infinity with a sign, or not a number when nought is divided by nought. That is
-D018 again: match C where C has an answer.
+D018 again: match C where C has an answer. `%` by nought is the same two
+things: `K0601` for a whole number, and not a number for a float, which is
+again the answer C has.
 
 A whole number written inside a conversion is a number of that type when it
 fits — `i64(9223372036854775807)` is that number, not an `i32` too small to

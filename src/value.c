@@ -777,9 +777,10 @@ static const Instruction INSTRUCTIONS[] = {
     {"narrow", U16},       {"i2f", NONE},         {"u2f", NONE},
     {"f2i", U16},          {"to.f32", NONE},
     {"add.f", NONE},       {"sub.f", NONE},       {"mul.f", NONE},
-    {"div.f", NONE},       {"neg.f", NONE},
+    {"div.f", NONE},       {"mod.f", NONE},       {"neg.f", NONE},
     {"add.f32", NONE},     {"sub.f32", NONE},     {"mul.f32", NONE},
-    {"div.f32", NONE},     {"neg.f32", NONE},     {"lt.i", NONE},
+    {"div.f32", NONE},     {"mod.f32", NONE},     {"neg.f32", NONE},
+    {"lt.i", NONE},
     {"le.i", NONE},        {"gt.i", NONE},        {"ge.i", NONE},
     {"lt.u", NONE},        {"le.u", NONE},        {"gt.u", NONE},
     {"ge.u", NONE},        {"lt.f", NONE},        {"le.f", NONE},
@@ -1052,11 +1053,13 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_SUB_F:
     case KEST_OP_MUL_F:
     case KEST_OP_DIV_F:
+    case KEST_OP_MOD_F:
     case KEST_OP_NEG_F:
     case KEST_OP_ADD_F32:
     case KEST_OP_SUB_F32:
     case KEST_OP_MUL_F32:
     case KEST_OP_DIV_F32:
+    case KEST_OP_MOD_F32:
     case KEST_OP_NEG_F32:
     case KEST_OP_LT_I:
     case KEST_OP_LE_I:

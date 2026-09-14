@@ -153,6 +153,7 @@ typedef enum {
     KEST_OP_SUB_F,
     KEST_OP_MUL_F,
     KEST_OP_DIV_F,
+    KEST_OP_MOD_F,
     KEST_OP_NEG_F,
     // A slot holds a double, but `f32` arithmetic must round to `f32` or the
     // answer is not the one the engine on the other side of the boundary
@@ -161,6 +162,7 @@ typedef enum {
     KEST_OP_SUB_F32,
     KEST_OP_MUL_F32,
     KEST_OP_DIV_F32,
+    KEST_OP_MOD_F32,
     KEST_OP_NEG_F32,
 
     KEST_OP_LT_I,

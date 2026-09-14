@@ -3139,8 +3139,12 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
         }
         return logical ? builtin(checker, "bool") : error_type(checker);
     }
+    // `/` and `%` go together, which is the rule the whole numbers already
+    // keep. A float keeps it too: `kest_left_over` answers for every pair C
+    // has an answer for, and for the pair it has none for the answer is what
+    // is not a number rather than a program that stops. See D776.
     if (op == KEST_TOK_PERCENT && !is_error(left) &&
-        left->tag != KEST_T_INT) {
+        left->tag != KEST_T_INT && left->tag != KEST_T_FLOAT) {
         report(checker, expr->span, "K0314",
                "`%%` does not apply to `%s`", type_name(checker, left));
         if (left->element != NULL && left->element->tag == KEST_T_INT) {

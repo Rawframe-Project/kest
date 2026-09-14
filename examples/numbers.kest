@@ -35,6 +35,14 @@ const ROUNDED: f32 = f32(1.0 / 3.0)
 const TRUNCATED: i16 = i16(3.9)
 const STOPPED: i8 = i8(1000.0)
 
+// What a division leaves over, for a float. `/` and `%` go together and
+// answer the same way at every end of a width, which for a float means the
+// answer C has: the sign follows what is being divided, not what it is being
+// divided by. See D776.
+const LEFT_OVER: f64 = 7.5 % 2.0
+const LEFT_UNDER: f64 = -7.5 % 2.0
+const LEFT_NARROW: f32 = 7.5 % 2.0
+
 // What the folder cannot see through, which is a call: it works out numbers,
 // truths, text and arithmetic on those, and stops where a program starts.
 fn asRun(n: i64) -> i64 no.alloc {
@@ -441,6 +449,23 @@ fn main() -> i32 {
     }
     if i16(realAsRun(3.9)) != TRUNCATED || i8(realAsRun(1000.0)) != STOPPED {
         return 71
+    }
+    if realAsRun(7.5) % 2.0 != LEFT_OVER || LEFT_OVER != 1.5 {
+        return 72
+    }
+    // The sign of what is left over follows the number being divided, the
+    // same way a whole number does.
+    if realAsRun(-7.5) % 2.0 != LEFT_UNDER || LEFT_UNDER != -1.5 {
+        return 73
+    }
+    if f32(realAsRun(7.5)) % 2.0 != LEFT_NARROW || LEFT_NARROW != 1.5 {
+        return 74
+    }
+    // Nought on the right is where a float has an answer and a whole number
+    // has none: `/` gives an infinity there and `%` gives what is not a
+    // number, and neither of them stops the program.
+    if realAsRun(7.5) % 0.0 == realAsRun(7.5) % 0.0 {
+        return 75
     }
 
     io.print("every width wraps at its own end, and {NARROW} is one of them")
