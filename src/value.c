@@ -1736,10 +1736,22 @@ void kest_module_disassemble_json(const KestModule *module,
         // `tagged` is what the C side of this carries and the JSON did not:
         // a host reading pieces has to know whether they are pieces it may
         // walk or a payload it has to switch on.
-        fprintf(out, "%s{\"bytes\":%u,\"align\":%u,\"tagged\":%s,"
-                     "\"pieces\":[",
+        fprintf(out, "%s{\"bytes\":%u,\"align\":%u,\"tagged\":%s,\"of\":",
                 i == 0 ? "" : ",", layout->size, layout->align,
                 layout->tagged ? "true" : "false");
+        // Which type this is the layout of. Without it two layouts that differ
+        // only in what they are of read as one — every `[T]` is one word
+        // whatever `T` is — and a reader counting what a module holds would
+        // say half of them were written twice. They are not: the machine reads
+        // `type` to pack a value across the boundary, to name an enum's cases
+        // and to ask whether a value holds its own memory, so `[i32]` and
+        // `[text]` are one shape and two layouts. See D779.
+        if (layout->type != NULL) {
+            kest_json_text(kest_type_name(module->arena, layout->type), out);
+        } else {
+            fputs("null", out);
+        }
+        fputs(",\"pieces\":[", out);
         for (uint16_t p = 0; p < layout->count; p++) {
             fprintf(out, "%s{\"byte\":%u,\"is\":\"%s\"}", p == 0 ? "" : ",",
                     layout->pieces[p].offset,

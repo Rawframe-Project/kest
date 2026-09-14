@@ -323,6 +323,31 @@ for name in sorted(held - set(kinds)):
           "not one" % name)
     failed = 1
 
+# And that every layout says which type it is the layout of. Two that differ
+# only in that read as one without it -- every `[T]` is one word whatever `T`
+# is, and `u8` and `bool` are both a byte -- so a reader counting what a module
+# wrote twice counts what it wrote once, which is a measurement that was wrong
+# by sixty per cent until this was printed. The machine reads the same field to
+# pack a value across the host boundary. See D779.
+of_told = 0
+of_untold = 0
+for of_path in sorted(glob.glob(os.path.join('examples', '*.kest'))):
+    of_ran = subprocess.run(['./kest', 'emit', of_path, '--json'],
+                            capture_output=True, text=True,
+                            stdin=subprocess.DEVNULL)
+    if of_ran.returncode != 0:
+        continue
+    for of_one in json.loads(of_ran.stdout).get('layouts', []):
+        if of_one.get('of'):
+            of_told += 1
+        else:
+            of_untold += 1
+if of_told == 0 or of_untold != 0:
+    print("src/value.c: %u of %u layouts say which type they are the layout "
+          "of, and one that does not is a shape a reader cannot tell from "
+          "another shape" % (of_told, of_told + of_untold))
+    failed = 1
+
 if not failed:
     # Which of the two hosts calls what, because the header says there is
     # somewhere to look for each of its functions and this is where that is

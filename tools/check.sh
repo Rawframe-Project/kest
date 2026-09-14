@@ -508,14 +508,41 @@ for path in sys.argv[1:]:
 if shapes == 0 or widest is None:
     print("layouts: nothing here says what a value is laid out as")
     raise SystemExit(1)
+# And every layout a module writes says which type it is the layout of. Two
+# that differ only in that read as one without it -- every `[T]` is one word
+# whatever `T` is -- so a reader counting what a module holds counts wrongly,
+# and the machine that packs a value across the boundary reads the very field
+# the list left out. See D779.
+told = 0
+twice = 0
+for path in sys.argv[1:]:
+    said = subprocess.run(['./kest', 'emit', path, '--json'],
+                          capture_output=True, text=True,
+                          stdin=subprocess.DEVNULL).stdout
+    try:
+        held = json.loads(said)
+    except ValueError:
+        continue
+    seen = set()
+    for one in held.get('layouts', []):
+        if one.get('of'):
+            told += 1
+            if one['of'] in seen:
+                twice += 1
+            seen.add(one['of'])
+if told == 0:
+    print("layouts: nothing here says which type a layout is the layout of")
+    raise SystemExit(1)
 # What a shape takes in memory is this machine's: a handle is eight bytes where
 # a pointer is eight bytes and something else elsewhere, and the slots beside it
 # are the language's. So the line says whose the numbers are, the way the two
 # checks that measure a machine do. See D690.
 print("%u shape(s) take %u slots of stack and %u bytes of memory, %u slots if "
       "a slot held whatever fitted, and the widest gap is `%s` at %u slots "
-      "against %u bytes, laid out for the machine this ran on"
-      % (shapes, slots, bytes_of, packed, widest[0], widest[2], widest[3]))
+      "against %u bytes, and %u layout(s) each saying which type they are of, "
+      "%u of them a type already laid out, laid out for the machine this ran on"
+      % (shapes, slots, bytes_of, packed, widest[0], widest[2], widest[3],
+         told, twice))
 LAYOUTS
 if [ $? -ne 0 ]; then
     complain "layouts" "$(head -2 "$scratch"/layouts)"

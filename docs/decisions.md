@@ -22236,3 +22236,57 @@ outnumbering bodies — the rule costing nothing would mean it is not being
 measured — or if fewer than half of them promise anything. The second is the
 one that matters: a day when most of what this costs stops carrying a promise
 is a day to ask the question again, and the check is what will say so.
+
+## D779: a copy the rule did not have to make, and a layout that only looked like one
+
+*The question.* D778 measured what one body for many types costs and found
+`examples/inventory.kest` spending twenty-nine per cent of its code on copies
+from nine bodies. The obvious follow-up: is any of that spent twice over — two
+copies whose code is the same bytes are a copy the rule did not have to make.
+
+*Some of it is, and it is worth almost nothing.* `table.count` is compiled four
+times and all four are identical: the same ten bytes, the same four parameter
+slots, the same depth, no constants, the same promise. Its body is `return
+len(t.keys)`, which touches `K` and `V` only through a reference, so what it
+emits cannot depend on them. Across the tree **eight of the sixty-six copies are
+a chunk already compiled, and they are ninety-one bytes.**
+
+Eight of sixty-six is one in eight, which is a rate worth knowing. Ninety-one
+bytes is not worth a mechanism. Sharing them is also not as easy as it looks:
+a chunk carries `takes` and `gives` as layout indexes, and two copies of one
+body take different types even where they emit the same code, so what could be
+shared is the code array and not the chunk. So it is not shared, and this is
+written down instead — with the rate, so the day it stops being one in eight of
+ninety-one bytes there is something to compare against.
+
+*And then the thing that looked much bigger and was not.* Counting the layouts
+a module writes, forty-seven per cent of them across the tree appeared to be
+duplicates — two hundred and fifty-six of five hundred and forty-one, with
+`examples/embed.kest` at forty-seven of seventy. Twelve of `inventory.kest`'s
+twenty-eight were the identical one-word layout.
+
+They were not duplicates. `KestLayout` carries a pointer to the type it was made
+from, and the machine reads it in nine places: to pack and unpack a value across
+the host boundary, to name an enum's cases, to ask whether a value holds its own
+memory, and to check what a host handed in. `[i32]` and `[text]` are both one
+word and are not the same layout. `u8` and `bool` are both a byte and are not
+the same layout.
+
+**The emitted JSON could not say so.** It printed the size, the alignment,
+whether the thing is tagged, and the pieces — everything except the one field
+that tells two of them apart. A reader of `emit --json` could not distinguish
+layout 2 from layout 3 in a list where they are `[text]` and `text`, and neither
+could the measurement above until it read the C. So each layout now says `of`,
+the type it is the layout of.
+
+*With that, the real number.* Of five hundred and forty-one layouts, **one
+hundred and fifty-seven are a type already laid out** — twenty-nine per cent,
+not forty-seven — and the other ninety-nine are one shape and a different type,
+which is correct and is not waste. `[text]` appears three times in
+`inventory.kest` and `[u8]` twice; `embed.kest` writes `[embed.Row]`,
+`[embed.Event]`, `[u8]` and `ref<embed.Npc>` more than once each.
+
+*What this cost to find out.* A measurement that would have been wrong by sixty
+per cent, made right by printing the field the thing already carried. The
+correction is the entry: a count of things that look alike is a count of
+nothing until what tells them apart is written down beside them.

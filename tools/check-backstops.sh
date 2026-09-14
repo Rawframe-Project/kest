@@ -1205,6 +1205,20 @@ yield""",
         "caught": "did not all fit in a hole",
     },
     {
+        # A layout list that does not say which type each one is of, which
+        # leaves every `[T]` reading as every other and a reader counting
+        # what a module wrote twice counting what it wrote once. See D779.
+        "what": "a layout that does not say what it is of",
+        "file": "src/value.c",
+        "from": r"""        if (layout->type != NULL) {
+            kest_json_text(kest_type_name(module->arena, layout->type), out);""",
+        "to": r"""        if (layout->type == NULL) {
+            kest_json_text(kest_type_name(module->arena, layout->type), out);""",
+        "make": ["kest"],
+        "tool": "tools/check-dead.sh",
+        "caught": "say which type they are the layout of",
+    },
+    {
         # A copy counted as a body, which makes the rule look free: every
         # group of copies would report one body and one copy, and the
         # difference the check reads -- what monomorphising cost over
@@ -9299,8 +9313,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # machine needs to know which half moved.
         "what": "what a shape takes said as though it were anybody's",
         "file": "tools/check.sh",
-        "from": '      "against %u bytes, laid out for the machine this ran on"',
-        "to": '      "against %u bytes"',
+        "from": '      "%u of them a type already laid out, laid out for the machine this ran on"',
+        "to": '      "%u of them a type already laid out"',
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "caught": "says numbers a machine gave it and does not say",

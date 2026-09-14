@@ -4583,9 +4583,9 @@ shape:
 ```json
 {
   "layouts": [
-    {"bytes": 8, "align": 4, "tagged": false,
+    {"bytes": 8, "align": 4, "tagged": false, "of": "doc.Point",
      "pieces": [{"byte": 0, "is": "i32"}, {"byte": 4, "is": "i32"}]},
-    {"bytes": 8, "align": 4, "tagged": true,
+    {"bytes": 8, "align": 4, "tagged": true, "of": "doc.Shape",
      "pieces": [{"byte": 0, "is": "i32"}, {"byte": 4, "is": "payload"}]}
   ],
   "hosts": ["Host.sqrt", "Host.write"],
@@ -4618,6 +4618,16 @@ shape:
   ]
 }
 ```
+
+`of` is the type a layout is the layout of, written the way a message writes
+it. Without it two layouts that differ only in what they are of read as one —
+every `[T]` is one word whatever `T` is, and `u8` and `bool` are both a byte —
+and a reader counting what a module holds would say half of them were written
+twice. They are not: the machine reads which type a layout is of to pack a
+value across the host boundary, to name an enum's cases and to ask whether a
+value holds its own memory, so `[i32]` and `[text]` are one shape and two
+layouts. What is written twice is what says the same type twice, and that a
+reader can now see.
 
 Every one it has is there whether or not it differs from the whole,
 because a tool looks one up by name; the text form leaves out the ones that are

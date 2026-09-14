@@ -29592,3 +29592,37 @@ promise anything, which is the day to ask again. Recorded as D778.
 from nine bodies. Find which nine, and whether any of them is copied for types
 that make no difference to what is emitted — two copies whose code is the same
 bytes are a copy the rule did not have to make.
+
+## A copy the rule did not have to make, and a layout that only looked like one
+
+`inventory.kest` spends twenty-nine per cent of its code on copies from nine
+bodies, so: is any of it spent twice? `table.count` is compiled four times and
+all four are identical — same ten bytes, same slots, same depth, same promise —
+because its body is `return len(t.keys)`, which touches `K` and `V` only through
+a reference. Across the tree eight of sixty-six copies are a chunk already
+compiled, worth ninety-one bytes. One in eight is a rate worth knowing; ninety
+bytes is not worth a mechanism, and sharing is not as easy as it looks because a
+chunk carries `takes` and `gives` as layout indexes that differ per type. So it
+is written down with the rate instead.
+
+Then the thing that looked much bigger. Counting layouts, forty-seven per cent
+of the tree's five hundred and forty-one looked like duplicates. They were not.
+`KestLayout` carries the type it was made from, and the machine reads it in nine
+places — packing across the host boundary, naming an enum's cases, asking
+whether a value holds its own memory. `[i32]` and `[text]` are both one word and
+are two layouts; `u8` and `bool` are both a byte and are two layouts.
+
+The emitted JSON printed everything except the field that tells two of them
+apart, so neither a reader nor the measurement above could tell. Each layout
+says `of` now. With it the real number is a hundred and fifty-seven of five
+hundred and forty-one — twenty-nine per cent, not forty-seven — a type already
+laid out, and the other ninety-nine are one shape and a different type and are
+not waste. `check-dead.sh` refuses a layout that does not say, and the gate's
+layouts line says both counts. Recorded as D779.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a hundred and fifty-seven layouts are a type already laid out, which
+is a type laid out per use rather than per type. Find where a layout is added
+and whether asking for one of a type it already has is a lookup this module can
+do, and what it saves against what the lookup costs.
