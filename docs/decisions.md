@@ -22573,3 +22573,50 @@ could not be seen at all until the rest was named.
 *Held.* Every number `holds` gives is part of `held`, so the sum of them and the
 source cannot pass it. A part that is not part of the whole is a part counted
 twice, and `check-costs.sh` refuses it.
+
+## D785: the loader was not where it went
+
+*A guess, written down as a guess, and wrong.* D784 named two thirds of what a
+build holds and said of the third it could not name: *"the rest belongs to the
+loader — the paths it kept, the units it read, and where every line of every
+file begins."* That was reasoning from what was left rather than from what was
+measured, and it is worth having written it down plainly, because measuring it
+took one function and the answer was no.
+
+*The loader holds four per cent.* It says so now, the way the module and the
+checker do: the files it read and the shape kept for each, where every line of
+every file begins, the paths they came from, and the names they call themselves
+and import.
+
+| | `text.kest` | `embed.kest` | `shapes.kest` |
+| --- | --- | --- | --- |
+| what a build holds | 63975 | 226531 | 225248 |
+| the loader's share | 2619 | 6462 | 5556 |
+| | **4.1%** | **2.9%** | **2.5%** |
+| of that, the line table | 1764 | 5492 | 4520 |
+
+*And the line table is exact.* It was the specific thing D784 pointed at — four
+bytes a line, kept for the life of a build so a message can say `12:7`. The
+newlines are counted before the array is taken, so it fits to the line and there
+is nothing in it that is not used. What could be saved is not room but the
+building of it at all: a program that compiles and runs without a word said
+never reads it. Building it on first use would mean a source carrying an arena
+to build it in, which is a field on every source and a change to every place one
+is made, for between two and three per cent. Measured, and not taken.
+
+*What is actually left.* A third of a build, in allocations that are small and
+many — 784 askings for `lib/std/text.kest`, and nothing above a few thousand
+bytes once the eleven named things are taken out. Attributing it by the function
+that asked was tried: the arena can tally callers, but it tallies them across
+every arena at once, so what comes back is dominated by the parser filling a
+tree that is given back before the build ends. Telling those apart wants the
+tally kept per arena, which is a field on the arena and a report per arena, and
+the thing it would find is already known to be small change by the fact that
+none of it is big.
+
+*So the ledger closes here.* Two thirds of what a build holds is named and each
+part of it is read by something after the build: the origins by a program that
+fails, the types by the machine packing a value, the globals by a caller naming
+a function, the source by every message. The last third is the structures the
+rest hang off and the names made by joining a module to a declaration, and it is
+a third because a build holds little, not because something is hiding in it.

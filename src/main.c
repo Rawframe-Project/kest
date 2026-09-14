@@ -1829,6 +1829,12 @@ static int run(const char *command, const char *executable, char **paths,
             uint32_t of_constants = 0;
             uint32_t of_layouts = 0;
             uint32_t of_chunks = 0;
+            uint32_t of_files = 0;
+            uint32_t of_lines = 0;
+            uint32_t of_paths = 0;
+            uint32_t of_names = 0;
+            kest_units_hold(&build->units, &of_files, &of_lines, &of_paths,
+                            &of_names);
             kest_module_holds(&build->module, &of_code, &of_origins,
                               &of_constants, &of_layouts, &of_chunks);
             uint32_t of_types = 0;
@@ -1842,10 +1848,12 @@ static int run(const char *command, const char *executable, char **paths,
             fprintf(stdout, ",\"holds\":{\"code\":%u,\"origins\":%u"
                             ",\"constants\":%u,\"layouts\":%u"
                             ",\"types\":%u,\"globals\":%u"
-                            ",\"foundBy\":%u,\"composed\":%u,\"chunks\":%u}",
+                            ",\"foundBy\":%u,\"composed\":%u,\"chunks\":%u"
+                            ",\"files\":%u,\"lines\":%u,\"paths\":%u"
+                            ",\"names\":%u}",
                     of_code, of_origins, of_constants, of_layouts,
                     of_types, of_globals, of_found_by, of_composed,
-                    of_chunks);
+                    of_chunks, of_files, of_lines, of_paths, of_names);
         }
         // And what that cost was paid for: every file this build read, and how
         // many bytes each of them is. A cost on its own is a number with

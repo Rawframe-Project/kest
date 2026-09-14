@@ -29814,3 +29814,34 @@ and none of it is named. Four bytes a line for where each line begins is held
 for the life of a build so a message can say `12:7` without counting newlines.
 Count what the loader keeps, the way the module and the checker now do, and find
 what of it outlives the reading.
+
+## The loader was not where it went
+
+D784 named two thirds of what a build holds and guessed the rest was the
+loader's. It was a guess written as a guess, and measuring it took one function:
+**the loader holds four per cent** — 2619 of 63975 for the library, 2.9% for
+`embed.kest`, 2.5% for `shapes.kest`. It says so now the way the module and the
+checker do: files, lines, paths, names.
+
+The line table D784 pointed at is 2.0–2.8% and is exact — the newlines are
+counted before the array is taken, so it fits to the line. What could be saved
+is not room but building it at all, since a program that compiles and runs
+without a word said never reads it. That wants a source to carry an arena to
+build it in later, which is a field on every source and a change to every place
+one is made, for under three per cent. Measured, and not taken.
+
+What is left is a third of a build in allocations that are small and many.
+Attributing them by caller was tried and the arena tallies across every arena at
+once, so the answer is dominated by the parser filling a tree that is given back
+before the build ends. Telling those apart wants the tally kept per arena. The
+thing it would find is small change, which is known from none of it being big.
+Recorded as D785.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** five entries have been about what a build costs and holds, and the
+ledger closes: two thirds named, each part read by something after the build.
+The roadmap says types, compile, value, vm, and the machine has not been touched
+in nine. Read `docs/language.md` on what a program does when it runs — the
+ceilings, the faults, what a host is told — against what `vm.c` does, the way
+D777 read the rest of it, and find the first place they part.

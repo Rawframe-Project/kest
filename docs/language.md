@@ -4241,7 +4241,8 @@ than hiding it.
   "copiedBytes": 3887,
   "holds": { "code": 4608, "origins": 5632, "constants": 1024,
              "layouts": 564, "chunks": 3384, "types": 7560,
-             "globals": 2304, "foundBy": 256, "composed": 64 } }
+             "globals": 2304, "foundBy": 256, "composed": 64,
+             "files": 832, "lines": 1764, "paths": 18, "names": 5 } }
 ```
 
 `holds` is what is still held when the answer is written, by what asked for it.
@@ -4249,10 +4250,17 @@ than hiding it.
 sits in, where every instruction came from, the values worked out where they
 stood, the layouts a host is told about and the chunks they hang off are the
 module's; the types made, the names registered, the table they are found in and
-the composed types kept so that two of one are one are the checker's. What is
-left over is the source every one of them was cut from, which `read` says, and
-the loader's own — the paths, the units and where each line of each file begins.
-Every number here is part of `held` and none of them is all of it.
+the composed types kept so that two of one are one are the checker's. The
+files read and the shape kept for each, where every line of every file begins,
+the paths they came from and the names they call themselves and import are the
+loader's. What is left over is the source every one of them was cut from, which
+`read` says, and the small change of a build — the structures the three of them
+hang off, the diagnostics, and the names made by joining a module to a
+declaration. Every number here is part of `held` and none of them is all of it.
+
+`lines` is four bytes a line, held for the life of a build so that a message can
+say `12:7` without counting newlines from the top of the file. It is built once
+per file, counted before it is taken so that it fits exactly.
 
 `copies`, `copiedBodies` and `copiedBytes` are what one body written for many
 types cost this program. A copy exists per set of types a generic is called

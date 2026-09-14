@@ -72,6 +72,11 @@ typedef struct {
 bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
                     char **paths, int count, KestUnits *units);
 
+// What the loader still holds when a build is done, by what asked for it. See
+// D785.
+void kest_units_hold(const KestUnits *units, uint32_t *files, uint32_t *lines,
+                     uint32_t *paths, uint32_t *names);
+
 // Whether the library has a module of this name, asked by looking for the file
 // it would be read from. What this answers is about the installation and not
 // about the program: a module nothing imports is in no program, so the only

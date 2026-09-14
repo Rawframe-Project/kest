@@ -234,6 +234,38 @@ static bool already_loaded(const KestUnits *units, const char *path) {
     return false;
 }
 
+// What the loader still holds when a build is done. `files` is the list of what
+// was read and the shape kept for each of them; `lines` is where every line of
+// every file begins, four bytes a line, held so that a message can say `12:7`
+// without counting newlines from the top; `paths` and `names` are the text it
+// kept that is not the files themselves — where each came from, what each calls
+// itself, and what each imports. The source text is not counted here, because
+// `read` already says it file by file. See D785.
+void kest_units_hold(const KestUnits *units, uint32_t *files, uint32_t *lines,
+                     uint32_t *paths, uint32_t *names) {
+    *files = (uint32_t)(units->capacity * sizeof(KestUnitInfo));
+    *lines = 0;
+    *paths = 0;
+    *names = 0;
+    for (uint32_t i = 0; i < units->count; i++) {
+        const KestUnitInfo *one = &units->items[i];
+        *lines += (uint32_t)(one->source.line_count * sizeof(uint32_t));
+        if (one->source.path != NULL) {
+            *paths += (uint32_t)(strlen(one->source.path) + 1);
+        }
+        if (one->alias != NULL) {
+            *names += (uint32_t)(strlen(one->alias) + 1);
+        }
+        *names += (uint32_t)(one->import_count *
+                             (sizeof(const char *) + sizeof(bool)));
+        for (uint32_t k = 0; k < one->import_count; k++) {
+            if (one->imports[k] != NULL) {
+                *names += (uint32_t)(strlen(one->imports[k]) + 1);
+            }
+        }
+    }
+}
+
 // `std` is reserved: a module named that always comes from the library, so a
 // program cannot shadow one and a reader always knows which is which.
 static bool is_library(const char *dotted, size_t length) {
