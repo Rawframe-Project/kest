@@ -29703,3 +29703,45 @@ costs — half of it, and twice what checking and compiling add together. A
 program is made of, the way the types were counted here, and find whether the
 same thing is true of them: a wide shape carrying fields most of its
 inhabitants never use.
+
+## A node is as wide as its rarest inhabitant
+
+The tree is 83461 of the 171159 that compiling the library costs, so the
+question D781 asked of types got asked one stage up. Counted across this tree:
+of 25082 expressions, names are 41.9%, calls 13.8%, binaries 12.2% — and
+`match` is **0.03%**, eight of them in the whole tree. Of 5217 statements,
+returns are 38%, expressions 27.7%, lets 17.9% — and `for` is 4.1%.
+
+An expression is already a union, so nothing carries a field for a kind it is
+not. What it carries is the width of the widest member, and the widest was
+`KestChoose` written out — thirty-two bytes — where `KestBranch` beside it, for
+the `if` that is a hundred and fifty-seven times more common, was already a
+pointer. Eight `match` expressions were making every name and every `+` eight
+bytes wider. A statement was the same: `for`'s member is sixteen bytes wider
+than the next and one statement in twenty-five is one.
+
+Both point now, allocated where they are parsed. An expression falls 56 to 48
+bytes, a statement 64 to 48; compiling `lib/std/text.kest` falls 171159 to
+162407 and `embed.kest` 512987 to 491707. Two `memset`s written beside the new
+allocations came out again — `mem.c` has said since line 149 that what it hands
+out is nought, every time.
+
+`check-dead.sh` holds the three widths and refuses when one moves, so a member
+added wider than the widest has to come and say so.
+
+The ladder's two per-unit constants went stale the way they are written to —
+compiling got cheaper, so the program it writes for itself stopped being an
+order of magnitude past the examples. Re-measured: 3816 and 14069 become 3106
+and 12992. Four `Segmentation fault` lines appeared on a passing gate while
+that was sorted out, and they are the shell dying under a five-megabyte
+ceiling, not the compiler: `kest` exits 1 cleanly at every rung of the ladder.
+Running the compiler with `exec` inside those subshells, so nothing is left for
+the shell to do after it returns, took four to two. Recorded as D782.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** an expression is 48 bytes of which 8 are `type`, filled in by the
+checker and read after. A declaration is 88 and there are few of them. What is
+left to look at is the token: 12 bytes each and the lexer makes one per word,
+41180 bytes of the library before a tree exists. Count what a token carries
+against what is read of it.

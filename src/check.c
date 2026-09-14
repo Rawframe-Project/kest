@@ -3247,7 +3247,7 @@ static KestType *check_branch(Checker *checker, KestExpr *expr,
 
 static KestType *check_match(Checker *checker, KestExpr *expr,
                              const KestType *expected) {
-    KestChoose *choose = &expr->choose;
+    KestChoose *choose = expr->choose;
     KestType *subjects[MAX_SUBJECTS];
     uint32_t count = choose->subject_count;
     if (count > MAX_SUBJECTS) {
@@ -4048,7 +4048,7 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         const KestExpr *value = stmt->value;
         bool does_something =
             value == NULL || value->kind == KEST_EXPR_CALL ||
-            (value->kind == KEST_EXPR_MATCH && !value->choose.gives) ||
+            (value->kind == KEST_EXPR_MATCH && !value->choose->gives) ||
             (value->kind == KEST_EXPR_IF && value->branch != NULL &&
              !value->branch->gives);
         // One that gives a value, written where a statement belongs, is a
@@ -4107,53 +4107,53 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         // `for i in from..to` counts rather than walks. Both ends are one
         // type, and the name is that type, so a walk of an array's positions
         // reads the same as an index into it.
-        if (stmt->each.until != NULL) {
-            KestType *from = check_expr(checker, stmt->each.sequence, NULL);
-            KestType *to = check_expr(checker, stmt->each.until, from);
+        if (stmt->each->until != NULL) {
+            KestType *from = check_expr(checker, stmt->each->sequence, NULL);
+            KestType *to = check_expr(checker, stmt->each->until, from);
             // A literal at one end takes the type of the other, so
             // `0..count` counts in whatever `count` is. It is the rule an
             // operator already follows, and the node is corrected so the
             // compiler reads the same type the checker settled on.
-            if (!kest_type_equal(from, to) && is_literal(stmt->each.sequence) &&
+            if (!kest_type_equal(from, to) && is_literal(stmt->each->sequence) &&
                 !is_error(to) && from != NULL && from->tag == to->tag) {
                 from = to;
-                stmt->each.sequence->type = to;
+                stmt->each->sequence->type = to;
             }
             if (!is_error(from) && from->tag != KEST_T_INT) {
-                report(checker, stmt->each.sequence->span, "K0341",
+                report(checker, stmt->each->sequence->span, "K0341",
                        "a count runs between integers, found `%s`",
                        type_name(checker, from));
                 from = error_type(checker);
             } else if (!kest_type_equal(from, to)) {
-                expected_but(checker, stmt->each.until->span, from, to,
+                expected_but(checker, stmt->each->until->span, from, to,
                              "this end");
             }
-            if (stmt->each.index.length > 0) {
-                report(checker, stmt->each.index, "K0317",
+            if (stmt->each->index.length > 0) {
+                report(checker, stmt->each->index, "K0317",
                        "a count has no positions to walk by");
                 kest_diags_suggest(checker->program->diags,
                                    "the number is the position");
             }
             uint32_t counted = checker->local_count;
             checker->depth++;
-            declare_local(checker, stmt->each.name, from);
+            declare_local(checker, stmt->each->name, from);
             if (checker->local_count > counted) {
                 checker->locals[checker->local_count - 1].is_loop_element =
                     true;
                 checker->locals[checker->local_count - 1].is_loop_index = true;
             }
             checker->loop_depth++;
-            check_block(checker, &stmt->each.body);
+            check_block(checker, &stmt->each->body);
             checker->loop_depth--;
             checker->depth--;
             checker->local_count = counted;
             break;
         }
-        KestType *sequence = check_expr(checker, stmt->each.sequence, NULL);
+        KestType *sequence = check_expr(checker, stmt->each->sequence, NULL);
         KestType *element = error_type(checker);
         if (!is_error(sequence)) {
             if (!walks(sequence)) {
-                report(checker, stmt->each.sequence->span, "K0317",
+                report(checker, stmt->each->sequence->span, "K0317",
                        "`for` walks an array, text, a store or a set of bits, "
                        "found `%s`",
                        type_name(checker, sequence));
@@ -4164,8 +4164,8 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
                        sequence->tag == KEST_T_FIXED) {
                 element = sequence->element;
             } else if (sequence->tag == KEST_T_STORE) {
-                if (stmt->each.index.length > 0) {
-                    report(checker, stmt->each.index, "K0317",
+                if (stmt->each->index.length > 0) {
+                    report(checker, stmt->each->index, "K0317",
                            "a store has no positions to walk by");
                     kest_diags_suggest(checker->program->diags,
                                        "the reference is what names a slot");
@@ -4176,8 +4176,8 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
                 // fail, which is the noise probe 4 asked about; see D020.
                 element = kest_ref_of(checker->program, sequence->element);
             } else if (sequence->tag == KEST_T_FLAGS) {
-                if (stmt->each.index.length > 0) {
-                    report(checker, stmt->each.index, "K0317",
+                if (stmt->each->index.length > 0) {
+                    report(checker, stmt->each->index, "K0317",
                            "a set of bits has no positions to walk by");
                     kest_diags_suggest(checker->program->diags,
                                        "the flag is what names the bit");
@@ -4194,8 +4194,8 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         }
         uint32_t mark = checker->local_count;
         checker->depth++;
-        if (stmt->each.index.length > 0) {
-            declare_local(checker, stmt->each.index, builtin(checker, "i32"));
+        if (stmt->each->index.length > 0) {
+            declare_local(checker, stmt->each->index, builtin(checker, "i32"));
             if (checker->local_count > mark) {
                 checker->locals[checker->local_count - 1].is_loop_element =
                     true;
@@ -4203,12 +4203,12 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
             }
         }
         uint32_t before_element = checker->local_count;
-        declare_local(checker, stmt->each.name, element);
+        declare_local(checker, stmt->each->name, element);
         if (checker->local_count > before_element) {
             checker->locals[checker->local_count - 1].is_loop_element = true;
         }
         checker->loop_depth++;
-        check_block(checker, &stmt->each.body);
+        check_block(checker, &stmt->each->body);
         checker->loop_depth--;
         checker->depth--;
         drop_locals(checker, mark);
@@ -4289,13 +4289,13 @@ static bool expr_returns(const KestExpr *value) {
         }
         return always_returns(&branch->else_body);
     }
-    if (value->kind != KEST_EXPR_MATCH || !value->choose.total ||
-        value->choose.arm_count == 0) {
+    if (value->kind != KEST_EXPR_MATCH || !value->choose->total ||
+        value->choose->arm_count == 0) {
         return false;
     }
-    for (uint32_t a = 0; a < value->choose.arm_count; a++) {
-        if (value->choose.arms[a].value != NULL ||
-            !always_returns(&value->choose.arms[a].body)) {
+    for (uint32_t a = 0; a < value->choose->arm_count; a++) {
+        if (value->choose->arms[a].value != NULL ||
+            !always_returns(&value->choose->arms[a].body)) {
             return false;
         }
     }
@@ -4363,7 +4363,7 @@ static bool check_function(KestProgram *program, Checker *checker,
         if (last != NULL && last->kind == KEST_STMT_EXPR &&
             last->value != NULL &&
             ((last->value->kind == KEST_EXPR_MATCH &&
-              last->value->choose.gives) ||
+              last->value->choose->gives) ||
              (last->value->kind == KEST_EXPR_IF &&
               last->value->branch != NULL && last->value->branch->gives))) {
             kest_diags_suggest(program->diags,

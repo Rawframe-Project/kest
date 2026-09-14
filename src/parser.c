@@ -848,19 +848,25 @@ static KestExpr *parse_match(Parser *parser) {
     if (expr == NULL) {
         return NULL;
     }
-    expr->choose.subjects = (KestExpr **)list_taken(parser, &subjects);
-    expr->choose.subject_count = subjects.count;
-    expr->choose.gives = gives;
-    expr->choose.arms =
+    expr->choose = kest_arena_alloc(parser->arena, sizeof *expr->choose,
+                                    _Alignof(KestChoose));
+    if (expr->choose == NULL) {
+        parser->out_of_memory = true;
+        return NULL;
+    }
+    expr->choose->subjects = (KestExpr **)list_taken(parser, &subjects);
+    expr->choose->subject_count = subjects.count;
+    expr->choose->gives = gives;
+    expr->choose->arms =
         KEST_ARENA_ARRAY(parser->arena, KestArm, arms.count == 0 ? 1 : arms.count);
-    if (expr->choose.arms == NULL) {
+    if (expr->choose->arms == NULL) {
         parser->out_of_memory = true;
         return NULL;
     }
     for (uint32_t i = 0; i < arms.count; i++) {
-        expr->choose.arms[i] = *(KestArm *)arms.items[i];
+        expr->choose->arms[i] = *(KestArm *)arms.items[i];
     }
-    expr->choose.arm_count = arms.count;
+    expr->choose->arm_count = arms.count;
     return expr;
 }
 
@@ -1503,11 +1509,17 @@ static KestStmt *parse_statement(Parser *parser) {
         if (stmt == NULL) {
             return NULL;
         }
-        stmt->each.index = index;
-        stmt->each.name = name;
-        stmt->each.sequence = sequence;
-        stmt->each.until = until;
-        parse_block(parser, &stmt->each.body);
+        stmt->each = kest_arena_alloc(parser->arena, sizeof *stmt->each,
+                                      _Alignof(KestEach));
+        if (stmt->each == NULL) {
+            parser->out_of_memory = true;
+            return NULL;
+        }
+        stmt->each->index = index;
+        stmt->each->name = name;
+        stmt->each->sequence = sequence;
+        stmt->each->until = until;
+        parse_block(parser, &stmt->each->body);
         stmt->span =
             span_between(start, parser->tokens[parser->position - 1].span);
         return stmt;

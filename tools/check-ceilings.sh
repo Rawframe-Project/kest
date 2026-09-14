@@ -814,7 +814,7 @@ fn main() -> i32 {
 KEST
 
 out=$(ulimit -v 40000 2>/dev/null;
-      "$work/spending" "$work/hungry.kest" 0 2>&1 </dev/null)
+      exec "$work/spending" "$work/hungry.kest" 0 2>&1 </dev/null)
 if printf '%s' "$out" | grep -q K0605 &&
    printf '%s' "$out" | grep -qF "refused by the machine underneath"; then
     reached=$((reached + 1))
@@ -857,7 +857,7 @@ KEST
 
 ran_out() {
     out=$(ulimit -v 40000 2>/dev/null;
-          ./kest run "$work/$1.kest" 2>&1 </dev/null)
+          exec ./kest run "$work/$1.kest" 2>&1 </dev/null)
     used=$(printf '%s\n' "$out" |
            sed -n 's/.*has used \([0-9][0-9]*\) bytes.*/\1/p')
     more=$(printf '%s\n' "$out" |
@@ -910,7 +910,7 @@ if ! builds asking "asks for too much"; then
     failed=1
 else
     out=$(ulimit -v 1000000 2>/dev/null;
-          "$work/asking" "$work/spending.kest" 2>&1 </dev/null)
+          exec "$work/asking" "$work/spending.kest" 2>&1 </dev/null)
     if printf '%s' "$out" | grep -q K0638 &&
        printf '%s' "$out" | grep -qF "4000000000 slots of stack"; then
         reached=$((reached + 1))
@@ -969,7 +969,7 @@ walk_the_ladder() {
     level=4000
     while [ $level -le 65536 ]; do
         out=$(ulimit -v $level 2>/dev/null;
-              ./kest run "$program" 2>&1 </dev/null)
+              exec ./kest run "$program" 2>&1 </dev/null)
         if [ -n "$out" ] && [ "${out#*error}" = "$out" ]; then
             runnable=$level
             break
@@ -984,7 +984,7 @@ walk_the_ladder() {
     level=$runnable
     while [ $level -ge 1000 ]; do
         out=$(ulimit -v $level 2>/dev/null;
-              ./kest run "$program" 2>&1 </dev/null)
+              exec ./kest run "$program" 2>&1 </dev/null)
         answered=$?
         # Below some level the C library cannot be mapped and this program
         # never starts. That is the machine refusing rather than this compiler,
@@ -1201,11 +1201,12 @@ fi
 # These two go stale every time compiling gets cheaper, and they are meant to:
 # the examples get cheaper by the same change and the ratio is what moves, so
 # the check refuses and says both numbers. They were 4991 and 18855 until the
-# token array stopped being taken again at every size (D746), and 4214 and
-# 16364 until where an instruction was written stopped being kept for every
-# byte of it (D751).
-steps=$((dearest * 11 / 3816 + 1))
-chains=$((dearest * 11 / 14069 + 1))
+# token array stopped being taken again at every size (D746), 4214 and 16364
+# until where an instruction was written stopped being kept for every byte of
+# it (D751), and 3816 and 14069 until a node stopped being as wide as its
+# rarest inhabitant (D782).
+steps=$((dearest * 11 / 3106 + 1))
+chains=$((dearest * 11 / 12992 + 1))
 {
     echo "module steps"
     echo
@@ -1297,7 +1298,7 @@ for program in examples/*.kest "$scratch"/steps.kest "$scratch"/chains.kest; do
     high=$runnable
     low=$((library_goes + 100))
     out=$(ulimit -v $high 2>/dev/null;
-          ./kest run "$program" 2>&1 </dev/null)
+          exec ./kest run "$program" 2>&1 </dev/null)
     # A program dearer than the ladder's own refuses where the ladder runs, so
     # the top of the search is found rather than taken: doubled until the
     # program runs in it, and a program that runs nowhere is one this cannot
@@ -1308,7 +1309,7 @@ for program in examples/*.kest "$scratch"/steps.kest "$scratch"/chains.kest; do
         fi
         high=$((high * 2))
         out=$(ulimit -v $high 2>/dev/null;
-              ./kest run "$program" 2>&1 </dev/null)
+              exec ./kest run "$program" 2>&1 </dev/null)
     done
     if printf '%s' "$out" | grep -q 'error\[K'; then
         at_the_top=1
@@ -1319,7 +1320,7 @@ for program in examples/*.kest "$scratch"/steps.kest "$scratch"/chains.kest; do
         # is nothing on a day the ladder found it and the whole search on a day
         # it did not.
         out=$(ulimit -v $low 2>/dev/null;
-              ./kest run "$program" 2>&1 </dev/null)
+              exec ./kest run "$program" 2>&1 </dev/null)
         while [ $low -lt $high ]; do
             case "$out" in
             *"loading shared libraries"*|*"TLS data structures"*) ;;
@@ -1327,13 +1328,13 @@ for program in examples/*.kest "$scratch"/steps.kest "$scratch"/chains.kest; do
             esac
             low=$((low + 100))
             out=$(ulimit -v $low 2>/dev/null;
-                  ./kest run "$program" 2>&1 </dev/null)
+                  exec ./kest run "$program" 2>&1 </dev/null)
         done
         if printf '%s' "$out" | grep -q 'error\[K'; then
             while [ $((high - low)) -gt 100 ]; do
                 middle=$(((high + low) / 200 * 100))
                 said_there=$(ulimit -v $middle 2>/dev/null;
-                             ./kest run "$program" 2>&1 </dev/null)
+                             exec ./kest run "$program" 2>&1 </dev/null)
                 if printf '%s' "$said_there" | grep -q 'error\[K'; then
                     low=$middle
                     out=$said_there

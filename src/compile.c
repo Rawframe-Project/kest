@@ -889,14 +889,14 @@ static bool expr_reads_only_fields(Compiler *compiler, const KestExpr *expr,
         }
         return true;
     case KEST_EXPR_MATCH: {
-        for (uint32_t i = 0; i < expr->choose.subject_count; i++) {
-            if (!expr_reads_only_fields(compiler, expr->choose.subjects[i], name, length,
+        for (uint32_t i = 0; i < expr->choose->subject_count; i++) {
+            if (!expr_reads_only_fields(compiler, expr->choose->subjects[i], name, length,
                                       fields_are_fine)) {
                 return false;
             }
         }
-        for (uint32_t a = 0; a < expr->choose.arm_count; a++) {
-            const KestArm *arm = &expr->choose.arms[a];
+        for (uint32_t a = 0; a < expr->choose->arm_count; a++) {
+            const KestArm *arm = &expr->choose->arms[a];
             if (!expr_reads_only_fields(compiler, arm->value, name, length,
                                       fields_are_fine) ||
                 !reads_only_fields(compiler, &arm->body, name, length,
@@ -975,11 +975,11 @@ static bool reads_only_fields(Compiler *compiler, const KestBlock *block,
             }
             break;
         case KEST_STMT_FOR:
-            if (!expr_reads_only_fields(compiler, stmt->each.sequence, name, length,
+            if (!expr_reads_only_fields(compiler, stmt->each->sequence, name, length,
                                       fields_are_fine) ||
-                !expr_reads_only_fields(compiler, stmt->each.until, name, length,
+                !expr_reads_only_fields(compiler, stmt->each->until, name, length,
                                       fields_are_fine) ||
-                !reads_only_fields(compiler, &stmt->each.body, name, length,
+                !reads_only_fields(compiler, &stmt->each->body, name, length,
                                       fields_are_fine)) {
                 return false;
             }
@@ -1054,14 +1054,14 @@ static bool expr_writes_no_arrays(Compiler *compiler, const KestExpr *expr) {
         }
         return true;
     case KEST_EXPR_MATCH:
-        for (uint32_t i = 0; i < expr->choose.subject_count; i++) {
-            if (!expr_writes_no_arrays(compiler, expr->choose.subjects[i])) {
+        for (uint32_t i = 0; i < expr->choose->subject_count; i++) {
+            if (!expr_writes_no_arrays(compiler, expr->choose->subjects[i])) {
                 return false;
             }
         }
-        for (uint32_t a = 0; a < expr->choose.arm_count; a++) {
-            if (!expr_writes_no_arrays(compiler, expr->choose.arms[a].value) ||
-                !writes_no_arrays(compiler, &expr->choose.arms[a].body)) {
+        for (uint32_t a = 0; a < expr->choose->arm_count; a++) {
+            if (!expr_writes_no_arrays(compiler, expr->choose->arms[a].value) ||
+                !writes_no_arrays(compiler, &expr->choose->arms[a].body)) {
                 return false;
             }
         }
@@ -1113,9 +1113,9 @@ static bool writes_no_arrays(Compiler *compiler, const KestBlock *block) {
             }
             break;
         case KEST_STMT_FOR:
-            if (!expr_writes_no_arrays(compiler, stmt->each.sequence) ||
-                !expr_writes_no_arrays(compiler, stmt->each.until) ||
-                !writes_no_arrays(compiler, &stmt->each.body)) {
+            if (!expr_writes_no_arrays(compiler, stmt->each->sequence) ||
+                !expr_writes_no_arrays(compiler, stmt->each->until) ||
+                !writes_no_arrays(compiler, &stmt->each->body)) {
                 return false;
             }
             break;
@@ -2346,7 +2346,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
     }
 
     case KEST_EXPR_MATCH: {
-        const KestChoose *choose = &expr->choose;
+        const KestChoose *choose = expr->choose;
         uint32_t count = choose->subject_count;
         if (count > 8) {
             fault(compiler, expr->span,
@@ -2829,13 +2829,13 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         // `for i in from..to` counts. The end is worked out once and kept in
         // a slot nobody can name, so a call in it happens once rather than
         // every turn.
-        if (stmt->each.until != NULL) {
+        if (stmt->each->until != NULL) {
             uint16_t names = compiler->local_count;
             uint16_t slots = compiler->next_slot;
             compiler->depth++;
 
             uint16_t end_slot = reserve_slot(compiler, 1);
-            compile_expr(compiler, stmt->each.until);
+            compile_expr(compiler, stmt->each->until);
             stack_pop(compiler, 1);
             emit_store(compiler, end_slot, 1, stmt->span);
 
@@ -2843,12 +2843,12 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             // name is a copy of it, the same way a walk of an array works, so
             // assigning to that name cannot make the count go wrong.
             uint16_t index_slot = reserve_slot(compiler, 1);
-            compile_expr(compiler, stmt->each.sequence);
+            compile_expr(compiler, stmt->each->sequence);
             stack_pop(compiler, 1);
             emit_store(compiler, index_slot, 1, stmt->span);
 
             Walk walk = {index_slot, end_slot,
-                         kest_is_unsigned(stmt->each.sequence->type), false, 0};
+                         kest_is_unsigned(stmt->each->sequence->type), false, 0};
             uint32_t exit = open_walk(compiler, walk, stmt->span);
 
             Loop *loop = open_loop(compiler, stmt->span);
@@ -2856,14 +2856,14 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
                 break;
             }
 
-            uint16_t counter = declare_local(compiler, stmt->each.name,
-                                             stmt->each.sequence->type);
+            uint16_t counter = declare_local(compiler, stmt->each->name,
+                                             stmt->each->sequence->type);
             stack_push(compiler, 1);
             emit_load(compiler, index_slot, 1, stmt->span);
             stack_pop(compiler, 1);
             emit_store(compiler, counter, 1, stmt->span);
 
-            compile_block(compiler, &stmt->each.body);
+            compile_block(compiler, &stmt->each->body);
             close_walk(compiler, loop, exit, walk, stmt->span);
 
             compiler->depth--;
@@ -2872,7 +2872,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             break;
         }
 
-        const KestType *sequence = stmt->each.sequence->type;
+        const KestType *sequence = stmt->each->sequence->type;
         bool over_store = sequence != NULL && sequence->tag == KEST_T_STORE;
         bool over_bits = sequence != NULL && sequence->tag == KEST_T_FLAGS;
         bool over_run = sequence != NULL && sequence->tag == KEST_T_FIXED;
@@ -2896,7 +2896,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             compiler->depth++;
 
             uint16_t run_slot = reserve_slot(compiler, sequence->slots);
-            compile_expr(compiler, stmt->each.sequence);
+            compile_expr(compiler, stmt->each->sequence);
             stack_pop(compiler, sequence->slots);
             emit_store(compiler, run_slot, sequence->slots, stmt->span);
 
@@ -2924,9 +2924,9 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
                 break;
             }
 
-            if (stmt->each.index.length > 0) {
+            if (stmt->each->index.length > 0) {
                 uint16_t named =
-                    declare_local(compiler, stmt->each.index, NULL);
+                    declare_local(compiler, stmt->each->index, NULL);
                 stack_push(compiler, 1);
                 emit_load(compiler, index_slot, 1, stmt->span);
                 stack_pop(compiler, 1);
@@ -2943,11 +2943,11 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             emit_u16(compiler, (uint16_t)sequence->count, stmt->span);
 
             uint16_t held =
-                declare_local(compiler, stmt->each.name, sequence->element);
+                declare_local(compiler, stmt->each->name, sequence->element);
             stack_pop(compiler, stride);
             emit_store(compiler, held, stride, stmt->span);
 
-            compile_block(compiler, &stmt->each.body);
+            compile_block(compiler, &stmt->each->body);
             close_walk(compiler, loop, exit, walk, stmt->span);
 
             compiler->depth--;
@@ -2966,7 +2966,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         uint16_t walked_slot = reserve_slot(compiler, 1);
         uint16_t index_slot = reserve_slot(compiler, 1);
 
-        compile_expr(compiler, stmt->each.sequence);
+        compile_expr(compiler, stmt->each->sequence);
         stack_pop(compiler, 1);
         emit_store(compiler, walked_slot, 1, stmt->span);
 
@@ -3013,8 +3013,8 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         // The loop's own counter stays where nobody can reach it, and the
         // name the author asked for is a copy of it, so assigning to that
         // name cannot make the walk go wrong.
-        if (stmt->each.index.length > 0) {
-            uint16_t named = declare_local(compiler, stmt->each.index, NULL);
+        if (stmt->each->index.length > 0) {
+            uint16_t named = declare_local(compiler, stmt->each->index, NULL);
             stack_push(compiler, 1);
             emit_load(compiler, index_slot, 1, stmt->span);
             stack_pop(compiler, 1);
@@ -3034,7 +3034,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
 
             // It goes into the name first, so a bit that is not there leaves
             // nothing on the stack to clean up on the way past.
-            uint16_t held = declare_local(compiler, stmt->each.name, sequence);
+            uint16_t held = declare_local(compiler, stmt->each->name, sequence);
             stack_pop(compiler, 1);
             emit_store(compiler, held, 1, stmt->span);
 
@@ -3047,7 +3047,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
             stack_pop(compiler, 1);
             absent = emit_jump(compiler, KEST_OP_JUMP_FALSE, stmt->span);
 
-            compile_block(compiler, &stmt->each.body);
+            compile_block(compiler, &stmt->each->body);
 
             // A bit that is not set skips the body and lands on the step,
             // which is where `continue` lands too.
@@ -3069,7 +3069,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         // and the two differ the moment the body writes the array. Nothing
         // here can tell whether a call would write it, so the rule is that
         // the body does not name the thing being walked at all. See D053.
-        const KestExpr *root = stmt->each.sequence;
+        const KestExpr *root = stmt->each->sequence;
         while (root != NULL && (root->kind == KEST_EXPR_FIELD ||
                                 root->kind == KEST_EXPR_INDEX)) {
             root = root->kind == KEST_EXPR_FIELD ? root->field.object
@@ -3077,16 +3077,16 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         }
         bool untouched =
             root != NULL && root->kind == KEST_EXPR_NAME &&
-            reads_only_fields(compiler, &stmt->each.body,
+            reads_only_fields(compiler, &stmt->each->body,
                               span_text(compiler, root->span),
                               root->span.length, false) &&
-            writes_no_arrays(compiler, &stmt->each.body);
+            writes_no_arrays(compiler, &stmt->each->body);
         bool by_address =
             !over_store && untouched && sequence->element != NULL &&
             sequence->element->tag == KEST_T_STRUCT &&
-            reads_only_fields(compiler, &stmt->each.body,
-                              span_text(compiler, stmt->each.name),
-                              stmt->each.name.length, true);
+            reads_only_fields(compiler, &stmt->each->body,
+                              span_text(compiler, stmt->each->name),
+                              stmt->each->name.length, true);
 
         // The byte the walk is on. It reads the two slots itself rather than
         // taking them off the stack, because the walk measured the text when
@@ -3121,7 +3121,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         const KestType *bound =
             over_store || over_text ? NULL : sequence->element;
         uint16_t element_slot =
-            declare_local(compiler, stmt->each.name, by_address ? NULL : bound);
+            declare_local(compiler, stmt->each->name, by_address ? NULL : bound);
         if (by_address) {
             Local *held = &compiler->locals[compiler->local_count - 1];
             held->is_address = true;
@@ -3131,7 +3131,7 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
         emit_store(compiler, element_slot, by_address ? 1 : stride,
                    stmt->span);
 
-        compile_block(compiler, &stmt->each.body);
+        compile_block(compiler, &stmt->each->body);
 
         close_walk(compiler, loop, exit, walk, stmt->span);
 

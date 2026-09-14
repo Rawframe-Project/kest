@@ -323,6 +323,31 @@ for name in sorted(held - set(kinds)):
           "not one" % name)
     failed = 1
 
+# And how wide a node is. A tree is half of what compiling a program costs, so
+# a union member written out where it could be pointed at is paid for by every
+# node of every program: `match` is one expression in three thousand and `for`
+# one statement in twenty-five, and between them they were making an expression
+# fifty-six bytes and a statement sixty-four. Both are forty-eight now.
+#
+# Written down rather than worked out, so that a member added wider than the
+# widest here has to say so. The numbers are meant to go stale the day one
+# legitimately does. See D782.
+WIDEST_NODE = {"expression": 48, "statement": 48, "declaration": 88}
+
+node_said = subprocess.run(['./kest', 'parse', 'examples/words.kest', '--json'],
+                           capture_output=True, text=True,
+                           stdin=subprocess.DEVNULL)
+node_bytes = ({} if node_said.returncode != 0
+              else json.loads(node_said.stdout).get('nodeBytes', {}))
+if True:
+    for node_what, node_most in sorted(WIDEST_NODE.items()):
+        node_is = node_bytes.get(node_what)
+        if node_is != node_most:
+            print("src/ast.h: a %s is %s bytes and this says %u, and a node "
+                  "widened is every node of every program widened"
+                  % (node_what, node_is, node_most))
+            failed = 1
+
 # And that every layout says which type it is the layout of. Two that differ
 # only in that read as one without it -- every `[T]` is one word whatever `T`
 # is, and `u8` and `bool` are both a byte -- so a reader counting what a module

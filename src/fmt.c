@@ -645,16 +645,16 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
 
     case KEST_EXPR_MATCH: {
         put(printer, "match ");
-        for (uint32_t i = 0; i < expr->choose.subject_count; i++) {
+        for (uint32_t i = 0; i < expr->choose->subject_count; i++) {
             put(printer, i == 0 ? "" : ", ");
-            print_condition(printer, expr->choose.subjects[i], 2);
+            print_condition(printer, expr->choose->subjects[i], 2);
         }
         put(printer, " {\n");
         printer->depth++;
         uint32_t was = printer->previous_line;
         printer->previous_line = 0;
-        for (uint32_t i = 0; i < expr->choose.arm_count; i++) {
-            const KestArm *arm = &expr->choose.arms[i];
+        for (uint32_t i = 0; i < expr->choose->arm_count; i++) {
+            const KestArm *arm = &expr->choose->arms[i];
             uint32_t begins = arm->span.length > 0 ? arm->span.offset
                                                    : expr->span.offset;
             // An arm that gives a value is one line when it is printed, so
@@ -853,18 +853,18 @@ static void print_stmt(Printer *printer, const KestStmt *stmt, bool bare) {
 
     case KEST_STMT_FOR:
         put(printer, "for ");
-        if (stmt->each.index.length > 0) {
-            print_span(printer, stmt->each.index);
+        if (stmt->each->index.length > 0) {
+            print_span(printer, stmt->each->index);
             put(printer, ", ");
         }
-        print_span(printer, stmt->each.name);
+        print_span(printer, stmt->each->name);
         put(printer, " in ");
-        print_expr(printer, stmt->each.sequence, 0);
-        if (stmt->each.until != NULL) {
+        print_expr(printer, stmt->each->sequence, 0);
+        if (stmt->each->until != NULL) {
             put(printer, "..");
-            print_expr(printer, stmt->each.until, 0);
+            print_expr(printer, stmt->each->until, 0);
         }
-        print_block(printer, &stmt->each.body,
+        print_block(printer, &stmt->each->body,
                     stmt->span.offset + stmt->span.length);
         put_char(printer, '\n');
         break;

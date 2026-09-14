@@ -22396,3 +22396,74 @@ is seven and a half kilobytes of the hundred and seventy-one that compiling
 `lib/std/text.kest` costs, so halving the struct would save two per cent. The
 tokens are 41180 and the tree is 83461 of the same total. Written down here so
 the next reading of this starts from the numbers.
+
+## D782: a node is as wide as its rarest inhabitant
+
+*Where the memory actually is.* D781 found the type struct paying for fields
+almost nothing uses and then found it does not matter: forty-five types is seven
+kilobytes of the hundred and seventy-one that compiling `lib/std/text.kest`
+costs. The tree is 83461 of that same total — half of it, and twice what
+checking and compiling add together. So the question was asked again one stage
+up, and this time it was the right place to ask it.
+
+*Counted, the way the types were.* Across this tree's programs, 25082
+expressions and 5217 statements:
+
+| expression | share | | statement | share |
+| --- | --- | --- | --- | --- |
+| name | 41.9% | | return | 38.0% |
+| call | 13.8% | | expression | 27.7% |
+| binary | 12.2% | | let | 17.9% |
+| whole number | 10.1% | | assign | 9.3% |
+| field | 7.6% | | **for** | **4.1%** |
+| if | 5.0% | | while | 2.1% |
+| **match** | **0.03%** | | the rest | under 1% |
+
+*And the shape each of them was being held in.* Unlike a type, an expression is
+already a union, so nothing carries a field for a kind it is not. What it
+carries is the **width of the widest member**, and the widest was `KestChoose`
+written out — thirty-two bytes for what a `match` chooses between — where a
+`KestBranch` beside it, for the `if` that is a hundred and fifty-seven times
+more common, was already a pointer. Two things of one kind, done two ways, and
+the rarer one was the one paying for itself out of everybody else's pocket.
+
+**Eight `match` expressions in the whole of this tree** were making every name,
+every number and every `+` eight bytes wider.
+
+A statement was the same again: `for` is one in twenty-five and its member is
+sixteen bytes wider than the next, because it holds a position, a name, a
+sequence, an until and a body where a `while` holds a binding, a condition and
+a body.
+
+*Both point now.* `KestChoose *choose` and a named `KestEach *each`, allocated
+where they are parsed — eight and two hundred and fourteen allocations across
+the tree, against every node of every program. An expression falls from **56 to
+48 bytes** and a statement from **64 to 48**. Compiling `lib/std/text.kest`
+falls from 171159 bytes to **162407**, five per cent, and `examples/embed.kest`
+from 512987 to **491707**.
+
+*And two `memset`s that were never needed.* Written beside the allocations out
+of habit, then read against `mem.c`, which says on line 149 what it has always
+said: *"And what it hands out: nought, every time."* Taken out.
+
+*What it broke, which was the ladder.* `check-ceilings.sh` writes itself two
+programs sized to be an order of magnitude past the dearest example, out of two
+per-unit constants whose own comment says they go stale every time compiling
+gets cheaper. They did. Re-measured at the scale they are used at: 3816 and
+14069 become 3106 and 12992, after 4991/18855 and 4214/16364 before them.
+
+And four `Segmentation fault (core dumped)` lines appeared on a gate that
+passed. They are not the compiler. `kest` exits 1 cleanly at every rung when it
+is the only thing inside the ceiling; what dies is the shell that has to finish
+a command substitution in five megabytes of address space after the compiler
+returns. The compiler is run with `exec` in those ten places now, so the
+subshell becomes it and has nothing left to do, which took four to two. The
+two that remain are the same thing and the check's own test for a program dying
+says none did.
+
+*Held by a number that is meant to go stale.* `check-dead.sh` says how wide a
+node is and refuses when it is not: forty-eight for an expression, forty-eight
+for a statement, eighty-eight for a declaration. A member added wider than the
+widest has to come here and say so, which is the whole of what this entry
+found — the cost of a wide member is not paid by what holds it but by
+everything that does not.

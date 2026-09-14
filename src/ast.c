@@ -182,12 +182,12 @@ static void print_expr(const KestExpr *expr, const KestSource *source,
     }
     case KEST_EXPR_MATCH:
         fputs("(match", out);
-        for (uint32_t i = 0; i < expr->choose.subject_count; i++) {
+        for (uint32_t i = 0; i < expr->choose->subject_count; i++) {
             fputc(' ', out);
-            print_expr(expr->choose.subjects[i], source, depth, out);
+            print_expr(expr->choose->subjects[i], source, depth, out);
         }
-        for (uint32_t i = 0; i < expr->choose.arm_count; i++) {
-            const KestArm *arm = &expr->choose.arms[i];
+        for (uint32_t i = 0; i < expr->choose->arm_count; i++) {
+            const KestArm *arm = &expr->choose->arms[i];
             fputs(" (", out);
             for (uint32_t p = 0; p < arm->part_count; p++) {
                 const KestArmPart *part = &arm->parts[p];
@@ -274,19 +274,19 @@ static void print_stmt(const KestStmt *stmt, const KestSource *source,
         break;
     case KEST_STMT_FOR:
         fputs("(for ", out);
-        if (stmt->each.index.length > 0) {
-            print_span(source, stmt->each.index, out);
+        if (stmt->each->index.length > 0) {
+            print_span(source, stmt->each->index, out);
             fputs(", ", out);
         }
-        print_span(source, stmt->each.name, out);
+        print_span(source, stmt->each->name, out);
         fputs(" in ", out);
-        print_expr(stmt->each.sequence, source, depth, out);
-        if (stmt->each.until != NULL) {
+        print_expr(stmt->each->sequence, source, depth, out);
+        if (stmt->each->until != NULL) {
             fputs(" .. ", out);
-            print_expr(stmt->each.until, source, depth, out);
+            print_expr(stmt->each->until, source, depth, out);
         }
         fputc('\n', out);
-        print_block(&stmt->each.body, source, depth + 1, out);
+        print_block(&stmt->each->body, source, depth + 1, out);
         indent(out, depth);
         fputs(")\n", out);
         break;

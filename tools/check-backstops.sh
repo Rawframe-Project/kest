@@ -1219,6 +1219,18 @@ yield""",
         "caught": "a name written in one shape and nowhere else",
     },
     {
+        # A union member written out where the widest is already pointed at,
+        # which costs every node of every program the difference. See D782.
+        "what": "a node widened by something one program in a thousand holds",
+        "file": "src/ast.h",
+        "from": r"""        KestChoose *choose;""",
+        "to": r"""        KestChoose *choose;
+        KestChoose spare;""",
+        "make": ["kest"],
+        "tool": "tools/check-dead.sh",
+        "caught": "a node widened is every node of every program widened",
+    },
+    {
         # A layout list that does not say which type each one is of, which
         # leaves every `[T]` reading as every other and a reader counting
         # what a module wrote twice counting what it wrote once. See D779.
@@ -3452,7 +3464,7 @@ fn main() -> i32 {
         "what": "a checker that lets through what the compiler cannot emit",
         "file": "src/check.c",
         "from": r"""            if (!walks(sequence)) {
-                report(checker, stmt->each.sequence->span, "K0317",
+                report(checker, stmt->each->sequence->span, "K0317",
                        "`for` walks an array, text, a store or a set of bits, "
                        "found `%s`",
                        type_name(checker, sequence));
@@ -9003,8 +9015,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # holding what the examples already hold and saying it twice.
         "what": "a written program no bigger than what was written by hand",
         "file": "tools/check-ceilings.sh",
-        "from": """steps=$((dearest * 11 / 3816 + 1))""",
-        "to": """steps=$((dearest * 11 / 381600 + 1))""",
+        "from": """steps=$((dearest * 11 / 3106 + 1))""",
+        "to": """steps=$((dearest * 11 / 310600 + 1))""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "the order of magnitude past them it is written for",

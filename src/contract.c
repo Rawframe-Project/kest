@@ -261,12 +261,12 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
         walk_expr(graph, function, expr->index.index);
         break;
     case KEST_EXPR_MATCH:
-        for (uint32_t i = 0; i < expr->choose.subject_count; i++) {
-            walk_expr(graph, function, expr->choose.subjects[i]);
+        for (uint32_t i = 0; i < expr->choose->subject_count; i++) {
+            walk_expr(graph, function, expr->choose->subjects[i]);
         }
-        for (uint32_t a = 0; a < expr->choose.arm_count; a++) {
-            walk_expr(graph, function, expr->choose.arms[a].value);
-            walk_block(graph, function, &expr->choose.arms[a].body);
+        for (uint32_t a = 0; a < expr->choose->arm_count; a++) {
+            walk_expr(graph, function, expr->choose->arms[a].value);
+            walk_block(graph, function, &expr->choose->arms[a].body);
         }
         break;
     case KEST_EXPR_IF:
@@ -301,9 +301,9 @@ static void walk_stmt(Graph *graph, Function *function, const KestStmt *stmt) {
         walk_block(graph, function, &stmt->loop.body);
         break;
     case KEST_STMT_FOR:
-        walk_expr(graph, function, stmt->each.sequence);
-        walk_expr(graph, function, stmt->each.until);
-        walk_block(graph, function, &stmt->each.body);
+        walk_expr(graph, function, stmt->each->sequence);
+        walk_expr(graph, function, stmt->each->until);
+        walk_block(graph, function, &stmt->each->body);
         break;
     case KEST_STMT_RETURN:
         walk_expr(graph, function, stmt->result);

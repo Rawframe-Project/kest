@@ -124,7 +124,11 @@ struct KestExpr {
             KestTextPart *parts;
             uint32_t count;
         } text;
-        KestChoose choose;
+        // Held through a pointer the way a branch beside it is. Written out
+        // it is the widest thing this union can be, and eight `match`
+        // expressions in the whole of this tree were making every name and
+        // every `+` eight bytes wider. See D782.
+        KestChoose *choose;
         // Out of line because it holds blocks, which are named below this.
         KestBranch *branch;
     };
@@ -192,6 +196,18 @@ typedef enum {
     KEST_STMT_DEFER,
 } KestStmtKind;
 
+// What a `for` walks. `index` is zero length when the position was not asked
+// for, which is most of the time; `until` non-NULL makes `sequence` the first
+// number of a range rather than the thing being walked. Named so a statement
+// can hold one through a pointer rather than inside itself. See D782.
+typedef struct {
+    KestSpan index;
+    KestSpan name;
+    KestExpr *sequence;
+    KestExpr *until;
+    KestBlock body;
+} KestEach;
+
 struct KestStmt {
     KestStmtKind kind;
     // Set by the checker on the last statement of an arm written as a block
@@ -224,17 +240,12 @@ struct KestStmt {
             KestExpr *condition;
             KestBlock body;
         } loop;
-        struct {
-            // `for i, x in a`. Zero length when the position was not asked
-            // for, which is most of the time.
-            KestSpan index;
-            KestSpan name;
-            KestExpr *sequence;
-            // `for i in from..to`. Non-NULL makes `sequence` the first number
-            // rather than the thing being walked.
-            KestExpr *until;
-            KestBlock body;
-        } each;
+        // Held through a pointer, the way a `match` is. Written out it is the
+        // widest thing this union can be by sixteen bytes, and a `for` is one
+        // statement in twenty-five: the other twenty-four were carrying the
+        // room for a position, a name, a sequence, an until and a body, and
+        // using none of it. See D782.
+        KestEach *each;
         // NULL for a bare `return`.
         KestExpr *result;
         KestExpr *value;
