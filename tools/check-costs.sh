@@ -471,6 +471,28 @@ flat = per_copy('emit', 1)
 # nothing could check. So the promises are counted beside the bytes, and a day
 # when most of what the rule costs stops carrying one is a day to ask again.
 # See D778.
+# And what room a token array takes against what is put in it. The array grows
+# where it stands, so the factor it grows by is free to be chosen for the room
+# it leaves rather than for a copy it is not making, and it is bounded by the
+# bytes left to read because the shortest token there is is one byte. Doubling
+# left a third of every array never written to. See D783.
+room_tokens = 0
+room_slots = 0
+for room_path in sorted(glob.glob(os.path.join('examples', '*.kest'))):
+    room_ran = subprocess.run(['./kest', 'lex', room_path, '--json'],
+                              capture_output=True, text=True,
+                              stdin=subprocess.DEVNULL)
+    if room_ran.returncode != 0:
+        continue
+    room_said = json.loads(room_ran.stdout)
+    room_tokens += len(room_said.get('tokens', []))
+    room_slots += room_said.get('tokenRoom', 0)
+if room_slots == 0 or room_slots > room_tokens * 5 // 4:
+    print("costs: %u tokens were read into room for %u, and an array that "
+          "grows where it stands has no copy to be doubling for"
+          % (room_tokens, room_slots))
+    failed = 1
+
 copied_total = 0
 copied_bodies = 0
 copied_bytes = 0

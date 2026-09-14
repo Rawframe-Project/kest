@@ -29745,3 +29745,42 @@ checker and read after. A declaration is 88 and there are few of them. What is
 left to look at is the token: 12 bytes each and the lexer makes one per word,
 41180 bytes of the library before a tree exists. Count what a token carries
 against what is read of it.
+
+## A token array doubled for a copy it stopped making
+
+A token is twelve bytes — a kind and a span — with no field it does not use. But
+tokens are 41180 of the 162407 that compiling the library costs, so the question
+was where that goes.
+
+Into slots nothing was put in. Doubling from 256 meant this tree's 31498 tokens
+were read into 46592 slots: **a third of every token array never written to**,
+181128 bytes asked for and unused. Doubling is what an array that copies itself
+grows by, and D746 made this one grow where it stands — it removed the reason
+for the factor without changing the factor, and nothing noticed until the room
+was counted.
+
+A quarter more now, which keeps the extension count a logarithm while leaving
+less behind. And a bound that is exact rather than chosen: the lexer knows how
+many bytes are left and the shortest token is one byte, so what is still to come
+cannot outnumber what is still to be read. Growth is capped there.
+
+31498 tokens now go into 34682 slots — a third unused becomes a tenth.
+Compiling `lib/std/text.kest` falls 162407 to 149195, `numbers.kest` 414120 to
+360708, `embed.kest` 491707 to 464995. `tokenRoom` is reported beside
+`tokenBytes` and `check-costs.sh` refuses room more than a quarter past the
+tokens. The ladder's constants went stale again, as they do: 3106 and 12992
+become 3280 and 12900.
+
+Also corrected: `docs/language.md` showed `nodeBytes` of 56 and 64, which D782
+made 48 and 48 the day before. `check-docs.sh` holds every JSON name shown
+against one a run writes and holds no value, so nothing caught it. Recorded as
+D783.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** four entries have cut what a build costs — 171159 to 149195 for the
+library, thirteen per cent — by finding room asked for and not used. The same
+question has not been asked of the one arena that is kept rather than given
+back: `held` is 63975 of that 149195. Count what is still held when a build is
+done, by what asked for it, and find whether any of it is dead the moment the
+answer is written.

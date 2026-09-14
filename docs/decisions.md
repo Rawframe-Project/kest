@@ -22467,3 +22467,58 @@ for a statement, eighty-eight for a declaration. A member added wider than the
 widest has to come here and say so, which is the whole of what this entry
 found — the cost of a wide member is not paid by what holds it but by
 everything that does not.
+
+## D783: a token array doubled for a copy it stopped making
+
+*What a token carries.* Twelve bytes: a kind and a span, and nothing else. There
+is no field a token holds and does not use, which is where this was expected to
+end. But the tokens are 41180 bytes of the hundred and sixty-two thousand that
+compiling `lib/std/text.kest` costs, and the question was where that went rather
+than what a token is.
+
+*It went into slots nothing was ever put in.* The array grows by doubling from
+two hundred and fifty-six, so a file of nineteen hundred tokens takes room for
+two thousand and forty-eight and a file of two thousand two hundred takes room
+for four thousand and ninety-six. Across this tree, **31498 tokens were read
+into 46592 slots: a third of every token array was never written to**, 15094
+slots and 181128 bytes of arena asked for and not used.
+
+*Doubling is what an array that copies itself grows by.* The factor is chosen so
+that a copy is paid for less often than it happens — the copies are halved each
+time, so the total copying stays linear. **This array does not copy.** D746 made
+it the last thing in an arena of its own so that it grows where it stands, and
+in doing so removed the reason for the factor without changing the factor. The
+growth has been sized for a cost that is not paid since D746 and nothing noticed
+until the room was counted.
+
+So it is a quarter more each time. Geometric, so the number of extensions stays
+a logarithm of the file rather than becoming a count of it; a quarter rather
+than a double, because the only thing the factor buys now is the room it leaves
+behind.
+
+*And a bound that is exact rather than chosen.* A quarter more still overshoots
+at the end of a file — nineteen hundred tokens asked for two thousand three
+hundred, which is worse than doubling happened to be for that one file. But the
+lexer knows how many bytes are left, and **the shortest token there is is one
+byte**, so what is still to come cannot outnumber what is still to be read.
+Growth is capped at that. It is not an estimate and it cannot be wrong.
+
+*Measured.* The tree's 31498 tokens now go into 34682 slots — **a third unused
+becomes a tenth**. Compiling `lib/std/text.kest` falls from 162407 to **149195**,
+eight per cent; `examples/numbers.kest` from 414120 to **360708**, thirteen per
+cent; `examples/embed.kest` from 491707 to **464995**.
+
+*Held.* `kest lex --json` says `tokenRoom` beside `tokenBytes`, the way a
+compiled function says `room` beside `bytes` (D750), and `check-costs.sh`
+refuses if the room is more than a quarter past the tokens. A floor of a hundred
+and twenty-eight instead of two hundred and fifty-six was measured too: it takes
+the tree's waste to seven per cent and the one file the costs check headlines to
+slightly worse, so it was not taken and the number is here instead.
+
+*And two documents corrected.* `docs/language.md` showed `nodeBytes` of
+fifty-six and sixty-four, which D782 made forty-eight and forty-eight the day
+before. Nothing caught it: `check-docs.sh` holds every JSON **name** shown
+against one a run writes, and holds no value. That is a gap and it is written
+down rather than closed, because the numbers a document shows are illustrations
+of a shape and holding every one of them to a run would make an example of a
+program into a measurement of this machine.

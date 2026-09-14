@@ -1,5 +1,6 @@
 #include "lexer.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -910,6 +911,12 @@ KestToken *kest_lex_all(KestArena *arena, const KestSource *source,
     return lex_from(arena, &lexer, (uint32_t)source->length, count);
 }
 
+static uint32_t LAST_ROOM;
+
+uint32_t kest_lex_room(void) {
+    return LAST_ROOM;
+}
+
 static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
                            uint32_t *count) {
 
@@ -919,7 +926,29 @@ static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
 
     while (true) {
         if (used == capacity) {
-            uint32_t grown = capacity == 0 ? 256 : capacity * 2;
+            // A quarter more, not twice as much. Doubling is what an array
+            // that copies itself grows by, because the copy has to be paid
+            // for less often than it happens; this one does not copy — D746
+            // made it the last thing in its arena so it grows where it
+            // stands — so the factor is free to be chosen for the room it
+            // leaves rather than for the copy it is not making. Twice as much
+            // left a third of every token array never written to, which is
+            // 15094 slots of the 46592 this tree asks for. A quarter more is
+            // an eighth, and the number of extensions stays a logarithm
+            // rather than becoming a count of the file. See D783.
+            uint32_t grown =
+                capacity == 0 ? 256 : capacity + capacity / 4;
+            // And never room for more tokens than there are bytes left to
+            // make them out of: the shortest token there is is one byte, so
+            // what is still to come cannot outnumber what is still to be
+            // read. Near the end of a file this is what is asked for rather
+            // than the quarter, which is why a file of nineteen hundred
+            // tokens no longer takes room for two thousand three hundred.
+            uint32_t left = end > lexer->offset ? end - lexer->offset : 0;
+            uint32_t most = used + left + 1;
+            if (grown > most && most > capacity) {
+                grown = most;
+            }
             // Nothing else is handed out while a file is being read, so this
             // array is the last thing in the arena and can be made bigger
             // where it stands. What that saves is every size it passed
@@ -961,6 +990,7 @@ static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
     }
 
     *count = used;
+    LAST_ROOM = capacity;
     return tokens;
 }
 

@@ -854,7 +854,8 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                     // says what it weighs: a tool that has the cost, the count
                     // and the weight can say whether reading a file cost the
                     // tokens or the sizes the array grew through. See D746.
-                    fprintf(stdout, ",\"tokenBytes\":%zu", sizeof(KestToken));
+                    fprintf(stdout, ",\"tokenBytes\":%zu,\"tokenRoom\":%u",
+                            sizeof(KestToken), kest_lex_room());
                     dump_tokens_json(arena, tokens, found, &alone, stdout);
                     dump_comments_json(arena, &alone, stdout);
                 }

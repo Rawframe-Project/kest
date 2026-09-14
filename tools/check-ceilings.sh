@@ -1203,10 +1203,11 @@ fi
 # the check refuses and says both numbers. They were 4991 and 18855 until the
 # token array stopped being taken again at every size (D746), 4214 and 16364
 # until where an instruction was written stopped being kept for every byte of
-# it (D751), and 3816 and 14069 until a node stopped being as wide as its
-# rarest inhabitant (D782).
-steps=$((dearest * 11 / 3106 + 1))
-chains=$((dearest * 11 / 12992 + 1))
+# it (D751), 3816 and 14069 until a node stopped being as wide as its rarest
+# inhabitant (D782), and 3106 and 12992 until a token array stopped being
+# doubled for a copy it does not make (D783).
+steps=$((dearest * 11 / 3280 + 1))
+chains=$((dearest * 11 / 12900 + 1))
 {
     echo "module steps"
     echo

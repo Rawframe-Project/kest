@@ -1245,6 +1245,18 @@ yield""",
         "caught": "say which type they are the layout of",
     },
     {
+        # A token array doubled again, which is what an array that copies
+        # itself grows by. This one grows where it stands, so doubling buys
+        # nothing and leaves a third of every array never written to. See D783.
+        "what": "a token array grown for a copy it does not make",
+        "file": "src/lexer.c",
+        "from": r"""                capacity == 0 ? 256 : capacity + capacity / 4;""",
+        "to": r"""                capacity == 0 ? 256 : capacity * 2;""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "has no copy to be doubling for",
+    },
+    {
         # A copy counted as a body, which makes the rule look free: every
         # group of copies would report one body and one copy, and the
         # difference the check reads -- what monomorphising cost over
@@ -9015,8 +9027,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # holding what the examples already hold and saying it twice.
         "what": "a written program no bigger than what was written by hand",
         "file": "tools/check-ceilings.sh",
-        "from": """steps=$((dearest * 11 / 3106 + 1))""",
-        "to": """steps=$((dearest * 11 / 310600 + 1))""",
+        "from": """steps=$((dearest * 11 / 3280 + 1))""",
+        "to": """steps=$((dearest * 11 / 328000 + 1))""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "the order of magnitude past them it is written for",

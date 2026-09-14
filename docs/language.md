@@ -4154,12 +4154,13 @@ every optional and every run of something:
 
 ```json
 { "diagnostics": [], "errors": 0, "cost": 41180, "held": 41180,
-  "askings": 5, "tokenBytes": 12, "tokens": [], "comments": [] }
+  "askings": 5, "tokenBytes": 12, "tokenRoom": 256,
+  "tokens": [], "comments": [] }
 ```
 
 ```json
 { "diagnostics": [], "errors": 0, "cost": 156080, "nodes": 978,
-  "nodeBytes": { "expression": 56, "statement": 64, "declaration": 88 } }
+  "nodeBytes": { "expression": 48, "statement": 48, "declaration": 88 } }
 ```
 
 ```json
@@ -4170,7 +4171,12 @@ every optional and every run of something:
 `tokenBytes` is the same thing for a token, and the same reason: reading a file
 costs the file and the tokens made of it, and telling that from the sizes the
 array grew through wants the count and the weight from the run that measured the
-cost.
+cost. `tokenRoom` is how many the array had room for against how many went in
+it, the way a compiled function says `room` beside `bytes`. The array grows
+where it stands rather than being copied, so what it grows by is chosen for the
+room it leaves: a quarter more each time, and never room for more tokens than
+there are bytes left to make them out of, because the shortest token there is
+is one byte.
 
 `held` is what is still held when the answer is written, against `cost` which is
 what was asked for on the way to it. They differ by what a stage left behind for
