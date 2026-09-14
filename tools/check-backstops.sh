@@ -11738,11 +11738,13 @@ fn main() -> i32 {
         "from": """```kest
 import std.io
 
-fn main() -> i32 {""",
+fn main() -> i32 {
+    io.print("hello")""",
         "to": """```
 import std.io
 
-fn main() -> i32 {""",
+fn main() -> i32 {
+    io.print("hello")""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",
         "arguments": ["docs/language.md", "docs/decisions.md"],

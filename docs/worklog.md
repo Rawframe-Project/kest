@@ -29523,3 +29523,37 @@ Recorded as D776.
 of `docs/language.md` the same way — every sentence that says what the language
 does, against what it does — and write down every place they have come apart,
 before fixing any of them.
+
+## The document read against the compiler
+
+D776 went in because one sentence of `docs/language.md` had come apart from the
+compiler. One found by accident is a reason to look for the rest.
+
+Forty-nine claims were pulled out of the **prose** — not the fenced blocks,
+which `check-docs.sh` already parses, checks, compiles and runs — and each was
+turned into a program with what the document says should happen written beside
+it. The semicolon rule, `-> void`, a condition in brackets, a broken string, a
+file importing itself, where a `defer` runs and in what order and what it
+reads, which width a bare literal takes, an ambiguous call, `none` fitting two
+signatures, two optionals not comparing, a function value carrying its promise,
+a `no.alloc` that allocates, and thirty-odd more.
+
+All forty-nine held. Three looked like gaps and were the harness asking wrongly
+— `K0329` cannot be said until a name has two functions, and `ref` is not what
+a local is handed to. The corpus stays in the log rather than becoming a check:
+every case passes on the day it is written, over a document already held seven
+ways by `check-docs.sh`.
+
+What was found is a silence. `T??` works, and works properly — an outer holding
+an inner that holds nothing answers `!= none` while the inner answers `== none`
+inside the `if let`, and a value becomes an optional once and not twice. Nothing
+said so anywhere. It does now, written as a program the gate runs with its
+output held under it. Recorded as D777.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the roadmap is types, compile, value, vm, and the document turns out
+to be an accurate map of the language rather than a list of debts. So stop
+reading it for gaps and read it for weight: find the rule that costs the most to
+keep — in what the compiler does per program, not in lines of it — and measure
+whether what it buys is worth what it costs.

@@ -22130,3 +22130,58 @@ nothing else has a list of them to be exhausted."* A gap the document argues
 for is not a gap. Also left: `slice` over an array, which would need the
 machine to learn something new, and a function declared inside another, which
 nothing in the document asks for.
+
+## D777: the document read against the compiler, and what came of it
+
+*Why read the whole thing.* D776 went in because one sentence of
+`docs/language.md` had come apart from the compiler — `/` and `%` were said to
+go together and did not. One found by accident is a reason to look for the
+rest, and looking for the rest before fixing any of them is how the size of the
+problem gets known rather than guessed.
+
+*How.* Forty-nine claims were pulled out of the document and turned into
+programs: not the fenced blocks, which `check-docs.sh` already parses, checks,
+compiles and runs, but the **prose** — every sentence saying a thing is refused,
+or works, or gives a particular answer. Each one became a program with what the
+document says should happen written beside it, and a harness said which
+disagreed. The corpus is in this entry rather than in `tools/`, for the reason
+the next paragraph gives.
+
+*What came apart: nothing.* Every one of the forty-nine held. The semicolon
+rule, `fn f() -> void`, `let a: i32` with no value, a condition in brackets, a
+comparison split after its operator, a string broken over two lines, a file
+importing itself, an `if` giving a value with no `else`, `a == b` as a
+statement, a two-byte character, `let x: u8 = 300` against `u8(300)`, a `const`
+with no type, an empty hole, a negative index, an index past a fixed length,
+mixed `match` arms, a ninth flag over a `u8`, where a `defer` runs and in what
+order and what it reads, `else` on the next line, no ternary, a `defer` of
+something that is not a call, a `defer` that breaks `no.alloc`, which width a
+bare literal takes and which a bare fraction takes, an ambiguous call, `none`
+fitting two signatures, what `these are` says and how a literal is named in it,
+reading an optional without `if let`, two optionals not comparing, `none` on
+either side, a function value carrying its promise, `while let`, `if let 1 =`
+not being a pattern, a `for` over a range and a `for` with a position, a
+`no.alloc` that allocates and one that calls something that does.
+
+That is the answer to what this was for. The document and the compiler agree
+everywhere a sentence could be turned into a program, which is why the corpus
+is not made into a check: a check whose every case passes on the day it is
+written, over a document already held by `check-docs.sh` for its blocks, its
+messages, its JSON names, its commands, its library calls, its file names and
+its operators, is a check that earns nothing and costs a run. The three that
+first looked like gaps were the harness asking wrongly — `K0329` needs two
+functions of a name before it can be said at all, and `ref` is not something a
+local is passed to.
+
+*What was found is a silence, not a disagreement.* `T??` works. An optional of
+an optional keeps its two kinds of nothing apart: an outer holding an inner
+that holds nothing answers `!= none`, and the inner answers `== none` inside the
+`if let`. A value becomes an optional once and not twice, so `let outer: i32?? =
+1` is refused and `let outer: i32?? = inner` is not. None of that was written
+down anywhere. It is now, as a program the gate runs with what it writes held
+under it, which is the form this document already has for the one thing it
+demonstrates by running.
+
+*What this says about reading a document against its compiler.* It is worth
+doing once and it is not worth automating, and the way to tell which is to do
+it once and count.

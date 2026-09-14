@@ -1988,6 +1988,41 @@ nothing. `none` may be written on either side. Before this there was no way to
 ask, so a program wrote `if let` and a name it never read — `text.contains` and
 `table.has` in the library were four lines each and are one now.
 
+An optional of an optional is two questions rather than one, and they stay
+apart: the outer one is asked with `== none`, and what it holds is asked the
+same way again. `Item??` is what a lookup that may not have been asked gives
+back beside one that was asked and found nothing.
+
+```kest
+import std.io
+
+fn main() -> i32 {
+    let missing: i32? = none
+    let holdsMissing: i32?? = missing
+    let holdsNothing: i32?? = none
+
+    io.print("{holdsMissing != none}")
+    io.print("{holdsNothing != none}")
+    if let held = holdsMissing {
+        io.print("{held == none}")
+    }
+    return 0
+}
+```
+
+which says
+
+```text
+true
+false
+true
+```
+
+A value becomes an optional where one is wanted, and it does that once: `1`
+standing where a `i32??` is wanted is refused, because two conversions is the
+sort of quiet reach this language does not make. `let outer: i32?? = inner`
+is written with the `i32?` in hand.
+
 What stands between `let` and `=` is a name and only a name. Neither of these
 is a pattern: nothing is compared with what is held and nothing is taken apart,
 so `if let 1 = door` and `if let Some(x) = door` are not written here. The
