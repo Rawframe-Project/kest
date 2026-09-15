@@ -223,7 +223,7 @@ static uint32_t emit_jump(Compiler *compiler, uint8_t op, KestSpan origin) {
         if (fused == op) {
             break;
         }
-        compiler->chunk->code_count = compiler->last_at;
+        kest_chunk_take_back(compiler->chunk, compiler->last_at);
         op = fused;
         compiler->last_op = compiler->before_op;
         compiler->last_at = compiler->before_at;

@@ -30459,3 +30459,44 @@ does with the three float comparisons and `%` at the edges a float has and C
 does not name the same way — a remainder by zero, one of a nought, and one of
 a number too large to hold — and check each against what the language document
 says a program is promised.
+
+## A byte taken back and an origin left behind
+
+Writing float ends into `examples/numbers.kest` for the next entry pushed one of
+its constant indexes to 148, and the sanitised build said `index 148 out of
+bounds for type 'Instruction [148]'` — the compiler reading a constant index as
+an opcode while emitting it.
+
+`emit_jump` takes a comparison back when the jump after it can read one:
+`code_count = last_at`, then the fused instruction in its place. Three things
+are written when an instruction is emitted — the byte, where the next
+instruction is expected, and where this one came from — and only the byte was
+taken back. `next_instruction` stayed one past the code, so the jump's first
+operand landed on it and was read as an opcode, and `origins` kept an entry for
+an instruction that is not there.
+
+The opcode misreading was silent, because a constant index under 148 is a valid
+opcode and `kest_op_width` answered something. The origin was not silent, it was
+never looked at: a divide by nought on line 7 was reported on line 9. Every
+instruction after a fused jump carried the origin of the one after it, so every
+runtime message in a body with a comparison a jump reads pointed at the wrong
+line — in a language whose case for itself is that it says where.
+
+`kest_chunk_take_back` takes all three back together and is the one place that
+knows how, which is what D751 said about `kest_op_width` at the other end.
+`tools/check-commands.sh` runs a body that divides by nought after each of the
+six comparisons a jump can read and holds the line the message points at against
+the line the divide is on: all six moved before the fix, none after.
+
+Nothing here was new. What was new was a program whose constant pool crossed 148
+under a build that checks itself. The sanitiser found in one run what eight
+hundred entries of reading did not. Recorded as D804.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the float ends that found this. `%` and `/` by nought are worked out
+by the machine and refused by the folder, so `const INFINITY: f64 = 1.0 / 0.0`
+— the one way the reference says a program names an infinity — does not
+compile. Make the folder answer where the machine answers, keep the whole
+numbers' refusal where the machine stops, and hold every float end in both
+arithmetics against each other.

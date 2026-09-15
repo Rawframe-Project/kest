@@ -3077,6 +3077,43 @@ $want"
     esac
 done
 
+# Where a message points in a body that has a comparison a jump reads. The
+# compiler writes the comparison, sees the jump after it and takes the
+# comparison back, and until D804 it took back the byte and left behind the
+# origin written beside it — so every instruction after a fused jump carried
+# the origin of the one after it, and a failure while running pointed at the
+# next line. Every fused pair is tried, because there is one of these for each
+# comparison and they are taken back by the same two rounds.
+mkdir "$scratch"/fused
+for fusing in "==|5" "!=|10" "<|1" "<=|1" ">|10" ">=|10"; do
+    comparison=${fusing%|*}
+    given=${fusing#*|}
+    cat > "$scratch"/fused/jump.kest <<KEST
+module jump
+
+fn run(a: i32, b: i32) -> i32 {
+    if a $comparison 5 {
+        let c = a + 1
+        let d = c + 1
+        return d / b
+    }
+    return 0
+}
+
+fn main() -> i32 {
+    return run($given, 0)
+}
+KEST
+    dividing=$(grep -n "return d / b" "$scratch"/fused/jump.kest | cut -d: -f1)
+    said=$("$kest" run "$scratch"/fused/jump.kest 2>&1 </dev/null)
+    pointed=$(printf '%s\n' "$said" | sed -n 's|.*--> .*/jump.kest:\([0-9][0-9]*\):.*|\1|p' | head -1)
+    if [ "$pointed" != "$dividing" ]; then
+        complain "check: a divide on line $dividing after \`a $comparison 5\` \
+is reported on line ${pointed:-nowhere}"
+        printf '%s\n' "$said" | sed 's/^/    /' | head -5
+    fi
+done
+
 # And what those notes point at. A note that names something is a note about
 # where that something is: `\`stepFrame\` promises it here` under a line that is
 # not the declaration is worse than no note, and reads exactly like a right

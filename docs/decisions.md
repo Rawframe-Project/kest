@@ -23402,3 +23402,48 @@ D802 a sum held as an order, D803 an order whose slack was where a sentence went
 wrong. A check is also a claim about what may drift — one that admits two
 arithmetics has written down the weaker, and the prose beside it will be about
 whichever the author had in mind.
+
+## D804: a byte taken back and an origin left behind
+
+*Where it came from.* Writing float ends into `examples/numbers.kest` for the
+next entry pushed one of its constant indexes to 148, and the sanitised build
+said `index 148 out of bounds for type 'Instruction [148]'` — the compiler
+reading a constant index as an opcode while emitting it.
+
+*What was actually wrong.* `emit_jump` takes a comparison back when the jump
+after it can read one: `chunk->code_count = compiler->last_at`, then the fused
+instruction in its place. Three things are written when an instruction is
+emitted — the byte, where the next instruction is expected, and where this one
+came from — and only the byte was taken back. `next_instruction` stayed one
+past the code, so the jump's first operand landed exactly on it and was read as
+an opcode; and `origins` kept an entry for an instruction that is not there.
+
+The opcode misreading was silent for eight hundred entries, because a constant
+index under 148 is a valid opcode and `kest_op_width` answered something. The
+origin was not silent, it was just never looked at:
+
+```
+error[K0601]: division by zero
+  --> origin.kest:9:5
+ 9 |     return 0
+```
+
+The divide is on line 7. Every instruction after a fused jump carried the origin
+of the one after it, so **every runtime message in a body with a comparison a
+jump reads pointed at the wrong line** — in a language whose case for itself is
+that it says where.
+
+*The fix.* `kest_chunk_take_back` takes all three back together, and is the one
+place that knows how. D751 said of `kest_op_width` that it is "the only place
+that knows, so a walk that prints and a walk that does not cannot come apart".
+The same was needed at the other end: one place that knows how to unwrite an
+instruction.
+
+*Held.* `tools/check-commands.sh` runs a body that divides by nought after each
+of the six comparisons a jump can read, and holds the line the message points at
+against the line the divide is on. All six moved before the fix and none after.
+
+*What made it findable.* Nothing here was new. What was new was a program whose
+constant pool crossed 148 under a build that checks itself — a bound this tree
+has had since the day it had 148 instructions. The sanitiser found in one run
+what eight hundred entries of reading did not.

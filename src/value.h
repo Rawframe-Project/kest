@@ -478,6 +478,14 @@ int32_t kest_module_entry(const KestModule *module, const char *name);
 // a chunk with nothing in it. See D751.
 uint32_t kest_chunk_origin(const KestChunk *chunk, uint32_t offset);
 
+// Takes the last instruction back, which the compiler does when a comparison
+// turns out to be what a jump reads. `to` is where that instruction started.
+// It takes back the byte, where the next instruction is expected and where the
+// instruction came from — three things written together and until D804 taken
+// back one at a time, which left every origin after a fused jump naming the
+// instruction after the one it is for. See D804.
+void kest_chunk_take_back(KestChunk *chunk, uint32_t to);
+
 bool kest_chunk_emit(KestModule *module, KestChunk *chunk, uint8_t byte,
                      uint32_t origin);
 bool kest_chunk_emit_u16(KestModule *module, KestChunk *chunk, uint16_t value,

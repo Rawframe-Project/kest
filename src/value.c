@@ -690,6 +690,24 @@ bool kest_chunk_emit(KestModule *module, KestChunk *chunk, uint8_t byte,
     return true;
 }
 
+void kest_chunk_take_back(KestChunk *chunk, uint32_t to) {
+    if (chunk == NULL || to > chunk->code_count) {
+        return;
+    }
+    // The instruction being taken back is one byte and started where the code
+    // now ends, so what it wrote is one origin and one expectation. Both go
+    // back with it: a `code_count` moved on its own leaves the next byte
+    // looking like an operand and the origin of every instruction after it
+    // off by one. See D804.
+    chunk->code_count = to;
+    if (chunk->next_instruction > to) {
+        chunk->next_instruction = to;
+        if (chunk->origin_count > 0) {
+            chunk->origin_count--;
+        }
+    }
+}
+
 uint32_t kest_chunk_origin(const KestChunk *chunk, uint32_t offset) {
     // Walked rather than looked up: a table of where every instruction starts
     // would be the thing this is for getting rid of. What reads one is a

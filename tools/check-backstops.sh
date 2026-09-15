@@ -184,6 +184,25 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # An instruction taken back with its origin left behind. The compiler
+        # takes a comparison back when the jump after it can read one, and
+        # what it wrote beside that byte is where the instruction came from:
+        # left there, every origin after it belongs to the instruction after
+        # the one it is for, and a failure while running is reported on the
+        # next line. Nothing says so — the program still runs and still
+        # refuses, in the wrong place. See D804.
+        "what": "an instruction taken back without its origin",
+        "file": "src/value.c",
+        "from": r"""    chunk->code_count = to;
+    if (chunk->next_instruction > to) {""",
+        "to": r"""    chunk->code_count = to;
+    if (false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "is reported on line",
+    },
+    {
         # A refusal the machine makes for a host, made without a word. Only a
         # host can be refused for these, and a host in a frame loop reads the
         # answer rather than the words — so a refusal that stops saying which
