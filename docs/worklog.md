@@ -30544,3 +30544,45 @@ D667, D668, D669 and now D805 have each found them apart. Read every operator
 and conversion the folder implements against the instruction the machine runs
 for the same thing, and list the ones where a program could tell which worked
 its answer out. Then hold the ones nothing holds.
+
+## The two ends where a constant took the compiler down
+
+Every operator and conversion the folder implements, read against the
+instruction the machine runs for the same thing. Most of it cannot come apart:
+conversions go through `kest_narrow_to` and `kest_real_to_int`, `hash` through
+`kest_hash_value` — one implementation each, asked by both — and the folder's
+negate is the machine's unsigned line for the same reason. Three did not.
+
+The least number over minus one. The reference says it wraps to itself with
+nought left over, and the machine has guarded it since it had a divide, with a
+comment saying C leaves it undefined and most machines trap. The folder did `a /
+b`, so `const FLIPPED: i64 = SMALLEST / -1` did not give a wrong answer — it
+took the compiler down with `Floating point exception (core dumped)`. Narrower
+widths never reached it: an `i32`'s least over minus one is worked out in
+`int64_t` and fits, so the one width where C traps is the one width nothing
+exercised.
+
+A shift of a count past the width. The reference says `1 << 64` is nought and
+`-8 >> 64` is -1, and the machine says exactly that. The folder refused. And
+that refusal was one line with the refusal for a count below nought, which is
+right — the machine stops with K0604 — so the right one came out with no reason
+at all, under the fallback suggestion. Now it says which it is.
+
+`examples/numbers.kest` holds all five answers folded against running, codes 88
+to 93, and `check-commands.sh` runs two programs that come back nought only if
+the folder worked the answer out and the machine agreed. The trap cannot be held
+by a program hole — a compiler that dies of SIGFPE says nothing to catch — so it
+is held where the exit status is read.
+
+D805 was the folder refusing where the machine answers, in floats. This is the
+same fault in whole numbers, twice. Across D667, D668, D669, D805 and this:
+two arithmetics, and what holds them together is a program that runs both and
+compares. Recorded as D806.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the folder answers for one value at a time and `fold_slots` for a
+value made of several. Read what it does with a struct, an array and a case of
+an enum written where they stand against what the machine builds for the same
+words — the layouts, the order of the slots, and what a piece each is — and
+find whether a program can tell which of the two put the value together.

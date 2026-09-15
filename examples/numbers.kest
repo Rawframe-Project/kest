@@ -25,6 +25,19 @@ const OVER: i64 = HIGHEST * 3
 const PAST: i64 = HIGHEST + 1
 const FLIPPED: i64 = -SMALLEST
 const SHIFTED: i64 = HIGHEST << 3
+// And the two ends the machine has always held and the folder had not: the
+// least number over minus one, which the reference says wraps to itself with
+// nought left over, and a shift of a count past the width, which leaves
+// nothing but the sign a signed shift keeps shifting in. The first took the
+// compiler down on the machine it compiles on rather than being worked out,
+// and the second was refused where the machine answers. See D806.
+const FLIPPED_OVER: i64 = SMALLEST / -1
+const LEFT_OF_FLIPPED: i64 = SMALLEST % -1
+const SHIFTED_OUT: i64 = HIGHEST << 64
+const SIGN_LEFT: i64 = SMALLEST >> 64
+const NOTHING_LEFT: i64 = HIGHEST >> 100
+const WIDEST: u64 = 18446744073709551615
+const WIDE_SHIFTED: u64 = WIDEST >> 64
 const NARROWED: i8 = NARROW * 3
 // And the conversions, which the folder does now for the same reason it does
 // the arithmetic: a narrowing is what a program writes when it means one, and
@@ -70,6 +83,10 @@ fn asRun(n: i64) -> i64 no.alloc {
 
 fn realAsRun(x: f64) -> f64 no.alloc {
     return x
+}
+
+fn asRunWide(n: u64) -> u64 no.alloc {
+    return n
 }
 
 fn asRunNarrow(n: i8) -> i8 no.alloc {
@@ -456,6 +473,31 @@ fn main() -> i32 {
     }
     if asRun(HIGHEST) << 3 != SHIFTED {
         return 67
+    }
+    // The two ends of the whole numbers worked out twice. The least number
+    // over minus one is one past the top of the width, so it wraps to itself
+    // and leaves nought — the same sentence the run-time check above makes
+    // about an `i32`, made here about the width where C traps rather than
+    // wrapping. See D806.
+    if FLIPPED_OVER != SMALLEST || asRun(SMALLEST) / -1 != FLIPPED_OVER {
+        return 88
+    }
+    if LEFT_OF_FLIPPED != 0 || asRun(SMALLEST) % -1 != LEFT_OF_FLIPPED {
+        return 89
+    }
+    // And a count past the width, which leaves nothing of an unsigned number
+    // and nothing but the sign of a signed one.
+    if SHIFTED_OUT != 0 || asRun(HIGHEST) << 64 != SHIFTED_OUT {
+        return 90
+    }
+    if SIGN_LEFT != 0 - 1 || asRun(SMALLEST) >> 64 != SIGN_LEFT {
+        return 91
+    }
+    if NOTHING_LEFT != 0 || asRun(HIGHEST) >> 100 != NOTHING_LEFT {
+        return 92
+    }
+    if WIDE_SHIFTED != 0 || asRunWide(WIDEST) >> 64 != WIDE_SHIFTED {
+        return 93
     }
     if asRunNarrow(NARROW) * 3 != NARROWED {
         return 68

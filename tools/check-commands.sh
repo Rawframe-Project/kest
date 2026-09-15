@@ -4996,6 +4996,42 @@ case "$real" in
     printf '%s\n' "$real" | sed 's/^/    /' | head -4
     ;;
 esac
+# And the two ends of the whole numbers the machine has always answered. The
+# least number over minus one is one past the top of its width, so it wraps to
+# itself with nought left over; a shift of a count past the width leaves
+# nothing but the sign a signed shift keeps. Both are answers the reference
+# states, and until D806 the first took the compiler down with a trap C is
+# entitled to and the second was refused where it is written. Each program
+# comes back nought only if the folder worked the answer out and the machine
+# agreed with it.
+cat > "$scratch"/marking/flipped.kest <<'KEST'
+const SMALLEST: i64 = -9223372036854775807 - 1
+const FLIPPED: i64 = SMALLEST / -1
+const LEFT: i64 = SMALLEST % -1
+
+fn main() -> i32 {
+    return i32(FLIPPED - SMALLEST) + i32(LEFT)
+}
+KEST
+"$kest" run "$scratch"/marking/flipped.kest >/dev/null 2>&1 </dev/null
+flipped=$?
+if [ "$flipped" != 0 ]; then
+    complain "check: the least number over minus one in a constant answers \
+$flipped"
+fi
+cat > "$scratch"/marking/past.kest <<'KEST'
+const WIDE: i64 = 1 << 64
+const SIGNED: i64 = -1 >> 100
+
+fn main() -> i32 {
+    return i32(WIDE) - i32(SIGNED + 1)
+}
+KEST
+"$kest" run "$scratch"/marking/past.kest >/dev/null 2>&1 </dev/null
+past=$?
+if [ "$past" != 0 ]; then
+    complain "check: a shift past the width in a constant answers $past"
+fi
 
 # And the same words whichever way they are asked for, because a reader who
 # typed one of the three has read the other two nowhere.

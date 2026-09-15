@@ -787,6 +787,17 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
                 *why = "this divides by nought";
                 return false;
             }
+            // The one pair whose quotient does not fit, which the reference
+            // says wraps to itself with nought left over and which C leaves
+            // undefined — a trap on the machine this compiles on, so a
+            // constant written this way took the compiler down rather than
+            // being worked out. The machine has held this since it had a
+            // divide; this is the same guard on the other arithmetic. See
+            // D806.
+            if (!unsigned_ && a == INT64_MIN && b == -1) {
+                out->integer = INT64_MIN;
+                break;
+            }
             out->integer = unsigned_ ? (int64_t)((uint64_t)a / (uint64_t)b)
                                      : a / b;
             break;
@@ -794,6 +805,10 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
             if (b == 0) {
                 *why = "this divides by nought";
                 return false;
+            }
+            if (!unsigned_ && a == INT64_MIN && b == -1) {
+                out->integer = 0;
+                break;
             }
             out->integer = unsigned_ ? (int64_t)((uint64_t)a % (uint64_t)b)
                                      : a % b;
@@ -807,15 +822,28 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
         case KEST_TOK_CARET:
             out->integer = a ^ b;
             break;
+        // A count of nothing is not a count, which the machine says while
+        // running and a constant has nothing to work out; a count past the
+        // width has an answer, and it is the one the machine gives — nothing
+        // is left of a number shifted further than it is wide, except the
+        // sign a signed shift keeps shifting in. Refused for the first and
+        // answered for the second, which is where these were one refusal.
+        // See D806.
         case KEST_TOK_LTLT:
-            if (b < 0 || b > 63) {
+            if (b < 0) {
+                *why = "a shift of a count below nought is not a shift";
                 return false;
             }
-            out->integer = (int64_t)((uint64_t)a << b);
+            out->integer = b >= 64 ? 0 : (int64_t)((uint64_t)a << b);
             break;
         case KEST_TOK_GTGT:
-            if (b < 0 || b > 63) {
+            if (b < 0) {
+                *why = "a shift of a count below nought is not a shift";
                 return false;
+            }
+            if (b >= 64) {
+                out->integer = unsigned_ ? 0 : (a < 0 ? -1 : 0);
+                break;
             }
             out->integer = unsigned_ ? (int64_t)((uint64_t)a >> b) : a >> b;
             break;

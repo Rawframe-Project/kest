@@ -23493,3 +23493,50 @@ them and nothing asking the other.
 And the twelve constants it took to hold that are what found D804: one of them
 pushed this file's constant pool past 148, and a build that checks itself read
 the index as an opcode.
+
+## D806: the two ends where a constant took the compiler down
+
+*The sweep.* Every operator and conversion the folder implements, read against
+the instruction the machine runs for the same thing. Most of it cannot come
+apart: conversions go through `kest_narrow_to` and `kest_real_to_int`, and
+`hash` through `kest_hash_value`, which are one implementation each, asked by
+both. `neg.i` and the folder's negate are the same unsigned line for the same
+reason. Text and the comparisons agree. Three did not.
+
+*One: the least number over minus one.* The reference says it "wraps to itself,
+the way every other arithmetic at the end of a width wraps, and the remainder
+beside it is nought", and the machine has guarded it since it had a divide,
+with a comment saying C leaves it undefined and most machines trap. The folder
+did `a / b`. So:
+
+```
+$ kest run least.kest
+Floating point exception (core dumped)
+```
+
+`const FLIPPED: i64 = SMALLEST / -1` did not give a wrong answer. It took the
+compiler down. Narrower widths never reached it — an `i32`'s least over minus
+one is worked out in `int64_t` and fits — so the one width where C traps is the
+one width nothing exercised.
+
+*Two: a shift of a count past the width.* The reference says "everything is
+shifted out, so `1 << 64` is nought and `-8 >> 64` is -1", and the machine says
+exactly that. The folder refused: `if (b < 0 || b > 63) return false;`.
+
+*Three: and the refusal it shares with a count below nought.* That one is right
+— the machine stops with `K0604`, so a constant has nothing to work out, the
+same as an integer divided by nought. But the two were one line, so the right
+refusal came out with no `*why` at all, under the fallback suggestion about what
+a constant may be made of. Now it says which of the two it is.
+
+*Held.* `examples/numbers.kest` holds all five answers folded against running
+(codes 88 to 93), and `tools/check-commands.sh` runs two programs that come
+back nought only if the folder worked the answer out and the machine agreed.
+The trap could not be held by a program hole — a compiler that dies of `SIGFPE`
+says nothing for a hole to catch — so it is held where the exit status is read.
+
+*The shape.* D805 was the folder refusing where the machine answers, in floats.
+This is the same fault in whole numbers, twice, plus the place where refusing is
+right and the reason was missing. The pattern across D667, D668, D669, D805 and
+this: **two arithmetics, and what holds them together is a program that runs
+both and compares.**

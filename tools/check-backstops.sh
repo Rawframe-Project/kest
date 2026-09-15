@@ -184,6 +184,45 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # The least number over minus one worked out where it is written. C
+        # leaves it undefined and the machine it compiles on traps, so a
+        # constant written this way does not give a wrong answer: it takes the
+        # compiler down. The machine has guarded it since it had a divide.
+        # See D806.
+        "what": "the least number over minus one in a constant",
+        "file": "src/types.c",
+        "from": r"""            if (!unsigned_ && a == INT64_MIN && b == -1) {
+                out->integer = INT64_MIN;
+                break;
+            }""",
+        "to": r"""            if (false) {
+                out->integer = INT64_MIN;
+                break;
+            }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "the least number over minus one in a constant",
+    },
+    {
+        # A count past the width refused where it is written. The machine
+        # answers every count: nothing is left of a number shifted further
+        # than it is wide, except the sign a signed shift keeps shifting in.
+        # A constant that refuses is the same program told two things about
+        # the same line. See D806.
+        "what": "a shift past the width refused as a constant",
+        "file": "src/types.c",
+        "from": r"""            out->integer = b >= 64 ? 0 : (int64_t)((uint64_t)a << b);""",
+        "to": r"""            if (b >= 64) {
+                return false;
+            }
+            out->integer = (int64_t)((uint64_t)a << b);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a shift past the width in a constant",
+    },
+    {
         # A float divided by nought refused where it is written. The machine
         # answers it and does not stop, so a constant that will not be worked
         # out is the same program told two different things about the same

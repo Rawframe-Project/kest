@@ -908,7 +908,8 @@ it: everything is shifted out, so `1 << 64` is nought and `-8 >> 64` is -1,
 which is what the sign says and what a shift of sixty-three then one more would
 have given. It is the declared width and not the slot's: a `u8` of 200 shifted
 nine either way is nought, and an `i8` of -8 shifted right nine is -1. D018 is the rule — match C where C has an answer, and answer where
-it has none.
+it has none. A constant is worked out with the same answers, and a count below
+nought is refused where it is written, because that is where the machine stops.
 
 A name, a field or an element may be assigned to, with `=` or with one of the
 four that work the value out first. There is no `%=`, `&=` or the rest of them:
@@ -1336,7 +1337,9 @@ let wrapped = angle % 360.0
 The least whole number divided by minus one is the other place C has no
 answer. There is one number it cannot be — the answer is one past the top of
 the width — so it wraps to itself, the way every other arithmetic at the end of
-a width wraps, and the remainder beside it is nought. That is D018's second
+a width wraps, and the remainder beside it is nought. A constant is
+worked out the same way, which is the one place in this arithmetic where C does
+not merely have no answer but takes the program down for asking. That is D018's second
 half: answer where C has none, and answer the way the rest of the language
 already does.
 
