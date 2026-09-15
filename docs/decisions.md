@@ -25310,3 +25310,45 @@ took and what the program put on the heap, and the two added are held against
 what the run was allowed — whatever the run did, because what was spent was
 spent whether it finished or not. Two holes: a ceiling given away twice over,
 and a driven run that will not say what the heap came to.
+
+## D850: what a machine costs, weighed against the same number
+
+A ceiling is one number and a machine has three. Two of them — the slots of
+stack and the frames of calls — are taken before a program runs, and they were
+weighed against nothing at all. A program of nine lines that calls itself has no
+deepest frame, so what it is given is the usual number of each: forty-nine
+thousand four hundred and fourteen bytes of machine. A command allowed twenty
+thousand made it, ran in it, and answered.
+
+*Weighing it means making one.* What a machine costs is the arithmetic a machine
+is made with, and a second copy of that arithmetic in the command line would be
+two numbers that agree until somebody changes one — a shape this project has
+been caught by often enough to have a rule about it. So the machine is made with
+a heap of a single byte, asked `kest_runtime_cost` what that took, and then told
+how much of what is left the program may have.
+
+*Which wanted a door.* `kest_heap_allow` says how much heap a machine may have
+from here on, and it exists because a host dividing a number it was given cannot
+divide it before there is a machine. It answers false for no machine and while
+the program is running — what the program is holding is on the heap, and a
+ceiling moved under it is a promise changed after it was made, which is the
+rule `kest_heap_reset` already keeps.
+
+*One machine rather than two.* The first version made one to weigh, threw it
+away, and made another; the gate said so within the minute, because a machine
+costs a list of diagnostics of its own out of the build's arena and that showed
+up as a program costing two hundred and sixty bytes more to compile when a
+ceiling was named. A ladder that holds a rung to saying what the same run with
+no ceiling said is a ladder that notices that.
+
+*And what is still not weighed.* A machine's own arena grows while the program
+runs — the one measured here at three hundred and twenty-seven bytes when it was
+made ended at four thousand four hundred and forty-two — and nothing walls that.
+What is weighed is what a machine costs to make, which is the number that was
+taken before a program runs and the one this entry is about. The rest is written
+down as what comes next rather than left as a number nobody said.
+
+*Held* by a program that calls itself, walked down a band every rung of which is
+too small for its machine: every one of them refused, read by what the run said
+rather than by what it answered, because what a run answers is the program's.
+One hole — a machine made without being weighed.

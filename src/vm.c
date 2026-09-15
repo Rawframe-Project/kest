@@ -3762,6 +3762,29 @@ size_t kest_heap_used(const KestRuntime *runtime) {
     return kest_arena_used(runtime->heap);
 }
 
+bool kest_heap_allow(KestRuntime *runtime, size_t bytes) {
+    if (runtime == NULL) {
+        return false;
+    }
+    if (is_running(runtime)) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0613", nowhere,
+                       "how much heap this machine may have cannot be said "
+                       "while the program is running");
+        kest_diags_suggest(runtime->diags,
+                           "say it between calls; what the program is holding "
+                           "is on it");
+        return false;
+    }
+    // Kept as well as told to the arena, because a heap thrown away is capped
+    // again with this number and a reset that went back to the old one would
+    // be a ceiling that moves when nobody moved it.
+    runtime->heap_bytes = bytes;
+    kest_arena_cap(runtime->heap, bytes);
+    return true;
+}
+
 bool kest_heap_reset(KestRuntime *runtime) {
     if (is_running(runtime)) {
         KestSpan nowhere = {0, 0};

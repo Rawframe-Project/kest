@@ -841,6 +841,21 @@ void kest_allowed(const KestRuntime *runtime, KestLimits *limits);
 // See D322.
 bool kest_heap_reset(KestRuntime *runtime);
 
+// How much heap this machine may have from here on, said after there is one.
+// A host dividing a number it was given cannot divide it before the machine
+// exists: what a machine costs is the arithmetic a machine is made with, and a
+// host that works that out for itself keeps a second copy of a sum that is
+// only ever right until somebody changes one of them. So it makes a machine
+// with a heap of nothing, asks `kest_runtime_cost` what that took, and says
+// here how much of what is left the program may have. Nought is no ceiling,
+// which is what a host that never says this has.
+//
+// Answers false for no machine and while the program is running, because what
+// the program is holding is on the heap and a ceiling moved under it is a
+// promise changed after it was made. Between calls is where it belongs, which
+// is where `kest_heap_reset` belongs for the same reason. See D850.
+bool kest_heap_allow(KestRuntime *runtime, size_t bytes);
+
 // What the host provides, bound by the name the program declares:
 // `extern fn Clock.now() -> i64` is bound as "Clock.now".
 typedef struct KestHost KestHost;

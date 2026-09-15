@@ -300,6 +300,15 @@ static void engine_decide(KestValue *frame, KestRuntime *runtime,
                     "the heap was thrown away while the program was running\n");
             _Exit(1);
         }
+        // And the other half of the same rule: how much heap this machine may
+        // have is a promise, and a promise changed while the program is
+        // standing on what it promised is not one. A host divides what it has
+        // between calls, which is where it knows what it has. See D850.
+        if (kest_heap_allow(runtime, 4096)) {
+            fprintf(stderr, "how much heap the machine may have was said "
+                            "while the program was running\n");
+            _Exit(1);
+        }
         kest_report(runtime, said, KEST_FORM_TEXT);
         // The answer as well as the words, read in that order: what the
         // machine said is what a report tells anybody, and what it answered is
@@ -315,10 +324,10 @@ static void engine_decide(KestValue *frame, KestRuntime *runtime,
             }
         }
         fclose(said);
-        if (refused != 2) {
+        if (refused != 3) {
             fprintf(stderr,
-                    "a host asked for two things it may not have and was told "
-                    "about %d\n",
+                    "a host asked for three things it may not have and was "
+                    "told about %d\n",
                     refused);
             _Exit(1);
         }

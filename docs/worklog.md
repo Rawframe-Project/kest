@@ -32238,3 +32238,40 @@ slots of stack and frames of calls — are taken before a program runs and are n
 weighed against `--room` at all: a command allowed sixty-four kilobytes can be
 handed a program whose machine wants a megabyte of stack and takes it. Weigh
 what a machine costs against the same number, and refuse where it does not fit.
+
+## What a machine costs, weighed against the same number
+
+A ceiling is one number and a machine has three. The slots of stack and the
+frames of calls are taken before a program runs and were weighed against
+nothing: nine lines that call themselves have no deepest frame, so the machine
+is the usual number of each — 49414 bytes — and a command allowed 20000 made it,
+ran in it and answered.
+
+Weighing it means making one, because what a machine costs is the arithmetic a
+machine is made with and a second copy here would be two numbers that agree
+until somebody changes one. So the machine is made with a heap of a single byte,
+asked what that took, and then told how much of what is left the program may
+have. That wanted a door — `kest_heap_allow` — which answers false for no
+machine and while the program is running, for the reason `kest_heap_reset` does.
+
+One machine rather than two. The first version weighed one, threw it away and
+made another, and the gate said so within the minute: a machine costs a list of
+diagnostics of its own out of the build's arena, and that showed up as a program
+costing 260 bytes more to compile when a ceiling was named.
+
+What is still not weighed: a machine's own arena grows while the program runs —
+327 bytes when this one was made, 4442 when it was done — and nothing walls
+that. What is weighed is what a machine costs to make.
+
+Held by a program that calls itself, walked down a band every rung of which is
+too small for its machine: every one refused, read by what the run said rather
+than by what it answered, because what a run answers is the program's.
+
+Recorded as D850.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a machine's own arena grows while the program runs and nothing walls
+it — 327 bytes when it is made and 4442 when it is done, and neither number is
+under any ceiling. Find what grows there, and either hold it to what a machine
+was weighed at or count it where it is spent.

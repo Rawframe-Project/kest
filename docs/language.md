@@ -3914,6 +3914,21 @@ way it answers false is a host asking for it from inside a call:
 error[K0613]: the heap cannot be thrown away while the program is running
 ```
 
+`kest_heap_allow` says how much heap a machine may have from here on, and it is
+there because a host with a number to divide cannot divide it before there is a
+machine: what a machine costs is the arithmetic a machine is made with, and a
+host that works that out for itself keeps a second copy of a sum that is right
+until somebody changes one of them. So it makes the machine with a heap of
+nothing, asks `kest_runtime_cost` what that took, and says here how much of what
+is left the program may have. Nought is no ceiling, which is what a host that
+never says it has. It is refused from inside a call for the same reason the
+other is — what the program is holding is on the heap, and a ceiling moved under
+it is a promise changed after it was made:
+
+```
+error[K0613]: how much heap this machine may have cannot be said while the program is running
+```
+
 Freeing the machine there is refused the same way and for the same reason: the
 stack the program is standing on goes with it. Both are asked for by
 `examples/embed.c` from inside the function the program calls it back through,

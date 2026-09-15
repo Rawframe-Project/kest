@@ -3103,6 +3103,22 @@ for file in "$@"; do""",
         "caught": "says nothing about what it took",
     },
     {
+        # A machine made without being weighed. What a machine takes is a third
+        # thing beside reading a program and the heap it runs on, and it is
+        # taken before the program runs: a program that calls itself is given
+        # the usual number of slots and the usual depth, which is fifty
+        # thousand bytes for nine lines, and a command allowed twenty thousand
+        # used to make it and run in it. See D850.
+        "what": "a machine made without being weighed",
+        "file": "src/main.c",
+        "from": r"""    if (costs >= rest) {""",
+        "to": r"""    if (false) {""",
+        "make": [],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "instead of being refused",
+    },
+    {
         # A build that keeps a ceiling of the whole number while the program
         # runs. What is left of what a command may have goes to the heap, and
         # the build's own ceiling has to come down by the same amount or the
@@ -3155,8 +3171,11 @@ for file in "$@"; do""",
         # every ceiling a host sets is a ceiling nothing meets. See D847.
         "what": "a heap given a ceiling and capped at none",
         "file": "src/vm.c",
-        "from": r"""        kest_arena_cap(rt->heap, rt->heap_bytes);""",
-        "to": r"""        kest_arena_cap(rt->heap, 0);""",
+        "from": r"""    runtime->heap_bytes = bytes;
+    kest_arena_cap(runtime->heap, bytes);""",
+        "to": r"""    (void)bytes;
+    runtime->heap_bytes = 0;
+    kest_arena_cap(runtime->heap, 0);""",
         "make": [],
         "tool": "tools/check-ceilings.sh",
         "arguments": [],
@@ -7693,20 +7712,18 @@ fn main() -> i32 {
         # wants eight slots, every run.
         "what": "a command line that asks and takes the usual numbers",
         "file": "src/main.c",
-        "from": """    return least;
-}
-
-static int run(const char *command,""",
-        "to": """    if (least->stack_slots < KEST_STACK_SLOTS) {
+        "from": """    least->heap_bytes = take_the_rest(build, room);
+    return least;
+}""",
+        "to": """    least->heap_bytes = take_the_rest(build, room);
+    if (least->stack_slots < KEST_STACK_SLOTS) {
         least->stack_slots = KEST_STACK_SLOTS;
     }
     if (least->call_depth < KEST_CALL_DEPTH) {
         least->call_depth = KEST_CALL_DEPTH;
     }
     return least;
-}
-
-static int run(const char *command,""",
+}""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],

@@ -592,6 +592,53 @@ else
     done
 fi
 
+# And what a machine costs, which is the third thing a command pays for and was
+# weighed against nothing at all. A program that calls itself has no deepest
+# frame, so what it is given is the usual number of slots and the usual depth
+# rather than its own — fifty thousand bytes of machine for nine lines of
+# program — and a command allowed twenty thousand made it and used it and never
+# counted it. Weighed now, against what is left after reading and compiling,
+# and refused where it does not fit. See D850.
+cat > "$work/calls-itself.kest" <<'KEST'
+fn down(n: i32) -> i32 {
+    if n <= 0 {
+        return 0
+    }
+    return down(n - 1) + 1
+}
+
+fn main() -> i32 {
+    return down(3) - 3
+}
+KEST
+itself_costs=$(costs_of "$work/calls-itself.kest")
+if [ -z "$itself_costs" ] || [ "$itself_costs" -le 0 ]; then
+    echo "ceilings: a program written here to be walked down a ceiling of its" \
+         "own says nothing about what compiling it costs"
+    failed=1
+else
+    # Twice what compiling it costs and less, which is nowhere near what its
+    # machine wants: every rung of this is one the machine does not fit in.
+    step=$itself_costs
+    while [ "$step" -ge $((itself_costs / 4)) ]; do
+        rung=$((itself_costs + step))
+        # Read by what it said rather than by what it answered: what a run of
+        # a program answers is the program's, and a refusal is the only thing
+        # a status has to say that this is about.
+        said=$(./kest run --room $rung "$work/calls-itself.kest" 2>&1 </dev/null)
+        case "$said" in
+        *"error[K0"*) ;;
+        *)
+            echo "ceilings: a program whose machine costs more than this" \
+                 "command was allowed ran under \`--room $rung\` instead of" \
+                 "being refused"
+            failed=1
+            ;;
+        esac
+        step=$((step / 2))
+    done
+fi
+
 # And what a run says when it has no room left to say anything with. A
 # diagnostic is words written into the arena the stage is working in, so a
 # program with something wrong with it, compiled in a ceiling too small to

@@ -1505,6 +1505,58 @@ static const KestLimits *room_for(KestBuild *build, const char *const *entries,
     return least;
 }
 
+// A machine, weighed against what this command may have. What a machine takes
+// is a third thing beside reading a program and the heap it runs on, and it is
+// taken before the program runs: sixty-four kilobytes allowed and a machine of
+// fifty for a program that calls itself three times, which used to be made and
+// used and never counted.
+//
+// Weighing it means making one. What a machine costs is the arithmetic a
+// machine is made with, and a second copy of that arithmetic here would be two
+// numbers that agree until somebody changes one — a shape this project has
+// been caught by often enough to write down. So the machine is made with a
+// heap of a single byte, asked what it cost, and then told how much of what is
+// left the program may have. One machine rather than two: a machine made to be
+// weighed and thrown away costs a list of diagnostics of its own, and what
+// that showed up as was a program that cost two hundred and sixty bytes more
+// to compile when a ceiling was named. See D850.
+static KestRuntime *a_machine_within(KestBuild *build, KestHost *host,
+                                     const char *const *entries,
+                                     KestLimits *least, size_t room) {
+    const KestLimits *asked = room_for(build, entries, least, room);
+    if (room == 0 || asked == NULL) {
+        return kest_start(build, host, asked);
+    }
+    size_t rest = least->heap_bytes;
+    KestLimits weighing = *least;
+    weighing.heap_bytes = 1;
+    KestRuntime *runtime = kest_start(build, host, &weighing);
+    if (runtime == NULL) {
+        return NULL;
+    }
+    size_t costs = kest_runtime_cost(runtime);
+    if (costs >= rest) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(&build->diags, NULL);
+        kest_diags_add(&build->diags, KEST_SEVERITY_ERROR, KEST_CRAMPED_CODE,
+                       nowhere,
+                       "a machine for this program costs %zu bytes and %zu "
+                       "are left of what this command was given",
+                       costs, rest);
+        kest_diags_suggest(&build->diags,
+                           "a machine is made before a program runs, so what "
+                           "it costs comes out of the same number");
+        kest_runtime_free(runtime);
+        return NULL;
+    }
+    least->heap_bytes = rest - costs;
+    if (!kest_heap_allow(runtime, least->heap_bytes)) {
+        kest_runtime_free(runtime);
+        return NULL;
+    }
+    return runtime;
+}
+
 static int run(const char *command, const char *executable, char **paths,
                int path_count, bool json, int32_t count, const int32_t *given,
                bool reset, size_t room) {
@@ -1609,10 +1661,9 @@ static int run(const char *command, const char *executable, char **paths,
                 KestRuntime *runtime =
                     host == NULL
                         ? NULL
-                        : kest_start(build, host,
-                                     room_for(build, (const char *[]){paths[1],
-                                                                      NULL},
-                                              &least, room));
+                        : a_machine_within(build, host,
+                                           (const char *[]){paths[1], NULL},
+                                           &least, room);
                 if (runtime != NULL) {
                     // What comes back and what goes in, because the frame is
                     // both: `chosen->type` is the function, and a function is
@@ -1746,10 +1797,8 @@ static int run(const char *command, const char *executable, char **paths,
             // of the two handlers the file has. Asking about the ones this
             // host will call is asking about what will run.
             KestLimits least = {0, 0, 0};
-            KestRuntime *runtime = kest_start(
-                build, host,
-                room_for(build, ticking ? TICK_CALLS : RUN_CALLS, &least,
-                         room));
+            KestRuntime *runtime = a_machine_within(
+                build, host, ticking ? TICK_CALLS : RUN_CALLS, &least, room);
             if (runtime != NULL) {
                 if (ticking) {
                     drive_events(runtime, build, count, given, reset, &ticked);
