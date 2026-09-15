@@ -30037,3 +30037,35 @@ time in this log a hole has caught the hand that was tidying up.
 `tools/`, and the roadmap says types, compile, value, vm. `docs/language.md` has
 eleven hundred lines on what a host has to keep and D786 read only the ceilings
 in it. Read the rest against `src/vm.c` and `include/kest.h`.
+
+## Three a host is given and nothing said
+
+The document spends eleven hundred lines on what a host has to keep and names
+fifty-two of the library's functions. All fifty-two exist with the shape given.
+The header has fifty-five.
+
+The three it never named: `kest_build_held`, what a build is still holding
+against `kest_build_cost` which is what it asked for on the way; `kest_host_find`,
+what a name is bound to, so a host can ask what it has already said instead of
+keeping a second list beside the library's; and `kest_version`, which Kest this
+is, for a host linked against one it did not compile. None obscure, none new —
+what a host reaches for second, after it has a build and a machine.
+
+A host reads the header and this document and nothing else, so a function the
+document never names is one nobody will find. `check-header.sh` already builds a
+C file naming all fifty-five to prove the header stands on libc alone; it has
+the list in hand, so it now asks the document for each of them too. The other
+way round was already impossible to miss — that C file would not compile.
+
+Everything else in the section holds. What was missing was not a wrong sentence
+but three absent ones, which is the failure a document has and a compiler does
+not: nothing goes wrong in a program when a page says too little. Recorded as
+D792.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the header is held to being said and the language document to being
+true. `docs/decisions.md` is held only to being append-only and to naming what
+it supersedes. Seven hundred and ninety-two entries name files, functions and
+codes; count how many of those names are still there, the way the language
+document's are.

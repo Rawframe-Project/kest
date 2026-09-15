@@ -1245,6 +1245,25 @@ yield""",
         "caught": "say which type they are the layout of",
     },
     {
+        # A function a host is given that the document never names. A host
+        # reads the header and the document and nothing else, so one the
+        # document does not say is one nobody will find. See D792.
+        "what": "a function a host is given and nothing says",
+        "file": "include/kest.h",
+        "from": r"""const char *kest_version(void);""",
+        "to": r"""const char *kest_version(void);
+const char *kest_unsaid(void);""",
+        "also": ("src/kest.c", "const char *kest_version(void) {",
+                 "const char *kest_unsaid(void) {\n"
+                 "    return kest_version();\n"
+                 "}\n"
+                 "\n"
+                 "const char *kest_version(void) {"),
+        "make": [],
+        "tool": "tools/check-header.sh",
+        "caught": "the document never says them",
+    },
+    {
         # A fault that stops saying it is one. Then it is a refusal only a
         # hole can provoke with nothing saying whose mistake it is, which is
         # the reader left to guess between the compiler and themselves. See

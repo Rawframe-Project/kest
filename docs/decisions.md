@@ -22892,3 +22892,37 @@ has caught the hand that was tidying up.
 duplicate, and the removal found a real looseness of six years' standing in the
 thing duplicated. That is not a defence of writing it twice. It is the reason
 the removal was worth doing properly rather than reverting four commits.
+
+## D792: three a host is given and nothing said
+
+*Reading the host boundary the way D777 read the rest.* The document spends
+eleven hundred lines on what a host has to keep, and names fifty-two of the
+library's functions. Every one of them exists, with the shape the document gives
+it. The header has **fifty-five**.
+
+*The three.* `kest_build_held` — what a build is still holding, against
+`kest_build_cost` which is what it asked for on the way, a pair the document
+already explains one half of. `kest_host_find` — what a name is bound to, which
+is how a host asks what it has already said instead of keeping a second list
+beside the library's. `kest_version` — which Kest this is, for a host linked
+against one it did not compile.
+
+None of them is obscure and none is new. They are what a host reaches for
+second, after it has a build and a machine, and a host reaching for them finds
+nothing: **the header and this document are the only two things a host reads**,
+so a function the second never names is a function nobody will find. The first
+says what it takes; only the second says when to want it.
+
+*Held, and the direction matters.* `check-header.sh` already builds a C file
+naming all fifty-five, to prove the header stands on libc alone. It has the list
+in hand, so it now also asks the document for each of them and refuses the ones
+it does not find. The other way round — a function the document names and the
+header has not — was already impossible to miss, because the C file would not
+compile.
+
+*What this did not find.* Every other claim in the section holds: the fifty-two
+named functions all exist, `kest_host_bind` refuses a second binding of a name,
+`kest_build_extern` walks to NULL, and the two ceilings a host meets are the two
+D786 already read. The section is accurate. What it was missing was not a wrong
+sentence but three absent ones, which is the failure mode a document has that a
+compiler does not — nothing in a program goes wrong when a page says too little.

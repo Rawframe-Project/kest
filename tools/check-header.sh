@@ -61,4 +61,21 @@ if ! "$work/host"; then
     exit 1
 fi
 
-echo "the header stands alone: $count function(s), libc and nothing else"
+# And that the document says each of them. A host reads two things: this header
+# and `docs/language.md`, and a function in the first that the second never
+# names is one nobody will find -- there is nowhere else to look. Three were in
+# that state when this was written: what a build still holds, what a name is
+# bound to, and which Kest this is. See D792.
+unsaid=$(for name in $names; do
+    if ! grep -qF "$name" docs/language.md; then
+        echo "$name"
+    fi
+done)
+if [ -n "$unsaid" ]; then
+    echo "a host is given these and the document never says them:"
+    printf '%s\n' "$unsaid" | sed 's/^/    /'
+    exit 1
+fi
+
+echo "the header stands alone: $count function(s), libc and nothing else, and \
+the document says every one of them"

@@ -2464,6 +2464,10 @@ which it was. `examples/embed.c` asks each of them on its own and reads the
 report after each, because three questions and one reading is a check that
 cannot tell which of the three spoke.
 
+`kest_host_find` answers what a name is bound to, or NULL, which is how a host
+asks what it has already said rather than keeping a second list beside the one
+the library keeps.
+
 A name the host provides is bound once. `kest_host_bind` refuses a name that
 is already bound rather than replacing it, because a machine takes what the
 host held when it started and keeps it: a second binding would change the
@@ -3587,7 +3591,10 @@ program with five hundred things wrong with it has five hundred things wrong
 with it, and the run that found them ends. A machine does not end.
 
 `include/kest.h` is the only header a host includes and `libkest.a` needs libc
-and nothing beyond it.
+and nothing beyond it. `kest_version` says which Kest it is, for a host linked
+against one it did not compile itself — the same string `kest --version`
+prints, out of the same place, so the library and the command line cannot
+disagree about what they are.
 
 ## Running
 
@@ -4219,6 +4226,12 @@ anything to be carried in. `examples/embed.c` goes round three times and reads
 the same pair each time, and what says the memory went back rather than being
 counted twice is the sanitised build, which is told at the end of a run what is
 still held.
+
+`kest_build_held` is the other half of that pair: what a build is *still*
+holding, against `kest_build_cost` which is what it asked for on the way. They
+differ by what a stage left behind for nobody, and a build that was checked and
+not compiled holds more than one that was compiled, because the trees are dead
+only once every copy has been made out of them.
 
 `emit` says a `codeMark` as well, which is what the machine will run rather than
 what was read to get there: the instructions, the constants, the names, the
