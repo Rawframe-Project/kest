@@ -32117,3 +32117,39 @@ Recorded as D846.
 a `--reset` that says whether it is. Walk `tick` down the same ceiling, with and
 without `--reset`, and hold that every rung either drives the events it was
 given or names the refusal it met.
+
+## What a handler keeps between the frames it is called in
+
+The ladder asks `tick` and `tick --reset` too now: 2043 rungs over 114
+program-and-command pairs. A program with no handler is refused with no ceiling
+at all and skipped, so what walks this is whatever takes events.
+
+The ladder cannot see what `--reset` is for, though. A handler that allocates
+keeps what it allocated until something throws it away, so a ceiling a hundred
+frames fit inside is one two hundred do not — a fact about frames rather than
+about a rung. So a program written for it: sixty-four elements an event, two
+hundred events, walked from twice its compile cost down to an eighth of that
+over it, which is a band it is always inside. Without `--reset` the ceiling is
+met; with it the same ceiling and the same frames run to the end.
+
+Both sides, because one holds the other. A check that held only the second would
+pass on a machine where the ceiling was never applied at all — which is what the
+last entry found. The first side holds the ceiling and the second holds the
+reset.
+
+Two things worth writing down. Near the bottom of the band the run without
+`--reset` says `K0658` where `K0617` would be more use: it met the heap ceiling,
+went to say so, and had no room left in the build's arena to write the
+diagnostic in, so it said the thing it could. And the first version of this
+check walked `"$asking"` quoted, so `tick --reset` was looked for as a command
+of that name — there is none, every rung of it was skipped, and the only thing
+that said so was a count of 113 where 114 is right.
+
+Recorded as D847.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** what a running program says is written where the build's diagnostics
+are and under the same ceiling, so a program that runs out of heap near the wall
+has no room left to say which wall it met. Keep enough back for the last message
+— a run that ran out should always be able to say what it ran out of.

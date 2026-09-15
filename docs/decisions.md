@@ -25192,3 +25192,44 @@ through a value, and a question that ran out of room.
 *Held* by two holes: the ceiling dropped where the question under it ran out,
 and a build that says it cost nothing — because every ladder here starts at what
 a program costs, and one that answers nought is a ladder with no first rung.
+
+## D847: what a handler keeps between the frames it is called in
+
+The ladder asks `tick` and `tick --reset` now as well: two thousand and
+forty-three rungs over a hundred and fourteen program-and-command pairs. A
+program with no handler is refused with no ceiling at all and skipped, so what
+walks this is whatever takes events.
+
+*And the ladder cannot see what `--reset` is for.* A handler that allocates keeps
+what it allocated until something throws it away, so a ceiling a hundred frames
+fit inside is one two hundred do not. That is a fact about frames and not about
+a rung, and no sweep over one program at one ceiling will ever say it.
+
+So a program written for it: sixty-four elements an event, two hundred events,
+walked from twice what compiling it costs down to an eighth of that over it —
+a band it is always inside, because it compiled in that number and every rung is
+above what one frame of it takes. Held from both sides. Without `--reset` the
+ceiling is met. With it, the same ceiling and the same frames run to the end.
+
+*Both sides, because one of them holds the other.* A check that held only the
+second would pass on a machine where the ceiling was never applied at all, which
+is exactly what the turn before this one found: `--reset` looks like it works
+when nothing is walling anything. The first side is the one that holds the
+ceiling; the second is the one that holds the reset.
+
+*What the lower rungs say, which is worth writing down.* Near the bottom of the
+band the run without `--reset` says `K0658` rather than `K0617` — it met the
+heap ceiling, went to say so, and had no room in the build's arena to write the
+diagnostic. So it said the thing it could say: that there was no room. Both are
+true and the second is less use, and the reason is that what a running program
+says is written where the build's diagnostics are and under the same ceiling.
+
+*And one mistake in the check itself.* The first version walked `"$asking"`
+quoted, so `tick --reset` was looked for as a command of that name, there is
+none, every rung of it was skipped, and what said so was a count: a hundred and
+thirteen where a hundred and fourteen is right. A sweep that silently walks
+nothing is the shape this project has been caught by more than once, and the
+only thing that catches it is a number somebody reads.
+
+*Held* by two holes: a heap given a ceiling and capped at none, and a heap kept
+between frames that was to be thrown away.

@@ -3088,6 +3088,37 @@ for file in "$@"; do""",
         "caught": "and one of the two is not there",
     },
     {
+        # A machine told how much heap it may have and not holding it to any.
+        # What a host writes in `KestLimits` is a promise the machine keeps,
+        # and a machine that takes the number and caps nothing is one where
+        # every ceiling a host sets is a ceiling nothing meets. See D847.
+        "what": "a heap given a ceiling and capped at none",
+        "file": "src/vm.c",
+        "from": r"""        kest_arena_cap(rt->heap, rt->heap_bytes);""",
+        "to": r"""        kest_arena_cap(rt->heap, 0);""",
+        "make": [],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "so what it keeps between them is kept nowhere",
+    },
+    {
+        # The heap kept between frames rather than thrown away. `--reset` is
+        # the whole of what a host driving frames has against a handler that
+        # allocates, and a `--reset` that keeps the heap is a program that runs
+        # for a hundred frames and cannot run for two hundred — which is the
+        # shape nobody meets until the game has been running a while. See D847.
+        "what": "a heap kept between frames that was to be thrown away",
+        "file": "src/main.c",
+        "from": r"""            if (reset) {
+                if (!kest_heap_reset(runtime)) {""",
+        "to": r"""            if (reset && false) {
+                if (!kest_heap_reset(runtime)) {""",
+        "make": [],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "so throwing the heap away between events did not",
+    },
+    {
         # A machine given nothing where the question under it could not be
         # answered. What a machine is sized by is a question asked in the
         # build's own arena, and a program too big for that question to finish

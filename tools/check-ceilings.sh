@@ -370,12 +370,17 @@ failed=0
 # anybody can ask it — and it is a question nothing asked at all until there was
 # a way to say how much room a command may have.
 #
-# Reading, compiling, and running: the third is where the machine's own ways of
-# running out are — a heap that cannot grow, a frame that cannot be made, a
+# Reading, compiling, running, and being driven: the third is where the
+# machine's own ways of running out are — a heap that cannot grow, a frame that cannot be made, a
 # piece of text with nowhere to go — and it is the one where a rung that came
 # back nought is a program that ran, wrote what it writes, and answered what it
 # answers. Every example here answers nought, so nought is what a rung that did
 # the whole job comes back as.
+#
+# And the fourth is the one a game is written against: a handler a frame, with a
+# heap that grows across frames unless it is thrown away. A program with no
+# handler is refused with no ceiling at all and skipped here, so what walks this
+# is whatever takes events.
 #
 # What it holds of a rung is the whole of it: one that came back nought said
 # what the same run with no ceiling said, and one that refused said which
@@ -387,12 +392,15 @@ failed=0
 walked_down=0
 walked_over=0
 for reading in examples/*.kest lib/std/*.kest; do
-    for asking in check emit run; do
+    for asking in check emit run tick "tick --reset"; do
         # Only what answers with no ceiling at all. A program this command
         # refuses for its own reasons is one every rung refuses for the same
         # reason, and holding those would be holding the refusal rather than
         # the ceiling.
-        whole=$(./kest "$asking" "$reading" 2>&1 </dev/null) || continue
+        # Unquoted, because what is walked is a command and the words that go
+        # with it: `tick --reset` is one way of asking and `tick` is another,
+        # and the two answer differently by the whole of what this is about.
+        whole=$(./kest $asking "$reading" 2>&1 </dev/null) || continue
         # What it cost, which is where the ladder starts: twice that is a
         # ceiling every program here fits inside, and halving reaches one byte.
         # A number read out of the run rather than written here, because what a
@@ -408,7 +416,7 @@ for reading in examples/*.kest lib/std/*.kest; do
         walked_over=$((walked_over + 1))
         rung=$((costs * 2))
         while [ "$rung" -gt 0 ]; do
-            said=$(./kest "$asking" --room "$rung" "$reading" 2>&1 </dev/null)
+            said=$(./kest $asking --room "$rung" "$reading" 2>&1 </dev/null)
             why=$?
             walked_down=$((walked_down + 1))
             if [ "$why" -eq 0 ]; then
@@ -471,11 +479,42 @@ fi
     printf '        push(xs, f1(n))\n        n += 1\n    }\n'
     printf '    return len(xs) - 2000000\n}\n'
 } > "$work/hungry.kest"
-hungry_costs=$(./kest emit --json "$work/hungry.kest" 2>/dev/null </dev/null |
-    sed -n 's/.*"cost":\([0-9]*\).*/\1/p')
-if [ -z "$hungry_costs" ] || [ "$hungry_costs" -le 0 ]; then
-    echo "ceilings: the program written here to want more heap than it can be" \
-         "given says nothing about what compiling it costs"
+# And the other program this walks, which is about the other half of a ceiling:
+# what a handler keeps between the frames it is called in. A handler that
+# allocates keeps what it allocated until something throws it away, so a ceiling
+# a hundred frames fit inside is one two hundred do not — unless the heap goes
+# back between them, which is what `--reset` says to do. Sixty-four elements a
+# frame is small enough that one frame fits anywhere and two hundred fit
+# nowhere, which is the gap this is walked in.
+cat > "$work/framed.kest" <<'KEST'
+fn onEvent(event: i32) -> i32 {
+    let kept: [i64] = array()
+    let at: i64 = 0
+    while at < 64 {
+        push(kept, at)
+        at += 1
+    }
+    return len(kept) - 64 + event - event
+}
+
+fn main() -> i32 {
+    return onEvent(1)
+}
+KEST
+
+# What each of them costs to compile, which is where its ladder starts. Both go
+# through one door, because two readings of one number is one of them quietly
+# stopping.
+costs_of() {
+    ./kest emit --json "$1" 2>/dev/null </dev/null |
+        sed -n 's/.*"cost":\([0-9]*\).*/\1/p'
+}
+hungry_costs=$(costs_of "$work/hungry.kest")
+framed_costs=$(costs_of "$work/framed.kest")
+if [ -z "$hungry_costs" ] || [ "$hungry_costs" -le 0 ] ||
+   [ -z "$framed_costs" ] || [ "$framed_costs" -le 0 ]; then
+    echo "ceilings: a program written here to be walked down a ceiling of its" \
+         "own says nothing about what compiling it costs"
     failed=1
 else
     step=$hungry_costs
@@ -487,6 +526,44 @@ else
             echo "ceilings: a program wanting sixteen megabytes of heap ran" \
                  "under \`--room $rung\`, so the ceiling it was given went" \
                  "nowhere"
+            failed=1
+        fi
+        step=$((step / 2))
+    done
+
+    # And the frames, from both sides. Without `--reset` the heap of two
+    # hundred frames is met by the ceiling; with it, the same ceiling and the
+    # same frames run to the end. Only the second would pass on a machine that
+    # was given a ceiling and never applied it, which is what was found one
+    # turn ago — so both are held, and the first is the one that holds the
+    # ceiling. See D847.
+    # From twice what compiling it costs down to an eighth of that over it,
+    # which is a band this program is always inside: it compiled in
+    # `framed_costs`, so the first rung is twice the room it needs and every
+    # rung is above what one frame of it takes. A floor rather than a walk to
+    # nothing, because under the band a rung is refused for having no room to
+    # compile in and says nothing about frames.
+    framed_rungs=0
+    step=$framed_costs
+    while [ "$step" -ge $((framed_costs / 8)) ]; do
+        rung=$((framed_costs + step))
+        framed_rungs=$((framed_rungs + 1))
+        ./kest tick --room $rung "$work/framed.kest" 200 >/dev/null 2>&1 \
+            </dev/null
+        kept=$?
+        ./kest tick --reset --room $rung "$work/framed.kest" 200 \
+            >/dev/null 2>&1 </dev/null
+        thrown=$?
+        if [ "$kept" -eq 0 ]; then
+            echo "ceilings: a handler that allocates drove 200 events under" \
+                 "\`--room $rung\` and was not refused, so what it keeps" \
+                 "between them is kept nowhere"
+            failed=1
+        fi
+        if [ "$thrown" -ne 0 ]; then
+            echo "ceilings: the same handler under \`--reset\` was refused at" \
+                 "\`--room $rung\`, so throwing the heap away between events" \
+                 "did not"
             failed=1
         fi
         step=$((step / 2))
@@ -1666,7 +1743,9 @@ if [ $failed -eq 0 ]; then
          "that said nothing about what they cost, and a ladder of its own" \
          "under every program this command line reads —" \
          "$walked_down rung(s) over $walked_over of them, each either saying" \
-         "what it says with no ceiling at all or naming the refusal it met —" \
+         "what it says with no ceiling at all or naming the refusal it met," \
+         "and what a handler keeps between the frames it is called in held" \
+         "from both sides over $framed_rungs rung(s) —" \
          "all of it measured on the machine this ran on"
 fi
 exit $failed
