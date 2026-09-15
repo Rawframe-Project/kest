@@ -1287,10 +1287,11 @@ fn main() -> i32 {
         # refuses, in the wrong place. See D804.
         "what": "an instruction taken back without its origin",
         "file": "src/value.c",
-        "from": r"""    chunk->code_count = to;
-    if (chunk->next_instruction > to) {""",
-        "to": r"""    chunk->code_count = to;
-    if (false) {""",
+        "from": r"""        chunk->next_instruction = to;
+        if (chunk->origin_count > 0) {
+            chunk->origin_count--;
+        }""",
+        "to": r"""        chunk->next_instruction = to;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -1721,7 +1722,7 @@ tokens   what a token is and what it carries""",
                  r"""    {"return", U16}, {"return.none", U16},"""],
         "make": [],
         "tool": "tools/check-tables.sh",
-        "caught": "instructions: 148 kinds and 149 names",
+        "caught": "instructions: 151 kinds and 152 names",
     },
     {
         # And the same for the tokens, which is the other list this rule was
@@ -5332,6 +5333,51 @@ fn length(v: Vec2) -> f32 no.alloc {""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "what it costs, and not every",
+    },
+    {
+        # Arithmetic and the cut behind it written as two instructions again.
+        # Nothing running would notice — the two do what the one does — and
+        # what it costs is a dispatch on every `+`, `-` and `*` a program
+        # written over `i32` makes, which is a twelfth of a frame step. See
+        # D868.
+        "what": "a cut written apart from the arithmetic that needed it",
+        "file": "src/compile.c",
+        "from": """    case KEST_OP_ADD_I:
+        return KEST_OP_ADD_I_NARROW;""",
+        "to": """    case KEST_OP_ADD_I:
+        return KEST_OP_NARROW;""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "are one instruction and not two",
+    },
+    {
+        # And the machine's half of it: an instruction that says it cuts and
+        # does not. The width is still read, so everything after it is where it
+        # should be and the only thing wrong is the answer — one past the top of
+        # the width, in a slot the type says cannot hold it. See D868.
+        "what": "an instruction that adds and says it cut what it added",
+        "file": "src/vm.c",
+        "from": """        case KEST_OP_ADD_I_NARROW:
+            BINARY_I(integer, (int64_t)((uint64_t)left.integer +
+                                        (uint64_t)right.integer));
+            top[-1].integer = kest_narrow_to(READ_U16(), top[-1].integer);
+            break;""",
+        "to": """        case KEST_OP_ADD_I_NARROW:
+            BINARY_I(integer, (int64_t)((uint64_t)left.integer +
+                                        (uint64_t)right.integer));
+            (void)READ_U16();
+            break;""",
+        "make": ["kest"],
+        "program": "adding.kest",
+        "source": """fn main() -> i32 {
+    let big: i32 = 2147483647
+    if big + 1 != i32(0 - 2147483647) - 1 {
+        return 300
+    }
+    return 0
+}
+""",
+        "caught": "K0618",
     },
     {
         # A cast that cuts a width already wide enough for everything it is

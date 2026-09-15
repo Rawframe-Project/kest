@@ -43,24 +43,24 @@ What it costs to run, measured rather than remembered. `make time` takes three
 numbers on the machine it is run on:
 
 ```
-155 ns per entity per step, best of 7 over 10000, spread 4%
-22 ns for a call and 28 ns for a crossing, which is 6 ns more, best of 7 over 1000000 calls, spread 9%
-15 ns for a hop of the loop, 19 ns with an index read and 36 ns with a read through a reference, which is 17 ns more, best of 7 over 200000 reads, spread 2%
-16 ns for a call in from a host and 21 ns for one the program makes in a loop, best of 7 over 1000000 calls, spread 4%
+143 ns per entity per step, best of 7 over 10000, spread 2%
+22 ns for a call and 28 ns for a crossing, which is 6 ns more, best of 7 over 1000000 calls, spread 6%
+12 ns for a hop of the loop, 15 ns with an index read and 35 ns with a read through a reference, which is 20 ns more, best of 7 over 200000 reads, spread 8%
+20 ns for a call in from a host and 21 ns for one the program makes in a loop, best of 7 over 1000000 calls, spread 6%
 ```
 
 A frame step per entity, a call against a crossing out, a loop hop against an
 index and a reference, and a crossing in against a call. The arithmetic that makes them mean something: on this machine a
 frame of ten thousand entities is about one and a half milliseconds, so a
-sixty-hertz budget holds roughly ten of those frames; a crossing out costs six
-nanoseconds over a call, which is under a twenty-fifth of a step, so `no.host`
-is worth having where a frame crosses many times an entity and worth little
-where it crosses once; a reference an entity is seventeen nanoseconds against
-the same hundred and fifty-five, which is about a ninth of a step, so a world of
-entities that can be removed costs about a ninth of a frame more than a run of
-entities that cannot; and a crossing *in* is about what a hop of a program's own
-loop costs, so a host that drives a program a call at a time is not paying much
-for the privilege. The numbers are one machine's; the shape of them is what carries. The
+sixty-hertz budget holds roughly eleven of those frames; a crossing out costs
+six nanoseconds over a call, which is about a twenty-fourth of a step, so
+`no.host` is worth having where a frame crosses many times an entity and worth
+little where it crosses once; a reference an entity is twenty nanoseconds
+against the same hundred and forty-three, which is about a seventh of a step, so
+a world of entities that can be removed costs about a seventh of a frame more
+than a run of entities that cannot; and a crossing *in* is about what a hop of a
+program's own loop costs, so a host that drives a program a call at a time is
+not paying much for the privilege. The numbers are one machine's; the shape of them is what carries. The
 [reference](docs/language.md#what-running-costs) says what each leaves out and
 how to read one against another.
 

@@ -142,6 +142,16 @@ typedef enum {
     // bits and an `i8` is eight, and what the engine on the other side gets
     // is the eight.
     KEST_OP_NARROW,     // u16 scalar kind
+    // The three that arrive with a cut behind them, in one instruction. Every
+    // `+`, `-` and `*` on a whole number narrower than a slot is one of these
+    // followed by a `narrow`, which is two dispatches for one piece of
+    // arithmetic — 484 of the 572 cuts every example and library module makes
+    // between them. The width stays an operand rather than becoming six
+    // instructions each: what a dispatch costs is the branch, not the two
+    // bytes read after it. See D868.
+    KEST_OP_ADD_I_NARROW,   // u16 scalar kind
+    KEST_OP_SUB_I_NARROW,   // u16 scalar kind
+    KEST_OP_MUL_I_NARROW,   // u16 scalar kind
     // Between the two families. Nothing crosses on its own, so each of these
     // is somewhere a type was named.
     KEST_OP_I2F,

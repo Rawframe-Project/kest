@@ -604,6 +604,23 @@ static bool every_value_fits(const KestType *from, const KestType *to) {
     return to->is_signed && from->width <= to->width;
 }
 
+// The arithmetic a cut arrives behind, when it is the instruction just before
+// it. Each of the three is one byte and carries nothing after it, so it is the
+// last instruction when it is the last byte — the same thing that lets a jump
+// take back the comparison before it. See D868.
+static uint8_t fused_with_narrow(uint8_t arithmetic) {
+    switch (arithmetic) {
+    case KEST_OP_ADD_I:
+        return KEST_OP_ADD_I_NARROW;
+    case KEST_OP_SUB_I:
+        return KEST_OP_SUB_I_NARROW;
+    case KEST_OP_MUL_I:
+        return KEST_OP_MUL_I_NARROW;
+    default:
+        return KEST_OP_NARROW;
+    }
+}
+
 // A result wider than its type is not the answer the type describes, so it is
 // cut back. Sixty-four bits is the slot, so nothing is cut there.
 static void emit_narrow(Compiler *compiler, const KestType *type,
@@ -612,7 +629,16 @@ static void emit_narrow(Compiler *compiler, const KestType *type,
         (type->tag != KEST_T_INT && type->tag != KEST_T_FLAGS)) {
         return;
     }
-    emit(compiler, KEST_OP_NARROW, span);
+    uint8_t op = KEST_OP_NARROW;
+    if (compiler->last_at + 1 == compiler->chunk->code_count) {
+        op = fused_with_narrow(compiler->last_op);
+        if (op != KEST_OP_NARROW) {
+            kest_chunk_take_back(compiler->chunk, compiler->last_at);
+            compiler->last_op = compiler->before_op;
+            compiler->last_at = compiler->before_at;
+        }
+    }
+    emit(compiler, op, span);
     emit_u16(compiler, kest_scalar_of(type), span);
 }
 

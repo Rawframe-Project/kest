@@ -2964,6 +2964,26 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top[-1].integer = kest_narrow_to(READ_U16(), top[-1].integer);
             break;
 
+        // The same cut, arriving with the arithmetic that needed it. Written
+        // out rather than falling through a shared macro because the whole
+        // point of them is that there is one dispatch and one read of the
+        // width between the operands and the answer. See D868.
+        case KEST_OP_ADD_I_NARROW:
+            BINARY_I(integer, (int64_t)((uint64_t)left.integer +
+                                        (uint64_t)right.integer));
+            top[-1].integer = kest_narrow_to(READ_U16(), top[-1].integer);
+            break;
+        case KEST_OP_SUB_I_NARROW:
+            BINARY_I(integer, (int64_t)((uint64_t)left.integer -
+                                        (uint64_t)right.integer));
+            top[-1].integer = kest_narrow_to(READ_U16(), top[-1].integer);
+            break;
+        case KEST_OP_MUL_I_NARROW:
+            BINARY_I(integer, (int64_t)((uint64_t)left.integer *
+                                        (uint64_t)right.integer));
+            top[-1].integer = kest_narrow_to(READ_U16(), top[-1].integer);
+            break;
+
         case KEST_OP_ADD_F:
             BINARY_I(real, left.real + right.real);
             break;

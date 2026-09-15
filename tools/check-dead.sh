@@ -53,6 +53,11 @@ for host in HOSTS:
         sys.exit(1)
 
 declared = {}
+# A body written in a header rather than declared by one. `static inline` is
+# folded into whoever calls it, and where a build does not fold it, it is that
+# object's own by design — so it is a symbol in no object and the rules below
+# read it out of the files that call it instead. See D868.
+in_headers = {}
 for header in sorted(os.listdir("src")) + ["../include/kest.h"]:
     if not header.endswith(".h"):
         continue
@@ -62,6 +67,14 @@ for header in sorted(os.listdir("src")) + ["../include/kest.h"]:
     text = re.sub(r"//[^\n]*", "", text)
     for name in re.findall(r"\b(kest_[a-z_0-9]+)\s*\(", text):
         declared.setdefault(name, os.path.normpath(path))
+    for name in re.findall(r"static inline [^;{}]*?\b(kest_[a-z_0-9]+)\s*\(",
+                           text):
+        in_headers[name] = os.path.normpath(path)
+
+# What the files say, for the one question objects cannot answer. Comments are
+# taken out for the same reason they are taken out of a header.
+calling = {path: re.sub(r"//[^\n]*", "", open(path).read())
+           for path in sorted(glob.glob(os.path.join("src", "*.c")))}
 
 made = {}
 inside = {}
@@ -88,8 +101,22 @@ def some(what, found):
 
 
 some("the names the headers declare", declared)
+some("the files that could call a body written in a header", calling)
 
 for name, header in sorted(declared.items()):
+    if name in in_headers:
+        # One file calling it is a body written where it does not belong: it
+        # belongs in that file, where nothing has to be said about it at all.
+        callers = sorted(path for path, text in calling.items()
+                         if re.search(r"\b%s\s*\(" % name, text))
+        if not callers:
+            print("%s: `%s` is declared and is not there" % (header, name))
+            failed = 1
+        elif len(callers) < 2:
+            print("%s: nothing outside %s calls `%s`"
+                  % (header, os.path.basename(callers[0]), name))
+            failed = 1
+        continue
     if name not in made:
         print("%s: `%s` is declared and is not there" % (header, name))
         failed = 1
@@ -133,7 +160,7 @@ for symbol, where in sorted(made.items()):
 # this: a reader looking for where `kest_something` is declared finds nothing
 # and cannot tell a private name from a declaration that went missing.
 for symbol, where in sorted(inside.items()):
-    if "." in symbol:
+    if "." in symbol or symbol in in_headers:
         continue
     print("%s: `%s` is this file's own and is named as a public one"
           % (where, symbol))

@@ -32852,12 +32852,12 @@ Recorded as D865.
 
 **Runs:** `make check`, everything passing, with `TMPDIR=/var/tmp`.
 
-**Next:** 484 of the 572 narrows left are an `add.i`, a `sub.i` or a `mul.i`
-with a `narrow` immediately after it, which is two dispatches where the machine
-could do one. The machine already fuses where it pays — `next.less.i`,
-`jump.false.lt.i` — so weigh an `add.i32` that adds and cuts in one against what
-it costs in instructions the machine has to carry: how many new ones, at which
-widths, and whether the table has room for them.
+**Next:** what is left under a hop of a `for` is `load`, `load`, `store` and
+`next.less.i`, and three of those four are slot traffic. Read how the machine
+holds its stack — `top`, `frame->base`, `KestValue` — and say what a `load` of a
+slot costs beside the arithmetic it feeds: whether the value is in memory every
+time, what the compiler is doing with `top` across a dispatch, and whether
+anything in the loop above could be held rather than fetched.
 
 ## A hop of a `for` is one instruction
 
@@ -32948,3 +32948,59 @@ could do one. The machine already fuses where it pays — `next.less.i`,
 `jump.false.lt.i` — so weigh an `add.i32` that adds and cuts in one against what
 it costs in instructions the machine has to carry: how many new ones, at which
 widths, and whether the table has room for them.
+
+## The cut arrives with the arithmetic, and stops being a call
+
+484 of the 572 cuts left were an `add.i`, a `sub.i` or a `mul.i` with a `narrow`
+right behind it — two dispatches for one piece of arithmetic. The question was
+how many instructions a fused set costs the machine, at which widths, and
+whether the table has room.
+
+At which widths: none of them. Six widths times three operators is eighteen
+instructions, and what eighteen buys over three is one read of two bytes, which
+are already in the instruction stream. What a dispatch costs is the branch. So
+three: `add.i.narrow`, `sub.i.narrow`, `mul.i.narrow`, each carrying the scalar
+kind as an operand, and the table goes 148 to 151 of 256. The compiler fuses
+them where it already fuses a comparison into a jump — each is one byte and
+carries nothing after it, so it is the last instruction exactly when it is the
+last byte.
+
+Then the measurement said something else. Fusing bought about one and a half
+nanoseconds a hop; making `kest_narrow_to` a `static inline` in `types.h`
+instead of a call into `types.c` bought two and a half. A switch of six cases,
+reached through a call across a file, cost more than the dispatch that reached
+it. The thing that looked like the optimisation was the smaller half of it.
+
+Four builds, five rounds each, alternated: D867 16 ns a hop, fused-only 14–15,
+inline-only 13–14, both 11–12. Across the instruments against D867: a frame step
+an entity 148 to 143, a hop 16 to 12, an index read 19 to 15, a call in a loop
+22 to 20.
+
+A hop of a `for` was nineteen nanoseconds three changes ago and is twelve. None
+of the three was an optimiser pass; each was one fact already known and thrown
+away.
+
+`check-costs.sh` reads that an `i32` `+` and its cut are one instruction, out of
+what `emit` printed, and two holes break it: one writes them apart again, one
+makes the fused instruction read the width and not cut by it. Both pages of
+measurements re-taken.
+
+Two things came along with it. `check-dead.sh` reads what a header declares out
+of the objects a build made, and a body written in a header is in no object, so
+a name defined in one is now read out of the files that call it — held to the
+same two sentences, that it is there and that more than one file calls it. And
+the hole for `kest_chunk_take_back` stopped catching: it broke the roll-back of
+`next_instruction` and of the origin together, and what that does to a later
+origin depends on the bytes of the operand after it. It breaks the origin alone
+now, which is one extra origin and everything after it off by one, every time.
+
+Recorded as D868.
+
+**Runs:** `make check`, everything passing. `make time`, four instruments.
+
+**Next:** what is left under a hop of a `for` is `load`, `load`, `store` and
+`next.less.i`, and three of those four are slot traffic. Read how the machine
+holds its stack — `top`, `frame->base`, `KestValue` — and say what a `load` of a
+slot costs beside the arithmetic it feeds: whether the value is in memory every
+time, what the compiler is doing with `top` across a dispatch, and whether
+anything in the loop above could be held rather than fetched.

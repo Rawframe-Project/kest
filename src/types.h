@@ -498,7 +498,31 @@ uint64_t kest_hash_value(const KestType *type, const KestValue *slots);
 
 uint64_t kest_mix(uint64_t bits);
 
-int64_t kest_narrow_to(uint16_t scalar, int64_t value);
+// Written here rather than beside the rest of them, and written once. The
+// machine runs one of these for every `+`, `-` and `*` on a number narrower
+// than a slot, and a call across a file for a switch of six cases cost more
+// than the dispatch that reached it: a loop hop went from sixteen nanoseconds
+// to twelve when this stopped being a call. See D868.
+static inline int64_t kest_narrow_to(uint16_t scalar, int64_t value) {
+    switch (scalar) {
+    case KEST_L_I8:
+        return (int8_t)value;
+    case KEST_L_I16:
+        return (int16_t)value;
+    case KEST_L_I32:
+        return (int32_t)value;
+    case KEST_L_BOOL:
+    case KEST_L_U8:
+        return (uint8_t)value;
+    case KEST_L_U16:
+        return (uint16_t)value;
+    case KEST_L_U32:
+        return (uint32_t)value;
+    default:
+        return value;
+    }
+}
+
 int64_t kest_real_to_int(uint16_t scalar, double value);
 
 // What an expression is worth, worked out where it is written, in as many slots

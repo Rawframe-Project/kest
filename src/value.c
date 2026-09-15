@@ -903,7 +903,9 @@ static const Instruction INSTRUCTIONS[] = {
     {"and.i", NONE},       {"or.i", NONE},        {"xor.i", NONE},
     {"not.i", NONE},       {"shl", NONE},         {"shr.i", NONE},
     {"shr.u", NONE},
-    {"narrow", U16},       {"i2f", NONE},         {"u2f", NONE},
+    {"narrow", U16},
+    {"add.i.narrow", U16}, {"sub.i.narrow", U16}, {"mul.i.narrow", U16},
+    {"i2f", NONE},         {"u2f", NONE},
     {"f2i", U16},          {"to.f32", NONE},
     {"add.f", NONE},       {"sub.f", NONE},       {"mul.f", NONE},
     {"div.f", NONE},       {"mod.f", NONE},       {"neg.f", NONE},
@@ -1412,6 +1414,9 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_SHR_I:
     case KEST_OP_SHR_U:
     case KEST_OP_NARROW:
+    case KEST_OP_ADD_I_NARROW:
+    case KEST_OP_SUB_I_NARROW:
+    case KEST_OP_MUL_I_NARROW:
     case KEST_OP_I2F:
     case KEST_OP_U2F:
     case KEST_OP_F2I:

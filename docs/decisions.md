@@ -26048,3 +26048,76 @@ than by a count.
 
 The 484 that remain are one instruction after another that could be one
 instruction. That is the next thing to weigh.
+
+## D868: the cut arrives with the arithmetic, and stops being a call
+
+484 of the 572 cuts left after D867 were an `add.i`, a `sub.i` or a `mul.i` with
+a `narrow` immediately after it — two dispatches for one piece of arithmetic.
+The question this was written to answer was how many instructions a fused set
+would cost the machine, at which widths, and whether the table has room.
+
+*The answer to "at which widths" is none of them.* Six widths times three
+operators is eighteen instructions, and what that buys over three is one read of
+two bytes — the width is already sitting in the instruction stream. What a
+dispatch costs is the indirect branch, not the operand behind it. So the width
+stays an operand and there are **three** new instructions:
+`add.i.narrow`, `sub.i.narrow`, `mul.i.narrow`, each `// u16 scalar kind`. The
+table went 148 to 151 of a possible 256.
+
+The compiler fuses them the way it already fuses a comparison into a jump: each
+of the three is one byte and carries nothing after it, so it is the last
+instruction exactly when it is the last byte, and `emit_narrow` takes it back
+and writes the fused one. Nothing else in the compiler changed.
+
+**And then the measurement said something else.** Fusing bought about one and a
+half nanoseconds a hop. Making `kest_narrow_to` a `static inline` in `types.h`
+rather than a call into `types.c` bought two and a half — *more than the fusion
+did*. A switch of six cases, reached through a call across a translation unit,
+was costing more than the dispatch that reached it. Both are worth having and
+they are worth having together; the reason to record which is which is that the
+one that looked like the optimisation was the smaller half.
+
+Four builds, five rounds each, alternated on an idle machine:
+
+| | loop hop | index read | reference read |
+|---|---|---|---|
+| D867 | 16 ns | 19–20 ns | 37–39 ns |
+| fused only | 14–15 | 18–19 | 38–40 |
+| inline only | 13–14 | 16–17 | 35–36 |
+| **both** | **11–12** | **14–16** | **33–34** |
+
+And across all four instruments, against D867:
+
+- a frame step an entity: **148 ns → 143**
+- a hop of a `for`: **16 ns → 12**
+- a read through an index: 19 ns → 15
+- a call in a loop: 22 ns → 20
+
+A hop of a `for` was nineteen nanoseconds three changes ago. It is twelve.
+D866 took the copy of the count into a name nothing writes; D867 took the cuts
+that cut nothing; this takes the dispatch and the call from the cut that
+remains. None of the three is an optimiser pass — each is one fact already known
+and thrown away.
+
+`check-costs.sh` reads that an `i32` `+` and the cut behind it are one
+instruction and not two, out of what `emit` printed. Two holes: one that writes
+them apart again, caught by that count, and one that makes the fused instruction
+read the width and not cut by it, caught by a program that adds one to the
+largest `i32` and expects the smallest.
+
+What is left under a hop is `load`, `load`, `store` and `next.less.i`. Three of
+those four are slot traffic, and the machine holds its stack in memory rather
+than in anything a compiler would call a register.
+
+Two things the change dragged with it. `check-dead.sh` reads what a header
+declares out of the objects a build made, and a body written in a header is in
+no object — `static inline` is folded into whoever calls it, and where a build
+does not fold it, it is that object's own by design. So a name defined in a
+header is now read out of the files that call it instead, held to the same two
+sentences: it has to be there, and one file calling it is a body written where
+it does not belong. And the hole for `kest_chunk_take_back` stopped catching:
+it broke the roll-back of `next_instruction` and the origin together, and what
+that does to a later origin depends on the bytes of the operand that follows —
+with one more take-back in the chunk it happened to come out right. It breaks
+the origin alone now, which is one extra origin and every instruction after it
+off by one, every time.

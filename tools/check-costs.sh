@@ -793,6 +793,37 @@ def one_program(lines):
     return "module walking\n\nfn main() -> i32 {\n%s\n}\n" % lines
 
 
+# And whether the cut arrives with the arithmetic that needed it. Every `+`,
+# `-` and `*` on a whole number narrower than a slot used to be two
+# instructions: one that adds and one that cuts what it added. They are one
+# now, and what says so is that the pair is nowhere in what `emit` prints. See
+# D868.
+def cuts_apart(body, arithmetic):
+    printed = what_emit_printed(body)
+    if printed is None:
+        return None
+    in_order = [printed[each] for each in sorted(printed)]
+    return sum(1 for i, (op, rest) in enumerate(in_order)
+               if op == arithmetic and i + 1 < len(in_order) and
+               in_order[i + 1][0] == 'narrow')
+
+
+def cuts_together(body, arithmetic):
+    printed = what_emit_printed(body)
+    if printed is None:
+        return None
+    return sum(1 for each in printed if printed[each][0] == arithmetic)
+
+
+ADDING = one_program(
+    "    let total = 0\n    let n: i32 = 3\n    total += n\n    return total")
+apart = cuts_apart(ADDING, 'add.i')
+together = cuts_together(ADDING, 'add.i.narrow')
+if apart != 0 or together != 1:
+    print("costs: an `i32` `+` and the cut behind it are one instruction and "
+          "not two: %s pair(s) left apart and %s together" % (apart, together))
+    failed = 1
+
 widening = narrows_in(one_program(
     "    let n: i16 = 3\n    return i32(n)"))
 narrowing = narrows_in(one_program(
@@ -1195,7 +1226,8 @@ if not failed:
           "instruction(s) where the body never writes the name it binds and "
           "%u where it does, and a cast cuts the width %u time(s) widening "
           "and %u narrowing, and a division %u time(s) with a sign and %u "
-          "without, all of it "
+          "without, and an `i32` `+` cuts what it added in %u instruction(s), "
+          "all of it "
           "measured on the machine "
           "this ran on"
           % (asked, len(left_to_the_host), driven, proved, kept, len(alone),
@@ -1210,6 +1242,6 @@ if not failed:
              copied_total, copied_bodies, copied_bytes, copied_code,
              copied_quiet, asked_for, reached, run_sized, run_asked,
              run_went, quiet_walk[0], written_walk[0], widening, narrowing,
-             with_sign, without_sign))
+             with_sign, without_sign, together))
 sys.exit(failed)
 PY
