@@ -3434,6 +3434,12 @@ needs 902 slots and 301 frames
 needs a number a host picks: `shapes.kept#...` calls through a value
 ```
 
+`kest_bound` is the same for the first door: what this program can want
+altogether, answered where there is a least and bounded where there is not. It
+is what a machine given nothing is sized by, said before there is one, so a host
+that wants to know what saying nothing will cost can ask rather than start one
+and read it back.
+
 The command line sizes what it runs from the names it calls, asking the least
 where a name has one and a bound where it has not. A name with neither used to
 leave it sizing from everything the file defines, which put the bodies nothing

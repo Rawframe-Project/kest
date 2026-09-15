@@ -275,6 +275,18 @@ bool kest_needs(KestBuild *build, KestLimits *least, KestReason *why);
 bool kest_needs_of(KestBuild *build, const char *name, KestLimits *least,
                    KestReason *why);
 
+// The most this program can want, for a host with no names and a ceiling on
+// frames. It is `kest_needs` where there is a least and a bound where there is
+// not — the same shape as the two below, and `why` says which it gave.
+//
+// It is what a machine given nothing is sized by, said before there is one: a
+// host that wants to know what saying nothing will cost asks this, and gets the
+// number the machine would have picked.
+//
+// False for the reasons `kest_needs` is false.
+bool kest_bound(KestBuild *build, uint32_t frames, KestLimits *most,
+                KestReason *why);
+
 // The most `name` and what it reaches can want, for a host that has a name and
 // a ceiling on frames rather than a program with a least. `frames` is how many
 // a host will allow; nought means as many as usual.

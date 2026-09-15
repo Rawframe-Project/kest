@@ -235,6 +235,29 @@ int main(int argc, char **argv) {
                "64 — %u a frame and %u whatever the frames\n",
                path, had_few.stack_slots, had_many.stack_slots, a_turn,
                had_few.stack_slots - a_turn * 16);
+        // The number a host can read before it makes anything, held against
+        // the machine it would get: `kest_bound` is what a machine given
+        // nothing is sized by, said early. A number a host reads that is not
+        // the machine it is handed is a number it cannot budget with. See
+        // D823.
+        KestLimits told_first = {0, 0, 0};
+        KestReason told_why = {KEST_REACH_UNASKED, NULL};
+        if (!kest_bound(build, 16, &told_first, &told_why) ||
+            told_why.reach == KEST_REACH_KNOWN ||
+            told_first.stack_slots != had_few.stack_slots ||
+            told_first.call_depth != had_few.call_depth) {
+            fprintf(stderr,
+                    "`%s` is bounded at %u slots and %u frames and a machine "
+                    "of 16 frames got %u and %u\n",
+                    path, told_first.stack_slots, told_first.call_depth,
+                    had_few.stack_slots, had_few.call_depth);
+            kest_runtime_free(shallow);
+            kest_runtime_free(deeper);
+            kest_host_free(host);
+            kest_build_free(build);
+            return 1;
+        }
+
         // And the same question about one name rather than the whole program.
         // A host that calls one function is not calling the whole of what the
         // file defines, and what that one reaches is what it can want. This

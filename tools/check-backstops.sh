@@ -184,6 +184,39 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A number a host reads that is not the machine it is handed. The
+        # first door bounds what a machine given nothing is sized by, said
+        # before there is one; a host that budgets by it and is given
+        # something else has read a number for nothing, and nothing says so
+        # because the machine runs either way. See D823.
+        "what": "a bound that is not the machine it stands for",
+        "file": "src/build.c",
+        "from": r"""    most->stack_slots = a_chain_of(walked->widest, walked->in_a_turn,
+                                   walked->off_the_turns, most->call_depth);""",
+        "to": r"""    most->stack_slots = a_chain_of(walked->widest, walked->in_a_turn,
+                                   walked->off_the_turns, most->call_depth) + 1;""",
+        "make": ["kest", "least"],
+        "host": "examples/least",
+        "caught": "and a machine of 16 frames got",
+    },
+    {
+        # And the first door bounding where it can answer, which is the same
+        # fault the other two are held to. See D823.
+        "what": "the whole program bounded over its own least",
+        "file": "src/build.c",
+        "from": r"""    if (kest_needs(build, most, why)) {
+        why->reach = KEST_REACH_KNOWN;
+        return true;
+    }""",
+        "to": r"""    if (false) {
+        why->reach = KEST_REACH_KNOWN;
+        return true;
+    }""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "frames and is bounded at",
+    },
+    {
         # A machine sized from the file rather than from the names the command
         # line drives. One entry with no least used to throw away the answers
         # for the ones beside it and for itself, and what ran instead was a

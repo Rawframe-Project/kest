@@ -2256,6 +2256,23 @@ int main(int argc, char **argv) {
             fprintf(stderr, "the program says nothing about what it needs\n");
             return 1;
         }
+        // And the same asked of the door that bounds where there is nothing to
+        // answer. This program has a least, so that is what comes back and the
+        // frames are not looked at — the first of the three doors holding the
+        // same promise as the other two. See D823.
+        KestLimits at_most = {0, 0, 0};
+        KestReason most_why = {KEST_REACH_UNASKED, NULL};
+        if (!kest_bound(build, 4, &at_most, &most_why) ||
+            most_why.reach != KEST_REACH_KNOWN ||
+            at_most.stack_slots != everything.stack_slots ||
+            at_most.call_depth != everything.call_depth) {
+            fprintf(stderr,
+                    "the program needs %u slots and %u frames and is bounded "
+                    "at %u and %u\n",
+                    everything.stack_slots, everything.call_depth,
+                    at_most.stack_slots, at_most.call_depth);
+            return 1;
+        }
         if (!room_for_calling(build, calls, NULL, &named)) {
             return 1;
         }

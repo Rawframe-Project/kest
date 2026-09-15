@@ -24237,3 +24237,36 @@ command line and the machine's own refusal all ask about the names they call and
 all get a number. The thing that took five entries to get right was not the
 arithmetic — D816 settled that — but that every one of them was asking about
 more of the program than it was going to run.
+
+## D823: the first door, and one arithmetic behind the three
+
+*The one left.* `kest_needs` asks about the whole program, which is the right
+question for a host with no names — and it answered false where a bound existed,
+while the machine behind it worked one out anyway and never told anybody.
+
+*`kest_bound`.* No name, a ceiling on frames, the least where there is one and
+the bound where there is not, `why` saying which. It is what a machine given
+nothing is sized by, said **before** there is one: a host that wants to know
+what saying nothing will cost can ask rather than start a machine and read it
+back.
+
+`kest_needs` is left as it was. A host that wants to know whether there is a
+least still has a door that says so by answering false, and every host in this
+tree that reads `measured` keeps working.
+
+*And the arithmetic, which was written three times.* The two readings of a chain
+of frames, the smaller of them, never more than the usual number — `kest_bound`,
+`kest_bound_of` and `kest_bound_from` each had a copy. They are one function
+now, `a_chain_of`. Three copies of a sum is three places for a sum to drift, and
+D806 to D809 were all one number written twice.
+
+*Held as the number being the machine.* `examples/least.c` asks `kest_bound` for
+sixteen frames before it makes anything and refuses unless it is, to the slot
+and to the frame, the machine that sixteen frames actually gets. A number a host
+reads that is not what it is handed is a number it cannot budget with.
+`examples/embed.c` asks it of a program with a least and refuses unless it is
+that least.
+
+*Three doors, three bounds, done.* Every question a host can ask about room now
+answers where it can and bounds where it cannot, over what the question was
+about, and says which of the two it gave.

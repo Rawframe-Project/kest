@@ -31205,3 +31205,39 @@ for a good reason — it is the question a host with no names asks. But it still
 answers false where a bound exists, and the machine behind it works one out
 anyway. Give it the same shape as the other two: the least where there is one, a
 bound where there is not, and `why` saying which.
+
+## The first door, and one arithmetic behind the three
+
+`kest_needs` asks about the whole program, which is the right question for a
+host with no names, and it answered false where a bound existed while the
+machine behind it worked one out anyway and never told anybody.
+
+`kest_bound` takes no name and a ceiling on frames and answers the least where
+there is one and the bound where there is not, with `why` saying which. It is
+what a machine given nothing is sized by, said before there is one, so a host
+that wants to know what saying nothing costs can ask rather than start a machine
+and read it back. `kest_needs` is left as it was: a host that wants to know
+whether there is a least still has a door that says so by answering false, and
+every host here that reads `measured` keeps working.
+
+The arithmetic behind the three bounds — two readings of a chain of frames, the
+smaller of them, never more than the usual number — had a copy in each. It is one
+function now, `a_chain_of`. Three copies of a sum is three places for a sum to
+drift, and D806 to D809 were all one number written twice.
+
+`examples/least.c` asks `kest_bound` for sixteen frames before it makes anything
+and refuses unless it is, to the slot and to the frame, the machine sixteen
+frames actually gets; `examples/embed.c` asks it of a program with a least and
+refuses unless it is that least.
+
+Every question a host can ask about room now answers where it can and bounds
+where it cannot, over what the question was about, and says which of the two it
+gave. Recorded as D823.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** six doors where there were three, and nothing says the six are six
+and not seven. `tools/check-tables.sh` holds the codes, the instructions and the
+keywords to their names; hold the doors the same way — every `kest_bound*` has a
+`kest_needs*` beside it, every one of them takes the same shape, and a seventh
+added to one side and not the other is a pair that came apart.

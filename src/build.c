@@ -442,6 +442,50 @@ bool kest_needs_of(KestBuild *build, const char *name, KestLimits *least,
     return true;
 }
 
+// What the three bound doors have in common: two readings of a chain of frames,
+// the smaller of them, and never more than the usual number. See D816.
+static uint32_t a_chain_of(uint32_t widest, uint32_t in_a_turn,
+                           uint32_t off_the_turns, uint32_t allowed) {
+    uint64_t a_frame_each = (uint64_t)widest * allowed;
+    uint64_t a_turn_each =
+        (uint64_t)off_the_turns + (uint64_t)in_a_turn * allowed;
+    if (in_a_turn > 0 && a_turn_each < a_frame_each) {
+        a_frame_each = a_turn_each;
+    }
+    return a_frame_each < (uint64_t)KEST_STACK_SLOTS ? (uint32_t)a_frame_each
+                                                     : KEST_STACK_SLOTS;
+}
+
+bool kest_bound(KestBuild *build, uint32_t frames, KestLimits *most,
+                KestReason *why) {
+    KestReason ignored;
+    if (why == NULL) {
+        why = &ignored;
+    }
+    why->reach = KEST_REACH_UNASKED;
+    why->where = NULL;
+    if (build == NULL || most == NULL || !build->compiled) {
+        return false;
+    }
+    if (kest_needs(build, most, why)) {
+        why->reach = KEST_REACH_KNOWN;
+        return true;
+    }
+    if (why->reach == KEST_REACH_NO_ROOM) {
+        return false;
+    }
+    const KestWalk *walked = walk_it(build);
+    if (walked->widest == 0) {
+        why->reach = KEST_REACH_NO_ROOM;
+        return false;
+    }
+    most->heap_bytes = 0;
+    most->call_depth = frames == 0 ? KEST_CALL_DEPTH : frames;
+    most->stack_slots = a_chain_of(walked->widest, walked->in_a_turn,
+                                   walked->off_the_turns, most->call_depth);
+    return true;
+}
+
 bool kest_bound_of(KestBuild *build, const char *name, uint32_t frames,
                    KestLimits *most, KestReason *why) {
     KestReason ignored;
@@ -486,15 +530,7 @@ bool kest_bound_of(KestBuild *build, const char *name, uint32_t frames,
         return false;
     }
     uint32_t allowed = frames == 0 ? KEST_CALL_DEPTH : frames;
-    uint64_t a_frame_each = (uint64_t)widest * allowed;
-    uint64_t a_turn_each =
-        (uint64_t)off_the_turns + (uint64_t)in_a_turn * allowed;
-    if (in_a_turn > 0 && a_turn_each < a_frame_each) {
-        a_frame_each = a_turn_each;
-    }
-    most->stack_slots = a_frame_each < (uint64_t)KEST_STACK_SLOTS
-                            ? (uint32_t)a_frame_each
-                            : KEST_STACK_SLOTS;
+    most->stack_slots = a_chain_of(widest, in_a_turn, off_the_turns, allowed);
     most->call_depth = allowed;
     return true;
 }
@@ -585,15 +621,7 @@ bool kest_bound_from(KestBuild *build, const char *name, uint32_t frames,
         return true;
     }
     uint32_t allowed = frames == 0 ? KEST_CALL_DEPTH : frames;
-    uint64_t a_frame_each = (uint64_t)widest * allowed;
-    uint64_t a_turn_each =
-        (uint64_t)off_the_turns + (uint64_t)in_a_turn * allowed;
-    if (in_a_turn > 0 && a_turn_each < a_frame_each) {
-        a_frame_each = a_turn_each;
-    }
-    inside->stack_slots = a_frame_each < (uint64_t)KEST_STACK_SLOTS
-                              ? (uint32_t)a_frame_each
-                              : KEST_STACK_SLOTS;
+    inside->stack_slots = a_chain_of(widest, in_a_turn, off_the_turns, allowed);
     inside->call_depth = allowed;
     return true;
 }
