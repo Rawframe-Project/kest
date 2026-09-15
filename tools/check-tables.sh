@@ -1531,13 +1531,15 @@ for asking_in in [where for where in sorted(glob.glob("tools/*.sh"))
                  ["examples/embed.c"]:
     # A code in a comment is a mention and not an asking, the same way a name
     # in one is not a call: what this holds is what a check looks for. Nor is
-    # one written into a list of what nothing can be made to say -- `NOT_SEEN`
-    # and `NOT_REACHED` are the two of those, and a code named in one of them
-    # is being excused rather than asked for, which is the opposite thing. See
-    # D788.
+    # one written into a list about codes rather than a check that makes one
+    # happen -- `NOT_SEEN` and `NOT_REACHED` say what nothing can be made to
+    # say, and `HOSTS_OWN` says whose mistake a code is. A code named in any of
+    # the three is being written about, which is the opposite of being asked
+    # for, and each of the three was found by it counting itself. See D788,
+    # D789.
     reads = re.sub(r'^\s*(?:#|//).*$', '', open(asking_in).read(), flags=re.M)
-    reads = re.sub(r'NOT_SEEN = \(.*?\)\)|NOT_REACHED = \([^)]*\)', '',
-                   reads, flags=re.S)
+    reads = re.sub(r'NOT_SEEN = \(.*?\)\)|NOT_REACHED = \([^)]*\)'
+                   r'|HOSTS_OWN = \{.*?\n\}', '', reads, flags=re.S)
     for code_named in sorted(set(re.findall(r'K0[0-9][0-9][0-9]', reads))):
         if code_named not in every_code:
             print("%s: asks for `%s`, which nothing in `src` says" %
@@ -1570,6 +1572,49 @@ for code_named in sorted(every_code - code_asked - code_by_a_hole -
           % code_named)
     failed = 1
 code_only_a_hole = (every_code & code_by_a_hole) - code_asked
+
+# And what each of those is. A code only a hole can provoke is one of two
+# things and the difference matters to whoever reads it: the compiler saying it
+# got something wrong, or the machine catching a host at something no host
+# anybody would write does. The first says so itself, in the one sentence
+# `kest_diags_fault` writes; the second has to be named here with whose mistake
+# it is, because nothing in the source distinguishes it from a refusal a
+# program can earn.
+#
+# That is also the line between what belongs in a hole and what belongs in
+# `examples/embed.c`. A ceiling a careful host meets is a host worth copying
+# and the example host meets it -- never reading what a machine says is a
+# frame loop, not a bug. A host that binds memory it has given back is not a
+# host to copy, so the only place it is made is a hole. See D789.
+HOSTS_OWN = {
+    "K0612": "a handle that is not the kind the instruction wanted, which the "
+             "checker leaves no way to write and a host hands in through a "
+             "frame",
+    "K0654": "a context bound and then given back, which nothing about a "
+             "pointer says and only the build told where a host's blocks end "
+             "can see",
+}
+
+code_says_fault = set()
+for code_where in sorted(glob.glob("src/*.c")):
+    code_reads = open(code_where).read().split("\n")
+    for code_at, code_line in enumerate(code_reads):
+        for code_named in re.findall(r'"(K0[0-9][0-9][0-9])"', code_line):
+            if "kest_diags_fault" in "\n".join(
+                    code_reads[code_at:code_at + 12]):
+                code_says_fault.add(code_named)
+some("the codes that say they are a fault", code_says_fault)
+for code_named in sorted(code_only_a_hole - code_says_fault):
+    if code_named in HOSTS_OWN:
+        continue
+    print("src: `%s` is said by breaking this compiler and does not say it is "
+          "a fault, so nothing says whose mistake it is" % code_named)
+    failed = 1
+for code_named in sorted(HOSTS_OWN):
+    if code_named not in code_only_a_hole or code_named in code_says_fault:
+        print("tools/check-tables.sh: `%s` is written down as a host's own "
+              "mistake and is not one a hole alone says" % code_named)
+        failed = 1
 code_only_written = (every_code & code_excused) - code_asked - code_by_a_hole
 
 # What a fault says it is, said in one place. A fault is what this project got

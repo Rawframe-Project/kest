@@ -22744,3 +22744,49 @@ Three categories now, and a code in none of them is refused: **152 asked for by
 a check, 10 by a hole and nothing else, 3 written down as what nothing can be
 made to say.** The ledger adds to the hundred and sixty-five either way; what
 changed is that two of the three are no longer being counted as the first.
+
+## D789: which of the two, and a list that counted itself a third time
+
+*The question D788 left.* Two of the ten codes a hole alone provokes are a
+host's mistake rather than the compiler's. Can a host make one on purpose, the
+way `examples/embed.c` meets the unread ceiling on purpose?
+
+`K0654` — yes. The hole that provokes it *is* a host doing it deliberately:
+malloc a context, free it, bind it. Nothing stops a host writing that.
+
+*And it should not.* Never reading what a machine says is a **host worth
+copying** — a frame loop reads answers rather than words, and the ceiling is
+what a machine does about that, so the example host meets it and shows what
+happens. A host that binds memory it has given back is a host nobody should
+copy. Putting it in the example teaches it; putting it in a hole makes it
+happen without teaching it, which is the whole reason a hole is a separate
+thing from an example.
+
+So the answer is: yes it can be, and no it should not be, and the line between
+them is *whether a careful host would ever do it*. That line now has a name in
+the tree and is held.
+
+*What is held.* A code only a hole can provoke is one of two things, and a
+reader meeting one needs to know which: the compiler saying it got something
+wrong, or the machine catching a host at something no careful host does. The
+first says so itself — `kest_diags_fault` writes *"which is a fault in the
+compiler"* and eight of the ten call it. The second says nothing in the source
+that tells it from a refusal a program could earn, so it is named in
+`HOSTS_OWN` with whose mistake it is. A hole-only code that is neither is
+refused, and a name in `HOSTS_OWN` that a check already asks for is refused too
+— the same two ways round every other list in `check-tables.sh` is held.
+
+*And the mistake, for the third time, one step further out.* `HOSTS_OWN` was
+counted as **asking for** `K0612` and `K0654`, so the check reported that they
+were not hole-only. That is exactly what D788 fixed for `NOT_SEEN` and
+`NOT_REACHED` and what the line above both already warned of for comments:
+
+- a code in a comment is a mention, not an asking (written long before D787)
+- a code in a list of what cannot be said is an excuse, not an asking (D788)
+- a code in a list of whose mistake it is is a description, not an asking (here)
+
+Three times the same shape, each found by the new list counting itself. The
+comment now says the general thing rather than naming three special cases: a
+code written into a list **about** codes is being written about, which is the
+opposite of being asked for. The next list will still have to be added to the
+pattern, but whoever adds it will read why.

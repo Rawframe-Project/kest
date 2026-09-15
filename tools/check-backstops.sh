@@ -1245,6 +1245,38 @@ yield""",
         "caught": "say which type they are the layout of",
     },
     {
+        # A fault that stops saying it is one. Then it is a refusal only a
+        # hole can provoke with nothing saying whose mistake it is, which is
+        # the reader left to guess between the compiler and themselves. See
+        # D789.
+        "what": "a fault that stops saying it is a fault",
+        "file": "src/vm.c",
+        "from": r"""                kest_diags_fault(vmp->diags,
+                                 "a walk over text measures it before its "
+                                 "first turn and reads without asking");""",
+        "to": r"""                kest_diags_suggest(vmp->diags,
+                                   "a walk over text measures it before its "
+                                   "first turn and reads without asking");""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "nothing says whose mistake it is",
+    },
+    {
+        # A code written down as a host's own mistake that a check already
+        # asks for, which is a reason standing over nothing -- the same way
+        # round every other list in this check is held. See D789.
+        "what": "a host's own mistake named where there is none",
+        "file": "tools/check-tables.sh",
+        "from": r"""HOSTS_OWN = {
+    "K0612": """,
+        "to": r"""HOSTS_OWN = {
+    "K0601": "nothing, which is the point of this break",
+    "K0612": """,
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "is written down as a host's own mistake and is not one",
+    },
+    {
         # A refusal this compiler has and nothing asks for, which is a sentence
         # nobody has ever seen said. The other way round was already held -- a
         # check asking for a code this compiler has not -- and this is the half

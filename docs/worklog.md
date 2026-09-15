@@ -29937,3 +29937,34 @@ and both are reached only by breaking one. `examples/embed.c` is the host that
 makes host mistakes on purpose — it binds what it has given back for `K0654`
 already, through a hole rather than itself. Find whether either can be made by a
 host that means to, the way the unread ceiling was, and if so make it.
+
+## Which of the two, and a list that counted itself a third time
+
+Can a host make `K0654` on purpose? Yes — the hole that provokes it is a host
+doing it deliberately: malloc a context, free it, bind it. And it should not.
+Never reading what a machine says is a host worth copying, so the example host
+meets that ceiling and shows what happens; a host that binds memory it has given
+back is a host nobody should copy, and putting it in the example teaches it.
+That is the line between what belongs in a hole and what belongs in an example,
+and it has a name in the tree now.
+
+Held: a code only a hole provokes is either the compiler saying it got something
+wrong — `kest_diags_fault`, which eight of the ten call — or the machine
+catching a host at something no careful host does, which says nothing in the
+source and so is named in `HOSTS_OWN` with whose mistake it is. Neither, and it
+is refused; a name in `HOSTS_OWN` a check already asks for, refused too.
+
+And the same mistake a third time, one step further out: `HOSTS_OWN` counted as
+asking for the two codes it describes. A code in a comment is a mention, a code
+in a list of what cannot be said is an excuse, a code in a list of whose mistake
+it is is a description — none of them an asking, and each found by the new list
+counting itself. The comment says the general thing now. Recorded as D789.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** three lists in one check now say things about codes rather than
+asking for them, and each was found by counting itself. The pattern that strips
+them names all three by hand, so a fourth will be counted wrongly until somebody
+reads the comment. Find whether what they have in common can be read instead of
+listed — they are assignments of codes to reasons, and an asking is a code in a
+string a check compares against what a program said.
