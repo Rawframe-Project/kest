@@ -227,7 +227,7 @@ fn reach(p: Point, most: bool) -> f32 no.alloc {
 
 // Reading the host's memory as what it is. Nothing here allocates, so a whole
 // batch crosses once and is walked in place.
-fn onEvents(events: [Event]) -> i32 no.alloc {
+fn onEvents(events: [Event]) -> i32 no.alloc no.host {
     let damage = 0
     for e in events {
         damage += match e {

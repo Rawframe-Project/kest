@@ -25569,3 +25569,35 @@ are held to being all of the ones that can.
 *Which is the whole point of asking a question of the old thing as well as the
 new one.* The library's promises had been right for as long as anybody had
 looked, and the way to find out whether that was a rule was to ask.
+
+## D856: the same question at the door
+
+The library is held to writing a promise wherever it can be kept. The examples
+are not the library, and asking them the same question the same way would be
+asking the wrong one: the reference says what the rule is, and it is not
+everywhere.
+
+> The promise is written at entry points. Callees defined in the same unit are
+> judged by their bodies, transitively; only boundaries need a written promise.
+
+Every function of the library is an entry point, because another unit is what
+calls it. In an example the entry points are what a host enters — `main`, and
+the two handlers a frame is driven at. So that is what is asked, and the rest of
+an example is left to be read rather than decorated: two hundred and forty-three
+functions there could carry `no.host` and saying so on each of them would bury
+what each example is about under what it does not do.
+
+*At the door, two were missing.* `examples/frame.kest`'s `main` — the instrument
+that measures what a frame costs — could promise `no.host` and did not, and
+`examples/embed.kest`'s `onEvents` could and did not. Written now. The two that
+can keep neither are `game.main` and `embed.main`, which print, and printing is
+both a crossing and a heap.
+
+*And the first answer was wrong, which is worth more than the two it found.*
+The copy this asks its question in was made under a name of its own, and a file
+that says `module examples.game` is found by the path its module spells: under
+another name every import is `cannot read`, the check stops there, and no
+promise is ever weighed. What came back was that thirty-two functions could
+promise what two of them could not — a sweep answering confidently about work it
+had never done. The copy is made under its own name now, which is the only name
+it can be made under.

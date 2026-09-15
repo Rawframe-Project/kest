@@ -493,12 +493,52 @@ for promise in no.alloc no.host; do
 library refuses $refused of them and $without are written without it, so \
 $((without - refused)) could promise it and do not"
     fi
-    promise_kept="$promise_kept, \`$promise\` on $keeps of them and refused on \
-the $without that carry it in none"
+    # And the same question of the examples, where a promise belongs at the
+    # boundary rather than everywhere. The reference says it in as many words:
+    # a promise is written at entry points, and a callee in the same unit is
+    # judged by its body. Every function of the library is an entry point
+    # because another unit calls it; in an example the entry points are what a
+    # host enters, which is `main` and the two handlers — so that is what is
+    # asked, and the rest of an example is left to be read rather than
+    # decorated. See D856.
+    #
+    # Copied under its own name, because a file that says `module
+    # examples.game` is found by the path its module spells and a copy under
+    # another name is a program whose imports cannot be read. That is how this
+    # first counted: every rung stopped at `cannot read`, before the promise
+    # was ever weighed, and answered that thirty-two functions could promise
+    # what two of them could not.
+    rm -rf "$scratch"/side
+    mkdir "$scratch"/side
+    cp -r examples "$scratch"/side/examples
+    for one in $(find "$scratch"/side/examples -name '*.kest' | sort); do
+        sed -i "/$promise/! s/^\(fn \(main\|onEvent\|onEvents\)[( ][^{]*\) \
+{\$/\1 $promise {/" "$one"
+    done
+    entered=0
+    for one in $(find "$scratch"/side/examples -name '*.kest' | sort); do
+        entered=$((entered + $(./kest check "$one" 2>&1 </dev/null |
+            grep -c "^error\[K040[12]\].*promises \`$promise\`" || true)))
+    done
+    at_the_door=$(find examples -name '*.kest' -exec cat {} \; |
+        grep '^fn \(main\|onEvent\|onEvents\)[( ]' | grep -vc "$promise" \
+        || true)
+    if [ "$entered" -ne "$at_the_door" ]; then
+        complain "promises" "writing \`$promise\` on every function a host \
+enters in the examples refuses $entered of them and $at_the_door are written \
+without it, so $((at_the_door - entered)) could promise it and do not"
+    fi
+    rm -rf "$scratch"/side
+    doors=$(find examples -name '*.kest' -exec cat {} \; |
+        grep '^fn \(main\|onEvent\|onEvents\)[( ]' | grep -c "$promise" \
+        || true)
+    promise_kept="$promise_kept, \`$promise\` on $keeps of the library's and \
+$doors of the doors a host enters in the examples, against $without and \
+$at_the_door the compiler refuses it to"
 done
 rm -rf "$promised"
-say "promises" "every function in the library that can keep a promise says \
-so: ${promise_kept#, }"
+say "promises" "every function that can keep a promise says so — \
+${promise_kept#, }"
 
 # And nothing in the tree has anything to say about itself. Four of the
 # warnings this compiler gives are about a name nothing reaches — an extern,

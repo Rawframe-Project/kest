@@ -32477,3 +32477,39 @@ writing Kest looks first, and nothing asks whether the promises there are
 written wherever they could be — `no.alloc` appears in some of them and not
 others, with no reason either way that anything has read. Ask the examples what
 the library was just asked, and write what the answer says.
+
+## The same question at the door
+
+The library is held to writing a promise wherever it can be kept; the examples
+are not the library, and asking them the same question the same way would be
+asking the wrong one. The reference already says what the rule is: a promise is
+written at entry points, and a callee in the same unit is judged by its body.
+Every library function is an entry point because another unit calls it; in an
+example the entry points are what a host enters — `main` and the two handlers.
+So that is what is asked, and the rest is left to be read rather than decorated:
+243 functions there could carry `no.host`, and saying so on each would bury what
+an example is about under what it does not do.
+
+At the door, two were missing. `examples/frame.kest`'s `main` — the instrument
+that measures what a frame costs — could promise `no.host` and did not, and
+`examples/embed.kest`'s `onEvents` could and did not. Written now. The two that
+can keep neither are `game.main` and `embed.main`, which print, and printing is
+both a crossing and a heap.
+
+The first answer was wrong, which is worth more than the two it found. The copy
+the question is asked in was made under a name of its own, and a file that says
+`module examples.game` is found by the path its module spells: under another
+name every import is `cannot read`, the check stops there, and nothing is ever
+weighed. What came back was that 32 functions could promise what two of them
+could not — a sweep answering confidently about work it had never done.
+
+Recorded as D856.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** back to the machine. `no.host` is proved of a program and the machine
+holds a call through a value to it, but a host binding a function to a name it
+promised nothing about is the one crossing nothing weighs: `kest_entry_promises`
+answers about `no.alloc` alone, and there is no way for a host to ask whether
+what it is about to drive promises not to call back into it. Give the door the
+second promise.
