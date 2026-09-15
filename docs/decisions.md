@@ -25749,3 +25749,29 @@ something that is not here, and a line an instrument takes that the reference
 never shows is a number nobody reading the reference knows exists. Read as pairs
 rather than as two lists, because a line naming one instrument's rounds and
 another's scale would be in both lists and in neither measurement.
+
+## D861: the numbers on the page somebody reads first
+
+The reference prices a promise and the README did not mention any of it. A
+person deciding whether to try this language reads one page, and that page said
+what Kest is and nothing about what it costs to run — no frame number, no
+crossing, and no `make time` to take either with.
+
+The three lines are on it now, with the arithmetic that makes them mean
+something rather than the numbers on their own: a frame of ten thousand entities
+is about a millisecond and a half here, so a sixty-hertz budget holds about ten
+of them; a crossing out is under a twentieth of a step, so `no.host` is worth
+having where a frame crosses many times an entity and worth little where it
+crosses once; and a crossing in is cheaper than a hop of a program's own loop,
+so a host driving a program a call at a time is not paying for the privilege.
+The numbers are one machine's and the shape of them is what carries, which the
+page says and the reference says at length.
+
+*And two rules follow the numbers onto that page.* The measurements shown are
+held against the ones this tree can take, on either page — a number on one and
+not the other is still a number this tree takes, which is what the rule is
+about. And every `make` a page tells somebody to run has to be a rule this tree
+has: a page that tells somebody to run something is the page they run it from,
+and a command that was renamed leaves them typing what nothing answers to. It is
+the rule the commands and options already keep, said about the other program a
+reader is told to run.

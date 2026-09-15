@@ -39,6 +39,27 @@ shape is laid out as, and is refused in words when it does something it may
 not. The standard library is written in Kest and held to the same rules as a
 program.
 
+What it costs to run, measured rather than remembered. `make time` takes three
+numbers on the machine it is run on:
+
+```
+162 ns per entity per step, best of 7 over 10000, spread 1%
+27 ns for a call and 33 ns for a crossing, which is 6 ns more, best of 7 over 1000000 calls, spread 3%
+16 ns for a call in from a host and 27 ns for one the program makes in a loop, best of 7 over 1000000 calls, spread 4%
+```
+
+A frame step per entity, a call against a crossing out, and a crossing in
+against a call. The arithmetic that makes them mean something: on this machine a
+frame of ten thousand entities is about one and a half milliseconds, so a
+sixty-hertz budget holds roughly ten of those frames; a crossing out costs six
+nanoseconds over a call, which is under a twentieth of a step, so `no.host` is
+worth having where a frame crosses many times an entity and worth little where
+it crosses once; and a crossing *in* is cheaper than a hop of a program's own
+loop, so a host that drives a program a call at a time is not paying for the
+privilege. The numbers are one machine's; the shape of them is what carries. The
+[reference](docs/language.md#what-running-costs) says what each leaves out and
+how to read one against another.
+
 What this is not yet: a language anybody should ship a game on. There is one
 machine, one target and no optimiser worth the name, the library is small, and
 the numbers in `docs/worklog.md` are all taken on one developer's machine.

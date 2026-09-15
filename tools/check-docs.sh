@@ -1022,8 +1022,13 @@ for where in sorted(glob.glob('tools/*.kest')) + ['tools/inward.c']:
         declares, re.M)
     if rounds is not None and over is not None:
         taken.add((rounds.group(1), over.group(1)))
+# Shown in either of the two pages a reader reads: the reference, which says
+# what each measures, and the page somebody reads before they have a working
+# `kest`. A number on one of them and not the other is still a number this tree
+# can take, which is what this is about.
 shown_as = set(re.findall(r'best of (\d+) over (\d+)',
-                          open('docs/language.md').read()))
+                          open('docs/language.md').read() +
+                          open('README.md').read()))
 some("the measurements the instruments take", sorted(taken))
 if shown_as != taken:
     print("docs/language.md: the instruments measure %s and the reference "
@@ -1032,6 +1037,22 @@ if shown_as != taken:
              ", ".join("best of %s over %s" % one
                        for one in sorted(shown_as)) or "none"))
     failed = 1
+
+# And every `make` written on either page is a rule this tree has. A page that
+# tells somebody to run something is the page they run it from, and a command
+# that was renamed leaves them typing what nothing answers to — which is the
+# same rule the commands and options above keep, said about the other program a
+# reader is told to run. See D861.
+rules = some("the rules this tree's Makefile has", set(
+    re.findall(r'^([a-zA-Z][\w./-]*):', open('Makefile').read(), re.M)))
+for page in ('README.md', 'docs/language.md'):
+    for asked in sorted(set(re.findall(r'`make ([a-z][\w-]*)`|^make ([a-z][\w-]*)$',
+                                       open(page).read(), re.M))):
+        name = asked[0] or asked[1]
+        if name and name not in rules:
+            print("%s: writes `make %s` and this tree has no such rule"
+                  % (page, name))
+            failed = 1
 
 if not failed:
     print('every documented block parses: %u, is in the one form, and checks '
@@ -1049,9 +1070,10 @@ if not failed:
           'the %u places the compiler looks for the library is named where '
           'somebody installing it reads, and every one of the %u '
           'measurements this tree takes is shown over the work it was taken '
-          'over'
+          'over, and every `make` a page tells somebody to run is one of the '
+          '%u rules there are'
           % (checked, made_code, standing, quoting, said_it, whole, fenced,
              messages, shown, typed, called, pointed, operators,
-             len(places), len(taken)))
+             len(places), len(taken), len(rules)))
 sys.exit(failed)
 PY

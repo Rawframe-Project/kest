@@ -32667,3 +32667,33 @@ it. A person deciding whether to try this language reads one page, and that page
 says what Kest is and nothing about what it costs to run — no frame number, no
 crossing, no `make time`. Put the shape of the three on the page somebody reads
 first, with the arithmetic that makes them mean something.
+
+## The numbers on the page somebody reads first
+
+The reference prices a promise and the README mentioned none of it: a person
+deciding whether to try this language reads one page, and that page said what
+Kest is and nothing about what running it costs.
+
+The three lines are on it now, with the arithmetic rather than the numbers on
+their own — a frame of ten thousand entities is about a millisecond and a half
+here so a sixty-hertz budget holds about ten of them; a crossing out is under a
+twentieth of a step, so `no.host` is worth having where a frame crosses many
+times an entity and worth little where it crosses once; a crossing in is cheaper
+than a hop of a program's own loop, so a host driving a program a call at a time
+is not paying for the privilege.
+
+Two rules follow the numbers onto the page. The measurements shown are held
+against the ones this tree can take, on either page. And every `make` a page
+tells somebody to run has to be a rule this tree has — the rule the commands and
+options already keep, said about the other program a reader is told to run.
+
+Recorded as D861.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** back to the machine and the roadmap. Every number so far is about one
+call or one frame; nothing measures what the machine does between them. A
+program that keeps a store of entities and hands out references pays for a
+generation check on every read, and nothing has ever said what that costs
+against a plain array index. Measure a read through a reference against a read
+through an index, and say what the safety is worth.

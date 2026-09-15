@@ -3340,6 +3340,19 @@ for file in "$@"; do""",
     },
 
     {
+        # A rule a page tells somebody to run, renamed. A reader of the first
+        # page runs what it says from the tree it says it in, and a command
+        # that moved leaves them typing what nothing answers to. See D861.
+        "what": "a page telling somebody to run what is not there",
+        "file": "Makefile",
+        "from": r"""time: kest tools/inward""",
+        "to": r"""timing: kest tools/inward""",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "and this tree has no such rule",
+    },
+    {
         # A measurement taken over one amount of work and shown over another.
         # What a reference can carry from the machine a number was read on is
         # the shape of the line and not the number in it: how many rounds it
