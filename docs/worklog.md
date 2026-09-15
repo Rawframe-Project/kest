@@ -30945,3 +30945,42 @@ actually costs is the bodies it goes round. `needs_of` already knows which
 functions are on the way back round when it stops — the three-state mark says
 so. Keep that set and answer the widest of it instead of the widest of
 everything, and see what `tree.kest` comes to.
+
+## The same chain read the other way round
+
+D815 gives a program with no least the frames a host allows and the widest body
+for each of them. That charges a program whose loop is one narrow function the
+width of its widest body — which may be nowhere near the loop — for every frame.
+
+Read the other way: split the functions into the ones that lie on a run of calls
+that comes back round and the ones that do not. The ones that go round cost at
+most the widest of them, once a frame. The ones that do not can each stand in
+the chain once, because twice would be a run of calls coming back round through
+them, so the whole of them summed is a bound on what the chain's other frames
+cost. `off_the_turns + in_a_turn * frames`, from a depth-first walk that marks a
+back edge and two sums — no longest path anywhere.
+
+Neither bound is the other's. `tree.kest`'s loop is its widest body, so the
+first reading wins and it stays at 12288. `least.kest`'s loop is three slots
+wide against a widest body of four, with four bodies off it: `9 + 3 * frames`
+against `4 * frames`, smaller from four frames up. 57 against 64 at sixteen
+frames, 201 against 256 at sixty-four, 3081 against 4096 at a thousand. Both are
+true, so a machine is given the smaller.
+
+The walk follows `call.value` to every function the program names as a value,
+which is D814's set, so a loop that closes through a function value is a loop.
+
+`examples/least.c` makes two machines, at sixteen frames and at sixty-four, and
+refuses unless a frame costs the same in both and what is left over when the
+frames are taken away is the same in each and is more than nothing. That last
+part is what says the bodies off the loop are paid for once — a bound that
+charged every frame the widest body leaves nothing over, and is caught.
+Recorded as D816.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** both bounds are over the whole program, and a host that calls one
+function is not calling the whole program. `kest_needs_of` answers for one name
+and has no bound to fall back on when that name reaches a loop — it says there
+is none and leaves the host with nothing. Work the same two readings out for one
+function and what it reaches, and answer those.

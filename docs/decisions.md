@@ -23954,3 +23954,47 @@ frame. What would tighten it is the width of the bodies the cycle actually goes
 round, which is a walk this does not do. The line it draws is between what needs
 a walk and what does not — the widest body needs none, which is why it is the
 one a program with no answer keeps.
+
+## D816: the same chain read the other way round
+
+*What D815 left.* A program with no least is given the frames a host allows and
+the widest body for each of them. That charges a program whose loop is one
+narrow function the width of its widest body — which may be nowhere near the
+loop — for every frame of it.
+
+*The other reading.* Split the functions in two: the ones that lie on a run of
+calls that comes back round, and the ones that do not. A chain of frames is made
+of both. The ones that go round cost at most the widest of them, once a frame.
+The ones that do not can each stand in the chain **once** — twice would be a run
+of calls coming back round through them, which would put them in the first set —
+so the whole of them together, summed, is a bound on everything the chain's
+other frames cost.
+
+So: `off_the_turns + in_a_turn × frames`. No chain analysis, no longest-path: a
+depth-first walk that marks a back edge, and two sums.
+
+*Neither bound is the other's.* `tree.kest`'s loop **is** its widest body — the
+two recursive functions are the widest two in the program — so the first reading
+wins and it stays at 12288. `examples/least.kest`'s loop is three slots wide and
+its widest body is four, with four bodies off the loop: the second reading gives
+`9 + 3 × frames` against `4 × frames`, which is smaller from four frames up.
+Both are true, so a machine is given the smaller.
+
+| | frames | D815 | now |
+|---|---|---|---|
+| `least.kest` | 16 | 64 | **57** |
+| `least.kest` | 64 | 256 | **201** |
+| `least.kest` | 1024 | 4096 | **3081** |
+| `tree.kest` | 1024 | 12288 | 12288 |
+
+*A call through a value is an edge too.* The walk that finds the loops follows
+`call.value` to every function the program names as a value, which is the set
+D814 measures against. A loop that closes through a function value is a loop.
+
+*Held as the shape rather than the numbers.* `examples/least.c` makes two
+machines, at sixteen frames and at sixty-four, and refuses unless a frame costs
+the same in both — the difference is the frames between them times one number —
+and unless what is left over when the frames are taken away is the same in each
+and is more than nothing. That last part is what says the bodies off the loop
+are paid for once: a bound that charged every frame the widest body would leave
+nothing over, and does, and is caught.

@@ -442,8 +442,24 @@ typedef struct {
     // has no worst chain to add up and a ceiling on frames all the same, so
     // what it needs is at most this many slots a frame. See D815.
     uint32_t widest;
+    // And the same question asked of the shape of the calls rather than of
+    // every body: the widest body that goes round, and the whole of the ones
+    // that do not. A chain of frames is those two, and the second cannot
+    // repeat. Worked out only for a program with no least. See D816.
+    uint32_t in_a_turn;
+    uint32_t off_the_turns;
     KestReason why;
 } KestWalk;
+
+// The two numbers a program with no least is bounded by. `widest_in_a_turn` is
+// the widest body of the ones that lie on a run of calls that comes back round,
+// and `all_the_rest` is the sum of the widths of every body that does not — a
+// body off a cycle can stand in a chain of frames at most once, because twice
+// would be a cycle through it, so the whole of them together is a bound on
+// what the chain's acyclic frames cost. Nought for both when there is no room
+// to work them out. See D816.
+void kest_module_cycles(const KestModule *module, KestArena *arena,
+                        uint32_t *widest_in_a_turn, uint32_t *all_the_rest);
 
 bool kest_module_needs(const KestModule *module, KestArena *arena, int32_t only,
                        uint32_t *stack_slots, uint32_t *call_depth,

@@ -1119,6 +1119,90 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
     return true;
 }
 
+// Which functions lie on a run of calls that comes back round. A back edge is
+// a call to a function the walk is already inside, and everything from that
+// one up to where the walk is now goes round with it. A call through a value
+// is an edge to every function this program ever names as one, the same set
+// D814 measures against, so a loop that closes through a function value is one
+// of these too.
+static void cycle_walk(const KestModule *module, uint32_t which, uint8_t *state,
+                       uint8_t *on_cycle, uint32_t *chain, uint32_t *where,
+                       uint32_t depth) {
+    state[which] = 1;
+    where[which] = depth;
+    chain[depth] = which;
+    const KestChunk *chunk = module->functions[which];
+    for (uint32_t at = 0; chunk != NULL && at < chunk->code_count;) {
+        uint8_t op = chunk->code[at];
+        uint32_t first = module->count;
+        uint32_t last = module->count;
+        if (op == KEST_OP_CALL) {
+            first = read_u16(chunk, at + 1);
+            last = first + 1;
+        } else if (op == KEST_OP_CALL_VALUE) {
+            first = 0;
+            last = module->count;
+        }
+        for (uint32_t callee = first; callee < last; callee++) {
+            if (callee >= module->count || module->functions[callee] == NULL ||
+                (op == KEST_OP_CALL_VALUE &&
+                 !module->functions[callee]->as_value)) {
+                continue;
+            }
+            if (state[callee] == 1) {
+                for (uint32_t back = where[callee]; back <= depth; back++) {
+                    on_cycle[chain[back]] = 1;
+                }
+            } else if (state[callee] == 0) {
+                cycle_walk(module, callee, state, on_cycle, chain, where,
+                           depth + 1);
+            }
+        }
+        at += kest_op_width(op);
+    }
+    state[which] = 2;
+}
+
+void kest_module_cycles(const KestModule *module, KestArena *arena,
+                        uint32_t *widest_in_a_turn, uint32_t *all_the_rest) {
+    *widest_in_a_turn = 0;
+    *all_the_rest = 0;
+    if (module == NULL || module->count == 0) {
+        return;
+    }
+    KestMark before = kest_arena_mark(arena);
+    uint8_t *state = KEST_ARENA_ARRAY(arena, uint8_t, module->count);
+    uint8_t *on_cycle = KEST_ARENA_ARRAY(arena, uint8_t, module->count);
+    uint32_t *chain = KEST_ARENA_ARRAY(arena, uint32_t, module->count);
+    uint32_t *where = KEST_ARENA_ARRAY(arena, uint32_t, module->count);
+    if (state == NULL || on_cycle == NULL || chain == NULL || where == NULL) {
+        kest_arena_rewind(arena, before);
+        return;
+    }
+    for (uint32_t i = 0; i < module->count; i++) {
+        state[i] = 0;
+        on_cycle[i] = 0;
+    }
+    for (uint32_t i = 0; i < module->count; i++) {
+        if (state[i] == 0) {
+            cycle_walk(module, i, state, on_cycle, chain, where, 0);
+        }
+    }
+    for (uint32_t i = 0; i < module->count; i++) {
+        const KestChunk *one = module->functions[i];
+        uint32_t own =
+            one == NULL ? 0 : (uint32_t)one->slot_count + one->stack_needed;
+        if (on_cycle[i]) {
+            if (own > *widest_in_a_turn) {
+                *widest_in_a_turn = own;
+            }
+        } else {
+            *all_the_rest += own;
+        }
+    }
+    kest_arena_rewind(arena, before);
+}
+
 // Whether an instruction reaches the heap. This is the list the machine
 // itself keeps, read off the cases that call the allocator, and it is the one
 // thing that makes a `no.alloc` promise a property of what runs rather than

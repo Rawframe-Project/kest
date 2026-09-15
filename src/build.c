@@ -375,10 +375,19 @@ static const KestWalk *walk_it(KestBuild *build) {
                 build->walked.widest = own;
             }
         }
+        // And the two a program with no least is bounded by, worked out only
+        // when there is no least to have: a walk of the calls for which
+        // functions go round, and a sum of the widths of the ones that do
+        // not. See D816.
         build->walked.measured = kest_module_needs(
             &build->module, build->arena, -1, &build->walked.slots,
             &build->walked.frames, &build->walked.host_slots,
             &build->walked.host_frames, NULL, &build->walked.why);
+        if (!build->walked.measured) {
+            kest_module_cycles(&build->module, build->arena,
+                               &build->walked.in_a_turn,
+                               &build->walked.off_the_turns);
+        }
     }
     return &build->walked;
 }

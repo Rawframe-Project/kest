@@ -204,9 +204,19 @@ int main(int argc, char **argv) {
         KestLimits had_many = {0, 0, 0};
         kest_allowed(shallow, &had_few);
         kest_allowed(deeper, &had_many);
-        if (shallow == NULL || deeper == NULL ||
-            had_few.stack_slots == 0 ||
-            had_many.stack_slots != had_few.stack_slots * 4 ||
+        // A frame costs the same wherever it is, so the two answers differ by
+        // the frames between them and what is left over is the same in each:
+        // that fixed part is the bodies the loop does not go round, which
+        // stand in a chain once and do not repeat. Held as the relationship
+        // and not as either number. See D816.
+        uint32_t more = had_many.stack_slots - had_few.stack_slots;
+        uint32_t a_turn = more / (64 - 16);
+        if (shallow == NULL || deeper == NULL || had_few.stack_slots == 0 ||
+            had_many.stack_slots <= had_few.stack_slots || a_turn == 0 ||
+            more != a_turn * (64 - 16) ||
+            had_few.stack_slots - a_turn * 16 !=
+                had_many.stack_slots - a_turn * 64 ||
+            had_few.stack_slots <= a_turn * 16 ||
             had_many.stack_slots >= KEST_STACK_SLOTS) {
             fprintf(stderr,
                     "`%s` has no least, and 16 frames of it is %u slots "
@@ -219,7 +229,9 @@ int main(int argc, char **argv) {
             return 1;
         }
         printf("`%s` has no least, and is %u slots for 16 frames and %u for "
-               "64\n", path, had_few.stack_slots, had_many.stack_slots);
+               "64 — %u a frame and %u whatever the frames\n",
+               path, had_few.stack_slots, had_many.stack_slots, a_turn,
+               had_few.stack_slots - a_turn * 16);
         kest_runtime_free(shallow);
         kest_runtime_free(deeper);
     }

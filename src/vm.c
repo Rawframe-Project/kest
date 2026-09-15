@@ -3313,6 +3313,20 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
         // what it was before and no worse. The frames are settled first,
         // because the slots are worked out from them. See D815.
         uint64_t a_frame_each = (uint64_t)walked->widest * rt->call_depth;
+        // And the same chain read the other way round: the frames that go
+        // round cost the widest body that does, and the ones that do not can
+        // each stand in the chain once, because twice would be a run of calls
+        // coming back round through them. So the whole of those, once, plus a
+        // turn's width for every frame. Neither bound is the other's: a
+        // program whose loop is its widest body is smaller by the first, and
+        // one whose loop is narrow and whose bodies are many is smaller by
+        // the second. Both are true, so the smaller is. See D816.
+        uint64_t a_turn_each =
+            (uint64_t)walked->off_the_turns +
+            (uint64_t)walked->in_a_turn * rt->call_depth;
+        if (walked->in_a_turn > 0 && a_turn_each < a_frame_each) {
+            a_frame_each = a_turn_each;
+        }
         wants_slots = a_frame_each < (uint64_t)STACK_SLOTS
                           ? (uint32_t)a_frame_each
                           : STACK_SLOTS;

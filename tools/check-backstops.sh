@@ -184,6 +184,26 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A program with no least bounded as though every body went round.
+        # The frames that go round cost the widest body that does; the ones
+        # that do not stand in a chain once each, because twice would be a run
+        # of calls coming back round through them. Charging every frame the
+        # widest body of the whole program is true and looser, and a host
+        # paying for the loose one would never know: the machine is bigger
+        # than it has to be and every answer is right. See D816.
+        "what": "a bound that charges every frame the widest body",
+        "file": "src/value.c",
+        "from": r"""                for (uint32_t back = where[callee]; back <= depth; back++) {
+                    on_cycle[chain[back]] = 1;
+                }""",
+        "to": r"""                for (uint32_t back = where[callee]; back <= depth; back++) {
+                    (void)chain[back];
+                }""",
+        "make": ["kest", "least"],
+        "host": "examples/least",
+        "caught": "has no least, and 16 frames of it is",
+    },
+    {
         # A program with no least given the usual number of slots whatever
         # depth a host named. There is no worst chain to add up and a frame is
         # at most the widest body all the same, so a host that says sixteen
