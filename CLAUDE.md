@@ -26,13 +26,16 @@ identifiers, error messages. No exceptions.
 decision was superseded the day it was accepted because it was written from a
 summary instead of the documents it cited.
 
-**Four documents, and that is all.**
+**Five documents, and that is all.** One front page and four that hold the
+work. A sixth is refused by `check-docs.sh`, which reads this table and the
+tree and holds them to each other.
 
 | File | Holds |
 | --- | --- |
 | `CLAUDE.md` | This file. Rules and conventions. |
 | `docs/decisions.md` | Decisions and why. Append-only; supersede, do not delete, and say `supersedes` in that word so the list at the top can be held to it. What a later one replaced is listed there, because nothing here is edited and an entry that is no longer what this project does reads exactly like one that is. |
 | `docs/language.md` | Syntax and semantics reference. |
+| `README.md` | The front page: what this is, how to build it, what runs. It is the one document written for somebody who has not read the others, so it says what the language does and points at the three below rather than repeating them. Held by `check-docs.sh` to naming files that are there, because a front page nothing reads is a front page nothing catches: this one said structs did not run yet for the length of the tree having them. |
 | `docs/worklog.md` | What was built, in order. Newest last. An entry is a heading, what was done and what it turned up, a `**Runs:**` line saying what was run to believe it, and — on the last one — a `**Next:**` line, which is what the next turn reads. `check-docs.sh` holds the two lines. |
 
 ## Layout

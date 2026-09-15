@@ -22978,3 +22978,51 @@ reasons.* `D912` is `D012` mistyped, and `D915` is a check's refusal — both
 quoted by the turn that made the mistake and fixed it. A log that could not
 quote its own mistakes would have to stop recording them, which is the opposite
 of what it is for.
+
+## D794: the front page said structs do not run yet
+
+*What CLAUDE.md claims, against what the tree does.* Twenty-eight files named,
+all there. The pipeline, held by `check-tables.sh` since it was written. One
+module per `.c`/`.h` pair, true but for `main.c`, which is a command line rather
+than a module, and `kest.c`, whose header is the public one. **Four documents,
+and that is all** — and there are five.
+
+*The fifth is `README.md`, and it was wrong.* Thirty-one lines, referenced by
+nothing: not by `CLAUDE.md`, not by the three documents, not by any check. It
+ended:
+
+> Status: early. Scalars, control flow and calls run; structs and arrays do
+> not yet.
+
+The library is written in structs. There are fifty-two struct declarations in
+`lib` and `examples`, arrays in most of them, enums that carry values, sets of
+bits, stores handing out references, optionals, functions as values, one body
+written for many types, `defer`, `match`, cost contracts proved rather than
+trusted, and a host boundary with eleven hundred lines about it. The first page
+anybody reads says none of that runs.
+
+*Why it went wrong is the rule itself.* "Four documents, and that is all" is a
+good rule and the README was outside it, so nothing governed the README: no rule
+said what it was for, no check read it, and nothing named it. A document nothing
+names is a document nothing catches. It is the same shape as D792 — a page that
+said too little, because nothing held it to saying more — except this one said
+something false for as long as it took the language to grow past it.
+
+*So it is the fifth, named and held.* `CLAUDE.md` says five now and says what
+the front page is for: the one document written for somebody who has read none
+of the others, so it says what the language does and points at the three rather
+than repeating them. `check-docs.sh` reads that table against the `.md` files
+there are and refuses either way round, so a sixth has to declare itself and a
+named one has to exist. And the links in the front page are held to pointing at
+files, because a link that goes nowhere is the first thing a reader meets.
+
+*What the status says now* is what runs, what it is not yet — one machine, one
+target, no optimiser, a small library, every number taken on one machine — and
+that the worklog's last entry is what is being worked on. That last is the only
+part that cannot go stale, because it is a pointer rather than a claim.
+
+*And the harness did not have it.* `check-backstops.sh` copies `src`, `include`,
+`lib`, `tools`, `docs`, `examples`, the `Makefile` and `CLAUDE.md` into the tree
+it breaks. Not the README — which is the same fact as everything above, in the
+one place where it would have stopped this being checkable at all. It copies it
+now.

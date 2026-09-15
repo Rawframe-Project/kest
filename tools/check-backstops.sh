@@ -1245,6 +1245,47 @@ yield""",
         "caught": "say which type they are the layout of",
     },
     {
+        # A document nothing names, which is a document no rule reaches and no
+        # check reads. The front page was one for the length of this tree and
+        # said structs did not run yet while the library was written in them.
+        # See D794.
+        "what": "a document the rules do not name",
+        "file": "CLAUDE.md",
+        "from": r"""| `README.md` |""",
+        "to": r"""| `README.md` |""",
+        "program": "docs/notes.md",
+        "source": "# Notes\n\nA document nothing names.\n",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "is a document and `CLAUDE.md` does not name it",
+    },
+    {
+        # A document named in the rules that is not there, which is the other
+        # way round from a document nothing names -- the same two ways every
+        # list in this project is held. See D794.
+        "what": "a document named in the rules and not in the tree",
+        "file": "CLAUDE.md",
+        "from": r"""| `README.md` |""",
+        "to": r"""| `READMEE.md` |""",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "names `READMEE.md` and there is no such document",
+    },
+    {
+        # A front page pointing somewhere there is nothing. It is the one
+        # document written for somebody who has read nothing else. See D794.
+        "what": "a front page that points nowhere",
+        "file": "README.md",
+        "from": r"""[docs/language.md](docs/language.md)""",
+        "to": r"""[docs/language.md](docs/grammar.md)""",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "points at `docs/grammar.md` and there is no such file",
+    },
+    {
         # A decision named by the log or the worklog that was never written.
         # Every other document was held to this; the two that name decisions
         # most were not, and the one dangling reference in the tree was in one
@@ -11989,7 +12030,7 @@ def put_out_of_order(hole):
         shutil.copytree("examples", os.path.join(work, "examples"),
                         copy_function=bring,
                         ignore=shutil.ignore_patterns("embed", "embed-debug"))
-        for what in ("Makefile", "CLAUDE.md"):
+        for what in ("Makefile", "CLAUDE.md", "README.md"):
             bring(what, os.path.join(work, what))
         # The times come with these: an archive that looks newer than the
         # objects in it is one nothing rebuilds.

@@ -30111,3 +30111,39 @@ function a host is given; the decision log and the worklog are now held to their
 references landing. What no document is held to is the pipeline in `CLAUDE.md` —
 `check-tables.sh` reads it for the module list, and nothing reads the rest of
 that file. Count what CLAUDE.md claims against what the tree does.
+
+## The front page said structs do not run yet
+
+CLAUDE.md against the tree: twenty-eight files named, all there; the pipeline
+held since it was written; one module per `.c`/`.h` pair, true but for `main.c`
+and `kest.c`. **Four documents, and that is all** — and there are five.
+
+The fifth is `README.md`, referenced by nothing — not CLAUDE.md, not the three
+documents, not any check — and it ended *"Status: early. Scalars, control flow
+and calls run; structs and arrays do not yet."* There are fifty-two struct
+declarations in `lib` and `examples`, arrays in most of them, enums carrying
+values, stores, optionals, generics, `defer`, `match`, cost contracts and a host
+boundary with eleven hundred lines about it.
+
+It went wrong because the rule was good and the README was outside it. Nothing
+said what the front page was for, nothing read it, nothing named it — and a
+document nothing names is a document nothing catches. Same shape as D792, except
+this one said something false rather than nothing at all.
+
+It is the fifth now, named in the table with what it is for, and `check-docs.sh`
+holds that table against the `.md` files there are, both ways round, and holds
+the front page's links to pointing at files. The status says what runs, what it
+is not yet, and that the worklog's last entry is the current work — which is the
+only part that cannot go stale, being a pointer rather than a claim. And
+`check-backstops.sh` copies the README into the tree it breaks now; it did not,
+which is the same fact in the one place that made this uncheckable. Recorded as
+D794.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** five documents are held now and the tree's own claims with them. The
+roadmap says types, compile, value, vm, and nine of the last ten entries have
+been documents and checks. Take the roadmap at its word: `docs/language.md`
+lists what a `store` does and `src/vm.c` has `seek.from`, `seek.next` and
+`next.less` for walking one. Read what the document says a walk of a store
+costs against what those instructions do.

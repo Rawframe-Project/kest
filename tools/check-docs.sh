@@ -779,6 +779,32 @@ WRITTEN_ABOUT = {
     "D278": "a number the log never had, which D793 is about",
     "D279": "a number the log never had, cited once in error before D793",
 }
+# Every document there is, against the table in `CLAUDE.md` that says which
+# there are. A document nothing names is a document no rule reaches and no
+# check reads: `README.md` was one for the length of this tree, and said that
+# structs did not run yet while the library was written in them. See D794.
+DOCUMENTS = sorted(re.findall(r"^\| `([A-Za-z0-9_./-]+\.md)` \|",
+                              open("CLAUDE.md").read(), re.M))
+some("the documents `CLAUDE.md` names", DOCUMENTS)
+there = sorted(where for where in
+               glob.glob("*.md") + glob.glob("docs/*.md"))
+for where in there:
+    if where not in DOCUMENTS:
+        print("%s: is a document and `CLAUDE.md` does not name it" % where)
+        failed = 1
+for where in DOCUMENTS:
+    if where not in there:
+        print("CLAUDE.md: names `%s` and there is no such document" % where)
+        failed = 1
+
+# And that the front page points at things that are there. It is the one
+# document written for somebody who has read nothing else, so a link in it
+# that goes nowhere is the first thing they meet.
+for where in re.findall(r"\]\(([A-Za-z0-9_./-]+)\)", open("README.md").read()):
+    if not os.path.exists(where):
+        print("README.md: points at `%s` and there is no such file" % where)
+        failed = 1
+
 # Every check but the one whose contents are broken copies of the others. A
 # hole that takes a decision away has to name one the log has not got, the same
 # way one that takes a code away names one this compiler has not -- and the

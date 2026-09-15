@@ -27,5 +27,18 @@ and what it cost to decide, is in [docs/decisions.md](docs/decisions.md). The
 language itself is in [docs/language.md](docs/language.md). What actually runs
 today is in [docs/worklog.md](docs/worklog.md).
 
-Status: early. Scalars, control flow and calls run; structs and arrays do
-not yet.
+What runs: whole numbers and floats at every width, text, `bool`, structs,
+fixed runs, arrays, stores that hand out references, enums that carry values,
+sets of bits, optionals, functions as values, one body written for many types,
+`defer`, `match`, `for` and `while`, and cost contracts the compiler proves
+rather than trusts. A host binds what a program asks of it, is told what every
+shape is laid out as, and is refused in words when it does something it may
+not. The standard library is written in Kest and held to the same rules as a
+program.
+
+What this is not yet: a language anybody should ship a game on. There is one
+machine, one target and no optimiser worth the name, the library is small, and
+the numbers in `docs/worklog.md` are all taken on one developer's machine.
+
+`docs/worklog.md` says what was built and in what order; its last entry is what
+is being worked on now.
