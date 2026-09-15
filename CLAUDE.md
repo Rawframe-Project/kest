@@ -974,9 +974,9 @@ returns      files written on the spot: line endings, noughts inside text,
              and a promise around a `defer`
 keywords     every word this language keeps written into every place a name
              belongs, refused in a moment rather than never
-promises     every function of the library that can keep `no.host` saying so,
-             read by writing it on every one of them and counting what the
-             compiler refuses
+promises     every function of the library that can keep a promise saying so,
+             each promise read by writing it on every one of them and counting
+             what the compiler refuses
 warnings     every file holding its tongue about itself
 modules      every file where its `module` line says it is
 project      `lib/std` read as one project rather than as files

@@ -187,7 +187,7 @@ fn set<K, V>(t: Table<K, V>, key: K, value: V) no.host {
 // them, which is what a hash is for. Walking every slot to find two of them is
 // the whole table for one pair, and a table is walked when it is refilled and
 // not when something is taken out of it.
-fn remove<K, V>(t: Table<K, V>, key: K) -> bool no.host {
+fn remove<K, V>(t: Table<K, V>, key: K) -> bool no.alloc no.host {
     if let here = slotOf(t, key) {
         let at = t.slots[here] - 1
         let last = len(t.keys) - 1

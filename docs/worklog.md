@@ -32443,3 +32443,37 @@ first, and nothing holds the same thing about `no.alloc` — it is written on
 eighty-six signatures because somebody wrote it, not because anything asks. Ask
 it the same way, in the same place, with the same counting: a promise written
 wherever it can be kept is a rule or it is a habit.
+
+## Asked of both, and the one it found
+
+`no.host` was written across the library and held there by a check. `no.alloc`
+was written across the same library by somebody, some time, and asked for by
+nothing. A promise written wherever it can be kept is a rule or it is a habit,
+and what tells the two apart is whether anything notices when it stops being
+true.
+
+The check asks it of both now, once each, the same way and in the same place: a
+copy of the library with the promise on every signature, checked, and what the
+compiler refuses counted against what carries it in none.
+
+It found one. `std.table.remove` takes a pair out of a table — it moves the last
+pair into the hole and shortens two runs with the builtin `remove`, which does
+not allocate — and it promised `no.host` and not `no.alloc`, alone among the
+eleven functions of its module. Nobody had written the promise and nothing had
+asked for it. It is written now.
+
+```
+promises   every function in the library that can keep a promise says so:
+           `no.alloc` on 99 of them and refused on the 17 that carry it in none,
+           `no.host` on 86 of them and refused on the 30 that carry it in none
+```
+
+Recorded as D855.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same question one door out. The examples are where somebody
+writing Kest looks first, and nothing asks whether the promises there are
+written wherever they could be — `no.alloc` appears in some of them and not
+others, with no reason either way that anything has read. Ask the examples what
+the library was just asked, and write what the answer says.

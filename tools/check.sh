@@ -459,35 +459,46 @@ done
 rm -f "$kept"
 say "keywords" "every one of the $(printf '%s\n' $keywords | grep -c .) word(s) this language keeps is refused, and in a moment, in each of $(printf '%s\n' $keyword_places | grep -c .) place(s) a name belongs: $tried run(s)"
 
-# What a frame may not do, said by this tree about itself. `no.host` is proved
-# by the compiler wherever it is written; whether it is written wherever it
-# could be is not proved by anything, and a promise nobody writes is a promise
-# nobody keeps. So every function in the library is asked: a copy of it with the
-# promise on every signature is checked, and what the compiler refuses there has
-# to be exactly what carries no promise here.
+# What this tree may not do, said by itself about itself. A promise is proved by
+# the compiler wherever it is written; whether it is written wherever it could be
+# is not proved by anything, and a promise nobody writes is a promise nobody
+# keeps. So every function in the library is asked, once for each promise there
+# is: a copy of it with that promise on every signature is checked, and what the
+# compiler refuses there has to be exactly what carries it in none.
 #
 # Counted rather than compared name by name, and the count is the comparison: a
 # function that promises it here is proved to keep it, so it is never one of the
-# refused, and the refused are therefore always among the ones that promise
-# nothing. Equal counts is then equal lists. See D854.
-promised="$scratch"/promised
-cp -r lib "$promised"
-for one in "$promised"/std/*.kest; do
-    sed -i '/no\.host/! s/^\(fn [^{]*\) {$/\1 no.host {/' "$one"
+# refused, and the refused are therefore always among the ones promising
+# nothing. Equal counts is then equal lists. See D854 and D855.
+#
+# Both promises, because the older of the two was written on eighty-six
+# signatures by somebody and asked for by nothing: a promise written wherever it
+# can be kept is a rule or it is a habit, and the two are told apart by whether
+# anything notices when it stops being true.
+promise_kept=""
+for promise in no.alloc no.host; do
+    promised="$scratch"/promised
+    rm -rf "$promised"
+    cp -r lib "$promised"
+    for one in "$promised"/std/*.kest; do
+        sed -i "/$promise/! s/^\(fn [^{]*\) {\$/\1 $promise {/" "$one"
+    done
+    refused=$(KEST_LIB="$promised" ./kest check "$promised"/std/*.kest 2>&1 \
+        </dev/null | grep -c "^error\[K040[12]\].*promises \`$promise\`" \
+        || true)
+    without=$(cat lib/std/*.kest | grep '^fn ' | grep -vc "$promise" || true)
+    keeps=$(cat lib/std/*.kest | grep '^fn ' | grep -c "$promise" || true)
+    if [ "$refused" -ne "$without" ]; then
+        complain "promises" "writing \`$promise\` on every function in the \
+library refuses $refused of them and $without are written without it, so \
+$((without - refused)) could promise it and do not"
+    fi
+    promise_kept="$promise_kept, \`$promise\` on $keeps of them and refused on \
+the $without that carry it in none"
 done
-refused=$(KEST_LIB="$promised" ./kest check "$promised"/std/*.kest 2>&1 \
-    </dev/null | grep -c "^error\[K040[12]\].*promises \`no.host\`" || true)
-without=$(cat lib/std/*.kest | grep '^fn ' | grep -vc 'no\.host' || true)
-keeps=$(cat lib/std/*.kest | grep '^fn ' | grep -c 'no\.host' || true)
-if [ "$refused" -ne "$without" ]; then
-    complain "promises" "writing \`no.host\` on every function in the library \
-refuses $refused of them and $without are written without it, so $((without - refused)) \
-could promise it and do not"
-fi
 rm -rf "$promised"
-say "promises" "every function in the library that can keep \`no.host\` says \
-so: $keeps of them, and the $without that cannot are refused where the promise \
-is written in"
+say "promises" "every function in the library that can keep a promise says \
+so: ${promise_kept#, }"
 
 # And nothing in the tree has anything to say about itself. Four of the
 # warnings this compiler gives are about a name nothing reaches — an extern,

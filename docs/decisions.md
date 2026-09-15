@@ -25546,3 +25546,26 @@ line was written about the first time. And the check that reads the printed
 disassembly back and holds it against the JSON knew one promise too: a function
 line with the second on it stopped matching, and every call under it was
 attributed to whatever matched last.
+
+## D855: asked of both, and the one it found
+
+`no.host` was written across the library and held there by a check that asks the
+compiler which functions could keep it. `no.alloc` was written across the same
+library by somebody, some time, and asked for by nothing at all. A promise
+written wherever it can be kept is a rule or it is a habit, and what tells the
+two apart is whether anything notices when it stops being true.
+
+So the check asks it of both, once each, the same way and in the same place:
+a copy of the library with the promise on every signature, checked, and what the
+compiler refuses counted against what carries it in none.
+
+*It found one.* `std.table.remove` takes a pair out of a table — it moves the
+last pair into the hole and shortens two runs with `remove`, which is a builtin
+that does not allocate — and it promised `no.host` and not `no.alloc`, alone
+among the eleven functions of its module. Nobody had written the promise and
+nothing had asked for it. It is written now, and the ninety-nine that carry it
+are held to being all of the ones that can.
+
+*Which is the whole point of asking a question of the old thing as well as the
+new one.* The library's promises had been right for as long as anybody had
+looked, and the way to find out whether that was a rule was to ask.
