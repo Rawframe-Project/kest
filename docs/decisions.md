@@ -25352,3 +25352,40 @@ down as what comes next rather than left as a number nobody said.
 too small for its machine: every one of them refused, read by what the run said
 rather than by what it answered, because what a run answers is the program's.
 One hole — a machine made without being weighed.
+
+## D851: a machine weighed at what it can reach
+
+A machine's own arena grows while the program runs — three hundred and twenty-
+seven bytes when one was made and four thousand four hundred and forty-two when
+it was done — and the last entry weighed the first of those and left the second
+under no ceiling at all.
+
+*What grows there is what the machine says.* `kest_start` hands the machine its
+own room for that: `diags->arena = own`, with a mark taken straight after, and
+reading the report rewinds to the mark and hands the room back. So a machine
+that is never asked what it said holds what it said — and the list comes first
+and is the dearest thing in it, sixteen places at two hundred and forty-eight
+bytes, which is where the four thousand went. A machine that says nothing stays
+where it started: a program driven a thousand times with nothing wrong is three
+hundred and two bytes, the same as at one.
+
+*So it is weighed at what it can reach.* What a machine costs to make, plus what
+saying things may cost it, which is the same number this command keeps back for
+its own saying — the same thing happening twice, once in the build's arena and
+once in the machine's, with one list behind both. A wall against what a machine
+starts as is a wall against nothing: it is left behind the moment anything goes
+wrong, which is the moment a ceiling is there for.
+
+*Held by the sum, which is the whole of it now.* Every rung of the band reads
+back what reading and compiling took, what the machine took, and what the
+program put on the heap, and the three added are held against what the run was
+allowed. That check was written a turn ago with two of the three in it and taken
+out again when the third would not fit; it fits now, which is what finishing the
+arithmetic means.
+
+*And the band moves up once more*, because a machine that is weighed is a
+machine that can be refused: the lowest rung of the old band is a room the
+machine no longer fits in. That is the ceiling doing its work, and the band is
+where the question this asks can still be asked.
+
+*Held* by a hole — a machine weighed before it has said anything.

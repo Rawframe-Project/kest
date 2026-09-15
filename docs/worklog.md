@@ -32275,3 +32275,39 @@ Recorded as D850.
 it — 327 bytes when it is made and 4442 when it is done, and neither number is
 under any ceiling. Find what grows there, and either hold it to what a machine
 was weighed at or count it where it is spent.
+
+## A machine weighed at what it can reach
+
+A machine's own arena grows while the program runs — 327 bytes when one is made
+and 4442 when it is done — and the last entry weighed the first and left the
+second under no ceiling.
+
+What grows there is what the machine says. `kest_start` gives the machine its
+own room for that and takes a mark straight after; reading the report rewinds to
+the mark and hands the room back. So a machine nobody asks holds what it said,
+and the list comes first and is the dearest thing in it — sixteen places at 248
+bytes, which is where the four thousand went. A machine that says nothing stays
+where it started: driven a thousand times with nothing wrong it is 302 bytes,
+the same as at one.
+
+So it is weighed at what it can reach: what it costs to make plus what saying
+things may cost it, which is the same number this command keeps back for its own
+saying — one list behind both. A wall against what a machine starts as is a wall
+against nothing, because that number is left behind the moment anything goes
+wrong, which is the moment a ceiling is there for.
+
+The sum is the whole of it now: reading and compiling, the machine, and the
+heap, held against what the run was allowed. That check was written a turn ago
+with two of the three in it and taken out again when the third would not fit.
+The band moves up once more, because a machine that is weighed is a machine that
+can be refused.
+
+Recorded as D851.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** eleven entries of ceilings is enough. Back to the roadmap: `types`.
+`kest tick` drives `onEvent` a frame and the language has no way to say what a
+frame may not do — `no.alloc` is a promise about a function and there is no way
+to ask for it on the handler a host actually calls. Find what a contract can say
+about an entry point that it cannot say now, and say it.

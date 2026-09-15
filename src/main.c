@@ -1406,7 +1406,11 @@ static const KestSymbol *choose(KestBuild *build, const char *name,
 // places at two hundred and forty-eight bytes is nearly four kilobytes before a
 // word is written. So it is counted rather than guessed at — four thousand was
 // guessed at, and it was sixty-eight bytes short of the list alone. What is
-// added to it is room for the words themselves, several times over. See D849.
+// added to it is room for the words themselves, several times over.
+//
+// The same number twice over, because the same thing happens twice: the build
+// says what it has to say in its arena and a machine says what it has to say in
+// its own, and both lists are this one. See D849 and D851.
 #define ENOUGH_TO_SAY (KEST_MOST_UNREAD * sizeof(KestDiag) + 4096)
 
 // What is left of what this command may have once reading and compiling have
@@ -1534,7 +1538,15 @@ static KestRuntime *a_machine_within(KestBuild *build, KestHost *host,
     if (runtime == NULL) {
         return NULL;
     }
-    size_t costs = kest_runtime_cost(runtime);
+    // What it costs, and what saying things costs it. A machine writes what it
+    // says in its own room: the list first, which is the dearest thing in it,
+    // and the words after — and hands the room back when a host reads the
+    // report. So what a machine may grow to is what it was made at plus that,
+    // and the same number this command keeps back for its own saying is what a
+    // machine may spend on its. Weighed at what it can reach rather than at
+    // what it starts as, because a wall against the first is a wall against
+    // nothing. See D851.
+    size_t costs = kest_runtime_cost(runtime) + ENOUGH_TO_SAY;
     if (costs >= rest) {
         KestSpan nowhere = {0, 0};
         kest_diags_in(&build->diags, NULL);

@@ -3103,6 +3103,22 @@ for file in "$@"; do""",
         "caught": "says nothing about what it took",
     },
     {
+        # A machine weighed at what it starts as rather than at what it can
+        # reach. A machine writes what it says in its own room — the list
+        # first, which is the dearest thing in it — so one weighed the moment
+        # it is made is weighed at a number it leaves behind as soon as
+        # anything goes wrong, and the rest of what a command may have was
+        # handed out against it. See D851.
+        "what": "a machine weighed before it has said anything",
+        "file": "src/main.c",
+        "from": r"""    size_t costs = kest_runtime_cost(runtime) + ENOUGH_TO_SAY;""",
+        "to": r"""    size_t costs = kest_runtime_cost(runtime);""",
+        "make": [],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "for a machine and",
+    },
+    {
         # A machine made without being weighed. What a machine takes is a third
         # thing beside reading a program and the heap it runs on, and it is
         # taken before the program runs: a program that calls itself is given

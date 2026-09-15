@@ -547,15 +547,15 @@ else
     # are refused alike where one of them does not fit.
     framed_rungs=0
     step=$((framed_costs * 8))
-    while [ "$step" -ge $framed_costs ]; do
+    while [ "$step" -ge $((framed_costs * 2)) ]; do
         rung=$((framed_costs + step))
         framed_rungs=$((framed_rungs + 1))
         answered=$(./kest tick --json --room $rung "$work/framed.kest" 200 \
             2>/dev/null </dev/null)
         kept=$?
         # And what the whole of it came to: what reading and compiling took,
-        # and what the program put on the heap, against what the command was
-        # allowed. `--room` says it is the most a command asks for, all of it,
+        # what a machine for it took, and what the program put on the heap,
+        # against what the command was allowed. `--room` says it is the most a command asks for, all of it,
         # and the build kept a ceiling of the whole number while the program
         # ran — a second purse the same size as the first, and twenty thousand
         # bytes allowed came to twenty-four thousand spent. Read whatever the
@@ -563,14 +563,19 @@ else
         # See D849.
         spent=$(printf '%s' "$answered" | sed -n 's/.*"cost":\([0-9]*\).*/\1/p')
         grew=$(printf '%s' "$answered" | sed -n 's/.*,"heap":\([0-9]*\).*/\1/p')
-        if [ -z "$spent" ] || [ -z "$grew" ]; then
+        # The machine beside them, which is the third of the three: what it
+        # cost to make and what it may spend saying what happens, weighed
+        # together because a wall against the first is a wall against nothing.
+        engine=$(printf '%s' "$answered" |
+            sed -n 's/.*"machine":{"bytes":\([0-9]*\).*/\1/p')
+        if [ -z "$spent" ] || [ -z "$grew" ] || [ -z "$engine" ]; then
             echo "ceilings: a run under \`--room $rung\` says nothing about" \
                  "what it took, so the number it was given holds nothing"
             failed=1
-        elif [ $((spent + grew)) -gt "$rung" ]; then
+        elif [ $((spent + engine + grew)) -gt "$rung" ]; then
             echo "ceilings: a run allowed $rung bytes took $spent reading and" \
-                 "compiling and $grew more on the heap, which is" \
-                 "$((spent + grew))"
+                 "compiling, $engine for a machine and $grew more on the" \
+                 "heap, which is $((spent + engine + grew))"
             failed=1
         fi
         ./kest tick --reset --room $rung "$work/framed.kest" 200 \
