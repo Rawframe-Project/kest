@@ -653,6 +653,11 @@ bool kest_frame_fills(KestRuntime *runtime, int32_t entry,
 // the host's own is a number nobody wrote. One kind a slot again, over what
 // the function gives back, which is nothing at all for one that gives nothing.
 //
+// `count` has to be every slot it gives back, the same as above and for the
+// other reason: a host reading more slots than came back reads the slot above
+// the answer, which is the machine's and not the answer's. The width and what
+// is in it are two questions, and this asks both.
+//
 // True when they agree, and false in the same three ways.
 bool kest_frame_reads(KestRuntime *runtime, int32_t entry,
                       const uint8_t *kinds, uint32_t count);

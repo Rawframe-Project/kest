@@ -31502,3 +31502,39 @@ frame is the other half of the boundary — `kest_frame_fills` and
 `kest_frame_reads` say what a host promises about the slots it writes and reads,
 and `kest_takes_text` writes them itself. Read what each says a host may do
 against what the machine does with a frame that breaks it.
+
+## The width a host says, and the slots it did not think about
+
+The frame doors — what a host says it is about to write, what it says it is
+about to read, and the one that writes for it. Most of what they promise is
+held: a frame of the right width with the wrong things in it, a result read as
+the wrong kind, a function that gives nothing read as giving something, words
+that are not what a function takes.
+
+What was not is the width. `kest_frame_fills` says "`count` has to be every slot
+the arguments take: saying what some of them hold is not checking the rest, and
+a host that stops short is told so rather than told nothing" — and nothing had
+ever stopped short. The machine does refuse it, but the promise was a sentence
+with no run behind it, and the slots a host did not speak for are exactly the
+ones it is wrong about.
+
+The same door from the other side was not even said: reading more slots than
+came back is the other way to be wrong about a width, and a host that reads two
+where one came back reads the slot above the answer, which is the machine's. One
+comparison refuses both; the page says both now, and `embed.c` runs both.
+
+Two holes on one line, one each way: `count > slots` takes a host that spoke for
+three of five as having spoken for all five, and `count < slots` takes a host
+reading two where one came back. Each is caught by its own side, which is what
+says the comparison is doing two jobs rather than one.
+
+D830 held the numbers a host reads; the widths a host writes are held now. What
+is left of the frame is what a host puts in the slots, which is K0634's own
+business and held since D718. Recorded as D831.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `kest_frame_slots` is what the suggestion under that refusal tells a
+host to ask, and nothing here has ever asked it. Read what it answers against
+the widths the two doors above compare against, and hold the number a host is
+sent to against the number it is judged by.

@@ -184,6 +184,45 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A host that spoke for some of the slots, taken as having spoken for
+        # them all. Saying what three of five hold is not checking the other
+        # two, and those two are exactly the ones it is wrong about — the
+        # whole of what this door is for is the slots a host did not think
+        # about. See D831.
+        "what": "a frame checked for fewer slots than it has",
+        "file": "src/vm.c",
+        "from": r"""    if (count != slots) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0634", nowhere,
+                       "`%s` %s %u slot%s and this host says what %u of them "
+                       "hold",""",
+        "to": r"""    if (count > slots) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0634", nowhere,
+                       "`%s` %s %u slot%s and this host says what %u of them "
+                       "hold",""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "two slots wide where it is three",
+    },
+    {
+        # And the other way: a host reading more slots than came back reads
+        # the slot above the answer, which is the machine's. The width and
+        # what is in it are two questions, and a door that asks only the
+        # second answers a host that was wrong about the first. See D831.
+        "what": "a result read wider than it is",
+        "file": "src/vm.c",
+        "from": r"""    if (count != slots) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0634", nowhere,
+                       "`%s` %s %u slot%s and this host says what %u of them "
+                       "hold",""",
+        "to": r"""    if (count < slots) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0634", nowhere,
+                       "`%s` %s %u slot%s and this host says what %u of them "
+                       "hold",""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "one slot wide was read as two",
+    },
+    {
         # The ceiling a host wrote, forgotten by the door that reads a machine
         # back. Two of the three numbers there are what the machine worked
         # out and the third is what the host asked for, so this is the one a

@@ -3041,7 +3041,21 @@ int main(int argc, char **argv) {
     if (!said_that(engine.runtime, "K0634", "slot")) {
         return 1;
     }
-    printf("a frame said to hold what it does not was refused\n");
+    // And fewer slots than the arguments take, which is a host saying what
+    // some of them hold and nothing about the rest. Saying part of it is not
+    // checking it, so it is refused rather than taken for what it covers —
+    // the slots nobody spoke for are exactly the ones a host is wrong about.
+    // See D831.
+    if (kest_frame_fills(engine.runtime, engine.entry[LENGTH_OF], writing, 2)) {
+        fprintf(stderr, "a frame said to be two slots wide where it is three "
+                        "was agreed to\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0634", "slot")) {
+        return 1;
+    }
+    printf("a frame said to hold what it does not was refused, and one that "
+           "spoke for two of its three slots\n");
     // And the width of a function that is not there. Nought is the honest
     // width of one that takes and gives nothing, so the number cannot say
     // which of the two this is and the report does.
@@ -3113,7 +3127,18 @@ int main(int argc, char **argv) {
         fprintf(stderr, "a function that gives nothing back gave a slot\n");
         return 1;
     }
-    printf("a result said to hold what it does not was refused, twice\n");
+    // And more slots than it gives, which is the other way to be wrong about
+    // a width: a host that reads two where one came back reads the slot above
+    // the answer, which is the machine's and not the answer's. The width and
+    // what is in it are two questions and this door asks both. See D831.
+    const uint8_t read_wide[2] = {KEST_L_F32, KEST_L_F32};
+    if (kest_frame_reads(engine.runtime, engine.entry[LENGTH_OF], read_wide,
+                         2)) {
+        fprintf(stderr, "a result one slot wide was read as two\n");
+        return 1;
+    }
+    printf("a result said to hold what it does not was refused, three "
+           "times\n");
 
     // And the way a host has nothing to be wrong about: the arguments handed
     // over as words, written the way a program writes them, and the machine

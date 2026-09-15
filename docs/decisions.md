@@ -24528,3 +24528,34 @@ stopping a program that was inside everything it was given.
 *What this is the end of.* `kest_allowed` was the last door in the machine that
 a host reads and nothing checked. Every number a host can ask a machine for is
 now held to being the number it was given.
+
+## D831: the width a host says, and the slots it did not think about
+
+*The reading.* The frame doors — what a host says it is about to write, what it
+says it is about to read, and the one that writes for it. Most of what they
+promise is held: a frame of the right width with the wrong things in it, a
+result read as the wrong kind, a function that gives nothing read as giving
+something, words that are not what a function takes. Held by
+`examples/embed.c`, each with its own `K0634` or `K0635`.
+
+*What was not.* `kest_frame_fills` says *"`count` has to be every slot the
+arguments take: saying what some of them hold is not checking the rest, and a
+host that stops short is told so rather than told nothing."* Nothing had ever
+stopped short. The machine does refuse it — the width is compared before
+anything in it — but the promise was a sentence with no run behind it, and the
+slots a host did not speak for are exactly the ones it is wrong about.
+
+*And the same door from the other side.* Reading **more** slots than came back
+is the other way to be wrong about a width, and the header did not say so at
+all. A host that reads two where one came back reads the slot above the answer,
+which is the machine's. The one comparison, `count != slots`, refuses both; the
+page now says both.
+
+*Two holes on one line, one each way.* `count > slots` takes a host that spoke
+for three of five as having spoken for all five; `count < slots` takes a host
+reading two where one came back. Each is caught by its own side, which is what
+says the comparison is doing two jobs rather than one.
+
+*Where this leaves the boundary.* The numbers a host reads were held by D830;
+the widths a host writes are held now. What is left of the frame is what a host
+puts in the slots, which is `K0634`'s own business and held since D718.
