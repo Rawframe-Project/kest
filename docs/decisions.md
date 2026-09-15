@@ -24659,3 +24659,42 @@ does.
 *And the reference says who it is for.* It described the check and not who can
 reach it, which is the difference between a rule a reader believes and a rule a
 reader can act on.
+
+## D835: a function value is a number, and a number is only in range
+
+*What the machine asked and what it did not.* A call through a value asks two
+things of the number it is handed: that it is in range, and that what it names
+promises what the call promised. It did not ask what shape it is. A program
+cannot get there with the wrong shape — the shape is the type — so the only
+thing that can is a host, which is what D834 just gave this tree a way to be.
+
+*What it did instead.* A host writing the index of `ranked`, which takes three
+slots, into a slot the program calls with one:
+
+```
+$ ./probe
+apply=71 ranked=57
+Segmentation fault (core dumped)
+```
+
+The frame is made at the top of the stack less what the **call** carries, so a
+body entered with a narrower frame reads the slots below the ones it was given,
+and those are the caller's. Far enough down and it is not the stack at all.
+This is the one thing found in this tree that took a machine off its own memory
+rather than refusing.
+
+*Why the index cannot carry it.* Every function index is the same kind of thing
+in a frame: `kest_frame_fills` says the slot is a word, and a word is what a
+text handle is too. What tells `ranked` from `doubled` is what they take and
+give — so the call has to carry both, and `call.value` now does. It was one
+number and is two, which is an instruction a byte wider and a table entry
+changed from `U16` to `U16_U16`.
+
+*The refusal.* `K0657`, naming both shapes: what the call carries and what the
+function it was handed takes and gives. A host reading it knows which of its
+indexes it got wrong, which a range check could never say.
+
+*Held.* `examples/embed.c` hands `ranked` where `apply` wants `fn(i32) -> i32`
+and refuses unless the machine says so. Three things a host can get wrong about
+a function value are now three refusals: out of range, promising less, and the
+wrong shape.

@@ -31642,3 +31642,39 @@ host now writes into a function slot. What a host may write there is a number
 and nothing says which numbers are wrong: `kest_frame_fills` knows the slot is a
 word, and a word is what a text handle is too. Find out what the machine does
 with a function slot filled with something that is not a function index.
+
+## A function value is a number, and a number is only in range
+
+A call through a value asked two things of the number it is handed: that it is
+in range, and that what it names promises what the call promised. It did not ask
+what shape it is. A program cannot get there with the wrong shape, because the
+shape is the type, so the only thing that can is a host — which is what D834
+gave this tree a way to be.
+
+Handing the index of `ranked`, which takes three slots, into a slot the program
+calls with one: `Segmentation fault (core dumped)`. The frame is made at the top
+of the stack less what the call carries, so a body entered with a narrower frame
+reads the slots below the ones it was given, and those are the caller's. Far
+enough down and it is not the stack at all. It is the one thing found in this
+tree that took a machine off its own memory rather than refusing.
+
+Every function index is the same kind of thing in a frame — `kest_frame_fills`
+says the slot is a word, and a word is what a text handle is too — so what tells
+`ranked` from `doubled` is what they take and give, and the call has to carry
+both. `call.value` was one number and is two, an instruction a byte wider and a
+table entry from `U16` to `U16_U16`. The refusal is `K0657`, naming what the
+call carries and what the function it was handed takes and gives, so a host
+knows which of its indexes it got wrong.
+
+`embed.c` hands `ranked` where `apply` wants `fn(i32) -> i32` and refuses unless
+the machine says so. Three things a host can get wrong about a function value
+are now three refusals: out of range, promising less, and the wrong shape.
+Recorded as D835.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a frame is the other place a host writes a number the machine trusts.
+`kest_call` is given a frame and a width, and what is in the slots is the
+host's word — `kest_frame_fills` is how a host checks itself and nothing makes
+it. Find what the machine does with a frame whose slots hold what the program
+does not expect, and whether the answer is the same for every kind.

@@ -3088,6 +3088,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 
         case KEST_OP_CALL_VALUE: {
             uint16_t argument_slots = READ_U16();
+            uint16_t coming_back = READ_U16();
             int64_t which = (--top)->integer;
             if (which < 0 || (uint64_t)which >= module->count) {
                 fail(vmp, frame, instruction, "K0609",
@@ -3095,6 +3096,27 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             const KestChunk *callee = module->functions[which];
+
+            // And that it is a function of this shape. A program cannot get
+            // here with the wrong one — the shape is the type and the type is
+            // checked — so what can is a host, which writes a number into the
+            // slot and a number is only in range or not. Entered with a frame
+            // of the wrong width, a body reads the slots below the ones it
+            // was given, which are the caller's, and a machine walks off its
+            // own stack. See D835.
+            if (callee->param_slots != argument_slots ||
+                callee->result_slots != coming_back) {
+                fail(vmp, frame, instruction, "K0657",
+                     "this calls something taking %u slot(s) and giving %u, "
+                     "and `%s` takes %u and gives %u",
+                     argument_slots, coming_back, callee->wrote,
+                     callee->param_slots, callee->result_slots);
+                kest_diags_suggest(vmp->diags,
+                                   "a function value is one slot holding "
+                                   "which function it is, and `kest_entry` is "
+                                   "what a host reads one from");
+                return false;
+            }
 
             // A promise is proved twice: over the tree, and over the code
             // that was emitted for it. The second proof follows `call` and

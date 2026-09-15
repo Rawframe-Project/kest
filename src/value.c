@@ -893,7 +893,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"jump.true.eq.f", JUMP}, {"jump.true.ne.f", JUMP},
     {"loop", BACK},
 {"next.less.i", WALK}, {"next.less.u", WALK},
-    {"call", U16_U16},     {"call.value", U16},
+    {"call", U16_U16},     {"call.value", U16_U16},
     {"call.host", U16_U16_U16},
     {"return", U16},
 };

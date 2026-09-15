@@ -2300,6 +2300,12 @@ host filling that slot writes a number — a number carries no promise, and the
 machine asking the chunk is the only thing between a host that read the wrong
 index and a program running something it was told would not allocate.
 
+The shape is asked there too. Every function index is the same kind of thing in
+a frame, so what tells one from another is what it takes and what it gives, and
+a call through a value carries both — a number that names a function of another
+shape is `K0657` at the call rather than a body reading the slots below the ones
+it was given.
+
 ## What there is a most of
 
 A few numbers are what they are because an instruction holds them in two bytes

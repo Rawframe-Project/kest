@@ -3189,8 +3189,25 @@ int main(int argc, char **argv) {
     if (!said_that(engine.runtime, "K0623", "no.alloc")) {
         return 1;
     }
+    // And one of the right kind and the wrong shape. A function value is one
+    // slot holding a number, so every index is the same kind of thing to a
+    // frame: `kest_frame_fills` says the slot is a word and a word is what a
+    // handle is too. What tells `ranked` from `doubled` is what they take and
+    // give, and a host that read the wrong index hands over a number that is
+    // in range, promises nothing it should not, and enters a body expecting a
+    // frame three slots wide. Until D835 that walked off the caller's frame.
+    engine.frame[0].integer = engine.entry[RANKED];
+    engine.frame[1].integer = 5;
+    if (kest_call(engine.runtime, engine.entry[APPLY], engine.frame, 2)) {
+        fprintf(stderr, "a function of another shape was entered\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0657", "takes 3 and gives 1")) {
+        return 1;
+    }
     printf("a function value this host handed in was asked whether it "
-           "promised, and the one that did not was refused\n");
+           "promised, and the one that did not was refused, and so was one "
+           "of another shape\n");
 
     // And the way a host has nothing to be wrong about: the arguments handed
     // over as words, written the way a program writes them, and the machine

@@ -184,6 +184,23 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A call through a value that does not ask what shape it is entering.
+        # Every function index is the same kind of thing in a frame, so a host
+        # that read the wrong one hands over a number that is in range and
+        # names a body expecting a different frame — which reads the slots
+        # below the ones it was given, and those are the caller's. It is the
+        # one thing here that took a machine off its own stack rather than
+        # refusing. See D835.
+        "what": "a call through a value that does not ask its shape",
+        "file": "src/vm.c",
+        "from": r"""            if (callee->param_slots != argument_slots ||
+                callee->result_slots != coming_back) {""",
+        "to": r"""            if (false) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "of another shape was entered",
+    },
+    {
         # The third proof, which is the machine asking the chunk it is about
         # to enter. The types hold a program to handing a promising value
         # where one is wanted, and the walk over the code follows every call
@@ -1407,8 +1424,8 @@ tokens   what a token is and what it carries""",
         # something else.
         "what": "two instruction names in each other's places",
         "file": "src/value.c",
-        "from": r"""    {"call", U16_U16},     {"call.value", U16},""",
-        "to": r"""    {"call.value", U16_U16},     {"call", U16},""",
+        "from": r"""    {"call", U16_U16},     {"call.value", U16_U16},""",
+        "to": r"""    {"call.value", U16_U16},     {"call", U16_U16},""",
         "make": [],
         "tool": "tools/check-tables.sh",
         "caught": " is KEST_OP_CALL and is called ",

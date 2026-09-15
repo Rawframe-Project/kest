@@ -1745,11 +1745,16 @@ static void compile_value_call(Compiler *compiler, const KestExpr *expr) {
     compile_expr(compiler, expr->call.callee);
     stack_pop(compiler, (uint16_t)(through + 1));
     // What it gives rather than what the expression is, for the reason above.
-    stack_push(compiler, shape != NULL && shape->tag == KEST_T_FN
-                             ? value_slots(shape->result)
-                             : value_slots(expr->type));
+    uint16_t coming_back = shape != NULL && shape->tag == KEST_T_FN
+                               ? value_slots(shape->result)
+                               : value_slots(expr->type);
+    stack_push(compiler, coming_back);
     emit(compiler, KEST_OP_CALL_VALUE, expr->span);
     emit_u16(compiler, through, expr->span);
+    // And what this call is expecting back, which the machine has no other
+    // way to know: which function it enters is a number, and a number a host
+    // wrote may name one of another shape. See D835.
+    emit_u16(compiler, coming_back, expr->span);
 }
 
 static void compile_call(Compiler *compiler, const KestExpr *expr) {
