@@ -32197,3 +32197,44 @@ heap is given what is left, the build still has that much of its own to spend �
 a run can reach half as much again as it was allowed. Hold the number to what
 it says: give the heap the rest and lower the build to what it has, with only
 enough kept back for the last message.
+
+## One number for the whole of it, and something kept back
+
+`--room` says it is the most a command may ask for, all of it, and it was not.
+The heap gets what is left after reading and compiling, and the build kept a
+ceiling of the whole number while the program ran — so what was left was there
+twice over. Twenty thousand bytes allowed and 24177 spent, which is a wall
+somebody walks through.
+
+What was a question is an act now: the build's ceiling comes down to what it has
+spent plus what it keeps back, and the rest is the heap's alone. The same run
+under the same twenty thousand comes to 16029.
+
+What is kept back is the list a machine keeps plus four kilobytes, so a program
+stopped while it runs can be told what stopped it in the shape everything else
+is told in — the words, the line, and the caret under it. A run with none of
+that still says what it was about to say, because the last entry keeps those
+words in the list itself, but it says them with no file around them. The number
+is counted rather than guessed at: four thousand was the guess, and it was
+sixty-eight bytes short of the list alone — sixteen places at 248 bytes — which
+the gate said within the hour.
+
+The band a ceiling can usefully be walked in moves up by the reserve, which is a
+true thing about the number rather than an accident: a command allowed less than
+what compiling took plus enough to say so has nothing to run a program in, and
+it says so at the rung where that becomes true.
+
+Held by the sum: every rung reads back what reading and compiling took and what
+the program put on the heap, and the two added are held against what the run was
+allowed — whatever the run did, because what was spent was spent whether it
+finished or not.
+
+Recorded as D849.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the ceiling is one number and the machine has three. Two of them —
+slots of stack and frames of calls — are taken before a program runs and are not
+weighed against `--room` at all: a command allowed sixty-four kilobytes can be
+handed a program whose machine wants a megabyte of stack and takes it. Weigh
+what a machine costs against the same number, and refuse where it does not fit.

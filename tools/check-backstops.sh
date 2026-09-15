@@ -607,10 +607,8 @@ fn main() -> i32 {
         # See D843.
         "what": "a ceiling that leaves the program none of itself",
         "file": "src/main.c",
-        "from": r"""    size_t spent = kest_build_cost(build);
-    return room > spent ? room - spent : 1;""",
-        "to": r"""    size_t spent = kest_build_cost(build);
-    return spent > room ? room : 1;""",
+        "from": r"""    return room > keeping ? room - keeping : 1;""",
+        "to": r"""    return room > keeping ? 1 : 1;""",
         "make": ["kest", "debug"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -3088,6 +3086,46 @@ for file in "$@"; do""",
         "tool": "tools/check-ceilings.sh",
         "arguments": [],
         "caught": "and one of the two is not there",
+    },
+    {
+        # A run driven by events that does not say what the program put on the
+        # heap. It is the one number a host watching a frame budget reads, and
+        # the one this project holds a ceiling against: a run that answers
+        # everything else and not that is a ceiling nothing can be weighed
+        # against. See D849.
+        "what": "a driven run that will not say what the heap came to",
+        "file": "src/main.c",
+        "from": r"""            fprintf(stdout, ",\"heap\":%zu,\"thrown\":%d", ticked.heap,""",
+        "to": r"""            fprintf(stdout, ",\"grew\":%zu,\"thrown\":%d", ticked.heap,""",
+        "make": [],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "says nothing about what it took",
+    },
+    {
+        # A build that keeps a ceiling of the whole number while the program
+        # runs. What is left of what a command may have goes to the heap, and
+        # the build's own ceiling has to come down by the same amount or the
+        # two of them are a purse each: twenty thousand bytes allowed and
+        # twenty-four thousand spent, which is a wall somebody walks through.
+        # See D849.
+        "what": "a ceiling given away twice over",
+        "file": "src/main.c",
+        "from": r"""    size_t keeping = kest_build_cost(build) + ENOUGH_TO_SAY;
+    // Never above what it was allowed: a build already over that number is one
+    // whose ceiling this would be raising rather than lowering.
+    if (keeping > room) {
+        keeping = room;
+    }
+    kest_arena_cap(build->arena, keeping);""",
+        "to": r"""    size_t keeping = kest_build_cost(build);
+    if (keeping > room) {
+        keeping = room;
+    }""",
+        "make": [],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "more on the heap, which is",
     },
     {
         # What a run was about to say, thrown away because there was no room to

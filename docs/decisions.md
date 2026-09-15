@@ -25272,3 +25272,41 @@ program that is wrong rather than by one that is big.
 the one between reading a file and writing what is wrong with it, and halving
 walks straight over it: six rungs of sixteen say both codes. One hole — the last
 thing a run was trying to say, thrown away.
+
+## D849: one number for the whole of it, and something kept back
+
+`--room` says it is the most a command may ask this machine for, all of it. It
+was not. The heap is given what is left after reading and compiling — and the
+build kept a ceiling of the *whole* number while the program ran, so what was
+left was there twice over. Twenty thousand bytes allowed, twenty-four thousand
+and a hundred and seventy-seven spent: a wall somebody walks through.
+
+*Taken rather than read.* What was a question — how much is left? — is an act
+now: the build's own ceiling comes down to what it has spent plus what it keeps
+back, and the rest is the heap's and nobody else's. The same run under the same
+twenty thousand now comes to sixteen thousand and twenty-nine.
+
+*And what is kept back*, so that a program stopped while it runs can be told
+what stopped it in the shape everything else is told in: the words, the line,
+and the caret under it. A run with none of that still says what it was about to
+say — D848 keeps those words in the list itself — but it says them with no file
+around them.
+
+The number is counted rather than guessed at, because guessing it was wrong by
+sixty-eight bytes and the gate said so within the hour. The list a machine keeps
+comes first and is the dearest thing in it: sixteen places at two hundred and
+forty-eight bytes is three thousand nine hundred and sixty-eight before a word
+is written, and four thousand was the guess. So the reserve is that list plus
+four kilobytes for the words themselves, several times over.
+
+*What it costs.* The band a ceiling can usefully be walked in moves up by the
+reserve, which is a true thing about the number and not an accident: a command
+allowed less than what compiling took plus enough to say so is a command with
+nothing to run a program in, and it now says so at the rung where that becomes
+true rather than one lower.
+
+*Held* by the sum. Every rung of the band reads back what reading and compiling
+took and what the program put on the heap, and the two added are held against
+what the run was allowed — whatever the run did, because what was spent was
+spent whether it finished or not. Two holes: a ceiling given away twice over,
+and a driven run that will not say what the heap came to.

@@ -537,20 +537,42 @@ else
     # was given a ceiling and never applied it, which is what was found one
     # turn ago — so both are held, and the first is the one that holds the
     # ceiling. See D847.
-    # From twice what compiling it costs down to an eighth of that over it,
-    # which is a band this program is always inside: it compiled in
-    # `framed_costs`, so the first rung is twice the room it needs and every
-    # rung is above what one frame of it takes. A floor rather than a walk to
-    # nothing, because under the band a rung is refused for having no room to
-    # compile in and says nothing about frames.
+    # From nine times what compiling it costs down to twice it, which is a band
+    # this program is always inside: it compiled in `framed_costs`, every rung
+    # is well above that and what a command keeps back to say things with, and
+    # the lowest still leaves several frames of it on the heap while the
+    # highest leaves nothing like two hundred. A floor rather than a walk to
+    # nothing, because under the band a rung has no heap to speak of and says
+    # nothing about what is kept between frames — two hundred frames and one
+    # are refused alike where one of them does not fit.
     framed_rungs=0
-    step=$framed_costs
-    while [ "$step" -ge $((framed_costs / 8)) ]; do
+    step=$((framed_costs * 8))
+    while [ "$step" -ge $framed_costs ]; do
         rung=$((framed_costs + step))
         framed_rungs=$((framed_rungs + 1))
-        ./kest tick --room $rung "$work/framed.kest" 200 >/dev/null 2>&1 \
-            </dev/null
+        answered=$(./kest tick --json --room $rung "$work/framed.kest" 200 \
+            2>/dev/null </dev/null)
         kept=$?
+        # And what the whole of it came to: what reading and compiling took,
+        # and what the program put on the heap, against what the command was
+        # allowed. `--room` says it is the most a command asks for, all of it,
+        # and the build kept a ceiling of the whole number while the program
+        # ran — a second purse the same size as the first, and twenty thousand
+        # bytes allowed came to twenty-four thousand spent. Read whatever the
+        # run did, because what was spent was spent whether it finished or not.
+        # See D849.
+        spent=$(printf '%s' "$answered" | sed -n 's/.*"cost":\([0-9]*\).*/\1/p')
+        grew=$(printf '%s' "$answered" | sed -n 's/.*,"heap":\([0-9]*\).*/\1/p')
+        if [ -z "$spent" ] || [ -z "$grew" ]; then
+            echo "ceilings: a run under \`--room $rung\` says nothing about" \
+                 "what it took, so the number it was given holds nothing"
+            failed=1
+        elif [ $((spent + grew)) -gt "$rung" ]; then
+            echo "ceilings: a run allowed $rung bytes took $spent reading and" \
+                 "compiling and $grew more on the heap, which is" \
+                 "$((spent + grew))"
+            failed=1
+        fi
         ./kest tick --reset --room $rung "$work/framed.kest" 200 \
             >/dev/null 2>&1 </dev/null
         thrown=$?

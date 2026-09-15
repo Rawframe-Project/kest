@@ -1396,16 +1396,41 @@ static const KestSymbol *choose(KestBuild *build, const char *name,
 // needs gets that much, and one that cannot say gets what a host that says
 // nothing gets. Never less than that, because what is measured is the least
 // and this host prints from inside the call it makes.
+// What a command keeps back out of what it may have, so that a program stopped
+// while it runs can be told what stopped it in the shape everything else is
+// told in: the words, the line, and the caret under it. A run with none of this
+// still says what it was about to say — that is kept in the list of
+// diagnostics itself — but it says it with no file around it.
+//
+// The list a machine keeps comes first and is the dearest thing in it: sixteen
+// places at two hundred and forty-eight bytes is nearly four kilobytes before a
+// word is written. So it is counted rather than guessed at — four thousand was
+// guessed at, and it was sixty-eight bytes short of the list alone. What is
+// added to it is room for the words themselves, several times over. See D849.
+#define ENOUGH_TO_SAY (KEST_MOST_UNREAD * sizeof(KestDiag) + 4096)
+
 // What is left of what this command may have once reading and compiling have
-// taken theirs, which is the heap the program runs on. One byte where the build
-// took all of it, because nought here is what no ceiling is and this is not no
-// ceiling.
-static size_t what_is_left(KestBuild *build, size_t room) {
+// taken theirs, which is the heap the program runs on. Taken rather than read:
+// the build's own ceiling comes down to what it has spent and what it keeps
+// back, so that the rest belongs to the program alone. `--room` says it is the
+// most this command asks the machine for, all of it, and a build that keeps a
+// ceiling of the whole number while the program runs is a second purse the same
+// size as the first — twenty thousand bytes allowed and twenty-four thousand
+// spent, which is a wall somebody walks through. One byte where there is
+// nothing left, because nought is what no ceiling is and this is not no
+// ceiling. See D849.
+static size_t take_the_rest(KestBuild *build, size_t room) {
     if (room == 0) {
         return 0;
     }
-    size_t spent = kest_build_cost(build);
-    return room > spent ? room - spent : 1;
+    size_t keeping = kest_build_cost(build) + ENOUGH_TO_SAY;
+    // Never above what it was allowed: a build already over that number is one
+    // whose ceiling this would be raising rather than lowering.
+    if (keeping > room) {
+        keeping = room;
+    }
+    kest_arena_cap(build->arena, keeping);
+    return room > keeping ? room - keeping : 1;
 }
 
 // And what to give a machine when the program cannot say what it needs. Nought
@@ -1463,20 +1488,20 @@ static const KestLimits *room_for(KestBuild *build, const char *const *entries,
         case KEST_REACH_VALUE:
         case KEST_REACH_NO_ROOM:
         case KEST_REACH_UNASKED:
-            return only_the_heap(least, what_is_left(build, room));
+            return only_the_heap(least, take_the_rest(build, room));
         }
     }
     // Nothing named, or nothing found: the whole program then, which is what a
     // host that has not said which function it calls is given.
     if (!asked && !kest_needs(build, least, &why)) {
-        return only_the_heap(least, what_is_left(build, room));
+        return only_the_heap(least, take_the_rest(build, room));
     }
     // And what is left of what this command was allowed, which is the heap the
     // program runs on. One number covers the whole of what this command asks
     // the machine for, so what compiling has already taken comes off it: a
     // ceiling that meant one thing while compiling and another while running
     // would be two ceilings with one name. See D843.
-    least->heap_bytes = what_is_left(build, room);
+    least->heap_bytes = take_the_rest(build, room);
     return least;
 }
 
