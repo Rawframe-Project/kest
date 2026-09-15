@@ -4083,6 +4083,17 @@ is the crossing.
 27 ns for a call and 33 ns for a crossing, which is 6 ns more, best of 7 over 1000000 calls, spread 3%
 ```
 
+`tools/reference.kest` is a read through a reference against a read through an
+index. A `store<T>` hands out a `ref<T>` and can delete what it holds, so every
+read through one asks whether what was handed out is still there; an index into
+an array asks whether the place exists and nothing else. Both walks add one
+field of the same values in the same order, so what is left between them is the
+check and the optional it comes back in.
+
+```
+23 ns for a read through an index and 38 ns for one through a reference, which is 15 ns more, best of 7 over 200000 reads, spread 8%
+```
+
 `tools/inward` is the crossing the other way, and it is C because the thing
 doing the calling is the host. One `kest_call` against one hop of a loop inside
 one `kest_call`.
@@ -4094,11 +4105,15 @@ one `kest_call`.
 Those numbers are the machine they were taken on and nothing else — six cores,
 one of them busy with whatever else was running. What carries from one machine
 to another is the shape of them: that a crossing out costs a few nanoseconds
-over a call, that a crossing in costs less than a hop of a loop, and that both
-are small against a frame step. A crossing an entity on this machine is six
+over a call, that a crossing in costs less than a hop of a loop, that a
+reference costs about half as much again as an index, and that all of them are
+small against a frame step. A crossing an entity on this machine is six
 nanoseconds against a hundred and sixty, which is under a twentieth of the step
 — so `no.host` is worth having where a frame crosses many times an entity and
-worth little where it crosses once.
+worth little where it crosses once. A reference an entity is fifteen against the
+same hundred and sixty, which is a tenth: a world of entities that can be
+removed costs about a tenth of a frame more than a run of entities that cannot,
+and that is what the safety is worth.
 
 Each leaves things out on purpose, and they are each other's omissions. The
 frame leaves out starting up, compiling, crossing and allocating; the two

@@ -751,10 +751,10 @@ for file in $instruments; do
     # it reads like a measurement. See D579.
     rounds=$(sed -n 's/^const ROUNDS: i32 = \([0-9]*\)$/\1/p' "$file")
     # What it was over, under whichever name that scale has: one instrument
-    # counts entities and the other counts calls, and what the rule is about is
-    # that the number in the line is the constant the work was done with rather
-    # than a number somebody typed.
-    over=$(sed -n 's/^const \(ENTITIES\|CALLS\): i32 = \([0-9]*\)$/\2/p' \
+    # counts entities, one counts calls and one counts reads, and what the rule
+    # is about is that the number in the line is the constant the work was done
+    # with rather than a number somebody typed.
+    over=$(sed -n 's/^const \(ENTITIES\|CALLS\|READS\): i32 = \([0-9]*\)$/\2/p' \
         "$file")
     # An instrument that declares neither is one whose line cannot name them,
     # and the same complaint says so: what is looked for is `best of  over `

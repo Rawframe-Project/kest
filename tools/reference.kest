@@ -1,0 +1,125 @@
+module tools.reference
+
+import std.io
+
+// Two numbers and what the difference between them buys: how long a read
+// through a reference takes, and how long a read through an index takes.
+//
+// A `store<T>` hands out a `ref<T>` and can delete what it holds, so every read
+// through one asks whether what was handed out is still there — the place is
+// still a place after the thing in it is gone, and a reference carries the
+// stamp its place was handed out with. An index into an array asks whether the
+// place exists and nothing else. The first is what a program that keeps a world
+// of entities and removes some of them is written with; the second is what a
+// program that keeps a run of them and never removes one is written with. What
+// separates the two numbers is what the safety costs.
+//
+// Both loops walk the same count in the same order over the same values, and
+// both add one field of what they read, so what is left between them is the
+// check and the optional it comes back in.
+//
+// It is not a benchmark suite and `make check` reads only whether it ran and
+// what shape its line is. `make time` runs it beside the other three.
+
+extern fn Host.clock() -> i64 no.alloc
+
+const READS: i32 = 200000
+const ROUNDS: i32 = 7
+
+struct Thing {
+    n: i32
+    x: f32
+}
+
+// The two walks, each in a function of its own so that what is timed is a call
+// into a body rather than a loop written twice in one.
+fn throughReferences(world: store<Thing>, where: [ref<Thing>]) -> i32 no.alloc no.host {
+    let sum = 0
+    for one in where {
+        if let thing = get(world, one) {
+            sum += thing.n
+        }
+    }
+    return sum
+}
+
+fn throughIndexes(items: [Thing]) -> i32 no.alloc no.host {
+    let sum = 0
+    for i in 0..len(items) {
+        sum += items[i].n
+    }
+    return sum
+}
+
+fn main() -> i32 {
+    let world: store<Thing> = store()
+    let where: [ref<Thing>] = array()
+    let items: [Thing] = array()
+    for i in 0..READS {
+        push(where, add(world, Thing(i % 64, 1.0)))
+        push(items, Thing(i % 64, 1.0))
+    }
+
+    // A walk of each before the clock, so what is measured is the steady state
+    // rather than the first touch of two hundred thousand things.
+    let seen = throughReferences(world, where) + throughIndexes(items)
+
+    // The best of several rounds rather than the average of them: anything
+    // else sharing the machine only ever adds time, so the smallest is the
+    // closest this gets to the work itself.
+    let stamped: i64 = 0
+    let worstStamped: i64 = 0
+    for round in 0..ROUNDS {
+        let before = Host.clock()
+        seen += throughReferences(world, where)
+        let took = Host.clock() - before
+        if round == 0 || took < stamped {
+            stamped = took
+        }
+        if took > worstStamped {
+            worstStamped = took
+        }
+    }
+
+    let counted: i64 = 0
+    let worstCounted: i64 = 0
+    for round in 0..ROUNDS {
+        let before = Host.clock()
+        seen += throughIndexes(items)
+        let took = Host.clock() - before
+        if round == 0 || took < counted {
+            counted = took
+        }
+        if took > worstCounted {
+            worstCounted = took
+        }
+    }
+
+    // The host's clock counts microseconds and what is wanted is nanoseconds
+    // for one read.
+    let there = stamped * 1000 / i64(READS)
+    let here = counted * 1000 / i64(READS)
+    let safety = there - here
+    // Each against its own worst, because the two are two measurements: a walk
+    // through references is slower than a walk through indexes by exactly the
+    // thing being weighed.
+    let thereSpread = (worstStamped - stamped) * 100 / stamped
+    let hereSpread = (worstCounted - counted) * 100 / counted
+    let spread = if thereSpread > hereSpread -> thereSpread else -> hereSpread
+    let steady = if spread <= 25 -> ""
+        else -> " — the machine was somebody else's"
+    io.print("{here} ns for a read through an index and {there} ns for one through a reference, which is {safety} ns more, best of {ROUNDS} over {READS} reads, spread {spread}%{steady}")
+
+    // And what the work adds up to, which is a number and not a duration: an
+    // instrument that stops doing its work still prints a duration, and a
+    // smaller one reads like a faster machine. Both walks add the same field of
+    // the same values, so the two are the same sum.
+    let each = 0
+    for i in 0..READS {
+        each += i % 64
+    }
+    if seen != each * (ROUNDS + 1) * 2 {
+        return 1
+    }
+    return 0
+}

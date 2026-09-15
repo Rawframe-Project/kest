@@ -32697,3 +32697,47 @@ program that keeps a store of entities and hands out references pays for a
 generation check on every read, and nothing has ever said what that costs
 against a plain array index. Measure a read through a reference against a read
 through an index, and say what the safety is worth.
+
+## What the safety is worth
+
+Every number so far was about one call or one frame and nothing said what the
+machine does between them. A program that keeps a world of entities and hands
+out references pays for a stamp check on every read, and what that costs against
+a plain index had never been measured.
+
+```
+23 ns for a read through an index and 38 ns for one through a reference, which is 15 ns more, best of 7 over 200000 reads, spread 8%
+```
+
+A `store<T>` hands out a `ref<T>` and can delete what it holds, so a place is
+still a place after the thing in it is gone and a reference carries the stamp
+its place was handed out with; every read asks whether the two still agree and
+comes back in an optional because they may not. An index asks whether the place
+exists and nothing else. Both walks add one field of the same values in the same
+order, so what is left between them is the check and the optional.
+
+Fifteen nanoseconds an entity against a frame step of 160 is a tenth of a frame:
+a world of entities that can be removed costs about a tenth more than a run of
+entities that cannot. That is a number somebody writing a game can decide with,
+and the reason to take it — a language that offers both and prices neither is a
+language whose safety is a matter of taste.
+
+The scale in a line has a third name now, and both places that read it know all
+three: one instrument counts entities, one counts calls, one counts reads.
+
+Recorded as D862.
+
+**Runs:** `make check`, everything passing. `make time` runs all four.
+
+**Next:** the gate failed twice this turn and passed twice on the same tree, on
+one hole — `a ceiling written in the table and nowhere held` — which catches
+every time it is run alone. A gate that fails one run in three is a gate
+somebody stops believing, and a flake is a thing to find rather than a thing to
+re-run. Both failures came on a run started in the same command as an edit to
+`docs/`, and both passes on a run started on a tree nobody had touched; that is
+two for two and not yet a reason. Find the reason.
+
+And after it, the number this turn left standing: a read through an index is
+twenty-three nanoseconds, which is most of what a whole frame step costs per
+entity — and a step reads, works and writes back per entity. Either the read is
+dearer than it looks or the frame is cheaper than it should be.

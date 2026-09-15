@@ -68,6 +68,7 @@ check: tools/check.sh
 time: kest tools/inward
 	@./kest run tools/frame.kest
 	@./kest run tools/crossing.kest
+	@./kest run tools/reference.kest
 	@./tools/inward
 
 # The other direction, which a program cannot measure about itself: a host is

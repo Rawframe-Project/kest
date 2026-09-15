@@ -25775,3 +25775,34 @@ has: a page that tells somebody to run something is the page they run it from,
 and a command that was renamed leaves them typing what nothing answers to. It is
 the rule the commands and options already keep, said about the other program a
 reader is told to run.
+
+## D862: what the safety is worth
+
+Every number so far was about one call or one frame, and nothing said what the
+machine does between them. A program that keeps a world of entities and hands
+out references pays for a stamp check on every read, and what that costs against
+a plain index had never been measured.
+
+```
+23 ns for a read through an index and 38 ns for one through a reference, which is 15 ns more, best of 7 over 200000 reads, spread 8%
+```
+
+*What separates the two.* A `store<T>` hands out a `ref<T>` and can delete what
+it holds, so a place is still a place after the thing in it is gone and a
+reference carries the stamp its place was handed out with; every read asks
+whether the two still agree, and comes back in an optional because they may not.
+An index into an array asks whether the place exists and nothing else. Both
+walks add one field of the same values in the same order, so what is left
+between them is the check and the optional.
+
+*Fifteen nanoseconds an entity, against a frame step of a hundred and sixty.*
+That is a tenth of a frame: a world of entities that can be removed costs about
+a tenth more than a run of entities that cannot. Which is a number somebody
+writing a game can decide with, and the reason to take it — a language that
+offers both and prices neither is a language whose safety is a matter of taste.
+
+*And the scale in a line has a third name now.* One instrument counts entities,
+one counts calls and one counts reads, and the rule about that number is what it
+always was: it is the constant the work was done with rather than one somebody
+typed. Both places that read it — the gate and the rule that holds the reference
+to showing what this tree measures — know all three.

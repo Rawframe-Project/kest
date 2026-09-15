@@ -1018,7 +1018,7 @@ for where in sorted(glob.glob('tools/*.kest')) + ['tools/inward.c']:
     rounds = re.search(r'(?:^const ROUNDS: i32 = |^#define ROUNDS )(\d+)',
                        declares, re.M)
     over = re.search(
-        r'(?:^const (?:ENTITIES|CALLS): i32 = |^#define CALLS )(\d+)',
+        r'(?:^const (?:ENTITIES|CALLS|READS): i32 = |^#define CALLS )(\d+)',
         declares, re.M)
     if rounds is not None and over is not None:
         taken.add((rounds.group(1), over.group(1)))
