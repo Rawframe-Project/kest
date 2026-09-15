@@ -304,8 +304,13 @@ static void print_type(Printer *printer, const KestTypeRef *type) {
             put(printer, " -> ");
             print_type(printer, type->element);
         }
+        // One order wherever they are written: two orders would be two forms
+        // of one thing, and this language has one form. See D853.
         if (type->no_alloc) {
             put(printer, " no.alloc");
+        }
+        if (type->no_host) {
+            put(printer, " no.host");
         }
         break;
     }
@@ -967,6 +972,9 @@ static void print_signature(Printer *printer, const KestDecl *decl) {
     }
     if (decl->function.no_alloc) {
         put(printer, " no.alloc");
+    }
+    if (decl->function.no_host) {
+        put(printer, " no.host");
     }
 }
 

@@ -337,8 +337,10 @@ typedef struct {
     bool returns_value;
     // What the declaration promised. The promise is checked against the tree
     // before anything is emitted; this is what lets it be checked again
-    // against what was emitted. See D058.
+    // against what was emitted. See D058. Both of them, because both are
+    // proved twice and the second proof reads what is written here. See D853.
     bool no_alloc;
+    bool no_host;
 } KestChunk;
 
 // A function the program declared and the host must provide.

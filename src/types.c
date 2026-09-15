@@ -1787,7 +1787,7 @@ KestType *kest_fixed_of(KestProgram *program, KestType *element,
 // A function as a value. What it promises is part of what it is.
 static KestType *fn_of(KestProgram *program, KestType **params,
                             uint32_t count,
-                     KestType *result, bool no_alloc) {
+                     KestType *result, bool no_alloc, bool no_host) {
     KestType *type = new_type(program, KEST_T_FN);
     if (type == NULL) {
         return NULL;
@@ -1803,6 +1803,7 @@ static KestType *fn_of(KestProgram *program, KestType **params,
     type->param_count = count;
     type->result = result;
     type->no_alloc = no_alloc;
+    type->no_host = no_host;
     type->slots = 1;
     type->byte_size = 8;
     type->byte_align = 8;
@@ -1973,7 +1974,8 @@ KestType *kest_resolve_type_ref(KestProgram *program,
         KestType *result = ref->element == NULL
                                ? kest_lookup_type(program, "void", 4)
                                : kest_resolve_type_ref(program, ref->element);
-        return fn_of(program, params, count, result, ref->no_alloc);
+        return fn_of(program, params, count, result, ref->no_alloc,
+                     ref->no_host);
     }
 
     case KEST_TYPE_NAMED:
@@ -2251,7 +2253,10 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
                                      result);
         }
         if (type->no_alloc) {
-            snprintf(written + used, room - used, " no.alloc");
+            used += (size_t)snprintf(written + used, room - used, " no.alloc");
+        }
+        if (type->no_host) {
+            snprintf(written + used, room - used, " no.host");
         }
         return written;
     }
@@ -3202,7 +3207,7 @@ KestType *kest_substitute(KestProgram *program, KestType *type,
         return fn_of(
             program, params, used,
             kest_substitute(program, type->result, names, bindings, count),
-            type->no_alloc);
+            type->no_alloc, type->no_host);
     }
     case KEST_T_STRUCT: {
         if (type->shape == NULL) {
@@ -3489,6 +3494,7 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
                            ? kest_find_type(program, "void", 4)
                            : kest_resolve_type_ref(program, decl->function.result);
         type->no_alloc = decl->function.no_alloc;
+        type->no_host = decl->function.no_host;
         type->is_foreign = decl->function.is_extern;
 
         // An extern function with a receiver is named for the host type it
@@ -3621,7 +3627,11 @@ bool kest_type_equal(const KestType *a, const KestType *b) {
                 return false;
             }
         }
-        return a->no_alloc || !b->no_alloc;
+        // A value promising more may go where one promising less is wanted,
+        // and each promise is asked about on its own: one that promises the
+        // heap and not the host is neither above nor below one that promises
+        // the other way, and neither goes where the other is wanted. See D853.
+        return (a->no_alloc || !b->no_alloc) && (a->no_host || !b->no_host);
     }
     // Everything left is a type there is one object of: a primitive is
     // registered once, a struct, an enum and a set of bits are the declaration
@@ -3917,9 +3927,10 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
         // Written the way the file writes it: a function that gives nothing
         // back has no arrow, so this has none either. See D519.
         bool gives = type->result != NULL && type->result->tag != KEST_T_VOID;
-        fprintf(out, ")%s%s%s\n", gives ? " -> " : "",
+        fprintf(out, ")%s%s%s%s\n", gives ? " -> " : "",
                 gives ? kest_type_name(arena, type->result) : "",
-                type->no_alloc ? " no.alloc" : "");
+                type->no_alloc ? " no.alloc" : "",
+                type->no_host ? " no.host" : "");
     }
 
     // A line each for what was imported. The whole of them is what `--json`
@@ -4073,8 +4084,10 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
         // One name for one thing, and these were two things. See D590.
         fputs("],\"gives\":", out);
         kest_json_text(kest_type_name(arena, symbol->type->result), out);
-        fprintf(out, ",\"noAlloc\":%s,\"foreign\":%s,\"named\":%s",
+        fprintf(out, ",\"noAlloc\":%s,\"noHost\":%s,\"foreign\":%s,"
+                     "\"named\":%s",
                 symbol->type->no_alloc ? "true" : "false",
+                symbol->type->no_host ? "true" : "false",
                 symbol->type->is_foreign ? "true" : "false",
                 symbol->named ? "true" : "false");
         write_where(symbol->source, symbol->span, out);

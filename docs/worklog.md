@@ -32347,3 +32347,53 @@ must not call back into the host is the next one a game wants: `no.host` reads
 like the promise it would be, it is provable the same way `no.alloc` is — a walk
 of the tree looking for one kind of call — and the word is already refused by
 name. Write it.
+
+## The second promise
+
+The namespace was spelled with a dot so it could hold more than one promise and
+had held one since the day it was written. It holds two. `no.host` says a
+function calls nothing the host provides — the promise a frame wants, because
+what a frame cannot afford is not only the heap but the crossing.
+
+It is proved the same way and on its own walk. The call graph is the same graph
+for both and what differs is what counts as reaching, so it is walked once for
+each: a body that breaks one and keeps the other has one thing wrong with it and
+a reader wants that one on its own. `no.host` is the simpler of the two, which
+is what made it worth doing first — nothing a body writes reaches the host, and
+the only way out of a program is a call to something the host provides.
+
+```
+error[K0401]: this calls the host, and `tick` promises `no.host`
+ --> tick.kest:4:12
+  |
+4 |     return Host.now()
+  |            ^^^^^^^^^^ `Host.now` is the host's
+```
+
+Through a value it is the shape that is asked, the same as the other. The second
+proof is one instruction: what reaches the heap is a list of them, and what
+reaches the host is `KEST_OP_CALL_HOST` and nothing else. Where a value goes
+somewhere each promise is asked about on its own — one that promises the heap
+and not the host is neither above nor below one that promises the other way. And
+they are written in one order and read in any, each once.
+
+One thing this turned over on the way. `kest_module_add` answers nothing for
+three reasons — a name already there and two ways of having no room — and the
+caller said the same about all three: `two functions are compiled under this
+name, which the checker allowed`, a compiler calling itself wrong about a
+machine that had run out. The band it happens in is fifty kilobytes wide and
+nothing walked there until the ladder did; a type grew by one byte and three
+rungs started saying it. Running out says so now — and one hole stopped reaching because of it: a module
+that gives up where it runs out no longer reaches D845's crash, so what breaks
+that check now is an allocation nobody answers for. A hole is a road to a
+sentence and not the sentence.
+
+Recorded as D853.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `no.host` is proved and nothing in this tree promises it. The place it
+belongs is the one the promise was written for: the handlers a host drives a
+frame at a time. Write it into the example that takes events and into whatever
+of the library can keep it, and hold that what a frame may not do is a thing
+this tree says about itself rather than a thing it can say.

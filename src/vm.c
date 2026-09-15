@@ -3296,13 +3296,22 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // it runs. It is known now, and a chunk carries what it promised,
             // so the one call that proof cannot see through is checked where
             // it is made. See D058.
-            if (frame->chunk->no_alloc && !callee->no_alloc) {
+            // Either promise, and the one that is broken is the one said:
+            // a body promising both and entering one that promises neither is
+            // two things wrong with one call, and a reader told the first
+            // fixes it and is told the second. See D853.
+            const char *broken = frame->chunk->no_alloc && !callee->no_alloc
+                                     ? "no.alloc"
+                                 : frame->chunk->no_host && !callee->no_host
+                                     ? "no.host"
+                                     : NULL;
+            if (broken != NULL) {
                 const char *promised = frame->chunk->wrote;
                 const char *entered = callee->wrote;
                 fail(vmp, frame, instruction, "K0623",
-                     "`%s` promises `no.alloc` and this enters `%s`, which "
+                     "`%s` promises `%s` and this enters `%s`, which "
                      "does not",
-                     promised, entered);
+                     promised, broken, entered);
                 kest_diags_fault(vmp->diags,
                                  "the shape it was held in promises and the "
                                  "body does not");

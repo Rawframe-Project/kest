@@ -57,6 +57,9 @@ static void print_type(const KestTypeRef *type, const KestSource *source,
         if (type->no_alloc) {
             fputs(" no.alloc", out);
         }
+        if (type->no_host) {
+            fputs(" no.host", out);
+        }
         break;
     case KEST_TYPE_OPTIONAL:
         print_type(type->element, source, out);
@@ -405,6 +408,9 @@ static void print_decl(const KestDecl *decl, const KestSource *source,
         print_type_params(decl, source, out);
         if (decl->function.no_alloc) {
             fputs(" no.alloc", out);
+        }
+        if (decl->function.no_host) {
+            fputs(" no.host", out);
         }
         fputc('\n', out);
         for (uint32_t i = 0; i < decl->function.param_count; i++) {

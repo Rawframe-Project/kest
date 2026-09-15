@@ -419,7 +419,7 @@ fn main() -> i32 {
         # See D834.
         "what": "a call through a value that does not ask what it promised",
         "file": "src/vm.c",
-        "from": r"""            if (frame->chunk->no_alloc && !callee->no_alloc) {""",
+        "from": r"""            if (broken != NULL) {""",
         "to": r"""            if (false) {""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
@@ -3320,27 +3320,25 @@ for file in "$@"; do""",
         "caught": "which names no refusal",
     },
     {
-        # A jump filled in that was never written. `emit_jump` answers where
-        # the two bytes it wrote are, and a chunk with no room for them wrote
-        # neither — the answer is two short of nothing at all, and writing
-        # there is a compiler that dies where it meant to run out. This is the
-        # hole the ladder walked past for as long as there has been one. See
-        # D845.
-        "what": "a jump filled in after the chunk ran out",
-        "file": "src/compile.c",
-        "from": r"""    if (compiler->out_of_memory) {
-        return;
-    }
-    uint32_t distance = compiler->chunk->code_count - placeholder - 2;""",
-        "to": r"""    if (false) {
-        return;
-    }
-    uint32_t distance = compiler->chunk->code_count - placeholder - 2;""",
+        # A block the host would not give, taken anyway. Every allocation in
+        # this arena is answered for, and one that is not is a null read as a
+        # block: a compiler that dies where it meant to run out, at a rung of a
+        # ladder that reads a run which died as a run which said nothing. The
+        # jump this hole used to break was the same shape and stopped being
+        # reachable the day a module that runs out started saying so rather
+        # than compiling on. See D845 and D853.
+        "what": "a block the host would not give, taken anyway",
+        "file": "src/mem.c",
+        "from": r"""        Block *block = block_new(capacity);
+        if (block == NULL) {""",
+        "to": r"""        Block *block = block_new(capacity);
+        if (false) {""",
         "make": [],
         "tool": "tools/check-ceilings.sh",
         "arguments": [],
         "caught": "died while this looked for where it first refuses",
     },
+
     {
         # The number a message has to say, taken from this list instead of
         # from the table it is meant to hold. The comment above it said the
@@ -4550,12 +4548,12 @@ for file in "$@"; do""",
         # true is a flag that answers the same whatever is so.
         "what": "a flag that says every name is reached",
         "file": "src/types.c",
-        "from": r"""        fprintf(out, ",\"noAlloc\":%s,\"foreign\":%s,\"named\":%s",
-                symbol->type->no_alloc ? "true" : "false",
+        "from": r"""                symbol->type->no_alloc ? "true" : "false",
+                symbol->type->no_host ? "true" : "false",
                 symbol->type->is_foreign ? "true" : "false",
                 symbol->named ? "true" : "false");""",
-        "to": r"""        fprintf(out, ",\"noAlloc\":%s,\"foreign\":%s,\"named\":%s",
-                symbol->type->no_alloc ? "true" : "false",
+        "to": r"""                symbol->type->no_alloc ? "true" : "false",
+                symbol->type->no_host ? "true" : "false",
                 symbol->type->is_foreign ? "true" : "false",
                 "true");""",
         "make": ["kest"],
@@ -4728,9 +4726,10 @@ for file in "$@"; do""",
         # what a reader and every other check are reading.
         "what": "a chunk that does not carry the promise it was declared with",
         "file": "src/value.c",
-        "from": r"""                chunk->folded, chunk->folded_slots,
-                chunk->no_alloc ? "true" : "false");""",
-        "to": r"""                chunk->folded, chunk->folded_slots, "false");""",
+        "from": r"""                chunk->no_alloc ? "true" : "false",
+                chunk->no_host ? "true" : "false");""",
+        "to": r"""                "false",
+                chunk->no_host ? "true" : "false");""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -5081,8 +5080,8 @@ for file in "$@"; do""",
         # refuses, and a rule half held is a rule.
         "what": "a promise refused where none was wanted",
         "file": "src/types.c",
-        "from": """        return a->no_alloc || !b->no_alloc;""",
-        "to": """        return a->no_alloc == b->no_alloc;""",
+        "from": """        return (a->no_alloc || !b->no_alloc) && (a->no_host || !b->no_host);""",
+        "to": """        return a->no_alloc == b->no_alloc && a->no_host == b->no_host;""",
         "program": "wanted.kest",
         "source": """fn long(word: text) -> bool no.alloc {
     return len(word) > 4
@@ -5109,8 +5108,8 @@ fn main() -> i32 {
     {
         "what": "a promise that does not survive being handed over",
         "file": "src/types.c",
-        "from": """        return a->no_alloc || !b->no_alloc;""",
-        "to": """        return true;""",
+        "from": """        return (a->no_alloc || !b->no_alloc) && (a->no_host || !b->no_host);""",
+        "to": """        return a->no_host || !b->no_host;""",
         "program": "handed.kest",
         # The one call the second proof cannot follow: which chunk it enters
         # is not known until it runs, so the machine is what catches this.
@@ -6187,7 +6186,7 @@ _Static_assert(MAX_EXTERNS > 1024, "a program may ask for plenty of names");""",
         # because the two are the same three lines.
         "what": "a stack that runs out under a call through a value",
         "file": "src/vm.c",
-        "from": """                     promised, entered);
+        "from": """                     promised, broken, entered);
                 kest_diags_fault(vmp->diags,
                                  "the shape it was held in promises and the "
                                  "body does not");
@@ -6207,7 +6206,7 @@ _Static_assert(MAX_EXTERNS > 1024, "a program may ask for plenty of names");""",
                 fail(vmp, frame, instruction, "K0602",
                      "this call wants more than the %u slots of stack there "
                      "are", rt->stack_slots);""",
-        "to": """                     promised, entered);
+        "to": """                     promised, broken, entered);
                 kest_diags_fault(vmp->diags,
                                  "the shape it was held in promises and the "
                                  "body does not");
@@ -9507,11 +9506,10 @@ static const Keyword KEYWORDS[] = {
         # two files that say nothing.
         "what": "a promise the parser stopped reading",
         "file": "src/parser.c",
-        "from": r"""static bool match_no_alloc(Parser *parser) {
-    if (is_word(parser, 0, "no") && peek_at(parser, 1).kind == KEST_TOK_DOT) {""",
-        "to": r"""static bool match_no_alloc(Parser *parser) {
-    if (false && is_word(parser, 0, "no") &&
-        peek_at(parser, 1).kind == KEST_TOK_DOT) {""",
+        "from": r"""    while (is_word(parser, 0, "no") &&
+           peek_at(parser, 1).kind == KEST_TOK_DOT) {""",
+        "to": r"""    while (false && is_word(parser, 0, "no") &&
+           peek_at(parser, 1).kind == KEST_TOK_DOT) {""",
         "make": ["kest"],
         "tool": "tools/check-fmt.sh",
         "arguments": ["examples/math.kest"],
@@ -12954,6 +12952,9 @@ fn main() -> i32 {
         "file": "src/ast.c",
         "from": """        if (decl->function.no_alloc) {
             fputs(" no.alloc", out);
+        }
+        if (decl->function.no_host) {
+            fputs(" no.host", out);
         }
         fputc('\\n', out);""",
         "to": """        fputc('\\n', out);""",

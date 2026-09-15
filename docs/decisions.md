@@ -25432,3 +25432,68 @@ there was no way to ask for `no.alloc` on the handler a host calls. There is:
 whether a function promised it, and the machine holds a host to its side of the
 same promise. What was actually missing was smaller and nearer: the language had
 one promise and no answer for anybody who spelled it wrong.
+
+## D853: the second promise
+
+The namespace was spelled with a dot so it could hold more than one promise and
+it had held exactly one since the day it was written. It holds two now.
+`no.host` says a function calls nothing the host provides — the promise a frame
+wants, because what a frame cannot afford is not only the heap but the crossing.
+
+*Proved the same way, twice, and on its own walk.* The call graph is the same
+graph for both — the calls a body makes are the calls a body makes — and what
+differs is what counts as reaching: a builtin that grows, or a function the host
+provides. So the graph is walked once for each promise rather than once for
+both. A body that breaks one and keeps the other has one thing wrong with it,
+and a reader wants that one said on its own.
+
+`no.host` is the simpler of the two to prove, which is what made it worth doing
+first: nothing a body *writes* reaches the host. The only way out of a program is
+a call to something the host provides, and that is a call like any other — found
+where calls are found, followed where calls are followed. A foreign function
+reaches the host whatever it promises about the heap.
+
+```
+error[K0401]: this calls the host, and `tick` promises `no.host`
+ --> tick.kest:4:12
+  |
+4 |     return Host.now()
+  |            ^^^^^^^^^^ `Host.now` is the host's
+```
+
+And through a value it is the shape that is asked, the same as the other:
+`K0402`, with the promise to write into it.
+
+*The second proof is one instruction.* What reaches the heap is a list of
+instructions; what reaches the host is `KEST_OP_CALL_HOST` and nothing else. So
+the walk over what was emitted takes which promise it is about and asks the one
+question either way.
+
+*Each promise is asked about on its own where a value goes somewhere.* One that
+promises the heap and not the host is neither above nor below one that promises
+the other way, and neither goes where the other is wanted. A value promising
+more may go where one promising less is wanted, which was already the rule, and
+is now the rule twice.
+
+*And they are written in one order and read in any.* `no.alloc no.host` is what
+the one form writes, whichever way somebody typed them, and each is written
+once — a second one is somebody who wrote it twice and not somebody promising
+twice as much.
+
+*One thing this turned over on the way.* `kest_module_add` answers nothing for
+three reasons — a name already there, and two ways of having no room — and the
+caller said the same thing about all three: `two functions are compiled under
+this name, which the checker allowed`, which is this compiler calling itself
+wrong about a machine that had simply run out. Nobody had seen it because the
+band it happens in is fifty kilobytes wide and nothing walked there until the
+ladder did; the size of a type moved by one byte and three rungs of it started
+saying so. The two ways of having no room say so now, and the caller reads it.
+
+*And one hole that stopped reaching.* A module that runs out gives up where it
+runs out rather than compiling on, so the jump filled in after a chunk ran out —
+D845's crash — is no longer reachable by the road that found it. The check it
+backstopped is the one that says a rung of a ladder died rather than answered,
+and that is worth keeping whatever reaches it, so what breaks it now is an
+allocation that is not answered for: a block the host would not give, taken
+anyway. A hole is a road to a sentence and not the sentence, and a road that has
+been built over is one to replace rather than one to mourn.

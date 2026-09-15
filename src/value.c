@@ -121,10 +121,16 @@ KestChunk *kest_module_add(KestModule *module, const char *name) {
         }
     }
 
+    // And nowhere to put one is not two of a name. Both answer nothing here,
+    // and the caller said the same thing about both: `two functions are
+    // compiled under this name, which the checker allowed`, which is this
+    // compiler calling itself wrong about a machine that had simply run out.
+    // Three rungs of a ladder said it before anybody read one. See D853.
     if (module->count == module->capacity) {
         void *moved = grow(module->arena, module->functions, module->count,
                            &module->capacity, sizeof(KestChunk *));
         if (moved == NULL) {
+            module->out_of_room = true;
             return NULL;
         }
         module->functions = moved;
@@ -132,6 +138,7 @@ KestChunk *kest_module_add(KestModule *module, const char *name) {
 
     KestChunk *chunk = KEST_ARENA_NEW(module->arena, KestChunk);
     if (chunk == NULL) {
+        module->out_of_room = true;
         return NULL;
     }
     chunk->name = name;
@@ -143,6 +150,7 @@ KestChunk *kest_module_add(KestModule *module, const char *name) {
                        : kest_arena_strndup(module->arena, name,
                                             (size_t)(hash - name));
     if (chunk->wrote == NULL) {
+        module->out_of_room = true;
         return NULL;
     }
     module->functions[module->count++] = chunk;
@@ -1484,8 +1492,12 @@ static bool op_allocates(uint8_t op) {
 
 // Which chunk first reaches the heap, following calls, or -1. `where` is left
 // at the instruction that does it.
-static int32_t allocation_in(const KestModule *module, uint32_t which,
-                             uint8_t *state, uint32_t *where) {
+// Where a promise is broken in what was emitted, and which chunk it is in. The
+// same walk for both promises, because the thing that differs is one
+// instruction: what reaches the heap is a list of them, and what reaches the
+// host is `KEST_OP_CALL_HOST` and nothing else. See D853.
+static int32_t breaks_in(const KestModule *module, uint32_t which,
+                         uint8_t *state, uint32_t *where, bool about_host) {
     if (state[which] != 0) {
         return -1;
     }
@@ -1494,14 +1506,15 @@ static int32_t allocation_in(const KestModule *module, uint32_t which,
     const KestChunk *chunk = module->functions[which];
     for (uint32_t at = 0; at < chunk->code_count;) {
         uint8_t op = chunk->code[at];
-        if (op_allocates(op)) {
+        if (about_host ? op == KEST_OP_CALL_HOST : op_allocates(op)) {
             *where = at;
             return (int32_t)which;
         }
         if (op == KEST_OP_CALL) {
             uint16_t callee = read_u16(chunk, at + 1);
             if (callee < module->count) {
-                int32_t found = allocation_in(module, callee, state, where);
+                int32_t found =
+                    breaks_in(module, callee, state, where, about_host);
                 if (found >= 0) {
                     return found;
                 }
@@ -1593,31 +1606,38 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
     }
 
     for (uint32_t i = 0; i < module->count; i++) {
-        if (!module->functions[i]->no_alloc) {
-            continue;
-        }
-        memset(state, 0, module->count);
-        uint32_t where = 0;
-        int32_t at = allocation_in(module, i, state, &where);
-        if (at < 0) {
-            continue;
-        }
-        // Reaching here means the walk over the tree missed something, so it
-        // is reported against the instruction rather than against a promise:
-        // the promise was checked and this is the code that was emitted for
-        // it.
-        const KestChunk *guilty = module->functions[at];
-        KestSpan span = {kest_chunk_origin(guilty, where), 1};
-        const char *written = module->functions[i]->wrote;
+        for (int about_host = 0; about_host < 2; about_host++) {
+            if (!(about_host ? module->functions[i]->no_host
+                             : module->functions[i]->no_alloc)) {
+                continue;
+            }
+            memset(state, 0, module->count);
+            uint32_t where = 0;
+            int32_t at = breaks_in(module, i, state, &where, about_host != 0);
+            if (at < 0) {
+                continue;
+            }
+            // Reaching here means the walk over the tree missed something, so
+            // it is reported against the instruction rather than against a
+            // promise: the promise was checked and this is the code that was
+            // emitted for it.
+            const KestChunk *guilty = module->functions[at];
+            KestSpan span = {kest_chunk_origin(guilty, where), 1};
+            const char *written = module->functions[i]->wrote;
 
-        kest_diags_in(diags, guilty->source);
-        kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0405", span,
-                       "this reaches the heap, and `%s` promises `no.alloc`",
-                       written);
-        kest_diags_fault(diags,
-                         "the promise was allowed and the code says "
-                         "otherwise");
-        held = false;
+            kest_diags_in(diags, guilty->source);
+            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0405", span,
+                           about_host
+                               ? "this calls the host, and `%s` promises "
+                                 "`no.host`"
+                               : "this reaches the heap, and `%s` promises "
+                                 "`no.alloc`",
+                           written);
+            kest_diags_fault(diags,
+                             "the promise was allowed and the code says "
+                             "otherwise");
+            held = false;
+        }
     }
     return held;
 }
@@ -2022,6 +2042,7 @@ uint64_t kest_module_mark(const KestModule *module) {
         fold_number(&mark, chunk->stack_needed, 2);
         fold_number(&mark, chunk->returns_value, 1);
         fold_number(&mark, chunk->no_alloc, 1);
+        fold_number(&mark, chunk->no_host, 1);
     }
     for (uint32_t at = 0; at < module->extern_count; at++) {
         const KestExtern *host = &module->externs[at];
@@ -2169,11 +2190,12 @@ void kest_module_disassemble_json(const KestModule *module,
                 ",\"bytes\":%u,\"room\":%u,\"constants\":%u"
                 ",\"parameterSlots\":%u,\"slots\":%u,\"deep\":%u"
                 ",\"folded\":%u,\"foldedSlots\":%u"
-                ",\"noAlloc\":%s,\"why\":",
+                ",\"noAlloc\":%s,\"noHost\":%s,\"why\":",
                 chunk->code_count, chunk->code_capacity,
                 chunk->constant_count, chunk->param_slots, chunk->slot_count, chunk->stack_needed,
                 chunk->folded, chunk->folded_slots,
-                chunk->no_alloc ? "true" : "false");
+                chunk->no_alloc ? "true" : "false",
+                chunk->no_host ? "true" : "false");
         if (reasons != NULL && reasons[i].reach != 0) {
             kest_json_text(kest_reach_name((KestReach)reasons[i].reach), out);
             fputs(",\"where\":", out);
@@ -2309,11 +2331,12 @@ void kest_module_disassemble(const KestModule *module,
                 came_from = module->functions[reasons[i].from]->name;
             }
         }
-        fprintf(out, "fn %s  %u parameter slot%s, %u slot%s, %u deep%s%s%s\n",
+        fprintf(out, "fn %s  %u parameter slot%s, %u slot%s, %u deep%s%s%s%s\n",
                 chunk->name, chunk->param_slots,
                 chunk->param_slots == 1 ? "" : "s", chunk->slot_count,
                 chunk->slot_count == 1 ? "" : "s", chunk->stack_needed,
                 chunk->no_alloc ? ", promises `no.alloc`" : "",
+                chunk->no_host ? ", promises `no.host`" : "",
                 stopped_at[0] == '\0' ? "" : ", ", stopped_at);
         if (came_from[0] != '\0') {
             fprintf(out, "     in %s\n", came_from);

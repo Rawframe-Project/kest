@@ -431,53 +431,57 @@ static KestSpan parse_path(Parser *parser) {
     return span_between(start, end);
 }
 
-// `no.alloc` after a signature, and what is said about anything else written
-// where it goes. It is spelled with a dot so the namespace can hold further
-// contracts without taking more keywords — and until this, a word that was not
-// the one there is went unread: the parser found no promise, went looking for a
-// body, found an identifier and said `expected {`. Somebody who wrote
-// `no.allocate` was told nothing about promises at all, and somebody who wrote
-// `alloc` was told the same. `no` and a dot is somebody writing a promise
-// whatever follows it, so what follows it is read and answered for. See D852.
-static bool match_no_alloc(Parser *parser) {
-    if (is_word(parser, 0, "no") && peek_at(parser, 1).kind == KEST_TOK_DOT) {
+// The promises after a signature, and what is said about anything else written
+// where they go. They are spelled with a dot so the namespace can hold more of
+// them without taking more keywords, and it holds two: `no.alloc`, which is
+// about the heap, and `no.host`, which is about calling out of the program.
+// Either order, each once.
+//
+// A word that is not one of them went unread until D852: the parser found no
+// promise, went looking for a body, found an identifier and said `expected `{``.
+// `no` and a dot is somebody writing a promise whatever follows it, so what
+// follows it is read and answered for. See D852 and D853.
+static void match_promises(Parser *parser, bool *no_alloc, bool *no_host) {
+    *no_alloc = false;
+    *no_host = false;
+    while (is_word(parser, 0, "no") &&
+           peek_at(parser, 1).kind == KEST_TOK_DOT) {
         KestToken word = peek_at(parser, 2);
-        if (is_word(parser, 2, "alloc")) {
-            parser->position += 3;
-            // And once. A second one is somebody who wrote it twice rather
-            // than somebody promising twice as much, and a parser that reads
-            // the first and stops leaves the second to be `expected {`.
-            if (is_word(parser, 0, "no") &&
-                peek_at(parser, 1).kind == KEST_TOK_DOT &&
-                is_word(parser, 2, "alloc")) {
-                error_at(parser,
-                         span_between(peek(parser).span,
-                                      peek_at(parser, 2).span),
-                         "K0216", "`no.alloc` is written once");
-                parser->position += 3;
+        KestSpan whole = span_between(peek(parser).span, word.span);
+        bool *which = is_word(parser, 2, "alloc")   ? no_alloc
+                      : is_word(parser, 2, "host")  ? no_host
+                                                    : NULL;
+        if (which == NULL) {
+            if (word.kind != KEST_TOK_IDENT) {
+                return;
             }
-            return true;
-        }
-        if (word.kind == KEST_TOK_IDENT) {
-            error_at(parser, span_between(peek(parser).span, word.span),
-                     "K0216", "`no.%.*s` is not a promise this language has",
+            error_at(parser, whole, "K0216",
+                     "`no.%.*s` is not a promise this language has",
                      (int)word.span.length, span_text(parser, word.span));
             kest_diags_suggest(parser->diags,
-                               "the one there is is `no.alloc`");
+                               "this language has `no.alloc` and `no.host`");
             parser->position += 3;
-            return false;
+            continue;
         }
+        // And once each. A second one is somebody who wrote it twice rather
+        // than somebody promising twice as much.
+        if (*which) {
+            error_at(parser, whole, "K0216", "`no.%.*s` is written once",
+                     (int)word.span.length, span_text(parser, word.span));
+        }
+        *which = true;
+        parser->position += 3;
     }
-    // And the promise with its first half left off. `alloc` where a body goes
-    // is not a name this language has any use for, so saying `expected {`
-    // about it is true and no help at all.
-    if (is_word(parser, 0, "alloc")) {
+    // And a promise with its first half left off. `alloc` where a body goes is
+    // not a name this language has any use for, so saying `expected `{`` about
+    // it is true and no help at all.
+    if (is_word(parser, 0, "alloc") || is_word(parser, 0, "host")) {
         error_at(parser, peek(parser).span, "K0216",
-                 "a promise is written `no.alloc`");
+                 "a promise is written `no.%.*s`",
+                 (int)peek(parser).span.length,
+                 span_text(parser, peek(parser).span));
         advance(parser);
-        return false;
     }
-    return false;
 }
 
 // `store<ref<Npc>>` ends in one token that is two closers. The first half
@@ -527,10 +531,10 @@ static KestTypeRef *parse_type(Parser *parser) {
                 return NULL;
             }
         }
-        // The same words a declaration uses through the same door, because it
-        // is the same promise and two readings of one promise are two things
-        // that agree until somebody changes one.
-        type->no_alloc = match_no_alloc(parser);
+        // The same words a declaration uses through the same door, because
+        // they are the same promises and two readings of one promise are two
+        // things that agree until somebody changes one.
+        match_promises(parser, &type->no_alloc, &type->no_host);
         type->span =
             span_between(start, parser->tokens[parser->position - 1].span);
         return type;
@@ -1822,7 +1826,7 @@ static KestDecl *parse_function(Parser *parser, KestSpan start, bool is_extern) 
     if (match(parser, KEST_TOK_ARROW)) {
         decl->function.result = parse_type(parser);
     }
-    decl->function.no_alloc = match_no_alloc(parser);
+    match_promises(parser, &decl->function.no_alloc, &decl->function.no_host);
 
     if (is_extern) {
         decl->span =

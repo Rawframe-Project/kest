@@ -49,12 +49,27 @@ typedef struct {
     Function *functions;
     uint32_t count;
     bool out_of_memory;
+    // Which promise this walk is about. The graph is the same graph either
+    // way — the calls a body makes are the calls a body makes — and what
+    // differs is what counts as reaching: a builtin that grows, or a function
+    // the host provides. Walked once for each rather than once for both,
+    // because a body that breaks one and keeps the other has one thing wrong
+    // with it and a reader wants that one. See D853.
+    bool about_host;
 } Graph;
 
 
 // One place a body is written down as reaching the heap, so the first and the
 // rest are kept by the same rule and nothing has to remember which it is.
-static void reaches(Function *function, KestSpan span, const char *why) {
+static void reaches(Graph *graph, Function *function, KestSpan span,
+                    const char *why) {
+    // Nothing a body writes reaches the host. The only way out of a program is
+    // a call to something the host provides, and that is a call like any
+    // other: found where calls are found and followed where calls are
+    // followed.
+    if (graph->about_host) {
+        return;
+    }
     function->allocates = true;
     if (function->site.length == 0) {
         function->site = span;
@@ -142,7 +157,7 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
         // reaches the heap, and the compiler emits no instruction that could.
         // What allocates is the kind that can grow.
         if (expr->type == NULL || expr->type->tag != KEST_T_FIXED) {
-            reaches(function, expr->span,
+            reaches(graph, function, expr->span,
                     "a run that can grow is one on the heap");
         }
         for (uint32_t i = 0; i < expr->array.count; i++) {
@@ -153,7 +168,7 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
     case KEST_EXPR_TEXT:
         // Text with a hole in it is built, and building it reaches the heap.
         // A string with nothing in it is a constant and does not.
-        reaches(function, expr->span,
+        reaches(graph, function, expr->span,
                 "text with a hole in it is built, and what is built is on the "
                 "heap");
         for (uint32_t i = 0; i < expr->text.count; i++) {
@@ -209,7 +224,7 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
                 if (REACHES[i].why == NULL) {
                     break;
                 }
-                reaches(function, expr->span, REACHES[i].why);
+                reaches(graph, function, expr->span, REACHES[i].why);
                 break;
             }
             // Text from bytes copies them, which is the whole point of it: the
@@ -217,7 +232,7 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
             // and not a builtin, which is why it is asked about here rather
             // than in the table the builtins are held to.
             if (kest_word_same("text", text, callee->span.length)) {
-                reaches(function, expr->span,
+                reaches(graph, function, expr->span,
                         "`text` copies the bytes it is given");
             }
         }
@@ -227,7 +242,8 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
         // which is what keeps this provable at all.
         if (callee->type != NULL && callee->type->tag == KEST_T_FN &&
             callee->type->symbol == NULL && !callee->type->is_foreign &&
-            !callee->type->no_alloc) {
+            !(graph->about_host ? callee->type->no_host
+                                : callee->type->no_alloc)) {
             if (function->site.length == 0) {
                 function->site = expr->span;
                 function->shape =
@@ -397,9 +413,11 @@ static bool trace(Graph *graph, uint32_t index, Path *path) {
     return false;
 }
 
-bool kest_check_contracts(KestProgram *program, const KestUnits *units) {
+static bool prove_promise(KestProgram *program, const KestUnits *units,
+                          bool about_host) {
     Graph graph = {0};
     graph.program = program;
+    graph.about_host = about_host;
 
     for (uint32_t u = 0; u < units->count; u++) {
         for (uint32_t i = 0; i < units->items[u].unit.count; i++) {
@@ -445,11 +463,15 @@ bool kest_check_contracts(KestProgram *program, const KestUnits *units) {
         }
         function->name = symbol->type->symbol;
         function->display = symbol->name;
-        function->promises = decl->function.no_alloc;
+        function->promises = about_host ? decl->function.no_host
+                                       : decl->function.no_alloc;
         function->is_extern = decl->function.is_extern;
         // A foreign body is not here to be read, so its promise is the only
-        // thing there is to go on.
-        function->allocates = function->is_extern && !function->promises;
+        // thing there is to go on — and about the host there is nothing to go
+        // on either way: a function the host provides is the host, whatever it
+        // says about the heap.
+        function->allocates =
+            function->is_extern && (about_host || !function->promises);
         function->site = NO_SITE;
       }
     }
@@ -505,6 +527,7 @@ bool kest_check_contracts(KestProgram *program, const KestUnits *units) {
         if (!trace(&graph, i, &path)) {
             path.site = function->decl->name;
         }
+        const char *promise = about_host ? "no.host" : "no.alloc";
         kest_program_in(program, &units->items[path.unit]);
         kest_diags_in(program->diags, program->source);
 
@@ -515,12 +538,16 @@ bool kest_check_contracts(KestProgram *program, const KestUnits *units) {
             kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0402",
                            path.site,
                            "nothing promises about what this calls, and `%s` "
-                           "promises `no.alloc`",
-                           function->display);
+                           "promises `%s`",
+                           function->display, promise);
             kest_diags_suggest(program->diags,
-                               "write the promise into the shape: "
-                               "`%s no.alloc`",
-                               path.shape);
+                               "write the promise into the shape: `%s %s`",
+                               path.shape, promise);
+        } else if (about_host) {
+            kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0401",
+                           path.site,
+                           "this calls the host, and `%s` promises `no.host`",
+                           function->display);
         } else {
             kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0401",
                            path.site,
@@ -532,7 +559,9 @@ bool kest_check_contracts(KestProgram *program, const KestUnits *units) {
         }
 
         if (path.ends_in_extern) {
-            kest_diags_suggest(program->diags, "`%s` is declared to allocate",
+            kest_diags_suggest(program->diags,
+                               about_host ? "`%s` is the host's"
+                                          : "`%s` is declared to allocate",
                                path.names[path.count - 1]);
         }
 
@@ -594,4 +623,15 @@ bool kest_check_contracts(KestProgram *program, const KestUnits *units) {
         }
     }
     return true;
+}
+
+bool kest_check_contracts(KestProgram *program, const KestUnits *units) {
+    // Once for each promise. Two walks over one graph rather than one walk
+    // answering two questions: a body that breaks one and keeps the other has
+    // one thing wrong with it, and a reader wants that one said on its own.
+    // Both are run whatever the first says, because a program with two
+    // promises broken has two things to fix and finding out about the second
+    // one build later is what a compiler that reports everything is for.
+    bool held = prove_promise(program, units, false);
+    return prove_promise(program, units, true) && held;
 }

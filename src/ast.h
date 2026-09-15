@@ -29,8 +29,11 @@ struct KestTypeRef {
     // `[f32; 16]`. Zero is `[f32]`, which is a handle to something that can
     // grow; a count makes it that many, laid out where it stands.
     KestSpan count;
-    // FN only. What the value promises, which is part of what it is.
+    // FN only. What the value promises, which is part of what it is. Two of
+    // them, and a value promising more may go where one promising less is
+    // wanted. See D853.
     bool no_alloc;
+    bool no_host;
 };
 
 typedef enum {
@@ -314,6 +317,7 @@ typedef struct {
             KestTypeRef *result;
             bool is_extern;
             bool no_alloc;
+            bool no_host;
             KestBlock body;
         } function;
     };

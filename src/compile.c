@@ -3449,6 +3449,9 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
             }
             KestChunk *chunk = kest_module_add(module, symbol->type->symbol);
             if (chunk == NULL) {
+                if (module->out_of_room) {
+                    return false;
+                }
                 two_of_one_name(program, symbol->type->symbol, decl->name);
                 return false;
             }
@@ -3459,6 +3462,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
                                       ? 0
                                       : symbol->type->result->slots;
             chunk->no_alloc = symbol->type->no_alloc;
+            chunk->no_host = symbol->type->no_host;
             chunk->param_slots = 0;
         }
     }
@@ -3470,6 +3474,9 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
         }
         KestChunk *chunk = kest_module_add(module, instance->symbol);
         if (chunk == NULL) {
+            if (module->out_of_room) {
+                return false;
+            }
             kest_program_in(program, instance->unit);
             two_of_one_name(program, instance->symbol,
                             instance->decl->name);
@@ -3485,6 +3492,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
                                   ? 0
                                   : instance->type->result->slots;
         chunk->no_alloc = instance->type->no_alloc;
+        chunk->no_host = instance->type->no_host;
     }
 
     // Every constant is worked out here, where it is declared, rather than at
