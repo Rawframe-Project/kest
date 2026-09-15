@@ -23739,3 +23739,45 @@ disagree, and it now says it of four things: a value the checker allowed that
 the compiler cannot place, an expression that does not leave what it is, a
 statement that does not leave the stack as it found it, and a count taken below
 nothing.
+
+## D811: the count, held by the thing that moves it
+
+*What was left.* D808 to D810 held the compiler's count of the operand stack
+while it was being made: an expression leaves what it is, a statement leaves the
+stack as it found it, and the count never goes under nothing. None of them says
+the count is *right* — three self-consistent arithmetics are still three
+arithmetics. What knows is the machine, which moves `top` by what each
+instruction actually does.
+
+*So it is put together there.* A body is given its named slots and
+`stack_needed` above them. Once per instruction, in the build that checks
+itself, the machine holds `top` against that ceiling — `K0655`, a fault it owns
+up to. `-DKEST_CHECKED` is what the debug build passes and the release build
+does not, because this is a comparison per dispatch and the answer it gives is
+about the compiler rather than about the program.
+
+*It found one on the first run.*
+
+```
+error[K0655]: this body was given room to work out 2 slot(s) and is 3 deep
+   --> examples/borrow.kest:43:11
+ 43 |     defer give(slots, held)
+```
+
+`KEST_STMT_RETURN` worked out the answer, **took it off the count**, and then
+compiled the deferred calls. At run time the answer is still there — the
+`return` instruction is what takes it — so a deferred call works itself out on
+top of it. Every body that defers and answers something asked for its answer's
+width less room than it uses.
+
+Why nothing noticed: the slots above a frame's share are the ones the next frame
+is about to use. Overrunning writes where the callee is going to be, and the
+callee has not arrived yet. It is only wrong at the deepest point of a program
+sized by `kest_needs` — which is what `kest_needs` is for.
+
+The fix is the order: run the deferred calls, then take the answer off.
+
+*What each of the four now says.* The compiler's count is held to itself at
+every expression and every statement, held to never going under nothing, and
+held to what the machine did with it. The first three are cheap and always on;
+the fourth is a build.

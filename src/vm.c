@@ -1699,6 +1699,27 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 
     while (true) {
         const uint8_t *instruction = frame->ip;
+#ifdef KEST_CHECKED
+        // The compiler's count of the operand stack, held by the machine that
+        // moves it. A body is given its named slots and this many above them,
+        // and the machine is the only thing that knows how far it actually
+        // went — so the two are put together here, in the build that checks
+        // itself, once per instruction. D808 to D810 held that count while it
+        // was being made; this holds it against what it was made for. See
+        // D811.
+        if (top > frame->base + frame->chunk->slot_count +
+                      frame->chunk->stack_needed) {
+            fail(vmp, frame, instruction, "K0655",
+                 "this body was given room to work out %u slot(s) and is "
+                 "%u deep",
+                 frame->chunk->stack_needed,
+                 (uint32_t)(top - frame->base - frame->chunk->slot_count));
+            kest_diags_fault(vmp->diags,
+                             "the compiler's count of the operand stack and "
+                             "what the machine moved disagree");
+            return false;
+        }
+#endif
         switch (READ_BYTE()) {
         case KEST_OP_CONST:
             *top++ = frame->chunk->constants[READ_U16()];

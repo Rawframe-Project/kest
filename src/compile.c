@@ -3239,11 +3239,15 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         if (stmt->result != NULL) {
             compile_expr(compiler, stmt->result);
             size = value_slots(stmt->result->type);
-            stack_pop(compiler, size);
         }
         // The answer is worked out first and then everything outstanding is
-        // run, so what a deferred call sees is what the function decided.
+        // run, so what a deferred call sees is what the function decided —
+        // and it works itself out above that answer, which is still on the
+        // stack for the `return` to take. Counted the other way round, a body
+        // that defers asked for its answer's width less room than it uses.
+        // See D811.
         run_deferred(compiler, 0, stmt->span);
+        stack_pop(compiler, size);
         emit(compiler, KEST_OP_RETURN, stmt->span);
         emit_u16(compiler, size, stmt->span);
         break;

@@ -25,7 +25,7 @@ kest-debug: build/debug/main.o $(DEBUG_OBJ)
 	$(CC) -fsanitize=address,undefined -o $@ $^ -lm
 
 build/debug/%.o: src/%.c | build/debug
-	$(CC) $(WARN) -O0 -g -fsanitize=address,undefined -Iinclude -DKEST_LIB_DIR='"$(PREFIX)/lib/kest/"' -MMD -MP -c -o $@ $<
+	$(CC) $(WARN) -O0 -g -fsanitize=address,undefined -DKEST_CHECKED -Iinclude -DKEST_LIB_DIR='"$(PREFIX)/lib/kest/"' -MMD -MP -c -o $@ $<
 
 build/release build/debug:
 	mkdir -p $@

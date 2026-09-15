@@ -30744,3 +30744,39 @@ each instruction says. Walk a chunk without running it, adding and taking away
 what each instruction moves, and hold the deepest that walk reaches against what
 the chunk says it needs — the compiler's count and the machine's, against each
 other.
+
+## The count, held by the thing that moves it
+
+D808 to D810 held the compiler's count of the operand stack while it was being
+made — an expression leaves what it is, a statement leaves the stack as it found
+it, the count never goes under nothing. None of them says the count is right:
+three self-consistent arithmetics are still three arithmetics. What knows is the
+machine, which moves `top` by what each instruction actually does.
+
+So the two are put together there. A body is given its named slots and
+`stack_needed` above them, and once per instruction, in the build that checks
+itself, the machine holds `top` against that ceiling — K0655, a fault it owns up
+to. `-DKEST_CHECKED` is what the debug build passes and the release build does
+not, because this is a comparison per dispatch about the compiler rather than
+about the program.
+
+It found one on the first run, in `examples/borrow.kest`: a body given room for
+2 and 3 deep, at a `defer`. `KEST_STMT_RETURN` worked the answer out, took it
+off the count, and then compiled the deferred calls — but at run time the answer
+is still there, because the `return` instruction is what takes it, so a deferred
+call works itself out on top of it. Every body that defers and answers something
+asked for its answer's width less room than it uses.
+
+Nothing noticed because the slots above a frame's share are the ones the next
+frame is about to use: overrunning writes where the callee is going to be, and
+the callee has not arrived. It is only wrong at the deepest point of a program
+sized by `kest_needs`, which is what `kest_needs` is for. The fix is the order —
+run the deferred calls, then take the answer off. Recorded as D811.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `K0655` says a body went deeper than it was given. Nothing says it
+went shallower. A body that asks for more than it ever uses is memory a host is
+told to find for nothing, and `needs_of` multiplies it up a chain of calls.
+Have the checked build remember the deepest each body actually reached, say so
+at the end of a run, and read the examples' answers against what they asked for.

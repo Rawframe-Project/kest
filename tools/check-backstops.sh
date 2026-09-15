@@ -184,6 +184,44 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A deferred call counted where it is written rather than where it
+        # runs. What a `defer` does happens after the answer has been worked
+        # out and while it is still on the stack for the `return` to take, so
+        # the room it needs is its own on top of that answer. Counted from
+        # nothing, a body that defers asks for its answer's width less room
+        # than it uses — which no build but the one that checks itself can
+        # tell, because the slots above a frame's share are the ones the next
+        # frame is about to use anyway. See D811.
+        "what": "a deferred call counted below the answer it runs above",
+        "file": "src/compile.c",
+        "from": r"""        run_deferred(compiler, 0, stmt->span);
+        stack_pop(compiler, size);""",
+        "to": r"""        stack_pop(compiler, size);
+        run_deferred(compiler, 0, stmt->span);""",
+        "make": ["debug"],
+        "binary": "kest-debug",
+        "program": "deferring.kest",
+        "source": """fn give(xs: [bool], which: i32) no.alloc {
+    if which >= 0 {
+        xs[which] = true
+    }
+}
+
+fn measure(xs: [bool], value: i32) -> i32 no.alloc {
+    let held = 0
+    defer give(xs, held)
+    return value * 2
+}
+
+fn main() -> i32 {
+    let xs: [bool] = array()
+    push(xs, false)
+    return measure(xs, 3) - 6
+}
+""",
+        "caught": "K0655",
+    },
+    {
         # A statement that leaves something on the stack. A statement is where
         # a value is dropped, stored or handed back, so the stack it stands on
         # is the stack the next one stands on — one that keeps a slot puts
