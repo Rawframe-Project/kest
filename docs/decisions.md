@@ -31,6 +31,7 @@ another and is not named here is a check that fails.
 | D541 | D727 | an optional answers `== none`, which is not a comparison of two |
 | D708 | D713 | the pair a tag and a number were one of is an enum carrying nothing |
 | D040 | D759 | a generic named rather than called is `K0362`, not `K0343` |
+| D787 | D788 | the ten a hole alone provokes are eight faults and two a host makes |
 
 ---
 
@@ -22699,3 +22700,47 @@ the askings, which `check-tables.sh` already knew to do: **a code in a comment i
 a mention and not an asking, the same way a name in one is not a call.** That
 line was written before this entry and is the reason this one could be counted
 at all.
+
+## D788: eight faults and two a host makes, and a count that excused itself
+
+*This supersedes D787* on what the ten codes a hole alone provokes are. D787
+said *"every one of them is the compiler saying something about itself"*. Two of
+them are not, and the tree already said so.
+
+*The tree's own marker.* A fault is what this project got wrong rather than what
+a program did, and `kest_diags_fault` is the one door it goes through — the
+sentence *"which is a fault in the compiler"*, written once. Of the ten:
+
+| | says it is a fault | whose mistake |
+| --- | --- | --- |
+| `K0354` `K0405` `K0406` `K0407` `K0505` `K0623` `K0633` `K0645` | yes | the compiler's |
+| `K0612` `K0654` | **no** | the host's |
+
+`K0654` is a host that bound a context it has since given back, which only the
+sanitised build can see, by asking whether the byte is still there. `K0612` is
+beside `K0637` in the same guard: a lend that is not what the instruction wanted.
+Neither is a fault, neither says it is, and both are provoked by a hole for the
+same reason a fault is — a host that makes those mistakes is not a host anybody
+has written, so breaking one is how it gets made.
+
+So the ten are not one fault said ten ways. They are eight faults and two
+mistakes a host can make, and what tells them apart was already one call per
+fault before this entry asked the question.
+
+*And the count D787 added was excusing itself.* It held that every code the
+compiler has is one something asks for, and counted `K0364`, `K0628` and `K0705`
+among the asked. They are not asked for: they are written into `NOT_SEEN` and
+`NOT_REACHED`, the two lists of what nothing can be made to say, each with its
+reason beside it. The check saw the code appear in a check's text and called
+that an asking.
+
+That is the same mistake the line above it already warns about — *a code in a
+comment is a mention and not an asking* — one step out. A code named in a list
+of what cannot be provoked is being **excused**, which is the opposite of being
+asked for, and counting it as one meant a code could be excused into invisibility
+by anybody who added it to either list.
+
+Three categories now, and a code in none of them is refused: **152 asked for by
+a check, 10 by a hole and nothing else, 3 written down as what nothing can be
+made to say.** The ledger adds to the hundred and sixty-five either way; what
+changed is that two of the three are no longer being counted as the first.

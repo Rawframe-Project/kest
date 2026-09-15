@@ -29906,3 +29906,34 @@ the compiler disagreeing with itself — the checker letting through what the
 compiler cannot emit, a chunk whose widths the machine does not recognise. Read
 the ten against each other and find whether they are ten faults or one fault
 said ten ways, the way `kest_diags_fault` made eight sentences into one.
+
+## Eight faults and two a host makes
+
+The ten codes a hole alone provokes are not one fault said ten ways, and D787's
+sentence about them was wrong. `kest_diags_fault` is the one door a fault goes
+through — *"which is a fault in the compiler"* — and eight of the ten say it:
+`K0354`, `K0405`, `K0406`, `K0407`, `K0505`, `K0623`, `K0633`, `K0645`. Two do
+not. `K0654` is a host that bound a context it has since given back; `K0612` is
+a lend that is not what the instruction wanted. Both are the host's mistake, and
+both are provoked by a hole for the same reason a fault is: no host anybody has
+written makes them, so breaking one is how it gets made.
+
+And the count D787 added was excusing itself. It called `K0364`, `K0628` and
+`K0705` asked-for, when all three are written into `NOT_SEEN` and `NOT_REACHED`
+— the lists of what nothing can be made to say. A code named there is being
+excused, which is the opposite of being asked for, so a code could have been
+excused into invisibility by anybody adding it to either list. It is the same
+mistake the line above already warns of, one step out: a code in a comment is a
+mention and not an asking.
+
+Three categories now, and a code in none of them is refused: 152 asked for by a
+check, 10 by a hole and nothing else, 3 written down as unmakeable. Recorded as
+D788, superseding D787.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `K0612` and `K0654` are mistakes a host can make and no host has made,
+and both are reached only by breaking one. `examples/embed.c` is the host that
+makes host mistakes on purpose — it binds what it has given back for `K0654`
+already, through a hole rather than itself. Find whether either can be made by a
+host that means to, the way the unread ceiling was, and if so make it.

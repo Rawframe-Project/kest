@@ -1530,8 +1530,14 @@ for asking_in in [where for where in sorted(glob.glob("tools/*.sh"))
                   if not where.endswith("check-backstops.sh")] + \
                  ["examples/embed.c"]:
     # A code in a comment is a mention and not an asking, the same way a name
-    # in one is not a call: what this holds is what a check looks for.
+    # in one is not a call: what this holds is what a check looks for. Nor is
+    # one written into a list of what nothing can be made to say -- `NOT_SEEN`
+    # and `NOT_REACHED` are the two of those, and a code named in one of them
+    # is being excused rather than asked for, which is the opposite thing. See
+    # D788.
     reads = re.sub(r'^\s*(?:#|//).*$', '', open(asking_in).read(), flags=re.M)
+    reads = re.sub(r'NOT_SEEN = \(.*?\)\)|NOT_REACHED = \([^)]*\)', '',
+                   reads, flags=re.S)
     for code_named in sorted(set(re.findall(r'K0[0-9][0-9][0-9]', reads))):
         if code_named not in every_code:
             print("%s: asks for `%s`, which nothing in `src` says" %
@@ -1550,11 +1556,21 @@ for asking_in in [where for where in sorted(glob.glob("tools/*.sh"))
 code_by_a_hole = set(re.findall(
     r'"caught":\s*"[^"]*?(K0[0-9][0-9][0-9])',
     open(os.path.join("tools", "check-backstops.sh")).read()))
-for code_named in sorted(every_code - code_asked - code_by_a_hole):
+# And the third way a code is accounted for: named in one of the two lists of
+# what nothing can be made to say, each of which carries its reason beside it.
+# Those are not asked for and are not meant to be; what they are is written
+# down, which is the whole of what this refuses the absence of.
+code_excused = set(re.findall(r'K0[0-9][0-9][0-9]', "".join(
+    found.group(0) for where in sorted(glob.glob("tools/*.sh"))
+    for found in re.finditer(r'NOT_SEEN = \(.*?\)\)|NOT_REACHED = \([^)]*\)',
+                             open(where).read(), re.S))))
+for code_named in sorted(every_code - code_asked - code_by_a_hole -
+                         code_excused):
     print("src: says `%s` and nothing asks for it, so nobody has seen it said"
           % code_named)
     failed = 1
 code_only_a_hole = (every_code & code_by_a_hole) - code_asked
+code_only_written = (every_code & code_excused) - code_asked - code_by_a_hole
 
 # What a fault says it is, said in one place. A fault is what this project got
 # wrong rather than what a program did, and the sentence that says which is
@@ -2073,7 +2089,8 @@ if not failed:
           "refusals asked for, %u of them by a hole and nothing else, "
           "and %u nothing can be made to ask for, every one of the %u codes a "
           "check names being one this compiler has and every one of them being "
-          "one something asks for, %u of those by a hole and nothing else, "
+          "one something asks for, %u of those by a hole and nothing else and "
+          "%u written down as what nothing can be made to say, "
           "every one of the %u things "
           "%u check(s) say when something is wrong having been watched being "
           "said, "
@@ -2090,7 +2107,8 @@ if not failed:
              len(reasons), len(listed),
              len(tools), pythons, shells, len(reading), len(only_a_hole),
              len(NOT_REACHED),
-             len(every_code), len(code_only_a_hole), sentences,
+             len(every_code), len(code_only_a_hole),
+             len(code_only_written), sentences,
              len(HELD), halves // 2,
              len(in_widths), len(ANSWERS), len(SPAN_BY_HAND),
              len(WORD_BY_HAND), bodies, shapes, len(SAME_SHAPE)))
