@@ -185,11 +185,14 @@ const char *kest_case_of(const KestLayout *layout, uint16_t piece, int32_t tag,
 // number to give, and then zero is the two numbers above. For the heap, zero
 // is whatever the host itself can spare.
 //
-// A host that has no opinion is the one this is for. `kest_needs` is the same
-// question asked before there is a machine, for a host that wants the number
-// rather than the machine sized by it, and a host that wants more than the
-// program asked for says so here — a machine that runs out says what it would
-// have needed, so a host that finds out here is told what to write.
+// A host that has no opinion is the one this is for. `kest_needs` is half of
+// that question asked before there is a machine: it answers the worst any
+// function needs and not the way back in, so a host that asks it and writes
+// the answer here gets a smaller machine than one that writes nothing. Adding
+// `kest_needs_from` with no name is the whole of it, and the two added is
+// exactly what zero here means. A host that wants more than the program asked
+// for says so here — a machine that runs out says what it would have needed,
+// so a host that finds out here is told what to write.
 //
 // The heap is the one of the three that grows while a program runs, so it is
 // the one a host watching a frame budget puts a number on: crossing it is a

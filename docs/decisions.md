@@ -23330,3 +23330,39 @@ two numbers, and what was wrong was a sentence about which line to edit. D792
 found three functions a document never named and D794 a page that said something
 false; this is the third kind — a sentence precise enough to act on and wrong
 about which action.
+
+## D802: half a question is not the question
+
+*What the header said.* `KestLimits` documents zero as "what the program asked
+for: the worst any function needs, plus the worst call back into the program
+from inside a host function" — which is what `kest_start` computes. The next
+paragraph then said `kest_needs` is "the same question asked before there is a
+machine, for a host that wants the number rather than the machine sized by it".
+
+It is not the same question. `kest_needs` answers `walked->slots` and stops;
+the machine adds `walked->host_slots`. For `examples/embed.kest` that is 34
+slots against 66, and 10 frames against 12. A host that read those two
+paragraphs, asked the number and wrote it into `KestLimits` would get a machine
+**half the size** of the one it would have got by leaving the field alone — and
+would find out at the first call back in, as K0638 in the middle of a frame.
+
+*Why the wrong sentence survived.* `examples/embed.c` has held since D575 that a
+machine given nothing is bigger than `kest_needs` says. That check is true of
+the wrong arithmetic too: any machine that is merely generous keeps it. An order
+between two numbers does not hold a sum.
+
+*What is held now.* The sum itself: what a host that said nothing was given is
+`kest_needs` plus `kest_needs_from(NULL)`, slots and frames both, exactly. That
+is the arithmetic a host redoes by hand to arrive at the same machine, so it is
+the arithmetic the header can point at. Two holes sit on it now — one that drops
+the way back in, caught since D575, and one that counts it twice, which the
+order-only check let through.
+
+*And the paragraph says the two names.* `kest_needs` is half of that question;
+adding `kest_needs_from` with no name is the whole of it.
+
+*The pattern D801 started.* Both entries found a number right and a sentence
+about it wrong, and both times the wrong sentence told a host what to do. The
+difference is where the hole was: D801 had no check at all on the relation, and
+this had one too weak to notice. A check that passes under two different
+arithmetics is documentation of the weaker one.

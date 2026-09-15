@@ -5876,6 +5876,29 @@ int main(int argc, char **argv) {
                     was_given.stack_slots, was_given.call_depth);
             return 1;
         }
+        // And more by exactly the way back in, which is the other half of the
+        // number and the one `kest_needs` does not answer. A host that asks
+        // that and writes what it hears gets the smaller machine; asking this
+        // one too and adding is what writing nothing does. Held as the sum
+        // rather than as an order, because an order is kept by a machine that
+        // is merely generous and this is the arithmetic a host has to redo to
+        // get the same machine by hand. See D802.
+        KestLimits way_back = {0, 0, 0};
+        if (!kest_needs_from(build, NULL, &way_back, NULL) ||
+            was_given.stack_slots != worst.stack_slots + way_back.stack_slots ||
+            was_given.call_depth != worst.call_depth + way_back.call_depth) {
+            fprintf(stderr, "a host that said nothing was given %u slots and "
+                            "%u frames, against %u and %u for the program and "
+                            "%u and %u for the way back in\n",
+                    was_given.stack_slots, was_given.call_depth,
+                    worst.stack_slots, worst.call_depth,
+                    way_back.stack_slots, way_back.call_depth);
+            return 1;
+        }
+        printf("a host that said nothing was given %u slots, which is %u for "
+               "the program and %u for the way back in\n",
+               was_given.stack_slots, worst.stack_slots,
+               way_back.stack_slots);
         KestValue turn[6] = {{0}};
         int32_t made_world = kest_entry(given, "create");
         int32_t put_one = kest_entry(given, "spawn");

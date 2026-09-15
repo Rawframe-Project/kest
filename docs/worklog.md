@@ -30387,3 +30387,38 @@ their descriptions loose. `include/kest.h` is eleven hundred lines of such
 descriptions and nothing holds any of them. Pick the ones that say a number is
 related to another number — those are the only ones a host can act on wrongly —
 and check each against what the code computes.
+
+## Half a question is not the question
+
+The header says zero limits mean "the worst any function needs, plus the worst
+call back into the program from inside a host function", which is what
+`kest_start` computes, and then said `kest_needs` is "the same question asked
+before there is a machine". It is not. `kest_needs` answers `walked->slots` and
+stops; the machine adds `walked->host_slots`. For `examples/embed.kest`: 34
+slots against 66, 10 frames against 12. A host that asked the number and wrote
+it into `KestLimits` would get half the machine it would have got by leaving
+the field alone, and would find out as K0638 in the middle of a frame.
+
+The wrong sentence survived because the check under it was too weak.
+`examples/embed.c` has held since D575 that a machine given nothing is bigger
+than `kest_needs` says — true of the wrong arithmetic too, since any machine
+that is merely generous keeps it. An order between two numbers does not hold a
+sum.
+
+Held now: the sum. What a host that said nothing was given is `kest_needs` plus
+`kest_needs_from(NULL)`, slots and frames, exactly — the arithmetic a host
+redoes by hand to arrive at the same machine. Two holes sit on it, one dropping
+the way back in and one counting it twice; the second is new, because the
+order-only check let it through. The paragraph names both functions now.
+
+D801 found a number right and a sentence about it wrong with no check on the
+relation at all; this found the same with a check too weak to notice. A check
+that passes under two different arithmetics is documentation of the weaker one.
+Recorded as D802.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the weak check was weak in one way: it held `>` where `==` was true.
+Go through the relationships `examples/embed.c` and `examples/least.c` hold
+between two numbers a host is given, find the ones written as an order, and for
+each ask whether the exact relation is known. Where it is, hold that instead.

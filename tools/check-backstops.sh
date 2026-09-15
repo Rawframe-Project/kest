@@ -6377,6 +6377,20 @@ static int run(const char *command,""",
         "caught": "and a host that said nothing was given",
     },
     {
+        # And the same number worked out too large. A default a host cannot
+        # arrive at by adding the two numbers it is given is one a host that
+        # wants the same machine by hand cannot ask for: room enough is not
+        # the whole promise, because a host sizing a frame budget against the
+        # header's arithmetic is told a number the machine does not use.
+        "what": "a default a host cannot add its way to",
+        "file": "src/vm.c",
+        "from": """        wants_slots = reached + rt->host_slots;""",
+        "to": """        wants_slots = reached + rt->host_slots * 2;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "frames, against",
+    },
+    {
         # A machine taking twice the stack it was asked for. The two numbers a
         # host picks are the two it budgets by, and a machine that quietly
         # takes more of one of them is a host whose sums are right and whose
