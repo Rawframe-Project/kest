@@ -382,7 +382,7 @@ struct KestRuntime {
     uint32_t frame_count;
     uint32_t stack_slots;
     uint32_t call_depth;
-#ifdef KEST_CHECKED
+#if KEST_CHECKED
     // The deepest this machine ever got, in slots and in frames, which only
     // the build that checks itself counts. D812 asked the same of one body;
     // this asks it of the run, which is what a host is sized by. See D813.
@@ -1748,7 +1748,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 
     while (true) {
         const uint8_t *instruction = frame->ip;
-#ifdef KEST_CHECKED
+#if KEST_CHECKED
         // The compiler's count of the operand stack, held by the machine that
         // moves it. A body is given its named slots and this many above them,
         // and the machine is the only thing that knows how far it actually
@@ -3336,7 +3336,7 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
                          : limits->call_depth;
 
     uint32_t wants_slots = STACK_SLOTS;
-#ifdef KEST_CHECKED
+#if KEST_CHECKED
     rt->had_least = rt->host_measured && reached + rt->host_slots > 0;
 #endif
     if (rt->host_measured && reached + rt->host_slots > 0) {
@@ -3499,7 +3499,7 @@ bool kest_runtime_free(KestRuntime *runtime) {
                            "free it after the call it was made for returns");
         return false;
     }
-#ifdef KEST_CHECKED
+#if KEST_CHECKED
     // What every body that ran actually reached, against what it asked for.
     // The build that checks itself is the only one that counts it, and it says
     // so only when asked, because a machine that wrote this every time would

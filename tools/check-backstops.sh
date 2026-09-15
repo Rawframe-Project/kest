@@ -184,6 +184,38 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A build under the sanitiser that says it is not checked. This is
+        # the one place the question is answered, and answered wrongly it is a
+        # build with the sanitiser on and none of the readings that go with it
+        # — and the two builds stop being the two things that tell each other
+        # apart. See D827.
+        "what": "a checked build with nothing checking it",
+        "file": "src/mem.h",
+        "from": r"""#if defined(__SANITIZE_ADDRESS__)
+#define KEST_CHECKED 1""",
+        "to": r"""#if defined(__SANITIZE_ADDRESS__)
+#define KEST_CHECKED 0""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "and the one that does not counted",
+    },
+    {
+        # The question the checked build answers, asked the other way. A macro
+        # that is defined as nought is still defined, so `#ifdef` is true in
+        # every build and the readings go into the compiler people run — a
+        # comparison an instruction, for numbers nobody asked for. See D827.
+        "what": "the checked build asked for by name rather than by value",
+        "file": "src/vm.c",
+        "from": r"""#if KEST_CHECKED
+        // The compiler's count of the operand stack, held by the machine that""",
+        "to": r"""#ifdef KEST_CHECKED
+        // The compiler's count of the operand stack, held by the machine that""",
+        "make": ["kest"],
+        "in_build": True,
+        "caught": "went_slots",
+    },
+    {
         # A heap thrown away that still remembers what it refused. The number
         # and the reason belong to the heap that is gone, and a host raising a
         # ceiling reads both — so kept across a reset they are a ceiling

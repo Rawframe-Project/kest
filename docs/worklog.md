@@ -31342,3 +31342,45 @@ is the argument for reading a boundary rather than a function. Recorded as D826.
 which is the other thing a host and a machine share: `kest_lend`, the header the
 machine keeps, and the end of a lend. Read what each door promises against what a
 run does with it, and hold the promises nothing holds.
+
+## Two answers to one question, and the readings in the wrong build
+
+The lend boundary was walked door by door against what a run does, the way D825
+walked the heap, and every promise is held: nothing copied, held by lending four
+bytes and forty thousand and the second costing no more than the first; a lend
+costing a header and the one after an end costing nothing; a host's idea of the
+size disagreed with; a shape holding a pointer refused with K0647; a lend ended
+twice, a lend from before a heap went, and an array the program made all K0637.
+Two boundaries read, nothing unheld, which is worth writing down so the next
+reader does not walk it again.
+
+What the walk found instead was in the walking. `src/mem.h` has answered
+`KEST_CHECKED` since D330 by asking the compiler whether the sanitiser is on —
+"written once, because the compilers do not spell it the same" — and D811 added a
+second way of turning it on, a `-DKEST_CHECKED` on the debug line, and wrote its
+new blocks as `#ifdef`.
+
+A macro defined as nought is still defined. So every `#ifdef KEST_CHECKED` block
+was in every build: the per-instruction comparison of `top` against a body's
+ceiling, the high-water written back onto the chunk, the machine's own deepest
+kept a frame at a time — all of it in the compiler people run, with nothing
+saying so because what it prints is behind an environment variable nobody sets.
+`KEST_DEEP=1 ./kest run examples/least.kest` printed four of them.
+
+It built because a second definition is an error under `-Werror` only when the
+two disagree, and they did not: the debug line has the sanitiser on, so `mem.h`
+said 1 and the `-D` said 1. Invisible for the same reason it looked harmless,
+and `#ifdef` turned the harmless duplicate into a switch that was never off.
+
+The `-D` is gone and the four `#ifdef` are `#if`. `check-commands.sh` runs one
+program under each build with `KEST_DEEP` set and refuses unless the checked one
+counts something and the plain one counts nothing — one complaint for both ways
+round, because a reading in the wrong build and a reading in no build are the
+same thing to be told. Recorded as D827.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** that was three entries' worth of code running where it was not meant
+to, found by reading something else. Read the rest of `src` for the same shape:
+every `#if` and `#ifdef` in the tree, what each asks, and whether the thing it
+asks about is answered in one place.

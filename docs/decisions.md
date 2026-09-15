@@ -24364,3 +24364,57 @@ prose wrong about one. This asked what a fourth does in a case that turns out
 not to exist, and found the door beside it unheld. Twice now the useful part was
 not the question but what was next to it — which is the argument for reading a
 boundary rather than a function.
+
+## D827: two answers to one question, and the readings in the wrong build
+
+*The reading that found nothing.* The lend boundary was walked door by door
+against what a run does, the way D825 walked the heap. Every promise is held,
+and this is where: that nothing is copied, by lending four bytes and forty
+thousand and holding the second to cost no more than the first; that a lend
+costs a header, and the one after an end costs nothing; that a host's idea of
+the size is disagreed with; that a shape holding a pointer is `K0647`; that a
+lend ended twice, a lend from before a heap went, and an array the program made
+are all `K0637`. Two boundaries read, nothing unheld. That is worth writing down
+so the next reader does not walk it again.
+
+*What the walk found instead.* `src/mem.h` has answered `KEST_CHECKED` since
+D330 by asking the compiler whether the sanitiser is on — *"Written once,
+because the compilers do not spell it the same"*. D811 added a second way of
+turning it on, a `-DKEST_CHECKED` on the debug line, and wrote its new blocks as
+`#ifdef`.
+
+A macro defined as nought is still defined. So every `#ifdef KEST_CHECKED` block
+was in **every** build: the per-instruction comparison of `top` against a body's
+ceiling, the high-water written back onto the chunk, the machine's own deepest
+kept a frame at a time. All of it in the compiler people run, and nothing said
+so, because what it prints is behind an environment variable nobody sets.
+
+```
+$ KEST_DEEP=1 ./kest run examples/least.kest | grep -c '^deep \|^run '
+4
+```
+
+Four lines out of the release build, from code three entries said belonged to
+the build that checks itself.
+
+*One question, asked one way.* The `-D` is gone — `src/mem.h` answers it and has
+since D330 — and the four `#ifdef` are `#if`. The release build now counts
+nothing and says nothing; the checked build counts and says.
+
+*Why it built at all.* A second definition of a macro is an error under
+`-Werror` unless the two agree, and they did: the debug line has the sanitiser
+on, so `mem.h` said 1 and the `-D` said 1. It was invisible for exactly the
+reason it was harmless-looking — and `#ifdef` made the harmless duplicate into a
+switch that was never off.
+
+*Held.* `tools/check-commands.sh` runs one program under each build with
+`KEST_DEEP` set, and refuses unless the checked one counts something and the
+plain one counts nothing. One complaint for both ways round: a reading in the
+wrong build and a reading in no build are the same thing to be told.
+
+Two things the writing of it taught. `grep -c` answers nought and **exits one**,
+so a count of nothing under `set -e` is a script that stops rather than a script
+that complains — the check was silently not running. And a hole that breaks a
+`Makefile` line does not rebuild what the line makes, because `make` compares
+timestamps and not recipes; the hole breaks `src/mem.h`, which is the one place
+the question is answered and a file every object depends on.

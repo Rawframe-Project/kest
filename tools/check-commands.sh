@@ -4996,6 +4996,26 @@ case "$real" in
     printf '%s\n' "$real" | sed 's/^/    /' | head -4
     ;;
 esac
+# What the build that checks itself counts, counted only by it. D812 and D813
+# put a reading of the stack and the heap in the machine behind `KEST_CHECKED`,
+# which `src/mem.h` has answered since D330 by asking the compiler whether the
+# sanitiser is on — and D811 added a second way of turning it on, a `-D` on the
+# debug line, which the `#define` beside it made true in every build. So the
+# readings were in the release compiler as well, a comparison an instruction,
+# and nothing said so because what they print is behind an environment
+# variable nobody sets. One question, asked one way. See D827.
+plain_counted=$(KEST_DEEP=1 "$kest" run "$scratch"/marking/real.kest 2>&1 \
+                </dev/null | grep -c '^deep \|^run ' || true)
+checked_counted=$(KEST_DEEP=1 ./kest-debug run "$scratch"/marking/real.kest \
+                  2>&1 </dev/null | grep -c '^deep \|^run ' || true)
+# One complaint for both ways round, because a reading in the wrong build and
+# a reading in no build are the same thing to be told: the two builds are not
+# doing what says which is which.
+if [ "$plain_counted" != 0 ] || [ "$checked_counted" = 0 ]; then
+    complain "run: the build that checks itself counted $checked_counted \
+things and the one that does not counted $plain_counted"
+fi
+
 # And the machine the command line makes for the names it drives, which is
 # sized from those names and not from the file they are in. One entry with no
 # least used to throw away the answers for the ones beside it, and the machine
