@@ -30665,3 +30665,46 @@ the type says one, a hundred of them, and `if` used as a statement growing one
 where it says none. Both are over-counts and both are in what a builtin leaves
 behind. Put the comparison back in `compile_expr` behind a build that checks
 itself, walk the builtins until it says nothing, and leave it in.
+
+## The count that catches the miscompile
+
+The instrumentation from D808 went back in and the rest was walked down. Three
+more places where something pushed beside the thing that already pushed:
+`array()` with nothing to fill it, which emits a nought per slot of the element
+and then pushed that many again; an assignment through an address, which pushed
+one for the address `compile_address` had already pushed. Over-counts both — a
+body asking for stack it does not use.
+
+One left, and it was not an over-count:
+
+```
+WIDTH kind 10 grew 3 says 2 wrapped 1 type i32?: xs[below(s, len(xs))]
+```
+
+`std.random`'s `one<T>`. The checker widens a value standing where an optional
+is wanted, so `expr->type` is `i32?` — and reading one of a run, the compiler
+pushed `value_slots(expr->type)` and emitted `layout_of(expr->type)`. So
+`KEST_OP_INDEX` read an optional-shaped value out of a run with no tag in it:
+the element and the bytes after it, at a stride that is not the array's, with
+the tag then pushed on top.
+
+`random.one` answered nought. For every array, of every type, since it was
+written. `chance.kest` called it and held the answer against `picked < 0 ||
+picked >= len(once)`, and nought is an index, so the check passed on a wrong
+answer. It now holds what is picked against what is in the run.
+
+The fix is what `compile_call` already had written down: read one element at the
+element's width and let the tag go on afterwards. And `hold_width` is left in,
+at every expression: what the stack grew by against what the type says it is,
+refused as K0505, the code that already says the two halves of the compiler
+disagree. Every example and every file of the library compiles with it saying
+nothing. Three backstop holes now trip on the count rather than on a program
+answering wrongly — D807's empty struct, D555's slot holding whatever fits, and
+the optional asked about with both sides compiled. Recorded as D809.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `hold_width` holds an expression to its type. Nothing holds a
+statement, and a statement is where a value is dropped, stored or returned.
+Add the same count around `compile_stmt` — a statement leaves nothing — and
+walk whatever it says down the same way.

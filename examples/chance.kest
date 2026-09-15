@@ -134,12 +134,24 @@ fn main() -> i32 {
             return 6
         }
     }
-    if let picked = random.one(source, order) {
-        if picked < 0 || picked >= len(once) {
-            return 7
+    // One of them, held against what is in the run rather than against the
+    // range the run happens to cover. `order` holds every index once, so a
+    // pick that came back nought passed a test for being an index — which is
+    // how `random.one` answered nought for every array in the language for as
+    // long as it did. See D809.
+    let marks: [i32] = array()
+    push(marks, 11)
+    push(marks, 22)
+    push(marks, 33)
+    for round in 0..12 {
+        if let picked = random.one(source, marks) {
+            if picked != 11 && picked != 22 && picked != 33 {
+                return 7
+            }
+        } else {
+            return 8
         }
-    } else {
-        return 8
+        source = random.next(source)
     }
 
     // A band is a band: nothing outside it, and the same seed lays out the

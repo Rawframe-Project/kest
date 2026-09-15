@@ -184,6 +184,59 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # What a type says it is, told to a reader as one number and laid out
+        # as another. `kest check` says how many slots a shape takes and
+        # `kest emit` says how many a function taking one lays out, and the
+        # second is the first and the argument beside it. A shape reported
+        # wider than it is laid out is a host reading the wrong number out of
+        # the door meant for reading it, which nothing running would notice.
+        # See D555 and D809.
+        "what": "a shape reported wider than it is laid out",
+        "file": "src/types.c",
+        "from": r"""        fprintf(out, ",\"slots\":%u,\"bytes\":%u,\"align\":%u,\"named\":%s",""",
+        "to": r"""        fprintf(out, ",\"slots\":%u,\"bytes\":%u,\"align\":%u,\"named\":%s",
+                (uint16_t)(type->slots + 1), type->byte_size, type->byte_align,
+                type->named ? "true" : "false");
+        if (false) fprintf(out, "%u%u%u%s",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "slots and a function taking one and an",
+    },
+    {
+        # An element read at the width of the optional it is about to become.
+        # A value standing where an optional is wanted is widened by the
+        # checker, and reading the run at that width took the element and the
+        # bytes after it out of a run that has no tag in it — `random.one`
+        # answered nought for every array in the language. The compiler now
+        # holds what an expression leaves against what its type says, so this
+        # is refused where it is written rather than answered wrongly while
+        # running. See D809.
+        "what": "one of a run read at the width it is about to become",
+        "file": "src/compile.c",
+        "from": r"""        stack_push(compiler, value_slots(one));
+        emit(compiler, KEST_OP_INDEX, expr->span);
+        emit_u16(compiler, layout_of(compiler, one), expr->span);""",
+        "to": r"""        stack_push(compiler, value_slots(expr->type));
+        emit(compiler, KEST_OP_INDEX, expr->span);
+        emit_u16(compiler, layout_of(compiler, one), expr->span);""",
+        "make": ["kest"],
+        "program": "picked.kest",
+        "source": """import std.random
+
+fn main() -> i32 {
+    let xs: [i32] = array()
+    push(xs, 11)
+    let s = random.from(7)
+    if let got = random.one(s, xs) {
+        return got - 11
+    }
+    return 1
+}
+""",
+        "caught": "K0505",
+    },
+    {
         # A byte literal counted twice against the stack a body asks for.
         # `emit_constant` pushes the slot it writes, so a caller that pushes
         # beside it says a one-slot value is two — and a body full of bytes
@@ -205,9 +258,10 @@ fn main() -> i32 {
         # A struct with nothing in it built as no slots at all. Its width says
         # one slot and every other place believes that — the frame it is
         # passed in, what a constant of one has to fill — so pushing nothing
-        # leaves every argument after it a slot low and the numbers come out
-        # of whatever the stack was holding. Nothing stops; it answers. See
-        # D807.
+        # left every argument after it a slot low and the numbers came out of
+        # whatever the stack was holding. Nothing stopped and it answered;
+        # since D809 the compiler holds what an expression leaves against what
+        # its type says, so this is refused where it is written. See D807.
         "what": "a struct with nothing in it built as no slots",
         "file": "src/compile.c",
         "from": r"""        if (callee->type->member_count == 0) {
@@ -238,7 +292,7 @@ fn main() -> i32 {
     return 0
 }
 """,
-        "caught": "the second number after nothing is",
+        "caught": "K0505",
     },
     {
         # And worked out where it is written as no slots, which is a constant
@@ -1273,7 +1327,9 @@ yield""",
         # A slot holding whatever fitted in it, which is what D554 turned down:
         # one line in the compiler, and a `Vec3` and an `f32` become three
         # slots where they are four. The answers go wrong with them, but what
-        # says so first is the count. See D555.
+        # says so first is the count — and since D809 that count is the
+        # compiler's own, so it refuses at the line rather than the command
+        # line finding the widths apart afterwards. See D555.
         "what": "a slot holding whatever fits",
         "file": "src/compile.c",
         "from": r"""static uint16_t type_slots(const KestType *type) {
@@ -1287,7 +1343,7 @@ yield""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
-        "caught": "slots and a function taking one and an",
+        "caught": "K0505",
     },
     {
         # And the reading itself, moved out of reach: what a `Vec3` takes is
@@ -10663,7 +10719,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # holds is not part of the question — the other side is `none`, which
         # is as many slots of nothing as the value takes — and compiling it
         # leaves those slots under the answer, so everything after reads one
-        # slot along from where it is.
+        # slot along from where it is. Since D809 the count says so while it
+        # is being compiled rather than the program answering wrongly.
         "what": "an optional against nothing, with the nothing compiled too",
         "file": "src/compile.c",
         "from": """        if (held->type != NULL && held->type->tag == KEST_T_OPTIONAL) {""",
@@ -10688,7 +10745,7 @@ fn main() -> i32 {
     return 0
 }
 """,
-        "caught": "left the stack one along",
+        "caught": "K0505",
     },
     {
         # An `if let` whose name nothing reads, asked about like any other

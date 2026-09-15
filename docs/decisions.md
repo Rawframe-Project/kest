@@ -23638,3 +23638,60 @@ well, in the builtins, and they are the next thing. The under-counts it appeared
 to show were the checker widening a value into an optional: the tag is pushed
 after the expression, so the comparison has to be made after it and not before.
 There are none.
+
+## D809: the count that catches the miscompile
+
+*Following D808's count to nothing.* The instrumentation that found a byte
+literal counted twice was put back and the rest walked down. Three more places,
+each the same fault: something pushed beside the thing that already pushed.
+
+`array()` with nothing to fill it emits a nought per slot of the element and
+then pushed that many again — over-counting `1 + element` slots per empty array,
+which is most of them. An assignment through an address pushed one for the
+address `compile_address` had already pushed. Both are over-counts: a body asked
+for stack it does not use.
+
+*And then one that was not.* One left:
+
+```
+WIDTH kind 10 grew 3 says 2 wrapped 1 type i32?: xs[below(s, len(xs))]
+```
+
+That is `std.random`'s `one<T>`, and `expr->type` is `i32?` because the checker
+widens a value standing where an optional is wanted. Reading one of a run, the
+compiler pushed `value_slots(expr->type)` and emitted `layout_of(expr->type)` —
+so `KEST_OP_INDEX` read an **optional-shaped** value out of a run that has no
+tag in it: the element, and the bytes after it, at a stride that is not the
+array's. The tag was then pushed on top of that.
+
+`random.one` answered nought. For every array, of every type, since it was
+written. `examples/chance.kest` called it and held the answer against
+`picked < 0 || picked >= len(once)` — and nought is an index, so the check
+passed on a wrong answer for as long as it stood.
+
+The fix is the one `compile_call` already had written down: read one element at
+the element's width and let the tag go on afterwards, the same as after a call.
+
+*What is left in.* `hold_width`, at every expression: what the stack grew by
+against what the expression's type says it is. The count is what sizes a frame
+and, through `needs_of`, the machine, and it is the same count the machine moves
+by — so the two parting company is either a body sized for a stack it does not
+use or a value read at the wrong width. It is `K0505`, the code that already
+says the two halves of the compiler disagree.
+
+Every example and every file of the library compiles with it saying nothing.
+
+*And what it caught on the way in.* Three backstop holes now trip on the count
+rather than on the program answering wrongly: D807's struct with no fields,
+D555's slot holding whatever fits, and the optional asked about with both sides
+compiled. All three were holes whose comment said the answers go wrong; the
+count says so first now, which is what a hole catching earlier means. One
+sentence was left holding nothing by that — `kest check` saying a shape is one
+width while `kest emit` lays out another is a reader told the wrong number, not
+a program that runs wrongly, so it has a hole of its own now: the width written
+into the JSON, and nothing else, one over.
+
+*The shape of it.* D808 said the accounting was for something. This is what it
+was for: a number that two halves of the compiler both compute is a number that
+can be held, and holding it turned a silent wrong answer in the standard library
+into a refusal at the line that wrote it.

@@ -1519,7 +1519,6 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
             for (uint16_t i = 0; i < value_slots(element); i++) {
                 emit_constant(compiler, zero, KEST_CONST_INT, expr->span);
             }
-            stack_push(compiler, (uint16_t)(1 + value_slots(element)));
         }
         stack_pop(compiler, (uint16_t)(1 + value_slots(element)));
         stack_push(compiler, 1);
@@ -2233,14 +2232,24 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         }
         compile_expr(compiler, expr->index.object);
         compile_expr(compiler, expr->index.index);
+        // What comes off is one element, which is what the run holds and not
+        // what the expression is: a value standing where an optional is
+        // wanted is widened by the checker, and read at the width of the
+        // widened type this took the element and the bytes after it out of a
+        // run that has no tag in it. The tag goes on afterwards, the same as
+        // it does after a call. See D809.
+        const KestType *one = object == NULL || object->element == NULL
+                                  ? expr->type
+                                  : object->element;
         stack_pop(compiler, 2);
-        stack_push(compiler, value_slots(expr->type));
         if (object != NULL && object->tag == KEST_T_TEXT) {
+            stack_push(compiler, 1);
             emit(compiler, KEST_OP_TEXT_AT, expr->span);
             break;
         }
+        stack_push(compiler, value_slots(one));
         emit(compiler, KEST_OP_INDEX, expr->span);
-        emit_u16(compiler, layout_of(compiler, expr->type), expr->span);
+        emit_u16(compiler, layout_of(compiler, one), expr->span);
         break;
     }
 
@@ -2502,10 +2511,37 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
     }
 }
 
+// What an expression left on the stack against what its type says it is. The
+// compiler adds this up as it goes and reads it once, as `stack_high_water`,
+// to say how much operand stack a body needs — and it is the same count the
+// machine moves by, so the two parting company is either a body sized for a
+// stack it does not use or a value read at the wrong width. D808 was the
+// first, over a byte literal counted twice; D809 was the second, an element
+// read at the width of the optional it was about to become. Held at every
+// expression rather than measured afterwards, because the expression is what
+// names it. See D809.
+static void hold_width(Compiler *compiler, const KestExpr *expr,
+                       uint16_t before) {
+    if (compiler->out_of_memory) {
+        return;
+    }
+    int32_t grew = (int32_t)compiler->stack_depth - (int32_t)before;
+    uint16_t want = value_slots(expr->type);
+    if (grew == (int32_t)want) {
+        return;
+    }
+    refuse(compiler, expr->span, "K0505",
+           "this leaves %d slot(s) of stack and is %u wide", grew, want);
+    kest_diags_fault(compiler->program->diags,
+                     "the compiler's count of the stack and the width of a "
+                     "value disagree");
+}
+
 static void compile_expr(Compiler *compiler, const KestExpr *expr) {
     if (expr == NULL || compiler->out_of_memory) {
         return;
     }
+    uint16_t before = compiler->stack_depth;
     compile_expr_kind(compiler, expr);
     // The checker decided this value stands where an optional is wanted, so
     // the tag goes after it.
@@ -2513,6 +2549,7 @@ static void compile_expr(Compiler *compiler, const KestExpr *expr) {
         stack_push(compiler, 1);
         emit(compiler, KEST_OP_TRUE, expr->span);
     }
+    hold_width(compiler, expr, before);
 }
 
 static void compile_block(Compiler *compiler, const KestBlock *block);
@@ -2689,10 +2726,6 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
                   "this assigns to something that is not a place");
             break;
         }
-        if (!in_slots) {
-            stack_push(compiler, 1);
-        }
-
         if (stmt->assign.op != KEST_TOK_EQ) {
             // The operator applies to what is there, so the target is read
             // before it is written. Through an address that means keeping a
