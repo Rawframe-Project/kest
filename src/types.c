@@ -992,6 +992,14 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
 
     if (type != NULL && type->tag == KEST_T_STRUCT &&
         expr->kind == KEST_EXPR_CALL) {
+        // One with no fields is one slot of nought, which is what the machine
+        // pushes for it and what its width says it is. Worked out as no slots
+        // at all, it was a constant that could not be written down of a value
+        // a program may make anywhere else. See D807.
+        if (type->member_count == 0 && expr->call.arg_count == 0) {
+            out[0].integer = 0;
+            return 1;
+        }
         uint32_t used = 0;
         for (uint32_t i = 0; i < expr->call.arg_count; i++) {
             uint32_t wrote = fold_slots(program, expr->call.args[i], out + used,

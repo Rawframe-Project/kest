@@ -30586,3 +30586,44 @@ value made of several. Read what it does with a struct, an array and a case of
 an enum written where they stand against what the machine builds for the same
 words — the layouts, the order of the slots, and what a piece each is — and
 find whether a program can tell which of the two put the value together.
+
+## A width believed everywhere except where the value is made
+
+`fold_slots` read against what the machine builds, for every shape a constant
+may be written as. A struct's slot offsets are a running sum of its members'
+widths — no padding, no reordering — so appending in declaration order is the
+layout, and the two agree. Nested structs, runs of structs, a case of an enum
+with a payload, a case inside a struct, a constant named from another: all fold
+to what the machine builds, held by hashing one against the other.
+
+One did not, and it was not a folder bug. `measure_struct` ends with
+`type->slots = offset == 0 ? 1 : offset` — a struct is at least one slot wide so
+that a value of one is a value — and everything believed that except the thing
+that builds one. "Building a struct emits nothing. Its fields were pushed in
+declaration order" is true of every struct that has a field; for one with none
+it pushed nothing, and the slot the type promised was never there. So
+`takes(Empty(), 3, 4)` answered 96666730631551: every argument after it a slot
+low, reading whatever the stack was holding. Nothing stopped and nothing was
+said — the frame was the right size, the call was the right shape, and the
+numbers were somebody else's.
+
+The folder had the same hole from the other side: `used == type->slots` with
+`used` nought, so `const NOWT: Nothing = Nothing()` was K0504 — a constant that
+cannot be written down of a value a program may make anywhere else.
+
+Both now write one slot of nought, which is the width the type already said.
+`examples/rows.kest` holds a call where the empty one is not the only argument,
+built where it stands and read from a constant, because the numbers after it are
+where a missing slot shows up. Two holes, and the reference says the width.
+
+D806 was two arithmetics disagreeing. This is narrower and worse: one number
+read by four places and written by three. The sweep was looking at the folder,
+and the folder was the one that was nearly right. Recorded as D807.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** that width is read in four places and was written in three. Find the
+other numbers a type carries — `slots`, `byte_size`, `byte_align`, a case's
+offsets — and for each, list every place that writes one and every place that
+reads one. A number with more readers than writers agree on is the shape this
+was.

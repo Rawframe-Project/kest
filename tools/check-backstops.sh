@@ -184,6 +184,69 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A struct with nothing in it built as no slots at all. Its width says
+        # one slot and every other place believes that — the frame it is
+        # passed in, what a constant of one has to fill — so pushing nothing
+        # leaves every argument after it a slot low and the numbers come out
+        # of whatever the stack was holding. Nothing stops; it answers. See
+        # D807.
+        "what": "a struct with nothing in it built as no slots",
+        "file": "src/compile.c",
+        "from": r"""        if (callee->type->member_count == 0) {
+            KestValue nothing = {0};
+            emit_constant(compiler, nothing, KEST_CONST_INT, expr->span);
+        }""",
+        "to": r"""        if (false) {
+            KestValue nothing = {0};
+            emit_constant(compiler, nothing, KEST_CONST_INT, expr->span);
+        }""",
+        "make": ["kest"],
+        "program": "empty.kest",
+        "source": """import std.io
+
+struct Nothing {
+}
+
+fn after(e: Nothing, n: i32, m: i32) -> i32 no.alloc {
+    return m
+}
+
+fn main() -> i32 {
+    let answer = after(Nothing(), 3, 4)
+    io.print("the second number after nothing is {answer}")
+    if answer != 4 {
+        return 1
+    }
+    return 0
+}
+""",
+        "caught": "the second number after nothing is",
+    },
+    {
+        # And worked out where it is written as no slots, which is a constant
+        # of a value a program may make anywhere else and not name. See D807.
+        "what": "a struct with nothing in it worked out as no slots",
+        "file": "src/types.c",
+        "from": r"""        if (type->member_count == 0 && expr->call.arg_count == 0) {""",
+        "to": r"""        if (false) {""",
+        "make": ["kest"],
+        "program": "empty-const.kest",
+        "source": """struct Nothing {
+}
+
+const NOWT: Nothing = Nothing()
+
+fn after(e: Nothing, n: i32) -> i32 no.alloc {
+    return n
+}
+
+fn main() -> i32 {
+    return after(NOWT, 0)
+}
+""",
+        "caught": "K0504",
+    },
+    {
         # The least number over minus one worked out where it is written. C
         # leaves it undefined and the machine it compiles on traps, so a
         # constant written this way does not give a wrong answer: it takes the

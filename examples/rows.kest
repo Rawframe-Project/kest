@@ -16,6 +16,22 @@ struct Row {
     tag: i32
 }
 
+// And one with nothing in it, which is a slot all the same: a struct is at
+// least one slot wide so that a value of one is a value, and a width believed
+// in some places and not others is a value that changes shape on the way. It
+// was believed by the frame a program is called with, by what a constant of
+// one has to fill, and not by the thing that builds one. See D807.
+struct Nothing {
+}
+
+// What that is worth holding is a call where it is not the only argument: the
+// numbers after it are where a slot that was never pushed shows up.
+const NOWT: Nothing = Nothing()
+
+fn after(e: Nothing, n: i32, m: i32) -> i32 no.alloc {
+    return n * 100 + m
+}
+
 fn heaviest(r: Row) -> i32 no.alloc {
     let best = 0
     let seen = 0.0
@@ -74,6 +90,13 @@ fn main() -> i32 {
     }
     if many[which].cells[cell].weight != 1.0 {
         return 7
+    }
+
+    // A struct with nothing in it, built where it stands and read from a
+    // constant, with numbers after it either way. Pushed as no slots at all,
+    // both of these answered whatever the stack was holding. See D807.
+    if after(Nothing(), 3, 4) != 304 || after(NOWT, 5, 6) != 506 {
+        return 8
     }
 
     io.print("a row is three cells and a tag, heaviest {heaviest(r)}")

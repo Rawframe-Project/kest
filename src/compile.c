@@ -1790,7 +1790,19 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
 
     // Building a struct emits nothing. Its fields were pushed in declaration
     // order, which is the layout, so the value is already on the stack.
+    //
+    // Except one with no fields, which is a slot all the same: a struct is at
+    // least one slot wide so that a value of one is a value, and every other
+    // place in this compiler believes that width — the frame it is passed in,
+    // the slots it is stored to, what a constant of one has to fill. Pushing
+    // nothing here left every argument after it a slot low, so
+    // `takes(Empty(), 3, 4)` read its numbers out of whatever the stack was
+    // holding. See D807.
     if (callee->type != NULL && callee->type->tag == KEST_T_STRUCT) {
+        if (callee->type->member_count == 0) {
+            KestValue nothing = {0};
+            emit_constant(compiler, nothing, KEST_CONST_INT, expr->span);
+        }
         return;
     }
     if (callee->type != NULL && callee->type->tag == KEST_T_ENUM) {

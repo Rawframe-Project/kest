@@ -1688,6 +1688,11 @@ nowhere else.
 elsewhere. It is a value like a struct: copying one copies all of it, and a
 struct holding one holds the whole thing.
 
+A struct with no fields is one slot wide, not none. It has a value the way
+every other struct does — it is passed, stored, held in a constant and copied —
+and a width of nothing would make it a value that is not there, which is a
+different thing from a value with nothing in it.
+
 ```kest
 struct Transform {
     m: [f32; 4]

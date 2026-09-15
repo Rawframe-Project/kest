@@ -23540,3 +23540,50 @@ This is the same fault in whole numbers, twice, plus the place where refusing is
 right and the reason was missing. The pattern across D667, D668, D669, D805 and
 this: **two arithmetics, and what holds them together is a program that runs
 both and compares.**
+
+## D807: a width believed everywhere except where the value is made
+
+*The sweep.* `fold_slots` against what the machine builds, for every shape a
+constant may be written as. A struct's slot offsets are a running sum of its
+members' widths — no padding, no reordering — so appending fields in
+declaration order is the layout, and the folder and the compiler agree. Nested
+structs, runs of structs, a case of an enum with a payload, a case inside a
+struct, a constant named from another constant: all fold to what the machine
+builds, held by hashing one against the other.
+
+One did not, and what it turned out to be was not a folder bug.
+
+*A struct with no fields.* `measure_struct` ends with `type->slots = offset == 0
+? 1 : offset` — a struct is at least one slot wide, so that a value of one is a
+value. Everything believed that: the frame a program is called with, the slots
+it is stored to, what a constant of one has to fill. The compiler did not:
+
+*"Building a struct emits nothing. Its fields were pushed in declaration order,
+which is the layout, so the value is already on the stack."*
+
+True of every struct that has a field. For one with none it pushed nothing, and
+the slot the type promised was never there. So:
+
+```
+$ kest run empty.kest
+takes(Empty(), 3, 4) is 96666730631551
+```
+
+Every argument after it a slot low, reading whatever the stack was holding.
+Nothing stopped, nothing was said: the frame was the right size, the call was
+the right shape, and the numbers were somebody else's.
+
+*And the folder had the same hole from the other side.* `used == type->slots`
+with `used` nought and `slots` one, so `const NOWT: Nothing = Nothing()` was
+`K0504` — a constant that cannot be written down of a value a program may make
+anywhere else.
+
+*Both fixed at the width the type already said.* One slot of nought, pushed and
+worked out. `examples/rows.kest` holds a call where the empty one is not the
+only argument, built where it stands and read from a constant, because the
+numbers after it are where a slot that was never pushed shows up. Two holes.
+
+*What this is an instance of.* D806's pattern was two arithmetics disagreeing.
+This is narrower and worse: one number — a type's width — read by four places
+and written by three. The sweep that found it was looking at the folder, and the
+folder was the one that was nearly right.
