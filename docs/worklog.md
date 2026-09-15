@@ -30316,3 +30316,38 @@ for how deep a program goes and how much stack it wants. That one answers a host
 before anything runs, so a program that goes deeper than it said is a host given
 a frame budget that is wrong. Read what that walk does about a cycle against
 what `allocation_in` does about one.
+
+## Two walks over one graph, and a name held only against itself
+
+`allocation_in` marks a chunk with one state: seen. A cycle returns nothing,
+because the question is whether any reachable chunk allocates and one already
+walked adds nothing. `needs_of` marks with three — unseen, on the way, done — and
+a chunk found on the way is a cycle, which there is not a value that adds
+nothing but the reason there is no value: the question is the deepest a run of
+calls goes, and a run that comes back round has no deepest. Different marks
+because different questions.
+
+The three states do a second job nobody wrote down: take the cycle test out and
+the compiler segfaults, because `needs_of` recurses into C. The mark that says a
+cycle has no answer also stops the walk running out of stack finding that out.
+
+Both cycle paths are watched — the first by D799's hole, the second by
+`check-ceilings.sh`'s `nesting.kest`, which says `K0602` when a cycle answers
+with a number. What was not watched is the name: when there is no answer, both
+forms say which function the run closes at and each is held to the other, which
+says they agree and not that either is right. A host reads it to know what to
+shorten, so it is held now to being the function the cycle is in.
+
+Getting that right took two goes. The first read the name with a pattern that
+walks the line — the whole object is one line and every function repeats those
+names beside its own, so it took the last pair rather than the one asked for,
+and passed against a compiler answering `plain` where `down` was right. A check
+that reads the wrong thing agrees with everything. Recorded as D800.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `needs_of` answers three things at once — how deep, how wide, and the
+same two again for runs of calls that end in the host. The host pair is what a
+host is given to size a machine it may be called back into. Read what that pair
+counts against what the first pair counts, and find whether a call into the host
+from inside a walk is counted where a host would look for it.

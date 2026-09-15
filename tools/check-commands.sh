@@ -3341,6 +3341,48 @@ elif [ "$reach_grew" -le "$reach_made" ]; then
 against $reach_made for making it, and the proof says \`push\` reaches"
 fi
 
+# And which function a run of calls closes at, when there is no answer for what
+# a program needs. Both forms say it and each is held to the other a few
+# hundred lines below, which says they agree and not that either is right -- a
+# name taken from the wrong function reads the same in both. A host reads it to
+# know what to shorten, so it is held here to being the function the cycle is
+# in rather than the one the walk started from or the one that happens to be
+# first. See D800.
+mkdir "$scratch"/closing
+cat > "$scratch"/closing/closing.kest <<'KEST'
+fn plain(n: i32) -> i32 {
+    return n + 1
+}
+
+fn down(n: i32) -> i32 {
+    if n <= 0 {
+        return 0
+    }
+    return down(n - 1) + 1
+}
+
+fn main() -> i32 {
+    return down(3) + plain(0) - 4
+}
+KEST
+closing_said=$("$kest" emit --json "$scratch"/closing/closing.kest 2>/dev/null \
+    </dev/null)
+# The whole object is one line and every function says the same two names
+# beside its own, so the one wanted is cut out before either is read: a pattern
+# that walks the line takes the last pair on it and not this one.
+closing_needs=$(printf '%s' "$closing_said" | grep -o '"needs":{[^}]*')
+closing_why=$(printf '%s' "$closing_needs" |
+    grep -o '"why":"[^"]*"' | head -1 | cut -d'"' -f4)
+closing_where=$(printf '%s' "$closing_needs" |
+    grep -o '"where":"[^"]*"' | head -1 | cut -d'"' -f4)
+case "$closing_where" in
+*down*) ;;
+*)
+    complain "emit --json: a program that reaches itself said \`$closing_why\` \
+at \`$closing_where\`, where the run of calls closes at \`down\`"
+    ;;
+esac
+
 # And the one reach the proof decides outside that table, because `text` is a
 # conversion rather than a builtin -- it is not in the checker's list of
 # builtins either, so being outside is what it is and not where it is written.

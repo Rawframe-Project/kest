@@ -1275,6 +1275,20 @@ yield""",
         "caught": "said nothing about what it cost",
     },
     {
+        # The function a run of calls closes at, taken from the wrong one.
+        # Both forms say it and each is held to the other, which says they
+        # agree and not that either is right -- a wrong name reads the same in
+        # both. A host reads it to know what to shorten. See D800.
+        "what": "a run of calls said to close at the wrong function",
+        "file": "src/value.c",
+        "from": r"""        why->where = module->functions[which]->name;""",
+        "to": r"""        why->where = module->functions[0]->name;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "where the run of calls closes at",
+    },
+    {
         # The walk over the tree forgetting the calls it made, so a promise
         # broken one call away is one the first proof cannot see. What catches
         # it is the second proof following the same call through the code that

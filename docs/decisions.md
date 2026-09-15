@@ -23240,3 +23240,49 @@ watches what it claims to.
 first proof wrong to see the second proof work, and a check that breaks the
 compiler to test it is a hole with extra steps. This is what holes are: the
 thing that can only be seen when something else is broken on purpose.
+
+## D800: two walks over one graph, and a name held only against itself
+
+*What each does about a cycle.* `allocation_in` marks a chunk with one byte and
+one state: seen. A cycle returns nothing, because the question is whether any
+reachable chunk allocates and a chunk already walked has nothing left to add.
+`needs_of` marks with three: unseen, **on the way**, and done. A chunk found on
+the way is a cycle, and a cycle there is not a value that adds nothing — it is
+the reason there is no value at all, because the question is the deepest a run
+of calls goes and a run that comes back round has no deepest. It says
+`reaches itself` and names where the run closes.
+
+Two walks over one graph with different marks because they ask different
+questions: one reachability, one a maximum over paths. Neither is the other's
+shortcut.
+
+*And the three states do a second job nobody wrote down.* Take the cycle test
+out and the compiler does not answer wrongly — it **segfaults**, because
+`needs_of` recurses into C. The mark that says a cycle has no answer is also the
+mark that stops the walk running out of stack finding that out. That is why the
+break this entry is about had to be the subtler one: a cycle that returns a
+number rather than one that never returns.
+
+*What is watched.* The allocation walk's cycle handling, by the hole D799 added.
+The depth walk's, by `check-ceilings.sh`, which has a `nesting.kest` and holds
+it to being told what the machine has: make a cycle answer with a number and it
+says `K0602` instead, which is the check catching a host being handed a frame
+budget that is wrong.
+
+*And one thing that was not.* When there is no answer, both forms say which
+function the run closes at, and `check-commands.sh` holds each form to the
+other. That says they agree; it does not say either is right. A name taken from
+the wrong function reads the same in both.
+
+A host reads that name to know what to shorten (D605), so it is held now to
+being the function the cycle is in — not the one the walk started from, and not
+whichever happens to be first. Taking it from the first chunk instead is caught,
+and every other number a program reports stays correct while it is wrong, which
+is what made it worth holding.
+
+*What that cost to get right.* The first attempt read the name with a pattern
+that walks the line. The whole object is one line and every function repeats
+those two names beside its own, so the pattern took the last pair on the line
+rather than the one asked for — and the check passed against a compiler that was
+answering `plain` where `down` was right. The object is cut out before either
+name is read now. A check that reads the wrong thing agrees with everything.
