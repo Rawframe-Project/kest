@@ -31575,3 +31575,31 @@ D832.
 reader somewhere is a claim about where. Read the suggestions the machine gives
 for the doors they name, and hold each to naming one that answers the question
 the refusal was about.
+
+## Every door a refusal names is one a host can open
+
+Every `kest_` name in every string in `src/`, against what the public header
+declares. Eleven doors are named in what the compiler says and every one is
+public. Three more appear in `src/` and are not, and all three are in
+comments, which are for whoever is reading the code; a name in a message is for
+whoever is reading a report, and those two readers have different doors.
+
+The reading found nothing wrong and left a rule nobody was keeping on purpose.
+`check-tables.sh` now reads the names out of the strings rather than out of the
+file, and refuses one the public header does not declare. The documents have
+been held to this since D659 — "every library call shown is one there is" — and
+what the machine says never was, which is the half a host meets without going
+looking.
+
+What it does not hold, said plainly: D832's mistake was naming a real door that
+answers a different question, and no reading of names catches that. What caught
+it was following the advice and finding it circular. This rule catches the
+cheaper half, a door that is not there at all, and the expensive half stays a
+thing somebody has to walk. Recorded as D833.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the cheaper half is held for `src`. The two hosts say things too —
+`examples/embed.c` and `examples/least.c` are what a host writer copies, and a
+name in one of their messages is read the same way. Hold them to the same rule,
+and to naming only doors they themselves call.

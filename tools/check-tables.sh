@@ -2106,6 +2106,30 @@ for named in FROM_A_MACHINE:
               "they are that machine's" % named)
         failed = 1
 
+# Every door this compiler names in something it says, held to being one a host
+# can call. A refusal that sends a reader to a function is a claim about where
+# the answer is, and a name out of `src` is a name a host looks for in
+# `include/kest.h` and does not find — the documents have been held to this
+# since D659 and what the machine says never was. Read out of the strings
+# rather than out of the file, because a name in a comment is for whoever is
+# reading the code and a name in a message is for whoever is reading a report.
+# See D833.
+doors_public = some("the doors the public header declares", set(re.findall(
+    r'\b(kest_[a-z_0-9]+)\s*\(',
+    re.sub(r'//[^\n]*', '', open(os.path.join("include", "kest.h")).read()))))
+sent_to = {}
+for sent_where in sorted(glob.glob(os.path.join("src", "*.c"))):
+    sent_read = re.sub(r'//[^\n]*', '', open(sent_where).read())
+    for sent_said in re.findall(r'"((?:[^"\\]|\\.)*)"', sent_read):
+        for sent_name in re.findall(r'`(kest_[a-z_0-9]+)`', sent_said):
+            sent_to.setdefault(sent_name, sent_where)
+for sent_name, sent_where in sorted(some("the doors this compiler names in "
+                                         "what it says", sent_to).items()):
+    if sent_name not in doors_public:
+        print("%s: says `%s`, which the public header does not declare, so a "
+              "reader sent there finds nothing" % (sent_where, sent_name))
+        failed = 1
+
 # The doors a host asks about room through, which come in pairs: each one that
 # answers has one beside it that bounds, and the bounding one is the answering
 # one with a ceiling on frames written in. A seventh added to one side and not
@@ -2166,7 +2190,8 @@ if not failed:
           "written once, %u of them long enough to be read for their shape as "
           "well, with %u group(s) of one shape and a reason beside each, and "
           "%u door(s) a host asks about room through, each that answers with "
-          "one beside it that bounds"
+          "one beside it that bounds, and %u door(s) named in what this "
+          "compiler says, every one of them one a host can call"
           % (len(ops), len(toks), len(held), len(checked), len(writable),
              len(reasons), len(listed),
              len(tools), pythons, shells, len(reading), len(only_a_hole),
@@ -2175,7 +2200,7 @@ if not failed:
              len(HELD), halves // 2,
              len(in_widths), len(ANSWERS), len(SPAN_BY_HAND),
              len(WORD_BY_HAND), bodies, shapes, len(SAME_SHAPE),
-             len(doors) * 2))
+             len(doors) * 2, len(sent_to)))
 
 sys.exit(failed)
 PY

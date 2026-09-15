@@ -184,6 +184,24 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A refusal that sends a reader to a door there is no way in through.
+        # What a message names is a claim about where the answer is, and a
+        # name out of `src` is a name a host looks for in the public header
+        # and does not find — the documents have been held to this since D659
+        # and what the machine says never was. See D833.
+        "what": "a message naming a door a host cannot call",
+        "file": "src/vm.c",
+        "from": r"""                       "there is nothing at %d to ask the width of", entry);
+        kest_diags_suggest(runtime->diags,
+                           "`kest_entry` gives -1 for a name the program does """,
+        "to": r"""                       "there is nothing at %d to ask the width of", entry);
+        kest_diags_suggest(runtime->diags,
+                           "`kest_module_entry` gives -1 for a name the program does """,
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "which the public header does not declare",
+    },
+    {
         # A host sent to the wrong number. `kest_frame_slots` answers how wide
         # a frame has to be, which is the wider of what a function takes and
         # what it gives — and a host judged against one of the two and sent to

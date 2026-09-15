@@ -24599,3 +24599,27 @@ report said plainly.
 
 *And what `kest_frame_slots` is still for.* `kest_call`'s frame, which has to
 hold both. The header says so now, beside what it is not for.
+
+## D833: every door a refusal names is one a host can open
+
+*The reading.* Every `kest_` name in every string in `src/`, against what
+`include/kest.h` declares. Eleven doors are named in what the compiler says, and
+every one of them is public. Three more appear in `src/` and are not:
+`kest_module_entry`, `kest_module_prove`, `kest_type_has_text`. All three are in
+comments, which are for whoever is reading the code; a name in a message is for
+whoever is reading a report, and those two readers have different doors.
+
+So the reading found nothing wrong, and left a rule nobody was keeping on
+purpose.
+
+*Held now.* `tools/check-tables.sh` reads the names out of the strings — not out
+of the file, for the reason above — and refuses one the public header does not
+declare. The documents have been held to this since D659: *"every library call
+shown is one there is."* What the machine says never was, and it is the half a
+host meets without going looking.
+
+*What this does not hold, said plainly.* D832's mistake was naming a real door
+that answers a different question. No reading of names catches that; what caught
+it was following the advice and finding it circular. This rule catches the
+cheaper half — a door that is not there at all — and the expensive half stays a
+thing somebody has to walk.
