@@ -1396,6 +1396,36 @@ static const KestSymbol *choose(KestBuild *build, const char *name,
 // needs gets that much, and one that cannot say gets what a host that says
 // nothing gets. Never less than that, because what is measured is the least
 // and this host prints from inside the call it makes.
+// What is left of what this command may have once reading and compiling have
+// taken theirs, which is the heap the program runs on. One byte where the build
+// took all of it, because nought here is what no ceiling is and this is not no
+// ceiling.
+static size_t what_is_left(KestBuild *build, size_t room) {
+    if (room == 0) {
+        return 0;
+    }
+    size_t spent = kest_build_cost(build);
+    return room > spent ? room - spent : 1;
+}
+
+// And what to give a machine when the program cannot say what it needs. Nought
+// slots and nought frames is the machine working those out for itself, which is
+// what a host with no answer has always got; the heap is the number this
+// command was given. Answering nothing at all here is what used to happen, and
+// what it meant was that a ceiling asked for stopped applying the moment the
+// question under it could not be answered — a program too big for the sizing
+// walk to finish inside its own ceiling ran with no ceiling at all, and took
+// thirty times what it had been allowed. See D846.
+static const KestLimits *only_the_heap(KestLimits *least, size_t left) {
+    if (left == 0) {
+        return NULL;
+    }
+    least->stack_slots = 0;
+    least->call_depth = 0;
+    least->heap_bytes = left;
+    return least;
+}
+
 static const KestLimits *room_for(KestBuild *build, const char *const *entries,
                                   KestLimits *least, size_t room) {
     KestReason why = {KEST_REACH_UNASKED, NULL};
@@ -1433,25 +1463,20 @@ static const KestLimits *room_for(KestBuild *build, const char *const *entries,
         case KEST_REACH_VALUE:
         case KEST_REACH_NO_ROOM:
         case KEST_REACH_UNASKED:
-            return NULL;
+            return only_the_heap(least, what_is_left(build, room));
         }
     }
     // Nothing named, or nothing found: the whole program then, which is what a
     // host that has not said which function it calls is given.
     if (!asked && !kest_needs(build, least, &why)) {
-        return NULL;
+        return only_the_heap(least, what_is_left(build, room));
     }
     // And what is left of what this command was allowed, which is the heap the
     // program runs on. One number covers the whole of what this command asks
     // the machine for, so what compiling has already taken comes off it: a
     // ceiling that meant one thing while compiling and another while running
-    // would be two ceilings with one name. A build that took all of it leaves
-    // one byte, because nought here is what no ceiling is and this is not no
-    // ceiling. See D843.
-    if (room > 0) {
-        size_t spent = kest_build_cost(build);
-        least->heap_bytes = room > spent ? room - spent : 1;
-    }
+    // would be two ceilings with one name. See D843.
+    least->heap_bytes = what_is_left(build, room);
     return least;
 }
 

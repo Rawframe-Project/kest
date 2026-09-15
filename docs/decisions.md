@@ -25151,3 +25151,44 @@ past it. Neither ladder is the other one.
 
 *Held* by three holes: the listing written anyway, running out counted and not
 said, and a jump filled in after the chunk ran out.
+
+## D846: a ceiling that reached the machine
+
+The ladder of D845 asks `check` and `emit`, which is reading and compiling. It
+asks `run` now as well — two thousand and eleven rungs over a hundred and twelve
+program-and-command pairs — because running is where the machine's own ways of
+running out are: a heap that cannot grow, a frame that cannot be made, a piece
+of text with nowhere to go.
+
+*And it found nothing, which was the finding.* A rung of `run` that comes back
+nought is a program that ran, wrote what it writes and answered what it answers.
+That is a rung that did what it was asked, and it says nothing at all about
+whether the ceiling it was given was ever applied. Every example in this tree
+fits inside a ceiling the ladder leaves it, so every rung that ran was a rung
+that would have run either way.
+
+*So a program that cannot have done the job.* Three hundred functions and two
+million elements of array — sixteen megabytes against a ceiling of one — walked
+down the same band. A rung of that which comes back nought is a rung whose
+ceiling went nowhere.
+
+One did. A machine is sized by a question asked about the program, and that
+question is answered in the build's own arena. A program big enough that the
+question itself runs out of room got no answer, and what this command line
+handed the machine then was nothing at all — and nothing at all is no ceiling.
+The program ran to the end in nineteen and a half megabytes, against the six
+hundred and seven kilobytes it had been allowed, and came back nought. A ceiling
+asked for stopped applying at exactly the point where it was most needed: the
+programs too big to size are the programs worth walling.
+
+*The fix is that nothing was the wrong answer.* Nought slots and nought frames
+already mean the machine works those out for itself, which is the whole of what
+NULL meant here; the heap is the one of the three this command *was* told. So
+what goes back is `{0, 0, what is left}` — the two the program could not say
+left to the machine, and the one that was asked for kept. The same answer serves
+every reason there is no least: a run of calls that comes back round, a call
+through a value, and a question that ran out of room.
+
+*Held* by two holes: the ceiling dropped where the question under it ran out,
+and a build that says it cost nothing — because every ladder here starts at what
+a program costs, and one that answers nought is a ladder with no first rung.

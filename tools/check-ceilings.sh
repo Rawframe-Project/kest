@@ -370,6 +370,13 @@ failed=0
 # anybody can ask it — and it is a question nothing asked at all until there was
 # a way to say how much room a command may have.
 #
+# Reading, compiling, and running: the third is where the machine's own ways of
+# running out are — a heap that cannot grow, a frame that cannot be made, a
+# piece of text with nowhere to go — and it is the one where a rung that came
+# back nought is a program that ran, wrote what it writes, and answered what it
+# answers. Every example here answers nought, so nought is what a rung that did
+# the whole job comes back as.
+#
 # What it holds of a rung is the whole of it: one that came back nought said
 # what the same run with no ceiling said, and one that refused said which
 # refusal it was. Both halves were broken the day this was written. A `check`
@@ -380,7 +387,7 @@ failed=0
 walked_down=0
 walked_over=0
 for reading in examples/*.kest lib/std/*.kest; do
-    for asking in check emit; do
+    for asking in check emit run; do
         # Only what answers with no ceiling at all. A program this command
         # refuses for its own reasons is one every rung refuses for the same
         # reason, and holding those would be holding the refusal rather than
@@ -436,6 +443,54 @@ if [ "$walked_down" -eq 0 ]; then
     echo "ceilings: no program was walked down a ceiling of its own, so" \
          "nothing here holds one"
     failed=1
+fi
+
+# And a program that cannot have done the job, walked down the same band. The
+# sweep above reads a rung that ran the whole program and answered what it
+# answers as a rung that did what it was asked — which it is, and which says
+# nothing about whether the ceiling it was given was ever applied. This one
+# wants sixteen megabytes of array against a ceiling of one, so a rung of it
+# that comes back nought is a rung whose ceiling went nowhere.
+#
+# One did. A machine is built from a question about what the program needs, and
+# that question is answered in the build's own arena — so a program big enough
+# that the question runs out of room got no answer, and what this command line
+# handed the machine then was nothing at all. Nothing at all is no ceiling: the
+# program ran to the end and took thirty times what it had been allowed. The
+# three hundred functions are what makes the question dear enough to run out.
+# See D846.
+{
+    at=1
+    while [ $at -le 300 ]; do
+        printf 'fn f%d(n: i64) -> i64 no.alloc {\n    return n + %d\n}\n\n' \
+            "$at" "$at"
+        at=$((at + 1))
+    done
+    printf 'fn main() -> i32 {\n    let xs: [i64] = array()\n'
+    printf '    let n: i64 = 0\n    while n < 2000000 {\n'
+    printf '        push(xs, f1(n))\n        n += 1\n    }\n'
+    printf '    return len(xs) - 2000000\n}\n'
+} > "$work/hungry.kest"
+hungry_costs=$(./kest emit --json "$work/hungry.kest" 2>/dev/null </dev/null |
+    sed -n 's/.*"cost":\([0-9]*\).*/\1/p')
+if [ -z "$hungry_costs" ] || [ "$hungry_costs" -le 0 ]; then
+    echo "ceilings: the program written here to want more heap than it can be" \
+         "given says nothing about what compiling it costs"
+    failed=1
+else
+    step=$hungry_costs
+    while [ "$step" -ge 1 ]; do
+        rung=$((hungry_costs + step))
+        said=$(./kest run --room $rung "$work/hungry.kest" 2>&1 </dev/null)
+        why=$?
+        if [ "$why" -eq 0 ]; then
+            echo "ceilings: a program wanting sixteen megabytes of heap ran" \
+                 "under \`--room $rung\`, so the ceiling it was given went" \
+                 "nowhere"
+            failed=1
+        fi
+        step=$((step / 2))
+    done
 fi
 
 reached=0

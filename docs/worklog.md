@@ -32078,3 +32078,42 @@ What it does not ask is `run`, where the machine's own out-of-room paths are —
 a heap that cannot grow, a frame that cannot be made, a piece of text with
 nowhere to go. Walk the same ladder with `run`, and hold that every rung either
 writes what the program writes or names the refusal it met.
+
+## A ceiling that reached the machine
+
+The ladder asks `run` now as well as `check` and `emit`: 2011 rungs over 112
+program-and-command pairs. Running is where the machine's own ways of running
+out are — a heap that cannot grow, a frame that cannot be made, a piece of text
+with nowhere to go.
+
+It found nothing, and that was the finding. A rung of `run` that comes back
+nought is a program that ran and answered, which is a rung that did what it was
+asked and says nothing about whether the ceiling it was given was ever applied.
+Every example here fits inside the ceiling the ladder leaves it.
+
+So: a program that cannot have done the job. Three hundred functions and two
+million elements of array, sixteen megabytes against a ceiling of one, walked
+down the same band. A rung of that which comes back nought is a rung whose
+ceiling went nowhere — and one did. A machine is sized by a question asked about
+the program, answered in the build's own arena; a program big enough that the
+question runs out of room got no answer, and what this command line handed the
+machine then was nothing at all. Nothing at all is no ceiling. It ran to the end
+in 19.5 megabytes against the 607 kilobytes it was allowed, and came back
+nought. The ceiling stopped applying exactly where it was most needed: the
+programs too big to size are the programs worth walling.
+
+Nothing was the wrong answer. Nought slots and nought frames already mean the
+machine works those out for itself, which is all NULL ever meant here, and the
+heap is the one of the three this command was told. So `{0, 0, what is left}`
+goes back instead — and the same answer serves every reason there is no least.
+
+Recorded as D846.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the ladder asks `check`, `emit` and `run`. The two it does not ask are
+`call` and `tick` — and `tick` is the one a game is actually written against:
+`onEvent` a frame, a heap that grows across frames unless it is thrown away, and
+a `--reset` that says whether it is. Walk `tick` down the same ceiling, with and
+without `--reset`, and hold that every rung either drives the events it was
+given or names the refusal it met.

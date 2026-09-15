@@ -605,10 +605,10 @@ fn main() -> i32 {
         # See D843.
         "what": "a ceiling that leaves the program none of itself",
         "file": "src/main.c",
-        "from": r"""        size_t spent = kest_build_cost(build);
-        least->heap_bytes = room > spent ? room - spent : 1;""",
-        "to": r"""        size_t spent = kest_build_cost(build);
-        least->heap_bytes = spent > room ? room : 1;""",
+        "from": r"""    size_t spent = kest_build_cost(build);
+    return room > spent ? room - spent : 1;""",
+        "to": r"""    size_t spent = kest_build_cost(build);
+    return spent > room ? room : 1;""",
         "make": ["kest", "debug"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -3086,6 +3086,38 @@ for file in "$@"; do""",
         "tool": "tools/check-ceilings.sh",
         "arguments": [],
         "caught": "and one of the two is not there",
+    },
+    {
+        # A machine given nothing where the question under it could not be
+        # answered. What a machine is sized by is a question asked in the
+        # build's own arena, and a program too big for that question to finish
+        # inside its own ceiling used to get no answer at all — and nothing at
+        # all is no ceiling, so the ceiling asked for stopped applying at the
+        # one place it was needed. See D846.
+        "what": "a ceiling dropped where the question under it ran out",
+        "file": "src/main.c",
+        "from": r"""static const KestLimits *only_the_heap(KestLimits *least, size_t left) {
+    if (left == 0) {""",
+        "to": r"""static const KestLimits *only_the_heap(KestLimits *least, size_t left) {
+    if (true) {""",
+        "make": [],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "so the ceiling it was given went nowhere",
+    },
+    {
+        # What a build cost, answered as nothing. Every ladder here starts at
+        # what a program costs, so a build that answers nought about itself is
+        # a ladder with no first rung — and a sweep that walks no rungs is a
+        # check that passes without asking anything. See D846.
+        "what": "a build that says it cost nothing",
+        "file": "src/build.c",
+        "from": r"""    return build == NULL ? 0 : kest_arena_used(build->arena);""",
+        "to": r"""    return build == NULL ? 0 : 0;""",
+        "make": [],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "says nothing about what compiling it costs",
     },
     {
         # What a build cost, written under a name nothing reads. A ladder
