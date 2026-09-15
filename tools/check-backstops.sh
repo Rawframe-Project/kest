@@ -656,9 +656,9 @@ fn main() -> i32 {
         "what": "the checked build asked for by name rather than by value",
         "file": "src/vm.c",
         "from": r"""#if KEST_CHECKED
-        // The compiler's count of the operand stack, held by the machine that""",
+        if (rt->ran != NULL) {""",
         "to": r"""#ifdef KEST_CHECKED
-        // The compiler's count of the operand stack, held by the machine that""",
+        if (rt->ran != NULL) {""",
         "make": ["kest"],
         "in_build": True,
         "caught": "went_slots",
@@ -5333,6 +5333,22 @@ fn length(v: Vec2) -> f32 no.alloc {""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "what it costs, and not every",
+    },
+    {
+        # A machine counting an instruction it never ran. What it counts is
+        # read against what `emit` printed for the same loop, so a count that
+        # is not what the machine did is a number that would answer every
+        # question about where a run spends its time with somebody else's
+        # answer. Only the build that checks itself counts, so only that one is
+        # made. See D870.
+        "what": "a machine that counts an instruction it never ran",
+        "file": "src/vm.c",
+        "from": """            rt->ran[*instruction]++;""",
+        "to": """            rt->ran[*instruction]++;
+            rt->ran[KEST_OP_POP]++;""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-costs.sh",
+        "caught": "where it is written and the machine ran",
     },
     {
         # The machine holding where it is in a local and never writing it back

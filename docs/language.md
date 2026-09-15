@@ -4094,6 +4094,16 @@ language is written in.
 127 ns per entity per step, best of 7 over 10000, spread 7%
 ```
 
+What those nanoseconds are spent on is a thing the machine can be asked rather
+than guessed at: the build that checks itself counts every instruction it runs,
+and `KEST_DEEP=1` makes it say so. Run at two step counts and take the
+difference, and a frame step an entity is **sixty-four instructions**, of which
+twenty-nine are `load`, eight are `const` and four are `store` — forty-six of
+the sixty-four, about seven in ten, move a value onto the stack or off it. The
+arithmetic is six: two `mul.f32`, two `add.f32` and two on whole numbers. That
+is what a stack machine is, and it is where the next thing to be gone after
+will be found.
+
 `tools/crossing.kest` is a call against a crossing out. Two loops that differ by
 one word: one calls a function of the program, the other calls one the host
 provides, and both are one argument and one answer, so what is left between them

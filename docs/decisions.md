@@ -26179,3 +26179,72 @@ there. What holds this change is two holes over the two write-backs a call does,
 both caught by `check-commands.sh` on `examples/math.kest`: without them a
 program comes back to another body's instructions, or stands on another body's
 slots.
+
+## D870: what a frame step is made of, counted rather than guessed at
+
+Four changes took a frame step an entity from 162 nanoseconds to 127, and each
+of them was found by reading what the compiler emitted. That runs out: what
+`emit` prints is what a program is *written* as, and a loop is written once and
+run ten thousand times. The question left is what the machine *ran*.
+
+The machine already counts two things — how far up its stack a run reached and
+how many frames stood at once — behind `KEST_CHECKED` and said only when
+`KEST_DEEP` is set. Those are high-water marks: how far it got. This is the
+other question, what it did on the way, and it is one array:
+
+```c
+uint64_t ran[KEST_OP_RETURN + 1];
+```
+
+incremented in the block at the top of the dispatch that the checked build
+already has, and printed as `ran <name> <count>` beside the rest. The release
+build is untouched, so every number in this document is still the release
+build's.
+
+*Two lengths, and the difference is the thing.* `tools/frame.kest` with a
+thousand entities at one step and at two: everything that is not a step — the
+world being built, the module being read — is in both, so what is left is two
+steps of a thousand entities. **Sixty-four instructions an entity a step:**
+
+| | | |
+|---|---|---|
+| `load` | 29 | 45% |
+| `const` | 8 | 13% |
+| `store` | 4 | 6% |
+| `call`, `return` | 2 each | |
+| `add.f32`, `mul.f32` | 2 each | |
+| `jump.false.gt.f`, `jump.false.gt.i`, `jump.true.lt.f` | 2 each | |
+| `add.i.narrow`, `sub.i.narrow`, `jump`, `next.less.i` | 1 each | |
+| `index`, `elem.addr`, `store.at`, `load.n`, `store.n` | 1 each | |
+
+**Forty-six of the sixty-four — about seven in ten — move a value onto the stack
+or off it. The arithmetic is six.** A `load` is 45% of everything the machine
+does for one entity of a frame.
+
+That is not a bug, it is what a stack machine is: an operand is pushed, an
+instruction takes it off, and the answer is pushed back. What it says is where
+the next thing to go after is, and it is not another fused arithmetic — there
+are six arithmetic instructions an entity to fuse. It is the twenty-nine loads.
+
+`check-costs.sh` now holds the two halves to each other: a turn of a `for` is
+five instructions where `emit` printed it and the machine ran five of them, read
+off two loops differing only in how many turns they take. A hole makes the
+machine count an instruction it never ran.
+
+What this does not answer is what each of those sixty-four *costs*, which is a
+different instrument and a harder one — a count is exact and a cost is a
+measurement. A `load` and a `call` are one each here.
+
+*Two things it cost to add, both of them caught by rules that were already
+there.* A hundred and fifty-two counts is twelve hundred bytes, and a machine is
+about two thousand: written into the machine's struct, the counts pushed it over
+the rule `examples/embed.c` holds it to — that a machine is smaller than a walk
+of the program it runs — and the sanitised host refused before anybody had asked
+to read a count. So the room is taken only where `KEST_DEEP` is set, and a
+machine nobody asked stays the size it was. And `check-dead.sh` reads what a
+header declares out of the objects a build made, and `kest_op_name` is called
+only inside `#if KEST_CHECKED`, so the release build asks for it nowhere. It now
+reads what *both* builds ask for, while what a build makes and what only one
+object can see stay the release build's: the checked build is compiled without
+optimisation, so every `static` function is still a symbol in it, which is what
+the compiler was told to do rather than a name written as a public one.

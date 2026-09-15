@@ -395,6 +395,19 @@ struct KestRuntime {
     // what it needs and one that does not by what a frame of it costs, and
     // the room left over means a different thing in each. See D815.
     bool had_least;
+    // What the machine ran, one count for each instruction there is. The other
+    // readings here are high-water marks — how far a run reached — and this is
+    // the other question: what it did on the way. A static count of what a
+    // program is written with says nothing about a loop, and a loop is what
+    // this language is for. Counted only by the build that checks itself, so
+    // the release build's numbers are still the release build's.
+    //
+    // Taken only when somebody asks for it: a hundred and fifty-two counts is
+    // twelve hundred bytes, and a machine is two thousand. `examples/embed.c`
+    // holds a machine to being smaller than a walk of the program it runs, and
+    // it refused one carrying these before anybody had asked to read them.
+    // Nought here is a machine that is not counting. See D870.
+    uint64_t *ran;
 #endif
     // How much had been said when this started, and how much of it has been
     // written out since. What failed to compile is not this machine's to
@@ -1934,6 +1947,9 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     while (true) {
         const uint8_t *instruction = ip;
 #if KEST_CHECKED
+        if (rt->ran != NULL) {
+            rt->ran[*instruction]++;
+        }
         // The compiler's count of the operand stack, held by the machine that
         // moves it. A body is given its named slots and this many above them,
         // and the machine is the only thing that knows how far it actually
@@ -3589,6 +3605,14 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     uint32_t wants_slots = STACK_SLOTS;
 #if KEST_CHECKED
     rt->had_least = rt->host_measured && reached + rt->host_slots > 0;
+    // Room for the counts, taken only where somebody has asked to read them:
+    // no room, no counting, and a machine nobody asked stays the size it was.
+    // Nothing is said about a machine that could not have it — what fails is
+    // the reading, and the reading was somebody's question rather than the
+    // program's. See D870.
+    if (getenv("KEST_DEEP") != NULL) {
+        rt->ran = KEST_ARENA_ARRAY(own, uint64_t, KEST_OP_RETURN + 1);
+    }
 #endif
     if (rt->host_measured && reached + rt->host_slots > 0) {
         wants_slots = reached + rt->host_slots;
@@ -3770,6 +3794,17 @@ bool kest_runtime_free(KestRuntime *runtime) {
                 runtime->had_least ? "least" : "bound", runtime->stack_slots,
                 runtime->call_depth, runtime->went_slots,
                 runtime->went_frames);
+        // And what it ran on the way, the ones it ran at all and in the order
+        // the machine holds them, because an order chosen here would be a
+        // second thing to keep in step with the list. Whoever reads this can
+        // sort it. See D870.
+        for (uint32_t op = 0; runtime->ran != NULL && op <= KEST_OP_RETURN;
+             op++) {
+            if (runtime->ran[op] > 0) {
+                fprintf(stderr, "ran %s %llu\n", kest_op_name((uint8_t)op),
+                        (unsigned long long)runtime->ran[op]);
+            }
+        }
     }
 #endif
 

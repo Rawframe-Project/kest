@@ -529,6 +529,11 @@ int32_t kest_module_entry(const KestModule *module, const char *name);
 // a chunk with nothing in it. See D751.
 uint32_t kest_chunk_origin(const KestChunk *chunk, uint32_t offset);
 
+// What an instruction is called. The list of them is `value.c`'s and this is
+// the one way anything else asks it, which is what keeps a machine that says
+// what it ran from holding a second copy of the names. See D870.
+const char *kest_op_name(uint8_t op);
+
 // Takes the last instruction back, which the compiler does when a comparison
 // turns out to be what a jump reads. `to` is where that instruction started.
 // It takes back the byte, where the next instruction is expected and where the

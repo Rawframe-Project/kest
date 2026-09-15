@@ -868,6 +868,49 @@ if written_walk is None or not written_walk[1]:
           % (None if written_walk is None else written_walk[0]))
     failed = 1
 
+# And what the machine actually ran, which is the other half of the same
+# question: `emit` says what a turn is written as, and this says what the
+# machine did with it. Two loops differing only in how many turns they take, so
+# everything that is not the loop is in both and the difference divided by the
+# turns is one turn. Only the build that checks itself counts what it ran — the
+# release build's numbers stay the release build's — which is why this is asked
+# of that one. See D870.
+def what_it_ran(body):
+    where = os.path.join(work, 'running.kest')
+    with open(where, 'w') as running:
+        running.write(body)
+    ran = subprocess.run(['./kest-debug', 'run', where], capture_output=True,
+                         text=True, stdin=subprocess.DEVNULL,
+                         env=dict(os.environ, KEST_LIB='lib', KEST_DEEP='1'))
+    if ran.returncode != 0:
+        return None
+    added = 0
+    for line in ran.stderr.splitlines():
+        if line.startswith('ran '):
+            added += int(line.split()[2])
+    return added or None
+
+
+TURNS = 100
+
+
+def loop_of(turns):
+    return one_program("    let total = 0\n    for i in 0..%u {\n"
+                       "        total += i\n    }\n    return 0" % turns)
+
+
+ran_short = what_it_ran(loop_of(TURNS)) if have_checked else None
+ran_longer = what_it_ran(loop_of(TURNS * 2)) if have_checked else None
+turn_ran = None
+if ran_short is not None and ran_longer is not None:
+    turn_ran = (ran_longer - ran_short) // TURNS
+if have_checked and (turn_ran is None or quiet_walk is None or
+                     turn_ran != quiet_walk[0]):
+    print("costs: a turn of a `for` is %s instruction(s) where it is written "
+          "and the machine ran %s of them"
+          % (None if quiet_walk is None else quiet_walk[0], turn_ran))
+    failed = 1
+
 shutil.rmtree(work, ignore_errors=True)
 if (one_copy_costs is None or many_copies_costs is None or
         many_copies_costs <= one_copy_costs * 2 or
@@ -1227,7 +1270,7 @@ if not failed:
           "%u where it does, and a cast cuts the width %u time(s) widening "
           "and %u narrowing, and a division %u time(s) with a sign and %u "
           "without, and an `i32` `+` cuts what it added in %u instruction(s), "
-          "all of it "
+          "and the machine ran %s of the turn's instruction(s), all of it "
           "measured on the machine "
           "this ran on"
           % (asked, len(left_to_the_host), driven, proved, kept, len(alone),
@@ -1242,6 +1285,6 @@ if not failed:
              copied_total, copied_bodies, copied_bytes, copied_code,
              copied_quiet, asked_for, reached, run_sized, run_asked,
              run_went, quiet_walk[0], written_walk[0], widening, narrowing,
-             with_sign, without_sign, together))
+             with_sign, without_sign, together, turn_ran))
 sys.exit(failed)
 PY

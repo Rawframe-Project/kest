@@ -20,6 +20,13 @@ import subprocess
 import sys
 
 OBJECTS = "build/release"
+# And the build that checks itself, which is the same sources with one more
+# thing turned on. A name the machine calls only inside `#if KEST_CHECKED` is
+# in no release object and is still called: reading one build and calling it
+# the tree was what said `kest_op_name` was declared and not there. Both are
+# read for what they make and what they ask for; which host calls what is still
+# read out of the release ones, because there is one of each there. See D870.
+CHECKED = "build/debug"
 # The two hosts. A tool that quietly skips one is a tool that says the public
 # header is used when nothing has looked.
 HOSTS = ["main.o", "embed.o"]
@@ -79,15 +86,25 @@ calling = {path: re.sub(r"//[^\n]*", "", open(path).read())
 made = {}
 inside = {}
 wanted = {}
-for name in sorted(os.listdir(OBJECTS)):
-    if not name.endswith(".o"):
+built = [os.path.join(OBJECTS, name) for name in sorted(os.listdir(OBJECTS))]
+checked = ([os.path.join(CHECKED, name) for name in sorted(os.listdir(CHECKED))]
+           if os.path.isdir(CHECKED) else [])
+built += checked
+for path in built:
+    if not path.endswith(".o"):
         continue
-    path = os.path.join(OBJECTS, name)
     mine, theirs, asked = symbols(path)
-    for symbol in mine:
-        made[symbol] = path
-    for symbol in theirs:
-        inside[symbol] = path
+    # What a build makes is asked of the release one alone. The one that checks
+    # itself is built without optimisation, so every `static` function is still
+    # a symbol in it — which is what the compiler was told to do rather than a
+    # name written as a public one. What is read out of both is what each asks
+    # for, because that is the half a checked-only call is missing from. See
+    # D870.
+    if path.startswith(OBJECTS):
+        for symbol in mine:
+            made[symbol] = path
+        for symbol in theirs:
+            inside[symbol] = path
     wanted[path] = asked
 # A pattern that reads a header finds what it finds, and a header it read
 # nothing out of is a header nothing here is holding to anything. Every list
@@ -100,6 +117,7 @@ def some(what, found):
     return found
 
 
+some("the objects of the build that checks itself", checked)
 some("the names the headers declare", declared)
 some("the files that could call a body written in a header", calling)
 

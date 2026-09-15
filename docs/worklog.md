@@ -32852,13 +32852,12 @@ Recorded as D865.
 
 **Runs:** `make check`, everything passing, with `TMPDIR=/var/tmp`.
 
-**Next:** four changes have come off the hop and the machine is down to a
-hundred and twenty-seven nanoseconds an entity from a hundred and sixty-two.
-Stop and read what is left: take `tools/frame.kest` and count what the machine
-actually runs for one entity — every instruction, not the static list — and say
-which three cost the most of it. `KEST_DEEP` already counts what a run reaches;
-see whether it can be made to say what a run *ran*, and if it cannot, say what
-it would take.
+**Next:** twenty-nine of the sixty-four instructions an entity are `load`, and
+most of them are a field read pushed for one instruction to take straight off
+again. Read what `one.x + one.dx * dt` compiles to in `tools/frame.kest` and
+what `mul.f32` does with what is under it, and weigh an instruction that takes
+one operand from a slot rather than from the stack — how many of the
+twenty-nine it would reach, and how many instructions the table would grow by.
 
 ## A hop of a `for` is one instruction
 
@@ -33047,3 +33046,52 @@ actually runs for one entity — every instruction, not the static list — and 
 which three cost the most of it. `KEST_DEEP` already counts what a run reaches;
 see whether it can be made to say what a run *ran*, and if it cannot, say what
 it would take.
+
+## What a frame step is made of, counted rather than guessed at
+
+Four changes took a frame step from 162 nanoseconds an entity to 127, each found
+by reading what the compiler emitted. That runs out: `emit` says what a program
+is written as, and a loop is written once and run ten thousand times. So the
+machine was taught to count what it ran — one array of counts beside the two
+high-water marks it already keeps, inside the build that checks itself and said
+only when `KEST_DEEP` is set, printed as `ran <name> <count>`. The release build
+is untouched, so the numbers on both pages are still its own.
+
+`tools/frame.kest` at a thousand entities, one step against two, so everything
+that is not a step is in both. Sixty-four instructions an entity a step. Twenty
+-nine of them `load`, eight `const`, four `store` — forty-six of the sixty-four,
+about seven in ten, moving a value onto the stack or off it. The arithmetic is
+six: two `mul.f32`, two `add.f32`, two on whole numbers. `load` alone is 45% of
+everything the machine does for one entity.
+
+That is what a stack machine is rather than a bug, and it says where to go next:
+not another fused arithmetic — there are six arithmetic instructions an entity
+to fuse — but the twenty-nine loads.
+
+`check-costs.sh` now holds the two halves to each other: a turn of a `for` is
+five instructions where `emit` printed it and five where the machine ran it,
+read off two loops differing only in how many turns they take. One hole makes
+the machine count an instruction it never ran.
+
+Two things it cost, both caught by rules already there. A hundred and fifty-two
+counts is twelve hundred bytes and a machine is about two thousand, so writing
+them into the machine's struct pushed it past the rule `examples/embed.c` holds
+it to — a machine is smaller than a walk of the program it runs — and the
+sanitised host refused before anybody had asked to read a count. The room is
+taken only where `KEST_DEEP` is set now. And `check-dead.sh` reads what a header
+declares out of what a build made, and `kest_op_name` is called only inside
+`#if KEST_CHECKED`, so the release build asks for it nowhere: it reads what both
+builds ask for now, while what a build makes stays the release build's, because
+the checked one is built without optimisation and every `static` function is
+still a symbol in it.
+
+Recorded as D870.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** twenty-nine of the sixty-four instructions an entity are `load`, and
+most of them are a field read pushed for one instruction to take straight off
+again. Read what `one.x + one.dx * dt` compiles to in `tools/frame.kest` and
+what `mul.f32` does with what is under it, and weigh an instruction that takes
+one operand from a slot rather than from the stack — how many of the
+twenty-nine it would reach, and how many instructions the table would grow by.

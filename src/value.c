@@ -946,6 +946,10 @@ _Static_assert(sizeof(INSTRUCTIONS) / sizeof(INSTRUCTIONS[0]) ==
                    KEST_OP_RETURN + 1,
                "every instruction has a name and nothing else does");
 
+const char *kest_op_name(uint8_t op) {
+    return op <= KEST_OP_RETURN ? INSTRUCTIONS[op].name : "?";
+}
+
 static uint16_t read_u16(const KestChunk *chunk, uint32_t offset) {
     return (uint16_t)(chunk->code[offset] | (chunk->code[offset + 1] << 8));
 }
