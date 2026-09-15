@@ -184,6 +184,40 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A bound answered where there is a least. A host that asks the second
+        # question of a program that can answer the first has to get the
+        # first, because that is what makes it safe to ask always — a bound
+        # over a least is a machine bigger than the program can reach and a
+        # host that never asked the other question would not know. See D817.
+        "what": "a bound answered over a least",
+        "file": "src/build.c",
+        "from": r"""    if (kest_module_needs(&build->module, build->arena, about,
+                          &most->stack_slots, &most->call_depth, NULL, NULL,
+                          NULL, why)) {""",
+        "to": r"""    if (false) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "and is bounded at",
+    },
+    {
+        # One name bounded by everything the file defines rather than by what
+        # that name reaches. A host that calls one function is not calling the
+        # whole program, and the bodies under something it never calls cannot
+        # stand in a chain of frames beneath the one it does. Counting them is
+        # room a host is told to find for a call it will not make. See D817.
+        "what": "one name bounded by the whole file",
+        "file": "src/value.c",
+        "from": r"""        if (state[i] == 0) {
+            continue;
+        }""",
+        "to": r"""        if (false) {
+            continue;
+        }""",
+        "make": ["kest", "least"],
+        "host": "examples/least",
+        "caught": "is bounded at",
+    },
+    {
         # A program with no least bounded as though every body went round.
         # The frames that go round cost the widest body that does; the ones
         # that do not stand in a chain once each, because twice would be a run

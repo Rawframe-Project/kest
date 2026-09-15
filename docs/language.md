@@ -3309,6 +3309,20 @@ host will never call — a library it imported for one function, most often. A
 host that calls several asks about each and takes the largest, because which of
 them it will call is the host's to know.
 
+A name that reaches a run of calls that comes back round has no least, and then
+the same two readings that size a whole program are asked of that one name:
+
+```c
+KestLimits most = {0, 0, 0};
+KestReason why = {KEST_REACH_UNASKED, NULL};
+kest_bound_of(build, "step", 16, &most, &why);
+```
+
+`kest_bound_of` answers the least where there is one and a bound where there is
+not, over what that name reaches rather than over the whole file, and `why` says
+which of the two it gave. A bound is enough and may be more than enough; a least
+is what the program wants.
+
 It does not have to ask at all: `emit` says what a machine to call each function
 takes, beside that function — `5 slots and 1 frame to call it`, and `least` in
 the object — because the walk that answers for the whole program works both out

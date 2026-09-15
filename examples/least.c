@@ -232,6 +232,33 @@ int main(int argc, char **argv) {
                "64 — %u a frame and %u whatever the frames\n",
                path, had_few.stack_slots, had_many.stack_slots, a_turn,
                had_few.stack_slots - a_turn * 16);
+        // And the same question about one name rather than the whole program.
+        // A host that calls one function is not calling the whole of what the
+        // file defines, and what that one reaches is what it can want. This
+        // program has two functions `main` never calls, so its own bound is
+        // under the one the whole file gets — held as less and not as no
+        // more, because a bound that counted everything would be equal and
+        // read as right. See D817.
+        KestLimits about_main = {0, 0, 0};
+        KestReason bounded = {KEST_REACH_UNASKED, NULL};
+        if (!kest_bound_of(build, "main", 16, &about_main, &bounded) ||
+            about_main.call_depth != 16 ||
+            about_main.stack_slots == 0 ||
+            about_main.stack_slots >= had_few.stack_slots ||
+            bounded.reach == KEST_REACH_KNOWN) {
+            fprintf(stderr,
+                    "`main` of `%s` is bounded at %u slots and %u frames "
+                    "where the whole program is %u\n",
+                    path, about_main.stack_slots, about_main.call_depth,
+                    had_few.stack_slots);
+            kest_runtime_free(shallow);
+            kest_runtime_free(deeper);
+            kest_host_free(host);
+            kest_build_free(build);
+            return 1;
+        }
+        printf("and `main` on its own is %u of them\n",
+               about_main.stack_slots);
         kest_runtime_free(shallow);
         kest_runtime_free(deeper);
     }

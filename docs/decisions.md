@@ -23998,3 +23998,35 @@ and unless what is left over when the frames are taken away is the same in each
 and is more than nothing. That last part is what says the bodies off the loop
 are paid for once: a bound that charged every frame the widest body would leave
 nothing over, and does, and is caught.
+
+## D817: the same two readings, about one name
+
+*What was left over.* D815 and D816 bound a whole program with no least.
+`kest_needs_of` answers about one name and what it reaches, and when that name
+reaches a run of calls that comes back round it answers false and leaves a host
+with nothing at all — while the machine beside it sizes itself from a bound the
+host could not ask for.
+
+*`kest_bound_of`.* A name, a ceiling on frames, and the least where there is
+one or the bound where there is not. `why` says which: `KEST_REACH_KNOWN` for a
+least, and the reason the walk gave for a bound. A host that asks this of a
+program that can answer the other gets the other, which is what makes it safe to
+ask always.
+
+*Over what that name reaches.* The walk that finds the loops now starts from one
+function rather than from every one, and counts only what it got to. A body
+nothing the host calls can reach cannot stand in a chain of frames under it. For
+`examples/least.kest` at sixteen frames the whole file is 57 slots and `main`
+alone is 54 — `motto` and `pair` are two bodies `main` never calls, and they
+were being paid for.
+
+*Held twice, by the two hosts, for the two answers it gives.*
+`examples/embed.c` asks about `step`, which has a least, and refuses unless the
+bound is that least to the slot and the frames it was handed are not looked at.
+`examples/least.c` asks about `main` of a program with no least and refuses
+unless it is **under** what the whole file gets — under and not at most, because
+a bound that counted every body would be equal and read as right.
+
+*What the door is for.* A host that calls one function and allows sixteen frames
+had two ways to size a machine before this: ask about the whole program, or pick
+a number. Now it has the same question it asks about everything else.

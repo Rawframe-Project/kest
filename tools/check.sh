@@ -771,9 +771,10 @@ fi
 # calls that comes back round, so it has no worst chain to add up: a frame is at
 # most the widest body and the host says how many frames there are, so the slots
 # follow from the frames. See D815.
-if ! grep -q "has no least, and is" "$scratch"/least-said; then
+if ! grep -q "has no least, and is" "$scratch"/least-said ||
+   ! grep -q "on its own is" "$scratch"/least-said; then
     complain "least" "the smallest host ran its own program and said nothing \
-about what a frame of it costs"
+about what a frame of it costs or what one name of it wants"
     sed 's/^/    /' "$scratch"/least-said | head -4
     least_wrong=1
 fi
@@ -888,7 +889,8 @@ if [ $least_wrong -eq 0 ]; then
 nothing, reads back an answer that is not a number and one the language has no \
 text of its own for, refuses one that asks for a name it has not got, and two \
 that ask for its own in another shape, calls with a word what takes one, says \
-what a frame of a program with no least costs, and \
+what a frame of a program with no least costs and what one name of it wants, \
+and \
 says what compiling had to say about a program that compiled"
 fi
 

@@ -363,29 +363,17 @@ const char *kest_build_name(KestBuild *build, const char *name) {
 static const KestWalk *walk_it(KestBuild *build) {
     if (!build->walked.taken) {
         build->walked.taken = true;
-        // The widest one body ever is, which needs no walk of the calls: it
-        // is read straight off the chunks, and it is what a program with no
-        // least is sized by. See D815.
-        for (uint32_t i = 0; i < build->module.count; i++) {
-            const KestChunk *one = build->module.functions[i];
-            uint32_t own = one == NULL
-                               ? 0
-                               : (uint32_t)one->slot_count + one->stack_needed;
-            if (own > build->walked.widest) {
-                build->walked.widest = own;
-            }
-        }
-        // And the two a program with no least is bounded by, worked out only
-        // when there is no least to have: a walk of the calls for which
-        // functions go round, and a sum of the widths of the ones that do
-        // not. See D816.
         build->walked.measured = kest_module_needs(
             &build->module, build->arena, -1, &build->walked.slots,
             &build->walked.frames, &build->walked.host_slots,
             &build->walked.host_frames, NULL, &build->walked.why);
+        // And what a program with no least is bounded by, worked out only
+        // when there is no least to have: the widest body, which one walk
+        // answers along with which functions go round and how wide the ones
+        // that do not are altogether. See D815 and D816.
         if (!build->walked.measured) {
-            kest_module_cycles(&build->module, build->arena,
-                               &build->walked.in_a_turn,
+            kest_module_cycles(&build->module, build->arena, -1,
+                               &build->walked.widest, &build->walked.in_a_turn,
                                &build->walked.off_the_turns);
         }
     }
@@ -451,6 +439,63 @@ bool kest_needs_of(KestBuild *build, const char *name, KestLimits *least,
         return false;
     }
     least->heap_bytes = 0;
+    return true;
+}
+
+bool kest_bound_of(KestBuild *build, const char *name, uint32_t frames,
+                   KestLimits *most, KestReason *why) {
+    KestReason ignored;
+    if (why == NULL) {
+        why = &ignored;
+    }
+    why->reach = KEST_REACH_UNASKED;
+    why->where = NULL;
+    if (build == NULL || name == NULL || most == NULL || !build->compiled) {
+        return false;
+    }
+    // The same lookup the two above do, which is the one `kest_entry` does:
+    // a host cannot be bounded for a function it cannot call.
+    int32_t about = kest_module_entry(&build->module, name);
+    if (about < 0) {
+        why->reach = KEST_REACH_NO_NAME;
+        return false;
+    }
+    most->heap_bytes = 0;
+    // A least is better than a bound, so a name that has one is answered with
+    // it and the frames are not looked at.
+    if (kest_module_needs(&build->module, build->arena, about,
+                          &most->stack_slots, &most->call_depth, NULL, NULL,
+                          NULL, why)) {
+        why->reach = KEST_REACH_KNOWN;
+        return true;
+    }
+    // And a name that has none is bounded by the two readings of a chain of
+    // frames, over what this one reaches rather than over the whole program.
+    // The reason the walk gave is kept: a host is told a bound and why there
+    // was nothing better. See D817.
+    if (why->reach == KEST_REACH_NO_ROOM) {
+        return false;
+    }
+    uint32_t widest = 0;
+    uint32_t in_a_turn = 0;
+    uint32_t off_the_turns = 0;
+    kest_module_cycles(&build->module, build->arena, about, &widest,
+                       &in_a_turn, &off_the_turns);
+    if (widest == 0) {
+        why->reach = KEST_REACH_NO_ROOM;
+        return false;
+    }
+    uint32_t allowed = frames == 0 ? KEST_CALL_DEPTH : frames;
+    uint64_t a_frame_each = (uint64_t)widest * allowed;
+    uint64_t a_turn_each =
+        (uint64_t)off_the_turns + (uint64_t)in_a_turn * allowed;
+    if (in_a_turn > 0 && a_turn_each < a_frame_each) {
+        a_frame_each = a_turn_each;
+    }
+    most->stack_slots = a_frame_each < (uint64_t)KEST_STACK_SLOTS
+                            ? (uint32_t)a_frame_each
+                            : KEST_STACK_SLOTS;
+    most->call_depth = allowed;
     return true;
 }
 

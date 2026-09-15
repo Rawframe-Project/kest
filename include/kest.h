@@ -275,6 +275,28 @@ bool kest_needs(KestBuild *build, KestLimits *least, KestReason *why);
 bool kest_needs_of(KestBuild *build, const char *name, KestLimits *least,
                    KestReason *why);
 
+// The most `name` and what it reaches can want, for a host that has a name and
+// a ceiling on frames rather than a program with a least. `frames` is how many
+// a host will allow; nought means as many as usual.
+//
+// A name whose stack can be worked out answers what `kest_needs_of` answers
+// and the frames are not looked at: there is a least, and a bound above it is
+// a number nobody needs. A name that reaches a run of calls that comes back
+// round has none, and what this gives instead is the smaller of two readings
+// of a chain of frames — the widest body it reaches, once a frame, and the
+// bodies that go round once a frame with the bodies that do not paid for once.
+// Both are true of any chain, so the smaller is.
+//
+// It is a bound and not a least: a machine made from it is big enough and may
+// be bigger than anything the program reaches. A host that wants to know which
+// it was asks `kest_needs_of` first — this answers true either way, and `why`
+// says which, `KEST_REACH_KNOWN` for a least and `KEST_REACH_ITSELF` or
+// `KEST_REACH_VALUE` for a bound.
+//
+// False for the same reasons `kest_needs_of` is false, and for the same name.
+bool kest_bound_of(KestBuild *build, const char *name, uint32_t frames,
+                   KestLimits *most, KestReason *why);
+
 // Where the machine already is when it calls into the host: the frames and
 // slots a machine is holding where `name` reaches a host function: the widest
 // the function itself ever gets, plus the worst of the same over everything it

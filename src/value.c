@@ -1164,10 +1164,13 @@ static void cycle_walk(const KestModule *module, uint32_t which, uint8_t *state,
 }
 
 void kest_module_cycles(const KestModule *module, KestArena *arena,
+                        int32_t only, uint32_t *widest,
                         uint32_t *widest_in_a_turn, uint32_t *all_the_rest) {
+    *widest = 0;
     *widest_in_a_turn = 0;
     *all_the_rest = 0;
-    if (module == NULL || module->count == 0) {
+    if (module == NULL || module->count == 0 ||
+        (only >= 0 && (uint32_t)only >= module->count)) {
         return;
     }
     KestMark before = kest_arena_mark(arena);
@@ -1183,15 +1186,28 @@ void kest_module_cycles(const KestModule *module, KestArena *arena,
         state[i] = 0;
         on_cycle[i] = 0;
     }
-    for (uint32_t i = 0; i < module->count; i++) {
-        if (state[i] == 0) {
-            cycle_walk(module, i, state, on_cycle, chain, where, 0);
+    if (only >= 0) {
+        cycle_walk(module, (uint32_t)only, state, on_cycle, chain, where, 0);
+    } else {
+        for (uint32_t i = 0; i < module->count; i++) {
+            if (state[i] == 0) {
+                cycle_walk(module, i, state, on_cycle, chain, where, 0);
+            }
         }
     }
+    // Only what the walk got to. A function nothing here reaches cannot stand
+    // in a chain of frames under the one asked about, so it is not part of
+    // what that one can want. See D817.
     for (uint32_t i = 0; i < module->count; i++) {
         const KestChunk *one = module->functions[i];
         uint32_t own =
             one == NULL ? 0 : (uint32_t)one->slot_count + one->stack_needed;
+        if (state[i] == 0) {
+            continue;
+        }
+        if (own > *widest) {
+            *widest = own;
+        }
         if (on_cycle[i]) {
             if (own > *widest_in_a_turn) {
                 *widest_in_a_turn = own;

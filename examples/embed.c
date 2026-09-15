@@ -2187,6 +2187,24 @@ int main(int argc, char **argv) {
                    stepping.stack_slots, stepping.call_depth,
                    stepping.call_depth == 1 ? "" : "s");
         }
+        // And the same name asked of the door that answers a bound where
+        // there is no least. This one has a least, so the bound is the least
+        // and the frames are not looked at: a host that asks the second
+        // question of a program that can answer the first gets the first,
+        // which is what makes it safe to ask always. See D817.
+        KestLimits bounded = {0, 0, 0};
+        KestReason which_one = {KEST_REACH_UNASKED, NULL};
+        if (!kest_bound_of(build, "step", 4, &bounded, &which_one) ||
+            which_one.reach != KEST_REACH_KNOWN ||
+            bounded.stack_slots != stepping.stack_slots ||
+            bounded.call_depth != stepping.call_depth) {
+            fprintf(stderr,
+                    "`step` needs %u slots and %u frames and is bounded at "
+                    "%u and %u\n",
+                    stepping.stack_slots, stepping.call_depth,
+                    bounded.stack_slots, bounded.call_depth);
+            return 1;
+        }
         // This host calls back into the program from inside one of its own
         // functions, and what that needs is not a number to double and hope
         // over: it is where the machine already is when it reaches a host

@@ -30984,3 +30984,36 @@ function is not calling the whole program. `kest_needs_of` answers for one name
 and has no bound to fall back on when that name reaches a loop — it says there
 is none and leaves the host with nothing. Work the same two readings out for one
 function and what it reaches, and answer those.
+
+## The same two readings, about one name
+
+D815 and D816 bound a whole program with no least. `kest_needs_of` answers about
+one name and what it reaches, and when that name reaches a run of calls that
+comes back round it answers false and leaves a host with nothing — while the
+machine beside it sizes itself from a bound the host could not ask for.
+
+`kest_bound_of` takes a name and a ceiling on frames and answers the least where
+there is one or the bound where there is not, with `why` saying which. A host
+that asks this of a program that can answer the other gets the other, which is
+what makes it safe to ask always.
+
+The walk that finds the loops now starts from one function rather than from
+every one, and counts only what it got to: a body nothing the host calls can
+reach cannot stand in a chain of frames under it. For `examples/least.kest` at
+sixteen frames the whole file is 57 slots and `main` alone is 54 — `motto` and
+`pair` are two bodies `main` never calls, and they were being paid for.
+
+Held twice, by the two hosts, for the two answers it gives. `examples/embed.c`
+asks about `step`, which has a least, and refuses unless the bound is that least
+to the slot and the frames it was handed are not looked at. `examples/least.c`
+asks about `main` of a program with no least and refuses unless it is under what
+the whole file gets — under and not at most, because a bound that counted every
+body would be equal and read as right. Recorded as D817.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `kest_needs_from` is the third of the three doors and the only one
+with no bound behind it: a host whose bound function calls back in is told where
+the machine already is, and a program with no least tells it nothing. Work the
+same two readings out for the runs of calls that end at a host function, and
+answer those.

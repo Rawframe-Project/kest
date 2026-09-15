@@ -458,7 +458,10 @@ typedef struct {
 // would be a cycle through it, so the whole of them together is a bound on
 // what the chain's acyclic frames cost. Nought for both when there is no room
 // to work them out. See D816.
+// `only` is one function and what it reaches, or -1 for every function the
+// program defines. `widest` is the widest body among them, whichever they are.
 void kest_module_cycles(const KestModule *module, KestArena *arena,
+                        int32_t only, uint32_t *widest,
                         uint32_t *widest_in_a_turn, uint32_t *all_the_rest);
 
 bool kest_module_needs(const KestModule *module, KestArena *arena, int32_t only,
