@@ -3,6 +3,7 @@ build/
 examples/embed
 examples/embed-debug
 examples/least
+tools/inward
 kest
 kest-debug
 libkest.a

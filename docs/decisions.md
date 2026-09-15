@@ -25675,3 +25675,44 @@ The scale in the line is read under either name it has: one instrument counts
 entities and the other counts calls, and what the rule is about is that the
 number in the line is the constant the work was done with rather than one
 somebody typed.
+
+## D859: the crossing the other way
+
+D007 says the two crossings are separate specifications — the frame a machine
+writes for a host is not the frame a host writes for it — and only one of them
+had a number. The other cannot be measured by a program, because the thing doing
+the calling is the host. So `tools/inward` is C.
+
+```
+16 ns for a call in from a host and 27 ns for one the program makes in a loop
+```
+
+*The smaller of the two is the crossing*, which is the thing worth reading here.
+A host that writes the frame itself and calls straight in is cheaper than the
+machine reaching an instruction that starts a call: no opcode is decoded, no
+arguments are copied off a stack, and the frame is already where it has to be.
+The way out — `Math.floor` from inside a loop, four to seven nanoseconds over a
+call — is the dearer direction.
+
+*The two are not a difference and are not printed as one.* One is a crossing and
+a body; the other is a hop of a loop, and a loop is what a call in a program is
+written inside. Subtracting them says a crossing costs less than nothing, which
+is true of the arithmetic and of nothing else. Both are printed and neither is
+taken away from the other, which is a rule an instrument can keep and a reader
+cannot be told.
+
+*Where the program it measures lives.* In whatever room the caller works in, at
+the root of the tree when there is none, and never under `tools` or `examples`:
+a `.kest` written there is one a sweep running beside this would find and try to
+read. `tmpnam` is the only name the standard hands out and it is the one thing
+in it nobody should use; `TMPDIR` is what the gate hands every check, for the
+same reason it hands it one.
+
+*And it is built and read by the gate* rather than left to `make time`: a host
+that stops compiling is a host nobody finds out about until somebody wants a
+number. Built where everything else is, at the top, because this gate is held to
+building what it reaches for before it reaches for it — and it said so when this
+was built where it is read. What is held is that it builds, that it says it did its work, and that
+its line names the rounds and the calls — the same three things every other
+instrument is held to. The number is not held, because a duration is not a pass
+or a fail.

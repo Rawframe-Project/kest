@@ -65,9 +65,15 @@ check: tools/check.sh
 
 # One number: how long a frame step takes per entity. Not part of `check`,
 # because a duration is not a pass or a fail, and written down nowhere.
-time: kest
+time: kest tools/inward
 	@./kest run tools/frame.kest
 	@./kest run tools/crossing.kest
+	@./tools/inward
+
+# The other direction, which a program cannot measure about itself: a host is
+# what calls in, so the thing that measures a call in is a host.
+tools/inward: tools/inward.c libkest.a include/kest.h
+	$(CC) $(WARN) -O2 -Iinclude -o $@ tools/inward.c libkest.a -lm
 
 # Where another project looks.
 install: kest libkest.a
@@ -87,7 +93,7 @@ uninstall:
 
 clean:
 	rm -rf build kest kest-debug libkest.a examples/embed \
-	    examples/embed-debug examples/least
+	    examples/embed-debug examples/least tools/inward
 
 .PHONY: debug least embed embed-debug check time install uninstall clean
 

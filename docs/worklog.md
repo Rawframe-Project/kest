@@ -32592,3 +32592,46 @@ the other direction, and D007 says the two are separate specifications — the
 frame the machine writes for a host is not the frame a host writes for it.
 Measure a call in from a host against a call the program makes itself, and say
 that number beside this one.
+
+## The crossing the other way
+
+D007 says the two crossings are separate specifications and only one of them had
+a number. The other cannot be measured by a program, because the thing doing the
+calling is the host — so `tools/inward` is C.
+
+```
+16 ns for a call in from a host and 27 ns for one the program makes in a loop
+```
+
+The smaller of the two is the crossing, which is what is worth reading: a host
+that writes the frame itself and calls straight in is cheaper than the machine
+reaching an instruction that starts a call — no opcode decoded, no arguments
+copied off a stack, and the frame already where it has to be. The way out is the
+dearer direction.
+
+The two are not a difference and are not printed as one. One is a crossing and a
+body; the other is a hop of a loop, and a loop is what a call in a program is
+written inside. Subtracting them says a crossing costs less than nothing, which
+is true of the arithmetic and of nothing else.
+
+The program it measures is written in whatever room the caller works in and at
+the root of the tree when there is none — never under `tools` or `examples`,
+where a sweep running beside it would find a `.kest` and try to read it.
+
+The gate builds it and reads it rather than leaving it to `make time`: a host
+that stops compiling is one nobody finds out about until somebody wants a
+number. It is built at the top with everything else, because the gate is held to
+building what it reaches for before it reaches for it, and it said so when this
+was built where it is read. It is held to building, to saying it did its work, and to naming the
+rounds and the calls in its line — the three things every instrument is held to.
+The number is not held, because a duration is not a pass or a fail.
+
+Recorded as D859.
+
+**Runs:** `make check`, everything passing. `make time` runs all three.
+
+**Next:** three numbers now and nowhere that says what they are for. The
+reference has a section on running and none on what running costs, so somebody
+choosing this language reads about promises they cannot price. Write what the
+three measure, what each one leaves out, and how to read one against another —
+with the numbers this machine gave named as this machine's.

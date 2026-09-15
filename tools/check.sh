@@ -53,7 +53,8 @@ if ! make >/dev/null 2>"$scratch"/check-why; then
     sed 's/^/    /' "$scratch"/check-why | head -10
     exit 1
 fi
-if ! make debug embed embed-debug least >/dev/null 2>"$scratch"/check-why; then
+if ! make debug embed embed-debug least tools/inward >/dev/null \
+        2>"$scratch"/check-why; then
     complain "build" "the sanitised build does not build"
     sed 's/^/    /' "$scratch"/check-why | head -10
     exit 1
@@ -62,7 +63,7 @@ fi
 # cannot start, is every check below this reporting its own confusing failure —
 # a probe that passes when a command fails would pass for the wrong reason, and
 # `make` saying nothing is not the same as there being something to run.
-for built in ./kest ./kest-debug ./examples/embed ./examples/embed-debug ./examples/least; do
+for built in ./kest ./kest-debug ./examples/embed ./examples/embed-debug ./examples/least ./tools/inward; do
     if [ ! -x "$built" ]; then
         complain "build" "$built was built and is not there"
         exit 1
@@ -927,7 +928,30 @@ else
         esac
     done
 fi
-say "instruments" "$(printf '%s\n' "$instruments" | grep -c .) resolved, run, saying what it measured over, and told what to say about a machine that was somebody else's"
+# And the other direction, which is a host rather than an instrument: a program
+# cannot measure a call into itself, so what measures one is C. It is built with
+# everything else at the top, where everything this gate reaches for is built;
+# what is read here is whether it did its work and what shape its line is. The
+# number is for `make time`, like the other two. See D859.
+inward_said=""
+if ! inward_said=$(./tools/inward 2>"$scratch"/check-why </dev/null); then
+    complain "instruments" "the host that measures a call in says it did not \
+do its work"
+    sed 's/^/    /' "$scratch"/check-why | head -6
+else
+    inward_rounds=$(sed -n 's/^#define ROUNDS \([0-9]*\)$/\1/p' tools/inward.c)
+    inward_over=$(sed -n 's/^#define CALLS \([0-9]*\)$/\1/p' tools/inward.c)
+    case $inward_said in
+    *"best of $inward_rounds over $inward_over"*", spread "*"%"*) ;;
+    *)
+        complain "instruments" "the host that measures a call in did not say \
+what it measured over"
+        printf '%s\n' "$inward_said" | sed 's/^/    /' | head -3
+        ;;
+    esac
+fi
+
+say "instruments" "$(printf '%s\n' "$instruments" | grep -c .) resolved, run, saying what it measured over, and told what to say about a machine that was somebody else's, and a host of this gate's own measuring the crossing the other way"
 
 # The smallest host runs on the program it was written for, and refuses a
 # program that asks for a name it has not got rather than binding whatever it

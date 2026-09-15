@@ -988,7 +988,9 @@ examples     every example run or resolved under both builds, answering the
              same under each, and a `main` that gives nothing
 instruments  every Kest under `tools` resolved, run for its answer, saying
              over what work its number was taken, and told by a clock of the
-             gate's own what to say about a machine that was somebody else's
+             gate's own what to say about a machine that was somebody else's —
+             and the host under `tools` that measures the crossing the other
+             way, built, run, and read for the same shape
 least        the smallest host running its own program and one that asks for
              nothing, reading back an answer that is not a number and one the
              language has no text of its own for, refusing one that asks for a
