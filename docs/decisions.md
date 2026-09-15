@@ -25633,3 +25633,45 @@ because that is the one place a reader looks to find out there is a door at all.
 and offered `the one there is is `no.alloc`` under a caret the compiler had
 stopped writing that way a turn ago. The second promise has prose of its own
 now, which is what the check that found it was for.
+
+## D858: what a crossing costs
+
+`no.host` is proved, written, asked about and held, and nothing had ever
+measured what it is worth. `tools/frame.kest` says what a frame costs and says
+in as many words that crossing the boundary is a question of its own wanting its
+own number. This is that number.
+
+*Two loops that differ by one word.* `inside` takes an `f64` and gives it back;
+`Math.floor` takes an `f64` and gives back the same value, because every value
+handed to it is already whole. Both are one call with one argument and one
+answer, so what is left between them is the crossing: the frame the machine
+writes for a host, the arguments weighed on the way out and the answer weighed
+on the way back.
+
+```
+27 ns for a call and 33 ns for a crossing, which is 6 ns more, best of 7 over 1000000 calls, spread 3%
+```
+
+Six or seven nanoseconds, read four times in one sitting. That is what `no.host`
+is worth on a frame that makes one crossing an entity, and it is a fifth of what
+this machine's frame step costs per entity — a number somebody writing a game
+can do arithmetic with, which is the whole of what an instrument is for.
+
+*Two runs of rounds rather than one run of pairs.* The clock is asked twice a
+round either way, which is what a round is, and each number is measured the same
+way as the other. Each is read against its own worst as well: a crossing round
+is slower than a call round by exactly the thing being measured, so one spread
+over both said every run was somebody else's.
+
+*And what the gate had to learn.* The host it holds a clock with provided two
+names and refused an instrument that asked for a third, which is a rule with a
+number in it and there is no number right for two instruments. It provides
+`Math.floor` now, cheaply; and the other half of that rule — a name the host
+binds that nothing asks for — moved outside the C, where every instrument is in
+front of somebody at once. It asks what a program asks for rather than what it
+writes, because `Io.write` is the library's and no instrument names it.
+
+The scale in the line is read under either name it has: one instrument counts
+entities and the other counts calls, and what the rule is about is that the
+number in the line is the constant the work was done with rather than one
+somebody typed.

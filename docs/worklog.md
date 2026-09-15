@@ -32548,3 +32548,47 @@ ever measured what it is worth. `tools/frame.kest` says what a frame costs in
 nanoseconds; there is no number anywhere for what a crossing costs, so `no.host`
 is a promise whose value nobody can state. Measure a call out to the host
 against a call inside the program, and say the two beside each other.
+
+## What a crossing costs
+
+`no.host` is proved, written, asked about and held, and nothing had measured
+what it is worth. `tools/crossing.kest` is that number, beside the frame's.
+
+Two loops that differ by one word: `inside` takes an `f64` and gives it back,
+and `Math.floor` gives back the same value because every value handed to it is
+already whole. Both are one call with one argument and one answer, so what is
+left between them is the crossing — the frame the machine writes for a host, the
+arguments weighed on the way out and the answer weighed on the way back.
+
+```
+27 ns for a call and 33 ns for a crossing, which is 6 ns more, best of 7 over 1000000 calls, spread 3%
+```
+
+Six or seven nanoseconds, read four times in one sitting: a fifth of what this
+machine's frame step costs per entity. That is what `no.host` is worth on a
+frame that crosses once an entity, and it is a number somebody writing a game
+can do arithmetic with.
+
+Two runs of rounds rather than one run of pairs, so the clock is asked twice a
+round either way and each number is measured like the other; and each read
+against its own worst, because a crossing round is slower than a call round by
+exactly the thing being measured and one spread over both said every run was
+somebody else's.
+
+The gate had to learn two things. The host it holds a clock with provided two
+names and refused an instrument that asked for a third — a rule with a number in
+it, and no number is right for two instruments. It provides `Math.floor` now,
+and the other half of that rule moved outside the C, where every instrument is
+in front of somebody at once; it asks what a program asks for rather than what
+it writes, because `Io.write` is the library's and no instrument names it. And
+the scale in the line is read under either name it has, entities or calls.
+
+Recorded as D858.
+
+**Runs:** `make check`, everything passing. `make time` runs both instruments.
+
+**Next:** the crossing is measured one way. A host calling *into* a program is
+the other direction, and D007 says the two are separate specifications — the
+frame the machine writes for a host is not the frame a host writes for it.
+Measure a call in from a host against a call the program makes itself, and say
+that number beside this one.

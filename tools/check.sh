@@ -749,12 +749,17 @@ for file in $instruments; do
     # right constants — `best of 10000 over 7` is a line somebody swapped, and
     # it reads like a measurement. See D579.
     rounds=$(sed -n 's/^const ROUNDS: i32 = \([0-9]*\)$/\1/p' "$file")
-    over=$(sed -n 's/^const ENTITIES: i32 = \([0-9]*\)$/\1/p' "$file")
+    # What it was over, under whichever name that scale has: one instrument
+    # counts entities and the other counts calls, and what the rule is about is
+    # that the number in the line is the constant the work was done with rather
+    # than a number somebody typed.
+    over=$(sed -n 's/^const \(ENTITIES\|CALLS\): i32 = \([0-9]*\)$/\2/p' \
+        "$file")
     # An instrument that declares neither is one whose line cannot name them,
-    # and the same complaint says so: what is looked for is `best of  over ,`
+    # and the same complaint says so: what is looked for is `best of  over `
     # and nothing says that.
     case $measured in
-    *"best of $rounds over $over, spread "*"%"*) ;;
+    *"best of $rounds over $over"*", spread "*"%"*) ;;
     *)
         complain "instruments" "$file did not say what it measured over"
         printf '%s\n' "$measured" | sed 's/^/    /' | head -3
@@ -769,6 +774,7 @@ done
 # what makes an instrument say it. What is held is both ways round: a clock
 # that ticks evenly and one that loses a round. See D580.
 cat > "$scratch"/steady.c <<'HOST'
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -799,6 +805,15 @@ static void wrote(KestValue *frame, KestRuntime *runtime, void *context) {
     fputs(frame[0].text, stdout);
 }
 
+/* The one crossing an instrument makes that is not the clock and not the
+   writer: something cheap, so that what is being weighed against a call in the
+   program is the crossing rather than the work on the other side of it. */
+static void floored(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)runtime;
+    (void)context;
+    frame[0].real = floor(frame[0].real);
+}
+
 int main(int argc, char **argv) {
     rounds = argc - 2;
     took = calloc((size_t)(rounds > 0 ? rounds : 1), sizeof(long long));
@@ -821,7 +836,8 @@ int main(int argc, char **argv) {
        host written for a program that has changed since, which goes on
        building and goes on running. So it is read here, where the two lists
        are both in front of somebody. */
-    static const char *const provides[] = {"Host.clock", "Io.write"};
+    static const char *const provides[] = {"Host.clock", "Io.write",
+                                           "Math.floor"};
     size_t has = sizeof(provides) / sizeof(provides[0]);
     uint32_t asks = 0;
     for (const char *name; (name = kest_build_extern(build, asks)) != NULL;
@@ -835,14 +851,14 @@ int main(int argc, char **argv) {
             return 2;
         }
     }
-    if (asks != has) {
-        fprintf(stderr, "this host binds %zu names and the instrument asks "
-                        "for %u\n", has, asks);
-        return 2;
-    }
+    /* And the other way round — a name this host binds that nothing asks for —
+       is asked outside, where every instrument is in front of somebody at
+       once. One of them asks for two of these and the other for three, so
+       there is no number here that is right for both. */
     KestHost *host = kest_host_new();
     if (host == NULL || !kest_host_bind(host, "Host.clock", clock_says, NULL) ||
-        !kest_host_bind(host, "Io.write", wrote, NULL)) {
+        !kest_host_bind(host, "Io.write", wrote, NULL) ||
+        !kest_host_bind(host, "Math.floor", floored, NULL)) {
         return 2;
     }
     KestRuntime *runtime = kest_start(build, host, NULL);
@@ -868,6 +884,26 @@ if ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude \
     complain "instruments" "the host that holds a clock does not build"
     sed 's/^/    /' "$scratch"/check-why | head -5
 else
+    # And the other half of the rule the host inside keeps. It refuses an
+    # instrument that asks for a name it has not got; a name it binds that no
+    # instrument asks for is the same mistake the other way round — a host
+    # written for a program that has changed since, which goes on building and
+    # goes on running. Asked of the whole list at once, because one instrument
+    # asks for two of them and the other for three, and asked of what a program
+    # asks rather than of what it writes: `Io.write` is the library's and no
+    # instrument names it.
+    asked_for=$(for file in $instruments; do
+        ./kest emit "$file" 2>/dev/null </dev/null | sed -n 's/^host //p'
+    done | sort -u)
+    for name in Host.clock Io.write Math.floor; do
+        case "$asked_for" in
+        *"$name"*) ;;
+        *)
+            complain "instruments" "the host that holds a clock binds \
+\`$name\` and no instrument asks for it"
+            ;;
+        esac
+    done
     for file in $instruments; do
         even=$("$scratch"/steady "$file" 100 100 100 100 100 100 100 \
                2>"$scratch"/check-why </dev/null)

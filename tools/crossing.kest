@@ -1,0 +1,133 @@
+module tools.crossing
+
+import std.io
+
+// Two numbers, and the difference between them is the one this is for: how long
+// a call inside the program takes, and how long a call out to the host takes.
+//
+// `no.host` is a promise a program can make about a function, proved by the
+// compiler and readable by a host before it drives one. What it is worth was
+// never measured: `tools/frame.kest` says what a frame costs and says in as
+// many words that crossing the boundary is a question of its own wanting its
+// own number. This is that number.
+//
+// The two loops are the same loop with one word changed. `inside` takes an
+// `f64` and gives it back; `Math.floor` takes an `f64` and gives back the same
+// value, because every value handed to it is already whole. So both are one
+// call with one argument and one answer, and what is left between them is the
+// crossing: the frame the machine writes for a host, the arguments weighed on
+// the way out and the answer weighed on the way back.
+//
+// It is not a benchmark suite and there is nowhere it is written down. `make
+// check` does not touch it, because a duration is not a pass or a fail; `make
+// time` runs it beside the frame.
+//
+// What it reads on a quiet machine is a few nanoseconds for a call and rather
+// more for a crossing. Read both in one sitting and against each other rather
+// than against a number somebody remembers, for the reason the frame gives:
+// the first run on a cold machine reads high, and two numbers taken minutes
+// apart can differ by a tenth for a reason that is not the language.
+
+extern fn Host.clock() -> i64 no.alloc
+extern fn Math.floor(value: f64) -> f64 no.alloc
+
+const CALLS: i32 = 1000000
+const ROUNDS: i32 = 7
+
+// A call that stays in the program: one argument, one answer, and nothing in
+// the body but giving the argument back. What is weighed is the call and not
+// the work, so the body is the least a body can be and still be one.
+fn inside(value: f64) -> f64 no.alloc no.host {
+    return value
+}
+
+// One round of each, written once: two loops that differ by which function is
+// called are two loops to keep in step, and a round that measured the two
+// differently is a difference that is not the crossing.
+fn ofInside(total: f64) -> f64 no.alloc no.host {
+    let sum = total
+    for i in 0..CALLS {
+        sum += inside(f64(i % 64))
+    }
+    return sum
+}
+
+fn ofCrossing(total: f64) -> f64 no.alloc {
+    let sum = total
+    for i in 0..CALLS {
+        sum += Math.floor(f64(i % 64))
+    }
+    return sum
+}
+
+fn main() -> i32 {
+    // A round of each before the clock, so what is measured is the steady
+    // state rather than the first touch of anything.
+    let warm = ofCrossing(ofInside(0.0))
+
+    // Two runs of rounds rather than one run of pairs. The clock is asked
+    // twice a round either way, which is what a round is, and a reader of the
+    // two numbers reads each of them measured the same way.
+    //
+    // The best of several rounds rather than the average, for the reason the
+    // frame gives: anything else sharing the machine only ever adds time, so
+    // the smallest is the closest this gets to the work itself.
+    let inHere: i64 = 0
+    let worstHere: i64 = 0
+    let sum = warm
+    for round in 0..ROUNDS {
+        let before = Host.clock()
+        sum = ofInside(sum)
+        let took = Host.clock() - before
+        if round == 0 || took < inHere {
+            inHere = took
+        }
+        if took > worstHere {
+            worstHere = took
+        }
+    }
+
+    let outThere: i64 = 0
+    let worstThere: i64 = 0
+    for round in 0..ROUNDS {
+        let before = Host.clock()
+        sum = ofCrossing(sum)
+        let took = Host.clock() - before
+        if round == 0 || took < outThere {
+            outThere = took
+        }
+        if took > worstThere {
+            worstThere = took
+        }
+    }
+
+    // The host's clock counts microseconds and what is wanted is nanoseconds
+    // for one call.
+    let here = inHere * 1000 / i64(CALLS)
+    let there = outThere * 1000 / i64(CALLS)
+    let crossing = there - here
+    // Each against its own worst, because the two are two measurements: a
+    // crossing round is slower than a call round by the thing being measured,
+    // and one spread over both would say every run was somebody else's.
+    let hereSpread = (worstHere - inHere) * 100 / inHere
+    let thereSpread = (worstThere - outThere) * 100 / outThere
+    let spread = if hereSpread > thereSpread -> hereSpread else -> thereSpread
+    let steady = if spread <= 25 -> ""
+        else -> " — the machine was somebody else's"
+    io.print("{here} ns for a call and {there} ns for a crossing, which is {crossing} ns more, best of {ROUNDS} over {CALLS} calls, spread {spread}%{steady}")
+
+    // And what the work adds up to, which is a number and not a duration: an
+    // instrument that stops doing its work still prints a duration, and a
+    // smaller one reads like a faster machine. Every call gives back what it
+    // was handed, so the sum is what the loop puts in — counted here rather
+    // than trusted. See D549.
+    let each: f64 = 0.0
+    for i in 0..CALLS {
+        each += f64(i % 64)
+    }
+    let rounds = f64(ROUNDS) * 2.0 + 2.0
+    if sum != each * rounds {
+        return 1
+    }
+    return 0
+}

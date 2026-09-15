@@ -67,6 +67,7 @@ check: tools/check.sh
 # because a duration is not a pass or a fail, and written down nowhere.
 time: kest
 	@./kest run tools/frame.kest
+	@./kest run tools/crossing.kest
 
 # Where another project looks.
 install: kest libkest.a
