@@ -4057,6 +4057,65 @@ had. The library itself takes the number rather than the words: a host says how
 much heap a machine may have in `KestLimits`, and a build is opened with a
 ceiling of its own.
 
+## What running costs
+
+Three numbers, measured rather than remembered, each over work that is kept in
+this tree and run by `make time`. They are not a benchmark suite and there is
+nowhere they are written down: they answer one question each — did the thing
+this language exists for get slower — and `make check` reads only whether they
+ran and what shape their lines are, because a duration is not a pass or a fail.
+
+`tools/frame.kest` is a frame step, per entity. An array of value structs walked
+in order and handed one at a time to helpers that take one and give one back,
+inside a promise that nothing reaches the heap — the shape a frame in this
+language is written in.
+
+```
+162 ns per entity per step, best of 7 over 10000, spread 1%
+```
+
+`tools/crossing.kest` is a call against a crossing out. Two loops that differ by
+one word: one calls a function of the program, the other calls one the host
+provides, and both are one argument and one answer, so what is left between them
+is the crossing.
+
+```
+27 ns for a call and 33 ns for a crossing, which is 6 ns more, best of 7 over 1000000 calls, spread 3%
+```
+
+`tools/inward` is the crossing the other way, and it is C because the thing
+doing the calling is the host. One `kest_call` against one hop of a loop inside
+one `kest_call`.
+
+```
+16 ns for a call in from a host and 27 ns for one the program makes in a loop, best of 7 over 1000000 calls, spread 4%
+```
+
+Those numbers are the machine they were taken on and nothing else — six cores,
+one of them busy with whatever else was running. What carries from one machine
+to another is the shape of them: that a crossing out costs a few nanoseconds
+over a call, that a crossing in costs less than a hop of a loop, and that both
+are small against a frame step. A crossing an entity on this machine is six
+nanoseconds against a hundred and sixty, which is under a twentieth of the step
+— so `no.host` is worth having where a frame crosses many times an entity and
+worth little where it crosses once.
+
+Each leaves things out on purpose, and they are each other's omissions. The
+frame leaves out starting up, compiling, crossing and allocating; the two
+crossing numbers leave out everything a frame actually does. Reading one against
+another is the point of there being three, and reading either against a number
+somebody remembers is not: the first run on a cold machine reads about a fifth
+high, because the processor has not decided how fast it is running yet, so two
+numbers taken minutes apart can differ by more than a tenth for a reason that is
+not the language. Run them twice, believe the second, and compare against a
+number read the same way in the same sitting.
+
+The spread at the end of each line is that question asked inside one run: how
+far the slowest round was from the fastest. Past a quarter the line says the
+machine was somebody else's, which is a thing to know rather than a thing to
+fail — a number read while something else was running is not one to compare
+against another.
+
 ## Where each rule is run
 
 Every example is a program that checks itself and answers with which of its own

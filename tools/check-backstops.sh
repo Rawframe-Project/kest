@@ -3340,6 +3340,22 @@ for file in "$@"; do""",
     },
 
     {
+        # A measurement taken over one amount of work and shown over another.
+        # What a reference can carry from the machine a number was read on is
+        # the shape of the line and not the number in it: how many rounds it
+        # was the best of and over how much work. Both are constants here, so a
+        # line shown over work no instrument does is a measurement of something
+        # that is not in this tree. See D860.
+        "what": "a measurement shown over work nothing does",
+        "file": "tools/frame.kest",
+        "from": r"""const ROUNDS: i32 = 7""",
+        "to": r"""const ROUNDS: i32 = 9""",
+        "make": [],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "the instruments measure",
+    },
+    {
         # The number a message has to say, taken from this list instead of
         # from the table it is meant to hold. The comment above it said the
         # define, the table and the words were kept in step; the table could

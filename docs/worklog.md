@@ -32635,3 +32635,35 @@ reference has a section on running and none on what running costs, so somebody
 choosing this language reads about promises they cannot price. Write what the
 three measure, what each one leaves out, and how to read one against another —
 with the numbers this machine gave named as this machine's.
+
+## What running costs, written down
+
+Three numbers and nowhere that said what they are for: the reference had a
+section on running and none on what running costs, so somebody choosing this
+language could read about a promise and had no way to price it. It has one now —
+what each of the three measures, what each leaves out, how to read one against
+another, and the numbers named as this machine's.
+
+A number in the last entry was wrong and is corrected there. D858 said six
+nanoseconds of crossing is a fifth of a frame step per entity. It is not: the
+step is 160 ns an entity and six of those is under a twentieth. A fifth is what
+the crossing *call* costs against the step — 33 against 160 — which is a
+different number about a different thing.
+
+What holds the new section is that every measurement shown in it is one an
+instrument here can take, read as a pair: the rounds it was the best of and the
+work it was over. Both are constants — a `const` in the two written in Kest and
+a `#define` in the host written in C — so both are readable where they are
+declared. A line shown over work no instrument does is a measurement of
+something that is not here, and one an instrument takes that the reference never
+shows is a number nobody reading it knows exists.
+
+Recorded as D860.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the reference prices a promise and the README does not mention any of
+it. A person deciding whether to try this language reads one page, and that page
+says what Kest is and nothing about what it costs to run — no frame number, no
+crossing, no `make time`. Put the shape of the three on the page somebody reads
+first, with the arithmetic that makes them mean something.

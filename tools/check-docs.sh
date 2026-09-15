@@ -1002,6 +1002,37 @@ for place in some("the places the compiler looks for the library", places):
               "page does not say so" % place)
         failed = 1
 
+# And every measurement shown is one an instrument here can take. A reference
+# that quotes a number is quoting a machine somebody else had, and what carries
+# is the shape of the line rather than the number in it: how many rounds it was
+# the best of and over how much work. Both are constants, so both are readable
+# where they are declared — and a line shown over work no instrument does is a
+# measurement of something that is not here. See D860.
+#
+# Read as pairs rather than as two lists, because a line that named one
+# instrument's rounds and another's scale would be in both lists and in neither
+# measurement.
+taken = set()
+for where in sorted(glob.glob('tools/*.kest')) + ['tools/inward.c']:
+    declares = open(where).read()
+    rounds = re.search(r'(?:^const ROUNDS: i32 = |^#define ROUNDS )(\d+)',
+                       declares, re.M)
+    over = re.search(
+        r'(?:^const (?:ENTITIES|CALLS): i32 = |^#define CALLS )(\d+)',
+        declares, re.M)
+    if rounds is not None and over is not None:
+        taken.add((rounds.group(1), over.group(1)))
+shown_as = set(re.findall(r'best of (\d+) over (\d+)',
+                          open('docs/language.md').read()))
+some("the measurements the instruments take", sorted(taken))
+if shown_as != taken:
+    print("docs/language.md: the instruments measure %s and the reference "
+          "shows %s"
+          % (", ".join("best of %s over %s" % one for one in sorted(taken)),
+             ", ".join("best of %s over %s" % one
+                       for one in sorted(shown_as)) or "none"))
+    failed = 1
+
 if not failed:
     print('every documented block parses: %u, is in the one form, and checks '
           'and compiles where it stands on its own: %u of %u, the other %u '
@@ -1016,9 +1047,11 @@ if not failed:
           'tree they name is there: %u, and every one of the %u operators a '
           'program is written with is written in one of them, and every one of '
           'the %u places the compiler looks for the library is named where '
-          'somebody installing it reads'
+          'somebody installing it reads, and every one of the %u '
+          'measurements this tree takes is shown over the work it was taken '
+          'over'
           % (checked, made_code, standing, quoting, said_it, whole, fenced,
              messages, shown, typed, called, pointed, operators,
-             len(places)))
+             len(places), len(taken)))
 sys.exit(failed)
 PY

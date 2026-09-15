@@ -25716,3 +25716,36 @@ was built where it is read. What is held is that it builds, that it says it did 
 its line names the rounds and the calls — the same three things every other
 instrument is held to. The number is not held, because a duration is not a pass
 or a fail.
+
+## D860: what running costs, written down
+
+Three numbers and nowhere that said what they are for. The reference had a
+section on running and none on what running costs, so somebody choosing this
+language could read about a promise and had no way to price it. It has one now:
+what each of the three measures, what each leaves out, and how to read one
+against another.
+
+*The numbers in it are this machine's and are named as such.* What carries from
+one machine to another is the shape of them — that a crossing out costs a few
+nanoseconds over a call, that a crossing in costs less than a hop of a loop, and
+that both are small against a frame step. Each of the three leaves things out on
+purpose and they are each other's omissions, which is the whole reason there are
+three.
+
+*And a number in the last entry was wrong.* D858 said six nanoseconds of
+crossing is `a fifth of what this machine's frame step costs per entity`. It is
+not: the step is a hundred and sixty nanoseconds an entity and six of those is
+under a twentieth. A fifth is what the *crossing call* costs against the step —
+thirty-three against a hundred and sixty — which is a different number about a
+different thing. The reference says the right one, and this says so rather than
+leaving two numbers in this tree that disagree.
+
+*What holds it.* Every measurement shown in the reference has to be one an
+instrument here can take, read as a pair: how many rounds it was the best of and
+over how much work. Both are constants, so both are readable where they are
+declared — in a `const` for the two written in Kest and in a `#define` for the
+host written in C. A line shown over work no instrument does is a measurement of
+something that is not here, and a line an instrument takes that the reference
+never shows is a number nobody reading the reference knows exists. Read as pairs
+rather than as two lists, because a line naming one instrument's rounds and
+another's scale would be in both lists and in neither measurement.
