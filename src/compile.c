@@ -2968,12 +2968,21 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
                 break;
             }
 
-            uint16_t counter = declare_local(compiler, stmt->each->name,
-                                             stmt->each->sequence->type);
-            stack_push(compiler, 1);
-            emit_load(compiler, index_slot, 1, stmt->span);
-            stack_pop(compiler, 1);
-            emit_store(compiler, counter, 1, stmt->span);
+            // Where nothing assigns to it there is nothing to go wrong, and
+            // the name is the count rather than a copy of it: a load and a
+            // store off every turn, which for a loop whose body is small is
+            // most of what the turn was. The checker is what knows, because
+            // it is what resolved the name. See D866.
+            if (stmt->each->name_written) {
+                uint16_t counter = declare_local(compiler, stmt->each->name,
+                                                 stmt->each->sequence->type);
+                stack_push(compiler, 1);
+                emit_load(compiler, index_slot, 1, stmt->span);
+                stack_pop(compiler, 1);
+                emit_store(compiler, counter, 1, stmt->span);
+            } else {
+                bind_local(compiler, stmt->each->name, index_slot, 1);
+            }
 
             compile_block(compiler, &stmt->each->body);
             close_walk(compiler, loop, exit, walk, stmt->span);
@@ -3037,12 +3046,16 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             }
 
             if (stmt->each->index.length > 0) {
-                uint16_t named =
-                    declare_local(compiler, stmt->each->index, NULL);
-                stack_push(compiler, 1);
-                emit_load(compiler, index_slot, 1, stmt->span);
-                stack_pop(compiler, 1);
-                emit_store(compiler, named, 1, stmt->span);
+                if (stmt->each->index_written) {
+                    uint16_t named =
+                        declare_local(compiler, stmt->each->index, NULL);
+                    stack_push(compiler, 1);
+                    emit_load(compiler, index_slot, 1, stmt->span);
+                    stack_pop(compiler, 1);
+                    emit_store(compiler, named, 1, stmt->span);
+                } else {
+                    bind_local(compiler, stmt->each->index, index_slot, 1);
+                }
             }
 
             stack_push(compiler, 1);
@@ -3124,13 +3137,19 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
 
         // The loop's own counter stays where nobody can reach it, and the
         // name the author asked for is a copy of it, so assigning to that
-        // name cannot make the walk go wrong.
+        // name cannot make the walk go wrong — unless nothing assigns to it,
+        // when the name is the counter. See D866.
         if (stmt->each->index.length > 0) {
-            uint16_t named = declare_local(compiler, stmt->each->index, NULL);
-            stack_push(compiler, 1);
-            emit_load(compiler, index_slot, 1, stmt->span);
-            stack_pop(compiler, 1);
-            emit_store(compiler, named, 1, stmt->span);
+            if (stmt->each->index_written) {
+                uint16_t named =
+                    declare_local(compiler, stmt->each->index, NULL);
+                stack_push(compiler, 1);
+                emit_load(compiler, index_slot, 1, stmt->span);
+                stack_pop(compiler, 1);
+                emit_store(compiler, named, 1, stmt->span);
+            } else {
+                bind_local(compiler, stmt->each->index, index_slot, 1);
+            }
         }
 
         uint32_t absent = 0;

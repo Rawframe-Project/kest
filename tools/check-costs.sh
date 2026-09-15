@@ -689,6 +689,87 @@ deep = per_copy('emit', 20)
 flat_checked = per_copy('check', 1)
 deep_checked = per_copy('check', 20)
 
+# What a turn of a walk costs, which is instructions rather than memory and is
+# here because it is what `emit` printed rather than what a clock said. The
+# count a `for` keeps lives in a slot nothing can name and the name the program
+# asked for is a copy of it, so that assigning to the name cannot make the count
+# go wrong. Where nothing in the body assigns to it there is nothing to defend
+# against and the name is the count itself: a load and a store off every turn of
+# the loop this language is written with most. Both halves are read, because a
+# copy that is never made is as wrong as one that is always made — one is two
+# instructions nobody needed and the other is a walk a body can derail. See
+# D866.
+def what_a_turn_is(body):
+    where = os.path.join(work, 'walking.kest')
+    with open(where, 'w') as walking:
+        walking.write(body)
+    ran = subprocess.run(['./kest', 'emit', where], capture_output=True,
+                         text=True, stdin=subprocess.DEVNULL,
+                         env=dict(os.environ, KEST_LIB='lib'))
+    if ran.returncode != 0:
+        return None
+    printed = {}
+    for line in ran.stdout.splitlines():
+        found = re.match(r'^  (\d{4})  (\S+)\s*(.*)$', line)
+        if found:
+            printed[int(found.group(1))] = (found.group(2),
+                                            found.group(3).strip())
+    step = None
+    for at, (op, rest) in printed.items():
+        if op.startswith('next.less.'):
+            step = (at, rest)
+    if step is None:
+        return None
+    where_from = re.search(r'-> (\d+)$', step[1])
+    counts = re.match(r'(\d+)', step[1])
+    if where_from is None or counts is None:
+        return None
+    top = int(where_from.group(1))
+    count_slot = counts.group(1)
+    turn = sorted(at for at in printed if top <= at <= step[0])
+    copies = (len(turn) > 2 and printed[turn[0]] == ('load', count_slot) and
+              printed[turn[1]][0] == 'store')
+    return len(turn), copies
+
+
+# Two programs of one loop each, the same in every line but one: the second
+# writes the name the walk binds and the first does not.
+QUIET_WALK = """module walking
+
+fn main() -> i32 {
+    let total = 0
+    for i in 0..8 {
+        total += i
+    }
+    return total - 28
+}
+"""
+WRITTEN_WALK = """module walking
+
+fn main() -> i32 {
+    let total = 0
+    for i in 0..8 {
+        i = i + 1
+        total += i
+    }
+    return total - 36
+}
+"""
+quiet_walk = what_a_turn_is(QUIET_WALK)
+written_walk = what_a_turn_is(WRITTEN_WALK)
+if quiet_walk is None or quiet_walk[1]:
+    print("costs: a `for` whose body never writes the name it binds still "
+          "copies the count into that name every turn, and a turn of it is "
+          "%s instruction(s)"
+          % (None if quiet_walk is None else quiet_walk[0]))
+    failed = 1
+if written_walk is None or not written_walk[1]:
+    print("costs: a `for` whose body writes the name it binds is not given a "
+          "copy of the count, so that write is a write to the walk's own "
+          "count, and a turn of it is %s instruction(s)"
+          % (None if written_walk is None else written_walk[0]))
+    failed = 1
+
 shutil.rmtree(work, ignore_errors=True)
 if (one_copy_costs is None or many_copies_costs is None or
         many_copies_costs <= one_copy_costs * 2 or
@@ -1043,7 +1124,9 @@ if not failed:
           "`no.alloc`, and %u bodies run by the examples each reaching "
           "every slot of the %u they were given between them, and %u "
           "example(s) a machine could size from the program itself asking "
-          "for %u slot(s) and reaching %u, all of it "
+          "for %u slot(s) and reaching %u, and a turn of a `for` is %u "
+          "instruction(s) where the body never writes the name it binds and "
+          "%u where it does, all of it "
           "measured on the machine "
           "this ran on"
           % (asked, len(left_to_the_host), driven, proved, kept, len(alone),
@@ -1057,6 +1140,6 @@ if not failed:
              COPIES, COPIES, one_copy_costs, many_copies_costs,
              copied_total, copied_bodies, copied_bytes, copied_code,
              copied_quiet, asked_for, reached, run_sized, run_asked,
-             run_went))
+             run_went, quiet_walk[0], written_walk[0]))
 sys.exit(failed)
 PY

@@ -25915,3 +25915,66 @@ directory goes down is a thing about the disk and not about the compiler.
 one answer rather than either of the two roads to it. A hole that only catches
 where its author's scratch happened to live is a hole that says nothing about
 anybody else's machine.
+
+## D866: a name nothing writes is the walk's own count
+
+Nineteen nanoseconds a hop of a `for`, measured in D864, was the first number
+this project had a reason to go after. What a hop of `for i in 0..n` compiled to
+was eight instructions, of which three were the walk's own:
+
+```
+0027  load            3     ; the walk's count
+0030  store           4     ; into the name `i`
+0033  load            1     ; the body: sum
+0036  load            4     ;           i
+0039  add.i
+0040  narrow          2
+0043  store           1
+0046  next.less.i     3  < 2  -> 27
+```
+
+`next.less.i` is one instruction that counts, compares and goes back, and there
+is nothing to take out of it. The load and the store above it are a *copy*: the
+walk keeps its count in a slot nothing can name, and the name the program asked
+for is a copy of it made every turn, so that `i = 0` in the body cannot set the
+walk back to the beginning. Assigning to that name is a warning (K0321, "`i` is
+the loop's own, so this is discarded") and not a refusal, so the defence has to
+be there.
+
+*It has to be there where the body writes the name.* Where nothing in the body
+writes it, the copy is two instructions a turn spent defending against a write
+that is not in the program — and the name can simply **be** the count. The
+compiler already has `bind_local`, which is how a `match` arm names what the
+case it answered was carrying, so the change is one branch in each of the three
+places a walk binds a position.
+
+What it costs is knowing, and the compiler cannot know without walking the body
+a second time. *The checker already walked it and already resolved the name*, so
+the checker is what answers: a `written` bit on its local, set where an
+assignment's target is a plain name, read off the binding as the scope is
+dropped and written onto the `for` node as `name_written` and `index_written`.
+The parser sets both to `true`, because a name nothing has read the body about
+is a name the body writes.
+
+A hop of a `for` is now one instruction. Measured alternately against the build
+before it, on an idle machine, five rounds each:
+
+- a bare loop: **19–20 ns a hop → 16 ns**
+- a walk with an index read: 22 ns → 20 ns
+- `tools/crossing.kest`, a call in a loop: 25 ns → 22 ns
+- `tools/frame.kest`, a frame step an entity: ~152 ns → ~148 ns
+
+The saving is about two nanoseconds an instruction, which is what this machine
+dispatches at, and it is the loop's whole overhead rather than a share of it.
+
+*Both halves are checked, because a copy that is never made is as wrong as one
+that is always made.* `check-costs.sh` emits two programs of one loop each that
+differ in one line — one writes the name, one does not — and reads what `emit`
+printed: the quiet one's turn must not open with a load of the count and a
+store, and the writing one's must. Six instructions a turn against thirteen.
+Two holes in `check-backstops.sh` break the two directions from the checker's
+side: one that says every name is written, one that says none is.
+
+What this is not is an optimiser. There is no pass, no analysis over the
+program, and nothing that reads one statement in the light of another: it is one
+fact the checker already knew and had been throwing away.

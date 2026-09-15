@@ -30,6 +30,11 @@ typedef struct {
     // to do about it: a `let` nothing reads comes out, and an `if let` nothing
     // reads is a question asked the long way. See D728.
     bool from_if_let;
+    // Whether the body assigns to this name. Asked about the two a walk binds,
+    // because a name nothing writes can be the walk's own count rather than a
+    // copy of it made every turn. A write to a field of it is not one of
+    // these: this is the name itself on the left of an `=`. See D866.
+    bool written;
 } Local;
 
 typedef struct {
@@ -273,7 +278,7 @@ static void declare_local(Checker *checker, KestSpan span, KestType *type) {
     // See D726.
     Local *local = &checker->locals[checker->local_count++];
     Local fresh = {name, type, span, checker->depth, false, false, false,
-                   false, false, false};
+                   false, false, false, false};
     *local = fresh;
 }
 
@@ -3966,6 +3971,17 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
             stmt->assign.target->kind == KEST_EXPR_NAME;
         KestType *target = check_expr(checker, stmt->assign.target, NULL);
         checker->writing_to_a_name = was_writing;
+        if (stmt->assign.target->kind == KEST_EXPR_NAME) {
+            // Written down where the name is known, because a walk that is
+            // about to bind its count to a name needs to know before it does
+            // it, and only the checker ever resolved the name. See D866.
+            Local *assigned =
+                find_local(checker, span_text(checker, stmt->assign.target->span),
+                           stmt->assign.target->span.length);
+            if (assigned != NULL) {
+                assigned->written = true;
+            }
+        }
         KestType *value = check_expr(checker, stmt->assign.value, target);
         const KestExpr *root = NULL;
         bool is_index = false;
@@ -4146,6 +4162,11 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
             check_block(checker, &stmt->each->body);
             checker->loop_depth--;
             checker->depth--;
+            // A name the body never assigns to can be the count itself. A
+            // name that was refused before it was declared is one the body's
+            // writes went somewhere else, so it counts as written. See D866.
+            stmt->each->name_written = checker->local_count <= counted ||
+                                       checker->locals[counted].written;
             checker->local_count = counted;
             break;
         }
@@ -4211,6 +4232,9 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         check_block(checker, &stmt->each->body);
         checker->loop_depth--;
         checker->depth--;
+        stmt->each->index_written = stmt->each->index.length == 0 ||
+                                    before_element <= mark ||
+                                    checker->locals[mark].written;
         drop_locals(checker, mark);
         break;
     }

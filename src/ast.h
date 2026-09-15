@@ -209,6 +209,15 @@ typedef struct {
     KestExpr *sequence;
     KestExpr *until;
     KestBlock body;
+    // Whether the body assigns to that name, and to that position, which the
+    // checker knows and the compiler cannot see without walking the body
+    // again. A walk keeps its count where nothing can name it and hands the
+    // name a copy, so that writing the name cannot make the count go wrong;
+    // where nothing writes it, the copy is two instructions a turn spent
+    // defending against nothing and the name is the count itself. Assigning
+    // to a field of the name is not assigning to the name. See D866.
+    bool name_written;
+    bool index_written;
 } KestEach;
 
 struct KestStmt {

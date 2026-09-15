@@ -1588,6 +1588,12 @@ static KestStmt *parse_statement(Parser *parser) {
         stmt->each->name = name;
         stmt->each->sequence = sequence;
         stmt->each->until = until;
+        // Until the checker has read the body, a name is one the body writes:
+        // what a walk does about that is safe for every program, and what it
+        // does when nothing writes is safe only for the programs the checker
+        // has said so about. See D866.
+        stmt->each->name_written = true;
+        stmt->each->index_written = true;
         parse_block(parser, &stmt->each->body);
         stmt->span =
             span_between(start, parser->tokens[parser->position - 1].span);

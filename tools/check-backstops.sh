@@ -5334,6 +5334,40 @@ fn length(v: Vec2) -> f32 no.alloc {""",
         "caught": "what it costs, and not every",
     },
     {
+        # A walk that copies its count into the name whatever the body does.
+        # Nothing running would notice: every program answers what it answered
+        # and the loop goes round the same number of times. What it costs is
+        # two instructions off every turn of the loop this language is written
+        # with most, which is the kind of thing that is put in once and read by
+        # nobody again. See D866.
+        "what": "a walk that copies its count into a name nothing writes",
+        "file": "src/check.c",
+        "from": """            stmt->each->name_written = checker->local_count <= counted ||
+                                       checker->locals[counted].written;""",
+        "to": """            stmt->each->name_written = true;""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "still copies the count into that name every turn",
+    },
+    {
+        # And the other way round: a checker that never notices a write leaves
+        # every walk binding its name to its own count, so `i = 0` inside the
+        # body sets the walk back to the beginning and the loop never ends. The
+        # saving and the danger are the same edit read two ways, so both are
+        # asked for. See D866.
+        "what": "a walk whose name is its count in a body that writes the name",
+        "file": "src/check.c",
+        "from": """            if (assigned != NULL) {
+                assigned->written = true;
+            }""",
+        "to": """            if (assigned != NULL) {
+                assigned->written = false;
+            }""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "is not given a copy of the count",
+    },
+    {
         # A host keeping a promise made on its behalf is read rather than run,
         # because the machine refuses a promise that calls a body which
         # allocates and cannot see what a host does on its own side of the
@@ -11908,7 +11942,7 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "what": "a local that keeps what the last one at its place left",
         "file": "src/check.c",
         "from": """    Local fresh = {name, type, span, checker->depth, false, false, false,
-                   false, false, false};
+                   false, false, false, false};
     *local = fresh;""",
         "to": """    local->name = name;
     local->type = type;

@@ -32852,7 +32852,53 @@ Recorded as D865.
 
 **Runs:** `make check`, everything passing, with `TMPDIR=/var/tmp`.
 
-**Next:** nineteen nanoseconds a hop of a `for` is the number to go after, and
-it is the first optimiser work this project has had a reason for. Read what
-`for i in 0..n` compiles to, count what the machine does a hop, and say which of
-those instructions a loop over a run of things could do without.
+**Next:** a hop of a `for` is one instruction now, so the next number under it
+is the body: `total += i` is a load, a load, an add, a `narrow` and a store, and
+the `narrow` is there because the add is wider than the slot it goes in. Read
+where `narrow` is emitted, count how many of them a program written over `i32`
+carries, and say which of them the checker already knows cannot narrow anything.
+
+## A hop of a `for` is one instruction
+
+Nineteen nanoseconds a hop was the number to go after, and what a hop was made
+of turned out to be three instructions, not one. `next.less.i` counts, compares
+and goes back in one go and there is nothing in it to take out. Above it sat a
+load and a store: the walk keeps its count where nothing can name it and hands
+the name a copy of it every turn, so that writing the name cannot set the walk
+back to the beginning.
+
+That copy is a defence, and it is worth having in a body that writes the name.
+In a body that does not, it is two instructions a turn defending against a write
+that is not in the program — and the name can be the count. The compiler cannot
+tell without walking the body again; the checker walked it already and resolved
+the name already, so the checker is what answers. A `written` bit on its local,
+set where an assignment's target is a plain name, read off the binding as the
+scope is dropped, and written onto the `for` node. The parser sets it to
+written, because a name nothing has read the body about is a name the body
+writes.
+
+Three places bind a position — the counting walk, the walk over a run of things
+and the walk over an array, text, a store or a set of bits — and each of them
+now either copies or calls `bind_local`, which is already how a `match` arm
+names what the case it answered was carrying.
+
+Measured alternately against the build before it, five rounds each: a bare loop
+19–20 ns a hop to 16, a walk with an index read 22 to 20, a call in a loop 25 to
+22, a frame step an entity about 152 to about 148. Two nanoseconds an
+instruction, which is what this machine dispatches at.
+
+Both directions are checked, because a copy that is never made is as wrong as
+one that is always made: `check-costs.sh` emits two one-loop programs differing
+in one line and reads what `emit` printed — six instructions a turn where the
+name is not written, thirteen where it is — and two holes break the checker's
+answer each way. The pages that show what running costs were re-measured.
+
+Recorded as D866.
+
+**Runs:** `make check`, everything passing. `make time`, four instruments.
+
+**Next:** a hop of a `for` is one instruction now, so the next number under it
+is the body: `total += i` is a load, a load, an add, a `narrow` and a store, and
+the `narrow` is there because the add is wider than the slot it goes in. Read
+where `narrow` is emitted, count how many of them a program written over `i32`
+carries, and say which of them the checker already knows cannot narrow anything.
