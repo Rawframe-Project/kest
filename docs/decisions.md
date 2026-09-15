@@ -23286,3 +23286,47 @@ those two names beside its own, so the pattern took the last pair on the line
 rather than the one asked for — and the check passed against a compiler that was
 answering `plain` where `down` was right. The object is cut out before either
 name is read now. A check that reads the wrong thing agrees with everything.
+
+## D801: the widest the function gets, not the width at the call
+
+*What the second pair counts.* `needs_of` answers two numbers twice: how deep
+and how wide a program goes, and the same two again over the runs of calls that
+end at a host function rather than at a `return`. The second pair is what
+`kest_needs_from` gives a host, and what it is for is a host function that calls
+back in with `kest_call`: that call does not start from nothing, it starts from
+wherever the machine already was.
+
+*Where it comes from.* `host_slots[which] = reaches_host ? host_widest + own : 0`,
+and `own` is `chunk->slot_count + chunk->stack_needed` — the slots the function
+names, plus the deepest its operand stack ever gets. **Anywhere in the body.**
+
+So a function that calls the host on its first line and then works out a long
+expression on its second is charged the long expression. Written out: `early`
+calls `Host.note` and then adds seven terms, and its `deep` is eight where the
+call is one or two in. Its host number carries all eight.
+
+*The number is right and the words were not.* Over-counting is the safe
+direction — a host that makes a machine bigger than the program can reach loses
+memory, and one that makes it smaller loses the program. But the header said
+*"slots in use at the deepest place `name` reaches a host function"*, which is
+the width **at** the call, and then said the named function is *"the function a
+host would have to shorten"*. A host reading both would shorten the line the
+call is on, which is very often not the line that sets the number.
+
+Both sentences say what the number is now: the widest the function itself ever
+gets, plus the worst of the same over everything it reaches on the way to a host
+function — and that shortening it means making the function narrower wherever it
+is widest, which is not always where the call is.
+
+*And a thing that follows, held.* The host reaches are some of the reaches, never
+more, so what a call back in starts on cannot exceed what the function needs
+altogether. `examples/embed.c` asks both of the named function and refuses the
+other way round — a host told to make room for a place the program cannot get to.
+Multiplying `own` into the host pair alone is caught.
+
+*What is not held is the wording.* Prose accuracy is not machine-checkable and
+this entry does not pretend otherwise: what is held is the relationship between
+two numbers, and what was wrong was a sentence about which line to edit. D792
+found three functions a document never named and D794 a page that said something
+false; this is the third kind — a sentence precise enough to act on and wrong
+about which action.

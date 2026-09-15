@@ -30351,3 +30351,39 @@ same two again for runs of calls that end in the host. The host pair is what a
 host is given to size a machine it may be called back into. Read what that pair
 counts against what the first pair counts, and find whether a call into the host
 from inside a walk is counted where a host would look for it.
+
+## The widest the function gets, not the width at the call
+
+`needs_of` answers how deep and how wide twice: once over every run of calls,
+once over the runs that end at a host function. The second pair is what
+`kest_needs_from` gives a host, for a host function that calls back in with
+`kest_call` and starts from wherever the machine already was.
+
+It is `host_widest + own`, and `own` is the slots a function names plus the
+deepest its operand stack ever gets — anywhere in the body. So a function that
+calls the host on its first line and works out a long expression on its second
+is charged the long expression: `early` calls `Host.note` and then adds seven
+terms, and its `deep` is eight where the call is one or two in.
+
+The number is right — over-counting loses memory and under-counting loses the
+program — but the header said *"slots in use at the deepest place `name`
+reaches a host function"*, the width **at** the call, and then called the named
+function the one to shorten. A host reading both would shorten the line the call
+is on, which is often not the line that sets the number. Both sentences say what
+the number is now.
+
+Held: the host reaches are some of the reaches, never more, so what a call back
+in starts on cannot exceed what the function needs altogether. `embed.c` asks
+both of the named function and refuses the other way round. The wording itself
+is not held, and this does not pretend otherwise — prose accuracy is not
+machine-checkable. D792 found functions a document never named, D794 a page that
+said something false; this is the third kind, a sentence precise enough to act
+on and wrong about which action. Recorded as D801.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** three entries running have found the host boundary's numbers right and
+their descriptions loose. `include/kest.h` is eleven hundred lines of such
+descriptions and nothing holds any of them. Pick the ones that say a number is
+related to another number — those are the only ones a host can act on wrongly —
+and check each against what the code computes.

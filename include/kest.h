@@ -265,10 +265,16 @@ bool kest_needs_of(KestBuild *build, const char *name, KestLimits *least,
                    KestReason *why);
 
 // Where the machine already is when it calls into the host: the frames and
-// slots in use at the deepest place `name` reaches a host function. A host
-// function that calls back in with `kest_call` starts from there and not from
-// nothing, so what a re-entrant host needs is this plus what the entry it
-// calls needs on its own — `kest_needs_of` for that one, added to this.
+// slots a machine is holding where `name` reaches a host function: the widest
+// the function itself ever gets, plus the worst of the same over everything it
+// reaches on the way to one. It is the function's widest rather than the width
+// at the call, so a long expression anywhere in the body is in it whether the
+// host is called before that expression or after — which makes the number
+// large enough always, and makes shortening the line the call is on the wrong
+// thing to shorten. A host function that calls back in with `kest_call` starts
+// from there and not from nothing, so what a re-entrant host needs is this plus
+// what the entry it calls needs on its own — `kest_needs_of` for that one,
+// added to this.
 //
 // Both are nought when nothing `name` reaches calls into the host, and then
 // there is nowhere to call back in from. The heap is not part of it: it does
@@ -281,6 +287,8 @@ bool kest_needs_of(KestBuild *build, const char *name, KestLimits *least,
 // in, and is NULL when nothing reaches one. That is the function a host would
 // have to shorten to make the number smaller, and asking about it by name
 // answers what it reaches the host at on its own, which is less than this.
+// Shortening it means making the function narrower wherever it is widest,
+// which is not always where the call is.
 //
 // False for the same reasons `kest_needs_of` is false, and for the same name.
 bool kest_needs_from(KestBuild *build, const char *name, KestLimits *inside,

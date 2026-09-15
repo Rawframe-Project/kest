@@ -2285,6 +2285,22 @@ int main(int argc, char **argv) {
                     there.stack_slots);
             return 1;
         }
+        // And that reaching the host from inside that function is no more
+        // than everything it reaches. What a call back in starts on is the
+        // function's own widest plus the worst reach below it, and what it
+        // needs altogether is its widest plus the worst reach of any kind --
+        // the host reaches being some of those, never more. A number the
+        // other way round would be a host told to make room for a place the
+        // program cannot get to. See D801.
+        KestLimits everywhere = {0, 0, 0};
+        if (!kest_needs_of(build, where.where, &everywhere, NULL) ||
+            there.stack_slots > everywhere.stack_slots) {
+            fprintf(stderr,
+                    "`%s` reaches this host %u slots in and reaches "
+                    "everything it reaches at %u\n",
+                    where.where, there.stack_slots, everywhere.stack_slots);
+            return 1;
+        }
         printf("and the call is in `%s`, which reaches this host %u slots "
                "in on its own\n",
                where.where, there.stack_slots);

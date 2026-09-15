@@ -1275,6 +1275,21 @@ yield""",
         "caught": "said nothing about what it cost",
     },
     {
+        # A host reach said to be wider than every reach. What a call back in
+        # starts on is the function's widest plus the worst host reach below
+        # it; what it needs altogether is the same widest plus the worst reach
+        # of any kind, and the host ones are some of those. The other way round
+        # is a host told to make room for a place the program cannot get to.
+        # See D801.
+        "what": "a host reach wider than every reach",
+        "file": "src/value.c",
+        "from": r"""    host_slots[which] = reaches_host ? host_widest + own : 0;""",
+        "to": r"""    host_slots[which] = reaches_host ? host_widest + own * 4 : 0;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "and reaches everything it reaches at",
+    },
+    {
         # The function a run of calls closes at, taken from the wrong one.
         # Both forms say it and each is held to the other, which says they
         # agree and not that either is right -- a wrong name reads the same in
