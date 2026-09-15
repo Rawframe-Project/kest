@@ -977,14 +977,73 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
     for (uint32_t at = 0; at < chunk->code_count;) {
         uint8_t op = chunk->code[at];
         if (op == KEST_OP_CALL_VALUE) {
-            why->reach = KEST_REACH_VALUE;
-            why->where = chunk->name;
-            state[which] = 0;
-            if (reasons != NULL) {
-                reasons[which].reach = KEST_REACH_VALUE;
-                reasons[which].from = which;
+            // Which function this enters is not known here, but which
+            // functions it could enter is: a function becomes a value in one
+            // place, and every one that ever does is written down. So the
+            // call costs the worst of those, the same way an ordinary call
+            // costs the one it names — and a program that turns none of its
+            // functions into a value has no candidates at all, which leaves a
+            // host that handed one in and no answer to give. A host that
+            // hands in something wider than these meets the machine asking
+            // for room at the call and being told no, which is what every
+            // other under-asking meets. See D814.
+            bool any = false;
+            for (uint32_t maybe = 0; maybe < module->count; maybe++) {
+                if (module->functions[maybe] == NULL ||
+                    !module->functions[maybe]->as_value) {
+                    continue;
+                }
+                any = true;
+                if (!measure_chunk(module, maybe, state, depth, slots,
+                                   host_depth, host_slots, host_from, reasons,
+                                   why)) {
+                    state[which] = 0;
+                    if (reasons != NULL && maybe < module->count) {
+                        reasons[which].reach = reasons[maybe].reach != 0
+                                                   ? reasons[maybe].reach
+                                                   : (uint8_t)why->reach;
+                        reasons[which].from = reasons[maybe].reach != 0
+                                                  ? reasons[maybe].from
+                                                  : maybe;
+                    }
+                    return false;
+                }
+                if (depth[maybe] > deepest) {
+                    deepest = depth[maybe];
+                }
+                uint32_t through =
+                    slots[maybe] - module->functions[maybe]->param_slots;
+                if (through > widest) {
+                    widest = through;
+                }
+                if (host_depth[maybe] > 0) {
+                    reaches_host = true;
+                }
+                if (host_depth[maybe] > host_deepest) {
+                    host_deepest = host_depth[maybe];
+                }
+                uint32_t host_through =
+                    host_slots[maybe] == 0
+                        ? 0
+                        : host_slots[maybe] -
+                              module->functions[maybe]->param_slots;
+                if (host_through > host_widest) {
+                    host_widest = host_through;
+                    host_started = host_from[maybe];
+                }
             }
-            return false;
+            if (!any) {
+                why->reach = KEST_REACH_VALUE;
+                why->where = chunk->name;
+                state[which] = 0;
+                if (reasons != NULL) {
+                    reasons[which].reach = KEST_REACH_VALUE;
+                    reasons[which].from = which;
+                }
+                return false;
+            }
+            at += kest_op_width(op);
+            continue;
         }
         if (op == KEST_OP_CALL_HOST) {
             reaches_host = true;

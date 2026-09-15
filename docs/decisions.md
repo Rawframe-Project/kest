@@ -23861,3 +23861,58 @@ never used and all three were programs that did not run their widest path. This
 found one number asking for room nothing could ever use, and it was arithmetic.
 The first kind you fix by writing a better example; the second by writing down
 what the machine actually does.
+
+## D814: which functions a call through a value can enter
+
+*The six that had no answer.* Five of them said `calls through a value`, and
+four of those pointed at one function: `sort.by`. A program that sorts had no
+answer for its whole stack, took `KEST_STACK_SLOTS` — 65536 — and reached
+seventy. The sixth, `tree.kest`, reaches itself, which is a different thing.
+
+*What was not known and what was.* Which function a `call.value` enters is not
+known before it runs. **Which functions it could enter is.** A function becomes
+a value in exactly one place in this compiler, `compile_function_value`, which
+turns a name into the index of a chunk — so the set of chunks that index can
+ever hold is written down while the program is compiled. A call through a value
+costs the worst of those, the same way a call that names one costs that one,
+arguments taken off once as in D813.
+
+`KestChunk.as_value` is that mark. A program that turns none of its own
+functions into a value and calls through one anyway was handed it by a host, and
+then there is nothing to count and the answer stays what it was.
+
+*What it is worth.*
+
+| | before | now | reached |
+|---|---|---|---|
+| `boxes` | 65536 | 31 | 30 |
+| `inventory` | 65536 | 73 | 72 |
+| `numbers` | 65536 | 73 | 70 |
+| `shapes` | 65536 | 30 | 25 |
+| `words` | 65536 | 39 | 34 |
+| `tree` | 65536 | — reaches itself | 38 |
+
+Thirty-one of thirty-two examples can now be sized from the program itself,
+asking 1108 slots between them and reaching 988.
+
+*Where it is not sound, and why that is the same as everywhere else.* A host may
+hand a function value in — an `extern` may answer one, and a host may fill a
+function-shaped slot in a frame. If it hands in one that needs more room than
+anything the program names, the machine asks for room at the call and is told
+no: `K0602`, with what it wanted. That is under-asking, and under-asking is a
+program that stops and says what it needed. It is the shape every other number
+here has.
+
+*What is left.* One example, and it is real recursion. `needs_of` gives up on a
+whole program for it; whether a machine can be sized from the part that has an
+answer plus a ceiling on the part that does not is the next thing.
+
+*And a check that lost a band because of it.* `tools/check-ceilings.sh` walks a
+ladder down to where the library stops being mappable, and the rungs wear one of
+three codes: a heap filled, a machine that cannot be made, a read that cannot
+finish. With every program here down to under a hundred slots, the middle band
+stopped happening — a machine that small can always be made — and the check that
+holds the bands in order had nothing left to hold. `examples/tree.kest` still
+takes the usual numbers, so it walks a third ladder, and all three bands are
+back. A check that loses coverage because the thing it checks got better is a
+check that needs a program the improvement did not reach.

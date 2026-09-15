@@ -30862,3 +30862,48 @@ itself or calls through a value, and `needs_of` gives up on the whole program
 for it. Find how much of each of those programs does have an answer, and whether
 a machine can be sized from the part that does plus a ceiling on the part that
 cannot.
+
+## Which functions a call through a value can enter
+
+Five of the six examples a machine could not size said `calls through a value`,
+and four of those pointed at one function: `sort.by`. A program that sorts had
+no answer for its whole stack, took 65536 slots and reached seventy.
+
+Which function a `call.value` enters is not known before it runs. Which
+functions it could enter is: a function becomes a value in exactly one place,
+`compile_function_value`, which turns a name into the index of a chunk, so the
+set of chunks that index can hold is written down while the program is compiled.
+`KestChunk.as_value` is that mark, and a call through a value now costs the
+worst of them, the same way a call that names one costs that one, with the
+arguments taken off once as in D813. A program that turns none of its own
+functions into a value and calls through one anyway was handed it by a host, and
+then there is nothing to count.
+
+`boxes` 65536 to 31 against 30 reached, `inventory` to 73 against 72, `numbers`
+to 73 against 70, `shapes` to 30 against 25, `words` to 39 against 34. Thirty-one
+of thirty-two examples can be sized from the program itself now, asking 1108
+slots between them and reaching 988.
+
+A host may hand a function value in, and one that needs more room than anything
+the program names meets the machine asking for room at the call and being told
+no — K0602, with what it wanted. Under-asking is a program that stops and says
+what it needed, which is the shape every other number here has.
+
+What is left is `tree.kest`, and it is real recursion.
+
+It earns its keep elsewhere too. `check-ceilings.sh` walks a ladder whose rungs
+wear one of three codes — a heap filled, a machine that cannot be made, a read
+that cannot finish — and with every program down to under a hundred slots the
+middle band stopped happening, because a machine that small can always be made.
+The check that holds the bands in order had nothing left to hold. `tree.kest`
+still takes the usual numbers, so it walks a third ladder and all three bands
+are back. A check that loses coverage because the thing it checks got better is
+a check that needs a program the improvement did not reach. Recorded as D814.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `needs_of` gives up on a whole program when one function reaches
+itself, and `tree.kest` is that program: it takes 65536 slots and reaches 38.
+Work out what the part with an answer costs and what one turn of the part
+without costs, and see whether a machine can be sized from the first plus the
+second times the frames a host allows.

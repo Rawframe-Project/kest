@@ -1698,6 +1698,10 @@ LEFT_OUT = {
     ("KestChunk", "next_instruction"): "where the next opcode goes while a "
                                        "body is being written, which is "
                                        "nothing once one is",
+    ("KestChunk", "as_value"): "whether anything names this function as a "
+                               "value, which is read off the code that names "
+                               "it and is a thing about the module rather "
+                               "than a thing in it",
     ("KestChunk", "went"): "the deepest the machine ever got in this body, "
                            "which only the build that checks itself counts "
                            "and which is written after the code is, so it is "

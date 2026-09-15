@@ -1113,6 +1113,15 @@ walk_the_ladder examples/numbers.kest numbers.kest
 computing=$first_refusal
 walk_the_ladder examples/grow.kest grow.kest
 allocating=$first_refusal
+# And one that asks for a big machine. D814 worked out what a call through a
+# value costs, and with it every program here but one came down from 65536
+# slots to under a hundred — so the rung where a machine cannot be made, which
+# is the middle of the three bands, stopped happening at all and the ladder
+# had one band left. `examples/tree.kest` reaches itself and still takes the
+# usual numbers, so it is the program that walks through all three. A check
+# that lost a band because the compiler got better is a check that needs a
+# program the improvement did not reach. See D814.
+walk_the_ladder examples/tree.kest tree.kest
 # Two ladders are two measurements only where they part company. The level a
 # band starts at is what the program cost to get that far, so a program that
 # costs four hundred kilobytes more to compile starts refusing further up; two
@@ -1497,7 +1506,7 @@ if [ $failed -eq 0 ]; then
     # See D646.
     echo "every ceiling is a message at the line that asked:" \
          "$reached while running, $met while compiling, and a ladder for each" \
-         "of two programs down to where the library stops being mappable —" \
+         "of three programs down to where the library stops being mappable —" \
          "$walked — $all_rungs rungs in all, $all_ranged run and" \
          "$all_refused refused in words, and none died, and the bytes" \
          "compiling costs read beside the rungs it costs — $spans — over" \

@@ -213,6 +213,14 @@ typedef struct {
 typedef enum {
     KEST_REACH_KNOWN,
     KEST_REACH_ITSELF,
+    // A call through a value, where the program turns none of its own
+    // functions into one. Which function such a call enters is not known
+    // here, but which ones it could enter is: a function becomes a value in
+    // one place, and the answer counts the worst of the ones that ever do. A
+    // program with none of them can only have been handed one by a host, and
+    // then there is nothing to count. A host that hands in something wider
+    // than the program's own is told so at the call, in the same words as any
+    // other machine asked for more than it was given. See D814.
     KEST_REACH_VALUE,
     // The program defines no function of that name, which is the same news
     // `kest_entry` gives with -1: a host asking about one it cannot call.

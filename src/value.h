@@ -325,6 +325,11 @@ typedef struct {
     // How deep the operand stack gets. The compiler knows it exactly, so the
     // machine checks for room once per call instead of once per push.
     uint16_t stack_needed;
+    // Whether anything in this program ever names this function as a value.
+    // A call through a value enters one of these and nothing else, so it is
+    // what a walk that meets one has to look at — and a program that names
+    // none of them can only be handed one by a host. See D814.
+    bool as_value;
     // The deepest the machine ever got in this body, which only the build
     // that checks itself counts. It is what says the number above is not
     // merely enough but no more than enough. See D812.

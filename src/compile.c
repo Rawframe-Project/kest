@@ -610,6 +610,10 @@ static bool compile_function_value(Compiler *compiler, const KestExpr *expr) {
                                     "compiled");
         return true;
     }
+    // Written down as one that a call through a value may enter. What such a
+    // call costs is the worst of these and nothing else, because this is the
+    // only place a function becomes a value. See D814.
+    compiler->module->functions[index]->as_value = true;
     KestValue which = {0};
     which.integer = index;
     emit_constant(compiler, which, KEST_CONST_INT, expr->span);

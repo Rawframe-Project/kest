@@ -184,6 +184,42 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A call through a value costing nothing at all. Which function it
+        # enters is one of the ones the program turns into a value, and the
+        # answer is the worst of them; counting none of them is a program told
+        # it needs the room of a call that is not there, and a machine sized
+        # by it stops in the middle of a frame. See D814.
+        "what": "a call through a value costing nothing",
+        "file": "src/value.c",
+        "from": r"""                uint32_t through =
+                    slots[maybe] - module->functions[maybe]->param_slots;
+                if (through > widest) {""",
+        "to": r"""                uint32_t through =
+                    slots[maybe] - module->functions[maybe]->param_slots;
+                if (false) {""",
+        "make": ["kest"],
+        "program": "through.kest",
+        "source": """import std.sort
+
+fn wide(a: i32, b: i32) -> bool no.alloc {
+    return (a * 2 + (b * 3 + (a * 4 + (b * 5 + (a * 6 + (b * 7 +
+           (a * 8 + (b * 9 + (a * 10 + (b * 11 + (a * 12 + b))))))))))) <
+           (b * 2 + (a * 3 + (b * 4 + (a * 5 + (b * 6 + (a * 7 +
+           (b * 8 + (a * 9 + (b * 10 + (a * 11 + (b * 12 + a)))))))))))
+}
+
+fn main() -> i32 {
+    let xs: [i32] = array()
+    for i in 0..40 {
+        push(xs, 40 - i)
+    }
+    sort.by(xs, wide)
+    return xs[0] - 1
+}
+""",
+        "caught": "K0602",
+    },
+    {
         # A chain of calls charged its arguments once too few. The machine
         # puts a callee's frame at the top of the stack less the slots the
         # call carries, so the caller's arguments and the callee's parameters
@@ -6271,7 +6307,7 @@ fn main() -> i32 {
         "to": """                    reasons[which].from = which;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
-        "arguments": ["examples/shapes.kest"],
+        "arguments": ["examples/tree.kest"],
         "caught": "asked on its own it says",
     },
     {
@@ -6289,7 +6325,7 @@ fn main() -> i32 {
         "to": """                    reasons[which].reach = 0;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
-        "arguments": ["examples/shapes.kest"],
+        "arguments": ["examples/tree.kest"],
         "caught": "asked on its own it says",
     },
     {
@@ -6307,7 +6343,7 @@ fn main() -> i32 {
             kest_json_text(kest_reach_name((KestReach)reasons[i].reach), out);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
-        "arguments": ["examples/shapes.kest"],
+        "arguments": ["examples/tree.kest"],
         "caught": "the walk stopped here saying",
     },
     {
