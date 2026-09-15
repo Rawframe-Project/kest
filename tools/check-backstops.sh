@@ -3088,6 +3088,101 @@ for file in "$@"; do""",
         "caught": "and one of the two is not there",
     },
     {
+        # What a build cost, written under a name nothing reads. A ladder
+        # starts at what a program costs and asks the run for the number, so a
+        # run that writes it under another name is a ladder with no first rung
+        # — and a check that walked no rungs is one that passed without asking
+        # anything. See D845.
+        "what": "what a build cost written under another name",
+        "file": "src/main.c",
+        "from": r"""        fprintf(stdout, ",\"cost\":%zu,\"held\":%zu,\"askings\":%zu",
+                kest_build_cost(build), kest_build_held(build),
+                kest_arena_askings(build->arena));""",
+        "to": r"""        fprintf(stdout, ",\"spent\":%zu,\"held\":%zu,\"askings\":%zu",
+                kest_build_cost(build), kest_build_held(build),
+                kest_arena_askings(build->arena));""",
+        "make": [],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "says nothing about what reading it costs",
+    },
+    {
+        # A command that refuses everything it is given. What a ladder walks
+        # is a program that answers with no ceiling at all, so a command that
+        # answers nothing is a ladder with nothing under it — and a sweep over
+        # no programs is a check that reads as every one of them passing. See
+        # D845.
+        "what": "a command that comes back one whatever happened",
+        "file": "src/main.c",
+        "from": r"""    int status = build->diags.error_count > 0 || failed_to_choose
+                     ? 1
+                     : (int)(exit_code & 0xff);""",
+        "to": r"""    int status = 1;""",
+        "make": [],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "no program was walked down a ceiling of its own",
+    },
+    {
+        # A listing worked out in an arena with nothing left. What it says
+        # depends on holding every module the file is not about, and the list
+        # of those is the first thing it asks for — so a `check` with no room
+        # for it wrote every type of every module the program imports as
+        # though the file had declared them, and came back nought. A run that
+        # answers nought has done the whole of what it was asked. See D845.
+        "what": "a listing there was no room to work out, written anyway",
+        "file": "src/main.c",
+        "from": r"""                if (!kest_program_dump(build->program, build->arena,
+                                       build->units.items[0].alias, stdout)) {
+                    kest_diags_starve(&build->diags);
+                }""",
+        "to": r"""                (void)kest_program_dump(build->program, build->arena,
+                                        build->units.items[0].alias, stdout);""",
+        "make": [],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "came back nought and said something else",
+    },
+    {
+        # A run that ran out, counted and not said. The bit is the one thing a
+        # list of diagnostics can record without any room to record it in, and
+        # the count is what a caller reads to decide whether anything went
+        # wrong — so a build that keeps the count and drops the bit is a run
+        # that comes back one and says nothing at all, which is the shape
+        # nobody can act on. See D845.
+        "what": "running out counted and not said",
+        "file": "src/diag.c",
+        "from": r"""    diags->starved = true;
+    diags->error_count++;""",
+        "to": r"""    diags->error_count++;""",
+        "make": [],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "which names no refusal",
+    },
+    {
+        # A jump filled in that was never written. `emit_jump` answers where
+        # the two bytes it wrote are, and a chunk with no room for them wrote
+        # neither — the answer is two short of nothing at all, and writing
+        # there is a compiler that dies where it meant to run out. This is the
+        # hole the ladder walked past for as long as there has been one. See
+        # D845.
+        "what": "a jump filled in after the chunk ran out",
+        "file": "src/compile.c",
+        "from": r"""    if (compiler->out_of_memory) {
+        return;
+    }
+    uint32_t distance = compiler->chunk->code_count - placeholder - 2;""",
+        "to": r"""    if (false) {
+        return;
+    }
+    uint32_t distance = compiler->chunk->code_count - placeholder - 2;""",
+        "make": [],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "died while this looked for where it first refuses",
+    },
+    {
         # The number a message has to say, taken from this list instead of
         # from the table it is meant to hold. The comment above it said the
         # define, the table and the words were kept in step; the table could
@@ -4062,10 +4157,10 @@ for file in "$@"; do""",
         # everything arrives on the stream it was told to ignore.
         "what": "what a program holds written where the errors go",
         "file": "src/main.c",
-        "from": r"""                kest_program_dump(build->program, build->arena,
-                                  build->units.items[0].alias, stdout);""",
-        "to": r"""                kest_program_dump(build->program, build->arena,
-                                  build->units.items[0].alias, stderr);""",
+        "from": r"""                if (!kest_program_dump(build->program, build->arena,
+                                       build->units.items[0].alias, stdout)) {""",
+        "to": r"""                if (!kest_program_dump(build->program, build->arena,
+                                       build->units.items[0].alias, stderr)) {""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -8385,7 +8480,7 @@ fn main() -> i32 {
         # full is an answer nobody reads.
         "what": "every module written out rather than the one asked about",
         "file": "src/types.c",
-        "from": """        if (held != NULL && !same_module(symbol->name, root, root_length)) {
+        "from": """        if (!same_module(symbol->name, root, root_length)) {
             Held *one = held_of(held, &elsewhere, symbol->name);
             if (type->tag == KEST_T_FN) {
                 one->functions++;""",

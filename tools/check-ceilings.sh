@@ -362,6 +362,82 @@ fi
 met=$(sed -n 's/^met //p' "$scratch/limits")
 
 failed=0
+
+# And a ladder walked from the command line rather than from a host, over every
+# program in this tree. The ladders above lower a number inside a copy of the
+# compiler and walk one program down each; this one hands the compiler its own
+# ceiling and walks every program down, which is the same question asked where
+# anybody can ask it — and it is a question nothing asked at all until there was
+# a way to say how much room a command may have.
+#
+# What it holds of a rung is the whole of it: one that came back nought said
+# what the same run with no ceiling said, and one that refused said which
+# refusal it was. Both halves were broken the day this was written. A `check`
+# with no room to work out which module a type belongs to wrote every type of
+# every module the program imports, as though the file had declared them, and
+# came back nought; and an `emit` whose compiler had no room for a layout wrote
+# the program with one fewer layout than it has, and came back nought. See D845.
+walked_down=0
+walked_over=0
+for reading in examples/*.kest lib/std/*.kest; do
+    for asking in check emit; do
+        # Only what answers with no ceiling at all. A program this command
+        # refuses for its own reasons is one every rung refuses for the same
+        # reason, and holding those would be holding the refusal rather than
+        # the ceiling.
+        whole=$(./kest "$asking" "$reading" 2>&1 </dev/null) || continue
+        # What it cost, which is where the ladder starts: twice that is a
+        # ceiling every program here fits inside, and halving reaches one byte.
+        # A number read out of the run rather than written here, because what a
+        # program costs to read is a thing that moves.
+        costs=$(./kest check --json "$reading" 2>/dev/null </dev/null |
+            sed -n 's/.*"cost":\([0-9]*\).*/\1/p')
+        if [ -z "$costs" ] || [ "$costs" -le 0 ]; then
+            echo "ceilings: \`$reading\` says nothing about what reading it" \
+                 "costs, so there is no ladder to walk it down"
+            failed=1
+            continue
+        fi
+        walked_over=$((walked_over + 1))
+        rung=$((costs * 2))
+        while [ "$rung" -gt 0 ]; do
+            said=$(./kest "$asking" --room "$rung" "$reading" 2>&1 </dev/null)
+            why=$?
+            walked_down=$((walked_down + 1))
+            if [ "$why" -eq 0 ]; then
+                if [ "$said" != "$whole" ]; then
+                    echo "ceilings: \`kest $asking --room $rung $reading\`" \
+                         "came back nought and said something else than the" \
+                         "same run with no ceiling:" \
+                         "\`$(printf '%s' "$said" | head -1 | cut -c1-60)\`"
+                    failed=1
+                fi
+            else
+                case "$said" in
+                *"error[K0"*) ;;
+                *)
+                    # Which covers a rung that was killed as well as one that
+                    # came back on its own feet with nothing to say: a signal
+                    # is a hundred and twenty-eight and the number of it, and
+                    # neither of them named a refusal.
+                    echo "ceilings: \`kest $asking --room $rung $reading\`" \
+                         "came back $why saying" \
+                         "\`$(printf '%s' "$said" | head -1 | cut -c1-60)\`," \
+                         "which names no refusal"
+                    failed=1
+                    ;;
+                esac
+            fi
+            rung=$((rung / 2))
+        done
+    done
+done
+if [ "$walked_down" -eq 0 ]; then
+    echo "ceilings: no program was walked down a ceiling of its own, so" \
+         "nothing here holds one"
+    failed=1
+fi
+
 reached=0
 # Each of the three, and the words it has to say: the number a program can be
 # told it has, at the line that asked for one more.
@@ -1345,6 +1421,21 @@ for program in examples/*.kest "$scratch"/steps.kest "$scratch"/chains.kest; do
                 middle=$(((high + low) / 200 * 100))
                 said_there=$(ulimit -v $middle 2>/dev/null;
                              exec ./kest run "$program" 2>&1 </dev/null)
+                there=$?
+                # A rung that was killed reads as a rung that ran, because
+                # what this looks at is whether it refused in words and a run
+                # that died said none. So the search walks past it and the
+                # ladder it reports has a hole where the compiler crashes:
+                # `parse.kest` in four and a half megabytes died here every
+                # time this check has ever run, and what anybody saw was a
+                # line on the standard error of a check that passed. See D845.
+                if [ $there -ge 128 ]; then
+                    echo "ceilings: with ${middle}K of memory \`$program\`" \
+                         "died while this looked for where it first refuses:" \
+                         "it came back $there"
+                    failed=1
+                    break
+                fi
                 if printf '%s' "$said_there" | grep -q 'error\[K'; then
                     low=$middle
                     out=$said_there
@@ -1517,7 +1608,10 @@ if [ $failed -eq 0 ]; then
          "$wanted_its_input that wanted an input, $no_answer with no" \
          "answer for what they need, $refused_anywhere refused wherever they" \
          "are run, $ran_throughout that ran at every rung and $said_nothing" \
-         "that said nothing about what they cost, all of it measured on the" \
-         "machine this ran on"
+         "that said nothing about what they cost, and a ladder of its own" \
+         "under every program this command line reads —" \
+         "$walked_down rung(s) over $walked_over of them, each either saying" \
+         "what it says with no ceiling at all or naming the refusal it met —" \
+         "all of it measured on the machine this ran on"
 fi
 exit $failed

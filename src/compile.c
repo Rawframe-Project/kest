@@ -249,6 +249,16 @@ static uint32_t emit_jump(Compiler *compiler, uint8_t op, KestSpan origin) {
 
 static void patch_jump(Compiler *compiler, uint32_t placeholder,
                        KestSpan origin) {
+    // A jump that was never written has nowhere to be filled in. `emit_jump`
+    // answers where the two bytes it wrote are, and a chunk with no room for
+    // them wrote neither — the answer is then two short of nothing at all,
+    // which is four thousand million and something, and writing there is a
+    // compiler that dies where it meant to run out. `examples/parse.kest`
+    // compiled in four and a half megabytes did exactly that, and what the
+    // gate saw was a rung that said nothing. See D845.
+    if (compiler->out_of_memory) {
+        return;
+    }
     uint32_t distance = compiler->chunk->code_count - placeholder - 2;
     if (distance > MAX_REACH) {
         refuse(compiler, origin, "K0503",

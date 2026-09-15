@@ -25105,3 +25105,49 @@ wanted. One given a single byte comes back nothing and says there was never
 enough to begin — which is the other sentence, from the door that has nowhere
 to write a diagnostic down. A host that reads only the nothing cannot tell a
 ceiling it picked from a machine it has to buy, and this one reads both.
+
+## D845: a ladder under every program, and the three things under it
+
+A ceiling makes every out-of-room path in this compiler reachable for the first
+time, and the first one anybody walked into came back nought and said nothing.
+So the gate walks one: `--room` from twice what a program costs, halved to a
+single byte, under every program in this tree, asked both as `check` and as
+`emit`. Fourteen hundred rungs over eighty of them, in under two seconds.
+
+*What it holds of a rung is the whole of it.* One that came back nought said
+what the same run with no ceiling said; one that came back anything else named
+a refusal. Both halves were broken the day it was written.
+
+*A listing there was no room to work out, written anyway.* What `check` says
+about a file depends on holding every module the file is **not** about, and that
+list is the first thing it asks the arena for. With no room it was NULL, and two
+guards written `held != NULL` turned the grouping off rather than the answer —
+so every type of every module the program imports was printed as though the file
+had declared it, and the run came back nought. Sixteen lines became a hundred
+and seven. It answers whether it could say it now, and a `check` that could not
+is a run that ran out, said where every other one is said.
+
+*A compiler's answer thrown away.* `kest_compile` answers whether it ran out and
+nothing read it; what was read was `module->out_of_room`, which is about the
+chunk being written and not about the compiler writing it. A compiler with no
+room for a layout went on without one, and `emit` wrote every instruction of the
+program and one fewer layout than it has, and came back nought.
+
+*And a crash the gate has printed on its own standard error every time it has
+ever run.* `Segmentation fault (core dumped)`, one line, while the check under it
+said `none died`. `patch_jump` fills in a jump that `emit_jump` wrote — and a
+chunk with no room wrote neither of its two bytes, so where-they-are is two short
+of nothing at all, four thousand million and something, and writing there is a
+compiler that dies where it meant to run out. `examples/parse.kest` compiled in
+four and a half megabytes did it every time.
+
+What walked past it was the binary search that looks for where a program first
+refuses: what it reads is whether a rung refused *in words*, and a rung that died
+said none, so a death read as a rung that ran and the search carried on above it.
+It says so now. Both halves of that are worth keeping: `--room` refuses at the
+ceiling this compiler was given and `ulimit` refuses at the host underneath, and
+the crash above is on the second side only — the `--room` ladder walks straight
+past it. Neither ladder is the other one.
+
+*Held* by three holes: the listing written anyway, running out counted and not
+said, and a jump filled in after the chunk ran out.

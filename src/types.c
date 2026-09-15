@@ -3805,7 +3805,7 @@ static Held *held_of(Held *held, uint32_t *count, const char *name) {
     return one;
 }
 
-void kest_program_dump(const KestProgram *program, KestArena *arena,
+bool kest_program_dump(const KestProgram *program, KestArena *arena,
                        const char *root, FILE *out) {
     size_t root_length = root == NULL ? 0 : strlen(root);
     uint32_t elsewhere = 0;
@@ -3813,6 +3813,15 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
     Held *held = KEST_ARENA_ARRAY(arena, Held,
                                   program->type_count + program->global_count +
                                       1);
+    // What this says about the file it was asked about depends on holding
+    // every module it is not about, so an arena with no room for that list is
+    // one this cannot answer from. It used to answer anyway, and what it wrote
+    // then was every type of every module the program imports, listed as
+    // though the file had declared them: a run that came back nought having
+    // said something else. See D845.
+    if (held == NULL) {
+        return false;
+    }
 
     for (uint32_t i = 0; i < program->type_count; i++) {
         const KestType *type = program->types[i];
@@ -3821,7 +3830,7 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
         if (type->type_param_count > 0 || mentions_param(type)) {
             continue;
         }
-        if (type->name != NULL && held != NULL &&
+        if (type->name != NULL &&
             !same_module(type->name, root, root_length)) {
             if (type->tag == KEST_T_STRUCT || type->tag == KEST_T_ENUM ||
                 type->tag == KEST_T_FLAGS) {
@@ -3876,7 +3885,7 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
     for (uint32_t i = 0; i < program->global_count; i++) {
         const KestSymbol *symbol = &program->globals[i];
         const KestType *type = symbol->type;
-        if (held != NULL && !same_module(symbol->name, root, root_length)) {
+        if (!same_module(symbol->name, root, root_length)) {
             Held *one = held_of(held, &elsewhere, symbol->name);
             if (type->tag == KEST_T_FN) {
                 one->functions++;
@@ -3941,6 +3950,7 @@ void kest_program_dump(const KestProgram *program, KestArena *arena,
     if (said == 0 && elsewhere == 0) {
         fputs("this file declares nothing\n", out);
     }
+    return true;
 }
 
 

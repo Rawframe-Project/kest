@@ -32035,3 +32035,46 @@ the first time, and the first one anybody walked into answered nought and said
 nothing at all. `--room` can now walk a ladder down over every example from the
 command line. Walk one, and hold that no rung ever comes back nought with
 nothing said.
+
+## A ladder under every program, and the three things under it
+
+A ceiling makes every out-of-room path reachable, and the first one anybody
+walked into came back nought and said nothing. So the gate walks one now:
+`--room` from twice what a program costs, halved down to a single byte, under
+every program in this tree, asked as `check` and as `emit`. 1430 rungs over 80
+of them, in under two seconds. What it holds of a rung is the whole of it — one
+that came back nought said what the same run with no ceiling said, and one that
+came back anything else named a refusal.
+
+Both halves were broken. `check` works out what to say about a file by holding
+every module the file is not about, and asks for that list first; with no room
+it was NULL and two guards turned the grouping off rather than the answer, so
+every type of every imported module printed as though the file had declared it —
+sixteen lines became a hundred and seven, and the run came back nought. And
+`kest_compile` answers whether it ran out, and nothing read the answer: a
+compiler with no room for a layout went on without one, and `emit` wrote the
+program with one fewer layout than it has and came back nought.
+
+The third thing was not found by the check but by the noise beside it. The
+ceilings check has printed `Segmentation fault (core dumped)` on its own
+standard error every time it has ever run, under a line saying `none died`.
+`patch_jump` fills in a jump `emit_jump` wrote, and a chunk with no room wrote
+neither of its two bytes, so where-they-are is two short of nothing at all —
+four thousand million and something — and writing there is a compiler that dies
+where it meant to run out. What walked past it is the binary search for where a
+program first refuses: it reads whether a rung refused in words, and a rung that
+died said none. It says so now.
+
+Both ladders stay. `--room` refuses at the ceiling this compiler was given and
+`ulimit` refuses at the host underneath, and the crash above is on the second
+side only: the `--room` ladder walks straight past it.
+
+Recorded as D845.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the ladder asks `check` and `emit`, which is reading and compiling.
+What it does not ask is `run`, where the machine's own out-of-room paths are —
+a heap that cannot grow, a frame that cannot be made, a piece of text with
+nowhere to go. Walk the same ladder with `run`, and hold that every rung either
+writes what the program writes or names the refusal it met.

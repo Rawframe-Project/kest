@@ -1515,9 +1515,14 @@ static int run(const char *command, const char *executable, char **paths,
         if (checking) {
             if (kest_build_check(build) && !json) {
                 // The file that was named, which `check` knows without
-                // having compiled anything.
-                kest_program_dump(build->program, build->arena,
-                                  build->units.items[0].alias, stdout);
+                // having compiled anything. A listing it had no room to work
+                // out is not written half-way and is not written wrongly: it
+                // is a run that ran out, said where every other one is said.
+                // See D845.
+                if (!kest_program_dump(build->program, build->arena,
+                                       build->units.items[0].alias, stdout)) {
+                    kest_diags_starve(&build->diags);
+                }
             }
         } else if (emitting) {
             if (kest_build_emit(build) && !json) {
