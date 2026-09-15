@@ -25601,3 +25601,35 @@ promise is ever weighed. What came back was that thirty-two functions could
 promise what two of them could not — a sweep answering confidently about work it
 had never done. The copy is made under its own name now, which is the only name
 it can be made under.
+
+## D857: a promise is a thing to name
+
+`kest_entry_promises` answered about `no.alloc` and there was no way for a host
+to ask about the other one. The obvious repair is a second door, and it is the
+wrong one: the namespace was spelled with a dot so the language could hold more
+promises than it has, and a door a promise is a door a language cannot grow.
+
+So the door takes which: `KEST_PROMISE_NO_ALLOC`, `KEST_PROMISE_NO_HOST`, and a
+`switch` with no `default` in it, so a third promise added to the language stops
+this compiling until somebody says what a host reads for it — the same rule the
+list of what reaches the heap keeps, one layer up.
+
+*What a host does with the second one is not what it does with the first.* A
+frame step that may reach the heap is one an engine puts somewhere other than a
+frame; a step that may call back in is one a host driving frames from inside its
+own lock cannot install at all. The engine host asks both of the same functions
+now and gets different answers — sixty-one promise `no.alloc` of a hundred and
+three, and twenty-four promise `no.host` — which is what says the second
+question is a question and not the first one asked twice.
+
+*Held in three places rather than two.* The word the parser reads, the name the
+header hands a host, and the reference that says either exists. A promise the
+parser reads and the header cannot name is one nobody can ask about; a promise
+the header names and the reference never shows is a door nobody opens. The third
+of those is held against the piece of C the reference shows a host asking with,
+because that is the one place a reader looks to find out there is a door at all.
+
+*And the reference had one promise in it.* It still said `there is one promise`
+and offered `the one there is is `no.alloc`` under a caret the compiler had
+stopped writing that way a turn ago. The second promise has prose of its own
+now, which is what the check that found it was for.

@@ -9499,6 +9499,34 @@ static const Keyword KEYWORDS[] = {
         "caught": "nothing a run says is where the declarations are read from",
     },
     {
+        # A promise the parser reads and the header cannot name. The namespace
+        # was spelled with a dot so it could hold more than the two it has, and
+        # what makes adding one a thing that is done everywhere or nowhere is
+        # the three places being held together: the word a program writes, the
+        # name a host asks by, and the reference that says either exists. See
+        # D857.
+        "what": "a promise the parser reads under another name",
+        "file": "src/parser.c",
+        "from": r"""                      : is_word(parser, 2, "host")  ? no_host""",
+        "to": r"""                      : is_word(parser, 2, "hosted")  ? no_host""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "the parser reads",
+    },
+    {
+        # And a promise a host can ask about that the reference never says. A
+        # door nobody is told about is a door nobody opens, which is this
+        # project's first rule said about the header rather than about
+        # diagnostics. See D857.
+        "what": "a promise the reference does not name",
+        "file": "docs/language.md",
+        "from": r"""if (!kest_entry_promises(runtime, at, KEST_PROMISE_NO_HOST)) {""",
+        "to": r"""if (!kest_entry_promises(runtime, at, KEST_PROMISE_NO_ALLOC)) {""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "shows a host asking and never about",
+    },
+    {
         # A pair of programs differing in one thing each is what says the tree
         # can tell that thing apart, and a pair that does not parse is a
         # comparison of two errors. The promise on a function is the first of

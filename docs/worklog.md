@@ -32513,3 +32513,38 @@ promised nothing about is the one crossing nothing weighs: `kest_entry_promises`
 answers about `no.alloc` alone, and there is no way for a host to ask whether
 what it is about to drive promises not to call back into it. Give the door the
 second promise.
+
+## A promise is a thing to name
+
+`kest_entry_promises` answered about `no.alloc` and a host had no way to ask
+about the other. The obvious repair is a second door and it is the wrong one:
+the namespace was spelled with a dot so the language could hold more promises
+than it has, and a door a promise is a door a language cannot grow.
+
+So the door takes which — `KEST_PROMISE_NO_ALLOC`, `KEST_PROMISE_NO_HOST` — and
+a `switch` with no `default`, so a third promise stops this compiling until
+somebody says what a host reads for it.
+
+What a host does with the second is not what it does with the first: a frame
+step that may reach the heap goes somewhere other than a frame, and one that may
+call back in cannot be installed at all by a host driving frames inside its own
+lock. The engine host asks both of the same functions and gets different answers
+— 61 of 103 promise `no.alloc`, 24 promise `no.host` — which is what says the
+second question is a question rather than the first asked twice.
+
+Held in three places: the word the parser reads, the name the header hands a
+host, and the reference. The last is held against the piece of C the reference
+shows a host asking with, because that is where a reader finds out there is a
+door at all — and it found that the reference still said `there is one promise`
+and offered a suggestion the compiler had stopped writing a turn ago. The second
+promise has prose of its own now.
+
+Recorded as D857.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the promise is proved, written, asked about and held — and nothing has
+ever measured what it is worth. `tools/frame.kest` says what a frame costs in
+nanoseconds; there is no number anywhere for what a crossing costs, so `no.host`
+is a promise whose value nobody can state. Measure a call out to the host
+against a call inside the program, and say the two beside each other.

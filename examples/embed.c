@@ -3612,25 +3612,47 @@ int main(int argc, char **argv) {
         // reading a constant. See D680.
         uint32_t promised = 0;
         uint32_t said_nothing_about_it = 0;
+        // And the other promise beside it, which is the one a host driving a
+        // frame from inside its own lock reads: a step that may call back in
+        // is one that reaches this host while this host is in the middle of
+        // something. Two questions of one door, because a promise is a thing
+        // to name rather than a door to add. See D857.
+        uint32_t quiet = 0;
         for (int32_t at = 0;; at++) {
             if (kest_entry_name(engine.runtime, at) == NULL) {
                 break;
             }
-            if (kest_entry_promises(engine.runtime, at)) {
+            if (kest_entry_promises(engine.runtime, at,
+                                    KEST_PROMISE_NO_ALLOC)) {
                 promised++;
             } else {
                 said_nothing_about_it++;
             }
+            if (kest_entry_promises(engine.runtime, at,
+                                    KEST_PROMISE_NO_HOST)) {
+                quiet++;
+            }
         }
         if (promised == 0 || said_nothing_about_it == 0 ||
-            kest_entry_promises(engine.runtime, -1) ||
-            kest_entry_promises(engine.runtime, (int32_t)defined)) {
+            kest_entry_promises(engine.runtime, -1, KEST_PROMISE_NO_ALLOC) ||
+            kest_entry_promises(engine.runtime, (int32_t)defined,
+                                KEST_PROMISE_NO_ALLOC)) {
             fprintf(stderr, "%u function(s) promised `no.alloc` and %u did "
                             "not\n", promised, said_nothing_about_it);
             return 1;
         }
-        printf("%u of %u function(s) promised to reach no heap\n", promised,
-               defined);
+        // The second promise is asked of the same functions and answers for
+        // fewer of them, because this program calls the host: a walk where
+        // every function answered the same to both would be a walk that asked
+        // one question twice.
+        if (quiet == 0 || quiet >= promised ||
+            kest_entry_promises(engine.runtime, -1, KEST_PROMISE_NO_HOST)) {
+            fprintf(stderr, "%u function(s) promised `no.host` against %u that "
+                            "promised `no.alloc`\n", quiet, promised);
+            return 1;
+        }
+        printf("%u of %u function(s) promised to reach no heap, and %u to "
+               "call nothing of this host's\n", promised, defined, quiet);
 
         // And the same walk read the way every message about a function
         // spells it. What a host reads in a refusal and what it reads in the

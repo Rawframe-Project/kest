@@ -616,17 +616,33 @@ const char *kest_entry_wrote(KestRuntime *runtime, int32_t entry);
 //
 // `kest_frame_at` answers how wide the arguments are together when `which` is
 // past the last one, which is where a result written over them would start.
-// Whether the one at `entry` promised `no.alloc`, which the compiler proved
-// against the code it emitted. False past the last function, and false for one
-// that made no promise.
+// The promises a function can make, which are the two this language has. They
+// are spelled with a dot in a program — `no.alloc`, `no.host` — so the
+// namespace can hold more without taking more keywords, and they are named here
+// for the same reason: a host asks about one of them by saying which, and a
+// third one added to the language is a case added here rather than a door added
+// beside the one below. See D857.
+typedef enum {
+    // Nothing this function does reaches the heap.
+    KEST_PROMISE_NO_ALLOC,
+    // Nothing it does calls back out into the host.
+    KEST_PROMISE_NO_HOST,
+} KestPromise;
+
+// Whether the one at `entry` made the promise asked about, which the compiler
+// proved against the code it emitted. False past the last function, false for
+// one that made no promise, and false for a `which` this language has not.
 //
-// It is the one thing about a function a host can act on before calling it: a
+// They are the things about a function a host can act on before calling it: a
 // frame step that may reach the heap is one an engine puts somewhere other than
-// a frame, or refuses to install at all. What a program costs in other ways —
-// how many of its values were worked out where they stand, how much reading it
-// cost — is in what `--json` prints, because a host cannot do anything about
-// those and a tool reading them can. See D680.
-bool kest_entry_promises(KestRuntime *runtime, int32_t entry);
+// a frame, or refuses to install at all, and one that may call back in is one a
+// host driving a frame from inside its own lock cannot install at all. What a
+// program costs in other ways — how many of its values were worked out where
+// they stand, how much reading it cost — is in what `--json` prints, because a
+// host cannot do anything about those and a tool reading them can. See D680 and
+// D857.
+bool kest_entry_promises(KestRuntime *runtime, int32_t entry,
+                         KestPromise which);
 
 uint32_t kest_frame_takes(KestRuntime *runtime, int32_t entry);
 uint32_t kest_frame_at(KestRuntime *runtime, int32_t entry, uint32_t which);

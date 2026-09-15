@@ -271,17 +271,24 @@ What goes back into `kest_entry` is the first of them. The second is not always
 a name that can: one that is several functions is refused, and that refusal is
 what names the copies.
 
-`kest_entry_promises` answers whether a function promised `no.alloc`, which the
-compiler proved against the code it emitted. It is the one thing about what a
-function costs that a host can act on before calling it: a frame step that may
-reach the heap is one an engine puts somewhere other than a frame, or refuses to
-install. What a program costs in other ways — how many of its values were worked
-out where they stand, what reading it cost — is in what `--json` prints, because
-a host cannot do anything about those and a tool reading them can.
+`kest_entry_promises` answers whether a function made a promise, which the
+compiler proved against the code it emitted. Which promise is asked by naming
+it — `KEST_PROMISE_NO_ALLOC` or `KEST_PROMISE_NO_HOST` — because a promise is a
+thing to name rather than a door to add, and the language has room for more of
+them than it has today. They are the things about a function a host can act on
+before calling it: a frame step that may reach the heap is one an engine puts
+somewhere other than a frame, and one that may call back in is one a host
+driving frames from inside its own lock cannot install at all. What a program
+costs in other ways — how many of its values were worked out where they stand,
+what reading it cost — is in what `--json` prints, because a host cannot do
+anything about those and a tool reading them can.
 
 ```c
-if (!kest_entry_promises(runtime, at)) {
+if (!kest_entry_promises(runtime, at, KEST_PROMISE_NO_ALLOC)) {
     // not a frame step: somewhere else, or nowhere
+}
+if (!kest_entry_promises(runtime, at, KEST_PROMISE_NO_HOST)) {
+    // it may call back in: not while this host holds its own lock
 }
 ```
 
@@ -2281,20 +2288,41 @@ error[K0402]: nothing promises about what this calls, and `apply` promises `no.a
   |            ^^^^ write the promise into the shape: `fn(i32) -> i32 no.alloc`
 ```
 
-There is one promise, and a word written where it goes that is not that one is
-answered for rather than left to be a body that never turned up:
+There are two promises, and a word written where one goes that is neither of
+them is answered for rather than left to be a body that never turned up:
 
 ```
 error[K0216]: `no.allocate` is not a promise this language has
  --> promise.kest:1:15
   |
 1 | fn f() -> i32 no.allocate {
-  |               ^^^^^^^^^^^ the one there is is `no.alloc`
+  |               ^^^^^^^^^^^ this language has `no.alloc` and `no.host`
 ```
 
 The same is said of a promise written with its first half left off and of one
 written twice, and it is said in a function's type as well as after its
-signature, because it is the same promise read through the same door.
+signature, because they are the same promises read through the same door.
+
+`no.host` is the second: a function that promises it calls nothing the host
+provides. It is proved the way `no.alloc` is and on a walk of its own, and what
+reaches the host is one thing rather than a list — nothing a body writes crosses
+out of a program, and the only way out is a call to an `extern`, which is a call
+like any other. A foreign function reaches the host whatever it promises about
+the heap.
+
+```
+error[K0401]: this calls the host, and `tick` promises `no.host`
+ --> tick.kest:4:12
+  |
+4 |     return Host.now()
+  |            ^^^^^^^^^^ `Host.now` is the host's
+```
+
+Both are written after one signature in one order, `no.alloc no.host`, and read
+in either; each is written once. Each is asked about on its own where a value
+goes somewhere: a value promising more may go where one promising less is
+wanted, and one that promises the heap and not the host is neither above nor
+below one that promises the other way.
 
 The promise is proved twice: once against the tree, where a refusal can name
 the path, and once against the instructions that were emitted for it, where

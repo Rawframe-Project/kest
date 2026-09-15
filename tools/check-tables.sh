@@ -210,6 +210,37 @@ for reading in sorted(glob.glob('tools/check-*.sh')):
                   "again" % (reading, made))
             failed = 1
 
+# The promises a function can make, in the three places that know them: the
+# words the parser reads, the names the header hands a host, and the reference
+# that tells anybody either of them exists. A promise the parser reads and the
+# header cannot name is one a host cannot ask about; one the header names and
+# the parser will not read is a door onto nothing. The namespace was spelled
+# with a dot so it could hold more of them, and this is what makes adding one a
+# thing that has to be done in all three places or not at all. See D857.
+promise_words = some("the promises the parser reads", sorted(set(re.findall(
+    r'is_word\(parser, 2, "([a-z]+)"\)', open('src/parser.c').read()))))
+promise_names = some("the promises the header names", sorted(re.findall(
+    r'(KEST_PROMISE_[A-Z_]+),',
+    table('include/kest.h', r'typedef enum \{(.*?)\} KestPromise;'))))
+if sorted("KEST_PROMISE_NO_" + word.upper()
+          for word in promise_words) != promise_names:
+    print("promises: the parser reads %s and the header names %s"
+          % (", ".join("`no.%s`" % w for w in promise_words),
+             ", ".join(promise_names)))
+    failed = 1
+# And every one of them is in the one place a host reads to learn there is a
+# door: the piece of C the reference shows a host asking with. A promise named
+# in the header and left out of that is one a reader of the reference never
+# finds out they can ask about, which is this project's first rule said about
+# the header rather than about diagnostics.
+asking = some("the reference's example of a host asking", table(
+    'docs/language.md', r'```c\n(if \(!kest_entry_promises.*?)```'))
+for name in promise_names:
+    if name not in asking:
+        print("promises: the reference shows a host asking and never about `%s`"
+              % name)
+        failed = 1
+
 # The reasons there is no least, in the three places that know them: the header
 # a host reads, the one list of what each is called, and the reference. A reason
 # with no name of its own is a host told whatever the last one fell through to,
@@ -2175,7 +2206,7 @@ if not failed:
     print("%u escapes, "
           % len(accepted), end="")
     print("%u instructions, %u tokens, %u keywords, %u builtins, "
-          "%u primitives, %u reasons, %u modules "
+          "%u primitives, %u reasons, %u promises, %u modules "
           "and %u checks are in step with their names, holding %u pieces of "
           "Python and %u of shell where a name stands for one thing, %u "
           "refusals asked for, %u of them by a hole and nothing else, "
@@ -2198,7 +2229,7 @@ if not failed:
           "one beside it that bounds, and %u door(s) named in what this "
           "compiler says, every one of them one a host can call"
           % (len(ops), len(toks), len(held), len(checked), len(writable),
-             len(reasons), len(listed),
+             len(reasons), len(promise_names), len(listed),
              len(tools), pythons, shells, len(reading), len(only_a_hole),
              len(NOT_REACHED),
              len(every_code), len(only_a_hole), sentences,

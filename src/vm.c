@@ -4058,7 +4058,8 @@ const char *kest_entry_wrote(KestRuntime *runtime, int32_t entry) {
     return runtime->module->functions[entry]->wrote;
 }
 
-bool kest_entry_promises(KestRuntime *runtime, int32_t entry) {
+bool kest_entry_promises(KestRuntime *runtime, int32_t entry,
+                         KestPromise which) {
     // False past the last function, the way the two above answer NULL: a host
     // walking to the end is reading the end rather than asking about a
     // function that is not there. A promise nothing made is not one to keep.
@@ -4066,7 +4067,16 @@ bool kest_entry_promises(KestRuntime *runtime, int32_t entry) {
         (uint32_t)entry >= runtime->module->count) {
         return false;
     }
-    return runtime->module->functions[entry]->no_alloc;
+    // Written out rather than left to a `default`, so a promise added to the
+    // language stops this compiling until somebody says what a host reads for
+    // it. See D857.
+    switch (which) {
+    case KEST_PROMISE_NO_ALLOC:
+        return runtime->module->functions[entry]->no_alloc;
+    case KEST_PROMISE_NO_HOST:
+        return runtime->module->functions[entry]->no_host;
+    }
+    return false;
 }
 
 uint32_t kest_frame_takes(KestRuntime *runtime, int32_t entry) {
