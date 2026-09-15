@@ -83,6 +83,24 @@ fn main() -> i32 {
         return 7
     }
 
+    // And one taken out from under the last one, which is the way through
+    // `remove` that moves a pair: what was at the end goes into the hole, and
+    // the slot pointing at it has to be found while it is still where it was.
+    // Taking the last one out never goes that way, so a table that is only
+    // ever shortened from the end leaves the widest thing this library does
+    // unrun — which is what `KEST_DEEP` counts. See D812.
+    let spare: table.Table<text, Item> = table.empty()
+    table.set(spare, "shield", Item("shield", 300))
+    table.set(spare, "torch", Item("torch", 5))
+    if !table.remove(spare, "shield") {
+        return 20
+    }
+    if table.count(spare) != 1 ||
+            table.has(spare, "shield") ||
+            table.get(spare, "torch", Item("", 0)).price != 5 {
+        return 21
+    }
+
     // The same table over other types, which is another copy of the same
     // bodies and nothing else.
     let counts: table.Table<i32, i32> = table.empty()
@@ -120,6 +138,15 @@ fn main() -> i32 {
     if table.count(counts) != 200 {
         return 16
     }
+    // One out from under the last one here as well. This is another copy of
+    // the same body, compiled against other types, and a copy is only as run
+    // as the program that calls it. See D812.
+    if !table.remove(counts, 0) ||
+            table.has(counts, 0) ||
+            table.count(counts) != 199 {
+        return 22
+    }
+    table.set(counts, 0, 0)
     for i in 0..200 {
         if table.get(counts, i, 0 - 1) != i * 2 {
             return 17

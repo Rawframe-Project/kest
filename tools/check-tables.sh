@@ -1698,6 +1698,10 @@ LEFT_OUT = {
     ("KestChunk", "next_instruction"): "where the next opcode goes while a "
                                        "body is being written, which is "
                                        "nothing once one is",
+    ("KestChunk", "went"): "the deepest the machine ever got in this body, "
+                           "which only the build that checks itself counts "
+                           "and which is written after the code is, so it is "
+                           "about a run rather than part of one",
     ("KestChunk", "folded"): "how many of its values were worked out where "
                              "they stand, which is a number about how the "
                              "chunk was made rather than part of what runs",

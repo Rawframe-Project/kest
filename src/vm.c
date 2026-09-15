@@ -1707,6 +1707,21 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // itself, once per instruction. D808 to D810 held that count while it
         // was being made; this holds it against what it was made for. See
         // D811.
+        // How deep this body has actually been, which is the other half of
+        // the question below: that one says a body went further than it was
+        // given, and this says whether it ever went that far at all. Room
+        // asked for and never used is memory a host is told to find for
+        // nothing, and `needs_of` carries it up every chain of calls. The
+        // chunk is the compiler's and the machine does not change it, so the
+        // const is put aside for the one number written back. See D812.
+        {
+            uint32_t at = (uint32_t)(top - frame->base -
+                                     frame->chunk->slot_count);
+            KestChunk *seen = (KestChunk *)(uintptr_t)frame->chunk;
+            if (at > seen->went) {
+                seen->went = at;
+            }
+        }
         if (top > frame->base + frame->chunk->slot_count +
                       frame->chunk->stack_needed) {
             fail(vmp, frame, instruction, "K0655",
@@ -3391,6 +3406,23 @@ bool kest_runtime_free(KestRuntime *runtime) {
                            "free it after the call it was made for returns");
         return false;
     }
+#ifdef KEST_CHECKED
+    // What every body that ran actually reached, against what it asked for.
+    // The build that checks itself is the only one that counts it, and it says
+    // so only when asked, because a machine that wrote this every time would
+    // be a machine whose answer differs from the one the release build gives.
+    // Read by `tools/check-costs.sh`. See D812.
+    if (runtime->module != NULL && getenv("KEST_DEEP") != NULL) {
+        for (uint32_t i = 0; i < runtime->module->count; i++) {
+            const KestChunk *one = runtime->module->functions[i];
+            if (one != NULL && one->went > 0) {
+                fprintf(stderr, "deep %s asked %u went %u\n", one->name,
+                        one->stack_needed, one->went);
+            }
+        }
+    }
+#endif
+
     // Read before the arena this machine is in goes, because this struct is in
     // it: what is being freed here is the thing holding the pointers to what
     // is being freed.

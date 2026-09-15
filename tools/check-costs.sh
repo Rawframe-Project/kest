@@ -913,6 +913,44 @@ if (lexing is None or parsing is None or checking is None or
 # covers something and one that looks as if it does.
 alone = sorted(promised - provided)
 
+# And the other half of the count the machine holds. `K0655` refuses a body
+# that goes deeper than it was given; nothing says a body never went that deep
+# at all. Room asked for and never used is memory a host is told to find for
+# nothing, and `needs_of` carries it up every chain of calls — a body four
+# slots wider than it needs makes every caller of it four wider too.
+#
+# The build that checks itself counts what each body reached and says so when
+# `KEST_DEEP` is set, which is the only time it says anything the release build
+# does not. Every body every example runs reaches the room it was given. Where
+# that stops being true it is usually not the compiler: it is an arm, or a
+# branch, or a copy of a generic that nothing here runs, and the answer is a
+# program that runs it. See D812.
+asked_for = 0
+reached = 0
+loose = []
+for deep_path in sorted(glob.glob(os.path.join('examples', '*.kest'))):
+    deep_env = dict(os.environ)
+    deep_env['KEST_DEEP'] = '1'
+    deep_ran = subprocess.run(['./kest-debug', 'run', deep_path],
+                              capture_output=True, text=True,
+                              stdin=subprocess.DEVNULL, env=deep_env)
+    for deep_line in deep_ran.stderr.split("\n"):
+        if not deep_line.startswith('deep '):
+            continue
+        deep_words = deep_line.split(' ')
+        deep_room = int(deep_words[-3])
+        deep_went = int(deep_words[-1])
+        deep_name = ' '.join(deep_words[1:-4])
+        asked_for += 1
+        reached += deep_room
+        if deep_room > deep_went:
+            loose.append((deep_room - deep_went, deep_name, deep_path))
+for deep_slack, deep_name, deep_path in sorted(loose, reverse=True)[:4]:
+    print("costs: `%s` asks for %u slot(s) it never used, running %s"
+          % (deep_name, deep_slack, deep_path))
+    failed = 1
+some("the bodies the examples run", asked_for)
+
 if not failed:
     print("what the library costs grows the way it should: %u askings of the "
           "text it makes, %u left to the host, %u modules in a loop, %u proved "
@@ -940,7 +978,9 @@ if not failed:
           "is paid for and a call is not, and what that rule costs the "
           "examples as they stand is %u copies from %u bodies, the ones past "
           "the first being %u of %u bytes of code, of which %u promise "
-          "`no.alloc`, all of it measured on the machine "
+          "`no.alloc`, and %u bodies run by the examples each reaching "
+          "every slot of the %u they were given between them, all of it "
+          "measured on the machine "
           "this ran on"
           % (asked, len(left_to_the_host), driven, proved, kept, len(alone),
              lexing, parsing, nodes, loops, checking, types_made, compiling,
@@ -952,6 +992,6 @@ if not failed:
              flat, flat_checked, deep, deep_checked,
              COPIES, COPIES, one_copy_costs, many_copies_costs,
              copied_total, copied_bodies, copied_bytes, copied_code,
-             copied_quiet))
+             copied_quiet, asked_for, reached))
 sys.exit(failed)
 PY

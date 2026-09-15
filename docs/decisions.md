@@ -23781,3 +23781,44 @@ The fix is the order: run the deferred calls, then take the answer off.
 every expression and every statement, held to never going under nothing, and
 held to what the machine did with it. The first three are cheap and always on;
 the fourth is a build.
+
+## D812: room asked for and never used
+
+*The other half of D811.* `K0655` refuses a body that goes deeper than it was
+given. Nothing said a body never went that deep at all — and that direction
+costs too: room asked for and never used is memory a host is told to find for
+nothing, and `needs_of` carries it up every chain of calls, so a body four slots
+wider than it needs makes every caller of it four wider.
+
+*Counted where the ceiling is held.* The build that checks itself already reads
+`top` once per instruction; it now also remembers the deepest each body reached,
+on the chunk, and says so at the end of a run when `KEST_DEEP` is set. Only when
+set, because a machine that wrote this every time would be a machine whose
+output differs from the release build's, and the gate holds those two to each
+other.
+
+*Three bodies over the whole tree, and none of them the compiler's fault.*
+
+- `state.describe` asked 3 and reached 2: its two arms that carry something have
+  a hole in a piece of text, which is worked out on the stack, and the example
+  only ever passed it `Door.Shut`.
+- `table.remove`, twice — once per copy of the generic. Its widest path is the
+  one that moves a pair: what was at the end goes into the hole, and the slot
+  pointing at it has to be found while it is still where it was. Every removal
+  in the tree took the last one out, which never goes that way.
+
+So the answer was three programs, not three fixes to the compiler: `state.kest`
+describes a locked door and an open one, and `inventory.kest` takes a key out
+from under the last one, in both copies. The compiler's count was already
+exactly right everywhere it had been run.
+
+*Held.* `tools/check-costs.sh` runs every example under the checked build with
+`KEST_DEEP` set and refuses a body that asks for a slot it never used. It says
+how many bodies ran and how many slots they were given between them — a hundred
+and fifty-odd bodies, and every slot of what they asked for reached.
+
+*What the check is really about.* Where it goes red it will usually not be the
+compiler: it will be an arm, a branch, or a copy of a generic that nothing runs.
+That makes it two things at once — a check on the compiler's arithmetic and a
+check on whether the examples run what they claim to show. Both are worth
+having, and the second is the one that will go off.

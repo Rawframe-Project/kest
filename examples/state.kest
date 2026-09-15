@@ -125,6 +125,17 @@ fn main() -> i32 {
     if describe(door) != "shut" {
         return 12
     }
+    // And the arms that carry something, which are the wide ones: a hole in a
+    // piece of text is worked out on the stack, so an arm with one needs more
+    // room than an arm that answers a word. A body whose widest arm is never
+    // run is a body that asks for room nothing here has seen it use, which is
+    // what `KEST_DEEP` counts. See D812.
+    if describe(Door.Locked(7)) != "locked with 7" {
+        return 14
+    }
+    if describe(Door.Open(1.5)) != "open 1.5 wide" {
+        return 15
+    }
 
     // The value's own text, which needs no function at all.
     if "{Door.Locked(7)}" != "Door.Locked(7)" {

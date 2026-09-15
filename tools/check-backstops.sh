@@ -184,6 +184,24 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A body given a slot more than it works out in. Room asked for and
+        # never used is memory a host is told to find for nothing, and
+        # `needs_of` carries it up every chain of calls — a body a slot wider
+        # than it needs makes every caller of it a slot wider too. Nothing
+        # running would notice: the machine is bigger than it has to be and
+        # every answer is right. See D812.
+        "what": "a body given more room than it works out in",
+        "file": "src/compile.c",
+        "from": r"""static void stack_push(Compiler *compiler, uint16_t count) {
+    compiler->stack_depth += count;""",
+        "to": r"""static void stack_push(Compiler *compiler, uint16_t count) {
+    compiler->stack_depth += count;
+    compiler->stack_high_water = (uint16_t)(compiler->stack_depth + 1);""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-costs.sh",
+        "caught": "slot(s) it never used, running",
+    },
+    {
         # A deferred call counted where it is written rather than where it
         # runs. What a `defer` does happens after the answer has been worked
         # out and while it is still on the stack for the `return` to take, so
@@ -9990,8 +10008,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # say it is the sentence they read.
         "what": "a machine's numbers said as though they were anybody's",
         "file": "tools/check-costs.sh",
-        "from": '          "`no.alloc`, all of it measured on the machine "\n          "this ran on"',
-        "to": '          "`no.alloc`"',
+        "from": '          "measured on the machine "\n          "this ran on"',
+        "to": '          ""',
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "caught": "says numbers a machine gave it and does not say",

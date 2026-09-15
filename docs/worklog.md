@@ -30780,3 +30780,43 @@ went shallower. A body that asks for more than it ever uses is memory a host is
 told to find for nothing, and `needs_of` multiplies it up a chain of calls.
 Have the checked build remember the deepest each body actually reached, say so
 at the end of a run, and read the examples' answers against what they asked for.
+
+## Room asked for and never used
+
+K0655 refuses a body that goes deeper than it was given. Nothing said a body
+never went that deep at all, and that direction costs too: room asked for and
+never used is memory a host is told to find for nothing, and `needs_of` carries
+it up every chain of calls, so a body four slots wider than it needs makes every
+caller of it four wider.
+
+The build that checks itself already reads `top` once per instruction. It now
+also remembers the deepest each body reached and says so at the end of a run
+when `KEST_DEEP` is set — only when set, because a machine that wrote it every
+time would be one whose output differs from the release build's, and the gate
+holds those two to each other.
+
+Three bodies over the whole tree, and none of them the compiler's fault.
+`state.describe` asked 3 and reached 2: the arms that carry something have a
+hole in a piece of text, worked out on the stack, and the example only ever
+passed it `Door.Shut`. `table.remove`, twice, once per copy of the generic: its
+widest path is the one that moves a pair, and every removal in the tree took the
+last one out, which never goes that way. So the answer was three programs, not
+three fixes — `state.kest` describes a locked door and an open one, and
+`inventory.kest` takes a key out from under the last one in both copies. The
+compiler's count was already exactly right everywhere it had been run.
+
+`check-costs.sh` now runs every example under the checked build with `KEST_DEEP`
+set and refuses a body that asks for a slot it never used, saying how many
+bodies ran and how many slots they were given between them. Where it goes red it
+will usually not be the compiler: it will be an arm, a branch, or a copy of a
+generic that nothing runs. That makes it a check on the compiler's arithmetic
+and a check on whether the examples run what they claim to show, and the second
+is the one that will go off. Recorded as D812.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same question one level up. `needs_of` answers for a chain of
+calls by adding each body's width to the worst of what it reaches, and the
+checked build now knows what each body really reached. Add up the deepest the
+machine's own frames ever got in a run, and read that against what `kest_needs`
+said the program would want.

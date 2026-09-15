@@ -325,6 +325,10 @@ typedef struct {
     // How deep the operand stack gets. The compiler knows it exactly, so the
     // machine checks for room once per call instead of once per push.
     uint16_t stack_needed;
+    // The deepest the machine ever got in this body, which only the build
+    // that checks itself counts. It is what says the number above is not
+    // merely enough but no more than enough. See D812.
+    uint32_t went;
     bool returns_value;
     // What the declaration promised. The promise is checked against the tree
     // before anything is emitted; this is what lets it be checked again
