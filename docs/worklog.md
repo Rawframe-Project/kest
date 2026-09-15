@@ -30500,3 +30500,47 @@ by the machine and refused by the folder, so `const INFINITY: f64 = 1.0 / 0.0`
 compile. Make the folder answer where the machine answers, keep the whole
 numbers' refusal where the machine stops, and hold every float end in both
 arithmetics against each other.
+
+## One promise, two arithmetics, one of them refusing
+
+The reference says a float divided by nought has an answer — an infinity with a
+sign, or not a number for nought over nought — and says that dividing is the
+only way to get one, because there is no way to write one down. A program that
+divided while running got exactly that. A program that divided in a constant got
+`K0504`: "this divides by nought". So `const INFINITY: f64 = 1.0 / 0.0`, the one
+way to name the thing the reference says a program gets by dividing, was
+refused.
+
+The folder's float branch carried the whole numbers' guard. That guard is right
+where it is — a whole number divided by nought stops the machine, so a constant
+has nothing to hold — and wrong where the machine answers. It is gone from the
+float branch and stays in the other.
+
+`examples/numbers.kest` checked three float remainders and one divide by nought,
+all at run time. It now checks twelve ends in both arithmetics and holds each
+folded answer against the running one: infinity either sign, nought over nought,
+a remainder by nought, by an infinity either way and of an infinity, a remainder
+of nought and of a nought that came from below — equal, so what tells them apart
+is dividing by them — a negative divisor, and a pair as far apart as a float
+reaches. Codes 76 to 87. Every one agrees with C's `fmod`.
+
+`tools/check-commands.sh` has refused a whole-number constant divided by nought
+since D673; the float beside it is now refused from being refused, four lines
+below, where the question was always asked. The reference says both.
+
+D801 to D803 were prose against numbers. This is the same fault one layer down:
+two pieces of code describing the language differently, with the document
+agreeing with one of them and nothing asking the other. Recorded as D805.
+
+And the twelve constants it took to hold that are what found D804: one of them
+pushed this file's constant pool past 148, and a build that checks itself read
+the index as an opcode.
+
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the folder and the machine are two arithmetics for one language, and
+D667, D668, D669 and now D805 have each found them apart. Read every operator
+and conversion the folder implements against the instruction the machine runs
+for the same thing, and list the ones where a program could tell which worked
+its answer out. Then hold the ones nothing holds.

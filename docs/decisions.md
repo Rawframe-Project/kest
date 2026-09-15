@@ -23447,3 +23447,49 @@ against the line the divide is on. All six moved before the fix and none after.
 constant pool crossed 148 under a build that checks itself — a bound this tree
 has had since the day it had 148 instructions. The sanitiser found in one run
 what eight hundred entries of reading did not.
+
+## D805: one promise, two arithmetics, one of them refusing
+
+*What the reference says.* "Dividing by nought is two different things. A whole
+number has no answer, so it is `K0601` and the program stops; a float has one
+and it is the one C has, an infinity with a sign, or not a number when nought is
+divided by nought." And further down, of `inf`, `-inf` and `nan`: "there is no
+way to write them: a program that wants one divides."
+
+*What a program got.* A program that divided while running got exactly that.
+A program that divided in a constant got `K0504`, *"`edge.INF` is not worked out
+where it is written — this divides by nought"*. So `const INFINITY: f64 = 1.0 /
+0.0` — the only way to name the thing the reference says a program gets by
+dividing — was refused.
+
+This language works arithmetic out twice, in the folder and in the machine, and
+`examples/numbers.kest` exists because of that: *"Two implementations of one
+promise — D667 fixed one of them and nothing held them to each other."* This was
+the same shape once more. The float branch of the folder carried the whole
+numbers' refusal, which is right where it is: there the machine does stop, so a
+constant has nothing to hold. Where the machine answers, the folder must.
+
+*What it does now.* `a / b` and `kest_left_over(a, b)`, unguarded. The whole
+numbers keep their guard.
+
+*And every end held, folded and running.* `examples/numbers.kest` checked three
+float remainders and one divide by nought, all at run time. It now checks twelve
+ends in both arithmetics and holds each folded answer against the running one:
+infinity with either sign, nought over nought, a remainder by nought, by an
+infinity either way and of an infinity, a remainder of nought and of a nought
+that came from below — which are equal, so what tells them apart is dividing by
+them — a negative divisor, and a pair as far apart as a float reaches. Twelve
+constants and codes 76 to 87.
+
+*And the twin check.* `tools/check-commands.sh` has refused a whole-number
+constant divided by nought since D673. The float beside it is now refused from
+being refused, four lines below, which is where the question was always asked.
+
+*What this was.* D801 to D803 were prose against numbers. This is the same fault
+one layer down: not a sentence that described the code wrongly, but two pieces of
+code describing the language differently, with the document agreeing with one of
+them and nothing asking the other.
+
+And the twelve constants it took to hold that are what found D804: one of them
+pushed this file's constant pool past 148, and a build that checks itself read
+the index as an opcode.

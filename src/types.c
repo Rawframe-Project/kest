@@ -704,18 +704,18 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
             case KEST_TOK_STAR:
                 out->real = a * b;
                 break;
+            // Nought on the right is where a float parts company with a
+            // whole number: the machine answers an infinity with a sign, or
+            // what is not a number for nought over nought, and does not stop.
+            // A constant is worked out by a second arithmetic and has to be
+            // the same one — a program that says a float divide has an answer
+            // and then refuses the one written down says it in two voices.
+            // The whole numbers below keep their refusal, because there the
+            // machine does stop. See D805.
             case KEST_TOK_SLASH:
-                if (b == 0.0) {
-                    *why = "this divides by nought";
-                    return false;
-                }
                 out->real = a / b;
                 break;
             case KEST_TOK_PERCENT:
-                if (b == 0.0) {
-                    *why = "this divides by nought";
-                    return false;
-                }
                 out->real = kest_left_over(a, b);
                 break;
             case KEST_TOK_LT:

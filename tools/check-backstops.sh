@@ -184,6 +184,29 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A float divided by nought refused where it is written. The machine
+        # answers it and does not stop, so a constant that will not be worked
+        # out is the same program told two different things about the same
+        # line — and the only way to write an infinity down taken away with
+        # it. See D805.
+        "what": "a float divided by nought refused as a constant",
+        "file": "src/types.c",
+        "from": r"""            case KEST_TOK_SLASH:
+                out->real = a / b;
+                break;""",
+        "to": r"""            case KEST_TOK_SLASH:
+                if (b == 0.0) {
+                    *why = "this divides by nought";
+                    return false;
+                }
+                out->real = a / b;
+                break;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a float divided by nought is refused where it is written",
+    },
+    {
         # An instruction taken back with its origin left behind. The compiler
         # takes a comparison back when the jump after it can read one, and
         # what it wrote beside that byte is where the instruction came from:

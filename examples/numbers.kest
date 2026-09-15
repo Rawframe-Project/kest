@@ -43,6 +43,25 @@ const LEFT_OVER: f64 = 7.5 % 2.0
 const LEFT_UNDER: f64 = -7.5 % 2.0
 const LEFT_NARROW: f32 = 7.5 % 2.0
 
+// And the ends a float has that a whole number has not. The machine answers
+// every one of these and stops at none of them, so the folder answers them
+// too: a constant is the second arithmetic, and a language that says a float
+// divide by nought has an answer and then refuses the one written down is
+// saying it in two voices. These are also the only way to write an infinity or
+// what is not a number, which the reference says a program gets by dividing.
+// See D805.
+const TOWARDS: f64 = 7.5 / 0.0
+const AWAY: f64 = -7.5 / 0.0
+const NEITHER: f64 = 0.0 / 0.0
+const LEFT_BY_NOUGHT: f64 = 7.5 % 0.0
+const LEFT_OF_NOUGHT: f64 = 0.0 % 2.0
+const LEFT_OF_MINUS_NOUGHT: f64 = -0.0 % 2.0
+const LEFT_BY_TOWARDS: f64 = 7.5 % TOWARDS
+const LEFT_BY_AWAY: f64 = 7.5 % AWAY
+const LEFT_OF_TOWARDS: f64 = TOWARDS % 2.0
+const LEFT_BY_MINUS: f64 = 7.5 % -2.0
+const LEFT_OF_TINY: f64 = 1.0e-300 % 1.0e300
+
 // What the folder cannot see through, which is a call: it works out numbers,
 // truths, text and arithmetic on those, and stops where a program starts.
 fn asRun(n: i64) -> i64 no.alloc {
@@ -466,6 +485,57 @@ fn main() -> i32 {
     // number, and neither of them stops the program.
     if realAsRun(7.5) % 0.0 == realAsRun(7.5) % 0.0 {
         return 75
+    }
+    // And every one of those ends worked out twice: once where it is written
+    // and once while running. Not a number is held by being unequal to
+    // itself, and an infinity by being past what a float can hold — there is
+    // no way to write either down, so there is nothing to compare them to but
+    // arithmetic. See D805.
+    if TOWARDS <= 1.7976931348623157e308 || realAsRun(7.5) / 0.0 != TOWARDS {
+        return 76
+    }
+    if AWAY >= -1.7976931348623157e308 || realAsRun(-7.5) / 0.0 != AWAY {
+        return 77
+    }
+    if NEITHER == NEITHER || realAsRun(0.0) / 0.0 == realAsRun(0.0) / 0.0 {
+        return 78
+    }
+    if LEFT_BY_NOUGHT == LEFT_BY_NOUGHT || LEFT_OF_TOWARDS == LEFT_OF_TOWARDS {
+        return 79
+    }
+    if realAsRun(TOWARDS) % 2.0 == realAsRun(TOWARDS) % 2.0 {
+        return 80
+    }
+    // Nought left over is nought, and a nought that was divided from below
+    // keeps the sign it came with: the two are equal, so what tells them apart
+    // is dividing by them. A whole number has one nought and a float has two.
+    if LEFT_OF_NOUGHT != 0.0 || realAsRun(0.0) % 2.0 != LEFT_OF_NOUGHT {
+        return 81
+    }
+    if LEFT_OF_MINUS_NOUGHT != 0.0 || 1.0 / LEFT_OF_MINUS_NOUGHT >= 0.0 {
+        return 82
+    }
+    if 1.0 / (realAsRun(-0.0) % 2.0) != 1.0 / LEFT_OF_MINUS_NOUGHT {
+        return 83
+    }
+    // An infinity to divide by leaves the whole of what was divided, whichever
+    // way it points, and the sign of what is left over still follows the
+    // number being divided rather than the one dividing it.
+    if LEFT_BY_TOWARDS != 7.5 || LEFT_BY_AWAY != 7.5 {
+        return 84
+    }
+    if realAsRun(7.5) % TOWARDS != LEFT_BY_TOWARDS ||
+            realAsRun(7.5) % AWAY != LEFT_BY_AWAY {
+        return 85
+    }
+    if LEFT_BY_MINUS != 1.5 || realAsRun(7.5) % -2.0 != LEFT_BY_MINUS {
+        return 86
+    }
+    // And two numbers as far apart as a float holds: what is left over is the
+    // whole of the smaller, worked out without ever reaching for the larger.
+    if LEFT_OF_TINY != 1.0e-300 ||
+            realAsRun(1.0e-300) % 1.0e300 != LEFT_OF_TINY {
+        return 87
     }
 
     io.print("every width wraps at its own end, and {NARROW} is one of them")

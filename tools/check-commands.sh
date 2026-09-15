@@ -4976,6 +4976,26 @@ case "$divided" in
     printf '%s\n' "$divided" | sed 's/^/    /' | head -4
     ;;
 esac
+# And the same line in a float, which is not that mistake: the machine answers
+# a float divided by nought and does not stop, so the arithmetic that works a
+# constant out answers it as well. A language that says a float divide has an
+# answer and refuses the one written down says it in two voices, and this is
+# the voice nothing was listening to. See D805.
+cat > "$scratch"/marking/real.kest <<'KEST'
+const SHARE: f64 = 10.0 / 0.0
+const LEFT: f64 = 10.0 % 0.0
+
+fn main() -> i32 {
+    return i32(SHARE - SHARE == LEFT)
+}
+KEST
+real=$("$kest" emit "$scratch"/marking/real.kest 2>&1 </dev/null)
+case "$real" in
+*"K0504"*|*"divides by nought"*)
+    complain "check: a float divided by nought is refused where it is written"
+    printf '%s\n' "$real" | sed 's/^/    /' | head -4
+    ;;
+esac
 
 # And the same words whichever way they are asked for, because a reader who
 # typed one of the three has read the other two nowhere.

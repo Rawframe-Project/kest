@@ -1347,6 +1347,11 @@ D018 again: match C where C has an answer. `%` by nought is the same two
 things: `K0601` for a whole number, and not a number for a float, which is
 again the answer C has.
 
+The same two things where a constant is worked out. A whole number divided by
+nought is `K0504` there, because nothing can be written down for it; a float is
+worked out and is the answer above, because the machine would have given that
+answer and not stopped. Two arithmetics, one promise.
+
 A whole number written inside a conversion is a number of that type when it
 fits — `i64(9223372036854775807)` is that number, not an `i32` too small to
 hold it — and a narrowing when it does not: `i8(300)` is 44, which is what
@@ -1360,7 +1365,13 @@ answer to both is written where somebody can read it.
 
 A hole in a string writes those as `inf`, `-inf` and `nan`. They are the one
 thing this language prints that it cannot read back, because there is no way to
-write them: a program that wants one divides. Not a number has one spelling
+write them: a program that wants one divides, and a program that wants to name
+one divides in a constant.
+
+```kest
+const FURTHEST: f64 = 1.0 / 0.0
+```
+ Not a number has one spelling
 whatever a divide left in its sign bit, because that says something about the
 bits and nothing about the value. `examples/numbers.kest` checks every edge of both
 rules, because a program that counts on them should be able to see them run.
