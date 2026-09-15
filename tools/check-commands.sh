@@ -3862,7 +3862,9 @@ for asking in "nonsense@unknown command \`nonsense\`" \
         "tick $scratch/refused/calling.kest 2x@\`2x\` is not a number of events" \
         "tick $scratch/refused/calling.kest 99999999999@an event count is between 0 and $most_events" \
         "tick $scratch/refused/calling.kest 1,2 3@takes one count, and was given \`3\` as well" \
-        "tick $scratch/refused/calling.kest 1,x@\`1,x\` is not a list of events"; do
+        "tick $scratch/refused/calling.kest 1,x@\`1,x\` is not a list of events" \
+        "check --room@\`--room\` says how much, and there is nothing after it" \
+        "check --room 4X $scratch/refused/calling.kest@\`4X\` is not an amount of room"; do
     words=${asking%%@*}
     refused_with=${asking#*@}
     answered=$("$kest" $words 2>&1 </dev/null)
@@ -3884,6 +3886,78 @@ for asking in "nonsense@unknown command \`nonsense\`" \
         ;;
     esac
 done
+
+mkdir -p "$scratch"/room
+cat > "$scratch"/room/hungry.kest <<'KEST'
+fn main() -> i32 {
+    let xs: [i64] = array()
+    let n: i64 = 0
+    while n < 2000000 {
+        push(xs, n)
+        n += 1
+    }
+    return len(xs) - 2000000
+}
+KEST
+
+# And the ceiling this command line can be given, which is the one wall between
+# a broken compiler and the machine it is running on. Two ways to cross it and
+# a different sentence for each: one where there was not enough to begin with,
+# where the arena that would have said so was never made, and one where a build
+# was under way and the allocation that crossed it is worth a number. See D843.
+cramped=$("$kest" check --room 1 "$scratch"/room/hungry.kest 2>&1 </dev/null)
+case "$cramped" in
+*"K0658"*"is not enough to begin reading a program"*) ;;
+*)
+    complain "check: \`--room 1\` said \`$(printf '%s' "$cramped" | head -1)\`"
+    ;;
+esac
+printf '%s\n' "$cramped" >> "$scratch"/said
+# Three rungs rather than one, because a ceiling is crossed in three places and
+# only one of them is the arena the ceiling is written on: the file is written
+# down in the build's own arena, read into an arena of its own, and parsed into
+# a third. A rung that stops at the first says nothing about the two under it,
+# and the two under it said the machine had run out when nothing of the kind
+# had happened.
+for how_much in 1000 2000 4000; do
+    cramped=$("$kest" check --room $how_much "$scratch"/room/hungry.kest \
+        2>&1 </dev/null)
+    case "$cramped" in
+    *"K0658"*"bytes it was given"*) ;;
+    *)
+        complain "check: \`--room $how_much\` said \
+\`$(printf '%s' "$cramped" | head -1)\`"
+        ;;
+    esac
+    printf '%s\n' "$cramped" >> "$scratch"/said
+done
+# And under `--json`, because the run that ran out is written out where the
+# list is written rather than made and put in it, and that is two places.
+cramped=$("$kest" check --room 1000 --json "$scratch"/room/hungry.kest \
+    2>/dev/null </dev/null)
+case "$cramped" in
+*'"code":"K0658"'*'of the 1000 bytes it was given'*) ;;
+*)
+    complain "check: \`--room 1000 --json\` wrote \
+\`$(printf '%s' "$cramped" | head -1)\`"
+    ;;
+esac
+# And that the ceiling reaches the heap the program runs on as well as the
+# reading of it, which is the whole of what one number covers: the same program
+# under a ceiling it fits in runs, and under one it does not is refused at the
+# line that asked rather than at the machine.
+hungry=$("$kest" run --room 700K "$scratch"/room/hungry.kest 2>&1 </dev/null)
+case "$hungry" in
+*"K0617"*"bytes it was given"*) ;;
+*)
+    complain "check: a program run under \`--room\` that wants more heap than \
+it was given said \`$(printf '%s' "$hungry" | head -1)\`"
+    ;;
+esac
+printf '%s\n' "$hungry" >> "$scratch"/said
+if ! "$kest" run --room 64M "$scratch"/room/hungry.kest >/dev/null 2>&1; then
+    complain "check: a program run under a ceiling it fits in was refused"
+fi
 
 # And a file the one form could not be written into, which is not a file that
 # is in the wrong form: the object for it says `false` either way, so what

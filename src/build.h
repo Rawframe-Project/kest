@@ -32,7 +32,15 @@ struct KestBuild {
 // The stages, so the command line can stop between them and a host does not
 // have to know there are any. `library` may be NULL for `lib/` beside the
 // program.
-KestBuild *kest_build_open(const char *library, char **paths, int count);
+//
+// `room` is the most this build may ask the machine for, in bytes, and nought
+// is as much as there is. A build with a ceiling is refused at the allocation
+// that would cross it and says what it had taken and what it wanted, the way a
+// program stopped by a heap ceiling does; a build without one asks until the
+// machine has nothing left, which is what took a machine down eight times in a
+// day. See D843.
+KestBuild *kest_build_open(const char *library, char **paths, int count,
+                           size_t room);
 
 // The name something lives under in the file that was named. A host does not
 // need this — `kest_entry` leaves the module off for it — but the command line

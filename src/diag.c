@@ -600,6 +600,45 @@ static void render_frame(const KestSource *source, KestSpan span,
     fputc('\n', out);
 }
 
+// Which of the two ran out, and what to say about it. Running out is one bit
+// on a list of diagnostics, because recording it is the one thing a run with
+// no memory can do; which of the two it was is not recorded at all, because
+// the arena the list is kept in is the arena that ran out and it remembers.
+// See D843.
+static const char *starved_code(const KestDiags *diags) {
+    return kest_arena_refused_by_ceiling(diags->arena) ? KEST_CRAMPED_CODE
+                                                       : KEST_STARVED_CODE;
+}
+
+// And the sentence, which carries numbers where there is a ceiling: what was
+// taken of what was allowed, and what the allocation that crossed it wanted.
+// A run that missed by eight bytes and one that missed by a gigabyte are the
+// same sentence otherwise, and they are not the same thing to do about it.
+// Written into the caller's room because there is none here to make it in.
+static const char *starved_says(const KestDiags *diags, char *room,
+                                size_t space) {
+    if (!kest_arena_refused_by_ceiling(diags->arena)) {
+        return KEST_STARVED_SAYS;
+    }
+    size_t taken = kest_arena_used(diags->arena);
+    size_t given = kest_arena_ceiling(diags->arena);
+    // Reading a file happens in an arena of its own and is charged back in one
+    // lump when it is done, so the charge that finishes a build can land above
+    // the ceiling that refused it. `4816 of the 4000` is two true numbers
+    // reading as a mistake in the compiler, so what is said instead is that
+    // there is none left, which is what both numbers mean.
+    if (taken >= given) {
+        snprintf(room, space,
+                 "this has taken all %zu bytes it was given, and wanted %zu "
+                 "more",
+                 given, kest_arena_refused(diags->arena));
+        return room;
+    }
+    snprintf(room, space, KEST_CRAMPED_SAYS, taken, given,
+             kest_arena_refused(diags->arena));
+    return room;
+}
+
 void kest_diags_render(const KestDiags *diags, FILE *out) {
     // What a program printed before this happened goes first. The two streams
     // are kept apart on purpose — what a program says is an answer and what
@@ -662,7 +701,9 @@ void kest_diags_render(const KestDiags *diags, FILE *out) {
     // out is what it managed to say, and then that there was more. When there
     // is nothing above it, it is the whole of what happened.
     if (diags->starved) {
-        kest_diags_say_one(out, false, KEST_STARVED_CODE, KEST_STARVED_SAYS);
+        char room[160];
+        kest_diags_say_one(out, false, starved_code(diags),
+                           starved_says(diags, room, sizeof room));
     }
     // And what was not kept, for the same reason and in the same place: a
     // machine holds so much of what nobody has asked for and counts the rest,
@@ -789,9 +830,10 @@ void kest_diags_write_json(const KestDiags *diags, FILE *out) {
     if (diags->starved) {
         // Written out here rather than made and put in the list, because
         // making one is what there was no room for.
+        char room[160];
         fprintf(out, "%s{\"severity\":\"error\",\"code\":\"%s\",\"message\":",
-                diags->count > 0 ? "," : "", KEST_STARVED_CODE);
-        kest_json_text(KEST_STARVED_SAYS, out);
+                diags->count > 0 ? "," : "", starved_code(diags));
+        kest_json_text(starved_says(diags, room, sizeof room), out);
         fputc('}', out);
     }
     fprintf(out, "],\"errors\":%u", diags->error_count);

@@ -3,11 +3,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-KestBuild *kest_build_open(const char *library, char **paths, int count) {
+KestBuild *kest_build_open(const char *library, char **paths, int count,
+                           size_t room) {
     KestArena *arena = kest_arena_new();
     if (arena == NULL) {
         return NULL;
     }
+    // Before anything is read into it, which is the only place a ceiling can
+    // go: what this arena hands out first is the build itself, and a ceiling
+    // written after that is one the first allocation was never held to.
+    kest_arena_cap(arena, room);
     KestBuild *build = KEST_ARENA_NEW(arena, KestBuild);
     if (build == NULL) {
         kest_arena_free(arena);
@@ -83,7 +88,10 @@ bool kest_build_emit(KestBuild *build) {
 KestBuild *kest_build(const char *path, const char *library, FILE *errors,
                       KestForm form) {
     char *paths[1] = {(char *)path};
-    KestBuild *build = kest_build_open(library, paths, 1);
+    // No ceiling, because this door takes no number for one: a host that
+    // wants to say how much room a build may have opens it in stages and says
+    // so there.
+    KestBuild *build = kest_build_open(library, paths, 1, 0);
     if (build == NULL) {
         // Nothing was made, so there is nothing to ask what went wrong: a
         // host that got NULL here and called `kest_build_report` would be

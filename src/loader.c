@@ -343,6 +343,13 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
 
     KestUnitInfo *info = reserve(arena, units);
     if (info == NULL) {
+        // Nowhere to write the file down, which is this build having no room
+        // left rather than anything about the file. Said here because what the
+        // stage above reads is a count of files and a count of errors, and no
+        // files with nothing wrong is a program with nothing in it: a build
+        // given a ceiling under what reading it costs came back nought and
+        // said nothing at all. See D843.
+        kest_diags_starve(diags);
         return false;
     }
     memset(info, 0, sizeof(*info));
@@ -351,6 +358,7 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
     const char *owned = kest_arena_strndup(arena, path, strlen(path));
     if (owned == NULL ||
         !kest_source_init(&info->source, arena, owned, text, length)) {
+        kest_diags_starve(diags);
         return false;
     }
 
@@ -387,6 +395,11 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
         // build's own arena that ran out and the stage above that said so;
         // the trees have an arena of their own now, and nothing above it is
         // watching one. See D748.
+        //
+        // And the refusal comes back with it, because the ceiling that stopped
+        // this one is written on the arena above and the refusal happened
+        // below it. See D843.
+        kest_arena_also_refused(arena, units->trees);
         kest_diags_starve(diags);
         return false;
     }

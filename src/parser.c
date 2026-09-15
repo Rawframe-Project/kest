@@ -2091,9 +2091,11 @@ bool kest_parse(KestArena *arena, const KestSource *source, KestDiags *diags,
     parser.tokens = kest_lex_all(reading, source, diags, &parser.count);
     if (parser.tokens == NULL) {
         // The bytes it did ask for before it ran out, which is what a ceiling
-        // was refusing against.
+        // was refusing against — and what it was refused, which belongs to the
+        // arena the ceiling is written on rather than to this one. See D843.
         kest_arena_charge(arena, kest_arena_used(reading));
         kest_arena_returned(arena, kest_arena_used(reading));
+        kest_arena_also_refused(arena, reading);
         kest_arena_free(reading);
         return false;
     }

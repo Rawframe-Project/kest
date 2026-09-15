@@ -114,6 +114,19 @@ void kest_arena_returned(KestArena *arena, size_t bytes);
 // there is a ceiling with nothing left under it.
 size_t kest_arena_ceiling_left(const KestArena *arena);
 
+// What that ceiling is, and nought where there is none. Read beside the two
+// numbers above by whatever says what happened: a run stopped short of what it
+// was allowed is told what it was allowed, because a number nobody is told is
+// a number nobody can raise.
+size_t kest_arena_ceiling(const KestArena *arena);
+
+// What a scratch arena under this one was refused, taken as this one's own.
+// Work moved out of an arena is work its ceiling still refuses, so a refusal
+// has to come back the way the charge does: the arena a reader is told about
+// is the one with the ceiling written on it, and it is not the one that was
+// standing there when the allocation failed. See D843.
+void kest_arena_also_refused(KestArena *arena, const KestArena *other);
+
 // Whether the last refusal was the ceiling rather than the host. The number
 // above is the same number either way and the two are not the same thing to do
 // anything about: one is a promise this arena kept and the other is the

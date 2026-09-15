@@ -548,6 +548,73 @@ fn main() -> i32 {
         "caught": "and this page does not say so",
     },
     {
+        # The command line given a ceiling it cannot begin under, told which of
+        # the two stopped it. There is no build to write a diagnostic in and no
+        # arena to ask which refused the first allocation, so the one thing
+        # that knows is the command line itself: it gave the number. Saying the
+        # machine ran out instead sends a reader to buy memory for a number
+        # they typed. See D843.
+        "what": "a ceiling nothing can start under, blamed on the machine",
+        "file": "src/main.c",
+        "from": r"""            kest_diags_say_one(json ? stdout : stderr, json,
+                               KEST_CRAMPED_CODE, said);""",
+        "to": r"""            kest_diags_say_one(json ? stdout : stderr, json,
+                               KEST_STARVED_CODE, KEST_STARVED_SAYS);""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "`--room 1` said",
+    },
+    {
+        # A refusal under a ceiling, carried back to the arena the ceiling is
+        # written on. Reading a file happens in an arena of its own, so the one
+        # that was standing there when the allocation failed is not the one
+        # anybody is told about — and without this every ceiling crossed while
+        # reading reads as a machine with nothing left. See D843.
+        "what": "a ceiling crossed in a scratch arena and not carried back",
+        "file": "src/parser.c",
+        "from": r"""        kest_arena_also_refused(arena, reading);""",
+        "to": r"""        (void)0;""",
+        "also": ["src/loader.c",
+                 """        kest_arena_also_refused(arena, units->trees);""",
+                 """        (void)0;"""],
+        "make": ["kest", "debug"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "`--room 2000` said",
+    },
+    {
+        # And the same answer written the other way. A run that ran out is
+        # written where the list is written rather than made and put in it,
+        # which is two places, and two places is where one of them says
+        # something the other does not. See D843.
+        "what": "a ceiling said in words and not in JSON",
+        "file": "src/diag.c",
+        "from": r"""                diags->count > 0 ? "," : "", starved_code(diags));""",
+        "to": r"""                diags->count > 0 ? "," : "", KEST_STARVED_CODE);""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "`--room 1000 --json` wrote",
+    },
+    {
+        # What is left of a ceiling after compiling, which is the heap the
+        # program runs on. One number covers the whole of what this command
+        # asks for, so a build that took some of it leaves the rest — and a
+        # program given none of it is refused for a ceiling it fits inside.
+        # See D843.
+        "what": "a ceiling that leaves the program none of itself",
+        "file": "src/main.c",
+        "from": r"""        size_t spent = kest_build_cost(build);
+        least->heap_bytes = room > spent ? room - spent : 1;""",
+        "to": r"""        size_t spent = kest_build_cost(build);
+        least->heap_bytes = spent > room ? room : 1;""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "under a ceiling it fits in was refused",
+    },
+    {
         # A library that says one thing about itself and does the other. What
         # a host does with the answer is run what only a checked build catches
         # and keep away from what a checked build catches first, so a build

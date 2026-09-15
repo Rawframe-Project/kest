@@ -3964,6 +3964,41 @@ time, with the same codes, the same source location and the same `--json`
 output. Nothing about repairing a program needs to know which of the two it is
 reading.
 
+A command that reads a program asks this machine for whatever the program
+needs. That is what a compiler does, and nobody notices it until the program is
+a broken one: a compiler handed a file it cannot make sense of can ask for
+everything there is, and one of them did — sixty-five gigabytes, eight times in
+a day, taking whatever else was running with it each time.
+
+`--room` says how much this command may have, all of it: reading and checking
+and compiling the program, and the heap the program runs on afterwards. It is a
+number of bytes, or one with `K`, `M` or `G` after it.
+
+```
+kest run --room 64M examples/game.kest
+```
+
+What compiling takes comes off the number and what is left is the heap, because
+a ceiling that meant one thing while compiling and another while running would
+be two ceilings sharing a name. A command that crosses it while compiling says
+what it had taken and what the allocation that crossed it wanted:
+
+```text
+error[K0658]: this has taken 440 of the 1000 bytes it was given, and wanted 832 more
+```
+
+and one that crosses it while running says so at the line that asked, in the
+words any host's own ceiling is reported in:
+
+```text
+error[K0617]: the program has used 557106 of the 706528 bytes it was given, and this asked for 1048577 more
+```
+
+Without `--room` there is no ceiling, which is what a command line has always
+had. The library itself takes the number rather than the words: a host says how
+much heap a machine may have in `KestLimits`, and a build is opened with a
+ceiling of its own.
+
 ## Where each rule is run
 
 Every example is a program that checks itself and answers with which of its own

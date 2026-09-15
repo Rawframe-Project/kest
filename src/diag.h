@@ -223,6 +223,17 @@ void kest_diags_note_at(KestDiags *diags, uint32_t which,
 #define KEST_STARVED_SAYS                                                      \
     "there was not enough memory to finish, or to say more about it"
 
+// And the same run stopped by a ceiling rather than by the machine. The bit
+// recorded is the one above — running out is running out — and what is said
+// about it is not: a ceiling is a number somebody chose and can choose again,
+// and a machine with nothing left is an afternoon spent somewhere else. The
+// numbers go with it for the reason the heap's own do, which is that a run
+// that missed by eight bytes and one that missed by a gigabyte read alike
+// otherwise. See D843.
+#define KEST_CRAMPED_CODE "K0658"
+#define KEST_CRAMPED_SAYS                                                      \
+    "this has taken %zu of the %zu bytes it was given, and wanted %zu more"
+
 // Says that something could not be said for want of memory, which is the one
 // thing this can record without any. It counts as an error, because what a
 // caller does with the count is decide whether anything went wrong, and what

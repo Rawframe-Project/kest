@@ -78,6 +78,11 @@ static void help(FILE *out) {
             "  --check           fmt names the files it would rewrite, without\n"
             "                    writing them, and exits non-zero\n"
             "  --reset           tick throws the heap away between events\n"
+    "  --room <amount>   the most this command may ask this machine for,\n"
+    "                    all of it: reading and compiling the program and\n"
+    "                    the heap it runs on. A number of bytes, or one\n"
+    "                    with K, M or G after it. Without this it asks for\n"
+    "                    whatever it needs\n"
             "  --version         print the version\n"
             "\n"
             "exit status is 1 when anything was refused, and otherwise what\n"
@@ -766,11 +771,16 @@ typedef enum {
 // not depend on what it imports, and each is its own answer, so one that
 // cannot be read does not stop the rest.
 static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
-                    bool json) {
+                    bool json, size_t room) {
     int status = 0;
 
     for (int i = 0; i < count; i++) {
         KestArena *arena = kest_arena_new();
+        // Each file is its own arena, so each is given the whole of what this
+        // command may have rather than a share of it: what `--room` says is
+        // the most this command asks the machine for at once, and these do not
+        // overlap.
+        kest_arena_cap(arena, room);
         if (arena == NULL) {
             kest_diags_say_one(json ? stdout : stderr, json,
                                KEST_STARVED_CODE, KEST_STARVED_SAYS);
@@ -1127,6 +1137,49 @@ static bool takes_a_count(const char *command) {
 // The events a `tick` was given, written `4,5,6`, and how many there are.
 // Nothing to do with the arena: this is read before there is a build, so it is
 // the command line's own memory and freed with the rest of it.
+// How much room this command may have, written the way somebody says an
+// amount of memory rather than as the nine digits it is: `64M` is a number
+// anybody reads back, and `67108864` is a number nobody checks. One sentence
+// for every way of writing it wrong, because what a reader does about any of
+// them is write it again.
+static bool read_room(const char *text, size_t *room, bool json) {
+    char *end = NULL;
+    errno = 0;
+    unsigned long long value = strtoull(text, &end, 10);
+    unsigned long long scale = 1;
+    if (end != text && errno != ERANGE) {
+        switch (*end) {
+        case 'K':
+        case 'k':
+            scale = 1024;
+            end++;
+            break;
+        case 'M':
+        case 'm':
+            scale = 1024ull * 1024;
+            end++;
+            break;
+        case 'G':
+        case 'g':
+            scale = 1024ull * 1024 * 1024;
+            end++;
+            break;
+        default:
+            break;
+        }
+    }
+    if (end == text || *end != '\0' || errno == ERANGE || value == 0 ||
+        value > (unsigned long long)SIZE_MAX / scale) {
+        refused_at_the_words(json, "K0649",
+                             "`%s` is not an amount of room; write a number of "
+                             "bytes, or one with `K`, `M` or `G` after it",
+                             text);
+        return false;
+    }
+    *room = (size_t)(value * scale);
+    return true;
+}
+
 static int32_t *read_events(const char *text, int32_t *count,
                             bool json) {
     uint32_t found = 1;
@@ -1344,7 +1397,7 @@ static const KestSymbol *choose(KestBuild *build, const char *name,
 // nothing gets. Never less than that, because what is measured is the least
 // and this host prints from inside the call it makes.
 static const KestLimits *room_for(KestBuild *build, const char *const *entries,
-                                  KestLimits *least) {
+                                  KestLimits *least, size_t room) {
     KestReason why = {KEST_REACH_UNASKED, NULL};
     bool asked = false;
     for (uint32_t i = 0; entries != NULL && entries[i] != NULL; i++) {
@@ -1388,21 +1441,48 @@ static const KestLimits *room_for(KestBuild *build, const char *const *entries,
     if (!asked && !kest_needs(build, least, &why)) {
         return NULL;
     }
+    // And what is left of what this command was allowed, which is the heap the
+    // program runs on. One number covers the whole of what this command asks
+    // the machine for, so what compiling has already taken comes off it: a
+    // ceiling that meant one thing while compiling and another while running
+    // would be two ceilings with one name. A build that took all of it leaves
+    // one byte, because nought here is what no ceiling is and this is not no
+    // ceiling. See D843.
+    if (room > 0) {
+        size_t spent = kest_build_cost(build);
+        least->heap_bytes = room > spent ? room - spent : 1;
+    }
     return least;
 }
 
 static int run(const char *command, const char *executable, char **paths,
                int path_count, bool json, int32_t count, const int32_t *given,
-               bool reset) {
+               bool reset, size_t room) {
     KestBuild *build = kest_build_open(kest_library_path(NULL, executable),
                                        paths,
                                        strcmp(command, "call") == 0
                                            ? 1
-                                           : path_count);
+                                           : path_count,
+                                       room);
     if (build == NULL) {
         // Before there is anywhere to write a diagnostic down, which is what
         // this door is for: the words are the ones every other refusal is
         // written with, because they are written beside them.
+        //
+        // And which of the two it was, which is known here without asking
+        // anything: a build given a ceiling and refused before it had a list
+        // to write in was refused by the ceiling, and the arena that would
+        // have said so is already gone.
+        if (room > 0) {
+            char said[120];
+            snprintf(said, sizeof said,
+                     "this was given %zu bytes, which is not enough to begin "
+                     "reading a program",
+                     room);
+            kest_diags_say_one(json ? stdout : stderr, json,
+                               KEST_CRAMPED_CODE, said);
+            return 1;
+        }
         kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
                            KEST_STARVED_SAYS);
         return 1;
@@ -1480,7 +1560,7 @@ static int run(const char *command, const char *executable, char **paths,
                         : kest_start(build, host,
                                      room_for(build, (const char *[]){paths[1],
                                                                       NULL},
-                                              &least));
+                                              &least, room));
                 if (runtime != NULL) {
                     // What comes back and what goes in, because the frame is
                     // both: `chosen->type` is the function, and a function is
@@ -1616,7 +1696,8 @@ static int run(const char *command, const char *executable, char **paths,
             KestLimits least = {0, 0, 0};
             KestRuntime *runtime = kest_start(
                 build, host,
-                room_for(build, ticking ? TICK_CALLS : RUN_CALLS, &least));
+                room_for(build, ticking ? TICK_CALLS : RUN_CALLS, &least,
+                         room));
             if (runtime != NULL) {
                 if (ticking) {
                     drive_events(runtime, build, count, given, reset, &ticked);
@@ -2062,6 +2143,9 @@ int main(int argc, char **argv) {
         json = json || strcmp(argv[i], "--json") == 0;
     }
     int32_t count = 1024;
+    // The most this command may ask the machine for, and nought for as much as
+    // there is, which is what it has always asked for. See D843.
+    size_t room = 0;
     // The events themselves, when `tick` was given a list rather than a count.
     int32_t *given = NULL;
     bool told_it = false;
@@ -2087,6 +2171,23 @@ int main(int argc, char **argv) {
             mode = FORMAT_CHECK;
         } else if (strcmp(argv[i], "--reset") == 0) {
             reset = true;
+        } else if (strcmp(argv[i], "--room") == 0) {
+            // The amount is the word after, the way a count is: an option
+            // written `--room=64M` is one word this command line would have
+            // taken for a file, and a file is what everything it does not
+            // know is.
+            if (i + 1 >= argc) {
+                free(paths);
+                free(given);
+                return refused_at_the_words(json, "K0649",
+                                            "`--room` says how much, and "
+                                            "there is nothing after it");
+            }
+            if (!read_room(argv[++i], &room, json)) {
+                free(paths);
+                free(given);
+                return 1;
+            }
         } else if (takes_a_count(argv[1]) && path_count > 0 && told_it) {
             free(paths);
             free(given);
@@ -2146,7 +2247,7 @@ int main(int argc, char **argv) {
         FileCommand what = strcmp(argv[1], "fmt") == 0   ? FILE_FORMAT
                            : strcmp(argv[1], "lex") == 0 ? FILE_LEX
                                                          : FILE_PARSE;
-        int status = per_file(paths, path_count, what, mode, json);
+        int status = per_file(paths, path_count, what, mode, json, room);
         free(paths);
         free(given);
         return status;
@@ -2162,7 +2263,7 @@ int main(int argc, char **argv) {
         }
         int status =
             run(argv[1], argv[0], paths, path_count, json, count, given,
-                reset);
+                reset, room);
         free(paths);
         free(given);
         return status;

@@ -460,6 +460,18 @@ size_t kest_arena_refused(const KestArena *arena) {
     return arena == NULL ? 0 : arena->refused;
 }
 
+void kest_arena_also_refused(KestArena *arena, const KestArena *other) {
+    if (arena == NULL || other == NULL || other->refused == 0) {
+        return;
+    }
+    arena->refused = other->refused;
+    arena->refused_by_ceiling = other->refused_by_ceiling;
+}
+
+size_t kest_arena_ceiling(const KestArena *arena) {
+    return arena == NULL ? 0 : arena->ceiling;
+}
+
 bool kest_arena_refused_by_ceiling(const KestArena *arena) {
     return arena != NULL && arena->refused_by_ceiling;
 }

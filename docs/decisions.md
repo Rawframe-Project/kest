@@ -25020,3 +25020,54 @@ has not been seen making them say, and this is the gate's own work, held instead
 by `CLAUDE.md` saying the gate does it. Fourteen positions were tried by hand
 before ten were kept — a field read, a module's name, a `const`'s, an `extern`'s
 — and every one of them already answered.
+
+## D843: the command line may be told how much room it has
+
+The library takes a ceiling: a host says how much heap a machine may have in
+`KestLimits`, and both hosts in this tree say one. The command everybody
+actually runs did not. `kest` asked this machine for whatever the program
+needed and there was no way to say no, which is how a broken copy of it
+reserved sixty-five gigabytes and was killed eight times in a day.
+
+*One number for the whole of it.* `--room 64M` is the most the command may ask
+for: reading the files, checking them, compiling them, and the heap the program
+runs on afterwards. What compiling took comes off it and what is left is the
+heap, because a ceiling that meant one thing while compiling and another while
+running would be two ceilings sharing a name. Written as an amount rather than
+as the nine digits it is, with one sentence for every way of writing it wrong,
+because what a reader does about any of them is write it again.
+
+*What it refuses with.* `K0658`, carrying what was taken, what it was given, and
+what the allocation that crossed it wanted — the shape `K0617` has for the heap
+and for the same reason: a run that missed by eight bytes and one that missed by
+a gigabyte read alike otherwise. Crossed while running, it is `K0617` itself, at
+the line that asked.
+
+*Two things it found on the way in.* The first: a build that ran out while
+writing a file down said **nothing at all** and came back nought. Three
+allocation failures in `load_one` returned false without recording anything, and
+the stage above reads a count of files and a count of errors — no files and
+nothing wrong is a program with nothing in it. Without a ceiling those lines are
+unreachable, because a machine that cannot spare forty bytes is a machine
+nothing is running on; with one they are the first thing anybody hits.
+`kest check --room 500` reported success on a program it had not read.
+
+The second: a ceiling crossed in a scratch arena was reported as the machine
+having run out. A file is read into an arena of its own and charged back to the
+build's when it is done — the charge came back and the refusal did not, so three
+rungs of the ladder said `there was not enough memory to finish` about a number
+somebody had typed. `kest_arena_also_refused` carries it back the way the charge
+goes: the arena a reader is told about is the one with the ceiling written on
+it, and it is not the one that was standing there when the allocation failed.
+
+*And one number that reads as a fault.* A scratch arena is charged in one lump
+when it is done, so the charge that finishes a build can land above the ceiling
+that refused it: `this has taken 4816 of the 4000 bytes it was given` is two
+true numbers reading as a mistake in the compiler. What is said there instead is
+that it has taken all of them, which is what both numbers mean.
+
+*Held* by four holes — the ceiling nothing can start under blamed on the
+machine, a refusal not carried back out of a scratch arena, a ceiling said in
+words and not in JSON, and a ceiling that leaves the program none of itself —
+and by three rungs rather than one, because a ceiling is crossed in three places
+and only one of them is the arena the ceiling is written on.

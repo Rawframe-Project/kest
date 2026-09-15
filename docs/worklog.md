@@ -31960,3 +31960,46 @@ tell it; the command everybody actually runs cannot. `kest` asks the host for
 whatever it needs and there is no way to say no — which is how a broken copy of
 it reserved sixty-five gigabytes. Give the command line a ceiling, and say what
 it refuses with.
+
+## The command line may be told how much room it has
+
+The library takes a ceiling and both hosts here give one; the command everybody
+runs did not. `kest` asked this machine for whatever the program needed and
+there was no way to say no — which is how a broken copy of it reserved
+sixty-five gigabytes and was killed eight times in a day.
+
+`--room 64M` is now the most a command may ask for, all of it: reading,
+checking and compiling the program, and the heap it runs on afterwards. What
+compiling took comes off the number and what is left is the heap, because a
+ceiling that meant one thing while compiling and another while running would be
+two ceilings sharing a name. Crossing it while compiling is `K0658` with what
+was taken, what was given and what the allocation that crossed it wanted;
+crossing it while running is `K0617` at the line that asked, which is what any
+host's own ceiling has always said.
+
+Wiring it turned over two things. A build that ran out while writing a file
+down said nothing at all and came back nought — three allocation failures in
+`load_one` recorded nothing, and no files with nothing wrong reads as a program
+with nothing in it, so `kest check --room 500` reported success on a program it
+had not read. And a ceiling crossed in a scratch arena was blamed on the
+machine: reading happens in an arena of its own and the charge comes back to
+the build's, and the refusal did not. It does now.
+
+One number still reads oddly and is left saying something else: a scratch arena
+is charged in one lump, so the charge that finishes a build can land above the
+ceiling that refused it. `taken 4816 of the 4000 bytes` is two true numbers
+reading as a fault, so what is said there is that it has taken all of them.
+
+Four holes hold it, and the check walks three rungs rather than one, because a
+ceiling is crossed in three places and only one of them is the arena the
+ceiling is written on.
+
+Recorded as D843.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same gap one door over. `kest_build` is the door a host that is
+not this command line compiles through, and it takes no ceiling either — an
+engine embedding this library has exactly the exposure the command line had
+until today. Give the public door a number, or say in the header why it has
+none.
