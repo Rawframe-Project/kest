@@ -31310,3 +31310,35 @@ is between them is not: a host may cap a heap after a program has already filled
 more than the cap. `kest_arena_cap` writes the number and nothing says what
 happens to a program already over it. Find out what the machine does, and make it
 do one thing on purpose.
+
+## A ceiling written under what is already out, and a heap that forgets
+
+`kest_arena_cap` writes a number and nothing said what happens to an arena
+already over it. Nothing does: a ceiling under what has been handed out takes
+nothing back and every allocation after it is refused. There is no case either —
+nothing caps a running arena. The machine caps its heap once where the heap is
+made, the loader and the parser cap a scratch where the scratch is made, and no
+public door lets a host cap a machine it has already started. So it is what the
+number means rather than a thing anything does, and `src/mem.h` says so.
+
+What was reachable and unheld was next to it. A heap thrown away forgets what it
+refused — `kest_arena_reset` clears the number and the reason, with the comment
+"A new heap has refused nobody" — and nothing asked. The reset `embed.c` does at
+D630 follows a K0617, so both numbers are live when it happens: the best place to
+ask, and the place that printed the used bytes and asked nothing until D825.
+
+Both are held now, read together because a host raising a ceiling reads both, and
+kept across a reset they would raise this heap by a number about another. The
+header says it.
+
+D825 read three heap doors and found the prose wrong about one; this asked what a
+fourth does in a case that turns out not to exist and found the door beside it
+unheld. Twice the useful part was not the question but what was next to it, which
+is the argument for reading a boundary rather than a function. Recorded as D826.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the heap boundary is read. Take the same walk along the lend boundary,
+which is the other thing a host and a machine share: `kest_lend`, the header the
+machine keeps, and the end of a lend. Read what each door promises against what a
+run does with it, and hold the promises nothing holds.

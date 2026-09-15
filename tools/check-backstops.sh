@@ -184,6 +184,21 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A heap thrown away that still remembers what it refused. The number
+        # and the reason belong to the heap that is gone, and a host raising a
+        # ceiling reads both — so kept across a reset they are a ceiling
+        # raised by a number about another heap, on a machine that has not
+        # been refused anything. See D826.
+        "what": "a thrown-away heap that still names a refusal",
+        "file": "src/mem.c",
+        "from": r"""    // A new heap has refused nobody.
+    arena->refused = 0;""",
+        "to": r"""    // A new heap has refused nobody.""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "still says",
+    },
+    {
         # A heap thrown away with the counting of it left behind. What a host
         # watching a frame budget reads is the difference between two of these
         # numbers, so a reset that puts the memory back and not the number

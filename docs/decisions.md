@@ -24336,3 +24336,31 @@ the count while giving the memory back is caught.
 *The shape of a null result.* Three readings, two of them unbreakable, one prose
 defect and one unheld promise. Worth writing down: the next reader of these
 doors should not have to do the reading again to find out that it was done.
+
+## D826: a ceiling written under what is already out, and a heap that forgets
+
+*The question, and why it has no case.* `kest_arena_cap` writes a number and
+nothing said what happens to an arena already over it. The answer is that
+nothing does: a ceiling under what has been handed out takes nothing back, and
+every allocation after it is refused. But there is no case, either — **nothing
+caps a running arena.** The machine caps its heap once, where the heap is made;
+the loader and the parser cap a scratch where the scratch is made; and no public
+door lets a host cap a machine it has already started. So it is what the number
+means rather than a thing anything does, and `src/mem.h` says so now.
+
+*What was reachable, and unheld.* A heap thrown away forgets what it refused —
+`kest_arena_reset` clears the number and the reason with the comment *"A new
+heap has refused nobody"* — and nothing asked. The reset `examples/embed.c` does
+at D630 follows a `K0617`, so the two numbers are live when it happens: the
+best possible place to ask, and the place that printed the used bytes and asked
+nothing at all until D825.
+
+Both are held now. What was refused and which of the two refused it are read
+together, because a host raising a ceiling reads both, and kept across a reset
+they would raise **this** heap by a number about another. The header says it.
+
+*The shape of the last two entries.* D825 read three heap doors and found the
+prose wrong about one. This asked what a fourth does in a case that turns out
+not to exist, and found the door beside it unheld. Twice now the useful part was
+not the question but what was next to it — which is the argument for reading a
+boundary rather than a function.

@@ -1493,6 +1493,19 @@ static bool spends_the_heap(Engine *engine) {
                 kest_heap_used(engine->runtime));
         return false;
     }
+    // And nothing refused on it either. The refusal that brought us here is
+    // the old heap's, and a host that raises a ceiling by what the last one
+    // asked for would raise this one by a number about a heap that is gone.
+    // The two numbers go together: what was refused, and which of the two
+    // refused it. See D826.
+    if (kest_heap_wanted(engine->runtime) != 0 ||
+        kest_heap_refused_by(engine->runtime) != KEST_REFUSED_NOTHING) {
+        fprintf(stderr,
+                "a heap thrown away still says %zu bytes were refused by %d\n",
+                kest_heap_wanted(engine->runtime),
+                (int)kest_heap_refused_by(engine->runtime));
+        return false;
+    }
     printf("and the heap it has now holds %zu bytes\n",
            kest_heap_used(engine->runtime));
 

@@ -143,6 +143,12 @@ bool kest_arena_holds(KestArena *arena, const void *at);
 // has until somebody says otherwise. Past it an allocation answers NULL, which
 // is what every caller already handles, because the alternative is a caller
 // that handles running out one way and being capped another.
+//
+// A ceiling under what has already been handed out takes nothing back: what is
+// out is out, and every allocation after it is refused. Nothing here caps a
+// running arena — the machine caps its heap once, where the heap is made, and
+// the loader and the parser cap a scratch where the scratch is made — so this
+// is what the number means rather than a thing anything does. See D826.
 void kest_arena_cap(KestArena *arena, size_t bytes);
 
 #define KEST_ARENA_NEW(arena, type)                                            \

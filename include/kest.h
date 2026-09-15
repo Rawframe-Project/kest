@@ -738,7 +738,9 @@ void kest_report(KestRuntime *runtime, FILE *out, KestForm form);
 size_t kest_heap_used(const KestRuntime *runtime);
 
 // And what the allocation that was refused was asking for, or nought when
-// nothing has been refused. A ceiling stops a program at the allocation that
+// nothing has been refused — which a heap thrown away with `kest_heap_reset`
+// is: the refusal belonged to the heap that is gone, and a host raising a
+// ceiling by it would be raising this one by a number about another. A ceiling stops a program at the allocation that
 // would have crossed it, so what it has used stops short of what it was
 // allowed — by this much, which is the difference between a frame that missed
 // by eight bytes and one that missed by a megabyte. A host raising a ceiling
