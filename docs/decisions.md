@@ -24983,3 +24983,40 @@ second wall rather than the only one.
 *Held.* A hole written to remove the guard above, run against the real wall,
 is stopped at four gigabytes in four seconds and named — where the same hole
 without the wall took the machine down eight times in a day.
+
+## D842: every word the language keeps, written where a name belongs
+
+D841 fixed a parse loop that never stopped. What found it was a number printed
+at the end of a different check, on a machine that had been killed eight times
+before anybody read it — which is luck, not a gate. Nothing here asked whether
+the compiler answers.
+
+*What it asks now.* The words this language keeps are read out of the reference,
+where `check-tables.sh` already holds them beside the lexer's own list, and each
+is written into every place a name belongs. Three things are held of each: that
+it is answered at all, that it is refused, and that the refusal says something.
+Answered is the one this is for, and it is held by a wall of ten seconds against
+runs that take a tenth of one.
+
+*Ten places rather than the five that were asked for*, because a loop that can
+stand still is a shape there are several of and only one of them had ever been
+looked at: the fields of a record, the cases of an enum, the cases of a flag
+set, the type parameters of a generic, what a `match` arm names, what a `for`
+walks with — beside a local, a parameter, a function's name and a record's.
+Twenty-one words in ten places is two hundred and ten runs and twenty-two
+seconds, which is what a gate is for.
+
+*Refused rather than accepted, and both are held.* A keyword is not a name, so a
+run that comes back nought is a word the parse took as one — a different bug
+from the one this was written for and one the same sweep sees for free.
+
+*Held.* With the guard of D841 taken out, `break` where a field name belongs
+comes back 124: never answered. That is the complaint this check exists to make,
+and it makes it.
+
+*And where it lives.* In `check.sh` rather than in a tool of its own: the ten
+tools under `tools/check-*.sh` are each held to saying nothing a backstop hole
+has not been seen making them say, and this is the gate's own work, held instead
+by `CLAUDE.md` saying the gate does it. Fourteen positions were tried by hand
+before ten were kept — a field read, a module's name, a `const`'s, an `extern`'s
+— and every one of them already answered.

@@ -388,6 +388,77 @@ rm -f "$deferred"
 
 say "returns" "line endings, noughts inside text, and a promise around a \`defer\`"
 
+# Every word this language keeps, written where a name belongs. It has to be
+# refused there — the parse wants a name and a keyword is not one — and what
+# this holds is that it is refused *in a moment*. One of them was not: a
+# keyword where a field name goes was refused without being eaten, the loop
+# round it recovered to where a statement could begin, which is where it
+# already was, and the parse asked the same question for ever, keeping one more
+# copy of the answer each time until the host had none left to give. Six lines
+# took the machine down and nothing here would have said so. See D841.
+#
+# Ten places rather than the one, because the loop that stood still is a shape
+# there are several of — the fields of a record, the cases of an enum, the
+# statements of a block — and every word rather than the one, because which
+# words a recovery stops at is a list somebody will add to.
+keyword_places="field parameter local function record case flag generic
+                arm walk"
+keyword_program() {
+    case $2 in
+    field)
+        printf 'struct P {\n    %s: i32\n}\n\nfn main() -> i32 {\n    return 0\n}\n' "$1" ;;
+    parameter)
+        printf 'fn one(%s: i32) -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}\n' "$1" ;;
+    local)
+        printf 'fn main() -> i32 {\n    let %s = 1\n    return 0\n}\n' "$1" ;;
+    function)
+        printf 'fn %s() -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}\n' "$1" ;;
+    record)
+        printf 'struct %s {\n    x: i32\n}\n\nfn main() -> i32 {\n    return 0\n}\n' "$1" ;;
+    case)
+        printf 'enum D {\n    %s\n}\n\nfn main() -> i32 {\n    return 0\n}\n' "$1" ;;
+    flag)
+        printf 'flags S: u8 {\n    %s\n}\n\nfn main() -> i32 {\n    return 0\n}\n' "$1" ;;
+    generic)
+        printf 'struct P<%s> {\n    x: i32\n}\n\nfn main() -> i32 {\n    return 0\n}\n' "$1" ;;
+    arm)
+        printf 'enum D {\n    Open(i32)\n}\n\nfn main() -> i32 {\n    let d = D.Open(1)\n    return match d {\n        Open(%s) -> 0\n    }\n}\n' "$1" ;;
+    walk)
+        printf 'fn main() -> i32 {\n    for %s in [1, 2] {\n        return 1\n    }\n    return 0\n}\n' "$1" ;;
+    esac
+}
+# Read where the lexer's own list is read from, which is held beside the lexer
+# by `check-tables.sh`: a word held and not printed there is a word this would
+# never try.
+keywords=$(awk '/^## Keywords$/ {inside = 1; next}
+                inside && /^```$/ {fence++; next}
+                inside && fence == 1' docs/language.md)
+if [ -z "$keywords" ]; then
+    complain "keywords" "the reference prints no keywords, so none were tried"
+fi
+kept="$scratch"/check-keyword.kest
+tried=0
+for word in $keywords; do
+    for place in $keyword_places; do
+        keyword_program "$word" "$place" > "$kept"
+        # A while to answer in, because what this is looking for is a compiler
+        # that does not. Every one of these answers in milliseconds; the number
+        # is a wall, not a measurement.
+        said=$(timeout 10 ./kest check "$kept" 2>&1 </dev/null)
+        why=$?
+        tried=$((tried + 1))
+        if [ "$why" -eq 124 ]; then
+            complain "keywords" "\`$word\` where a $place name belongs is never answered"
+        elif [ "$why" -eq 0 ]; then
+            complain "keywords" "\`$word\` is taken as a $place name"
+        elif [ -z "$said" ]; then
+            complain "keywords" "\`$word\` where a $place name belongs is refused and nothing is said"
+        fi
+    done
+done
+rm -f "$kept"
+say "keywords" "every one of the $(printf '%s\n' $keywords | grep -c .) word(s) this language keeps is refused, and in a moment, in each of $(printf '%s\n' $keyword_places | grep -c .) place(s) a name belongs: $tried run(s)"
+
 # And nothing in the tree has anything to say about itself. Four of the
 # warnings this compiler gives are about a name nothing reaches — an extern,
 # a function, a constant, a shape — and a project that says those to everybody

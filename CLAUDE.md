@@ -972,6 +972,8 @@ asking       a host asking what came back before anything came back, and
              every copy of one body walked to the end
 returns      files written on the spot: line endings, noughts inside text,
              and a promise around a `defer`
+keywords     every word this language keeps written into every place a name
+             belongs, refused in a moment rather than never
 warnings     every file holding its tongue about itself
 modules      every file where its `module` line says it is
 project      `lib/std` read as one project rather than as files

@@ -31922,3 +31922,41 @@ noticed; what found it was a number printed at the end of another check. Write
 every keyword this language keeps into every place a name belongs — a field, a
 parameter, a local, a function, a record — and hold that each is refused in a
 moment rather than never.
+
+## Every word the language keeps, written where a name belongs
+
+The loop fixed in the last entry would never have stopped, and nothing in this
+tree would have said so: what found it was a number printed at the end of
+another check, after the machine had been killed eight times. So the gate asks
+the question directly now.
+
+Every word this language keeps — read out of the reference, where the lexer's
+own list is already held beside it — is written into every place a name
+belongs, and three things are held of each run: that it is answered at all,
+that it is refused, and that the refusal says something. Answered is the one
+this is for, and a wall of ten seconds holds it against runs that take a tenth
+of one.
+
+Ten places rather than the five the last entry asked for, because a loop that
+can stand still is a shape there are several of and one of them had ever been
+looked at: the fields of a record, the cases of an enum, the cases of a flag
+set, the type parameters of a generic, what a `match` arm names, what a `for`
+walks with, beside a local, a parameter, a function's name and a record's. That
+is 210 runs in 22 seconds, and every one of them is refused in a moment.
+
+It lives in `check.sh` rather than in a tool of its own, and `CLAUDE.md` says
+the gate does it, which is what holds it there. With the guard of D841 taken
+out, `break` where a field name belongs comes back 124 — never answered — which
+is the complaint this exists to make.
+
+Recorded as D842.
+
+**Runs:** `make check`, everything passing, with `keywords  every one of the 21
+word(s) this language keeps is refused, and in a moment, in each of 10 place(s)
+a name belongs: 210 run(s)` in it.
+
+**Next:** the library can be told how much room it may have and both hosts here
+tell it; the command everybody actually runs cannot. `kest` asks the host for
+whatever it needs and there is no way to say no — which is how a broken copy of
+it reserved sixty-five gigabytes. Give the command line a ceiling, and say what
+it refuses with.
