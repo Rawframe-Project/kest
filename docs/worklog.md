@@ -30708,3 +30708,39 @@ the optional asked about with both sides compiled. Recorded as D809.
 statement, and a statement is where a value is dropped, stored or returned.
 Add the same count around `compile_stmt` — a statement leaves nothing — and
 walk whatever it says down the same way.
+
+## What a statement stands on
+
+`hold_width` holds an expression to its type. A statement has no type: what it
+has is a promise that the stack it stands on is the stack the next one stands
+on. Instrumented the same way over every example and every file of the library,
+every statement is compiled from nothing and leaves nothing — nothing to walk
+down. So it is held rather than fixed: `hold_empty`, under K0505 like the other.
+
+And the way either could have been kept while wrong. `stack_pop` stopped at
+nought, so a count taken below nothing clamped and carried on, and a compiler
+that had lost track came back to the right answer by the end of the statement.
+It now remembers, and a statement that took more off than it put on is refused
+where it is written. Nothing in the tree does.
+
+What the two are worth showed up in a hole. D642's walk that reads a byte past
+what it measured breaks the compiler by emitting a `+ 1`, and the break itself
+pushed beside `emit_constant` — the same fault D808 found in the compiler,
+written into a hole. The new count caught the hole's own arithmetic before the
+hole could catch the compiler. Corrected in the break; it catches what it is for
+again. That is the second time a check here has been strong enough to find a
+fault in the thing testing it.
+
+K0505 now says the two halves of the compiler disagree about four things: a
+value the checker allowed that the compiler cannot place, an expression that
+does not leave what it is, a statement that does not leave the stack as it found
+it, and a count taken below nothing. Recorded as D810.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the machine has the same two numbers and nothing holds them. A chunk
+says `slot_count` and `stack_needed`, and the machine moves `top` by whatever
+each instruction says. Walk a chunk without running it, adding and taking away
+what each instruction moves, and hold the deepest that walk reaches against what
+the chunk says it needs — the compiler's count and the machine's, against each
+other.

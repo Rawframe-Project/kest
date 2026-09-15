@@ -184,6 +184,57 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A statement that leaves something on the stack. A statement is where
+        # a value is dropped, stored or handed back, so the stack it stands on
+        # is the stack the next one stands on — one that keeps a slot puts
+        # every statement after it one along, and a body that never notices
+        # asks for more stack than it uses and reads its own leftovers. See
+        # D810.
+        "what": "a statement that leaves a slot behind",
+        "file": "src/compile.c",
+        "from": r"""        if (in_slots) {
+            stack_pop(compiler, size);
+            emit_store(compiler, slot, size, stmt->span);""",
+        "to": r"""        if (in_slots) {
+            emit_store(compiler, slot, size, stmt->span);""",
+        "make": ["kest"],
+        "program": "leaving.kest",
+        "source": """fn main() -> i32 {
+    let n = 1
+    n = 2
+    return n - 2
+}
+""",
+        "caught": "and a statement leaves it as it found it",
+    },
+    {
+        # A count taken below nothing. Taking more off than was put on used to
+        # stop at nought and carry on, so a compiler that had lost track came
+        # back to the right answer by the end of the statement — which is the
+        # one way the two counts held here could both be kept by a compiler
+        # that was wrong in the middle. See D810.
+        "what": "a count taken below nothing",
+        "file": "src/compile.c",
+        "from": r"""            if (size == 1) {
+                stack_pop(compiler, 1);
+                emit(compiler, KEST_OP_POP, stmt->span);""",
+        "to": r"""            if (size == 1) {
+                stack_pop(compiler, 2);
+                emit(compiler, KEST_OP_POP, stmt->span);""",
+        "make": ["kest"],
+        "program": "under.kest",
+        "source": """fn side(n: i32) -> i32 {
+    return n
+}
+
+fn main() -> i32 {
+    side(1)
+    return 0
+}
+""",
+        "caught": "takes more off the stack than it put on",
+    },
+    {
         # What a type says it is, told to a reader as one number and laid out
         # as another. `kest check` says how many slots a shape takes and
         # `kest emit` says how many a function taking one lays out, and the
@@ -12151,7 +12202,6 @@ fn main() -> i32 {
                 if (over_text) {
                     KestValue one = {0};
                     one.integer = 1;
-                    stack_push(compiler, 1);
                     emit_constant(compiler, one, KEST_CONST_INT, stmt->span);
                     stack_pop(compiler, 1);
                     emit(compiler, KEST_OP_ADD_I, stmt->span);

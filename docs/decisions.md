@@ -23695,3 +23695,47 @@ into the JSON, and nothing else, one over.
 was for: a number that two halves of the compiler both compute is a number that
 can be held, and holding it turned a silent wrong answer in the standard library
 into a refusal at the line that wrote it.
+
+## D810: what a statement stands on
+
+*The other half of D809's count.* `hold_width` holds an expression to its type.
+A statement has no type: what it has is a promise that the stack it stands on is
+the stack the next one stands on. Instrumented the same way and run over every
+example and every file of the library: **every statement in the tree is compiled
+from nothing and leaves nothing.** Not one to walk down.
+
+So it is held rather than fixed. `hold_empty` at every statement, under `K0505`
+like the other.
+
+*And the way either could have been kept while wrong.* `stack_pop` stopped at
+nought:
+
+```c
+compiler->stack_depth =
+    compiler->stack_depth >= count ? compiler->stack_depth - count : 0;
+```
+
+A count taken below nothing clamped and carried on, so a compiler that had lost
+track came back to the right answer by the end of the statement. That is the one
+way both of these checks could pass over code that is wrong in the middle — and
+it is how a pop of two where one was pushed reads as balanced. It now
+remembers, and a statement that took more off than it put on is refused where it
+is written. Nothing in the tree does.
+
+*What the two of them are worth, measured on the holes.* Adding them made a
+backstop hole stop catching what it is for: D642's walk that reads a byte past
+what it measured breaks the compiler by emitting a `+ 1`, and the break itself
+pushed beside `emit_constant` — the same fault D808 found in the compiler,
+written into a hole. The count caught the hole's own arithmetic before the hole
+could catch the compiler. Corrected in the break; the hole catches what it is
+for again.
+
+That is the second time this week a check has been strong enough to find a fault
+in the thing testing it. It is the argument for holding a number rather than
+measuring it afterwards: the measurement is a thing to get wrong too.
+
+*Four counts now, one code.* `K0505` says the two halves of the compiler
+disagree, and it now says it of four things: a value the checker allowed that
+the compiler cannot place, an expression that does not leave what it is, a
+statement that does not leave the stack as it found it, and a count taken below
+nothing.

@@ -88,9 +88,16 @@ typedef struct {
 
     // Compiling an expression always leaves one value behind and compiling a
     // statement leaves none, so following the emit sites gives the exact
-    // depth rather than a bound.
+    // depth rather than a bound. Since D809 that is held rather than said:
+    // `hold_width` at every expression, and `hold_empty` at every statement.
     uint16_t stack_depth;
     uint16_t stack_high_water;
+    // Whether the count was taken below nothing since the last statement.
+    // Taking more off than was put on used to stop at nought and carry on,
+    // which is a count that is wrong and looks right again by the end of the
+    // statement — the one way either of the two above could be kept by a
+    // compiler that had lost track. See D810.
+    bool lost_count;
 
     // A reported problem does not stop the walk: D008 wants one run to report
     // the whole file. Only running out of memory stops it, because after that
@@ -130,6 +137,13 @@ static void stack_push(Compiler *compiler, uint16_t count) {
 }
 
 static void stack_pop(Compiler *compiler, uint16_t count) {
+    // Stopping at nought rather than going under it, and remembering that it
+    // had to: what is under nothing is not a depth, and a count that clamps
+    // is one that comes back to the right answer by the end of the statement
+    // whatever it did in the middle. `hold_empty` reads this. See D810.
+    if (compiler->stack_depth < count) {
+        compiler->lost_count = true;
+    }
     compiler->stack_depth =
         compiler->stack_depth >= count ? compiler->stack_depth - count : 0;
 }
@@ -2668,11 +2682,49 @@ static void close_walk(Compiler *compiler, Loop *loop, uint32_t exit, Walk walk,
     land_exit(compiler, loop, &exits, span);
 }
 
+// And what a statement leaves, which is nothing. A statement is where a value
+// is dropped, stored or handed back, so the stack it stands on is the stack the
+// next one stands on — every statement in this tree and in the library is
+// compiled from nothing and leaves nothing. The count going under nothing on
+// the way is the same fault seen earlier: what clamped at nought is a depth
+// that is wrong and right again by the end. See D810.
+static void hold_empty(Compiler *compiler, const KestStmt *stmt,
+                       uint16_t before) {
+    if (compiler->out_of_memory) {
+        return;
+    }
+    if (compiler->lost_count) {
+        compiler->lost_count = false;
+        refuse(compiler, stmt->span,
+               "K0505", "this takes more off the stack than it put on");
+        kest_diags_fault(compiler->program->diags,
+                         "the compiler's count of the stack went under "
+                         "nothing");
+        return;
+    }
+    if (compiler->stack_depth == before) {
+        return;
+    }
+    refuse(compiler, stmt->span, "K0505",
+           "this leaves the stack %u deep and a statement leaves it as it "
+           "found it", compiler->stack_depth);
+    kest_diags_fault(compiler->program->diags,
+                     "the compiler's count of the stack and what a statement "
+                     "is disagree");
+}
+
+static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt);
+
 static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
     if (compiler->out_of_memory) {
         return;
     }
+    uint16_t before = compiler->stack_depth;
+    compile_stmt_kind(compiler, stmt);
+    hold_empty(compiler, stmt, before);
+}
 
+static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
     switch (stmt->kind) {
     case KEST_STMT_LET: {
         compile_expr(compiler, stmt->let.value);
