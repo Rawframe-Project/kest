@@ -31865,3 +31865,60 @@ Recorded as D840.
 Have the harness say what a hole was given and what it took, so a hole that goes
 near the wall is a thing somebody reads rather than a thing somebody's neighbour
 notices.
+
+## A parse that recovers where it stands, and a wall over all of it
+
+The last entry left a complaint: the wall round the backstop holes stops a
+runaway and says nothing about which hole it was. So the harness says it now. It
+does its own waiting — `os.wait4`, output to files rather than pipes, because
+the call that empties a pipe is the call that reaps the run — and writes down
+what every hole took of what it was given. The last sentence of the check names
+the hungriest and the slowest.
+
+The first thing it said was that the wall was not a wall. `the hungriest, a word
+test that says yes to a shorter name, took 51809M of the 4096M each is given`.
+That hole runs a check which runs a build with no sanitiser in it, and the wall
+was the sanitiser's own: a plain build reads the variable and ignores it.
+
+What the hole was doing turned out not to be about the hole. `parse_field` wants
+a name, is handed the keyword `break`, and refuses without eating it; the loop
+round it recovers, and recovering stops at whatever could begin the next
+statement — which a keyword does, wherever it is written. So the loop asks again
+at the same token for ever, keeping one more copy of one message each time. Six
+ordinary lines of Kest did that to the shipped compiler:
+
+```
+struct P {
+    break: i32
+}
+```
+
+`recover_from` recovers and, if that left the parse where it began, eats one
+token and recovers again. Two loops are shaped that way, the statements of a
+block and the fields of a record; the declarations of a file cannot stand still
+and are left alone. The six lines now answer with one message in no time, and
+the hole that took fifty-one gigabytes takes two and a half megabytes. The
+refusal is written into the table of refusals a file can meet.
+
+Then the wall, this time over all of it and kept here rather than borrowed:
+every hole runs in a session of its own, and one still going after a second has
+what that session is resident in read twice a second. Over the wall, everything
+in the session is killed and the hole is answered as missed. A session rather
+than a process, because a check that starts a compiler is not the one taking the
+memory — and the wall for a run that will not stop kills the session too now,
+where before it killed one process and left the rest. A hole written to remove
+the guard is stopped at four gigabytes in four seconds and named.
+
+Recorded as D841.
+
+**Runs:** `make check`, everything passing, the backstops ending `of the 747
+that run something the hungriest, an entry that says what was run and not what
+is next, took 76M of the 4096M each is given, and the slowest, a number to ask
+for that is one short, 18.1s of the 600s`. Seventy-six megabytes, where the
+sentence that started this said fifty-one gigabytes.
+
+**Next:** one loop in the parser would never stop and nothing here would have
+noticed; what found it was a number printed at the end of another check. Write
+every keyword this language keeps into every place a name belongs — a field, a
+parameter, a local, a function, a record — and hold that each is refused in a
+moment rather than never.

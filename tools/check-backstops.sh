@@ -35,9 +35,11 @@ import concurrent.futures
 import glob
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
+import time
 
 # Each of these is a hole this project has actually had, or the exact shape of
 # one. Nothing here is a mutation for its own sake. A hole names what to break
@@ -115,20 +117,118 @@ A_WHILE = 600
 # largest thing here actually compiles in. See D840.
 SO_MUCH = 4 * 1024 * 1024  # kilobytes
 
-# Told to the sanitiser rather than to the shell. `ulimit -v` is the obvious
-# wall and it is the wrong one here: a build that checks itself reserves
-# fourteen terabytes of address space for its shadow map before it runs a line,
-# so an address-space wall low enough to stop a runaway is one no checked build
-# starts inside. What the sanitiser has instead is a wall on what is actually
-# resident, which is the number that was killing the machine. Everything here
-# is run through it, and a build without a sanitiser in it reads the variable
-# and ignores it.
+# One of the two walls, and the one that only half of these runs are behind: a
+# build that checks itself stops itself here and says which allocation it was
+# stopped at, which is worth having, and a build without a sanitiser in it
+# reads this variable and ignores it. What is behind the other is everything,
+# and the other is the one this file keeps itself: `ulimit -v` is no use as the
+# general wall, because a checked build reserves fourteen terabytes of address
+# space for its shadow map before it runs a line and so never starts inside a
+# wall low enough to stop anything. See D841.
 def inside_the_walls(env=None):
+    """The sanitiser's wall, which a build without one reads and ignores."""
     walled = dict(os.environ if env is None else env)
     walled["ASAN_OPTIONS"] = (walled.get("ASAN_OPTIONS", "")
                               + ("," if walled.get("ASAN_OPTIONS") else "")
                               + "hard_rss_limit_mb=%d" % (SO_MUCH // 1024))
     return walled
+
+# How long a run is left alone before anybody looks at what it is taking, and
+# how often after that. Nearly every hole here answers in under a second and is
+# never looked at at all; a hole that is still going after this is one worth
+# the cost of reading three hundred lines of `/proc` twice a second.
+A_MOMENT = 1.0
+NOW_AND_AGAIN = 0.5
+
+
+class AskedForTooMuch(Exception):
+    """A run that wanted more room than the wall above leaves it."""
+
+
+def what_a_session_is_taking(session):
+    """What everything started under one run is resident in, in kilobytes.
+
+    Everything, because what a hole runs is as often a check as a compiler,
+    and a check that starts a compiler is not the one taking the memory. A
+    run of its own session is the handle on the whole of it.
+    """
+    page = os.sysconf("SC_PAGE_SIZE") // 1024
+    taking, these = 0, []
+    for name in os.listdir("/proc"):
+        if not name.isdigit():
+            continue
+        try:
+            with open("/proc/" + name + "/stat", "rb") as reading:
+                # The name a run was started under can hold anything at all,
+                # brackets and spaces included, so what is read is what comes
+                # after the last of them: the state, and then the rest.
+                rest = reading.read().rsplit(b") ", 1)[1].split()
+        except (OSError, IndexError):
+            continue  # Gone between the listing and the reading.
+        if int(rest[3]) == session:
+            taking += int(rest[21]) * page
+            these.append(int(name))
+    return taking, these
+
+
+def what_it_took(args, hole, cwd=None):
+    """Run what a hole is about, and say what it took as well as what it said.
+
+    `subprocess.run` answers what a run said and not what it cost, because
+    what carries the cost is the wait, and the wait that call does throws the
+    numbers away. So the wait is done here. What comes back is what that call
+    would have answered, with the most memory the run was ever resident in and
+    how long it was there written on the end.
+    """
+    # Written to files rather than to pipes. A pipe that fills stops the run
+    # until somebody empties it, and what empties a pipe here is the call that
+    # reaps the run, which is the call whose numbers this was written for.
+    said, wrote = tempfile.TemporaryFile(), tempfile.TemporaryFile()
+    try:
+        started = time.monotonic()
+        # In a session of its own, so that what a hole starts can be counted
+        # and stopped as one thing rather than as whatever is left behind.
+        running = subprocess.Popen(args, cwd=cwd, env=inside_the_walls(),
+                                   stdin=subprocess.DEVNULL,
+                                   stdout=said, stderr=wrote,
+                                   start_new_session=True)
+        looked = started + A_MOMENT
+        while True:
+            done, how, took = os.wait4(running.pid, os.WNOHANG)
+            if done:
+                break
+            been = time.monotonic() - started
+            too_much = False
+            if time.monotonic() > looked:
+                looked = time.monotonic() + NOW_AND_AGAIN
+                too_much = what_a_session_is_taking(running.pid)[0] > SO_MUCH
+            if been > A_WHILE or too_much:
+                for one in what_a_session_is_taking(running.pid)[1]:
+                    try:
+                        os.kill(one, signal.SIGKILL)
+                    except OSError:
+                        pass  # Gone of its own accord.
+                os.wait4(running.pid, 0)
+                running.returncode = -9
+                if too_much:
+                    raise AskedForTooMuch(args)
+                raise subprocess.TimeoutExpired(args, A_WHILE)
+            time.sleep(0.005)
+        # Written down rather than asked for. The run is reaped above, and a
+        # `Popen` let go with nothing left to reap says so on its way out.
+        running.returncode = os.waitstatus_to_exitcode(how)
+        for file in (said, wrote):
+            file.seek(0)
+        ran = subprocess.CompletedProcess(
+            args, running.returncode,
+            said.read().decode(errors="replace"),
+            wrote.read().decode(errors="replace"))
+        ran.took = took.ru_maxrss
+        ran.for_a_while = time.monotonic() - started
+        return ran
+    finally:
+        said.close()
+        wrote.close()
 
 BREAKS = [
     {
@@ -13143,6 +13243,13 @@ fn main() -> i32 {
 
 failed = 0
 
+# What each hole took of what it was given. The walls above stop a hole that
+# runs away and say nothing about a hole that is nearly there, and a wall
+# nobody is told about is one whose neighbour finds out first. Threads write
+# into this, each under a name of its own, and what is made of it is the
+# sentence at the end. See D841.
+they_took = {}
+
 # The tree's own objects come along with each copy, so that breaking one file
 # rebuilds one file rather than sixteen, twenty-one times over. The `.d` files
 # beside them are what makes that safe: the build wrote down what each object
@@ -13287,31 +13394,29 @@ def put_out_of_order(hole):
         # needs longer than this is one nobody would wait for either.
         try:
             if "tool" in hole:
-                ran = subprocess.run([os.path.join(work, hole["tool"])]
-                                     + hole.get("arguments", []), cwd=work,
-                                     env=inside_the_walls(),
-                                     capture_output=True, text=True,
-                                     stdin=subprocess.DEVNULL,
-                                     timeout=A_WHILE)
+                ran = what_it_took([os.path.join(work, hole["tool"])]
+                                   + hole.get("arguments", []), hole, cwd=work)
             elif "host" in hole:
                 # The other host, which is the only thing here that lays its
                 # own memory over what the compiler says a type is.
-                ran = subprocess.run([os.path.join(work, hole["host"])],
-                                     cwd=work, env=inside_the_walls(),
-                                     capture_output=True, text=True,
-                                     stdin=subprocess.DEVNULL,
-                                     timeout=A_WHILE)
+                ran = what_it_took([os.path.join(work, hole["host"])], hole,
+                                   cwd=work)
             else:
                 # Under the sanitisers when the hole is one only they can see.
-                ran = subprocess.run(
+                ran = what_it_took(
                     [os.path.join(work, hole.get("binary", "kest")), "run",
-                     os.path.join(work, hole["program"])],
-                    env=inside_the_walls(),
-                    capture_output=True, text=True,
-                    stdin=subprocess.DEVNULL, timeout=A_WHILE)
+                     os.path.join(work, hole["program"])], hole)
         except subprocess.TimeoutExpired:
             return ["MISSED: %s" % hole["what"],
                     "    the broken tree never answered"], True
+        except AskedForTooMuch:
+            return ["MISSED: %s" % hole["what"],
+                    "    the broken tree asked for more than %uM of memory"
+                    % (SO_MUCH // 1024)], True
+        # Written down before what it said is read, so that a hole that is
+        # nearly at a wall is in the sentence at the end whether it caught
+        # what it is for or not.
+        they_took[hole["what"]] = (ran.took, ran.for_a_while)
         answered = ran.stdout + ran.stderr
         if hole["caught"] in answered:
             # And it has to refuse as well as say so. What reads a check is a
@@ -13401,6 +13506,15 @@ for name in sorted(tools_here - broken):
     failed = 1
 
 if not failed:
-    print("every backstop catches what it is for")
+    # What each hole was given and what the hungriest and the slowest of them
+    # took of it, because a wall is only a wall to somebody who knows how near
+    # it they are standing.
+    hungriest = max(they_took, key=lambda what: they_took[what][0])
+    slowest = max(they_took, key=lambda what: they_took[what][1])
+    print("every backstop catches what it is for, and of the %u that run "
+          "something the hungriest, %s, took %uM of the %uM each is given, "
+          "and the slowest, %s, %.1fs of the %us"
+          % (len(they_took), hungriest, they_took[hungriest][0] // 1024,
+             SO_MUCH // 1024, slowest, they_took[slowest][1], A_WHILE))
 sys.exit(failed)
 PY

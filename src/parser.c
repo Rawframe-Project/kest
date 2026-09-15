@@ -348,6 +348,26 @@ static void recover_declaration(Parser *parser) {
     parser->recovering = false;
 }
 
+// Recovering from a refusal in a loop, which has to leave the loop further on
+// than `was` or the loop is not a loop. Recovery on its own is allowed to
+// stand still: it stops at whatever could begin the next statement, and a word
+// this language keeps is one of those wherever it is written. `break` where a
+// field name belongs is refused, recovery stops on it because a statement
+// could begin there, the loop asks for a field again at the same token, and
+// that is the whole of the program from then on — one more copy of one message
+// at a time, until the host has no memory left to give it. Six lines did that.
+//
+// So a pass that has eaten nothing eats one and recovers from where that
+// leaves it, which also puts the rest of the line where it belongs: whatever
+// follows a name that cannot be one is not a second mistake. See D841.
+static void recover_from(Parser *parser, uint32_t was) {
+    recover_statement(parser);
+    if (parser->position == was) {
+        advance(parser);
+        recover_statement(parser);
+    }
+}
+
 // A statement ends at a line break, or at the brace that closes its block.
 static void end_statement(Parser *parser) {
     if (match(parser, KEST_TOK_NEWLINE)) {
@@ -1614,9 +1634,10 @@ static bool parse_block(Parser *parser, KestBlock *block) {
     List items = {0};
     skip_newlines(parser);
     while (!check(parser, KEST_TOK_RBRACE) && !check(parser, KEST_TOK_EOF)) {
+        uint32_t was = parser->position;
         KestStmt *stmt = parse_statement(parser);
         if (stmt == NULL) {
-            recover_statement(parser);
+            recover_from(parser, was);
         } else {
             list_push(parser, &items, stmt);
             end_statement(parser);
@@ -1854,9 +1875,10 @@ static KestDecl *parse_declaration(Parser *parser) {
         List fields = {0};
         skip_newlines(parser);
         while (!check(parser, KEST_TOK_RBRACE) && !check(parser, KEST_TOK_EOF)) {
+            uint32_t was = parser->position;
             KestField *field = parse_field(parser);
             if (field == NULL) {
-                recover_statement(parser);
+                recover_from(parser, was);
             } else {
                 list_push(parser, &fields, field);
                 end_statement(parser);

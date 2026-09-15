@@ -3656,6 +3656,7 @@ K0104|fn main() -> i32 {\n    let a = 0x\n    return a\n}|literal has no digits
 K0107|fn main() -> i32 {\n    let s = "\0377"\n    return len(s)\n}|starts no character
 K0108|fn main() -> i32 {\n    let s = "\0357\0273\0277hi"\n    return len(s)\n}|a mark with no width
 K0201|fn main() -> i32 \n    return 0\n}|expected
+K0201|struct P {\n    break: i32\n}\n\nfn main() -> i32 {\n    return 0\n}|expected identifier, found `break`
 K0202|what\n|expected a declaration
 K0204|fn main() -> i32 {\n    let a = \n    return 0\n}|expected an expression
 K0205|fn main() -> i32 {\n    1 = 2\n    return 0\n}|cannot be assigned to

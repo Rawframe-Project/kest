@@ -24905,3 +24905,81 @@ damage, and a build without a sanitiser in it reads the variable and ignores it.
 *What the gate did while running with it.* Nothing named `kest` appeared in the
 machine's memory at all, and the machine sat at twelve gigabytes of sixty-two
 throughout.
+
+## D841: a parse that recovers where it stands, and a wall over all of it
+
+D840 put a wall round the backstop holes and ended with a complaint about it:
+the wall stops a runaway and says nothing about which hole it was, so a hole
+that is nearly at the wall is a thing nobody reads. So the harness says it now,
+and the first thing it said was that the wall was not a wall at all.
+
+*What saying it took.* `subprocess.run` answers what a run said and not what it
+cost, because what carries the cost is the wait, and the wait that call does
+throws the numbers away. So the wait is done here: `os.wait4`, with the output
+to files rather than to pipes, because the call that empties a pipe is the call
+that reaps the run. Every hole's peak residency and its seconds are written
+down, and the last sentence of the check names the hungriest and the slowest
+against what each was given.
+
+*What it said.* `every backstop catches what it is for, and of the 747 that run
+something the hungriest, a word test that says yes to a shorter name, took
+51809M of the 4096M each is given`. Fifty-one gigabytes, through a wall of four.
+The wall of D840 is the sanitiser's own `hard_rss_limit_mb`, and this hole runs
+a check which runs a build with no sanitiser in it — which reads that variable
+and ignores it. Half of these runs were behind the wall and the half that was
+doing the damage was not.
+
+*What the hole was doing.* The break makes the word test answer yes to a prefix,
+so `b` lexes as `break`. Then:
+
+```
+struct P {
+    break: i32
+}
+```
+
+`parse_field` wants a name, is handed a keyword, and refuses without eating it.
+The loop round it recovers, and recovering is allowed to stand still: it stops
+at whatever could begin the next statement, and a word this language keeps is
+one of those wherever it is written. So the loop asks for a field again at the
+same token, and that is the whole of the program from then on — one more copy
+of one message each time round, until the host has nothing left to give.
+
+*And it was not the hole.* The six lines above are not a broken compiler's
+input. They are a program somebody could write, and the compiler as it shipped
+hung on them and ate the machine while it did. The backstop hole found a bug in
+the language, which is what a backstop hole is for; what it took to see it was
+one number printed at the end of a check.
+
+*So: a loop that recovers has to be further on than it was.* `recover_from`
+recovers, and if that left the parse where it began it eats one token and
+recovers again — which also puts the rest of the line where it belongs, so that
+whatever follows a name that cannot be one is not reported as a second mistake.
+Two loops are shaped this way, the statements of a block and the fields of a
+record. The declarations of a file are not: every token that can begin a
+declaration is one `parse_declaration` eats before it can refuse anything, so
+that loop cannot stand still. Six lines that never answered now answer with one
+message in no time at all, and the hole that took fifty-one gigabytes takes two
+and a half megabytes.
+
+*And the wall, this time over all of it.* `ulimit -v` cannot be the general wall:
+a build that checks itself reserves fourteen terabytes of address space for its
+shadow map before it runs a line, so it never starts inside a wall low enough to
+stop anything. The sanitiser's wall cannot be the general wall either, for the
+reason above. What is left is to keep the wall here, in the harness that already
+does its own waiting: each hole is started in a session of its own, and a hole
+still going after a second has what that whole session is resident in read out
+of `/proc` twice a second. Over `SO_MUCH` and everything in the session is
+killed and the hole is answered as missed, saying so. A session rather than a
+process, because what a hole runs is as often a check as a compiler, and a check
+that starts a compiler is not the one taking the memory — and for the same
+reason the wall for a run that will not stop kills the session too, where before
+it killed the one process and left the rest.
+
+The sanitiser's wall stays where it was. It stops a checked build sooner and
+says which allocation it was stopped at, which is worth having; it is now the
+second wall rather than the only one.
+
+*Held.* A hole written to remove the guard above, run against the real wall,
+is stopped at four gigabytes in four seconds and named — where the same hole
+without the wall took the machine down eight times in a day.
