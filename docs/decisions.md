@@ -24858,3 +24858,50 @@ been worth it.
 
 *Held.* `examples/embed.c` writes 7 into `reach`'s `bool` and refuses unless the
 machine says `K0636` naming `bool` and the slot.
+
+## D840: a set is the bits it has names for, and a wall for the holes
+
+*What a set was.* `flags State: u8 { Moving, Hurt }` is two named bits. A host
+writing 255 got a `State` holding six bits nothing named — and the program's own
+text writer said so without saying so:
+
+```
+bits 1   -> "State.Moving"
+bits 3   -> "State.Moving | State.Hurt"
+bits 255 -> "State.Moving | State.Hurt"
+```
+
+A value that writes itself as something it is not equal to. The reference says a
+set "is not a `u8` and not another set"; this was the door round that.
+
+*Weighed against the bits its names cover.* Which bit a name stands for is where
+it was written, so the named bits are the low `case_count` of them and anything
+above is a value the program cannot make. `K0636` taking, `K0652` answering, the
+same pair as the widths.
+
+*And the layout says whether it must be walked.* The machine decided that by
+looking at every piece of every argument of every call, for a word or a tag — a
+set of bits is neither, and its pieces are the whole number it is kept in. What
+has to be walked is a fact about the **type**, and a type does not change between
+calls, so `KestLayout` says it: `by_the_type`, worked out where the layout is
+made. The per-call scan is gone and the set is covered.
+
+*The wall, which is the other half of this entry.* A backstop hole breaks a
+compiler on purpose, and some of the ways a compiler can be broken ask the host
+for everything it has. One of them reserved sixty-five gigabytes and was killed
+by the kernel **seven times in half an hour**, each time taking whatever else was
+on the machine with it — a neighbour's builds, this machine's swap, and the
+thirty minutes it took anybody to notice.
+
+`A_WHILE` is the wall for a run that will not stop. There was none for a run that
+will not stop asking. There is now, and it is not `ulimit -v`: a build that
+checks itself reserves fourteen terabytes of address space for its shadow map
+before it runs a line, so an address-space wall low enough to stop a runaway is
+one no checked build starts inside — which the first attempt found out by
+refusing every sanitised hole at once. The sanitiser's own `hard_rss_limit_mb` is
+a wall on what is actually resident, which is the number that was doing the
+damage, and a build without a sanitiser in it reads the variable and ignores it.
+
+*What the gate did while running with it.* Nothing named `kest` appeared in the
+machine's memory at all, and the machine sat at twelve gigabytes of sixty-two
+throughout.

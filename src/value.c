@@ -272,6 +272,37 @@ uint32_t kest_module_copies(const KestModule *module, const char *name,
     return count;
 }
 
+// Whether anything in here is a thing whose value the pieces cannot weigh: a
+// handle is a handle of something, a tag is a tag of an enum, and a set of bits
+// is a set of named ones. Worked out where the layout is made, because the
+// alternative is looking at every piece of every argument of every call. See
+// D840.
+static bool by_the_type(const KestType *type) {
+    if (type == NULL) {
+        return false;
+    }
+    switch (type->tag) {
+    case KEST_T_ENUM:
+    case KEST_T_FLAGS:
+    case KEST_T_TEXT:
+    case KEST_T_ARRAY:
+    case KEST_T_STORE:
+        return true;
+    case KEST_T_OPTIONAL:
+    case KEST_T_FIXED:
+        return by_the_type(type->element);
+    case KEST_T_STRUCT:
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            if (by_the_type(type->members[i].type)) {
+                return true;
+            }
+        }
+        return false;
+    default:
+        return false;
+    }
+}
+
 // Whether anything in here is a tagged union, which is what makes the piece
 // list not enough to move a value by.
 static bool holds_a_tag(const KestType *type) {
@@ -581,6 +612,7 @@ int32_t kest_module_layout(KestModule *module, const KestType *type) {
     layout->count = slots;
     layout->type = type;
     layout->tagged = holds_a_tag(type);
+    layout->by_the_type = by_the_type(type);
     layout->size = type == NULL || type->byte_size == 0 ? 8 : type->byte_size;
     layout->align = type == NULL || type->byte_align == 0 ? 8 : type->byte_align;
     module->layout_types[module->layout_count] = type;

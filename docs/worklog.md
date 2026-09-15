@@ -31826,3 +31826,42 @@ for what it is at every width — except one: `KEST_L_TAG` is four bytes read as
 whole number, and an enum's tag is weighed against the cases only where the walk
 reaches it. Find whether a tag written into a frame of plain pieces is weighed
 at all.
+
+## A set is the bits it has names for, and a wall for the holes
+
+`flags State: u8 { Moving, Hurt }` is two named bits, and a host writing 255 got
+a `State` holding six that nothing named. Its own text writer printed
+"State.Moving | State.Hurt" for it — a value that writes itself as something it
+is not equal to. The reference says a set is not a `u8` and not another set, and
+this was the door round that.
+
+Weighed now against the bits its names cover: which bit a name stands for is
+where it was written, so anything above the low `case_count` is a value the
+program cannot make. K0636 taking, K0652 answering, the same pair as the widths.
+
+The machine decided whether to walk an argument by looking at every piece of
+every call for a word or a tag. A set of bits is neither and its pieces are the
+whole number it is kept in, and what has to be walked is a fact about the type,
+which does not change between calls — so `KestLayout` says it now, worked out
+where the layout is made. The per-call scan is gone.
+
+The other half of this entry is a wall. A backstop hole breaks a compiler on
+purpose, and one of them reserved sixty-five gigabytes and was killed by the
+kernel seven times in half an hour, each time taking whatever else was on the
+machine with it. `A_WHILE` is the wall for a run that will not stop and there
+was none for a run that will not stop asking. It is not `ulimit -v`: a checked
+build reserves fourteen terabytes of address space for its shadow map before it
+runs a line, so an address-space wall low enough to stop a runaway is one no
+checked build starts inside, which the first attempt found out by refusing every
+sanitised hole at once. The sanitiser's own `hard_rss_limit_mb` walls what is
+resident, which is the number that was doing the damage. Running the gate with
+it, nothing named `kest` appeared in the machine's memory at all.
+
+Recorded as D840.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the wall stops a runaway hole and says nothing about which one it was.
+Have the harness say what a hole was given and what it took, so a hole that goes
+near the wall is a thing somebody reads rather than a thing somebody's neighbour
+notices.

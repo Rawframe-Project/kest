@@ -93,7 +93,7 @@ static uint16_t move_scalar(KestValue *out, const KestType *type,
                             const unsigned char *from, bool reading,
                             unsigned char *to) {
     KestPiece piece = {0, kest_scalar_of(type)};
-    KestLayout one = {&piece, 1, 0, 0, NULL, false};
+    KestLayout one = {&piece, 1, 0, 0, NULL, false, false};
     if (reading) {
         // Nothing here is a tag: a scalar moved on its own is one piece of a
         // width, and what a tag is is the piece that says which.
@@ -1789,6 +1789,39 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
     // loop that decides whether to walk at all — this is the other two ways
     // in: a number inside a shape that has text or a handle somewhere else in
     // it, and a number a host answers a crossing with. See D837.
+    // A set of bits, against the bits its names cover. A set is not the whole
+    // number it is kept in: which bit a name stands for is where it was
+    // written, so a bit nothing named is a value the program cannot make and
+    // its own text does not say — `State` with every bit set writes itself as
+    // the two it has names for, and compares unequal to what it just wrote.
+    // See D840.
+    if (type->tag == KEST_T_FLAGS) {
+        uint64_t named = type->case_count >= 64
+                             ? ~(uint64_t)0
+                             : ((uint64_t)1 << type->case_count) - 1;
+        uint64_t given = (uint64_t)frame[*at].integer;
+        if ((given & ~named) != 0) {
+            if (saying->at_a_crossing) {
+                fail(runtime, saying->frame, saying->instruction, "K0652",
+                     "`%s` answers with `%s` in slot %u and %llu has bits it "
+                     "has no names for",
+                     name, kest_type_written(type), *at,
+                     (unsigned long long)given);
+            } else {
+                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                               nowhere,
+                               "`%s` takes `%s` in slot %u and %llu has bits "
+                               "it has no names for",
+                               name, kest_type_written(type), *at,
+                               (unsigned long long)given);
+            }
+            kest_diags_suggest(runtime->diags,
+                               "which bit a name stands for is where it was "
+                               "written, and a set is the bits it has names "
+                               "for");
+            return false;
+        }
+    }
     if (type->tag == KEST_T_FLOAT && type->width == 32) {
         double given = frame[*at].real;
         if (given == given && (double)(float)given != given) {
@@ -4557,12 +4590,10 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
     for (uint32_t which = 0; which < chunk->takes_count; which++) {
         const KestLayout *layout =
             &runtime->module->layouts[chunk->takes[which]];
-        bool worth_reading = false;
-        for (uint16_t p = 0; p < layout->count && !worth_reading; p++) {
-            worth_reading = layout->pieces[p].kind == KEST_L_WORD ||
-                            layout->pieces[p].kind == KEST_L_TAG;
-        }
-        if (!worth_reading) {
+        // Read off the layout rather than off its pieces: what has to be
+        // walked is a thing about the type, and the type does not change
+        // between calls. See D840.
+        if (!layout->by_the_type) {
             // Nothing in it a walk would read, and one thing a look will: a
             // slot holds sixty-four bits and a `u8` holds eight, so a host
             // writing 300 into one is the one way a value this language

@@ -105,6 +105,31 @@ fn main() -> i32 {
 # measurement of anything.
 A_WHILE = 600
 
+# And how much memory it is given, which is the same wall in the other
+# direction and was not there. A hole breaks a compiler on purpose, and some of
+# the ways a compiler can be broken ask the host for everything it has: one of
+# these reserved sixty-five gigabytes and was killed by the kernel seven times
+# in half an hour, taking whatever else was on the machine with it each time.
+# What a run that will not stop meets is `A_WHILE`; what a run that will not
+# stop *asking* meets is this. Four gigabytes, against the half a megabyte the
+# largest thing here actually compiles in. See D840.
+SO_MUCH = 4 * 1024 * 1024  # kilobytes
+
+# Told to the sanitiser rather than to the shell. `ulimit -v` is the obvious
+# wall and it is the wrong one here: a build that checks itself reserves
+# fourteen terabytes of address space for its shadow map before it runs a line,
+# so an address-space wall low enough to stop a runaway is one no checked build
+# starts inside. What the sanitiser has instead is a wall on what is actually
+# resident, which is the number that was killing the machine. Everything here
+# is run through it, and a build without a sanitiser in it reads the variable
+# and ignores it.
+def inside_the_walls(env=None):
+    walled = dict(os.environ if env is None else env)
+    walled["ASAN_OPTIONS"] = (walled.get("ASAN_OPTIONS", "")
+                              + ("," if walled.get("ASAN_OPTIONS") else "")
+                              + "hard_rss_limit_mb=%d" % (SO_MUCH // 1024))
+    return walled
+
 BREAKS = [
     {
         "what": "a tree walk that does not look inside an `if`",
@@ -9385,12 +9410,17 @@ static const Keyword KEYWORDS[] = {
         # is an enum has its tag there and one inside a shape has it wherever
         # the fields in front of it end.
         "what": "a walk of the tags that reads only the first slot",
-        "file": "src/vm.c",
-        "from": """            worth_reading = layout->pieces[p].kind == KEST_L_WORD ||
-                            layout->pieces[p].kind == KEST_L_TAG;""",
-        "to": """            worth_reading = p == 0 &&
-                            (layout->pieces[p].kind == KEST_L_WORD ||
-                             layout->pieces[p].kind == KEST_L_TAG);""",
+        "file": "src/value.c",
+        "from": """    case KEST_T_STRUCT:
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            if (by_the_type(type->members[i].type)) {
+                return true;
+            }
+        }
+        return false;""",
+        "to": """    case KEST_T_STRUCT:
+        return type->member_count > 0 &&
+               by_the_type(type->members[0].type);""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "a tag nobody declared inside a shape was read",
@@ -13259,6 +13289,7 @@ def put_out_of_order(hole):
             if "tool" in hole:
                 ran = subprocess.run([os.path.join(work, hole["tool"])]
                                      + hole.get("arguments", []), cwd=work,
+                                     env=inside_the_walls(),
                                      capture_output=True, text=True,
                                      stdin=subprocess.DEVNULL,
                                      timeout=A_WHILE)
@@ -13266,7 +13297,8 @@ def put_out_of_order(hole):
                 # The other host, which is the only thing here that lays its
                 # own memory over what the compiler says a type is.
                 ran = subprocess.run([os.path.join(work, hole["host"])],
-                                     cwd=work, capture_output=True, text=True,
+                                     cwd=work, env=inside_the_walls(),
+                                     capture_output=True, text=True,
                                      stdin=subprocess.DEVNULL,
                                      timeout=A_WHILE)
             else:
@@ -13274,6 +13306,7 @@ def put_out_of_order(hole):
                 ran = subprocess.run(
                     [os.path.join(work, hole.get("binary", "kest")), "run",
                      os.path.join(work, hole["program"])],
+                    env=inside_the_walls(),
                     capture_output=True, text=True,
                     stdin=subprocess.DEVNULL, timeout=A_WHILE)
         except subprocess.TimeoutExpired:

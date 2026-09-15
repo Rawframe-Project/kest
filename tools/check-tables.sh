@@ -1698,6 +1698,11 @@ LEFT_OUT = {
     ("KestChunk", "next_instruction"): "where the next opcode goes while a "
                                        "body is being written, which is "
                                        "nothing once one is",
+    ("KestLayout", "by_the_type"): "whether what a host writes into this has "
+                                   "to be read by its type, which is worked "
+                                   "out from the type the mark already folds "
+                                   "and is a thing about reading a value "
+                                   "rather than part of one",
     ("KestChunk", "as_value"): "whether anything names this function as a "
                                "value, which is read off the code that names "
                                "it and is a thing about the module rather "

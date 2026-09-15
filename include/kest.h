@@ -158,6 +158,14 @@ typedef struct {
     uint16_t align;
     const void *type;
     bool tagged;
+    // Whether what a host writes into this has to be read by its type rather
+    // than by its pieces. A piece says how wide a slot is and what it is read
+    // through, and for most values that is the whole of what can be wrong —
+    // but a handle is a handle of something, a tag is a tag of an enum, and a
+    // set of bits is a set of named ones, and none of those is a thing a
+    // width can say. The machine reads this rather than looking at the pieces
+    // every call. See D840.
+    bool by_the_type;
 } KestLayout;
 
 // Which case the tag at a piece of this value names, and what that case
