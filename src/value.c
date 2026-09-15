@@ -1016,8 +1016,17 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
             if (depth[callee] > deepest) {
                 deepest = depth[callee];
             }
-            if (slots[callee] > widest) {
-                widest = slots[callee];
+            // What a call adds is what the callee needs less the arguments
+            // it was handed: the machine puts the callee's frame at `top`
+            // less the slots the call carries, so the caller's arguments and
+            // the callee's parameters are the same slots counted once. Added
+            // whole, a chain of calls was charged its arguments twice at
+            // every step — which is room a host is told to find and no
+            // program reaches. See D813.
+            uint32_t callee_adds =
+                slots[callee] - module->functions[callee]->param_slots;
+            if (callee_adds > widest) {
+                widest = callee_adds;
             }
             if (host_depth[callee] > 0) {
                 reaches_host = true;
@@ -1025,8 +1034,13 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
             if (host_depth[callee] > host_deepest) {
                 host_deepest = host_depth[callee];
             }
-            if (host_slots[callee] > host_widest) {
-                host_widest = host_slots[callee];
+            uint32_t host_adds =
+                host_slots[callee] == 0
+                    ? 0
+                    : host_slots[callee] -
+                          module->functions[callee]->param_slots;
+            if (host_adds > host_widest) {
+                host_widest = host_adds;
                 host_started = host_from[callee];
             }
         }

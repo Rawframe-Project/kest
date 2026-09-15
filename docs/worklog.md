@@ -30820,3 +30820,45 @@ calls by adding each body's width to the worst of what it reaches, and the
 checked build now knows what each body really reached. Add up the deepest the
 machine's own frames ever got in a run, and read that against what `kest_needs`
 said the program would want.
+
+## A call's arguments, counted once
+
+D812 asked what one body reached against what it asked for. This asks it of the
+run: the machine now remembers the deepest it ever got, in slots and in frames,
+and says so with the rest under `KEST_DEEP`. Read against what the program was
+given, thirty-two examples said the same thing — frames exact, every one; slots
+five to twenty-five per cent over, everywhere.
+
+`needs_of` works a chain out as `own + max(what it reaches)`, and the machine
+puts a callee's frame at the top of the stack less the slots the call carries.
+The caller's arguments and the callee's parameters are one set of slots, written
+once and read twice; added whole, every call in a chain was charged its
+arguments a second time. What a call adds is `slots[callee] -
+param_slots[callee]`, and the same for the host pair. Safe in the direction that
+matters: if a caller's widest point is not at the call, the callee sits lower
+still, so the number stays an over-estimate and never becomes an under one.
+
+Over the examples a machine can size from the program itself: 862 slots asked
+where 1050 were asked before, against 757 reached.
+
+A machine the program outgrows is not this check's business — the machine asks
+whether there is room at every call and refuses rather than running off the end,
+so under-asking is a program that stops and over-asking is a program that runs,
+and only the second is silent. So what is held is the ratio: a fifth over what
+the examples reach between them, where the double-counting was a quarter over on
+its own. The frames are held exactly, because they are exact.
+
+D812 found three bodies asking for room they never used and all three were
+programs that did not run their widest path. This found one number asking for
+room nothing could ever use, and it was arithmetic. The first kind you fix by
+writing a better example; the second by writing down what the machine actually
+does. Recorded as D813.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the six examples a machine cannot size take 65536 slots and 1024
+frames and reach seventy. They have no answer because something in them reaches
+itself or calls through a value, and `needs_of` gives up on the whole program
+for it. Find how much of each of those programs does have an answer, and whether
+a machine can be sized from the part that does plus a ceiling on the part that
+cannot.

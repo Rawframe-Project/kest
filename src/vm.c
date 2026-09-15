@@ -382,6 +382,13 @@ struct KestRuntime {
     uint32_t frame_count;
     uint32_t stack_slots;
     uint32_t call_depth;
+#ifdef KEST_CHECKED
+    // The deepest this machine ever got, in slots and in frames, which only
+    // the build that checks itself counts. D812 asked the same of one body;
+    // this asks it of the run, which is what a host is sized by. See D813.
+    uint32_t went_slots;
+    uint32_t went_frames;
+#endif
     // How much had been said when this started, and how much of it has been
     // written out since. What failed to compile is not this machine's to
     // report and is not reported twice.
@@ -1720,6 +1727,17 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             KestChunk *seen = (KestChunk *)(uintptr_t)frame->chunk;
             if (at > seen->went) {
                 seen->went = at;
+            }
+            // And the same of the whole machine rather than of one body: how
+            // far up its stack it ever reached and how many frames were
+            // standing at once. That pair is what a host is asked to find
+            // room for. See D813.
+            uint32_t all = (uint32_t)(top - rt->stack);
+            if (all > rt->went_slots) {
+                rt->went_slots = all;
+            }
+            if (rt->frame_count > rt->went_frames) {
+                rt->went_frames = rt->frame_count;
             }
         }
         if (top > frame->base + frame->chunk->slot_count +
@@ -3420,6 +3438,11 @@ bool kest_runtime_free(KestRuntime *runtime) {
                         one->stack_needed, one->went);
             }
         }
+    }
+    if (getenv("KEST_DEEP") != NULL && runtime->went_slots > 0) {
+        fprintf(stderr, "run asked %u slots %u frames went %u %u\n",
+                runtime->stack_slots, runtime->call_depth,
+                runtime->went_slots, runtime->went_frames);
     }
 #endif
 

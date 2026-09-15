@@ -165,6 +165,103 @@ fn work(n: i32) -> i32 {
 # with how many there are: what is being weighed is the heap the call took, and
 # that is the same number whichever of the two the program says out loud. Each
 # is a walk that makes a piece per character or per piece, so twice as much is
+# And the other half of the count the machine holds. `K0655` refuses a body
+# that goes deeper than it was given; nothing says a body never went that deep
+# at all. Room asked for and never used is memory a host is told to find for
+# nothing, and `needs_of` carries it up every chain of calls — a body four
+# slots wider than it needs makes every caller of it four wider too.
+#
+# The build that checks itself counts what each body reached and says so when
+# `KEST_DEEP` is set, which is the only time it says anything the release build
+# does not. Every body every example runs reaches the room it was given. Where
+# that stops being true it is usually not the compiler: it is an arm, or a
+# branch, or a copy of a generic that nothing here runs, and the answer is a
+# program that runs it. See D812.
+asked_for = 0
+reached = 0
+loose = []
+deep_runs = []
+# What a machine takes when the program has no answer, which `include/kest.h`
+# names and this reads rather than writing a second copy of.
+KEST_STACK_SLOTS = int(re.search(r"#define KEST_STACK_SLOTS (\d+)",
+                                 open(os.path.join("include",
+                                                   "kest.h")).read()).group(1))
+# The build that checks itself is what counts this, and the gate makes sure it
+# is there before anything runs. A tree with only the release build in it --
+# which is what a hole that does not ask for the other one leaves -- has
+# nothing to read here, and reading nothing is not the same as reading nought.
+have_checked = os.path.exists('./kest-debug')
+for deep_path in (sorted(glob.glob(os.path.join('examples', '*.kest')))
+                  if have_checked else []):
+    deep_env = dict(os.environ)
+    deep_env['KEST_DEEP'] = '1'
+    deep_ran = subprocess.run(['./kest-debug', 'run', deep_path],
+                              capture_output=True, text=True,
+                              stdin=subprocess.DEVNULL, env=deep_env)
+    for deep_line in deep_ran.stderr.split("\n"):
+        if deep_line.startswith('run asked '):
+            deep_runs.append((deep_path, deep_line))
+            continue
+        if not deep_line.startswith('deep '):
+            continue
+        deep_words = deep_line.split(' ')
+        deep_room = int(deep_words[-3])
+        deep_went = int(deep_words[-1])
+        deep_name = ' '.join(deep_words[1:-4])
+        asked_for += 1
+        reached += deep_room
+        if deep_room > deep_went:
+            loose.append((deep_room - deep_went, deep_name, deep_path))
+for deep_slack, deep_name, deep_path in sorted(loose, reverse=True)[:4]:
+    print("costs: `%s` asks for %u slot(s) it never used, running %s"
+          % (deep_name, deep_slack, deep_path))
+    failed = 1
+if have_checked:
+    some("the bodies the examples run", asked_for)
+
+# And the same question of the whole run rather than of one body. What a
+# program is given is what `kest_needs` said it would want, worked out by
+# adding each body's width to the worst of what it reaches; what it used is
+# what the machine reached. Going over is the one that cannot stand -- a
+# machine the program outgrows is a refusal in the middle of a frame -- and
+# the room left over is worth saying, because it is what a host is asked to
+# find and never uses. A program with no answer takes the usual numbers and is
+# counted apart: what it wants cannot be worked out, so what it did not use is
+# not slack. See D813.
+run_asked = 0
+run_went = 0
+run_frames = 0
+run_went_frames = 0
+run_sized = 0
+for run_path, run_line in deep_runs:
+    run_words = run_line.split(' ')
+    room, frames, went, went_frames = (int(run_words[2]), int(run_words[4]),
+                                       int(run_words[7]), int(run_words[8]))
+    if room >= KEST_STACK_SLOTS:
+        continue
+    run_sized += 1
+    run_asked += room
+    run_went += went
+    run_frames += frames
+    run_went_frames += went_frames
+if have_checked:
+    some("the examples a machine could size from the program", run_sized)
+# A machine the program outgrows is not what this watches: the machine asks
+# whether there is room at every call and refuses rather than running off the
+# end, so under-asking is a program that stops and over-asking is a program
+# that runs. What is left to watch is the over-asking, and the shape of it is a
+# ratio rather than a number, the same as everything else here: a fifth over
+# what every example between them reaches is room enough for the paths they do
+# not take. Adding a call's arguments to its caller without taking them off
+# again -- they are one set of slots, and the machine puts the callee's frame
+# on top of them -- was a quarter over on its own. See D813.
+if have_checked and (run_asked > run_went * 5 // 4 or
+                     run_frames != run_went_frames):
+    print("costs: %u example(s) ask for %u slot(s) and %u frame(s) and reach "
+          "%u and %u, and what a program is told to find is what it uses"
+          % (run_sized, run_asked, run_frames, run_went, run_went_frames))
+    failed = 1
+
 # twice the work and nothing here should be more.
 RUNS = re.findall(r'\nfn ([a-zA-Z]+)\(([^)]*)\) -> \[text\]', source)
 some("the library's functions that hand back a run of text", RUNS)
@@ -913,44 +1010,6 @@ if (lexing is None or parsing is None or checking is None or
 # covers something and one that looks as if it does.
 alone = sorted(promised - provided)
 
-# And the other half of the count the machine holds. `K0655` refuses a body
-# that goes deeper than it was given; nothing says a body never went that deep
-# at all. Room asked for and never used is memory a host is told to find for
-# nothing, and `needs_of` carries it up every chain of calls — a body four
-# slots wider than it needs makes every caller of it four wider too.
-#
-# The build that checks itself counts what each body reached and says so when
-# `KEST_DEEP` is set, which is the only time it says anything the release build
-# does not. Every body every example runs reaches the room it was given. Where
-# that stops being true it is usually not the compiler: it is an arm, or a
-# branch, or a copy of a generic that nothing here runs, and the answer is a
-# program that runs it. See D812.
-asked_for = 0
-reached = 0
-loose = []
-for deep_path in sorted(glob.glob(os.path.join('examples', '*.kest'))):
-    deep_env = dict(os.environ)
-    deep_env['KEST_DEEP'] = '1'
-    deep_ran = subprocess.run(['./kest-debug', 'run', deep_path],
-                              capture_output=True, text=True,
-                              stdin=subprocess.DEVNULL, env=deep_env)
-    for deep_line in deep_ran.stderr.split("\n"):
-        if not deep_line.startswith('deep '):
-            continue
-        deep_words = deep_line.split(' ')
-        deep_room = int(deep_words[-3])
-        deep_went = int(deep_words[-1])
-        deep_name = ' '.join(deep_words[1:-4])
-        asked_for += 1
-        reached += deep_room
-        if deep_room > deep_went:
-            loose.append((deep_room - deep_went, deep_name, deep_path))
-for deep_slack, deep_name, deep_path in sorted(loose, reverse=True)[:4]:
-    print("costs: `%s` asks for %u slot(s) it never used, running %s"
-          % (deep_name, deep_slack, deep_path))
-    failed = 1
-some("the bodies the examples run", asked_for)
-
 if not failed:
     print("what the library costs grows the way it should: %u askings of the "
           "text it makes, %u left to the host, %u modules in a loop, %u proved "
@@ -979,7 +1038,9 @@ if not failed:
           "examples as they stand is %u copies from %u bodies, the ones past "
           "the first being %u of %u bytes of code, of which %u promise "
           "`no.alloc`, and %u bodies run by the examples each reaching "
-          "every slot of the %u they were given between them, all of it "
+          "every slot of the %u they were given between them, and %u "
+          "example(s) a machine could size from the program itself asking "
+          "for %u slot(s) and reaching %u, all of it "
           "measured on the machine "
           "this ran on"
           % (asked, len(left_to_the_host), driven, proved, kept, len(alone),
@@ -992,6 +1053,7 @@ if not failed:
              flat, flat_checked, deep, deep_checked,
              COPIES, COPIES, one_copy_costs, many_copies_costs,
              copied_total, copied_bodies, copied_bytes, copied_code,
-             copied_quiet, asked_for, reached))
+             copied_quiet, asked_for, reached, run_sized, run_asked,
+             run_went))
 sys.exit(failed)
 PY

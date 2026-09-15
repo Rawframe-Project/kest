@@ -184,6 +184,23 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A chain of calls charged its arguments once too few. The machine
+        # puts a callee's frame at the top of the stack less the slots the
+        # call carries, so the caller's arguments and the callee's parameters
+        # are the same slots — taken off twice, a program is given less room
+        # than it reaches, and what it meets is a refusal in the middle of a
+        # frame rather than a wrong answer. See D813.
+        "what": "a call charged its arguments twice over",
+        "file": "src/value.c",
+        "from": r"""            uint32_t callee_adds =
+                slots[callee] - module->functions[callee]->param_slots;""",
+        "to": r"""            uint32_t callee_adds =
+                slots[callee] - module->functions[callee]->param_slots * 2;""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-costs.sh",
+        "caught": "what a program is told to find is what it uses",
+    },
+    {
         # A body given a slot more than it works out in. Room asked for and
         # never used is memory a host is told to find for nothing, and
         # `needs_of` carries it up every chain of calls — a body a slot wider
@@ -6215,9 +6232,9 @@ fn main() -> i32 {
         # the whole program does and tells a host nothing it did not have.
         "what": "where a call back in starts answered from the top of the chain",
         "file": "src/value.c",
-        "from": """                host_widest = host_slots[callee];
+        "from": """                host_widest = host_adds;
                 host_started = host_from[callee];""",
-        "to": """                host_widest = host_slots[callee];""",
+        "to": """                host_widest = host_adds;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "said to be in",

@@ -23822,3 +23822,42 @@ compiler: it will be an arm, a branch, or a copy of a generic that nothing runs.
 That makes it two things at once — a check on the compiler's arithmetic and a
 check on whether the examples run what they claim to show. Both are worth
 having, and the second is the one that will go off.
+
+## D813: a call's arguments, counted once
+
+*The question one level up.* D812 asked what one body reached against what it
+asked for. This asks it of the run: the machine now remembers the deepest it
+ever got, in slots and in frames, and says so with the rest under `KEST_DEEP`.
+
+Read against what the program was given, thirty-two examples said the same
+thing. Frames: exact, every one. Slots: five to twenty-five per cent over,
+everywhere, in every shape of program.
+
+*Where it came from.* `needs_of` works a chain out as `own + max(what it
+reaches)`, where `own` is a body's named slots plus its operand stack. The
+machine puts a callee's frame at the top of the stack **less the slots the call
+carries** — the caller's arguments and the callee's parameters are one set of
+slots, written once and read twice. Added whole, every call in a chain was
+charged its arguments a second time.
+
+*Counted once now.* `slots[callee] - param_slots[callee]` is what a call adds,
+and the same for the host pair. It is safe in the direction that matters: if a
+caller's widest point is not at the call, the callee sits lower still, so the
+number is an over-estimate and never an under one.
+
+Over the examples a machine can size from the program itself: **862 slots asked
+where 1050 were asked before, against 757 reached.**
+
+*What is watched, and what is not.* A machine the program outgrows is not this
+check's business — the machine asks whether there is room at every call and
+refuses rather than running off the end, so under-asking is a program that stops
+and over-asking is a program that runs. Only the second is silent. So what is
+held is the ratio: a fifth over what the examples reach between them is room for
+the paths they do not take, and the double-counting was a quarter over on its
+own. The frames are held exactly, because they are exact.
+
+*And the shape this keeps having.* D812 found three bodies asking for room they
+never used and all three were programs that did not run their widest path. This
+found one number asking for room nothing could ever use, and it was arithmetic.
+The first kind you fix by writing a better example; the second by writing down
+what the machine actually does.
