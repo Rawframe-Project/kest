@@ -23,35 +23,35 @@ struct Vec3 {
     z: f32
 }
 
-fn add(a: Vec2, b: Vec2) -> Vec2 no.alloc {
+fn add(a: Vec2, b: Vec2) -> Vec2 no.alloc no.host {
     return Vec2(a.x + b.x, a.y + b.y)
 }
 
-fn add(a: Vec3, b: Vec3) -> Vec3 no.alloc {
+fn add(a: Vec3, b: Vec3) -> Vec3 no.alloc no.host {
     return Vec3(a.x + b.x, a.y + b.y, a.z + b.z)
 }
 
-fn sub(a: Vec2, b: Vec2) -> Vec2 no.alloc {
+fn sub(a: Vec2, b: Vec2) -> Vec2 no.alloc no.host {
     return Vec2(a.x - b.x, a.y - b.y)
 }
 
-fn sub(a: Vec3, b: Vec3) -> Vec3 no.alloc {
+fn sub(a: Vec3, b: Vec3) -> Vec3 no.alloc no.host {
     return Vec3(a.x - b.x, a.y - b.y, a.z - b.z)
 }
 
-fn scale(v: Vec2, k: f32) -> Vec2 no.alloc {
+fn scale(v: Vec2, k: f32) -> Vec2 no.alloc no.host {
     return Vec2(v.x * k, v.y * k)
 }
 
-fn scale(v: Vec3, k: f32) -> Vec3 no.alloc {
+fn scale(v: Vec3, k: f32) -> Vec3 no.alloc no.host {
     return Vec3(v.x * k, v.y * k, v.z * k)
 }
 
-fn dot(a: Vec2, b: Vec2) -> f32 no.alloc {
+fn dot(a: Vec2, b: Vec2) -> f32 no.alloc no.host {
     return a.x * b.x + a.y * b.y
 }
 
-fn dot(a: Vec3, b: Vec3) -> f32 no.alloc {
+fn dot(a: Vec3, b: Vec3) -> f32 no.alloc no.host {
     return a.x * b.x + a.y * b.y + a.z * b.z
 }
 
@@ -61,11 +61,11 @@ fn dot(a: Vec3, b: Vec3) -> f32 no.alloc {
 // end of the width where a square does — the square of 1e20 is infinity — and
 // comparing works up to the size where the squares stop fitting. `length` is
 // the one that answers for every vector this width holds an answer for.
-fn lengthSquared(v: Vec2) -> f32 no.alloc {
+fn lengthSquared(v: Vec2) -> f32 no.alloc no.host {
     return dot(v, v)
 }
 
-fn lengthSquared(v: Vec3) -> f32 no.alloc {
+fn lengthSquared(v: Vec3) -> f32 no.alloc no.host {
     return dot(v, v)
 }
 
@@ -103,11 +103,11 @@ fn length(v: Vec3) -> f32 no.alloc {
 // frame actually asks: what is nearest, and is it inside a radius. Both of
 // those order the same way without the square root, and `lengthSquared` was
 // here for that reason while the two-point form of it was not.
-fn distanceSquared(a: Vec2, b: Vec2) -> f32 no.alloc {
+fn distanceSquared(a: Vec2, b: Vec2) -> f32 no.alloc no.host {
     return lengthSquared(sub(a, b))
 }
 
-fn distanceSquared(a: Vec3, b: Vec3) -> f32 no.alloc {
+fn distanceSquared(a: Vec3, b: Vec3) -> f32 no.alloc no.host {
     return lengthSquared(sub(a, b))
 }
 
@@ -161,20 +161,20 @@ fn direction(v: Vec3) -> Vec3? no.alloc {
     return scale(even, 1.0 / size)
 }
 
-fn lerp(a: Vec2, b: Vec2, amount: f32) -> Vec2 no.alloc {
+fn lerp(a: Vec2, b: Vec2, amount: f32) -> Vec2 no.alloc no.host {
     return add(a, scale(sub(b, a), amount))
 }
 
-fn lerp(a: Vec3, b: Vec3, amount: f32) -> Vec3 no.alloc {
+fn lerp(a: Vec3, b: Vec3, amount: f32) -> Vec3 no.alloc no.host {
     return add(a, scale(sub(b, a), amount))
 }
 
 // Perpendicular in two, and the one perpendicular to both in three.
-fn perpendicular(v: Vec2) -> Vec2 no.alloc {
+fn perpendicular(v: Vec2) -> Vec2 no.alloc no.host {
     return Vec2(0.0 - v.y, v.x)
 }
 
-fn cross(a: Vec3, b: Vec3) -> Vec3 no.alloc {
+fn cross(a: Vec3, b: Vec3) -> Vec3 no.alloc no.host {
     return Vec3(
         a.y * b.z - a.z * b.y,
         a.z * b.x - a.x * b.z,
@@ -189,6 +189,6 @@ fn cross(a: Vec3, b: Vec3) -> Vec3 no.alloc {
 // negative the other, and nought when they lie along each other. It is `dot`
 // with one of them turned a quarter, which is the other thing this module
 // gives for two dimensions and did not put together.
-fn cross(a: Vec2, b: Vec2) -> f32 no.alloc {
+fn cross(a: Vec2, b: Vec2) -> f32 no.alloc no.host {
     return a.x * b.y - a.y * b.x
 }

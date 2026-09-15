@@ -25497,3 +25497,52 @@ and that is worth keeping whatever reaches it, so what breaks it now is an
 allocation that is not answered for: a block the host would not give, taken
 anyway. A hole is a road to a sentence and not the sentence, and a road that has
 been built over is one to replace rather than one to mourn.
+
+## D854: the promise written where it can be kept
+
+`no.host` was proved and nothing in this tree promised it. A promise a language
+can prove and nobody writes is a feature in the reference and nothing in the
+code, so it is written now: eighty-six functions of the library keep it, and the
+handlers of `examples/events.kest` — the two a host drives a frame at a time,
+which is what the promise was written for — keep it beside `no.alloc`.
+
+*Which thirty cannot, and why, is the compiler's answer rather than anybody's
+judgement.* Writing it on every signature and reading back what was refused is
+how the list was made: `std.io` writes through the host and `std.math` asks it
+for seven functions, so what calls those cannot promise it — and `std.vec` has
+no host call of its own and loses six anyway, because six of its functions ask
+`math` for a square root. That is the transitive proof doing what it is for, on
+a module that never mentions a host.
+
+*And what is written is now held.* A promise proved wherever it is written says
+nothing about whether it is written wherever it could be, and that second half
+is the one that rots: a function that stops calling the host is a promise nobody
+notices they could make. So the gate makes the copy itself — every signature in
+the library given the promise, checked, and what the compiler refuses counted
+against what carries no promise here.
+
+The count is the comparison and not a summary of it. A function that promises it
+here has been proved to keep it, so it is never among the refused; the refused
+are therefore always among the ones promising nothing, and equal counts is equal
+lists.
+
+```
+promises   every function in the library that can keep `no.host` says so: 86 of
+           them, and the 30 that cannot are refused where the promise is written in
+```
+
+*And a sort is told what it is told with.* `sort.by` promises `no.host` and is
+handed the comparison it sorts by, which is the one body it cannot read — so the
+promise had to go into the shape: `fn(T, T) -> bool no.alloc no.host`. That is
+the library asking for more than it did, and it is the only honest way round: a
+sort that promises what it will not do and takes something that promises nothing
+is a promise with a hole in it, which is exactly what `K0402` is for.
+
+*Two things this found in yesterday's work.* A function type's name is built in
+a buffer sized from what it is made of, and the size still counted one promise —
+so a message about a shape with two of them said `fn(i32, i32) -> bool no.alloc
+n`, a name that is not the type's, which is the mistake the comment above that
+line was written about the first time. And the check that reads the printed
+disassembly back and holds it against the JSON knew one promise too: a function
+line with the second on it stopped matching, and every call under it was
+attributed to whatever matched last.

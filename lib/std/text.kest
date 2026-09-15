@@ -6,7 +6,7 @@ module std.text
 
 // The number a piece of text spells, or nothing when it spells something else.
 // Reads nothing but bytes, so it allocates nothing.
-fn number(digits: text) -> i32? no.alloc {
+fn number(digits: text) -> i32? no.alloc no.host {
     // Counted in `i64` so that running out of room is something that can be
     // seen: an `i32` given more than it holds wraps without a word, and a text
     // spelling a number this cannot give back is a text this cannot read. The
@@ -48,7 +48,7 @@ fn number(digits: text) -> i32? no.alloc {
 //
 // Worked out a digit at a time in `f64` and narrowed once, which is the same
 // two roundings every other number in this module goes through.
-fn real(digits: text) -> f32? no.alloc {
+fn real(digits: text) -> f32? no.alloc no.host {
     let negative = false
     let seen = 0
     let whole: f64 = 0.0
@@ -109,7 +109,7 @@ fn real(digits: text) -> f32? no.alloc {
 // nothing after the point is worth anything at that size. A number that rounds
 // to nothing is written without a sign in front of it: `-0.0` is a number this
 // language has and not a thing anybody wants in a file.
-fn fixed(value: f32, places: i32) -> text {
+fn fixed(value: f32, places: i32) -> text no.host {
     let want = places
     if want < 0 {
         want = 0
@@ -162,7 +162,7 @@ fn fixed(value: f32, places: i32) -> text {
 // pretends otherwise: what a program means by a character is the program's to
 // say. Text already that wide comes back as it is, because losing the end of
 // something to fit a column is worse than a column that does not fit.
-fn right(subject: text, width: i32) -> text {
+fn right(subject: text, width: i32) -> text no.host {
     let out: [u8] = array()
     for i in len(subject)..width {
         push(out, ' ')
@@ -172,7 +172,7 @@ fn right(subject: text, width: i32) -> text {
 }
 
 // And to the left of it, which is where a name belongs.
-fn left(subject: text, width: i32) -> text {
+fn left(subject: text, width: i32) -> text no.host {
     let out = bytes(subject)
     for i in len(subject)..width {
         push(out, ' ')
@@ -180,15 +180,15 @@ fn left(subject: text, width: i32) -> text {
     return text(out)
 }
 
-fn contains(subject: text, needle: text) -> bool no.alloc {
+fn contains(subject: text, needle: text) -> bool no.alloc no.host {
     return find(subject, needle) != none
 }
 
-fn starts(subject: text, prefix: text) -> bool no.alloc {
+fn starts(subject: text, prefix: text) -> bool no.alloc no.host {
     return matches(subject, 0, prefix)
 }
 
-fn ends(subject: text, suffix: text) -> bool no.alloc {
+fn ends(subject: text, suffix: text) -> bool no.alloc no.host {
     if len(suffix) > len(subject) {
         return false
     }
@@ -201,7 +201,7 @@ fn ends(subject: text, suffix: text) -> bool no.alloc {
 // number of bytes. A byte in the middle of a character says nothing about
 // where the character began, which is why this answers nought for one rather
 // than guessing.
-fn charBytes(first: u8) -> i32 no.alloc {
+fn charBytes(first: u8) -> i32 no.alloc no.host {
     if first < u8(128) {
         return 1
     }
@@ -226,7 +226,7 @@ fn charBytes(first: u8) -> i32 no.alloc {
 // begins a character of its own ends the one before it, and a piece of text
 // that stops sooner ends it too. So this is the width to walk by, and
 // `charBytes` is the question about one byte on its own.
-fn charWidth(piece: text) -> i32 no.alloc {
+fn charWidth(piece: text) -> i32 no.alloc no.host {
     if piece == "" {
         return 0
     }
@@ -254,7 +254,7 @@ fn charWidth(piece: text) -> i32 no.alloc {
 // walk forwards. What it lands on has to reach where it started from — bytes
 // that disagree are a byte on its own, which is what walking forwards makes of
 // them too, so the two walks agree about every place in any text at all.
-fn charBack(subject: text, at: i32) -> i32 no.alloc {
+fn charBack(subject: text, at: i32) -> i32 no.alloc no.host {
     if at <= 0 {
         return 0
     }
@@ -276,7 +276,7 @@ fn charBack(subject: text, at: i32) -> i32 no.alloc {
 // that begin no character are counted as one each, because text that is not
 // UTF-8 is still text and a count that stops at the first of them is a count
 // nobody can use.
-fn chars(subject: text) -> i32 no.alloc {
+fn chars(subject: text) -> i32 no.alloc no.host {
     // Walked by keeping what is left rather than by counting from the start.
     // `rest` costs the bytes it steps over and nothing else, so the whole walk
     // reads the text once; an index would make every step measure from the
@@ -296,7 +296,7 @@ fn chars(subject: text) -> i32 no.alloc {
 // the whole of the text walked once per character. This is one walk, and it
 // pays for one piece of text each, which is what a program that wants them all
 // is asking for.
-fn charsOf(subject: text) -> [text] {
+fn charsOf(subject: text) -> [text] no.host {
     let out: [text] = array()
     let tail = subject
     while tail != "" {
@@ -311,7 +311,7 @@ fn charsOf(subject: text) -> [text] {
 // nothing when there is no such place. It is text of its own, because a
 // character is not a number here: what a byte means is a program's to say, and
 // what a character means is Unicode's.
-fn charAt(subject: text, index: i32) -> text? {
+fn charAt(subject: text, index: i32) -> text? no.host {
     let count = 0
     let tail = subject
     while tail != "" {
@@ -330,12 +330,12 @@ fn charAt(subject: text, index: i32) -> text? {
     return none
 }
 
-fn isSpace(byte: u8) -> bool no.alloc {
+fn isSpace(byte: u8) -> bool no.alloc no.host {
     return byte == ' ' || byte == '\t' || byte == '\n' || byte == '\r'
 }
 
 // Without the spaces at either end. Cuts, so it reaches the heap.
-fn trim(subject: text) -> text {
+fn trim(subject: text) -> text no.host {
     // Both ends found in one walk forwards, because forwards is the cheap
     // direction: `rest` steps a byte at a time and `tail[0]` is the byte it is
     // standing on, where `subject[to - 1]` is the walk from the front again on
@@ -361,7 +361,7 @@ fn trim(subject: text) -> text {
 
 // The pieces between each separator. An empty subject has no pieces; a
 // subject with no separator in it is one piece.
-fn split(subject: text, separator: text) -> [text] {
+fn split(subject: text, separator: text) -> [text] no.host {
     let pieces: [text] = array()
     if len(separator) == 0 {
         push(pieces, subject)
@@ -389,20 +389,20 @@ fn split(subject: text, separator: text) -> [text] {
 // Text is its bytes, so a run of bytes is what it is built from. Gathering
 // them costs nothing and `text(bytes)` pays for the copy once, which is what
 // a loop that builds a string a piece at a time needs.
-fn bytes(subject: text) -> [u8] {
+fn bytes(subject: text) -> [u8] no.host {
     let out: [u8] = array()
     append(out, subject)
     return out
 }
 
-fn append(out: [u8], piece: text) {
+fn append(out: [u8], piece: text) no.host {
     for byte in piece {
         push(out, byte)
     }
 }
 
 // The pieces with the separator between them, which is what `split` undoes.
-fn join(pieces: [text], separator: text) -> text {
+fn join(pieces: [text], separator: text) -> text no.host {
     let out: [u8] = array()
     for i in 0..len(pieces) {
         if i > 0 {
@@ -413,7 +413,7 @@ fn join(pieces: [text], separator: text) -> text {
     return text(out)
 }
 
-fn repeat(subject: text, times: i32) -> text {
+fn repeat(subject: text, times: i32) -> text no.host {
     let out: [u8] = array()
     for i in 0..times {
         append(out, subject)
@@ -423,7 +423,7 @@ fn repeat(subject: text, times: i32) -> text {
 
 // ASCII only, and deliberately: a byte is a byte, and what an upper case `ı`
 // is depends on a language rather than on a table this could carry.
-fn upper(subject: text) -> text {
+fn upper(subject: text) -> text no.host {
     let out = bytes(subject)
     for i in 0..len(out) {
         out[i] = if out[i] >= 'a' && out[i] <= 'z' -> out[i] - 32 else -> out[i]
@@ -431,7 +431,7 @@ fn upper(subject: text) -> text {
     return text(out)
 }
 
-fn lower(subject: text) -> text {
+fn lower(subject: text) -> text no.host {
     let out = bytes(subject)
     for i in 0..len(out) {
         out[i] = if out[i] >= 'A' && out[i] <= 'Z' -> out[i] + 32 else -> out[i]

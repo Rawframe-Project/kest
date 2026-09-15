@@ -459,6 +459,36 @@ done
 rm -f "$kept"
 say "keywords" "every one of the $(printf '%s\n' $keywords | grep -c .) word(s) this language keeps is refused, and in a moment, in each of $(printf '%s\n' $keyword_places | grep -c .) place(s) a name belongs: $tried run(s)"
 
+# What a frame may not do, said by this tree about itself. `no.host` is proved
+# by the compiler wherever it is written; whether it is written wherever it
+# could be is not proved by anything, and a promise nobody writes is a promise
+# nobody keeps. So every function in the library is asked: a copy of it with the
+# promise on every signature is checked, and what the compiler refuses there has
+# to be exactly what carries no promise here.
+#
+# Counted rather than compared name by name, and the count is the comparison: a
+# function that promises it here is proved to keep it, so it is never one of the
+# refused, and the refused are therefore always among the ones that promise
+# nothing. Equal counts is then equal lists. See D854.
+promised="$scratch"/promised
+cp -r lib "$promised"
+for one in "$promised"/std/*.kest; do
+    sed -i '/no\.host/! s/^\(fn [^{]*\) {$/\1 no.host {/' "$one"
+done
+refused=$(KEST_LIB="$promised" ./kest check "$promised"/std/*.kest 2>&1 \
+    </dev/null | grep -c "^error\[K040[12]\].*promises \`no.host\`" || true)
+without=$(cat lib/std/*.kest | grep '^fn ' | grep -vc 'no\.host' || true)
+keeps=$(cat lib/std/*.kest | grep '^fn ' | grep -c 'no\.host' || true)
+if [ "$refused" -ne "$without" ]; then
+    complain "promises" "writing \`no.host\` on every function in the library \
+refuses $refused of them and $without are written without it, so $((without - refused)) \
+could promise it and do not"
+fi
+rm -rf "$promised"
+say "promises" "every function in the library that can keep \`no.host\` says \
+so: $keeps of them, and the $without that cannot are refused where the promise \
+is written in"
+
 # And nothing in the tree has anything to say about itself. Four of the
 # warnings this compiler gives are about a name nothing reaches — an extern,
 # a function, a constant, a shape — and a project that says those to everybody

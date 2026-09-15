@@ -49,7 +49,7 @@ struct Table<K, V> {
 
 // What a table starts as. `table.empty()` rather than `table.table()`, which
 // is the same stammer `sort.sort` was.
-fn empty<K, V>() -> Table<K, V> {
+fn empty<K, V>() -> Table<K, V> no.host {
     let keys: [K] = array()
     let values: [V] = array()
     let slots = array(8, EMPTY)
@@ -57,7 +57,7 @@ fn empty<K, V>() -> Table<K, V> {
     return Table(keys, values, slots, marks)
 }
 
-fn count<K, V>(t: Table<K, V>) -> i32 no.alloc {
+fn count<K, V>(t: Table<K, V>) -> i32 no.alloc no.host {
     return len(t.keys)
 }
 
@@ -68,7 +68,7 @@ fn count<K, V>(t: Table<K, V>) -> i32 no.alloc {
 // value — measured, and no refusal anywhere, because a handle handed out is a
 // handle written through. So a program that wants them in an order of its own
 // asks for a copy and sorts that. See D693.
-fn keysOf<K, V>(t: Table<K, V>) -> [K] {
+fn keysOf<K, V>(t: Table<K, V>) -> [K] no.host {
     let out: [K] = array()
     for key in t.keys {
         push(out, key)
@@ -80,7 +80,7 @@ fn keysOf<K, V>(t: Table<K, V>) -> [K] {
 // looks here: `find` wants the pair, `remove` wants the slot, and a second
 // probe written for the second of those would be a second place to get the
 // walk past a mark wrong.
-fn slotOf<K, V>(t: Table<K, V>, key: K) -> i32? no.alloc {
+fn slotOf<K, V>(t: Table<K, V>, key: K) -> i32? no.alloc no.host {
     let room = len(t.slots)
     let at = i32(hash(key) % u64(room))
     for step in 0..room {
@@ -101,28 +101,28 @@ fn slotOf<K, V>(t: Table<K, V>, key: K) -> i32? no.alloc {
 
 // Where a key is, or nothing. Reads only what is already there, so a lookup
 // costs no allocation whatever the table holds.
-fn find<K, V>(t: Table<K, V>, key: K) -> i32? no.alloc {
+fn find<K, V>(t: Table<K, V>, key: K) -> i32? no.alloc no.host {
     if let slot = slotOf(t, key) {
         return t.slots[slot] - 1
     }
     return none
 }
 
-fn get<K, V>(t: Table<K, V>, key: K, fallback: V) -> V no.alloc {
+fn get<K, V>(t: Table<K, V>, key: K, fallback: V) -> V no.alloc no.host {
     if let at = find(t, key) {
         return t.values[at]
     }
     return fallback
 }
 
-fn has<K, V>(t: Table<K, V>, key: K) -> bool no.alloc {
+fn has<K, V>(t: Table<K, V>, key: K) -> bool no.alloc no.host {
     return find(t, key) != none
 }
 
 // Puts a position in the first slot that will hold it, walking past whatever
 // is already there. Nothing is compared: this is only used where the key is
 // known to be new.
-fn place<K, V>(t: Table<K, V>, key: K, where: i32) no.alloc {
+fn place<K, V>(t: Table<K, V>, key: K, where: i32) no.alloc no.host {
     let room = len(t.slots)
     let at = i32(hash(key) % u64(room))
     for step in 0..room {
@@ -142,7 +142,7 @@ fn place<K, V>(t: Table<K, V>, key: K, where: i32) no.alloc {
 // copy's handle and leave the caller's table where it was. The marks go with
 // it: what they were for is a probe that has to carry on past a hole, and
 // after this there are no holes to carry on past.
-fn refill<K, V>(t: Table<K, V>, room: i32) {
+fn refill<K, V>(t: Table<K, V>, room: i32) no.host {
     clear(t.slots)
     for i in 0..room {
         push(t.slots, EMPTY)
@@ -162,7 +162,7 @@ fn refill<K, V>(t: Table<K, V>, room: i32) {
 // holding almost nothing. Twice the room is for the pairs; the same room again
 // is for the marks, and which of the two is asked is which of them is
 // crowding it.
-fn set<K, V>(t: Table<K, V>, key: K, value: V) {
+fn set<K, V>(t: Table<K, V>, key: K, value: V) no.host {
     if let at = find(t, key) {
         t.values[at] = value
         return
@@ -187,7 +187,7 @@ fn set<K, V>(t: Table<K, V>, key: K, value: V) {
 // them, which is what a hash is for. Walking every slot to find two of them is
 // the whole table for one pair, and a table is walked when it is refilled and
 // not when something is taken out of it.
-fn remove<K, V>(t: Table<K, V>, key: K) -> bool {
+fn remove<K, V>(t: Table<K, V>, key: K) -> bool no.host {
     if let here = slotOf(t, key) {
         let at = t.slots[here] - 1
         let last = len(t.keys) - 1

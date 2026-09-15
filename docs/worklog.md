@@ -32397,3 +32397,49 @@ belongs is the one the promise was written for: the handlers a host drives a
 frame at a time. Write it into the example that takes events and into whatever
 of the library can keep it, and hold that what a frame may not do is a thing
 this tree says about itself rather than a thing it can say.
+
+## The promise written where it can be kept
+
+`no.host` was proved and nothing in this tree promised it. Eighty-six functions
+of the library keep it now, and the two handlers of `examples/events.kest` — the
+ones a host drives a frame at a time, which is what the promise was written for
+— keep it beside `no.alloc`.
+
+Which thirty cannot is the compiler's answer rather than anybody's judgement:
+the list was made by writing it on every signature and reading back what was
+refused. `std.io` writes through the host and `std.math` asks it for seven
+functions; `std.vec` has no host call of its own and loses six anyway, because
+six of its functions ask `math` for a square root. The transitive proof doing
+what it is for, on a module that never mentions a host.
+
+And what is written is held. A promise proved wherever it is written says
+nothing about whether it is written wherever it could be, and that is the half
+that rots. So the gate makes the copy itself — every signature given the
+promise, checked, and what the compiler refuses counted against what carries no
+promise here. The count is the comparison: a function that promises it here is
+proved to keep it, so it is never among the refused, and equal counts is equal
+lists.
+
+A sort is told what it is told with: `sort.by` promises `no.host` and is handed
+the comparison it sorts by, which is the one body it cannot read — so the
+promise went into the shape, `fn(T, T) -> bool no.alloc no.host`. The library
+asking for more than it did, and the only honest way round.
+
+Two things this found in yesterday's work. A function type's name is built in a
+buffer sized from what it is made of and the size still counted one promise, so
+a message about a shape with two said `fn(i32, i32) -> bool no.alloc n` — a name
+that is not the type's, which is what the comment above that line was written
+about the first time. And the check that reads the printed disassembly back and
+holds it against the JSON knew one promise too, so a function line with the
+second on it stopped matching and every call under it went to whatever matched
+last.
+
+Recorded as D854.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `no.host` is written across the library and `no.alloc` was there
+first, and nothing holds the same thing about `no.alloc` — it is written on
+eighty-six signatures because somebody wrote it, not because anything asks. Ask
+it the same way, in the same place, with the same counting: a promise written
+wherever it can be kept is a rule or it is a habit.

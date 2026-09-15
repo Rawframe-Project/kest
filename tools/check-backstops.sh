@@ -938,7 +938,7 @@ bool kest_needs_when(KestBuild *build, KestLimits *least, KestReason *why);""",
         "program": "through.kest",
         "source": """import std.sort
 
-fn wide(a: i32, b: i32) -> bool no.alloc {
+fn wide(a: i32, b: i32) -> bool no.alloc no.host {
     return (a * 2 + (b * 3 + (a * 4 + (b * 5 + (a * 6 + (b * 7 +
            (a * 8 + (b * 9 + (a * 10 + (b * 11 + (a * 12 + b))))))))))) <
            (b * 2 + (a * 3 + (b * 4 + (a * 5 + (b * 6 + (a * 7 +
@@ -5362,7 +5362,7 @@ fn length(v: Vec2) -> f32 no.alloc {""",
         # grows with the square of its input would get in.
         "what": "a library function of a shape nothing knows how to weigh",
         "file": "lib/std/text.kest",
-        "from": """fn charsOf(subject: text) -> [text] {""",
+        "from": """fn charsOf(subject: text) -> [text] no.host {""",
         "to": """fn pieces(count: i32) -> [text] {
     let made: [text] = array()
     let at = 0
@@ -5373,7 +5373,7 @@ fn length(v: Vec2) -> f32 no.alloc {""",
     return made
 }
 
-fn charsOf(subject: text) -> [text] {""",
+fn charsOf(subject: text) -> [text] no.host {""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "which this does not know how to ask for",
@@ -5385,8 +5385,8 @@ fn charsOf(subject: text) -> [text] {""",
         # costs are fine about a tree that does not compile.
         "what": "a library nothing can be asked what it costs",
         "file": "lib/std/text.kest",
-        "from": """fn repeat(subject: text, times: i32) -> text {""",
-        "to": """fn repeat(subject: text, times: i32) -> text {
+        "from": """fn repeat(subject: text, times: i32) -> text no.host {""",
+        "to": """fn repeat(subject: text, times: i32) -> text no.host {
     let unknown = nowhere(subject)""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
@@ -5398,12 +5398,12 @@ fn charsOf(subject: text) -> [text] {""",
         # the loop that holds the functions had never been seen catching one.
         "what": "a library function nothing has ever reached",
         "file": "lib/std/math.kest",
-        "from": """fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
-        "to": """fn nobody(value: i32) -> i32 no.alloc {
+        "from": """fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc no.host {""",
+        "to": """fn nobody(value: i32) -> i32 no.alloc no.host {
     return value
 }
 
-fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
+fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc no.host {""",
         "make": ["kest", "embed"],
         "tool": "tools/check-dead.sh",
         "caught": "so nothing has run it",
@@ -10139,7 +10139,7 @@ static const Keyword KEYWORDS[] = {
         # sizes cost.
         "what": "a library function that copies everything every time",
         "file": "lib/std/text.kest",
-        "from": """fn repeat(subject: text, times: i32) -> text {
+        "from": """fn repeat(subject: text, times: i32) -> text no.host {
     let out: [u8] = array()
     for i in 0..times {
         append(out, subject)
@@ -10367,10 +10367,10 @@ fn main() -> i32 {
         # A constant rather than a function, because the function half of this
         # has been caught since it was written and the two are one rule now:
         # a name in the library that nothing in the tree reaches.
-        "from": """fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
+        "from": """fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc no.host {""",
         "to": """const NOBODY: i32 = 3
 
-fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
+fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc no.host {""",
         "make": ["kest", "embed"],
         "tool": "tools/check-dead.sh",
         "caught": "so nothing has ever used it",
@@ -10450,7 +10450,7 @@ fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc {""",
         # the check itself had never been seen catching anything.
         "what": "a library the costs check should refuse",
         "file": "lib/std/text.kest",
-        "from": """fn upper(subject: text) -> text {
+        "from": """fn upper(subject: text) -> text no.host {
     let out = bytes(subject)""",
         "to": """fn upper(subject: text) -> text {
     let piece = ""
@@ -12902,7 +12902,7 @@ fn main() -> i32 {
         # nobody. This is the check that can see a gap rather than a leftover.
         "what": "a function written for one width and not the other",
         "file": "lib/std/math.kest",
-        "from": """fn abs(value: i64) -> i64 no.alloc {
+        "from": """fn abs(value: i64) -> i64 no.alloc no.host {
     return if value < 0 -> 0 - value else -> value
 }""",
         "to": "",

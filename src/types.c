@@ -2223,15 +2223,18 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
     }
 
     if (type->tag == KEST_T_FN) {
-        // Sized from what it is made of. This was two hundred and fifty-six
-        // bytes and gave back what fitted, which is a name that is not the
-        // type's — and it is the name a copy of a generic is compiled under as
-        // well as the one a message says.
+        // Sized from what it is made of, both promises included. This was two
+        // hundred and fifty-six bytes and gave back what fitted, which is a
+        // name that is not the type's — and it is the name a copy of a generic
+        // is compiled under as well as the one a message says. Room for one
+        // promise where there are two gave back `no.alloc n`, which is the
+        // same mistake one promise later. See D853.
         const char *result =
             type->result == NULL || type->result->tag == KEST_T_VOID
                 ? NULL
                 : kest_type_name(arena, type->result);
-        size_t room = strlen("fn()") + strlen(" no.alloc") + 1;
+        size_t room =
+            strlen("fn()") + strlen(" no.alloc") + strlen(" no.host") + 1;
         for (uint32_t i = 0; i < type->param_count; i++) {
             room += strlen(kest_type_name(arena, type->params[i])) + 2;
         }

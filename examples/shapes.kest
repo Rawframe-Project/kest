@@ -70,7 +70,7 @@ fn short(word: text) -> bool no.alloc {
     return len(word) < 5
 }
 
-fn nearer(a: vec.Vec2, b: vec.Vec2) -> bool no.alloc {
+fn nearer(a: vec.Vec2, b: vec.Vec2) -> bool no.alloc no.host {
     return a.x < b.x
 }
 

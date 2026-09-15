@@ -335,9 +335,10 @@ sweep_one() {
             continue
         gives = one["gives"]
         of_the_same_name.setdefault(one["name"], []).append(
-            "%s)%s%s" % (", ".join(one["parameters"]),
-                         "" if gives == "nothing" else " -> " + gives,
-                         " no.alloc" if one["noAlloc"] else ""))
+            "%s)%s%s%s" % (", ".join(one["parameters"]),
+                           "" if gives == "nothing" else " -> " + gives,
+                           " no.alloc" if one["noAlloc"] else "",
+                           " no.host" if one["noHost"] else ""))
     # And the same for a shape: what it is laid out as, and what is under it.
     # The words say it in a line and a run of lines beneath, and the object
     # says it in numbers and a list; a reader of one has never been held to
@@ -544,6 +545,7 @@ sweep_one() {
         # the name is the two spaces before what it is wide, not the first space.
         written_fn = re.match(r"fn (.+?)  (\d+) parameter slots?, (\d+) slots?, "
                               r"(\d+) deep(, promises `no.alloc`)?"
+                              r"(?:, promises `no.host`)?"
                               r"(?:, (reaches itself|calls through a value))?$",
                               line)
         if written_fn:
@@ -744,7 +746,8 @@ sweep_one() {
     for one in json.loads(declared.strip() or "{}").get("functions", []):
         if one.get("foreign"):
             continue
-        promised.setdefault(one["name"], set()).add(one["noAlloc"])
+        promised.setdefault(one["name"], set()).add(
+            (one["noAlloc"], one["noHost"]))
 
     # And where each chunk was declared, which is a place `check` lists a
     # declaration at: a chunk is compiled from one of them, so a place that is
@@ -776,9 +779,9 @@ sweep_one() {
         if says is None or len(says) != 1:
             continue
         said = next(iter(says))
-        if one["noAlloc"] != said:
+        if (one["noAlloc"], one["noHost"]) != said:
             print("%s: the declaration promises %s and the chunk carries %s"
-                  % (one["name"], said, one["noAlloc"]))
+                  % (one["name"], said, (one["noAlloc"], one["noHost"])))
     ')
         if [ -n "$carried" ]; then
             complain "emit $file: a chunk carries what its declaration does not"

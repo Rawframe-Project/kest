@@ -93,7 +93,7 @@ fn first(words: [text]) -> text? no.alloc {
 
 // A comparison of its own, which is the whole point of being told rather
 // than deciding: this one is `no.alloc` and so the sort stays one too.
-fn byVowels(a: text, b: text) -> bool no.alloc {
+fn byVowels(a: text, b: text) -> bool no.alloc no.host {
     return vowels(a) < vowels(b)
 }
 
