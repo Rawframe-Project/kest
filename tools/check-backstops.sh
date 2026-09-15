@@ -5335,6 +5335,63 @@ fn length(v: Vec2) -> f32 no.alloc {""",
         "caught": "what it costs, and not every",
     },
     {
+        # The machine holding where it is in a local and never writing it back
+        # into the frame. A `return` reads it to know where to carry on, so
+        # every call after the first comes back to wherever that frame was when
+        # it last wrote — which is a program running somebody else's
+        # instructions with its own slots under them. The one thing this change
+        # rests on. See D869.
+        "what": "a machine that stops saying where a frame had got to",
+        "file": "src/vm.c",
+        "from": """            // call was written, and a `return` comes back to it. See D869.
+            frame->ip = ip;
+            frame = &rt->frames[rt->frame_count++];""",
+        "to": """            // call was written, and a `return` comes back to it. See D869.
+            frame = &rt->frames[rt->frame_count++];""",
+        "make": ["kest"],
+        "program": "calling.kest",
+        # The second call comes back to where the first one left, which is an
+        # instruction into the body it just returned from, and the machine
+        # walks itself off its own stack within a few calls. Said as a ceiling
+        # because that is the wall it hits first.
+        "source": """fn twice(n: i32) -> i32 {
+    return n + n
+}
+
+fn main() -> i32 {
+    let a = twice(3)
+    let b = twice(4)
+    return a + b - 14
+}
+""",
+        "caught": "K0602",
+    },
+    {
+        # And the other half of the same: a callee left reading the slots of
+        # whoever called it. Where a body's slots start is held in a local
+        # beside where it has got to, and a call that does not move it runs the
+        # callee's instructions over the caller's names. See D869.
+        "what": "a callee left standing on the slots of whoever called it",
+        "file": "src/vm.c",
+        "from": """            ip = callee->code;
+            mine = base;
+            top = base + callee->slot_count;
+            break;
+        }
+
+        case KEST_OP_CALL_VALUE: {""",
+        "to": """            ip = callee->code;
+            top = base + callee->slot_count;
+            break;
+        }
+
+        case KEST_OP_CALL_VALUE: {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a number written down did not read back as itself",
+    },
+    {
         # Arithmetic and the cut behind it written as two instructions again.
         # Nothing running would notice — the two do what the one does — and
         # what it costs is a dispatch on every `+`, `-` and `*` a program

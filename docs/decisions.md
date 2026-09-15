@@ -26121,3 +26121,61 @@ that does to a later origin depends on the bytes of the operand that follows —
 with one more take-back in the chunk it happened to come out right. It breaks
 the origin alone now, which is one extra origin and every instruction after it
 off by one, every time.
+
+## D869: where the machine is, and where its slots are, held rather than fetched
+
+Under a hop of a `for` sit `load`, `load`, `store` and `next.less.i`. Three of
+those four read `frame->base`, and every one of the four reads at least one byte
+of code through `frame->ip`. Both are fields of a struct reached through a
+pointer, which means the C compiler has to *reload them after anything that
+might have written through a pointer* — and the machine is full of such things:
+a `memcpy` into the stack, a call into a host, a diagnostic. `READ_BYTE()` was
+`*frame->ip++`: a load, an increment, and a store back through the pointer, for
+every byte of every instruction.
+
+Both are now locals.
+
+```c
+const uint8_t *ip = frame->ip;
+KestValue *mine = frame->base;
+```
+
+*What the frame is for is the three places anything else looks at it.* Under a
+call: the caller's position is written back before the callee stands on top of
+it, because a `return` reads it to know where to carry on and a fault inside the
+callee reads it to say where the call was written. Coming back out of one: both
+are read out of the frame the machine is returning to. And before a host runs,
+because a host may call back in and the machine it starts stands on frames this
+one is under — a fault in there names them, and what it says about this one
+comes out of the frame.
+
+Nothing else writes either. `fail` was checked and does not need the current
+frame's position at all: it takes the instruction it is about as an argument,
+and walks only the frames *under* that one, whose positions were written when
+they made their calls.
+
+On a quiet machine, alternated against the build before it:
+
+| | before | after |
+|---|---|---|
+| a frame step an entity | ~137 ns | **~130** |
+| a read through a reference | 34–35 ns | **31–32** |
+| a hop of a `for` | 12–13 ns | **11–12** |
+| a call and a crossing out | 19–20 / 25–26 | unchanged |
+
+A few percent, and most of it where there is the most slot traffic. It is the
+smallest of the four changes in this run of them and the least surprising: the
+two before it took instructions out, and this one takes a load and a store off
+the instructions that are left.
+
+**No new check, because none could be reached.** A rule that read the lines a
+deep failure's call notes point at was written and then taken out again: every
+way of breaking the write-back that the rule would catch breaks resuming from a
+call first and louder, and a hole that breaks only the note's arithmetic —
+`kest_chunk_origin(chunk, at)` rather than `at - 1` — lands on the same line,
+because the call and the instruction after it are usually the same statement. A
+complaint sentence no hole can reach is a rule that says nothing, so it is not
+there. What holds this change is two holes over the two write-backs a call does,
+both caught by `check-commands.sh` on `examples/math.kest`: without them a
+program comes back to another body's instructions, or stands on another body's
+slots.

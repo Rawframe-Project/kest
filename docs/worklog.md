@@ -32852,12 +32852,13 @@ Recorded as D865.
 
 **Runs:** `make check`, everything passing, with `TMPDIR=/var/tmp`.
 
-**Next:** what is left under a hop of a `for` is `load`, `load`, `store` and
-`next.less.i`, and three of those four are slot traffic. Read how the machine
-holds its stack — `top`, `frame->base`, `KestValue` — and say what a `load` of a
-slot costs beside the arithmetic it feeds: whether the value is in memory every
-time, what the compiler is doing with `top` across a dispatch, and whether
-anything in the loop above could be held rather than fetched.
+**Next:** four changes have come off the hop and the machine is down to a
+hundred and twenty-seven nanoseconds an entity from a hundred and sixty-two.
+Stop and read what is left: take `tools/frame.kest` and count what the machine
+actually runs for one entity — every instruction, not the static list — and say
+which three cost the most of it. `KEST_DEEP` already counts what a run reaches;
+see whether it can be made to say what a run *ran*, and if it cannot, say what
+it would take.
 
 ## A hop of a `for` is one instruction
 
@@ -33004,3 +33005,45 @@ holds its stack — `top`, `frame->base`, `KestValue` — and say what a `load` 
 slot costs beside the arithmetic it feeds: whether the value is in memory every
 time, what the compiler is doing with `top` across a dispatch, and whether
 anything in the loop above could be held rather than fetched.
+
+## Where the machine is, and where its slots are, held rather than fetched
+
+Under a hop sit `load`, `load`, `store` and `next.less.i`. Three of those read
+`frame->base` and all four read code through `frame->ip`, and both are fields
+behind a pointer — so the C compiler reloads them after anything that might
+write through one, which in this machine is a `memcpy` into the stack, a call
+into a host, a diagnostic. `READ_BYTE()` was `*frame->ip++`: a load, an
+increment and a store back through the pointer, for every byte of every
+instruction.
+
+Both are locals now, and the frame is written back at the three places anything
+else reads it: under a call, on the way back out of one, and before a host runs,
+because a host may call back in and what it starts stands on frames this one is
+under. `fail` was read and needs neither — it takes the instruction it is about
+and walks only the frames below, whose positions were written when they called.
+
+Alternated against the build before it on a quiet machine: a frame step an
+entity about 137 ns to about 130, a read through a reference 34–35 to 31–32, a
+hop 12–13 to 11–12, a call and a crossing unchanged. A few percent, and most of
+it where there is the most slot traffic. The smallest of the four changes in
+this run and the least surprising: the two before took instructions out, and
+this takes a load and a store off the ones left.
+
+No new check, because none could be reached. A rule that read the lines a deep
+failure's call notes point at was written and taken out again: everything it
+would catch breaks resuming from a call first and louder, and a hole that breaks
+only the note's arithmetic lands on the same line anyway. A complaint no hole
+can reach is a rule that says nothing. What holds this is two holes over the two
+write-backs a call does, both caught on `examples/math.kest`.
+
+Recorded as D869.
+
+**Runs:** `make check`, everything passing. `make time`, four instruments.
+
+**Next:** four changes have come off the hop and the machine is down to a
+hundred and twenty-seven nanoseconds an entity from a hundred and sixty-two.
+Stop and read what is left: take `tools/frame.kest` and count what the machine
+actually runs for one entity — every instruction, not the static list — and say
+which three cost the most of it. `KEST_DEEP` already counts what a run reaches;
+see whether it can be made to say what a run *ran*, and if it cannot, say what
+it would take.

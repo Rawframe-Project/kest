@@ -4091,7 +4091,7 @@ inside a promise that nothing reaches the heap — the shape a frame in this
 language is written in.
 
 ```
-143 ns per entity per step, best of 7 over 10000, spread 2%
+127 ns per entity per step, best of 7 over 10000, spread 7%
 ```
 
 `tools/crossing.kest` is a call against a crossing out. Two loops that differ by
@@ -4100,7 +4100,7 @@ provides, and both are one argument and one answer, so what is left between them
 is the crossing.
 
 ```
-22 ns for a call and 28 ns for a crossing, which is 6 ns more, best of 7 over 1000000 calls, spread 6%
+19 ns for a call and 25 ns for a crossing, which is 6 ns more, best of 7 over 1000000 calls, spread 3%
 ```
 
 `tools/reference.kest` is a hop of a loop, a read through an index and a read
@@ -4111,25 +4111,26 @@ field of the same values in the same order, so what is left between them is the
 check and the optional it comes back in.
 
 ```
-12 ns for a hop of the loop, 15 ns with an index read and 35 ns with a read through a reference, which is 20 ns more, best of 7 over 200000 reads, spread 8%
+10 ns for a hop of the loop, 13 ns with an index read and 29 ns with a read through a reference, which is 16 ns more, best of 7 over 200000 reads, spread 8%
 ```
 
 The first of those three is what the other two are measured against, and it is
-the one worth reading first: a hop of a `for` is twelve nanoseconds here, so a
-read through an index is about three and a read through a reference about
-twenty-three. Every per-item number on this page carries a hop of a loop,
-because that is what a program written over a run of things is made of — which
-is why the hop is the one of these numbers that has been gone after, and why it
-is nineteen nanoseconds no longer. What came off it was three instructions a
-turn: a copy of the count into a name nothing wrote, and an arithmetic and the
-cut behind it that are one instruction now.
+the one worth reading first: a hop of a `for` is ten nanoseconds here, so a read
+through an index is about three and a read through a reference about nineteen.
+Every per-item number on this page carries a hop of a loop, because that is what
+a program written over a run of things is made of — which is why the hop is the
+one of these numbers that has been gone after, and why it is nineteen
+nanoseconds no longer. What came off it was three instructions a turn — a copy
+of the count into a name nothing wrote, and an arithmetic and the cut behind it
+that are one instruction now — and then the machine stopped fetching where it
+was and where its slots are through a pointer on every one of the rest.
 
 `tools/inward` is the crossing the other way, and it is C because the thing
 doing the calling is the host. One `kest_call` against one hop of a loop inside
 one `kest_call`.
 
 ```
-20 ns for a call in from a host and 21 ns for one the program makes in a loop, best of 7 over 1000000 calls, spread 6%
+15 ns for a call in from a host and 19 ns for one the program makes in a loop, best of 7 over 1000000 calls, spread 9%
 ```
 
 Those numbers are the machine they were taken on and nothing else — six cores,
@@ -4138,12 +4139,12 @@ to another is the shape of them: that a crossing out costs a few nanoseconds
 over a call, that a crossing in costs less than a hop of a loop, that a
 reference costs about half as much again as an index, and that all of them are
 small against a frame step. A crossing an entity on this machine is six
-nanoseconds against a hundred and forty-three, which is about a twenty-fourth of
+nanoseconds against a hundred and twenty-seven, which is about a twenty-first of
 the step — so `no.host` is worth having where a frame crosses many times an
-entity and worth little where it crosses once. A reference an entity is twenty
-nanoseconds more than an index, against the same hundred and forty-three, which
-is about a seventh: a world of entities that can be removed costs about a
-seventh of a frame more than a run of entities that cannot, and that is what the
+entity and worth little where it crosses once. A reference an entity is sixteen
+nanoseconds more than an index, against the same hundred and twenty-seven, which
+is about an eighth: a world of entities that can be removed costs about an
+eighth of a frame more than a run of entities that cannot, and that is what the
 safety is worth. The index read itself is three.
 
 Each leaves things out on purpose, and they are each other's omissions. The

@@ -1903,10 +1903,23 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 
     KestValue *top = floor + (chunk->slot_count > arg_slots ? chunk->slot_count
                                                             : arg_slots);
-#define READ_BYTE() (*frame->ip++)
+    // Where the machine is, held here rather than in the frame. Every
+    // instruction reads at least one byte and most read two more, and through a
+    // pointer that is a load and a store each time: nothing tells the compiler
+    // that a `memcpy` into the stack cannot be writing the frame it is reading
+    // the position out of. A local is a register, and the frame is written back
+    // at the three places anything else looks at it — under a call, before a
+    // host runs, and on the way back out of one. See D869.
+    const uint8_t *ip = frame->ip;
+    // And where this body's slots are, held for the same reason. `load`,
+    // `store` and the instruction a walk turns on all read it, which is three
+    // of the four instructions a hop of a `for` is made of. Nothing writes it
+    // between a call and the return that undoes the call, so it goes back into
+    // the frame at those two places and nowhere else. See D869.
+    KestValue *mine = frame->base;
+#define READ_BYTE() (*ip++)
 #define READ_U16()                                                             \
-    (frame->ip += 2,                                                           \
-     (uint16_t)(frame->ip[-2] | ((uint16_t)frame->ip[-1] << 8)))
+    (ip += 2, (uint16_t)(ip[-2] | ((uint16_t)ip[-1] << 8)))
 
     // One macro per storage class rather than thirty near-identical cases.
     // The operands are already the right kind: the compiler chose which
@@ -1919,7 +1932,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     } while (0)
 
     while (true) {
-        const uint8_t *instruction = frame->ip;
+        const uint8_t *instruction = ip;
 #if KEST_CHECKED
         // The compiler's count of the operand stack, held by the machine that
         // moves it. A body is given its named slots and this many above them,
@@ -1936,7 +1949,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // chunk is the compiler's and the machine does not change it, so the
         // const is put aside for the one number written back. See D812.
         {
-            uint32_t at = (uint32_t)(top - frame->base -
+            uint32_t at = (uint32_t)(top - mine -
                                      frame->chunk->slot_count);
             KestChunk *seen = (KestChunk *)(uintptr_t)frame->chunk;
             if (at > seen->went) {
@@ -1954,13 +1967,13 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 rt->went_frames = rt->frame_count;
             }
         }
-        if (top > frame->base + frame->chunk->slot_count +
+        if (top > mine + frame->chunk->slot_count +
                       frame->chunk->stack_needed) {
             fail(vmp, frame, instruction, "K0655",
                  "this body was given room to work out %u slot(s) and is "
                  "%u deep",
                  frame->chunk->stack_needed,
-                 (uint32_t)(top - frame->base - frame->chunk->slot_count));
+                 (uint32_t)(top - mine - frame->chunk->slot_count));
             kest_diags_fault(vmp->diags,
                              "the compiler's count of the operand stack and "
                              "what the machine moved disagree");
@@ -1991,15 +2004,15 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         }
         case KEST_OP_LOAD:
-            *top++ = frame->base[READ_U16()];
+            *top++ = mine[READ_U16()];
             break;
         case KEST_OP_STORE:
-            frame->base[READ_U16()] = *--top;
+            mine[READ_U16()] = *--top;
             break;
         case KEST_OP_LOADN: {
             uint16_t slot = READ_U16();
             uint16_t count = READ_U16();
-            memcpy(top, frame->base + slot, sizeof(KestValue) * count);
+            memcpy(top, mine + slot, sizeof(KestValue) * count);
             top += count;
             break;
         }
@@ -2007,7 +2020,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t slot = READ_U16();
             uint16_t count = READ_U16();
             top -= count;
-            memcpy(frame->base + slot, top, sizeof(KestValue) * count);
+            memcpy(mine + slot, top, sizeof(KestValue) * count);
             break;
         }
         case KEST_OP_FIELD: {
@@ -2244,7 +2257,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t count = READ_U16();
             int64_t index = (--top)->integer;
             IN_RUN(index, count);
-            memcpy(top, frame->base + base + (size_t)index * stride,
+            memcpy(top, mine + base + (size_t)index * stride,
                    sizeof(KestValue) * stride);
             top += stride;
             break;
@@ -2257,7 +2270,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             KestValue *value = top;
             int64_t index = (--top)->integer;
             IN_RUN(index, count);
-            memcpy(frame->base + base + (size_t)index * stride, value,
+            memcpy(mine + base + (size_t)index * stride, value,
                    sizeof(KestValue) * stride);
             break;
         }
@@ -2433,20 +2446,20 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t which = READ_U16();
             uint16_t at = READ_U16();
             uint16_t away = READ_U16();
-            const Store *store = frame->base[which].object;
+            const Store *store = mine[which].object;
             HOLD(store, KEST_IS_STORE, "a store");
-            int64_t from = frame->base[at].integer + (first ? 0 : 1);
+            int64_t from = mine[at].integer + (first ? 0 : 1);
             int64_t found = live_from(store, from);
-            frame->base[at].integer = found;
+            mine[at].integer = found;
             // The first one leaves when there is none and the ones after go
             // back while there is one, which is the same shape every other
             // walk has: a test above the loop and a test at the bottom.
             if (first) {
                 if (found < 0) {
-                    frame->ip += away;
+                    ip += away;
                 }
             } else if (found >= 0) {
-                frame->ip -= away;
+                ip -= away;
             }
             break;
         }
@@ -2653,8 +2666,8 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         }
         case KEST_OP_TEXT_IN: {
-            const char *text = frame->base[READ_U16()].text;
-            int64_t index = frame->base[READ_U16()].integer;
+            const char *text = mine[READ_U16()].text;
+            int64_t index = mine[READ_U16()].integer;
 #if KEST_CHECKED
             // The one read in this language that does not ask. What makes it
             // right is the walk: the handle was taken and the length measured
@@ -3105,20 +3118,20 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_JUMP: {
             // Read the distance before moving, because the read moves too.
             uint16_t distance = READ_U16();
-            frame->ip += distance;
+            ip += distance;
             break;
         }
         case KEST_OP_JUMP_FALSE: {
             uint16_t distance = READ_U16();
             if ((--top)->integer == 0) {
-                frame->ip += distance;
+                ip += distance;
             }
             break;
         }
         case KEST_OP_JUMP_TRUE: {
             uint16_t distance = READ_U16();
             if ((--top)->integer != 0) {
-                frame->ip += distance;
+                ip += distance;
             }
             break;
         }
@@ -3130,7 +3143,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         KestValue right = *--top;                                              \
         KestValue left = *--top;                                               \
         if (!(expression)) {                                                   \
-            frame->ip += distance;                                             \
+            ip += distance;                                                    \
         }                                                                      \
     } while (0)
 
@@ -3140,7 +3153,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         KestValue right = *--top;                                              \
         KestValue left = *--top;                                               \
         if (expression) {                                                      \
-            frame->ip += distance;                                             \
+            ip += distance;                                                    \
         }                                                                      \
     } while (0)
 
@@ -3221,7 +3234,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 
         case KEST_OP_LOOP: {
             uint16_t distance = READ_U16();
-            frame->ip -= distance;
+            ip -= distance;
             break;
         }
 
@@ -3229,8 +3242,8 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t slot = READ_U16();
             uint16_t limit = READ_U16();
             uint16_t distance = READ_U16();
-            if (++frame->base[slot].integer < frame->base[limit].integer) {
-                frame->ip -= distance;
+            if (++mine[slot].integer < mine[limit].integer) {
+                ip -= distance;
             }
             break;
         }
@@ -3239,9 +3252,9 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t slot = READ_U16();
             uint16_t limit = READ_U16();
             uint16_t distance = READ_U16();
-            uint64_t next = (uint64_t)++frame->base[slot].integer;
-            if (next < (uint64_t)frame->base[limit].integer) {
-                frame->ip -= distance;
+            uint64_t next = (uint64_t)++mine[slot].integer;
+            if (next < (uint64_t)mine[limit].integer) {
+                ip -= distance;
             }
             break;
         }
@@ -3270,10 +3283,16 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
 
+            // Where the caller is, written back before the callee stands on
+            // top of it: a fault inside the callee reads it to say where the
+            // call was written, and a `return` comes back to it. See D869.
+            frame->ip = ip;
             frame = &rt->frames[rt->frame_count++];
             frame->chunk = callee;
             frame->ip = callee->code;
             frame->base = base;
+            ip = callee->code;
+            mine = base;
             top = base + callee->slot_count;
             break;
         }
@@ -3355,10 +3374,13 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
 
+            frame->ip = ip;
             frame = &rt->frames[rt->frame_count++];
             frame->chunk = callee;
             frame->ip = callee->code;
             frame->base = base;
+            ip = callee->code;
+            mine = base;
             top = base + callee->slot_count;
             break;
         }
@@ -3397,6 +3419,10 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             KestValue *was_top = rt->running_top;
             uint32_t was_frames = rt->running_frames;
+            // A host may call back in, and what it calls stands on frames this
+            // one is under: where this frame is has to be in the frame before
+            // the host runs. See D869.
+            frame->ip = ip;
             rt->running_top = top;
             rt->running_frames = rt->frame_count;
             // The one promise in this language that somebody else keeps. A
@@ -3479,7 +3505,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t count = READ_U16();
             // The result lands where the arguments were, which is where the
             // caller left room for it.
-            KestValue *base = frame->base;
+            KestValue *base = mine;
             memmove(base, top - count, sizeof(KestValue) * count);
 
             rt->frame_count--;
@@ -3488,6 +3514,8 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return true;
             }
             frame = &rt->frames[rt->frame_count - 1];
+            ip = frame->ip;
+            mine = frame->base;
             top = base + count;
             break;
         }
