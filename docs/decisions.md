@@ -25840,3 +25840,78 @@ misses says what the check came back as, so a check that passed and a check that
 complained about something else are two different things to go and look at. An
 afternoon went on a hole that turned out to be a check quietly passing, and the
 status would have said so in the first line.
+
+## D864: the flake was a full disk, and the loop is the number
+
+Two answers this turn, and the first is the one the last entry asked for.
+
+*The gate was run four times and failed once, and the line added last time said
+what it was in its first words:* `came back 1 and nothing said died while this
+looked for where it first refuses; it said 'ceilings: the tree with a lower
+ceiling does not build ... fatal error: error writing'`, and beside it
+`final link failed: No space left on device`.
+
+`/tmp` here is a tmpfs of thirty-two gigabytes shared with everything else
+running on the machine, and it was full. A hole is a copy of this tree and a
+build of its own, and one that runs a check runs a check that copies the tree
+again and builds *that* — a hundred and eighteen megabytes, measured. When there
+is no room the build fails, and what the reader is handed is `MISSED`: a
+compiler that has stopped catching something, rather than a disk that has
+stopped taking anything. The correlation with editing `docs/` was nothing: later
+runs simply had less room than earlier ones.
+
+So the harness asks first. A hundred and twenty-eight megabytes a worker,
+against however many run at once, and a run that begins without it says so and
+stops:
+
+```
+there is 664 MB of room where a hole is put out of order and 12 of them run at
+once, which wants 1536 MB: a hole that cannot be built is a hole that says it
+missed what it was for
+```
+
+*And the number the last entry called suspicious was the loop.* A read through
+an index looked like twenty-three nanoseconds, which is most of a whole frame
+step per entity. It is not: a hop of the `for` around it is nineteen, and the
+read is three. A read through a reference is eighteen. Every per-item number
+this project prints carries a hop of a loop, because that is what a program
+written over a run of things is made of — and none of them said so, which is how
+a three-nanosecond read read as twenty-three.
+
+The instrument prints the hop first now, and the reference says to read it
+first. What that number is really about is the machine rather than the loop: a
+`for` over a run of things costing nineteen nanoseconds a hop is the largest
+single thing in a per-entity budget here, and it is the one an optimiser would
+take first.
+
+## D865: a directory is not the same thing on two disks
+
+Moving the gate's scratch off the full tmpfs and onto a real disk broke a hole
+that had been catching for months — and the thing it uncovered is worth more
+than the move.
+
+`kest check` on a directory is refused, and on this machine it was refused for
+two different reasons depending on where the directory was. A directory opens
+and refuses to be read; what says so is the read failing. But how many bytes
+there are to read is what the filesystem says a directory *is*, and `ftell`
+answers **nought** on tmpfs and **nine quintillion** — `LONG_MAX` — on ext4. So:
+
+- on tmpfs the loader asked for nought bytes, which fails at nothing, which is
+  why there is a `fgetc` after it to ask for one more;
+- on ext4 the loader asked the arena for nine exabytes, the allocation failed,
+  and the path was refused by an allocation nobody could ever have made. The
+  right answer for the wrong reason, and a different reason on every disk.
+
+*Three things, and each of them is the same thing said once rather than twice.*
+A length nobody can have is a length nobody said, so `LONG_MAX` goes down the
+same road as `size < 0`: read it as a stream and let the read fail. The `fgetc`
+past the end is asked always rather than only when a file measured nought,
+because asking past the end is the same question on both — a file gives
+end-of-file and a directory gives an error. And whether the read failed is one
+answer, `read_failed`, asked by both ways of reading a file, because which way a
+directory goes down is a thing about the disk and not about the compiler.
+
+*The hole catches on both disks now*, which is what it is for, and it broke the
+one answer rather than either of the two roads to it. A hole that only catches
+where its author's scratch happened to live is a hole that says nothing about
+anybody else's machine.

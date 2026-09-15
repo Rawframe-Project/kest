@@ -4075,8 +4075,8 @@ for file in "$@"; do""",
         # there.
         "what": "a reader that refuses what cannot say how long it is",
         "file": "src/loader.c",
-        "from": r"""    if (size < 0) {""",
-        "to": r"""    if (size < 0 && false) {""",
+        "from": r"""    if (size < 0 || size == LONG_MAX) {""",
+        "to": r"""    if (size == LONG_MAX) {""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -5250,18 +5250,17 @@ total += held""",
         "caught": "cut down to fit",
     },
     {
-        # A directory read as a file. It opens, measures nought and refuses
-        # to be read, and reading nought bytes of one fails at nothing -- so
-        # one byte is asked for. Without that, a path that is a directory is a
-        # file with nothing in it, and `kest check` says it declares nothing.
+        # A directory read as a file. It opens and refuses to be read, so what
+        # says it is not a file is that the read failed — and a read that
+        # failed and is not asked about is a directory that is a file with
+        # nothing in it. This breaks the one answer both ways of reading a file
+        # ask for, because which of the two a directory goes down is a thing
+        # about the disk: one filesystem says a directory is nought bytes and
+        # the next says nine quintillion. See D865.
         "what": "a directory read as a file",
         "file": "src/loader.c",
-        "from": """    if (size == 0) {
-        fgetc(file);
-    }""",
-        "to": """    if (false) {
-        fgetc(file);
-    }""",
+        "from": """    return ferror(file) != 0;""",
+        "to": """    return file == NULL;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -13631,6 +13630,29 @@ they_took = {}
 # was made from, headers included, so an object older than any of those is
 # made again. The tree is built first because objects behind the source they
 # came from would make every copy neither one thing nor the other.
+# Room to put a hole out of order in. Every hole is a copy of this tree and a
+# build of its own, and where they are copied to is whatever `TMPDIR` names —
+# which on the machine this was written on is a tmpfs shared with everything
+# else running there. A run that begins on a full one does not say so: a hole
+# whose build fails for want of space reports the catch it missed, and what a
+# reader is handed is a compiler that has stopped catching something rather than
+# a disk that has stopped taking anything. Two runs of the gate went that way
+# before anybody looked at the disk. See D864.
+#
+# A hundred and twenty-eight megabytes a worker, which is what the largest of
+# these takes: a hole that runs a check runs a check that copies this tree
+# again and builds it, and one of those was measured at a hundred and eighteen.
+A_WORKER_WANTS = 128 * 1024 * 1024
+workers = os.cpu_count() or 1
+room = shutil.disk_usage(tempfile.gettempdir()).free
+if room < A_WORKER_WANTS * workers:
+    print("there is %u MB of room where a hole is put out of order and %u of "
+          "them run at once, which wants %u MB: a hole that cannot be built is "
+          "a hole that says it missed what it was for"
+          % (room // (1024 * 1024), workers,
+             A_WORKER_WANTS * workers // (1024 * 1024)))
+    sys.exit(1)
+
 built = subprocess.run(["make", "-s", "-j4", "kest", "embed", "debug",
                         "embed-debug"],
                        capture_output=True, text=True)

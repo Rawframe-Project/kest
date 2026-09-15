@@ -4083,16 +4083,22 @@ is the crossing.
 27 ns for a call and 33 ns for a crossing, which is 6 ns more, best of 7 over 1000000 calls, spread 3%
 ```
 
-`tools/reference.kest` is a read through a reference against a read through an
-index. A `store<T>` hands out a `ref<T>` and can delete what it holds, so every
+`tools/reference.kest` is a hop of a loop, a read through an index and a read
+through a reference. A `store<T>` hands out a `ref<T>` and can delete what it holds, so every
 read through one asks whether what was handed out is still there; an index into
 an array asks whether the place exists and nothing else. Both walks add one
 field of the same values in the same order, so what is left between them is the
 check and the optional it comes back in.
 
 ```
-23 ns for a read through an index and 38 ns for one through a reference, which is 15 ns more, best of 7 over 200000 reads, spread 8%
+19 ns for a hop of the loop, 22 ns with an index read and 37 ns with a read through a reference, which is 15 ns more, best of 7 over 200000 reads, spread 8%
 ```
+
+The first of those three is what the other two are measured against, and it is
+the one worth reading first: a hop of a `for` is nineteen nanoseconds here, so a
+read through an index is about three and a read through a reference about
+eighteen. Every per-item number on this page carries a hop of a loop, because
+that is what a program written over a run of things is made of.
 
 `tools/inward` is the crossing the other way, and it is C because the thing
 doing the calling is the host. One `kest_call` against one hop of a loop inside
@@ -4110,10 +4116,11 @@ reference costs about half as much again as an index, and that all of them are
 small against a frame step. A crossing an entity on this machine is six
 nanoseconds against a hundred and sixty, which is under a twentieth of the step
 — so `no.host` is worth having where a frame crosses many times an entity and
-worth little where it crosses once. A reference an entity is fifteen against the
-same hundred and sixty, which is a tenth: a world of entities that can be
-removed costs about a tenth of a frame more than a run of entities that cannot,
-and that is what the safety is worth.
+worth little where it crosses once. A reference an entity is fifteen nanoseconds more than
+an index, against the same hundred and sixty, which is a tenth: a world of
+entities that can be removed costs about a tenth of a frame more than a run of
+entities that cannot, and that is what the safety is worth. The index read
+itself is three.
 
 Each leaves things out on purpose, and they are each other's omissions. The
 frame leaves out starting up, compiling, crossing and allocating; the two

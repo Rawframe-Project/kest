@@ -32781,3 +32781,78 @@ a check that complained about something else first. Either answer names the next
 thing to open. And if it does not fail again in several runs, say so — a flake
 that stops after the one weakness it could have been is evidence about that
 weakness.
+
+## The flake was a full disk, and the loop is the number
+
+The gate was run four times and failed once, and the line added last time said
+what it was in its first words: `came back 1 and nothing said died ...; it said
+'ceilings: the tree with a lower ceiling does not build ... fatal error: error
+writing'`, with `final link failed: No space left on device` beside it.
+
+`/tmp` here is a 32 GB tmpfs shared with everything else on the machine, and it
+was full. A hole is a copy of this tree and a build of its own, and one that
+runs a check runs a check that copies the tree again and builds that — 118 MB,
+measured. With no room the build fails and the reader is handed `MISSED`: a
+compiler that has stopped catching something rather than a disk that has stopped
+taking anything. The correlation with editing `docs/` was nothing; later runs
+simply had less room than earlier ones.
+
+The harness asks first now — 128 MB a worker against however many run at once —
+and a run that begins without it says so and stops.
+
+And the number called suspicious was the loop. A read through an index looked
+like 23 ns, which is most of a whole frame step per entity. It is not: a hop of
+the `for` around it is 19, the read is 3, and a read through a reference is 18.
+Every per-item number this project prints carries a hop of a loop and none of
+them said so. The instrument prints the hop first now and the reference says to
+read it first.
+
+What that number is really about is the machine: a `for` over a run of things at
+19 ns a hop is the largest single thing in a per-entity budget here.
+
+Recorded as D864.
+
+**Runs:** `make check`, everything passing, run with `TMPDIR=/var/tmp` because
+`/tmp` on this machine has 664 MB left of thirty-two gigabytes and the harness
+now refuses to start there.
+
+**Next:** nineteen nanoseconds a hop is the number to go after, and it is the
+first optimiser work this project has had a reason for. Read what a `for i in
+0..n` compiles to, count what the machine does a hop, and say which of those
+instructions a loop over a run of things could do without.
+
+## A directory is not the same thing on two disks
+
+Moving the gate's scratch off the full tmpfs and onto a real disk broke a hole
+that had been catching for months, and what it uncovered is worth more than the
+move.
+
+`kest check` on a directory is refused, and it was refused for two different
+reasons depending on where the directory was. A directory opens and refuses to
+be read, and what says so is the read failing — but how many bytes there are to
+read is what the filesystem says a directory *is*, and `ftell` answers nought on
+tmpfs and `LONG_MAX` on ext4. On tmpfs the loader asked for nought bytes, which
+fails at nothing, which is why there is a `fgetc` after it; on ext4 it asked the
+arena for nine exabytes, the allocation failed, and the path was refused by an
+allocation nobody could ever have made — the right answer for the wrong reason,
+and a different reason on every disk.
+
+Three things now, each said once rather than twice. A length nobody can have is
+a length nobody said, so `LONG_MAX` goes down the same road as `size < 0`. The
+`fgetc` past the end is asked always rather than only when a file measured
+nought. And whether the read failed is one answer, `read_failed`, asked by both
+ways of reading a file.
+
+The hole catches on both disks now, and it breaks the one answer rather than
+either of the two roads to it. A hole that only catches where its author's
+scratch happened to live is a hole that says nothing about anybody else's
+machine.
+
+Recorded as D865.
+
+**Runs:** `make check`, everything passing, with `TMPDIR=/var/tmp`.
+
+**Next:** nineteen nanoseconds a hop of a `for` is the number to go after, and
+it is the first optimiser work this project has had a reason for. Read what
+`for i in 0..n` compiles to, count what the machine does a hop, and say which of
+those instructions a loop over a run of things could do without.

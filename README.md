@@ -45,12 +45,12 @@ numbers on the machine it is run on:
 ```
 162 ns per entity per step, best of 7 over 10000, spread 1%
 27 ns for a call and 33 ns for a crossing, which is 6 ns more, best of 7 over 1000000 calls, spread 3%
-23 ns for a read through an index and 38 ns for one through a reference, which is 15 ns more, best of 7 over 200000 reads, spread 8%
+19 ns for a hop of the loop, 22 ns with an index read and 37 ns with a read through a reference, which is 15 ns more, best of 7 over 200000 reads, spread 8%
 16 ns for a call in from a host and 27 ns for one the program makes in a loop, best of 7 over 1000000 calls, spread 4%
 ```
 
-A frame step per entity, a call against a crossing out, an index against a
-reference, and a crossing in against a call. The arithmetic that makes them mean something: on this machine a
+A frame step per entity, a call against a crossing out, a loop hop against an
+index and a reference, and a crossing in against a call. The arithmetic that makes them mean something: on this machine a
 frame of ten thousand entities is about one and a half milliseconds, so a
 sixty-hertz budget holds roughly ten of those frames; a crossing out costs six
 nanoseconds over a call, which is under a twentieth of a step, so `no.host` is

@@ -43,6 +43,18 @@ fn throughReferences(world: store<Thing>, where: [ref<Thing>]) -> i32 no.alloc n
     return sum
 }
 
+// And the walk with nothing in it, which is what the other two are measured
+// against: a loop that counts and adds and reads nothing at all. Every number
+// this instrument prints carries a hop of a loop, and a hop of a loop is not a
+// read — so what a read costs is what is left when this is taken away.
+fn throughNothing(count: i32) -> i32 no.alloc no.host {
+    let sum = 0
+    for i in 0..count {
+        sum += i % 64
+    }
+    return sum
+}
+
 fn throughIndexes(items: [Thing]) -> i32 no.alloc no.host {
     let sum = 0
     for i in 0..len(items) {
@@ -62,7 +74,9 @@ fn main() -> i32 {
 
     // A walk of each before the clock, so what is measured is the steady state
     // rather than the first touch of two hundred thousand things.
-    let seen = throughReferences(world, where) + throughIndexes(items)
+    let seen = throughReferences(world, where) +
+        throughIndexes(items) +
+        throughNothing(READS)
 
     // The best of several rounds rather than the average of them: anything
     // else sharing the machine only ever adds time, so the smallest is the
@@ -78,6 +92,20 @@ fn main() -> i32 {
         }
         if took > worstStamped {
             worstStamped = took
+        }
+    }
+
+    let bare: i64 = 0
+    let worstBare: i64 = 0
+    for round in 0..ROUNDS {
+        let before = Host.clock()
+        seen += throughNothing(READS)
+        let took = Host.clock() - before
+        if round == 0 || took < bare {
+            bare = took
+        }
+        if took > worstBare {
+            worstBare = took
         }
     }
 
@@ -97,6 +125,7 @@ fn main() -> i32 {
 
     // The host's clock counts microseconds and what is wanted is nanoseconds
     // for one read.
+    let nothing = bare * 1000 / i64(READS)
     let there = stamped * 1000 / i64(READS)
     let here = counted * 1000 / i64(READS)
     let safety = there - here
@@ -108,7 +137,7 @@ fn main() -> i32 {
     let spread = if thereSpread > hereSpread -> thereSpread else -> hereSpread
     let steady = if spread <= 25 -> ""
         else -> " — the machine was somebody else's"
-    io.print("{here} ns for a read through an index and {there} ns for one through a reference, which is {safety} ns more, best of {ROUNDS} over {READS} reads, spread {spread}%{steady}")
+    io.print("{nothing} ns for a hop of the loop, {here} ns with an index read and {there} ns with a read through a reference, which is {safety} ns more, best of {ROUNDS} over {READS} reads, spread {spread}%{steady}")
 
     // And what the work adds up to, which is a number and not a duration: an
     // instrument that stops doing its work still prints a duration, and a
@@ -118,7 +147,7 @@ fn main() -> i32 {
     for i in 0..READS {
         each += i % 64
     }
-    if seen != each * (ROUNDS + 1) * 2 {
+    if seen != each * (ROUNDS + 1) * 3 {
         return 1
     }
     return 0

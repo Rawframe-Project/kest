@@ -1,5 +1,6 @@
 #include "loader.h"
 
+#include <limits.h>
 #ifndef KEST_LIB_DIR
 #define KEST_LIB_DIR "/usr/local/lib/kest/"
 #endif
@@ -13,6 +14,16 @@
 // A stream that cannot be measured is read until it ends. A pipe is one, which
 // is what a shell hands over for `kest check <(...)`, and it used to come back
 // as a file this could not read.
+// Whether what was read was read. A directory opens and refuses to be read, and
+// which of the two ways of reading a file notices that is a thing about the
+// disk: one filesystem says a directory is nought bytes and the next says nine
+// quintillion, so one goes down the stream and the other down the sized read.
+// Both ask here, so there is one answer rather than one for each way in. See
+// D865.
+static bool read_failed(FILE *file) {
+    return ferror(file) != 0;
+}
+
 static char *read_stream(KestArena *arena, FILE *file, size_t *length) {
     size_t room = 4096;
     size_t used = 0;
@@ -34,7 +45,7 @@ static char *read_stream(KestArena *arena, FILE *file, size_t *length) {
         text = grown;
         room *= 2;
     }
-    if (text == NULL || ferror(file)) {
+    if (text == NULL || read_failed(file)) {
         return NULL;
     }
     text[used] = '\0';
@@ -51,9 +62,15 @@ static char *read_file(KestArena *arena, const char *path, size_t *length) {
     fseek(file, 0, SEEK_END);
     long size = ftell(file);
     rewind(file);
-    if (size < 0) {
-        // Not a mistake: a stream that cannot say how long it is is read to
-        // the end instead of being refused for not knowing.
+    // Not a mistake: a stream that cannot say how long it is is read to the end
+    // instead of being refused for not knowing. `LONG_MAX` is the same answer
+    // said the other way round — a directory on one filesystem here measures
+    // nought and on the next measures nine quintillion, and nothing has that
+    // many bytes in it. Asking the arena for them is how the second was caught
+    // before this: not by the read failing but by an allocation nobody could
+    // ever have made, which is the right answer for the wrong reason and a
+    // different reason on every disk. See D865.
+    if (size < 0 || size == LONG_MAX) {
         char *text = read_stream(arena, file, length);
         fclose(file);
         return text;
@@ -65,15 +82,21 @@ static char *read_file(KestArena *arena, const char *path, size_t *length) {
         return NULL;
     }
     size_t read = fread(text, 1, (size_t)size, file);
-    // A read that failed is not a file this read. A directory opens, measures
-    // nought, and refuses to be read — and reading nought bytes of it fails at
-    // nothing, so it is asked for one. Without that, a path that is a
-    // directory was a file with nothing in it, and `kest check` said it
-    // declared nothing.
-    if (size == 0) {
-        fgetc(file);
-    }
-    bool broke = ferror(file) != 0;
+    // A read that failed is not a file this read. A directory opens and refuses
+    // to be read, and reading nought bytes of it fails at nothing — so one more
+    // byte than there is said to be is asked for, whatever that number was.
+    //
+    // Always, rather than only when a file measured nought. How many bytes
+    // there are to read is what the filesystem says a directory is, and that is
+    // nought on one and four thousand and ninety-six on the next: on the first
+    // this asked and caught it, and on the second it read four thousand bytes
+    // that were not there, failed, and was caught by `ferror` instead. The same
+    // compiler said `this file declares nothing` about a directory on one disk
+    // and `cannot read` on another, and the hole written to catch that caught
+    // it on one disk only. Asking past the end is the same question on both: a
+    // file gives end-of-file and a directory gives an error. See D865.
+    fgetc(file);
+    bool broke = read_failed(file);
     fclose(file);
     if (broke) {
         return NULL;
