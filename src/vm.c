@@ -1343,8 +1343,15 @@ static void what_it_needed(Vm *vm, const KestRuntime *rt, int32_t called) {
     uint32_t widest = 0;
     uint32_t in_a_turn = 0;
     uint32_t off_the_turns = 0;
-    kest_module_cycles(rt->module, rt->heap, -1, false, &widest, &in_a_turn,
-                       &off_the_turns);
+    // Over what the call a host made reaches rather than over everything the
+    // file defines. A host sizing a machine for one name asks `kest_bound_of`
+    // about that name, so a refusal that answers about the whole program is
+    // answering a question the host did not ask — and the arithmetic it hands
+    // back is arithmetic about bodies the host never calls. Nought or less
+    // where there is no call to name, which is a machine that could not be
+    // made rather than one that ran out. See D821.
+    kest_module_cycles(rt->module, rt->heap, called, false, &widest,
+                       &in_a_turn, &off_the_turns);
     bool by_turns =
         in_a_turn > 0 &&
         (uint64_t)off_the_turns + (uint64_t)in_a_turn * rt->call_depth <

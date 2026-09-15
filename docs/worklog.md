@@ -31136,3 +31136,37 @@ for, and a refusal that says what the next number would be. Recorded as D820.
 the machine that refused may have been sized for one name. Read what the machine
 was sized from and say the bound over that instead — a host told the shape of a
 program it never calls is told arithmetic it cannot use.
+
+## The shape of a bound is about the call, not the file
+
+D820's refusal says so much a frame and so much whatever the frames, and it
+worked that out over every function the file defines. That is not what the host
+asked about: a host sizing a machine for one name asks `kest_bound_of` about
+that name, and D817 made that walk start from one function and count only what
+it reached. The refusal answered about the whole program, so the arithmetic it
+handed back was over bodies the host never calls, and a host raising a ceiling
+by it raises it too far.
+
+The machine already knows which call it is in the middle of — `what_it_needed`
+is handed it and has used it since D622 for the other half of the same message —
+so the walk starts there. On two files identical but for a function nothing
+calls: "1024 frame(s) of 3 slot(s) each and 22 besides" before, "and 0 besides"
+after.
+
+`check-commands.sh` runs a program that runs out of frames, then the same
+program with a body nothing reaches added to it, and refuses unless both are
+told the same thing. A rule and not a number: what the shape is depends on the
+program, and that adding something unreachable does not change it does not.
+
+D817 for `kest_bound_of`, D818 for `kest_bound_from`, D812 for a body's own
+room, and this — each time the same sentence: a number worked out over more of
+the program than the question was about is a number the asker cannot use.
+Recorded as D821.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `kest_needs_of` and `kest_bound_of` both walk from one name, and the
+command line asks about several — `room_for` calls `kest_needs_of` per entry and
+takes the largest, and gives up on all of them when one has no answer. Have it
+fall back to `kest_bound_of` for the ones that do, and size what it runs from
+the names it names.

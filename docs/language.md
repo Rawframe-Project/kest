@@ -3323,6 +3323,12 @@ not, over what that name reaches rather than over the whole file, and `why` says
 which of the two it gave. A bound is enough and may be more than enough; a least
 is what the program wants.
 
+When a machine sized from a bound runs out of frames, the refusal says the
+shape of the bound over what the call the host made reaches: so much a frame,
+and so much whatever the frames. That is what a host raising a ceiling does
+arithmetic with, and it is about the call rather than about the file — a body
+nothing the host calls can reach is not in it.
+
 `kest_bound_from` is the same for the third door: where a host may be called
 back in from, answered where it can be and bounded where it cannot. Its bound
 counts only the bodies that reach a host function, because a body that never

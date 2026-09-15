@@ -24164,3 +24164,40 @@ reaches itself and wants a single name bound is `examples/least.kest`, and
 *Where this closes.* A host now has a number before it starts, a machine that is
 the number it asked for, and a refusal that says what the next number would be.
 That is the whole of the loop it needs to size a program it cannot measure.
+
+## D821: the shape of a bound is about the call, not the file
+
+*What D820 handed back.* A machine sized from a bound that runs out of frames
+says so much a frame and so much whatever the frames. It worked that out over
+every function the file defines.
+
+*Which is not what the host asked about.* A host sizing a machine for one name
+asks `kest_bound_of` about **that name**, and D817 made that walk start from one
+function and count only what it reached. The refusal did not: it answered about
+the whole program, so the arithmetic it handed back was over bodies the host
+never calls, and a host raising a ceiling by it raises it too far.
+
+The machine already knows which call it is in the middle of — `what_it_needed`
+is handed it, and has used it since D622 for the other half of the same message.
+So the walk starts there.
+
+*Measured on a program with a body nothing reaches.* Two files, identical but
+for a function nothing calls:
+
+```
+before   1024 frame(s) of 3 slot(s) each and 22 besides
+after    1024 frame(s) of 3 slot(s) each and 0 besides
+```
+
+*Held as the two being the same.* `tools/check-commands.sh` runs a program that
+runs out of frames, then the same program with a body nothing reaches added to
+it, and refuses unless both are told the same thing. A rule and not a number:
+what the shape is depends on the program, and that adding something unreachable
+does not change it does not. Told nothing at all and told somebody else's
+arithmetic are one complaint, because a host has no number it can use either
+way — and one complaint is one thing to have watched this say.
+
+*The pattern this is the fourth of.* D817 for `kest_bound_of`, D818 for
+`kest_bound_from`, D812 for a body's own room, and this. Each time the same
+sentence: a number worked out over more of the program than the question was
+about is a number the asker cannot use.

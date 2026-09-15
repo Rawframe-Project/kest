@@ -184,6 +184,21 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # The shape of a bound, said about the whole file rather than about
+        # the call the host made. A host sizing a machine for one name asks
+        # about that name; a refusal answering about everything the file
+        # defines hands back arithmetic over bodies the host never calls, and
+        # a host raising a ceiling by it raises it too far. See D821.
+        "what": "a refusal shaped by bodies the call cannot reach",
+        "file": "src/vm.c",
+        "from": r"""    kest_module_cycles(rt->module, rt->heap, called, false, &widest,""",
+        "to": r"""    kest_module_cycles(rt->module, rt->heap, -1, false, &widest,""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "about what a frame of it costs and the same program",
+    },
+    {
         # A machine sized from a bound, refusing without saying what the next
         # size up costs. There is no number to ask for and there is a shape to
         # be told: so much a frame and so much whatever the frames, which is

@@ -4996,6 +4996,50 @@ case "$real" in
     printf '%s\n' "$real" | sed 's/^/    /' | head -4
     ;;
 esac
+# What a refusal says about the shape of a bound, which is about the call the
+# host made and not about the file it was made from. A program that runs out of
+# frames is told so much a frame and so much whatever the frames; the second of
+# those is the bodies that do not go round, and a body nothing the host calls
+# can reach is not one of them. The two programs below differ by a body nothing
+# reaches, so they have to be told the same thing. See D821.
+mkdir "$scratch"/apart
+for aside in "" "
+fn apart() -> i32 {
+    return wide(3, 4) + wide(5, 6)
+}
+"; do
+    cat > "$scratch"/apart/deep.kest <<KEST
+fn down(n: i32) -> i32 {
+    if n <= 0 {
+        return 0
+    }
+    return down(n - 1) + 1
+}
+
+fn wide(a: i32, b: i32) -> i32 {
+    return (a * 2 + (b * 3 + (a * 4 + (b * 5 + (a * 6 + (b * 7 +
+           (a * 8 + (b * 9 + (a * 10 + (b * 11 + (a * 12 + b)))))))))))
+}
+
+fn main() -> i32 {
+    return down(5000) + wide(1, 2) - wide(1, 2)
+}
+$aside
+KEST
+    ran_out=$("$kest" run "$scratch"/apart/deep.kest 2>&1 </dev/null |
+              sed -n 's/.*frame(s) of \([0-9]*\) slot(s) each and \([0-9]*\) besides.*/\1 \2/p' |
+              head -1)
+    a_frame_shape=${a_frame_shape:-$ran_out}
+    # Nothing said and something else said are one complaint, because a
+    # program told nothing about what a frame of it costs and a program told
+    # somebody else's arithmetic are a host with no number either way.
+    if [ -z "$ran_out" ] || [ "$a_frame_shape" != "$ran_out" ]; then
+        complain "run: a program that ran out said \"$a_frame_shape\" about \
+what a frame of it costs and the same program with a body nothing reaches said \
+\"$ran_out\""
+    fi
+done
+
 # And the two ends of the whole numbers the machine has always answered. The
 # least number over minus one is one past the top of its width, so it wraps to
 # itself with nought left over; a shift of a count past the width leaves
