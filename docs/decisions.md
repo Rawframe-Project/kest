@@ -22664,3 +22664,38 @@ and was caught by the memory check; the second broke the words and was caught by
 the refusal check. Only the third — the name in the JSON changed — is caught by
 the new block and by nothing else, which is the test of whether a check was
 worth adding at all.
+
+## D787: the other way round, for every refusal this compiler has
+
+*The question.* D786 left the machine's codes to be counted against the ones
+anything has ever been made to say. The count is: **a hundred and sixty-five
+codes, and nothing is never said.** A hundred and fifty-five are asked for by a
+check; the other ten are asked for by a backstop hole and by nothing else.
+
+*The ten, and why a hole is the only way.* `K0405`, `K0406`, `K0407` in
+`value.c`, `K0505` in `compile.c`, `K0612`, `K0623`, `K0633`, `K0645`, `K0654`
+in `vm.c` and `K0354` in `types.c`. Every one of them is the compiler saying
+something about itself — the checker let through what the compiler cannot emit,
+a chunk that disagrees with the machine about its own widths. No program can be
+written to provoke one, because a program that could is a program the stage
+before would have refused. Breaking the compiler is the only way to hear them,
+and a hole is what breaking the compiler on purpose is called here.
+
+*What was missing was the direction.* `check-tables.sh` already held that a code
+a check asks for is one this compiler has: a check quoting `K0399` is refused
+because nothing in `src` says it. The other way round — a code this compiler
+says and nothing asks for — was not held at all. A refusal added tomorrow with
+no check behind it would have been invisible, and the way anybody would have
+found out is a reader meeting a sentence the tree had never seen said.
+
+It is held now, both ways, with the ten counted rather than refused: a hole is a
+check being quoted, and quoting is how those are asked for.
+
+*Two searches that were wrong before the right one.* `K0639` looked like a code
+named but not had, and it is `KEST_STARVED_CODE` in `diag.h` — a `#define`, not
+a literal, which a pattern for `"K06xx"` in `src/*.c` cannot see. And every
+K06xx looked mentioned-but-unexercised until the mentions were separated from
+the askings, which `check-tables.sh` already knew to do: **a code in a comment is
+a mention and not an asking, the same way a name in one is not a call.** That
+line was written before this entry and is the reason this one could be counted
+at all.

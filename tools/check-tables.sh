@@ -1525,6 +1525,7 @@ some("the codes this compiler has", every_code)
 # reason it is left out above: a code in a hole is a check being quoted, and a
 # hole that puts a code out of order says one this compiler does not have on
 # purpose.
+code_asked = set()
 for asking_in in [where for where in sorted(glob.glob("tools/*.sh"))
                   if not where.endswith("check-backstops.sh")] + \
                  ["examples/embed.c"]:
@@ -1536,6 +1537,24 @@ for asking_in in [where for where in sorted(glob.glob("tools/*.sh"))
             print("%s: asks for `%s`, which nothing in `src` says" %
                   (asking_in, code_named))
             failed = 1
+        code_asked.add(code_named)
+
+# And the same two ways round. A code a check asks for and this compiler has
+# not is caught above; a code this compiler has and nothing asks for is a
+# sentence nobody has ever seen said, which is the half that was missing. Ten
+# of them are asked for by a hole and by nothing else -- a fault the compiler
+# makes about itself is not something a program can be written to provoke, so
+# breaking the compiler is the only way to hear it -- and those are counted
+# rather than refused, because a hole is a check being quoted and quoting is
+# how they are asked for. See D787.
+code_by_a_hole = set(re.findall(
+    r'"caught":\s*"[^"]*?(K0[0-9][0-9][0-9])',
+    open(os.path.join("tools", "check-backstops.sh")).read()))
+for code_named in sorted(every_code - code_asked - code_by_a_hole):
+    print("src: says `%s` and nothing asks for it, so nobody has seen it said"
+          % code_named)
+    failed = 1
+code_only_a_hole = (every_code & code_by_a_hole) - code_asked
 
 # What a fault says it is, said in one place. A fault is what this project got
 # wrong rather than what a program did, and the sentence that says which is
@@ -2053,7 +2072,9 @@ if not failed:
           "Python and %u of shell where a name stands for one thing, %u "
           "refusals asked for, %u of them by a hole and nothing else, "
           "and %u nothing can be made to ask for, every one of the %u codes a "
-          "check names being one this compiler has, every one of the %u things "
+          "check names being one this compiler has and every one of them being "
+          "one something asks for, %u of those by a hole and nothing else, "
+          "every one of the %u things "
           "%u check(s) say when something is wrong having been watched being "
           "said, "
           "and %u pairs of widths "
@@ -2069,7 +2090,8 @@ if not failed:
              len(reasons), len(listed),
              len(tools), pythons, shells, len(reading), len(only_a_hole),
              len(NOT_REACHED),
-             len(every_code), sentences, len(HELD), halves // 2,
+             len(every_code), len(code_only_a_hole), sentences,
+             len(HELD), halves // 2,
              len(in_widths), len(ANSWERS), len(SPAN_BY_HAND),
              len(WORD_BY_HAND), bodies, shapes, len(SAME_SHAPE)))
 

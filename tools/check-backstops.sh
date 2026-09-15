@@ -1245,6 +1245,19 @@ yield""",
         "caught": "say which type they are the layout of",
     },
     {
+        # A refusal this compiler has and nothing asks for, which is a sentence
+        # nobody has ever seen said. The other way round was already held -- a
+        # check asking for a code this compiler has not -- and this is the half
+        # that was missing. See D787.
+        "what": "a refusal nothing has ever been made to say",
+        "file": "src/types.c",
+        "from": r"""                                       "K0326", ref->count,""",
+        "to": r"""                                       "K0399", ref->count,""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "nothing asks for it, so nobody has seen it said",
+    },
+    {
         # The count of what a machine did not keep, left out of JSON. The
         # ceiling itself and the words it counts the rest in are both held in
         # the same host already -- by what two hundred unread refusals cost,

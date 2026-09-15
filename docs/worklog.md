@@ -29876,3 +29876,33 @@ host is told when it asks for something it may not have is `K0613`, and what it
 is told when it asks for a name it has not got is `K0644`. Count the K06xx codes
 against the ones a host or a command has ever been made to say, the way the
 K05xx warnings were counted, and find the ones nothing has ever seen said.
+
+## The other way round, for every refusal this compiler has
+
+The count D786 asked for: **165 codes, and nothing is never said.** 155 are
+asked for by a check and ten by a backstop hole and nothing else — `K0405`,
+`K0406`, `K0407`, `K0505`, `K0612`, `K0623`, `K0633`, `K0645`, `K0654` and
+`K0354`, every one of them the compiler saying something about itself. No
+program can provoke one, because a program that could is one the stage before
+would have refused; breaking the compiler is the only way to hear them, and a
+hole is what that is called here.
+
+What was missing was the direction. `check-tables.sh` held that a code a check
+asks for is one this compiler has; a code this compiler says and nothing asks
+for was not held at all, so a refusal added tomorrow with no check behind it
+would have been invisible until a reader met a sentence the tree had never seen
+said. Held now, both ways, with the ten counted rather than refused.
+
+Two searches were wrong first. `K0639` looked named-but-not-had and is
+`KEST_STARVED_CODE`, a `#define` rather than a literal. And every K06xx looked
+mentioned-but-unexercised until mentions were separated from askings — which
+`check-tables.sh` already knew to do, in a line written long before this:
+a code in a comment is a mention and not an asking. Recorded as D787.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** ten codes are only ever said by breaking the compiler, and all ten are
+the compiler disagreeing with itself — the checker letting through what the
+compiler cannot emit, a chunk whose widths the machine does not recognise. Read
+the ten against each other and find whether they are ten faults or one fault
+said ten ways, the way `kest_diags_fault` made eight sentences into one.
