@@ -3209,6 +3209,24 @@ int main(int argc, char **argv) {
            "promised, and the one that did not was refused, and so was one "
            "of another shape\n");
 
+    // And a number too wide for the slot it was written into. Every other
+    // thing a frame holds is something this machine made and says what it is;
+    // a number is what the host put there, and a slot is sixty-four bits
+    // where an `i32` is thirty-two. Writing one that does not fit is the one
+    // way a value this language cannot make gets into a program — it wraps at
+    // its own end everywhere else — and until D836 the program counted with
+    // it. `blamed` takes an `i32`.
+    engine.frame[0].integer = (int64_t)1 << 40;
+    if (kest_call(engine.runtime, engine.entry[BLAMED], engine.frame,
+                  sizeof(engine.frame) / sizeof(engine.frame[0]))) {
+        fprintf(stderr, "a number too wide for its slot was taken\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0636", "is not one")) {
+        return 1;
+    }
+    printf("and a number wider than the slot it was written into\n");
+
     // And the way a host has nothing to be wrong about: the arguments handed
     // over as words, written the way a program writes them, and the machine
     // laying them out. The other half of `kest_gave_text`, which says what a

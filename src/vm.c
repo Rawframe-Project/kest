@@ -1447,6 +1447,61 @@ typedef struct {
     const uint8_t *instruction;
 } Saying;
 
+// Whether a number a host wrote fits the width the piece it sits in says. A
+// slot is sixty-four bits and a piece may be eight, and a number as wide as
+// the slot cannot be wrong — so only the narrow ones are asked, off the piece
+// and not off the type. See D836.
+static bool fits_the_piece(uint8_t kind, int64_t given) {
+    switch (kind) {
+    case KEST_L_I8:
+        return given >= INT8_MIN && given <= INT8_MAX;
+    case KEST_L_I16:
+        return given >= INT16_MIN && given <= INT16_MAX;
+    case KEST_L_I32:
+        return given >= INT32_MIN && given <= INT32_MAX;
+    case KEST_L_U8:
+        return given >= 0 && given <= UINT8_MAX;
+    case KEST_L_U16:
+        return given >= 0 && given <= UINT16_MAX;
+    case KEST_L_U32:
+        return given >= 0 && given <= UINT32_MAX;
+    default:
+        return true;
+    }
+}
+
+// And what it is called, which is the piece's own word for itself: a host
+// reading this is looking at a slot it filled and wants the width it was
+// supposed to fill it to.
+static const char *the_width_of(uint8_t kind) {
+    switch (kind) {
+    case KEST_L_I8:
+        return "i8";
+    case KEST_L_I16:
+        return "i16";
+    case KEST_L_I32:
+        return "i32";
+    case KEST_L_U8:
+        return "u8";
+    case KEST_L_U16:
+        return "u16";
+    default:
+        return "u32";
+    }
+}
+
+static void narrower_than_that(KestRuntime *runtime, const char *name,
+                               uint32_t at, uint8_t kind, int64_t given) {
+    KestSpan nowhere = {0, 0};
+    kest_diags_in(runtime->diags, NULL);
+    kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636", nowhere,
+                   "`%s` takes `%s` in slot %u and %lld is not one", name,
+                   the_width_of(kind), at, (long long)given);
+    kest_diags_suggest(runtime->diags,
+                       "every width wraps at its own end, and a host narrows "
+                       "what it writes the way `u8(n)` does");
+}
+
 // What a host handed over in one argument, read by what the argument is rather
 // than by what its first piece is. Every check here was a check on the type of
 // the whole argument, so a piece of text inside a shape crossed unread: a host
@@ -4424,6 +4479,21 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
                             layout->pieces[p].kind == KEST_L_TAG;
         }
         if (!worth_reading) {
+            // Nothing in it a walk would read, and one thing a look will: a
+            // slot holds sixty-four bits and a `u8` holds eight, so a host
+            // writing 300 into one is the one way a value this language
+            // cannot make gets into a program. Read off the piece rather than
+            // out of the type, because the type is what the walk above costs
+            // and this is the case it was skipping. See D836.
+            for (uint16_t p = 0; p < layout->count; p++) {
+                if (!fits_the_piece(layout->pieces[p].kind,
+                                    frame[at + p].integer)) {
+                    narrower_than_that(runtime, name, at + p,
+                                       layout->pieces[p].kind,
+                                       frame[at + p].integer);
+                    return false;
+                }
+            }
             at += layout->count;
             continue;
         }

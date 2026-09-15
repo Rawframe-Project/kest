@@ -184,6 +184,24 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A number a host wrote, taken without being weighed against the width
+        # of the slot it went into. A slot is sixty-four bits and an `i32` is
+        # thirty-two, so a host that writes more is a program counting in a
+        # type that says it cannot count that far — which every width in this
+        # language wraps at its own end to prevent, and this is the one door
+        # round it. Nothing stops: the program runs and the arithmetic is
+        # somebody else's. See D836.
+        "what": "a number too wide for the slot it was written into",
+        "file": "src/vm.c",
+        "from": r"""                if (!fits_the_piece(layout->pieces[p].kind,
+                                    frame[at + p].integer)) {""",
+        "to": r"""                if (!fits_the_piece(layout->pieces[p].kind,
+                                    frame[at + p].integer) && false) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "too wide for its slot was taken",
+    },
+    {
         # A call through a value that does not ask what shape it is entering.
         # Every function index is the same kind of thing in a frame, so a host
         # that read the wrong one hands over a number that is in range and

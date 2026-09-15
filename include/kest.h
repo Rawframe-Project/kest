@@ -628,6 +628,12 @@ const KestLayout *kest_frame_layout(KestRuntime *runtime, int32_t entry,
 // knowing how wide it is.
 const KestLayout *kest_frame_gives(KestRuntime *runtime, int32_t entry);
 
+// A number written into a slot is weighed against the width the program keeps
+// it at: a slot is sixty-four bits and an `i32` is thirty-two, and a host that
+// writes more is refused with `K0636` at the call. Every width in this language
+// wraps at its own end, and a frame is the one place a value it cannot make
+// could get in. What a host writes it narrows the way the program would.
+//
 // What this host is about to write, said back to the program before it writes
 // it: one kind a slot, in the order the arguments are laid out, which is the
 // order `kest_frame_layout` gives them in. A frame of the right width with the

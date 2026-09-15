@@ -24698,3 +24698,40 @@ indexes it got wrong, which a range check could never say.
 and refuses unless the machine says so. Three things a host can get wrong about
 a function value are now three refusals: out of range, promising less, and the
 wrong shape.
+
+## D836: a slot is sixty-four bits and a `u8` is eight
+
+*What the machine weighs of a frame a host filled.* It walks an argument by its
+type where the type has something in it that says what it is — text, a handle, a
+tag, and the shapes those sit in. D718 chose not to walk the rest: *"every other
+kind is a number in a slot, which is whatever the host put there. Most arguments
+are numbers, and they cost the walk that says so."*
+
+*Which is true and is the hole.* A number is whatever the host put there, and a
+slot is sixty-four bits:
+
+```
+u8 given 300 -> ok=1 answer=300
+u8 given  -1 -> ok=1 answer=-1
+```
+
+A `u8` holding 300. Every width in this language wraps at its own end — `u8(300)`
+is 44, `120 + 10` in an `i8` is -126 — and a frame is the one door round all of
+it. The program then counts in a type that says it cannot count that far, and
+nothing says so, because nothing was wrong in the machine's own terms.
+
+*Weighed off the piece, not off the type.* The walk D718 measured is the one it
+skips; adding it back cost ten per cent of a frame step. What the skipped case
+needs is not a walk: a layout already says what each piece is, and a piece says
+its width. So the widths are read there, in the loop that was already looking at
+the pieces to decide whether to walk at all. Measured over four runs of
+`make time`: 136, 139, 128, 124 nanoseconds an entity a step, against 136 before
+— which is to say nothing outside the spread.
+
+*A number as wide as the slot is not asked.* Sixty-four bits in sixty-four bits
+cannot be wrong, and a float is not a width the same way. Only `i8`, `i16`,
+`i32`, `u8`, `u16` and `u32` are read.
+
+*Held.* `examples/embed.c` writes `1 << 40` into an `i32` and refuses unless the
+machine says `K0636`. And the header says what a host is held to, which is what
+the program is held to: narrow what you write the way `u8(n)` does.
