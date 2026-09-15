@@ -699,7 +699,7 @@ deep_checked = per_copy('check', 20)
 # copy that is never made is as wrong as one that is always made — one is two
 # instructions nobody needed and the other is a walk a body can derail. See
 # D866.
-def what_a_turn_is(body):
+def what_emit_printed(body):
     where = os.path.join(work, 'walking.kest')
     with open(where, 'w') as walking:
         walking.write(body)
@@ -714,6 +714,13 @@ def what_a_turn_is(body):
         if found:
             printed[int(found.group(1))] = (found.group(2),
                                             found.group(3).strip())
+    return printed
+
+
+def what_a_turn_is(body):
+    printed = what_emit_printed(body)
+    if printed is None:
+        return None
     step = None
     for at, (op, rest) in printed.items():
         if op.startswith('next.less.'):
@@ -755,6 +762,66 @@ fn main() -> i32 {
     return total - 36
 }
 """
+# And what a cast and a division cost, which is the same question asked of the
+# other instruction a program written over `i32` carries everywhere: `narrow`.
+# A result wider than its type is not the answer the type describes and is cut
+# back, but two of the places that cut had nothing to cut. A cast to a type that
+# already holds every value of what it is cast from cuts nothing, and an
+# unsigned division cannot leave the width at all — while a signed one can, for
+# the one pair at the end of the range, and `/=` was not cutting it. See D867.
+def narrows_in(body):
+    printed = what_emit_printed(body)
+    if printed is None:
+        return None
+    return sum(1 for each in printed if printed[each][0] == 'narrow')
+
+
+def cuts_after_dividing(body, dividing):
+    printed = what_emit_printed(body)
+    if printed is None:
+        return None
+    in_order = [printed[each] for each in sorted(printed)]
+    places = [i for i, (op, rest) in enumerate(in_order) if op == dividing]
+    if len(places) != 1:
+        return None
+    next_one = places[0] + 1
+    return (1 if next_one < len(in_order) and
+            in_order[next_one][0] == 'narrow' else 0)
+
+
+def one_program(lines):
+    return "module walking\n\nfn main() -> i32 {\n%s\n}\n" % lines
+
+
+widening = narrows_in(one_program(
+    "    let n: i16 = 3\n    return i32(n)"))
+narrowing = narrows_in(one_program(
+    "    let n: i32 = 70000\n    return i32(i16(n))"))
+from_truth = narrows_in(one_program(
+    "    let yes = true\n    return i32(u8(yes))"))
+if (widening != 0 or narrowing != 1 or from_truth != 0):
+    print("costs: a cast cuts the width when what it is cast from has values "
+          "that width does not hold, and not otherwise: %s cut(s) widening an "
+          "`i16` to an `i32`, %s cutting an `i32` to an `i16` and %s turning a "
+          "`bool` into a `u8`" % (widening, narrowing, from_truth))
+    failed = 1
+
+without_sign = cuts_after_dividing(one_program(
+    "    let a: u32 = 100\n    let b: u32 = 7\n    let c: u32 = a / b\n"
+    "    return i32(c)"), 'div.u')
+with_sign = cuts_after_dividing(one_program(
+    "    let a: i32 = 100\n    let b: i32 = 7\n    return a / b"), 'div.i')
+into = cuts_after_dividing(one_program(
+    "    let a: i32 = 100\n    let b: i32 = 7\n    a /= b\n    return a"),
+    'div.i')
+if with_sign != 1 or without_sign != 0 or into != 1:
+    print("costs: a division cuts the width where it can leave it and not "
+          "where it cannot: %s cut(s) after an unsigned `/`, %s after a signed "
+          "one and %s after a signed `/=`, and two spellings of one division "
+          "emit the one thing"
+          % (without_sign, with_sign, into))
+    failed = 1
+
 quiet_walk = what_a_turn_is(QUIET_WALK)
 written_walk = what_a_turn_is(WRITTEN_WALK)
 if quiet_walk is None or quiet_walk[1]:
@@ -1126,7 +1193,9 @@ if not failed:
           "example(s) a machine could size from the program itself asking "
           "for %u slot(s) and reaching %u, and a turn of a `for` is %u "
           "instruction(s) where the body never writes the name it binds and "
-          "%u where it does, all of it "
+          "%u where it does, and a cast cuts the width %u time(s) widening "
+          "and %u narrowing, and a division %u time(s) with a sign and %u "
+          "without, all of it "
           "measured on the machine "
           "this ran on"
           % (asked, len(left_to_the_host), driven, proved, kept, len(alone),
@@ -1140,6 +1209,7 @@ if not failed:
              COPIES, COPIES, one_copy_costs, many_copies_costs,
              copied_total, copied_bodies, copied_bytes, copied_code,
              copied_quiet, asked_for, reached, run_sized, run_asked,
-             run_went, quiet_walk[0], written_walk[0]))
+             run_went, quiet_walk[0], written_walk[0], widening, narrowing,
+             with_sign, without_sign))
 sys.exit(failed)
 PY

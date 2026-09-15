@@ -5334,6 +5334,74 @@ fn length(v: Vec2) -> f32 no.alloc {""",
         "caught": "what it costs, and not every",
     },
     {
+        # A cast that cuts a width already wide enough for everything it is
+        # cast from. Nothing running would notice — the value is the same
+        # before and after — and what it costs is an instruction wherever a
+        # program widens one integer into another, which is what every call
+        # taking an `i32` and handed an `i16` is. See D867.
+        "what": "a cast that cuts a width it cannot be outside of",
+        "file": "src/compile.c",
+        "from": """static bool every_value_fits(const KestType *from, const KestType *to) {
+    if (from == NULL || to == NULL || to->tag != KEST_T_INT) {
+        return false;
+    }""",
+        "to": """static bool every_value_fits(const KestType *from, const KestType *to) {
+    if (from == NULL || to == NULL || to->tag != KEST_T_INT) {
+        return false;
+    }
+    return false;""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "and not otherwise",
+    },
+    {
+        # An unsigned division cut back to its width. A division never answers
+        # larger than what went into it, and without a sign there is no pair at
+        # the end of the range to be one past the top of it, so the cut is an
+        # instruction that cannot change anything. See D867.
+        "what": "an unsigned division cut to a width it never leaves",
+        "file": "src/compile.c",
+        "from": """static bool dividing_can_leave(const KestType *type) {
+    return type != NULL && type->tag == KEST_T_INT && type->is_signed;
+}""",
+        "to": """static bool dividing_can_leave(const KestType *type) {
+    return type != NULL && type->tag == KEST_T_INT;
+}""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "where it can leave it and not where it cannot",
+    },
+    {
+        # And the other way, which is not a cost but an answer: a signed
+        # division that is not cut leaves one past the top of the width sitting
+        # in the slot, and every read of that slot afterwards is of a number the
+        # type cannot hold. `x /= -1` and `x = x / -1` answered differently for
+        # the least `i32` until D867, so the program asks it both ways.
+        "what": "a signed division left one past the top of its width",
+        "file": "src/compile.c",
+        "from": """static bool dividing_can_leave(const KestType *type) {
+    return type != NULL && type->tag == KEST_T_INT && type->is_signed;
+}""",
+        "to": """static bool dividing_can_leave(const KestType *type) {
+    (void)type;
+    return false;
+}""",
+        "make": ["kest"],
+        "program": "dividing.kest",
+        "source": """fn main() -> i32 {
+    let least: i32 = i32(0 - 2147483647) - 1
+    let minus: i32 = 0 - 1
+    let shrinking = least
+    shrinking /= minus
+    if shrinking < 0 {
+        return 0
+    }
+    return 300
+}
+""",
+        "caught": "K0618",
+    },
+    {
         # A walk that copies its count into the name whatever the body does.
         # Nothing running would notice: every program answers what it answered
         # and the loop goes round the same number of times. What it costs is

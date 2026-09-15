@@ -25978,3 +25978,73 @@ side: one that says every name is written, one that says none is.
 What this is not is an optimiser. There is no pass, no analysis over the
 program, and nothing that reads one statement in the light of another: it is one
 fact the checker already knew and had been throwing away.
+
+## D867: the other instruction a loop carries, and a division that disagreed with itself
+
+With a hop of a `for` down to one instruction (D866), what is left under it is
+the body, and `total += i` is five: two loads, an `add.i`, a `narrow` and a
+store. `narrow` is there because a slot holds sixty-four bits and an `i32` is
+thirty-two: a result wider than its type is not the answer the type describes,
+so it is cut back. Counted over every example and every library module, it was
+**670 of 28117 instructions — one in forty-two.**
+
+Where they came from, read off what `emit` printed:
+
+| after | how many |
+|---|---|
+| `add.i` | 246 |
+| `sub.i` | 209 |
+| `const` | 77 |
+| `mul.i` | 28 |
+| `load` | 24 |
+| `narrow` | 16 |
+| `neg.i` | 15 |
+| `mod.u`, `mod.i` | 21 |
+| everything else | 34 |
+
+The first four columns of that are arithmetic that really can run off the end,
+and nothing type-only will remove them. *The rest are casts*, and a cast after
+`narrow`, after `mod`, after `and.i`, after `shr.i` is a cast of a value that is
+already inside the width it is being cut to.
+
+**A cast cuts nothing when the type it is going to already holds every value of
+the type it is coming from.** That is a fact about two types and not about a
+value: an unsigned value is nought upwards, so it fits an unsigned type of at
+least its width and a signed one wider than it; a signed value can be under
+nought, which no unsigned type holds; a `bool` is nought or one and fits them
+all. `every_value_fits` is those four lines, and `compile_conversion` asks it.
+
+**And a division cannot leave the width except at one pair.** The answer of a
+division is never larger than what went in, save for the least number over minus
+one, which is one past the top — so an unsigned division has nothing to cut at
+all. The expression `/` was cutting always.
+
+*Asking that question found the two spellings disagreeing.* `x /= y` skipped the
+narrow outright — `if (stmt->assign.op != KEST_TOK_SLASHEQ)` — while `x = x / y`
+always took it. So for the least `i32` over minus one:
+
+```
+2147483648 against -2147483648
+```
+
+One past the top of the width, sitting in an `i32` slot, read as that number by
+everything after it. `examples/numbers.kest` had asked this question for years
+— `least32 / minus != least32` — and had only ever asked it the one way.
+
+Both places now ask `dividing_can_leave`, which is the one fact said once:
+signed cuts, unsigned does not.
+
+**What it came to: 670 narrows to 572, one in forty-two down to one in
+forty-nine.** None of the four instruments moved, and that is the honest report
+— a frame step, a crossing and a loop hop carry `add.i` and `sub.i` narrows,
+which are the 456 that stay. What moved is every program that widens an integer
+to pass it, which is a cost paid at a boundary rather than in a loop.
+
+`check-costs.sh` reads both facts out of `emit` — three casts and three
+divisions, each of them a program of four lines — and three holes break them:
+one that makes every cast cut, one that makes every division cut, and one that
+makes no division cut, which is the bug above and is caught by a program rather
+than by a count.
+
+The 484 that remain are one instruction after another that could be one
+instruction. That is the next thing to weigh.

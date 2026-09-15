@@ -938,6 +938,11 @@ count *= 4
 count /= 2
 ```
 
+`x += y` is `x = x + y` and not a second arithmetic. They compile to the same
+instructions and answer the same for the values at the ends of a width, which
+is where two paths through a compiler part company if they are going to:
+`x /= -1` on the least `i32` is the least `i32`, the same as `x = x / -1`.
+
 A statement that is only an expression has to do something. A call does, and
 what it gives back may be worth ignoring; an `if` or a `match` whose arms are
 blocks does. Anything else works a value out and leaves it lying there, which
@@ -1373,6 +1378,13 @@ A whole number written inside a conversion is a number of that type when it
 fits — `i64(9223372036854775807)` is that number, not an `i32` too small to
 hold it — and a narrowing when it does not: `i8(300)` is 44, which is what
 D018 says about a value that will not fit.
+
+A conversion to a type that already holds every value of what it is converted
+from does nothing at all: `i32` of an `i16`, `u16` of a `u8`, `u8` of a `bool`.
+There is nothing to cut, so no instruction is written for it. A conversion to
+one that does not — `i16` of an `i32`, or `i32` of a `u32`, where the values are
+in range for the width and not for the sign — is the cut above. Which of the two
+a conversion is, is read off the two types and not off the value.
 
 Those are two questions that look like one. `let x: u8 = 300` says this number
 is a `u8`, and it is not, so it is refused. `u8(300)` says make me a `u8` out

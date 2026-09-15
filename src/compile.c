@@ -571,6 +571,39 @@ static const uint8_t *compares(KestTokenKind op, bool text, bool real,
     return NULL;
 }
 
+// Whether dividing can leave the width. The answer of a division is never
+// larger than what went in, save for the one pair at the end of a signed range:
+// the least number over minus one is one past the top. So an unsigned division
+// has nothing to cut and a signed one has that pair, and both places that
+// divide ask here. They had it each their own way round — the expression cut
+// what it never had to and `/=` never cut what it had to, so `x /= -1` and
+// `x = x / -1` answered differently for the least `i32`. See D867.
+static bool dividing_can_leave(const KestType *type) {
+    return type != NULL && type->tag == KEST_T_INT && type->is_signed;
+}
+
+// Whether every value of one type is a value of another, which is what says a
+// cast between them has nothing to cut. A `bool` is nought or one and fits in
+// all of them. An unsigned value is nought upwards, so it fits an unsigned type
+// of at least its width and a signed one wider than it; a signed value can be
+// under nought, which no unsigned type holds. See D867.
+static bool every_value_fits(const KestType *from, const KestType *to) {
+    if (from == NULL || to == NULL || to->tag != KEST_T_INT) {
+        return false;
+    }
+    if (from->tag == KEST_T_BOOL) {
+        return true;
+    }
+    if (from->tag != KEST_T_INT) {
+        return false;
+    }
+    if (!from->is_signed) {
+        return to->is_signed ? from->width < to->width
+                             : from->width <= to->width;
+    }
+    return to->is_signed && from->width <= to->width;
+}
+
 // A result wider than its type is not the answer the type describes, so it is
 // cut back. Sixty-four bits is the slot, so nothing is cut there.
 static void emit_narrow(Compiler *compiler, const KestType *type,
@@ -1414,7 +1447,9 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
              span);
         // Once, and only for the pair at the end of the range: the least
         // number over minus one is one past the top of the width.
-        emit_narrow(compiler, operand, span);
+        if (dividing_can_leave(operand)) {
+            emit_narrow(compiler, operand, span);
+        }
         break;
     case KEST_TOK_PERCENT:
         emit(compiler,
@@ -1681,8 +1716,11 @@ static void compile_conversion(Compiler *compiler, const KestExpr *expr,
             emit_u16(compiler, kest_scalar_of(to), expr->span);
         } else {
             // A `bool` is already nought or one, and an integer only has to
-            // be cut to the width it is going into.
-            emit_narrow(compiler, to, expr->span);
+            // be cut to the width it is going into — and not even that where
+            // that width already holds every value it has. See D867.
+            if (!every_value_fits(from, to)) {
+                emit_narrow(compiler, to, expr->span);
+            }
         }
         return;
     }
@@ -2848,7 +2886,8 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
                                                        : KEST_OP_DIV_I),
                      stmt->span);
             }
-            if (stmt->assign.op != KEST_TOK_SLASHEQ) {
+            if (stmt->assign.op != KEST_TOK_SLASHEQ ||
+                dividing_can_leave(target->type)) {
                 emit_narrow(compiler, target->type, stmt->span);
             }
         }

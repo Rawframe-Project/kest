@@ -32852,11 +32852,12 @@ Recorded as D865.
 
 **Runs:** `make check`, everything passing, with `TMPDIR=/var/tmp`.
 
-**Next:** a hop of a `for` is one instruction now, so the next number under it
-is the body: `total += i` is a load, a load, an add, a `narrow` and a store, and
-the `narrow` is there because the add is wider than the slot it goes in. Read
-where `narrow` is emitted, count how many of them a program written over `i32`
-carries, and say which of them the checker already knows cannot narrow anything.
+**Next:** 484 of the 572 narrows left are an `add.i`, a `sub.i` or a `mul.i`
+with a `narrow` immediately after it, which is two dispatches where the machine
+could do one. The machine already fuses where it pays — `next.less.i`,
+`jump.false.lt.i` — so weigh an `add.i32` that adds and cuts in one against what
+it costs in instructions the machine has to carry: how many new ones, at which
+widths, and whether the table has room for them.
 
 ## A hop of a `for` is one instruction
 
@@ -32902,3 +32903,48 @@ is the body: `total += i` is a load, a load, an add, a `narrow` and a store, and
 the `narrow` is there because the add is wider than the slot it goes in. Read
 where `narrow` is emitted, count how many of them a program written over `i32`
 carries, and say which of them the checker already knows cannot narrow anything.
+
+## A cast that cut nothing, and a division that disagreed with itself
+
+With the hop down to one instruction, the body is what is left, and `total += i`
+is five: two loads, an `add.i`, a `narrow` and a store. Counted over every
+example and library module, `narrow` was 670 of 28117 instructions — one in
+forty-two. Most of it is `add.i` (246) and `sub.i` (209), which really can run
+off the end. The rest are casts, and a cast written after a `mod`, after an
+`and.i`, after another `narrow` is a cast of a value already inside the width it
+is being cut to.
+
+Two type-only facts came out of reading them. A cast cuts nothing when the type
+it goes to already holds every value of the type it comes from — unsigned fits
+unsigned of at least its width and signed wider than it, signed fits signed of
+at least its width, a `bool` fits everything. And a division never answers
+larger than what went into it, save for the least number over minus one, so an
+unsigned division cannot leave the width at all.
+
+Asking the second question found the two spellings of a division disagreeing.
+`x /= y` skipped the narrow outright and `x = x / y` always took it, so the least
+`i32` over minus one printed `2147483648 against -2147483648`: one past the top
+of the width, sitting in an `i32` slot. `examples/numbers.kest` had asked that
+question for years and had only ever asked it one way; it asks it both ways now,
+and both places in the compiler ask one `dividing_can_leave`.
+
+670 narrows to 572. None of the four instruments moved, which is the honest
+report: their hot loops carry the `add.i` and `sub.i` narrows, which are the 456
+that stay. What moved is every program that widens an integer to pass it.
+
+`check-costs.sh` reads both out of what `emit` printed, over six programs of
+four lines each, and three holes break them — every cast cuts, every division
+cuts, no division cuts. The last of those is the bug, and it is caught by a
+program's answer rather than by a count.
+
+Recorded as D867.
+
+**Runs:** `make check`, everything passing. `make time`, four instruments, no
+movement.
+
+**Next:** 484 of the 572 narrows left are an `add.i`, a `sub.i` or a `mul.i`
+with a `narrow` immediately after it, which is two dispatches where the machine
+could do one. The machine already fuses where it pays — `next.less.i`,
+`jump.false.lt.i` — so weigh an `add.i32` that adds and cuts in one against what
+it costs in instructions the machine has to carry: how many new ones, at which
+widths, and whether the table has room for them.

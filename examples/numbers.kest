@@ -132,6 +132,17 @@ fn main() -> i32 {
     if least8 / i8(0 - 1) != least8 || least8 % i8(0 - 1) != 0 {
         return 32
     }
+    // And the same division written the other way. `x /= y` and `x = x / y`
+    // are two spellings of one thing and go down two paths in the compiler,
+    // and for this one pair they used to answer differently: one past the top
+    // of the width was left sitting in an `i32` slot. See D867.
+    let shrinking: i32 = least32
+    shrinking /= minus
+    let shrinking8: i8 = least8
+    shrinking8 /= i8(0 - 1)
+    if shrinking != least32 || shrinking8 != least8 {
+        return 94
+    }
 
     // A shift past the width is everything shifted out, at every width and not
     // only at the one the slot is: the value is worked out wide and comes back
