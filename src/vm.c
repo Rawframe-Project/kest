@@ -4036,9 +4036,14 @@ static bool frame_agrees(KestRuntime *runtime, const KestChunk *chunk,
                        "`%s` %s %u slot%s and this host says what %u of them "
                        "hold",
                        name, said, slots, slots == 1 ? "" : "s", count);
-        kest_diags_suggest(runtime->diags,
-                           "`kest_frame_slots` says how wide it is, and every "
-                           "one of them is a slot something is in");
+        // The door that gives the number this was judged by, which is not
+        // `kest_frame_slots`: that one answers how wide a frame has to be,
+        // which is the wider of what a function takes and what it gives, and
+        // a host judged against one of the two and sent to the larger reads
+        // the number it just used. `hoard` takes nothing and gives one slot,
+        // so a host that said one was told to go and ask a door that says
+        // one. See D832.
+        kest_diags_suggest(runtime->diags, "%s", ask);
         return false;
     }
 

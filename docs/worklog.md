@@ -31538,3 +31538,40 @@ business and held since D718. Recorded as D831.
 host to ask, and nothing here has ever asked it. Read what it answers against
 the widths the two doors above compare against, and hold the number a host is
 sent to against the number it is judged by.
+
+## The number a host was sent to was not the number it was judged by
+
+`kest_frame_slots` is what the suggestion under a width refusal told a host to
+ask, and it is held: `embed.c` has asked it of every entry since D628 and
+refused unless it is the wider of what a function takes and what it gives back.
+The number is right and it is the wrong number.
+
+`kest_frame_fills` judges a host against what a function takes and
+`kest_frame_reads` against what it gives, and `kest_frame_slots` answers the
+wider of the two. Where they differ the door a refused host was sent to answers
+something it was not judged by — and in the sharpest case the number it just
+used. `hoard` takes nothing and gives one slot: a host that says one is told it
+said one of nought, told to ask `kest_frame_slots`, and told one. There is no
+third step.
+
+The two doors already carry a sentence each naming where their numbers come
+from, `kest_frame_layout` for the arguments and `kest_frame_gives` for the
+result, and the kinds half of the same walk already used it. The width half
+named `kest_frame_slots` instead. One line, and a host is sent to the door that
+judged it.
+
+`embed.c` asks for a slot of a function that takes none and refuses unless the
+report says `kest_frame_layout` under the code, and the same for a result read
+too wide and `kest_frame_gives` — read with the reader for suggestions rather
+than the one for messages, because a code and a suggestion are never on one
+line, which is what the first attempt got wrong and what the report said
+plainly. What `kest_frame_slots` is still for is `kest_call`'s frame, which has
+to hold both, and the header says so beside what it is not for. Recorded as
+D832.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** every suggestion under a refusal is advice, and advice that sends a
+reader somewhere is a claim about where. Read the suggestions the machine gives
+for the doors they name, and hold each to naming one that answers the question
+the refusal was about.

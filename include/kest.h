@@ -711,6 +711,12 @@ int64_t kest_gave_text(KestRuntime *runtime, int32_t entry,
 // How wide a frame has to be to call this: enough for what it takes and for
 // what it gives back, whichever is more.
 //
+// It is not the number `kest_frame_fills` and `kest_frame_reads` judge a host
+// by: they ask about one side each, and this is the wider of the two. A host
+// told it said the wrong number of slots is sent to the door that gave the
+// number it was judged by, which is `kest_frame_layout` for what a function
+// takes and `kest_frame_gives` for what comes back.
+//
 // Zero for an index that is no function, and zero for a function that takes
 // nothing and gives nothing, because that is what it needs. The number cannot
 // tell those apart and so the first of them says so into `kest_report`: ask

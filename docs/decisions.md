@@ -24559,3 +24559,43 @@ says the comparison is doing two jobs rather than one.
 *Where this leaves the boundary.* The numbers a host reads were held by D830;
 the widths a host writes are held now. What is left of the frame is what a host
 puts in the slots, which is `K0634`'s own business and held since D718.
+
+## D832: the number a host was sent to was not the number it was judged by
+
+*The reading.* `kest_frame_slots` is what the suggestion under a width refusal
+told a host to ask. It is held — `examples/embed.c` has asked it of every entry
+since D628 and refused unless it is the wider of what a function takes and what
+it gives back. The number is right.
+
+*It is the wrong number.* `kest_frame_fills` judges a host against what a
+function **takes**. `kest_frame_reads` judges it against what a function
+**gives**. `kest_frame_slots` answers the wider of the two. When they differ,
+the door a refused host was sent to answers something it was not judged by —
+and in the sharpest case it answers the number the host just used:
+
+```
+hoard() -> i32        takes nothing, gives one slot
+kest_frame_fills(rt, hoard, kinds, 1)
+  → `hoard` takes 0 slots and this host says what 1 of them hold
+  → `kest_frame_slots` says how wide it is
+kest_frame_slots(rt, hoard)  → 1
+```
+
+A host reading its own report does what it is told, gets one, passes one, and is
+refused again in the same words. There is no third step.
+
+*What it says now.* The two doors already carry a sentence each naming where
+their numbers come from — `kest_frame_layout` for the arguments,
+`kest_frame_gives` for the result — and the kinds half of the same walk already
+used it. The width half named `kest_frame_slots` instead. One line: it uses the
+same sentence, so a host is sent to the door that judged it.
+
+*Held.* `examples/embed.c` asks for a slot of a function that takes none and
+refuses unless the report says `kest_frame_layout` under the code, and the same
+for a result read too wide and `kest_frame_gives`. Read with the reader for
+suggestions rather than the one for messages, because a code and a suggestion
+are never on one line — which is what the first attempt got wrong and what the
+report said plainly.
+
+*And what `kest_frame_slots` is still for.* `kest_call`'s frame, which has to
+hold both. The header says so now, beside what it is not for.

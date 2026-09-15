@@ -3051,11 +3051,26 @@ int main(int argc, char **argv) {
                         "was agreed to\n");
         return 1;
     }
-    if (!said_that(engine.runtime, "K0634", "slot")) {
+    if (!said_under(engine.runtime, "K0634", "kest_frame_layout")) {
+        return 1;
+    }
+    // And the sharpest shape of the same mistake: a function that takes
+    // nothing and gives one slot. A host that says one is judged against
+    // nought — and until D832 was sent to `kest_frame_slots`, which answers
+    // the wider of the two and so answers the number it just used. What it is
+    // sent to now is the door that gave the number it was judged by.
+    const uint8_t one_slot[1] = {KEST_L_I32};
+    if (kest_frame_fills(engine.runtime, engine.entry[HOARD], one_slot, 1)) {
+        fprintf(stderr, "a function that takes nothing took a slot\n");
+        return 1;
+    }
+    if (!said_under(engine.runtime, "K0634", "kest_frame_layout") ||
+        kest_frame_slots(engine.runtime, engine.entry[HOARD]) != 1) {
         return 1;
     }
     printf("a frame said to hold what it does not was refused, and one that "
-           "spoke for two of its three slots\n");
+           "spoke for two of its three slots, and one that spoke for a slot "
+           "of a function that takes none\n");
     // And the width of a function that is not there. Nought is the honest
     // width of one that takes and gives nothing, so the number cannot say
     // which of the two this is and the report does.
@@ -3135,6 +3150,9 @@ int main(int argc, char **argv) {
     if (kest_frame_reads(engine.runtime, engine.entry[LENGTH_OF], read_wide,
                          2)) {
         fprintf(stderr, "a result one slot wide was read as two\n");
+        return 1;
+    }
+    if (!said_under(engine.runtime, "K0634", "kest_frame_gives")) {
         return 1;
     }
     printf("a result said to hold what it does not was refused, three "

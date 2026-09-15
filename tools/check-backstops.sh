@@ -184,6 +184,25 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A host sent to the wrong number. `kest_frame_slots` answers how wide
+        # a frame has to be, which is the wider of what a function takes and
+        # what it gives — and a host judged against one of the two and sent to
+        # the larger reads the number it just used. `hoard` takes nothing and
+        # gives one slot, so a host that said one was told to go and ask a
+        # door that says one. See D832.
+        "what": "a width refusal that sends a host to the wrong door",
+        "file": "src/vm.c",
+        "from": r"""        // one. See D832.
+        kest_diags_suggest(runtime->diags, "%s", ask);""",
+        "to": r"""        // one. See D832.
+        kest_diags_suggest(runtime->diags,
+                           "`kest_frame_slots` says how wide it is, and every "
+                           "one of them is a slot something is in");""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "under it, `kest_frame_layout`",
+    },
+    {
         # A host that spoke for some of the slots, taken as having spoken for
         # them all. Saying what three of five hold is not checking the other
         # two, and those two are exactly the ones it is wrong about — the
@@ -204,10 +223,11 @@ fn main() -> i32 {
         "caught": "two slots wide where it is three",
     },
     {
-        # And the other way: a host reading more slots than came back reads
-        # the slot above the answer, which is the machine's. The width and
-        # what is in it are two questions, and a door that asks only the
-        # second answers a host that was wrong about the first. See D831.
+        # And the other way: a host saying more slots than there are. Reading
+        # more than came back reads the slot above the answer, which is the
+        # machine's, and saying a slot of a function that takes none is the
+        # same mistake at nought — which is the one this catches, because it
+        # is the first of them the host meets. See D831 and D832.
         "what": "a result read wider than it is",
         "file": "src/vm.c",
         "from": r"""    if (count != slots) {
@@ -220,7 +240,7 @@ fn main() -> i32 {
                        "hold",""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "one slot wide was read as two",
+        "caught": "takes nothing took a slot",
     },
     {
         # The ceiling a host wrote, forgotten by the door that reads a machine
