@@ -5710,8 +5710,10 @@ int main(int argc, char **argv) {
         // whole program needs, and what the functions this host calls need
         // with the way back in on top. The program has a run of calls ten
         // deep that nothing here enters (D620), so what saying nothing costs
-        // is that chain's frames — the slots are the call back in either way,
-        // which is the floor D604 is about. See D621.
+        // is that chain's frames. The slots it costs are nothing at all —
+        // naming what it calls is a slot dearer, not cheaper, because the way
+        // back in is nearly the whole program's width and the function called
+        // from there is added to it. See D621 and D803.
         KestLimits whole = {0, 0, 0};
         KestLimits driven = {0, 0, 0};
         static const char *const drives[] = {"step", "create", "spawn", NULL};
@@ -5746,11 +5748,15 @@ int main(int argc, char **argv) {
         }
         size_t quiet_cost = kest_runtime_cost(saying_nothing);
         size_t named_cost = kest_runtime_cost(naming);
-        // The frames are what a chain nothing enters costs, and the slots are
-        // not: the way back in is wider than the deepest function here, so a
-        // host that names what it calls pays the same for stack and less for
-        // frames.
-        if (driven.stack_slots < whole.stack_slots ||
+        // The frames are the whole of what naming buys. The stack goes the
+        // other way: the way back in is 32 of the program's 34, and the
+        // function called from inside a host function is added to it, so
+        // naming asks for more slots than saying nothing does. Refused at
+        // equal as well as at less, because equal is what this said for a
+        // while and what stopped being true without anything saying so — an
+        // order kept by two different arithmetics is the weaker one written
+        // down. See D803.
+        if (driven.stack_slots <= whole.stack_slots ||
             driven.call_depth >= whole.call_depth || named_cost >= quiet_cost) {
             fprintf(stderr, "saying nothing wants %u slots and %u frames, "
                             "naming wants %u and %u, at %zu bytes against "
@@ -5764,9 +5770,12 @@ int main(int argc, char **argv) {
             return 1;
         }
         printf("saying nothing is %u slots and %u frames at %zu bytes, and "
-               "naming what it calls is %u and %u at %zu\n",
+               "naming what it calls is %u and %u at %zu — %u slot(s) dearer "
+               "and %u frame(s) cheaper\n",
                whole.stack_slots, whole.call_depth, quiet_cost,
-               driven.stack_slots, driven.call_depth, named_cost);
+               driven.stack_slots, driven.call_depth, named_cost,
+               driven.stack_slots - whole.stack_slots,
+               whole.call_depth - driven.call_depth);
 
         // And what happens when this host calls something it did not name. A
         // machine sized by naming is three frames deep and the chain is ten,

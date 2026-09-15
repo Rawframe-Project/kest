@@ -23366,3 +23366,39 @@ about it wrong, and both times the wrong sentence told a host what to do. The
 difference is where the hole was: D801 had no check at all on the relation, and
 this had one too weak to notice. A check that passes under two different
 arithmetics is documentation of the weaker one.
+
+## D803: an order kept by two arithmetics
+
+*Reading the orders back.* D802 found a sentence claiming an equality over a
+check holding an order. The rest of the orders two hosts hold between numbers a
+host is given were read the same way: `examples/least.c` holds none, and of the
+nine in `examples/embed.c` eight are orders because no equality is known — a
+named function's worst against the program's, three names against all of them,
+one function's reach into the host against every function's.
+
+The ninth was not. Beside `driven` and `whole` — what the functions this host
+drives need with the way back in on top, against what the whole program needs —
+stood *"a host that names what it calls pays the same for stack and less for
+frames"*. The run says **35 slots against 34**. Naming is a slot **dearer**.
+
+*How it went stale quietly.* The check under it refused `driven < whole`. Equal
+kept it and greater kept it, so when the number crossed from one to the other
+nothing had anything to say. The sentence was probably true when it was written
+at D621; what it lacked was anything that would notice it stopping.
+
+*What it says and holds now.* That naming buys frames and costs a slot, and why:
+the way back in is 32 of the program's 34, and the function called from inside a
+host function is added to that, so the sum clears the program's own worst. Seven
+frames cheaper, one slot dearer, and 867 bytes against 1027 — the frames are the
+whole of the saving. The check refuses at equal as well as at less, and the line
+it prints says the two differences rather than leaving a reader to subtract.
+
+*The hole.* One slot added to the program's own worst in `kest_needs` lands the
+two numbers on each other and makes naming look free. The old check let that
+through; this one refuses it.
+
+*What this pattern is.* Three entries running: D801 a relation with no check,
+D802 a sum held as an order, D803 an order whose slack was where a sentence went
+wrong. A check is also a claim about what may drift — one that admits two
+arithmetics has written down the weaker, and the prose beside it will be about
+whichever the author had in mind.

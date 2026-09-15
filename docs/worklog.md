@@ -30422,3 +30422,40 @@ Recorded as D802.
 Go through the relationships `examples/embed.c` and `examples/least.c` hold
 between two numbers a host is given, find the ones written as an order, and for
 each ask whether the exact relation is known. Where it is, hold that instead.
+
+## An order kept by two arithmetics
+
+Read back the orders `examples/embed.c` and `examples/least.c` hold between two
+numbers a host is given. `least.c` holds none. Of the nine in `embed.c`, eight
+are orders because no equality is known — a named function's worst against the
+program's, three names against all of them, one function's reach into the host
+against every function's.
+
+The ninth was not. Beside `driven` and `whole` stood "a host that names what it
+calls pays the same for stack and less for frames". The run says 35 slots
+against 34: naming is a slot dearer. The check under it refused `driven <
+whole`, which equal keeps and greater keeps, so when the number crossed from one
+to the other nothing had anything to say. It was probably true at D621; what it
+lacked was anything that would notice it stopping.
+
+It now says that naming buys frames and costs a slot, and why — the way back in
+is 32 of the program's 34, and the function called from inside a host function
+is added to that. Seven frames cheaper, one slot dearer, 867 bytes against 1027.
+The check refuses at equal as well as at less, and the line printed says the two
+differences rather than leaving a reader to subtract. The hole: one slot added
+to the program's own worst lands the two numbers on each other and makes naming
+look free, which the old check let through.
+
+Three entries running — D801 a relation with no check, D802 a sum held as an
+order, D803 an order whose slack was where a sentence went wrong. A check is
+also a claim about what may drift, and one that admits two arithmetics has
+written down the weaker. Recorded as D803.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** back to the machine. `KEST_OP_MOD_F` and `KEST_OP_MOD_F32` were added
+with `kest_left_over` doing the arithmetic without libm. Read what the machine
+does with the three float comparisons and `%` at the edges a float has and C
+does not name the same way — a remainder by zero, one of a nought, and one of
+a number too large to hold — and check each against what the language document
+says a program is promised.

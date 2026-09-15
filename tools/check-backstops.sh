@@ -5570,6 +5570,21 @@ fn main() -> i32 {
         "caught": "saying nothing wants",
     },
     {
+        # The program's own worst one slot over. Naming what a host calls is
+        # dearer than saying nothing by exactly one slot here, so one slot
+        # added to the program's number lands the two on each other and makes
+        # naming look free. This is the hole the old check could not have: it
+        # refused less and let equal through, and equal is what the sentence
+        # beside it claimed for as long as nothing asked. See D803.
+        "what": "the program's worst one slot over",
+        "file": "src/build.c",
+        "from": r"""    least->stack_slots = walked->slots;""",
+        "to": r"""    least->stack_slots = walked->slots + 1;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "saying nothing wants",
+    },
+    {
         # A machine that keeps everything nobody has asked for. It does not
         # end, so a program refused every frame hands a host that never reads
         # a frame of words for as long as it runs — which is what the room it
