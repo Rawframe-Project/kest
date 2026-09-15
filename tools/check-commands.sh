@@ -3304,6 +3304,22 @@ fn grew(t: text) -> i32 {
     }
     return 0
 }
+
+fn gathered(t: text) -> i32 {
+    let a: [u8] = array()
+    for i in 0..10 {
+        push(a, u8(97))
+    }
+    return len(a)
+}
+
+fn converted(t: text) -> i32 {
+    let a: [u8] = array()
+    for i in 0..10 {
+        push(a, u8(97))
+    }
+    return len(text(a))
+}
 KEST
 reach_heap() {
     "$kest" call --json "$scratch"/reaching/reaching.kest "$1" abcdefghij \
@@ -3323,6 +3339,20 @@ work on cost $reach_made, and the proof says they reach nothing"
 elif [ "$reach_grew" -le "$reach_made" ]; then
     complain "call: growing an array past its first block cost $reach_grew \
 against $reach_made for making it, and the proof says \`push\` reaches"
+fi
+
+# And the one reach the proof decides outside that table, because `text` is a
+# conversion rather than a builtin -- it is not in the checker's list of
+# builtins either, so being outside is what it is and not where it is written.
+# What it costs is the bytes it was given and the nought after them, which is a
+# number rather than a direction: ten bytes gathered and then made into text is
+# eleven more than gathering them.
+reach_gathered=$(reach_heap gathered)
+reach_converted=$(reach_heap converted)
+if [ "$((reach_converted - reach_gathered))" != "11" ]; then
+    complain "call: making text out of ten bytes cost \
+$((reach_converted - reach_gathered)) over gathering them, where the bytes and \
+the nought after them are eleven"
 fi
 
 # Text that ends in the middle of a character, which is what text arriving a

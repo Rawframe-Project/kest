@@ -1275,6 +1275,19 @@ yield""",
         "caught": "said nothing about what it cost",
     },
     {
+        # Text out of bytes, taking more than the bytes and the nought after
+        # them. This is the one reach the proof decides outside its table, and
+        # what it costs is a number rather than a direction. See D798.
+        "what": "text out of bytes taking more than the bytes",
+        "file": "src/vm.c",
+        "from": r"""            char *text = kest_arena_alloc(rt->heap, bytes->length + 1, 1);""",
+        "to": r"""            char *text = kest_arena_alloc(rt->heap, bytes->length + 9, 1);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "where the bytes and the nought after them are eleven",
+    },
+    {
         # A builtin the proof says reaches nothing, reaching. Every promise
         # this language makes about allocation is proved against a table in
         # `contract.c` rather than against the machine, so a row of it that

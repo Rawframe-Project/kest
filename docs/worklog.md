@@ -30251,3 +30251,34 @@ the table rather than in it and is in none of this. Recorded as D797.
 proof handles outside its table, in the lines after the loop. Read what it does
 against what the table's rows do, and find whether being outside the table is
 what it is or only where it is written.
+
+## Outside the table is what it is
+
+`text(a)` is the one reach the proof decides after its table rather than in it.
+The checker's `BUILTINS` holds fifteen names and `contract.c`'s `REACHES` holds
+the same fifteen, held to each other since the table was written — and `text` is
+in neither. It is a conversion, like `i32(x)`, and the only one that copies. So
+being outside is what it is, not where it is written.
+
+The proof does reach it: a `no.alloc` body writing `text(a)` is `K0401`, and so
+is one writing `"{n}"`, because a hole makes text the same way. Both refused
+already, neither weighed.
+
+Now weighed. Ten bytes gathered into a `[u8]` cost 81; the same ten made into
+text cost 92 — eleven more, the bytes and the nought after them. That is a
+number rather than a direction, so the check reads it as one: `text` taking nine
+bytes of slack says 19 where eleven is right. The five in the table get a
+direction because they are held together by one run whose cost depends on how
+far an array doubles; this one copies what it was given and nothing else, so
+there is an exact answer and no reason to take a vaguer one.
+
+Every row of the proof's table is now weighed against a run, and so is the one
+reach outside it. Recorded as D798.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the proof's table is weighed. What it proves against is the tree, and
+`docs/language.md` says the second proof reads the emitted code instead —
+"the promise was checked against the tree; this holds it against what was
+emitted", in `build.c`. Read what that second proof walks against what the first
+does, and find what one can see that the other cannot.

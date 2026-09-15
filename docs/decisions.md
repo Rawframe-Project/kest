@@ -23163,3 +23163,39 @@ it reaches the end and not when it stops sooner. The other four that reach are
 held together by the third number rather than one at a time, and `text(a)`,
 which the code handles after the table rather than in it, is not in any of this.
 Both are written here rather than left for the next reading to rediscover.
+
+## D798: outside the table is what it is
+
+*The question.* `text(a)` is the one reach the proof decides in the lines after
+its table rather than in it. Is being outside what it *is*, or only where it is
+written?
+
+*What it is.* The checker's `BUILTINS` holds fifteen names and `contract.c`'s
+`REACHES` holds the same fifteen — `check-tables.sh` has held the two to each
+other since the table was written, so a builtin added to the language is one
+somebody has to have an opinion about in the proof. **`text` is in neither.** It
+is a conversion, like `i32(x)` and `f32(x)`, and the only conversion that copies.
+Being outside the table is what it is.
+
+*And the proof does reach it.* A `no.alloc` body that writes `text(a)` is
+`K0401` at the call, and so is one that writes `"{n}"` — a hole makes text the
+same way and is caught the same way. Both were already refused; neither had been
+weighed.
+
+*What it costs, measured.* Ten bytes gathered into a `[u8]` cost 81. The same
+ten made into text cost 92. **Eleven more: the bytes, and the nought after
+them.** That is a number rather than a direction, so the check reads it as one —
+`text` taking nine bytes of slack instead of one says `19` where eleven is
+right, which is what the hole does.
+
+*Why a number here and a direction for the five in the table.* Those five are
+held together by one run that grows an array past its block, and what they cost
+depends on how far it doubles. This one copies what it was given and nothing
+else, so there is an exact answer and no reason to accept a vaguer one. Where a
+cost is a fact, the check says the fact.
+
+*What that leaves.* Every row of the proof's table is now weighed against a run,
+and so is the one reach outside it. What is still weighed loosely is the four
+growers other than `slice`, which move together rather than one at a time — and
+`slice` remains the only one measured in both of its directions, because it is
+the only one that has two.
