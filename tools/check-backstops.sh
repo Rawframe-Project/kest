@@ -1245,6 +1245,22 @@ yield""",
         "caught": "say which type they are the layout of",
     },
     {
+        # A decision named by the log or the worklog that was never written.
+        # Every other document was held to this; the two that name decisions
+        # most were not, and the one dangling reference in the tree was in one
+        # of them. See D793.
+        "what": "a decision the log names and never wrote",
+        "file": "docs/worklog.md",
+        "from": r"""## The two documents nothing read""",
+        "to": r"""## The two documents nothing read
+
+D999 says otherwise.""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "names `D999` and no decision is written under it",
+    },
+    {
         # A function a host is given that the document never names. A host
         # reads the header and the document and nothing else, so one the
         # document does not say is one nobody will find. See D792.

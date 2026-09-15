@@ -16890,7 +16890,9 @@ compares them.
 
 Writing it, I called a variable `said`, which is what this check calls the
 directory it keeps its answers in. Two holes went missed, which is how I found
-out — the same mistake D279 is about, caught by the thing D279 asked for.
+out — a name in a check meaning two things, caught by the check that asks it
+not to. (This named `D279` twice, which is a number the log has never had; see
+D793.)
 Recorded as D338.
 
 **Runs:** `make check`, everything passing; a `K0401` with a fix and two notes,
@@ -30069,3 +30071,43 @@ true. `docs/decisions.md` is held only to being append-only and to naming what
 it supersedes. Seven hundred and ninety-two entries name files, functions and
 codes; count how many of those names are still there, the way the language
 document's are.
+
+## The two documents nothing read
+
+Are the names in `docs/decisions.md` still there? Sixty-one file paths, all
+present. A hundred and forty-nine `kest_` functions, twelve gone — and every one
+of the twelve is named by the entry that removed it: *"`kest_defines` is gone"*,
+*"`kest_vm_run` had no callers"*. Three codes the compiler does not have, two
+withdrawn with entries saying so and one that is the number this log uses when
+it needs one that does not exist.
+
+So that check must not be built. A log is append-only so that what was decided
+stays what was decided; holding every name in it to still existing is demanding
+it be edited whenever the tree moves. A dead name in a history is the record of
+its death.
+
+What is decidable is whether a reference lands, and that was held for every
+document except the two that name decisions most — the decision log itself and
+this one. The log is clean: 790 entries, every reference lands. The worklog
+names 714 and `D279` is not one of them. The log runs D001 to D792 with exactly
+two numbers missing, D278 and D279, and a turn in the three hundreds cited D279
+twice for a rule that is D403, written a hundred turns later. Wrong when typed,
+and nothing looked for four hundred entries.
+
+The check also had to leave `check-backstops.sh` out: a hole that takes a
+decision away names one the log has not got, exactly as one that takes a code
+away names one this compiler has not, and the scan of codes beside it has
+excluded that file since it was written.
+
+That line names the rule now instead of a number that points nowhere. The gap
+stays a gap — filling it would be writing a decision into the past. Four names
+are excused with reasons: two the worklog quotes from mistakes it was recording,
+and the two missing numbers, which D793 is about. Recorded as D793.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the language document is held to being true and to naming every
+function a host is given; the decision log and the worklog are now held to their
+references landing. What no document is held to is the pipeline in `CLAUDE.md` —
+`check-tables.sh` reads it for the module list, and nothing reads the rest of
+that file. Count what CLAUDE.md claims against what the tree does.

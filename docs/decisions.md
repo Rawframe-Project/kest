@@ -22926,3 +22926,55 @@ named functions all exist, `kest_host_bind` refuses a second binding of a name,
 D786 already read. The section is accurate. What it was missing was not a wrong
 sentence but three absent ones, which is the failure mode a document has that a
 compiler does not — nothing in a program goes wrong when a page says too little.
+
+## D793: the two documents nothing read
+
+*What was asked.* Whether the names in `docs/decisions.md` are still there.
+
+*Most of them are, and the ones that are not are meant to be.* Sixty-one file
+paths, all present. A hundred and forty-nine `kest_` functions named, twelve of
+which no longer exist — and every one of the twelve is named **by the entry that
+removed it**: *"`kest_defines` is gone"*, *"`kest_vm_run` had no callers"*,
+*"`kest_ast_dump_all` printed every file's tree and nothing asked it to"*. Three
+codes named that the compiler does not have: `K0501` and `K0507` were withdrawn
+and the entries say so, and `K0399` is the number this log uses when it needs
+one that does not exist.
+
+So the check this was reaching for must not be built. A decision log is
+append-only so that what was decided stays what was decided; holding every name
+in it to still existing is demanding it be edited whenever the tree moves, which
+is the one thing its first line forbids. **A dead name in a history is the record
+of its death.**
+
+*What is decidable is whether a reference points somewhere.* An entry either
+exists or does not, and because nothing is ever removed, a reference that points
+nowhere is wrong the day it is written and stays wrong. That was already held —
+for `src`, `include`, `examples`, `lib`, `tools`, `docs/language.md` and
+`CLAUDE.md`. It was not held for the two documents that name decisions most:
+**`docs/decisions.md` itself and `docs/worklog.md`.**
+
+*And there was one.* The decision log is clean: seven hundred and ninety entries
+and every reference in it lands. The worklog names seven hundred and fourteen,
+and **`D279` is not one of them.** The log runs from D001 to D792 with exactly
+two numbers missing, D278 and D279, and a turn somewhere in the three hundreds
+cited D279 twice for a rule about a name in a check meaning two things — which
+is D403, written a hundred turns after the citation. The number was wrong when
+it was typed, and for four hundred entries nothing looked.
+
+The line now names the rule instead of a number that points nowhere, and says
+where to read about it. The gap at D278 and D279 stays a gap: two numbers were
+taken and nothing was written under them, and filling them in now would be
+writing a decision into the past.
+
+*And the check had to leave one file out, which the scan beside it already
+did.* A hole that takes a decision away has to name one the log has not got,
+the same way a hole that takes a code away names one this compiler has not. The
+scan of codes in `check-tables.sh` has excluded `check-backstops.sh` since it
+was written and says why; the scan of decisions never had to, because until now
+it did not read the file that would want it. It does now.
+
+*Two names in the worklog are not references and are excused with their
+reasons.* `D912` is `D012` mistyped, and `D915` is a check's refusal — both
+quoted by the turn that made the mistake and fixed it. A log that could not
+quote its own mistakes would have to stop recording them, which is the opposite
+of what it is for.

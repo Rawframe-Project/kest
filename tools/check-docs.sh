@@ -762,11 +762,38 @@ if entries and '**Next:**' not in entries[-1]:
 # under that number, and a wrong digit is a reader sent nowhere.
 decided = some("the decisions that are written", set(re.findall(
     r'^## (D\d+)', open('docs/decisions.md').read(), re.M)))
+# The two documents this used to leave out, which is where the one dangling
+# reference in the tree was. A decision names the ones it rests on and the
+# worklog names the one each turn recorded, and both were held to nothing:
+# `D279` was cited twice in the worklog for a rule that is `D403`, written a
+# hundred turns later, and the log has no D278 or D279 at all. See D793.
+#
+# And the names these two write *about* rather than point at, which is a thing
+# only a log does: a number it got wrong and is recording, and a number it never
+# had and is saying so. A log that could not name its own mistakes would have to
+# stop recording them. Each is named here with why, the way every list in this
+# project that excuses something is.
+WRITTEN_ABOUT = {
+    "D912": "`D012` mistyped, quoted by the turn that found and fixed it",
+    "D915": "a check's refusal naming it, quoted by the turn that fixed it",
+    "D278": "a number the log never had, which D793 is about",
+    "D279": "a number the log never had, cited once in error before D793",
+}
+# Every check but the one whose contents are broken copies of the others. A
+# hole that takes a decision away has to name one the log has not got, the same
+# way one that takes a code away names one this compiler has not -- and the
+# scan of codes one file over has left it out since it was written, for this
+# reason. See D793.
 for path in sorted(glob.glob('src/*.c') + glob.glob('src/*.h')
                    + glob.glob('include/*.h') + glob.glob('examples/*.kest')
-                   + glob.glob('lib/std/*.kest') + glob.glob('tools/*.sh')
-                   + ['docs/language.md', 'CLAUDE.md']):
+                   + glob.glob('lib/std/*.kest')
+                   + [where for where in glob.glob('tools/*.sh')
+                      if not where.endswith('check-backstops.sh')]
+                   + ['docs/language.md', 'docs/decisions.md',
+                      'docs/worklog.md', 'CLAUDE.md']):
     for name in sorted(set(re.findall(r'\bD\d{3}\b', open(path).read()))):
+        if name in WRITTEN_ABOUT:
+            continue
         if name not in decided:
             print("%s: names `%s` and no decision is written under it"
                   % (path, name))
