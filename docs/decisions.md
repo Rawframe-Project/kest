@@ -24495,3 +24495,36 @@ entry is about.
 in the wrong build, D828 found a question asked in a spelling that answers
 wrongly under half the compilers, and this found a page that named three of four
 places. The `#if`s were never the point; what was behind them was.
+
+## D830: the one of the three that answers a different question
+
+*The question.* Can a host tell a machine with no heap ceiling from one whose
+ceiling it has forgotten? Yes, and the header already says why: *"`heap_bytes`
+answers zero when there is no ceiling, because that is what no ceiling is. The
+other two are always a number, because a machine always has a stack and a
+depth."* A ceiling of nought is not a thing a host can ask for — nought is how
+it says none — so nought coming back has one meaning.
+
+The prose was right and complete. What was missing was anybody asking.
+
+*What `kest_allowed` actually is.* Two of the three numbers it fills are what
+the machine worked out; the third is what the host wrote down. A host reading
+all three the same way is wrong about one of them, and it is the one with no
+other way to be checked: `kest_heap_used` is a number without a scale until the
+ceiling beside it is readable, so the ceiling is the only thing that gives the
+heap a scale and nothing held it.
+
+*Held from both sides, by the two hosts.* `examples/least.c` writes a ceiling
+and refuses unless the machine gives it back, to the byte, beside the two it
+already held. `examples/embed.c` makes a machine having said nothing about the
+heap and refuses unless that one answers nought — and unless the two beside it
+answer something, which is the other half of the same sentence.
+
+*Two holes on one line, because it is one line with two ways to be wrong.* A
+ceiling forgotten reads as no ceiling; no ceiling answered as a number is a host
+told it has a budget it never asked for, watching a frame against it, and
+stopping a program that was inside everything it was given.
+
+*What this is the end of.* `kest_allowed` was the last door in the machine that
+a host reads and nothing checked. Every number a host can ask a machine for is
+now held to being the number it was given.

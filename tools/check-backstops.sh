@@ -184,6 +184,34 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # The ceiling a host wrote, forgotten by the door that reads a machine
+        # back. Two of the three numbers there are what the machine worked
+        # out and the third is what the host asked for, so this is the one a
+        # host cannot check against anything else — `kest_heap_used` is a
+        # number without a scale until the ceiling beside it is readable.
+        # See D830.
+        "what": "a machine that forgets the ceiling it was given",
+        "file": "src/vm.c",
+        "from": r"""    limits->heap_bytes = runtime->heap_bytes;""",
+        "to": r"""    limits->heap_bytes = 0;""",
+        "make": ["kest", "least"],
+        "host": "examples/least",
+        "caught": "frames and",
+    },
+    {
+        # And a machine with no ceiling answering one. Nought is what no
+        # ceiling is, so a number there is a host told it has a budget it
+        # never asked for — and one that watches a frame against it stops a
+        # program that was inside everything it was given. See D830.
+        "what": "a machine with no ceiling answering a number",
+        "file": "src/vm.c",
+        "from": r"""    limits->heap_bytes = runtime->heap_bytes;""",
+        "to": r"""    limits->heap_bytes = runtime->heap_bytes + 1;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "said nothing about the heap was given",
+    },
+    {
         # A place the compiler looks for the library that nobody is told
         # about. The README is the one page a person reads before they have a
         # working `kest`, and a place it does not name is a place nobody knows

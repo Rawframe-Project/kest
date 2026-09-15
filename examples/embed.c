@@ -5939,6 +5939,20 @@ int main(int argc, char **argv) {
         asking.rule = kest_entry(given, "rule");
         KestLimits was_given = {0, 0, 0};
         kest_allowed(given, &was_given);
+        // And the heap, which this host said nothing about: nought is what no
+        // ceiling is, and the two beside it are always a number because a
+        // machine always has a stack and a depth. One of the three answers
+        // what a host wrote and the other two what the machine worked out, so
+        // a host reading all three the same way is wrong about one. See D830.
+        if (was_given.heap_bytes != 0 || was_given.stack_slots == 0 ||
+            was_given.call_depth == 0) {
+            fprintf(stderr,
+                    "a host that said nothing about the heap was given %zu "
+                    "bytes, %u slots and %u frames\n",
+                    was_given.heap_bytes, was_given.stack_slots,
+                    was_given.call_depth);
+            return 1;
+        }
         if (was_given.stack_slots >= KEST_STACK_SLOTS ||
             was_given.call_depth >= KEST_CALL_DEPTH) {
             fprintf(stderr, "a host that said nothing was given %u slots and "

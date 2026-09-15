@@ -355,14 +355,20 @@ int main(int argc, char **argv) {
     if (asked_for.stack_slots > 0) {
         KestLimits was_given = {0, 0, 0};
         kest_allowed(runtime, &was_given);
+        // The heap beside them, which is the one of the three a machine has
+        // no number of its own for: what comes back is the ceiling this host
+        // wrote or nought where it wrote none, and nought is what no ceiling
+        // is. Read here because this host wrote one. See D830.
         if (was_given.stack_slots != asked_for.stack_slots ||
             was_given.call_depth != asked_for.call_depth ||
+            was_given.heap_bytes != asked_for.heap_bytes ||
             was_given.stack_slots >= KEST_STACK_SLOTS) {
             fprintf(stderr,
-                    "a machine asked for %u slots and %u frames was given %u "
-                    "and %u\n",
+                    "a machine asked for %u slots, %u frames and %zu bytes "
+                    "was given %u, %u and %zu\n",
                     asked_for.stack_slots, asked_for.call_depth,
-                    was_given.stack_slots, was_given.call_depth);
+                    asked_for.heap_bytes, was_given.stack_slots,
+                    was_given.call_depth, was_given.heap_bytes);
             kest_runtime_free(runtime);
             kest_build_free(build);
             return 1;

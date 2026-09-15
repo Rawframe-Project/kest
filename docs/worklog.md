@@ -31464,3 +31464,41 @@ sets and nothing reads back: `heap_bytes` is what a host allowed, and
 `kest_allowed` answers it — but a machine made with no ceiling answers nought,
 which is also what a ceiling of nought means. Find whether a host can tell a
 machine with no ceiling from one whose ceiling it has forgotten.
+
+## The one of the three that answers a different question
+
+Can a host tell a machine with no heap ceiling from one whose ceiling it has
+forgotten? Yes, and the header says why: heap_bytes answers zero when there is
+no ceiling, because that is what no ceiling is, and the other two are always a
+number. A ceiling of nought is not a thing a host can ask for — nought is how it
+says none — so nought coming back has one meaning. The prose was right and
+complete; what was missing was anybody asking.
+
+Two of the three numbers `kest_allowed` fills are what the machine worked out
+and the third is what the host wrote down, so a host reading all three the same
+way is wrong about one — and it is the one with no other way to be checked,
+because `kest_heap_used` is a number without a scale until the ceiling beside it
+is readable.
+
+Held from both sides by the two hosts. `examples/least.c` writes a ceiling and
+refuses unless the machine gives it back to the byte, beside the two it already
+held. `examples/embed.c` makes a machine having said nothing about the heap and
+refuses unless that one answers nought, and unless the two beside it answer
+something.
+
+Two holes on one line, because it is one line with two ways to be wrong: a
+ceiling forgotten reads as no ceiling, and no ceiling answered as a number is a
+host told it has a budget it never asked for, watching a frame against it and
+stopping a program that was inside everything it was given.
+
+`kest_allowed` was the last door in the machine that a host reads and nothing
+checked. Every number a host can ask a machine for is now held to being the
+number it was given. Recorded as D830.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** every number a host reads is held; what a host *writes* is not. A
+frame is the other half of the boundary — `kest_frame_fills` and
+`kest_frame_reads` say what a host promises about the slots it writes and reads,
+and `kest_takes_text` writes them itself. Read what each says a host may do
+against what the machine does with a frame that breaks it.
