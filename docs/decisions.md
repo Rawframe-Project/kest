@@ -23110,3 +23110,56 @@ against a description of the machine, not the machine. The table is right today
 and was right when it was written; what was missing is the line that says so
 out of a run. Every other builtin in that table is in the same position, and
 this closes one of them — the one eight library functions stand on.
+
+## D797: the whole table, against a run
+
+*What the proof rests on.* `contract.c` holds fifteen builtins and what each
+reaches. Five of them reach the heap — `add`, `array`, `push`, `slice`,
+`store` — and ten do not: `clear`, `find`, `get`, `hash`, `len`, `matches`,
+`pop`, `remove`, `rest`, `set`. Every `no.alloc` promise this language proves is
+proved against that list.
+
+*What had been measured.* Three rows. `slice` both ways round, because a cut
+that reaches the end is free and a shorter one is not, and `check-commands.sh`
+has weighed all three shapes of that for some time. `rest` and `find` since
+D796. Twelve rows had never been weighed at all.
+
+*The difficulty, and the shape that solves it.* Eight of the ten that reach
+nothing cannot be reached without something that does: there is no `get` without
+a `store`, no `pop` without an `array`. So the baseline is not measuring text —
+it is **making the containers**, and the question is whether using them moves
+the number.
+
+Three runs say the whole table:
+
+| | heap | |
+| --- | --- | --- |
+| making a store, an array, and one thing in each | 305 | the baseline |
+| the same, then `set` `get` `remove` `pop` `clear` `matches` `hash` `len` | **305** | ten reach nothing |
+| the same, then pushing past the block it started in | **529** | five reach |
+
+The first two being equal is the ten; the third being bigger is the five. A row
+that stops being true moves one of the numbers, and a change that moves all
+three equally is not a change to the table — which is why the baseline makes
+the containers rather than avoiding them.
+
+*What that cost to get right.* The first break tried was an allocation in
+`count`, which none of the three programs reaches — `len` of text and `len` of
+an array are different instructions. The second was `len` itself, which all
+three call, so all three rose together and the difference the check reads did
+not move. Only a break in something the middle run alone touches shows: `clear`
+does, and the check says `369` where making cost `305`.
+
+*And two of the three sentences are held by breaking the check rather than the
+machine.* A `push` that grows without asking for memory is not a thing that can
+be written, and an array given room to spare keeps the capacity it recorded, so
+it grows anyway. What can go wrong with those two numbers is the run stopping
+short of growing, or the run they are read against going missing — so those are
+what the holes do. A hole makes what can happen happen; where the only way a
+check can stop working is the check, that is where it breaks.
+
+*What is left.* `slice` is the only row measured in both directions — free when
+it reaches the end and not when it stops sooner. The other four that reach are
+held together by the third number rather than one at a time, and `text(a)`,
+which the code handles after the table rather than in it, is not in any of this.
+Both are written here rather than left for the next reading to rediscover.

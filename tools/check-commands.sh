@@ -3247,6 +3247,84 @@ and a walk keeping what is left cost $walked_cost over ten bytes, where \
 measuring the same text cost $just_measured"
 fi
 
+# And the rest of the table the proof reads. `contract.c` says which builtins
+# reach the heap and which do not, and every promise this language makes about
+# allocation is proved against that list rather than against the machine. Ten of
+# the fifteen reach nothing and five do, and what says the machine agrees is
+# three numbers: making the containers, using them without growing them, and
+# growing one past the block it started in. The first two are the same number
+# or something in the second list is reaching; the third is bigger or something
+# in the first is not. See D797.
+mkdir "$scratch"/reaching
+cat > "$scratch"/reaching/reaching.kest <<'KEST'
+struct Thing {
+    n: i32
+}
+
+fn made(t: text) -> i32 {
+    let s: store<Thing> = store()
+    let r = add(s, Thing(len(t)))
+    let a: [i32] = array()
+    push(a, 1)
+    if let held = get(s, r) {
+        return held.n + len(a)
+    }
+    return 0
+}
+
+fn used(t: text) -> i32 {
+    let s: store<Thing> = store()
+    let r = add(s, Thing(len(t)))
+    let a: [i32] = array()
+    push(a, 1)
+    set(s, r, Thing(2))
+    let seen = 0
+    if matches(t, 0, "ab") {
+        seen += 0
+    }
+    seen += i32(hash(t)) * 0
+    if let held = get(s, r) {
+        seen = held.n
+    }
+    remove(s, r)
+    pop(a)
+    clear(a)
+    return seen + len(a)
+}
+
+fn grew(t: text) -> i32 {
+    let s: store<Thing> = store()
+    let r = add(s, Thing(len(t)))
+    let a: [i32] = array()
+    for i in 0..64 {
+        push(a, i)
+    }
+    if let held = get(s, r) {
+        return held.n + len(a)
+    }
+    return 0
+}
+KEST
+reach_heap() {
+    "$kest" call --json "$scratch"/reaching/reaching.kest "$1" abcdefghij \
+        2>/dev/null </dev/null |
+        sed -n 's/.*"heap":\([0-9][0-9]*\).*/\1/p'
+}
+reach_made=$(reach_heap made)
+reach_used=$(reach_heap used)
+reach_grew=$(reach_heap grew)
+if [ -z "$reach_made" ]; then
+    complain "call --json: making what a builtin works on said nothing about \
+what it cost"
+elif [ "$reach_used" != "$reach_made" ]; then
+    complain "call: \`set\`, \`get\`, \`remove\`, \`pop\`, \`clear\`, \
+\`matches\`, \`hash\` and \`len\` cost $reach_used where making what they \
+work on cost $reach_made, and the proof says they reach nothing"
+elif [ "$reach_grew" -le "$reach_made" ]; then
+    complain "call: growing an array past its first block cost $reach_grew \
+against $reach_made for making it, and the proof says \`push\` reaches"
+fi
+
 # Text that ends in the middle of a character, which is what text arriving a
 # piece at a time does. The library counts a character by its first byte, so
 # the last one of a half-read line says it is three bytes wide when two are

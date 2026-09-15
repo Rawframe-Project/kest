@@ -30213,3 +30213,41 @@ eight library functions stand on. Recorded as D796.
 the proof rests on it. One of its rows is now held against a run. Count the rest
 — how many builtins the table names, how many reach the heap by it, and which of
 those have ever been measured doing so.
+
+## The whole table, against a run
+
+`contract.c` holds fifteen builtins and what each reaches — five reach the heap
+and ten do not — and every `no.alloc` promise is proved against that list rather
+than against the machine. Three rows had ever been weighed: `slice` both ways
+round, and `rest` and `find` since D796.
+
+Eight of the ten that reach nothing cannot be reached without something that
+does: no `get` without a `store`, no `pop` without an `array`. So the baseline is
+making the containers, and the question is whether using them moves the number.
+Three runs say the whole table: making them costs 305, using them without
+growing costs 305, growing one past its first block costs 529. The first two
+being equal is the ten; the third being bigger is the five.
+
+Getting the break right took three tries. An allocation in `count` — none of the
+three programs reaches it, since `len` of text and `len` of an array are
+different instructions. Then `len` itself — all three call it, so all three rose
+and the difference did not move. Only something the middle run alone touches
+shows: `clear` does, and the check reads 369 against 305.
+
+Two of the three sentences are held by breaking the check rather than the
+machine: a `push` that grows without asking for memory cannot be written, and an
+array given spare room keeps the capacity it recorded and grows anyway. What can
+go wrong there is the run stopping short of growing, or the run the others are
+read against going missing.
+
+Left over and written down rather than left to be rediscovered: `slice` is still
+the only row measured in both directions, the other four growers are held
+together by one number rather than one at a time, and `text(a)` is handled after
+the table rather than in it and is in none of this. Recorded as D797.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `text(a)` makes a piece of text out of bytes and is the one reach the
+proof handles outside its table, in the lines after the loop. Read what it does
+against what the table's rows do, and find whether being outside the table is
+what it is or only where it is written.

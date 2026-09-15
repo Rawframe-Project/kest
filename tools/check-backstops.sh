@@ -1245,6 +1245,55 @@ yield""",
         "caught": "say which type they are the layout of",
     },
     {
+        # The growing run stopping short of growing, so the number that says
+        # the five reaching builtins reach says nothing: an array that never
+        # leaves the block it started in costs what making it cost. See D797.
+        "what": "a run that was to grow an array and does not",
+        "file": "tools/check-commands.sh",
+        "from": r"""    for i in 0..64 {
+        push(a, i)
+    }""",
+        "to": r"""    for i in 0..1 {
+        push(a, i)
+    }""",
+        "make": [],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "and the proof says `push` reaches",
+    },
+    {
+        # The run the other two are read against, gone. Both of those are a
+        # difference from it, so without it there is nothing to differ from.
+        # See D797.
+        "what": "the run a reach is measured against, missing",
+        "file": "tools/check-commands.sh",
+        "from": r"""fn made(t: text) -> i32 {""",
+        "to": r"""fn notMade(t: text) -> i32 {""",
+        "make": [],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "said nothing about what it cost",
+    },
+    {
+        # A builtin the proof says reaches nothing, reaching. Every promise
+        # this language makes about allocation is proved against a table in
+        # `contract.c` rather than against the machine, so a row of it that
+        # stops being true is a promise kept on paper and nowhere else. See
+        # D797.
+        "what": "a builtin that reaches where the proof says it does not",
+        "file": "src/vm.c",
+        "from": r"""        case KEST_OP_CLEAR: {""",
+        "to": r"""        case KEST_OP_CLEAR: {
+            if (rt->heap != NULL && kest_arena_alloc(rt->heap, 64, 1) == NULL) {
+                no_room(vmp, frame, instruction, rt);
+                return false;
+            }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "and the proof says they reach nothing",
+    },
+    {
         # `rest` copying what it keeps instead of standing inside it. Every
         # program still answers the same; what changes is that eight of the
         # library's `no.alloc` functions reach the heap while promising not
