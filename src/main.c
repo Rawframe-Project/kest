@@ -1337,7 +1337,13 @@ static const KestLimits *room_for(KestBuild *build, const char *const *entries,
     bool asked = false;
     for (uint32_t i = 0; entries != NULL && entries[i] != NULL; i++) {
         KestLimits one = {0, 0, 0};
-        if (kest_needs_of(build, entries[i], &one, &why)) {
+        // The least where the name has one and a bound where it has not, which
+        // is one question rather than two: a name that reaches itself used to
+        // throw away the answers for the names beside it and for itself, and
+        // what the machine did instead was bound the whole file. Nought frames
+        // is as many as usual, which is the ceiling this command line has
+        // always run with. See D822.
+        if (kest_bound_of(build, entries[i], 0, &one, &why)) {
             asked = true;
             if (one.stack_slots > least->stack_slots) {
                 least->stack_slots = one.stack_slots;

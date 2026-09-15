@@ -4996,6 +4996,50 @@ case "$real" in
     printf '%s\n' "$real" | sed 's/^/    /' | head -4
     ;;
 esac
+# And the machine the command line makes for the names it drives, which is
+# sized from those names and not from the file they are in. One entry with no
+# least used to throw away the answers for the ones beside it, and the machine
+# fell back to bounding everything the file defines — so a body nothing either
+# entry reaches was in the number. The two programs below differ by one of
+# those, so the machine has to come out the same size. See D822.
+mkdir "$scratch"/driven
+for spare in "" "
+fn spare() -> i64 no.alloc {
+    return wide(7, 8) + wide(9, 10)
+}
+"; do
+    cat > "$scratch"/driven/ticks.kest <<KEST
+fn wide(a: i64, b: i64) -> i64 no.alloc {
+    return (a * 2 + (b * 3 + (a * 4 + (b * 5 + (a * 6 + (b * 7 +
+           (a * 8 + (b * 9 + (a * 10 + (b * 11 + (a * 12 + b)))))))))))
+}
+
+fn onEvents(events: [i64]) -> i64 no.alloc {
+    let total: i64 = 0
+    for one in events {
+        total += wide(one, 2)
+    }
+    return total
+}
+
+fn onEvent(one: i64) -> i64 no.alloc {
+    if one <= 0 {
+        return 0
+    }
+    return onEvent(one - 1) + 1
+}
+$spare
+KEST
+    driven=$("$kest" tick "$scratch"/driven/ticks.kest 4 --json 2>&1 </dev/null |
+             sed -n 's/.*"machine":{"bytes":[0-9]*,"slots":\([0-9]*\).*/\1/p' |
+             head -1)
+    driven_first=${driven_first:-$driven}
+    if [ -z "$driven" ] || [ "$driven_first" != "$driven" ]; then
+        complain "tick: a machine for the names this drives is $driven_first \
+slots and the same program with a body neither of them reaches is $driven"
+    fi
+done
+
 # What a refusal says about the shape of a bound, which is about the call the
 # host made and not about the file it was made from. A program that runs out of
 # frames is told so much a frame and so much whatever the frames; the second of

@@ -24201,3 +24201,39 @@ way — and one complaint is one thing to have watched this say.
 `kest_bound_from`, D812 for a body's own room, and this. Each time the same
 sentence: a number worked out over more of the program than the question was
 about is a number the asker cannot use.
+
+## D822: the command line sizes what it runs from the names it runs
+
+*The last of the four askers.* D817 to D821 gave a host a bound where it had
+none, and left the command line — which is a host, and the one every reader
+meets first — asking the old question. `room_for` calls `kest_needs_of` for each
+name it drives and takes the largest; a name with no answer made it give up on
+**all** of them, including the ones that had answered, and what ran instead was
+a machine bounding everything the file defines.
+
+*One question instead of two.* `kest_bound_of` with nought frames — as many as
+usual, which is the ceiling this command line has always run with — answers the
+least where there is one and the bound where there is not. So every name gets a
+number and the largest is what runs.
+
+*Measured on a file with one of each.* `onEvents` has a least and `onEvent`
+reaches itself:
+
+```
+before   3095 slots, 49616 bytes
+after    3072 slots, 49432 bytes
+```
+
+The twenty-three are a body neither entry reaches. On `examples/least.kest`,
+where `main` reaches three of the five bodies, 3081 becomes 3078.
+
+*Held without a number.* `tools/check-commands.sh` ticks that file, then the
+same file with a body neither entry reaches added, and refuses unless the
+machine comes out the same size. What the size is depends on the program; that
+adding something unreachable does not change it does not.
+
+*Where the four askers stand now.* The engine host, the smallest host, the
+command line and the machine's own refusal all ask about the names they call and
+all get a number. The thing that took five entries to get right was not the
+arithmetic — D816 settled that — but that every one of them was asking about
+more of the program than it was going to run.

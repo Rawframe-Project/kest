@@ -31170,3 +31170,38 @@ command line asks about several — `room_for` calls `kest_needs_of` per entry a
 takes the largest, and gives up on all of them when one has no answer. Have it
 fall back to `kest_bound_of` for the ones that do, and size what it runs from
 the names it names.
+
+## The command line sizes what it runs from the names it runs
+
+D817 to D821 gave a host a bound where it had none and left the command line —
+which is a host, and the one every reader meets first — asking the old question.
+`room_for` calls `kest_needs_of` for each name it drives and takes the largest; a
+name with no answer made it give up on all of them, including the ones that had
+answered, and what ran instead was a machine bounding everything the file
+defines.
+
+`kest_bound_of` with nought frames — as many as usual, the ceiling this command
+line has always run with — answers the least where there is one and the bound
+where there is not, so every name gets a number and the largest is what runs. On
+a file where `onEvents` has a least and `onEvent` reaches itself: 3095 slots and
+49616 bytes before, 3072 and 49432 after, the twenty-three being a body neither
+entry reaches. On `examples/least.kest`, 3081 becomes 3078.
+
+`check-commands.sh` ticks that file, then the same file with a body neither
+entry reaches added, and refuses unless the machine comes out the same size —
+what the size is depends on the program, and that adding something unreachable
+does not change it does not.
+
+The engine host, the smallest host, the command line and the machine's own
+refusal all ask about the names they call now, and all get a number. What took
+five entries to get right was not the arithmetic, which D816 settled, but that
+every one of them was asking about more of the program than it was going to run.
+Recorded as D822.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `kest_needs` is the one door left asking about the whole program, and
+for a good reason — it is the question a host with no names asks. But it still
+answers false where a bound exists, and the machine behind it works one out
+anyway. Give it the same shape as the other two: the least where there is one, a
+bound where there is not, and `why` saying which.

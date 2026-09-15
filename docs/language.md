@@ -3434,6 +3434,11 @@ needs 902 slots and 301 frames
 needs a number a host picks: `shapes.kept#...` calls through a value
 ```
 
+The command line sizes what it runs from the names it calls, asking the least
+where a name has one and a bound where it has not. A name with neither used to
+leave it sizing from everything the file defines, which put the bodies nothing
+it calls reaches into the number.
+
 The second line is there for each of `main`, `onEvents` and `onEvent` the file
 has, when what it needs is less than the whole — those three because they are
 the ones a command line calls. A host with its own names asks `kest_needs_of`

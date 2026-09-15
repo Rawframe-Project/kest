@@ -184,6 +184,22 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A machine sized from the file rather than from the names the command
+        # line drives. One entry with no least used to throw away the answers
+        # for the ones beside it and for itself, and what ran instead was a
+        # bound over everything the file defines — a body neither entry
+        # reaches, in the number, and nothing saying so because the machine is
+        # only ever too big. See D822.
+        "what": "a machine sized from the file rather than the names driven",
+        "file": "src/main.c",
+        "from": r"""        if (kest_bound_of(build, entries[i], 0, &one, &why)) {""",
+        "to": r"""        if (kest_needs_of(build, entries[i], &one, &why)) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "and the same program with a body neither of them reaches",
+    },
+    {
         # The shape of a bound, said about the whole file rather than about
         # the call the host made. A host sizing a machine for one name asks
         # about that name; a refusal answering about everything the file
