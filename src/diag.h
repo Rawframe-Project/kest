@@ -99,6 +99,15 @@ typedef struct {
     // on the last one recorded, and one offered after a refusal that was not
     // kept would go on somebody else's. See D618.
     bool held_back;
+    // And what it was trying to say when it ran out, written here rather than
+    // in the arena it ran out of. A run stopped by a ceiling used to answer
+    // `there was not enough memory to finish` — true of the message it could
+    // not write, and not what happened to the program. The code and the words
+    // are the ones the stage was about to say, cut where they stop fitting,
+    // because a sentence half said is more than no sentence at all. Empty
+    // until something is lost. See D848.
+    char last_code[8];
+    char last_words[192];
 } KestDiags;
 
 

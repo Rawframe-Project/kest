@@ -32153,3 +32153,47 @@ Recorded as D847.
 are and under the same ceiling, so a program that runs out of heap near the wall
 has no room left to say which wall it met. Keep enough back for the last message
 — a run that ran out should always be able to say what it ran out of.
+
+## What a run was about to say when it ran out
+
+A diagnostic is words written into the arena the stage is working in, so a run
+with none of that arena left kept one bit — *there was not enough memory to
+finish* — and threw the words away. A program with something wrong with it,
+compiled under a ceiling too small to write the message in, answered about this
+machine and said nothing about the program.
+
+The words are kept in the list itself now: eight bytes of code and a hundred
+and ninety-two of sentence, written into `KestDiags` rather than into the arena
+it ran out of, cut where they stop fitting. The first one lost is the one kept,
+because what stopped a run is the first thing it could not say. Both renderers
+say it before they say there was no room:
+
+```
+error[K0301]: unknown type `Nope`
+error[K0658]: this has taken 6150 of the 6200 bytes it was given, and wanted 646 more
+```
+
+where there used to be only the second line.
+
+A correction goes with it. The last entry said that near the bottom of its band
+a run said `K0658` where `K0617` would be more use because it had no room to
+write the message. That was a guess and it was wrong: those rungs are the build
+running out before the program runs at all, and the numbers say so — `taken
+13420 of the 16260 and wanted 3972 more` is a compiler that never started a
+machine. The case this entry is about is reached by a program that is wrong,
+not by one that is big.
+
+Held over sixteenths rather than halves, because the band is the one between
+reading a file and writing what is wrong with it and halving walks over it: six
+rungs of sixteen say both codes.
+
+Recorded as D848.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `--room` says it is the most a command may ask for, all of it, and it
+is not: the build keeps its own ceiling while the program runs, so after the
+heap is given what is left, the build still has that much of its own to spend —
+a run can reach half as much again as it was allowed. Hold the number to what
+it says: give the heap the rest and lower the build to what it has, with only
+enough kept back for the last message.

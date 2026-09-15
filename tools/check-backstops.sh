@@ -590,8 +590,10 @@ fn main() -> i32 {
         # something the other does not. See D843.
         "what": "a ceiling said in words and not in JSON",
         "file": "src/diag.c",
-        "from": r"""                diags->count > 0 ? "," : "", starved_code(diags));""",
-        "to": r"""                diags->count > 0 ? "," : "", KEST_STARVED_CODE);""",
+        "from": r"""        fprintf(out, "{\"severity\":\"error\",\"code\":\"%s\",\"message\":",
+                starved_code(diags));""",
+        "to": r"""        fprintf(out, "{\"severity\":\"error\",\"code\":\"%s\",\"message\":",
+                KEST_STARVED_CODE);""",
         "make": ["kest", "debug"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -3086,6 +3088,27 @@ for file in "$@"; do""",
         "tool": "tools/check-ceilings.sh",
         "arguments": [],
         "caught": "and one of the two is not there",
+    },
+    {
+        # What a run was about to say, thrown away because there was no room to
+        # write it. A diagnostic is words written into the arena the stage is
+        # working in, and a run with none of it left kept the bit that says so
+        # and nothing else — so a program with something wrong with it,
+        # compiled under a ceiling too small to write the message in, answered
+        # that this machine was out of memory and said nothing about the
+        # program. See D848.
+        "what": "the last thing a run was trying to say, thrown away",
+        "file": "src/diag.c",
+        "from": r"""    if (diags == NULL || diags->last_code[0] != '\0') {
+        return;
+    }""",
+        "to": r"""    if (true) {
+        return;
+    }""",
+        "make": [],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "is kept nowhere",
     },
     {
         # A machine told how much heap it may have and not holding it to any.

@@ -203,8 +203,24 @@ void kest_diags_init(KestDiags *diags, KestArena *arena) {
     diags->most = 0;
     diags->not_said = 0;
     diags->held_back = false;
+    diags->last_code[0] = '\0';
+    diags->last_words[0] = '\0';
 }
 
+
+// What a run was trying to say when it found it had nowhere to say it. Kept in
+// the list itself, which is the one place a run with no room left still has:
+// the first one to be lost is the one kept, because what stopped a run is the
+// first thing it could not say and everything after it is a consequence. See
+// D848.
+static void keep_the_last_words(KestDiags *diags, const char *code,
+                                const char *format, va_list args) {
+    if (diags == NULL || diags->last_code[0] != '\0') {
+        return;
+    }
+    snprintf(diags->last_code, sizeof diags->last_code, "%s", code);
+    vsnprintf(diags->last_words, sizeof diags->last_words, format, args);
+}
 
 void kest_diags_starve(KestDiags *diags) {
     if (diags == NULL || diags->starved) {
@@ -292,14 +308,20 @@ void kest_diags_addv(KestDiags *diags, KestSeverity severity,
         return;
     }
     if (!diags_reserve(diags)) {
+        keep_the_last_words(diags, code, format, args);
         kest_diags_starve(diags);
         return;
     }
+    va_list again;
+    va_copy(again, args);
     char *message = format_into(diags->arena, format, args);
     if (message == NULL) {
+        keep_the_last_words(diags, code, format, again);
+        va_end(again);
         kest_diags_starve(diags);
         return;
     }
+    va_end(again);
     add_formatted(diags, severity, code, span, message);
 }
 
@@ -311,16 +333,22 @@ void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,
     if (!room_to_keep(diags)) {
         return;
     }
+    va_list args;
     if (!diags_reserve(diags)) {
+        va_start(args, format);
+        keep_the_last_words(diags, code, format, args);
+        va_end(args);
         kest_diags_starve(diags);
         return;
     }
 
-    va_list args;
     va_start(args, format);
     char *message = format_into(diags->arena, format, args);
     va_end(args);
     if (message == NULL) {
+        va_start(args, format);
+        keep_the_last_words(diags, code, format, args);
+        va_end(args);
         kest_diags_starve(diags);
         return;
     }
@@ -701,6 +729,13 @@ void kest_diags_render(const KestDiags *diags, FILE *out) {
     // out is what it managed to say, and then that there was more. When there
     // is nothing above it, it is the whole of what happened.
     if (diags->starved) {
+        // What it was about to say, before what it says about having had
+        // nowhere to say it. A reader wants the program's problem first and
+        // this machine's second, and the second without the first is a reader
+        // sent to buy memory for a program that was over its own ceiling.
+        if (diags->last_code[0] != '\0') {
+            kest_diags_say_one(out, false, diags->last_code, diags->last_words);
+        }
         char room[160];
         kest_diags_say_one(out, false, starved_code(diags),
                            starved_says(diags, room, sizeof room));
@@ -829,10 +864,22 @@ void kest_diags_write_json(const KestDiags *diags, FILE *out) {
     }
     if (diags->starved) {
         // Written out here rather than made and put in the list, because
-        // making one is what there was no room for.
+        // making one is what there was no room for. Two of them where there
+        // are two things to say: what it was about to say, and that it had
+        // nowhere to say it. See D848.
         char room[160];
-        fprintf(out, "%s{\"severity\":\"error\",\"code\":\"%s\",\"message\":",
-                diags->count > 0 ? "," : "", starved_code(diags));
+        if (diags->last_code[0] != '\0') {
+            fprintf(out,
+                    "%s{\"severity\":\"error\",\"code\":\"%s\",\"message\":",
+                    diags->count > 0 ? "," : "", diags->last_code);
+            kest_json_text(diags->last_words, out);
+            fputc('}', out);
+            fputc(',', out);
+        } else {
+            fputs(diags->count > 0 ? "," : "", out);
+        }
+        fprintf(out, "{\"severity\":\"error\",\"code\":\"%s\",\"message\":",
+                starved_code(diags));
         kest_json_text(starved_says(diags, room, sizeof room), out);
         fputc('}', out);
     }

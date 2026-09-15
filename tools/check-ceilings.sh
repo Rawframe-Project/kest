@@ -570,6 +570,46 @@ else
     done
 fi
 
+# And what a run says when it has no room left to say anything with. A
+# diagnostic is words written into the arena the stage is working in, so a
+# program with something wrong with it, compiled in a ceiling too small to
+# write the message in, used to answer that there was not enough memory —
+# which is true of the message and says nothing about the program. It says
+# both now: the words it was about to say, kept in the list itself where a run
+# with nothing left still has somewhere to put them, and then that it ran out.
+#
+# Sixteenths rather than halves, because the band this happens in is the one
+# between reading the file and writing what is wrong with it, and halving walks
+# straight over it. See D848.
+cat > "$work/wrong.kest" <<'KEST'
+fn main() -> i32 {
+    let x: Nope = 1
+    return 0
+}
+KEST
+wrong_costs=$(costs_of "$work/wrong.kest")
+if [ -z "$wrong_costs" ] || [ "$wrong_costs" -le 16 ]; then
+    echo "ceilings: a program written here to be walked down a ceiling of its" \
+         "own says nothing about what compiling it costs"
+    failed=1
+else
+    told=0
+    rung=$wrong_costs
+    while [ "$rung" -gt 0 ]; do
+        said=$(./kest check --room $rung "$work/wrong.kest" 2>&1 </dev/null)
+        case "$said" in
+        *"K0301"*"K06"*) told=$((told + 1)) ;;
+        esac
+        rung=$((rung - wrong_costs / 16))
+    done
+    if [ "$told" -eq 0 ]; then
+        echo "ceilings: no rung of a program with something wrong with it was" \
+             "refused for room and still said what was wrong, so what a run" \
+             "was about to say when it ran out is kept nowhere"
+        failed=1
+    fi
+fi
+
 reached=0
 # Each of the three, and the words it has to say: the number a program can be
 # told it has, at the line that asked for one more.
@@ -1745,7 +1785,8 @@ if [ $failed -eq 0 ]; then
          "$walked_down rung(s) over $walked_over of them, each either saying" \
          "what it says with no ceiling at all or naming the refusal it met," \
          "and what a handler keeps between the frames it is called in held" \
-         "from both sides over $framed_rungs rung(s) —" \
+         "from both sides over $framed_rungs rung(s), and $told rung(s) where" \
+         "a run with no room to write what was wrong wrote it anyway —" \
          "all of it measured on the machine this ran on"
 fi
 exit $failed

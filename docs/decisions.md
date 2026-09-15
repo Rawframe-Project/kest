@@ -25233,3 +25233,42 @@ only thing that catches it is a number somebody reads.
 
 *Held* by two holes: a heap given a ceiling and capped at none, and a heap kept
 between frames that was to be thrown away.
+
+## D848: what a run was about to say when it ran out
+
+A diagnostic is words written into the arena the stage is working in. A run with
+none of that arena left kept one bit — *there was not enough memory to finish* —
+and threw the words away, so a program with something wrong with it, compiled
+under a ceiling too small to write the message in, answered about this machine
+and said nothing about the program.
+
+*The words are kept where the list is.* Eight bytes of code and a hundred and
+ninety-two of sentence, written into `KestDiags` itself rather than into the
+arena it ran out of, cut where they stop fitting — a sentence half said is more
+than no sentence at all. The first one lost is the one kept: what stopped a run
+is the first thing it could not say, and everything after it is a consequence.
+Both renderers say it before they say that there was no room, because a reader
+wants the program's problem first and this machine's second, and the second
+without the first sends somebody to buy memory for a program that was over its
+own ceiling.
+
+```
+error[K0301]: unknown type `Nope`
+error[K0658]: this has taken 6150 of the 6200 bytes it was given, and wanted 646 more
+```
+
+Both lines, where there used to be only the second.
+
+*And a correction.* D847 said that near the bottom of its band the run without
+`--reset` said `K0658` where `K0617` would be more use, because it met the heap
+ceiling and had no room left to write the diagnostic. That was a guess and it
+was wrong. Those rungs are the build running out *before the program runs at
+all* — the numbers say so plainly: `this has taken 13420 of the 16260 bytes it
+was given, and wanted 3972 more`, which is a compiler that never started a
+machine. The case this entry is about is the one above, and it is reached by a
+program that is wrong rather than by one that is big.
+
+*Held* over sixteenths rather than halves, because the band this happens in is
+the one between reading a file and writing what is wrong with it, and halving
+walks straight over it: six rungs of sixteen say both codes. One hole — the last
+thing a run was trying to say, thrown away.
