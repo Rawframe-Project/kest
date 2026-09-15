@@ -29845,3 +29845,34 @@ The roadmap says types, compile, value, vm, and the machine has not been touched
 in nine. Read `docs/language.md` on what a program does when it runs — the
 ceilings, the faults, what a host is told — against what `vm.c` does, the way
 D777 read the rest of it, and find the first place they part.
+
+## Where a rule is checked is where it bites
+
+The same reading D777 gave the rest of `docs/language.md`, given to what a
+program does when it runs. Every claim holds: `main` taking something is
+`K0348`, giving `bool` is `K0347`, two of them `K0355`, answering 300 `K0618` in
+those words; the heap ceiling is `K0617` and the machine running out `K0605`,
+both walked at every rung by `check-ceilings.sh`.
+
+The search was wrong twice. `KEST_MOST_UNREAD` and the sentence counting what a
+machine did not keep both looked unchecked, because grepping `tools/` and `src/`
+found them in neither. Both are checked in `examples/embed.c` — the host that
+decides what a host has to keep. A rule about what a host is told cannot be held
+by a tool that runs the compiler: a command that refuses stops, and what stops
+says one thing, so a command never meets the ceiling. Looking in `tools/` finds
+the rules a command can reach and misses every rule only a host can.
+
+One thing was genuinely unread: `notKept`, the count in the form a tool reads
+rather than the sentence a person does. The machine wrote it and nothing had
+ever asked for it. It is read now, in the host that already asks the other two,
+and asks only what they do not. Three holes were needed to find that out — the
+first two were caught by checks that already existed, which is the test of
+whether a new check was worth adding. Recorded as D786.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the machine has `notKept` read now and the two ceilings held. What a
+host is told when it asks for something it may not have is `K0613`, and what it
+is told when it asks for a name it has not got is `K0644`. Count the K06xx codes
+against the ones a host or a command has ever been made to say, the way the
+K05xx warnings were counted, and find the ones nothing has ever seen said.

@@ -22620,3 +22620,47 @@ fails, the types by the machine packing a value, the globals by a caller naming
 a function, the source by every message. The last third is the structures the
 rest hang off and the names made by joining a module to a declaration, and it is
 a third because a build holds little, not because something is hiding in it.
+
+## D786: where a rule is checked is where it bites
+
+*The document read against the machine.* D777 read the prose of
+`docs/language.md` against the compiler and found forty-nine claims all true.
+This is the same reading of what a program does when it *runs*: the shape `main`
+is held to, what an exit status can carry, the two ceilings a host meets, what a
+machine says when it has been told and not read.
+
+Every one of them holds. `main` taking something is `K0348`, giving `bool` is
+`K0347`, two of them is `K0355`, answering 300 is `K0618` and says so in those
+words. The heap ceiling is `K0617` and the machine running out is `K0605`, and
+both are walked by `check-ceilings.sh` at every rung of a ladder.
+
+*And a search that was wrong twice.* Grepping `tools/` and `src/` for
+`KEST_MOST_UNREAD` found it in the machine and in the header and in no check,
+and the same for the sentence that counts what a machine did not keep. Both
+looked unchecked. Both are checked — in `examples/embed.c`, which is the host
+that decides what a host has to keep.
+
+That is not an oversight in the search so much as the wrong idea of where a
+check lives. A rule about what a host is told cannot be held by a tool that runs
+the compiler: **a command that refuses stops, and what stops says one thing**, so
+a command never meets the ceiling at all. The only reader that can is a host,
+and the host is where the check is. The lesson is the heading: looking for a
+rule's check in `tools/` finds the rules that a command can reach, and misses
+every rule that only a host can.
+
+*One thing was genuinely not read.* `notKept` — the count of what a machine did
+not keep, in the form a tool reads rather than the sentence a person does.
+Nothing in the tree had ever asked for it. The ceiling is held by what two
+hundred unread refusals cost in memory; the words are held by a refusal naming
+`more since`; the same number in JSON was written by the machine and read by
+nobody.
+
+It is read now, in the host that already asks the other two, and beside them
+rather than instead of them: the block asks only the question the other two do
+not, which is what stopped it from being a third copy of a check that exists.
+
+*What that cost to find.* Three attempts at a hole. The first broke the ceiling
+and was caught by the memory check; the second broke the words and was caught by
+the refusal check. Only the third — the name in the JSON changed — is caught by
+the new block and by nothing else, which is the test of whether a check was
+worth adding at all.

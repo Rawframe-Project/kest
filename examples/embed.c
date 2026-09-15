@@ -303,6 +303,37 @@ static void engine_decide(KestValue *frame, KestRuntime *runtime,
                     refused);
             _Exit(1);
         }
+        // The count of what nobody read, in the form that gives it a name
+        // rather than a sentence. What a machine keeps of what nobody asks
+        // for, and the words it counts the rest in, are both held below --
+        // by what two hundred unread refusals cost and by a refusal naming
+        // `more since`. `notKept` is the same number in the other form, and
+        // no command writes it: a command that refuses stops, and what stops
+        // says one thing. So a host is the only reader it has. See D786.
+        FILE *again = tmpfile();
+        if (again == NULL) {
+            fprintf(stderr, "this host has nowhere to read a report back\n");
+            _Exit(1);
+        }
+        for (uint32_t asking = 0; asking < KEST_MOST_UNREAD + 4; asking++) {
+            kest_heap_reset(runtime);
+        }
+        kest_report(runtime, again, KEST_FORM_JSON);
+        rewind(again);
+        bool named_the_rest = false;
+        while (fgets(line, sizeof(line), again) != NULL) {
+            if (strstr(line, "\"notKept\":4") != NULL) {
+                named_the_rest = true;
+            }
+        }
+        fclose(again);
+        if (!named_the_rest) {
+            fprintf(stderr,
+                    "a host that never read was not told in JSON how many "
+                    "more there were than the %u kept\n",
+                    (unsigned)KEST_MOST_UNREAD);
+            _Exit(1);
+        }
         // What this host does about the false is come back when this call
         // returns and ask again, which is the only thing that makes the
         // refusal stop. It does that at the end of this file.

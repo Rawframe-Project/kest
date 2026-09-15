@@ -1245,6 +1245,21 @@ yield""",
         "caught": "say which type they are the layout of",
     },
     {
+        # The count of what a machine did not keep, left out of JSON. The
+        # ceiling itself and the words it counts the rest in are both held in
+        # the same host already -- by what two hundred unread refusals cost,
+        # and by a refusal naming `more since`. This is the same number in the
+        # form a tool reads, and no command writes it: a command that refuses
+        # stops, and what stops says one thing. See D786.
+        "what": "a count of what was not kept, left out of JSON",
+        "file": "src/diag.c",
+        "from": r"""        fprintf(out, ",\"notKept\":%u", diags->not_said);""",
+        "to": r"""        fprintf(out, ",\"notSaid\":%u", diags->not_said);""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "was not told in JSON how many",
+    },
+    {
         # A part of what a build holds counted twice, which makes the parts
         # come to more than the whole and the breakdown say nothing. See D784.
         "what": "a part of what a build holds counted twice",
