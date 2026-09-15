@@ -184,6 +184,26 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A number a host answers a crossing with, taken without being weighed
+        # against the width the program keeps it at. The walk over what came
+        # back reads the slots that hold something this machine made and
+        # stepped over the ones the host wrote — which are the numbers, and a
+        # slot is sixty-four bits where an `i32` is thirty-two. The same walk
+        # is what reads a shape a host hands in, so this is both ways at once.
+        # See D837.
+        "what": "a number answered wider than the field it goes in",
+        "file": "src/vm.c",
+        "from": r"""    if (type->tag == KEST_T_INT) {
+        int64_t given = frame[*at].integer;
+        if (kest_narrow_to(kest_scalar_of(type), given) != given) {""",
+        "to": r"""    if (type->tag == KEST_T_INT) {
+        int64_t given = frame[*at].integer;
+        if (kest_narrow_to(kest_scalar_of(type), given) != given && false) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "too wide for its field was answered with",
+    },
+    {
         # A number a host wrote, taken without being weighed against the width
         # of the slot it went into. A slot is sixty-four bits and an `i32` is
         # thirty-two, so a host that writes more is a program counting in a

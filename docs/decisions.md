@@ -24735,3 +24735,41 @@ cannot be wrong, and a float is not a width the same way. Only `i8`, `i16`,
 *Held.* `examples/embed.c` writes `1 << 40` into an `i32` and refuses unless the
 machine says `K0636`. And the header says what a host is held to, which is what
 the program is held to: narrow what you write the way `u8(n)` does.
+
+## D837: the same weighing at the other end, and the field D836 stepped over
+
+*What D836 left.* It weighed the arguments that are only numbers, in the loop
+that decides whether a walk is worth making. Two ways in were not that loop.
+
+*One: a number inside a shape that holds something else.* A layout with a piece
+of text or a handle in it is walked by its type, and the walk read the slots
+that hold something the machine made and stepped over the ones the host wrote.
+`Npc` is a piece of text and an `i32`, so the number in it went unweighed by the
+very case D718 built the walk for.
+
+*Two: what a host answers a crossing with.* The same walk, at the other end.
+
+```
+extern fn Host.pick() -> u8
+extern fn Host.pair() -> Pair       // { a: u8, b: text }
+→ ok=1 answer=702                   // 300 + 400 + 2
+```
+
+A `u8` answered 300 and a `u8` field answered 400, and the program added them
+up.
+
+*One line covers both, because it is one walk.* The width is read off the type
+at the scalar the walk ends on, and which of `K0636` and `K0652` it says is the
+flag the walk already carries: taking, or answering. What it costs is what D718
+already pays, and it is measured — 142, 134, 132 nanoseconds an entity a step
+against 136 before.
+
+*Two names for one width.* D836 reads a width off a layout piece and this reads
+it off a type, and both want the word for it. `kest_scalar_of` turns a type into
+the piece kind, so the second asks the first and there is one list of names.
+
+*Held.* `examples/embed.c` has the `Decider` flag pattern for a host that
+answers wrongly on purpose, and gained one more: `Engine.who` answers a health
+of `1 << 40`, and the machine refuses with `K0652` naming `i32` and the slot.
+The shape it answers with is the one that has text in it, so the check stands
+exactly where the walk used to step over.

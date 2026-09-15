@@ -31712,3 +31712,40 @@ wrote, and `kest_frame_reads` says what kind it is — but what the machine hand
 back through a host function's frame is written by the host too. `K0652` is what
 a host answering wrongly meets; find whether it weighs a number against its
 width the way the way in now does.
+
+## The same weighing at the other end, and the field D836 stepped over
+
+D836 weighed the arguments that are only numbers, in the loop that decides
+whether a walk is worth making. Two ways in were not that loop.
+
+A number inside a shape that holds something else: a layout with text or a
+handle in it is walked by its type, and the walk read the slots holding
+something the machine made and stepped over the ones the host wrote. `Npc` is a
+piece of text and an `i32`, so the number in it went unweighed by the very case
+D718 built the walk for.
+
+And what a host answers a crossing with, which is the same walk at the other
+end. `Host.pick() -> u8` answered 300 and a `u8` field answered 400, and the
+program added them up to 702.
+
+One line covers both, because it is one walk: the width is read off the type at
+the scalar the walk ends on, and which of K0636 and K0652 it says is the flag
+the walk already carries. What it costs is what D718 already pays — 142, 134,
+132 nanoseconds an entity a step against 136 before.
+
+D836 reads a width off a layout piece and this reads it off a type, and both
+want the word for it; `kest_scalar_of` turns a type into the piece kind, so the
+second asks the first and there is one list of names.
+
+`examples/embed.c` has a flag pattern for a host that answers wrongly on
+purpose and gained one more: `Engine.who` answers a health of `1 << 40` and the
+machine refuses with K0652 naming `i32` and the slot. The shape it answers with
+is the one with text in it, so the check stands exactly where the walk used to
+step over. Recorded as D837.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a float is not weighed either way. A slot holds a double and an `f32`
+holds less, so a host writing a double no `f32` can hold is the same door D836
+and D837 shut for whole numbers. Find whether the program can tell, and whether
+shutting it costs anything a frame step can see.

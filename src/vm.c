@@ -1470,6 +1470,7 @@ static bool fits_the_piece(uint8_t kind, int64_t given) {
     }
 }
 
+
 // And what it is called, which is the piece's own word for itself: a host
 // reading this is looking at a slot it filled and wants the width it was
 // supposed to fill it to.
@@ -1485,9 +1486,18 @@ static const char *the_width_of(uint8_t kind) {
         return "u8";
     case KEST_L_U16:
         return "u16";
-    default:
+    case KEST_L_U32:
         return "u32";
+    default:
+        return "a whole number";
     }
+}
+
+// And the same off a type, for the walk that has one. A number's own word for
+// itself is what a host reading this wants: it is looking at a slot it filled
+// or answered with, and wants the width it was supposed to fill it to.
+static const char *the_width_of_type(const KestType *type) {
+    return the_width_of(kest_scalar_of(type));
 }
 
 static void narrower_than_that(KestRuntime *runtime, const char *name,
@@ -1747,6 +1757,34 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         }
         *at += 1;
         return true;
+    }
+    // And a number, against the width the program keeps it at. The walk above
+    // is for the slots that hold something this machine made; this is the slot
+    // that holds what the host wrote, and a slot is sixty-four bits where a
+    // `u8` is eight. D836 weighed the arguments that are only numbers, in the
+    // loop that decides whether to walk at all — this is the other two ways
+    // in: a number inside a shape that has text or a handle somewhere else in
+    // it, and a number a host answers a crossing with. See D837.
+    if (type->tag == KEST_T_INT) {
+        int64_t given = frame[*at].integer;
+        if (kest_narrow_to(kest_scalar_of(type), given) != given) {
+            if (saying->at_a_crossing) {
+                fail(runtime, saying->frame, saying->instruction, "K0652",
+                     "`%s` answers with `%s` in slot %u and %lld is not one",
+                     name, the_width_of_type(type), *at, (long long)given);
+            } else {
+                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                               nowhere,
+                               "`%s` takes `%s` in slot %u and %lld is not "
+                               "one",
+                               name, the_width_of_type(type), *at,
+                               (long long)given);
+            }
+            kest_diags_suggest(runtime->diags,
+                               "every width wraps at its own end, and a host "
+                               "narrows what it writes the way `u8(n)` does");
+            return false;
+        }
     }
     *at += type->slots == 0 ? 1 : type->slots;
     return true;

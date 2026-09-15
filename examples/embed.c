@@ -158,6 +158,11 @@ typedef struct {
     // of them. It is put back to false where it is answered, so a host that
     // finds it still true was never asked.
     bool meddles;
+    // And whether it answers a number too wide for the width the program keeps
+    // it at. A slot is sixty-four bits and an `i32` is thirty-two, so this is
+    // the one thing a host can put in an answer that the program's own
+    // arithmetic cannot make. See D837.
+    bool answers_too_wide;
 } Decider;
 
 // The engine's own policy. Asking the program is calling in from inside a call
@@ -255,7 +260,9 @@ static void engine_who(KestValue *frame, KestRuntime *runtime, void *context) {
     } else {
         frame[0] = kest_text(runtime, said, (uint32_t)strlen(said));
     }
-    frame[1].integer = 3;
+    frame[1].integer = decider != NULL && decider->answers_too_wide
+                           ? (int64_t)1 << 40
+                           : 3;
 }
 
 static void engine_decide(KestValue *frame, KestRuntime *runtime,
@@ -1930,7 +1937,7 @@ int main(int argc, char **argv) {
     printf("with no host at all, the program asks for `Engine.decide`\n");
 
     KestHost *host = kest_host_new();
-    static Decider decider = {-1, 1, true, true, false};
+    static Decider decider = {-1, 1, true, true, false, false};
     // Whether the crossing that answers an event answers with a tag nobody
     // declared. False everywhere but the one place that asks for the refusal.
     static bool blaming = false;
@@ -2605,7 +2612,7 @@ int main(int argc, char **argv) {
     // answers, and neither host can reach through the other's machine to
     // change them: what this one holds stays what it held while the first
     // host's decider is swapped under its own machine below.
-    static Decider apart = {-1, 2, true, true, false};
+    static Decider apart = {-1, 2, true, true, false, false};
     KestHost *elsewhere = kest_host_new();
     if (elsewhere == NULL ||
         !kest_host_bind(elsewhere, "Io.write", io_write, stdout) ||
@@ -2988,6 +2995,7 @@ int main(int argc, char **argv) {
            "%s\n",
            about);
 
+
     // And the same mistake one field in, which is where the answer was read no
     // further than the top of: a crossing that answers with a shape writes a
     // name and a number, and the name is a word the machine has to own. The
@@ -3013,6 +3021,21 @@ int main(int argc, char **argv) {
     printf("a name inside a shape answered with is read where a name on its "
            "own is\n");
     kest_runtime_free(apart_at);
+    // And the same crossing answering a number too wide for the field it goes
+    // in. `Npc` is a piece of text and an `i32`, so what comes back is walked
+    // — and until D837 the walk read the text and stepped over the number,
+    // which is the slot the host actually wrote. See D837.
+    decider.answers_too_wide = true;
+    if (asks(&engine, WHO_IS)) {
+        fprintf(stderr, "a number too wide for its field was answered with\n");
+        return 1;
+    }
+    decider.answers_too_wide = false;
+    if (!said_that(engine.runtime, "K0652", "`i32` in slot 1")) {
+        return 1;
+    }
+    printf("and a crossing that answered a number too wide for the field it "
+           "goes in\n");
 
     // And a store is a thing the language has no text for, which it says
     // rather than inventing one. What the host wants of a store, only the host
@@ -5801,7 +5824,7 @@ int main(int argc, char **argv) {
     // See D637.
     {
         KestHost *quietly = kest_host_new();
-        static Decider unasked = {-1, 1, false, true, false};
+        static Decider unasked = {-1, 1, false, true, false, false};
         if (quietly == NULL ||
             !kest_host_bind(quietly, "Io.write", io_write, stdout) ||
             !kest_host_bind(quietly, "Engine.decide", engine_decide, &unasked) ||
@@ -5851,7 +5874,7 @@ int main(int argc, char **argv) {
         KestLimits wide_stack = {8192, 16, 0};
         size_t build_before = kest_build_cost(build);
         KestHost *sizing = kest_host_new();
-        static Decider still = {-1, 1, false, true, false};
+        static Decider still = {-1, 1, false, true, false, false};
         if (sizing == NULL ||
             !kest_host_bind(sizing, "Io.write", io_write, stdout) ||
             !kest_host_bind(sizing, "Engine.decide", engine_decide, &still) ||
@@ -6028,7 +6051,7 @@ int main(int argc, char **argv) {
         // frame that steps the world, which asks this host, which asks the
         // program back. See D575.
         KestHost *unasked = kest_host_new();
-        static Decider asking = {-1, 1, true, true, false};
+        static Decider asking = {-1, 1, true, true, false, false};
         if (unasked == NULL ||
             !kest_host_bind(unasked, "Io.write", io_write, stdout) ||
             !kest_host_bind(unasked, "Engine.decide", engine_decide, &asking) ||
@@ -6237,7 +6260,7 @@ int main(int argc, char **argv) {
     // be refused something is not one of them. See D441.
     {
         KestHost *apart = kest_host_new();
-        static Decider quiet = {-1, 1, false, true, false};
+        static Decider quiet = {-1, 1, false, true, false, false};
         if (apart == NULL ||
             !kest_host_bind(apart, "Io.write", io_write, stdout) ||
             !kest_host_bind(apart, "Engine.decide", engine_decide, &quiet) ||
@@ -6361,7 +6384,7 @@ int main(int argc, char **argv) {
         size_t started = 0;
         for (int cycle = 0; cycle < 3; cycle++) {
             KestHost *over = kest_host_new();
-            static Decider quietly = {-1, 1, false, true, false};
+            static Decider quietly = {-1, 1, false, true, false, false};
             KestBuild *reloaded =
                 kest_build(path, NULL, stderr, KEST_FORM_TEXT);
             if (over == NULL || reloaded == NULL ||
