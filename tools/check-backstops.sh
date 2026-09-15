@@ -184,6 +184,22 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A truth taken as any byte. A `u8` holds nought to 255 and a truth
+        # holds one of two, and a host writing 7 into one wrote a value the
+        # program reads as true where it asks `if` and as neither where it
+        # asks `== true` — one slot, two answers, and nothing saying so.
+        # See D839.
+        "what": "a truth taken as any byte",
+        "file": "src/vm.c",
+        "from": r"""    case KEST_L_BOOL:
+        return given == 0 || given == 1;""",
+        "to": r"""    case KEST_L_BOOL:
+        return given >= 0 && given <= UINT8_MAX;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a truth that is neither was taken",
+    },
+    {
         # A number written into a frame that no `f32` holds. A slot holds a
         # double and an `f32` holds less, so this is the one of the three
         # widths a program can tell without counting: it compares what the
@@ -5900,8 +5916,8 @@ const char *kest_scalar_name(uint8_t kind) {""",
         # answers to the name of the one before.
         "what": "a scalar a layout holds with no name",
         "file": "src/value.c",
-        "from": '"tag", "held",  "ref"};',
-        "to": '"tag", "held"};',
+        "from": '"tag", "held",  "bool",    "ref"};',
+        "to": '"tag", "held",  "bool"};',
         "make": ["build/release/value.o"],
         "in_build": True,
         "caught": "every scalar a layout holds has a name",
@@ -12209,7 +12225,9 @@ bool kest_needs_of(""",
         "from": """        case KEST_L_U8:
         // The byte an optional keeps after its value is one byte, read the way
         // any other byte is. Its kind is what it is for and not what it is,
-        // and what it is is this. See D714.
+        // and what it is is this. See D714. A truth is the third of them, and
+        // the same byte. See D839.
+        case KEST_L_BOOL:
         case KEST_L_HELD: {
             uint8_t v;
             memcpy(&v, at, 1);
@@ -12217,6 +12235,7 @@ bool kest_needs_of(""",
             break;
         }""",
         "to": """        case KEST_L_U8:
+        case KEST_L_BOOL:
         case KEST_L_HELD: {
             int8_t v;
             memcpy(&v, at, 1);
@@ -12237,12 +12256,14 @@ bool kest_needs_of(""",
         "file": "src/vm.c",
         "from": """        case KEST_L_I8:
         case KEST_L_U8:
+        case KEST_L_BOOL:
         case KEST_L_HELD: {
             uint8_t v = (uint8_t)from[i].integer;
             memcpy(at, &v, 1);
             break;""",
         "to": """        case KEST_L_I8:
         case KEST_L_U8:
+        case KEST_L_BOOL:
         case KEST_L_HELD: {
             uint8_t v = (uint8_t)(from[i].integer >> 8);
             memcpy(at, &v, 1);

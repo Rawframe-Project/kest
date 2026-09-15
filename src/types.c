@@ -1079,7 +1079,7 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
 uint8_t kest_scalar_of(const KestType *type) {
     switch (type->tag) {
     case KEST_T_BOOL:
-        return KEST_L_U8;
+        return KEST_L_BOOL;
     case KEST_T_FLOAT:
         return type->width == 32 ? KEST_L_F32 : KEST_L_F64;
     // A set of bits is the unsigned integer it was declared over, which is
@@ -1179,6 +1179,7 @@ int64_t kest_narrow_to(uint16_t scalar, int64_t value) {
         return (int16_t)value;
     case KEST_L_I32:
         return (int32_t)value;
+    case KEST_L_BOOL:
     case KEST_L_U8:
         return (uint8_t)value;
     case KEST_L_U16:

@@ -24818,3 +24818,43 @@ backstop holes quote those bindings and moved with them, and the first attempt
 wrote the pair as one `&&` inside the `||` chain, which `-Werror` refused and
 which broke both quotations at once. A name is cheap and a name in a host is
 ten places.
+
+## D839: a truth is one of two, and was any byte
+
+*The third thing hiding in one kind.* D708 took the tag out of `KEST_L_I32`,
+D714 took the optional's flag out of `KEST_L_U8` — and the comment it left says
+what was still in there: *"a `bool` and a number were one run of pieces — same
+kinds, same offsets, same size."* It took the flag and left the truth.
+
+*What a program could see.* A slot holds sixty-four bits and a truth holds one
+of two:
+
+```
+bool 1 -> 1
+bool 7 -> 2        // `if b` was true and `b == true` was false
+```
+
+Two answers about one slot. A host writing 7 gave a program that is told the
+value is true where it asks and not true where it compares, and nothing said so,
+because 7 fits a byte and a byte was all the layout said it was.
+
+*And the layout was telling a host the wrong thing.* Before this, a `bool`
+parameter answered `KEST_L_U8`, so a host doing everything right — asking
+`kest_frame_layout`, writing what it was told — was told it may write nought to
+255. Even the refusal D836 gave for `-1` said `u8`.
+
+*`KEST_L_BOOL`.* Same byte where memory is shared, its own kind where a host
+reads what to write. `fits_the_piece` asks it for one of two, and every place
+that reads or writes a byte takes it beside `KEST_L_U8` and `KEST_L_HELD`, which
+is what they are.
+
+*What it cost to add a kind.* A name in `SCALARS` — held by a static assert
+against the last enumerator, which is what said the name was missing. Four
+switches over kinds in three files. Five places in `examples/embed.c` where the
+host said `u8` for a field the program calls a truth, each of which the machine
+then refused, one at a time, until they were all right. Four backstop holes that
+quote those switches. That is what a kind costs, and it is the third time it has
+been worth it.
+
+*Held.* `examples/embed.c` writes 7 into `reach`'s `bool` and refuses unless the
+machine says `K0636` naming `bool` and the slot.

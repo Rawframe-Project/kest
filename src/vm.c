@@ -242,7 +242,9 @@ static void unpack(KestValue *out, const KestLayout *layout,
         case KEST_L_U8:
         // The byte an optional keeps after its value is one byte, read the way
         // any other byte is. Its kind is what it is for and not what it is,
-        // and what it is is this. See D714.
+        // and what it is is this. See D714. A truth is the third of them, and
+        // the same byte. See D839.
+        case KEST_L_BOOL:
         case KEST_L_HELD: {
             uint8_t v;
             memcpy(&v, at, 1);
@@ -291,6 +293,7 @@ static void pack(unsigned char *to, const KestLayout *layout,
         switch (layout->pieces[i].kind) {
         case KEST_L_I8:
         case KEST_L_U8:
+        case KEST_L_BOOL:
         case KEST_L_HELD: {
             uint8_t v = (uint8_t)from[i].integer;
             memcpy(at, &v, 1);
@@ -1469,6 +1472,9 @@ static bool fits_the_piece(uint8_t kind, KestValue given_as) {
         return given >= INT32_MIN && given <= INT32_MAX;
     case KEST_L_U8:
         return given >= 0 && given <= UINT8_MAX;
+    // A truth holds one of two, and a slot holds sixty-four bits. See D839.
+    case KEST_L_BOOL:
+        return given == 0 || given == 1;
     case KEST_L_U16:
         return given >= 0 && given <= UINT16_MAX;
     case KEST_L_U32:
@@ -1498,6 +1504,8 @@ static const char *the_width_of(uint8_t kind) {
         return "u32";
     case KEST_L_F32:
         return "f32";
+    case KEST_L_BOOL:
+        return "bool";
     default:
         return "a whole number";
     }
@@ -1796,8 +1804,9 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
                                name, *at, given);
             }
             kest_diags_suggest(runtime->diags,
-                               "every width wraps at its own end, and a host "
-                               "narrows what it writes the way `u8(n)` does");
+                               "every width wraps at its own end and a truth "
+                               "is one of two, and a host writes what the "
+                               "program could have made");
             return false;
         }
     }
@@ -1817,8 +1826,9 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
                                (long long)given);
             }
             kest_diags_suggest(runtime->diags,
-                               "every width wraps at its own end, and a host "
-                               "narrows what it writes the way `u8(n)` does");
+                               "every width wraps at its own end and a truth "
+                               "is one of two, and a host writes what the "
+                               "program could have made");
             return false;
         }
     }

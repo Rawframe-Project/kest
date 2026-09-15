@@ -938,8 +938,10 @@ static bool lays_them_out_the_same(KestBuild *build) {
     tile[3].offset = (uint16_t)offsetof(Tile, wear);
     tile[3].kind = KEST_L_I8;
 
-    // A `bool` is one byte and the machine reads it as one: `KEST_L_U8` is
-    // what a layout calls a byte, whatever the program calls the field.
+    // A `bool` is one byte and the machine reads it as one, and says which of
+    // the two truths it is: `KEST_L_BOOL` until D839 was `KEST_L_U8`, which is
+    // what it is and not what it means, and a host that knows which it is
+    // writing writes 0 or 1.
     // A value, the byte that says whether it is there, and the number after
     // the padding: three pieces, and the flag is a byte the same as a `bool`
     // is, because that is what it is.
@@ -955,7 +957,7 @@ static bool lays_them_out_the_same(KestBuild *build) {
     flagged[0].offset = (uint16_t)offsetof(Flagged, kind);
     flagged[0].kind = KEST_L_U16;
     flagged[1].offset = (uint16_t)offsetof(Flagged, on);
-    flagged[1].kind = KEST_L_U8;
+    flagged[1].kind = KEST_L_BOOL;
 
     KestPiece event[3];
     event_pieces(event);
@@ -2689,7 +2691,7 @@ int main(int argc, char **argv) {
         {"spawn", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_I32}, 1},
         {"step", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         {"onEvents", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
-        {"silence", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_U8}, 1},
+        {"silence", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_BOOL}, 1},
         // The tag, and what the case it names carries. A layout says
         // `KEST_L_PAYLOAD` for the slots after a tag because which type
         // is in one is the tag's to say, and this host says the same
@@ -2770,7 +2772,7 @@ int main(int argc, char **argv) {
         {"putRecord", {KEST_L_WORD, KEST_L_I32, KEST_L_I32}, 3, {0}, 0},
         {"ownArray", {0}, 0, {KEST_L_WORD}, 1},
         {"howManyOn", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
-        {"reach", {KEST_L_F32, KEST_L_F32, KEST_L_F32, KEST_L_U8}, 4,
+        {"reach", {KEST_L_F32, KEST_L_F32, KEST_L_F32, KEST_L_BOOL}, 4,
          {KEST_L_F32}, 1},
         {"heaviestCell", {KEST_L_WORD, KEST_L_I32}, 2,
          {KEST_L_I32, KEST_L_F32}, 2},
@@ -3154,6 +3156,24 @@ int main(int argc, char **argv) {
         return 1;
     }
     printf("and a number no `f32` holds, written into a frame\n");
+
+    // And a truth that is neither. `reach` takes three floats and a `bool`,
+    // and a slot holds sixty-four bits where a truth holds one of two: a host
+    // writing 7 wrote a value the program reads as true where it asks `if`
+    // and as neither where it asks `== true`. One slot, two answers. See D839.
+    engine.frame[0].real = (double)(float)1.0;
+    engine.frame[1].real = (double)(float)1.0;
+    engine.frame[2].real = (double)(float)1.0;
+    engine.frame[3].integer = 7;
+    if (kest_call(engine.runtime, engine.entry[REACH], engine.frame,
+                  sizeof(engine.frame) / sizeof(engine.frame[0]))) {
+        fprintf(stderr, "a truth that is neither was taken\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0636", "`bool` in slot 3")) {
+        return 1;
+    }
+    printf("and a truth that is neither of the two\n");
     // And the width of a function that is not there. Nought is the honest
     // width of one that takes and gives nothing, so the number cannot say
     // which of the two this is and the report does.
@@ -3905,10 +3925,11 @@ int main(int argc, char **argv) {
     float across = (float)engine.frame[0].real;
     uint32_t whether = kest_frame_at(engine.runtime, engine.entry[REACH], 1);
     // What the program says the arguments are, said before anything is
-    // written: three `f32` and a `bool`, which a layout calls a byte because
-    // that is what it is where memory is shared.
+    // written: three `f32` and a `bool`, which a layout calls a truth in a
+    // byte — the byte is what it is where memory is shared and the truth is
+    // what it means. See D839.
     const uint8_t reaching[4] = {KEST_L_F32, KEST_L_F32, KEST_L_F32,
-                                 KEST_L_U8};
+                                 KEST_L_BOOL};
     if (!kest_frame_fills(engine.runtime, engine.entry[REACH], reaching, 4)) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
@@ -5316,7 +5337,7 @@ int main(int argc, char **argv) {
             return 1;
         }
     }
-    const uint8_t as_a_switch[3] = {KEST_L_I32, KEST_L_U8, KEST_L_I32};
+    const uint8_t as_a_switch[3] = {KEST_L_I32, KEST_L_BOOL, KEST_L_I32};
     if (kest_frame_fills(engine.runtime, engine.entry[MARKING], as_a_switch,
                          3)) {
         fprintf(stderr, "a flag said to be a byte was agreed to\n");

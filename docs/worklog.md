@@ -31790,3 +31790,39 @@ holes quote those bindings and moved with them. Recorded as D838.
 for what it is and not for what it says: a `bool`. A slot holds sixty-four bits
 and a truth holds one, and a host writing 7 gets a program for which it is true.
 Find whether the program can tell, and whether the same two places will say so.
+
+## A truth is one of two, and was any byte
+
+D708 took the tag out of `KEST_L_I32` and D714 took the optional's flag out of
+`KEST_L_U8`, and the comment D714 left says what was still in there: "a `bool`
+and a number were one run of pieces — same kinds, same offsets, same size." It
+took the flag and left the truth.
+
+A slot holds sixty-four bits and a truth holds one of two. A host writing 7 gave
+a program that answered 2 from a function that returns 1 when `if b` and `b ==
+true` agree: `if b` was true and `b == true` was false. Two answers about one
+slot, and nothing said so, because 7 fits a byte and a byte was all the layout
+said it was.
+
+The layout was also telling a host the wrong thing: a `bool` parameter answered
+`KEST_L_U8`, so a host asking `kest_frame_layout` and writing what it was told
+was told it may write nought to 255, and even D836's refusal for `-1` said `u8`.
+
+`KEST_L_BOOL` is the same byte where memory is shared and its own kind where a
+host reads what to write. What it cost: a name in `SCALARS`, held by a static
+assert that is what said the name was missing; four switches over kinds in three
+files; five places in `embed.c` where the host said `u8` for a field the program
+calls a truth, each refused by the machine one at a time until they were all
+right; and four backstop holes that quote those switches. That is what a kind
+costs, and it is the third time it has been worth it.
+
+`embed.c` writes 7 into `reach`'s `bool` and refuses unless the machine says
+K0636 naming `bool` and the slot. Recorded as D839.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** four widths shut and one kind split. What a host writes is now weighed
+for what it is at every width — except one: `KEST_L_TAG` is four bytes read as a
+whole number, and an enum's tag is weighed against the cases only where the walk
+reaches it. Find whether a tag written into a frame of plain pieces is weighed
+at all.

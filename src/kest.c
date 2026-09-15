@@ -105,6 +105,7 @@ KestSlot kest_slot_of(uint8_t kind) {
     case KEST_L_I32:
     case KEST_L_I64:
     case KEST_L_U8:
+    case KEST_L_BOOL:
     case KEST_L_U16:
     case KEST_L_U32:
     case KEST_L_U64:

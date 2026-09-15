@@ -94,6 +94,14 @@ typedef enum {
     // number, a `bool` and a number were one run of pieces — same kinds, same
     // offsets, same size — and a host could lend either under the other's name.
     KEST_L_HELD,
+    // And a truth, which is the same byte again and the last of the three this
+    // kind had hidden. It said `KEST_L_U8` until D839, which is what it is and
+    // not what it means: a `u8` holds 0 to 255 and a truth holds one of two,
+    // so a host writing 7 wrote a value the program reads as true where it
+    // asks `if`, and as neither where it asks `== true`. A host that knows
+    // which it is writing writes 0 or 1, and one that does not is told. See
+    // D839.
+    KEST_L_BOOL,
     // A place in a store, which is not a machine word at all: a reference is
     // the slot it names and the number of times that slot has been handed out,
     // packed into one whole number. It said `KEST_L_WORD` until D715, and the

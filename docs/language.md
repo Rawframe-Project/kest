@@ -492,6 +492,13 @@ what tells them apart:
 error[K0634]: `marking` takes `held` in slot 1 and this host says `u8`
 ```
 
+`KEST_L_BOOL` is the third of the same byte and was the last one hiding in
+`KEST_L_U8`. A `u8` holds nought to 255 and a truth holds one of two, so a host
+writing 7 into one wrote a value the program reads as true where it asks `if`
+and as neither where it asks `== true` — which is a program told two different
+things about one slot. A host writes 0 or 1, and one that writes anything else
+is told at the call.
+
 The other thing with a flag beside it is written the same way. An optional is a
 value and a byte saying whether the value is there, and an empty one is that byte
 set to nought with nought under it — so two empty ones of a type are two of the
