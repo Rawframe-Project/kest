@@ -230,6 +230,30 @@ fn main() -> i32 {
         return 26
     }
 
+    // And which slot comes back, which the comment above `reinforce` rests on
+    // and nothing here watched. Three added and the first two taken back, the
+    // second taken back last: what goes in next takes that one, so a walk in
+    // slot order reads the newest first. A store that runs out of taken-back
+    // slots reaches for the end instead, and a store with nothing left in it
+    // goes back to reaching nothing — which is why one is kept alive here.
+    let order: store<Npc> = store()
+    let oldest = add(order, Npc("1", none, none))
+    let newer = add(order, Npc("2", none, none))
+    add(order, Npc("3", none, none))
+    remove(order, oldest)
+    remove(order, newer)
+    add(order, Npc("4", none, none))
+    add(order, Npc("5", none, none))
+    let read = ""
+    for r in order {
+        if let npc = get(order, r) {
+            read = "{read}{npc.name}"
+        }
+    }
+    if read != "543" {
+        return 27
+    }
+
     io.print("{len(world)} left, and the guard's escort reads \"{escortOf(world, guard)}\"")
     return 0
 }

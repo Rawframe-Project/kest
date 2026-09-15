@@ -30147,3 +30147,35 @@ been documents and checks. Take the roadmap at its word: `docs/language.md`
 lists what a `store` does and `src/vm.c` has `seek.from`, `seek.next` and
 `next.less` for walking one. Read what the document says a walk of a store
 costs against what those instructions do.
+
+## What a walk of a store costs, and which slot comes back
+
+Four claims the document makes about a store, three already held. A walk costs
+how far the store has ever reached — `live_from` scans to `used` and looks at
+`live[]`, so a store that held a thousand and holds one still walks a thousand.
+A store with nothing left in it goes back to reaching nothing — removing the
+last sets `used` to nought and keeps the stamps, so slots come back from the
+start and old references stay stale, which `quests.kest` demonstrates. A slot
+that has used all its counts is not handed out again — four thousand million
+removals, which `check-ceilings.sh` reaches by building with `MOST_STAMPS`
+lowered to a thousand.
+
+The fourth was written down twice and watched nowhere: **a store hands out the
+slot it last took back**. It is in the document and in a comment in
+`quests.kest` above the function that exists because of it — `reinforce` gathers
+and adds afterwards precisely because where a new one lands is a coin.
+
+It is observable: a walk reads slots in slot order, so three added, the first
+two taken back and two put in reads `543` if the last taken back comes first and
+`453` if the first does. `quests.kest` reads it now and answers 27 otherwise.
+Turning the free list round leaves every program running, every count right and
+every other example passing — a rule a program is shaped by and nothing watches
+is a rule that can go without a word. Recorded as D795.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a store's four claims are held. `docs/language.md` says the same kind
+of thing about text — that `slice` copies and reaches the heap, that `rest` and
+`find` do not, that a walk of it counts glyphs and an index counts bytes. Read
+those against `src/vm.c`'s text instructions the way this read the store's, and
+find which are watched.

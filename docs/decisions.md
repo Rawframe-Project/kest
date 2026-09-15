@@ -23026,3 +23026,41 @@ part that cannot go stale, because it is a pointer rather than a claim.
 it breaks. Not the README — which is the same fact as everything above, in the
 one place where it would have stopped this being checkable at all. It copies it
 now.
+
+## D795: what a walk of a store costs, and which slot comes back
+
+*Read against the machine.* The document makes four claims about a store that
+the machine has to keep, and three of them were already held.
+
+*A walk costs how far the store has ever reached.* `live_from` scans from where
+it is to `store->used` and looks at `live[]`, so a store that held a thousand
+and holds one still walks a thousand. True, and `examples/quests.kest` walks one
+that has had things taken out of it.
+
+*A store with nothing left in it goes back to reaching nothing.* Removing the
+last one sets `used` to nought and throws the free list away, and the stamps
+stay — so the slots come back from the beginning and every reference from before
+is as stale as it was. True, demonstrated in `quests.kest`, and the comment
+beside it says it is the thing that would be easiest to lose.
+
+*A slot that has used all its counts is not handed out again.* Four thousand
+million removals of one slot, which nothing can run. `check-ceilings.sh` builds
+the compiler with `MOST_STAMPS` lowered to a thousand and runs it there, which
+is this project's answer to a ceiling too far away to reach.
+
+*And the fourth was written down twice and watched nowhere.* **A store hands out
+the slot it last took back.** It is in `docs/language.md`, and it is in a comment
+in `quests.kest` above the function that exists because of it — `reinforce`
+gathers and adds afterwards precisely because where a new one lands is a coin.
+Nothing looked at the order itself.
+
+It is observable, which is what makes the absence worth fixing rather than
+noting. A walk reads slots in slot order, so three added, the first two taken
+back and two put in reads `543` if the last taken back comes first and `453` if
+the first does. `quests.kest` reads it now and answers 27 when it is not `543`.
+
+*What that is worth.* Turning the free list round leaves every program running,
+every count right and every other example passing — it changes only which slot
+something lands in, which is exactly the thing `reinforce` is written around. A
+rule a program is shaped by and nothing watches is a rule that can go without
+the program that depends on it saying a word.

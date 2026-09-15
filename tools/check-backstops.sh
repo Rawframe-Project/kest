@@ -1245,6 +1245,22 @@ yield""",
         "caught": "say which type they are the layout of",
     },
     {
+        # A store handing back the slot it took first rather than the one it
+        # took last. Every program still runs and every count still comes out;
+        # what changes is which slot something added lands in, which the
+        # document says and one example now watches. See D795.
+        "what": "a store handing slots back in the order it took them",
+        "file": "src/vm.c",
+        "from": r"""                index = store->free_slots[--store->free_count];""",
+        "to": r"""                index = store->free_slots[0];
+                memmove(store->free_slots, store->free_slots + 1,
+                        sizeof(uint32_t) * --store->free_count);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/quests.kest"],
+        "caught": "run examples/quests.kest",
+    },
+    {
         # A document nothing names, which is a document no rule reaches and no
         # check reads. The front page was one for the length of this tree and
         # said structs did not run yet while the library was written in them.
