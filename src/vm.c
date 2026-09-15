@@ -1334,9 +1334,40 @@ static void what_it_needed(Vm *vm, const KestRuntime *rt, int32_t called) {
     // rather than a silence: a program that reaches itself or calls through a
     // value has no deepest call, so the host that picked a number was always
     // going to find out here, and this is where it does.
-    kest_diags_suggest(vm->diags, "there is no number to ask for: `%s` %s",
+    // And what there is instead of a number, which is a bound: this machine
+    // was sized from one, so a host reading a refusal is told the shape of it
+    // — so much a frame and so much whatever the frames — rather than being
+    // left to guess what the next size up costs. One saying and not two,
+    // because a diagnostic holds one and the second would take the first's
+    // place. See D820.
+    uint32_t widest = 0;
+    uint32_t in_a_turn = 0;
+    uint32_t off_the_turns = 0;
+    kest_module_cycles(rt->module, rt->heap, -1, false, &widest, &in_a_turn,
+                       &off_the_turns);
+    bool by_turns =
+        in_a_turn > 0 &&
+        (uint64_t)off_the_turns + (uint64_t)in_a_turn * rt->call_depth <
+            (uint64_t)widest * rt->call_depth;
+    uint32_t a_frame = by_turns ? in_a_turn : widest;
+    uint32_t besides = by_turns ? off_the_turns : 0;
+    if (widest == 0) {
+        kest_diags_suggest(vm->diags, "there is no number to ask for: `%s` %s",
+                           why.where == NULL ? "something here" : why.where,
+                           kest_reach_name(why.reach));
+        kest_arena_rewind(rt->heap, before);
+        return;
+    }
+    kest_diags_suggest(vm->diags,
+                       "there is no number to ask for: `%s` %s, and this "
+                       "machine was given %u frame(s) of %u slot(s) each and "
+                       "%u besides, so twice the frames is %llu slots",
                        why.where == NULL ? "something here" : why.where,
-                       kest_reach_name(why.reach));
+                       kest_reach_name(why.reach), rt->call_depth, a_frame,
+                       besides,
+                       (unsigned long long)(besides +
+                                            (uint64_t)a_frame *
+                                                rt->call_depth * 2));
     kest_arena_rewind(rt->heap, before);
 }
 

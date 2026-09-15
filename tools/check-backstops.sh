@@ -184,6 +184,22 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A machine sized from a bound, refusing without saying what the next
+        # size up costs. There is no number to ask for and there is a shape to
+        # be told: so much a frame and so much whatever the frames, which is
+        # what a host raising a ceiling does arithmetic with. Told only that
+        # the program reaches itself, a host raises by guesses. See D820.
+        "what": "a refusal that does not say what a frame of it costs",
+        "file": "src/vm.c",
+        "from": r"""    if (widest == 0) {
+        kest_diags_suggest(vm->diags, "there is no number to ask for: `%s` %s",""",
+        "to": r"""    if (true) {
+        kest_diags_suggest(vm->diags, "there is no number to ask for: `%s` %s",""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a machine of two frames refused",
+    },
+    {
         # A machine that takes the number it worked out for itself over the
         # one a host wrote down. Its twin — the frames — has been held since
         # D621; the slots beside it were not, because until the bounds there

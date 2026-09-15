@@ -24119,3 +24119,48 @@ that wants seventeen is refused at the call that would be the seventeenth, and
 told what it wanted. That is what every under-asking meets, and it is what makes
 a bound safe to be wrong about. Nothing here demonstrates it, because this host
 is the one that has to stay readable in one sitting.
+
+## D820: what a refusal says when there is no number to ask for
+
+*The half D819 left.* A bound is enough for the frames a host named and says
+nothing about a program that wants more. The promise is not that the number is
+right — it is that a machine built from it refuses at the call that would go
+past it and says what that call wanted. Shown here, and what it said turned out
+to be nothing a host could act on.
+
+*What it said.* `examples/embed.c` builds `examples/least.kest`, bounds it at two
+frames, and calls into it:
+
+```
+error[K0602]: calls nest more than 2 deep
+ --> examples/least.kest:45:12
+    ^ there is no number to ask for: `least.depth#i32` reaches itself
+```
+
+True, and the end of the conversation. A host reading that knows the program
+recurses and nothing about what to do next.
+
+*What it says now.* There is no number, and there is a **shape**: so much a
+frame, and so much whatever the frames. That is what a host raising a ceiling
+does arithmetic with, and it is exactly the two numbers D816 works the bound out
+of, so nothing new is computed — the machine asks the same walk the build asked.
+
+```
+    ^ there is no number to ask for: `down#i32` reaches itself, and this machine
+      was given 1024 frame(s) of 3 slot(s) each and 0 besides, so twice the
+      frames is 6144 slots
+```
+
+One saying and not two, because a diagnostic holds one and a second would take
+the first's place — which is what the first attempt did, and what reading the
+output showed.
+
+*And the program it is shown on.* `examples/embed.c` runs the **other host's**
+program for this. Its own has a least, and a least is not a guess; the one that
+reaches itself and wants a single name bound is `examples/least.kest`, and
+`examples/tree.kest` would do as well at the price of four bindings for
+`std.math` and nothing more shown.
+
+*Where this closes.* A host now has a number before it starts, a machine that is
+the number it asked for, and a refusal that says what the next number would be.
+That is the whole of the loop it needs to size a program it cannot measure.

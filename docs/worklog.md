@@ -31104,3 +31104,35 @@ Recorded as D819.
 machine too small does: size one from `kest_bound_of` with fewer frames than the
 program wants, call into it, and hold that what comes back is a refusal naming
 the number it wanted rather than anything else.
+
+## What a refusal says when there is no number to ask for
+
+D819 left half of it: a bound is enough for the frames a host named and says
+nothing about a program that wants more, so the promise is that a machine built
+from one refuses at the call that goes past it and says what that call wanted.
+Shown here, and what it said turned out to be nothing a host could act on —
+"there is no number to ask for: `least.depth#i32` reaches itself", true and the
+end of the conversation.
+
+There is no number, and there is a shape: so much a frame, and so much whatever
+the frames. That is what a host raising a ceiling does arithmetic with, and it
+is the two numbers D816 works the bound out of, so nothing new is computed —
+the machine asks the same walk the build asked. One saying and not two, because
+a diagnostic holds one and a second takes the first's place, which is what the
+first attempt did and what reading the output showed.
+
+`examples/embed.c` builds the other host's program to show it: its own has a
+least, and a least is not a guess. `examples/least.kest` reaches itself and wants
+one name bound; `examples/tree.kest` would do as well at the price of four
+bindings for `std.math` and nothing more shown. Bounded at two frames, called
+into, and held to refusing with the number a frame costs in what it says.
+
+A host now has a number before it starts, a machine that is the number it asked
+for, and a refusal that says what the next number would be. Recorded as D820.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the bound the refusal names is worked out over the whole program, and
+the machine that refused may have been sized for one name. Read what the machine
+was sized from and say the bound over that instead — a host told the shape of a
+program it never calls is told arithmetic it cannot use.

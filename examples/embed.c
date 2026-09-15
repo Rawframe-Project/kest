@@ -5981,6 +5981,72 @@ int main(int argc, char **argv) {
                was_given.stack_slots, was_given.call_depth, asked_for_cost);
     }
 
+    // And what a bound is worth being wrong about. A bound is enough for the
+    // frames a host named and says nothing about a program that wants more,
+    // so the promise is not that the number is right: it is that a machine
+    // built from it refuses at the call that would go past it and says what
+    // that call wanted. Shown on a program that reaches itself, because this
+    // file's own has a least and a least is not a guess. See D820.
+    {
+        // The smallest host's program, which reaches itself and asks for
+        // one name this host already has a function for. `examples/tree.kest`
+        // would do as well and wants `std.math` bound as well, which is four
+        // more bindings and nothing more shown.
+        const char *deep_path = "examples/least.kest";
+        KestBuild *deeply = kest_build(deep_path, NULL, stderr, KEST_FORM_TEXT);
+        if (deeply == NULL) {
+            fprintf(stderr, "`%s` did not compile\n", deep_path);
+            return 1;
+        }
+        KestLimits nowhere_near = {0, 0, 0};
+        KestReason bounded_at = {KEST_REACH_UNASKED, NULL};
+        if (!kest_bound_of(deeply, "main", 2, &nowhere_near, &bounded_at) ||
+            bounded_at.reach == KEST_REACH_KNOWN ||
+            nowhere_near.call_depth != 2) {
+            fprintf(stderr, "`%s` bounded at %u slots and %u frames\n",
+                    deep_path, nowhere_near.stack_slots,
+                    nowhere_near.call_depth);
+            return 1;
+        }
+        KestHost *quiet = kest_host_new();
+        if (quiet == NULL || !kest_host_bind(quiet, "Host.write", io_write,
+                                             stdout)) {
+            fprintf(stderr, "a host for `%s` would not be made\n", deep_path);
+            return 1;
+        }
+        KestRuntime *too_few = kest_start(deeply, quiet, &nowhere_near);
+        kest_host_free(quiet);
+        if (too_few == NULL) {
+            fprintf(stderr, "no machine for `%s` at two frames\n", deep_path);
+            return 1;
+        }
+        int32_t its_main = kest_entry(too_few, "main");
+        KestValue nothing_back[2] = {{0}};
+        char refused[2048];
+        if (its_main < 0 || kest_call(too_few, its_main, nothing_back, 2)) {
+            fprintf(stderr, "`%s` ran in two frames\n", deep_path);
+            return 1;
+        }
+        what_was_said(too_few, NULL, KEST_FORM_TEXT, refused, sizeof(refused));
+        // The number it wanted, not merely that it wanted more: a host told
+        // it ran out and not how far out is a host that raises the ceiling by
+        // guesses. `K0602` carries both, and the words under it name the call.
+        if (strstr(refused, "K0602") == NULL ||
+            strstr(refused, "frames") == NULL ||
+            strstr(refused, "this machine was given") == NULL) {
+            fprintf(stderr, "a machine of two frames refused `%s` saying %s\n",
+                    deep_path, refused);
+            return 1;
+        }
+        if (!kest_runtime_free(too_few) || !kest_build_free(deeply)) {
+            fprintf(stderr, "the machine of two frames was not freed\n");
+            return 1;
+        }
+        printf("and a machine bounded at %u slots for 2 frames refused a "
+               "program that wants more, and said what it wanted\n",
+               nowhere_near.stack_slots);
+    }
+
     // And the other side of the answer: outside a call there is nothing
     // standing on the machine, so this is the free that happens. Nothing takes
     // a machine away by force — a host that asked from inside a call and never
