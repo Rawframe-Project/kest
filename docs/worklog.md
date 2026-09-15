@@ -31603,3 +31603,42 @@ thing somebody has to walk. Recorded as D833.
 `examples/embed.c` and `examples/least.c` are what a host writer copies, and a
 name in one of their messages is read the same way. Hold them to the same rule,
 and to naming only doors they themselves call.
+
+## The proof only a host can break, broken by one
+
+A `no.alloc` promise is proved over the tree, then over the emitted code, then
+by the machine at the one call neither walk can follow. The first two are held
+by examples. The third had a backstop hole and nothing else, and the hole
+reaches it by breaking the type rule, which is not how anybody reaches it.
+
+Not a program: the promise is part of the type, so a value that does not promise
+cannot go where one that does is wanted. A host can. A function value is one
+slot holding which function it is, and a host filling that slot writes a number,
+and a number carries no promise — the machine asking the chunk is the only thing
+between a host that read the wrong index and a program running something it was
+told would not allocate.
+
+So the host does it. `examples/embed.kest` gained `apply`, `doubled` and `grows`,
+and `main` calls `apply(doubled, 2)`; `examples/embed.c` reads both indexes with
+`kest_entry`, writes each into the function slot, and holds the first to running
+and the second to K0623.
+
+That one line of program was the price of the demonstration. Naming a function
+as a value is what puts it in the set a call through a value may enter, and a
+file that names none has no answer for its stack at all — the first draft gave
+`embed.kest` a `call.value` and no value, and every `kest_needs` relationship the
+host holds went with it. It is also what makes the demonstration honest: the
+proof passes for what the program does and the machine catches what the host
+does.
+
+The reference described the check and not who can reach it, which is the
+difference between a rule a reader believes and one a reader can act on. It says
+so now. Recorded as D834.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `apply` is the first call through a value this file makes, and the
+host now writes into a function slot. What a host may write there is a number
+and nothing says which numbers are wrong: `kest_frame_fills` knows the slot is a
+word, and a word is what a text handle is too. Find out what the machine does
+with a function slot filled with something that is not a function index.

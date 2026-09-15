@@ -24623,3 +24623,39 @@ that answers a different question. No reading of names catches that; what caught
 it was following the advice and finding it circular. This rule catches the
 cheaper half — a door that is not there at all — and the expensive half stays a
 thing somebody has to walk.
+
+## D834: the proof only a host can break, broken by one
+
+*What the three proofs are.* A `no.alloc` promise is proved over the tree, then
+over the code that was emitted for it, and then by the machine at the one call
+neither walk can follow. The first two are held by examples. The third had a
+backstop hole and nothing else — and the hole reaches it by breaking the type
+rule, which is not how anybody reaches it.
+
+*Who can reach it.* Not a program: the promise is part of the type, so a value
+that does not promise cannot go where one that does is wanted, and D814's
+candidate set makes the second proof's gap a knowable one. **A host can.** A
+function value is one slot holding which function it is, and a host filling that
+slot writes a number. A number carries no promise. The machine asking the chunk
+is the only thing between a host that read the wrong index and a program running
+something it was told would not allocate.
+
+*So the host does it.* `examples/embed.kest` gained three functions —
+`apply(f: fn(i32) -> i32 no.alloc, n: i32)`, `doubled`, and `grows`, which fills
+an array — and `main` calls `apply(doubled, 2)`, which is what makes the second
+proof's candidate set non-empty and keeps the whole file's least. Then
+`examples/embed.c` reads both indexes with `kest_entry`, writes each into the
+function slot, and holds the first to running and the second to `K0623`.
+
+*What the program had to do for the host to be able to.* Naming a function as a
+value is what puts it in the set a call through a value may enter, and a file
+that names none has no answer for its stack at all — the first draft of this
+gave `examples/embed.kest` a `call.value` and no value, and every `kest_needs`
+relationship the host holds went with it. One line of program was the price of
+the demonstration, and it is the line that makes the demonstration honest: the
+proof passes for what the program does and the machine catches what the host
+does.
+
+*And the reference says who it is for.* It described the check and not who can
+reach it, which is the difference between a rule a reader believes and a rule a
+reader can act on.

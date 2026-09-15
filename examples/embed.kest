@@ -884,6 +884,35 @@ fn main() -> i32 {
         return 5
     }
 
+    // The call the second proof cannot follow, made by the program itself so
+    // that there is something for it to follow to: what a call through a value
+    // may enter is what this file ever names as one, which here is `doubled`.
+    // The host hands in `grows` and finds out from the machine. See D834.
+    if apply(doubled, 2) != 4 {
+        return 6
+    }
+
     io.print("one frame under {who}, {step(world)} left standing")
     return 0
+}
+
+// A promise through a call the second proof cannot follow. Which function
+// `apply` enters is not known until it runs, so what holds it is the type:
+// only a value that promises `no.alloc` goes where one is wanted. A host
+// filling that slot writes a number, and a number carries no promise — so the
+// machine asks the chunk it is about to enter and refuses if it does not
+// promise. `grows` is the one it refuses, handed in by a host that read the
+// index and wrote it. See D834.
+fn apply(f: fn(i32) -> i32 no.alloc, n: i32) -> i32 no.alloc {
+    return f(n)
+}
+
+fn doubled(n: i32) -> i32 no.alloc {
+    return n * 2
+}
+
+fn grows(n: i32) -> i32 {
+    let made: [i32] = array()
+    push(made, n)
+    return len(made) + n
 }

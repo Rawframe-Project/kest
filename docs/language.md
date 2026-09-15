@@ -2293,6 +2293,13 @@ is known while it runs, and a compiled function carries what it promised, so
 the machine checks that one call as it makes it and refuses with `K0623`. That
 is the same fault said in the same words, at the only place it can be seen.
 
+A program cannot reach that check: the promise is part of the type, so a value
+that does not promise cannot go where one that does is wanted. What reaches it
+is a host. A function value is one slot holding which function it is, and a
+host filling that slot writes a number — a number carries no promise, and the
+machine asking the chunk is the only thing between a host that read the wrong
+index and a program running something it was told would not allocate.
+
 ## What there is a most of
 
 A few numbers are what they are because an instruction holds them in two bytes

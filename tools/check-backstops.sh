@@ -184,6 +184,22 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # The third proof, which is the machine asking the chunk it is about
+        # to enter. The types hold a program to handing a promising value
+        # where one is wanted, and the walk over the code follows every call
+        # but this one — so what is left is a host, which writes a number into
+        # that slot and a number carries no promise. Without this the promise
+        # is kept by everything except the one thing that can break it.
+        # See D834.
+        "what": "a call through a value that does not ask what it promised",
+        "file": "src/vm.c",
+        "from": r"""            if (frame->chunk->no_alloc && !callee->no_alloc) {""",
+        "to": r"""            if (false) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "the program ran it under a promise",
+    },
+    {
         # A refusal that sends a reader to a door there is no way in through.
         # What a message names is a claim about where the answer is, and a
         # name out of `src` is a name a host looks for in the public header

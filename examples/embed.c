@@ -107,7 +107,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, DAMAGE_OF, HURT_BY, WORST,
        EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST,
        BORN, HEALTH_OF, DROPPED, TOTAL_OF, ANSWER_INTO, SAY_INTO, WORN,
        MOVED, PUT_RECORD, OWN_ARRAY, HOW_MANY_ON, REACH,
-       HEAVIEST_CELL, AS_WRITTEN, RANKED,
+       HEAVIEST_CELL, AS_WRITTEN, RANKED, APPLY, DOUBLED, GROWS,
        // What the list of names below has to be as long as. This host looked
        // each of them up into an array sized by the last name in this list,
        // so a name added after that one was a write past the end of it — this
@@ -2754,7 +2754,13 @@ int main(int argc, char **argv) {
         {"heaviestCell", {KEST_L_WORD, KEST_L_I32}, 2,
          {KEST_L_I32, KEST_L_F32}, 2},
         {"asWritten", {0}, 0, {KEST_L_WORD}, 1},
-        {"ranked", {KEST_L_F32, KEST_L_F32, KEST_L_F32}, 3, {KEST_L_I32}, 1}};
+        {"ranked", {KEST_L_F32, KEST_L_F32, KEST_L_F32}, 3, {KEST_L_I32}, 1},
+        // A function value is one slot holding which function it is, which is
+        // a word like any other handle — and a word carries no promise, which
+        // is the whole of why the machine asks the chunk. See D834.
+        {"apply", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_I32}, 1},
+        {"doubled", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
+        {"grows", {KEST_L_I32}, 1, {KEST_L_I32}, 1}};
     _Static_assert(sizeof(wanted) / sizeof(wanted[0]) == ENTRIES,
                    "every name this host asks for has somewhere to be put");
     // And what walking the names costs a host in news, which is nothing. The
@@ -3157,6 +3163,34 @@ int main(int argc, char **argv) {
     }
     printf("a result said to hold what it does not was refused, three "
            "times\n");
+
+    // A promise through the one call neither proof can follow. `apply` takes
+    // a value that promises `no.alloc`, and the program may only hand it one
+    // that does — the type carries the promise. A host hands it a number, and
+    // a number carries nothing: what this host writes into that slot is an
+    // index it read from `kest_entry`, and the machine is the only thing left
+    // that can ask the chunk whether it promised. `doubled` did and `grows`
+    // did not. See D834.
+    engine.frame[0].integer = engine.entry[DOUBLED];
+    engine.frame[1].integer = 5;
+    if (!kest_call(engine.runtime, engine.entry[APPLY], engine.frame, 2) ||
+        engine.frame[0].integer != 10) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        fprintf(stderr, "a function value that promises was refused\n");
+        return 1;
+    }
+    engine.frame[0].integer = engine.entry[GROWS];
+    engine.frame[1].integer = 5;
+    if (kest_call(engine.runtime, engine.entry[APPLY], engine.frame, 2)) {
+        fprintf(stderr, "a host handed in a function that allocates and the "
+                        "program ran it under a promise\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0623", "no.alloc")) {
+        return 1;
+    }
+    printf("a function value this host handed in was asked whether it "
+           "promised, and the one that did not was refused\n");
 
     // And the way a host has nothing to be wrong about: the arguments handed
     // over as words, written the way a program writes them, and the machine
