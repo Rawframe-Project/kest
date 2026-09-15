@@ -184,6 +184,23 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A machine that takes the number it worked out for itself over the
+        # one a host wrote down. Its twin — the frames — has been held since
+        # D621; the slots beside it were not, because until the bounds there
+        # was no host in this tree that named slots and not frames. A host
+        # that reads a bound, writes it down and is given something else has
+        # read a number for nothing. See D819.
+        "what": "a machine that ignores the slots a host asked for",
+        "file": "src/vm.c",
+        "from": r"""    rt->stack_slots = limits == NULL || limits->stack_slots == 0
+                          ? wants_slots
+                          : limits->stack_slots;""",
+        "to": r"""    rt->stack_slots = wants_slots;""",
+        "make": ["kest", "least"],
+        "host": "examples/least",
+        "caught": "was given",
+    },
+    {
         # Where a host may be called back in from, bounded by every body a
         # name reaches rather than by the ones that reach a host function. A
         # body that never reaches one is not on a chain of frames that ends at

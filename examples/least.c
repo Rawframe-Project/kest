@@ -184,6 +184,9 @@ int main(int argc, char **argv) {
     // What the program needs, rather than a number this host guessed. A
     // program that can reach itself has no answer and says so, and then the
     // machine picks for itself — which is what passing nothing gets.
+    // The name this host is about to call, read before the machine is made
+    // because what it is about to call is what the machine is sized for.
+    const char *called = argc > 2 ? argv[2] : "main";
     KestLimits limits = {0, 0, 0};
     KestReason why = {KEST_REACH_UNASKED, NULL};
     bool measured = kest_needs(build, &limits, &why);
@@ -286,7 +289,25 @@ int main(int argc, char **argv) {
         kest_runtime_free(deeper);
     }
 
-    KestRuntime *runtime = kest_start(build, host, measured ? &limits : NULL);
+    // And a machine made from the bound rather than from the usual numbers. A
+    // bound is a number a host can read; this is a host reading one, writing
+    // it down and running the program in what it asked for. Sixteen frames is
+    // this host's own choice and the slots follow from it — a program that
+    // goes deeper than that is refused at the call that would, and told what
+    // it wanted, which is the whole of what a bound promises. See D819.
+    KestLimits asked_for = {0, 0, 0};
+    if (!measured && kest_bound_of(build, called, 16, &asked_for, NULL)) {
+        asked_for.heap_bytes = 1024 * 1024;
+        // What came back may be the least for that one name rather than a
+        // bound — `motto` reaches nothing that comes back round — and then
+        // the frames are its own and not the sixteen this host allowed.
+        printf("and this host allows 16 frames, so it takes %u slots and %u "
+               "frames\n",
+               asked_for.stack_slots, asked_for.call_depth);
+    }
+    KestRuntime *runtime = kest_start(
+        build, host,
+        measured ? &limits : (asked_for.stack_slots > 0 ? &asked_for : NULL));
     // Freeing nothing is not a refusal, the same as freeing no machine, so a
     // host that has none says nothing special here.
     kest_host_free(host);
@@ -304,7 +325,27 @@ int main(int argc, char **argv) {
 
     // A name the program does not define is -1, and asking is free. What
     // comes back from the call is written over the frame it was handed.
-    const char *called = argc > 2 ? argv[2] : "main";
+    // And that the machine is the one that was asked for. A bound a host reads
+    // and writes down is only worth reading if the machine it makes is the
+    // one it wrote: this is the same two numbers, read back off the machine
+    // the program is about to run in. See D819.
+    if (asked_for.stack_slots > 0) {
+        KestLimits was_given = {0, 0, 0};
+        kest_allowed(runtime, &was_given);
+        if (was_given.stack_slots != asked_for.stack_slots ||
+            was_given.call_depth != asked_for.call_depth ||
+            was_given.stack_slots >= KEST_STACK_SLOTS) {
+            fprintf(stderr,
+                    "a machine asked for %u slots and %u frames was given %u "
+                    "and %u\n",
+                    asked_for.stack_slots, asked_for.call_depth,
+                    was_given.stack_slots, was_given.call_depth);
+            kest_runtime_free(runtime);
+            kest_build_free(build);
+            return 1;
+        }
+    }
+
     int32_t entry = kest_entry(runtime, called);
     KestValue frame[8] = {{0}};
     // And what to call it with, where somebody said so. Words are what a

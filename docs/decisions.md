@@ -24069,3 +24069,53 @@ host would be equal to it.
 *Three doors, three bounds, one shape.* Each answers the least where there is
 one. Each answers a bound where there is not, from the frames a host allows.
 Each says which it gave. A host that wants a number now always has one.
+
+## D819: a bound is a machine, not only a number
+
+*What the three doors had not done.* D815 to D818 gave a host a number where it
+had none. Nothing in this tree had ever made a machine out of one and run a
+program in it. A number nobody has spent is a number nobody has checked.
+
+*So the smallest host spends one.* `examples/least.c` asks `kest_bound_of` about
+the name it is about to call, with sixteen frames — its own choice, and the
+slots follow from it — writes the answer into `KestLimits`, and runs the program
+in that:
+
+```
+`examples/least.kest` has no least, and is 57 slots for 16 frames and 201 for 64
+and `main` on its own is 54 of them, 32 of which is where this host could be
+    called back in from
+and this host allows 16 frames, so it takes 54 slots
+hello, host
+`main` gave back 0
+```
+
+Fifty-four slots and sixteen frames, against the 3081 and 1024 the same program
+got when the host said nothing. The program fits, and says the same thing it
+said in a machine twenty times the size.
+
+Asked about a name that reaches nothing coming back round — `motto`, which this
+host is also run with — the same door answers that name's own least, one slot
+and one frame, and the sixteen are not looked at. So the machine is held to what
+was asked for and not to the sixteen: a host that asks always gets whichever of
+the two there is, and the frames it wrote down are the ceiling and not the
+answer.
+
+*And the machine is the one that was asked for.* Read back off it with
+`kest_allowed` before the call: the same two numbers, and both under the usual
+ones. A bound a host reads and writes down is only worth reading if the machine
+it makes is the one it wrote.
+
+*What that check turned out to be the first of.* The machine has been held to
+the **frames** a host asks for since D621. The slots beside them were not — and
+nothing noticed, because until these bounds there was no host in this tree that
+named slots and did not name frames. Every host here either said nothing or said
+what `kest_needs` told it, and what `kest_needs` tells you is what the machine
+would have picked anyway. A hole that makes the machine keep its own number over
+the host's is caught now.
+
+*The half not written.* A machine sized for sixteen frames and handed a program
+that wants seventeen is refused at the call that would be the seventeenth, and
+told what it wanted. That is what every under-asking meets, and it is what makes
+a bound safe to be wrong about. Nothing here demonstrates it, because this host
+is the one that has to stay readable in one sitting.

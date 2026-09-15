@@ -31060,3 +31060,47 @@ ever run a program against one. Give `examples/least.c` a machine sized by
 `kest_bound_of` rather than by the usual numbers, run its own program in it, and
 hold that a bound is a machine a program fits in as well as a number a host can
 read.
+
+## A bound is a machine, not only a number
+
+D815 to D818 gave a host a number where it had none, and nothing in this tree
+had ever made a machine out of one. A number nobody has spent is a number nobody
+has checked.
+
+`examples/least.c` asks `kest_bound_of` about the name it is about to call, with
+sixteen frames — its own choice, and the slots follow from it — writes the answer
+into `KestLimits` and runs the program in that. Fifty-four slots and sixteen
+frames, against the 3081 and 1024 the same program got when the host said
+nothing. It fits, and says the same thing it said in a machine twenty times the
+size.
+
+Asked about a name that reaches nothing coming back round — `motto`, which this
+host is also run with — the same door answers that name's own least, one slot
+and one frame, and the sixteen are not looked at. The machine is held to what
+was asked for rather than to the sixteen: the frames a host writes down are a
+ceiling and not an answer.
+
+And the machine is the one that was asked for: read back with `kest_allowed`
+before the call, the same two numbers and both under the usual ones. A bound a
+host reads and writes down is only worth reading if the machine it makes is the
+one it wrote.
+
+That check turned out to be the first of its kind. The machine has been held to
+the frames a host asks for since D621; the slots beside them were not, and
+nothing noticed, because until these bounds there was no host here that named
+slots and did not name frames — every one either said nothing or said what
+`kest_needs` told it, which is what the machine would have picked anyway. A hole
+that makes the machine keep its own number over the host's is caught now.
+
+The half not written: a machine sized for sixteen frames and handed a program
+that wants seventeen is refused at the call that would be the seventeenth and
+told what it wanted, which is what makes a bound safe to be wrong about. This
+host is the one that has to stay readable in one sitting, so it does not show it.
+Recorded as D819.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** that half. `examples/embed.c` is the host with room to show what a
+machine too small does: size one from `kest_bound_of` with fewer frames than the
+program wants, call into it, and hold that what comes back is a refusal naming
+the number it wanted rather than anything else.

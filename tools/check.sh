@@ -773,10 +773,11 @@ fi
 # follow from the frames. See D815.
 if ! grep -q "has no least, and is" "$scratch"/least-said ||
    ! grep -q "on its own is" "$scratch"/least-said ||
-   ! grep -q "called back in from" "$scratch"/least-said; then
+   ! grep -q "called back in from" "$scratch"/least-said ||
+   ! grep -q "frames, so it takes" "$scratch"/least-said; then
     complain "least" "the smallest host ran its own program and said nothing \
 about what a frame of it costs, what one name of it wants or where it could \
-be called back in from"
+be called back in from, or did not run it in a machine sized by that"
     sed 's/^/    /' "$scratch"/least-said | head -4
     least_wrong=1
 fi
@@ -892,7 +893,8 @@ nothing, reads back an answer that is not a number and one the language has no \
 text of its own for, refuses one that asks for a name it has not got, and two \
 that ask for its own in another shape, calls with a word what takes one, says \
 what a frame of a program with no least costs, what one name of it wants and \
-where it could be called back in from, and \
+where it could be called back in from, runs it in a machine sized by that, \
+and \
 says what compiling had to say about a program that compiled"
 fi
 
