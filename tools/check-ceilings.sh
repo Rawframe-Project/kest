@@ -425,7 +425,7 @@ cat > "$work/lending.c" <<'HOST'
 
 int main(int argc, char **argv) {
     (void)argc;
-    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT);
+    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT, 0);
     if (build == NULL) {
         return 2;
     }
@@ -640,7 +640,7 @@ cat > "$work/narrow.c" <<'HOST'
 
 int main(int argc, char **argv) {
     (void)argc;
-    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT);
+    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT, 0);
     if (build == NULL) {
         return 2;
     }
@@ -745,7 +745,7 @@ cat > "$work/spending.c" <<'HOST'
 
 int main(int argc, char **argv) {
     (void)argc;
-    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT);
+    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT, 0);
     if (build == NULL) {
         return 2;
     }
@@ -890,7 +890,7 @@ cat > "$work/asking.c" <<'HOST'
 
 int main(int argc, char **argv) {
     (void)argc;
-    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT);
+    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT, 0);
     if (build == NULL) {
         return 2;
     }

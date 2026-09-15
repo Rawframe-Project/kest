@@ -86,12 +86,9 @@ bool kest_build_emit(KestBuild *build) {
 }
 
 KestBuild *kest_build(const char *path, const char *library, FILE *errors,
-                      KestForm form) {
+                      KestForm form, size_t room) {
     char *paths[1] = {(char *)path};
-    // No ceiling, because this door takes no number for one: a host that
-    // wants to say how much room a build may have opens it in stages and says
-    // so there.
-    KestBuild *build = kest_build_open(library, paths, 1, 0);
+    KestBuild *build = kest_build_open(library, paths, 1, room);
     if (build == NULL) {
         // Nothing was made, so there is nothing to ask what went wrong: a
         // host that got NULL here and called `kest_build_report` would be
@@ -99,6 +96,18 @@ KestBuild *kest_build(const char *path, const char *library, FILE *errors,
         // and it is said in the form the caller asked for, through the writer
         // every other diagnostic goes through, because a shape written twice
         // is a shape that comes apart.
+        //
+        // Two reasons now, and which of them is known here without asking
+        // anything: a build given a ceiling and refused before it had a list
+        // to write in was refused by the ceiling, and the arena that would
+        // have said so is already gone. See D844.
+        if (room > 0) {
+            char said[120];
+            snprintf(said, sizeof said, KEST_CRAMPED_START, room);
+            kest_diags_say_one(errors, form == KEST_FORM_JSON,
+                               KEST_CRAMPED_CODE, said);
+            return NULL;
+        }
         kest_diags_say_one(errors, form == KEST_FORM_JSON, "K0705",
                            "there is not enough memory to read a program");
         return NULL;

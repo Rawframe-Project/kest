@@ -25071,3 +25071,37 @@ machine, a refusal not carried back out of a scratch arena, a ceiling said in
 words and not in JSON, and a ceiling that leaves the program none of itself —
 and by three rungs rather than one, because a ceiling is crossed in three places
 and only one of them is the arena the ceiling is written on.
+
+## D844: the door a host compiles through takes the number too
+
+D843 gave the command line a ceiling. `kest_build` is the door every other host
+compiles through and it took none, so an engine embedding this library had
+exactly the exposure `kest` had until yesterday: a file it cannot make sense of
+asks for everything the machine has, and one of them did.
+
+*The number goes on the door rather than beside it.* A second door —
+`kest_build_within`, or whatever it would have been called — is a door that is
+easy not to find, and a host that compiles a program somebody else wrote is a
+host that has to think about the number. So `kest_build` takes it, nought means
+as much as there is, and the nineteen callers in this tree each say which they
+mean. Eighteen of them say nought, which is a sentence rather than an omission.
+
+*Not in `KestLimits`.* A machine has three numbers and a build has one, and the
+three are asked before a machine exists while the one is asked before a build
+does. A fourth field that a machine never reads would be one shape with two
+meanings.
+
+*What it says is what the command line says*, and is now written once: the two
+sentences a ceiling is met with live beside the code in `diag.h`, because two
+doors reach the second of them and a sentence written in two places is a
+sentence that comes apart.
+
+*Held by the engine host*, which is the only thing here that asks a question and
+then holds the answer to itself: it builds the file, asks what that cost, and
+hands the door that number. A build given exactly what it costs builds, and
+costs the same to the byte. One given half of it comes back nothing and says
+what it had taken, what it was allowed and what the allocation that crossed it
+wanted. One given a single byte comes back nothing and says there was never
+enough to begin — which is the other sentence, from the door that has nowhere
+to write a diagnostic down. A host that reads only the nothing cannot tell a
+ceiling it picked from a machine it has to buy, and this one reads both.

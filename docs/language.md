@@ -3661,7 +3661,7 @@ boundary rather than at a command line, and it is asked for at each of the two
 places output is written rather than set once somewhere else:
 
 ```c
-KestBuild *build = kest_build(path, NULL, stderr, KEST_FORM_JSON);
+KestBuild *build = kest_build(path, NULL, stderr, KEST_FORM_JSON, 0);
 kest_report(runtime, stderr, KEST_FORM_JSON);
 ```
 

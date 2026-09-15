@@ -233,6 +233,12 @@ void kest_diags_note_at(KestDiags *diags, uint32_t which,
 #define KEST_CRAMPED_CODE "K0658"
 #define KEST_CRAMPED_SAYS                                                      \
     "this has taken %zu of the %zu bytes it was given, and wanted %zu more"
+// And the same ceiling met before there is anywhere to write a diagnostic
+// down, which is a build that could not be opened at all. Two doors reach it —
+// the command line and the one a host compiles through — and a sentence
+// written in two places is a sentence that comes apart. See D844.
+#define KEST_CRAMPED_START                                                     \
+    "this was given %zu bytes, which is not enough to begin reading a program"
 
 // Says that something could not be said for want of memory, which is the one
 // thing this can record without any. It counts as an error, because what a

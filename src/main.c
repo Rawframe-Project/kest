@@ -1475,10 +1475,7 @@ static int run(const char *command, const char *executable, char **paths,
         // have said so is already gone.
         if (room > 0) {
             char said[120];
-            snprintf(said, sizeof said,
-                     "this was given %zu bytes, which is not enough to begin "
-                     "reading a program",
-                     room);
+            snprintf(said, sizeof said, KEST_CRAMPED_START, room);
             kest_diags_say_one(json ? stdout : stderr, json,
                                KEST_CRAMPED_CODE, said);
             return 1;

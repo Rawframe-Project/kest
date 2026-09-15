@@ -32003,3 +32003,35 @@ not this command line compiles through, and it takes no ceiling either — an
 engine embedding this library has exactly the exposure the command line had
 until today. Give the public door a number, or say in the header why it has
 none.
+
+## The door a host compiles through takes the number too
+
+The last entry gave the command line a ceiling and left the same gap one door
+over. `kest_build` is what every other host compiles through, and an engine
+embedding this library had exactly the exposure `kest` had the day before.
+
+The number is on the door now rather than beside it: `kest_build` takes it, and
+a second door would have been one that is easy not to find. Nought is as much as
+there is, and the nineteen callers in this tree each say which they mean.
+
+The two sentences a ceiling is met with are written once now, beside the code in
+`diag.h`, because both doors reach the second of them.
+
+What holds it is the engine host, which asks a question and then holds the
+answer to itself: it builds the file, asks what that cost, and hands the door
+that number. A build given exactly what it costs builds and costs the same to
+the byte; one given half of it is refused with what it took, what it was allowed
+and what the allocation that crossed the ceiling wanted; one given a single byte
+is refused before there is anywhere to write a diagnostic, and says so in the
+other sentence. A host that reads only the nothing cannot tell a ceiling it
+picked from a machine it has to buy.
+
+Recorded as D844.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a ceiling makes every out-of-room path in this compiler reachable for
+the first time, and the first one anybody walked into answered nought and said
+nothing at all. `--room` can now walk a ladder down over every example from the
+command line. Walk one, and hold that no rung ever comes back nought with
+nothing said.

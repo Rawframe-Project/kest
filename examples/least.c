@@ -123,7 +123,7 @@ int main(int argc, char **argv) {
 
     // Compiling says what is wrong with the program where it is wrong, into
     // the file this host hands it. Nothing is a machine yet.
-    KestBuild *build = kest_build(path, NULL, stderr, KEST_FORM_TEXT);
+    KestBuild *build = kest_build(path, NULL, stderr, KEST_FORM_TEXT, 0);
     if (build == NULL) {
         return 1;
     }

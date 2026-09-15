@@ -267,7 +267,7 @@ cat > "$asking.c" <<'EOF'
 
 int main(int argc, char **argv) {
     (void)argc;
-    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT);
+    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT, 0);
     KestHost *host = kest_host_new();
     KestRuntime *runtime = build == NULL ? NULL : kest_start(build, host, NULL);
     if (runtime == NULL) {
@@ -308,7 +308,7 @@ int main(int argc, char **argv) {
     // the only thing that can say it stopped short is somebody else's count
     // of the same thing. See D435.
     if (argc > 2) {
-        KestBuild *both = kest_build(argv[2], NULL, stderr, KEST_FORM_TEXT);
+        KestBuild *both = kest_build(argv[2], NULL, stderr, KEST_FORM_TEXT, 0);
         KestRuntime *walking = both == NULL ? NULL
                                             : kest_start(both, host, NULL);
         if (walking == NULL) {
@@ -729,7 +729,7 @@ int main(int argc, char **argv) {
     }
     /* Where `std` lives, which is beside this tree rather than installed: a
        host says it, and this one is run from the root of the tree. */
-    KestBuild *build = kest_build(argv[1], "lib/", stderr, KEST_FORM_TEXT);
+    KestBuild *build = kest_build(argv[1], "lib/", stderr, KEST_FORM_TEXT, 0);
     if (build == NULL) {
         return 2;
     }

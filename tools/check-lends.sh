@@ -69,7 +69,7 @@ cat > "$naming.c" <<'EOF'
 
 int main(int argc, char **argv) {
     (void)argc;
-    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT);
+    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT, 0);
     if (build == NULL) {
         return 2;
     }
@@ -201,7 +201,7 @@ cat > "$holding.c" <<'EOF'
 
 int main(int argc, char **argv) {
     (void)argc;
-    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT);
+    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT, 0);
     if (build == NULL) {
         return 2;
     }

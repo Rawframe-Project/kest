@@ -1785,7 +1785,7 @@ int main(int argc, char **argv) {
     // NULL for the library, which is the compiler finding its own: what
     // `KEST_LIB` says, or where it was installed.
     const char *path = argc > 1 ? argv[1] : "examples/embed.kest";
-    KestBuild *build = kest_build(path, NULL, stderr, KEST_FORM_TEXT);
+    KestBuild *build = kest_build(path, NULL, stderr, KEST_FORM_TEXT, 0);
     if (build == NULL) {
         return 1;
     }
@@ -1797,7 +1797,7 @@ int main(int argc, char **argv) {
     // build to the next — a build is its own arena and its own everything — so
     // the second is the first, to the byte. See D573.
     size_t first_build = kest_build_cost(build);
-    KestBuild *read_again = kest_build(path, NULL, stderr, KEST_FORM_TEXT);
+    KestBuild *read_again = kest_build(path, NULL, stderr, KEST_FORM_TEXT, 0);
     if (read_again == NULL) {
         fprintf(stderr, "the same program would not build a second time\n");
         return 1;
@@ -6265,7 +6265,7 @@ int main(int argc, char **argv) {
         // would do as well and wants `std.math` bound as well, which is four
         // more bindings and nothing more shown.
         const char *deep_path = "examples/least.kest";
-        KestBuild *deeply = kest_build(deep_path, NULL, stderr, KEST_FORM_TEXT);
+        KestBuild *deeply = kest_build(deep_path, NULL, stderr, KEST_FORM_TEXT, 0);
         if (deeply == NULL) {
             fprintf(stderr, "`%s` did not compile\n", deep_path);
             return 1;
@@ -6361,7 +6361,7 @@ int main(int argc, char **argv) {
         // A build of its own, because how many machines are standing on this
         // one is a thing this host says out loud further down: a machine
         // started to be refused something is not a machine this host drives.
-        KestBuild *aside = kest_build(path, NULL, stderr, KEST_FORM_TEXT);
+        KestBuild *aside = kest_build(path, NULL, stderr, KEST_FORM_TEXT, 0);
         KestLimits nothing_left = {0, 0, 0};
         nothing_left.heap_bytes = 64;
         KestRuntime *starved =
@@ -6402,7 +6402,7 @@ int main(int argc, char **argv) {
                             "needs\n");
             return 1;
         }
-        KestBuild *narrowly = kest_build(path, NULL, stderr, KEST_FORM_TEXT);
+        KestBuild *narrowly = kest_build(path, NULL, stderr, KEST_FORM_TEXT, 0);
         KestRuntime *tight =
             narrowly == NULL ? NULL : kest_start(narrowly, apart, &bare);
         if (tight == NULL) {
@@ -6467,7 +6467,7 @@ int main(int argc, char **argv) {
             KestHost *over = kest_host_new();
             static Decider quietly = {-1, 1, false, true, false, false};
             KestBuild *reloaded =
-                kest_build(path, NULL, stderr, KEST_FORM_TEXT);
+                kest_build(path, NULL, stderr, KEST_FORM_TEXT, 0);
             if (over == NULL || reloaded == NULL ||
                 !kest_host_bind(over, "Io.write", io_write, stdout) ||
                 !kest_host_bind(over, "Engine.decide", engine_decide,
@@ -6506,6 +6506,65 @@ int main(int argc, char **argv) {
         }
         printf("a reload of this program is %zu bytes of build and %zu of "
                "machine, three times over\n", built, started);
+    }
+
+    // And the same file built inside a ceiling, which is the one thing this
+    // door did not take. Last of everything this host asks, because what is
+    // read back here is a refusal, and a refusal read before the checks above
+    // is one of them answered by the wrong question. See D844. A host that compiles a program somebody else wrote
+    // can be handed a file this compiler cannot make sense of, and one of
+    // those asked this machine for sixty-five gigabytes — so what a build may
+    // have is a number, and the number this host has in front of it is what
+    // building this one cost a moment ago. See D844.
+    KestBuild *walled = kest_build(path, NULL, stderr, KEST_FORM_TEXT,
+                                   first_build);
+    if (walled == NULL) {
+        fprintf(stderr, "a build given the %zu bytes it costs would not "
+                        "build\n",
+                first_build);
+        return 1;
+    }
+    if (kest_build_cost(walled) != first_build) {
+        fprintf(stderr, "a build given what it costs cost %zu instead\n",
+                kest_build_cost(walled));
+        return 1;
+    }
+    kest_build_free(walled);
+
+    // And two ceilings it does not fit in, because there are two ways to be
+    // refused by one and a sentence for each: one where there was never enough
+    // to begin, and one where a build was under way and the allocation that
+    // crossed the ceiling is worth a number. What comes back is nothing either
+    // way, and a host that only reads the nothing cannot tell a ceiling it
+    // picked from a machine it has to buy.
+    const size_t too_little[2] = {1, first_build / 2};
+    const char *cramped[2] = {"not enough to begin", "bytes it was given"};
+    for (int which = 0; which < 2; which++) {
+        FILE *refused = tmpfile();
+        if (refused == NULL) {
+            fprintf(stderr, "this host has nowhere to read a refusal back "
+                            "from\n");
+            return 1;
+        }
+        KestBuild *cannot = kest_build(path, NULL, refused, KEST_FORM_TEXT,
+                                       too_little[which]);
+        if (cannot != NULL) {
+            fprintf(stderr, "a build given %zu of the %zu bytes it costs "
+                            "built anyway\n",
+                    too_little[which], first_build);
+            return 1;
+        }
+        char why[512] = {0};
+        rewind(refused);
+        size_t said = fread(why, 1, sizeof why - 1, refused);
+        fclose(refused);
+        why[said] = '\0';
+        if (strstr(why, "K0658") == NULL ||
+            strstr(why, cramped[which]) == NULL) {
+            fprintf(stderr, "a build given %zu bytes said `%s`\n",
+                    too_little[which], why);
+            return 1;
+        }
     }
 
     // And then the build, which nothing is standing on now.

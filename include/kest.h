@@ -871,8 +871,19 @@ KestNative kest_host_find(const KestHost *host, const char *name,
 // a shape nothing names, a declaration nothing calls — has that waiting in
 // `kest_build_report`, because a build that answered is one a host may want to
 // say nothing about. Asking costs nothing and says nothing twice. See D631.
+//
+// `room` is the most this may ask the machine for while it reads, checks and
+// compiles, in bytes, and nought is as much as there is. It is the same
+// question `KestLimits.heap_bytes` asks about a machine and it is asked here
+// because compiling is where the answer is unbounded: what a program allocates
+// is a number the program chose, and what compiling one costs is a number
+// nobody chose — a file this compiler cannot make sense of can ask for
+// everything there is, and one did. A build refused by this says what it had
+// taken, what it was allowed and what the allocation that crossed it wanted;
+// a build refused by the machine says so instead, because one of the two is
+// raised by picking a bigger number and the other is not. See D843 and D844.
 KestBuild *kest_build(const char *path, const char *library, FILE *errors,
-                      KestForm form);
+                      KestForm form, size_t room);
 // Frees the build and everything on it. Answers whether there is no build now:
 // true when it freed one and true when there was none, false when a machine is
 // still standing on it. The program the machines run is on here, and so is
