@@ -24295,3 +24295,44 @@ more thing to keep in step — which is what this file is for.
 keywords and the codes have had: a table and the thing it is a table of, held to
 each other. The doors were the last group in this tree with a shape and no
 reading of it.
+
+## D825: reading the heap against a run, and what it found
+
+*The reading.* D811 held the compiler's count of the stack against what the
+machine moved. The same was asked of the heap: three doors — what the program
+has allocated, what a refused allocation asked for, and the ceiling that stops a
+program at the allocation that would cross it — read once per instruction, over
+every example and both hosts.
+
+Three things were checked and all three held. The heap never fell except where a
+host threw it away. It never went past a ceiling. At every refusal, what was used
+plus what was asked for was more than what was allowed.
+
+*So nothing is left in, and that is a decision rather than an omission.* The
+ceiling is asked at the allocation, which is the only place memory is taken, so a
+reading of it afterwards can only repeat what the refusal already said. And
+nothing in the machine gives heap back — `kest_arena_returned` is called by the
+loader, the parser and the build, and never by a run — so the other reading
+cannot be broken by any one line. A check nobody can break is a check nobody can
+trust, and `CLAUDE.md` asks for a hole per sentence for exactly that reason.
+Two of the three readings could not have one.
+
+*What it did find.* The header said of `kest_heap_used`: *"Nothing frees them, so
+this only goes up."* The same header declares `kest_heap_reset`, which throws the
+whole heap away and puts the number back to nothing. The sentence is wrong as
+written, and it is the sentence a host budgeting by differences reads.
+
+It says both now: it only goes up, and the one thing that moves it the other way
+is the reset — and that what a program is holding is a different number from what
+it has asked for.
+
+*And the door it names was the one nothing held.* `examples/embed.c` has printed
+`and the heap it has now holds 0 bytes` since D630 and never asked whether it was
+nought. A reset that put the memory back and not the number would make the first
+difference after it the leftovers plus the frame, and every frame after that
+measured against a number that was never true. Held now, and the hole that keeps
+the count while giving the memory back is caught.
+
+*The shape of a null result.* Three readings, two of them unbreakable, one prose
+defect and one unheld promise. Worth writing down: the next reader of these
+doors should not have to do the reading again to find out that it was done.

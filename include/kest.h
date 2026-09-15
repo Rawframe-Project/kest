@@ -724,8 +724,11 @@ void kest_report(KestRuntime *runtime, FILE *out, KestForm form);
 // were. A host that reads what it is told never meets this. See D618.
 #define KEST_MOST_UNREAD 16
 
-// How many bytes the running program has allocated. Nothing frees them, so
-// this only goes up, and a host watching it is watching the cost D012 defers.
+// How many bytes the running program has allocated. Nothing frees them, so this
+// only goes up, and a host watching it is watching the cost D012 defers. The
+// one thing that moves it the other way is `kest_heap_reset`, which throws the
+// whole of it away and puts this back to nothing — what a program is holding is
+// a different number from what it has asked for, and this is the second.
 //
 // Asked on either side of a call, the difference is what that call cost, which
 // is the number a host with a frame budget wants: a total is a number without

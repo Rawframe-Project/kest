@@ -184,6 +184,22 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A heap thrown away with the counting of it left behind. What a host
+        # watching a frame budget reads is the difference between two of these
+        # numbers, so a reset that puts the memory back and not the number
+        # makes the first difference after it the leftovers plus the frame —
+        # and every frame after that is measured against a number that was
+        # never true. See D825.
+        "what": "a heap thrown away with the count of it kept",
+        "file": "src/mem.c",
+        "from": r"""    arena->handed = 0;
+    arena->allocations = 0;""",
+        "to": r"""    arena->allocations = 0;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "the heap was thrown away and holds",
+    },
+    {
         # A door that answers with nothing beside it that bounds. The six come
         # in three pairs and a seventh on one side is a pair that came apart —
         # a host that learned the shape from one of them would be wrong about

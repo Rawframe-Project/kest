@@ -1482,6 +1482,17 @@ static bool spends_the_heap(Engine *engine) {
         kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
         return false;
     }
+    // And nothing on it, which is the one thing that moves this number the
+    // other way. `kest_heap_used` only goes up while a program runs, so a host
+    // watching a frame budget reads the difference between two of them — and
+    // a reset that left anything behind would make the first difference after
+    // it the leftovers plus the frame. Printed here since D630 and never held
+    // until D825. See D825.
+    if (kest_heap_used(engine->runtime) != 0) {
+        fprintf(stderr, "the heap was thrown away and holds %zu bytes\n",
+                kest_heap_used(engine->runtime));
+        return false;
+    }
     printf("and the heap it has now holds %zu bytes\n",
            kest_heap_used(engine->runtime));
 

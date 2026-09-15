@@ -31272,3 +31272,41 @@ the machine and read what it does with the heap: `kest_heap_used` only goes up,
 `kest_heap_wanted` says what a refused allocation asked for, and a ceiling stops
 a program at the allocation that would cross it. Read those three against what a
 run actually does, the way D811 read the stack.
+
+## Reading the heap against a run, and what it found
+
+D811 held the compiler's count of the stack against what the machine moved. The
+same was asked of the heap: three doors — what the program has allocated, what a
+refused allocation asked for, and the ceiling that stops a program at the
+allocation that would cross it — read once per instruction over every example and
+both hosts. All three held. The heap never fell except where a host threw it
+away, never went past a ceiling, and at every refusal what was used plus what was
+asked for was more than what was allowed.
+
+Nothing is left in, and that is a decision. The ceiling is asked at the
+allocation, which is the only place memory is taken, so reading it afterwards can
+only repeat what the refusal already said; and nothing in the machine gives heap
+back — `kest_arena_returned` is called by the loader, the parser and the build,
+never by a run — so the other reading cannot be broken by any one line. A check
+nobody can break is a check nobody can trust, which is what a hole per sentence
+is for, and two of the three could not have one.
+
+What the reading found was prose. The header said of `kest_heap_used` that
+"nothing frees them, so this only goes up", and the same header declares
+`kest_heap_reset`, which throws the whole heap away and puts the number back to
+nothing. It says both now, and says that what a program is holding is a different
+number from what it has asked for.
+
+And the door it names was the one nothing held: `examples/embed.c` has printed
+"and the heap it has now holds 0 bytes" since D630 and never asked whether it was
+nought. A reset that put the memory back and not the number would make the first
+difference after it the leftovers plus the frame. Held now, and the hole that
+keeps the count while giving the memory back is caught. Recorded as D825.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the reset is held at nought and the ceiling at the allocation, and what
+is between them is not: a host may cap a heap after a program has already filled
+more than the cap. `kest_arena_cap` writes the number and nothing says what
+happens to a program already over it. Find out what the machine does, and make it
+do one thing on purpose.
