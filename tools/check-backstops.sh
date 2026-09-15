@@ -184,6 +184,21 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A program with no least given the usual number of slots whatever
+        # depth a host named. There is no worst chain to add up and a frame is
+        # at most the widest body all the same, so a host that says sixteen
+        # frames is asking for sixteen of those and not for sixty-five
+        # thousand slots. Nothing running would notice: the machine is bigger
+        # than it has to be, and the host paid for it. See D815.
+        "what": "a program with no least sized without its frames",
+        "file": "src/vm.c",
+        "from": r"""    } else if (walked->widest > 0) {""",
+        "to": r"""    } else if (false) {""",
+        "make": ["kest", "least"],
+        "host": "examples/least",
+        "caught": "has no least, and 16 frames of it is",
+    },
+    {
         # A call through a value costing nothing at all. Which function it
         # enters is one of the ones the program turns into a value, and the
         # answer is the worst of them; counting none of them is a program told
@@ -6761,10 +6776,8 @@ static int run(const char *command,""",
         # runs everything until the frame that asks the host something.
         "what": "a default with no room for the call back in",
         "file": "src/vm.c",
-        "from": """        wants_slots = reached + rt->host_slots;
-        wants_frames = deep + rt->host_frames;""",
-        "to": """        wants_slots = reached;
-        wants_frames = deep;""",
+        "from": """        wants_slots = reached + rt->host_slots;""",
+        "to": """        wants_slots = reached;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "and a host that said nothing was given",

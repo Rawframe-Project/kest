@@ -436,6 +436,12 @@ typedef struct {
     uint32_t frames;
     uint32_t host_slots;
     uint32_t host_frames;
+    // The widest one body of this program ever is, which is the one number a
+    // program with no least still has: a frame is at most this, whatever the
+    // run of calls above it turned out to be. A program that reaches itself
+    // has no worst chain to add up and a ceiling on frames all the same, so
+    // what it needs is at most this many slots a frame. See D815.
+    uint32_t widest;
     KestReason why;
 } KestWalk;
 

@@ -363,6 +363,18 @@ const char *kest_build_name(KestBuild *build, const char *name) {
 static const KestWalk *walk_it(KestBuild *build) {
     if (!build->walked.taken) {
         build->walked.taken = true;
+        // The widest one body ever is, which needs no walk of the calls: it
+        // is read straight off the chunks, and it is what a program with no
+        // least is sized by. See D815.
+        for (uint32_t i = 0; i < build->module.count; i++) {
+            const KestChunk *one = build->module.functions[i];
+            uint32_t own = one == NULL
+                               ? 0
+                               : (uint32_t)one->slot_count + one->stack_needed;
+            if (own > build->walked.widest) {
+                build->walked.widest = own;
+            }
+        }
         build->walked.measured = kest_module_needs(
             &build->module, build->arena, -1, &build->walked.slots,
             &build->walked.frames, &build->walked.host_slots,

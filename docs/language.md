@@ -3357,8 +3357,11 @@ it is done on the program's own heap and handed back before the machine
 answers, because a refusal is not the end of a run and a frame that goes wrong
 twice a second would otherwise be a heap that shrinks twice a second. A chain of calls a
 thousand deep runs because the program said it was one, and a program that can
-reach itself gets `KEST_STACK_SLOTS` and `KEST_CALL_DEPTH` and finds out, which
-is what it got before.
+reach itself is given the frames a host allows and the widest one of its bodies
+for each of them: there is no worst chain to add up, but a frame is at most the
+widest body whatever the run of calls above it turned out to be, so the slots
+follow from the frames. A host that says sixteen frames is asking for sixteen of
+those. `KEST_STACK_SLOTS` is what it gets when even that is more.
 
 A call through a value costs the worst of the functions this program ever turns
 into one. Which function such a call enters is not known before it runs, but

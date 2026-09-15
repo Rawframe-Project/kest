@@ -189,6 +189,41 @@ int main(int argc, char **argv) {
     bool measured = kest_needs(build, &limits, &why);
     limits.heap_bytes = 1024 * 1024;
 
+    // And what a program with no answer costs a host that names a depth. There
+    // is no worst chain to add up, but a frame is at most the widest body the
+    // program has and a host says how many frames there are — so the slots are
+    // that many a frame, and twice the frames is twice the slots. Asked here
+    // because this is the host with nothing else in it: two machines, no
+    // program run in them, and the numbers read back out. See D815.
+    if (!measured) {
+        KestLimits few = {0, 16, 0};
+        KestLimits many = {0, 64, 0};
+        KestRuntime *shallow = kest_start(build, host, &few);
+        KestRuntime *deeper = kest_start(build, host, &many);
+        KestLimits had_few = {0, 0, 0};
+        KestLimits had_many = {0, 0, 0};
+        kest_allowed(shallow, &had_few);
+        kest_allowed(deeper, &had_many);
+        if (shallow == NULL || deeper == NULL ||
+            had_few.stack_slots == 0 ||
+            had_many.stack_slots != had_few.stack_slots * 4 ||
+            had_many.stack_slots >= KEST_STACK_SLOTS) {
+            fprintf(stderr,
+                    "`%s` has no least, and 16 frames of it is %u slots "
+                    "against %u for 64\n",
+                    path, had_few.stack_slots, had_many.stack_slots);
+            kest_runtime_free(shallow);
+            kest_runtime_free(deeper);
+            kest_host_free(host);
+            kest_build_free(build);
+            return 1;
+        }
+        printf("`%s` has no least, and is %u slots for 16 frames and %u for "
+               "64\n", path, had_few.stack_slots, had_many.stack_slots);
+        kest_runtime_free(shallow);
+        kest_runtime_free(deeper);
+    }
+
     KestRuntime *runtime = kest_start(build, host, measured ? &limits : NULL);
     // Freeing nothing is not a refusal, the same as freeing no machine, so a
     // host that has none says nothing special here.

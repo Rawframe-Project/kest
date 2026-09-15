@@ -199,7 +199,7 @@ for deep_path in (sorted(glob.glob(os.path.join('examples', '*.kest')))
                               capture_output=True, text=True,
                               stdin=subprocess.DEVNULL, env=deep_env)
     for deep_line in deep_ran.stderr.split("\n"):
-        if deep_line.startswith('run asked '):
+        if deep_line.startswith('run '):
             deep_runs.append((deep_path, deep_line))
             continue
         if not deep_line.startswith('deep '):
@@ -235,10 +235,13 @@ run_went_frames = 0
 run_sized = 0
 for run_path, run_line in deep_runs:
     run_words = run_line.split(' ')
-    room, frames, went, went_frames = (int(run_words[2]), int(run_words[4]),
-                                       int(run_words[7]), int(run_words[8]))
-    if room >= KEST_STACK_SLOTS:
+    # A program with no least is not sized by what it needs but bounded by
+    # what a frame of it costs, so the room it did not use is a bound being
+    # loose rather than a number being wrong. Counted apart. See D815.
+    if run_words[1] != 'least':
         continue
+    room, frames, went, went_frames = (int(run_words[3]), int(run_words[5]),
+                                       int(run_words[8]), int(run_words[9]))
     run_sized += 1
     run_asked += room
     run_went += went

@@ -23916,3 +23916,41 @@ holds the bands in order had nothing left to hold. `examples/tree.kest` still
 takes the usual numbers, so it walks a third ladder, and all three bands are
 back. A check that loses coverage because the thing it checks got better is a
 check that needs a program the improvement did not reach.
+
+## D815: a frame each, for a program with no least
+
+*The one left.* D814 gave thirty-one of thirty-two examples an answer.
+`tree.kest` reaches itself, and a program that does had no worst chain to add
+up, so it was given `KEST_STACK_SLOTS` — 65536 — and reached 38.
+
+*What such a program still has.* A ceiling on frames, which the host names, and
+a widest body, which is read straight off the chunks and needs no walk of the
+calls at all. A frame is at most the widest body, whatever the run of calls
+above it turned out to be. So the slots are that many a frame.
+
+The frames are settled first now, because the slots are worked out from them.
+`tree.kest` at the usual thousand frames comes to 12288 rather than 65536, and a
+host that names sixteen frames is asking for sixteen widest bodies rather than
+sixty-five thousand slots. `KEST_STACK_SLOTS` is still what it gets when even
+that is more, so nothing is worse off than before.
+
+*Held by the host that has nothing else in it.* `examples/least.kest` gained a
+run of calls that comes back round — three lines, called from `main` — because a
+host writer meets this and the smallest host is what they read. `examples/least.c`
+makes two machines for it, one at sixteen frames and one at sixty-four, and
+refuses unless the second is four times the first and both are under the usual
+number:
+
+```
+`examples/least.kest` has no least, and is 64 slots for 16 frames and 256 for 64
+```
+
+Four slots a frame, and the relationship rather than the number, so what is held
+is the rule.
+
+*Where this stops.* It is a bound and not an answer: a program whose recursion
+is one narrow function is charged the widest body in the whole program for every
+frame. What would tighten it is the width of the bodies the cycle actually goes
+round, which is a walk this does not do. The line it draws is between what needs
+a walk and what does not — the widest body needs none, which is why it is the
+one a program with no answer keeps.

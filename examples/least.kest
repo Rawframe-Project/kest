@@ -1,7 +1,7 @@
 module examples.least
 
 // The program the smallest host runs. One function the host provides, one the
-// host calls, and nothing else. The name is the one the command line provides
+// host calls, and the least else. The name is the one the command line provides
 // as well, so `kest run` answers what the host beside it answers: what it is for is that `examples/least.c` can
 // be read from top to bottom in one sitting, which is what somebody writing
 // their first host needs. Everything else this boundary can do is in
@@ -32,7 +32,20 @@ fn motto() -> text {
     return "a host reads what came back the same way, whatever it is"
 }
 
+// A run of calls that comes back round, which is the other thing a host writing
+// its first one has to meet: a program with one of these has no worst chain to
+// add up, so `kest_needs` has no answer and the host has to say how many frames
+// it allows. What a frame costs is the widest body, so the slots follow from
+// the frames — and `examples/least.c` reads both numbers back out of two
+// machines to show it. See D815.
+fn depth(n: i32) -> i32 {
+    if n <= 0 {
+        return 0
+    }
+    return depth(n - 1) + 1
+}
+
 fn main() -> i32 {
     Host.write(greeting("host"))
-    return 0
+    return depth(3) - 3
 }

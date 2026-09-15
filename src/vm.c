@@ -388,6 +388,10 @@ struct KestRuntime {
     // this asks it of the run, which is what a host is sized by. See D813.
     uint32_t went_slots;
     uint32_t went_frames;
+    // And whether the program had a least at all. One that does is sized by
+    // what it needs and one that does not by what a frame of it costs, and
+    // the room left over means a different thing in each. See D815.
+    bool had_least;
 #endif
     // How much had been said when this started, and how much of it has been
     // written out since. What failed to compile is not this machine's to
@@ -3285,18 +3289,37 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     // program with no deepest call has no number to give, and then the usual
     // ones are what there is. Half a megabyte of stack for a program that
     // wants sixteen slots is what saying nothing used to cost. See D575.
-    uint32_t wants_slots = STACK_SLOTS;
     uint32_t wants_frames = MAX_FRAMES;
     if (rt->host_measured && reached + rt->host_slots > 0) {
-        wants_slots = reached + rt->host_slots;
         wants_frames = deep + rt->host_frames;
+    }
+    rt->call_depth = limits == NULL || limits->call_depth == 0
+                         ? wants_frames
+                         : limits->call_depth;
+
+    uint32_t wants_slots = STACK_SLOTS;
+#ifdef KEST_CHECKED
+    rt->had_least = rt->host_measured && reached + rt->host_slots > 0;
+#endif
+    if (rt->host_measured && reached + rt->host_slots > 0) {
+        wants_slots = reached + rt->host_slots;
+    } else if (walked->widest > 0) {
+        // A program with no least still has a ceiling on frames, and a frame
+        // is at most the widest body this program has. So the slots are that
+        // many a frame rather than the usual number — which is what a program
+        // that reaches itself used to be given whatever its shape, and what a
+        // host that names a small depth was being charged sixty-five thousand
+        // slots for. The usual number when even this is more, because that is
+        // what it was before and no worse. The frames are settled first,
+        // because the slots are worked out from them. See D815.
+        uint64_t a_frame_each = (uint64_t)walked->widest * rt->call_depth;
+        wants_slots = a_frame_each < (uint64_t)STACK_SLOTS
+                          ? (uint32_t)a_frame_each
+                          : STACK_SLOTS;
     }
     rt->stack_slots = limits == NULL || limits->stack_slots == 0
                           ? wants_slots
                           : limits->stack_slots;
-    rt->call_depth = limits == NULL || limits->call_depth == 0
-                         ? wants_frames
-                         : limits->call_depth;
     rt->stack = KEST_ARENA_ARRAY(own, KestValue, rt->stack_slots);
     rt->frames = KEST_ARENA_ARRAY(own, Frame, rt->call_depth);
     rt->natives =
@@ -3440,9 +3463,10 @@ bool kest_runtime_free(KestRuntime *runtime) {
         }
     }
     if (getenv("KEST_DEEP") != NULL && runtime->went_slots > 0) {
-        fprintf(stderr, "run asked %u slots %u frames went %u %u\n",
-                runtime->stack_slots, runtime->call_depth,
-                runtime->went_slots, runtime->went_frames);
+        fprintf(stderr, "run %s asked %u slots %u frames went %u %u\n",
+                runtime->had_least ? "least" : "bound", runtime->stack_slots,
+                runtime->call_depth, runtime->went_slots,
+                runtime->went_frames);
     }
 #endif
 

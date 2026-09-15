@@ -30907,3 +30907,41 @@ itself, and `tree.kest` is that program: it takes 65536 slots and reaches 38.
 Work out what the part with an answer costs and what one turn of the part
 without costs, and see whether a machine can be sized from the first plus the
 second times the frames a host allows.
+
+## A frame each, for a program with no least
+
+D814 gave thirty-one of thirty-two examples an answer. `tree.kest` reaches
+itself, and a program that does had no worst chain to add up, so it was given
+65536 slots and reached 38.
+
+Such a program still has two numbers: a ceiling on frames, which the host names,
+and a widest body, which is read straight off the chunks and needs no walk of
+the calls. A frame is at most the widest body whatever the run of calls above it
+turned out to be, so the slots are that many a frame. The frames are settled
+first now, because the slots are worked out from them. `tree.kest` at the usual
+thousand frames comes to 12288 rather than 65536, and a host that names sixteen
+frames is asking for sixteen widest bodies rather than sixty-five thousand
+slots. `KEST_STACK_SLOTS` is still what it gets when even that is more.
+
+`examples/least.kest` gained a run of calls that comes back round — three lines,
+called from `main` — because a host writer meets this and the smallest host is
+what they read. `examples/least.c` makes two machines for it, one at sixteen
+frames and one at sixty-four, and refuses unless the second is four times the
+first and both are under the usual number: "`examples/least.kest` has no least,
+and is 64 slots for 16 frames and 256 for 64". The relationship rather than the
+number, so what is held is the rule.
+
+It is a bound and not an answer: a program whose recursion is one narrow
+function is charged the widest body in the whole program for every frame. What
+would tighten it is the width of the bodies the cycle actually goes round, which
+is a walk this does not do. The line it draws is between what needs a walk and
+what does not — the widest body needs none, which is why it is the one a program
+with no answer keeps. Recorded as D815.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the bound is the widest body in the whole program, and what a cycle
+actually costs is the bodies it goes round. `needs_of` already knows which
+functions are on the way back round when it stops — the three-state mark says
+so. Keep that set and answer the widest of it instead of the widest of
+everything, and see what `tree.kest` comes to.
