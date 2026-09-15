@@ -2106,6 +2106,42 @@ for named in FROM_A_MACHINE:
               "they are that machine's" % named)
         failed = 1
 
+# The doors a host asks about room through, which come in pairs: each one that
+# answers has one beside it that bounds, and the bounding one is the answering
+# one with a ceiling on frames written in. A seventh added to one side and not
+# the other is a pair that came apart, and a host that learned the shape from
+# one would be wrong about the other.
+#
+# Read out of the header rather than written down here, because a list beside
+# them is one more thing to keep in step, which is the thing this file is about.
+door_header = re.sub(r"//[^\n]*", "",
+                     open(os.path.join("include", "kest.h")).read())
+doors = {}
+for door_which, door_name, door_takes in re.findall(
+        r"\nbool kest_(needs|bound)(_[a-z]*|)\(([^)]*)\)", door_header):
+    doors.setdefault(door_name, {})[door_which] = [
+        " ".join(one.split()[:-1]) for one in door_takes.split(",")]
+some("the doors a host asks about room through", doors)
+for door_name, door_pair in sorted(doors.items()):
+    if len(door_pair) != 2:
+        print("include/kest.h: `kest_%s%s` has nothing beside it, and a door "
+              "that answers has one that bounds"
+              % (sorted(door_pair)[0], door_name))
+        failed = 1
+        continue
+    wanted = []
+    for one in door_pair["needs"]:
+        if one.startswith("KestLimits") and "uint32_t" not in wanted:
+            wanted.append("uint32_t")
+        wanted.append(one)
+    if door_pair["bound"] != wanted:
+        print("include/kest.h: `kest_bound%s` takes %s and `kest_needs%s` "
+              "takes %s, and one is the other with a ceiling on frames "
+              "written in"
+              % (door_name, ", ".join(door_pair["bound"]), door_name,
+                 ", ".join(door_pair["needs"])))
+        failed = 1
+
 if not failed:
     print("%u escapes, "
           % len(accepted), end="")
@@ -2128,7 +2164,9 @@ if not failed:
           "asking it by hand, and %u "
           "bodies of `src` are each "
           "written once, %u of them long enough to be read for their shape as "
-          "well, with %u group(s) of one shape and a reason beside each"
+          "well, with %u group(s) of one shape and a reason beside each, and "
+          "%u door(s) a host asks about room through, each that answers with "
+          "one beside it that bounds"
           % (len(ops), len(toks), len(held), len(checked), len(writable),
              len(reasons), len(listed),
              len(tools), pythons, shells, len(reading), len(only_a_hole),
@@ -2136,7 +2174,8 @@ if not failed:
              len(every_code), len(only_a_hole), sentences,
              len(HELD), halves // 2,
              len(in_widths), len(ANSWERS), len(SPAN_BY_HAND),
-             len(WORD_BY_HAND), bodies, shapes, len(SAME_SHAPE)))
+             len(WORD_BY_HAND), bodies, shapes, len(SAME_SHAPE),
+             len(doors) * 2))
 
 sys.exit(failed)
 PY

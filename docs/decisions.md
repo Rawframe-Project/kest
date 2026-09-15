@@ -24270,3 +24270,28 @@ that least.
 *Three doors, three bounds, done.* Every question a host can ask about room now
 answers where it can and bounds where it cannot, over what the question was
 about, and says which of the two it gave.
+
+## D824: six doors, held to being three pairs
+
+*What eight entries built.* `kest_needs`, `kest_needs_of` and `kest_needs_from`
+answer where there is an answer; `kest_bound`, `kest_bound_of` and
+`kest_bound_from` bound where there is not. Six functions, and nothing said they
+were six rather than seven, or that the second three had anything to do with the
+first three.
+
+*What makes them readable as three.* Each bounding door is its answering door
+with a ceiling on frames written in, in the same place — after the name where
+there is one, before the answer. A host that learns the shape from one of them
+is right about the other two. A seventh added to one side is a pair that came
+apart, and nothing would have said so.
+
+*Held out of the header itself.* `tools/check-tables.sh` reads the declarations,
+pairs them by what follows `kest_needs` or `kest_bound`, and refuses a door with
+nothing beside it or a pair whose two halves are not that shape. Read out of the
+header rather than written down beside it, because a list beside them is one
+more thing to keep in step — which is what this file is for.
+
+*Where this sits.* It is the same check the instructions, the tokens, the
+keywords and the codes have had: a table and the thing it is a table of, held to
+each other. The doors were the last group in this tree with a shape and no
+reading of it.

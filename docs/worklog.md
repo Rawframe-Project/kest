@@ -31241,3 +31241,34 @@ and not seven. `tools/check-tables.sh` holds the codes, the instructions and the
 keywords to their names; hold the doors the same way — every `kest_bound*` has a
 `kest_needs*` beside it, every one of them takes the same shape, and a seventh
 added to one side and not the other is a pair that came apart.
+
+## Six doors, held to being three pairs
+
+`kest_needs`, `kest_needs_of` and `kest_needs_from` answer where there is an
+answer; `kest_bound`, `kest_bound_of` and `kest_bound_from` bound where there is
+not. Six functions, and nothing said they were six rather than seven, or that
+the second three had anything to do with the first three.
+
+What makes them readable as three is that each bounding door is its answering
+door with a ceiling on frames written in, in the same place — after the name
+where there is one, before the answer. A host that learns the shape from one of
+them is right about the other two, and a seventh added to one side would have
+been a pair that came apart with nothing saying so.
+
+`check-tables.sh` reads the declarations out of the header, pairs them by what
+follows `kest_needs` or `kest_bound`, and refuses a door with nothing beside it
+or a pair whose halves are not that shape. Read out of the header rather than
+written down beside it, because a list beside them is one more thing to keep in
+step, which is what that file is for.
+
+It is the same check the instructions, the tokens, the keywords and the codes
+have had: a table and the thing it is a table of, held to each other. The doors
+were the last group here with a shape and no reading of it. Recorded as D824.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the bounds are settled and the roadmap says value and vm. Go back to
+the machine and read what it does with the heap: `kest_heap_used` only goes up,
+`kest_heap_wanted` says what a refused allocation asked for, and a ceiling stops
+a program at the allocation that would cross it. Read those three against what a
+run actually does, the way D811 read the stack.

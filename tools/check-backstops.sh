@@ -184,6 +184,40 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A door that answers with nothing beside it that bounds. The six come
+        # in three pairs and a seventh on one side is a pair that came apart —
+        # a host that learned the shape from one of them would be wrong about
+        # the other. See D824.
+        "what": "a door that answers with nothing beside it",
+        "file": "include/kest.h",
+        "from": r"""bool kest_needs(KestBuild *build, KestLimits *least, KestReason *why);""",
+        "to": r"""bool kest_needs(KestBuild *build, KestLimits *least, KestReason *why);
+bool kest_needs_when(KestBuild *build, KestLimits *least, KestReason *why);""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "has nothing beside it, and a door that answers",
+    },
+    {
+        # And a pair whose two halves are not the same shape. What makes the
+        # six readable as three is that each bounding one is its answering one
+        # with a ceiling on frames written in; one that takes something else
+        # is a door a host has to read on its own. See D824.
+        "what": "a pair of doors that are not the same shape",
+        "file": "include/kest.h",
+        "from": r"""bool kest_bound(KestBuild *build, uint32_t frames, KestLimits *most,
+                KestReason *why);""",
+        "to": r"""bool kest_bound(KestBuild *build, int32_t frames, KestLimits *most,
+                KestReason *why);""",
+        "also": ["src/build.c",
+                 """bool kest_bound(KestBuild *build, uint32_t frames, KestLimits *most,
+                KestReason *why) {""",
+                 """bool kest_bound(KestBuild *build, int32_t frames, KestLimits *most,
+                KestReason *why) {"""],
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "and one is the other with a ceiling on frames",
+    },
+    {
         # A number a host reads that is not the machine it is handed. The
         # first door bounds what a machine given nothing is sized by, said
         # before there is one; a host that budgets by it and is given
