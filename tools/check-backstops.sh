@@ -184,6 +184,23 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A place the compiler looks for the library that nobody is told
+        # about. The README is the one page a person reads before they have a
+        # working `kest`, and a place it does not name is a place nobody knows
+        # to put a library — which is a compiler that finds nothing and a
+        # person with no way to find out why. See D829.
+        "what": "a place the library is looked for and nobody told",
+        "file": "src/loader.c",
+        "from": r"""            snprintf(scratch, sizeof(scratch), "%.*s../lib/kest/", length,
+                     program);""",
+        "to": r"""            snprintf(scratch, sizeof(scratch), "%.*s../share/kest/", length,
+                     program);""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "and this page does not say so",
+    },
+    {
         # A library that says one thing about itself and does the other. What
         # a host does with the answer is run what only a checked build catches
         # and keep away from what a checked build catches first, so a build

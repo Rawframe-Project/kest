@@ -24457,3 +24457,41 @@ checked one. It now holds that the build which counts is the build which **says*
 it does — because what a host does with the answer is run what only a checked
 build catches and keep away from what a checked build catches first, and a
 library that says one thing and does the other has it doing both wrongly.
+
+## D829: the four places, and the page that named three
+
+*The reading.* `#ifndef KEST_LIB_DIR` was the last conditional with a question
+behind it. Where the library lives is decided in four places: a default in
+`src/loader.c`, a `-D` in the `Makefile`, what `install` copies, and the search
+order in `kest_library_path`. The first three are already held to each other by
+`tools/check-tables.sh` — a build told one path and installed under another
+finds no library and says so from a path nobody can fix by moving anything — and
+the installed layout is exercised by `tools/check-commands.sh`, which lays out a
+`bin/` and a `lib/kest/` in a scratch and runs a program through it.
+
+*What was not held was the page.* `README.md` said the compiler finds the
+library *"at `$KEST_LIB`, or beside itself, or where the build it came from was
+told it would be put."* Three places. The loader tries four:
+
+```
+$KEST_LIB
+lib/            beside the program, which is where it is in a source tree
+../lib/kest/    a directory up and into, which is where installing puts it
+KEST_LIB_DIR    what the build was told, for a host that is not this command line
+```
+
+The one the README leaves out is the one that does the work. An installed `kest`
+sits in `bin/` and its library in `lib/kest/`, so what finds it is the third
+rule — and a reader of that sentence would think it was the fourth, and would go
+looking at what their build was told when what they wanted was a directory.
+
+*Held.* `tools/check-docs.sh` reads the places out of `kest_library_path` — the
+paths it builds and the name it reads from the environment — and refuses one the
+README does not name. Read out of the function rather than from a list beside
+it, because a list beside it is the thing that goes stale, which is what this
+entry is about.
+
+*Four conditionals, four entries.* D827 found three entries' worth of readings
+in the wrong build, D828 found a question asked in a spelling that answers
+wrongly under half the compilers, and this found a page that named three of four
+places. The `#if`s were never the point; what was behind them was.

@@ -31427,3 +31427,40 @@ catches and keep away from what a checked build catches first. Recorded as D828.
 behind it: where the library lives is a default in the Makefile, an environment
 variable, and a search order in the loader. Read those three against each other
 and against what `README.md` tells somebody installing it.
+
+## The four places, and the page that named three
+
+`#ifndef KEST_LIB_DIR` was the last conditional with a question behind it. Where
+the library lives is decided in four places: a default in `src/loader.c`, a `-D`
+in the Makefile, what `install` copies, and the search order in
+`kest_library_path`. The first three are already held to each other by
+`check-tables.sh`, and the installed layout is exercised by `check-commands.sh`,
+which lays out a `bin/` and a `lib/kest/` in a scratch and runs a program
+through it.
+
+What was not held was the page. `README.md` said the compiler finds the library
+"at `$KEST_LIB`, or beside itself, or where the build it came from was told it
+would be put" — three places, where the loader tries four: `$KEST_LIB`, then
+`lib/` beside the program, then `../lib/kest/`, then what the build was told.
+The one left out is the one that does the work: an installed `kest` sits in
+`bin/` and its library in `lib/kest/`, so what finds it is the third rule, and a
+reader of that sentence would go looking at what their build was told when what
+they wanted was a directory.
+
+`check-docs.sh` now reads the places out of `kest_library_path` — the paths it
+builds and the name it reads from the environment — and refuses one the README
+does not name. Read out of the function rather than from a list beside it,
+because a list beside it is the thing that goes stale.
+
+D827 found three entries' worth of readings in the wrong build, D828 a question
+asked in a spelling that answers wrongly under half the compilers, and this a
+page that named three of four places. The `#if`s were never the point; what was
+behind them was. Recorded as D829.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** back to the roadmap, which says vm. The machine has one number a host
+sets and nothing reads back: `heap_bytes` is what a host allowed, and
+`kest_allowed` answers it — but a machine made with no ceiling answers nought,
+which is also what a ceiling of nought means. Find whether a host can tell a
+machine with no ceiling from one whose ceiling it has forgotten.

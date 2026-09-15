@@ -16,8 +16,11 @@ sudo make install PREFIX=/usr/local
 ```
 
 Installing puts `kest`, `kest.h`, `libkest.a` and the standard library where
-another project looks. The compiler finds the library at `$KEST_LIB`, or
-beside itself, or where the build it came from was told it would be put.
+another project looks. The compiler looks for the library in four places, in
+this order: `$KEST_LIB`, then `lib/` beside itself, which is where it is in a
+source tree, then `../lib/kest/`, which is where installing puts it, and last
+where the build it came from was told it would be put — which is the one a host
+that is not this command line falls back on.
 
 The second command above is a host that is not the command line: it compiles a file, makes a
 machine with its own limits, and keeps a world between frames.

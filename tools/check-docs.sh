@@ -981,6 +981,27 @@ for path in sys.argv[1:]:
             failed = 1
 some("what the documents type at a command line", typed)
 
+# Where the compiler looks for the library, against where somebody installing
+# it is told to look. The loader tries four places in order and the README is
+# the one page a person reads before they have a working `kest` — a place it
+# does not name is a place nobody knows to put a library, and a place it names
+# that the loader does not try is a person putting one somewhere it will never
+# be found. Read out of the function rather than from a list beside it. See
+# D829.
+looking = open(os.path.join("src", "loader.c")).read()
+looking = looking[looking.index("const char *kest_library_path"):]
+looking = looking[:looking.index("\n}")]
+places = set(re.findall(r'"%\.\*s([^"]+)"', looking))
+places |= {"$" + one for one in re.findall(r'getenv\("([A-Z_]+)"\)', looking)}
+if "KEST_LIB_DIR" in looking:
+    places.add("the build it came from was told")
+readme = open("README.md").read()
+for place in some("the places the compiler looks for the library", places):
+    if place not in readme:
+        print("README.md: the compiler looks for the library at `%s` and this "
+              "page does not say so" % place)
+        failed = 1
+
 if not failed:
     print('every documented block parses: %u, is in the one form, and checks '
           'and compiles where it stands on its own: %u of %u, the other %u '
@@ -993,8 +1014,11 @@ if not failed:
           'every command and option written is one there is: %u, and every '
           'library call shown is one there is: %u, and every file of this '
           'tree they name is there: %u, and every one of the %u operators a '
-          'program is written with is written in one of them'
+          'program is written with is written in one of them, and every one of '
+          'the %u places the compiler looks for the library is named where '
+          'somebody installing it reads'
           % (checked, made_code, standing, quoting, said_it, whole, fenced,
-             messages, shown, typed, called, pointed, operators))
+             messages, shown, typed, called, pointed, operators,
+             len(places)))
 sys.exit(failed)
 PY
