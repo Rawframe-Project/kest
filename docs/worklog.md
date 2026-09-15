@@ -32741,3 +32741,43 @@ And after it, the number this turn left standing: a read through an index is
 twenty-three nanoseconds, which is most of what a whole frame step costs per
 entity — and a step reads, works and writes back per entity. Either the read is
 dearer than it looks or the frame is cheaper than it should be.
+
+## A number in a path is not a number in a message
+
+The gate failed twice on one hole and passed twice on the same tree, and the
+hole catches every time it is run alone. Twenty-four runs of it alone missed
+nothing; twenty-four more under the load of a whole gate missed nothing; two
+full runs of every hole at once missed nothing. What was left was the hole
+running beside everything else, and looking for it that way is waiting for it.
+
+So the check it runs was read instead. Every ceiling in the reference is held by
+compiling one too many of something and looking for the number the table prints
+— and it looked for that number anywhere in what was printed, including the path
+the program was written at, which is a name somebody's temporary directory
+handed out. A number can turn up there for no reason, and then a ceiling the
+words no longer name is one nothing catches on a machine whose scratch happened
+to be called the right thing.
+
+It looks in every line but that one now. Not the message alone: half of these
+say the number in the message and half in the suggestion under it, which writing
+it the strict way first is what showed — `K0326` says `an array of that many has
+no size: 65536` and prints the ceiling in the line beneath.
+
+Whether that was the flake is not proved: a random scratch name holds `48` about
+once in two hundred and fifty, and the gate failed two runs in four. What is
+proved is that the check could pass for a reason that has nothing to do with the
+compiler. And the hunt has better evidence now — a hole that misses says what
+the check came back as, so a check that passed and a check that complained about
+something else are two different things to go and look at.
+
+Recorded as D863.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the flake is closed at one end and not caught at the other. Run the
+gate until it fails again and read the new line: a miss that says `came back 0`
+is a check that passed with a broken tree, and a miss that says anything else is
+a check that complained about something else first. Either answer names the next
+thing to open. And if it does not fail again in several runs, say so — a flake
+that stops after the one weakness it could have been is evidence about that
+weakness.

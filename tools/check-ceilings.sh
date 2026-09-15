@@ -344,7 +344,19 @@ for phrase, program, code in PROBES:
                           stdin=subprocess.DEVNULL)
     out = said.stdout + said.stderr
     os.remove(path)
-    if code not in out or number not in out:
+    # The number has to be in what was said and not in where it was said about.
+    # What is printed carries the path the program was written at, and that path
+    # is a name somebody's temporary directory handed out — so a number this is
+    # looking for can turn up in it for no reason at all, and a check that reads
+    # the whole of what was printed passes on a coincidence. A ceiling the words
+    # no longer name would then be one nothing catches, now and again, on a
+    # machine whose scratch happened to be called the right thing.
+    #
+    # Every line but that one, rather than the message alone: half of these
+    # ceilings say the number in the message and half say it in the suggestion
+    # under it, and both are the words somebody reads. See D863.
+    says = "\n".join(line for line in out.splitlines() if path not in line)
+    if code not in out or number not in says:
         print("limits: one too many `%s` is not `%s` with %s in it; it said %r"
               % (phrase, code, number, out.strip()[:120]))
         failed = 1

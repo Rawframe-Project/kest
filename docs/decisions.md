@@ -25806,3 +25806,37 @@ one counts calls and one counts reads, and the rule about that number is what it
 always was: it is the constant the work was done with rather than one somebody
 typed. Both places that read it — the gate and the rule that holds the reference
 to showing what this tree measures — know all three.
+
+## D863: a number in a path is not a number in a message
+
+The gate failed twice on one hole and passed twice on the same tree, and the
+hole catches every time it is run alone. Two dozen runs of it alone, and two
+dozen more under the load of a whole gate, missed nothing; two full runs of every
+hole at once missed nothing either. What was left was the hole running beside
+everything else, which is the one arrangement that had failed — and looking for
+it that way is looking for a thing by waiting for it.
+
+*So the check it runs was read instead of watched.* Every ceiling in the
+reference is held by compiling one too many of something and looking for the
+number the table prints. It looked for that number **anywhere in what was
+printed** — and what is printed carries the path the program was written at,
+which is a name somebody's temporary directory handed out. A number this is
+looking for can turn up there for no reason at all, and then a ceiling the words
+no longer name is one nothing catches, on a machine whose scratch happened to be
+called the right thing.
+
+It looks in every line but that one now. Not in the message alone: half of these
+ceilings say the number in the message and half say it in the suggestion under
+it, and both are words somebody reads. Writing that the strict way first is what
+showed the other half — `K0326` says `an array of that many has no size: 65536`
+and prints the ceiling in the line under it.
+
+*Whether that was the flake is not proved.* The chance a random scratch name
+holds `48` is about one in two hundred and fifty, and the gate failed twice in
+four. What is proved is that the check could pass for a reason that has nothing
+to do with the compiler, which is a thing to close whether or not it was the
+thing. The rest of the hunt has better evidence to work with now: a hole that
+misses says what the check came back as, so a check that passed and a check that
+complained about something else are two different things to go and look at. An
+afternoon went on a hole that turned out to be a check quietly passing, and the
+status would have said so in the first line.

@@ -13812,9 +13812,15 @@ def put_out_of_order(hole):
                 return ["MISSED: %s" % hole["what"],
                         "    said %r first, which is a detail" % first[:60]], True
             return ["caught: %s" % hole["what"]], False
+        # What it came back as, beside what it said. A check that passed and a
+        # check that complained about something else are two different things
+        # to go and look at, and a hundred and twenty characters of a sentence
+        # that begins with a summary says neither. An afternoon went on a hole
+        # that turned out to be a check quietly passing, which the status would
+        # have said in the first line. See D863.
         return ["MISSED: %s" % hole["what"],
-                "    nothing said %s; it said %r"
-                % (hole["caught"], answered.strip()[:120])], True
+                "    came back %d and nothing said %s; it said %r"
+                % (ran.returncode, hole["caught"], answered.strip()[:200])], True
     finally:
         shutil.rmtree(work, ignore_errors=True)
 
