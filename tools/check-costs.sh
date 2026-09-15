@@ -234,6 +234,44 @@ try:
                       "which is not twice for twice the work"
                       % (module, sizes[SMALL], SMALL, sizes[LARGE], LARGE))
                 failed = 1
+
+    # And what the stack a function asks for is counted out of. Every value a
+    # program works out is so many slots wide, and the compiler adds that up
+    # as it goes to say how much room a body needs. A byte written as a letter
+    # and the same byte written as a number are the same one slot, so the two
+    # programs below have to ask for the same room -- until D808 the letter was
+    # counted twice, because `emit_constant` pushes and four places pushed
+    # beside it, and a body full of them asked for twice the stack it uses.
+    # Written as two programs rather than as a number, because a number here
+    # would be this compiler's arithmetic held to itself.
+    letters = ["'a'", "'b'", "'c'", "'d'", "'e'"]
+    numbers = ["97", "98", "99", "100", "101"]
+    counted = {}
+    for which, written in (('letters', letters), ('numbers', numbers)):
+        spelled = os.path.join(work, which + '.kest')
+        open(spelled, 'w').write(
+            "fn f() -> i32 {\n"
+            "    return %s\n"
+            "}\n"
+            "\n"
+            "fn main() -> i32 {\n"
+            "    return f() - 495\n"
+            "}\n" % ' + '.join("i32(%s)" % one for one in written))
+        asked_ran = subprocess.run(['./kest', 'emit', spelled, '--json'],
+                                   capture_output=True, text=True,
+                                   stdin=subprocess.DEVNULL)
+        # One that did not compile is counted as nought, which no program
+        # asks for, so the pair below is what says so: a second message here
+        # would be a second thing this can say and one more thing to have
+        # watched it say.
+        counted[which] = (json.loads(asked_ran.stdout).get('needs', {})
+                          .get('slots', 0) if asked_ran.returncode == 0 else 0)
+    if counted.get('letters') != counted.get('numbers') or \
+            counted.get('letters', 0) == 0:
+        print("costs: five bytes written as letters ask for %u slots and the "
+              "same five written as numbers ask for %u, and a byte is a byte"
+              % (counted.get('letters', 0), counted.get('numbers', 0)))
+        failed = 1
 finally:
     shutil.rmtree(work, ignore_errors=True)
 

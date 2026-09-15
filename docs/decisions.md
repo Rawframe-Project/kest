@@ -23587,3 +23587,54 @@ numbers after it are where a slot that was never pushed shows up. Two holes.
 This is narrower and worse: one number — a type's width — read by four places
 and written by three. The sweep that found it was looking at the folder, and the
 folder was the one that was nearly right.
+
+## D808: a slot pushed twice, and what the accounting is for
+
+*The list the last entry asked for.* Every number a type carries, with who
+writes it and who reads it. `byte_size` and `byte_align`: one writer per shape,
+read by the host boundary. A struct member's `offset`: one writer,
+`measure_struct`. A case's `offsets`: one writer, `measure_enum`. `slots`: eleven
+writers, one per shape, and two of them are for the same shape — `kest_fixed_of`
+and `measure_held` both size `[T; n]`, and they differ, one guarding an element
+of no slots and holding the result to what a value may be and the other doing
+neither. Reachable? No: every position a `[T; n]` can stand in goes through
+`measure_held`, which was checked for a struct member, a parameter, a local, an
+element of a run that grows, a `ref` and an optional. Duplication with the
+difference out of reach.
+
+*And then the number that is not a type's.* `compiler->stack_depth`, which is
+added up as a body is compiled and read once, as `stack_high_water`, to say how
+much operand stack a function needs — the number that sizes a frame and,
+through `needs_of`, the machine. Instrumented to compare, at every expression,
+what the stack grew by against what the expression's type says it is:
+
+```
+195 kind BYTE:   grew 2, type says 1
+183 kind BINARY: grew 2, type says 1
+```
+
+`emit_constant` pushes the slot it writes. Four callers pushed beside it — a
+byte literal, `len` of a run of a size the type says, twice — so those values
+were counted two slots wide. The binary count is the same fault seen through a
+`+`: a comparison of two byte literals is two of them.
+
+*What it cost.* `examples/parse.kest` asked for 49 slots and needs 45.
+`examples/scan.kest` 29 against 26, `examples/pieces.kest` 33 against 31. A
+program of five bytes added together asked for eight slots and uses four.
+Nothing was wrong at run time — the machine was bigger than it needed to be,
+which is a number nobody reads until they are counting memory.
+
+*Held without a number.* `tools/check-costs.sh` compiles `i32('a') + …` and
+`i32(97) + …`, five of each, and holds the two to asking for the same room. A
+byte written as a letter and the same byte written as a number are the same one
+slot; a number written down here would be this compiler's arithmetic held to
+itself. A program that did not compile is counted as nought
+slots, which no program asks for, so the one message covers that too — a second
+would be one more thing to have watched this say.
+
+*What is left, and why it is not this entry.* The same instrumentation still
+reports calls growing three where the type says one. Those are over-counts as
+well, in the builtins, and they are the next thing. The under-counts it appeared
+to show were the checker widening a value into an optional: the tag is pushed
+after the expression, so the comparison has to be made after it and not before.
+There are none.

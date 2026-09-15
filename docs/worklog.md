@@ -30627,3 +30627,41 @@ other numbers a type carries — `slots`, `byte_size`, `byte_align`, a case's
 offsets — and for each, list every place that writes one and every place that
 reads one. A number with more readers than writers agree on is the shape this
 was.
+
+## A slot pushed twice, and what the accounting is for
+
+The list the last entry asked for. `byte_size`, `byte_align`, a struct member's
+`offset`, a case's `offsets`: one writer each. `slots`: one writer per shape,
+except `[T; n]`, which `kest_fixed_of` and `measure_held` both size and size
+differently — one guards an element of no slots and holds the result to what a
+value may be, the other does neither. Not reachable: every position a `[T; n]`
+can stand in goes through `measure_held`, checked for a struct member, a
+parameter, a local, an element of a run that grows, a `ref` and an optional.
+
+Then the number that is not a type's. `compiler->stack_depth` is added up as a
+body is compiled and read once, as `stack_high_water`, to say how much operand
+stack a function needs — the number that sizes a frame and, through `needs_of`,
+the machine. Instrumented to compare what the stack grew by at every expression
+against what the expression's type says: 195 byte literals growing two where the
+type says one, and 183 binaries doing the same through them.
+
+`emit_constant` pushes the slot it writes, and four callers pushed beside it. So
+`examples/parse.kest` asked for 49 slots and needs 45, `scan.kest` 29 against
+26, `pieces.kest` 33 against 31, and a program of five bytes added together
+asked for eight and uses four. Nothing was wrong at run time: the machine was
+bigger than it needed to be, which is a number nobody reads until they are
+counting memory.
+
+`check-costs.sh` compiles `i32('a') + ...` and `i32(97) + ...`, five of each,
+and holds the two to asking for the same room — a byte written as a letter and
+the same byte written as a number are the same one slot. Written as two programs
+rather than as a number, because a number here would be this compiler's
+arithmetic held to itself. Recorded as D808.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same instrumentation still reports calls growing three slots where
+the type says one, a hundred of them, and `if` used as a statement growing one
+where it says none. Both are over-counts and both are in what a builtin leaves
+behind. Put the comparison back in `compile_expr` behind a build that checks
+itself, walk the builtins until it says nothing, and leave it in.

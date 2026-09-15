@@ -598,7 +598,6 @@ static bool compile_function_value(Compiler *compiler, const KestExpr *expr) {
     }
     KestValue which = {0};
     which.integer = index;
-    stack_push(compiler, 1);
     emit_constant(compiler, which, KEST_CONST_INT, expr->span);
     return true;
 }
@@ -1461,7 +1460,6 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
             emit_u16(compiler, held, expr->span);
             KestValue how_many = {0};
             how_many.integer = subject->count;
-            stack_push(compiler, 1);
             emit_constant(compiler, how_many, KEST_CONST_INT, expr->span);
             return true;
         }
@@ -1779,7 +1777,6 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
                        callee->span.length)) {
         KestValue how_many = {0};
         how_many.integer = only->type->count;
-        stack_push(compiler, 1);
         emit_constant(compiler, how_many, KEST_CONST_INT, expr->span);
         return;
     }
@@ -1982,7 +1979,6 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         const char *held = literal_text(compiler, content);
         KestValue value = {0};
         value.integer = (unsigned char)held[0];
-        stack_push(compiler, 1);
         emit_constant(compiler, value, KEST_CONST_INT, expr->span);
         break;
     }

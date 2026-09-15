@@ -184,6 +184,24 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A byte literal counted twice against the stack a body asks for.
+        # `emit_constant` pushes the slot it writes, so a caller that pushes
+        # beside it says a one-slot value is two — and a body full of bytes
+        # asks for twice the room it uses. Nothing stops: the machine is
+        # bigger than it needs to be, which is a number nobody reads until
+        # they are counting memory. See D808.
+        "what": "a byte literal counted twice against the stack",
+        "file": "src/compile.c",
+        "from": r"""        value.integer = (unsigned char)held[0];
+        emit_constant(compiler, value, KEST_CONST_INT, expr->span);""",
+        "to": r"""        value.integer = (unsigned char)held[0];
+        stack_push(compiler, 1);
+        emit_constant(compiler, value, KEST_CONST_INT, expr->span);""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "and a byte is a byte",
+    },
+    {
         # A struct with nothing in it built as no slots at all. Its width says
         # one slot and every other place believes that — the frame it is
         # passed in, what a constant of one has to fill — so pushing nothing
