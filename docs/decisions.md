@@ -32,6 +32,8 @@ another and is not named here is a check that fails.
 | D708 | D713 | the pair a tag and a number were one of is an enum carrying nothing |
 | D040 | D759 | a generic named rather than called is `K0362`, not `K0343` |
 | D787 | D788 | the ten a hole alone provokes are eight faults and two a host makes |
+| D787 | D791 | the direction was already held, by D529, and D787 duplicated it |
+| D790 | D791 | the three lists only needed naming because of the duplicate |
 
 ---
 
@@ -22790,3 +22792,103 @@ comment now says the general thing rather than naming three special cases: a
 code written into a list **about** codes is being written about, which is the
 opposite of being asked for. The next list will still have to be added to the
 pattern, but whoever adds it will read why.
+
+## D790: it cannot be read, so it is written once instead of three times
+
+*The question.* Three lists in `tools/` say things about codes rather than
+asking for them, and the pattern that told them from askings named all three by
+hand. A fourth would be counted as an asking until somebody read the comment —
+which is exactly how the first three were each found, one at a time, by the new
+list counting itself. So: is there something to *read* instead of a list to
+keep?
+
+*There is not, and the measurement says so.* Five lists in the checks hold
+codes:
+
+| | | |
+| --- | --- | --- |
+| `PROBES` | `check-ceilings.sh` | asks |
+| `QUOTED` | `check-docs.sh` | asks |
+| `NOT_SEEN` | `check-commands.sh` | says |
+| `NOT_REACHED` | `check-tables.sh` | says |
+| `HOSTS_OWN` | `check-tables.sh` | says |
+
+Two of the five ask and three say, and nothing in their shape tells them apart.
+`QUOTED` pairs a code with the message it is held to saying; `NOT_SEEN` pairs a
+code with the message nothing can be made to say. Both are a name in capitals
+holding codes beside words. The difference is what the check *does* with them,
+which is not in the literal.
+
+*So it is written, once.* `LISTS_OF_CODES` names all five with which of the two
+each is and why. The askings are left alone; the sayings are taken out before
+the codes in a check are counted as asked for. What used to be three names in a
+regular expression is one table with a row per list.
+
+*And the table is held both ways round.* A list of codes in a check that this
+does not name is refused — whoever adds a fourth is asked which kind it is
+before their codes go anywhere — and a name here that no check has is refused
+too.
+
+*Why this one cannot make the mistake it catches.* The three that went wrong
+each held codes, so each was found by the scan that was supposed to skip it.
+This table holds **list names**, not codes. There is nothing in it for a scan
+looking for `K0xxx` to find, so it cannot count itself, which is the property
+the previous three lacked and the reason there is no fourth entry in the
+sequence of this being got wrong.
+
+## D791: a check written twice, and what removing it found
+
+*This supersedes D787 and D790.* D787 said the tree held that a code a check
+asks for is one this compiler has, and did not hold the other way round. It
+did. `check-tables.sh` has held it since **D529**, thirty lines above where the
+second copy was written: *"Every refusal this compiler can say, held to being
+asked for by something that makes it happen and reads what it said."* It builds
+the same three sets, refuses the same absence, and counts `only_a_hole` for the
+same reason.
+
+So D787 added a second implementation of a check that was already there, D788
+fixed a flaw in the copy that the original never had, and D790 added a table of
+list names to serve a scan that should not have existed. Four entries, one of
+them right.
+
+*What went wrong in the looking.* The search was for the *sentence* — a check
+saying "nothing asks for this" — and what was there said it in other words, in a
+paragraph about diagnostics being a feature. Grepping for the thing rather than
+reading the file around the thing is what D786 had already written down about
+searching in the wrong place, one turn before. The lesson did not transfer
+because it was filed as being about hosts.
+
+*What is kept.* One thing in the four was new, and the original's own comment
+says why: it names the two kinds a hole-only code can be — *"a guard about this
+compiler being wrong, which is what it should be, or a message a program can
+reach that nobody has written the program for"* — and then holds neither. Which
+of the two a code is is now held: eight say so themselves through
+`kest_diags_fault`, and `K0612` and `K0654` are named in `HOSTS_OWN` with whose
+mistake they are. The rest is removed.
+
+*And removing it found two things in the original.* Rebasing the classification
+onto D529's `only_a_hole` made that list wrong, twice over:
+
+`HOSTS_OWN` was counted as asking for the codes it describes — the fourth time
+that shape has appeared, and the first time in code somebody else wrote. D529
+already excludes its own complaint for exactly this reason; it now excludes this
+too.
+
+And **a code named in a comment counted as an asking**. `K0612` is named twice
+in `examples/embed.c`, both times to say what the machine *used to* answer
+before a door was put in front of it — and that counted as somebody asking for
+it. The scan thirty lines above has stripped comments since it was written;
+this one never did. It does now.
+
+*And the removal itself went wrong once, which the gate caught.* Taking the
+duplicate out took an existing check with it — the loop that holds a code a
+check names to being one this compiler has, which sat between the second copy
+and the one thing worth keeping. Nothing in the reading of the file said so; the
+backstop for it did, on the next run. A check deleted by accident is exactly
+what a hole is for, and this is the first time in this project's log that one
+has caught the hand that was tidying up.
+
+*What that is worth against what it cost.* Four entries to add and remove a
+duplicate, and the removal found a real looseness of six years' standing in the
+thing duplicated. That is not a defence of writing it twice. It is the reason
+the removal was worth doing properly rather than reverting four commits.

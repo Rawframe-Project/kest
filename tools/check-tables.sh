@@ -1485,6 +1485,17 @@ by_a_check = "".join(open(where).read()
                      for where in sorted(glob.glob("tools/*.sh"))
                      if not where.endswith("check-backstops.sh"))
 by_a_check += open("examples/embed.c").read()
+# And not `HOSTS_OWN` below, for the same reason as the line above: a code
+# written there is being said whose mistake it is, which is a thing said about
+# a code rather than a check making one happen. Counting it would let a code be
+# asked for by the list that describes it, which is the shape this check has
+# been caught by three times over. See D791.
+by_a_check = re.sub(r"HOSTS_OWN = \{.*?\n\}", "", by_a_check, flags=re.S)
+# Nor a code in a comment, which is a mention and not an asking -- the rule the
+# scan above this one has always kept and this one never did. `K0612` is named
+# twice in the host, both times to say what the machine used to answer before a
+# door was put in front of it, and that counted as somebody asking for it.
+by_a_check = re.sub(r"^\s*(?:#|//).*$", "", by_a_check, flags=re.M)
 # And what a hole says it is caught by: a code somebody made happen on purpose
 # and then read. Except this rule's own complaint — the hole that takes a probe
 # away is caught by words that name the code, so counting them would let a code
@@ -1525,53 +1536,17 @@ some("the codes this compiler has", every_code)
 # reason it is left out above: a code in a hole is a check being quoted, and a
 # hole that puts a code out of order says one this compiler does not have on
 # purpose.
-code_asked = set()
 for asking_in in [where for where in sorted(glob.glob("tools/*.sh"))
                   if not where.endswith("check-backstops.sh")] + \
                  ["examples/embed.c"]:
     # A code in a comment is a mention and not an asking, the same way a name
-    # in one is not a call: what this holds is what a check looks for. Nor is
-    # one written into a list about codes rather than a check that makes one
-    # happen -- `NOT_SEEN` and `NOT_REACHED` say what nothing can be made to
-    # say, and `HOSTS_OWN` says whose mistake a code is. A code named in any of
-    # the three is being written about, which is the opposite of being asked
-    # for, and each of the three was found by it counting itself. See D788,
-    # D789.
+    # in one is not a call: what this holds is what a check looks for.
     reads = re.sub(r'^\s*(?:#|//).*$', '', open(asking_in).read(), flags=re.M)
-    reads = re.sub(r'NOT_SEEN = \(.*?\)\)|NOT_REACHED = \([^)]*\)'
-                   r'|HOSTS_OWN = \{.*?\n\}', '', reads, flags=re.S)
     for code_named in sorted(set(re.findall(r'K0[0-9][0-9][0-9]', reads))):
         if code_named not in every_code:
             print("%s: asks for `%s`, which nothing in `src` says" %
                   (asking_in, code_named))
             failed = 1
-        code_asked.add(code_named)
-
-# And the same two ways round. A code a check asks for and this compiler has
-# not is caught above; a code this compiler has and nothing asks for is a
-# sentence nobody has ever seen said, which is the half that was missing. Ten
-# of them are asked for by a hole and by nothing else -- a fault the compiler
-# makes about itself is not something a program can be written to provoke, so
-# breaking the compiler is the only way to hear it -- and those are counted
-# rather than refused, because a hole is a check being quoted and quoting is
-# how they are asked for. See D787.
-code_by_a_hole = set(re.findall(
-    r'"caught":\s*"[^"]*?(K0[0-9][0-9][0-9])',
-    open(os.path.join("tools", "check-backstops.sh")).read()))
-# And the third way a code is accounted for: named in one of the two lists of
-# what nothing can be made to say, each of which carries its reason beside it.
-# Those are not asked for and are not meant to be; what they are is written
-# down, which is the whole of what this refuses the absence of.
-code_excused = set(re.findall(r'K0[0-9][0-9][0-9]', "".join(
-    found.group(0) for where in sorted(glob.glob("tools/*.sh"))
-    for found in re.finditer(r'NOT_SEEN = \(.*?\)\)|NOT_REACHED = \([^)]*\)',
-                             open(where).read(), re.S))))
-for code_named in sorted(every_code - code_asked - code_by_a_hole -
-                         code_excused):
-    print("src: says `%s` and nothing asks for it, so nobody has seen it said"
-          % code_named)
-    failed = 1
-code_only_a_hole = (every_code & code_by_a_hole) - code_asked
 
 # And what each of those is. A code only a hole can provoke is one of two
 # things and the difference matters to whoever reads it: the compiler saying it
@@ -1604,18 +1579,17 @@ for code_where in sorted(glob.glob("src/*.c")):
                     code_reads[code_at:code_at + 12]):
                 code_says_fault.add(code_named)
 some("the codes that say they are a fault", code_says_fault)
-for code_named in sorted(code_only_a_hole - code_says_fault):
+for code_named in sorted(set(only_a_hole) - code_says_fault):
     if code_named in HOSTS_OWN:
         continue
     print("src: `%s` is said by breaking this compiler and does not say it is "
           "a fault, so nothing says whose mistake it is" % code_named)
     failed = 1
 for code_named in sorted(HOSTS_OWN):
-    if code_named not in code_only_a_hole or code_named in code_says_fault:
+    if code_named not in only_a_hole or code_named in code_says_fault:
         print("tools/check-tables.sh: `%s` is written down as a host's own "
               "mistake and is not one a hole alone says" % code_named)
         failed = 1
-code_only_written = (every_code & code_excused) - code_asked - code_by_a_hole
 
 # What a fault says it is, said in one place. A fault is what this project got
 # wrong rather than what a program did, and the sentence that says which is
@@ -2133,10 +2107,9 @@ if not failed:
           "Python and %u of shell where a name stands for one thing, %u "
           "refusals asked for, %u of them by a hole and nothing else, "
           "and %u nothing can be made to ask for, every one of the %u codes a "
-          "check names being one this compiler has and every one of them being "
-          "one something asks for, %u of those by a hole and nothing else and "
-          "%u written down as what nothing can be made to say, "
-          "every one of the %u things "
+          "check names being one this compiler has, each of the %u only a hole "
+          "says being a fault it owns up to or a mistake written down as a "
+          "host's, every one of the %u things "
           "%u check(s) say when something is wrong having been watched being "
           "said, "
           "and %u pairs of widths "
@@ -2152,8 +2125,7 @@ if not failed:
              len(reasons), len(listed),
              len(tools), pythons, shells, len(reading), len(only_a_hole),
              len(NOT_REACHED),
-             len(every_code), len(code_only_a_hole),
-             len(code_only_written), sentences,
+             len(every_code), len(only_a_hole), sentences,
              len(HELD), halves // 2,
              len(in_widths), len(ANSWERS), len(SPAN_BY_HAND),
              len(WORD_BY_HAND), bodies, shapes, len(SAME_SHAPE)))

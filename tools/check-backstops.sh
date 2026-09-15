@@ -1287,7 +1287,7 @@ yield""",
         "to": r"""                                       "K0399", ref->count,""",
         "make": [],
         "tool": "tools/check-tables.sh",
-        "caught": "nothing asks for it, so nobody has seen it said",
+        "caught": "a message nobody has ever seen is a message nobody knows",
     },
     {
         # The count of what a machine did not keep, left out of JSON. The

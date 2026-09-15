@@ -29968,3 +29968,72 @@ them names all three by hand, so a fourth will be counted wrongly until somebody
 reads the comment. Find whether what they have in common can be read instead of
 listed — they are assignments of codes to reasons, and an asking is a code in a
 string a check compares against what a program said.
+
+## It cannot be read, so it is written once instead of three times
+
+Three lists say things about codes rather than asking for them, and the pattern
+telling them apart named all three by hand — so a fourth would be miscounted,
+which is how each of the three was found.
+
+There is nothing to read instead. Five lists in the checks hold codes: `PROBES`
+and `QUOTED` ask for them, `NOT_SEEN`, `NOT_REACHED` and `HOSTS_OWN` say things
+about them, and nothing in their shape tells the two apart. `QUOTED` pairs a
+code with the message it is held to saying; `NOT_SEEN` pairs a code with the
+message nothing can be made to say. The difference is what the check does with
+them, which is not in the literal.
+
+So it is written once. `LISTS_OF_CODES` names all five with which kind each is
+and why; askings are left alone and sayings are taken out before codes are
+counted. A list of codes nothing names is refused, and a name no check has is
+refused. And this table cannot make the mistake it catches: the three that went
+wrong held codes, so the scan meant to skip them found them. This one holds list
+names, so there is nothing in it for a scan looking for `K0xxx` to find.
+Recorded as D790.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** six entries have been about the checks rather than the language, and
+the roadmap says types, compile, value, vm. `docs/language.md` has a section on
+what a host has to keep that runs eleven hundred lines, the longest in the
+document, and D786 read only the part about ceilings. Read the rest of it
+against `src/vm.c` and `include/kest.h` the way D777 and D786 read theirs.
+
+## A check written twice, and what removing it found
+
+D787 said the tree held one direction and not the other. It held both, and has
+since **D529**, thirty lines above where I wrote the second copy: *"Every
+refusal this compiler can say, held to being asked for by something that makes
+it happen and reads what it said."* Same three sets, same refusal, same
+`only_a_hole` count.
+
+So D787 duplicated a check, D788 fixed a flaw in the duplicate the original
+never had, and D790 added a table of list names to serve a scan that should not
+have existed. The search was for the sentence rather than the subject, and what
+was there said it in other words — which is what D786 had written down one turn
+earlier about looking in the wrong place, filed as being about hosts and so not
+transferred.
+
+Kept: the one new thing. The original names the two kinds a hole-only code can
+be and holds neither; which of the two is held now — eight say so through
+`kest_diags_fault`, `K0612` and `K0654` are named in `HOSTS_OWN`. The duplicate
+scan, its table and two of its holes are gone.
+
+And removing it found two faults in the original. `HOSTS_OWN` counted as asking
+for the codes it describes — the fourth time that shape has appeared, first time
+in code I did not write. And a code named in a **comment** counted as an asking:
+`K0612` is mentioned twice in the host, both times to say what the machine used
+to answer before a door was put in front of it. The scan thirty lines above has
+stripped comments since it was written; this one never did. Both fixed. Recorded
+as D791, superseding D787 and D790.
+
+And the removal went wrong once: taking the duplicate out took an existing
+check with it, the loop holding a code a check names to being one this compiler
+has. The backstop for that check caught it on the next run, which is the first
+time in this log a hole has caught the hand that was tidying up.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** stop reading the checks. Six of the last seven entries have been about
+`tools/`, and the roadmap says types, compile, value, vm. `docs/language.md` has
+eleven hundred lines on what a host has to keep and D786 read only the ceilings
+in it. Read the rest against `src/vm.c` and `include/kest.h`.
