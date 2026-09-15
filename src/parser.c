@@ -431,6 +431,55 @@ static KestSpan parse_path(Parser *parser) {
     return span_between(start, end);
 }
 
+// `no.alloc` after a signature, and what is said about anything else written
+// where it goes. It is spelled with a dot so the namespace can hold further
+// contracts without taking more keywords — and until this, a word that was not
+// the one there is went unread: the parser found no promise, went looking for a
+// body, found an identifier and said `expected {`. Somebody who wrote
+// `no.allocate` was told nothing about promises at all, and somebody who wrote
+// `alloc` was told the same. `no` and a dot is somebody writing a promise
+// whatever follows it, so what follows it is read and answered for. See D852.
+static bool match_no_alloc(Parser *parser) {
+    if (is_word(parser, 0, "no") && peek_at(parser, 1).kind == KEST_TOK_DOT) {
+        KestToken word = peek_at(parser, 2);
+        if (is_word(parser, 2, "alloc")) {
+            parser->position += 3;
+            // And once. A second one is somebody who wrote it twice rather
+            // than somebody promising twice as much, and a parser that reads
+            // the first and stops leaves the second to be `expected {`.
+            if (is_word(parser, 0, "no") &&
+                peek_at(parser, 1).kind == KEST_TOK_DOT &&
+                is_word(parser, 2, "alloc")) {
+                error_at(parser,
+                         span_between(peek(parser).span,
+                                      peek_at(parser, 2).span),
+                         "K0216", "`no.alloc` is written once");
+                parser->position += 3;
+            }
+            return true;
+        }
+        if (word.kind == KEST_TOK_IDENT) {
+            error_at(parser, span_between(peek(parser).span, word.span),
+                     "K0216", "`no.%.*s` is not a promise this language has",
+                     (int)word.span.length, span_text(parser, word.span));
+            kest_diags_suggest(parser->diags,
+                               "the one there is is `no.alloc`");
+            parser->position += 3;
+            return false;
+        }
+    }
+    // And the promise with its first half left off. `alloc` where a body goes
+    // is not a name this language has any use for, so saying `expected {`
+    // about it is true and no help at all.
+    if (is_word(parser, 0, "alloc")) {
+        error_at(parser, peek(parser).span, "K0216",
+                 "a promise is written `no.alloc`");
+        advance(parser);
+        return false;
+    }
+    return false;
+}
+
 // `store<ref<Npc>>` ends in one token that is two closers. The first half
 // closes this type and the second is left where it is, so the type around it
 // closes on what is still a `>`.
@@ -478,14 +527,10 @@ static KestTypeRef *parse_type(Parser *parser) {
                 return NULL;
             }
         }
-        // The same words a declaration uses, because it is the same promise.
-        if (is_word(parser, 0, "no") && peek_at(parser, 1).kind == KEST_TOK_DOT &&
-            is_word(parser, 2, "alloc")) {
-            advance(parser);
-            advance(parser);
-            advance(parser);
-            type->no_alloc = true;
-        }
+        // The same words a declaration uses through the same door, because it
+        // is the same promise and two readings of one promise are two things
+        // that agree until somebody changes one.
+        type->no_alloc = match_no_alloc(parser);
         type->span =
             span_between(start, parser->tokens[parser->position - 1].span);
         return type;
@@ -1674,17 +1719,6 @@ static KestField *parse_field(Parser *parser) {
     }
     field->type = parse_type(parser);
     return field->type == NULL ? NULL : field;
-}
-
-// `no.alloc` after a signature. It is spelled with a dot so the namespace can
-// hold further contracts without taking more keywords.
-static bool match_no_alloc(Parser *parser) {
-    if (is_word(parser, 0, "no") && peek_at(parser, 1).kind == KEST_TOK_DOT &&
-        is_word(parser, 2, "alloc")) {
-        parser->position += 3;
-        return true;
-    }
-    return false;
 }
 
 static KestDecl *new_decl(Parser *parser, KestDeclKind kind, KestSpan span) {

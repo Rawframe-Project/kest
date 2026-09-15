@@ -32311,3 +32311,39 @@ Recorded as D851.
 frame may not do — `no.alloc` is a promise about a function and there is no way
 to ask for it on the handler a host actually calls. Find what a contract can say
 about an entry point that it cannot say now, and say it.
+
+## A word written where a promise goes
+
+`no.alloc` is the one promise this language has, spelled with a dot so the
+namespace can hold more later. A word in that place that was not that one went
+unread: the parser found no promise, went looking for a body, found an
+identifier and said `expected `{``. Somebody who wrote `no.allocate` was told
+nothing about promises at all; so was somebody who wrote `alloc`, and somebody
+who wrote the right one twice.
+
+`no` and a dot is somebody writing a promise whatever follows it, so what
+follows it is read and answered for — `K0216`, with the one there is offered
+under the caret. Three things said where one message said nothing.
+
+And one door rather than two: the promise is written after a signature and
+inside a function's type, and each had its own copy of the same three-token
+test. The type reads it through the same door now, so `fn(i32) -> i32 no.heap`
+is refused where `fn f() -> i32 no.heap` is.
+
+The Next this came from was wrong and that is worth writing down. It said there
+was no way to ask for `no.alloc` on the handler a host calls. There is:
+`fn onEvent(e: i32) -> i32 no.alloc` compiles, `kest_entry_promises` answers
+whether a function promised it, and the machine holds a host to its side of the
+same promise. What was missing was smaller and nearer — one promise and no
+answer for anybody who spelled it wrong.
+
+Recorded as D852.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the namespace was spelled with a dot so it could hold more than one
+promise, and it has held exactly one since the day it was written. A frame that
+must not call back into the host is the next one a game wants: `no.host` reads
+like the promise it would be, it is provable the same way `no.alloc` is — a walk
+of the tree looking for one kind of call — and the word is already refused by
+name. Write it.

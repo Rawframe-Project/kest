@@ -2281,6 +2281,21 @@ error[K0402]: nothing promises about what this calls, and `apply` promises `no.a
   |            ^^^^ write the promise into the shape: `fn(i32) -> i32 no.alloc`
 ```
 
+There is one promise, and a word written where it goes that is not that one is
+answered for rather than left to be a body that never turned up:
+
+```
+error[K0216]: `no.allocate` is not a promise this language has
+ --> promise.kest:1:15
+  |
+1 | fn f() -> i32 no.allocate {
+  |               ^^^^^^^^^^^ the one there is is `no.alloc`
+```
+
+The same is said of a promise written with its first half left off and of one
+written twice, and it is said in a function's type as well as after its
+signature, because it is the same promise read through the same door.
+
 The promise is proved twice: once against the tree, where a refusal can name
 the path, and once against the instructions that were emitted for it, where
 there is nothing to miss because the machine's own list of what reaches the

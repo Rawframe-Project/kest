@@ -25389,3 +25389,46 @@ machine no longer fits in. That is the ceiling doing its work, and the band is
 where the question this asks can still be asked.
 
 *Held* by a hole — a machine weighed before it has said anything.
+
+## D852: a word written where a promise goes
+
+`no.alloc` is the one promise this language has, and it is spelled with a dot so
+the namespace can hold more of them later without taking more keywords. A word
+in that place that was not that one went unread: the parser found no promise,
+went looking for a body, found an identifier, and said `expected `{``. Somebody
+who wrote `no.allocate` was told nothing about promises at all. So was somebody
+who wrote `alloc`, and so was somebody who wrote the right one twice.
+
+*`no` and a dot is somebody writing a promise*, whatever follows it. So what
+follows it is read and answered for:
+
+```
+error[K0216]: `no.allocate` is not a promise this language has
+ --> promise.kest:1:15
+  |
+1 | fn f() -> i32 no.allocate {
+  |               ^^^^^^^^^^^ the one there is is `no.alloc`
+```
+
+Three things said where one message said nothing: a word that is not the one
+there is, the promise with its first half left off, and the promise written
+twice — which is somebody who wrote it twice and not somebody promising twice as
+much.
+
+*And one door rather than two.* The promise is written in two places, after a
+signature and inside a function's type, and each had its own copy of the same
+three-token test with a comment on the second saying it was the same promise.
+Two readings of one promise are two things that agree until somebody changes
+one, which is the rule this project keeps everywhere else. The type reads it
+through the same door now, so `fn(i32) -> i32 no.heap` is refused where
+`fn f() -> i32 no.heap` is.
+
+*Held* by three rows in the table of refusals a file can meet, one for each
+thing it says, which is what holds every wording of a code this compiler has.
+
+*And the Next this came from was wrong, which is worth writing down.* It said
+there was no way to ask for `no.alloc` on the handler a host calls. There is:
+`fn onEvent(e: i32) -> i32 no.alloc` compiles, `kest_entry_promises` answers
+whether a function promised it, and the machine holds a host to its side of the
+same promise. What was actually missing was smaller and nearer: the language had
+one promise and no answer for anybody who spelled it wrong.

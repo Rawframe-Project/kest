@@ -3664,6 +3664,9 @@ K0208|enum Door {\n    Shut\n    Open(i32)\n}\n\nfn main() -> i32 {\n    let d =
 K0211|fn firstOf<T>(a: T, b: T) -> T {\n    return a\n}\n\nfn main() -> i32 {\n    return firstOf<i32>(1, 2)\n}|is not given its types
 K0212|flags State {\n    Moving\n}\n\nfn main() -> i32 {\n    return 0\n}|says how wide it is
 K0213|fn main() -> i32 {\n    if (1 < 3) {\n        return 0\n    }\n    return 1\n}|without brackets round the whole of it
+K0216|fn f() -> i32 no.allocate {\n    return 0\n}|`no.allocate` is not a promise this language has
+K0216|fn f() -> i32 alloc {\n    return 0\n}|a promise is written `no.alloc`
+K0216|fn f() -> i32 no.alloc no.alloc {\n    return 0\n}|`no.alloc` is written once
 K0214|fn main() -> i32 {\n    let n = 5\n    n %= 2\n    return n\n}|is not one of the four this language has
 K0303|struct P {\n    x: i32\n    x: i32\n}\n\nfn main() -> i32 {\n    return 0\n}|declared twice
 K0305|fn f(a: i32, a: i32) -> i32 {\n    return a\n}\n\nfn main() -> i32 {\n    return f(1, 2)\n}|declared twice

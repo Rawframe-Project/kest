@@ -9508,12 +9508,10 @@ static const Keyword KEYWORDS[] = {
         "what": "a promise the parser stopped reading",
         "file": "src/parser.c",
         "from": r"""static bool match_no_alloc(Parser *parser) {
-    if (is_word(parser, 0, "no") && peek_at(parser, 1).kind == KEST_TOK_DOT &&
-        is_word(parser, 2, "alloc")) {""",
+    if (is_word(parser, 0, "no") && peek_at(parser, 1).kind == KEST_TOK_DOT) {""",
         "to": r"""static bool match_no_alloc(Parser *parser) {
     if (false && is_word(parser, 0, "no") &&
-        peek_at(parser, 1).kind == KEST_TOK_DOT &&
-        is_word(parser, 2, "alloc")) {""",
+        peek_at(parser, 1).kind == KEST_TOK_DOT) {""",
         "make": ["kest"],
         "tool": "tools/check-fmt.sh",
         "arguments": ["examples/math.kest"],
