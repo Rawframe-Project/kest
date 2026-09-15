@@ -1163,8 +1163,20 @@ static void cycle_walk(const KestModule *module, uint32_t which, uint8_t *state,
     state[which] = 2;
 }
 
+// Whether this body reaches a host function without going through a call:
+// the first step of the closure below.
+static bool calls_a_host(const KestChunk *chunk) {
+    for (uint32_t at = 0; chunk != NULL && at < chunk->code_count;) {
+        if (chunk->code[at] == KEST_OP_CALL_HOST) {
+            return true;
+        }
+        at += kest_op_width(chunk->code[at]);
+    }
+    return false;
+}
+
 void kest_module_cycles(const KestModule *module, KestArena *arena,
-                        int32_t only, uint32_t *widest,
+                        int32_t only, bool to_host, uint32_t *widest,
                         uint32_t *widest_in_a_turn, uint32_t *all_the_rest) {
     *widest = 0;
     *widest_in_a_turn = 0;
@@ -1195,6 +1207,59 @@ void kest_module_cycles(const KestModule *module, KestArena *arena,
             }
         }
     }
+    // And which of them reach a host function, when that is what was asked.
+    // A body that never reaches one cannot be on a chain of frames that ends
+    // at a host call, above it or below it, so it is not part of where the
+    // machine can be when one happens. Walked to a standstill rather than in
+    // order, because the graph has loops in it by the time this is asked and
+    // an order is what a loop has not got. See D818.
+    uint8_t *to_a_host = on_cycle;
+    if (to_host) {
+        to_a_host = KEST_ARENA_ARRAY(arena, uint8_t, module->count);
+        if (to_a_host == NULL) {
+            kest_arena_rewind(arena, before);
+            return;
+        }
+        for (uint32_t i = 0; i < module->count; i++) {
+            to_a_host[i] = (uint8_t)(state[i] != 0 &&
+                                     calls_a_host(module->functions[i]));
+        }
+        for (bool moved = true; moved;) {
+            moved = false;
+            for (uint32_t i = 0; i < module->count; i++) {
+                const KestChunk *one = module->functions[i];
+                if (state[i] == 0 || to_a_host[i] || one == NULL) {
+                    continue;
+                }
+                for (uint32_t at = 0; at < one->code_count;
+                     at += kest_op_width(one->code[at])) {
+                    uint8_t op = one->code[at];
+                    uint32_t first = module->count;
+                    uint32_t last = module->count;
+                    if (op == KEST_OP_CALL) {
+                        first = read_u16(one, at + 1);
+                        last = first + 1;
+                    } else if (op == KEST_OP_CALL_VALUE) {
+                        first = 0;
+                        last = module->count;
+                    }
+                    for (uint32_t callee = first;
+                         callee < last && !to_a_host[i]; callee++) {
+                        if (callee >= module->count ||
+                            module->functions[callee] == NULL ||
+                            (op == KEST_OP_CALL_VALUE &&
+                             !module->functions[callee]->as_value)) {
+                            continue;
+                        }
+                        if (to_a_host[callee]) {
+                            to_a_host[i] = 1;
+                            moved = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
     // Only what the walk got to. A function nothing here reaches cannot stand
     // in a chain of frames under the one asked about, so it is not part of
     // what that one can want. See D817.
@@ -1202,7 +1267,7 @@ void kest_module_cycles(const KestModule *module, KestArena *arena,
         const KestChunk *one = module->functions[i];
         uint32_t own =
             one == NULL ? 0 : (uint32_t)one->slot_count + one->stack_needed;
-        if (state[i] == 0) {
+        if (state[i] == 0 || (to_host && !to_a_host[i])) {
             continue;
         }
         if (own > *widest) {

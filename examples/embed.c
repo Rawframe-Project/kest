@@ -2322,6 +2322,22 @@ int main(int argc, char **argv) {
         printf("and the call is in `%s`, which reaches this host %u slots "
                "in on its own\n",
                where.where, there.stack_slots);
+        // And the third door asked of a program that can answer it without a
+        // bound, which has to be the answer and not a bound above it. See
+        // D818.
+        KestLimits bounded_from = {0, 0, 0};
+        KestReason which_from = {KEST_REACH_UNASKED, NULL};
+        if (!kest_bound_from(build, NULL, 4, &bounded_from, &which_from) ||
+            which_from.reach != KEST_REACH_KNOWN ||
+            bounded_from.stack_slots != from_inside.stack_slots ||
+            bounded_from.call_depth != from_inside.call_depth) {
+            fprintf(stderr,
+                    "a call back in starts at %u slots and %u frames and is "
+                    "bounded at %u and %u\n",
+                    from_inside.stack_slots, from_inside.call_depth,
+                    bounded_from.stack_slots, bounded_from.call_depth);
+            return 1;
+        }
     }
 
     // And what a hundred refused calls cost a host that reads what it was

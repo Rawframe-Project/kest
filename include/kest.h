@@ -327,6 +327,22 @@ bool kest_bound_of(KestBuild *build, const char *name, uint32_t frames,
 bool kest_needs_from(KestBuild *build, const char *name, KestLimits *inside,
                      KestReason *why);
 
+// And where a host may be called back in from, for a name with no least. It is
+// `kest_needs_from` where there is one and a bound where there is not, the same
+// way `kest_bound_of` is `kest_needs_of` — `why` says which, and a host that
+// asks this of a program that can answer the other gets the other.
+//
+// The bound counts only the bodies that reach a host function: a body that
+// never reaches one cannot stand in a chain of frames that ends at a host call,
+// above it or below it. `name` may be NULL for every function the program
+// defines, the same as `kest_needs_from`.
+//
+// What a re-entrant host wants is this plus `kest_bound_of` for the entry it
+// calls, which is the same sum as for a program with a least and made of the
+// same two doors.
+bool kest_bound_from(KestBuild *build, const char *name, uint32_t frames,
+                     KestLimits *inside, KestReason *why);
+
 // The machine, while it is running. A host function is handed one so that it
 // can give the program a view of memory the host owns.
 typedef struct KestRuntime KestRuntime;

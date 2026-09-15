@@ -372,7 +372,7 @@ static const KestWalk *walk_it(KestBuild *build) {
         // answers along with which functions go round and how wide the ones
         // that do not are altogether. See D815 and D816.
         if (!build->walked.measured) {
-            kest_module_cycles(&build->module, build->arena, -1,
+            kest_module_cycles(&build->module, build->arena, -1, false,
                                &build->walked.widest, &build->walked.in_a_turn,
                                &build->walked.off_the_turns);
         }
@@ -479,7 +479,7 @@ bool kest_bound_of(KestBuild *build, const char *name, uint32_t frames,
     uint32_t widest = 0;
     uint32_t in_a_turn = 0;
     uint32_t off_the_turns = 0;
-    kest_module_cycles(&build->module, build->arena, about, &widest,
+    kest_module_cycles(&build->module, build->arena, about, false, &widest,
                        &in_a_turn, &off_the_turns);
     if (widest == 0) {
         why->reach = KEST_REACH_NO_ROOM;
@@ -540,6 +540,61 @@ bool kest_needs_from(KestBuild *build, const char *name, KestLimits *inside,
         return false;
     }
     inside->heap_bytes = 0;
+    return true;
+}
+
+bool kest_bound_from(KestBuild *build, const char *name, uint32_t frames,
+                     KestLimits *inside, KestReason *why) {
+    KestReason ignored;
+    if (why == NULL) {
+        why = &ignored;
+    }
+    why->reach = KEST_REACH_UNASKED;
+    why->where = NULL;
+    if (build == NULL || inside == NULL || !build->compiled) {
+        return false;
+    }
+    int32_t from = -1;
+    if (name != NULL) {
+        from = kest_module_entry(&build->module, name);
+        if (from < 0) {
+            why->reach = KEST_REACH_NO_NAME;
+            return false;
+        }
+    }
+    // The answer where there is one, which is better than any bound.
+    if (kest_needs_from(build, name, inside, why)) {
+        why->reach = KEST_REACH_KNOWN;
+        return true;
+    }
+    if (why->reach == KEST_REACH_NO_ROOM) {
+        return false;
+    }
+    uint32_t widest = 0;
+    uint32_t in_a_turn = 0;
+    uint32_t off_the_turns = 0;
+    kest_module_cycles(&build->module, build->arena, from, true, &widest,
+                       &in_a_turn, &off_the_turns);
+    inside->heap_bytes = 0;
+    // Nothing reaches a host function, so there is nowhere to call back in
+    // from and nothing to make room for. The same nothing `kest_needs_from`
+    // gives, and true for the same reason. See D818.
+    if (widest == 0) {
+        inside->stack_slots = 0;
+        inside->call_depth = 0;
+        return true;
+    }
+    uint32_t allowed = frames == 0 ? KEST_CALL_DEPTH : frames;
+    uint64_t a_frame_each = (uint64_t)widest * allowed;
+    uint64_t a_turn_each =
+        (uint64_t)off_the_turns + (uint64_t)in_a_turn * allowed;
+    if (in_a_turn > 0 && a_turn_each < a_frame_each) {
+        a_frame_each = a_turn_each;
+    }
+    inside->stack_slots = a_frame_each < (uint64_t)KEST_STACK_SLOTS
+                              ? (uint32_t)a_frame_each
+                              : KEST_STACK_SLOTS;
+    inside->call_depth = allowed;
     return true;
 }
 

@@ -3323,6 +3323,13 @@ not, over what that name reaches rather than over the whole file, and `why` says
 which of the two it gave. A bound is enough and may be more than enough; a least
 is what the program wants.
 
+`kest_bound_from` is the same for the third door: where a host may be called
+back in from, answered where it can be and bounded where it cannot. Its bound
+counts only the bodies that reach a host function, because a body that never
+reaches one cannot stand in a chain of frames that ends at a host call, above it
+or below it. What a re-entrant host wants is that plus `kest_bound_of` for the
+entry it calls, which is the same sum as for a program with a least.
+
 It does not have to ask at all: `emit` says what a machine to call each function
 takes, beside that function — `5 slots and 1 frame to call it`, and `least` in
 the object — because the walk that answers for the whole program works both out

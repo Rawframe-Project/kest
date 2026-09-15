@@ -24030,3 +24030,42 @@ a bound that counted every body would be equal and read as right.
 *What the door is for.* A host that calls one function and allows sixteen frames
 had two ways to size a machine before this: ask about the whole program, or pick
 a number. Now it has the same question it asks about everything else.
+
+## D818: the third door, and the bodies that cannot be under a host call
+
+*The last of the three.* `kest_needs`, `kest_needs_of` and `kest_needs_from` are
+the three questions a host asks about room. D815 and D816 gave the first a bound
+where it had none, D817 the second. The third had none: a host whose bound
+function calls back in was told where the machine already is, and a program with
+no least told it nothing at all.
+
+*`kest_bound_from`.* A name — or NULL for every function — a ceiling on frames,
+and the answer where there is one or a bound where there is not. `why` says
+which, the same as `kest_bound_of`, so it is safe to ask always.
+
+*What makes this bound tighter than the other two.* A chain of frames that ends
+at a host call is made only of bodies that **reach a host function**. A body that
+never reaches one is not below a host call, because it does not call one, and
+not above one either, because nothing under it calls one. So the two readings are
+taken over that set and nothing else.
+
+Which bodies reach one is a closure, not an order: the graph has loops in it by
+the time this is asked, and an order is what a loop has not got. So it is walked
+to a standstill — mark the bodies with a `call.host` in them, then keep marking
+callers until nothing more moves.
+
+For `examples/least.kest` at sixteen frames: the whole file is 57 slots, `main`
+alone is 54, and **32** is where the host could be called back in from. Two of
+the three bodies `main` reaches never touch `Host.write`, and they are not in the
+number.
+
+*Held for both of the answers it gives.* `examples/embed.c` asks it of a program
+that can answer, with NULL for every function, and refuses unless it is
+`kest_needs_from` to the slot and to the frame. `examples/least.c` asks it of a
+program that cannot, and refuses unless it is under what that name wants
+altogether — under, because a bound that counted the bodies that never reach the
+host would be equal to it.
+
+*Three doors, three bounds, one shape.* Each answers the least where there is
+one. Each answers a bound where there is not, from the frames a host allows.
+Each says which it gave. A host that wants a number now always has one.

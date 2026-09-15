@@ -460,8 +460,13 @@ typedef struct {
 // to work them out. See D816.
 // `only` is one function and what it reaches, or -1 for every function the
 // program defines. `widest` is the widest body among them, whichever they are.
+//
+// `to_host` counts only the bodies that reach a host function, which are the
+// only ones that can stand in a chain of frames ending at one: a body that
+// never reaches the host is not below a host call and not above one either.
+// See D818.
 void kest_module_cycles(const KestModule *module, KestArena *arena,
-                        int32_t only, uint32_t *widest,
+                        int32_t only, bool to_host, uint32_t *widest,
                         uint32_t *widest_in_a_turn, uint32_t *all_the_rest);
 
 bool kest_module_needs(const KestModule *module, KestArena *arena, int32_t only,

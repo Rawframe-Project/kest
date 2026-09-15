@@ -257,8 +257,31 @@ int main(int argc, char **argv) {
             kest_build_free(build);
             return 1;
         }
-        printf("and `main` on its own is %u of them\n",
-               about_main.stack_slots);
+        // And where this host could be called back in from, which is the
+        // third of the three doors and the one a re-entrant host reads. Only
+        // the bodies that reach a host function count towards it, and this
+        // program has bodies that do not, so it is under what `main` wants
+        // altogether. See D818.
+        KestLimits back_in = {0, 0, 0};
+        KestReason from_where = {KEST_REACH_UNASKED, NULL};
+        if (!kest_bound_from(build, "main", 16, &back_in, &from_where) ||
+            back_in.stack_slots == 0 ||
+            back_in.stack_slots >= about_main.stack_slots ||
+            back_in.call_depth != 16 ||
+            from_where.reach == KEST_REACH_KNOWN) {
+            fprintf(stderr,
+                    "a call back into `%s` starts at %u slots where `main` "
+                    "wants %u\n",
+                    path, back_in.stack_slots, about_main.stack_slots);
+            kest_runtime_free(shallow);
+            kest_runtime_free(deeper);
+            kest_host_free(host);
+            kest_build_free(build);
+            return 1;
+        }
+        printf("and `main` on its own is %u of them, %u of which is where "
+               "this host could be called back in from\n",
+               about_main.stack_slots, back_in.stack_slots);
         kest_runtime_free(shallow);
         kest_runtime_free(deeper);
     }

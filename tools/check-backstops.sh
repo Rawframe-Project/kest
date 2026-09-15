@@ -184,6 +184,32 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # Where a host may be called back in from, bounded by every body a
+        # name reaches rather than by the ones that reach a host function. A
+        # body that never reaches one is not on a chain of frames that ends at
+        # a host call, above it or below it, so counting it is room a host is
+        # told to find for a place the program cannot call it from. See D818.
+        "what": "a call back in bounded by bodies that never reach the host",
+        "file": "src/build.c",
+        "from": r"""    kest_module_cycles(&build->module, build->arena, from, true, &widest,""",
+        "to": r"""    kest_module_cycles(&build->module, build->arena, from, false, &widest,""",
+        "make": ["kest", "least"],
+        "host": "examples/least",
+        "caught": "a call back into",
+    },
+    {
+        # And the same door answering a bound where there is an answer. A host
+        # that asks the third question of a program that can answer it has to
+        # get the answer, for the same reason as the second. See D818.
+        "what": "a call back in bounded where it is known",
+        "file": "src/build.c",
+        "from": r"""    if (kest_needs_from(build, name, inside, why)) {""",
+        "to": r"""    if (false) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "and is bounded at",
+    },
+    {
         # A bound answered where there is a least. A host that asks the second
         # question of a program that can answer the first has to get the
         # first, because that is what makes it safe to ask always — a bound
@@ -207,10 +233,10 @@ fn main() -> i32 {
         # room a host is told to find for a call it will not make. See D817.
         "what": "one name bounded by the whole file",
         "file": "src/value.c",
-        "from": r"""        if (state[i] == 0) {
+        "from": r"""        if (state[i] == 0 || (to_host && !to_a_host[i])) {
             continue;
         }""",
-        "to": r"""        if (false) {
+        "to": r"""        if (to_host && !to_a_host[i]) {
             continue;
         }""",
         "make": ["kest", "least"],
