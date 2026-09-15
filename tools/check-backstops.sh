@@ -184,6 +184,23 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A library that says one thing about itself and does the other. What
+        # a host does with the answer is run what only a checked build catches
+        # and keep away from what a checked build catches first, so a build
+        # that says it is checked and is not is a host doing both wrongly —
+        # and this is the only door it has, because its own compiler is
+        # answering about its own build and spells the question two ways.
+        # See D828.
+        "what": "a library that says it checks itself and does not",
+        "file": "src/mem.c",
+        "from": r"""    return KEST_CHECKED != 0;""",
+        "to": r"""    return KEST_CHECKED == 0;""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "and says so",
+    },
+    {
         # A build under the sanitiser that says it is not checked. This is
         # the one place the question is answered, and answered wrongly it is a
         # build with the sanitiser on and none of the readings that go with it
@@ -2882,9 +2899,11 @@ for file in "$@"; do""",
         # is not there.
         "what": "a version that says its name and refuses",
         "file": "src/main.c",
-        "from": r"""        printf("kest %s%s\n", kest_version(), KEST_CHECKED ? " checked" : "");
+        "from": r"""        printf("kest %s%s\n", kest_version(),
+               kest_checked() ? " checked" : "");
         return 0;""",
-        "to": r"""        printf("kest %s%s\n", kest_version(), KEST_CHECKED ? " checked" : "");
+        "to": r"""        printf("kest %s%s\n", kest_version(),
+               kest_checked() ? " checked" : "");
         return 1;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
@@ -10708,8 +10727,9 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # rather than a person, and what a tool does with nothing is carry on.
         "what": "a version that says nothing",
         "file": "src/main.c",
-        "from": """        printf("kest %s%s\\n", kest_version(), KEST_CHECKED ? " checked" : "");""",
-        "to": """        printf("%s", KEST_CHECKED ? "" : "");""",
+        "from": """        printf("kest %s%s\\n", kest_version(),
+               kest_checked() ? " checked" : "");""",
+        "to": """        printf("%s", kest_checked() ? "" : "");""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/world.kest"],

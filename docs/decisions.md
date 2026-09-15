@@ -24418,3 +24418,42 @@ that complains — the check was silently not running. And a hole that breaks a
 `Makefile` line does not rebuild what the line makes, because `make` compares
 timestamps and not recipes; the hole breaks `src/mem.h`, which is the one place
 the question is answered and a file every object depends on.
+
+## D828: asking the library whether it checks itself
+
+*The reading.* Every `#if` and `#ifdef` in the tree, and what each asks. Sixteen
+are header guards, one is a default for where the library lives, one asks about
+`__GNUC__` for an attribute, and twelve ask `KEST_CHECKED`, which `src/mem.h`
+answers in one place — as D827 made it again.
+
+Three did not. `src/mem.h` asks the compiler directly, which is its job, and
+`examples/embed.c` asks it twice more: once to keep away from a read the arena
+poisons, and once to run a check only a poisoned arena can make.
+
+*Why that is the bug mem.h's own comment describes.* The comment beside the
+answer says it is written once *"because the compilers do not spell it the
+same: one defines a name and the other answers a question, and a file that only
+asked the first of them would compile under the second into a build with none of
+these checks in it and nothing to say so."* Both of `embed.c`'s asks are the
+first spelling. Under a compiler that uses the second, one of them runs a read
+the sanitiser would catch and the other silently skips a check.
+
+*And it is not only a spelling.* A host is a separate compilation. It may be
+built one way and linked against a library built the other, and then its own
+compiler is answering about the wrong thing entirely. What a host wants to know
+is about the library.
+
+*`kest_checked`.* The public door, answered in `src/mem.c` — the file whose
+header asks the compiler, so the answer is that file's own reading. Not beside
+`kest_version` in `src/kest.c`, where a reader would look for it: `kest` is
+above `mem` in the pipeline and a file may not reach down, which
+`tools/check-tables.sh` said the moment it was written there. `src/main.c` reads it for
+`--version` instead of the macro, and `examples/embed.c` asks it at both sites,
+which turns two compile-time questions into two run-time ones: the code is
+compiled in both builds and runs where it belongs.
+
+*Held.* `tools/check-commands.sh` already held that the build which counts is the
+checked one. It now holds that the build which counts is the build which **says**
+it does — because what a host does with the answer is run what only a checked
+build catches and keep away from what a checked build catches first, and a
+library that says one thing and does the other has it doing both wrongly.

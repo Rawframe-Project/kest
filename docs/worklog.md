@@ -31384,3 +31384,46 @@ same thing to be told. Recorded as D827.
 to, found by reading something else. Read the rest of `src` for the same shape:
 every `#if` and `#ifdef` in the tree, what each asks, and whether the thing it
 asks about is answered in one place.
+
+## Asking the library whether it checks itself
+
+Every `#if` and `#ifdef` in the tree, and what each asks: sixteen header guards,
+one default for where the library lives, one about `__GNUC__` for an attribute,
+and twelve asking `KEST_CHECKED`, which `src/mem.h` answers in one place as D827
+made it again. Three did not. `src/mem.h` asks the compiler, which is its job,
+and `examples/embed.c` asks it twice more — once to keep away from a read the
+arena poisons, once to run a check only a poisoned arena can make.
+
+That is the bug mem.h's own comment describes. It says the question is written
+once "because the compilers do not spell it the same: one defines a name and the
+other answers a question, and a file that only asked the first of them would
+compile under the second into a build with none of these checks in it and
+nothing to say so." Both of embed.c's asks are the first spelling, so under a
+compiler that uses the second one of them runs a read the sanitiser would catch
+and the other silently skips a check.
+
+And it is not only a spelling. A host is a separate compilation: it may be built
+one way and linked against a library built the other, and then its own compiler
+is answering about the wrong thing. What a host wants to know is about the
+library.
+
+`kest_checked` is the public door, answered in `src/mem.c` — the file whose
+header asks the compiler, so the answer is that file's own reading. Not beside
+`kest_version`, where a reader would look: `kest` is above `mem` in the pipeline
+and a file may not reach down, which `check-tables.sh` said the moment it was
+written there.
+`main.c` reads it for `--version` instead of the macro, and `embed.c` asks it at
+both sites, which turns two compile-time questions into run-time ones — the code
+is compiled in both builds and runs where it belongs.
+
+`check-commands.sh` already held that the build which counts is the checked one;
+it now holds that the build which counts is the build which says it does,
+because what a host does with the answer is run what only a checked build
+catches and keep away from what a checked build catches first. Recorded as D828.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `#ifndef KEST_LIB_DIR` is the one conditional left with a question
+behind it: where the library lives is a default in the Makefile, an environment
+variable, and a search order in the loader. Read those three against each other
+and against what `README.md` tells somebody installing it.

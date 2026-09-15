@@ -3434,6 +3434,14 @@ needs 902 slots and 301 frames
 needs a number a host picks: `shapes.kept#...` calls through a value
 ```
 
+A host that wants to know whether the library it is linked against checks
+itself asks `kest_checked` rather than asking its own compiler: the two are not
+the same question, and the compilers do not spell the question the same, so a
+host that asks for one spelling gets the wrong answer under the other. What it
+is for is deciding whether to run what only a checked build catches, and whether
+to keep away from what a checked build catches first — `examples/embed.c` does
+both.
+
 `kest_bound` is the same for the first door: what this program can want
 altogether, answered where there is a least and bounded where there is not. It
 is what a machine given nothing is sized by, said before there is one, so a host

@@ -23,6 +23,19 @@
 // a Kest it did not compile itself.
 const char *kest_version(void);
 
+// And whether that library checks itself: built under a sanitiser, with the
+// readings that only that build does. A host asks this rather than asking its
+// own compiler, because the two are not the same question — a host compiled one
+// way may be linked against a library compiled the other — and because the
+// compilers do not spell the question the same, so a host that asks for one
+// spelling gets the wrong answer under the other. This library asked once, in
+// the one place that knows.
+//
+// What a host does with it is decide whether to run what only a checked build
+// catches, and whether to keep away from what a checked build catches first.
+// See D828.
+bool kest_checked(void);
+
 typedef struct KestBuild KestBuild;
 
 // How what the boundary says is written. Prose for a person, and the same set

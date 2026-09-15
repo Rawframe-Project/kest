@@ -5011,9 +5011,18 @@ checked_counted=$(KEST_DEEP=1 ./kest-debug run "$scratch"/marking/real.kest \
 # One complaint for both ways round, because a reading in the wrong build and
 # a reading in no build are the same thing to be told: the two builds are not
 # doing what says which is which.
-if [ "$plain_counted" != 0 ] || [ "$checked_counted" = 0 ]; then
+# And that the build which counts is the build which says it does. What says so
+# is `kest_checked`, which a host asks instead of asking its own compiler — the
+# two are not the same question, and the compilers do not spell it the same. A
+# library that says one thing and does the other is a host told to run what only
+# a checked build catches by a build that catches nothing. See D828.
+plain_says=$("$kest" --version 2>&1 </dev/null | grep -c checked || true)
+checked_says=$(./kest-debug --version 2>&1 </dev/null | grep -c checked || true)
+if [ "$plain_counted" != 0 ] || [ "$checked_counted" = 0 ] ||
+   [ "$plain_says" != 0 ] || [ "$checked_says" = 0 ]; then
     complain "run: the build that checks itself counted $checked_counted \
-things and the one that does not counted $plain_counted"
+things and says so $checked_says time(s), and the one that does not counted \
+$plain_counted and says so $plain_says"
 fi
 
 # And the machine the command line makes for the names it drives, which is

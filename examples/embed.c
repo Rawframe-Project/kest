@@ -1636,8 +1636,10 @@ static bool spends_the_heap(Engine *engine) {
     //
     // Not under the sanitisers: the arena poisons what it takes back, so
     // reading the header at all is caught there, harder and one step earlier
-    // than the machine can catch it.
-#if !defined(__SANITIZE_ADDRESS__)
+    // than the machine can catch it. Asked of the library rather than of this
+    // host's own compiler, because the two are not the same question and the
+    // compilers do not spell it the same. See D828.
+    if (!kest_checked()) {
     Row rows[2];
     memset(rows, 0, sizeof(rows));
     KestValue lent =
@@ -1657,7 +1659,7 @@ static bool spends_the_heap(Engine *engine) {
         return false;
     }
     printf("and refused an array it lent before the heap was thrown away\n");
-#endif
+    }
 
     // And the other side of a budget, which is a program that stays inside one
     // it could not stay inside by luck. A store hands out the room of what was
@@ -4062,15 +4064,15 @@ int main(int argc, char **argv) {
     // in a build that ships can weigh that word — the block is the host's and
     // its end is written down nowhere the library can read — so it is asked
     // where it can be asked, and this host asks it there.
-#if defined(__SANITIZE_ADDRESS__)
-    if (kest_borrow(engine.runtime, rows, 4, "Row", sizeof(Row)).object !=
-        NULL) {
-        fprintf(stderr, "a lend of four out of two was taken\n");
-        return 1;
+    if (kest_checked()) {
+        if (kest_borrow(engine.runtime, rows, 4, "Row", sizeof(Row)).object !=
+            NULL) {
+            fprintf(stderr, "a lend of four out of two was taken\n");
+            return 1;
+        }
+        printf("a lend of %zu rows out of %zu was refused\n", (size_t)4,
+               sizeof(rows) / sizeof(rows[0]));
     }
-    printf("a lend of %zu rows out of %zu was refused\n", (size_t)4,
-           sizeof(rows) / sizeof(rows[0]));
-#endif
 
 
     // Text is the other thing a host hands over, and the machine copies it:

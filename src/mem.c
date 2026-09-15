@@ -1,5 +1,18 @@
 #include "mem.h"
 
+// And the one thing outside this file that wants the answer `mem.h` works out.
+// It lives here rather than beside `kest_version`, where a reader would look
+// for it, because `src/kest.c` is above this file in the pipeline and a file
+// may not reach down — and what it answers is this file's own reading of the
+// compiler. A host outside the tree cannot include `mem.h`, and a host inside
+// it should not have to: what it wants to know is about the library it is
+// linked against and not about its own build. See D828.
+#include "kest.h"
+
+bool kest_checked(void) {
+    return KEST_CHECKED != 0;
+}
+
 #include <stdbool.h>
 // Only the sanitised build says anything, and only when this arena has stopped
 // agreeing with itself. The release build includes nothing but what it uses.

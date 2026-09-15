@@ -2029,7 +2029,8 @@ int main(int argc, char **argv) {
         // a guard that stopped matching would be that build with none of them
         // in it, running everything and finding nothing, and the run would
         // read exactly as it does now.
-        printf("kest %s%s\n", kest_version(), KEST_CHECKED ? " checked" : "");
+        printf("kest %s%s\n", kest_version(),
+               kest_checked() ? " checked" : "");
         return 0;
     }
 
