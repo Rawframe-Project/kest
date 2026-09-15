@@ -23064,3 +23064,49 @@ every count right and every other example passing — it changes only which slot
 something lands in, which is exactly the thing `reinforce` is written around. A
 rule a program is shaped by and nothing watches is a rule that can go without
 the program that depends on it saying a word.
+
+## D796: a promise kept on paper
+
+*The text claims, read the way D795 read the store's.* Four again, and the sharp
+one was already watched.
+
+*A cut that reaches the end costs nothing, one that stops sooner pays.* The
+machine asks `text[want] == '\0'` and hands back a place inside what it was
+given, or allocates. `check-commands.sh` measures the heap for three shapes —
+the whole of it, the tail of it, the middle of it — against measuring the same
+text, and refuses if a cut to the end costs more or a short cut costs the same.
+Held, and held by the thing that would notice.
+
+*An index counts bytes and a walk counts characters.* `examples/words.kest`
+reads the second and third bytes of `"hız"` and says they are 196 and 177. Held.
+
+*Everything asked about the far end costs the walk to it.* `len`, `t[len - 1]`,
+a loop coming in from the right. That is the shape of the code rather than a
+number a check can read, and the document says it as advice.
+
+*And `rest` and `find` reach nothing, which nothing watched.* `rest` hands back
+`text + at` and `find` hands back a number. Neither copies, and **eight of the
+`no.alloc` functions in `lib/std/text.kest` are built on `rest`** — a walk that
+keeps what is left is the cheap direction, and it is cheap because of this.
+
+What holds those promises is the proof in `contract.c`, which reads a table
+saying which builtins reach the heap. The table says `rest` reaches nothing. The
+machine happens to agree. **Nothing held the two together** — so a `rest` that
+began copying would break eight promises at once, at runtime, with the compiler
+still proving them and every example still answering the same.
+
+*It is measured now, beside the cut it belongs with.* `rest` and `find` cost
+what measuring the same text costs, and a walk that takes the rest of the rest
+over ten bytes costs that too rather than ten times it. Making `rest` copy what
+it keeps turns those into twenty against eleven, which is what the check says.
+
+Three measurements and one sentence, because they are one question asked three
+ways. The first draft said the walk separately, which meant a second hole for
+it — and every break that makes a walk expensive makes a single step expensive
+first, so the second hole caught the first sentence and the walk's had none.
+
+*What this is an instance of.* A promise proved against a table is proved
+against a description of the machine, not the machine. The table is right today
+and was right when it was written; what was missing is the line that says so
+out of a run. Every other builtin in that table is in the same position, and
+this closes one of them — the one eight library functions stand on.

@@ -3166,6 +3166,27 @@ fn back(t: text, from: i32) -> i32 {
 fn at(t: text, index: i32) -> i32 {
     return i32(t[index])
 }
+
+fn stepped(t: text) -> i32 {
+    return len(rest(t, 2))
+}
+
+fn walked(t: text) -> i32 {
+    let seen = 0
+    let left = t
+    while left != "" {
+        seen += 1
+        left = rest(left, 1)
+    }
+    return seen
+}
+
+fn looked(t: text) -> i32 {
+    if let found = find(t, "j") {
+        return found
+    }
+    return -1
+}
 KEST
 cutting="$scratch"/cutting/cutting.kest
 # And what a cut, or a read, says when it is asked for what is not there. The
@@ -3204,6 +3225,26 @@ $whole_cut and $tail_cut where measuring it cost $just_measured"
 elif [ "$middle_cut" -le "$just_measured" ]; then
     complain "call: a cut that stops sooner cost $middle_cut, which is what \
 measuring it costs"
+fi
+
+# And the two beside it that step rather than cut. `rest` is a place inside the
+# text it was given and `find` is a number, so neither has anything to copy --
+# which is what eight of the library's `no.alloc` functions are built on. The
+# proof that holds them says so out of a table in `contract.c`; this says the
+# machine agrees, because a table saying a builtin reaches nothing and a
+# machine reaching for something is a promise kept on paper. See D796.
+stepped_cost=$(cut_heap stepped)
+walked_cost=$(cut_heap walked)
+looked_cost=$(cut_heap looked)
+# What a run says it cost is already held to being there, a few lines up: an
+# empty answer here reads as a cost that is not what measuring costs, which is
+# what these two say.
+if [ "$stepped_cost" != "$just_measured" ] ||
+   [ "$looked_cost" != "$just_measured" ] ||
+   [ "$walked_cost" != "$just_measured" ]; then
+    complain "call: \`rest\` cost $stepped_cost, \`find\` cost $looked_cost \
+and a walk keeping what is left cost $walked_cost over ten bytes, where \
+measuring the same text cost $just_measured"
 fi
 
 # Text that ends in the middle of a character, which is what text arriving a

@@ -1245,6 +1245,36 @@ yield""",
         "caught": "say which type they are the layout of",
     },
     {
+        # `rest` copying what it keeps instead of standing inside it. Every
+        # program still answers the same; what changes is that eight of the
+        # library's `no.alloc` functions reach the heap while promising not
+        # to, and the proof that holds them reads a table rather than the
+        # machine. See D796.
+        "what": "a rest that copies what it keeps",
+        "file": "src/vm.c",
+        "from": r"""            (top++)->text = text + at;
+            break;
+        }
+        case KEST_OP_TEXT_MATCHES: {""",
+        "to": r"""            {
+                size_t left = strlen(text + at);
+                char *copy = kest_arena_alloc(rt->heap, left + 1, 1);
+                if (copy == NULL) {
+                    no_room(vmp, frame, instruction, rt);
+                    return false;
+                }
+                memcpy(copy, text + at, left + 1);
+                (top++)->text = copy;
+            }
+            break;
+        }
+        case KEST_OP_TEXT_MATCHES: {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "where measuring the same text cost",
+    },
+    {
         # A store handing back the slot it took first rather than the one it
         # took last. Every program still runs and every count still comes out;
         # what changes is which slot something added lands in, which the

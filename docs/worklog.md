@@ -30179,3 +30179,37 @@ of thing about text — that `slice` copies and reaches the heap, that `rest` an
 `find` do not, that a walk of it counts glyphs and an index counts bytes. Read
 those against `src/vm.c`'s text instructions the way this read the store's, and
 find which are watched.
+
+## A promise kept on paper
+
+Four text claims, read the way D795 read the store's. A cut that reaches the end
+costs nothing and one that stops sooner pays — watched already, by
+`check-commands.sh` measuring the heap for the whole, the tail and the middle
+against measuring the same text. An index counts bytes where a walk counts
+characters — watched by `examples/words.kest` on `"hız"`. Everything about the
+far end costs the walk to it — the shape of the code rather than a number.
+
+And `rest` and `find` reach nothing, which nothing watched. `rest` hands back
+`text + at`, `find` hands back a number, and **eight of the `no.alloc` functions
+in `lib/std/text.kest` are built on `rest`**. What holds those promises is the
+proof in `contract.c`, which reads a table saying which builtins reach the heap.
+The table says `rest` reaches nothing; the machine happens to agree; nothing
+held the two together. A `rest` that began copying would break eight promises at
+once, at runtime, with the compiler still proving them and every example still
+answering the same.
+
+Measured now, beside the cut it belongs with: `rest` and `find` cost what
+measuring the same text costs, and a walk that takes the rest of the rest over
+ten bytes costs that rather than ten times it. Making `rest` copy turns those
+into twenty against eleven.
+
+A promise proved against a table is proved against a description of the machine.
+Every other builtin in that table is in the same position; this closes the one
+eight library functions stand on. Recorded as D796.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the table in `contract.c` names every builtin and what it reaches, and
+the proof rests on it. One of its rows is now held against a run. Count the rest
+— how many builtins the table names, how many reach the heap by it, and which of
+those have ever been measured doing so.
