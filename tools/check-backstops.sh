@@ -1275,6 +1275,39 @@ yield""",
         "caught": "said nothing about what it cost",
     },
     {
+        # The walk over the tree forgetting the calls it made, so a promise
+        # broken one call away is one the first proof cannot see. What catches
+        # it is the second proof following the same call through the code that
+        # was emitted -- which is the whole of what makes it a second proof
+        # rather than a scan of one body at a time, and which nothing watched
+        # until this. See D799.
+        "what": "a tree walk that forgets the calls it made",
+        "file": "src/contract.c",
+        "from": r"""static void record_call(Graph *graph, Function *caller, uint32_t callee,
+                        KestSpan span) {""",
+        "to": r"""static void record_call(Graph *graph, Function *caller, uint32_t callee,
+                        KestSpan span) {
+    if (span.length > 0) {
+        return;
+    }""",
+        "program": "one-call-away.kest",
+        "source": """fn grows() -> i32 {
+    let a: [i32] = array()
+    push(a, 1)
+    return len(a)
+}
+
+fn quiet() -> i32 no.alloc {
+    return grows() - 1
+}
+
+fn main() -> i32 {
+    return quiet()
+}
+""",
+        "caught": "K0405",
+    },
+    {
         # Text out of bytes, taking more than the bytes and the nought after
         # them. This is the one reach the proof decides outside its table, and
         # what it costs is a number rather than a direction. See D798.

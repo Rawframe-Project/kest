@@ -30282,3 +30282,37 @@ reach outside it. Recorded as D798.
 "the promise was checked against the tree; this holds it against what was
 emitted", in `build.c`. Read what that second proof walks against what the first
 does, and find what one can see that the other cannot.
+
+## What the second proof follows, and the line that nothing watched
+
+`op_allocates` lists fifteen instructions and `KEST_OP_CALL` is not one, which
+reads like a proof that scans one body at a time. It is not: the call is handled
+one line below, in `allocation_in`, which recurses into the callee with a byte
+per chunk so a cycle ends. The document has said so all along — *"the second
+proof follows a call to a named function and stops at a call through a value"* —
+and inferring the shape of the proof from one function was the mistake.
+
+Measured rather than reasoned: a `no.alloc` body calling a named allocator is
+refused by both proofs; one calling through a value by the first and by the
+machine at the call with `K0623`; one calling a host function declared without
+`no.alloc` by the first, which says so — and the second cannot see that in
+principle, since what a host function does is in the host's C. Three paths,
+three answers, no gap.
+
+The gap is in the proof's own machinery. Delete the nine lines that follow a
+call and every example runs, every check passes, the gate is green. What makes
+the second proof a proof over call chains was watched by nothing.
+
+Held now by a hole that makes the tree walk forget the calls it records: the
+first proof then cannot see a promise broken one call away, and the second
+catches it through the emitted code — `K0405` at the `array()` inside the
+callee. Removing the recursion makes that hole say MISSED, which is the test of
+whether a hole watches what it claims. Recorded as D799.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `allocation_in` walks calls and `kest_module_needs` walks them too,
+for how deep a program goes and how much stack it wants. That one answers a host
+before anything runs, so a program that goes deeper than it said is a host given
+a frame budget that is wrong. Read what that walk does about a cycle against
+what `allocation_in` does about one.

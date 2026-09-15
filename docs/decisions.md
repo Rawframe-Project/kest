@@ -23199,3 +23199,44 @@ and so is the one reach outside it. What is still weighed loosely is the four
 growers other than `slice`, which move together rather than one at a time — and
 `slice` remains the only one measured in both of its directions, because it is
 the only one that has two.
+
+## D799: what the second proof follows, and the line that nothing watched
+
+*A premise that was wrong.* `op_allocates` in `value.c` lists fifteen
+instructions that reach the heap and `KEST_OP_CALL` is not among them, which
+reads like a proof that scans one body at a time. It is not. The call is handled
+one line below the list, in `allocation_in`, which recurses into the callee's
+chunk with a byte per chunk marking where it has been so a cycle ends.
+
+So the second proof follows calls, and `docs/language.md` has said so all along:
+*"The second proof follows a call to a named function and stops at a call
+through a value, because which body that enters is not known until it runs."*
+Reading one function and inferring the shape of the proof from it was the
+mistake; the answer was two pages away and one line down.
+
+*What each proof sees, measured rather than reasoned.* A `no.alloc` body that
+calls a named function which allocates is refused by both. One that calls
+through a value is refused by the first, out of the promise in the value's type,
+and by the machine at the call with `K0623`. One that calls a host function
+declared without `no.alloc` is refused by the first, which says *"is declared to
+allocate"* — and the second cannot see it in principle, because what a host
+function does is in the host's C and not in any chunk. Three paths, three
+answers, and no gap between them.
+
+*The gap is elsewhere, and it is in the proof's own machinery.* Delete the nine
+lines in `allocation_in` that follow a call and: every example runs, every check
+passes, `make check` is green. The thing that makes the second proof a proof
+over call chains rather than a scan of one body at a time was watched by
+nothing.
+
+*What holds it now.* A hole that makes the tree walk forget the calls it
+records. The first proof then cannot see a promise broken one call away, and
+what catches it is the second proof following that same call through the code
+that was emitted — `K0405`, pointing at the `array()` inside the callee. Removing
+the recursion makes that hole say `MISSED`, which is the test of whether a hole
+watches what it claims to.
+
+*Why this one needed a hole rather than a check.* A check would have to make the
+first proof wrong to see the second proof work, and a check that breaks the
+compiler to test it is a hole with extra steps. This is what holes are: the
+thing that can only be seen when something else is broken on purpose.
