@@ -31749,3 +31749,44 @@ step over. Recorded as D837.
 holds less, so a host writing a double no `f32` can hold is the same door D836
 and D837 shut for whole numbers. Find whether the program can tell, and whether
 shutting it costs anything a frame step can see.
+
+## The third width, and the one a program can tell without counting
+
+D836 weighed the whole numbers a host writes into a frame and D837 the ones
+inside a shape and the ones a host answers with. A float was weighed neither
+way, and a slot holds a double where an `f32` holds less.
+
+What a program could see was not a wrong count but a disagreement: `same(0.1 as
+a double)` answered 0 where `same(f32 0.1)` answered 1, because the program's
+own `f32(0.1)` is not the double the host wrote — and `back(0.1)` handed the
+double out again as an `f32`. Of the three widths this is the one a program can
+tell without arithmetic. It compares, and finds them apart.
+
+Read off the piece where the pieces are looked at and off the type where the
+type is walked, the same two places as the whole numbers. What is not a number
+goes through, because `(double)(float)nan != nan` is true of every NaN and would
+have refused every one.
+
+The first measurements said 146 to 152 nanoseconds an entity a step against a
+remembered 136, which would have been ten per cent. Built both ways in one
+sitting instead: 133, 133, 135 without and 137, 135, 139 with. Two to three per
+cent, and the earlier number was a machine doing something else — one of those
+runs said so out loud.
+
+`examples/embed.c` writes `0.1` into the first of `ranked`'s three floats, which
+is the path that looks at pieces rather than walking a type, and a new crossing
+`Engine.weigh` answers `0.1` where an `f32` is wanted, which is the walk.
+Nothing in this file answered a float before, so without it the branch would
+have been a rule with no way to reach it.
+
+A new crossing costs more than a line: `Engine.weigh` had to be bound in nine
+places in `embed.c` and once in `main.c`, because a machine refuses to start
+with any declared name unbound and the command line runs this file too. Two
+holes quote those bindings and moved with them. Recorded as D838.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** three widths shut, and one thing a host writes is still only weighed
+for what it is and not for what it says: a `bool`. A slot holds sixty-four bits
+and a truth holds one, and a host writing 7 gets a program for which it is true.
+Find whether the program can tell, and whether the same two places will say so.

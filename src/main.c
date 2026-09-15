@@ -403,6 +403,17 @@ static void engine_decide(KestValue *frame, KestRuntime *runtime,
 // which is what the layout of a `Point` says the frame holds. The command line
 // is a host like any other and the examples are what it is a host for, so a
 // crossing an example declares is one this has to provide. See D699.
+// A number kept narrower than the slot it comes back in, which is what an
+// `f32` is: what this writes is what `f32(x)` would have made of it, because a
+// host answering anything else is answering a number the program cannot make.
+// See D838.
+static void engine_weigh(KestValue *frame, KestRuntime *runtime,
+                         void *context) {
+    (void)runtime;
+    (void)context;
+    frame[0].real = (double)(float)0.5;
+}
+
 static void engine_rank(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
     (void)context;
@@ -472,6 +483,7 @@ static KestHost *make_host(FILE *output) {
         !kest_host_bind(host, "Engine.hurt", engine_hurt, NULL) ||
         !kest_host_bind(host, "Engine.blame", engine_blame, NULL) ||
         !kest_host_bind(host, "Engine.who", engine_who, NULL) ||
+        !kest_host_bind(host, "Engine.weigh", engine_weigh, NULL) ||
         !kest_host_bind(host, "Io.read", io_read, NULL) ||
         !kest_host_bind(host, "Io.write", io_write, output)) {
         kest_host_free(host);

@@ -184,6 +184,36 @@ fn main() -> i32 {
         "caught": "K0407",
     },
     {
+        # A number written into a frame that no `f32` holds. A slot holds a
+        # double and an `f32` holds less, so this is the one of the three
+        # widths a program can tell without counting: it compares what the
+        # host wrote against its own `f32` literal and finds them apart, and
+        # nothing said why. See D838.
+        "what": "a float wider than the width it is kept at, written in",
+        "file": "src/vm.c",
+        "from": r"""    case KEST_L_F32:
+        return given_as.real != given_as.real ||
+               (double)(float)given_as.real == given_as.real;""",
+        "to": r"""    case KEST_L_F32:
+        return given_as.real == given_as.real ||
+               (double)(float)given_as.real != given_as.real;""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "holds was written into a frame",
+    },
+    {
+        # And the same answered with, which is the walk rather than the look:
+        # what a crossing hands back is read by its type, and a number is the
+        # slot the host wrote. See D838.
+        "what": "a float wider than the width it is kept at, answered with",
+        "file": "src/vm.c",
+        "from": r"""        if (given == given && (double)(float)given != given) {""",
+        "to": r"""        if (given != given && (double)(float)given == given) {""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "holds was answered with",
+    },
+    {
         # A number a host answers a crossing with, taken without being weighed
         # against the width the program keeps it at. The walk over what came
         # back reads the slots that hold something this machine made and
@@ -213,10 +243,10 @@ fn main() -> i32 {
         # somebody else's. See D836.
         "what": "a number too wide for the slot it was written into",
         "file": "src/vm.c",
-        "from": r"""                if (!fits_the_piece(layout->pieces[p].kind,
-                                    frame[at + p].integer)) {""",
-        "to": r"""                if (!fits_the_piece(layout->pieces[p].kind,
-                                    frame[at + p].integer) && false) {""",
+        "from": r"""    case KEST_L_I32:
+        return given >= INT32_MIN && given <= INT32_MAX;""",
+        "to": r"""    case KEST_L_I32:
+        return given >= INT64_MIN && given <= INT64_MAX;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "too wide for its slot was taken",
@@ -5818,6 +5848,7 @@ const char *kest_scalar_name(uint8_t kind) {""",
         !kest_host_bind(host, "Engine.rank", engine_rank, &decider) ||
         !kest_host_bind(host, "Engine.hurt", engine_hurt, NULL) ||
         !kest_host_bind(host, "Engine.blame", engine_blame, &blaming) ||
+        !kest_host_bind(host, "Engine.weigh", engine_weigh, &decider) ||
         !kest_host_bind(host, "Engine.who", engine_who, &decider)) {''',
         "to": '''    if (host == NULL ||
         !kest_host_bind(host,

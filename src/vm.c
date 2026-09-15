@@ -1451,8 +1451,16 @@ typedef struct {
 // slot is sixty-four bits and a piece may be eight, and a number as wide as
 // the slot cannot be wrong — so only the narrow ones are asked, off the piece
 // and not off the type. See D836.
-static bool fits_the_piece(uint8_t kind, int64_t given) {
+static bool fits_the_piece(uint8_t kind, KestValue given_as) {
+    int64_t given = given_as.integer;
     switch (kind) {
+    // A slot holds a double and an `f32` holds less, so a host writing one no
+    // `f32` can hold is the same door at a different width: what comes out is
+    // an `f32` the program's own `f32` literals do not equal. Not a number is
+    // not a number at either width, so it is let through. See D838.
+    case KEST_L_F32:
+        return given_as.real != given_as.real ||
+               (double)(float)given_as.real == given_as.real;
     case KEST_L_I8:
         return given >= INT8_MIN && given <= INT8_MAX;
     case KEST_L_I16:
@@ -1488,6 +1496,8 @@ static const char *the_width_of(uint8_t kind) {
         return "u16";
     case KEST_L_U32:
         return "u32";
+    case KEST_L_F32:
+        return "f32";
     default:
         return "a whole number";
     }
@@ -1501,12 +1511,18 @@ static const char *the_width_of_type(const KestType *type) {
 }
 
 static void narrower_than_that(KestRuntime *runtime, const char *name,
-                               uint32_t at, uint8_t kind, int64_t given) {
+                               uint32_t at, uint8_t kind, KestValue given) {
     KestSpan nowhere = {0, 0};
     kest_diags_in(runtime->diags, NULL);
-    kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636", nowhere,
-                   "`%s` takes `%s` in slot %u and %lld is not one", name,
-                   the_width_of(kind), at, (long long)given);
+    if (kind == KEST_L_F32) {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636", nowhere,
+                       "`%s` takes `f32` in slot %u and %.17g is not one",
+                       name, at, given.real);
+    } else {
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636", nowhere,
+                       "`%s` takes `%s` in slot %u and %lld is not one", name,
+                       the_width_of(kind), at, (long long)given.integer);
+    }
     kest_diags_suggest(runtime->diags,
                        "every width wraps at its own end, and a host narrows "
                        "what it writes the way `u8(n)` does");
@@ -1765,6 +1781,26 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
     // loop that decides whether to walk at all — this is the other two ways
     // in: a number inside a shape that has text or a handle somewhere else in
     // it, and a number a host answers a crossing with. See D837.
+    if (type->tag == KEST_T_FLOAT && type->width == 32) {
+        double given = frame[*at].real;
+        if (given == given && (double)(float)given != given) {
+            if (saying->at_a_crossing) {
+                fail(runtime, saying->frame, saying->instruction, "K0652",
+                     "`%s` answers with `f32` in slot %u and %.17g is not one",
+                     name, *at, given);
+            } else {
+                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0636",
+                               nowhere,
+                               "`%s` takes `f32` in slot %u and %.17g is not "
+                               "one",
+                               name, *at, given);
+            }
+            kest_diags_suggest(runtime->diags,
+                               "every width wraps at its own end, and a host "
+                               "narrows what it writes the way `u8(n)` does");
+            return false;
+        }
+    }
     if (type->tag == KEST_T_INT) {
         int64_t given = frame[*at].integer;
         if (kest_narrow_to(kest_scalar_of(type), given) != given) {
@@ -4524,11 +4560,9 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
             // out of the type, because the type is what the walk above costs
             // and this is the case it was skipping. See D836.
             for (uint16_t p = 0; p < layout->count; p++) {
-                if (!fits_the_piece(layout->pieces[p].kind,
-                                    frame[at + p].integer)) {
+                if (!fits_the_piece(layout->pieces[p].kind, frame[at + p])) {
                     narrower_than_that(runtime, name, at + p,
-                                       layout->pieces[p].kind,
-                                       frame[at + p].integer);
+                                       layout->pieces[p].kind, frame[at + p]);
                     return false;
                 }
             }

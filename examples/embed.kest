@@ -643,9 +643,20 @@ extern fn Engine.hurt(e: Event) -> i32 no.alloc
 // walk at the two ends of one call. See D719.
 extern fn Engine.who() -> Npc
 
+// And one answered with a number kept narrower than the slot it comes back in.
+// A slot holds a double and an `f32` holds less, so this is the one crossing
+// where a host can answer with a number the program's own arithmetic cannot
+// make — and the walk that reads what came back is where it is caught. See
+// D838.
+extern fn Engine.weigh() -> f32 no.alloc
+
 fn whoIs() -> i32 {
     let one = Engine.who()
     return len(one.name) + one.health
+}
+
+fn weighed() -> i32 {
+    return i32(Engine.weigh() * 2.0)
 }
 
 // A shape with a piece of text in it, handed over by value. The door reads an

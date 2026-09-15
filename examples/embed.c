@@ -107,7 +107,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, DAMAGE_OF, HURT_BY, WORST,
        EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST,
        BORN, HEALTH_OF, DROPPED, TOTAL_OF, ANSWER_INTO, SAY_INTO, WORN,
        MOVED, PUT_RECORD, OWN_ARRAY, HOW_MANY_ON, REACH,
-       HEAVIEST_CELL, AS_WRITTEN, RANKED, APPLY, DOUBLED, GROWS,
+       HEAVIEST_CELL, AS_WRITTEN, RANKED, APPLY, DOUBLED, GROWS, WEIGHED,
        // What the list of names below has to be as long as. This host looked
        // each of them up into an array sized by the last name in this list,
        // so a name added after that one was a write past the end of it — this
@@ -263,6 +263,18 @@ static void engine_who(KestValue *frame, KestRuntime *runtime, void *context) {
     frame[1].integer = decider != NULL && decider->answers_too_wide
                            ? (int64_t)1 << 40
                            : 3;
+}
+
+// What this host weighs something at, which is a number kept narrower than the
+// slot it comes back in. A host writing a `double` here is writing a number no
+// `f32` holds, and the walk over what came back is what says so. See D838.
+static void engine_weigh(KestValue *frame, KestRuntime *runtime,
+                         void *context) {
+    const Decider *decider = context;
+    (void)runtime;
+    frame[0].real = decider != NULL && decider->answers_too_wide
+                        ? 0.1
+                        : (double)(float)0.5;
 }
 
 static void engine_decide(KestValue *frame, KestRuntime *runtime,
@@ -1947,6 +1959,7 @@ int main(int argc, char **argv) {
         !kest_host_bind(host, "Engine.rank", engine_rank, &decider) ||
         !kest_host_bind(host, "Engine.hurt", engine_hurt, NULL) ||
         !kest_host_bind(host, "Engine.blame", engine_blame, &blaming) ||
+        !kest_host_bind(host, "Engine.weigh", engine_weigh, &decider) ||
         !kest_host_bind(host, "Engine.who", engine_who, &decider)) {
         return 1;
     }
@@ -2621,6 +2634,7 @@ int main(int argc, char **argv) {
         !kest_host_bind(elsewhere, "Engine.rank", engine_rank, &apart) ||
         !kest_host_bind(elsewhere, "Engine.hurt", engine_hurt, NULL) ||
         !kest_host_bind(elsewhere, "Engine.blame", engine_blame, NULL) ||
+        !kest_host_bind(elsewhere, "Engine.weigh", engine_weigh, NULL) ||
         !kest_host_bind(elsewhere, "Engine.who", engine_who, NULL)) {
         fprintf(stderr, "a second host could not be given what the first has\n");
         kest_host_free(elsewhere);
@@ -2767,7 +2781,8 @@ int main(int argc, char **argv) {
         // is the whole of why the machine asks the chunk. See D834.
         {"apply", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_I32}, 1},
         {"doubled", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
-        {"grows", {KEST_L_I32}, 1, {KEST_L_I32}, 1}};
+        {"grows", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
+        {"weighed", {0}, 0, {KEST_L_I32}, 1}};
     _Static_assert(sizeof(wanted) / sizeof(wanted[0]) == ENTRIES,
                    "every name this host asks for has somewhere to be put");
     // And what walking the names costs a host in news, which is nothing. The
@@ -3037,6 +3052,28 @@ int main(int argc, char **argv) {
     printf("and a crossing that answered a number too wide for the field it "
            "goes in\n");
 
+    // And the same at the width a slot cannot say: a slot holds a double and
+    // an `f32` holds less, so a host answering `0.1` answers a number the
+    // program's own `f32` literals do not equal. It is the one of these three
+    // that a program can tell without counting — it compares and finds them
+    // apart. See D838.
+    decider.answers_too_wide = true;
+    if (asks(&engine, WEIGHED)) {
+        fprintf(stderr, "a number no `f32` holds was answered with\n");
+        return 1;
+    }
+    decider.answers_too_wide = false;
+    if (!said_that(engine.runtime, "K0652", "`f32` in slot 0")) {
+        return 1;
+    }
+    if (!asks(&engine, WEIGHED) || engine.frame[0].integer != 1) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        fprintf(stderr, "a number an `f32` holds was refused\n");
+        return 1;
+    }
+    printf("and one no `f32` holds, where the one that fits weighed %lld\n",
+           (long long)engine.frame[0].integer);
+
     // And a store is a thing the language has no text for, which it says
     // rather than inventing one. What the host wants of a store, only the host
     // knows.
@@ -3100,6 +3137,23 @@ int main(int argc, char **argv) {
     printf("a frame said to hold what it does not was refused, and one that "
            "spoke for two of its three slots, and one that spoke for a slot "
            "of a function that takes none\n");
+
+    // And a number no `f32` holds, written into a frame rather than answered
+    // with. `ranked` takes three of them, and this is the path that does not
+    // walk the type: three pieces, all numbers, read where the walk would
+    // have been skipped. See D838.
+    engine.frame[0].real = 0.1;
+    engine.frame[1].real = (double)(float)1.0;
+    engine.frame[2].real = (double)(float)2.0;
+    if (kest_call(engine.runtime, engine.entry[RANKED], engine.frame,
+                  sizeof(engine.frame) / sizeof(engine.frame[0]))) {
+        fprintf(stderr, "a number no `f32` holds was written into a frame\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0636", "`f32` in slot 0")) {
+        return 1;
+    }
+    printf("and a number no `f32` holds, written into a frame\n");
     // And the width of a function that is not there. Nought is the honest
     // width of one that takes and gives nothing, so the number cannot say
     // which of the two this is and the report does.
@@ -5832,7 +5886,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(quietly, "Engine.rank", engine_rank, &unasked) ||
             !kest_host_bind(quietly, "Engine.hurt", engine_hurt, NULL) ||
             !kest_host_bind(quietly, "Engine.blame", engine_blame, NULL) ||
-            !kest_host_bind(quietly, "Engine.who", engine_who, NULL)) {
+            !kest_host_bind(quietly, "Engine.weigh", engine_weigh, NULL) ||
+        !kest_host_bind(quietly, "Engine.who", engine_who, NULL)) {
             fprintf(stderr, "a host to say nothing with would not be made\n");
             return 1;
         }
@@ -5882,7 +5937,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(sizing, "Engine.rank", engine_rank, &still) ||
             !kest_host_bind(sizing, "Engine.hurt", engine_hurt, NULL) ||
             !kest_host_bind(sizing, "Engine.blame", engine_blame, NULL) ||
-            !kest_host_bind(sizing, "Engine.who", engine_who, NULL)) {
+            !kest_host_bind(sizing, "Engine.weigh", engine_weigh, NULL) ||
+        !kest_host_bind(sizing, "Engine.who", engine_who, NULL)) {
             fprintf(stderr, "a host to size two machines with would not be "
                             "made\n");
             return 1;
@@ -5944,7 +6000,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(picking, "Engine.rank", engine_rank, &still) ||
             !kest_host_bind(picking, "Engine.hurt", engine_hurt, NULL) ||
             !kest_host_bind(picking, "Engine.blame", engine_blame, NULL) ||
-            !kest_host_bind(picking, "Engine.who", engine_who, NULL)) {
+            !kest_host_bind(picking, "Engine.weigh", engine_weigh, NULL) ||
+        !kest_host_bind(picking, "Engine.who", engine_who, NULL)) {
             fprintf(stderr, "a host to size two more machines would not be "
                             "made\n");
             return 1;
@@ -6004,7 +6061,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(shallow, "Engine.rank", engine_rank, &still) ||
             !kest_host_bind(shallow, "Engine.hurt", engine_hurt, NULL) ||
             !kest_host_bind(shallow, "Engine.blame", engine_blame, NULL) ||
-            !kest_host_bind(shallow, "Engine.who", engine_who, NULL)) {
+            !kest_host_bind(shallow, "Engine.weigh", engine_weigh, NULL) ||
+        !kest_host_bind(shallow, "Engine.who", engine_who, NULL)) {
             fprintf(stderr, "a host to be refused with would not be made\n");
             return 1;
         }
@@ -6059,7 +6117,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(unasked, "Engine.rank", engine_rank, &asking) ||
             !kest_host_bind(unasked, "Engine.hurt", engine_hurt, NULL) ||
             !kest_host_bind(unasked, "Engine.blame", engine_blame, NULL) ||
-            !kest_host_bind(unasked, "Engine.who", engine_who, NULL)) {
+            !kest_host_bind(unasked, "Engine.weigh", engine_weigh, NULL) ||
+        !kest_host_bind(unasked, "Engine.who", engine_who, NULL)) {
             fprintf(stderr, "a host that picks no numbers would not be made\n");
             return 1;
         }
@@ -6268,7 +6327,8 @@ int main(int argc, char **argv) {
             !kest_host_bind(apart, "Engine.rank", engine_rank, &quiet) ||
             !kest_host_bind(apart, "Engine.hurt", engine_hurt, NULL) ||
             !kest_host_bind(apart, "Engine.blame", engine_blame, NULL) ||
-            !kest_host_bind(apart, "Engine.who", engine_who, NULL)) {
+            !kest_host_bind(apart, "Engine.weigh", engine_weigh, NULL) ||
+        !kest_host_bind(apart, "Engine.who", engine_who, NULL)) {
             fprintf(stderr, "a host of its own would not be made\n");
             return 1;
         }
@@ -6395,7 +6455,8 @@ int main(int argc, char **argv) {
                 !kest_host_bind(over, "Engine.rank", engine_rank, &quietly) ||
                 !kest_host_bind(over, "Engine.hurt", engine_hurt, NULL) ||
                 !kest_host_bind(over, "Engine.blame", engine_blame, NULL) ||
-                !kest_host_bind(over, "Engine.who", engine_who, NULL)) {
+                !kest_host_bind(over, "Engine.weigh", engine_weigh, NULL) ||
+        !kest_host_bind(over, "Engine.who", engine_who, NULL)) {
                 fprintf(stderr, "a reload would not build\n");
                 return 1;
             }

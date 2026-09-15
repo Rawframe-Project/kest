@@ -24773,3 +24773,48 @@ answers wrongly on purpose, and gained one more: `Engine.who` answers a health
 of `1 << 40`, and the machine refuses with `K0652` naming `i32` and the slot.
 The shape it answers with is the one that has text in it, so the check stands
 exactly where the walk used to step over.
+
+## D838: the third width, and the one a program can tell without counting
+
+*The last of the three.* D836 weighed the whole numbers a host writes into a
+frame, D837 the ones inside a shape and the ones a host answers with. A float
+was weighed neither way. A slot holds a double and an `f32` holds less.
+
+*What a program could see.* Not a wrong count — a disagreement:
+
+```
+same(0.1 as a double) -> 0        // the program's own f32(0.1) is not that
+same(f32 0.1)         -> 1
+back(0.1)             -> 0.10000000000000001, where an f32 is 0.10000000149011612
+```
+
+A host writing a plain `double` into an `f32` gave a program whose `f32` does
+not equal its own `f32` literal, and handed one back out again. Of the three
+widths this is the one a program can tell without arithmetic: it compares, and
+finds them apart.
+
+*Both doors, and not a number.* Read off the piece where the pieces are looked
+at and off the type where the type is walked, the same two places as the whole
+numbers. What is not a number is not a number at either width, so it goes
+through — `(double)(float)nan != nan` is true of every NaN and would have
+refused every one of them.
+
+*What it costs, measured properly.* The first three runs said 146 to 152
+nanoseconds an entity a step against a remembered 136, which would have been ten
+per cent. Built both ways in one sitting instead: **133, 133, 135 without; 137,
+135, 139 with.** Two to three per cent, and the earlier number was a machine
+doing something else — one of those runs said so out loud.
+
+*Held at both ends.* `examples/embed.c` writes `0.1` into the first of `ranked`'s
+three floats, which is the path that looks at pieces rather than walking a type,
+and `Engine.weigh` answers `0.1` where an `f32` is wanted, which is the walk. The
+crossing is new: nothing in this file answered a float, so the branch would have
+been a rule with no way to reach it — which D825 says not to write.
+
+*What a new crossing costs.* `Engine.weigh` had to be bound in nine places in
+`examples/embed.c` and once in `src/main.c`, because a machine refuses to start
+with any declared name unbound and the command line runs this file too. Two
+backstop holes quote those bindings and moved with them, and the first attempt
+wrote the pair as one `&&` inside the `||` chain, which `-Werror` refused and
+which broke both quotations at once. A name is cheap and a name in a host is
+ten places.
