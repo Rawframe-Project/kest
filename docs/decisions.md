@@ -26723,3 +26723,70 @@ It has no hole, because it is one of the guards the gate makes about itself and
 what would catch it missing is itself. It was watched working on three checks in
 a copy — one that refused in silence, one that refused with something to say,
 and one that passed — and each was said about differently.
+
+## D879: a lookup answers what it knows
+
+Three turns on the gate, so this one read the examples instead — thirty-two
+programs written to be read — looking for a place where one of them works around
+the language rather than using it. `examples/inventory.kest`, line 215 as it
+then was:
+
+```text
+if table.get(byKind, Kind.Tool, 0 - 1) != 0 - 1 {
+```
+
+That is a program asking `!= none` in a number it hoped nothing else would use.
+`std.table`'s `get` took a `fallback: V` beside the key and gave back a `V`, so
+a program that wanted to know whether a key was there had to hand in a value no
+real one could be and then compare against it. Sixteen calls in that one file
+did it, and five of them handed in an `Item("", 0)` — a whole struct built to be
+thrown away.
+
+**What the workaround cost the reader**, in that file:
+
+- a value invented at every call site, whose only job is not to be the answer;
+- a miss that reads exactly like a hit whose value happens to be that one —
+  `total` added the fallback's price for every name not in stock, and nothing
+  about the line said so;
+- and the sentinel above, where the fallback is not a default at all but a stand
+  in for the word `none`, which the language has.
+
+*And the language was already answering it the other way three feet away.* The
+builtin `get` on a store gives what is there or nothing. One name, two meanings,
+one of them the language's own — so `table.get` answers a `V?` now, the same
+shape and the same reading:
+
+```text
+if let one = table.get(stock, name) {
+    sum += one.price
+}
+```
+
+**What it cost:** one line of the library, and sixteen call sites in the example
+— which is the point rather than the price. The two places in that file that are
+a *program* rather than an assertion both got shorter and both got more correct:
+`total` no longer adds a made-up price for a name it has not got, and the loop
+that prints no longer prints a line for one.
+
+Where a default is genuinely wanted the library says so in its own function:
+`table.orElse(counts, 7, 0)`. That is not a second way to ask the first
+question — one of them can answer *nothing* and the other cannot, which is the
+whole difference — and it is where the fallback belongs: written once, by
+somebody who means it, rather than at every place a program looks.
+
+*And what the split is worth is visible in the one file.* The three places in
+`examples/inventory.kest` that are a program rather than an assertion use `get`
+and read better for it; the ten that are checking an answer use `orElse` and
+read as they did. The line that started this is gone either way:
+`table.get(byKind, Kind.Tool) != none` asks what it means.
+
+Two things were found on the way and left alone, with the evidence written down
+rather than acted on. The first draft of the example used two generic helpers,
+and `check-ceilings.sh` refused it: at the rung where `inventory.kest` first
+runs out under `ulimit -v`, the compiler said *what `K` is here cannot be told
+from what was passed* before it said it had run out of room. Four rungs of the
+same program said four different things — `K0306`, `K0322`, `K0343`, `K0512` —
+each of them blaming the program for the compiler's afternoon. Not saying
+`K0343` when the checker is out of memory uncovers `K0306` beneath it, so the
+answer is not about any one message: a build reports as it goes, and by the time
+it knows it has starved it has already printed. That is the next entry's.

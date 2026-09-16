@@ -2063,6 +2063,17 @@ if find(stock, 7) != none {
 }
 ```
 
+That is what a lookup in this library answers with, and it is the same answer
+whatever is being looked in: the builtin `get` on a store gives what is there or
+nothing, and `table.get` gives what is under a key or nothing. A lookup that
+took a value to hand back *instead* would make a program build one to throw
+away, and would make a miss read as a hit — `table.get(kinds, Kind.Tool, -1) !=
+-1` is a program asking `!= none` in a number it hoped nothing else would use.
+
+Asking what is there and saying what to use when there is nothing are two
+questions, and the second is `table.orElse(counts, 7, 0)`. It is not a second
+way to ask the first: one of them can answer *nothing* and the other cannot.
+
 `== none` and `!= none` ask the byte beside the value and nothing else, which is
 why they are the one comparison an optional answers: two optionals still do not
 compare, because that is a question about what they hold and one of them may hold

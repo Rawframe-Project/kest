@@ -33,10 +33,16 @@ struct At {
     y: i32
 }
 
+// What a lookup is worth where the value is used rather than checked: a name
+// that is not in stock adds nothing, which is what `if let` says and what a
+// fallback could not — `table.get` took an `Item("", 0)` beside the key until
+// D879, and a missing name then added that one's price. See D879.
 fn total(stock: table.Table<text, Item>, names: [text]) -> i32 no.alloc {
     let sum = 0
     for i in 0..len(names) {
-        sum += table.get(stock, names[i], Item("", 0)).price
+        if let one = table.get(stock, names[i]) {
+            sum += one.price
+        }
     }
     return sum
 }
@@ -50,7 +56,7 @@ fn main() -> i32 {
     if table.count(stock) != 3 {
         return 1
     }
-    if table.get(stock, "rope", Item("", 0)).price != 40 {
+    if table.orElse(stock, "rope", Item("", 0)).price != 40 {
         return 2
     }
     if table.has(stock, "boat") {
@@ -60,7 +66,7 @@ fn main() -> i32 {
     // A key appears once, so setting it again writes over it.
     table.set(stock, "rope", Item("rope", 35))
     if table.count(stock) != 3 ||
-            table.get(stock, "rope", Item("", 0)).price != 35 {
+            table.orElse(stock, "rope", Item("", 0)).price != 35 {
         return 4
     }
 
@@ -74,7 +80,7 @@ fn main() -> i32 {
     if len(names) != 3 || names[0] != "lamp" || names[2] != "sword" {
         return 18
     }
-    if table.get(stock, "sword", Item("", 0)).price != 1200 {
+    if table.orElse(stock, "sword", Item("", 0)).price != 1200 {
         return 19
     }
 
@@ -106,7 +112,7 @@ fn main() -> i32 {
     }
     if table.count(spare) != 1 ||
             table.has(spare, "shield") ||
-            table.get(spare, "torch", Item("", 0)).price != 5 {
+            table.orElse(spare, "torch", Item("", 0)).price != 5 {
         return 21
     }
 
@@ -115,7 +121,7 @@ fn main() -> i32 {
     let counts: table.Table<i32, i32> = table.empty()
     table.set(counts, 7, 1)
     table.set(counts, 7, 2)
-    if table.count(counts) != 1 || table.get(counts, 7, 0) != 2 {
+    if table.count(counts) != 1 || table.orElse(counts, 7, 0) != 2 {
         return 8
     }
 
@@ -127,7 +133,7 @@ fn main() -> i32 {
         return 9
     }
     for i in 0..200 {
-        if table.get(counts, i, 0 - 1) != i * 2 {
+        if table.orElse(counts, i, 0) != i * 2 {
             return 10
         }
     }
@@ -157,7 +163,7 @@ fn main() -> i32 {
     }
     table.set(counts, 0, 0)
     for i in 0..200 {
-        if table.get(counts, i, 0 - 1) != i * 2 {
+        if table.orElse(counts, i, 0) != i * 2 {
             return 17
         }
     }
@@ -170,7 +176,7 @@ fn main() -> i32 {
     // which is an order and not one to lean on.
     let counted = 0
     for i in 0..table.count(counts) {
-        if table.get(counts, counts.keys[i], 0 - 1) != counts.values[i] {
+        if table.orElse(counts, counts.keys[i], 0) != counts.values[i] {
             return 19
         }
         counted += 1
@@ -190,10 +196,10 @@ fn main() -> i32 {
     table.set(weights, half, 1)
     table.set(weights, nothing, 2)
     table.set(weights, 0.0 - nothing, 3)
-    if table.count(weights) != 2 || table.get(weights, nothing, 0) != 3 {
+    if table.count(weights) != 2 || table.orElse(weights, nothing, 0) != 3 {
         return 21
     }
-    if table.get(weights, half, 0) != 1 {
+    if table.orElse(weights, half, 0) != 1 {
         return 22
     }
 
@@ -206,13 +212,15 @@ fn main() -> i32 {
     if table.count(byKind) != 3 {
         return 11
     }
-    if table.get(byKind, Kind.Potion(9), 0) != 5 {
+    if table.orElse(byKind, Kind.Potion(9), 0) != 5 {
         return 12
     }
     if table.has(byKind, Kind.Potion(1)) {
         return 13
     }
-    if table.get(byKind, Kind.Tool, 0 - 1) != 0 - 1 {
+    // A key that is not there, asked the way the language asks it rather
+    // than by handing in a number chosen not to collide with a real one.
+    if table.get(byKind, Kind.Tool) != none {
         return 14
     }
 
@@ -221,11 +229,12 @@ fn main() -> i32 {
     // wandering with the length of the name.
     let lines: [text] = array()
     for name in carried {
-        let one = table.get(stock, name, Item("", 0))
-        push(
-            lines,
-            "{text.left(one.name, 8)}{text.right(text.fixed(f32(one.price) / 100.0, 2), 8)}"
-        )
+        if let one = table.get(stock, name) {
+            push(
+                lines,
+                "{text.left(one.name, 8)}{text.right(text.fixed(f32(one.price) / 100.0, 2), 8)}"
+            )
+        }
     }
     if lines[0] != "sword      12.00" {
         return 15
@@ -248,14 +257,26 @@ fn main() -> i32 {
     let ground: table.Table<At, text> = table.empty()
     table.set(ground, At(1, 2), "hill")
     table.set(ground, At(3, 4), "lake")
-    if table.get(ground, At(1, 2), "nowhere") != "hill" ||
-            table.get(ground, At(9, 9), "nowhere") != "nowhere" {
+    if table.get(ground, At(9, 9)) != none {
         return 23
     }
-    table.set(ground, At(1, 2), "ridge")
-    if table.count(ground) != 2 ||
-            table.get(ground, At(1, 2), "nowhere") != "ridge" {
+    if let there = table.get(ground, At(1, 2)) {
+        if there != "hill" {
+            return 24
+        }
+    } else {
         return 24
+    }
+    table.set(ground, At(1, 2), "ridge")
+    if table.count(ground) != 2 {
+        return 25
+    }
+    if let there = table.get(ground, At(1, 2)) {
+        if there != "ridge" {
+            return 26
+        }
+    } else {
+        return 26
     }
     if !table.has(ground, At(3, 4)) || table.has(ground, At(4, 3)) {
         return 25

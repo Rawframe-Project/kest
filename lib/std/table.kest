@@ -108,9 +108,25 @@ fn find<K, V>(t: Table<K, V>, key: K) -> i32? no.alloc no.host {
     return none
 }
 
-fn get<K, V>(t: Table<K, V>, key: K, fallback: V) -> V no.alloc no.host {
+// What is under a key, or nothing. It answers the way the builtin `get` on a
+// store answers, because it is the same question asked of a different thing:
+// one name, one meaning. It took a `fallback: V` beside the key until D879 —
+// which made a program build a value to throw away, and made a miss read as a
+// hit whose value happened to be that one. The default is `orElse` beside it.
+fn get<K, V>(t: Table<K, V>, key: K) -> V? no.alloc no.host {
     if let at = find(t, key) {
         return t.values[at]
+    }
+    return none
+}
+
+// And what is under a key or this instead, which is a different question and
+// not a second way to ask the first: one asks what is there, and this one says
+// what to use when there is nothing. A program that means "nought when nobody
+// has counted it" says it here rather than at every place it looks.
+fn orElse<K, V>(t: Table<K, V>, key: K, fallback: V) -> V no.alloc no.host {
+    if let found = get(t, key) {
+        return found
     }
     return fallback
 }

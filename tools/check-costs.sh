@@ -153,7 +153,7 @@ fn work(n: i32) -> i32 {
     }
     let found = 0
     for i in 0..n {
-        found += table.get(t, i, 0)
+        found += table.orElse(t, i, 0)
     }
     return found - found
 }

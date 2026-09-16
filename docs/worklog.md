@@ -32852,14 +32852,14 @@ Recorded as D865.
 
 **Runs:** `make check`, everything passing, with `TMPDIR=/var/tmp`.
 
-**Next:** three turns have been spent on the gate rather than on the language,
-and the gate is in better shape than the thing it guards. Go back to the
-roadmap's `types` stage with the same question D874 was asked: what would a
-program written in this language want that it cannot have? This time read the
-examples rather than the compiler — thirty-two programs somebody wrote to be
-read — and find the place where one of them works around the language rather
-than using it. One place, with what the workaround costs the reader written
-beside it.
+**Next:** a compiler that has run out of room blames the program. At four rungs
+of one ladder `examples/inventory.kest` said `K0306`, `K0322`, `K0343` and
+`K0512` before it said `K0639`, and each is a guess at what a half-built
+program would have said next. Silencing one uncovers the next, so the answer is
+about when a compiler reports rather than what it says: a build reports as it
+goes, so by the time it knows it has starved it has already printed. Read
+`kest_build_report` and `kest_diags_absorb`, and say what it would take for a
+run that starves to say that and nothing after it.
 
 ## A hop of a `for` is one instruction
 
@@ -33461,3 +33461,61 @@ examples rather than the compiler — thirty-two programs somebody wrote to be
 read — and find the place where one of them works around the language rather
 than using it. One place, with what the workaround costs the reader written
 beside it.
+
+## A lookup answers what it knows
+
+Three turns on the gate, so this one read the examples: thirty-two programs
+written to be read, looking for a place where one works around the language
+rather than using it. `examples/inventory.kest` had this:
+
+    if table.get(byKind, Kind.Tool, 0 - 1) != 0 - 1 {
+
+A program asking `!= none` in a number it hoped nothing else would use.
+`std.table`'s `get` took a `fallback: V` beside the key and gave back a `V`, so
+knowing whether a key was there meant handing in a value no real one could be
+and comparing against it. Sixteen calls in that one file, five of them handing
+in an `Item("", 0)` — a whole struct built to be thrown away.
+
+What it cost the reader: a value invented at every call site whose only job is
+not to be the answer; a miss that reads exactly like a hit whose value happens
+to be that one, so `total` added a made-up price for every name not in stock and
+nothing on the line said so; and the sentinel above, where the fallback is not a
+default at all but a stand-in for a word the language has.
+
+And the language was already answering it the other way three feet away: the
+builtin `get` on a store gives what is there or nothing. One name, two meanings,
+one of them the language's own. `table.get` answers a `V?` now.
+
+One line of the library and sixteen call sites, which is the point rather than
+the price. The two places in that file that are a program rather than an
+assertion both got shorter and both got more correct.
+
+Where a default is genuinely wanted the library says so in its own function,
+`table.orElse`. That is not a second way to ask the first question — one of them
+can answer nothing and the other cannot — and it is where a fallback belongs:
+written once by somebody who means it rather than at every place a program
+looks. The three places in the file that are a program use `get`; the ten that
+check an answer use `orElse`; the line that started this is gone either way.
+
+One thing was found on the way and left alone, because it is a turn of its own.
+The example's first draft used two generic helpers, and `check-ceilings.sh`
+refused it: at the rung where `inventory.kest` first runs out under `ulimit -v`,
+the compiler said what `K` is here cannot be told from what was passed before it
+said it had run out. Four rungs of the same program said four different things,
+each blaming the program for the compiler's afternoon — `K0306`, `K0322`,
+`K0343`, `K0512`. Silencing `K0343` when the checker is out of memory only
+uncovers `K0306` beneath it: the noise is systemic, and the answer is about when
+a compiler reports rather than about any one message.
+
+Recorded as D879.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a compiler that has run out of room blames the program. At four rungs
+of one ladder `examples/inventory.kest` said `K0306`, `K0322`, `K0343` and
+`K0512` before it said `K0639`, and each is a guess at what a half-built
+program would have said next. Silencing one uncovers the next, so the answer is
+about when a compiler reports rather than what it says: a build reports as it
+goes, so by the time it knows it has starved it has already printed. Read
+`kest_build_report` and `kest_diags_absorb`, and say what it would take for a
+run that starves to say that and nothing after it.
