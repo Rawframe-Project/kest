@@ -35431,3 +35431,26 @@ This says that was the wrong place to look.
 **Runs:** all four implementations answering `6474c217796c6cf5`; `tools/w01`
 under `/home/kest/sprint`, outside this repository, because it is evidence rather
 than part of the language.
+
+## A file, an argument, and the boundary carrying a hundred thousand things
+
+`examples/colony.kest` reads how many days to run from the words it was started
+with, and saves its tally to a file and reads it back — which is the one thing a
+program in this language could not do before `std.os`. `kest run
+examples/colony.kest -- 5` runs five days.
+
+And the boundary was audited against what the predecessor's ADR-0006 asks of it:
+a host lends six arrays of a hundred thousand `f32` and crosses once for the
+whole run, and the program's loop reads and writes that memory in place under a
+body that promises both `no.alloc` and `no.host`. Nothing is copied, nothing is
+crossed an element at a time, and the compiler proves the two promises over
+memory the host owns. The layouts, the lend, ending a lend and asking whether
+what was kept is still there are all doors that were already here.
+
+The one gap the audit found: `KestLayout` says what each piece is and where it
+sits and does not say what it is called, so a host doing schema work — a
+reloader, a save format — reads field names out of `check --json` and bytes out
+of the layout. Two doors for one question, and neither is wrong.
+
+**Runs:** `make fast`; the W01 host lending a hundred thousand of each of six
+arrays.

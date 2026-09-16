@@ -1,5 +1,7 @@
 module examples.colony
 import std.io
+import std.os
+import std.text
 import std.sort
 // A small colony, run a day at a time. It is here to be a program rather than
 // an example of a rule: nothing in it is written to show a feature off, and
@@ -293,6 +295,25 @@ fn command(w: World, said: text) -> World {
     return w
 }
 
+// What a program does with the words it was started with, and with a file. It
+// is a small thing and it is the difference between a language and a language
+// somebody can write a tool in: `colony 30` runs thirty days, and a colony that
+// was saved is read back rather than started again.
+fn daysAsked() -> i32 {
+    if let said = os.arg(0) {
+        if let asked = text.number(said) {
+            if asked > 0 && asked < 10000 {
+                return asked
+            }
+        }
+    }
+    return 12
+}
+
+fn save(w: World, path: text) -> bool {
+    return os.write(path, "{w.day} {w.born} {w.starved} {w.finished} {w.stale}")
+}
+
 fn main() -> i32 {
     let w = empty()
     settle(w, 60)
@@ -323,7 +344,7 @@ fn main() -> i32 {
     }
     remove(w.settlers, next)
     let script: [text] = array()
-    for i in 0..12 {
+    for i in 0..daysAsked() {
         push(script, "day")
     }
     push(script, "settle")
@@ -332,8 +353,29 @@ fn main() -> i32 {
     for one in script {
         w = command(w, one)
     }
-    if w.day != 12 {
+    if w.day != daysAsked() {
         return 6
+    }
+    // And out to a file, read back, so that the one thing a program could not
+    // do before this sprint is a thing this program does. See D925.
+    let where = "/tmp/kest-colony-day.txt"
+    if !save(w, where) {
+        return 11
+    }
+    if let back = os.read(where) {
+        if len(back) == 0 {
+            return 12
+        }
+        io.print("saved and read back: {back}")
+    } else {
+        return 13
+    }
+    if os.read("{where}.not-there") != none {
+        return 14
+    }
+    let took = os.millisBetween(os.now(), os.now())
+    if took > 1 {
+        return 15
     }
     // Twelve days of a world that starts hungry: somebody starves, and every
     // job whose settler starved goes with them.
