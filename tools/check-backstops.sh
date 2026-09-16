@@ -5604,6 +5604,22 @@ fn main() -> i32 {
         "caught": "a build that is not there answered as though it were",
     },
     {
+        # A count of what the build that checks itself asked that says nought
+        # whatever it asked. Every number an instruction carries is read by
+        # something that asks whether it could be that number, and what says
+        # those questions are still being put is this count -- a guard nobody
+        # can see being asked is a guard nobody knows is there. See D907.
+        "what": "a count of what a checked build asked that says nought",
+        "file": "src/vm.c",
+        "from": """        fprintf(stderr, "guards %llu\\n",
+                (unsigned long long)runtime->guarded);""",
+        "to": """        fprintf(stderr, "guards %llu\\n", 0ULL);""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "asks 0 question(s) of its own compiler over it",
+    },
+    {
         # A body giving back what its own declaration does not hold. A chunk
         # says what it gives the same way it says what it takes -- a layout, a
         # piece a slot -- and D902 held the slots a call hands over to the

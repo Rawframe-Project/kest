@@ -28086,3 +28086,35 @@ Seven turns, seven decisions, one line of release build changed between them:
 none. Everything since D900 is inside `#if KEST_CHECKED`, which is what makes it
 affordable — the build that ships is the build that shipped, and the build that
 checks itself now disagrees with its own compiler out loud.
+
+## D907: what the build that checks itself does
+
+Seven turns put questions into the build that checks itself and nobody weighed
+it. The gate runs every example under that build, twice, so its cost is the
+gate's cost.
+
+Measured against the build from before D900, on the same work: **618 ms became
+804 ms**, a third more. And the checked build is about forty times the build
+that ships, which is the sanitisers and `-O0` rather than any of this — the
+guards are a thirtieth of that difference and the compiler flags are the rest.
+So nothing has doubled and no guard has to earn its place today.
+
+*What is worth keeping is not those numbers.* They are this machine's and they
+go stale the day somebody changes a flag. What does not is the count underneath:
+
+```text
+a frame step is 48 instruction(s) an entity, reaching 22 of the machine's 151,
+and answering 46 question(s) about itself in the build that checks itself
+```
+
+Forty-six questions over forty-eight instructions — almost one an instruction,
+which is the honest shape of what D900 to D906 built. It is a count rather than
+a duration, the same anywhere, and it is what the gate says now beside what a
+frame costs. A build that checks itself and asks nothing is a build that checks
+nothing, which is the one thing held; the number itself is said for a reader to
+compare, the way every other number from a run in this project is.
+
+The hole is the count saying nought whatever was asked. A guard nobody can see
+being asked is a guard nobody knows is there — which is the same sentence this
+project has written about a message, a net and an instruction, and is now
+written about a question.

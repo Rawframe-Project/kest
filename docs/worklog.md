@@ -34674,3 +34674,43 @@ measured it since D870. Weigh it: the same work under both builds, said as a
 ratio rather than a duration, so it is a count of what the checked build does
 rather than a number about this machine. If it has doubled, the next decision is
 which of these guards earns its place.
+
+## What the build that checks itself does
+
+Seven turns put questions into the build that checks itself and nobody weighed
+it. The gate runs every example under that build twice, so its cost is the
+gate's cost.
+
+Against the build from before D900, on the same work: **618 ms became 804 ms**,
+a third more. The checked build is about forty times the one that ships, and
+that is the sanitisers and `-O0` rather than any of this — the guards are a
+thirtieth of the difference. Nothing has doubled; no guard has to earn its place
+today.
+
+Those numbers are this machine's and go stale the day somebody changes a flag.
+What does not is the count underneath:
+
+```text
+a frame step is 48 instruction(s) an entity, reaching 22 of the machine's 151,
+and answering 46 question(s) about itself in the build that checks itself
+```
+
+Forty-six questions over forty-eight instructions — almost one an instruction,
+which is the honest shape of what D900 to D906 built. A count, not a duration,
+the same anywhere, said by the gate beside what a frame costs. What is held is
+that it is more than nought: a build that checks itself and asks nothing checks
+nothing. The hole is the count saying nought whatever was asked.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the number beside it, which nothing has ever said. The gate knows what
+a frame step costs in instructions and how many questions the checked build asks
+over them; it does not know what any of that costs the *program* in memory —
+`check-costs.sh` weighs what the compiler's work costs and what the library's
+functions cost, and stops at the door of a run. A frame that reaches no heap is
+the whole point of `no.alloc`, and 62 of the examples' bodies promise it, but
+nothing says what a frame that does *not* promise it takes. Ask it: run a frame
+step twice over different numbers of entities under a machine with a heap, and
+subtract, the way instructions are subtracted now. If a frame step takes bytes
+an entity, that is the number a host budgeting a frame most needs and this
+project has never printed.

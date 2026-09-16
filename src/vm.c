@@ -408,6 +408,14 @@ struct KestRuntime {
     // it refused one carrying these before anybody had asked to read them.
     // Nought here is a machine that is not counting. See D870.
     uint64_t *ran;
+    // And how many questions this build asked of its own compiler on the way:
+    // every number an instruction carries is read by something that asks
+    // whether it could be that number (D900 to D906), and this is how many
+    // times that happened. A count rather than a duration, so what it says is
+    // what the build that checks itself does rather than how fast this machine
+    // did it. Counted only where somebody has asked to read it, the same as
+    // the line above. See D907.
+    uint64_t guarded;
 #endif
     // How much had been said when this started, and how much of it has been
     // written out since. What failed to compile is not this machine's to
@@ -1235,6 +1243,7 @@ static bool values_equal(const KestType *type, const KestValue *a,
 #if KEST_CHECKED
 #define OF_THE_MODULE(which, many, what)                                       \
     do {                                                                       \
+        vmp->guarded++;                                                        \
         if ((uint32_t)(which) >= (uint32_t)(many)) {                           \
             fail(vmp, frame, instruction, "K0655",                             \
                  "this names %s %u of the %u this program has", (what),        \
@@ -1567,6 +1576,7 @@ typedef struct {
 // than by anybody's decision. See D904.
 static bool own_constants(Vm *vm, const Frame *frame,
                           const uint8_t *instruction, uint32_t past) {
+    vm->guarded++;
     if (past <= frame->chunk->constant_count) {
         return true;
     }
@@ -1588,6 +1598,7 @@ static bool own_constants(Vm *vm, const Frame *frame,
 // was in the middle of working out. See D903.
 static bool own_slots(Vm *vm, const Frame *frame, const uint8_t *instruction,
                       uint32_t first, uint32_t past) {
+    vm->guarded++;
     if (past <= frame->chunk->slot_count && first <= past) {
         return true;
     }
@@ -3537,6 +3548,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // D058, because that is the call the promise's second proof cannot
             // see through; this is the one it can, and nothing weighed it.
             // See D901.
+            rt->guarded++;
             if (argument_slots != callee->param_slots ||
                 base < mine + frame->chunk->slot_count) {
                 fail(vmp, frame, instruction, "K0655",
@@ -3560,6 +3572,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // to say and the pieces of one are not a run. See D902.
             {
                 uint32_t slot = 0;
+                rt->guarded++;
                 for (uint16_t which = 0;
                      which < callee->takes_count && slot < argument_slots;
                      which++) {
@@ -3727,6 +3740,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                     module->externs[index].gives_value
                         ? module->layouts[module->externs[index].gives].count
                         : 0;
+            rt->guarded++;
                 if (argument_slots != wanted || result_slots != answered ||
                     base < mine + frame->chunk->slot_count) {
                     fail(vmp, frame, instruction, "K0655",
@@ -3867,6 +3881,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // handed the right answer out of a body that lost count. D809 held
             // this while it was being made and the machine never asked. See
             // D900.
+            rt->guarded++;
             if (top - count != mine + frame->chunk->slot_count) {
                 fail(vmp, frame, instruction, "K0655",
                      "this body gives back %u slot(s) and has %d more than it "
@@ -3886,6 +3901,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // ask itself. A value with a tag in it is left out for D899's
             // reason. See D906.
             if (frame->chunk->returns_value && count > 0) {
+                rt->guarded++;
                 const KestLayout *given =
                     &module->layouts[frame->chunk->gives];
                 for (uint16_t piece = 0;
@@ -4186,6 +4202,8 @@ bool kest_runtime_free(KestRuntime *runtime) {
         // the machine holds them, because an order chosen here would be a
         // second thing to keep in step with the list. Whoever reads this can
         // sort it. See D870.
+        fprintf(stderr, "guards %llu\n",
+                (unsigned long long)runtime->guarded);
         for (uint32_t op = 0; runtime->ran != NULL && op <= KEST_OP_RETURN;
              op++) {
             if (runtime->ran[op] > 0) {
