@@ -1910,12 +1910,19 @@ for one_of in INSTRUMENTS:
               "figure about it, so its duration has nothing under it" % one_of)
         failed = 1
 
+# A copy is its body, and its body is paid for when it is compiled. Compiling a
+# twenty-line copy costs more over a one-line copy than checking one does --
+# which is the shape held here. It was held at four times as much until D933
+# gave the contract proof a node per copy and the tree is typed again for each:
+# checking a copy is now most of what it costs, and the difference between a
+# body of one line and one of twenty is a difference in both. The shape is the
+# same and the multiple is not, so the multiple is gone rather than tuned.
 shutil.rmtree(work, ignore_errors=True)
 if (one_copy_costs is None or many_copies_costs is None or
         many_copies_costs <= one_copy_costs * 2 or
         flat is None or deep is None or flat_checked is None or
         deep_checked is None or
-        deep - flat <= (deep_checked - flat_checked) * 4):
+        deep - flat <= (deep_checked - flat_checked)):
     print("costs: %u calls of one generic cost %s and %u generics called once "
           "cost %s, and a copy of a one-line body cost %s to compile and %s "
           "to check against %s and %s for one of twenty lines, and a copy is "

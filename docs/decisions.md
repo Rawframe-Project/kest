@@ -28814,3 +28814,154 @@ known answers and both are permanent choices about what this language's backend
 is. Neither is a small experiment, and the sprint that found this was told not to
 make that choice on its own. The evidence is here; the choice is the technical
 lead's.
+
+## D927: a handle says what it is of
+
+An array or a store crossing the boundary said what kind of handle it was and
+how far apart two of its elements are. Neither says what is inside one. Two
+`i32` and four `f32` are eight bytes and sixteen, and a host that lent the first
+where the second was wanted was unpacked by the callee's layout and read
+sixty-four bytes past the end of its own memory — a global buffer overflow, in
+release and under the sanitiser, with nothing said.
+
+Both headers carry the element type now. It is the build's own `KestType`, of
+which there is one per declared type, so the check at the boundary is a pointer
+against a pointer and the refusal names both: `K0661`. `new.store` carries the
+layout of a place beside its stride, because a store had nowhere else to learn
+it from.
+
+The check is where a handle can arrive from outside and nowhere else. Inside a
+program the checker has already said what every handle is.
+
+## D928: the room is asked for before the arguments move
+
+`kest_call` copied the arguments into the machine's stack and then called
+`execute`, which asked whether there was room. A call wider than the stack wrote
+past the end first and refused afterwards — the sanitiser called it a
+use-after-poison, and what it was writing over was the machine's own memory.
+
+The same arithmetic runs before the copy now. A refusal that arrives after the
+thing it was protecting has been written over is not a refusal.
+
+## D929: a budget is given back before a host runs, and a stop is heard at the door
+
+Two things about the budget were wrong and both were about the edges of a call.
+
+A body holds its slice of the budget in a register while it runs. A host called
+from inside it may call back in, and what that call could see was the budget
+minus the whole outer slice — so an outer call given three hundred steps took
+all three hundred, and the call inside it was refused after fifty. The slice is
+put back before the host runs and taken again after, so a reentrant call reads
+what is really left. No false exhaustion, and no fuel made out of nothing.
+
+And a machine that had been asked to stop ran anything with no jump and no call
+in it, because a step is only spent at those. The question is asked once at the
+door as well, so a body of straight-line work is refused before its first
+instruction.
+
+Cancellation is an `atomic_int` with release on the writing side and relaxed on
+the reading side. It was a `volatile sig_atomic_t`, which says the compiler will
+not cache it and says nothing at all about what another thread sees. Cross-thread
+cancellation is supported; safety from a signal handler is not claimed.
+
+## D930: a `u64` is converted through a `u64`
+
+`kest_real_to_int` cast every width through `int64_t` at the end. The whole top
+half of the `u64` range is above `INT64_MAX`, so that conversion was undefined
+and saturated at two to the sixty-third in practice: `u64(1e19)` came back as
+9223372036854775808. A `u64` goes through a `uint64_t`. The folded and the
+running paths are the same function, so they agreed before and agree now.
+
+## D931: a place in an array is what it is made of
+
+`a[0] = grow(a)` worked out the element address, ran the right-hand side, and
+stored through it. When the growth relocated the block the write went into the
+buffer nothing would read again, and the assignment was silently lost. It is
+only visible when the array is not the last thing the heap handed out, which is
+why it survived so long.
+
+`load.elem` and `store.elem` carry the array and the index and work the address
+out where it is used. Evaluation order is unchanged — the place's parts are
+evaluated before the value, as they were — and nothing between them can move
+the block out from under a pointer, because there is no pointer.
+
+It is also one instruction where there were two. The W01 kernel went from 46.51
+dynamic instructions an active entity a step to 43.51, and `store.at` and `dup`
+have no emitter left and are gone.
+
+## D932: a handle inside a shape is a handle
+
+A `for` may bind its element by address when the body cannot write what is being
+walked. The test refused a call whose argument was an array, a store or a
+reference — and looked only at the top of the type. `Holder { items: [Item] }`
+passed it, so a body that mutated the array through the holder changed the
+element under the loop's own copy, and the binding read 99 where the language
+says 7.
+
+The test walks the type: struct fields, enum payloads, optionals, fixed runs,
+bounded so a shape that names itself terminates. This is a value-semantics
+guarantee and it is not negotiable for a faster loop.
+
+## D933: a cost contract is proved per copy
+
+A generic body is one tree, typed again for each set of types. The contract
+graph had a node per declaration, so walking it read whichever copy had been
+typed into it last — and a call carries the copy's own symbol, so the walk
+looked for a node that was not there and read the call as reaching nothing at
+all.
+
+`kest check` accepted a `no.alloc` body that called an allocating copy, and
+`kest emit` then refused it under `K0405`, the code this project keeps for a
+fault in the compiler, for a mistake in the program.
+
+There is a node per copy now, named by the symbol the call sites carry, and the
+tree is typed for that copy before it is read — through `kest_retype_instance`,
+the door the compiler already uses before it emits each copy. `check`, `emit`
+and `run` agree, in both instantiation orders, and the refusal is `K0401`.
+
+What this does not do is make the representation immutable. It types the shared
+tree again and reads it while it is right, which is the smallest correct repair;
+one resolved body per copy is the next piece of work.
+
+## D934: a reference says which world it came from
+
+A reference was a thirty-two bit count and a thirty-two bit place, and the count
+came from the build. Two machines built separately from one file both handed out
+the same first reference, so a reference made in one world resolved in another
+and answered with an unrelated object's value.
+
+A reference is sixteen bits of world, twenty-four of count and twenty-four of
+place. The world is a number the process hands each machine as it starts, and
+every store carries the world that made it, so resolving one asks which world
+before it asks anything else. Sixty-five thousand worlds at once, sixteen
+million places in a store, sixteen million handouts per place, each refused in
+words at its own ceiling.
+
+What a reference is made of is read through one door. A second place that knew
+the widths was a second place to change, and `remove` was that place: it kept the
+old mask and walked off the end of the store.
+
+None of this is an ABI. The bits are the runtime's and nothing outside reads
+them, which is what makes them free to change again.
+
+## D935: a clock that measures elapsed time
+
+`Host.clock` was C's `clock()`, which is processor time. A program that waits
+for anything reads a clock that stopped, and `make time` was measuring how busy
+the processor had been rather than how long a frame took — which is why a busy
+machine made the instruments look fast rather than slow.
+
+The command line asks the platform for a monotonic clock, falls back to C's own
+wall clock where there is none, and falls back again to processor time. The
+library is still ISO C11 and nothing else; the request is in the host, which is
+where the reason is. `std.os` says which of the three a host bound.
+
+## D936: a machine's places are its own
+
+The counter behind a store's stamps was the build's, so two machines started
+from one build wrote it from whatever threads they were on. It is each machine's
+now, which the world in a reference is what makes safe: a place is told apart
+from a place in another machine by which world it is in, so the count no longer
+has to be unique across them.
+
+That was the last mutable thing a build had that two machines shared.

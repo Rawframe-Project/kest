@@ -4306,15 +4306,15 @@ than guessed at: the build that checks itself counts every instruction it runs,
 and `KEST_DEEP=1` makes it say so. Run at two step counts and two entity
 counts and take the difference of the differences — a world is built once
 however many rounds there are, and a round has a loop of its own however many
-entities are in it — and a frame step an entity is **fifty-nine instructions**,
-of which twenty-one are `load`, eight are `const`, four are `load.n` and four
-are `store` — thirty-seven of the fifty-nine, near enough two in three, move a
+entities are in it — and a frame step an entity is **fifty-seven instructions**,
+of which twenty are `load`, eight are `const`, four are `load.n` and four
+are `store` — thirty-six of the fifty-seven, near enough two in three, move a
 value onto the stack or off it. The arithmetic is six: two `mul.f32`, two
 `add.f32`, one `add.i.narrow` and one `sub.i.narrow`. That is what a stack
 machine is, and it is where the next thing to be gone after will be found.
 
 Counting them is not free, and what it costs is the other number this build
-says: over those fifty-nine instructions it asks its own compiler **fifty-two
+says: over those fifty-seven instructions it asks its own compiler **fifty-one
 questions** about what it is about to do — whose slots these are, whose
 constants, whether what a frame holds is the shape the chunk was declared with.
 That is the machine holding itself to what it was handed rather than trusting
@@ -4424,7 +4424,7 @@ Which of these numbers are anybody's. The three lines above are durations and a
 duration belongs to the machine this was read on — a processor that clocks
 differently reads differently, and that is why `make check` reads only whether
 they ran and what shape they are. The instruction counts under them are not: a
-frame step is fifty-nine instructions wherever it runs, which is the same count
+frame step is fifty-seven instructions wherever it runs, which is the same count
 anywhere, and it is why the gate holds the count to the figure and prints the
 duration beside it without an opinion. The three checks that say a number a
 machine gave them say so in the sentence a reader reads, and so does this.
@@ -4977,7 +4977,7 @@ where it is written, and the compiler works out every constant, so what `emit`
 says is what `check` said and more. `asked` beside them is how many times the
 folder was asked and there was nothing to work out — a field of a local, a name that is not a constant. The compiler asks
 of anything that might be one, because asking is how it finds out, and the two
-numbers together say how much of that finding out answered: 97 of 239 for
+numbers together say how much of that finding out answered: 97 of 299 for
 `examples/numbers.kest`.
 
 Each file also carries a `mark`, and the object has one for the program: a

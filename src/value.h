@@ -56,7 +56,6 @@ typedef enum {
     // The address of one of them inside memory the host laid out.
     KEST_OP_OFFSET_ADDR, // u16 stride, u16 count
     KEST_OP_LOAD_AT,    // u16 byte offset, u16 layout
-    KEST_OP_STORE_AT,   // u16 byte offset, u16 layout
     KEST_OP_LEN,
     // A piece of text is a pointer and nothing else, so its length is counted
     // rather than read. One byte of it is a `u8`; there is no character type
@@ -136,7 +135,6 @@ typedef enum {
     KEST_OP_FALSE,
     KEST_OP_POP,
     KEST_OP_POPN,    // u16 count
-    KEST_OP_DUP,
     // Turns the top run of slots over end to end. A case is built payload
     // first and tag last, because that is the order it is written in, and is
     // laid out tag first, because that is the order it is read in.

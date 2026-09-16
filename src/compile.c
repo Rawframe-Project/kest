@@ -3120,12 +3120,12 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         bool in_slots = resolve_place(compiler, target, &slot, &place_size);
 
         uint16_t offset = 0;
-        bool apart = false;
         if (!in_slots) {
+            // Held apart: the array and the index rather than an address
+            // worked out from them, because what is between here and the
+            // store may move the block. See D931.
             compiler->place_apart = true;
-            compiler->place_is_apart = false;
             bool made = compile_address(compiler, target, &offset);
-            apart = compiler->place_is_apart;
             compiler->place_apart = false;
             compiler->place_is_apart = false;
             if (!made) {
@@ -3141,20 +3141,11 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             if (in_slots) {
                 stack_push(compiler, 1);
                 emit_load(compiler, slot, 1, stmt->span);
-            } else if (apart) {
+            } else {
                 // The place stays where it is and the read is made from it,
                 // because the write below wants it again.
                 stack_push(compiler, 1);
                 emit(compiler, KEST_OP_LOAD_ELEM, stmt->span);
-                emit_u16(compiler, offset, stmt->span);
-                emit_u16(compiler, layout_of(compiler, target->type),
-                         stmt->span);
-            } else {
-                stack_push(compiler, 1);
-                emit(compiler, KEST_OP_DUP, stmt->span);
-                stack_push(compiler, 1);
-                stack_pop(compiler, 1);
-                emit(compiler, KEST_OP_LOAD_AT, stmt->span);
                 emit_u16(compiler, offset, stmt->span);
                 emit_u16(compiler, layout_of(compiler, target->type),
                          stmt->span);
@@ -3202,14 +3193,9 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         if (in_slots) {
             stack_pop(compiler, size);
             emit_store(compiler, slot, size, stmt->span);
-        } else if (apart) {
+        } else {
             stack_pop(compiler, (uint16_t)(size + 2));
             emit(compiler, KEST_OP_STORE_ELEM, stmt->span);
-            emit_u16(compiler, offset, stmt->span);
-            emit_u16(compiler, layout_of(compiler, target->type), stmt->span);
-        } else {
-            stack_pop(compiler, (uint16_t)(size + 1));
-            emit(compiler, KEST_OP_STORE_AT, stmt->span);
             emit_u16(compiler, offset, stmt->span);
             emit_u16(compiler, layout_of(compiler, target->type), stmt->span);
         }

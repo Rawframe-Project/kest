@@ -892,7 +892,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"clear", NONE},       {"elem.addr", U16},
     {"load.slots", U16_U16_U16},              {"store.slots", U16_U16_U16},
     {"offset.addr", U16_U16},
-    {"load.at", U16_U16},  {"store.at", U16_U16}, {"len", NONE},
+    {"load.at", U16_U16},   {"len", NONE},
     {"text.len", NONE},    {"text.at", NONE},     {"text.in", U16_U16},     {"text.slice", NONE},  {"text.rest", NONE},   {"text.matches", NONE},
     {"text.find", NONE},
     {"text.i", NONE},      {"text.u", NONE},      {"text.f", NONE},
@@ -907,7 +907,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"set", U16},          {"remove", NONE},      {"count", NONE},
     {"seek.from", FIND},   {"seek.next", FIND_BACK},        {"store.ref", NONE},
     {"true", NONE},        {"false", NONE},       {"pop", NONE},
-    {"pop.n", U16},        {"dup", NONE},         {"rotate", U16},
+    {"pop.n", U16},                 {"rotate", U16},
     {"add.i", NONE},       {"sub.i", NONE},
     {"mul.i", NONE},       {"div.i", NONE},       {"mod.i", NONE},
     {"div.u", NONE},       {"mod.u", NONE},       {"neg.i", NONE},
@@ -1391,7 +1391,6 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_STORE_SLOTS:
     case KEST_OP_OFFSET_ADDR:
     case KEST_OP_LOAD_AT:
-    case KEST_OP_STORE_AT:
     case KEST_OP_LEN:
     case KEST_OP_TEXT_LEN:
     case KEST_OP_TEXT_AT:
@@ -1416,7 +1415,6 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_FALSE:
     case KEST_OP_POP:
     case KEST_OP_POPN:
-    case KEST_OP_DUP:
     case KEST_OP_ROTATE:
     case KEST_OP_ADD_I:
     case KEST_OP_SUB_I:

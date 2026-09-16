@@ -2851,17 +2851,6 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                  value);
             break;
         }
-        case KEST_OP_STORE_AT: {
-            uint16_t offset = READ_U16();
-            uint16_t of_which = READ_U16();
-            OF_THE_MODULE(of_which, module->layout_count, "a layout");
-            const KestLayout *layout = &module->layouts[of_which];
-            top -= layout->count;
-            KestValue *value = top;
-            unsigned char *at = (--top)->object;
-            pack(at + offset, layout, value);
-            break;
-        }
         case KEST_OP_NEW_STORE: {
             int64_t room = (--top)->integer;
             if (room < 0) {
@@ -3409,10 +3398,6 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top[-count] = tag;
             break;
         }
-        case KEST_OP_DUP:
-            *top = top[-1];
-            top++;
-            break;
 
         // Worked out unsigned and read back signed. What this language says
         // arithmetic does at the end of a width is wrap, and a signed overflow
