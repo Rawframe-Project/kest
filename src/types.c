@@ -1097,9 +1097,6 @@ uint8_t kest_scalar_of(const KestType *type) {
         return KEST_L_BOOL;
     case KEST_T_FLOAT:
         return type->width == 32 ? KEST_L_F32 : KEST_L_F64;
-    // A set of bits is the unsigned integer it was declared over, which is
-    // what a host reading the same memory sees.
-    case KEST_T_FLAGS:
     case KEST_T_INT:
         switch (type->width) {
         case 8:
@@ -1121,6 +1118,24 @@ uint8_t kest_scalar_of(const KestType *type) {
     // frame cannot make out of a width. See D896.
     case KEST_T_TEXT:
         return KEST_L_TEXT;
+    // Which function of the program this is, which is a number: the machine
+    // calls through it by reading `integer`, and a layout that said `word`
+    // was telling a host to read that number as a pointer. See D897.
+    case KEST_T_FN:
+        return KEST_L_FN;
+    // A set of named bits, at the width it was declared over: what it holds is
+    // the bits it has names for, and a byte is a byte. See D897.
+    case KEST_T_FLAGS:
+        switch (type->width) {
+        case 8:
+            return KEST_L_FLAGS8;
+        case 16:
+            return KEST_L_FLAGS16;
+        case 32:
+            return KEST_L_FLAGS32;
+        default:
+            return KEST_L_FLAGS64;
+        }
     default:
         return KEST_L_WORD;
     }

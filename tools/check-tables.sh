@@ -1928,6 +1928,61 @@ def shapes_of(program):
             if one.get('kind') == 'struct']
 
 
+# Every type whose meaning is more than its width, held to a layout that says
+# so. Six kinds have been split out of a wider one -- the tag (D708), the byte
+# an optional keeps (D714), a reference (D715), a truth (D839), text (D896) and
+# a set of named bits (D897) -- and every one of them was found by somebody
+# reading a layout and being unable to tell two types apart in it. This is that
+# reading done as a rule: what a host is handed says what a piece means and not
+# only how wide it is, so a flag set lays out as one and an enum begins with a
+# tag. See D897.
+MEANS_MORE = {"flags": ("flags8", "flags16", "flags32", "flags64"),
+              "enum": ("tag",)}
+
+
+def laid_out_by(program):
+    """What each type of a program lays out as, by the name it is laid out under."""
+    ran = subprocess.run(['./kest', 'emit', '--json', program],
+                         capture_output=True, text=True,
+                         stdin=subprocess.DEVNULL,
+                         env=dict(os.environ, KEST_LIB='lib'))
+    if ran.returncode != 0:
+        return {}
+    return {one['of']: tuple(piece['is'] for piece in one['pieces'])
+            for one in (json.loads(ran.stdout).get('layouts') or [])}
+
+
+def told_apart(program):
+    """Every type of a program with the kind the checker calls it."""
+    ran = subprocess.run(['./kest', 'check', '--json', program],
+                         capture_output=True, text=True,
+                         stdin=subprocess.DEVNULL,
+                         env=dict(os.environ, KEST_LIB='lib'))
+    if ran.returncode != 0:
+        return {}
+    return {one['name']: one.get('kind')
+            for one in (json.loads(ran.stdout).get('types') or [])}
+
+
+meaning = {}
+laid_as = {}
+for program in (sorted(glob.glob(os.path.join('lib', 'std', '*.kest'))) +
+                sorted(glob.glob(os.path.join('examples', '*.kest')))):
+    meaning.update(told_apart(program))
+    laid_as.update(laid_out_by(program))
+some("the types this tree lays out", laid_as)
+told = 0
+for named in sorted(meaning):
+    wanted = MEANS_MORE.get(meaning[named])
+    if wanted is None or named not in laid_as or not laid_as[named]:
+        continue
+    told += 1
+    if laid_as[named][0] not in wanted:
+        print("layouts: `%s` is a %s and its first piece is `%s`, which is a "
+              "width and not what it is"
+              % (named, meaning[named], laid_as[named][0]))
+        failed = 1
+
 holding = {}
 declared_in = {}
 holds_what = {}
@@ -2267,6 +2322,9 @@ for door_name, door_pair in sorted(doors.items()):
 if not failed:
     print("%u escapes, "
           % len(accepted), end="")
+    print("%u type(s) whose meaning is more than their width saying so in "
+          "what a host is handed, of %u laid out, " % (told, len(laid_as)),
+          end="")
     print("%u instructions, %u tokens, %u keywords, %u builtins, "
           "%u primitives, %u reasons, %u promises, %u modules "
           "and %u checks are in step with their names, holding %u pieces of "

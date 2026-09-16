@@ -113,6 +113,25 @@ typedef enum {
     // which it is writing writes 0 or 1, and one that does not is told. See
     // D839.
     KEST_L_BOOL,
+    // And a set of named bits, at each of the four widths one may sit over.
+    // These said `KEST_L_U8` and the rest until D897, which is the width and
+    // not what it is: a `u8` holds nought to 255 and a set of two names holds
+    // four values, so `struct { m: Marks, n: i32 }` and a byte beside a number
+    // were one run of pieces — same kinds, same offsets, same size — and a
+    // host could lend either under the other's name. Four kinds rather than
+    // one, because a flag set is the width it was declared over and a host
+    // laying out its own memory needs that as much as it needs the meaning.
+    KEST_L_FLAGS8,
+    KEST_L_FLAGS16,
+    KEST_L_FLAGS32,
+    KEST_L_FLAGS64,
+    // A function value, which is not a machine word either: it is which
+    // function of the program this is, a number the machine reads through
+    // `integer` and calls through. It said `KEST_L_WORD` until D897 — so a
+    // layout told a host to read it through `object`, which is a pointer made
+    // out of an index, and the one the program handed over first is the null
+    // one. The same mistake `KEST_L_REF` was, in the last place it was left.
+    KEST_L_FN,
     // A place in a store, which is not a machine word at all: a reference is
     // the slot it names and the number of times that slot has been handed out,
     // packed into one whole number. It said `KEST_L_WORD` until D715, and the
@@ -134,9 +153,9 @@ typedef enum {
     // `KEST_L_F32` and `KEST_L_F64`: `real`, a `double` in the slot either
     // way, which is what a layout of an `f32` array is not.
     KEST_S_REAL,
-    // `KEST_L_WORD`: `object`, which is what a handle is. `KEST_L_REF` used to
-    // be one of these and is not a word: it is a number, and it answers
-    // `KEST_S_INTEGER` like every other number. `KEST_L_TEXT` used to be one
+    // `KEST_L_WORD`: `object`, which is what a handle is. `KEST_L_REF` and
+    // `KEST_L_FN` used to be ones of these and are not words: each is a
+    // number, and each answers `KEST_S_INTEGER` like every other number. `KEST_L_TEXT` used to be one
     // too, and answers `KEST_S_TEXT`: every kind names one member now, which
     // is what makes this answer worth asking for. See D896.
     KEST_S_WORD,

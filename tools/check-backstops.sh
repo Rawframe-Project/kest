@@ -5604,6 +5604,24 @@ fn main() -> i32 {
         "caught": "a build that is not there answered as though it were",
     },
     {
+        # A set of named bits laid out as the byte it sits over. Six kinds have
+        # been split out of a wider one and every one was found by somebody
+        # reading a layout and being unable to tell two types apart -- a
+        # `struct { m: Marks, n: i32 }` and a byte beside a number are one run
+        # of pieces the day a set says only its width, and a host may lend
+        # either under the other's name. See D897.
+        "what": "a set of named bits laid out as the byte it sits over",
+        "file": "src/types.c",
+        "from": """        case 8:
+            return KEST_L_FLAGS8;""",
+        "to": """        case 8:
+            return KEST_L_U8;""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "which is a width and not what it is",
+    },
+    {
         # A machine that did not start, answering as though it had.
         # `kest_start` says NULL and writes why into the build's report, and a
         # host that carries on regardless knocked on twenty-nine doors -- of
@@ -7252,8 +7270,8 @@ const char *kest_scalar_name(uint8_t kind) {""",
         # answers to the name of the one before.
         "what": "a scalar a layout holds with no name",
         "file": "src/value.c",
-        "from": '"tag", "held", "bool",\n                                     "ref"};',
-        "to": '"tag", "held", "bool"};',
+        "from": '"flags64", "fn", "ref"};',
+        "to": '"flags64", "fn"};',
         "make": ["build/release/value.o"],
         "in_build": True,
         "caught": "every scalar a layout holds has a name",

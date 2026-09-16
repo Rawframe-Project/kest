@@ -27703,3 +27703,52 @@ declarations that had been right about the width and silent about the rest.
 `examples/embed.c` holds the new fact by asking the two doors that answer it:
 `under()` gives bytes and `ownArray()` gives a handle, and the two kinds and the
 two members are four different answers.
+
+## D897: the walk that finds the next one
+
+D896 was found by printing what every shape answers and noticing two that
+matched. This is that walk done as a rule, and it found two more the same day.
+
+Every type in the tree, gathered by the run of pieces its values lay out as.
+Fifty-three shapes, nineteen of them reached by more than one type — and most
+of those are two structs with the same fields, which is not a mistake: a struct
+is its fields laid flat, so `Box<i32>` really is an `i32` in memory and a host
+lending one under the other's name is lending the right bytes. The mistake is
+narrower and it is always the same: **a piece that says how wide it is where the
+type means more than that.**
+
+**A function value.** It came back `word`, whose member is `object` — and the
+machine reads it through `integer`, because a function value is which function
+of the program it is:
+
+```text
+a function value is kind 10, read through member 1
+what came back: integer 0, object (nil)
+```
+
+A layout told a host to read a number as a pointer, and the first function a
+program hands over is the null one. That is exactly what `KEST_L_REF` was before
+D715, left in the one place D715 did not look. It is `KEST_L_FN` now, and it
+answers `KEST_S_INTEGER`.
+
+**A set of named bits.** `flags State: u8` laid out as `u8`, so
+`struct { m: Marks, n: i32 }` and a byte beside a number were one run of pieces
+— same kinds, same offsets, same size, and a host may lend either under the
+other's name. That is D714's sentence word for word about a different type. Four
+kinds rather than one, `KEST_L_FLAGS8` through `KEST_L_FLAGS64`, because a set
+is the width it was declared over and a host laying out its own memory needs
+that as much as it needs the meaning — which is how the four integer widths
+already work. `examples/flags.kest` gained the two widths nothing here had
+declared, so every one of the four is a layout something has written.
+
+That makes eight kinds split out of a wider one: the tag, the byte an optional
+keeps, a reference, a truth, text, and now a function value and a set of bits at
+four widths. Every one of the six occasions was found by a reader who could not
+tell two types apart in a layout, which is six times too many for a thing a
+program can be asked.
+
+So it is asked. `check-tables.sh` walks every type the checker declares and
+holds the ones whose meaning is more than their width — a flag set lays out as
+a flag set, an enum begins with a tag — against what a host is actually handed.
+Ten types answer to it today, of a hundred and thirty-seven laid out. A seventh
+occasion will be a failing gate rather than somebody noticing.

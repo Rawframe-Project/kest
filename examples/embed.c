@@ -2792,7 +2792,7 @@ int main(int argc, char **argv) {
         // A function value is one slot holding which function it is, which is
         // a word like any other handle — and a word carries no promise, which
         // is the whole of why the machine asks the chunk. See D834.
-        {"apply", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_I32}, 1},
+        {"apply", {KEST_L_FN, KEST_L_I32}, 2, {KEST_L_I32}, 1},
         {"doubled", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
         {"grows", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
         {"weighed", {0}, 0, {KEST_L_I32}, 1}};

@@ -33,6 +33,31 @@ flags Wide: u32 {
     Third
 }
 
+// And the two widths between and above them, which a program may declare and
+// nothing here had. What says they are worth having written down is that a set
+// is a kind of its own to a host since D897, one kind per width — so a width
+// nothing declares is a kind nothing has ever laid out.
+flags Middle: u16 {
+    Low
+    High
+}
+
+flags Widest: u64 {
+    Near
+    Far
+}
+
+// Each of the four is read where it is handed over, which is what makes a
+// width a kind: a set crossing a frame is laid out, and a width nothing hands
+// over is a layout nothing has ever written. See D897.
+fn middling(m: Middle) -> i32 no.alloc {
+    return i32(u16(m))
+}
+
+fn farthest(w: Widest) -> i32 no.alloc {
+    return i32(u64(w))
+}
+
 fn has(state: State, flag: State) -> bool no.alloc {
     return state & flag == flag
 }
@@ -200,6 +225,23 @@ fn main() -> i32 {
     }
     if "{wide}" != "Wide.First | Wide.Third" {
         return 24
+    }
+
+    // The two widths between and above, each held to the same three rules: the
+    // bits it was given, the number underneath, and the way back.
+    let middle = Middle.Low | Middle.High
+    if u16(middle) != 3 || Middle(u16(middle)) != middle {
+        return 25
+    }
+    if middle & Middle.High != Middle.High || middling(middle) != 3 {
+        return 26
+    }
+    let widest = Widest.Far
+    if u64(widest) != 2 || Widest(u64(widest)) != widest {
+        return 27
+    }
+    if widest & Widest.Near != Widest() || farthest(widest) != 2 {
+        return 28
     }
 
     io.print("{state} is {count(state)} flags, and a handle is {handle}")

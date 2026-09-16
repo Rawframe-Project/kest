@@ -34245,3 +34245,45 @@ the same run of kinds are two things a host lends or reads under one name —
 and the only reason it was found is that somebody wrote both down. A list of
 every pair still in that state is either empty, which is worth knowing, or it is
 the next four decisions.
+
+## The walk that finds the next one, and the two it found
+
+D896 was found by printing what every shape answers and noticing two that
+matched. Done as a walk over the whole tree — every type gathered by the run of
+pieces it lays out as, fifty-three shapes — it found two more.
+
+A **function value** came back `word`, whose member is `object`, and the machine
+reads it through `integer`: a function value is which function of the program it
+is, so a layout was telling a host to read a number as a pointer, and the first
+one a program hands over is the null one. `KEST_L_FN` now, answering
+`KEST_S_INTEGER` — exactly what `KEST_L_REF` was before D715, left in the one
+place D715 did not look.
+
+A **set of named bits** laid out as the byte it sits over, so
+`struct { m: Marks, n: i32 }` and a byte beside a number were one run of pieces
+and a host could lend either under the other's name. That is D714's sentence
+about a different type. Four kinds, `KEST_L_FLAGS8` through `KEST_L_FLAGS64`,
+because a set is the width it was declared over; `examples/flags.kest` gained
+the two widths nothing here had declared so all four are written by an example.
+
+Most of the nineteen groups with more than one type in them are not mistakes: a
+struct is its fields laid flat, so `Box<i32>` really is an `i32` and lending one
+under the other's name lends the right bytes. The mistake is always the narrow
+one — a piece that says how wide it is where the type means more.
+
+So the walk is a rule now. `check-tables.sh` holds every type whose meaning is
+more than its width to a layout that says so: ten of them today, of a hundred
+and thirty-seven laid out. The seventh occasion will be a failing gate rather
+than somebody noticing.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the other half of that rule, which is the one it cannot state yet. It
+holds a flag set to laying out as a flag set and an enum to beginning with a
+tag, because those are declared kinds the checker names. It says nothing about
+the pieces *inside* a shape: a struct holding a `text` and one holding a
+`[u8]` are told apart now, but nothing walks a struct's fields against its
+pieces and asks whether each field's type is the kind beside it. Write that —
+for every shape, flatten its fields to their leaf types and hold that list
+against the run of pieces, name by name. It is the same reading one level down,
+and it is where the seventh will be if there is one.
