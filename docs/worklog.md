@@ -34512,3 +34512,42 @@ or writes over the one below it, inside the body, where the guards at the frame
 boundary cannot see. Hold each against the layout of what it is moving: the
 chunk knows the type of every local it names, so ask whether the run a `load.n`
 takes is the run the name holds.
+
+## The slots a body names are the body's
+
+Four turns held the compiler's arithmetic to the machine's where a frame changes
+hands. Inside a body nothing held it.
+
+Everything a body reaches in its own frame is reached by a number the compiler
+wrote into an instruction — `load` and `store` a slot, `load.n` and `store.n` a
+slot and a count, `load.slots` and `store.slots` a base, a stride and how many,
+and a walk the two slots it counts with. A count one out reads the slot above
+the value or writes over the one below it, inside the body, where every guard
+put up since D900 is looking somewhere else.
+
+What is above the names is not nothing: a frame is the slots a body was given
+and then the operand stack, so a run read one long is a read of what the body
+was in the middle of working out.
+
+```text
+error[K0655]: this reaches slot 4 of the 3 this body names
+```
+
+Eight instructions, one door, the build that checks itself. Everything comes
+back clean; the hole is the `+ 1` that is not there.
+
+It is a bound and not an equality — the same distinction D901 drew. The equality
+needs the type of every local and a chunk records its parameters and nothing
+else; writing that table down is a decision of its own.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the other half of the same instruction, which is the constants. A body
+reaches its own slots by a number and the chunk's constants by another:
+`const` takes an index, `const.run` an index and a count, and `const.at` a
+first, a stride and how many. Those numbers are the compiler's the same way and
+nothing bounds them — a `const.run` one long reads whatever follows the
+constants in the chunk's array, which is room the arena handed out and nobody
+wrote. Hold them the way the slots are held now, against `constant_count`. It is
+the same door with a different number in it, and it closes the last place inside
+a body where a wrong number is read rather than refused.

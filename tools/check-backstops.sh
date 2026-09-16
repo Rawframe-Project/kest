@@ -5604,6 +5604,45 @@ fn main() -> i32 {
         "caught": "a build that is not there answered as though it were",
     },
     {
+        # A run of slots read one past the names a body has. Everything inside
+        # a frame is reached by a number the compiler wrote into the
+        # instruction, and a count one out reads the slot above the value --
+        # inside the body, where the guards where a frame changes hands cannot
+        # see. What is above the names is what the body was in the middle of
+        # working out. See D903.
+        "what": "a run of slots read past the names a body has",
+        "file": "src/compile.c",
+        "from": """    emit(compiler, size == 1 ? KEST_OP_LOAD : KEST_OP_LOADN, origin);
+    emit_u16(compiler, slot, origin);
+    if (size != 1) {
+        emit_u16(compiler, size, origin);
+    }""",
+        "to": """    emit(compiler, size == 1 ? KEST_OP_LOAD : KEST_OP_LOADN, origin);
+    emit_u16(compiler, slot, origin);
+    if (size != 1) {
+        emit_u16(compiler, (uint16_t)(size + 1), origin);
+    }""",
+        "make": ["debug"],
+        "binary": "kest-debug",
+        "program": "reaching.kest",
+        "source": """struct Three {
+    a: i32
+    b: i32
+    c: i32
+}
+
+fn first(v: Three) -> i32 no.alloc {
+    return v.a
+}
+
+fn main() -> i32 {
+    let made = Three(len("a"), len("bb"), len("ccc"))
+    return first(made) - 1
+}
+""",
+        "caught": "this reaches slot 4 of the 3 this body names",
+    },
+    {
         # A call putting into a frame something the body it enters does not
         # hold. The count of the slots is held beside this and says nothing
         # about what is in them: a narrowing left out is a slot holding three

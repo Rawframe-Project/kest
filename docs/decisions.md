@@ -27955,3 +27955,36 @@ and at a crossing (D901), and what is in a call's slots. The machine now asks of
 its own compiler three of the four things it asks of a host, and the fourth —
 what a crossing *answers* with — it has asked since D719. There is no longer a
 question the boundary puts to a host that the machine does not put to itself.
+
+## D903: the slots a body names are the body's
+
+Four turns held the compiler's arithmetic to the machine's where a frame changes
+hands. Inside a body nothing held it at all.
+
+Everything a body reaches in its own frame is reached by a number the compiler
+wrote into an instruction: `load` and `store` take a slot, `load.n` and
+`store.n` a slot and a count, `load.slots` and `store.slots` a base, a stride
+and how many, and a walk takes the two slots it counts with. Each of those
+numbers is the compiler's belief about a type, and a count one out reads the
+slot above the value or writes over the one below it — inside the body, where
+every guard put up since D900 is looking somewhere else.
+
+What is above the names is not nothing. A frame is the slots a body was given
+and then the operand stack, so a run read one long is a read of what the body
+was in the middle of working out, and a run written one long is a write into it.
+The program carries on with the answer half-made.
+
+```text
+error[K0655]: this reaches slot 4 of the 3 this body names
+```
+
+Eight instructions, one door, the build that checks itself. Every example, the
+library, both instruments and both hosts come back clean. The hole is the `+ 1`
+that is not there: a run loaded one slot longer than the name holds.
+
+*What it is not* is a check that the count is the right count. It is a check
+that the count is a possible count — the same distinction D901 drew between a
+bound and an equality, and this one is the bound. The equality needs the type of
+every local, and a chunk records the types of its parameters and nothing else.
+Writing that table down is a decision of its own; this is what can be had
+without it, and it is where a wrong number stops being silent.

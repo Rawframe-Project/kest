@@ -1534,6 +1534,29 @@ typedef struct {
     const uint8_t *instruction;
 } Saying;
 
+#if KEST_CHECKED
+// A run of slots a body names, held to being the body's. Everything inside a
+// frame is reached by a number the compiler wrote into the instruction, and a
+// count one out reads the slot above the value or writes over the one below
+// it -- inside the body, where the guards where a frame changes hands cannot
+// see. The named slots are what a body was given and the operand stack is
+// above them, so a read that runs past the names is a read of what the body
+// was in the middle of working out. See D903.
+static bool own_slots(Vm *vm, const Frame *frame, const uint8_t *instruction,
+                      uint32_t first, uint32_t past) {
+    if (past <= frame->chunk->slot_count && first <= past) {
+        return true;
+    }
+    fail(vm, frame, instruction, "K0655",
+         "this reaches slot %u of the %u this body names", past,
+         frame->chunk->slot_count);
+    kest_diags_fault(vm->diags,
+                     "what the compiler wrote into an instruction and what the "
+                     "body holds disagree");
+    return false;
+}
+#endif
+
 // Whether a number a host wrote fits the width the piece it sits in says. A
 // slot is sixty-four bits and a piece may be eight, and a number as wide as
 // the slot cannot be wrong — so only the narrow ones are asked, off the piece
@@ -2098,15 +2121,35 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top += stride;
             break;
         }
-        case KEST_OP_LOAD:
-            *top++ = mine[READ_U16()];
+        case KEST_OP_LOAD: {
+            uint16_t slot = READ_U16();
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, slot, slot + 1u)) {
+                return false;
+            }
+#endif
+            *top++ = mine[slot];
             break;
-        case KEST_OP_STORE:
-            mine[READ_U16()] = *--top;
+        }
+        case KEST_OP_STORE: {
+            uint16_t slot = READ_U16();
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, slot, slot + 1u)) {
+                return false;
+            }
+#endif
+            mine[slot] = *--top;
             break;
+        }
         case KEST_OP_LOADN: {
             uint16_t slot = READ_U16();
             uint16_t count = READ_U16();
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, slot,
+                           (uint32_t)slot + count)) {
+                return false;
+            }
+#endif
             // Written out rather than handed to `memcpy`. Most runs are two or
             // three slots — a struct of a few fields, or the fields of one
             // loaded one after another — and a call that decides how to copy
@@ -2120,6 +2163,12 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_STOREN: {
             uint16_t slot = READ_U16();
             uint16_t count = READ_U16();
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, slot,
+                           (uint32_t)slot + count)) {
+                return false;
+            }
+#endif
             top -= count;
             for (uint16_t i = 0; i < count; i++) {
                 mine[slot + i] = top[i];
@@ -2360,6 +2409,12 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t count = READ_U16();
             int64_t index = (--top)->integer;
             IN_RUN(index, count);
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, base,
+                           (uint32_t)base + (uint32_t)count * stride)) {
+                return false;
+            }
+#endif
             memcpy(top, mine + base + (size_t)index * stride,
                    sizeof(KestValue) * stride);
             top += stride;
@@ -2373,6 +2428,12 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             KestValue *value = top;
             int64_t index = (--top)->integer;
             IN_RUN(index, count);
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, base,
+                           (uint32_t)base + (uint32_t)count * stride)) {
+                return false;
+            }
+#endif
             memcpy(mine + base + (size_t)index * stride, value,
                    sizeof(KestValue) * stride);
             break;
@@ -3345,6 +3406,12 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t slot = READ_U16();
             uint16_t limit = READ_U16();
             uint16_t distance = READ_U16();
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, slot, slot + 1u) ||
+                !own_slots(vmp, frame, instruction, limit, limit + 1u)) {
+                return false;
+            }
+#endif
             if (++mine[slot].integer < mine[limit].integer) {
                 ip -= distance;
             }
@@ -3355,6 +3422,12 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t slot = READ_U16();
             uint16_t limit = READ_U16();
             uint16_t distance = READ_U16();
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, slot, slot + 1u) ||
+                !own_slots(vmp, frame, instruction, limit, limit + 1u)) {
+                return false;
+            }
+#endif
             uint64_t next = (uint64_t)++mine[slot].integer;
             if (next < (uint64_t)mine[limit].integer) {
                 ip -= distance;
