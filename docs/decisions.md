@@ -28255,3 +28255,43 @@ cannot be given room.** That is one builtin, and it is what the next turn is
 for. The measurement stays either way, and the gate now holds all three
 containers to it: nought for an array and a store that were told, and a table
 that was told costing less than one that was not.
+
+## D912: room for what is coming
+
+D911 found a gap with a shape: an array can be *made* with room and cannot be
+*given* room. `array(n, v)` makes a new one; a table's keys and values are
+arrays it cannot replace, so `table.refill` could make its slots once and had to
+let the other two double their way up — half the saving, where an array told the
+same thing saves all of it.
+
+`room(xs, n)` is the missing half. Room for `n` without changing what is in it
+or how many there are: the capacity and not the length, so `len` says the same
+before and after, and asking for less than it holds asks for nothing. It needs
+no value of the element type, because it makes nothing.
+
+```text
+a pair in a table that was told how many were coming
+  26 bytes an entity before          0 after
+```
+
+Nought, like an array and a store that were told. The gate holds it there.
+
+**And what it cost.** A hundred and fifty-second instruction, measured on
+`tools/frame.kest`, which never runs it:
+
+```text
+151 instructions   116  117  117  118  118  ns per entity per step
+152 instructions   124  125  125  125  137
+```
+
+Seven per cent of a frame step, which is D889's law arriving on cue: an
+instruction nothing emits and nothing executes costs about four nanoseconds an
+entity, and this one costs eight. D889 wrote that law about *fusions* — a
+peephole that removes dispatches has to repay the case it adds, and `load.2`
+could not. A capability is a different bargain: `room` repays nothing in time
+and buys a thing the language could not say.
+
+It is kept, and the price is written here rather than discovered later. A reader
+who wants the seven per cent back knows exactly what to take out and what the
+language loses when they do — which is the whole of what *cost is visible and
+provable* was ever supposed to mean.

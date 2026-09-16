@@ -34869,3 +34869,44 @@ slots and a table told how many are coming costs nought an entity like the other
 two, which is the number to hold it to. A builtin is the lists in `check.c`,
 `compile.c` and `contract.c`, a line in the reference and an example that runs
 it — and the measurement that says it worked is already in the gate.
+
+## Room for what is coming
+
+D911 found a gap with a shape: an array can be made with room and cannot be
+given room. `array(n, v)` makes a new one; a table's keys and values are arrays
+it cannot replace, so `table.refill` made its slots once and let the other two
+double their way up — half the saving, where an array told the same thing saves
+all of it.
+
+`room(xs, n)` is the missing half: room for `n` without changing what is in it
+or how many there are. The capacity and not the length, so `len` says the same
+before and after, and asking for less than it holds asks for nothing. It needs
+no value of the element type because it makes nothing.
+
+```text
+a pair in a table that was told how many were coming
+  26 bytes an entity before          0 after
+```
+
+Nought, like an array and a store that were told. The gate holds it there, and
+`table.refill` and `examples/grow.kest` both call it.
+
+**And what it cost.** A hundred and fifty-second instruction, measured on
+`tools/frame.kest`, which never runs it: 116-118 ns an entity became 124-125.
+Seven per cent, which is D889's law arriving on cue. D889 wrote that law about
+fusions — a peephole that removes dispatches has to repay the case it adds, and
+`load.2` could not. A capability is a different bargain: `room` repays nothing
+in time and buys a thing the language could not say. It is kept, and the price
+is written down rather than discovered later.
+
+**Runs:** `make check`, everything passing; `make time` against the build before
+it.
+
+**Next:** the other place that bargain is waiting. A store has `store(n)` and
+nothing that gives an existing one room — the same gap `room` just closed for an
+array, in the container whose per-entity cost is the highest of the three at
+eighty bytes. But the answer this time might not be another instruction: a store
+is one array of slots and one of counts, so `room` may already be able to do it
+from inside `std`, if a store's insides are reachable there. Look first, and
+only reach for the hundred and fifty-third instruction if they are not — because
+the price of one is now known and written down.

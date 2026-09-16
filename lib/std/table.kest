@@ -160,15 +160,23 @@ fn place<K, V>(t: Table<K, V>, key: K, where: i32) no.alloc no.host {
 // after this there are no holes to carry on past.
 //
 // A program that knows how many pairs are coming calls this before it puts
-// them in, and what that saves is half: a pair costs 51 bytes of heap in a
-// table that grows into them and 26 in one that was told, because a table is
-// three arrays and every one of the three doubles on the way up. Twenty-six is
-// about what growing an array by one element costs, which is what is left when
-// the slots are made once. Measured by `check-costs.sh`, which prints both.
-// See D910.
-fn refill<K, V>(t: Table<K, V>, room: i32) no.host {
+// them in, and what that saves is all of it: a pair costs 51 bytes of heap in
+// a table that grows into them and nothing at all in one that was told. It
+// saved half until D912 — the slots were made once and the keys and the values
+// still doubled on the way up — which is what `room` is for. Measured by
+// `check-costs.sh`, which prints both. See D910 and D912.
+fn refill<K, V>(t: Table<K, V>, howMany: i32) no.host {
+    // The pairs as well as the places to find them. The slots are made here
+    // and the keys and the values are arrays this cannot replace -- a table is
+    // a value and replacing a field of it replaces the copy's handle -- so
+    // they are given room where they stand. Without that, a table told how
+    // many were coming still doubled two of its three arrays on the way up
+    // and cost half of what one told nothing cost, where an array told the
+    // same thing costs nothing at all. See D912.
+    room(t.keys, howMany)
+    room(t.values, howMany)
     clear(t.slots)
-    for i in 0..room {
+    for i in 0..howMany {
         push(t.slots, EMPTY)
     }
     t.marks[0] = 0

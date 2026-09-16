@@ -1634,8 +1634,8 @@ tokens   what a token is and what it carries""",
         # saying nothing.
         "what": "a message suggesting a name that is not a builtin",
         "file": "src/check.c",
-        "from": r"""    "pop", "push",  "remove", "rest", "set",   "slice", "store",""",
-        "to": r"""    "pop", "push",  "remove", "rest", "set",   "slice", "store", "take",""",
+        "from": r"""    "pop", "push",  "remove", "rest", "room", "set",   "slice", "store",""",
+        "to": r"""    "pop", "push",  "remove", "rest", "room", "set",   "slice", "store", "take",""",
         "make": [],
         "tool": "tools/check-tables.sh",
         "caught": "the suggestion knows `take` and the checker does not",
@@ -1722,7 +1722,7 @@ tokens   what a token is and what it carries""",
                  r"""    {"return", U16}, {"return.none", U16},"""],
         "make": [],
         "tool": "tools/check-tables.sh",
-        "caught": "instructions: 151 kinds and 152 names",
+        "caught": "instructions: 152 kinds and 153 names",
     },
     {
         # And the same for the tokens, which is the other list this rule was
@@ -4972,9 +4972,17 @@ for file in "$@"; do""",
         # not know about — four ways to ask for that and one sentence for it.
         "what": "a lent array that grows without saying which refusal it is",
         "file": "src/vm.c",
-        "from": """                fail(vmp, frame, instruction, "K0608",
+        "from": """            Array *array = (--top)->object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
+
+            if (array->borrowed) {
+                fail(vmp, frame, instruction, "K0608",
                      "this array is the host's, so it cannot grow");""",
-        "to": """                fail(vmp, frame, instruction, "K0608",
+        "to": """            Array *array = (--top)->object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
+
+            if (array->borrowed) {
+                fail(vmp, frame, instruction, "K0608",
                      "this array is the host's, and it may not");""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
@@ -5602,6 +5610,21 @@ fn main() -> i32 {
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "a build that is not there answered as though it were",
+    },
+    {
+        # Room asked for and not made. A program that knows how many are coming
+        # says so and takes one block; one that does not doubles its way up and
+        # pays for the overshoot. A table's keys and values are two arrays it
+        # cannot replace, so being told how many pairs are coming bought half
+        # of what it buys an array until this was there. See D912.
+        "what": "room asked for and not made",
+        "file": "src/vm.c",
+        "from": """            if (wanted > (int64_t)array->capacity) {""",
+        "to": """            if (false && wanted > (int64_t)array->capacity) {""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "putting a pair in a table and 26 into one told",
     },
     {
         # What a tick cost the program, said as nought whatever it cost. It is

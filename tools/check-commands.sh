@@ -3852,6 +3852,7 @@ K0201|fn main() -> i32 {\n    let v: [i32; -1] = [1]\n    return v[0]\n}|how man
 K0201|fn main() -> i32 {\n    let v: [i32; "a"] = [1]\n    return v[0]\n}|write how many there are, or the name of a constant that is one
 K0207|fn main() -> i32 {\n    let s = "a{}b"\n    return len(s)\n}|write what fills it
 K0310|fn main() -> i32 {\n    let a: i32 = 1\n    let b: i32?? = a\n    if let inner = b {\n        if let n = inner {\n            return n\n        }\n    }\n    return 0\n}|a value becomes an optional once
+K0310|fn main() -> i32 {\n    let n = 1\n    room(n, 8)\n    return 0\n}|`room` makes room in an array
 REFUSED
 
 # And the one a command is refused for rather than a file: `call` with nothing

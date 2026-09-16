@@ -1349,7 +1349,7 @@ if (quiet_frame is None or text_frame is None or grown_frame is None or
         keyed_frame is None or told_frame is None or roomy_frame is None or
         stored_frame is None or housed_frame is None or quiet_frame != 0 or
         text_frame < 1 or grown_frame <= text_frame or
-        keyed_frame <= grown_frame or told_frame >= keyed_frame or
+        keyed_frame <= grown_frame or told_frame != 0 or
         roomy_frame != 0 or housed_frame != 0 or stored_frame < 1):
     print("costs: a frame step takes %s byte(s) an entity promising "
           "`no.alloc`, %s making a piece of text, %s growing an array and %s "
@@ -1742,9 +1742,9 @@ if not failed:
           "itself, and one that promises `no.alloc` takes %u byte(s) of heap "
           "an entity against %u for one that makes a piece of text, %u for "
           "one that grows an array and %u for one that puts a pair in a "
-          "table -- %u where the table was told how many were coming, and "
-          "nought where an array or a store was -- and %u for one that adds "
-          "to a store that was not, which "
+          "table -- nought where it was told how many were coming, as for an "
+          "array or a store that was -- and %u for one that adds to a store "
+          "that was not, which "
           "is work rather than time and the same count "
           "anywhere, with the rest of it measured on the machine "
           "this ran on"
@@ -1763,6 +1763,6 @@ if not failed:
              with_sign, without_sign, together, turn_ran, runs,
              a_frame, by_hand, reaches, len(instruction_names),
              asked_of_itself, quiet_frame, text_frame, grown_frame,
-             keyed_frame, told_frame, stored_frame))
+             keyed_frame, stored_frame))
 sys.exit(failed)
 PY

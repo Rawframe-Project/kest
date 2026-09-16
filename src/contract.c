@@ -212,6 +212,7 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
                 // there is nothing to copy: `rest` and `slice` differ in that
                 // one of them ends where it was already ending.
                 {"rest", NULL},
+                {"room", "`room` makes room in what it is given"},
                 {"set", NULL},
                 {"slice", "`slice` copies the piece it names"},
                 {"store", "`store()` makes something that can grow"},

@@ -500,7 +500,7 @@ static const char *takes_called(const char *name, uint32_t nth) {
 
 static const char *const BUILTINS[] = {
     "add", "array", "clear", "find",  "get",   "hash", "len", "matches",
-    "pop", "push",  "remove", "rest", "set",   "slice", "store",
+    "pop", "push",  "remove", "rest", "room", "set",   "slice", "store",
 };
 
 // The nearest thing a reader could have meant by a name that is not there: a
@@ -1306,6 +1306,37 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
         if (!kest_type_equal(value, array->element)) {
             expected_but(checker, expr->call.args[1]->span, array->element,
                          value, "this value");
+        }
+        return builtin(checker, "void");
+    }
+
+    // Room for what is coming, which is the other half of `array(n, v)`: that
+    // one makes a new array with room and this one gives an array it already
+    // has. What it does not change is what is in it or how many there are, so
+    // a program that asks for less than it holds has asked for nothing. See
+    // D912.
+    if (is_builtin(checker, expr, name, "room")) {
+        if (check_arity(checker, expr, 2) < 2) {
+            for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+                check_expr(checker, expr->call.args[i], NULL);
+            }
+            return builtin(checker, "void");
+        }
+        KestType *array = check_expr(checker, expr->call.args[0], NULL);
+        if (is_error(array) || array->tag != KEST_T_ARRAY) {
+            if (!is_error(array)) {
+                report(checker, expr->call.args[0]->span, "K0310",
+                       "`room` makes room in an array, found `%s`",
+                       type_name(checker, array));
+            }
+            check_expr(checker, expr->call.args[1], NULL);
+            return builtin(checker, "void");
+        }
+        KestType *many =
+            check_expr(checker, expr->call.args[1], builtin(checker, "i32"));
+        if (!is_error(many) && many->tag != KEST_T_INT) {
+            expected_but(checker, expr->call.args[1]->span,
+                         builtin(checker, "i32"), many, "`room`");
         }
         return builtin(checker, "void");
     }

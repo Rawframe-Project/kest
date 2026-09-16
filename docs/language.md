@@ -1695,7 +1695,21 @@ container: a store hands out references that survive a removal, and removing
 from one costs nothing.
 
 `clear` keeps the room it took, so `array(n, v)` and `clear` are together what
-`store(n)` is on its own: room for `n` and nothing in it. An array grows by
+`store(n)` is on its own: room for `n` and nothing in it. `room(xs, n)` is the
+same thing said to an array that already exists — room for `n` without changing
+what is in it or how many there are — which is what a program calls when it has
+an array it cannot replace. A table's keys and its values are two of those, so
+`table.refill` is written on it: a pair put into a table told how many are
+coming costs nothing of the heap, and one put into a table that grows into them
+costs fifty-one bytes.
+
+```kest
+let xs: [i32] = array()
+room(xs, 1000)
+```
+
+Asking for less than it holds asks for nothing, and it is the capacity rather
+than the length: `len` after one of these says what it said before. An array grows by
 doubling, and it grows where it stands when it is the last thing the heap
 handed out — which is what a loop filling one array is. Then the steps up cost
 nothing and what asking for room saves is the overshoot, since a thousand

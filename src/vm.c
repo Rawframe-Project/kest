@@ -2342,6 +2342,52 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             (top++)->object = array;
             break;
         }
+        case KEST_OP_ROOM: {
+            uint16_t of_which = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
+            int64_t wanted = (--top)->integer;
+            Array *array = (--top)->object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
+            if (array->borrowed) {
+                fail(vmp, frame, instruction, "K0608",
+                     "this array is the host's, so it cannot grow");
+                return false;
+            }
+            if (wanted > MAX_COUNTED) {
+                fail(vmp, frame, instruction, "K0630",
+                     "this array holds %d, which is all `len` can count",
+                     MAX_COUNTED);
+                return false;
+            }
+            // Room for what is coming and nothing about what is there: the
+            // length does not move, so a program that asks for less than it
+            // already holds is asking for nothing. One block, once, where a
+            // loop of pushes pays for a run of them.
+            if (wanted > (int64_t)array->capacity) {
+                uint32_t capacity = (uint32_t)wanted;
+                size_t was = (size_t)array->capacity * layout->size + 1;
+                size_t want = (size_t)capacity * layout->size + 1;
+                unsigned char *grown =
+                    array->capacity == 0
+                        ? NULL
+                        : kest_arena_extend(rt->heap, array->bytes, was, want);
+                if (grown == NULL) {
+                    grown = kest_arena_alloc(rt->heap, want, 8);
+                    if (grown == NULL) {
+                        no_room(vmp, frame, instruction, rt);
+                        return false;
+                    }
+                    if (array->length > 0) {
+                        memcpy(grown, array->bytes,
+                               (size_t)array->length * layout->size);
+                    }
+                }
+                array->bytes = grown;
+                array->capacity = capacity;
+            }
+            break;
+        }
         case KEST_OP_PUSH: {
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");

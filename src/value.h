@@ -32,7 +32,14 @@ typedef enum {
     // Growing moves the elements, so a borrowed block cannot be grown and the
     // machine says so rather than writing past what it was lent.
     KEST_OP_MAKE_ARRAY, // u16 layout
-    KEST_OP_PUSH,       // u16 layout
+    KEST_OP_PUSH,
+    // Room for that many without changing what is in it or how many there
+    // are. `array(n, v)` makes a new one with room and `clear` empties it,
+    // which is what a program does when it knows how many are coming -- and
+    // there was nothing that did it to one it already had. A table's keys and
+    // its values are arrays it cannot replace, so being told how many pairs
+    // are coming bought half of what it buys an array. See D912.
+    KEST_OP_ROOM,       // u16 layout
     KEST_OP_INDEX,      // u16 layout
     KEST_OP_POP_LAST,   // u16 layout, leaves an optional
     KEST_OP_TAKE,       // u16 layout, shifts what is after it down

@@ -887,6 +887,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"const.at", U16_U16_U16},        {"load", U16},         {"store", U16},
     {"load.n", U16_U16},   {"store.n", U16_U16},  {"field", U16_U16_U16},
     {"array", U16_U16},    {"make.array", U16},   {"push", U16},
+    {"room", U16},
     {"index", U16},        {"pop.last", U16},     {"take", U16},
     {"clear", NONE},       {"elem.addr", U16},
     {"load.slots", U16_U16_U16},              {"store.slots", U16_U16_U16},
@@ -1354,6 +1355,7 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_ARRAY:
     case KEST_OP_MAKE_ARRAY:
     case KEST_OP_PUSH:
+    case KEST_OP_ROOM:
     case KEST_OP_ADD:
     case KEST_OP_NEW_STORE:
     case KEST_OP_TEXT_SLICE:

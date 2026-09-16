@@ -1778,6 +1778,16 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         return true;
     }
 
+    if (kest_word_same("room", name, length)) {
+        const KestType *array =
+            expr->call.arg_count > 0 ? expr->call.args[0]->type : NULL;
+        const KestType *element = array == NULL ? NULL : array->element;
+        stack_pop(compiler, 2);
+        emit(compiler, KEST_OP_ROOM, expr->span);
+        emit_u16(compiler, layout_of(compiler, element), expr->span);
+        return true;
+    }
+
     if (kest_word_same("store", name, length)) {
         uint16_t stride = expr->type == NULL || expr->type->element == NULL
                               ? 1
