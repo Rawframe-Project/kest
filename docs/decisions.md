@@ -28295,3 +28295,34 @@ It is kept, and the price is written here rather than discovered later. A reader
 who wants the seven per cent back knows exactly what to take out and what the
 language loses when they do — which is the whole of what *cost is visible and
 provable* was ever supposed to mean.
+
+## D913: the same sentence, said to a store
+
+D912 asked whether a store's insides are reachable from `std`, so that giving an
+existing one room would not need a hundred and fifty-third instruction. They are
+not: a `store<T>` is the language's own shape and a program sees `add`, `remove`
+and a reference. Nothing in Kest can reach the four runs it keeps.
+
+But nothing needed to. `room` takes a handle, and a store is a handle — so the
+hundred and fifty-second instruction does both, and the third is not wanted.
+Inside, a store's growing was already written down as `room_for`, which is what
+`grow_store` doubles through; asking for a number instead of a doubling is the
+same call with the number the program said.
+
+```text
+a step adding to a store made with nothing            80 bytes an entity
+a step adding to one told afterwards                    0
+```
+
+Eighty is the highest per-entity cost of the three containers, because a store
+grows four runs at once — what it holds, what each has counted, which are live
+and which are free — and each of the four doubles. It is the container where
+being told is worth most, and it was the one that could only be told at the
+making.
+
+*What the turn is really about* is the shape of the question D912 left. That one
+cost seven per cent of a frame for a capability and wrote the price down; this
+one asked whether the price had to be paid twice and the answer is no. An
+instruction that takes a handle takes every handle, and the two things in this
+language that grow now answer the same sentence at the making — `array(n, v)`
+and `store(n)` — and the same sentence afterwards.

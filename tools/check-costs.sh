@@ -1319,6 +1319,9 @@ ROOMY_ARRAY = ('    let keep = array(%u, Npc("npc", 100))\n'
                "    let seen: table.Table<i32, i32> = table.empty()\n" % ROOM)
 NO_STORE = "    let kept: store<Npc> = store()\n"
 ROOMY_STORE = "    let kept: store<Npc> = store(%u)\n" % ROOM
+# And the same store told afterwards rather than when it was made, which is
+# what a program has when the store is inside something it was handed.
+TOLD_STORE = NO_STORE + "    room(kept, %u)\n" % ROOM
 
 
 def a_step_takes(which, made=NOTHING_MADE):
@@ -1338,6 +1341,7 @@ keyed_frame = a_step_takes('keyed(all, keep, seen)')
 told_frame = a_step_takes('keyed(all, keep, seen)', TOLD_TABLE)
 stored_frame = a_step_takes('housed(all, kept)', NO_STORE)
 housed_frame = a_step_takes('housed(all, kept)', ROOMY_STORE)
+roomy_store = a_step_takes('housed(all, kept)', TOLD_STORE)
 # The three containers this language has, side by side, and the promise beside
 # them. What is held is the order rather than the numbers: nought for the
 # promise, because that is what it means seen from outside; and a pair in a
@@ -1350,14 +1354,15 @@ if (quiet_frame is None or text_frame is None or grown_frame is None or
         stored_frame is None or housed_frame is None or quiet_frame != 0 or
         text_frame < 1 or grown_frame <= text_frame or
         keyed_frame <= grown_frame or told_frame != 0 or
-        roomy_frame != 0 or housed_frame != 0 or stored_frame < 1):
+        roomy_frame != 0 or housed_frame != 0 or roomy_store is None or
+        roomy_store != 0 or stored_frame < 1):
     print("costs: a frame step takes %s byte(s) an entity promising "
           "`no.alloc`, %s making a piece of text, %s growing an array and %s "
           "into one made with room, %s putting a pair in a table and %s into "
-          "one told how many were coming, %s adding to a store and %s to one "
-          "made with room"
+          "one told how many were coming, %s adding to a store, %s to one "
+          "made with room and %s to one told afterwards"
           % (quiet_frame, text_frame, grown_frame, roomy_frame, keyed_frame,
-             told_frame, stored_frame, housed_frame))
+             told_frame, stored_frame, housed_frame, roomy_store))
     failed = 1
 
 a_frame = a_step_of(HELPED) if have_checked else None

@@ -1323,10 +1323,11 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
             return builtin(checker, "void");
         }
         KestType *array = check_expr(checker, expr->call.args[0], NULL);
-        if (is_error(array) || array->tag != KEST_T_ARRAY) {
+        if (is_error(array) ||
+            (array->tag != KEST_T_ARRAY && array->tag != KEST_T_STORE)) {
             if (!is_error(array)) {
                 report(checker, expr->call.args[0]->span, "K0310",
-                       "`room` makes room in an array, found `%s`",
+                       "`room` makes room in an array or a store, found `%s`",
                        type_name(checker, array));
             }
             check_expr(checker, expr->call.args[1], NULL);

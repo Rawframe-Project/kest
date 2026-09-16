@@ -1696,9 +1696,11 @@ from one costs nothing.
 
 `clear` keeps the room it took, so `array(n, v)` and `clear` are together what
 `store(n)` is on its own: room for `n` and nothing in it. `room(xs, n)` is the
-same thing said to an array that already exists — room for `n` without changing
-what is in it or how many there are — which is what a program calls when it has
-an array it cannot replace. A table's keys and its values are two of those, so
+same thing said to one that already exists — room for `n` without changing what
+is in it or how many there are — which is what a program calls when it has a
+container it cannot replace. It takes either of the two things here that grow,
+an array or a store, because `array(n, v)` and `store(n)` are the same sentence
+said at the making and this is it said afterwards. A table's keys and its values are two of those, so
 `table.refill` is written on it: a pair put into a table told how many are
 coming costs nothing of the heap, and one put into a table that grows into them
 costs fifty-one bytes.

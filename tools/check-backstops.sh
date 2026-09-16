@@ -5612,6 +5612,24 @@ fn main() -> i32 {
         "caught": "a build that is not there answered as though it were",
     },
     {
+        # Room asked for in a store and not made. `store(n)` makes one with
+        # room and this is the same sentence said to one that is already
+        # there -- which is what a program has when the store is inside
+        # something it was handed. A store keeps four runs rather than one, so
+        # what it costs a frame that was not told is the highest of the three
+        # containers here. See D913.
+        "what": "room asked for in a store and not made",
+        "file": "src/vm.c",
+        "from": """                if (wanted > (int64_t)store->capacity &&
+                    !room_for(rt->heap, store, (uint32_t)wanted)) {""",
+        "to": """                if (false && wanted > (int64_t)store->capacity &&
+                    !room_for(rt->heap, store, (uint32_t)wanted)) {""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "made with room and 80 to one told afterwards",
+    },
+    {
         # Room asked for and not made. A program that knows how many are coming
         # says so and takes one block; one that does not doubles its way up and
         # pays for the overshoot. A table's keys and values are two arrays it

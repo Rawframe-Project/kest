@@ -34910,3 +34910,44 @@ is one array of slots and one of counts, so `room` may already be able to do it
 from inside `std`, if a store's insides are reachable there. Look first, and
 only reach for the hundred and fifty-third instruction if they are not — because
 the price of one is now known and written down.
+
+## The same sentence, said to a store
+
+D912 asked whether a store's insides are reachable from `std`, so giving an
+existing one room would not need a hundred and fifty-third instruction. They are
+not: a `store<T>` is the language's own shape and a program sees `add`, `remove`
+and a reference.
+
+But nothing needed to. `room` takes a handle and a store is a handle, so the
+hundred and fifty-second instruction does both and the third is not wanted.
+Inside, a store's growing was already written down as `room_for`, which is what
+`grow_store` doubles through — asking for a number instead of a doubling is the
+same call with the number the program said.
+
+```text
+a step adding to a store made with nothing            80 bytes an entity
+a step adding to one told afterwards                    0
+```
+
+Eighty is the highest per-entity cost of the three containers, because a store
+grows four runs at once — what it holds, what each has counted, which are live
+and which are free — and each of the four doubles. It is the container where
+being told is worth most, and it was the one that could only be told at the
+making.
+
+D912 cost seven per cent of a frame for a capability and wrote the price down;
+this asked whether the price had to be paid twice and the answer is no.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the five numbers the gate now prints are a table nobody can read
+without the gate. `docs/language.md` says an array grows by doubling and what
+that costs in words; it says nothing about a store's four runs, and nothing
+anywhere puts the three containers side by side with what a pair, an element and
+a place cost a frame. Write that paragraph — the numbers are measured, held and
+printed already, so this is the one thing left between them and a reader. And
+while writing it, check the words already there against the numbers: the
+reference says `remove` from a store costs nothing and `remove` from an array
+shifts, which is a claim about time and there is no measurement of either. If a
+sentence in that document is about a cost, it should be a sentence the gate
+holds or a sentence that says it is nobody's measurement.

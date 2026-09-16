@@ -2347,7 +2347,32 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
             const KestLayout *layout = &module->layouts[of_which];
             int64_t wanted = (--top)->integer;
-            Array *array = (--top)->object;
+            void *given = (--top)->object;
+            // The two things in this language that grow, through the one
+            // instruction: a store is made with room by `store(n)` and an
+            // array by `array(n, v)`, and this is the same sentence said to
+            // one that is already there. A store keeps four runs rather than
+            // one, so what it makes room in is four blocks at once, which is
+            // `room_for`'s to know. See D913.
+            if (KEST_HANDLE_IS(given, KEST_IS_STORE)) {
+                Store *store = given;
+                if (wanted > MAX_COUNTED) {
+                    fail(vmp, frame, instruction, "K0630",
+                         "this store holds %d, which is all `len` can count",
+                         MAX_COUNTED);
+                    return false;
+                }
+                if (wanted > (int64_t)store->capacity &&
+                    !room_for(rt->heap, store, (uint32_t)wanted)) {
+                    no_room_growing(vmp, frame, instruction, rt, "a store",
+                                    store->used,
+                                    sizeof(KestValue) * store->stride,
+                                    (uint32_t)wanted);
+                    return false;
+                }
+                break;
+            }
+            Array *array = given;
             HOLD(array, KEST_IS_ARRAY, "an array");
             if (array->borrowed) {
                 fail(vmp, frame, instruction, "K0608",
