@@ -5549,6 +5549,35 @@ fn main() -> i32 {
         "caught": "so a piece of the work went missing",
     },
     {
+        # A ternary, left as a token in the wrong place. `?` means optional
+        # here, so a reader shown only the token is being told their `?` is
+        # misplaced rather than that there is none — and the reference says
+        # there is no ternary in a paragraph they have not read. See D884.
+        "what": "a ternary told that its `?` is in the wrong place",
+        "file": "src/parser.c",
+        "from": """    if (found.kind == KEST_TOK_QUESTION) {""",
+        "to": """    if (false && found.kind == KEST_TOK_QUESTION) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0201 said `error[K0201]: expected end of line, found `?``",
+    },
+    {
+        # `+` on text, named and not answered. Everybody writes it, the
+        # reference says why there is none, and the reader who wrote it wants
+        # the hole that does the job. See D884.
+        "what": "`+` on text, told what is wrong and not what to write",
+        "file": "src/check.c",
+        "from": """        } else if (left != NULL && left->tag == KEST_T_TEXT &&
+                   op == KEST_TOK_PLUS) {""",
+        "to": """        } else if (false && left != NULL && left->tag == KEST_T_TEXT &&
+                   op == KEST_TOK_PLUS) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0314 said `error[K0314]: `+` does not apply to `text``",
+    },
+    {
         # A comparison broken over two lines, left to read as two mistakes. It
         # is the one thing this language will not take that a reader coming
         # from anywhere else writes without thinking, the reference spends four

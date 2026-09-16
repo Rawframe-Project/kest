@@ -3195,6 +3195,16 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
             kest_diags_suggest(checker->program->diags,
                                "one of two is not an order; `!a && b` is the "
                                "one somebody usually means");
+        } else if (left != NULL && left->tag == KEST_T_TEXT &&
+                   op == KEST_TOK_PLUS) {
+            // Text and `+` is what everybody writes first. The reference says
+            // there is no `+` on text and why — building a string reaches the
+            // heap, so a `no.alloc` body may hold one and may not build one —
+            // and the reader who wrote it is looking for what to write
+            // instead. See D884.
+            kest_diags_suggest(checker->program->diags,
+                               "a hole joins them: `\"{a}{b}\"`, and "
+                               "`text.join` joins a run of them");
         }
         return logical ? builtin(checker, "bool") : error_type(checker);
     }

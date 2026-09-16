@@ -32852,13 +32852,13 @@ Recorded as D865.
 
 **Runs:** `make check`, everything passing, with `TMPDIR=/var/tmp`.
 
-**Next:** the same reading, the next five hundred lines — from `Modules` to the
-end of `Types`. The rule is the same: find the place where the document explains
-a thing the language should not have needed explaining, and say what the
-explanation is standing in for. The one found this time was a message the
-compiler was not saying; the next may be a message that says the wrong thing, or
-a rule nobody would have guessed. One place, and what it costs the reader
-written beside it.
+**Next:** the sweep found its two by turning a sentence of the document into a
+question for the compiler — *there is no X*, so what is there? Do the same with
+the other sentence of that shape: the document says *`X` is refused* or *`X` is
+not one of them* a good many times too. Walk `docs/language.md` for every place
+it says a thing is refused, write it, and see whether what comes back names the
+rule and what to write instead. What is being looked for is the same gap said
+the other way round.
 
 ## A hop of a `for` is one instruction
 
@@ -33681,3 +33681,46 @@ explanation is standing in for. The one found this time was a message the
 compiler was not saying; the next may be a message that says the wrong thing, or
 a rule nobody would have guessed. One place, and what it costs the reader
 written beside it.
+
+## There is no X, and here is what there is
+
+The next five hundred lines, read the same way. The document says *there is no*
+X eleven times in them, and that turned the reading into a sweep rather than a
+hunt: for each, write what a reader would write and see whether the compiler
+says what to write instead.
+
+Nine of the eleven already do — brackets round a condition, a `let` with no
+value, `%=`, `-> void`, a semicolon, a comparison written as a statement,
+`print`, a method call, an `if` that gives a value with no `else`. Every one of
+them names the rule and says what to write.
+
+Two did not. `a > 0 ? 1 : 2` came back as `expected end of line, found ?` —
+which is the worse of the two, because `?` means something here, so a reader
+shown only the token is being told their `?` is in the wrong place when it is
+not in the wrong place, it is not a thing. And `"x" + "y"` came back as `` `+`
+does not apply to `text` ``, which names what is wrong and not what to do, for
+the thing everybody writes first.
+
+Both say the answer now: an `if` gives a value with `->`, and a hole joins two
+pieces of text.
+
+What the sweep is worth beyond the two lines it found is the shape of the
+question. "There is no X" is a sentence a document writes and a compiler can
+say, and the places it appears are a list of what a reader will try. Nine of
+eleven were already answered by somebody who had the same thought without
+writing it down; the two that were not are the two where the wrong thing is
+still, in some other language, the right thing.
+
+Both wordings are in the refusal table and each has a hole.
+
+Recorded as D884.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the sweep found its two by turning a sentence of the document into a
+question for the compiler — *there is no X*, so what is there? Do the same with
+the other sentence of that shape: the document says *`X` is refused* or *`X` is
+not one of them* a good many times too. Walk `docs/language.md` for every place
+it says a thing is refused, write it, and see whether what comes back names the
+rule and what to write instead. What is being looked for is the same gap said
+the other way round.

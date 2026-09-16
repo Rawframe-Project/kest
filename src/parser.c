@@ -390,6 +390,18 @@ static void end_statement(Parser *parser) {
     }
     error_at(parser, found.span, "K0201", "expected end of line, found %s",
              kest_token_name(found.kind));
+    // A ternary, which is what somebody writes who has met a language with
+    // one. The statement before it was whole, so what is left is a `?` where a
+    // line should have ended — and `?` means something else here, so a reader
+    // shown only the token is being told their `?` is in the wrong place
+    // rather than that there is none. The reference says there is no ternary;
+    // this is the reader who has not read it yet. See D884.
+    if (found.kind == KEST_TOK_QUESTION) {
+        kest_diags_suggest(parser->diags,
+                           "there is no ternary here and `?` means optional: "
+                           "an `if` gives a value with `->`, as "
+                           "`if c -> a else -> b`");
+    }
     // A statement that begins with a word this language nearly has is a
     // misspelt keyword, and the message above is about the token after it —
     // which is the one thing in the line that is not wrong. So the word is

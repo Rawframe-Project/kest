@@ -26981,3 +26981,58 @@ the moment somebody needs it.
 
 Both wordings are in the refusal table, so each is a sentence something has been
 made to say, and a hole takes the suggestion away.
+
+## D884: there is no X, and here is what there is
+
+The next five hundred lines, read the same way. The document says *there is no*
+X eleven times in them, and that turned the reading into a sweep rather than a
+hunt: for each one, write what a reader would write and see whether the compiler
+says what to write instead.
+
+**Nine of the eleven already do**, and they are the reason this took a sweep to
+find:
+
+| written | said |
+|---|---|
+| `if (x < 3) {` | *write `if x < 3 {`* |
+| `let a: i32` | *a `let` gives its value where it is written* |
+| `a %= 2` | *they are `+=`, `-=`, `*=` and `/=`; write it out: `x = x % y`* |
+| `fn f() -> void` | *a function that gives nothing back is written with no `->`* |
+| `let a = 1;` | *remove it; a line break ends a statement* |
+| `a == b` alone | *give it a name with `let`, return it, or write the call that does something* |
+| `print("hello")` | *`import std.io` and call `io.print`* |
+| `t.upper()` | *there are no methods here: write `text.upper(...)`* |
+| `if true -> 1` with no `else` | *there has to be a value on both ways through* |
+
+**Two did not.**
+
+```text
+let b = a > 0 ? 1 : 2
+error[K0201]: expected end of line, found `?`
+```
+
+That is the worse of the two, because `?` *means* something here. A reader shown
+only the token is being told their `?` is in the wrong place — and it is not in
+the wrong place, it is not a thing. It says so now: *there is no ternary here
+and `?` means optional: an `if` gives a value with `->`, as
+`if c -> a else -> b`*.
+
+```text
+let a = "x" + "y"
+error[K0314]: `+` does not apply to `text`
+```
+
+This one names what is wrong and not what to do, which everybody writes first
+and which the reference answers two paragraphs away: building a string reaches
+the heap, so a `no.alloc` body may hold one and may not build one. It says the
+answer now: *a hole joins them: `"{a}{b}"`, and `text.join` joins a run of
+them*.
+
+*What the sweep is worth beyond the two lines it found* is the shape of the
+question. "There is no X" is a sentence a document writes and a compiler can
+say, and the places it appears are a list of what a reader will try. Nine of
+eleven were already answered by somebody who had the same thought without
+writing it down; the two that were not are the two where the wrong thing is
+still, in some other language, the right thing.
+
+Both wordings are in the refusal table and each has a hole.
