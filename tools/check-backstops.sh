@@ -4776,10 +4776,11 @@ for file in "$@"; do""",
         # whatever the other store happens to keep there.
         "what": "a reference read in whatever store it is handed to",
         "file": "src/vm.c",
-        "from": r"""    if (index >= store->used || !store->live[index] ||
+        "from": r"""    if (world != store->world || index >= store->used || !store->live[index] ||
         store->generations[index] != generation) {""",
         "to": r"""    (void)generation;
-    if (index >= store->used || !store->live[index]) {""",
+    if (world != store->world || index >= store->used ||
+        !store->live[index]) {""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -5630,12 +5631,12 @@ fn main() -> i32 {
         # number. See D915.
         "what": "a frame step's instructions written down and not measured",
         "file": "docs/language.md",
-        "from": """**fifty-nine instructions**""",
-        "to": """**fifty-eight instructions**""",
+        "from": """**fifty-seven instructions**""",
+        "to": """**fifty-six instructions**""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "a frame step an entity is 58 instruction(s)",
+        "caught": "a frame step an entity is 56 instruction(s)",
     },
     {
         # And the other half of that paragraph: what the build that checks
@@ -5646,14 +5647,14 @@ fn main() -> i32 {
         # reached by a hole of its own. See D907 and D915.
         "what": "what the checked build asks written down and not measured",
         "file": "docs/language.md",
-        "from": """it asks its own compiler **fifty-two
+        "from": """it asks its own compiler **fifty-one
 questions**""",
-        "to": """it asks its own compiler **fifty-one
+        "to": """it asks its own compiler **fifty
 questions**""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "asks 51 question(s) over them",
+        "caught": "asks 50 question(s) over them",
     },
     {
         # The section that quotes a duration, with the sentence saying whose
@@ -6409,12 +6410,12 @@ fn main() -> i32 {
         # people and people read the sentence. See D886.
         "what": "a number the reference quotes that a run no longer says",
         "file": "docs/language.md",
-        "from": """numbers together say how much of that finding out answered: 97 of 239 for""",
-        "to": """numbers together say how much of that finding out answered: 97 of 240 for""",
+        "from": """numbers together say how much of that finding out answered: 97 of 299 for""",
+        "to": """numbers together say how much of that finding out answered: 97 of 300 for""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",
         "arguments": ["docs/language.md", "docs/decisions.md"],
-        "caught": "the reference says 97 of 240 were worked out for `examples/numbers.kest`",
+        "caught": "the reference says 97 of 300 were worked out for `examples/numbers.kest`",
     },
     {
         # A suggestion under somebody else's refusal. A suggestion goes to the
