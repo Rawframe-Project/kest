@@ -33765,3 +33765,61 @@ what a program does at run time — what wraps, what is folded, what costs
 nothing — write the program that would show each, and check that what runs
 matches what is written. A reference that is wrong about what runs is worse than
 one that is quiet about it.
+
+## What a frame does not pay for, and one of three that did
+
+The reference's third sentence shape is the promise — *X is what happens* — and
+the one worth writing down is its list of values the compiler works out where
+they stand: *a case written in a body, a hash of a piece of text, a run of
+numbers indexed by one*. Emitted, one of the three was true.
+
+`hash("sword")` inside a function compiled to `const "sword"` and `hash.t`,
+every call, while the same call written as a `const` was a number before the
+program started. The folder has known how to do this since D670; nothing asked
+it. `compile_folded` was offered a field and an index and never a call — and a
+call is the one expression kind that holds all three of the folder's builtins,
+`hash`, `len` and a conversion.
+
+One condition at the top of `compile_call` fixes it, asked where the answer is
+a number — which is what all three of the folder's builtins give back. The
+examples went from 78310 to 78268 bytes of code, `lookup.main` from one folded
+value to six, and `i32(hash("...") % 1000)` is now a single `const`. What says
+it is the right number is the half beside it in `examples/lookup.kest`: the
+same hash taken through a call the folder cannot see through.
+
+Offered every call it went further — the folder works out a shape built from
+values written down too, which took the tree to 77769 bytes — and that broke a
+backstop: a struct with nothing in it became a constant, and the branch saying
+what an empty one is built as was reachable from no program anybody could
+write. So the fold is the three the reference names and no more, and folding a
+shape is its own turn with its own hole.
+
+Two checks had to be told about the change, both for the same reason: their
+probes stopped reaching what they were about because the compiler got better at
+it. `check-costs.sh` weighed the stack a body full of `i32('a')` asks for, and
+those are numbers before the program starts now. `check-commands.sh` held the
+machine's hash of `"abc"` against a file's mark, and the machine stopped
+hashing. Both hand the value through a call the folder cannot see through now.
+
+Beside it, the walk found a number that had gone stale. The reference said the
+folder answered *nineteen of a hundred and ten* for `examples/numbers.kest`; a
+run says 59 of 216, and had said something other than nineteen for a long time.
+Nothing noticed, because a number written in prose is read by people and people
+read the sentence rather than the number. `check-docs.sh` now reads every number
+the reference quotes about a named example's run and asks the run.
+
+`check-costs.sh` holds the three kinds themselves: a program with one of each,
+and what says a value was not paid for is that the instruction which would have
+done the work is nowhere in what `emit` printed.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same list, one entry short. A run of numbers written in a body —
+`let xs: [i32; 4] = [10, 20, 30, 40]` — is still four `const` and a `store.n`
+on every call, and only a `const` run is read where it stands. A local that is
+never written and whose value folds whole is a chunk constant the frame reads
+rather than builds, which is the same rule `compile_folded` keeps for a name.
+Do that, and count what it costs the examples. The other loose end is the 1596
+bytes the reference says one walk of `examples/embed.kest` costs: nothing holds
+it, because what knows it is a host with a clock on the heap rather than a
+command.

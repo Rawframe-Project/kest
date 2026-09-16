@@ -110,6 +110,20 @@ fn main() -> i32 {
         return 11
     }
 
+    // And the third place the same arithmetic happens: the same call written
+    // in a body. The folder has always known how to work one of these out and
+    // nothing asked it about a call inside a function, so a program that
+    // hashed a name of five letters hashed them again on every frame that
+    // went past. It is a number in the chunk now, and what says it is the
+    // right number is the half beside it, which came from a call the folder
+    // cannot see through. See D886.
+    if hash("sword") != hash(spoken("sword")) {
+        return 12
+    }
+    if len(TIERS) != 4 || i32(u8(300)) != 44 {
+        return 13
+    }
+
     io.print("found what was there, and said nothing about what was not")
     return 0
 }

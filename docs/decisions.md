@@ -27092,3 +27092,72 @@ the one worth the walk: nothing failed, no check went red, and the compiler had
 been confidently telling a particular reader a rule they had not broken.
 
 Four wordings in the refusal table, four holes.
+
+## D886: a call in a body was never offered to the folder
+
+The third sentence shape in the reference, after *there is no X* and *X is
+refused*, is the promise: *X is what happens*. The one worth walking is the
+list of what the compiler works out where it stands, because it names three
+things one by one:
+
+> A case written in a body, a hash of a piece of text, a run of numbers indexed
+> by one — each of those is a value a frame does not pay for.
+
+Written and emitted, one of the three was true.
+
+```text
+fn hashed() -> u64 {
+    return hash("sword")
+}
+  0000  const           0  ; "sword"
+  0003  hash.t
+```
+
+A program with a name of five letters in it hashed those five letters on every
+frame that went past, while `const SWORD: u64 = hash("sword")` two lines above
+it was a number before the program started. The folder knew how to do the work
+— D670 taught it `hash` and `len`, D669 taught it a conversion — and nothing
+ever asked it. `compile_folded` was offered a field and an index and not a
+call, so the one expression kind that holds all three of the folder's builtins
+was the one kind it never saw.
+
+One condition at the top of `compile_call`, asked only where the answer is a
+number, which is what all three of the folder's builtins give back. The
+examples went from 78310 to 78268 bytes of code, `examples/lookup.kest` from
+one folded value in `main` to six, and `i32(hash("...") % 1000)` in a body is
+now a single `const`.
+
+*Where the condition stopped* is the part worth writing down. Offered every
+call, the folder also works out a shape built from values written down —
+`Vec3(0.0, 1.0, 0.0)` is as settled as a hash is — and that took the tree down
+to 77769 bytes and broke a backstop: a struct with nothing in it became a
+constant, and the branch that says what an empty one is built as was then
+reachable from no program anybody could write. A hole nothing can reach is a
+net nobody has seen catch anything. So this fold is the three the reference
+names and no more, and folding a shape is a change with its own hole to write.
+
+Two checks had to be told about it, both for the same reason: their probes
+stopped reaching what they were about because the compiler got better at the
+thing they were about. `check-costs.sh` counted the stack a body full of byte
+literals asks for, written `i32('a') + i32('b') + …` — every one of which is
+now a number before the program starts, so the byte-literal path it was
+weighing was never compiled. And `check-commands.sh` held the machine's hash
+of `"abc"` against the mark of a file holding those three bytes, and the
+machine stopped hashing anything. Both now hand the value through a call the
+folder cannot see through. That is the hazard of making a compiler better at
+something: the checks that watch it are written in the language it compiles.
+
+*What is worth more than the change* is what the walk found beside it. The
+sentence two paragraphs down said the folder answered **nineteen of a hundred
+and ten** for `examples/numbers.kest`. A run says fifty-nine of two hundred and
+sixteen, and had said something other than nineteen for a long time — the
+number went stale silently, because a number written in prose is read by people
+and people read the sentence rather than the number. It is held now:
+`check-docs.sh` reads every number the reference quotes about a named example's
+run and asks the run.
+
+There is one more of those in the document — the 1596 bytes one walk of
+`examples/embed.kest` costs — and nothing holds it, because what knows it is a
+host with a clock on the heap rather than a command. That is a walk of its own.
+
+Two holes: the fold, and the number.

@@ -5578,6 +5578,38 @@ fn main() -> i32 {
         "caught": "K0314 said `error[K0314]: `+` does not apply to `text``",
     },
     {
+        # A call in a body never offered to the folder. `hash` over a piece of
+        # text that is written down is a number the compiler works out at a
+        # declaration and ran on every frame inside a function, which is the
+        # reference's own sentence about what a frame does not pay for being
+        # untrue of two of the three it names. See D886.
+        "what": "a call whose answer cannot change worked out every time",
+        "file": "src/compile.c",
+        "from": """    if (expr->type != NULL &&
+        (expr->type->tag == KEST_T_INT || expr->type->tag == KEST_T_FLOAT) &&""",
+        "to": """    if (false && expr->type != NULL &&
+        (expr->type->tag == KEST_T_INT || expr->type->tag == KEST_T_FLOAT) &&""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "the three values a frame does not pay for are 2 value(s) worked out",
+    },
+    {
+        # A number the reference quotes from a run, gone stale. The sentence
+        # about how much of the folder's asking answered said nineteen of a
+        # hundred and ten long after it was fifty-nine of two hundred and
+        # sixteen, and nothing noticed, because a number in prose is read by
+        # people and people read the sentence. See D886.
+        "what": "a number the reference quotes that a run no longer says",
+        "file": "docs/language.md",
+        "from": """numbers together say how much of that finding out answered: 59 of 216 for""",
+        "to": """numbers together say how much of that finding out answered: 59 of 217 for""",
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "the reference says 59 of 217 were worked out for `examples/numbers.kest`",
+    },
+    {
         # A suggestion under somebody else's refusal. A suggestion goes to the
         # diagnostic that came last, whoever made it, and a parser recovering
         # says nothing -- so `let v: [i32; -1]` was told that a `let` gives its

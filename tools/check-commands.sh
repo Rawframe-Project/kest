@@ -5024,8 +5024,16 @@ marked_bytes=$("$kest" check --json "$scratch"/marking/bytes.kest 2>&1 \
 cat > "$scratch"/marking/hashing.kest <<'KEST'
 import std.io
 
+// Handed through a call, because since D886 a hash of a piece of text written
+// down is a number the compiler works out where it stands -- and a number in
+// the chunk is the folder's arithmetic, which is the half this already has.
+// What is wanted here is the machine's.
+fn spoken(t: text) -> text {
+    return t
+}
+
 fn main() -> i32 {
-    io.print("{hash("abc")}")
+    io.print("{hash(spoken("abc"))}")
     return 0
 }
 KEST

@@ -343,20 +343,23 @@ try:
     # counted twice, because `emit_constant` pushes and four places pushed
     # beside it, and a body full of them asked for twice the stack it uses.
     # Written as two programs rather than as a number, because a number here
-    # would be this compiler's arithmetic held to itself.
+    # would be this compiler's arithmetic held to itself. Each byte is added to
+    # something the function was handed, because a conversion of a byte written
+    # down is a value the compiler works out where it stands since D886 -- and
+    # a value worked out is a byte literal this never compiles.
     letters = ["'a'", "'b'", "'c'", "'d'", "'e'"]
     numbers = ["97", "98", "99", "100", "101"]
     counted = {}
     for which, written in (('letters', letters), ('numbers', numbers)):
         spelled = os.path.join(work, which + '.kest')
         open(spelled, 'w').write(
-            "fn f() -> i32 {\n"
+            "fn f(by: u8) -> i32 {\n"
             "    return %s\n"
             "}\n"
             "\n"
             "fn main() -> i32 {\n"
-            "    return f() - 495\n"
-            "}\n" % ' + '.join("i32(%s)" % one for one in written))
+            "    return f(0) - 495\n"
+            "}\n" % ' + '.join("i32(%s + by)" % one for one in written))
         asked_ran = subprocess.run(['./kest', 'emit', spelled, '--json'],
                                    capture_output=True, text=True,
                                    stdin=subprocess.DEVNULL)
@@ -717,6 +720,19 @@ def what_emit_printed(body):
     return printed
 
 
+# What a run of one command said about itself, which is how a stage is read
+# against the stage before it and how a body is read for what was worked
+# out inside it.
+def what_it_said(command, where, name):
+    ran = subprocess.run(['./kest', command, '--json', where],
+                         capture_output=True, text=True,
+                         stdin=subprocess.DEVNULL,
+                         env=dict(os.environ, KEST_LIB='lib'))
+    if ran.returncode != 0:
+        return None
+    return json.loads(ran.stdout).get(name)
+
+
 def what_a_turn_is(body):
     printed = what_emit_printed(body)
     if printed is None:
@@ -959,6 +975,70 @@ if have_checked and (turn_ran is None or quiet_walk is None or
     print("costs: a turn of a `for` is %s instruction(s) where it is written "
           "and the machine ran %s of them"
           % (None if quiet_walk is None else quiet_walk[0], turn_ran))
+    failed = 1
+
+# And the three kinds of value the reference names one by one: a case written
+# in a body, a hash of a piece of text, and a run of numbers indexed by one.
+# Each is something the folder has always known how to work out, and a call
+# written in a body was never offered to it — so a program that hashed a name
+# of three letters hashed them again on every frame that went past, while the
+# same call written as a constant was a number before the program started. What
+# says a value was not paid for is that the instruction which would have done
+# the work is nowhere in what `emit` printed. See D886.
+def instructions_of(where):
+    ran = subprocess.run(['./kest', 'emit', where], capture_output=True,
+                         text=True, stdin=subprocess.DEVNULL,
+                         env=dict(os.environ, KEST_LIB='lib'))
+    if ran.returncode != 0:
+        return None
+    return {found.group(1)
+            for found in re.finditer(r'^  \d{4}  (\S+)', ran.stdout, re.M)}
+
+
+NOT_PAID_FOR = """module paying
+
+enum Door {
+    Shut
+    Open
+}
+
+const TIERS: [i32; 4] = [0, 90, 250, 1200]
+
+fn tier(at: i32) -> i32 {
+    return TIERS[at]
+}
+
+fn hashed() -> u64 {
+    return hash("sword")
+}
+
+fn chosen() -> i32 {
+    let door = Door.Open
+    return match door {
+        Shut -> 0
+        Open -> 1
+    }
+}
+
+fn main() -> i32 {
+    return tier(0) + i32(hashed() % 2) + chosen() - 1
+}
+"""
+paying = os.path.join(work, 'paying.kest')
+with open(paying, 'w') as writing:
+    writing.write(NOT_PAID_FOR)
+there = instructions_of(paying)
+paying_bodies = what_it_said('emit', paying, 'functions')
+worked_out = (None if paying_bodies is None
+              else sum(body['folded'] for body in paying_bodies))
+if (there is None or worked_out is None or 'hash.t' in there or
+        'const.at' not in there or worked_out < 3):
+    print("costs: the three values a frame does not pay for are %s value(s) "
+          "worked out, with the hash %s and the run %s"
+          % (worked_out,
+             "still run" if there is None or 'hash.t' in there else "folded",
+             "built" if there is None or 'const.at' not in there
+             else "read where it stands"))
     failed = 1
 
 shutil.rmtree(work, ignore_errors=True)

@@ -1878,6 +1878,27 @@ static void compile_value_call(Compiler *compiler, const KestExpr *expr) {
 static void compile_call(Compiler *compiler, const KestExpr *expr) {
     const KestExpr *callee = expr->call.callee;
 
+    // A call whose answer cannot be anything else is a value rather than work.
+    // The folder has always known three of them -- `hash` over something
+    // written down, `len` of a run whose size the type says, and a conversion
+    // of a number -- which is what makes `const H: u64 = hash("abc")` a number
+    // before the program starts. Nothing asked it about the same call written
+    // in a body, so a program that hashed a name of three letters hashed them
+    // again on every frame that went past. The reference says a hash of a
+    // piece of text is a value a frame does not pay for; it is one now.
+    //
+    // Asked only where the answer is a number, which is what all three of
+    // them give back. The folder can also work out a shape built from values
+    // written down -- `Vec3(0.0, 1.0, 0.0)` is as settled as a hash is -- and
+    // that is a wider change than this one: it makes a struct with nothing in
+    // it a constant, which is the one thing that reaches the branch below
+    // holding what an empty one is built as. See D886.
+    if (expr->type != NULL &&
+        (expr->type->tag == KEST_T_INT || expr->type->tag == KEST_T_FLOAT) &&
+        compile_folded(compiler, expr)) {
+        return;
+    }
+
     // A function is a value, so it is reached the way a value is: out of an
     // array, out of a store, out of whatever holds it. Only a name and a
     // dotted name are looked up as names, and what is left is called through

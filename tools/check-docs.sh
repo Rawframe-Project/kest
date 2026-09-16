@@ -1054,6 +1054,29 @@ for page in ('README.md', 'docs/language.md'):
                   % (page, name))
             failed = 1
 
+# And the numbers the reference quotes from a run. A document that says what a
+# program answered is a document that was true the day it was written: the
+# sentence about how much of the folder's asking answered said nineteen of a
+# hundred and ten long after it had become fifty-nine of two hundred and
+# forty-one, and nothing anywhere noticed, because a number in prose is read by
+# people and people read the sentence rather than the number. Asked of a run,
+# which is the only thing that knows. See D886.
+worked_out = some("the folder's answers the reference quotes", re.findall(
+    r'(\d+) of (\d+) for\s+`(examples/[\w.]+\.kest)`',
+    open('docs/language.md').read()))
+for answered, asked, about in worked_out:
+    ran = subprocess.run(['./kest', 'emit', '--json', about],
+                         capture_output=True, text=True,
+                         stdin=subprocess.DEVNULL,
+                         env=dict(os.environ, KEST_LIB='lib'))
+    said = json.loads(ran.stdout) if ran.returncode == 0 else {}
+    if (said.get('folds') != int(answered) or
+            said.get('asked') != int(asked)):
+        print("docs: the reference says %s of %s were worked out for `%s` and "
+              "a run says %s of %s"
+              % (answered, asked, about, said.get('folds'), said.get('asked')))
+        failed = 1
+
 if not failed:
     print('every documented block parses: %u, is in the one form, and checks '
           'and compiles where it stands on its own: %u of %u, the other %u '
@@ -1071,9 +1094,10 @@ if not failed:
           'somebody installing it reads, and every one of the %u '
           'measurements this tree takes is shown over the work it was taken '
           'over, and every `make` a page tells somebody to run is one of the '
-          '%u rules there are'
+          '%u rules there are, and each of the %u number(s) it quotes from a '
+          'run is what that run answers'
           % (checked, made_code, standing, quoting, said_it, whole, fenced,
              messages, shown, typed, called, pointed, operators,
-             len(places), len(taken), len(rules)))
+             len(places), len(taken), len(rules), len(worked_out)))
 sys.exit(failed)
 PY
