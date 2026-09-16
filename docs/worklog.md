@@ -35179,3 +35179,47 @@ what they are of. So read the list out of the document rather than keeping it in
 the check: a paragraph that quotes a bold figure beside an instrument is a thing
 to measure and hold, and an instrument in `tools` whose paragraph quotes none is
 a number nobody wrote down. Then a fifth instrument is a paragraph, not a block.
+
+## The list of instruments, read out of the reference (D919)
+
+The four checks D915 to D918 added each read a paragraph of `What running costs`
+and hold its figures to a run. What they were missing is the list: nothing said a
+fifth instrument had to have a paragraph, and nothing said a figure written in
+one had to be measured.
+
+Both are held now, and neither is written down twice.
+
+Every instrument in `tools` — `frame.kest`, `crossing.kest`, `reference.kest`
+and `inward.c` — has to be named in that section with a figure beside it. An
+instrument whose paragraph quotes no count is a duration with nothing under it.
+
+And every figure written in bold there has to be one some pattern above caught.
+Which of a pattern's groups are figures is read off the match rather than listed:
+a group whose text begins right after the two stars is a bold figure. Eleven
+figures about four instruments, and the two sets held to each other — so a bold
+figure added to a paragraph with nothing measuring it fails the gate, which is
+the hole D915 left open.
+
+Both were watched catching something before the holes were written: a `**one**`
+added to the crossing-in paragraph, and a spare `.kest` dropped into `tools`.
+
+The four blocks stay as four. They hold different shapes — a breakdown by
+instruction, a difference between two loops, two counts of two kinds — and one
+rule for all of them would say less about each. What is shared is the list, and
+the list is the part that goes stale.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `What running costs` is now a section the gate reads as a list, and the
+other measurement in these documents is not. `check-ceilings.sh` walks a ladder
+of `ulimit -v` and prints where each program first refuses, and the reference has
+a table of what there is a most of that `check-tables.sh` holds — but what a
+program costs to compile at each rung is printed by the gate and written down
+nowhere. D684 says that number was held once, was about the machine as much as
+the program, and was taken out for it. The lesson of D915 is that an order is
+what you hold when you do not know the number, and the lesson of D916 is that a
+number you cannot hold can still be said to be whose it is. So write what
+compiling costs into the reference the way the container table is written — as
+this machine's, said so — and hold the shape rather than the figure: that it
+grows with the source it read and that the ladder's rungs are in the order the
+ladder is.

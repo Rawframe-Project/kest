@@ -28507,3 +28507,30 @@ calls and that is the one thing the instrument fixes; it is compiled against the
 sanitised objects, since the build that checks itself is the one that counts. Two
 runs at two call counts, subtracted, so what the machine does either side of the
 work does not land in the number.
+
+## D919: the list of instruments, read where a reader reads it
+
+D915 through D918 put a count beside every duration the reference quotes, in
+four blocks of `check-costs.sh` that each read a paragraph, run a program at two
+sizes and compare. Four blocks is one rule written four times, and the thing they
+are written about is already a list: `What running costs` names each instrument
+and writes its figures in bold.
+
+So the list is read out of the document. Every instrument in `tools` — the three
+in Kest and the one in C — has to be named there with a figure beside it, and a
+fifth one added without a paragraph is a duration with nothing under it, which is
+what all four were before D915.
+
+**And which figures are held is not a list either.** A figure this check
+compares is one that some pattern above caught; a figure a reader is given is one
+written in bold. Which of a pattern's own groups are figures is read off the
+match — a group whose text begins right after the two stars is a bold one — so
+nothing is written down twice, and the two sets are held to each other. That
+closes the hole D915 left open: every number in those paragraphs was held to a
+run, and nothing said the *next* one would be. A figure written in bold with
+nothing measuring it is now a gate that fails.
+
+The four blocks stay. They hold different shapes — a breakdown by instruction, a
+difference between two loops, two counts of two kinds — and folding them into one
+would be a rule that says less about each. What is shared is the list, and the
+list is the part that goes stale.

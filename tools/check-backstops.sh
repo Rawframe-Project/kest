@@ -5732,6 +5732,37 @@ anywhere, and it is why the gate holds""",
         "caught": "a crossing in runs 3 instruction(s)",
     },
     {
+        # A figure written in bold beside an instrument with nothing measuring
+        # it. Every number in those four paragraphs is held to a run, and until
+        # D919 nothing said the next one would be: the figures a check compares
+        # are the ones its own patterns caught, and the ones a reader is given
+        # are the ones in bold, and the two are held to each other now.
+        "what": "a figure written in bold that nothing measures",
+        "file": "docs/language.md",
+        "from": """loop. Fifteen nanoseconds""",
+        "to": """loop, of which **one** is a jump. Fifteen nanoseconds""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "in bold where it says what running costs and this holds",
+    },
+    {
+        # And an instrument the reference stops saying a figure about. What
+        # running costs is the list of them, so an instrument that falls off it
+        # is a duration with nothing under it -- which is what all four were
+        # before D915. Renamed rather than deleted, because the paragraph is
+        # what the other holes read. See D919.
+        "what": "an instrument the reference says no figure about",
+        "file": "docs/language.md",
+        "from": """`tools/reference.kest` is a hop of a loop""",
+        "to": """`tools/sparse.kest` is a hop of a loop""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "`tools/reference.kest` is an instrument and what running "
+                  "costs says no figure about it",
+    },
+    {
         # Room asked for in a store and not made. `store(n)` makes one with
         # room and this is the same sentence said to one that is already
         # there -- which is what a program has when the store is inside

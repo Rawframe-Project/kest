@@ -1836,6 +1836,60 @@ if inward_says is not None and have_checked:
                  ran_in, asked_in, ran_turn, asked_turn))
         failed = 1
 
+# And the list of what all that is about, read out of the document rather than
+# kept here. Four instruments, four paragraphs, four blocks above -- and the
+# reference is already the list: each paragraph names its instrument and writes
+# its figures in bold. So the two things a fifth instrument would need are held
+# to each other here, and adding one is then a paragraph rather than a block.
+#
+# Which figures are held is not a list either. A figure this check compares is
+# one some pattern above caught, and a figure written in bold is one whose match
+# begins right after the two stars -- so the patterns say which of their own
+# groups are figures, and nothing has to be written down twice. A bold figure
+# added to a paragraph with nothing measuring it is then a gate that fails,
+# which is the hole D915 left: every number in those paragraphs was held and
+# nothing said the next one would be. See D919.
+def bold_in(said_by):
+    if said_by is None:
+        return []
+    return [said_by.group(which_at)
+            for which_at in range(1, (said_by.re.groups or 0) + 1)
+            if said_by.string[said_by.start(which_at) - 2:
+                              said_by.start(which_at)] == '**']
+
+
+RUNNING = ''.join(piece_of for piece_of in re.split(r'\n(?=## )', REFERENCE)
+                  if piece_of.startswith('## What running costs'))
+written_bold = some("the figures the reference writes in bold", re.findall(
+    r'\*\*([a-z-]+)(?:\s+(?:instructions|questions))?\*\*', RUNNING))
+held_bold = (bold_in(step_says) + bold_in(crossed_says) +
+             bold_in(reading_says) + bold_in(inward_says))
+if sorted(written_bold) != sorted(held_bold):
+    print("costs: the reference writes %s in bold where it says what running "
+          "costs and this holds %s of them to a run"
+          % (sorted(written_bold), sorted(held_bold)))
+    failed = 1
+
+# And every instrument in `tools` named there with a figure beside it. An
+# instrument is a thing the gate runs and expects a number from, and one whose
+# paragraph quotes no count is a duration with nothing under it -- which is what
+# all four of them were before D915.
+INSTRUMENTS = some("the instruments in `tools`", sorted(
+    glob.glob(os.path.join('tools', '*.kest')) +
+    glob.glob(os.path.join('tools', '*.c'))))
+told_of = {}
+for piece_of in re.split(r'(?=`tools/)', RUNNING):
+    named_of = re.match(r'`tools/([\w.]+)`', piece_of)
+    if named_of is not None:
+        stem_of = os.path.splitext(named_of.group(1))[0]
+        told_of[stem_of] = told_of.get(stem_of, '') + piece_of
+for one_of in INSTRUMENTS:
+    stem_of = os.path.splitext(os.path.basename(one_of))[0]
+    if '**' not in told_of.get(stem_of, ''):
+        print("costs: `%s` is an instrument and what running costs says no "
+              "figure about it, so its duration has nothing under it" % one_of)
+        failed = 1
+
 shutil.rmtree(work, ignore_errors=True)
 if (one_copy_costs is None or many_copies_costs is None or
         many_copies_costs <= one_copy_costs * 2 or
@@ -2207,7 +2261,9 @@ if not failed:
           "against %s crossing out, and a hop of one is %s, %s reading "
           "through an index and %s through a reference, and a crossing "
           "in from a host is %s instruction(s) and %s question(s) "
-          "against %s and %s for a turn of the loop it calls, and one "
+          "against %s and %s for a turn of the loop it calls — %u "
+          "figure(s) in bold about %u instrument(s), every one of them "
+          "held to a run — and one "
           "that promises "
           "`no.alloc` takes %u byte(s) of heap "
           "an entity against %u for one that makes a piece of text, %u for "
@@ -2240,6 +2296,7 @@ if not failed:
              None if ran_index is None else sum(ran_index.values()),
              None if ran_ref is None else sum(ran_ref.values()),
              ran_in, asked_in, ran_turn, asked_turn,
+             len(written_bold), len(INSTRUMENTS),
              quiet_frame, text_frame, grown_frame,
              keyed_frame, stored_frame))
 sys.exit(failed)
