@@ -34040,3 +34040,46 @@ between, emit the place once. It needs what the checker already knows about
 which names a body writes (D887's `written_into`) and nothing the machine has
 not got, which is what makes it the first thing in five turns that can pay.
 Weigh it against 48 instructions an entity, and only then against 116 ns.
+
+## The pass that did not pay, and the cut that lost a piece
+
+Counted out of the emitted code before touching anything, as D891 says to:
+sharing the place between `let one = ...world[i]...` and `world[i] = one` is
+seven instructions where there are eight — one an entity of forty-eight — and it
+is bought by leaving the element's address on the stack across a statement
+boundary, which is the one invariant the compiler holds about itself. A hidden
+local for the address is worse than doing nothing. And `turned`'s three names
+cannot take the slots of `one.dx`, `one.dy` and `one.health`, because those
+slots belong to `one`, which is read to the last line. The pass does not pay.
+
+So the text library got read at its edges instead — nothing, one byte, counts of
+nought and below, a separator that is not there. Eighteen answered. One did not:
+
+```text
+split("",      ",")   0 pieces
+split(",",     ",")   1 piece
+split("a,b,",  ",")   2 pieces
+```
+
+A cut gives one more piece than there are separators. The loop stopped when the
+text ran out, so the piece after the last separator was lost whenever it was the
+empty one, and `join(split("a,b,", ","), ",")` was `a,b`. A program cutting a
+file on `\n` and joining it back wrote a file a byte shorter than it read.
+
+It ends on running out of separators now. Every example still answers nought,
+and `examples/pieces.kest` holds the rule the way it should be held — by joining
+the pieces back over seven subjects including all four ends and asking for the
+subject, rather than by counting pieces.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the rest of that shelf. One of the nineteen edges of `std.text` was
+wrong and nothing in the tree had ever asked, because `split` is called four
+times in the examples and no subject ends with a separator. Do the same walk for
+the other modules a program leans on — `table`, `sort`, `vec`, `math` — a table
+asked for a key that is not there and one asked twice for the same key, a sort
+of nothing and of one and of a run already in order, a vector of length nought
+normalised, the arithmetic at the ends of what an `f32` holds. Write each edge,
+say what it should answer from the rule rather than from what it does, and keep
+the ones that are rules in an example. What is being looked for is the
+eighteen-to-one again.

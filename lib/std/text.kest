@@ -359,8 +359,14 @@ fn trim(subject: text) -> text no.host {
     return slice(subject, from, to - from)
 }
 
-// The pieces between each separator. An empty subject has no pieces; a
-// subject with no separator in it is one piece.
+// The pieces between each separator: one more of them than there are
+// separators, always. That is what makes this and `join` the two halves of one
+// thing -- `join(split(s, sep), sep)` is `s` for every `s` -- and it is the
+// rule that says what the ends are: an empty subject is one empty piece, and a
+// subject that ends with a separator has an empty piece after it. Stopping
+// where the text ran out instead lost the last piece whenever it was the empty
+// one, so `split("a,b,", ",")` was two pieces and joining them back gave
+// `a,b`. See D892.
 fn split(subject: text, separator: text) -> [text] no.host {
     let pieces: [text] = array()
     if len(separator) == 0 {
@@ -370,17 +376,16 @@ fn split(subject: text, separator: text) -> [text] no.host {
 
     // Each piece is copied once and what is left is not copied at all, which
     // is what `rest` is for: the remainder of a piece of text is a place
-    // inside it. Whether there is any left is asked of the first byte rather
-    // than of the length, which is the walk to the end for an answer the first
-    // byte already had. See D375.
+    // inside it. See D375.
     let tail = subject
-    while tail != "" {
+    let more = true
+    while more {
         if let at = find(tail, separator) {
             push(pieces, slice(tail, 0, at))
             tail = rest(tail, at + len(separator))
         } else {
             push(pieces, tail)
-            tail = ""
+            more = false
         }
     }
     return pieces

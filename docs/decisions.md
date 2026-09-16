@@ -27472,3 +27472,58 @@ wall does not stand in front of.
 now says what a frame reaches as well as what it costs: 48 instructions an
 entity, 45 written out, **22 of the machine's 151**. A frame touches a seventh
 of the machine and pays for all of it.
+
+## D892: a cut and a join are two halves of one thing
+
+The Next was a pass: work out where `world[i]` is once instead of twice an
+entity. Counted out of the emitted code first, which is what D891 says to do
+before touching anything:
+
+```text
+now      load, load, index          3        load, load, elem.addr   3
+         load.n, store.at           2                                      8
+shared   load, load, elem.addr, dup, load.at 5   load.n, store.at     2     7
+```
+
+One instruction an entity of forty-eight, and it is bought by leaving the
+element's address on the stack across a statement boundary — which is the one
+invariant the compiler holds about itself (D809: a statement leaves the stack as
+it found it, and saying so is how three compiler bugs were caught). A hidden
+local for the address instead is four instructions where there were three, so it
+is worse than doing nothing. The pass does not pay. Neither does the other half
+of the idea: `turned`'s three names cannot take the slots of `one.dx`, `one.dy`
+and `one.health` because those slots belong to `one`, which is read to the last
+line. The performance thread is closed where D891 left it.
+
+**So the text library got read instead, at its edges.** Eighteen of them
+answered. One did not:
+
+```text
+split("",      ",")   0 pieces
+split(",",     ",")   1 piece
+split("a,b,",  ",")   2 pieces
+```
+
+A cut gives one more piece than there are separators — that is what makes it and
+`join` the two halves of one thing, and it is the rule that says what the ends
+are. The loop stopped when the text ran out, so the piece after the last
+separator was lost whenever it was the empty one:
+`join(split("a,b,", ","), ",")` was `a,b`. A program cutting a file's lines on
+`\n` and joining them back wrote a file one byte shorter than the one it read.
+
+It ends on running out of *separators* now rather than out of text, so there is
+always a last piece: nothing is one empty piece, and a subject ending with a
+separator has an empty piece after it. Every example still answers nought;
+`examples/lines.kest`, the one that cuts on `\n`, gains an empty last line and
+throws it away where it already threw away the blank ones.
+
+What holds it is the rule rather than a count: `examples/pieces.kest` joins the
+pieces back over seven subjects, including the four ends, and asks for the
+subject. A count would be a second thing to keep in step; a round trip is the
+sentence itself.
+
+*What the turn is really about* is that eighteen edges were right and one was
+wrong, and nothing in the tree used the wrong one — `split` is called four times
+in the examples and not one of those subjects ends with a separator. A library
+function is only as held as the shapes somebody wrote down, and the shapes
+somebody writes down are the ones they needed that day.

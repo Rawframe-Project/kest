@@ -5581,6 +5581,34 @@ fn main() -> i32 {
         "caught": "K0314 said `error[K0314]: `+` does not apply to `text``",
     },
     {
+        # A cut that stops where the text ran out. The last piece is the one
+        # after the last separator, and when a subject ends with one that
+        # piece is empty -- so stopping at the end of the text dropped it, and
+        # `split("a,b,", ",")` was two pieces that joined back to `a,b`. A cut
+        # and a join are the two halves of one thing or they are two functions
+        # that nearly agree. See D892.
+        "what": "a cut that loses the piece after the last separator",
+        "file": "lib/std/text.kest",
+        "from": """    let more = true
+    while more {""",
+        "to": """    let more = true
+    while more && tail != "" {""",
+        "make": ["kest"],
+        "program": "cut.kest",
+        "source": """import std.io
+import std.text
+
+fn main() -> i32 {
+    if text.join(text.split("a,b,", ","), ",") != "a,b," {
+        io.print("a cut and a join are not two halves of one thing")
+        return 1
+    }
+    return 0
+}
+""",
+        "caught": "a cut and a join are not two halves of one thing",
+    },
+    {
         # A walk of what ran that stops one short. Every instruction the
         # machine has is written by an example and run by one, and the second
         # half of that is the machine's own count -- so a report that leaves

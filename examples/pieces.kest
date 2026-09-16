@@ -75,6 +75,25 @@ fn main() -> i32 {
         return 6
     }
 
+    // The two halves of one thing. A cut gives one more piece than there are
+    // separators, always, which is what says what the ends are: nothing is one
+    // empty piece, and a subject ending with a separator has an empty piece
+    // after it. Held by joining the pieces back rather than by counting them,
+    // because a count is a second thing to keep in step and this is the rule
+    // itself. See D892.
+    let ends: [text] = ["", ",", "a,b,", ",a,b", "a,,b", "a", ",,,"]
+    for one in ends {
+        if text.join(text.split(one, ","), ",") != one {
+            return 7
+        }
+    }
+    if text.join(text.split("one::two::", "::"), "::") != "one::two::" {
+        return 8
+    }
+    if len(text.split("", ",")) != 1 || len(text.split("a,b,", ",")) != 3 {
+        return 9
+    }
+
     io.print(table(rows, 5))
     return 0
 }
