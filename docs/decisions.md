@@ -26934,3 +26934,50 @@ refused one at a time. No sentence was added, so no hole was: the three the
 section already asks — that it refused, that it said nothing but the room, that
 it neither died nor answered as though nothing had happened — are the same three
 for a machine as for a compiler, and they are already held.
+
+## D883: the one thing a reader writes without thinking
+
+Five hundred lines of the reference, read as somebody who has never seen this
+language. **Fifty-four of them are about where a line may break**, and the four
+paragraphs at the end of them are about one operator:
+
+> `>` is the one operator a line may end after, because `ref<Npc>` and
+> `store<Job>` end in one and a field ends where its line does. So a comparison
+> whose right side is on the next line is refused where it is written [...]
+> breaking after the `>` gives two statements, and breaking before it ends the
+> line on a value, which is the same refusal from the other side.
+
+*What the explanation is standing in for is the compiler saying it.* A reader
+coming from anywhere else writes a long condition over two lines without
+thinking about it, and what came back was:
+
+```text
+error[K0204]: expected an expression, found end of line
+error[K0201]: expected end of line, found `{`
+```
+
+Two mistakes, one cause, and neither sentence about the cause. The rule is in
+the reference and the reader is in their editor.
+
+It says it now, from either side — after the `>` where the line ended, and at
+the `>` that started the next one, because a reader who broke a comparison did
+one thing and is looking at one rule:
+
+```text
+4 |     if a >
+  |            a line may end after `>` because a type may: `ref<Npc>` is a
+                whole field. So a comparison stays on the line it is on
+```
+
+*What was not done is the thing behind it.* `<` and `>` are the comparison
+operators and the brackets a type takes its types in, and that is what makes a
+line ending in `>` ambiguous — the lexer decides whether a newline ends a
+statement from the token before it and nothing else, so it cannot know whether
+the `>` closed `ref<Npc>` or was about to compare. Every way out of that is a
+different syntax for one of the two, which is a change to how every generic in
+the tree is written. The message is the part that was owed and the part that was
+cheap: a paragraph in a document nobody has read yet, said by the compiler at
+the moment somebody needs it.
+
+Both wordings are in the refusal table, so each is a sentence something has been
+made to say, and a hole takes the suggestion away.

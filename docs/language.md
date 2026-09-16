@@ -151,9 +151,18 @@ that ends in a value does not.
 `>` is the one operator a line may end after, because `ref<Npc>` and
 `store<Job>` end in one and a field ends where its line does. So a comparison
 whose right side is on the next line is refused where it is written, and a
-comparison too long for the line stays on the line it is on: breaking after the
-`>` gives two statements, and breaking before it ends the line on a value,
-which is the same refusal from the other side.
+comparison too long for the line stays on the line it is on. Breaking it after
+the `>` gives two statements and breaking it before ends the line on a value,
+which is the same refusal from the other side — and the compiler says so from
+either, rather than leaving a reader to find this paragraph:
+
+```
+error[K0204]: expected an expression, found end of line
+  |
+4 |     if a >
+  |            a line may end after `>` because a type may: `ref<Npc>` is a
+                whole field. So a comparison stays on the line it is on
+```
 
 A long string cannot be broken.
 

@@ -5549,6 +5549,22 @@ fn main() -> i32 {
         "caught": "so a piece of the work went missing",
     },
     {
+        # A comparison broken over two lines, left to read as two mistakes. It
+        # is the one thing this language will not take that a reader coming
+        # from anywhere else writes without thinking, the reference spends four
+        # paragraphs on the rule behind it, and what came back was `expected an
+        # expression, found end of line` and then `expected end of line, found
+        # {`. Neither says what to do. See D883.
+        "what": "a comparison broken over two lines, told nothing about why",
+        "file": "src/parser.c",
+        "from": """        if (ended_after_gt || began_with_compare) {""",
+        "to": """        if (false && (ended_after_gt || began_with_compare)) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0204 said `error[K0204]: expected an expression, found end of line`",
+    },
+    {
         # An aim that never hits. `KEST_REFUSE_AT` is the only way to ask a
         # compiler what it says when it has nothing left and mean a particular
         # nothing, so a build where it does nothing is a check that walks fifty

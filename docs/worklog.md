@@ -32852,13 +32852,13 @@ Recorded as D865.
 
 **Runs:** `make check`, everything passing, with `TMPDIR=/var/tmp`.
 
-**Next:** three entries have gone into what a compiler does when it has no
-memory, and it does the right thing everywhere anybody has looked. Put the aim
-down and pick the language back up. `docs/language.md` is four thousand lines
-and is the thing a reader meets first: read the first five hundred of them as
-somebody who has never seen this language, and find the place where the document
-explains a thing the language should not have needed explaining. One place, with
-what the explanation is standing in for.
+**Next:** the same reading, the next five hundred lines — from `Modules` to the
+end of `Types`. The rule is the same: find the place where the document explains
+a thing the language should not have needed explaining, and say what the
+explanation is standing in for. The one found this time was a message the
+compiler was not saying; the next may be a message that says the wrong thing, or
+a rule nobody would have guessed. One place, and what it costs the reader
+written beside it.
 
 ## A hop of a `for` is one instruction
 
@@ -33642,3 +33642,42 @@ and is the thing a reader meets first: read the first five hundred of them as
 somebody who has never seen this language, and find the place where the document
 explains a thing the language should not have needed explaining. One place, with
 what the explanation is standing in for.
+
+## The one thing a reader writes without thinking
+
+Five hundred lines of the reference read as somebody who has never seen this
+language. Fifty-four of them are about where a line may break, and the four
+paragraphs at the end of those are about one operator: `>` is the one a line may
+end after, because a type ends in one and a field ends where its line does.
+
+What that explanation stands in for is the compiler saying it. A reader coming
+from anywhere else writes a long condition over two lines without thinking, and
+what came back was `expected an expression, found end of line` and then
+`expected end of line, found {` — two mistakes, one cause, and neither sentence
+about the cause. The rule was in the reference and the reader was in their
+editor.
+
+It says it now from either side: after the `>` where the line ended, and at the
+`>` that started the next one, because a reader who broke a comparison did one
+thing and is looking at one rule.
+
+What was not done is the thing behind it. `<` and `>` are both the comparison
+operators and the brackets a type takes its types in, and the lexer decides
+whether a newline ends a statement from the token before it and nothing else —
+so it cannot know whether the `>` closed `ref<Npc>` or was about to compare.
+Every way out is a different syntax for one of the two. The message is the part
+that was owed and the part that was cheap.
+
+Both wordings are in the refusal table and a hole takes the suggestion away.
+
+Recorded as D883.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same reading, the next five hundred lines — from `Modules` to the
+end of `Types`. The rule is the same: find the place where the document explains
+a thing the language should not have needed explaining, and say what the
+explanation is standing in for. The one found this time was a message the
+compiler was not saying; the next may be a message that says the wrong thing, or
+a rule nobody would have guessed. One place, and what it costs the reader
+written beside it.

@@ -1138,6 +1138,29 @@ static KestExpr *parse_primary(Parser *parser) {
                                "a block is not a value: an `if` gives one "
                                "with `->`");
         }
+        // A comparison with its right side on the next line, which is the one
+        // thing a reader writes that this language will not take. A line ends
+        // after `>` because a type ends in one — `giver: ref<Npc>` is a whole
+        // field — so the line ended and what was to be compared with is a
+        // statement of its own. It reads as two mistakes and is one, and the
+        // reference spends four paragraphs on the rule; the reader who meets
+        // it is owed the sentence rather than the rule. See D883.
+        bool ended_after_gt =
+            token.kind == KEST_TOK_NEWLINE && parser->position >= 1 &&
+            parser->tokens[parser->position - 1].kind == KEST_TOK_GT;
+        // And the same mistake written the other way round: the line ended on
+        // a value, so what was on the next one starts with an operator and is
+        // a statement of its own. One sentence for both, because a reader who
+        // broke a comparison did one thing and is looking at one rule.
+        bool began_with_compare =
+            token.kind == KEST_TOK_GT || token.kind == KEST_TOK_LT ||
+            token.kind == KEST_TOK_GTEQ || token.kind == KEST_TOK_LTEQ;
+        if (ended_after_gt || began_with_compare) {
+            kest_diags_suggest(parser->diags,
+                               "a line may end after `>` because a type may: "
+                               "`ref<Npc>` is a whole field. So a comparison "
+                               "stays on the line it is on");
+        }
         return NULL;
     }
 }
