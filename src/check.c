@@ -152,13 +152,35 @@ static bool say_if_let(Checker *checker, const KestType *got,
     return true;
 }
 
+// The other way round: a value standing where an optional of an optional is
+// wanted. The conversion happens once, so the two are one step apart and the
+// message says only that the types differ -- which reads, to whoever wrote it,
+// as though the language made no conversion at all. What is missing is the
+// middle one, and it has to be named. See D885.
+static bool say_wrapped_once(Checker *checker, const KestType *got,
+                             const KestType *want) {
+    if (got == NULL || want == NULL || want->tag != KEST_T_OPTIONAL ||
+        want->element == NULL || want->element->tag != KEST_T_OPTIONAL ||
+        want->element->element == NULL ||
+        !kest_type_equal(got, want->element->element)) {
+        return false;
+    }
+    suggest(checker,
+            "a value becomes an optional once: name it as `%s` first, and "
+            "that is what goes where the `%s` is wanted",
+            type_name(checker, want->element), type_name(checker, want));
+    return true;
+}
+
 // Reports a mismatch in the one shape every mismatch is reported in, so a
 // reader learns to read it once.
 static void expected_but(Checker *checker, KestSpan span, const KestType *want,
                          const KestType *got, const char *where) {
     report(checker, span, "K0310", "%s expects `%s`, found `%s`", where,
            type_name(checker, want), type_name(checker, got));
-    say_if_let(checker, got, want);
+    if (!say_if_let(checker, got, want)) {
+        say_wrapped_once(checker, got, want);
+    }
 }
 
 // The same thing said with a name that is written down somewhere other than a
@@ -168,7 +190,9 @@ static void expected_called(Checker *checker, KestSpan span,
                             const char *called) {
     report(checker, span, "K0310", "`%s` expects `%s`, found `%s`", called,
            type_name(checker, want), type_name(checker, got));
-    say_if_let(checker, got, want);
+    if (!say_if_let(checker, got, want)) {
+        say_wrapped_once(checker, got, want);
+    }
 }
 
 // The same thing said with the name of what is being given to, which is worth
@@ -187,7 +211,9 @@ static void expected_for(Checker *checker, KestSpan span, const KestType *want,
     report(checker, span, "K0310", "`%.*s` expects `%s`, found `%s`",
            (int)name.length, kest_span_text(declared_in, name),
            type_name(checker, want), type_name(checker, got));
-    say_if_let(checker, got, want);
+    if (!say_if_let(checker, got, want)) {
+        say_wrapped_once(checker, got, want);
+    }
 }
 
 static Local *find_local(Checker *checker, const char *name, size_t length) {

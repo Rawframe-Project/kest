@@ -3829,6 +3829,10 @@ K0326|const N: i32 = 2000000000\n\nfn main() -> i32 {\n    let v: [i64; N] = [1]
 K0344|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let a = P\n    return 0\n}|`P` is a type, and this wants a value
 K0344|struct Box<T> {\n    it: T\n}\n\nfn main() -> i32 {\n    let b = Box\n    return 0\n}|a copy is made from what is passed
 K0333|enum Four {\n    C0\n    C1\n    C2\n    C3\n}\n\nfn main() -> i32 {\n    let a = Four.C0\n    return match a, a, a, a, a {\n        _, _, _, _, _ -> 0\n    }\n}|combinations to answer, which is more than
+K0201|fn main() -> i32 {\n    let v: [i32; -1] = [1]\n    return v[0]\n}|how many there are is more than nought
+K0201|fn main() -> i32 {\n    let v: [i32; "a"] = [1]\n    return v[0]\n}|write how many there are, or the name of a constant that is one
+K0207|fn main() -> i32 {\n    let s = "a{}b"\n    return len(s)\n}|write what fills it
+K0310|fn main() -> i32 {\n    let a: i32 = 1\n    let b: i32?? = a\n    if let inner = b {\n        if let n = inner {\n            return n\n        }\n    }\n    return 0\n}|a value becomes an optional once
 REFUSED
 
 # And the one a command is refused for rather than a file: `call` with nothing

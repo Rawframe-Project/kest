@@ -3483,9 +3483,9 @@ for file in "$@"; do""",
         # this language has instead of one. See D515.
         "what": "a type refused without what there is instead",
         "file": "src/parser.c",
-        "from": r"""            kest_diags_suggest(parser->diags,
-                               "there are no pointers here: what names a slot "
-                               "in a store is `ref<T>`");""",
+        "from": r"""            suggest(parser,
+                    "there are no pointers here: what names a slot "
+                    "in a store is `ref<T>`");""",
         "to": r"""            (void)0;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
@@ -3497,9 +3497,9 @@ for file in "$@"; do""",
         # is and was a message about a brace. See D515.
         "what": "a block refused without what a block is",
         "file": "src/parser.c",
-        "from": r"""            kest_diags_suggest(parser->diags,
-                               "a block is not a value: an `if` gives one "
-                               "with `->`");""",
+        "from": r"""            suggest(parser,
+                    "a block is not a value: an `if` gives one "
+                    "with `->`");""",
         "to": r"""            (void)0;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
@@ -3512,8 +3512,8 @@ for file in "$@"; do""",
         # See D514.
         "what": "a field refused without the shape of one",
         "file": "src/parser.c",
-        "from": r"""        kest_diags_suggest(parser->diags,
-                           "a field is written `name: type`");""",
+        "from": r"""        suggest(parser,
+                "a field is written `name: type`");""",
         "to": r"""        (void)0;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
@@ -3542,9 +3542,9 @@ for file in "$@"; do""",
         # met by a message about the token that was not a name. See D513.
         "what": "a binding refused without the rule behind it",
         "file": "src/parser.c",
-        "from": r"""        kest_diags_suggest(parser->diags,
-                           "`%s let` names what is held rather than comparing "
-                           "with it", what);""",
+        "from": r"""        suggest(parser,
+                "`%s let` names what is held rather than comparing "
+                "with it", what);""",
         "to": r"""        (void)what;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
@@ -3556,9 +3556,9 @@ for file in "$@"; do""",
         # reason and had the same nothing to say about it.
         "what": "a walk refused without the rule behind it",
         "file": "src/parser.c",
-        "from": r"""            kest_diags_suggest(parser->diags,
-                               "a `for` names what it walks over: "
-                               "`for one in ...`");""",
+        "from": r"""            suggest(parser,
+                    "a `for` names what it walks over: "
+                    "`for one in ...`");""",
         "to": r"""            (void)0;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
@@ -3572,9 +3572,9 @@ for file in "$@"; do""",
         # chooses between. See D512.
         "what": "a `match` arm refused without the rule behind it",
         "file": "src/parser.c",
-        "from": r"""                    kest_diags_suggest(parser->diags,
-                                       "a `match` arm names a case of an "
-                                       "enum, and `else` answers the rest");""",
+        "from": r"""                    suggest(parser,
+                            "a `match` arm names a case of an "
+                            "enum, and `else` answers the rest");""",
         "to": r"""                    (void)0;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
@@ -5576,6 +5576,67 @@ fn main() -> i32 {
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
         "caught": "K0314 said `error[K0314]: `+` does not apply to `text``",
+    },
+    {
+        # A suggestion under somebody else's refusal. A suggestion goes to the
+        # diagnostic that came last, whoever made it, and a parser recovering
+        # says nothing -- so `let v: [i32; -1]` was told that a `let` gives its
+        # value where it is written, which is a rule about a mistake nobody
+        # made. A wrong answer is worse than none. See D885.
+        "what": "a suggestion put under a refusal somebody else made",
+        "file": "src/parser.c",
+        "from": """    if (!parser->spoke) {""",
+        "to": """    if (false && !parser->spoke) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0201 said `error[K0201]: expected integer, found `-``",
+    },
+    {
+        # How many there are, below nought. The type parser names the token it
+        # did not want and says nothing about what a count is, which leaves a
+        # reader looking at a `-` they meant. The reference says a run is that
+        # many where it stands and a store says the same thing in its own
+        # words; this is the third place and it was quiet. See D885.
+        "what": "a run of minus one told only that `-` was unexpected",
+        "file": "src/parser.c",
+        "from": """                            found.kind == KEST_TOK_MINUS""",
+        "to": """                            found.kind != KEST_TOK_MINUS""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0201 said `error[K0201]: expected integer, found `-``",
+    },
+    {
+        # A hole with nothing in it, told it is empty and not what one holds.
+        # Somebody who wanted a brace in their text has written the one thing
+        # that cannot go in a hole, and the escape that does the job is a
+        # paragraph away. See D885.
+        "what": "an empty hole told what is wrong and not what one holds",
+        "file": "src/parser.c",
+        "from": """                    close == end
+                        ? "close it with""",
+        "to": """                    close != end
+                        ? "close it with""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0207 said `error[K0207]: this hole is empty`",
+    },
+    {
+        # A value standing where an optional of an optional is wanted. The
+        # conversion happens once, so what comes back is that the types differ
+        # -- which reads as though there were no conversion at all, to the one
+        # reader who has just used it. See D885.
+        "what": "a value two optionals deep told only that the types differ",
+        "file": "src/check.c",
+        "from": """    if (got == NULL || want == NULL || want->tag != KEST_T_OPTIONAL ||""",
+        "to": """    if (true || got == NULL || want == NULL ||
+        want->tag != KEST_T_OPTIONAL ||""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0310 said `error[K0310]: this binding expects `i32??`, found `i32``",
     },
     {
         # A comparison broken over two lines, left to read as two mistakes. It
@@ -10063,8 +10124,8 @@ static const Keyword KEYWORDS[] = {
         # without reading a word.
         "what": "a suggestion reworded so the list in it cannot be read",
         "file": "src/parser.c",
-        "from": r"""                           "a file holds `module`, `import`, `const`, """,
-        "to": r"""                           "a file may hold `module`, `import`, `const`, """,
+        "from": r"""                "a file holds `module`, `import`, `const`, """,
+        "to": r"""                "a file may hold `module`, `import`, `const`, """,
         "make": ["kest"],
         "tool": "tools/check-fmt.sh",
         "arguments": ["examples/math.kest"],

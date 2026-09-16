@@ -27036,3 +27036,59 @@ writing it down; the two that were not are the two where the wrong thing is
 still, in some other language, the right thing.
 
 Both wordings are in the refusal table and each has a hole.
+
+## D885: a suggestion under somebody else's refusal
+
+The same sweep again, the other way round. `docs/language.md` says *is refused*
+or *is not one of them* seventy-seven times, and each of those is a sentence a
+reader will one day write as a program. Seventy-three of them came back naming
+the rule. Four did not, and one of the four was worse than silent.
+
+**The one that was wrong.**
+
+```text
+let v: [i32; -1] = [1]
+error[K0201]: expected integer, found `-`
+      a `let` gives its value where it is written
+```
+
+The rule is true and it is about a different mistake. What happened is that a
+suggestion goes to the diagnostic that came last, whoever made it. The type
+failed to parse, said so, and left the parser recovering; the `expect` for the
+`=` that follows was then held back and said nothing — and the `let` branch,
+which had no way of knowing, hung its rule under the type's message.
+
+That is the shape of every suggestion in the parser, not one of them, so the
+parser now says whether the last thing it tried to say was said. `error_at`
+records it, and `suggest` — the same helper `check.c` has had — goes quiet when
+it is false. Twenty-nine call sites lost the `->diags` and gained the guard,
+two that were reading `recovering` by hand stopped needing to, and the one
+note in the parser is held the same way. The bug was one line; what it was
+about was that nothing in the shape of the code made it hard to write.
+
+**The three that said nothing.**
+
+```text
+let v: [i32; -1] = [1]      how many there are is more than nought; a run
+                            written with no count is the one that grows
+let s = "a{}b"              write what fills it, or `\{}` for two braces
+                            that are just text
+let b: i32?? = a            a value becomes an optional once: name it as
+                            `i32?` first, and that is what goes where the
+                            `i32??` is wanted
+```
+
+The last of those is the interesting one. The conversion this language makes is
+the only one it makes, and it makes it once — so somebody who has just met it
+writes it twice, and what came back was `expects i32??, found i32`, which reads
+as though there were no conversion at all. The refusal was right and it taught
+the wrong thing. `say_wrapped_once` sits beside `say_if_let` and every place
+that reports a mismatch tries both.
+
+*What the two sweeps are worth together* is that a reference document is a list
+of what readers will try. Eleven sentences of one shape found two gaps;
+seventy-seven of the other found three and a wrong answer. The wrong answer is
+the one worth the walk: nothing failed, no check went red, and the compiler had
+been confidently telling a particular reader a rule they had not broken.
+
+Four wordings in the refusal table, four holes.

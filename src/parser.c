@@ -13,6 +13,12 @@ typedef struct {
     // Set when an error is reported, cleared at a recovery point. One broken
     // construct reports once rather than at every token it goes on to confuse.
     bool recovering;
+    // Whether the last thing this parser tried to say was said. A suggestion
+    // and a note are attached to the diagnostic that came last, whoever made
+    // it -- so a message held back while recovering leaves them landing on
+    // somebody else's, which is a reader told the rule behind a mistake they
+    // did not make. See D885.
+    bool spoke;
     bool out_of_memory;
     // What the statement being parsed began with, so a message about where it
     // ended can point back at the word that started it.
@@ -132,6 +138,7 @@ static bool is_word(Parser *parser, uint32_t ahead, const char *word) {
 static void error_at(Parser *parser, KestSpan span, const char *code,
                      const char *format, ...) {
     if (parser->recovering) {
+        parser->spoke = false;
         return;
     }
     // A parser with nothing left says nothing about what it was reading. The
@@ -142,6 +149,7 @@ static void error_at(Parser *parser, KestSpan span, const char *code,
     // the answer is no. See D748.
     if (parser->out_of_memory) {
         parser->recovering = true;
+        parser->spoke = false;
         return;
     }
     // A token the lexer could not read has already been reported, by the one
@@ -150,6 +158,7 @@ static void error_at(Parser *parser, KestSpan span, const char *code,
     KestToken here = peek(parser);
     if (here.kind == KEST_TOK_ERROR && here.span.offset == span.offset) {
         parser->recovering = true;
+        parser->spoke = false;
         return;
     }
     parser->recovering = true;
@@ -168,10 +177,25 @@ static void error_at(Parser *parser, KestSpan span, const char *code,
         span.length = 1;
     }
 
+    uint32_t before = parser->diags->count;
     va_list args;
     va_start(args, format);
     kest_diags_addv(parser->diags, KEST_SEVERITY_ERROR, code, span, format,
                     args);
+    va_end(args);
+    parser->spoke = parser->diags->count > before;
+}
+
+// The rule behind a refusal, said to whoever made the refusal. It goes to the
+// diagnostic that came last, so it is only worth saying when the message it
+// belongs under is the one this parser has just made.
+static void suggest(Parser *parser, const char *format, ...) {
+    if (!parser->spoke) {
+        return;
+    }
+    va_list args;
+    va_start(args, format);
+    kest_diags_suggestv(parser->diags, format, args);
     va_end(args);
 }
 
@@ -254,7 +278,7 @@ static const char *no_compound(Parser *parser, uint32_t *at_out) {
 static void refuse_wrapped(Parser *parser, const char *what) {
     error_at(parser, peek(parser).span, "K0213",
              "a condition is written without brackets round the whole of it");
-    kest_diags_suggest(parser->diags, "write `%s x < 3 {`", what);
+    suggest(parser, "write `%s x < 3 {`", what);
 }
 
 static bool expect(Parser *parser, KestTokenKind kind) {
@@ -382,8 +406,8 @@ static void end_statement(Parser *parser) {
     if (found.kind == KEST_TOK_SEMICOLON) {
         error_at(parser, found.span, "K0105",
                  "statements are not separated by `;`");
-        kest_diags_suggest(parser->diags, "remove it; a line break ends a "
-                                          "statement");
+        suggest(parser, "remove it; a line break ends a "
+                        "statement");
         advance(parser);
         recover_statement(parser);
         return;
@@ -397,16 +421,16 @@ static void end_statement(Parser *parser) {
     // rather than that there is none. The reference says there is no ternary;
     // this is the reader who has not read it yet. See D884.
     if (found.kind == KEST_TOK_QUESTION) {
-        kest_diags_suggest(parser->diags,
-                           "there is no ternary here and `?` means optional: "
-                           "an `if` gives a value with `->`, as "
-                           "`if c -> a else -> b`");
+        suggest(parser,
+                "there is no ternary here and `?` means optional: "
+                "an `if` gives a value with `->`, as "
+                "`if c -> a else -> b`");
     }
     // A statement that begins with a word this language nearly has is a
     // misspelt keyword, and the message above is about the token after it —
     // which is the one thing in the line that is not wrong. So the word is
     // pointed at as well.
-    if (parser->began_with.kind == KEST_TOK_IDENT) {
+    if (parser->spoke && parser->began_with.kind == KEST_TOK_IDENT) {
         const char *nearly = kest_nearest_keyword(
             span_text(parser, parser->began_with.span),
             parser->began_with.span.length);
@@ -470,8 +494,8 @@ static void match_promises(Parser *parser, bool *no_alloc, bool *no_host) {
             error_at(parser, whole, "K0216",
                      "`no.%.*s` is not a promise this language has",
                      (int)word.span.length, span_text(parser, word.span));
-            kest_diags_suggest(parser->diags,
-                               "this language has `no.alloc` and `no.host`");
+            suggest(parser,
+                    "this language has `no.alloc` and `no.host`");
             parser->position += 3;
             continue;
         }
@@ -569,7 +593,22 @@ static KestTypeRef *parse_type(Parser *parser) {
                 type->count = parse_path(parser);
             } else {
                 type->count = current_span(parser);
-                expect(parser, KEST_TOK_INT);
+                KestToken found = peek(parser);
+                if (!expect(parser, KEST_TOK_INT)) {
+                    // How many there are, which the message above says
+                    // nothing about: it names the token that came, and a
+                    // reader who wrote a run of minus one is being told `-`
+                    // is unexpected rather than that a count is a count. A
+                    // store says the same thing in its own words at K0351.
+                    // See D885.
+                    suggest(parser,
+                            found.kind == KEST_TOK_MINUS
+                                ? "how many there are is more than nought; a "
+                                  "run written with no count is the one that "
+                                  "grows"
+                                : "write how many there are, or the name of "
+                                  "a constant that is one");
+                }
             }
         }
         expect(parser, KEST_TOK_RBRACKET);
@@ -596,17 +635,17 @@ static KestTypeRef *parse_type(Parser *parser) {
         // language they came from and each has a different answer here. See
         // D515.
         if (found.kind == KEST_TOK_STAR || found.kind == KEST_TOK_AMP) {
-            kest_diags_suggest(parser->diags,
-                               "there are no pointers here: what names a slot "
-                               "in a store is `ref<T>`");
+            suggest(parser,
+                    "there are no pointers here: what names a slot "
+                    "in a store is `ref<T>`");
         } else if (found.kind == KEST_TOK_LPAREN) {
-            kest_diags_suggest(parser->diags,
-                               "there are no tuples here: a `struct` is what "
-                               "holds several things");
+            suggest(parser,
+                    "there are no tuples here: a `struct` is what "
+                    "holds several things");
         } else {
-            kest_diags_suggest(parser->diags,
-                               "a type is a name, `[T]`, `[T; N]` or "
-                               "`fn(...)`, and `?` after any of them");
+            suggest(parser,
+                    "a type is a name, `[T]`, `[T; N]` or "
+                    "`fn(...)`, and `?` after any of them");
         }
         return NULL;
     }
@@ -720,6 +759,16 @@ static KestExpr *parse_string(Parser *parser, KestSpan span) {
             error_at(parser, where, "K0207",
                      close == end ? "this hole is not closed"
                                   : "this hole is empty");
+            // What a hole is for, which is the part a reader is missing: the
+            // message says what is wrong with the one they wrote and not what
+            // one holds, and somebody who wanted a brace in their text has
+            // written the only thing that cannot go in one. See D885.
+            suggest(parser,
+                    close == end
+                        ? "close it with `}`, or write `\\{` for a brace "
+                          "that is just text"
+                        : "write what fills it, or `\\{}` for two braces "
+                          "that are just text");
             return NULL;
         }
 
@@ -841,9 +890,9 @@ static KestExpr *parse_match(Parser *parser) {
                     // number or `true` here and hears about a token. What it
                     // chooses between is said where the subject is read, and
                     // the subject is not read until the arms parse. See D512.
-                    kest_diags_suggest(parser->diags,
-                                       "a `match` arm names a case of an "
-                                       "enum, and `else` answers the rest");
+                    suggest(parser,
+                            "a `match` arm names a case of an "
+                            "enum, and `else` answers the rest");
                     skip_arms(parser);
                     return NULL;
                 }
@@ -920,9 +969,9 @@ static KestExpr *parse_match(Parser *parser) {
     if (gives && blocks) {
         error_at(parser, start, "K0208",
                  "every arm gives a value or none does");
-        kest_diags_suggest(parser->diags,
-                           "an arm gives one with `-> value` and does "
-                           "something with a block");
+        suggest(parser,
+                "an arm gives one with `-> value` and does "
+                "something with a block");
     }
 
     KestExpr *expr = new_expr(parser, KEST_EXPR_MATCH, span_between(start, close));
@@ -959,15 +1008,15 @@ static KestExpr *parse_match(Parser *parser) {
 static bool parse_binding(Parser *parser, KestSpan *name, const char *what) {
     *name = current_span(parser);
     if (!expect(parser, KEST_TOK_IDENT)) {
-        kest_diags_suggest(parser->diags,
-                           "`%s let` names what is held rather than comparing "
-                           "with it", what);
+        suggest(parser,
+                "`%s let` names what is held rather than comparing "
+                "with it", what);
         return false;
     }
     if (!expect(parser, KEST_TOK_EQ)) {
-        kest_diags_suggest(parser->diags,
-                           "`%s let` names what an optional holds: "
-                           "`%s let held = ...`", what, what);
+        suggest(parser,
+                "`%s let` names what an optional holds: "
+                "`%s let held = ...`", what, what);
         return false;
     }
     return true;
@@ -1053,9 +1102,9 @@ static KestExpr *parse_if(Parser *parser) {
     if (branch.gives && blocks) {
         error_at(parser, whole, "K0208",
                  "every arm gives a value or none does");
-        kest_diags_suggest(parser->diags,
-                           "an arm gives one with `-> value` and does "
-                           "something with a block");
+        suggest(parser,
+                "an arm gives one with `-> value` and does "
+                "something with a block");
     }
 
     KestExpr *expr = new_expr(parser, KEST_EXPR_IF, whole);
@@ -1146,9 +1195,9 @@ static KestExpr *parse_primary(Parser *parser) {
         // statement and an `if` is the one thing that gives a value out of
         // arms. See D515.
         if (token.kind == KEST_TOK_LBRACE) {
-            kest_diags_suggest(parser->diags,
-                               "a block is not a value: an `if` gives one "
-                               "with `->`");
+            suggest(parser,
+                    "a block is not a value: an `if` gives one "
+                    "with `->`");
         }
         // A comparison with its right side on the next line, which is the one
         // thing a reader writes that this language will not take. A line ends
@@ -1168,10 +1217,10 @@ static KestExpr *parse_primary(Parser *parser) {
             token.kind == KEST_TOK_GT || token.kind == KEST_TOK_LT ||
             token.kind == KEST_TOK_GTEQ || token.kind == KEST_TOK_LTEQ;
         if (ended_after_gt || began_with_compare) {
-            kest_diags_suggest(parser->diags,
-                               "a line may end after `>` because a type may: "
-                               "`ref<Npc>` is a whole field. So a comparison "
-                               "stays on the line it is on");
+            suggest(parser,
+                    "a line may end after `>` because a type may: "
+                    "`ref<Npc>` is a whole field. So a comparison "
+                    "stays on the line it is on");
         }
         return NULL;
     }
@@ -1242,23 +1291,19 @@ static KestExpr *parse_postfix(Parser *parser) {
                 expr->span, peek_at(parser, angles - 1).span);
             bool nothing_passed =
                 peek_at(parser, angles + 1).kind == KEST_TOK_RPAREN;
-            bool said = !parser->recovering;
             error_at(parser, written, "K0211",
                      "`%.*s` is not given its types where it is called",
                      (int)expr->span.length, span_text(parser, expr->span));
-            if (said) {
-                // Which way the type gets there depends on whether anything
-                // is passed, and naming the wrong one of the two is worse
-                // than naming neither.
-                kest_diags_suggest(
-                    parser->diags,
+            // Which way the type gets there depends on whether anything is
+            // passed, and naming the wrong one of the two is worse than
+            // naming neither.
+            suggest(parser,
                     nothing_passed
                         ? "write `%.*s()`, and the type on the binding it "
                           "goes to"
                         : "write `%.*s(...)`: the copy is made from what is "
                           "passed",
                     (int)expr->span.length, span_text(parser, expr->span));
-            }
             for (uint32_t i = 0; i < angles; i++) {
                 advance(parser);
             }
@@ -1292,9 +1337,9 @@ static KestExpr *parse_postfix(Parser *parser) {
             if (!expect(parser, KEST_TOK_IDENT)) {
                 // `t.0` is what somebody writes who has met tuples. There are
                 // none here: what a struct holds is named. See D514.
-                kest_diags_suggest(parser->diags,
-                                   "a field is named, so there is nothing at "
-                                   "a position to read");
+                suggest(parser,
+                        "a field is named, so there is nothing at "
+                        "a position to read");
                 return NULL;
             }
             KestExpr *field = new_expr(parser, KEST_EXPR_FIELD,
@@ -1432,9 +1477,9 @@ static KestExpr *parse_expr(Parser *parser) {
         if (!parser->recovering) {
             error_at(parser, peek(parser).span, "K0215",
                      "expressions nest more than %d deep", MAX_NESTING);
-            kest_diags_suggest(parser->diags,
-                               "give a piece of it a name: a `let` is a place "
-                               "to stop and the checker reads it the same way");
+            suggest(parser,
+                    "give a piece of it a name: a `let` is a place "
+                    "to stop and the checker reads it the same way");
         }
         return NULL;
     }
@@ -1492,8 +1537,8 @@ static KestStmt *parse_statement(Parser *parser) {
             // The rule behind the expectation, which is the part worth
             // hearing: a name is given its value where it is written, and
             // there is no declaring one now and filling it in later. See D506.
-            kest_diags_suggest(parser->diags,
-                               "a `let` gives its value where it is written");
+            suggest(parser,
+                    "a `let` gives its value where it is written");
             return NULL;
         }
         KestExpr *value = parse_expr(parser);
@@ -1576,9 +1621,9 @@ static KestStmt *parse_statement(Parser *parser) {
             // The same rule in the third place it is written: what stands
             // here is a name for what comes out, and there is nothing else it
             // could be. See D513.
-            kest_diags_suggest(parser->diags,
-                               "a `for` names what it walks over: "
-                               "`for one in ...`");
+            suggest(parser,
+                    "a `for` names what it walks over: "
+                    "`for one in ...`");
             return NULL;
         }
         // `for i, x in a`: the position first, because that is the order it
@@ -1587,9 +1632,9 @@ static KestStmt *parse_statement(Parser *parser) {
             index = name;
             name = current_span(parser);
             if (!expect(parser, KEST_TOK_IDENT)) {
-                kest_diags_suggest(parser->diags,
-                                   "a `for` names the position first and what "
-                                   "it walks over second: `for at, one in ...`");
+                suggest(parser,
+                        "a `for` names the position first and what "
+                        "it walks over second: `for at, one in ...`");
                 return NULL;
             }
         }
@@ -1672,10 +1717,10 @@ static KestStmt *parse_statement(Parser *parser) {
     if (compound != NULL) {
         error_at(parser, peek_at(parser, compound_at).span, "K0214",
                  "`%s=` is not one of the four this language has", compound);
-        kest_diags_suggest(parser->diags,
-                           "they are `+=`, `-=`, `*=` and `/=`; write it out: "
-                           "`x = x %s y`",
-                           compound);
+        suggest(parser,
+                "they are `+=`, `-=`, `*=` and `/=`; write it out: "
+                "`x = x %s y`",
+                compound);
         return NULL;
     }
 
@@ -1693,9 +1738,9 @@ static KestStmt *parse_statement(Parser *parser) {
         if (!is_assignable(expr)) {
             error_at(parser, expr->span, "K0205",
                      "this expression cannot be assigned to");
-            kest_diags_suggest(parser->diags,
-                               "only a name, a field or an element can be a "
-                               "target");
+            suggest(parser,
+                    "only a name, a field or an element can be a "
+                    "target");
         }
         KestStmt *stmt = new_stmt(parser, KEST_STMT_ASSIGN,
                                   span_between(start, value->span));
@@ -1758,8 +1803,8 @@ static KestField *parse_field(Parser *parser) {
         // `x i32` is what somebody writes who has met Go, and the token this
         // wanted says nothing about which of the two orders is right. See
         // D514.
-        kest_diags_suggest(parser->diags,
-                           "a field is written `name: type`");
+        suggest(parser,
+                "a field is written `name: type`");
         return NULL;
     }
     field->type = parse_type(parser);
@@ -1918,16 +1963,16 @@ static KestDecl *parse_declaration(Parser *parser) {
             // `const N = 1` is what a reader writes first, and the rule it
             // meets is the one above this line: the type is written because
             // the name crosses a boundary. See D514.
-            kest_diags_suggest(parser->diags,
-                               "a `const` is written with its type: "
-                               "`const N: i32 = 1`");
+            suggest(parser,
+                    "a `const` is written with its type: "
+                    "`const N: i32 = 1`");
             return NULL;
         }
         decl->constant.type = parse_type(parser);
         if (!expect(parser, KEST_TOK_EQ)) {
-            kest_diags_suggest(parser->diags,
-                               "a `const` gives its value where it is "
-                               "written");
+            suggest(parser,
+                    "a `const` gives its value where it is "
+                    "written");
             return NULL;
         }
         decl->constant.value = parse_expr(parser);
@@ -2106,11 +2151,11 @@ static KestDecl *parse_declaration(Parser *parser) {
         KestSpan name = peek_at(parser, 1).span;
         error_at(parser, peek(parser).span, "K0212",
                  "a flag set says how wide it is");
-        kest_diags_suggest(parser->diags,
-                           "the width is what a host sees, so it is written "
-                           "rather than counted off the names: `flags %.*s: "
-                           "u8 {`",
-                           (int)name.length, span_text(parser, name));
+        suggest(parser,
+                "the width is what a host sees, so it is written "
+                "rather than counted off the names: `flags %.*s: "
+                "u8 {`",
+                (int)name.length, span_text(parser, name));
         return NULL;
     }
 
@@ -2123,9 +2168,9 @@ static KestDecl *parse_declaration(Parser *parser) {
             KestToken after = peek(parser);
             error_at(parser, after.span, "K0201", "expected `:`, found %s",
                      kest_token_name(after.kind));
-            kest_diags_suggest(parser->diags,
-                               "a flag set says how wide it is: "
-                               "`flags Name: u8 {`");
+            suggest(parser,
+                    "a flag set says how wide it is: "
+                    "`flags Name: u8 {`");
         }
         return NULL;
     }
@@ -2139,11 +2184,11 @@ static KestDecl *parse_declaration(Parser *parser) {
                                    found.span.length)
             : NULL;
     if (nearly != NULL) {
-        kest_diags_suggest(parser->diags, "did you mean `%s`?", nearly);
+        suggest(parser, "did you mean `%s`?", nearly);
     } else {
-        kest_diags_suggest(parser->diags,
-                           "a file holds `module`, `import`, `const`, "
-                           "`struct`, `enum`, `flags`, `fn` and `extern fn`");
+        suggest(parser,
+                "a file holds `module`, `import`, `const`, "
+                "`struct`, `enum`, `flags`, `fn` and `extern fn`");
     }
     return NULL;
 }

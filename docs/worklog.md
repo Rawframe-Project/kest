@@ -33724,3 +33724,44 @@ not one of them* a good many times too. Walk `docs/language.md` for every place
 it says a thing is refused, write it, and see whether what comes back names the
 rule and what to write instead. What is being looked for is the same gap said
 the other way round.
+
+## The other sweep: what is refused, and what to write instead
+
+D884 walked the eleven places `docs/language.md` says *there is no X*. This walks
+the seventy-seven where it says *X is refused*, which is the same question asked
+from the other side: the document states a rule, so write the thing the rule
+forbids and see whether the compiler states it back.
+
+Seventy-three did. Four did not, and the first of them was not silent but wrong:
+`let v: [i32; -1] = [1]` came back with *a `let` gives its value where it is
+written*, which is a rule about a mistake nobody had made. A suggestion attaches
+to whichever diagnostic came last. The type's refusal left the parser recovering,
+the `expect` for `=` was held back, and the `let` branch hung its rule under
+somebody else's message.
+
+So the parser now records whether the last thing it tried to say was said, and a
+new `suggest` helper — the shape `check.c` has had all along — is quiet when it
+was not. All twenty-nine sites in `parser.c` go through it, two hand-rolled
+`recovering` tests went away, and the one `note` is guarded the same way.
+
+Then the three that said nothing: a fixed run whose count is below nought, a
+hole with nothing in it, and a value standing where an `i32??` is wanted. The
+last is the one worth having — the conversion to an optional is the only one
+this language makes and it happens once, so the reader who has just learned it
+writes it twice and is told the types differ, which reads as though there were
+no conversion at all. `say_wrapped_once` names the middle type.
+
+Four rows in the refusal table and four holes in the backstops, including one
+for the misattribution itself: with the guard off, `[i32; -1]` gets the `let`
+rule back.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** both sweeps read the reference for sentences of a shape and asked the
+compiler about them. The third shape in that document is the promise: it says
+*X is what happens* or *X is worked out at compile time* a great many times, and
+those are claims about behaviour rather than about refusals. Pick the ones about
+what a program does at run time — what wraps, what is folded, what costs
+nothing — write the program that would show each, and check that what runs
+matches what is written. A reference that is wrong about what runs is worse than
+one that is quiet about it.
