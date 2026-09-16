@@ -1792,6 +1792,12 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         uint16_t stride = expr->type == NULL || expr->type->element == NULL
                               ? 1
                               : value_slots(expr->type->element);
+        // And which type a place in it holds, written beside the stride so the
+        // machine can say what a handle is of. A stride says how far apart two
+        // places are and nothing about what is in one. See D927.
+        uint16_t holds = layout_of(compiler, expr->type == NULL
+                                                 ? NULL
+                                                 : expr->type->element);
         // The instruction reads how much room to make either way, so one that
         // was not asked for gets a nought, the way an empty `array()` gets a
         // fill it never looks at.
@@ -1803,6 +1809,7 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         stack_push(compiler, 1);
         emit(compiler, KEST_OP_NEW_STORE, expr->span);
         emit_u16(compiler, stride, expr->span);
+        emit_u16(compiler, holds, expr->span);
         return true;
     }
 

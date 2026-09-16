@@ -6,7 +6,7 @@
 #include <sanitizer/asan_interface.h>
 #endif
 
-#include <signal.h>
+#include <stdatomic.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -58,6 +58,15 @@ typedef struct {
     // array is not ours to grow.
     bool borrowed;
     unsigned char *bytes;
+    // What one of them is. A stride says how far apart two of them are and
+    // says nothing about what is inside one: two `i32` and four `f32` are both
+    // a stride, and a host that lent the first where the second was wanted was
+    // read sixty-four bytes past the end of its own memory and told nobody.
+    // The type is the build's own and there is one of each, so this is a
+    // pointer comparison at the one door a handle can arrive through. NULL for
+    // a handle made before anything knew, which is refused rather than
+    // trusted. See D927.
+    const KestType *of;
 } Array;
 
 // What reading a value out of memory turned up, which is one thing: a tag that
@@ -350,6 +359,8 @@ typedef struct {
     uint32_t count;
     uint32_t capacity;
     uint16_t stride;
+    // The same, for the same reason: what one place in it holds.
+    const KestType *of;
 } Store;
 
 typedef struct {
@@ -391,10 +402,17 @@ struct KestRuntime {
     uint64_t fuel_given;
     bool fuel_bounded;
     // Written by a host that may not be this thread and read by the machine.
-    // `sig_atomic_t` is what the standard says may be written in a handler and
-    // read outside one; `volatile` is what stops the compiler from deciding
-    // nothing here changes.
-    volatile sig_atomic_t cancel_asked;
+    // An `_Atomic int` and nothing weaker: `volatile sig_atomic_t` says the
+    // compiler will not cache it and says nothing at all about what another
+    // thread sees, which is the whole of what a host cancelling from its own
+    // thread needs. Relaxed on the reading side, because the only thing the
+    // machine does with it is stop, and released on the writing side, so a
+    // host that set something up before cancelling has that visible too.
+    //
+    // This is cross-thread and is not claimed to be safe from a signal
+    // handler: `atomic_int` is only lock-free in practice and the standard
+    // does not promise a handler may touch it. See D929.
+    atomic_int cancel_asked;
     // Why the last run stopped, for the two reasons that are not a mistake in
     // the program. Read by nothing but the refusal itself.
     bool stopped_for_fuel;
@@ -929,6 +947,7 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     array->capacity = length;
     array->borrowed = true;
     array->stride = stride;
+    array->of = layout->type;
     // The block is the host's. The header is ours, and it points at theirs.
     array->bytes = data;
     value.object = array;
@@ -1965,6 +1984,43 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
                                "declaration says");
             return false;
         }
+        // And what one of them holds, which is the thing a kind and a stride
+        // between them cannot say. Two `i32` and four `f32` are eight bytes
+        // and sixteen, and a host that lent the first where the second was
+        // wanted was read past the end of its own memory and told nobody --
+        // the machine unpacked whatever was there by the callee's layout. A
+        // type is the build's own and there is one of each, so this is a
+        // pointer against a pointer at the one door a handle can arrive
+        // through. See D927.
+        const KestType *holds =
+            KEST_HANDLE_IS(frame[*at].object, KEST_IS_ARRAY)
+                ? ((const Array *)frame[*at].object)->of
+                : ((const Store *)frame[*at].object)->of;
+        if (type->element != NULL && holds != type->element) {
+            const char *wanted =
+                kest_type_name(runtime->diags->arena, type->element);
+            const char *given =
+                holds == NULL ? "something made before this machine said what "
+                                "its handles hold"
+                              : kest_type_name(runtime->diags->arena, holds);
+            if (saying->at_a_crossing) {
+                fail(runtime, saying->frame, saying->instruction, "K0661",
+                     "`%s` answers in slot %u with a handle of `%s` where one "
+                     "of `%s` was wanted",
+                     name, *at, given, wanted);
+            } else {
+                kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0661",
+                               nowhere,
+                               "`%s` takes a handle of `%s` in slot %u and "
+                               "this host handed one of `%s`",
+                               name, wanted, *at, given);
+            }
+            kest_diags_suggest(runtime->diags,
+                               "a handle carries what it is of; lend the type "
+                               "the program asks for, which is what "
+                               "`kest_borrow` was given the name of");
+            return false;
+        }
         *at += 1;
         return true;
     }
@@ -2069,7 +2125,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
 // things and the flag beside the counter is what says which: a host that asked
 // this program to stop, or a budget that is spent.
 static uint64_t take_fuel(KestRuntime *rt) {
-    if (rt->cancel_asked != 0) {
+    if (atomic_load_explicit(&rt->cancel_asked, memory_order_relaxed) != 0) {
         return 0;
     }
     if (!rt->fuel_bounded) {
@@ -2085,7 +2141,7 @@ static uint64_t take_fuel(KestRuntime *rt) {
 // program: a budget that is spent, and a host that asked. See D921.
 static bool stopped_here(Vm *vmp, KestRuntime *rt, Frame *frame,
                          const uint8_t *instruction) {
-    if (rt->cancel_asked != 0) {
+    if (atomic_load_explicit(&rt->cancel_asked, memory_order_relaxed) != 0) {
         fail(vmp, frame, instruction, "K0660",
              "the host asked this program to stop");
         return false;
@@ -2161,6 +2217,14 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     // worked. A run that ends in a refusal does not give it back, because a
     // machine that refused is one a host gives fuel to before it calls again.
     uint64_t slice = take_fuel(rt);
+    // Asked before anything runs. A body with no jump in it and no call has no
+    // step to spend, so a machine somebody had asked to stop ran it to the end
+    // and answered as though nobody had -- which is the one case a host that
+    // cancels most wants refused. See D929.
+    if (slice == 0) {
+        frame->ip = ip;
+        return stopped_here(vmp, rt, frame, ip);
+    }
 // A step of the budget, spent where a program can do something again: a jump
 // that goes back, and a call. Everything unbounded a program can do is one of
 // those two -- code is finite, so a run that never ends is going round or going
@@ -2373,6 +2437,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             array->length = count;
             array->capacity = count;
             array->stride = layout->size;
+            array->of = layout->type;
             array->bytes = bytes;
 
             top -= (size_t)count * layout->count;
@@ -2413,6 +2478,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             array->length = (uint32_t)count;
             array->capacity = (uint32_t)count;
             array->stride = layout->size;
+            array->of = layout->type;
             array->bytes = bytes;
             // A fill of nought is what the arena already handed over, so the
             // writing is skipped rather than done twice. Every slot being
@@ -2732,6 +2798,11 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             store->what = KEST_IS_STORE;
             store->stride = READ_U16();
+            {
+                uint16_t holds = READ_U16();
+                OF_THE_MODULE(holds, module->layout_count, "a layout");
+                store->of = module->layouts[holds].type;
+            }
             // Made here rather than at the first `add`, which is the whole of
             // what a count buys: the growth is where the program asked for it
             // instead of in whichever frame filled the last slot.
@@ -3961,6 +4032,18 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             frame->ip = ip;
             rt->running_top = top;
             rt->running_frames = rt->frame_count;
+            // And the budget, which is held in a register while this body runs
+            // and is nobody else's until it is put back. A host may call in
+            // again from in there: what that call could see was the budget
+            // minus this body's whole slice, so an outer call given three
+            // hundred steps took all three hundred and the call inside it was
+            // refused after fifty. Put back here and taken again below, so the
+            // number a reentrant call reads is the number that is left. See
+            // D929.
+            if (rt->fuel_bounded) {
+                rt->fuel_left += slice;
+            }
+            slice = 0;
             // The one promise in this language that somebody else keeps. A
             // declaration says a host function does not reach the heap, the
             // compiler lets a `no.alloc` body call it on the strength of that,
@@ -4248,7 +4331,7 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     rt->fuel_given = limits == NULL ? KEST_FUEL_UNLIMITED : limits->fuel;
     rt->fuel_bounded = rt->fuel_given != KEST_FUEL_UNLIMITED;
     rt->fuel_left = rt->fuel_bounded ? rt->fuel_given : UINT64_MAX;
-    rt->cancel_asked = 0;
+    atomic_init(&rt->cancel_asked, 0);
     rt->stopped_for_fuel = false;
     if (rt->stack == NULL || rt->frames == NULL || rt->natives == NULL ||
         rt->contexts == NULL || rt->said_extern == NULL ||
@@ -4427,7 +4510,7 @@ void kest_fuel_set(KestRuntime *runtime, uint64_t instructions) {
     // Giving fuel is what takes a cancel back. The two are one counter and a
     // flag, so a machine given fuel with the flag still set would run one
     // instruction and stop again saying somebody had asked it to.
-    runtime->cancel_asked = 0;
+    atomic_store_explicit(&runtime->cancel_asked, 0, memory_order_relaxed);
     runtime->stopped_for_fuel = false;
 }
 
@@ -4447,13 +4530,21 @@ void kest_cancel(KestRuntime *runtime) {
     }
     // The order matters and is the whole of what makes this safe from another
     // thread: the flag says why before the counter says stop, so a machine
-    // that reads nought has already been told which of the two it is.
-    runtime->cancel_asked = 1;
+    // that reads nought has already been told which of the two it is. Released
+    // rather than relaxed for the same reason -- everything the host did
+    // before asking is visible to the machine that stops.
+    atomic_store_explicit(&runtime->cancel_asked, 1, memory_order_release);
     runtime->fuel_left = 0;
 }
 
 bool kest_cancelled(const KestRuntime *runtime) {
-    return runtime != NULL && runtime->cancel_asked != 0;
+    if (runtime == NULL) {
+        return false;
+    }
+    // Cast away the const to read it: an atomic load takes a pointer to the
+    // object and this door promises not to change it.
+    atomic_int *asked = (atomic_int *)(uintptr_t)&runtime->cancel_asked;
+    return atomic_load_explicit(asked, memory_order_acquire) != 0;
 }
 
 void kest_allowed(const KestRuntime *runtime, KestLimits *limits) {
@@ -5419,6 +5510,21 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
     // will be, which is where the caller's frame already holds them.
     KestValue *floor = runtime->running_top != NULL ? runtime->running_top
                                                     : runtime->stack;
+    // And whether there is anywhere to put them, asked before a byte moves.
+    // `execute` asks the same thing and used to be the only one that did, so a
+    // call wider than the stack copied its arguments past the end and then
+    // said there was no room -- a refusal handed back after the memory it was
+    // protecting had already been written over. The arithmetic is the same as
+    // the one below it, and it is here because a check after a write is not a
+    // check. See D928.
+    if (runtime->running_frames >= runtime->call_depth ||
+        floor + chunk->slot_count + chunk->stack_needed > runtime->limit) {
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0602", nowhere,
+                       "there is no room to call in from here");
+        what_it_needed(runtime, runtime, index);
+        return false;
+    }
     if (chunk->param_slots > 0) {
         memcpy(floor, frame, sizeof(KestValue) * chunk->param_slots);
     }

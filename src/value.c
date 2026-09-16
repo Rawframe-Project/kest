@@ -902,7 +902,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"hash.i", NONE},      {"hash.f", NONE},      {"hash.t", NONE},
     {"hash.value", U16},   {"eq.value", U16},     {"ne.value", U16},
     {"text.from", NONE},
-    {"new.store", U16},    {"add", U16},          {"get", U16},
+    {"new.store", U16_U16},    {"add", U16},          {"get", U16},
     {"set", U16},          {"remove", NONE},      {"count", NONE},
     {"seek.from", FIND},   {"seek.next", FIND_BACK},        {"store.ref", NONE},
     {"true", NONE},        {"false", NONE},       {"pop", NONE},
