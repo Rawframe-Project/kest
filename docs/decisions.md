@@ -28150,3 +28150,38 @@ and the payment read alike.
 *It is a count and not a duration*, so it belongs in the gate rather than in
 `make time`: the same thirteen bytes on any machine, because they are the bytes
 the program asked for and not the time this one took to hand them over.
+
+## D909: what the three containers cost a frame
+
+D908 put a number on what a piece of text costs a frame. This is the other two,
+measured the same way and printed beside it:
+
+| a step that | bytes an entity |
+| --- | --- |
+| promises `no.alloc` | 0 |
+| makes a piece of text | 13 |
+| grows an array by one | 25 |
+| puts a pair in a table | 51 |
+
+The ratios are the part worth reading. An `Npc` here is a piece of text and a
+number — sixteen bytes — and growing an array by one costs twenty-five, which is
+the element and half of it again: an array doubles, so a push pays for itself
+and for the room the next one will need. A pair is eight bytes of key and value
+and costs fifty-one, because a table is three arrays — the keys, the values and
+the slots that find them — and every one of the three doubles. Six times what
+the pair holds, against one and a half for an array.
+
+That is not a defect and it is not free. It is the number a host budgeting a
+frame has had no way to ask for, and a reader who knows it will reach for
+`table.refill` before a frame that fills a table rather than after.
+
+What the gate holds is the order rather than the numbers: nought for the
+promise, and a pair above an element above a piece of text. A machine that
+reported the same heap for all four would satisfy the numbers and not the order,
+which is what the hole says.
+
+*Four turns of `check-costs.sh` have been about the same thing from four sides*:
+what the compiler's work costs, what the machine's own checking costs, what a
+frame costs in instructions, and now what a frame costs in bytes. The one thing
+this project promised at the top of `CLAUDE.md` — that cost is visible and
+provable — is a gate line rather than a claim.

@@ -5608,7 +5608,8 @@ fn main() -> i32 {
         # the one number a host budgeting a frame reads out of this command --
         # what the program allocated and nothing freed -- and a frame that
         # promises nothing and a frame that promises `no.alloc` read alike the
-        # day it stops being asked. See D908.
+        # day it stops being asked, as do the three containers beside them.
+        # See D908 and D909.
         "what": "what a tick cost the program said as nought",
         "file": "src/main.c",
         "from": """                    ticked.heap = kest_heap_used(runtime);""",
@@ -5616,7 +5617,7 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "one that makes text takes 0",
+        "caught": "0 making a piece of text, 0 growing an array",
     },
     {
         # A count of what the build that checks itself asked that says nought

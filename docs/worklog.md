@@ -34752,3 +34752,42 @@ entity a frame and a step that sets a key a frame, ticked over two round counts
 and subtracted. What a reader gets is what the three containers this language
 has cost a frame, side by side, in bytes an entity — and if pushing costs more
 than the element, the next decision is where the rest went.
+
+## What the three containers cost a frame
+
+D908 put a number on what a piece of text costs a frame. This is the other two,
+measured the same way and printed beside it:
+
+| a step that | bytes an entity |
+| --- | --- |
+| promises `no.alloc` | 0 |
+| makes a piece of text | 13 |
+| grows an array by one | 25 |
+| puts a pair in a table | 51 |
+
+The ratios are what to read. An `Npc` here is sixteen bytes, and growing an
+array by one costs twenty-five — the element and half again, because an array
+doubles and a push pays for itself and for the room the next one needs. A pair
+is eight bytes of key and value and costs fifty-one, because a table is three
+arrays — keys, values and the slots that find them — and each of the three
+doubles. Six times what the pair holds against one and a half for an array.
+
+Not a defect and not free: it is the number a host budgeting a frame has had no
+way to ask for, and a reader who knows it reaches for `table.refill` before a
+frame that fills a table rather than after.
+
+The gate holds the order rather than the numbers — nought for the promise, and a
+pair above an element above a piece of text. A machine reporting the same heap
+for all four satisfies the numbers and not the order, which is what the hole
+says.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the number the table makes worth asking for. A pair costs fifty-one
+bytes an entity and holds eight, and `table.refill` is what a program calls when
+it knows how many pairs are coming — but nothing here has ever measured what
+that saves. Ask it the same way: a step that fills a table refilled once at the
+front against one that is not, ticked over two round counts and subtracted. If
+the answer is that refilling halves it, that is a sentence `std.table`'s
+documentation should carry and does not; if it is that refilling saves nothing,
+then `refill` is a door nobody needs and the next decision is whether it stays.

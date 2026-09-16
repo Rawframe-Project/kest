@@ -1223,6 +1223,7 @@ def a_step_asks():
 TICKED = """module ticking
 
 import std.text
+import std.table
 
 struct Npc {
     name: text
@@ -1237,17 +1238,17 @@ fn made(count: i32) -> [Npc] {
     return all
 }
 
-fn quiet(world: [Npc]) -> i32 no.alloc {
-    let seen = 0
+fn quiet(world: [Npc], keep: [Npc], seen: table.Table<i32, i32>) -> i32 no.alloc {
+    let found = 0
     for one in world {
         if one.health > 0 {
-            seen += 1
+            found += 1
         }
     }
-    return seen
+    return found
 }
 
-fn loud(world: [Npc]) -> i32 {
+fn loud(world: [Npc], keep: [Npc], seen: table.Table<i32, i32>) -> i32 {
     let said = 0
     for one in world {
         let line = "{one.name}: {one.health}"
@@ -1256,13 +1257,29 @@ fn loud(world: [Npc]) -> i32 {
     return said
 }
 
+fn grown(world: [Npc], keep: [Npc], seen: table.Table<i32, i32>) -> i32 {
+    for one in world {
+        push(keep, one)
+    }
+    return len(keep)
+}
+
+fn keyed(world: [Npc], keep: [Npc], seen: table.Table<i32, i32>) -> i32 {
+    for at, one in world {
+        table.set(seen, at + table.count(seen), one.health)
+    }
+    return table.count(seen)
+}
+
 fn onEvents(events: [i32]) -> i32 {
     let all = made(%u)
-    let seen = 0
+    let keep: [Npc] = array()
+    let seen: table.Table<i32, i32> = table.empty()
+    let found = 0
     for r in 0..%u {
-        seen += %s(all)
+        found += %s(all, keep, seen)
     }
-    return seen
+    return found
 }
 
 fn main() -> i32 {
@@ -1296,11 +1313,22 @@ def a_step_takes(which):
 
 quiet_frame = a_step_takes('quiet')
 text_frame = a_step_takes('loud')
-if (quiet_frame is None or text_frame is None or quiet_frame != 0 or
-        text_frame < 1):
-    print("costs: a frame step that promises `no.alloc` takes %s byte(s) an "
-          "entity and one that makes text takes %s"
-          % (quiet_frame, text_frame))
+grown_frame = a_step_takes('grown')
+keyed_frame = a_step_takes('keyed')
+# The three containers this language has, side by side, and the promise beside
+# them. What is held is the order rather than the numbers: nought for the
+# promise, because that is what it means seen from outside; and a pair in a
+# table above an element in an array above a piece of text, because a table
+# keeps its keys, its values and its slots and each of the three doubles while
+# an array doubles once. The numbers are said for a reader to compare, the way
+# every number from a run here is. See D909.
+if (quiet_frame is None or text_frame is None or grown_frame is None or
+        keyed_frame is None or quiet_frame != 0 or text_frame < 1 or
+        grown_frame <= text_frame or keyed_frame <= grown_frame):
+    print("costs: a frame step takes %s byte(s) an entity promising "
+          "`no.alloc`, %s making a piece of text, %s growing an array and %s "
+          "putting a pair in a table"
+          % (quiet_frame, text_frame, grown_frame, keyed_frame))
     failed = 1
 
 a_frame = a_step_of(HELPED) if have_checked else None
@@ -1683,7 +1711,9 @@ if not failed:
           "written out, reaching %s of the machine's %u instructions and "
           "answering %s question(s) about itself in the build that checks "
           "itself, and one that promises `no.alloc` takes %u byte(s) of heap "
-          "an entity against %u for one that makes a piece of text, which "
+          "an entity against %u for one that makes a piece of text, %u for "
+          "one that grows an array and %u for one that puts a pair in a "
+          "table, which "
           "is work rather than time and the same count "
           "anywhere, with the rest of it measured on the machine "
           "this ran on"
@@ -1701,6 +1731,7 @@ if not failed:
              run_went, quiet_walk[0], written_walk[0], widening, narrowing,
              with_sign, without_sign, together, turn_ran, runs,
              a_frame, by_hand, reaches, len(instruction_names),
-             asked_of_itself, quiet_frame, text_frame))
+             asked_of_itself, quiet_frame, text_frame, grown_frame,
+             keyed_frame))
 sys.exit(failed)
 PY
