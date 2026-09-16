@@ -1225,6 +1225,30 @@ static bool values_equal(const KestType *type, const KestValue *a,
         }                                                                      \
     } while (0)
 
+// The numbers that reach out of a body, held to naming something the module
+// has. A body names a function, an extern and a layout by an index the
+// compiler wrote, and the machine reads the array at that index and takes what
+// it finds: a frame from a chunk, a native from a table, a walk from a
+// layout's pieces. Past the end of any of those is a pointer rather than the
+// nought a constant would be, which is the one place inside this machine where
+// a number one out is read as an address. See D905.
+#if KEST_CHECKED
+#define OF_THE_MODULE(which, many, what)                                       \
+    do {                                                                       \
+        if ((uint32_t)(which) >= (uint32_t)(many)) {                           \
+            fail(vmp, frame, instruction, "K0655",                             \
+                 "this names %s %u of the %u this program has", (what),        \
+                 (uint32_t)(which), (uint32_t)(many));                         \
+            kest_diags_fault(vmp->diags,                                       \
+                             "what the compiler wrote into an instruction and "\
+                             "what the program holds disagree");               \
+            return false;                                                      \
+        }                                                                      \
+    } while (0)
+#else
+#define OF_THE_MODULE(which, many, what) ((void)0)
+#endif
+
 #define IN_RUN(index, count)                                                   \
     do {                                                                       \
         if ((index) < 0 || (uint64_t)(index) >= (count)) {                     \
@@ -2225,7 +2249,9 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
         case KEST_OP_ARRAY: {
             uint16_t count = READ_U16();
-            const KestLayout *layout = &module->layouts[READ_U16()];
+            uint16_t of_which = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
             Array *array = kest_arena_alloc(rt->heap, sizeof(Array), 16);
             unsigned char *bytes = kest_arena_alloc(
                 rt->heap, (size_t)count * layout->size + 1, 16);
@@ -2255,7 +2281,9 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         }
         case KEST_OP_MAKE_ARRAY: {
-            const KestLayout *layout = &module->layouts[READ_U16()];
+            uint16_t of_which = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
             top -= layout->count;
             KestValue *fill = top;
             int64_t count = (--top)->integer;
@@ -2304,7 +2332,9 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         }
         case KEST_OP_PUSH: {
-            const KestLayout *layout = &module->layouts[READ_U16()];
+            uint16_t of_which = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
             top -= layout->count;
             KestValue *value = top;
             Array *array = (--top)->object;
@@ -2367,7 +2397,9 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         }
         case KEST_OP_INDEX: {
-            const KestLayout *layout = &module->layouts[READ_U16()];
+            uint16_t of_which = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
             int64_t index = (--top)->integer;
             const Array *array = (--top)->object;
             HOLD(array, KEST_IS_ARRAY, "an array");
@@ -2378,7 +2410,9 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         }
         case KEST_OP_POP_LAST: {
-            const KestLayout *layout = &module->layouts[READ_U16()];
+            uint16_t of_which = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
             Array *array = (--top)->object;
             HOLD(array, KEST_IS_ARRAY, "an array");
             if (array->borrowed) {
@@ -2402,7 +2436,9 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         }
         case KEST_OP_TAKE: {
-            const KestLayout *layout = &module->layouts[READ_U16()];
+            uint16_t of_which = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
             int64_t index = (--top)->integer;
             Array *array = (--top)->object;
             HOLD(array, KEST_IS_ARRAY, "an array");
@@ -2488,7 +2524,9 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
         case KEST_OP_LOAD_AT: {
             uint16_t offset = READ_U16();
-            const KestLayout *layout = &module->layouts[READ_U16()];
+            uint16_t of_which = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
             const unsigned char *at = (--top)->object;
             READ_INTO(top, layout, at + offset);
             top += layout->count;
@@ -2496,7 +2534,9 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
         case KEST_OP_STORE_AT: {
             uint16_t offset = READ_U16();
-            const KestLayout *layout = &module->layouts[READ_U16()];
+            uint16_t of_which = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
             top -= layout->count;
             KestValue *value = top;
             unsigned char *at = (--top)->object;
@@ -3477,6 +3517,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_CALL: {
             uint16_t index = READ_U16();
             uint16_t argument_slots = READ_U16();
+            OF_THE_MODULE(index, module->count, "a function");
             const KestChunk *callee = module->functions[index];
 
             if (rt->frame_count == rt->call_depth) {
@@ -3665,6 +3706,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t index = READ_U16();
             uint16_t argument_slots = READ_U16();
             uint16_t result_slots = READ_U16();
+            OF_THE_MODULE(index, module->extern_count, "a door of the host");
             KestValue *base = top - argument_slots;
 #if KEST_CHECKED
             // And the same three numbers at the crossing, held against the

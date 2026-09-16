@@ -34590,3 +34590,46 @@ wrote and the machine reads without asking whether it is one the module has —
 there. The five turns since D900 have bounded everything a body reaches inside
 itself; this is the same question about what it reaches outside, and it is the
 one where reading past the end is a pointer rather than a nought.
+
+## The numbers that reach out of a body
+
+D903 and D904 bounded the two things a body reaches inside itself. It reaches
+three outside: a function by an index into the module, a door of the host by
+another, a layout by a third. Eleven places read one of those arrays at a number
+the compiler wrote and take what they find.
+
+Past the end of any of the three is a pointer, which is what makes this the last
+of the five worth doing and the first worth doing carefully. A slot past a frame
+is the operand stack; a constant past the end is room the arena zeroed; a chunk
+past the end of the module is whatever is next in an arena, read as a body and
+entered. `call.value` has been held to this since D835 for a number a host
+writes; nothing held the same number when the compiler wrote it.
+
+```text
+error[K0655]: this names a layout 1 of the 1 this program has
+```
+
+One macro at eleven sites, the checked build, nothing in the release build. The
+hole is one added to `layout_of` — the one place the compiler turns a type into
+a number for an instruction.
+
+That closes it. Six turns ago the machine held its own compiler to one thing:
+that a body never went deeper than it was given. It now holds the count where a
+frame changes hands, what is in the slots handed over, the slots a body names,
+the constants it was given, and the three arrays it reaches outside itself.
+Every number the compiler writes into an instruction is read by something that
+asks whether it could be that number.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** what is left is whether it is the *right* number, and the one piece of
+it that can be had without a new table. A chunk records the layout of every
+parameter — `takes`, one per argument — and the machine now holds a call's slots
+to those. It records nothing about what a body gives back except how many slots,
+and `gives` names a layout for a host to read. So the same question at the other
+end: when a body returns, hold the slots it is handing back to the layout it
+declared, the way a call's arguments are held to the callee's. It is
+`fits_the_piece` at `return` rather than at `call`, it needs nothing written
+down that is not already there, and it is the last of the four questions the
+boundary puts to a host that the machine does not yet put to itself from the
+inside.

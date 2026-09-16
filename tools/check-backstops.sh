@@ -5604,6 +5604,38 @@ fn main() -> i32 {
         "caught": "a build that is not there answered as though it were",
     },
     {
+        # A layout named past the ones a program has. A body names a function,
+        # a door of the host and a layout by an index the compiler wrote, and
+        # the machine reads the array at that index and takes what it finds --
+        # a frame from a chunk, a native from a table, a walk from a layout's
+        # pieces. Past the end of any of those is a pointer rather than the
+        # nought a constant would be. See D905.
+        "what": "a layout named past the ones a program has",
+        "file": "src/compile.c",
+        "from": """    int32_t index = kest_module_layout(compiler->module, type);
+    if (index < 0) {
+        compiler->out_of_memory = true;
+        return 0;
+    }
+    return (uint16_t)index;""",
+        "to": """    int32_t index = kest_module_layout(compiler->module, type);
+    if (index < 0) {
+        compiler->out_of_memory = true;
+        return 0;
+    }
+    return (uint16_t)(index + 1);""",
+        "make": ["debug"],
+        "binary": "kest-debug",
+        "program": "naming.kest",
+        "source": """fn main() -> i32 {
+    let made: [i32] = array()
+    push(made, 7)
+    return made[0] - 7
+}
+""",
+        "caught": "this names a layout 1 of the 1 this program has",
+    },
+    {
         # A constant read one past the ones a body was given. The same number
         # written by the same hand as the slots beside it and reaching past the
         # other end of a body: what follows the constants in the array is room

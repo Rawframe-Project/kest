@@ -28019,3 +28019,39 @@ or a slot the body names, or a constant the body was given — and each of the
 three now says so rather than reading what is next to it. The numbers are still
 not held to being the *right* numbers; that is the table of local types D903
 named and has not been written.
+
+## D905: the numbers that reach out of a body
+
+D903 and D904 bounded the two things a body reaches inside itself. It reaches
+three outside: a function, by an index into the module; a door of the host, by
+another; and a layout, by a third. Eleven places read one of those arrays at a
+number the compiler wrote and take what they find there — a frame from a chunk,
+a native from a table, a walk from a layout's pieces.
+
+Past the end of any of the three is **a pointer**, which is what makes this the
+last of the five worth doing and the first of them worth doing carefully. A slot
+past a frame is the operand stack; a constant past the end is room the arena
+zeroed; a chunk past the end of the module is whatever is next in an arena, read
+as a body and entered. `call.value` has been held to this since D835 — *entered
+with a frame of the wrong width, a body reads the slots below the ones it was
+given, and a machine walks off its own stack* — for a number a host writes.
+Nothing held the same number when the compiler wrote it.
+
+```text
+error[K0655]: this names a layout 1 of the 1 this program has
+```
+
+One macro at eleven sites, the build that checks itself, and nothing in the
+release build at all. Every example, the library, both instruments and both
+hosts come back clean. The hole is one added to `layout_of`, which is the one
+place the compiler turns a type into a number for an instruction.
+
+*That closes it.* Six turns ago the machine held its own compiler to one thing:
+that a body never went deeper than it was given. It now holds the count where a
+frame changes hands, what is in the slots handed over, the slots a body names,
+the constants it was given, and the three arrays it reaches outside itself.
+Every number the compiler writes into an instruction is read by something that
+asks whether it could be that number. What is left is whether it is the *right*
+number, and for the slots that needs the table of local types D903 named — which
+is the one piece of this the machine cannot ask for without the compiler writing
+it down first.
