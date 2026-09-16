@@ -27,7 +27,7 @@ asks the question. Evidence is named; nothing here is a claim from a document.
 | --- | --- |
 | F10 | `no.alloc` is documented more broadly than what is measured: diagnostic and trap machinery allocate outside the program heap |
 | E3 | the library has no process-global mutable state; what is shared is the build's stamp counter, which two runtimes of one build write without synchronisation. That is what F9 rests on |
-| E4 | a text slot is a `const char *`; length is `strlen`, so `len` is O(n), embedded noughts are unrepresentable, and there is no reusable buffer |
+| E4 | a text slot is a `const char *`; length is `strlen`, so `len` is O(n) and embedded noughts are unrepresentable. The reusable buffer is answered: `fit` and `std.text`'s `fitting` (D940). O(1) length is not |
 | E5 | `live_from` scans to the store's high-water mark, so walking a store is O(high-water) rather than O(live) |
 
 ## Phases
@@ -37,7 +37,9 @@ The mission's order. `/home/kest/mission/STATE.md` carries which one is open.
     0 baseline and reproduction    done
     1 semantic and embedding repair
     2 one resolved per-instance representation
-    3 temporaries, text, buffer, store
+    3 temporaries, text, buffer, store   buffer done (D940); O(1) text
+                                         length and the store's own
+                                         representation are open
     4 validation correction
     5 backend decision from that representation
     6 a determinism profile that is true

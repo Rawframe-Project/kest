@@ -3788,6 +3788,7 @@ K0310|fn f(a: i32) -> i32 {\n    return a\n}\n\nfn main() -> i32 {\n    return f
 K0310|fn main() -> i32 {\n    let n = 1\n    return len(get(n, 0))\n}|`get` works on a store, found `i32`
 K0310|fn main() -> i32 {\n    let n = 1\n    return len(pop(n))\n}|`pop` works on an array, found `i32`
 K0310|fn main() -> i32 {\n    let n = 1\n    push(n, 1)\n    return 0\n}|`push` puts something on an array, found `i32`
+K0310|fn main() -> i32 {\n    let n = 1\n    if fit(n, 1) {\n        return 1\n    }\n    return 0\n}|`fit` puts something on an array if there is room, found `i32`
 K0310|fn main() -> i32 {\n    let a: [i32] = array()\n    let h = hash(a)\n    return i32(h)\n}|`hash` stands for what compares, and `[i32]` does not
 K0310|fn main() -> i32 {\n    return len(1)\n}|`len` counts an array, a store or text, found `i32`
 K0310|fn main() -> i32 {\n    let a: [i32] = array("x", 0)\n    return len(a)\n}|a count is an integer, found `text`

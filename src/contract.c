@@ -216,6 +216,9 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
                 {"array", "`array()` makes something that can grow"},
                 {"clear", NULL},
                 {"find", NULL},
+                // It writes where there is room and answers false where there
+                // is not, so it never reaches the heap. See D940.
+                {"fit", NULL},
                 {"get", NULL},
                 {"hash", NULL},
                 {"len", NULL},
