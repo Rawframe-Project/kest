@@ -187,7 +187,7 @@ int main(int argc, char **argv) {
     // The name this host is about to call, read before the machine is made
     // because what it is about to call is what the machine is sized for.
     const char *called = argc > 2 ? argv[2] : "main";
-    KestLimits limits = {0, 0, 0};
+    KestLimits limits = {0, 0, 0, 0};
     KestReason why = {KEST_REACH_UNASKED, NULL};
     bool measured = kest_needs(build, &limits, &why);
     limits.heap_bytes = 1024 * 1024;
@@ -199,12 +199,12 @@ int main(int argc, char **argv) {
     // because this is the host with nothing else in it: two machines, no
     // program run in them, and the numbers read back out. See D815.
     if (!measured) {
-        KestLimits few = {0, 16, 0};
-        KestLimits many = {0, 64, 0};
+        KestLimits few = {0, 16, 0, 0};
+        KestLimits many = {0, 64, 0, 0};
         KestRuntime *shallow = kest_start(build, host, &few);
         KestRuntime *deeper = kest_start(build, host, &many);
-        KestLimits had_few = {0, 0, 0};
-        KestLimits had_many = {0, 0, 0};
+        KestLimits had_few = {0, 0, 0, 0};
+        KestLimits had_many = {0, 0, 0, 0};
         kest_allowed(shallow, &had_few);
         kest_allowed(deeper, &had_many);
         // A frame costs the same wherever it is, so the two answers differ by
@@ -240,7 +240,7 @@ int main(int argc, char **argv) {
         // nothing is sized by, said early. A number a host reads that is not
         // the machine it is handed is a number it cannot budget with. See
         // D823.
-        KestLimits told_first = {0, 0, 0};
+        KestLimits told_first = {0, 0, 0, 0};
         KestReason told_why = {KEST_REACH_UNASKED, NULL};
         if (!kest_bound(build, 16, &told_first, &told_why) ||
             told_why.reach == KEST_REACH_KNOWN ||
@@ -265,7 +265,7 @@ int main(int argc, char **argv) {
         // under the one the whole file gets — held as less and not as no
         // more, because a bound that counted everything would be equal and
         // read as right. See D817.
-        KestLimits about_main = {0, 0, 0};
+        KestLimits about_main = {0, 0, 0, 0};
         KestReason bounded = {KEST_REACH_UNASKED, NULL};
         if (!kest_bound_of(build, "main", 16, &about_main, &bounded) ||
             about_main.call_depth != 16 ||
@@ -288,7 +288,7 @@ int main(int argc, char **argv) {
         // the bodies that reach a host function count towards it, and this
         // program has bodies that do not, so it is under what `main` wants
         // altogether. See D818.
-        KestLimits back_in = {0, 0, 0};
+        KestLimits back_in = {0, 0, 0, 0};
         KestReason from_where = {KEST_REACH_UNASKED, NULL};
         if (!kest_bound_from(build, "main", 16, &back_in, &from_where) ||
             back_in.stack_slots == 0 ||
@@ -318,7 +318,7 @@ int main(int argc, char **argv) {
     // this host's own choice and the slots follow from it — a program that
     // goes deeper than that is refused at the call that would, and told what
     // it wanted, which is the whole of what a bound promises. See D819.
-    KestLimits asked_for = {0, 0, 0};
+    KestLimits asked_for = {0, 0, 0, 0};
     if (!measured && kest_bound_of(build, called, 16, &asked_for, NULL)) {
         asked_for.heap_bytes = 1024 * 1024;
         // What came back may be the least for that one name rather than a
@@ -353,7 +353,7 @@ int main(int argc, char **argv) {
     // one it wrote: this is the same two numbers, read back off the machine
     // the program is about to run in. See D819.
     if (asked_for.stack_slots > 0) {
-        KestLimits was_given = {0, 0, 0};
+        KestLimits was_given = {0, 0, 0, 0};
         kest_allowed(runtime, &was_given);
         // The heap beside them, which is the one of the three a machine has
         // no number of its own for: what comes back is the ceiling this host

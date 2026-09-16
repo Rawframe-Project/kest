@@ -83,6 +83,11 @@ static void help(FILE *out) {
     "                    the heap it runs on. A number of bytes, or one\n"
     "                    with K, M or G after it. Without this it asks for\n"
     "                    whatever it needs\n"
+    "  --fuel <steps>    the most steps run, tick and call may take, where\n"
+    "                    a step is a jump that goes back or a call. A\n"
+    "                    number, or one with K, M or G after it. Without\n"
+    "                    this a program runs until it is done, which a\n"
+    "                    program with a loop that never ends never is\n"
             "  --version         print the version\n"
             "\n"
             "exit status is 1 when anything was refused, and otherwise what\n"
@@ -1180,6 +1185,48 @@ static bool read_room(const char *text, size_t *room, bool json) {
     return true;
 }
 
+// And how many instructions a run may have. Written the same way room is, with
+// the same scales, because a reader who has learnt one has learnt the other --
+// and a budget is the same kind of number: a ceiling somebody picked rather
+// than one the program asked for. See D921.
+static bool read_fuel(const char *text, uint64_t *fuel, bool json) {
+    char *end = NULL;
+    errno = 0;
+    unsigned long long value = strtoull(text, &end, 10);
+    unsigned long long scale = 1;
+    if (end != text && errno != ERANGE) {
+        switch (*end) {
+        case 'K':
+        case 'k':
+            scale = 1000;
+            end++;
+            break;
+        case 'M':
+        case 'm':
+            scale = 1000ull * 1000;
+            end++;
+            break;
+        case 'G':
+        case 'g':
+            scale = 1000ull * 1000 * 1000;
+            end++;
+            break;
+        default:
+            break;
+        }
+    }
+    if (end == text || *end != '\0' || errno == ERANGE || value == 0 ||
+        value > UINT64_MAX / scale) {
+        refused_at_the_words(json, "K0649",
+                             "`%s` is not a number of instructions; write one, "
+                             "or one with `K`, `M` or `G` after it",
+                             text);
+        return false;
+    }
+    *fuel = (uint64_t)(value * scale);
+    return true;
+}
+
 static int32_t *read_events(const char *text, int32_t *count,
                             bool json) {
     uint32_t found = 1;
@@ -1460,7 +1507,7 @@ static const KestLimits *room_for(KestBuild *build, const char *const *entries,
     KestReason why = {KEST_REACH_UNASKED, NULL};
     bool asked = false;
     for (uint32_t i = 0; entries != NULL && entries[i] != NULL; i++) {
-        KestLimits one = {0, 0, 0};
+        KestLimits one = {0, 0, 0, 0};
         // The least where the name has one and a bound where it has not, which
         // is one question rather than two: a name that reaches itself used to
         // throw away the answers for the names beside it and for itself, and
@@ -1571,7 +1618,7 @@ static KestRuntime *a_machine_within(KestBuild *build, KestHost *host,
 
 static int run(const char *command, const char *executable, char **paths,
                int path_count, bool json, int32_t count, const int32_t *given,
-               bool reset, size_t room) {
+               bool reset, size_t room, uint64_t fuel) {
     KestBuild *build = kest_build_open(kest_library_path(NULL, executable),
                                        paths,
                                        strcmp(command, "call") == 0
@@ -1669,13 +1716,14 @@ static int run(const char *command, const char *executable, char **paths,
                 // `--json` has always done this; the words do it too. See
                 // D343.
                 KestHost *host = make_host(stderr);
-                KestLimits least = {0, 0, 0};
+                KestLimits least = {0, 0, 0, 0};
                 KestRuntime *runtime =
                     host == NULL
                         ? NULL
                         : a_machine_within(build, host,
                                            (const char *[]){paths[1], NULL},
                                            &least, room);
+                kest_fuel_set(runtime, fuel);
                 if (runtime != NULL) {
                     // What comes back and what goes in, because the frame is
                     // both: `chosen->type` is the function, and a function is
@@ -1808,9 +1856,10 @@ static int run(const char *command, const char *executable, char **paths,
             // `run` calls `main` and nothing else, and `tick` calls whichever
             // of the two handlers the file has. Asking about the ones this
             // host will call is asking about what will run.
-            KestLimits least = {0, 0, 0};
+            KestLimits least = {0, 0, 0, 0};
             KestRuntime *runtime = a_machine_within(
                 build, host, ticking ? TICK_CALLS : RUN_CALLS, &least, room);
+            kest_fuel_set(runtime, fuel);
             if (runtime != NULL) {
                 if (ticking) {
                     drive_events(runtime, build, count, given, reset, &ticked);
@@ -1822,7 +1871,7 @@ static int run(const char *command, const char *executable, char **paths,
                     // the command line asks the program what it needs, so
                     // this is what asking gets you.
                     ticked.machine = kest_runtime_cost(runtime);
-                    KestLimits given_room = {0, 0, 0};
+                    KestLimits given_room = {0, 0, 0, 0};
                     kest_allowed(runtime, &given_room);
                     ticked.slots = given_room.stack_slots;
                     ticked.frames = given_room.call_depth;
@@ -2259,6 +2308,9 @@ int main(int argc, char **argv) {
     // The most this command may ask the machine for, and nought for as much as
     // there is, which is what it has always asked for. See D843.
     size_t room = 0;
+    // And how many instructions it may run, nought for as many as it takes,
+    // which is what this command has always allowed. See D921.
+    uint64_t fuel = KEST_FUEL_UNLIMITED;
     // The events themselves, when `tick` was given a list rather than a count.
     int32_t *given = NULL;
     bool told_it = false;
@@ -2284,6 +2336,21 @@ int main(int argc, char **argv) {
             mode = FORMAT_CHECK;
         } else if (strcmp(argv[i], "--reset") == 0) {
             reset = true;
+        } else if (strcmp(argv[i], "--fuel") == 0) {
+            // The count is the word after, for the reason `--room`'s is.
+            if (i + 1 >= argc) {
+                free(paths);
+                free(given);
+                return refused_at_the_words(json, "K0649",
+                                            "`--fuel` says how many "
+                                            "instruction(s), and there is "
+                                            "nothing after it");
+            }
+            if (!read_fuel(argv[++i], &fuel, json)) {
+                free(paths);
+                free(given);
+                return 1;
+            }
         } else if (strcmp(argv[i], "--room") == 0) {
             // The amount is the word after, the way a count is: an option
             // written `--room=64M` is one word this command line would have
@@ -2376,7 +2443,7 @@ int main(int argc, char **argv) {
         }
         int status =
             run(argv[1], argv[0], paths, path_count, json, count, given,
-                reset, room);
+                reset, room, fuel);
         free(paths);
         free(given);
         return status;

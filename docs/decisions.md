@@ -28568,3 +28568,57 @@ machine's word size and this machine's layouts as much as they are the program,
 the way a container's bytes are (D916). The section says so now, and the rule
 that holds a section quoting a duration or a byte-an-entity to saying whose it is
 covers this kind too.
+
+## D921: a budget in steps, so a program that will not stop can be stopped
+
+A host that runs code it did not write had three ceilings and all three were
+memory: how many slots, how deep calls may nest, how many bytes of heap.
+`while true {}` is a program, the compiler is right to accept it, and nothing
+here stopped it. That is the one thing an embedding host cannot work around
+from outside: it does not have the machine back to do anything with.
+
+So there is a fourth ceiling. `KestLimits.fuel` is how many steps a machine may
+take, `kest_fuel_set` gives it more, `kest_fuel_left` says what is left, and
+`kest_cancel` is the same stop asked for a different reason. `--fuel` is the
+command line's way in.
+
+**A step is a jump that goes back or a call.** Those are the only two things a
+program does to go on doing something: code is finite, so a run that never ends
+is going round or going deeper. A budget on them bounds every program that will
+not stop. What it does not bound is a long body with no loop in it, and the
+program's own size bounds that.
+
+**The unit is not an instruction, and the reason is measured.** The first
+version counted instructions, which is the number a reader would rather have. It
+cost a sixth of everything: a frame step an entity went from 122 ns to 142 on
+this machine, over ten interleaved pinned runs each, taken on the smallest of
+them. Two versions were measured against the same binary to find out where that
+went — one with the fields in the machine and the check compiled out, which cost
+1.6 percent and is noise, and one with the check, which cost 16.4. So it is the
+check and not the struct.
+
+Why a counter in the machine is so dear is written down twice in this file
+already: nothing tells the compiler that moving slots is not writing it, so it
+becomes a load and a store per instruction and blocks what the loop was
+rearranged for in D869 and D872. Holding it in a register does not help either,
+because the register still has to be spent and tested on every one.
+
+At the jump and the call it costs nothing that can be measured: −1.6 percent on
+the same statistic, which is to say the same number.
+
+**Stopping is not breaking.** A machine that runs out has its stack, its heap
+and everything the program built exactly where they were. A host gives it more
+and calls again. What it cannot do is resume the call that stopped — that call
+returned, and the work it had not done is not done. This is a tick budget, not a
+coroutine.
+
+**Cancel is the same mechanism.** `kest_cancel` is one store of one word, so a
+host may call it from a signal handler or from another thread, and the machine
+stops at the next step saying `K0660` rather than `K0659`. Giving fuel is what
+takes it back, because the two are one counter and a flag beside it. There is no
+second check in the loop for it.
+
+**It is not heap, stack or call depth.** Those three say the program asked for
+more memory than it may have. This one says it ran for longer than it may. The
+codes are separate, the messages say different things, and a host can tell which
+happened without reading prose.

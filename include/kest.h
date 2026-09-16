@@ -272,12 +272,22 @@ const char *kest_case_of(const KestLayout *layout, uint16_t piece, int32_t tag,
 // message at the instruction that asked, in the same shape as anything else
 // that fails while running, rather than a machine that has taken the memory
 // the host wanted for something else.
+//
+// `fuel` is the fourth and the only one of them that bounds *time* rather than
+// memory: how many instructions the machine may run before it stops. Nought is
+// no ceiling, which is what a machine has always had. A host that runs code it
+// did not write needs this one — `while true {}` is a program, the compiler is
+// right to accept it, and without a budget it is a frame that never ends.
 typedef struct {
     uint32_t stack_slots;
     uint32_t call_depth;
     size_t heap_bytes;
+    uint64_t fuel;
 } KestLimits;
 
+// No ceiling on how long a program runs, which is what `KestLimits.fuel` means
+// when it is nought and what every machine had before there was a fuel field.
+#define KEST_FUEL_UNLIMITED 0
 // Why there is a least, or why there is not. A run of calls that comes back
 // round has no deepest frame, and a call through a function value reaches
 // something that is not known until it runs; those are two different things to
@@ -891,6 +901,48 @@ KestRefusal kest_heap_refused_by(const KestRuntime *runtime);
 // ceiling is. The other two are always a number, because a machine always has
 // a stack and a depth.
 void kest_allowed(const KestRuntime *runtime, KestLimits *limits);
+
+// Give this machine a budget, or take its budget away with
+// `KEST_FUEL_UNLIMITED`. One unit is one instruction: a budget of a thousand
+// runs a thousand instructions and then stops at the instruction that would
+// have been the thousand and first, which is the same number whatever machine
+// this is on — an instruction count is the program's and a duration is the
+// machine's.
+//
+// This is the door a host replenishes through. A machine that stopped for want
+// of fuel is not broken and is not finished: its stack, its heap and everything
+// the program built are where they were, so a host that gives it more and calls
+// again carries on from the next tick rather than from the start. What it may
+// not do is carry on from the middle of the call that stopped — the call
+// returned, and the work that call had not done is not done.
+//
+// Called between calls. A host may call it from inside one of its own bound
+// functions; what it may not do is expect the call it is inside to see the new
+// budget, because that call is already spending the old one.
+void kest_fuel_set(KestRuntime *runtime, uint64_t instructions);
+
+// What is left of it, and `KEST_FUEL_UNLIMITED`'s own answer — every bit set —
+// for a machine with no budget. A host that watches a frame reads this after a
+// tick to learn what the tick cost, which is the same number the build that
+// checks itself counts and a release build does not.
+uint64_t kest_fuel_left(const KestRuntime *runtime);
+
+// Ask this machine to stop at the next instruction. It is the other half of the
+// same mechanism and costs the same nothing: a host that wants a running
+// program to stop — an editor cancelling, a process shutting down — sets this
+// and the machine stops the way it stops for fuel, with everything it built
+// intact and a refusal that says which of the two it was.
+//
+// It is one store of one word, so a host may call it from a signal handler or
+// from another thread while the machine runs. What it may not do is free the
+// machine from there: stopping is a message and freeing is a change.
+//
+// A machine stays cancelled until a host gives it fuel again. `kest_fuel_set`
+// is what takes it back.
+void kest_cancel(KestRuntime *runtime);
+
+// Whether somebody asked it to stop and it has not been given fuel since.
+bool kest_cancelled(const KestRuntime *runtime);
 
 // Throws the heap away and starts it again. Nothing in the machine survives a
 // call, so between calls there is nothing of the program's left to point at

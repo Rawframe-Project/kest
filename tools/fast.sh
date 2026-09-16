@@ -111,8 +111,60 @@ else
     fi
 fi
 
+# A program that will not stop, stopped. The three memory ceilings are held by
+# `check-ceilings.sh` and this is the fourth: a budget in steps, which is the
+# one an embedding host cannot work around from outside. See D921.
+cat >"$scratch"/spin.kest <<'KEST'
+module spin
+
+fn main() -> i32 {
+    while true {
+    }
+    return 0
+}
+KEST
+cat >"$scratch"/turns.kest <<'KEST'
+module turns
+
+fn turns(n: i32) -> i32 {
+    let sum = 0
+    for i in 0..n {
+        sum += i
+    }
+    return sum
+}
+
+fn main() -> i32 {
+    if turns(1000) != 499500 {
+        return 1
+    }
+    return 0
+}
+KEST
+if ./kest run --fuel 2000 "$scratch"/spin.kest >"$scratch"/spun 2>&1 </dev/null; then
+    say fuel "a program with a loop that never ends ran to the end"
+    failed=1
+elif ! grep -q 'K0659' "$scratch"/spun; then
+    say fuel "a program that ran out of steps said something else:"
+    head -3 "$scratch"/spun
+    failed=1
+# And to the number rather than only to stopping: a budget that stops
+# everything is a budget nobody can use. A thousand turns of a `for` and the
+# call that reaches them is a thousand steps, and one fewer is not enough.
+elif ! ./kest run --fuel 1000 "$scratch"/turns.kest >/dev/null 2>&1 </dev/null; then
+    say fuel "a thousand turns would not run inside a thousand steps"
+    failed=1
+elif ./kest run --fuel 999 "$scratch"/turns.kest >/dev/null 2>&1 </dev/null; then
+    say fuel "a thousand turns ran inside nine hundred and ninety-nine steps"
+    failed=1
+else
+    say fuel "a loop that never ends stops, and a budget is a number"
+fi
+
 # The boundary. `examples/embed` is the other host in this tree and it runs the
-# program beside it frame by frame, so it crosses in both directions.
+# program beside it frame by frame, so it crosses in both directions. It is
+# also where the budget is asked of the library rather than of the command
+# line: exhausted, replenished, spent to a number, cancelled and taken back.
 if ! ./examples/embed >"$scratch"/crossed 2>&1 </dev/null; then
     say embedding "the other host refused"
     tail -5 "$scratch"/crossed

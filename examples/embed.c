@@ -619,8 +619,8 @@ static uint32_t places_said(KestRuntime *runtime, const char *words) {
 // called back into, and then the second half is nothing. See D623.
 static bool room_for_calling(KestBuild *build, const char *const *names,
                              const char *into, KestLimits *limits) {
-    KestLimits back_in = {0, 0, 0};
-    KestLimits from_there = {0, 0, 0};
+    KestLimits back_in = {0, 0, 0, 0};
+    KestLimits from_there = {0, 0, 0, 0};
     if (into != NULL && (!kest_needs_from(build, NULL, &back_in, NULL) ||
                          !kest_needs_of(build, into, &from_there, NULL))) {
         fprintf(stderr, "the program says nothing about calling `%s` from "
@@ -630,7 +630,7 @@ static bool room_for_calling(KestBuild *build, const char *const *names,
     limits->stack_slots = back_in.stack_slots + from_there.stack_slots;
     limits->call_depth = back_in.call_depth + from_there.call_depth;
     for (uint32_t i = 0; names[i] != NULL; i++) {
-        KestLimits one = {0, 0, 0};
+        KestLimits one = {0, 0, 0, 0};
         if (!kest_needs_of(build, names[i], &one, NULL)) {
             fprintf(stderr, "`%s` is not there to ask about\n", names[i]);
             return false;
@@ -1479,7 +1479,7 @@ static bool spends_the_heap(Engine *engine) {
     // whether a megabyte was nearly enough. The two numbers are one number
     // said from either side: what it used stops short of what it was allowed
     // by exactly what it was refused.
-    KestLimits given = {0, 0, 0};
+    KestLimits given = {0, 0, 0, 0};
     kest_allowed(engine->runtime, &given);
     size_t wanted = kest_heap_wanted(engine->runtime);
     if (wanted == 0 ||
@@ -1961,7 +1961,7 @@ int main(int argc, char **argv) {
     // so does every machine started from it, which used to do the same walk in
     // its own room. Measured on the second build, which nobody has asked
     // anything yet — the first has been asked several times by here. See D607.
-    KestLimits asked = {0, 0, 0};
+    KestLimits asked = {0, 0, 0, 0};
     size_t before_asking = kest_build_cost(read_again);
     if (!kest_needs(read_again, &asked, NULL)) {
         fprintf(stderr, "a build that compiled says nothing about what it "
@@ -2267,7 +2267,7 @@ int main(int argc, char **argv) {
     // number a program has, and all three of these doors say that the same way
     // rather than one of them leaving the field as it found it. A host's own
     // cap goes on after asking, which is what this one does below. See D724.
-    KestLimits limits = {0, 0, 64};
+    KestLimits limits = {0, 0, 64, 0};
     KestReason why = {KEST_REACH_UNASKED, NULL};
     if (kest_needs(build, &limits, &why)) {
         if (limits.heap_bytes != 0) {
@@ -2290,7 +2290,7 @@ int main(int argc, char **argv) {
         // The same asking of one function, with the same heap written in
         // first: three doors, one shape, one answer about the field none of
         // them knows.
-        KestLimits stepping = {0, 0, 64};
+        KestLimits stepping = {0, 0, 64, 0};
         if (kest_needs_of(build, "step", &stepping, NULL) &&
             stepping.heap_bytes != 0) {
             fprintf(stderr, "asking what `step` needs left %zu bytes of heap "
@@ -2309,7 +2309,7 @@ int main(int argc, char **argv) {
         // and the frames are not looked at: a host that asks the second
         // question of a program that can answer the first gets the first,
         // which is what makes it safe to ask always. See D817.
-        KestLimits bounded = {0, 0, 0};
+        KestLimits bounded = {0, 0, 0, 0};
         KestReason which_one = {KEST_REACH_UNASKED, NULL};
         if (!kest_bound_of(build, "step", 4, &bounded, &which_one) ||
             which_one.reach != KEST_REACH_KNOWN ||
@@ -2326,8 +2326,8 @@ int main(int argc, char **argv) {
         // functions, and what that needs is not a number to double and hope
         // over: it is where the machine already is when it reaches a host
         // function, plus what the function called from there needs on its own.
-        KestLimits inside = {0, 0, 0};
-        KestLimits rule = {0, 0, 0};
+        KestLimits inside = {0, 0, 0, 0};
+        KestLimits rule = {0, 0, 0, 0};
         if (kest_needs_from(build, NULL, &inside, NULL) &&
             inside.call_depth > 0 &&
             kest_needs_of(build, "rule", &rule, NULL)) {
@@ -2365,9 +2365,9 @@ int main(int argc, char **argv) {
     // floor under both for a host that is called from inside a frame, which
     // this one is. See D604.
     {
-        KestLimits everything = {0, 0, 0};
-        KestLimits named = {0, 0, 0};
-        KestLimits from_inside = {0, 0, 0};
+        KestLimits everything = {0, 0, 0, 0};
+        KestLimits named = {0, 0, 0, 0};
+        KestLimits from_inside = {0, 0, 0, 0};
         static const char *const calls[] = {"step", "create", "spawn", NULL};
         if (!kest_needs(build, &everything, NULL)) {
             fprintf(stderr, "the program says nothing about what it needs\n");
@@ -2377,7 +2377,7 @@ int main(int argc, char **argv) {
         // answer. This program has a least, so that is what comes back and the
         // frames are not looked at — the first of the three doors holding the
         // same promise as the other two. See D823.
-        KestLimits at_most = {0, 0, 0};
+        KestLimits at_most = {0, 0, 0, 0};
         KestReason most_why = {KEST_REACH_UNASKED, NULL};
         if (!kest_bound(build, 4, &at_most, &most_why) ||
             most_why.reach != KEST_REACH_KNOWN ||
@@ -2425,7 +2425,7 @@ int main(int argc, char **argv) {
         // call is in rather than the one at the top of the chain that gets
         // there. A name that came back as the function asked about would
         // answer the whole program's own number. See D605.
-        KestLimits there = {0, 0, 0};
+        KestLimits there = {0, 0, 0, 0};
         if (where.where == NULL ||
             !kest_needs_from(build, where.where, &there, NULL) ||
             there.stack_slots == 0 ||
@@ -2444,7 +2444,7 @@ int main(int argc, char **argv) {
         // the host reaches being some of those, never more. A number the
         // other way round would be a host told to make room for a place the
         // program cannot get to. See D801.
-        KestLimits everywhere = {0, 0, 0};
+        KestLimits everywhere = {0, 0, 0, 0};
         if (!kest_needs_of(build, where.where, &everywhere, NULL) ||
             there.stack_slots > everywhere.stack_slots) {
             fprintf(stderr,
@@ -2459,7 +2459,7 @@ int main(int argc, char **argv) {
         // And the third door asked of a program that can answer it without a
         // bound, which has to be the answer and not a bound above it. See
         // D818.
-        KestLimits bounded_from = {0, 0, 0};
+        KestLimits bounded_from = {0, 0, 0, 0};
         KestReason which_from = {KEST_REACH_UNASKED, NULL};
         if (!kest_bound_from(build, NULL, 4, &bounded_from, &which_from) ||
             which_from.reach != KEST_REACH_KNOWN ||
@@ -2480,7 +2480,7 @@ int main(int argc, char **argv) {
     // and the room the words were written in is this machine's. Read, and it
     // goes back: what a host has been told is the host's. See D617.
     {
-        KestLimits tight = {0, 0, 64};
+        KestLimits tight = {0, 0, 64, 0};
         KestRuntime *filling = kest_start(build, host, &tight);
         FILE *told = tmpfile();
         if (filling == NULL || told == NULL) {
@@ -2635,7 +2635,7 @@ int main(int argc, char **argv) {
     // `nothing was asked` for both has to guess which it is looking at, and
     // guessing is what this boundary is written not to make anybody do.
     // See D566.
-    KestLimits nowhere = {0, 0, 0};
+    KestLimits nowhere = {0, 0, 0, 0};
     KestReason no_name = {KEST_REACH_UNASKED, NULL};
     if (kest_needs_of(build, "noSuchFunction", &nowhere, &no_name) ||
         no_name.reach != KEST_REACH_NO_NAME) {
@@ -5544,7 +5544,7 @@ int main(int argc, char **argv) {
 
     // What the machine is running with, asked of the machine rather than kept
     // beside it: a number allocated is a number without a scale on its own.
-    KestLimits allowed = {0, 0, 0};
+    KestLimits allowed = {0, 0, 0, 0};
     kest_allowed(engine.runtime, &allowed);
     printf("used %zu of %zu bytes, in %u slots and %u frames\n",
            kest_heap_used(engine.runtime), allowed.heap_bytes, allowed.stack_slots,
@@ -6086,7 +6086,7 @@ int main(int argc, char **argv) {
             fprintf(stderr, "a host to say nothing with would not be made\n");
             return 1;
         }
-        KestLimits little = {0, 0, 64};
+        KestLimits little = {0, 0, 64, 0};
         KestRuntime *silent = kest_start(build, quietly, &little);
         kest_host_free(quietly);
         int32_t fills = silent == NULL ? -1 : kest_entry(silent, "filling");
@@ -6110,6 +6110,133 @@ int main(int argc, char **argv) {
         printf("and what a machine nobody asked had to say went with it\n");
     }
 
+    // What a host does about a program that will not stop. Three ceilings here
+    // bound memory and this is the one that bounds time: a budget in steps,
+    // where a step is a jump that goes back or a call, because those are the
+    // two things a program does to go on doing something. A host that runs code
+    // it did not write needs it, and one that does not can leave it at nought
+    // and pay nothing for it. See D921.
+    {
+        KestHost *timed = kest_host_new();
+        static Decider untimed = {-1, 1, false, true, false, false};
+        if (timed == NULL ||
+            !kest_host_bind(timed, "Io.write", io_write, stdout) ||
+            !kest_host_bind(timed, "Engine.decide", engine_decide, &untimed) ||
+            !kest_host_bind(timed, "Engine.name", engine_name, &untimed) ||
+            !kest_host_bind(timed, "Engine.rank", engine_rank, &untimed) ||
+            !kest_host_bind(timed, "Engine.hurt", engine_hurt, NULL) ||
+            !kest_host_bind(timed, "Engine.blame", engine_blame, NULL) ||
+            !kest_host_bind(timed, "Engine.weigh", engine_weigh, NULL) ||
+            !kest_host_bind(timed, "Engine.who", engine_who, NULL)) {
+            fprintf(stderr, "a host to time a program with would not be "
+                            "made\n");
+            return 1;
+        }
+        // Ten steps, and a loop of a thousand turns to spend them on.
+        KestLimits counted = {0, 0, 0, 10};
+        KestRuntime *budgeted = kest_start(build, timed, &counted);
+        kest_host_free(timed);
+        int32_t fills = budgeted == NULL ? -1 : kest_entry(budgeted, "filling");
+        KestValue asking[4] = {{0}};
+        asking[0].integer = 1000;
+        if (budgeted == NULL || fills < 0) {
+            fprintf(stderr, "a machine with a budget would not start\n");
+            return 1;
+        }
+        // What the machine was told it may have, read back the way the other
+        // three are.
+        KestLimits allowed_steps = {0, 0, 0, 0};
+        kest_allowed(budgeted, &allowed_steps);
+        if (allowed_steps.fuel != 10) {
+            fprintf(stderr, "a machine given 10 steps says it was allowed "
+                            "%llu\n",
+                    (unsigned long long)allowed_steps.fuel);
+            return 1;
+        }
+        if (kest_call(budgeted, fills, asking, 4)) {
+            fprintf(stderr, "a thousand turns ran inside a budget of ten\n");
+            return 1;
+        }
+        if (!said_that(budgeted, "K0659", "step(s) it was given")) {
+            return 1;
+        }
+        if (kest_fuel_left(budgeted) != 0) {
+            fprintf(stderr, "a machine that ran out says it has %llu left\n",
+                    (unsigned long long)kest_fuel_left(budgeted));
+            return 1;
+        }
+        // And what it is for: a machine that stopped is not a machine that
+        // broke. Everything it built is where it was, so a host that gives it
+        // more carries on rather than starting again.
+        kest_fuel_set(budgeted, KEST_FUEL_UNLIMITED);
+        asking[0].integer = 1000;
+        if (!kest_call(budgeted, fills, asking, 4) || asking[0].integer != 1000) {
+            fprintf(stderr, "a machine given fuel again would not run\n");
+            return 1;
+        }
+        // A budget bigger than the work, which is the case a host in a frame
+        // is in: what is left afterwards is what the call did not spend, and a
+        // machine that kept the whole slice would say nought.
+        kest_fuel_set(budgeted, 100000);
+        asking[0].integer = 1000;
+        if (!kest_call(budgeted, fills, asking, 4)) {
+            fprintf(stderr, "a machine with room to spare would not run\n");
+            return 1;
+        }
+        uint64_t left = kest_fuel_left(budgeted);
+        if (left == 0 || left >= 100000) {
+            fprintf(stderr, "a thousand turns inside a hundred thousand steps "
+                            "left %llu\n",
+                    (unsigned long long)left);
+            return 1;
+        }
+        printf("a thousand turns cost %llu of a hundred thousand steps\n",
+               (unsigned long long)(100000 - left));
+        // The other half of the same mechanism: a host that wants it to stop
+        // for a reason that is not a budget. One store of one word, so a host
+        // may do it from a signal handler or another thread.
+        kest_cancel(budgeted);
+        if (!kest_cancelled(budgeted)) {
+            fprintf(stderr, "a machine asked to stop says nobody asked\n");
+            return 1;
+        }
+        asking[0].integer = 1000;
+        if (kest_call(budgeted, fills, asking, 4)) {
+            fprintf(stderr, "a machine asked to stop ran anyway\n");
+            return 1;
+        }
+        if (!said_that(budgeted, "K0660", "asked this program to stop")) {
+            return 1;
+        }
+        // And giving it fuel is what takes the asking back, because the two
+        // are one counter and a flag beside it.
+        kest_fuel_set(budgeted, KEST_FUEL_UNLIMITED);
+        if (kest_cancelled(budgeted)) {
+            fprintf(stderr, "a machine given fuel is still cancelled\n");
+            return 1;
+        }
+        asking[0].integer = 1000;
+        if (!kest_call(budgeted, fills, asking, 4)) {
+            fprintf(stderr, "a machine that was cancelled and given fuel "
+                            "would not run\n");
+            return 1;
+        }
+        // And the doors answer for a machine that is not there, the way every
+        // other door here does.
+        kest_fuel_set(NULL, 10);
+        kest_cancel(NULL);
+        if (kest_fuel_left(NULL) != KEST_FUEL_UNLIMITED ||
+            kest_cancelled(NULL)) {
+            fprintf(stderr, "a machine that is not there has a budget\n");
+            return 1;
+        }
+        if (!kest_runtime_free(budgeted)) {
+            fprintf(stderr, "a machine with a budget was not freed\n");
+            return 1;
+        }
+        printf("and a program that would not stop was stopped, twice over\n");
+    }
+
     // What a machine is made of, and what starting one costs the build it was
     // started on. Two machines that differ in one number: the stack is slots
     // of `KestValue`, so the wider of the two is wider by exactly that many
@@ -6120,8 +6247,8 @@ int main(int argc, char **argv) {
     // which is a host that reloads paying for one machine rather than for
     // every machine it has ever started. See D574.
     {
-        KestLimits narrow_stack = {4096, 16, 0};
-        KestLimits wide_stack = {8192, 16, 0};
+        KestLimits narrow_stack = {4096, 16, 0, 0};
+        KestLimits wide_stack = {8192, 16, 0, 0};
         size_t build_before = kest_build_cost(build);
         KestHost *sizing = kest_host_new();
         static Decider still = {-1, 1, false, true, false, false};
@@ -6177,8 +6304,8 @@ int main(int argc, char **argv) {
         // naming what it calls is a slot dearer, not cheaper, because the way
         // back in is nearly the whole program's width and the function called
         // from there is added to it. See D621 and D803.
-        KestLimits whole = {0, 0, 0};
-        KestLimits driven = {0, 0, 0};
+        KestLimits whole = {0, 0, 0, 0};
+        KestLimits driven = {0, 0, 0, 0};
         static const char *const drives[] = {"step", "create", "spawn", NULL};
         if (!kest_needs(build, &whole, NULL)) {
             fprintf(stderr, "the program says nothing about what it needs\n");
@@ -6270,7 +6397,7 @@ int main(int argc, char **argv) {
         int32_t chain = kest_entry(short_of_it, "tickWorld");
         KestValue among[2] = {{0}};
         among[0].integer = 4;
-        KestLimits enough = {0, 0, 0};
+        KestLimits enough = {0, 0, 0, 0};
         if (chain < 0 || kest_call(short_of_it, chain, among, 2) ||
             !needed_for(short_of_it, &enough) ||
             enough.call_depth <= driven.call_depth) {
@@ -6326,7 +6453,7 @@ int main(int argc, char **argv) {
             return 1;
         }
         asking.rule = kest_entry(given, "rule");
-        KestLimits was_given = {0, 0, 0};
+        KestLimits was_given = {0, 0, 0, 0};
         kest_allowed(given, &was_given);
         // And the heap, which this host said nothing about: nought is what no
         // ceiling is, and the two beside it are always a number because a
@@ -6354,7 +6481,7 @@ int main(int argc, char **argv) {
         // needs to be called, and the way back in from a host function is on
         // top of it. This host is the one that goes that way, so it is the one
         // that would find out.
-        KestLimits worst = {0, 0, 0};
+        KestLimits worst = {0, 0, 0, 0};
         if (!kest_needs(build, &worst, NULL) ||
             was_given.stack_slots <= worst.stack_slots ||
             was_given.call_depth <= worst.call_depth) {
@@ -6372,7 +6499,7 @@ int main(int argc, char **argv) {
         // rather than as an order, because an order is kept by a machine that
         // is merely generous and this is the arithmetic a host has to redo to
         // get the same machine by hand. See D802.
-        KestLimits way_back = {0, 0, 0};
+        KestLimits way_back = {0, 0, 0, 0};
         if (!kest_needs_from(build, NULL, &way_back, NULL) ||
             was_given.stack_slots != worst.stack_slots + way_back.stack_slots ||
             was_given.call_depth != worst.call_depth + way_back.call_depth) {
@@ -6444,7 +6571,7 @@ int main(int argc, char **argv) {
             fprintf(stderr, "`%s` did not compile\n", deep_path);
             return 1;
         }
-        KestLimits nowhere_near = {0, 0, 0};
+        KestLimits nowhere_near = {0, 0, 0, 0};
         KestReason bounded_at = {KEST_REACH_UNASKED, NULL};
         if (!kest_bound_of(deeply, "main", 2, &nowhere_near, &bounded_at) ||
             bounded_at.reach == KEST_REACH_KNOWN ||
@@ -6536,7 +6663,7 @@ int main(int argc, char **argv) {
         // one is a thing this host says out loud further down: a machine
         // started to be refused something is not a machine this host drives.
         KestBuild *aside = kest_build(path, NULL, stderr, KEST_FORM_TEXT, 0);
-        KestLimits nothing_left = {0, 0, 0};
+        KestLimits nothing_left = {0, 0, 0, 0};
         nothing_left.heap_bytes = 64;
         KestRuntime *starved =
             aside == NULL ? NULL : kest_start(aside, apart, &nothing_left);
@@ -6570,7 +6697,7 @@ int main(int argc, char **argv) {
         // What `step` alone wants, which is what a host that knows which
         // function it drives would take and is exactly the number that leaves
         // nothing over for the call this host makes from inside it.
-        KestLimits bare = {0, 0, 0};
+        KestLimits bare = {0, 0, 0, 0};
         if (!kest_needs_of(build, "step", &bare, NULL)) {
             fprintf(stderr, "the program says nothing about what `step` "
                             "needs\n");

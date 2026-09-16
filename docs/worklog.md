@@ -35273,3 +35273,42 @@ provides, with `read` and `write` of a whole file and the refusals a file has �
 not there, cannot be read, cannot be written — said as this language says a thing
 that might not be there. One module, one example that uses it, the doors bound in
 `main.c` and named in the reference where the others are.
+
+## A budget in steps (D921)
+
+A host that runs code it did not write had three ceilings and all three were
+memory. `while true {}` is a program and nothing here stopped it. There is a
+fourth now: `KestLimits.fuel`, `kest_fuel_set`, `kest_fuel_left`, `kest_cancel`,
+`kest_cancelled`, and `--fuel` on the command line.
+
+A step is a jump that goes back or a call, because those are the only two things
+a program does to go on doing something. A `for` over a thousand is 999 steps, a
+`while` over a thousand is 1000, and a function calling itself down from fifty is
+51.
+
+The unit was instructions first, and measuring is what changed it. Ten
+interleaved pinned runs of `tools/frame.kest` against the same binary without
+it, smallest of each:
+
+```text
+no budget                             122 ns an entity a step
+the fields, check compiled out        124        +1.6%
+a check on every instruction          142       +16.4%
+a check at the jump and the call      120        -1.6%
+```
+
+So the cost is the check and not the struct, and at every instruction it is a
+sixth of everything — the same reason D869 and D872 moved `ip`, the frame's
+slots and its constants into registers. At the jump and the call it does not
+move the number.
+
+Stopping is not breaking: the stack, the heap and everything the program built
+stay where they are, so a host gives it more and calls again. It cannot resume
+the call that stopped. `kest_cancel` is the same mechanism for a different
+reason and costs nothing extra, because it writes nought into the same counter.
+
+`examples/embed` exercises all of it: exhausted inside a call, replenished, spent
+to a number, cancelled, taken back, and every door asked of a machine that is not
+there. `make fast` holds the command line's half.
+
+**Runs:** `make fast`, and `make check`, everything passing.

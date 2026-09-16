@@ -765,7 +765,7 @@ int main(int argc, char **argv) {
     }
     KestHost *host = kest_host_new();
     /* Small, so that what runs out is this number rather than the machine. */
-    KestLimits limits = {0, 0, 65536};
+    KestLimits limits = {0, 0, 65536, 0};
     KestRuntime *runtime = kest_start(build, host, &limits);
     kest_host_free(host);
     if (runtime == NULL) {
@@ -985,7 +985,7 @@ int main(int argc, char **argv) {
        run is a machine too shallow and another is a machine wide enough. */
     KestLimits limits = {(uint32_t)strtoul(argv[2], NULL, 10),
                          (uint32_t)strtoul(argv[3], NULL, 10),
-                         (size_t)strtoul(argv[4], NULL, 10)};
+                         (size_t)strtoul(argv[4], NULL, 10), 0};
     KestRuntime *runtime = kest_start(build, host, &limits);
     kest_host_free(host);
     if (runtime == NULL) {
@@ -1089,7 +1089,7 @@ int main(int argc, char **argv) {
        says no. Small enough to be spent while the numbers are still small, so
        what the message says about what was growing is a number a reader can
        hold. */
-    KestLimits limits = {0, 0, (size_t)strtoul(argv[2], NULL, 10)};
+    KestLimits limits = {0, 0, (size_t)strtoul(argv[2], NULL, 10), 0};
     KestRuntime *runtime = kest_start(build, host, &limits);
     kest_host_free(host);
     if (runtime == NULL) {
@@ -1229,7 +1229,7 @@ int main(int argc, char **argv) {
         return 2;
     }
     KestHost *host = kest_host_new();
-    KestLimits limits = {4000000000u, 1024, 0};
+    KestLimits limits = {4000000000u, 1024, 0, 0};
     KestRuntime *runtime = kest_start(build, host, &limits);
     kest_host_free(host);
     if (runtime != NULL) {

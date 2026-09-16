@@ -4213,6 +4213,56 @@ had. The library itself takes the number rather than the words: a host says how
 much heap a machine may have in `KestLimits`, and a build is opened with a
 ceiling of its own.
 
+### How long a program may run
+
+The three ceilings above bound memory. `--fuel` bounds time, and it is the one
+a host running code it did not write needs: `while true {}` is a program, the
+compiler is right to accept it, and nothing else here stops it.
+
+```kest
+fn forever() -> i32 {
+    while true {
+    }
+    return 0
+}
+```
+
+```text
+error[K0659]: this program has taken the 1000 step(s) it was given
+```
+
+A step is a jump that goes back or a call. Those are the two things a program
+does to go on doing something — code is finite, so a run that never ends is
+going round or going deeper — and a budget on them bounds every program that
+would not stop. What it does not bound is a long body with no loop in it, which
+the program's own size bounds.
+
+It is a count and not a duration, so two machines given the same budget stop at
+the same place. A `for` over a thousand costs 999 steps, because the thousandth
+turn does not go back; a `while` over a thousand costs 1000; and `f(50)` calling
+itself down to nought costs 51.
+
+A machine that stops this way is not broken and is not finished. Its stack, its
+heap and everything the program built are where they were, so a host that gives
+it more through `kest_fuel_set` and calls again carries on. What it cannot do is
+carry on from the middle of the call that stopped: that call returned.
+`kest_fuel_left` says what is left of a budget, which is what a host watching a
+frame reads after a tick to learn what that tick cost, and a machine with no
+budget answers it with every bit set rather than with nought — nought is what a
+machine that has run out says, and those are opposite things.
+
+`kest_cancel` is the other half and costs the same nothing — a host that wants a
+running program to stop for a reason that is not a budget sets it and the
+machine stops the same way, saying `K0660` instead. It is one store of one word,
+so it may be done from a signal handler or from another thread while the machine
+runs, and `kest_cancelled` says whether anybody has.
+
+Costing nothing is the point. The check is at the jump and at the call rather
+than at every instruction, because at every instruction it was a sixth of
+everything: a frame step an entity went from `122 ns` to `142` on the machine
+this was read on. Where it is now it does not move that number at all, and a
+host that wants no budget writes nothing and pays for nothing.
+
 ## What running costs
 
 Three numbers, measured rather than remembered, each over work that is kept in

@@ -6,6 +6,7 @@
 #include <sanitizer/asan_interface.h>
 #endif
 
+#include <signal.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -379,6 +380,24 @@ struct KestRuntime {
     // What the host allowed the heap, kept so a reset gets the same ceiling
     // and so a refusal can say which of the two it was.
     size_t heap_bytes;
+    // And what it allowed in instructions, which is the one ceiling here that
+    // bounds time rather than memory. `fuel_left` is spent by the machine and
+    // is the only thing the hot path reads: a machine with no budget starts it
+    // at every bit set and never reaches nought in any run a person waits for,
+    // so one comparison serves both. A host that cancels writes nought into it
+    // from wherever it is, which is why the two are told apart by the flag
+    // beside them rather than by the counter. See D921.
+    uint64_t fuel_left;
+    uint64_t fuel_given;
+    bool fuel_bounded;
+    // Written by a host that may not be this thread and read by the machine.
+    // `sig_atomic_t` is what the standard says may be written in a handler and
+    // read outside one; `volatile` is what stops the compiler from deciding
+    // nothing here changes.
+    volatile sig_atomic_t cancel_asked;
+    // Why the last run stopped, for the two reasons that are not a mistake in
+    // the program. Read by nothing but the refusal itself.
+    bool stopped_for_fuel;
     // The frames live in the arena rather than on the host's stack, so the
     // depth limit is Kest's own number and not whatever the host allows.
     Frame *frames;
@@ -2031,6 +2050,51 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
     return true;
 }
 
+// How much of a budget the loop takes at a time. The counter cannot live in the
+// machine and be read every instruction: nothing tells the compiler that moving
+// slots is not writing it, so it becomes a load and a store per instruction and
+// costs a third of everything -- which is the same reason `ip`, this body's
+// slots and its constants are held in locals (D869, D872). So the loop holds a
+// slice in a register and comes here when it runs out. A thousand instructions
+// is under two microseconds, which is what a host asking a program to stop
+// waits for, and the cold half then costs a thousandth of nothing.
+#define FUEL_SLICE 1024u
+
+// The next slice, or nought for a run that is over. Nought means one of two
+// things and the flag beside the counter is what says which: a host that asked
+// this program to stop, or a budget that is spent.
+static uint64_t take_fuel(KestRuntime *rt) {
+    if (rt->cancel_asked != 0) {
+        return 0;
+    }
+    if (!rt->fuel_bounded) {
+        return FUEL_SLICE;
+    }
+    uint64_t take =
+        rt->fuel_left < FUEL_SLICE ? rt->fuel_left : (uint64_t)FUEL_SLICE;
+    rt->fuel_left -= take;
+    return take;
+}
+
+// What a run that stopped says. Two reasons, neither of them a mistake in the
+// program: a budget that is spent, and a host that asked. See D921.
+static bool stopped_here(Vm *vmp, KestRuntime *rt, Frame *frame,
+                         const uint8_t *instruction) {
+    if (rt->cancel_asked != 0) {
+        fail(vmp, frame, instruction, "K0660",
+             "the host asked this program to stop");
+        return false;
+    }
+    fail(vmp, frame, instruction, "K0659",
+         "this program has taken the %llu step(s) it was given",
+         (unsigned long long)rt->fuel_given);
+    kest_diags_suggest(rt->diags,
+                       "give it more with `kest_fuel_set` and call again: "
+                       "what it built is still there");
+    rt->stopped_for_fuel = true;
+    return false;
+}
+
 static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                     uint16_t *returned) {
     const KestModule *module = rt->module;
@@ -2087,6 +2151,29 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     // running does not change while it runs, so this changes where the body
     // does. See D872.
     const KestValue *constants = frame->chunk->constants;
+    // And what is left of this run's budget, held here for the same reason as
+    // the three above and given back at the one place this returns having
+    // worked. A run that ends in a refusal does not give it back, because a
+    // machine that refused is one a host gives fuel to before it calls again.
+    uint64_t slice = take_fuel(rt);
+// A step of the budget, spent where a program can do something again: a jump
+// that goes back, and a call. Everything unbounded a program can do is one of
+// those two -- code is finite, so a run that never ends is going round or going
+// deeper -- and a check at each of them costs the loop nothing, where the same
+// check on every instruction cost a sixth of everything. What it does not bound
+// is a long body with no loop in it, which is bounded by the program's own
+// size. See D921.
+#define SPEND()                                                                \
+    do {                                                                       \
+        if (slice == 0) {                                                      \
+            slice = take_fuel(rt);                                             \
+            if (slice == 0) {                                                  \
+                frame->ip = ip;                                                \
+                return stopped_here(vmp, rt, frame, instruction);              \
+            }                                                                  \
+        }                                                                      \
+        slice--;                                                               \
+    } while (0)
 #define READ_BYTE() (*ip++)
 #define READ_U16()                                                             \
     (ip += 2, (uint16_t)(ip[-2] | ((uint16_t)ip[-1] << 8)))
@@ -2784,6 +2871,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                     ip += away;
                 }
             } else if (found >= 0) {
+                SPEND();
                 ip -= away;
             }
             break;
@@ -3559,6 +3647,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 
         case KEST_OP_LOOP: {
             uint16_t distance = READ_U16();
+            SPEND();
             ip -= distance;
             break;
         }
@@ -3574,6 +3663,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
 #endif
             if (++mine[slot].integer < mine[limit].integer) {
+                SPEND();
                 ip -= distance;
             }
             break;
@@ -3591,12 +3681,14 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 #endif
             uint64_t next = (uint64_t)++mine[slot].integer;
             if (next < (uint64_t)mine[limit].integer) {
+                SPEND();
                 ip -= distance;
             }
             break;
         }
 
         case KEST_OP_CALL: {
+            SPEND();
             uint16_t index = READ_U16();
             uint16_t argument_slots = READ_U16();
             OF_THE_MODULE(index, module->count, "a function");
@@ -3698,6 +3790,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
 
         case KEST_OP_CALL_VALUE: {
+            SPEND();
             uint16_t argument_slots = READ_U16();
             uint16_t coming_back = READ_U16();
             int64_t which = (--top)->integer;
@@ -3787,6 +3880,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
 
         case KEST_OP_CALL_HOST: {
+            SPEND();
             uint16_t index = READ_U16();
             uint16_t argument_slots = READ_U16();
             uint16_t result_slots = READ_U16();
@@ -4001,6 +4095,12 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             rt->frame_count--;
             if (rt->frame_count == under) {
                 *returned = count;
+                // What this run took and did not spend. Without this a host
+                // that gives a thousand and calls something that runs ten is
+                // told it has nothing left.
+                if (rt->fuel_bounded) {
+                    rt->fuel_left += slice;
+                }
                 return true;
             }
             frame = &rt->frames[rt->frame_count - 1];
@@ -4013,6 +4113,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
     }
 
+#undef SPEND
 #undef READ_BYTE
 #undef READ_U16
 #undef BINARY_I
@@ -4135,6 +4236,15 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     if (rt->heap != NULL) {
         kest_arena_cap(rt->heap, rt->heap_bytes);
     }
+    // A machine with no budget is one whose counter never reaches nought.
+    // Every bit set is five hundred years of instructions at one a nanosecond,
+    // so the hot path tests the same word either way and a host that gave no
+    // number pays one comparison rather than a branch on whether there is one.
+    rt->fuel_given = limits == NULL ? KEST_FUEL_UNLIMITED : limits->fuel;
+    rt->fuel_bounded = rt->fuel_given != KEST_FUEL_UNLIMITED;
+    rt->fuel_left = rt->fuel_bounded ? rt->fuel_given : UINT64_MAX;
+    rt->cancel_asked = 0;
+    rt->stopped_for_fuel = false;
     if (rt->stack == NULL || rt->frames == NULL || rt->natives == NULL ||
         rt->contexts == NULL || rt->said_extern == NULL ||
         rt->said_copy == NULL || rt->said_layout == NULL || rt->heap == NULL) {
@@ -4299,6 +4409,48 @@ KestDiags *kest_runtime_said(KestRuntime *runtime) {
     return runtime->diags;
 }
 
+void kest_fuel_set(KestRuntime *runtime, uint64_t instructions) {
+    // A machine that is not there has no budget, the same as every other door
+    // here that answers rather than refuses.
+    if (runtime == NULL) {
+        return;
+    }
+    runtime->fuel_given = instructions;
+    runtime->fuel_bounded = instructions != KEST_FUEL_UNLIMITED;
+    runtime->fuel_left =
+        runtime->fuel_bounded ? instructions : UINT64_MAX;
+    // Giving fuel is what takes a cancel back. The two are one counter and a
+    // flag, so a machine given fuel with the flag still set would run one
+    // instruction and stop again saying somebody had asked it to.
+    runtime->cancel_asked = 0;
+    runtime->stopped_for_fuel = false;
+}
+
+uint64_t kest_fuel_left(const KestRuntime *runtime) {
+    if (runtime == NULL) {
+        return KEST_FUEL_UNLIMITED;
+    }
+    // A machine with no budget answers with what it is counting down from
+    // rather than with nought, because nought is the answer for one that has
+    // run out and those are opposite things.
+    return runtime->fuel_bounded ? runtime->fuel_left : UINT64_MAX;
+}
+
+void kest_cancel(KestRuntime *runtime) {
+    if (runtime == NULL) {
+        return;
+    }
+    // The order matters and is the whole of what makes this safe from another
+    // thread: the flag says why before the counter says stop, so a machine
+    // that reads nought has already been told which of the two it is.
+    runtime->cancel_asked = 1;
+    runtime->fuel_left = 0;
+}
+
+bool kest_cancelled(const KestRuntime *runtime) {
+    return runtime != NULL && runtime->cancel_asked != 0;
+}
+
 void kest_allowed(const KestRuntime *runtime, KestLimits *limits) {
     if (runtime == NULL || limits == NULL) {
         return;
@@ -4306,6 +4458,7 @@ void kest_allowed(const KestRuntime *runtime, KestLimits *limits) {
     limits->stack_slots = runtime->stack_slots;
     limits->call_depth = runtime->call_depth;
     limits->heap_bytes = runtime->heap_bytes;
+    limits->fuel = runtime->fuel_given;
 }
 
 size_t kest_runtime_cost(const KestRuntime *runtime) {
