@@ -24,6 +24,15 @@ struct Item {
     price: i32
 }
 
+// A place on a map, and the shape of a key this table could not hold until
+// D874: a value laid out flat compares and hashes, so a struct is a key like
+// any other. A struct holding a `[T]` still is not, because what would be
+// compared then is the handle.
+struct At {
+    x: i32
+    y: i32
+}
+
 fn total(stock: table.Table<text, Item>, names: [text]) -> i32 no.alloc {
     let sum = 0
     for i in 0..len(names) {
@@ -229,6 +238,27 @@ fn main() -> i32 {
     }
     for one in lines {
         io.print(one)
+    }
+
+    // And a table whose keys are a struct, which is what a world keyed by a
+    // place is: `At(1, 2)` is the key rather than a handle to one, so two of
+    // them holding the same numbers are one key and the second `set` writes
+    // over the first. What a table wants of a key is `hash` and `==`, and a
+    // value laid out flat has both. See D874.
+    let ground: table.Table<At, text> = table.empty()
+    table.set(ground, At(1, 2), "hill")
+    table.set(ground, At(3, 4), "lake")
+    if table.get(ground, At(1, 2), "nowhere") != "hill" ||
+            table.get(ground, At(9, 9), "nowhere") != "nowhere" {
+        return 23
+    }
+    table.set(ground, At(1, 2), "ridge")
+    if table.count(ground) != 2 ||
+            table.get(ground, At(1, 2), "nowhere") != "ridge" {
+        return 24
+    }
+    if !table.has(ground, At(3, 4)) || table.has(ground, At(4, 3)) {
+        return 25
     }
 
     io.print("{table.count(stock)} kinds carried, worth {total(stock, carried)}")

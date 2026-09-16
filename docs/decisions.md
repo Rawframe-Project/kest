@@ -26507,3 +26507,68 @@ error[K0314]: `==` does not apply to `Holds`
 
 The three hash numbers this document prints and the gate holds are for text, a
 whole number and an enum, and none of them moved.
+
+## D875: there is no order on a struct, and the refusal says so
+
+D874 gave a struct `==`, and the thing beside it a program tries next is `<`.
+The Next for this entry asked whether what a program has to write instead is
+what it *should* have to write. It is, and the reasoning is the mirror of D874's.
+
+Two of one struct are equal in exactly one way: what a value laid out flat *is*
+is what is in it, and there is nothing for a program to decide. Which of them
+comes *first* is a choice — a struct of three fields has three orders before
+anybody argues about direction — so a language that picked one would be picking
+for the program. **So there is no order on a struct and no way to declare one.**
+What sorts is told what comes first, and being told is a function value:
+
+```kest
+fn nearer(a: vec.Vec2, b: vec.Vec2) -> bool no.alloc no.host {
+    return a.x < b.x
+}
+
+sort.by(points, nearer)
+```
+
+Four lines for the choice and one for the call. Every way of shortening it
+either invents a default that is wrong as often as right — fields in the order
+they were declared would sort `Card { name, rank }` by name — or adds a concept
+(an anonymous function, a field taken as a value) to save three lines. Neither
+is worth it.
+
+**What was wrong was not what a program writes. It was what it is told.**
+
+```
+error[K0314]: `<` does not apply to `Card`
+  --> lib/std/sort.kest:34:12
+   |
+34 |     return a < b
+   |            ^^^^^
+  --> sorting.kest:12:20
+   |
+12 |     sort.by(cards, sort.ascending)
+   |                    ^^^^^^^^^^^^^^ this copy was asked for here, where `T` is `Card`
+```
+
+A reader who asks for the usual order on a shape that has none is shown a line
+of somebody else's file and told nothing about what to do. `==` on a type that
+does not compare has carried a suggestion since D541; `<` carried one only for
+an optional. It has four now, one for each shape a reader actually lands on:
+
+| | |
+|---|---|
+| a struct | *there are as many orders as fields, so write the one you mean: `fn(Card, Card) -> bool`, handed to what sorts* |
+| an enum | *a case is a name rather than a place in a line; `match` on it, or carry the number you mean* |
+| an array, a fixed run, a store | *walk them and compare what they hold* |
+| a `bool` | *one of two is not an order; `!a && b` is the one somebody usually means* |
+
+The optional still says its own thing and says it first, which is why
+`say_if_let` now answers whether it spoke rather than being called for its
+effect.
+
+*And one thing D874 bought that nothing in the tree held.* A table wants `hash`
+and `==` of a key and nothing else, so a struct is a key now:
+`Table<At, text>` over a `struct At { x: i32  y: i32 }` holds a world by its
+places. `At(1, 2)` is the key rather than a handle to one, and two of them
+holding the same numbers are one key — which is exactly the thing a handle could
+never be. `examples/inventory.kest` keeps one, sets the same place twice and
+reads it back.

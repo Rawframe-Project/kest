@@ -3166,8 +3166,35 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
         report(checker, expr->span, "K0314", "`%s` does not apply to `%s`",
                kest_token_bare(op, spelling, sizeof(spelling)),
                type_name(checker, left));
-        if (left != NULL && applies(left->element, op)) {
-            say_if_let(checker, left, NULL);
+        // And what to write instead, which for an order is a different sort of
+        // answer from the one `==` gets. Two of a struct are equal in exactly
+        // one way and there is nothing for a program to decide (D874); which
+        // of them comes first is a choice, and there are as many orders as
+        // fields. So this does not offer a default — it says the choice is
+        // there and what shape the answer takes. See D875.
+        bool told = left != NULL && applies(left->element, op) &&
+                    say_if_let(checker, left, NULL);
+        if (told) {
+            // An optional said the one thing there is to say about one.
+        } else if (left != NULL && left->tag == KEST_T_STRUCT) {
+            suggest(checker,
+                    "there are as many orders as fields, so write the one you "
+                    "mean: `fn(%s, %s) -> bool`, handed to what sorts",
+                    type_name(checker, left), type_name(checker, left));
+        } else if (left != NULL && left->tag == KEST_T_ENUM) {
+            kest_diags_suggest(checker->program->diags,
+                               "a case is a name rather than a place in a "
+                               "line; `match` on it, or carry the number you "
+                               "mean");
+        } else if (left != NULL &&
+                   (left->tag == KEST_T_ARRAY || left->tag == KEST_T_FIXED ||
+                    left->tag == KEST_T_STORE)) {
+            kest_diags_suggest(checker->program->diags,
+                               "walk them and compare what they hold");
+        } else if (left != NULL && left->tag == KEST_T_BOOL) {
+            kest_diags_suggest(checker->program->diags,
+                               "one of two is not an order; `!a && b` is the "
+                               "one somebody usually means");
         }
         return logical ? builtin(checker, "bool") : error_type(checker);
     }

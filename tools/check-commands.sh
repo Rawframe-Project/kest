@@ -3798,6 +3798,10 @@ K0317|fn main() -> i32 {\n    let a: [i32]? = [1]\n    for x in a {\n        ret
 K0315|fn main() -> i32 {\n    let a: [i32]? = [1]\n    return a[0]\n}|take what it holds out with `if let`
 K0351|fn main() -> i32 {\n    let a: [i32] = array(-1, 0)\n    return len(a)\n}|an array cannot have -1 elements
 K0314|fn main() -> i32 {\n    let a = "x"\n    return len(-a)\n}|`-` does not apply to `text`
+K0314|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let a = P(1)\n    let b = P(2)\n    if a < b {\n        return 1\n    }\n    return 0\n}|there are as many orders as fields, so write the one you mean: `fn(P, P) -> bool`, handed to what sorts
+K0314|enum Door {\n    Shut\n    Open\n}\n\nfn main() -> i32 {\n    let a = Door.Shut\n    let b = Door.Open\n    if a < b {\n        return 1\n    }\n    return 0\n}|a case is a name rather than a place in a line; `match` on it, or carry the number you mean
+K0314|fn main() -> i32 {\n    let a = true\n    let b = false\n    if a < b {\n        return 1\n    }\n    return 0\n}|one of two is not an order; `!a && b` is the one somebody usually means
+K0314|fn main() -> i32 {\n    let a: [i32] = array()\n    let b: [i32] = array()\n    if a < b {\n        return 1\n    }\n    return 0\n}|walk them and compare what they hold
 K0326|fn main() -> i32 {\n    let x: i8 = 300\n    return i32(x)\n}|300 does not fit in `i8`
 K0326|fn main() -> i32 {\n    let x: u8 = -1\n    return i32(x)\n}|`u8` holds no negative numbers
 K0326|fn main() -> i32 {\n    let n = 2\n    let v: [i32; n] = [1, 2]\n    return v[0]\n}|a count is a number or a constant that is one

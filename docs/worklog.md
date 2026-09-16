@@ -32852,13 +32852,12 @@ Recorded as D865.
 
 **Runs:** `make check`, everything passing, with `TMPDIR=/var/tmp`.
 
-**Next:** a struct compares now, and the thing beside it that a program would
-try next is ordering: `a < b` on two structs is refused the same way `==` was.
-Unlike equality there is no one answer — which field decides, and in which
-direction, is the program's to say — so the question is not whether to add it
-but what a program should write instead. Read what `std.sort` asks for, write a
-program that sorts a run of structs by a field, and say whether what it has to
-write is what it should have to write.
+**Next:** `==` and `<` are answered; what is left of the same family is
+printing. `"{card}"` on a struct is refused and `kest_type_has_text` is the list
+that says so — the twin of `has_equality`, which grew two shapes in D874 while
+this one did not. Ask whether that is a decision or an oversight: read what
+writing a value out has to settle that comparing two of them does not, and
+either give a struct a text or write down why it cannot have one.
 
 ## A hop of a `for` is one instruction
 
@@ -33287,3 +33286,41 @@ direction, is the program's to say — so the question is not whether to add it
 but what a program should write instead. Read what `std.sort` asks for, write a
 program that sorts a run of structs by a field, and say whether what it has to
 write is what it should have to write.
+
+## There is no order on a struct, and the refusal says so
+
+D874 gave a struct `==`; the thing beside it is `<`. The answer is the mirror of
+D874's: two of one struct are equal in exactly one way and there is nothing to
+decide, but which comes first is a choice, and a struct of three fields has
+three orders before anybody argues about direction. So there is no order on a
+struct and no way to declare one — what sorts is told what comes first, and
+being told is a function value. Four lines for the choice and one for the call.
+Every way of shortening it either invents a default that is wrong as often as
+right, or adds a concept to save three lines.
+
+What was wrong was not what a program writes but what it is told. A reader who
+asks `sort.by(cards, sort.ascending)` on a shape with no order is shown a line
+of `lib/std/sort.kest` and told nothing about what to do. `==` has carried a
+suggestion since D541; `<` carried one only for an optional. It has four now —
+for a struct, an enum, a handle and a `bool` — and the optional still says its
+own thing first, which is why `say_if_let` answers whether it spoke rather than
+being called for its effect. All four are in the refusal table, so each is a
+wording something has been made to say.
+
+And one thing D874 bought that nothing held: a struct is a table key. A table
+wants `hash` and `==` of a key and nothing else, so `Table<At, text>` over a
+`struct At` holds a world by its places — `At(1, 2)` is the key rather than a
+handle to one, so two of them with the same numbers are one key.
+`examples/inventory.kest` keeps one, sets the same place twice and reads it
+back.
+
+Recorded as D875.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `==` and `<` are answered; what is left of the same family is
+printing. `"{card}"` on a struct is refused and `kest_type_has_text` is the list
+that says so — the twin of `has_equality`, which grew two shapes in D874 while
+this one did not. Ask whether that is a decision or an oversight: read what
+writing a value out has to settle that comparing two of them does not, and
+either give a struct a text or write down why it cannot have one.

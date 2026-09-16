@@ -1100,6 +1100,11 @@ they hold the same things, and comparing the handles answers a different
 question — so a struct holding a `[T]` is refused, and the refusal names the
 field's type rather than the struct's.
 
+What that buys is that a struct is a key. `std.table` wants `hash` and `==` of
+a key and nothing else, so `Table<At, text>` over a `struct At { x: i32  y: i32 }`
+holds a world by its places: `At(1, 2)` is the key rather than a handle to one,
+and two of them holding the same numbers are one key.
+
 A program that wants some of the fields rather than all of them folds the ones
 it means with `std.hash`:
 
@@ -2202,6 +2207,24 @@ The parameter of `sorted` says `fn(i32, i32) -> bool`, and there is one copy of
 This is what lets a library say "the usual order" once rather than once per
 type: `std.sort` has one `ascending` and one `descending`, and a shape with no
 order of its own is refused in the copy that asked for it.
+
+A struct is one of those, and on purpose. Two of one struct are equal in exactly
+one way, so `==` is the language's to answer; which of them comes *first* is a
+choice, and a struct with three fields has three orders before anybody argues
+about direction. So there is no order on a struct and no way to declare one —
+what sorts is told what comes first, and being told is a function value:
+
+```kest
+fn nearer(a: vec.Vec2, b: vec.Vec2) -> bool no.alloc no.host {
+    return a.x < b.x
+}
+
+sort.by(points, nearer)
+```
+
+Four lines for the choice and one for the call, and the refusal says so where
+somebody asked for the other thing: *there are as many orders as fields, so
+write the one you mean: `fn(Card, Card) -> bool`, handed to what sorts.*
 
 Nothing is boxed and nothing carries a tag: a copy over `[Vec]` was compiled
 knowing a `Vec` is two `f32`. The cost is the copies, and a program that calls
