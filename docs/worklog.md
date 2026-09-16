@@ -34633,3 +34633,44 @@ declared, the way a call's arguments are held to the callee's. It is
 down that is not already there, and it is the last of the four questions the
 boundary puts to a host that the machine does not yet put to itself from the
 inside.
+
+## What a body gives back
+
+The last of the four. A chunk says what it gives the same way it says what it
+takes — a layout, a piece a slot — and D902 held the slots a call hands over to
+the layouts the callee declares. This is the other end of the same journey: what
+a body puts on the stack before it goes, held to the layout it declared.
+
+It matters for the reason the other end does: the caller reads what came back as
+the type it asked for, and a slot holding three hundred where an `i8` goes is a
+number the caller's next arithmetic makes something of, quietly and correctly by
+its own lights.
+
+```text
+error[K0655]: this gives back something in slot 0 that no `i8` holds
+```
+
+The boundary asks a host four things: how wide a frame is, what is in what it
+hands over, what is in what it answers with, and that the two ends agree about
+how many slots. The machine asks its own compiler all four now, from both sides
+of every call and every return. There is no question the engine puts to a host
+that it does not put to itself.
+
+Seven turns, seven decisions, and the release build is unchanged throughout —
+everything since D900 is inside `#if KEST_CHECKED`. The build that ships is the
+build that shipped; the build that checks itself now disagrees with its own
+compiler out loud.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the thread is finished and the numbers say where to look next. The
+gate's own line says a frame step is 48 instructions an entity and reaches 22 of
+the machine's 151; `check-costs.sh` says what the compiler's work costs in bytes
+at every stage. Nothing says what the *checked* build costs, and seven turns
+have just been spent adding work to it — a guard at every instruction that
+reaches a slot, a constant, a layout, a frame. That build is what the gate runs
+every example under twice, so its cost is the gate's cost, and nobody has
+measured it since D870. Weigh it: the same work under both builds, said as a
+ratio rather than a duration, so it is a count of what the checked build does
+rather than a number about this machine. If it has doubled, the next decision is
+which of these guards earns its place.

@@ -28055,3 +28055,34 @@ asks whether it could be that number. What is left is whether it is the *right*
 number, and for the slots that needs the table of local types D903 named — which
 is the one piece of this the machine cannot ask for without the compiler writing
 it down first.
+
+## D906: what a body gives back
+
+The last of the four. A chunk says what it gives the same way it says what it
+takes — a layout, a piece a slot — and D902 held the slots a call hands over to
+the layouts the callee declares. This is the other end of the same journey: what
+a body puts on the stack before it goes, held to the layout it said it would
+give.
+
+It matters for the reason the other end does. The caller reads what came back as
+the type it asked for, and a slot holding three hundred where an `i8` goes is a
+number the caller's next arithmetic makes something of — quietly, and correctly
+by its own lights.
+
+```text
+error[K0655]: this gives back something in slot 0 that no `i8` holds
+```
+
+Values with a tag in them are left out, for D899's reason.
+
+*What is now true* is the sentence D902 reached for and could not finish. The
+boundary asks a host four things: how wide a frame is, what is in what it hands
+over, what is in what it answers with, and that the two ends agree about how
+many slots. The machine asks its own compiler all four, from both sides of every
+call and every return, in the build that checks itself. There is no question the
+engine puts to a host that it does not put to itself.
+
+Seven turns, seven decisions, one line of release build changed between them:
+none. Everything since D900 is inside `#if KEST_CHECKED`, which is what makes it
+affordable — the build that ships is the build that shipped, and the build that
+checks itself now disagrees with its own compiler out loud.

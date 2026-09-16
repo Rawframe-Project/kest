@@ -3878,6 +3878,33 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                                  "and what the machine moved disagree");
                 return false;
             }
+            // And what is in what it hands back. A chunk says what it gives
+            // the same way it says what it takes -- a layout, a piece a slot
+            // -- and D902 held the slots a call hands over to the callee's.
+            // This is the other end of the same journey, and the last of the
+            // four things the boundary asks a host that the machine did not
+            // ask itself. A value with a tag in it is left out for D899's
+            // reason. See D906.
+            if (frame->chunk->returns_value && count > 0) {
+                const KestLayout *given =
+                    &module->layouts[frame->chunk->gives];
+                for (uint16_t piece = 0;
+                     !given->tagged && piece < given->count && piece < count;
+                     piece++) {
+                    if (fits_the_piece(given->pieces[piece].kind,
+                                       (top - count)[piece])) {
+                        continue;
+                    }
+                    fail(vmp, frame, instruction, "K0655",
+                         "this gives back something in slot %u that no `%s` "
+                         "holds",
+                         piece, the_width_of(given->pieces[piece].kind));
+                    kest_diags_fault(vmp->diags,
+                                     "what the compiler put in a frame and "
+                                     "what the body gives back disagree");
+                    return false;
+                }
+            }
 #endif
             // The result lands where the arguments were, which is where the
             // caller left room for it.

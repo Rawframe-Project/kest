@@ -5604,6 +5604,37 @@ fn main() -> i32 {
         "caught": "a build that is not there answered as though it were",
     },
     {
+        # A body giving back what its own declaration does not hold. A chunk
+        # says what it gives the same way it says what it takes -- a layout, a
+        # piece a slot -- and D902 held the slots a call hands over to the
+        # callee's. This is the other end of the same journey, and the caller
+        # reads what came back as the type it asked for. See D906.
+        "what": "a body giving back what its declaration does not hold",
+        "file": "src/compile.c",
+        "from": """    if (type == NULL || type->width == 64 ||
+        (type->tag != KEST_T_INT && type->tag != KEST_T_FLAGS)) {
+        return;
+    }""",
+        "to": """    if (type == NULL || type->width == 64 || type->width == 8 ||
+        (type->tag != KEST_T_INT && type->tag != KEST_T_FLAGS)) {
+        return;
+    }""",
+        "make": ["debug"],
+        "binary": "kest-debug",
+        "program": "giving.kest",
+        "source": """import std.text
+
+fn narrowed() -> i8 {
+    return i8(len(text.repeat("a", 300)))
+}
+
+fn main() -> i32 {
+    return i32(narrowed()) - 44
+}
+""",
+        "caught": "gives back something in slot 0 that no `i8` holds",
+    },
+    {
         # A layout named past the ones a program has. A body names a function,
         # a door of the host and a layout by an index the compiler wrote, and
         # the machine reads the array at that index and takes what it finds --
