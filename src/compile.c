@@ -1211,6 +1211,49 @@ static bool reads_only_fields(Compiler *compiler, const KestBlock *block,
 // does not ask.
 static bool writes_no_arrays(Compiler *compiler, const KestBlock *block);
 
+// Whether a value of this type can reach an array, a store or a reference --
+// anywhere inside it, not only at the top. A call handed one of those can write
+// what the loop above is walking, and a call handed a struct that holds one can
+// do exactly the same thing: `Holder { items: [Item] }` is a handle wearing a
+// struct. The walk used to stop at the top, so a body that passed the holder
+// was read as touching nothing and the loop bound its element by address. The
+// element then changed under the body's copy, which is the one thing a value
+// is promised not to do. See D932.
+static bool holds_a_handle(const KestType *type, uint32_t depth) {
+    // A shape can name itself through a reference, so the walk is bounded.
+    // Anything that deep holds one of these long before it gets here.
+    if (type == NULL || depth > 8) {
+        return type != NULL;
+    }
+    switch (type->tag) {
+    case KEST_T_ARRAY:
+    case KEST_T_STORE:
+    case KEST_T_REF:
+        return true;
+    case KEST_T_STRUCT:
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            if (holds_a_handle(type->members[i].type, depth + 1)) {
+                return true;
+            }
+        }
+        return false;
+    case KEST_T_ENUM:
+        for (uint32_t c = 0; c < type->case_count; c++) {
+            for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
+                if (holds_a_handle(type->cases[c].payload[p], depth + 1)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    case KEST_T_OPTIONAL:
+    case KEST_T_FIXED:
+        return holds_a_handle(type->element, depth + 1);
+    default:
+        return false;
+    }
+}
+
 static bool expr_writes_no_arrays(Compiler *compiler, const KestExpr *expr) {
     if (expr == NULL) {
         return true;
@@ -1218,10 +1261,7 @@ static bool expr_writes_no_arrays(Compiler *compiler, const KestExpr *expr) {
     switch (expr->kind) {
     case KEST_EXPR_CALL:
         for (uint32_t i = 0; i < expr->call.arg_count; i++) {
-            const KestType *given = expr->call.args[i]->type;
-            if (given != NULL && (given->tag == KEST_T_ARRAY ||
-                                  given->tag == KEST_T_STORE ||
-                                  given->tag == KEST_T_REF)) {
+            if (holds_a_handle(expr->call.args[i]->type, 0)) {
                 return false;
             }
             if (!expr_writes_no_arrays(compiler, expr->call.args[i])) {
