@@ -35400,3 +35400,34 @@ reload rests on.
 
 **Runs:** `make fast`; `tools/check-header.sh`; the reload prototype; W01 in
 Kest, C++ and Luau, all three answering the canonical checksum `6474c217796c6cf5`.
+
+## Where this stands against other languages (D926)
+
+The predecessor research left a shared oracle: W01, one hundred thousand
+entities and ten thousand steps, with a canonical checksum five languages
+reproduce. Kest reproduces it. Pinned to one core, one warmup and five runs,
+median with the spread:
+
+```text
+                   median      spread   ns an active entity a step
+C++ (AoT)           0.774 s      4.5%      0.97
+Daslang            15.902 s      9.1%     19.88
+Luau               22.493 s     21.9%     28.12
+Kest               20.363 s*    22.3%    127.27
+```
+
+`*` two thousand steps rather than ten thousand; the checksum was reproduced
+separately over the full run.
+
+Kest is 4.5 times Luau, 6.4 times Daslang and 131 times C++. The gap is
+instruction count: the same loop is 46.51 instructions an active entity at
+2.74 ns each, and twenty-seven of the forty-six move a value or work out an
+address. Per instruction Kest is in the same range as the other two
+interpreters. It runs about five times as many.
+
+D889 to D891 already established that the dispatch loop is at a local minimum.
+This says that was the wrong place to look.
+
+**Runs:** all four implementations answering `6474c217796c6cf5`; `tools/w01`
+under `/home/kest/sprint`, outside this repository, because it is evidence rather
+than part of the language.

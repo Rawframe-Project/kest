@@ -28757,3 +28757,60 @@ A file is read as text and refused as nothing when it holds a nought byte,
 because text that stops at a nought is a file handed over as less than it is.
 A file that is not there and a file with nothing in it are different answers and
 the door says so: `read` gives nothing rather than empty text.
+
+## D926: where this language actually stands, and what the gap is made of
+
+The predecessor's W01 workload is a shared oracle: one hundred thousand
+entities, ten thousand steps, one canonical checksum that five languages
+reproduce. Kest reproduces it too. What it costs, measured on one core of this
+machine, one warmup and five runs each, median with the spread beside it:
+
+```text
+                   median      spread   ns an active entity a step
+C++ (AoT)           0.774 s      4.5%      0.97
+Daslang            15.902 s      9.1%     19.88
+Luau               22.493 s     21.9%     28.12
+Kest               20.363 s*    22.3%    127.27
+```
+
+`*` Kest's timing is over two thousand steps rather than ten thousand, because
+the per-step cost is constant and the run is long; its checksum was reproduced
+separately over the full ten thousand.
+
+**So Kest is 4.5 times Luau and 6.4 times Daslang, and 131 times C++.** It is not
+roughly competitive with the game scripting languages. That is the number this
+project did not have and now does.
+
+**The gap is instruction count, not dispatch.** The same loop, counted:
+
+```text
+46.51 instructions an active entity a step
+  17.80  load            4.80  index           2.40  elem.addr
+   2.40  mul.f32         2.40  add.f32         2.40  store.at
+   2.00  const           1.00  mod.i           1.00  next.less.i
+   1.00  jump.false.ne.i
+```
+
+127.27 ns over 46.51 instructions is 2.74 ns each, which is what the frame
+instrument says too and is in the same range as the other two interpreters pay
+per operation. What differs is how many there are: `px[i] = px[i] + vx[i] * dt`
+is three components and each costs six loads, an index, an address and a store,
+where a register machine addresses `px`, `i`, `vx` and `dt` as operands and does
+the statement in about three.
+
+Twenty-seven of the forty-six move a value or work out an address, and only
+four-point-eight are arithmetic. The gate has been saying the same thing about a
+frame step for a long while — thirty-seven of fifty-nine move a value — and this
+is what that costs against other languages rather than against itself.
+
+**This is not the dispatch loop.** D889 to D891 tried five ways of making it
+faster and every one of them made it slower, against a null control that changed
+nothing. That door is closed and this measurement says it was the wrong door: the
+loop is not slow, there is too much going through it.
+
+**What closing it would take is a decision this sprint does not make.** A
+register-style bytecode, or an ahead-of-time path for the hot subset, are the two
+known answers and both are permanent choices about what this language's backend
+is. Neither is a small experiment, and the sprint that found this was told not to
+make that choice on its own. The evidence is here; the choice is the technical
+lead's.
