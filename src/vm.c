@@ -655,9 +655,21 @@ static void no_room_to_lend(KestRuntime *runtime) {
                        "the machine more heap");
 }
 
+// A machine that did not start is a machine with nothing in it. `kest_start`
+// answers NULL and says why into the build's report, and a host that carries
+// on regardless used to take the process down at thirteen of the doors it
+// could knock on next -- while eight of the others answered politely, which is
+// the shape of a guard somebody wrote where they happened to be. Every door
+// answers the same way now: the answer a real machine gives when it has
+// nothing, which is what `kest_frame_slots` and `kest_entry_name` already
+// said. There is nowhere to say more, because a report belongs to a machine
+// and there is none. See D894.
 KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
                       const char *element, size_t size) {
     KestValue value = {0};
+    if (runtime == NULL) {
+        return value;
+    }
 
     // A lend is an address and a count, and a host with nothing to lend has a
     // count of nought rather than an address of nothing. What used to happen
@@ -3929,7 +3941,7 @@ KestRefusal kest_heap_refused_by(const KestRuntime *runtime) {
 }
 
 size_t kest_heap_used(const KestRuntime *runtime) {
-    return kest_arena_used(runtime->heap);
+    return runtime == NULL ? 0 : kest_arena_used(runtime->heap);
 }
 
 bool kest_heap_allow(KestRuntime *runtime, size_t bytes) {
@@ -3956,6 +3968,9 @@ bool kest_heap_allow(KestRuntime *runtime, size_t bytes) {
 }
 
 bool kest_heap_reset(KestRuntime *runtime) {
+    if (runtime == NULL) {
+        return false;
+    }
     if (is_running(runtime)) {
         KestSpan nowhere = {0, 0};
         kest_diags_in(runtime->diags, NULL);
@@ -4149,6 +4164,9 @@ static int32_t nth_named(const KestModule *module, const char *name,
 }
 
 int32_t kest_entry_of(KestRuntime *runtime, const char *name, uint32_t at) {
+    if (runtime == NULL) {
+        return -1;
+    }
     int32_t found = nth_named(runtime->module, name, at);
     if (found >= 0) {
         return found;
@@ -4166,6 +4184,9 @@ int32_t kest_entry_of(KestRuntime *runtime, const char *name, uint32_t at) {
 }
 
 int32_t kest_entry(KestRuntime *runtime, const char *name) {
+    if (runtime == NULL) {
+        return -1;
+    }
     // A host writes what the file writes, and the file registered its names
     // under itself; which of the two spellings it is is `kest_module_entry`'s
     // to know, and every part of this project asks it the same way.
@@ -4489,6 +4510,9 @@ static bool frame_agrees(KestRuntime *runtime, const KestChunk *chunk,
 // Whether a host may be asked about this at all, and which function it is.
 static const KestChunk *frame_of(KestRuntime *runtime, int32_t entry,
                                  const uint8_t *kinds, uint32_t count) {
+    if (runtime == NULL) {
+        return NULL;
+    }
     KestSpan nowhere = {0, 0};
     kest_diags_in(runtime->diags, NULL);
     // A host that says how many slots it is about to describe and hands
@@ -4661,6 +4685,9 @@ bool kest_still_holds(const KestRuntime *runtime, KestValue kept) {
 }
 
 bool kest_lend_ends(KestRuntime *runtime, KestValue lent) {
+    if (runtime == NULL) {
+        return false;
+    }
     KestSpan nowhere = {0, 0};
     kest_diags_in(runtime->diags, NULL);
     // The same question a call in asks, for the same reason: what is at an
@@ -4719,6 +4746,9 @@ bool kest_lend_ends(KestRuntime *runtime, KestValue lent) {
 }
 
 uint32_t kest_frame_slots(KestRuntime *runtime, int32_t entry) {
+    if (runtime == NULL) {
+        return 0;
+    }
     if (entry < 0 || (uint32_t)entry >= runtime->module->count) {
         // Zero is also the honest width of a function that takes nothing and
         // gives nothing, so the number cannot say which of the two this is and
@@ -4742,6 +4772,9 @@ uint32_t kest_frame_slots(KestRuntime *runtime, int32_t entry) {
 
 bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
                uint32_t slots) {
+    if (runtime == NULL) {
+        return false;
+    }
     KestSpan nowhere = {0, 0};
     if (entry < 0 || (uint32_t)entry >= runtime->module->count) {
         kest_diags_in(runtime->diags, NULL);

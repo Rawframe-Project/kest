@@ -34127,3 +34127,38 @@ crossings, a context bound and never used. Say what each should answer from what
 the header promises rather than from what the engine does, and write the ones
 that are rules into `examples/embed.c`, which is the host that already reads
 them back.
+
+## Twenty-nine doors, thirteen of them open onto nothing
+
+The walk over the header, from the outside. Four times the probe was wrong and
+the engine was right — a machine made with `{0, 0, 0}` runs, because zero is
+what the program asked for; a name binds once; `kest_text` with no address
+answers empty and says `K0611`; a lend at no address is refused. The header said
+all four before I asked.
+
+The fifth was not the probe's mistake. It had forgotten to bind the one function
+its program declared, so `kest_start` answered NULL — rightly, and the build's
+report named the door and the line. The probe carried on with that NULL, the way
+a host that does not read an answer would, and the process died.
+
+Twenty-nine of these functions take a machine. **Thirteen crashed.** Eight
+answered politely and `kest_runtime_free(NULL)` is documented to answer true,
+which is the tell: a guard written wherever somebody happened to be standing
+rather than a rule.
+
+It is a rule now — every one answers what a real machine says when it has
+nothing, and seven came right from a single guard in `frame_of`, the door they
+all already went through. `examples/embed.c` knocks on all twenty-nine, so the
+sentence is checked rather than said.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the other half of the same boundary. A machine that did not start is
+one shape of nothing; a machine that *did* and then was freed is another, and a
+host that keeps the pointer is not holding NULL. Walk the same twenty-nine
+doors with a machine that has been freed, and with a build that has been freed
+under a machine still standing on it, and say what each should answer — the
+header already promises `kest_build_free` refuses while a machine is up, so the
+question is what the doors say in the window a host can still make. If it is
+`use after free` rather than an answer, the same rule needs a second half, and
+the sanitised build is what will say so.

@@ -410,6 +410,13 @@ typedef void (*KestNative)(KestValue *frame, KestRuntime *runtime,
 // which of the three it was is in the report and nowhere else.
 KestValue kest_text(KestRuntime *runtime, const char *bytes, uint32_t length);
 
+// A machine that did not start is a machine with nothing in it. `kest_start`
+// answers NULL and writes why into the build's report, which is where a host
+// finds out; a host that carries on regardless gets, at every door below, the
+// answer a machine gives when it has nothing — no entry, no layout, nought
+// bytes, an empty piece of text, and false. There is nowhere to say more than
+// that, because a report belongs to a machine and there is none. See D894.
+
 // Hands the program an array over memory the host owns. Nothing is copied and
 // nothing is freed: the caller keeps the block and must outlive the program's
 // use of it.

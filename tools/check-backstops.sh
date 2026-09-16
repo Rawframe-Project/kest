@@ -5581,6 +5581,28 @@ fn main() -> i32 {
         "caught": "K0314 said `error[K0314]: `+` does not apply to `text``",
     },
     {
+        # A machine that did not start, answering as though it had.
+        # `kest_start` says NULL and writes why into the build's report, and a
+        # host that carries on regardless knocked on twenty-nine doors -- of
+        # which thirteen took the process down and eight answered politely,
+        # which is a guard written where somebody happened to be. Every one of
+        # them answers the same way now: what a real machine says when it has
+        # nothing. See D894.
+        "what": "a machine that did not start answering as though it had",
+        "file": "src/vm.c",
+        "from": """int32_t kest_entry(KestRuntime *runtime, const char *name) {
+    if (runtime == NULL) {
+        return -1;
+    }""",
+        "to": """int32_t kest_entry(KestRuntime *runtime, const char *name) {
+    if (runtime == NULL) {
+        return 0;
+    }""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a machine that did not start answered as though it had",
+    },
+    {
         # A key that is not one key. A table finds a key again by `hash` and
         # `==`, so a value that is not equal to itself is a different key every
         # time it is handed over -- and a table given one counted a pair
@@ -12062,8 +12084,14 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "what": "a heap thrown away from inside a call",
         "file": "src/vm.c",
         "from": """bool kest_heap_reset(KestRuntime *runtime) {
+    if (runtime == NULL) {
+        return false;
+    }
     if (is_running(runtime)) {""",
         "to": """bool kest_heap_reset(KestRuntime *runtime) {
+    if (runtime == NULL) {
+        return false;
+    }
     if (false) {""",
         "make": ["kest", "embed"],
         "host": "examples/embed",

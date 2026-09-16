@@ -1998,6 +1998,10 @@ SAME_SHAPE = {
     frozenset(("math_ceil", "math_cos", "math_floor", "math_sin",
                "math_sqrt")):
         "and five that take one, the same way",
+    frozenset(("kest_heap_used", "kest_heap_wanted")):
+        "two numbers about one heap, each asked of the arena the same way and "
+        "each answering nought for a machine that did not start, which D894 "
+        "made the answer at every door",
 }
 
 # What a body's words are once the names in it are numbered by where they first

@@ -6609,6 +6609,58 @@ int main(int argc, char **argv) {
         }
     }
 
+    // Every door of this header knocked on with a machine that did not start.
+    // `kest_start` answers NULL and says why into the build's report, and a
+    // host that carries on regardless is a host with a bug — but the answer to
+    // that was thirteen of these taking the process down while eight answered
+    // politely, which is a guard written where somebody happened to be rather
+    // than a rule. The rule is that a machine that did not start is a machine
+    // with nothing in it, and the answer is the one a real machine gives when
+    // it has nothing. There is nowhere to say more: a report belongs to a
+    // machine and there is none. See D894.
+    {
+        KestValue nothing = {0};
+        int32_t numbers[2] = {1, 2};
+        uint8_t kinds[2] = {0, 0};
+        const char *words[1] = {"a"};
+        char out[8];
+        KestValue frame[4] = {{0}};
+        KestLimits allowed;
+        bool quiet = kest_text(NULL, "hi", 2).text != NULL &&
+                     kest_borrow(NULL, numbers, 2, "i32", 4).object == NULL &&
+                     !kest_lend_ends(NULL, nothing) &&
+                     !kest_still_holds(NULL, nothing) &&
+                     kest_kept_where(NULL, nothing) == KEST_KEPT_NOWHERE &&
+                     !kest_call(NULL, 0, frame, 1) &&
+                     kest_entry(NULL, "main") < 0 &&
+                     kest_entry_of(NULL, "main", 0) < 0 &&
+                     kest_entry_name(NULL, 0) == NULL &&
+                     kest_entry_wrote(NULL, 0) == NULL &&
+                     !kest_entry_promises(NULL, 0, KEST_PROMISE_NO_ALLOC) &&
+                     kest_frame_takes(NULL, 0) == 0 &&
+                     kest_frame_at(NULL, 0, 0) == 0 &&
+                     kest_frame_layout(NULL, 0, 0) == NULL &&
+                     kest_frame_gives(NULL, 0) == NULL &&
+                     !kest_frame_fills(NULL, 0, kinds, 2) &&
+                     !kest_frame_reads(NULL, 0, kinds, 2) &&
+                     !kest_takes_text(NULL, 0, frame, 1, words, 1) &&
+                     kest_gave_text(NULL, 0, frame, out, sizeof out) < 0 &&
+                     kest_frame_slots(NULL, 0) == 0 &&
+                     kest_heap_used(NULL) == 0 &&
+                     kest_heap_wanted(NULL) == 0 &&
+                     !kest_heap_reset(NULL) && !kest_heap_allow(NULL, 16) &&
+                     kest_runtime_cost(NULL) == 0 &&
+                     kest_runtime_free(NULL);
+        kest_report(NULL, stderr, KEST_FORM_TEXT);
+        kest_allowed(NULL, &allowed);
+        (void)kest_heap_refused_by(NULL);
+        if (!quiet) {
+            fprintf(stderr, "a machine that did not start answered as though "
+                            "it had\n");
+            return 1;
+        }
+    }
+
     // And then the build, which nothing is standing on now.
     if (!kest_build_free(build)) {
         kest_build_report(build, stderr, KEST_FORM_TEXT);

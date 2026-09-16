@@ -27570,3 +27570,44 @@ than a count, because the count is the thing that was lying.
 answered and one did not, and the one that did not was the edge nobody had
 needed that day. A library is held by the shapes somebody wrote down; the shapes
 somebody writes down are the ones their program had.
+
+## D894: a machine that did not start is a machine with nothing in it
+
+The walk D893 asked for, over the sixty functions a host sees. Four times the
+probe was wrong and the engine was right, which is worth writing down as
+plainly as the one that went the other way:
+
+| Written | What the header already said |
+| --- | --- |
+| a machine made with `{0, 0, 0}` should not run | zero is *what the program asked for*, and it ran |
+| binding a name twice should work | *a name is bound once* |
+| `kest_text` with no address should answer NULL | it answers *empty*, and says `K0611` |
+| a lend at no address should be refused | it is, and `object` is NULL |
+
+And the fifth, which was not the probe's mistake. The probe had forgotten to
+bind the one function its program declared, so `kest_start` answered NULL —
+correctly, and `kest_build_report` named the door and the line. The probe
+carried on with that NULL, the way a host that does not read an answer would,
+and the process died.
+
+Twenty-nine doors take a machine. **Thirteen of them took the process down.**
+Eight answered politely, and `kest_runtime_free(NULL)` is documented to answer
+true — which is the tell: this was a guard written wherever somebody happened to
+be standing, not a rule.
+
+It is a rule now. Every one of the twenty-nine answers what a real machine says
+when it has nothing: no entry, no layout, nought bytes, an empty piece of text,
+false. Seven of them came right from one guard in `frame_of`, which is the door
+they all already went through — the same shape D436 gave those answers in the
+first place. There is nowhere to say more than that: a report belongs to a
+machine, and there is none.
+
+*What makes this worth a turn rather than a line of defensive code* is which
+way the inconsistency pointed. A host reading the header could see that
+`kest_frame_slots` and `kest_entry_name` answer a machine that is not there, and
+conclude the boundary holds. Thirteen doors along, it does not. A boundary is
+one promise or it is a list of them, and a list is what nobody reads.
+
+`examples/embed.c` knocks on all twenty-nine now, which is what makes the
+sentence checkable rather than said: the host that reads this engine back is the
+one place a promise about the outside can be kept.
