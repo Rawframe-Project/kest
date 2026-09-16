@@ -28622,3 +28622,105 @@ second check in the loop for it.
 more memory than it may have. This one says it ran for longer than it may. The
 codes are separate, the messages say different things, and a host can tell which
 happened without reading prose.
+
+## D923: a reference compares, because it is an identity
+
+`==` was refused on `ref<T>` under the rule D874 wrote for handles: two arrays
+are equal when they hold the same things, so comparing the handles answers a
+different question. That is right about an array, a store and a function value.
+It is wrong about a reference, and the sprint audit is what found it.
+
+A `ref<T>` is not a way to reach something. It is a place and a stamp, and the
+stamp is the build's own counter — no two places in any two stores of any two
+machines from one build are ever stamped alike (D314, D316). So two references
+are equal when they are the same handout: the same entity, and still the entity
+it was. That is the question a program asks about a reference and the only one
+it can ask, and it is now the question `==` answers.
+
+**The old suggestion answered something else.** It said to read what they name
+with `get` and compare that. Two settlers with the same fields are one settler
+under that reading, and one settler whose hunger went up between the two reads
+is two. A language for games cannot have "is this the same entity" mean that.
+
+The change is in the checker and nowhere else: a reference is one slot holding a
+whole number, so the compiler was already emitting the right comparison and the
+machine was already running it. `hash` follows, because it applies exactly where
+`==` does, which makes a `Table<ref<T>, V>` a way to hang something off an entity
+without putting it in the entity.
+
+A reference to a place that was removed compares unequal to the reference the
+same place is handed out under next, and one from another store compares unequal
+to everything here. Both are held by `examples/quests.kest`.
+
+## D922: what keeping a world costs, measured
+
+`examples/colony.kest` is the persistent-world workload this project did not
+have: ten thousand entities and two thousand jobs pointing at each other, with
+deletion, slot reuse, cycles and references that outlive what they named, run a
+day at a time for up to eight hundred days.
+
+The heap settles to a constant 80 bytes a day. Three variants say which 80:
+
+```text
+the program as written                    80 bytes a day
+no temporaries in the day, births kept     0 -- exactly constant over 800 days
+temporaries kept, no births               80
+the per-day array hoisted into the world  35
+```
+
+**The store is a steady state and the temporaries are not.** Everything
+`store<T>` does — add, remove, reuse a place, follow a stale reference, hold a
+cycle — costs nothing that accumulates over eight hundred days of churn. A day
+that promises `no.alloc` allocates nothing, which the compiler proves and eight
+hundred days confirm.
+
+What grows is what a day makes and drops: the heap is an arena and nothing is
+freed while a program runs (D012). Hoisting the per-day array into the world and
+`clear`ing it takes 80 to 35, which is the language's own answer and works. The
+35 that is left is one interpolated line of text a day, and text is immutable
+with no buffer, so that class has no answer inside the program.
+
+`kest_heap_reset` is the answer outside it, and a host that keeps the world
+itself can use it. That is the trade this memory model asks a host to make, and
+it is now measured rather than assumed. Nothing here was changed; what a
+technical lead may want to decide about it is written in the sprint report.
+
+## D924: a number standing for which declaration this is
+
+A tool that watches a program — a reloader, a save format, a debugger, something
+reading a diff — has to know that the thing it saw yesterday is the thing it is
+looking at today. What this compiler gave it was a file, a line and a column,
+and a blank line above a declaration moves every one of them.
+
+There are two marks already and they answer a different question. `mark` is the
+bytes of the files, so a comment changes it. `codeMark` is what the machine will
+run, and it is better than it looks: a blank line, a comment and a renamed local
+all leave it alone, because none of them changes an instruction. What moves it is
+moving a declaration, because the chunks are then in another order.
+
+So `check --json` now says an `id` per declaration, folded from what was already
+printed beside it: the qualified name, the types it takes and gives, and the
+three promises. Nothing about where it is written goes in.
+
+```text
+edit                    id
+as written              dfe41484f0987403
+a blank line added      dfe41484f0987403
+a comment added         dfe41484f0987403
+declarations swapped    dfe41484f0987403
+a local renamed         dfe41484f0987403
+the body changed        dfe41484f0987403
+the signature changed   98b3f4bb0420d574
+`no.alloc` added        713fc08664a7e747
+```
+
+**The body not moving it is the point.** An identity says which declaration this
+is, not what it does. A reloader that sees the same id and a different `codeMark`
+is looking at the same function with a new body, which is exactly the case it
+exists for; one that sees a new id is looking at a different function, whatever
+it is called.
+
+It is folded here rather than left to whoever reads the JSON because two tools
+folding their own way would have two identities for one declaration. It is
+derived from what the JSON already carries, so nothing new is stored and nothing
+can drift out of step with it.

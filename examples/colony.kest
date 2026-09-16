@@ -48,11 +48,11 @@ struct Job {
     left: i32
 }
 
-// The world is two stores and the day's tally. A shape that holds more than one
-// handle says here that it holds them in step: a job's `who` is a settler in
-// `settlers` and nowhere else, and a settler's `job` is in `jobs`. Nothing in
-// the language holds two stores to each other, so the rule is that the world is
-// what hands them out and the world is what reads them back.
+// The world is two stores and the day's tally, and they are held in step: a
+// job's `who` is a settler in `settlers` and nowhere else, and a settler's
+// `job` is in `jobs`. Nothing in the language holds two stores to each other,
+// so the rule is that the world is what hands them out and the world is what
+// reads them back.
 struct World {
     settlers: store<Settler>
     jobs: store<Job>

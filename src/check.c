@@ -1100,10 +1100,24 @@ static bool has_equality(const KestType *type, const KestType **without) {
     // one that parts them — it can be written and it cannot be compared,
     // because the one way to ask an optional anything is to take what it holds
     // out. See D541.
+    // A reference is the one handle that is an identity rather than a way to
+    // reach something, so it is the one that compares. Two of them are equal
+    // when they name the same place with the same stamp, which is the question
+    // a program asks about a reference and the only one it can ask: is this the
+    // same entity, and is it still that entity. A stamp is the build's own
+    // counter, so no two places in any two stores of any two machines from one
+    // build are ever stamped alike (D314, D316) and comparing two from
+    // different stores is answered rather than guessed.
+    //
+    // Reading both and comparing what they name is what this used to say to do,
+    // and it answers something else: two settlers with the same fields are one
+    // settler under that reading, and one settler whose hunger went up is two.
+    // See D923.
+    case KEST_T_REF:
+        return true;
     case KEST_T_VOID:
     case KEST_T_OPTIONAL:
     case KEST_T_ARRAY:
-    case KEST_T_REF:
     case KEST_T_STORE:
     case KEST_T_FN:
     case KEST_T_MODULE:

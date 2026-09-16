@@ -2041,7 +2041,6 @@ yield""",
     case KEST_T_VOID:
     case KEST_T_OPTIONAL:
     case KEST_T_ARRAY:
-    case KEST_T_REF:
     case KEST_T_STORE:
     case KEST_T_FN:
     case KEST_T_MODULE:
@@ -2054,7 +2053,6 @@ yield""",
     case KEST_T_ERROR:
     case KEST_T_VOID:
     case KEST_T_ARRAY:
-    case KEST_T_REF:
     case KEST_T_STORE:
     case KEST_T_FN:
     case KEST_T_MODULE:
@@ -2097,7 +2095,6 @@ yield""",
         "what": "a kind that compares and cannot be written",
         "file": "src/check.c",
         "from": r"""    case KEST_T_ARRAY:
-    case KEST_T_REF:
     case KEST_T_STORE:
     case KEST_T_FN:
     case KEST_T_MODULE:
@@ -2108,7 +2105,6 @@ yield""",
     *without = type;""",
         "to": r"""    case KEST_T_ARRAY:
         return true;
-    case KEST_T_REF:
     case KEST_T_STORE:
     case KEST_T_FN:
     case KEST_T_MODULE:
@@ -2137,7 +2133,7 @@ yield""",
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "arguments": [],
-        "caught": "an optional compares now, and the one way to ask one",
+        "caught": "is written down here as one of the two that are on one list",
     },
     {
         # A store taken out of the walk that works a type name out from what

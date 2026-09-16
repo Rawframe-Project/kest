@@ -815,18 +815,27 @@ some("the types the machine writes", writes)
 # difference the other way was still exactly an optional and the guard held all
 # three shut. D874 gave a struct `==` without giving it a text and nothing here
 # said so. See D876.
+# The two that are not on both lists, each with a reason. An optional can be
+# written and does not compare, because the one way to ask an optional anything
+# is to take what it holds out. A reference compares and cannot be written,
+# because what it says as text is what is behind it and what is behind it may be
+# gone -- it is an identity to compare and not a value to read. Anything else
+# on one list and not the other is a kind nobody decided about. See D876, D923.
+COMPARES_WITHOUT_TEXT = {'REF'}
+WRITTEN_WITHOUT_EQUALITY = {'OPTIONAL'}
 if says is not None and compares is not None:
-    for one in sorted((says - compares) - {'OPTIONAL'}):
+    for one in sorted((says - compares) - WRITTEN_WITHOUT_EQUALITY):
         print("text: a `%s` can be written and does not compare, and an "
               "optional is the one that is both" % one.lower())
         failed = 1
-    for one in sorted(compares - says):
+    for one in sorted((compares - says) - COMPARES_WITHOUT_TEXT):
         print("text: a `%s` compares and cannot be written, which nothing here "
               "has an answer for" % one.lower())
         failed = 1
-    if 'OPTIONAL' not in says - compares:
-        print("text: an optional compares now, and the one way to ask one "
-              "anything was to take what it holds out")
+    for one in sorted((WRITTEN_WITHOUT_EQUALITY - (says - compares)) |
+                      (COMPARES_WITHOUT_TEXT - (compares - says))):
+        print("text: a `%s` is written down here as one of the two that are on "
+              "one list and not the other, and it is on both now" % one.lower())
         failed = 1
 if says != writes:
     for one in sorted((says or set()) - (writes or set())):

@@ -1116,10 +1116,26 @@ neither.
 **A value laid out flat compares when everything in it compares.** That is
 integers, floats, `bool`, text and a set of bits; a struct, when every field
 does; `[T; N]`, when `T` does; and an enum, when everything its cases carry
-does. A handle never compares, however it is reached: two arrays are equal when
-they hold the same things, and comparing the handles answers a different
-question — so a struct holding a `[T]` is refused, and the refusal names the
-field's type rather than the struct's. Writing one out follows the same line and
+does. An array, a store and a function value never compare, however they are
+reached: two arrays are equal when they hold the same things, and comparing the
+handles answers a different question — so a struct holding a `[T]` is refused,
+and the refusal names the field's type rather than the struct's.
+
+**A `ref<T>` compares, and it is the one handle that does.** It is an identity
+rather than a way to reach something: a place and a stamp, and the stamp is the
+build's own counter, so no two places in any two stores of any two machines from
+one build are ever stamped alike. Two references are equal when they are the
+same handout — the same entity, and still the entity it was. A reference to a
+place that was removed is not equal to the reference the same place is handed
+out under next, and one from another store is not equal to anything in this one.
+That is exactly the question a program asks about a reference, and it is the
+only one it can ask.
+
+Reading both and comparing what they name is a different question and the wrong
+answer to this one: two settlers with the same fields are one settler under that
+reading, and one settler whose hunger went up is two. A reference hashes for the
+same reason it compares, so a `Table<ref<T>, V>` is a way to hang something off
+an entity without putting it in the entity. Writing one out follows the same line and
 for the same reason: what a handle says as text is what is behind it, which is a
 question about reaching through rather than about the value.
 
@@ -4417,6 +4433,45 @@ far the slowest round was from the fastest. Past a quarter the line says the
 machine was somebody else's, which is a thing to know rather than a thing to
 fail — a number read while something else was running is not one to compare
 against another.
+
+## What is the same everywhere
+
+Three questions get called determinism and they have three different answers
+here.
+
+**Does the same source mean the same thing?** Yes, and it is written down rather
+than left to a compiler. Every integer width wraps at its own end; narrowing is
+defined at every width; `f32` arithmetic rounds to `f32` at every step, so a
+multiply and an add are two roundings and never one fused one; `f64` is IEEE-754
+binary64. A `for` over an array walks it in index order, over a store in slot
+order, and over text by character. `hash` is FNV-1a from a fixed start, with no
+seed taken from the run, so the same value hashes to the same number in every
+run on every machine. `std.random` is a seeded source and every one of its
+functions promises `no.host`.
+
+**Does the same program on the same machine do the same thing twice?** Yes.
+Nothing here reads a clock, an address or an environment unless the program asks
+a host for it, and nothing about a run is seeded from one.
+
+**Is a simulation bitwise identical on two different platforms?** For everything
+above, yes. For four things, no, and they are all host doors: `Math.sin`,
+`Math.cos`, `Math.pow` and `Math.atan2` are whatever the host binds them to,
+which for the command line is the platform's libm, and libm is not required to
+round those correctly. Two platforms may differ in the last bit and then diverge.
+`Math.sqrt` does not have that problem — IEEE-754 requires it to be correctly
+rounded — and neither do `Math.floor` and `Math.ceil`.
+
+**The profile that rejects what does not qualify already exists.** It is
+`no.host`. Every operation in this language whose answer could differ between
+platforms is behind a host door, and a function that promises `no.host` cannot
+call one — the compiler proves it and refuses the program otherwise. So a
+simulation written to be reproducible across machines is a simulation whose step
+promises `no.host`, and that is a thing the compiler checks rather than a thing
+a reader has to remember.
+
+It is stricter than it needs to be, which is the right way round: it also
+excludes `sqrt`, which would have been fine. A program that wants it writes its
+own over `no.host` arithmetic.
 
 ## Where each rule is run
 

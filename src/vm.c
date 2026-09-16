@@ -1146,6 +1146,12 @@ static bool values_equal(const KestType *type, const KestValue *a,
     switch (type->tag) {
     case KEST_T_FLOAT:
         return a[0].real == b[0].real;
+    // A reference is a place and a stamp packed into one whole number, and the
+    // stamp is the build's own counter, so the number is the handout. Two
+    // references are equal when they are the same handout, which is the same
+    // entity and still the entity it was. See D923.
+    case KEST_T_REF:
+        return a[0].integer == b[0].integer;
     case KEST_T_TEXT:
         return strcmp(a[0].text, b[0].text) == 0;
     case KEST_T_ENUM: {
@@ -1199,7 +1205,6 @@ static bool values_equal(const KestType *type, const KestValue *a,
     case KEST_T_VOID:
     case KEST_T_OPTIONAL:
     case KEST_T_ARRAY:
-    case KEST_T_REF:
     case KEST_T_STORE:
     case KEST_T_FN:
     case KEST_T_MODULE:

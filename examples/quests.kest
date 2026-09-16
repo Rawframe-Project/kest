@@ -100,6 +100,31 @@ fn reinforce(world: store<Npc>, after: text) -> i32 {
 }
 
 fn main() -> i32 {
+    // A reference is an identity, so two of them compare. It is the one handle
+    // that does, and the question it answers is the one a program asks: the
+    // same character, and still that character. See D923.
+    let named: store<Npc> = store()
+    let sameOne = add(named, Npc("one", none, none))
+    let sameTwo = add(named, Npc("two", none, none))
+    let again = sameOne
+    if sameOne != again || sameOne == sameTwo {
+        return 40
+    }
+    // A place handed out again is not the reference it was handed out under
+    // before, which is the whole of what a stamp is for.
+    remove(named, sameOne)
+    let reused = add(named, Npc("three", none, none))
+    if sameOne == reused || get(named, sameOne) != none {
+        return 41
+    }
+    // And a reference from another store names nothing in this one, because a
+    // stamp is the build's rather than the store's.
+    let elsewhere: store<Npc> = store()
+    let outside = add(elsewhere, Npc("outside", none, none))
+    if outside == sameTwo || get(named, outside) != none {
+        return 42
+    }
+
     let world: store<Npc> = store()
     let quests: store<Quest> = store()
 

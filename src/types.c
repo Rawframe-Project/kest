@@ -1147,6 +1147,11 @@ uint64_t kest_hash_value(const KestType *type, const KestValue *slots) {
     switch (type->tag) {
     case KEST_T_FLOAT:
         return kest_mix(slots[0].real == 0.0 ? 0 : (uint64_t)slots[0].integer);
+    // The same whole number `==` compares, mixed the way every other whole
+    // number here is: `hash` applies to exactly what `==` applies to, so a
+    // reference that compares is a reference that hashes. See D923.
+    case KEST_T_REF:
+        return kest_mix((uint64_t)slots[0].integer);
     case KEST_T_TEXT:
         // Through the one fold this compiler has, which is what a file is
         // marked with and what a program's `hash` over text answers. See D663.
@@ -1201,7 +1206,6 @@ uint64_t kest_hash_value(const KestType *type, const KestValue *slots) {
     case KEST_T_VOID:
     case KEST_T_OPTIONAL:
     case KEST_T_ARRAY:
-    case KEST_T_REF:
     case KEST_T_STORE:
     case KEST_T_FN:
     case KEST_T_MODULE:
@@ -4137,6 +4141,37 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
                 symbol->type->no_host ? "true" : "false",
                 symbol->type->is_foreign ? "true" : "false",
                 symbol->named ? "true" : "false");
+        // And a number standing for which declaration this is, folded from
+        // what is already printed beside it rather than from where it is
+        // written. A tool that watches a file -- a reloader, a save format, a
+        // debugger, something reading a diff -- needs to know that the thing
+        // it saw yesterday is the thing it is looking at today, and a line
+        // number is not that: a blank line above it moves every one of them.
+        //
+        // What it is made of is the module and name, which is the same
+        // qualified name a program writes; the types it takes and gives, which
+        // is what tells two functions of one name apart; and the promises,
+        // which are part of what a caller may do with it. So it survives
+        // formatting, a comment, a renamed local and a declaration moved past
+        // it, and it changes when the signature or a promise changes -- which
+        // is when a caller has to be told. See D924.
+        uint64_t stands_for = kest_mark_bytes(KEST_MARK_START, symbol->name,
+                                              strlen(symbol->name));
+        stands_for = kest_mark_bytes(stands_for, "(", 1);
+        for (uint32_t p = 0; p < symbol->type->param_count; p++) {
+            const char *one = kest_type_name(arena, symbol->type->params[p]);
+            stands_for = kest_mark_bytes(stands_for, one, strlen(one));
+            stands_for = kest_mark_bytes(stands_for, ",", 1);
+        }
+        const char *gives = kest_type_name(arena, symbol->type->result);
+        stands_for = kest_mark_bytes(stands_for, ")->", 3);
+        stands_for = kest_mark_bytes(stands_for, gives, strlen(gives));
+        char promised[3] = {symbol->type->no_alloc ? 'a' : '-',
+                            symbol->type->no_host ? 'h' : '-',
+                            symbol->type->is_foreign ? 'f' : '-'};
+        stands_for = kest_mark_bytes(stands_for, promised, sizeof(promised));
+        fprintf(out, ",\"id\":\"%016llx\"",
+                (unsigned long long)stands_for);
         write_where(symbol->source, symbol->span, out);
         fputc('}', out);
     }
