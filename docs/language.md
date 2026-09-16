@@ -1728,6 +1728,32 @@ let seen: [i32] = array(1000, 0)
 clear(seen)
 ```
 
+What each of the three containers costs a frame is a number rather than a
+sentence about doubling, and these are the numbers: what one more entity a step
+adds to the heap, measured by `check-costs.sh` over a tick and held there, so a
+reading of this table that the program disagrees with is a gate that fails.
+
+| a step that puts an entity into | told nothing | told how many |
+| --- | --- | --- |
+| a piece of text | 13 bytes an entity | — |
+| an array | 25 bytes an entity | 0 bytes an entity |
+| a table | 51 bytes an entity | 0 bytes an entity |
+| a store | 80 bytes an entity | 0 bytes an entity |
+
+A frame that promises `no.alloc` is 0 bytes an entity, which is what the promise
+means read from outside it. Being told is worth everything: the room is made
+once, before the frame, and the frame pays for nothing. A store is the dearest
+because it grows four runs at once — what it holds, what each has counted, which
+are live and which are free — and a table is dearer than an array because it
+grows three.
+
+Not everything about a cost here is a number this project measures. `remove`
+from an array shifts what comes after it and `remove` from a store does not:
+that is a difference in what one instruction does rather than in how many run or
+how much is asked of the heap, so neither of the two things this gate can count
+can see it. It is a claim about the algorithm, true by reading the code, and
+nobody's measurement.
+
 A fill of nought is not written, because the memory an array is made from is
 already nought. So those two lines cost the room and nothing else, which is
 what `store(n)` costs, and a fill of anything else costs the writing as it

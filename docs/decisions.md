@@ -28326,3 +28326,43 @@ one asked whether the price had to be paid twice and the answer is no. An
 instruction that takes a handle takes every handle, and the two things in this
 language that grow now answer the same sentence at the making — `array(n, v)`
 and `store(n)` — and the same sentence afterwards.
+
+## D914: the numbers, written where a reader is
+
+Five turns have measured what a frame costs and printed it in a gate line
+nobody reads unless something fails. The reference talks about doubling and
+overshoot and says no number at all. So the table is written there now — what
+one more entity a step adds to the heap, for a piece of text, an array, a table
+and a store, told and untold — and the gate reads the document and holds every
+row to what a run says. Two places for one fact, with the one that runs reading
+the one that is read.
+
+**It found a regression the same minute.** D912 gave `table.refill` room for the
+keys and the values as well as the slots, and `refill` is what `set` calls when
+a table grows. Its parameter was how many *places*, so `set` asking for twice
+the slots was asking for keys and values with room for four times the pairs:
+
+```text
+a pair in a table, before D912   51 bytes an entity
+after D912                       77
+after this                       51
+```
+
+The gate had held a pair above an element, and seventy-seven is above
+twenty-five, so nothing said anything. A number written where a reader can
+compare it is what said it — which is the argument for writing numbers down,
+made by the first number written down.
+
+The parameter means pairs now, which is what a program calling it knows and what
+the library's own sentence already claimed. The slots are twice that, because a
+table keeps twice as many places as pairs so that a probe ends, and that is the
+one thing `refill` knows and its caller does not.
+
+*And the sentence that is not a number.* `remove` from an array shifts what
+comes after it and `remove` from a store does not. That is a difference in what
+one instruction does, rather than in how many run or how much is asked of the
+heap — so neither of the two things this gate can count can see it. The
+reference says so where it says the rest: it is a claim about the algorithm,
+true by reading the code, and nobody's measurement. A document that says which
+of its costs are measured is a document a reader can trust about the ones that
+are.

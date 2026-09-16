@@ -34951,3 +34951,51 @@ reference says `remove` from a store costs nothing and `remove` from an array
 shifts, which is a claim about time and there is no measurement of either. If a
 sentence in that document is about a cost, it should be a sentence the gate
 holds or a sentence that says it is nobody's measurement.
+
+## The numbers, written where a reader is
+
+Five turns measured what a frame costs and printed it in a gate line nobody
+reads unless something fails. The reference talks about doubling and overshoot
+and says no number at all. The table is written there now — what one more entity
+a step adds to the heap, for a piece of text, an array, a table and a store,
+told and untold — and the gate reads the document and holds every row to what a
+run says.
+
+**It found a regression the same minute.** D912 gave `table.refill` room for the
+keys and the values as well as the slots, and `refill` is what `set` calls when
+a table grows. Its parameter was how many places, so `set` asking for twice the
+slots asked for keys and values with room for four times the pairs:
+
+```text
+a pair in a table, before D912   51 bytes an entity
+after D912                       77
+after this                       51
+```
+
+The gate held a pair above an element, and seventy-seven is above twenty-five,
+so nothing said anything. A number written where a reader can compare it is what
+said it — which is the argument for writing numbers down, made by the first
+number written down.
+
+The parameter means pairs now, which is what a program calling it knows; the
+slots are twice that, because a table keeps twice as many places as pairs so
+that a probe ends, and that is the one thing `refill` knows and its caller does
+not.
+
+And the sentence that is not a number: `remove` from an array shifts and from a
+store does not, which is a difference in what one instruction does rather than
+in how many run or how much heap is asked for. Neither thing this gate counts
+can see it, and the reference says so.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the regression is the lesson and it is not finished. Three numbers in
+the gate line are held to an order — a pair above an element, told below untold
+— and an order let seventy-seven through where fifty-one belonged. An order is
+what you hold when you do not know the number; the numbers are known now and
+written down. So hold them: every row of that table to the number, not to the
+ordering, and the same for the two the line prints and the document does not —
+what a frame step costs in instructions and how many questions the checked build
+asks. A number that moves is then a gate that fails and a line in the document
+to change on purpose, which is what D886 made of the one number the reference
+already quoted.

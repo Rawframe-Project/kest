@@ -166,6 +166,10 @@ fn place<K, V>(t: Table<K, V>, key: K, where: i32) no.alloc no.host {
 // still doubled on the way up — which is what `room` is for. Measured by
 // `check-costs.sh`, which prints both. See D910 and D912.
 fn refill<K, V>(t: Table<K, V>, howMany: i32) no.host {
+    // How many pairs, rather than how many places: a table keeps twice as many
+    // slots as pairs so that a probe ends, and a program calling this knows
+    // what it is about to put in and not how this finds it again. See D914.
+    //
     // The pairs as well as the places to find them. The slots are made here
     // and the keys and the values are arrays this cannot replace -- a table is
     // a value and replacing a field of it replaces the copy's handle -- so
@@ -175,8 +179,10 @@ fn refill<K, V>(t: Table<K, V>, howMany: i32) no.host {
     // same thing costs nothing at all. See D912.
     room(t.keys, howMany)
     room(t.values, howMany)
+    let places = howMany * 2
+    room(t.slots, places)
     clear(t.slots)
-    for i in 0..howMany {
+    for i in 0..places {
         push(t.slots, EMPTY)
     }
     t.marks[0] = 0
@@ -211,9 +217,9 @@ fn set<K, V>(t: Table<K, V>, key: K, value: V) no.host {
     }
     if (len(t.keys) + t.marks[0] + 1) * 2 >= len(t.slots) {
         if (len(t.keys) + 1) * 2 >= len(t.slots) {
-            refill(t, len(t.slots) * 2)
-        } else {
             refill(t, len(t.slots))
+        } else {
+            refill(t, len(t.slots) / 2)
         }
     }
     push(t.keys, key)

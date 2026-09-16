@@ -5612,6 +5612,20 @@ fn main() -> i32 {
         "caught": "a build that is not there answered as though it were",
     },
     {
+        # A row of the reference's table of what a container costs a frame,
+        # edited without running anything. The numbers are measured by the
+        # gate and written in the document, which is two places for one fact --
+        # so the one that runs reads the one that is read. See D914.
+        "what": "a container's cost written down and not measured",
+        "file": "docs/language.md",
+        "from": """| a table | 51 bytes an entity | 0 bytes an entity |""",
+        "to": """| a table | 50 bytes an entity | 0 bytes an entity |""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "the reference says a table costs 50 byte(s) an entity",
+    },
+    {
         # Room asked for in a store and not made. `store(n)` makes one with
         # room and this is the same sentence said to one that is already
         # there -- which is what a program has when the store is inside

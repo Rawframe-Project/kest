@@ -1349,6 +1349,24 @@ roomy_store = a_step_takes('housed(all, kept)', TOLD_STORE)
 # keeps its keys, its values and its slots and each of the three doubles while
 # an array doubles once. The numbers are said for a reader to compare, the way
 # every number from a run here is. See D909.
+# And the table the reference prints of these, held to them. The numbers are
+# measured here and written there, which is two places for one fact -- so the
+# one that runs reads the one that is read, and a row somebody edits without
+# running anything is a gate that fails. The same rule D886 made for the one
+# number the reference quotes from a run, said about four. See D914.
+WRITTEN_DOWN = {"a piece of text": text_frame, "an array": grown_frame,
+                "a table": keyed_frame, "a store": stored_frame}
+printed = dict(re.findall(
+    r"^\| (a piece of text|an array|a table|a store) \| (\d+) bytes an entity",
+    open(os.path.join('docs', 'language.md')).read(), re.M))
+some("the table of what a container costs a frame", printed)
+for which in sorted(WRITTEN_DOWN):
+    if which not in printed or int(printed[which]) != WRITTEN_DOWN[which]:
+        print("costs: the reference says %s costs %s byte(s) an entity and a "
+              "run says %s"
+              % (which, printed.get(which), WRITTEN_DOWN[which]))
+        failed = 1
+
 if (quiet_frame is None or text_frame is None or grown_frame is None or
         keyed_frame is None or told_frame is None or roomy_frame is None or
         stored_frame is None or housed_frame is None or quiet_frame != 0 or
