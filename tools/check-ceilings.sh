@@ -90,7 +90,7 @@ builds() {
 # reference from the first occupant read as the newest one. Lowered here for
 # the same reason the other is: nobody is adding four thousand million things
 # to a store to watch it.
-lower src/vm.c '#define MOST_STAMPS 0xffffffffu' '#define MOST_STAMPS 1000u'
+lower src/vm.c '#define MOST_STAMPS 16777215u' '#define MOST_STAMPS 1000u'
 
 # And how many names a program may ask a host for. An extern is named in the
 # instruction that calls it in two bytes, so the one past the last is called as
@@ -285,7 +285,8 @@ PROBES = [
 # for a program to have. Both are met further down this file, in a tree with the
 # ceiling lowered.
 LOWERED = ("elements an array or a store holds",
-           "places in stores a machine hands out",
+           "times a machine hands out a place, counting the ones taken back",
+           "places in one store",
            "names a program asks the host for")
 
 table = re.search(r"## What there is a most of(.*?)\n```",
@@ -309,8 +310,9 @@ for number, what in rows:
 DEFINED = [
     ("elements an array or a store holds", "src/vm.c", "MAX_COUNTED",
      {"INT32_MAX": "2147483647"}),
-    ("places in stores a machine hands out", "src/vm.c", "MOST_STAMPS",
-     {"0xffffffffu": "4294967295"}),
+    ("times a machine hands out a place, counting the ones taken back",
+     "src/vm.c", "MOST_STAMPS", {}),
+    ("places in one store", "src/vm.c", "MOST_PLACES", {}),
     ("names a program asks the host for", "src/compile.c", "MAX_EXTERNS", {}),
 ]
 for phrase, path, define, written_as in DEFINED:
@@ -323,6 +325,9 @@ for phrase, path, define, written_as in DEFINED:
         failed = 1
         continue
     value = written_as.get(found.group(1), found.group(1))
+    # Written with the `u` a C constant carries, which the table does not.
+    if value.endswith("u"):
+        value = value[:-1]
     if value != number[0]:
         print("limits: the table says %s %s and `%s` is %s"
               % (number[0], phrase.strip(), define, value))

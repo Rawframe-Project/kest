@@ -52,6 +52,14 @@
 #define MOST_STAMPS 16777215u
 #define MOST_PLACES 16777215u
 #define MOST_WORLDS 65535u
+// And the same widths again as masks. They are the same numbers today and they
+// are not the same thing: the three above are ceilings a program runs into and
+// `check-ceilings.sh` lowers one of them in a copy of this tree to watch the
+// refusal happen. A mask that moved with a lowered ceiling took the generation
+// apart wrongly and every reference read as stale. See D934.
+#define REF_STAMP_MASK ((1u << REF_STAMP_BITS) - 1u)
+#define REF_INDEX_MASK ((1u << REF_INDEX_BITS) - 1u)
+#define REF_WORLD_MASK ((1u << REF_WORLD_BITS) - 1u)
 
 #define KEST_IS_ARRAY 0x4b415252u
 #define KEST_IS_STORE 0x4b53544fu
@@ -1578,16 +1586,16 @@ static int64_t pack_ref(uint32_t world, uint32_t generation, uint32_t index) {
 // a reference is made of are this file's own and a second place that knew the
 // widths is a second place to change. See D934.
 static uint32_t ref_place(int64_t handle) {
-    return (uint32_t)((uint64_t)handle & MOST_PLACES);
+    return (uint32_t)((uint64_t)handle & REF_INDEX_MASK);
 }
 
 static KestValue *resolve_ref(Store *store, int64_t handle) {
     uint32_t index = ref_place(handle);
     uint32_t generation =
-        (uint32_t)(((uint64_t)handle >> REF_INDEX_BITS) & MOST_STAMPS);
+        (uint32_t)(((uint64_t)handle >> REF_INDEX_BITS) & REF_STAMP_MASK);
     uint32_t world =
         (uint32_t)(((uint64_t)handle >> (REF_STAMP_BITS + REF_INDEX_BITS)) &
-                   MOST_WORLDS);
+                   REF_WORLD_MASK);
     // Which world it came from is asked first, because a reference from
     // another one is a different kind of wrong from a reference to a place
     // that has been handed out again -- and without it the two were the same
@@ -4455,7 +4463,7 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     static atomic_uint worlds_so_far;
     rt->world = (atomic_fetch_add_explicit(&worlds_so_far, 1u,
                                            memory_order_relaxed) &
-                 MOST_WORLDS);
+                 REF_WORLD_MASK);
     // And what says this machine is standing on the build, counted where the
     // machines are rather than where the builds are: freeing the build while
     // one of these is up takes the program out from under it.
