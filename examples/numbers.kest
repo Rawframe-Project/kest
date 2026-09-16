@@ -93,6 +93,10 @@ fn asRunNarrow(n: i8) -> i8 no.alloc {
     return n
 }
 
+fn textAsRun(t: text) -> text no.alloc {
+    return t
+}
+
 fn main() -> i32 {
     // One past the top of each width is the bottom of it.
     let byte: i8 = 127
@@ -415,9 +419,13 @@ fn main() -> i32 {
     let fewer: bool = many <= 4
     let more: bool = many >= 4
     let differs: bool = many != 4
-    let sorted: bool = "a" <= "b"
-    let later: bool = "b" > "a"
-    let atLeast: bool = "b" >= "a"
+    // Through a call, because since D887 a name nothing writes holding a
+    // comparison of two pieces of text written down is a truth the compiler
+    // works out where it stands -- and a truth in the chunk is the three
+    // instructions that compare text never being run by anything.
+    let sorted: bool = textAsRun("a") <= "b"
+    let later: bool = textAsRun("b") > "a"
+    let atLeast: bool = textAsRun("b") >= "a"
     if below || !above || !apart || fewer || !more || !differs {
         return 49
     }

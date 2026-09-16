@@ -1349,8 +1349,15 @@ module rounds
 
 const X: f32 = 0.1
 
+// Through a call, because since D887 a name nothing writes holding something
+// the compiler can work out is worked out where it stands -- and then both
+// halves of this are the folder, which is one question asked twice.
+fn given(x: f32) -> f32 {
+    return x
+}
+
 fn main() -> i32 {
-    let y: f32 = 0.1
+    let y: f32 = given(0.1)
     if X == y {
         return 0
     }

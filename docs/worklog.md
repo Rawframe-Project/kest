@@ -33823,3 +33823,62 @@ Do that, and count what it costs the examples. The other loose end is the 1596
 bytes the reference says one walk of `examples/embed.kest` costs: nothing holds
 it, because what knows it is a host with a clock on the heap rather than a
 command.
+
+## The run written in a body, and a call read as a shape
+
+`TIERS[at]` where `TIERS` is a `const` was one instruction reading the chunk.
+The same four numbers written inside the function that uses them were four
+pushes and a `store.n`, on every call. Where a value was written decided
+whether it was a value or work.
+
+A `let` whose value is worked out where it stands and whose name the body never
+assigns to is now a value the chunk holds, and takes no slot at all: the frame
+neither builds it nor keeps it. One of a held run at a position worked out
+while running is `const.at`; a position written down is the one value. The
+function above went from five slots and four deep to one and one. The examples
+went from 78268 to 74872 bytes of code.
+
+What answers "never written" is the checker, the same way D866 answers it for a
+walk: the parser writes the bit true and the checker clears it where a scope
+ends, because a name nobody has looked at has to read as one that is written.
+Get that wrong and a write lands on a name with no place — and the compiler
+says `K0505` rather than the program quietly keeping its first value, which is
+what the hole for it shows.
+
+**What the walk turned up.** The first program to fail was `examples/chance.kest`:
+the folder said `random.next(random.from(5))` was `5`. `fold_slots` took any
+call whose type is a struct for a constructor of that struct, so a module
+function answering a shape had its arguments read as that shape's fields. It
+was already there and already reachable — `const S: Source = random.from(5)`
+folded wrongly at HEAD with nothing refusing it. A shape's name is of the shape
+and a function's name is of a function type; both the struct and the enum fold
+ask that now.
+
+The first cut asked the wrong question. D866's `written` is about the name
+itself on the left of an `=`, because a walk binds a copy; a name the frame
+does not hold has nowhere for a write to *anything inside it* to go either, so
+`counting[i] = i * i` in `examples/inline.kest` drew `K0505` about a program
+nobody had got wrong. Two flags for two questions now.
+
+Four probes needed telling, for last turn's reason: a value in the chunk is
+never loaded out of a frame, so a check weighing frame loads stopped weighing
+anything and a backstop about folding two instructions had none left to fold.
+Each holds a name the compiler cannot work out now — a parameter, or how long a
+piece of text is. The fourth is an example: `examples/numbers.kest` kept three
+comparisons of text in `let`s so those instructions would be run by something,
+and the text comes through a call now. What caught that one is the rule that
+every instruction the machine has is written by an example — a compiler that
+stops doing something makes the checks that watch it go quiet rather than fail,
+and that rule is one of the few that fails instead.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the cascade this turn walked past. A `const` the folder cannot work
+out is refused with `K0504` or `K0510`, and then every use of it is a second
+refusal — `K0505`, *the compiler's count of the stack and the width of a value
+disagree, which is a fault in the compiler* — which is this project's own name
+for its own bug, said about a program somebody wrote wrongly. One mistake, one
+message: a name whose constant was refused should compile as something of the
+right width and say nothing. Find every refusal that leaves a name or a type
+behind in a state the stage after it faults on, and give each the quiet answer
+the rest of the language already has for an error type.

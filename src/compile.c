@@ -38,6 +38,12 @@ typedef struct {
     // reading one field of a wide struct does not copy the rest. See D052.
     bool is_address;
     const KestType *points_at;
+    // The name is a value the chunk holds rather than a place in the frame: a
+    // `let` worked out where it was written whose name the body never assigns
+    // to. The frame neither builds it nor keeps it, and every reading of the
+    // name is a constant. NULL for every other name. See D887.
+    const KestValue *folded;
+    const KestType *holds;
 } Local;
 
 typedef struct {
@@ -389,6 +395,30 @@ static void bind_local(Compiler *compiler, KestSpan span, uint16_t slot,
     local->depth = compiler->depth;
 }
 
+// A name for a value the chunk holds. It takes no slot, so the frame is the
+// size it would be if the name had not been written -- which is the point:
+// nothing builds it and nothing keeps it. See D887.
+static void hold_local(Compiler *compiler, KestSpan span, const KestType *type,
+                       const KestValue *values, uint16_t slots) {
+    if (compiler->local_count == MAX_LOCALS) {
+        refuse(compiler, span, "K0502", "a function holds at most %d names",
+               MAX_LOCALS);
+        return;
+    }
+    Local *local = &compiler->locals[compiler->local_count++];
+    memset(local, 0, sizeof *local);
+    local->name = kest_arena_strndup(compiler->program->arena,
+                                     span_text(compiler, span), span.length);
+    if (local->name == NULL) {
+        compiler->out_of_memory = true;
+        return;
+    }
+    local->size = slots;
+    local->depth = compiler->depth;
+    local->folded = values;
+    local->holds = type;
+}
+
 static uint16_t declare_local(Compiler *compiler, KestSpan span,
                               const KestType *type) {
     if (compiler->local_count == MAX_LOCALS) {
@@ -540,7 +570,7 @@ static bool resolve_place(Compiler *compiler, const KestExpr *expr,
     }
     if (expr->kind == KEST_EXPR_NAME) {
         Local *local = find_local(compiler, expr->span);
-        if (local == NULL || local->is_address) {
+        if (local == NULL || local->is_address || local->folded != NULL) {
             return false;
         }
         *slot = local->slot;
@@ -786,6 +816,19 @@ static bool constant_run(Compiler *compiler, const KestType *type,
     return true;
 }
 
+// What was worked out, counted where it is put into the chunk. Three places
+// give a chunk a value it did not have to build -- an expression written where
+// it stands, one of a run read at a position, and a name the frame does not
+// hold -- and a count kept in three places is three answers the day one of
+// them moves. See D887.
+static void counted_fold(Compiler *compiler, uint16_t slots) {
+    if (compiler->chunk == NULL) {
+        return;
+    }
+    compiler->chunk->folded++;
+    compiler->chunk->folded_slots += slots;
+}
+
 static void emit_value_slots(Compiler *compiler, const KestType *type,
                              const KestValue *values, uint16_t slots,
                              KestSpan span) {
@@ -848,10 +891,7 @@ static bool compile_folded(Compiler *compiler, const KestExpr *expr) {
                         NULL) != slots) {
         return false;
     }
-    if (compiler->chunk != NULL) {
-        compiler->chunk->folded++;
-        compiler->chunk->folded_slots += slots;
-    }
+    counted_fold(compiler, slots);
     emit_value_slots(compiler, expr->type, values, slots, expr->span);
     return true;
 }
@@ -2167,6 +2207,11 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             compile_constant(compiler, expr);
             break;
         }
+        if (local->folded != NULL) {
+            emit_value_slots(compiler, local->holds, local->folded,
+                             local->size, expr->span);
+            break;
+        }
         stack_push(compiler, local->size);
         emit_load(compiler, local->slot, local->size, expr->span);
         break;
@@ -2287,6 +2332,35 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             uint16_t stride = value_slots(object->element);
             uint16_t slot = 0;
             uint16_t size = 0;
+            // One of a run the chunk holds. The folder cannot see a local, so
+            // what says the run is settled is the name rather than another
+            // fold -- and a position written down is one value rather than a
+            // reach into the run. See D887.
+            Local *by_name = expr->index.object->kind == KEST_EXPR_NAME
+                                 ? find_local(compiler, expr->index.object->span)
+                                 : NULL;
+            if (by_name != NULL && by_name->folded != NULL) {
+                int64_t at = written_index(compiler, expr->index.index);
+                if (at >= 0 && (uint64_t)at < object->count) {
+                    emit_value_slots(compiler, object->element,
+                                     by_name->folded + at * stride, stride,
+                                     expr->span);
+                    break;
+                }
+                uint32_t first = 0;
+                if (!constant_run(compiler, object, by_name->folded,
+                                  by_name->size, &first)) {
+                    break;
+                }
+                compile_expr(compiler, expr->index.index);
+                stack_pop(compiler, 1);
+                stack_push(compiler, stride);
+                emit(compiler, KEST_OP_CONST_AT, expr->span);
+                emit_u16(compiler, (uint16_t)first, expr->span);
+                emit_u16(compiler, stride, expr->span);
+                emit_u16(compiler, (uint16_t)object->count, expr->span);
+                break;
+            }
             // An index written down is a slot, the same way a field is, or a
             // byte offset where the run is memory the host laid out.
             if (resolve_place(compiler, expr, &slot, &size)) {
@@ -2357,10 +2431,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
                 if (!constant_run(compiler, object, held, wide, &first)) {
                     break;
                 }
-                if (compiler->chunk != NULL) {
-                    compiler->chunk->folded++;
-                    compiler->chunk->folded_slots += wide;
-                }
+                counted_fold(compiler, wide);
                 compile_expr(compiler, expr->index.index);
                 stack_pop(compiler, 1);
                 stack_push(compiler, stride);
@@ -2877,11 +2948,37 @@ static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
 static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
     switch (stmt->kind) {
     case KEST_STMT_LET: {
-        compile_expr(compiler, stmt->let.value);
         const KestType *type = stmt->let.value == NULL
                                    ? NULL
                                    : stmt->let.value->type;
         uint16_t size = value_slots(type);
+        // A value worked out where it is written whose name nothing assigns
+        // to is a value the chunk holds. A run of four numbers in a body was
+        // four pushes and a store on every call, and the same run written as
+        // a `const` was read where it stood: the reference says a run of
+        // numbers indexed by one is a value a frame does not pay for, and
+        // where it was written decided whether that was true. Sixteen for the
+        // reason every other fold stops there, which is that a value wider
+        // than that is a table rather than a value. See D887.
+        if (!stmt->let.name_written && stmt->let.value != NULL &&
+            compiler->chunk != NULL && size > 0 && size <= 16) {
+            KestValue held[16];
+            const char *why = NULL;
+            if (kest_fold_const(compiler->program, stmt->let.value, held, size,
+                                &why, NULL) == size) {
+                KestValue *kept = KEST_ARENA_ARRAY(compiler->program->arena,
+                                                   KestValue, size);
+                if (kept == NULL) {
+                    compiler->out_of_memory = true;
+                    break;
+                }
+                memcpy(kept, held, sizeof(KestValue) * size);
+                counted_fold(compiler, size);
+                hold_local(compiler, stmt->let.name, type, kept, size);
+                break;
+            }
+        }
+        compile_expr(compiler, stmt->let.value);
         uint16_t slot = declare_local(compiler, stmt->let.name, type);
         stack_pop(compiler, size);
         emit_store(compiler, slot, size == 0 ? 1 : size, stmt->span);

@@ -27161,3 +27161,88 @@ There is one more of those in the document — the 1596 bytes one walk of
 host with a clock on the heap rather than a command. That is a walk of its own.
 
 Two holes: the fold, and the number.
+
+## D887: where a value is written decided whether it was a value
+
+The last of the three the reference names. `TIERS[at]` where `TIERS` is a
+`const` was one instruction reading the chunk; the same four numbers written in
+the body they are used in were four pushes and a store, on every call.
+
+```text
+fn nearby(at: i32) -> i32 {
+    let tiers: [i32; 4] = [0, 90, 250, 1200]
+    return tiers[at]
+}
+  0000  const  0 ; 10   0012  store.n  1  4
+  0003  const  1 ; 20   0017  load     0
+  0006  const  2 ; 30   0020  load.slots +1  1 of 4
+  0009  const  3 ; 40
+```
+
+A `let` whose value is worked out where it stands and whose name the body never
+assigns to is a value the chunk holds. It takes no slot: the frame neither
+builds it nor keeps it, and every reading of the name is a constant — one of
+the run at a position worked out while running is `const.at`, and a position
+written down is the one value. The function above is now `load` and `const.at`,
+one slot deep instead of five.
+
+What says a name is never written is the checker, because it is what resolved
+it, the same way D866 answers it for a walk. The parser writes `name_written`
+true and the checker clears it where a scope ends, which is the first moment
+anybody knows — a name nobody has looked at has to read as one that is written,
+because what turns on the answer is whether the frame has a slot for it.
+
+It is a *wider* question than the walk's, and the first cut got it wrong. D866
+asks whether the name itself is on the left of an `=`, because a walk binds a
+copy and writing a field of that copy changes nothing that outlives the turn.
+A name the frame does not hold has nowhere for any of those writes to go, so
+`counting[i] = i * i` in `examples/inline.kest` was a write to a value in the
+chunk, and the compiler said `K0505` about a program nobody had got wrong.
+Two answers to two questions, kept beside each other: `written` for the walk
+and `written_into` for this.
+
+*The safety of that is worth writing down.* Get it wrong and a write goes to a
+name with no place, and the compiler says so: `K0505`, the two halves of the
+compiler disagreeing about what a program is. The wrong answer is caught by
+construction rather than by somebody reading the diff, which is what a hole for
+it shows.
+
+**And what the walk turned up on the way.** The first program to fail was
+`examples/chance.kest`, at a line comparing a random source against one worked
+out again:
+
+```text
+let held = random.next(random.from(5))
+```
+
+The folder said that was `5`. `fold_slots` took any call whose type is a struct
+for a constructor of that struct and folded the arguments into its fields —
+so a function in a module that answers a shape had its arguments read as that
+shape's fields. It was there before this turn and reachable then too, by a
+`const` of a shape built from a call, where it folded silently and wrongly with
+nothing refusing it. What tells the two apart is that a shape's name is of the
+shape and a function's name is of a function type. Both the struct fold and the
+enum fold ask now.
+
+That is the second time in three turns that making the compiler work out more
+has found something that was already wrong and had nothing reaching it. The
+cost of the fold: the examples went from 78268 to 74872 bytes of code.
+
+Four probes had to be told about the change, for the reason last turn's two
+were: a value the chunk holds is never loaded out of a frame, so a check
+weighing loads out of a frame stopped weighing anything, and a backstop about
+folding two instructions had no instructions left to fold. Each holds a name
+the compiler cannot work out now — a parameter, or how long a piece of text is.
+The fourth is an example rather than a check: `examples/numbers.kest` kept
+three comparisons of text in `let`s so that the instructions which compare text
+would be run by something, and they are worked out where they stand now, so the
+text comes through a call.
+
+That is the tax on this kind of change and it is worth naming. Every check that
+weighs what a frame does is written in the language being compiled, so a
+compiler that stops doing something is a check that stops watching it — and the
+check goes quiet rather than failing. What catches it here is the rule that
+every instruction the machine has is written by an example: three instructions
+that compare text stopped being emitted and something said so.
+
+Three holes: the fold, the answer it rests on, and the call.

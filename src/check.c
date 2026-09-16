@@ -35,6 +35,17 @@ typedef struct {
     // copy of it made every turn. A write to a field of it is not one of
     // these: this is the name itself on the left of an `=`. See D866.
     bool written;
+    // Whether anything assigns to the name or to anything inside it: a field
+    // of it, one of a run it holds, a field of one of those. Wider than
+    // `written` on purpose, and for a different question: a walk's binding is
+    // a copy made every turn, so writing a field of it changes nothing that
+    // outlives the turn, while a name the frame does not hold at all has
+    // nowhere for any of those writes to go. See D887.
+    bool written_into;
+    // The `let` that declared it, so what was learned about the name can be
+    // put where the compiler reads it. Whether a name is written is known when
+    // the scope holding it ends and not before. See D887.
+    KestStmt *declared_by;
 } Local;
 
 typedef struct {
@@ -234,6 +245,12 @@ static Local *find_local(Checker *checker, const char *name, size_t length) {
 static void drop_locals(Checker *checker, uint32_t mark) {
     for (uint32_t i = checker->local_count; i > mark; i--) {
         const Local *local = &checker->locals[i - 1];
+        // What was learned about the name, put where the compiler reads it.
+        // Said here because this is where a scope ends, which is the first
+        // moment anybody knows. See D887.
+        if (local->declared_by != NULL) {
+            local->declared_by->let.name_written = local->written_into;
+        }
         // A `let`, an `if let`, and the position a `for` binds beside an
         // element: the three a program had another way to write. What a `for`
         // binds on its own and what a `match` case binds are not asked, because
@@ -304,7 +321,7 @@ static void declare_local(Checker *checker, KestSpan span, KestType *type) {
     // See D726.
     Local *local = &checker->locals[checker->local_count++];
     Local fresh = {name, type, span, checker->depth, false, false, false,
-                   false, false, false, false};
+                   false, false, false, false, false, NULL};
     *local = fresh;
 }
 
@@ -4050,6 +4067,7 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
                       declared != NULL ? declared : value);
         if (checker->local_count > 0) {
             checker->locals[checker->local_count - 1].from_let = true;
+            checker->locals[checker->local_count - 1].declared_by = stmt;
         }
         break;
     }
@@ -4061,15 +4079,31 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
             stmt->assign.target->kind == KEST_EXPR_NAME;
         KestType *target = check_expr(checker, stmt->assign.target, NULL);
         checker->writing_to_a_name = was_writing;
-        if (stmt->assign.target->kind == KEST_EXPR_NAME) {
-            // Written down where the name is known, because a walk that is
-            // about to bind its count to a name needs to know before it does
-            // it, and only the checker ever resolved the name. See D866.
+        // Written down where the name is known, because a walk that is about
+        // to bind its count to a name needs to know before it does it, and
+        // only the checker ever resolved the name. See D866.
+        //
+        // The name itself and the name something inside it was reached
+        // through are two answers to two questions, so both are kept: a walk
+        // asks whether the count was written and a `let` asks whether
+        // anything went into the value at all. See D887.
+        const KestExpr *assigned_to = stmt->assign.target;
+        while (assigned_to != NULL && assigned_to->kind != KEST_EXPR_NAME) {
+            assigned_to = assigned_to->kind == KEST_EXPR_FIELD
+                              ? assigned_to->field.object
+                          : assigned_to->kind == KEST_EXPR_INDEX
+                              ? assigned_to->index.object
+                              : NULL;
+        }
+        if (assigned_to != NULL) {
             Local *assigned =
-                find_local(checker, span_text(checker, stmt->assign.target->span),
-                           stmt->assign.target->span.length);
+                find_local(checker, span_text(checker, assigned_to->span),
+                           assigned_to->span.length);
             if (assigned != NULL) {
-                assigned->written = true;
+                assigned->written_into = true;
+                if (stmt->assign.target->kind == KEST_EXPR_NAME) {
+                    assigned->written = true;
+                }
             }
         }
         KestType *value = check_expr(checker, stmt->assign.value, target);

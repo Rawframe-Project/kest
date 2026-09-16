@@ -238,6 +238,14 @@ struct KestStmt {
             // inside a body; see D005.
             KestTypeRef *type;
             KestExpr *value;
+            // Whether anything in the body assigns to that name or to
+            // anything inside it, which the checker knows because it is what
+            // resolved it. Written by the
+            // parser and cleared by the checker, so a name nobody has looked
+            // at is a name that was written: a value the compiler puts in the
+            // chunk because nothing changes it is the one thing that must not
+            // be got wrong by a walk that did not happen. See D887.
+            bool name_written;
         } let;
         struct {
             // KEST_TOK_EQ, or one of the compound assignment operators.

@@ -534,11 +534,15 @@ def folds_in(source):
 WIDE = "struct Big {\n" + "".join(
     "    f%d: i32\n" % i for i in range(8)) + "}\n\nconst P: Big = Big(" + (
     ", ".join(str(i + 1) for i in range(8))) + ")\n\n"
-read_once = folds_in(WIDE + "fn main() -> i32 {\n    let one = P\n"
-                            "    return one.f0 - one.f0\n}\n")
-read_often = folds_in(WIDE + "fn main() -> i32 {\n    let total = 0\n" +
-                      "".join("    let held%d = P\n    total += held%d.f0\n"
-                              % (i, i) for i in range(40)) +
+# Handed to a function rather than bound to a name, because since D887 a name
+# nothing writes is itself a value the chunk holds -- which is one value worked
+# out per name and has nothing to do with how often the constant was read.
+FIRST_OF = "fn first(b: Big) -> i32 {\n    return b.f0\n}\n\n"
+read_once = folds_in(WIDE + FIRST_OF +
+                     "fn main() -> i32 {\n    return first(P) - 1\n}\n")
+read_often = folds_in(WIDE + FIRST_OF +
+                      "fn main() -> i32 {\n    let total = 0\n" +
+                      "    total += first(P)\n" * 40 +
                       "    return total - total\n}\n")
 if read_once is None or read_once < 1 or read_once != read_often:
     print("costs: a constant read once was worked out %s times and read forty "
@@ -857,6 +861,11 @@ def runs_loaded(body):
     return sum(1 for each in printed if printed[each][0] == 'load.n')
 
 
+# Built out of three numbers the compiler cannot work out, because since D887 a
+# name nothing writes whose value is worked out where it stands is a value the
+# chunk holds -- and a value in the chunk is never loaded out of a frame at
+# all, which is not what this is weighing. How long a piece of text is is asked
+# while running, so a name holding one is a slot.
 BUILT = """module walking
 
 struct Three {
@@ -866,9 +875,9 @@ struct Three {
 }
 
 fn main() -> i32 {
-    let x: i32 = 1
-    let y: i32 = 2
-    let z: i32 = 3
+    let x = len("a")
+    let y = len("ab")
+    let z = len("abc")
     let made = Three(x, y, z)
     return made.a - 1
 }
@@ -978,7 +987,9 @@ if have_checked and (turn_ran is None or quiet_walk is None or
     failed = 1
 
 # And the three kinds of value the reference names one by one: a case written
-# in a body, a hash of a piece of text, and a run of numbers indexed by one.
+# in a body, a hash of a piece of text, and a run of numbers indexed by one --
+# the last written both ways, as a constant and inside a body, because where it
+# was written decided whether it was a value or work until D887.
 # Each is something the folder has always known how to work out, and a call
 # written in a body was never offered to it — so a program that hashed a name
 # of three letters hashed them again on every frame that went past, while the
@@ -1008,6 +1019,11 @@ fn tier(at: i32) -> i32 {
     return TIERS[at]
 }
 
+fn nearby(at: i32) -> i32 {
+    let tiers: [i32; 4] = [0, 90, 250, 1200]
+    return tiers[at]
+}
+
 fn hashed() -> u64 {
     return hash("sword")
 }
@@ -1021,7 +1037,7 @@ fn chosen() -> i32 {
 }
 
 fn main() -> i32 {
-    return tier(0) + i32(hashed() % 2) + chosen() - 1
+    return tier(0) + nearby(0) + i32(hashed() % 2) + chosen() - 1
 }
 """
 paying = os.path.join(work, 'paying.kest')
@@ -1032,13 +1048,13 @@ paying_bodies = what_it_said('emit', paying, 'functions')
 worked_out = (None if paying_bodies is None
               else sum(body['folded'] for body in paying_bodies))
 if (there is None or worked_out is None or 'hash.t' in there or
-        'const.at' not in there or worked_out < 3):
+        'const.at' not in there or 'store.n' in there or worked_out < 4):
     print("costs: the three values a frame does not pay for are %s value(s) "
           "worked out, with the hash %s and the run %s"
           % (worked_out,
              "still run" if there is None or 'hash.t' in there else "folded",
-             "built" if there is None or 'const.at' not in there
-             else "read where it stands"))
+             "built" if there is None or 'const.at' not in there or
+             'store.n' in there else "read where it stands"))
     failed = 1
 
 shutil.rmtree(work, ignore_errors=True)

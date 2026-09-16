@@ -907,6 +907,19 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
 // A value laid out flat: one slot for a scalar, and a slot per scalar for a
 // struct built where it is written. The arithmetic is all scalar, so this is
 // only about how many of them there are.
+// What a call gives back and what it builds are two different things. A shape
+// is built by naming it, and the arguments are its fields; a function in a
+// module that answers the same shape is a call, and its arguments are whatever
+// it takes. Read the other way round, `random.next(random.from(5))` folded to
+// the seed it was handed -- a constant of a type the program never worked out.
+// What tells them apart is that a function's name is of a function type and a
+// shape's name is of the shape. See D887.
+static bool builds_rather_than_calls(const KestExpr *expr) {
+    const KestExpr *callee = expr->call.callee;
+    return callee != NULL &&
+           (callee->type == NULL || callee->type->tag != KEST_T_FN);
+}
+
 static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
                            KestValue *out, uint32_t room, uint32_t depth,
                            const char **why) {
@@ -926,7 +939,8 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
     }
 
     // That many of something, written where it stands: the same idea as a
-    // struct laid out flat, and the same fold.
+    // struct laid out flat, and the same fold. See below for why a call is
+    // asked what it calls first.
     if (type != NULL && type->tag == KEST_T_FIXED &&
         expr->kind == KEST_EXPR_ARRAY) {
         uint32_t used = 0;
@@ -947,7 +961,8 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
     // slot is nought, because a value with a hole in it is bytes nobody wrote
     // and two of them built the same way would not compare alike. See D671.
     if (type != NULL && type->tag == KEST_T_ENUM &&
-        (expr->kind == KEST_EXPR_FIELD || expr->kind == KEST_EXPR_CALL)) {
+        (expr->kind == KEST_EXPR_FIELD || expr->kind == KEST_EXPR_CALL) &&
+        builds_rather_than_calls(expr)) {
         const KestExpr *named = expr->kind == KEST_EXPR_CALL
                                     ? expr->call.callee
                                     : expr;
@@ -991,7 +1006,7 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
     }
 
     if (type != NULL && type->tag == KEST_T_STRUCT &&
-        expr->kind == KEST_EXPR_CALL) {
+        expr->kind == KEST_EXPR_CALL && builds_rather_than_calls(expr)) {
         // One with no fields is one slot of nought, which is what the machine
         // pushes for it and what its width says it is. Worked out as no slots
         // at all, it was a constant that could not be written down of a value

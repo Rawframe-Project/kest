@@ -5345,7 +5345,9 @@ fn length(v: Vec2) -> f32 no.alloc {""",
         # middle of the one that replaced them. Only a program whose `if` gives
         # a value that is a local, beside another local next to it, is shaped
         # to show it — which is why it is written out here rather than left to
-        # an example. See D871.
+        # an example. Handed to a function, because a name nothing writes that
+        # the compiler can work out is no longer in a frame at all. See D871
+        # and D887.
         "what": "two instructions folded across something that points between "
                 "them",
         "file": "src/compile.c",
@@ -5357,11 +5359,12 @@ fn length(v: Vec2) -> f32 no.alloc {""",
     return a + b
 }
 
+fn landing(x: i32, y: i32, yes: bool) -> i32 {
+    return add(if yes -> x else -> x, y)
+}
+
 fn main() -> i32 {
-    let x: i32 = 3
-    let y: i32 = 4
-    let yes = true
-    return add(if yes -> x else -> x, y) - 7
+    return landing(3, 4, true) - 7
 }
 """,
         "caught": "K0604",
@@ -5578,6 +5581,73 @@ fn main() -> i32 {
         "caught": "K0314 said `error[K0314]: `+` does not apply to `text``",
     },
     {
+        # A run written in a body, built again on every call. A `let` whose
+        # value is worked out where it stands and whose name nothing assigns
+        # to is a value the chunk holds -- and where a table of four numbers
+        # was written decided whether reading one of it was an instruction or
+        # four pushes and a store. See D887.
+        "what": "a run written in a body built on every call",
+        "file": "src/compile.c",
+        "from": """        if (!stmt->let.name_written && stmt->let.value != NULL &&""",
+        "to": """        if (false && stmt->let.name_written && stmt->let.value != NULL &&""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "the three values a frame does not pay for",
+    },
+    {
+        # A name the body writes taken for one it does not. What the compiler
+        # does with the answer is leave the frame without a slot for the name,
+        # so a write to it is a write to nowhere -- and the two halves of the
+        # compiler say so rather than the program quietly keeping the value it
+        # was written with. A wrong answer here is the one that had to be
+        # caught by something other than a reader. See D887.
+        "what": "a name that is written taken for one that is not",
+        "file": "src/check.c",
+        "from": """            local->declared_by->let.name_written = local->written_into;""",
+        "to": """            local->declared_by->let.name_written = false;""",
+        "make": ["kest"],
+        "program": "written.kest",
+        "source": """import std.io
+
+fn main() -> i32 {
+    let n = 1
+    n = 2
+    io.print("{n}")
+    return n - 2
+}
+""",
+        "caught": "K0505",
+    },
+    {
+        # A call taken for the shape it gives back. A shape is built by naming
+        # it and its arguments are its fields; a function that answers the
+        # same shape is a call and its arguments are whatever it takes. Read
+        # the wrong way round, `random.next(random.from(5))` worked out to the
+        # seed it was handed -- a value the program would never have had, in a
+        # constant nothing refused. See D887.
+        "what": "a call worked out as though it built what it gives back",
+        "file": "src/types.c",
+        "from": """    return callee != NULL &&
+           (callee->type == NULL || callee->type->tag != KEST_T_FN);""",
+        "to": """    return callee != NULL;""",
+        "make": ["kest"],
+        "program": "calling.kest",
+        "source": """import std.io
+import std.random
+
+fn main() -> i32 {
+    let held = random.next(random.from(5))
+    if random.number(held) != random.number(random.next(random.from(5))) {
+        io.print("a call was taken for the shape it gives back")
+        return 1
+    }
+    return 0
+}
+""",
+        "caught": "a call was taken for the shape it gives back",
+    },
+    {
         # A call in a body never offered to the folder. `hash` over a piece of
         # text that is written down is a number the compiler works out at a
         # declaration and ran on every frame inside a function, which is the
@@ -5592,7 +5662,7 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "the three values a frame does not pay for are 2 value(s) worked out",
+        "caught": "a frame does not pay for are 3 value(s) worked out, with the hash still run",
     },
     {
         # A number the reference quotes from a run, gone stale. The sentence
@@ -5602,12 +5672,12 @@ fn main() -> i32 {
         # people and people read the sentence. See D886.
         "what": "a number the reference quotes that a run no longer says",
         "file": "docs/language.md",
-        "from": """numbers together say how much of that finding out answered: 59 of 216 for""",
-        "to": """numbers together say how much of that finding out answered: 59 of 217 for""",
+        "from": """numbers together say how much of that finding out answered: 97 of 239 for""",
+        "to": """numbers together say how much of that finding out answered: 97 of 240 for""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",
         "arguments": ["docs/language.md", "docs/decisions.md"],
-        "caught": "the reference says 59 of 217 were worked out for `examples/numbers.kest`",
+        "caught": "the reference says 97 of 240 were worked out for `examples/numbers.kest`",
     },
     {
         # A suggestion under somebody else's refusal. A suggestion goes to the
@@ -5957,12 +6027,12 @@ fn main() -> i32 {
         # asked for. See D866.
         "what": "a walk whose name is its count in a body that writes the name",
         "file": "src/check.c",
-        "from": """            if (assigned != NULL) {
-                assigned->written = true;
-            }""",
-        "to": """            if (assigned != NULL) {
-                assigned->written = false;
-            }""",
+        "from": """                if (stmt->assign.target->kind == KEST_EXPR_NAME) {
+                    assigned->written = true;
+                }""",
+        "to": """                if (false && stmt->assign.target->kind == KEST_EXPR_NAME) {
+                    assigned->written = true;
+                }""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "is not given a copy of the count",
@@ -10887,6 +10957,12 @@ fn main() -> i32 {
         "file": "examples/lookup.kest",
         "from": """    if TIERS[tier] != 250 || TIERS[tier + 1] != 1200 {""",
         "to": """    if TIERS[2] != 250 || TIERS[3] != 1200 {""",
+        # Both places the example reads one of a run at a position worked out
+        # while running: a `const` run and a run written in a body are one
+        # instruction since D887, so either left alone still writes it.
+        "also": ("examples/lookup.kest",
+                 "    if tiers[2] != TIERS[2] || tiers[tier] != TIERS[tier] {",
+                 "    if tiers[2] != TIERS[2] || tiers[3] != TIERS[3] {"),
         "make": ["kest", "embed"],
         "tool": "tools/check-dead.sh",
         "caught": "nothing emits `const.at`",
@@ -11526,10 +11602,7 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # sum rather than by anybody noticing the number.
         "what": "a value worked out in a body and counted nowhere",
         "file": "src/compile.c",
-        "from": """                if (compiler->chunk != NULL) {
-                    compiler->chunk->folded++;
-                    compiler->chunk->folded_slots += wide;
-                }
+        "from": """                counted_fold(compiler, wide);
 """,
         "to": "",
         "make": ["kest"],
@@ -11543,13 +11616,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # name — which reads like a measurement and says nothing.
         "what": "the size of a given value counted as one",
         "file": "src/compile.c",
-        "from": """        compiler->chunk->folded_slots += slots;""",
-        "to": """        compiler->chunk->folded_slots += 1;""",
-        # Both places a value is given, because either one left counting
-        # properly is a tree where something is still wider than one slot.
-        "also": ("src/compile.c",
-                 "                    compiler->chunk->folded_slots += wide;",
-                 "                    compiler->chunk->folded_slots += 1;"),
+        "from": """    compiler->chunk->folded_slots += slots;""",
+        "to": """    compiler->chunk->folded_slots += slots != 0;""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "is a number saying nothing",
@@ -11562,8 +11630,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # something that did not happen.
         "what": "a given value that takes no room",
         "file": "src/compile.c",
-        "from": """        compiler->chunk->folded_slots += slots;""",
-        "to": """        compiler->chunk->folded_slots += 0;""",
+        "from": """    compiler->chunk->folded_slots += slots;""",
+        "to": """    compiler->chunk->folded_slots += slots * 0;""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "and a value takes a slot at least",
@@ -12549,7 +12617,7 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "what": "a local that keeps what the last one at its place left",
         "file": "src/check.c",
         "from": """    Local fresh = {name, type, span, checker->depth, false, false, false,
-                   false, false, false, false};
+                   false, false, false, false, false, NULL};
     *local = fresh;""",
         "to": """    local->name = name;
     local->type = type;

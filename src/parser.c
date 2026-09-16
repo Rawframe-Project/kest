@@ -1553,6 +1553,11 @@ static KestStmt *parse_statement(Parser *parser) {
         stmt->let.name = name;
         stmt->let.type = type;
         stmt->let.value = value;
+        // Written until the checker says otherwise, because what turns on this
+        // is whether the compiler may put the value in the chunk and leave the
+        // frame without it. A name nobody has looked at has to read as one that
+        // is written. See D887.
+        stmt->let.name_written = true;
         return stmt;
     }
 
