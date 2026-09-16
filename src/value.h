@@ -33,6 +33,11 @@ typedef enum {
     // machine says so rather than writing past what it was lent.
     KEST_OP_MAKE_ARRAY, // u16 layout
     KEST_OP_PUSH,
+    // An append that never grows. `push` may double a block and so can never
+    // be inside a `no.alloc` promise; this refuses where that one would grow,
+    // which is what lets a body fill a buffer it was given room for without
+    // reaching the heap. See D940.
+    KEST_OP_FIT,
     // Room for that many without changing what is in it or how many there
     // are. `array(n, v)` makes a new one with room and `clear` empties it,
     // which is what a program does when it knows how many are coming -- and

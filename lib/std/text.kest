@@ -406,6 +406,63 @@ fn append(out: [u8], piece: text) no.host {
     }
 }
 
+// The same, into a buffer that was given room, which is what a frame writing a
+// line every tick wants: `push` may double the block and so can never be inside
+// a promise to reach no heap, and this cannot. It answers whether the whole
+// piece fitted, and a piece that did not fit is a buffer that holds what fitted
+// before it -- so a caller that wants all or nothing asks `room(out)` first.
+// See D940.
+fn fitting(out: [u8], piece: text) -> bool no.alloc no.host {
+    for byte in piece {
+        if !fit(out, byte) {
+            return false
+        }
+    }
+    return true
+}
+
+// And a whole number written into one the same way, most significant digit
+// first, without making any text on the way. It is the piece a tally line is
+// mostly made of.
+fn fittingNumber(out: [u8], value: i32) -> bool no.alloc no.host {
+    if value == 0 {
+        return fit(out, 48)
+    }
+    let left = value
+    if left < 0 {
+        if !fit(out, 45) {
+            return false
+        }
+    }
+    // Counted first so the digits go in the order somebody reads them, and in
+    // `i64` so the smallest `i32` has somewhere to be made positive.
+    let wide: i64 = i64(left)
+    if wide < 0 {
+        wide = 0 - wide
+    }
+    let digits = 0
+    let counting = wide
+    while counting > 0 {
+        digits += 1
+        counting = counting / 10
+    }
+    let at = digits
+    while at > 0 {
+        let divisor: i64 = 1
+        let step = 1
+        while step < at {
+            divisor = divisor * 10
+            step += 1
+        }
+        let digit = wide / divisor % 10
+        if !fit(out, u8(48 + i32(digit))) {
+            return false
+        }
+        at -= 1
+    }
+    return true
+}
+
 // The pieces with the separator between them, which is what `split` undoes.
 fn join(pieces: [text], separator: text) -> text no.host {
     let out: [u8] = array()

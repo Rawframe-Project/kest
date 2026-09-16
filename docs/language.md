@@ -1315,6 +1315,31 @@ when it is gathered:
 error[K0604]: byte 1 is zero, and text ends at a zero byte
 ```
 
+`fit(xs, value)` is `push` with the growth taken out: it writes where there is
+room, answers `false` where there is not, and never reaches the heap. That is
+what makes filling a buffer something a `no.alloc` body can do, and `push`
+never can — a `push` may double the block, and a promise cannot be kept by
+hoping it does not.
+
+```kest
+fn gather(into: [i32], many: i32) -> i32 no.alloc {
+    clear(into)
+    let put = 0
+    for i in 0..many {
+        if fit(into, i) {
+            put += 1
+        }
+    }
+    return put
+}
+```
+
+`clear` keeps the room it took, so a buffer made once with `array(n, v)` and
+cleared each turn is a buffer that is filled for the rest of the program's life
+without asking for anything. `std.text`'s `fitting` and `fittingNumber` write a
+piece of text and a whole number into one, so a tick can build a line and
+promise it reached no heap.
+
 Text built a piece at a time is built as bytes. `text(bytes)` makes one piece
 out of a `[u8]`, and it is the only way to make text from something that is
 not a string with a hole in it:

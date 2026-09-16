@@ -58,6 +58,12 @@ struct Job {
 struct World {
     settlers: store<Settler>
     jobs: store<Job>
+    // Two buffers the world keeps, so a day that counts and a day that writes
+    // a line both reach no heap. `clear` keeps the room it took and `fit` is
+    // the append that cannot grow, so filling either of these is a thing a
+    // body can promise about. See D940.
+    hungry: [i32]
+    said: [u8]
     day: i32
     born: i32
     starved: i32
@@ -71,7 +77,11 @@ struct World {
 fn empty() -> World {
     let settlers: store<Settler> = store()
     let jobs: store<Job> = store()
-    return World(settlers, jobs, 0, 0, 0, 0, 0)
+    let hungry: [i32] = array(SETTLERS, 0)
+    clear(hungry)
+    let said: [u8] = array(128, u8(0))
+    clear(said)
+    return World(settlers, jobs, hungry, said, 0, 0, 0, 0, 0)
 }
 
 // Filling it. Everything here allocates, which is what the promise on the
@@ -159,6 +169,8 @@ fn eat(w: World) -> World no.alloc {
     return World(
         w.settlers,
         w.jobs,
+        w.hungry,
+        w.said,
         w.day,
         w.born,
         w.starved + starved,
@@ -192,6 +204,8 @@ fn work(w: World) -> World no.alloc {
     return World(
         w.settlers,
         w.jobs,
+        w.hungry,
+        w.said,
         w.day,
         w.born,
         w.starved,
@@ -212,6 +226,8 @@ fn born(w: World, many: i32) -> World {
     return World(
         w.settlers,
         w.jobs,
+        w.hungry,
+        w.said,
         w.day + 1,
         w.born + added,
         w.starved,
@@ -224,12 +240,13 @@ fn born(w: World, many: i32) -> World {
 // line of text about it. A frame that reports is a frame that allocates, and
 // this is here because a world that only ever writes into what it already has
 // is not the case anybody has.
-fn tally(w: World) -> text {
-    let hungry: [i32] = array()
+fn tally(w: World) -> i32 no.alloc no.host {
+    let hungry = w.hungry
+    clear(hungry)
     for who in w.settlers {
         if let settler = get(w.settlers, who) {
             if settler.hunger > 5 {
-                push(hungry, settler.hunger)
+                fit(hungry, settler.hunger)
             }
         }
     }
@@ -238,7 +255,15 @@ fn tally(w: World) -> text {
     if len(hungry) > 0 {
         worst = hungry[len(hungry) - 1]
     }
-    return "day {w.day}: {len(hungry)} hungry, worst {worst}"
+    let said = w.said
+    clear(said)
+    text.fitting(said, "day ")
+    text.fittingNumber(said, w.day)
+    text.fitting(said, ": ")
+    text.fittingNumber(said, len(hungry))
+    text.fitting(said, " hungry, worst ")
+    text.fittingNumber(said, worst)
+    return len(said)
 }
 
 fn oneDay(w: World) -> World {
@@ -259,7 +284,7 @@ fn onEvents(events: [i32]) -> i32 no.host {
         w = oneDay(w)
         // Something that looks at the whole world and makes something, because
         // a day that only moves numbers is not the day anybody has.
-        said += len(tally(w))
+        said += tally(w)
     }
     return w.day + w.starved + w.finished + said % 7
 }
@@ -276,6 +301,8 @@ fn command(w: World, said: text) -> World {
         return World(
             w.settlers,
             w.jobs,
+            w.hungry,
+            w.said,
             w.day,
             w.born + 20,
             w.starved,
@@ -288,7 +315,9 @@ fn command(w: World, said: text) -> World {
         return w
     }
     if said == "report" {
-        io.print(tally(w))
+        tally(w)
+        // Frozen into text once, where somebody reads it, and nowhere else.
+        io.print(text(w.said))
         return w
     }
     io.print("no such command: {said}")

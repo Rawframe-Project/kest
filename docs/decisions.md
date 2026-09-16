@@ -29022,3 +29022,37 @@ grow for every `T` — and the second is settled per copy, where the copies are.
 So both halves hold: a template that allocates directly cannot promise, and a
 template whose allocation depends on which overload a copy picks is judged in
 that copy. Which is the difference F8 was about.
+
+## D940: the append that cannot grow
+
+`push` may double a block, so a body that appends can never promise `no.alloc`.
+That is correct about `push` and it left a whole shape unexpressible: a frame
+that fills a buffer it was given room for reaches no heap, and there was no way
+to say so.
+
+`fit(xs, value)` is that append. It writes where there is room and answers
+`false` where there is not, and it never allocates — which the compiler proves
+the same way it proves everything else, because the instruction is not on the
+list of the ones that reach the heap.
+
+`std.text` gains `fitting` and `fittingNumber` on top of it: a piece of text and
+a whole number written into a `[u8]` without making any text on the way. So a
+tick can format a line under `no.alloc no.host`, and `text(bytes)` freezes it
+once, where somebody reads it.
+
+**What that is worth, measured.** D922 found the colony settling to eighty bytes
+a day, of which thirty-five was one interpolated line. With the buffers kept in
+the world and filled with `fit`:
+
+```text
+days                 200        400        800
+heap             2370304    2370304    2370304
+```
+
+Nought a day, at every length. The persistent world reaches a steady state
+rather than nearly one, and the last class D922 could not answer is answered.
+
+It does ask the program to keep its scratch in the world rather than making it
+each tick. That is the idiom a frame budget wants anyway, and the difference is
+that it is now a thing the compiler can prove rather than a thing a reader has
+to believe.

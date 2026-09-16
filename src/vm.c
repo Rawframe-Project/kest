@@ -2691,6 +2691,33 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             array->length++;
             break;
         }
+        // The same append with the growth taken out. Where `push` would double
+        // the block this answers false and writes nothing, so a body that was
+        // given room can fill it under a promise to reach no heap. See D940.
+        case KEST_OP_FIT: {
+            uint16_t of_which = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
+            top -= layout->count;
+            KestValue *value = top;
+            Array *array = (--top)->object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
+            if (array->borrowed) {
+                fail(vmp, frame, instruction, "K0608",
+                     "this array is the host's, so it cannot grow");
+                return false;
+            }
+            if (array->length >= array->capacity ||
+                array->length == MAX_COUNTED) {
+                (top++)->integer = 0;
+                break;
+            }
+            pack(array->bytes + (size_t)array->length * layout->size, layout,
+                 value);
+            array->length++;
+            (top++)->integer = 1;
+            break;
+        }
         case KEST_OP_INDEX: {
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");

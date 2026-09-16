@@ -500,7 +500,8 @@ static const char *takes_called(const char *name, uint32_t nth) {
 
 static const char *const BUILTINS[] = {
     "add", "array", "clear", "find",  "get",   "hash", "len", "matches",
-    "pop", "push",  "remove", "rest", "room", "set",   "slice", "store",
+    "fit", "pop",   "push",   "remove", "rest", "room", "set", "slice",
+    "store",
 };
 
 // The nearest thing a reader could have meant by a name that is not there: a
@@ -1322,6 +1323,36 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
                          value, "this value");
         }
         return builtin(checker, "void");
+    }
+
+    // The same append with the growth taken out, which is what a body under a
+    // promise can do: it answers whether it fitted rather than making room.
+    // See D940.
+    if (is_builtin(checker, expr, name, "fit")) {
+        if (check_arity(checker, expr, 2) < 2) {
+            for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+                check_expr(checker, expr->call.args[i], NULL);
+            }
+            return builtin(checker, "bool");
+        }
+        KestType *array = check_expr(checker, expr->call.args[0], NULL);
+        if (is_error(array) || array->tag != KEST_T_ARRAY) {
+            if (!is_error(array)) {
+                report(checker, expr->call.args[0]->span, "K0310",
+                       "`fit` puts something on an array if there is room, "
+                       "found `%s`",
+                       type_name(checker, array));
+            }
+            check_expr(checker, expr->call.args[1], NULL);
+            return builtin(checker, "bool");
+        }
+        KestType *value =
+            check_expr(checker, expr->call.args[1], array->element);
+        if (!kest_type_equal(value, array->element)) {
+            expected_but(checker, expr->call.args[1]->span, array->element,
+                         value, "this value");
+        }
+        return builtin(checker, "bool");
     }
 
     // Room for what is coming, which is the other half of `array(n, v)`: that
