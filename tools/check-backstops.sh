@@ -5509,6 +5509,46 @@ fn main() -> i32 {
         "caught": "so the second is behind a question that is not about it",
     },
     {
+        # An arena that refuses by handing back something that is not memory.
+        # Every caller asks whether it got nothing, and none of them asks
+        # whether what it got is somewhere — so a refusal written this way is a
+        # compiler that writes through eight and dies where it meant to say it
+        # had run out. What tells one from the other is not the status, which
+        # the build that checks itself makes the same for both. See D881.
+        "what": "a refusal that hands back something that is not memory",
+        "file": "src/mem.c",
+        "from": """    if (refuse_this_one()) {
+        arena->refused = taking;
+        arena->refused_by_ceiling = false;
+        anybody_refused = true;
+        return NULL;
+    }""",
+        "to": """    if (refuse_this_one()) {
+        arena->refused = taking;
+        arena->refused_by_ceiling = false;
+        anybody_refused = true;
+        return (void *)8;
+    }""",
+        "make": ["debug"],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "killed it rather than being refused by it",
+    },
+    {
+        # An aim that lets go. Once there is no room there is no room, and a
+        # refusal that relents after one allocation is a question nobody meant
+        # to ask: the compiler copes, the build finishes, and what comes back
+        # is a program compiled with a piece missing and nobody told. See D881.
+        "what": "an aim that refuses one allocation and then relents",
+        "file": "src/mem.c",
+        "from": """    return refuse_at != 0 && allocations_so_far >= refuse_at;""",
+        "to": """    return refuse_at != 0 && allocations_so_far == refuse_at;""",
+        "make": ["debug"],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "so a piece of the work went missing",
+    },
+    {
         # An aim that never hits. `KEST_REFUSE_AT` is the only way to ask a
         # compiler what it says when it has nothing left and mean a particular
         # nothing, so a build where it does nothing is a check that walks fifty

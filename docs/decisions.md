@@ -26849,3 +26849,49 @@ not be grown.
 `check-ceilings.sh` refuses fifty allocations of that program one at a time and
 holds every run that says it ran out to saying nothing else. The hole keeps the
 guess.
+
+## D881: every allocation refused in turn, and what it is not
+
+D880 built an aim and pointed it at fifty allocations of one program. The Next
+was to point it at the rest, looking not for more messages but for the other two
+kinds: a run that dies rather than refusing, and a run that answers as though
+nothing had happened.
+
+**Every example and every library module, forty refusal points each, under
+`check` and again under `run` for the ones that run:** nothing died, nothing
+came back nought, and nothing blamed the program.
+
+**And two programs exhaustively** — `examples/events.kest` running, 385
+allocations, and `examples/math.kest` checking, 387 — with *every one of them*
+refused in turn. Seven hundred and seventy-two runs, and each of them said it
+had run out and said nothing else.
+
+So the answer is that there is no third kind. That is worth having as a
+sentence, and it is worth keeping, because it is the kind of thing that is true
+until somebody writes a line that does not ask whether an allocation came back.
+
+**What the gate keeps** is five ways of reading five programs — checking,
+running and emitting — with forty allocations refused in each, and three things
+asked of every one of them: that it refused, that what it said was about the
+room and nothing else, and that it neither died nor answered as though nothing
+had happened.
+
+*A death is not a status here, which is the thing this entry had to find out.*
+The build that checks itself catches the signal and writes a report, so a
+compiler that writes through eight comes back with exactly the number a refusal
+comes back with:
+
+```text
+AddressSanitizer:DEADLYSIGNAL
+==3099502==ERROR: AddressSanitizer: SEGV on unknown address 0x000000000008
+exit=1
+```
+
+What tells one from the other is the report. A check that read the status would
+have watched a compiler die forty times and called it forty refusals.
+
+Three holes hold it: an arena that refuses by handing back something that is not
+memory, an aim that refuses one allocation and then relents — once there is no
+room there is no room, and a refusal that lets go is a program compiled with a
+piece missing and nobody told — and the one D880 left, which keeps the guess a
+half-built program makes.

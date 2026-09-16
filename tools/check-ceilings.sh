@@ -1856,27 +1856,82 @@ fi
 # build that checks itself, which is the only way to mean a particular nothing
 # — and what is held here is that a run which says it has run out says that and
 # nothing else. See D880.
+# Three things are asked of every one of them, because an allocation coming
+# back with nothing has three ways to go wrong and only one of them says
+# anything: a run that refuses and blames the program, a run that dies rather
+# than refusing, and a run that answers as though nothing had happened. The
+# last is the quietest and the worst — a program compiled with a piece missing
+# and nobody told. See D881.
 aimed=0
-for at_one in $(seq 100 100 6000); do
-    said=$(KEST_REFUSE_AT=$at_one ./kest-debug check examples/inventory.kest \
-           2>&1 </dev/null)
-    case "$said" in
-    *K0639*|*K0658*) ;;
-    *) continue ;;
-    esac
-    aimed=$((aimed + 1))
-    blamed=$(printf '%s' "$said" | grep -o 'K[0-9][0-9][0-9][0-9]' |
-             grep -v -e K0639 -e K0658 | sort -u | tr '\n' ' ')
-    if [ -n "$blamed" ]; then
-        echo "ceilings: refusing allocation $at_one of" \
-             "\`examples/inventory.kest\` made it say ${blamed}before it said" \
-             "it had run out, and a compiler with no room left has nothing to" \
-             "say about a program"
-        failed=1
-    fi
+for aimed_at in "check examples/inventory.kest" "run examples/queue.kest" \
+                "check lib/std/text.kest" "run examples/flags.kest" \
+                "emit examples/boxes.kest"; do
+    how=${aimed_at%% *}
+    what=${aimed_at#* }
+    # How many it takes, found rather than written down: a number here would be
+    # one more thing to keep in step with the compiler, and the answer moves
+    # every time anything in the tree does.
+    low=1
+    high=200000
+    while [ $((high - low)) -gt 1 ]; do
+        middle=$(((high + low) / 2))
+        if KEST_REFUSE_AT=$middle ./kest-debug "$how" "$what" \
+                >/dev/null 2>&1 </dev/null; then
+            high=$middle
+        else
+            low=$middle
+        fi
+    done
+    takes=$high
+    step=1
+    while [ $step -le 40 ]; do
+        at_one=$(((takes * step) / 41))
+        [ $at_one -lt 1 ] && at_one=1
+        said=$(KEST_REFUSE_AT=$at_one ./kest-debug "$how" "$what" \
+               2>&1 </dev/null)
+        answered=$?
+        step=$((step + 1))
+        # A death is not a status here. The build that checks itself catches
+        # the signal and writes a report, and what it comes back as is one —
+        # the same number a refusal comes back as. So what says one from the
+        # other is the report. See D881.
+        case "$said" in
+        *AddressSanitizer*|*"Sanitizer:"*)
+            echo "ceilings: refusing allocation $at_one of $takes in" \
+                 "\`kest $how $what\` killed it rather than being refused by it"
+            printf '%s\n' "$said" | sed -n '2,4p' | sed 's/^/    /'
+            failed=1
+            continue
+            ;;
+        esac
+        if [ $answered -ge 128 ]; then
+            echo "ceilings: refusing allocation $at_one of $takes in" \
+                 "\`kest $how $what\` killed it: it came back $answered rather" \
+                 "than saying it had run out"
+            failed=1
+            continue
+        fi
+        if [ $answered -eq 0 ]; then
+            echo "ceilings: refusing allocation $at_one of $takes in" \
+                 "\`kest $how $what\` changed nothing it said, so a piece of" \
+                 "the work went missing and the answer came back anyway"
+            failed=1
+            continue
+        fi
+        aimed=$((aimed + 1))
+        blamed=$(printf '%s' "$said" | grep -o 'K[0-9][0-9][0-9][0-9]' |
+                 grep -v -e K0639 -e K0658 | sort -u | tr '\n' ' ')
+        if [ -n "$blamed" ]; then
+            echo "ceilings: refusing allocation $at_one of $takes in" \
+                 "\`kest $how $what\` made it say ${blamed}before it said it" \
+                 "had run out, and a compiler with no room left has nothing to" \
+                 "say about a program"
+            failed=1
+        fi
+    done
 done
 if [ $aimed -eq 0 ]; then
-    echo "ceilings: no allocation of \`examples/inventory.kest\` could be" \
+    echo "ceilings: no allocation of any program could be" \
          "refused, so nothing here asked what a compiler says when it has" \
          "none left"
     failed=1
@@ -1909,7 +1964,9 @@ if [ $failed -eq 0 ]; then
          "from both sides over $framed_rungs rung(s), and $told rung(s) where" \
          "a run with no room to write what was wrong wrote it anyway —" \
          "all of it measured on the machine this ran on, and" \
-         "$aimed allocation(s) refused one at a time, each of them a run that" \
-         "said it had run out and said nothing else"
+         "$aimed allocation(s) refused one at a time over five ways of" \
+         "reading five programs, each of them a run that said it had run out," \
+         "said nothing else, and neither died nor answered as though nothing" \
+         "had happened"
 fi
 exit $failed

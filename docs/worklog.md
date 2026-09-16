@@ -32852,12 +32852,13 @@ Recorded as D865.
 
 **Runs:** `make check`, everything passing, with `TMPDIR=/var/tmp`.
 
-**Next:** `KEST_REFUSE_AT` can aim at any allocation, and it has been pointed at
-one program's fifty. Point it at the rest: walk every example and every library
-module the same way and see what else a compiler does when an allocation it
-counted on comes back with nothing. What is being looked for is not more
-messages but the other two kinds — a run that dies rather than refusing, and a
-run that answers as though nothing went wrong.
+**Next:** the aim is at the compiler; the machine has one too. A program that
+runs asks the heap for arrays, for text and for what a store holds, and what
+`kest_heap_used` counts is a ceiling a host chooses. Point `KEST_REFUSE_AT` at a
+running program rather than at a compiling one — the examples that push, join
+and grow — and ask the same three things of the machine: that it refuses, that
+it says which program asked, and that it neither dies nor answers as though the
+push had happened.
 
 ## A hop of a `for` is one instruction
 
@@ -33562,3 +33563,43 @@ module the same way and see what else a compiler does when an allocation it
 counted on comes back with nothing. What is being looked for is not more
 messages but the other two kinds — a run that dies rather than refusing, and a
 run that answers as though nothing went wrong.
+
+## Every allocation refused in turn, and what it is not
+
+D880 built an aim and pointed it at fifty allocations of one program. Pointing
+it at the rest: every example and every library module, forty refusal points
+each, under `check` and again under `run` for the ones that run. Nothing died,
+nothing came back nought, nothing blamed the program.
+
+And two programs exhaustively — `examples/events.kest` running, 385
+allocations, and `examples/math.kest` checking, 387 — with every one of them
+refused in turn. Seven hundred and seventy-two runs, each saying it had run out
+and saying nothing else. There is no third kind.
+
+What the gate keeps is five ways of reading five programs — checking, running,
+emitting — with forty allocations refused in each, and three things asked of
+every one: that it refused, that what it said was about the room and nothing
+else, and that it neither died nor answered as though nothing had happened.
+
+A death is not a status here, which is the thing this entry had to find out. The
+build that checks itself catches the signal and writes a report, so a compiler
+that writes through eight comes back with exactly the number a refusal comes
+back with. What tells one from the other is the report — a check that read the
+status would have watched a compiler die forty times and called it forty
+refusals.
+
+Three holes hold it: an arena that refuses by handing back something that is not
+memory, an aim that refuses one allocation and then relents, and the one D880
+left.
+
+Recorded as D881.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the aim is at the compiler; the machine has one too. A program that
+runs asks the heap for arrays, for text and for what a store holds, and what
+`kest_heap_used` counts is a ceiling a host chooses. Point `KEST_REFUSE_AT` at a
+running program rather than at a compiling one — the examples that push, join
+and grow — and ask the same three things of the machine: that it refuses, that
+it says which program asked, and that it neither dies nor answers as though the
+push had happened.
