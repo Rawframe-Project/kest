@@ -27409,3 +27409,66 @@ one**. They were, which is the answer this kind of check wants and does not
 always get. And with D889 beside it the rule has a second reason: an
 instruction nobody has ever run is a cost every program pays with nothing on
 the other side.
+
+## D891: the machine's loop is not to be rearranged
+
+The Next was to try the one direction D889 and D890 left: fewer cases, not more.
+The twelve `jump.true.*` compare-jumps are the coldest end of the machine — a
+frame runs none of them, and across every example the busiest of the twelve runs
+266 times against 18569 for `jump.false.eq.i`. Eleven of their bodies collapsed
+into one, the twelve labels kept so the build still stops on a new instruction,
+the comparison read from the opcode:
+
+```text
+twenty-four bodies  116  116  116  117  119  ns per entity per step
+thirteen bodies     122  122  123  124  124
+```
+
+Slower, by six or seven nanoseconds. That is five changes to this loop over five
+turns, and every one of them cost:
+
+| What was tried | What it did |
+| --- | --- |
+| D873: three hoists in `KEST_OP_CALL` | slower |
+| D889: one instruction added, never emitted | slower, about 4 ns |
+| D889: `load.2`, four fewer dispatches an entity | slower |
+| D890: the biggest cold case moved out of the loop | slower |
+| here: eleven cold bodies collapsed into one | slower |
+| D890's control: two cold cases swapped in the source | **no change** |
+
+The control is what makes the rest a measurement rather than noise: a change
+that alters the order of the code and nothing else moves nothing. What moves the
+number is a change to the *structure* of the one function the machine spends its
+life in — a case added, a case taken out, a call put in, a jump across cases —
+and every one of those moves it the wrong way. D873 called it a register budget
+and D889 called it the size of the function; what six experiments say is simpler
+and less flattering to either reading: **this loop is at a local minimum the
+compiler found, and every hand that has been laid on it has made it worse.**
+
+So the rule for this project is to stop. The dispatch loop is not a place to
+look for time. What is left in it is a correctness surface, not a cost surface.
+
+*And the other half, which is the harder news.* A frame step is 48 instructions
+an entity, 45 with its two helpers written out. Every adjacent redundancy left
+in the whole tree is already one-for-one with an instruction the machine has:
+`store S; load S` (611 of them), `const K; const K` (293), `load S; load S` (98)
+— each of those pairs would be two instructions however it were written, because
+`dup` costs what the second push costs. The compiler and the instruction set
+have met in the middle. Every further fusion a frame would want — a `load` and
+the `const` after it, a compare against nought — needs an instruction the
+machine has not got, and D889 says one of those is four nanoseconds an entity in
+the hole before it has done anything.
+
+That leaves one direction with room, and it is not a peephole: emit **fewer
+instructions** by knowing more about the program. The frame reads `world[i]`
+twice an entity because a `let` and the assignment after it each work out where
+the element is; `turned` spends six instructions putting three values into slots
+and reading five back out, where slots the parameters have finished with are
+sitting free beside them. Those are liveness and common subexpressions — a pass
+rather than a peephole, and the first thing in five turns that the machine's
+wall does not stand in front of.
+
+*What stays* is the number that made this turn's experiment pickable. The gate
+now says what a frame reaches as well as what it costs: 48 instructions an
+entity, 45 written out, **22 of the machine's 151**. A frame touches a seventh
+of the machine and pays for all of it.

@@ -1153,13 +1153,42 @@ def a_step_of(middle):
     return (over[1] - over[0]) // (ROUNDS * ENTITIES)
 
 
+# The machine's own list of what it can do, read where it is written: how much
+# of it a frame reaches is a fraction and needs both halves.
+instruction_names = some("the machine's instructions", re.findall(
+    r'\{"((?:[^"\\]|\\.)*)",\s*\w+\}',
+    re.search(r'INSTRUCTIONS\[\] = \{(.*?)\n\};',
+              open(os.path.join('src', 'value.c')).read(), re.S).group(1)))
+
+
+# And how much of the machine a frame is: which of its instructions a frame
+# reaches at all. Every one of them costs every program that runs (D889), and
+# what a frame touches is the list to read before anybody moves one of them --
+# it is what said which end of the jump family is the cold end. A count of the
+# names a run says it ran, which is the same list anywhere. See D891.
+def what_a_frame_reaches(middle):
+    body = SHAPED + middle + WALKED % (ENTITIES, ROUNDS, ENTITIES * ROUNDS)
+    where = os.path.join(work, 'running.kest')
+    with open(where, 'w') as running:
+        running.write(body)
+    ran = subprocess.run(['./kest-debug', 'run', where], capture_output=True,
+                         text=True, stdin=subprocess.DEVNULL,
+                         env=dict(os.environ, KEST_LIB='lib', KEST_DEEP='1'))
+    if ran.returncode != 0:
+        return None
+    return len({line.split()[1] for line in ran.stderr.splitlines()
+                if line.startswith('ran ')}) or None
+
+
 a_frame = a_step_of(HELPED) if have_checked else None
 by_hand = a_step_of(BY_HAND) if have_checked else None
-if have_checked and (a_frame is None or by_hand is None or a_frame < 1 or
-                     by_hand < 1 or a_frame - by_hand < 2):
+reaches = what_a_frame_reaches(HELPED) if have_checked else None
+if have_checked and (a_frame is None or by_hand is None or reaches is None or
+                     a_frame < 1 or by_hand < 1 or a_frame - by_hand < 2):
     print("costs: a frame step is %s instruction(s) an entity and %s with its "
-          "helpers written out, and a call and its answer are two of them"
-          % (a_frame, by_hand))
+          "helpers written out, and a call and its answer are two of them, "
+          "and it reaches %s of the machine's %u"
+          % (a_frame, by_hand, reaches, len(instruction_names)))
     failed = 1
 
 shutil.rmtree(work, ignore_errors=True)
@@ -1524,7 +1553,8 @@ if not failed:
           "and the machine ran %s of the turn's instruction(s), and slots "
           "that sit next to each other are taken in %u go(es), and a frame "
           "step is %s instruction(s) an entity and %s with its two helpers "
-          "written out, which is work rather than time and the same count "
+          "written out, reaching %s of the machine's %u instructions, which "
+          "is work rather than time and the same count "
           "anywhere, with the rest of it measured on the machine "
           "this ran on"
           % (asked, len(left_to_the_host), driven, proved, kept, len(alone),
@@ -1540,6 +1570,6 @@ if not failed:
              copied_quiet, asked_for, reached, run_sized, run_asked,
              run_went, quiet_walk[0], written_walk[0], widening, narrowing,
              with_sign, without_sign, together, turn_ran, runs,
-             a_frame, by_hand))
+             a_frame, by_hand, reaches, len(instruction_names)))
 sys.exit(failed)
 PY

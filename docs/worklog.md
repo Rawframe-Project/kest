@@ -34000,3 +34000,43 @@ entity the gate states, and against 116 ns; if a handful of merged cases gives
 time back, the rest of the family follows, and if it does not, the four
 nanoseconds are not in the cases at all and the machine needs a different
 question.
+
+## Fewer cases, and it got slower too
+
+The twelve `jump.true.*` compare-jumps are the coldest end of the machine: a
+frame runs none of them, and the busiest of the twelve runs 266 times across
+every example against 18569 for `jump.false.eq.i`. Eleven bodies collapsed into
+one, the twelve labels kept so the build still stops on a new instruction, the
+comparison read from the opcode: 116-119 ns an entity became 122-124.
+
+That is five changes to this loop over five turns — hoists, an instruction
+added, a fusion, a cold case moved out, cold bodies merged — and every one of
+them cost. The control from D890 is what makes that a measurement: two cold
+cases swapped in the source, same code in a different order, moved nothing. So
+it is the structure of the function that matters and every hand laid on it has
+made it worse. The loop is at a local minimum the compiler found. Stop.
+
+The other half is harder news. A frame is 48 instructions an entity, 45 with the
+helpers written out, and every adjacent redundancy left in the tree is already
+one-for-one with an instruction the machine has: `store S; load S` 611 times,
+`const K; const K` 293, `load S; load S` 98 — each of those is two instructions
+however it is written, because `dup` costs what the second push costs. The
+compiler and the instruction set have met in the middle.
+
+What stays is the number that made this turn's experiment pickable: the gate now
+says what a frame reaches as well as what it costs — 48 an entity, 45 written
+out, **22 of the machine's 151**. A frame touches a seventh of the machine and
+pays for all of it.
+
+**Runs:** `make check`, everything passing; `make time` alongside two builds.
+
+**Next:** the one direction the wall does not stand in front of, and it is a
+pass rather than a peephole. A frame works out where `world[i]` is twice an
+entity — once for the `let` that reads it and once for the assignment that
+writes it back — with the same array and the same index, neither of which
+anything writes between them. Start there: where a body indexes the same run at
+the same name twice in one statement pair, with nothing assigning to either
+between, emit the place once. It needs what the checker already knows about
+which names a body writes (D887's `written_into`) and nothing the machine has
+not got, which is what makes it the first thing in five turns that can pay.
+Weigh it against 48 instructions an entity, and only then against 116 ns.
