@@ -113,6 +113,11 @@ typedef enum {
     // out at packed above it, so a read can tell a live one from a stale one
     // without anything having been notified of the removal.
     KEST_OP_NEW_STORE,  // u16 stride, u16 layout of a place
+    // A place in an array, kept as what it is made of rather than as an
+    // address. The address is worked out where it is used, so nothing that
+    // happens in between can move the block out from under it. See D931.
+    KEST_OP_LOAD_ELEM,  // u16 offset, u16 layout; reads, leaves the place
+    KEST_OP_STORE_ELEM, // u16 offset, u16 layout; writes, takes the place
     KEST_OP_ADD,        // u16 stride
     KEST_OP_GET,        // u16 stride, leaves an optional
     KEST_OP_SET,        // u16 stride

@@ -1279,6 +1279,14 @@ int64_t kest_real_to_int(uint16_t scalar, double value) {
                : scalar == KEST_L_I64  ? INT64_MAX
                                        : (int64_t)high;
     }
+    // A `u64` is converted through one. Everything else here fits an `int64_t`
+    // by the time it reaches this line, and a `u64` does not: the whole top
+    // half of its range is above `INT64_MAX`, so `(int64_t)value` was undefined
+    // where it mattered and saturated at two to the sixty-third in practice.
+    // Ten to the nineteenth came back as nine and a quarter. See D930.
+    if (scalar == KEST_L_U64) {
+        return (int64_t)(uint64_t)value;
+    }
     return (int64_t)value;
 }
 

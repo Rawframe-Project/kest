@@ -2772,6 +2772,42 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top += layout->count;
             break;
         }
+        // A place in an array, given as the array and the index rather than as
+        // an address. `load.elem` leaves the two where they are, because a
+        // compound assignment reads before it writes and the write needs them
+        // again; `store.elem` takes them. Between the two the program may do
+        // anything at all, including growing that very array -- which used to
+        // move the block while an address into it sat on the stack, and the
+        // write then went into memory nothing would read again. See D931.
+        case KEST_OP_LOAD_ELEM: {
+            uint16_t offset = READ_U16();
+            uint16_t of_which = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
+            int64_t index = top[-1].integer;
+            Array *array = top[-2].object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
+            IN_ARRAY(index, array);
+            READ_INTO(top, layout,
+                      array->bytes + (size_t)index * array->stride + offset);
+            top += layout->count;
+            break;
+        }
+        case KEST_OP_STORE_ELEM: {
+            uint16_t offset = READ_U16();
+            uint16_t of_which = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
+            top -= layout->count;
+            KestValue *value = top;
+            int64_t index = (--top)->integer;
+            Array *array = (--top)->object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
+            IN_ARRAY(index, array);
+            pack(array->bytes + (size_t)index * array->stride + offset, layout,
+                 value);
+            break;
+        }
         case KEST_OP_STORE_AT: {
             uint16_t offset = READ_U16();
             uint16_t of_which = READ_U16();

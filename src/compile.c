@@ -116,6 +116,14 @@ typedef struct {
     // nothing further is true.
     bool failed;
     bool out_of_memory;
+
+    // Whether a place in an array is wanted as what it is made of rather than
+    // as an address, and whether the last one asked for came back that way. A
+    // statement that writes through a place and evaluates something in between
+    // asks for the first; everything else takes the address, which is a slot
+    // fewer and is safe where nothing runs in between. See D931.
+    bool place_apart;
+    bool place_is_apart;
 } Compiler;
 
 static void refuse(Compiler *compiler, KestSpan span, const char *code,
@@ -1412,6 +1420,15 @@ static bool compile_address(Compiler *compiler, const KestExpr *expr,
 
     compile_expr(compiler, expr->index.object);
     compile_expr(compiler, expr->index.index);
+    if (compiler->place_apart) {
+        // Left as the array and the index. What reads or writes it works the
+        // address out at that moment, so anything the program does in between
+        // -- growing that very array, most of all -- cannot leave this holding
+        // a block nothing will read again. See D931.
+        compiler->place_is_apart = true;
+        *offset = 0;
+        return true;
+    }
     stack_pop(compiler, 1);
     emit(compiler, KEST_OP_ELEM_ADDR, expr->span);
     emit_u16(compiler, layout_of(compiler, sequence->element), expr->span);
@@ -3063,10 +3080,19 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         bool in_slots = resolve_place(compiler, target, &slot, &place_size);
 
         uint16_t offset = 0;
-        if (!in_slots && !compile_address(compiler, target, &offset)) {
-            fault(compiler, target->span,
-                  "this assigns to something that is not a place");
-            break;
+        bool apart = false;
+        if (!in_slots) {
+            compiler->place_apart = true;
+            compiler->place_is_apart = false;
+            bool made = compile_address(compiler, target, &offset);
+            apart = compiler->place_is_apart;
+            compiler->place_apart = false;
+            compiler->place_is_apart = false;
+            if (!made) {
+                fault(compiler, target->span,
+                      "this assigns to something that is not a place");
+                break;
+            }
         }
         if (stmt->assign.op != KEST_TOK_EQ) {
             // The operator applies to what is there, so the target is read
@@ -3075,6 +3101,14 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             if (in_slots) {
                 stack_push(compiler, 1);
                 emit_load(compiler, slot, 1, stmt->span);
+            } else if (apart) {
+                // The place stays where it is and the read is made from it,
+                // because the write below wants it again.
+                stack_push(compiler, 1);
+                emit(compiler, KEST_OP_LOAD_ELEM, stmt->span);
+                emit_u16(compiler, offset, stmt->span);
+                emit_u16(compiler, layout_of(compiler, target->type),
+                         stmt->span);
             } else {
                 stack_push(compiler, 1);
                 emit(compiler, KEST_OP_DUP, stmt->span);
@@ -3128,6 +3162,11 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         if (in_slots) {
             stack_pop(compiler, size);
             emit_store(compiler, slot, size, stmt->span);
+        } else if (apart) {
+            stack_pop(compiler, (uint16_t)(size + 2));
+            emit(compiler, KEST_OP_STORE_ELEM, stmt->span);
+            emit_u16(compiler, offset, stmt->span);
+            emit_u16(compiler, layout_of(compiler, target->type), stmt->span);
         } else {
             stack_pop(compiler, (uint16_t)(size + 1));
             emit(compiler, KEST_OP_STORE_AT, stmt->span);
