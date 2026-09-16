@@ -250,7 +250,7 @@ fn oneDay(w: World) -> World {
 
 // The host's way in. One day an event, so a batch of events is a batch of days
 // and the crossing happens once rather than once a day. See D007.
-fn onEvents(events: [i32]) -> i32 {
+fn onEvents(events: [i32]) -> i32 no.host {
     let w = empty()
     settle(w, SETTLERS)
     post(w, JOBS)

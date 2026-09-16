@@ -88,6 +88,6 @@ fn now() -> i64 no.alloc {
 
 // And what that is in milliseconds, because a frame budget is written in them
 // and dividing by a thousand in three places is three places to get it wrong.
-fn millisBetween(before: i64, after: i64) -> i64 no.alloc {
+fn millisBetween(before: i64, after: i64) -> i64 no.alloc no.host {
     return (after - before) / 1000
 }
