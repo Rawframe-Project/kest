@@ -35359,3 +35359,44 @@ where a tick keeps its promise, and the one class that grows has a host-side
 answer today.
 
 **Runs:** `make fast`; `kest tick examples/colony.kest N` at six values of N.
+
+## The sprint's middle: identity, determinism, a file, and a reference that compares
+
+Four things, each from the convergence sprint's audits rather than from this
+worklog.
+
+**A reference compares** (D923). `==` was refused on `ref<T>` and the suggested
+workaround answered a different question. A reference is an identity — a place
+and a build-unique stamp — so two are equal when they are the same handout. The
+checker allows it, the machine compares and hashes it, and `examples/quests.kest`
+holds the three cases: the same handle, a place handed out again, and a handle
+from another store.
+
+**A declaration has a number** (D924). `check --json` says an `id` per
+declaration, folded from the qualified name, the types and the promises. It
+survives a blank line, a comment, a moved declaration, a renamed local and a
+changed body, and moves when the signature or a promise moves.
+
+**`no.host` is the deterministic profile.** Every operation whose answer could
+differ between platforms is behind a host door — `sin`, `cos`, `pow` and `atan2`
+are the platform's libm and are the only four — and a body that promises
+`no.host` can reach none of them. The compiler already proves it, so the profile
+that rejects what does not qualify was already here and needed saying rather than
+building. `sqrt`, `floor` and `ceil` do not have the problem: IEEE-754 requires
+them to be exact.
+
+**A program can open a file** (D925). `std.os` is six doors a host binds: a file
+read, written and asked about, the words the program was started with, and a
+clock. No global filesystem, no ambient clock — the list of what a host binds is
+the list of what a program may do, which is what `extern` already meant.
+
+And a reload prototype, outside this repository because it is a prototype: two
+versions of one program, the schema read out of `check --json`, compatible fields
+carried, a new field defaulted, and a field that changed type refused cleanly.
+What it cannot do is carry a `ref<T>`: a reference is stamped by the build, so a
+handle from the old machine names nothing in the new one. A live world graph has
+to be rebuilt and remapped rather than carried, and that is the dependency a real
+reload rests on.
+
+**Runs:** `make fast`; `tools/check-header.sh`; the reload prototype; W01 in
+Kest, C++ and Luau, all three answering the canonical checksum `6474c217796c6cf5`.
