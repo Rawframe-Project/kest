@@ -5728,6 +5728,19 @@ anywhere, and it is why the gate holds""",
         "caught": "a crossing in runs 3 instruction(s)",
     },
     {
+        # The words after `--`, which are the program's rather than this
+        # command's. A program that asks what it was started with and is handed
+        # nothing is a program whose arguments went to the compiler. See D925.
+        "what": "a program handed none of its own words",
+        "file": "src/main.c",
+        "from": """            program_args = &argv[i + 1];""",
+        "to": """            program_args = NULL;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "hands a program its own words and one given",
+    },
+    {
         # A figure written in bold beside an instrument with nothing measuring
         # it. Every number in those four paragraphs is held to a run, and until
         # D919 nothing said the next one would be: the figures a check compares

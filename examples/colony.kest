@@ -300,6 +300,9 @@ fn command(w: World, said: text) -> World {
 // somebody can write a tool in: `colony 30` runs thirty days, and a colony that
 // was saved is read back rather than started again.
 fn daysAsked() -> i32 {
+    if os.argCount() > 1 {
+        io.print("only the first word is read; the rest are ignored")
+    }
     if let said = os.arg(0) {
         if let asked = text.number(said) {
             if asked > 0 && asked < 10000 {
@@ -361,6 +364,15 @@ fn main() -> i32 {
     let where = "/tmp/kest-colony-day.txt"
     if !save(w, where) {
         return 11
+    }
+    if !os.exists(where) {
+        return 16
+    }
+    // Every word this program was started with, walked rather than counted.
+    for one in os.args() {
+        if len(one) == 0 {
+            return 17
+        }
     }
     if let back = os.read(where) {
         if len(back) == 0 {

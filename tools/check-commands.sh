@@ -3945,6 +3945,44 @@ fn main() -> i32 {
 }
 KEST
 
+# What is after `--` is the program's rather than this command's, which is the
+# one option here that changes what a program sees rather than what this command
+# does. `std.os` is what a program asks for it through, and a host that binds
+# none of those doors is a host a program that wants them is refused by. See
+# D925.
+mkdir -p "$scratch"/given
+cat > "$scratch"/given/asking.kest <<'KEST'
+module asking
+
+import std.io
+import std.os
+
+fn main() -> i32 {
+    io.print("{os.argCount()} given")
+    for one in os.args() {
+        io.print("  {one}")
+    }
+    if os.exists("/definitely/not/a/file/anywhere") {
+        return 1
+    }
+    return 0
+}
+KEST
+for handing in "-- alpha beta@2 given" "@0 given"; do
+    given=${handing%@*}
+    wanted=${handing#*@}
+    # Unquoted on purpose: what is being handed over is a list of words.
+    handed=$("$kest" run "$scratch"/given/asking.kest $given 2>&1 </dev/null)
+    case "$handed" in
+    *"$wanted"*) ;;
+    *)
+        complain "run: \`--\` hands a program its own words and one given \
+\`$given\` was handed \`$(printf '%s' "$handed" | head -1)\`"
+        ;;
+    esac
+    printf '%s\n' "$handed" >> "$scratch"/said
+done
+
 # And the ceiling this command line can be given, which is the one wall between
 # a broken compiler and the machine it is running on. Two ways to cross it and
 # a different sentence for each: one where there was not enough to begin with,

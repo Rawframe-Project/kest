@@ -158,6 +158,24 @@ fn work(n: i32) -> i32 {
     return found - found
 }
 """,
+    # A file written and read back, which is the one thing in `std.os` that can
+    # cost the heap twice over: the text handed out and the text handed back.
+    # Twice the bytes is twice the answer, which is the same rule every other
+    # module here is asked.
+    'os': """import std.os
+import std.text
+
+fn work(n: i32) -> i32 {
+    let said = text.repeat("ab", n)
+    if !os.write("{HERE}/os.txt", said) {
+        return 0 - 1
+    }
+    if let back = os.read("{HERE}/os.txt") {
+        return len(back) - len(back)
+    }
+    return 0 - 2
+}
+""",
 }
 
 # And the ones that hand back a run of pieces rather than one. A command line
@@ -319,7 +337,9 @@ try:
             failed = 1
             continue
         driver = os.path.join(work, module + '.kest')
-        open(driver, 'w').write(DRIVERS[module])
+        # A driver that writes a file writes it into this run's own room, so
+        # two of these running at once do not write to one name.
+        open(driver, 'w').write(DRIVERS[module].replace('{HERE}', work))
         sizes = {}
         for size in (SMALL, LARGE):
             spent = cost_of(driver, 'work', [str(size)])
