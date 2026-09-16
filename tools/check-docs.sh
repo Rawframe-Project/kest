@@ -326,6 +326,7 @@ for path in sys.argv[1:]:
 # needs to be told which of the two they are reading before they compare. The
 # checks that say a machine's numbers say so in the sentence a reader reads, and
 # this is the same rule for the document. See D691.
+whose_said = []
 if sys.argv[1].endswith('language.md'):
     said_it = "measured on the machine this was written on" in open(
         sys.argv[1]).read()
@@ -333,6 +334,39 @@ if sys.argv[1].endswith('language.md'):
         print("%s: prints numbers a machine gave it and does not say which of "
               "them are that machine's" % sys.argv[1])
         failed = 1
+    # And the same rule said where the numbers are. D691 put that sentence at
+    # the top of the document, which is four thousand lines from the section
+    # that quotes a duration and the instruction count of the same work in one
+    # breath -- and those are the two kinds, side by side, one of them this
+    # machine's and one of them anybody's. A reader is inside a section when
+    # they read a figure, so a section that quotes one says which it is. A byte
+    # count goes with the durations: a handle is a machine word. See D916.
+    A_MACHINE_S = (r'\b\d+ ns\b', r'\b\d+ bytes an entity\b')
+    ANYBODY_S = (r'\*\*[a-z-]+ instructions\*\*',
+                 r'\*\*[a-z-]+\s+questions\*\*')
+    READ_ON = "the machine this was read on"
+    ANYWHERE = "the same count anywhere"
+    whose_numbers = some("the reference's sections",
+                         re.split(r'\n(?=## )', open(sys.argv[1]).read()))
+    for whose_part in whose_numbers:
+        for whose_kind, whose_of in ((A_MACHINE_S, READ_ON),
+                                     (ANYBODY_S, ANYWHERE)):
+            if not any(re.search(whose_one, whose_part)
+                       for whose_one in whose_kind):
+                continue
+            whose_said.append(whose_of)
+            # A sentence too long for a line is written in as many as it
+            # takes, so what the document holds is the words rather than the
+            # sentence -- the same reason `check-tables.sh` looks for a piece
+            # of one rather than the whole of it.
+            if re.search(r'\s+'.join(whose_of.split()), whose_part):
+                continue
+            print("%s: the section `%s` quotes a number from a run and does "
+                  "not say it is %s"
+                  % (sys.argv[1], whose_part.splitlines()[0].strip('# '),
+                     whose_of))
+            failed = 1
+    some("the reference's sections quoting a number from a run", whose_said)
 
 some("the blocks fenced as nothing", fenced)
 # A block that stands on its own is the only kind this holds to checking, so a
@@ -1095,9 +1129,11 @@ if not failed:
           'measurements this tree takes is shown over the work it was taken '
           'over, and every `make` a page tells somebody to run is one of the '
           '%u rules there are, and each of the %u number(s) it quotes from a '
-          'run is what that run answers'
+          'run is what that run answers, and each of the %u section(s) '
+          'quoting one says whose number it is'
           % (checked, made_code, standing, quoting, said_it, whole, fenced,
              messages, shown, typed, called, pointed, operators,
-             len(places), len(taken), len(rules), len(worked_out)))
+             len(places), len(taken), len(rules), len(worked_out),
+             len(whose_said)))
 sys.exit(failed)
 PY

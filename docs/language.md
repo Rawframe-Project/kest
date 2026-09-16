@@ -1740,6 +1740,12 @@ reading of this table that the program disagrees with is a gate that fails.
 | a table | 51 bytes an entity | 0 bytes an entity |
 | a store | 80 bytes an entity | 0 bytes an entity |
 
+These are bytes, and a byte count is this machine's as much as the program's: a
+handle is a machine word and a header is made of them, so the table above is
+what a container costs on the machine this was read on. What is the same count
+anywhere is the instructions, which is why the frame step further down is held
+to its count and these are held to what a tick on this machine says.
+
 A frame that promises `no.alloc` is 0 bytes an entity, which is what the promise
 means read from outside it. Being told is worth everything: the room is made
 once, before the frame, and the frame pays for nothing. A store is the dearest
@@ -4317,6 +4323,15 @@ high, because the processor has not decided how fast it is running yet, so two
 numbers taken minutes apart can differ by more than a tenth for a reason that is
 not the language. Run them twice, believe the second, and compare against a
 number read the same way in the same sitting.
+
+Which of these numbers are anybody's. The three lines above are durations and a
+duration belongs to the machine this was read on — a processor that clocks
+differently reads differently, and that is why `make check` reads only whether
+they ran and what shape they are. The instruction counts under them are not: a
+frame step is fifty-nine instructions wherever it runs, which is the same count
+anywhere, and it is why the gate holds the count to the figure and prints the
+duration beside it without an opinion. The three checks that say a number a
+machine gave them say so in the sentence a reader reads, and so does this.
 
 The spread at the end of each line is that question asked inside one run: how
 far the slowest round was from the fastest. Past a quarter the line says the

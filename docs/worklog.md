@@ -35053,3 +35053,40 @@ says of its own three lines whose numbers they are, and `check-tables.sh` holds
 it to saying so. The reference says it of nothing. Say it there, and hold that
 the same way: a paragraph that quotes a duration names the machine it was read
 on, and one that quotes a count says it is the same count anywhere.
+
+## Saying whose number it is where the number is (D916)
+
+D691 made this project say which of its numbers are a machine's and which are
+anybody's, and `check-docs.sh` has held the reference to saying it since. The
+sentence is in the preamble, four thousand lines above the section that needs
+it.
+
+`What running costs` is that section. It prints `117 ns per entity per step` and,
+since D915, `fifty-nine instructions` an entity — the same work, one number this
+machine's processor and one true wherever the program runs — and its own prose
+said nothing about the difference.
+
+So the rule is by section now. A section of `docs/language.md` that quotes a
+duration or a byte count says it is `the machine this was read on`; one that
+quotes an instruction count says it is `the same count anywhere`. Two sections
+match today and both say it now, including the container table from D914 —
+bytes are this machine's as much as the program's, because a handle is a machine
+word, and that had never been said of that table either.
+
+The phrases are read the way `check-tables.sh` reads the ones it holds the three
+checks to: a piece of the sentence with the spacing left open, because a
+sentence too long for a line is written in as many as it takes.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `tools/frame.kest` is now quoted in the reference instruction by
+instruction and held there, which makes it the only instrument whose work the
+gate reads rather than merely runs. The other two — `crossing.kest` and
+`reference.kest` — are quoted the same way in the same section and held to
+nothing but having run: `19 ns for a call and 25 ns for a crossing` and `10 ns
+for a hop of the loop, 12 ns with an index read`. A crossing out is a count as
+much as a duration, and so is a read through a reference against a read through
+an index. Count them the way D915 counted a frame step — the instrument's own
+bodies, subtracted twice — write the counts into the paragraphs beside the
+durations, and hold those. Then every number the reference takes from a run is
+either held to a figure or said to be a duration, and there is no third kind.

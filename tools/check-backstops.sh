@@ -5660,6 +5660,36 @@ questions**""",
         "caught": "asks 51 question(s) over them",
     },
     {
+        # The section that quotes a duration, with the sentence saying whose
+        # machine it was read on taken out of it. D691 put that sentence at the
+        # top of the document and it stays there; this is the same thing said
+        # where the numbers are. See D916.
+        "what": "a duration quoted without whose machine it is",
+        "file": "docs/language.md",
+        "from": """duration belongs to the machine this was read on""",
+        "to": """duration is what it is""",
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md"],
+        "caught": "quotes a number from a run and does not say it is the "
+                  "machine this was read on",
+    },
+    {
+        # And the other kind in the same section: an instruction count is the
+        # same wherever it runs, which is what makes it a thing to hold to a
+        # figure rather than a thing to print beside one. See D915 and D916.
+        "what": "a count quoted without saying it is anybody's",
+        "file": "docs/language.md",
+        "from": """which is the same count
+anywhere, and it is why the gate holds""",
+        "to": """which is what it is, and it is why the gate holds""",
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md"],
+        "caught": "quotes a number from a run and does not say it is the same "
+                  "count anywhere",
+    },
+    {
         # Room asked for in a store and not made. `store(n)` makes one with
         # room and this is the same sentence said to one that is already
         # there -- which is what a program has when the store is inside

@@ -28411,3 +28411,32 @@ And the three conditions D914 left behind are gone: a pair above an element,
 an element above a piece of text. An order is what you hold when you do not
 know the number. The numbers are known and written down, and holding both is
 holding the weaker one.
+
+## D916: whose number, said where the number is
+
+D691 made this project say which of its numbers are a machine's and which are
+anybody's, and put the sentence at the top of the reference: a count is the
+program's and the same on any machine, a measurement is this one's. It has been
+held there ever since, and it is four thousand lines from where it is needed.
+
+`What running costs` is the section that needed it. It prints three durations
+and, since D915, the instruction count of the same work — `117 ns per entity per
+step` and `fifty-nine instructions` an entity, in one breath, one of them this
+machine's processor and one of them true wherever the program runs. A reader
+given both together has no way to tell which is which, and the one they would
+guess wrong is the one the gate holds to the figure.
+
+So the rule is by section now. A section of the reference that quotes a duration
+or a byte count says it is the machine this was read on; one that quotes an
+instruction count says it is the same count anywhere. A reader is inside a
+section when they read a figure, and that is where the sentence has to be.
+
+**A byte count goes with the durations.** What a container costs a frame is
+measured in bytes, and a handle is a machine word: the table D914 wrote is what
+those containers cost on a machine of this width. That was not said either, and
+the gate line has said it of the same numbers all along — `with the rest of it
+measured on the machine this ran on`. The document now says what the gate says.
+
+The phrases are read the way `check-tables.sh` reads its own: a piece of the
+sentence rather than the whole of it, with the spacing left open, because a
+sentence too long for a line is written in as many as it takes.
