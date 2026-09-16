@@ -26248,3 +26248,70 @@ reads what *both* builds ask for, while what a build makes and what only one
 object can see stay the release build's: the checked build is compiled without
 optimisation, so every `static` function is still a symbol in it, which is what
 the compiler was told to do rather than a name written as a public one.
+
+## D871: a run of slots is one load, and moving one is not a `memcpy`
+
+Twenty-nine of the sixty-four instructions an entity were `load`. Reading what
+`moved` compiles to says why: a struct built out of locals is a load for every
+field.
+
+```
+0022  load            2
+0025  load            3
+0028  load            4
+0031  return          5
+```
+
+Slots two, three and four, one after another. **The machine already has the
+instruction for that** — `load.n <slot> <count>`, which is how a wide value is
+loaded — so nothing had to be added to the table. What was missing was the
+compiler noticing: `emit_load` now takes back the load before it when that load
+read the slots immediately below, and writes one `load.n` for both. Three loads
+become one.
+
+*And it needed a barrier.* Folding two instructions into one moves where the
+second of them starts, so anything already pointing between them would point
+into the middle of what replaced them. A `for` written as
+`add(if yes -> x else -> x, y)` is exactly that shape: the else branch ends in
+`load x`, the jump over it is patched to land there, and the next argument is
+`load y` in the slot above. Without the barrier that program answers
+`K0604: index 3 is outside 2 of them`. The compiler now carries `pointed_at` —
+the furthest byte anything already points at, set where a jump is patched and
+where a loop opens — and nothing that starts before it is folded into what comes
+after.
+
+**Sixty-four instructions an entity became fifty-nine.** `load` went from
+twenty-nine to twenty-one and `load.n` from one to four.
+
+*And it was worth nothing.* A frame step measured the same before and after,
+because `load.n` was `memcpy(top, mine + slot, sizeof(KestValue) * count)` and
+the runs it moves are two and three slots long. A call that decides how to copy
+anything costs more than moving three of them. Written out as a loop the
+compiler can see the length of:
+
+```c
+for (uint16_t i = 0; i < count; i++) {
+    top[i] = mine[slot + i];
+}
+```
+
+Three builds, alternated, five rounds each on a quiet machine:
+
+| | a frame step an entity |
+|---|---|
+| D870 | ~126 ns |
+| the loads folded, still a `memcpy` | ~126 |
+| the copy written out, loads not folded | ~121 |
+| **both** | **~120** |
+
+So the change that was the point of this entry — five instructions an entity off
+a frame — was worth about a nanosecond, and the one that came out of measuring
+it was worth six. *Fewer instructions is not less time.* D870 said a count is
+exact and a cost is a measurement; this is that, in the smallest form it comes
+in.
+
+Both are kept: the copy because it is six nanoseconds and helps every wide value
+anywhere, the fold because it is five instructions and a hundred and fifty bytes
+of code an entity that nothing now spends. Two holes hold them — one writes the
+loads apart again, caught by a count read out of `emit`; one takes the barrier
+out, caught by the eight-line program above.

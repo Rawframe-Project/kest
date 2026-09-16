@@ -32852,12 +32852,13 @@ Recorded as D865.
 
 **Runs:** `make check`, everything passing, with `TMPDIR=/var/tmp`.
 
-**Next:** twenty-nine of the sixty-four instructions an entity are `load`, and
-most of them are a field read pushed for one instruction to take straight off
-again. Read what `one.x + one.dx * dt` compiles to in `tools/frame.kest` and
-what `mul.f32` does with what is under it, and weigh an instruction that takes
-one operand from a slot rather than from the stack — how many of the
-twenty-nine it would reach, and how many instructions the table would grow by.
+**Next:** twenty-one loads an entity are left and they are not a run: they are
+the operands of `mul.f32` and `add.f32`, one slot at a time. Weigh the
+instruction that was not written this turn — a binary operator that takes its
+right operand from a slot rather than from the stack. Count how many of the
+twenty-one it would reach across the examples, count how many operators would
+need one, and say whether the table can carry them; then say what a dispatch is
+worth now that one has been measured at about a nanosecond.
 
 ## A hop of a `for` is one instruction
 
@@ -33095,3 +33096,47 @@ again. Read what `one.x + one.dx * dt` compiles to in `tools/frame.kest` and
 what `mul.f32` does with what is under it, and weigh an instruction that takes
 one operand from a slot rather than from the stack — how many of the
 twenty-nine it would reach, and how many instructions the table would grow by.
+
+## A run of slots is one load, and moving one is not a `memcpy`
+
+Twenty-nine of the sixty-four instructions an entity were `load`, and what
+`moved` compiles to says why: a struct built out of locals is a load for every
+field, and the last three of them read slots two, three and four one after
+another. The machine already has the instruction for a run of slots — `load.n`,
+which is how a wide value is loaded — so nothing was added to the table. What
+was missing was the compiler noticing. `emit_load` takes back the load before it
+when that one read the slots immediately below, and writes one `load.n` for
+both.
+
+It needed a barrier. Folding two instructions into one moves where the second
+starts, so anything already pointing between them points into the middle of what
+replaced them. `add(if yes -> x else -> x, y)` is that shape, and without the
+barrier it answers `K0604`. The compiler carries `pointed_at` now — the furthest
+byte anything already points at, set where a jump is patched and where a loop
+opens — and nothing starting before it is folded into what comes after.
+
+Sixty-four instructions an entity became fifty-nine, `load` twenty-nine to
+twenty-one. And it was worth nothing: a frame step measured the same, because
+`load.n` was a `memcpy` and the runs it moves are two and three slots. A call
+that decides how to copy anything costs more than moving three of them. Written
+out as a loop, three builds alternated five rounds each: D870 about 126 ns an
+entity, the loads folded with the `memcpy` still there about 126, the copy
+written out without the fold about 121, both about 120.
+
+So the change this turn was for was worth a nanosecond and the one that came out
+of measuring it was worth six. Fewer instructions is not less time. Both kept —
+the copy because it helps every wide value anywhere, the fold because it is five
+instructions and a good deal of code an entity that nothing now spends. Two
+holes: one writes the loads apart again, one takes the barrier out.
+
+Recorded as D871.
+
+**Runs:** `make check`, everything passing. `make time`, four instruments.
+
+**Next:** twenty-one loads an entity are left and they are not a run: they are
+the operands of `mul.f32` and `add.f32`, one slot at a time. Weigh the
+instruction that was not written this turn — a binary operator that takes its
+right operand from a slot rather than from the stack. Count how many of the
+twenty-one it would reach across the examples, count how many operators would
+need one, and say whether the table can carry them; then say what a dispatch is
+worth now that one has been measured at about a nanosecond.

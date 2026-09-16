@@ -79,6 +79,12 @@ typedef struct {
     uint32_t last_at;
     uint8_t before_op;
     uint32_t before_at;
+    // The furthest byte anything already points at. Two instructions written
+    // one after the other can be made into one, and that moves where the
+    // second of them starts — so a jump landing between them would land inside
+    // an instruction. Nothing that starts before this may be taken back into
+    // something that starts after it. See D871.
+    uint32_t pointed_at;
 
     // What has been deferred and not yet run, innermost last. A block runs
     // what it added when it ends; a `return` runs everything; a `break` runs
@@ -259,6 +265,9 @@ static void patch_jump(Compiler *compiler, uint32_t placeholder,
     if (compiler->out_of_memory) {
         return;
     }
+    // Something now points at where the code ends, so nothing before it may be
+    // folded into what comes after. See D871.
+    compiler->pointed_at = compiler->chunk->code_count;
     uint32_t distance = compiler->chunk->code_count - placeholder - 2;
     if (distance > MAX_REACH) {
         refuse(compiler, origin, "K0503",
@@ -428,8 +437,39 @@ static uint16_t layout_of(Compiler *compiler, const KestType *type) {
     return (uint16_t)index;
 }
 
+// What the load just written reads, when the last thing written was a load and
+// nothing points between the two. Answers how many slots it took and where they
+// start, or nought for anything else.
+static uint16_t load_before(const Compiler *compiler, uint16_t *slot) {
+    uint32_t width = compiler->last_op == KEST_OP_LOAD    ? 3
+                     : compiler->last_op == KEST_OP_LOADN ? 5
+                                                          : 0;
+    if (width == 0 || compiler->last_at < compiler->pointed_at ||
+        compiler->last_at + width != compiler->chunk->code_count) {
+        return 0;
+    }
+    const uint8_t *at = compiler->chunk->code + compiler->last_at;
+    *slot = (uint16_t)(at[1] | ((uint16_t)at[2] << 8));
+    return width == 3 ? 1 : (uint16_t)(at[3] | ((uint16_t)at[4] << 8));
+}
+
+// Two loads of slots that sit next to each other are one load of both. A struct
+// built out of locals is written as a load for each field, and the machine
+// already has an instruction that takes a run of slots in one go — `load.n`,
+// which a wide value is loaded with — so this is a dispatch off every field
+// past the first and no instruction the machine did not have. See D871.
 static void emit_load(Compiler *compiler, uint16_t slot, uint16_t size,
                       KestSpan origin) {
+    uint16_t before = 0;
+    uint16_t took = load_before(compiler, &before);
+    if (took > 0 && (uint32_t)before + took == slot &&
+        (uint32_t)took + size <= UINT16_MAX) {
+        kest_chunk_take_back(compiler->chunk, compiler->last_at);
+        compiler->last_op = compiler->before_op;
+        compiler->last_at = compiler->before_at;
+        slot = before;
+        size = (uint16_t)(took + size);
+    }
     emit(compiler, size == 1 ? KEST_OP_LOAD : KEST_OP_LOADN, origin);
     emit_u16(compiler, slot, origin);
     if (size != 1) {
@@ -2659,6 +2699,7 @@ static Loop *open_loop(Compiler *compiler, KestSpan span) {
     }
     Loop *loop = &compiler->loops[compiler->loop_count++];
     loop->start = compiler->chunk->code_count;
+    compiler->pointed_at = loop->start;
     loop->deferred = compiler->defer_count;
     loop->break_count = 0;
     loop->continue_count = 0;
@@ -3664,6 +3705,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
             compiler.stack_depth = 0;
             compiler.stack_high_water = 0;
             compiler.depth = 0;
+            compiler.pointed_at = 0;
             compiler.loop_count = 0;
 
             KestSymbol *symbol =
@@ -3710,6 +3752,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
         compiler.stack_depth = 0;
         compiler.stack_high_water = 0;
         compiler.depth = 0;
+        compiler.pointed_at = 0;
         compiler.loop_count = 0;
 
         const KestDecl *decl = instance->decl;

@@ -815,6 +815,56 @@ def cuts_together(body, arithmetic):
     return sum(1 for each in printed if printed[each][0] == arithmetic)
 
 
+# And whether a struct built out of locals is loaded a field at a time. The
+# machine has an instruction that takes a run of slots in one go, which is what
+# a wide value is loaded with, and the compiler now writes it wherever two loads
+# ask for slots that sit next to each other. See D871.
+def loads_apart(body):
+    printed = what_emit_printed(body)
+    if printed is None:
+        return None
+    in_order = [printed[each] for each in sorted(printed)]
+    apart = 0
+    for i in range(len(in_order) - 1):
+        one, after = in_order[i], in_order[i + 1]
+        if (one[0] == 'load' and after[0] == 'load' and
+                one[1].isdigit() and after[1].isdigit() and
+                int(after[1]) == int(one[1]) + 1):
+            apart += 1
+    return apart
+
+
+def runs_loaded(body):
+    printed = what_emit_printed(body)
+    if printed is None:
+        return None
+    return sum(1 for each in printed if printed[each][0] == 'load.n')
+
+
+BUILT = """module walking
+
+struct Three {
+    a: i32
+    b: i32
+    c: i32
+}
+
+fn main() -> i32 {
+    let x: i32 = 1
+    let y: i32 = 2
+    let z: i32 = 3
+    let made = Three(x, y, z)
+    return made.a - 1
+}
+"""
+apart_loads = loads_apart(BUILT)
+runs = runs_loaded(BUILT)
+if apart_loads != 0 or not runs:
+    print("costs: two loads of slots that sit next to each other are one load "
+          "of both: %s pair(s) left apart and %s run(s) taken at once"
+          % (apart_loads, runs))
+    failed = 1
+
 ADDING = one_program(
     "    let total = 0\n    let n: i32 = 3\n    total += n\n    return total")
 apart = cuts_apart(ADDING, 'add.i')
@@ -1270,7 +1320,8 @@ if not failed:
           "%u where it does, and a cast cuts the width %u time(s) widening "
           "and %u narrowing, and a division %u time(s) with a sign and %u "
           "without, and an `i32` `+` cuts what it added in %u instruction(s), "
-          "and the machine ran %s of the turn's instruction(s), all of it "
+          "and the machine ran %s of the turn's instruction(s), and slots "
+          "that sit next to each other are taken in %u go(es), all of it "
           "measured on the machine "
           "this ran on"
           % (asked, len(left_to_the_host), driven, proved, kept, len(alone),
@@ -1285,6 +1336,6 @@ if not failed:
              copied_total, copied_bodies, copied_bytes, copied_code,
              copied_quiet, asked_for, reached, run_sized, run_asked,
              run_went, quiet_walk[0], written_walk[0], widening, narrowing,
-             with_sign, without_sign, together, turn_ran))
+             with_sign, without_sign, together, turn_ran, runs))
 sys.exit(failed)
 PY

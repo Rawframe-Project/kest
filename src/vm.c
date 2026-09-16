@@ -2028,7 +2028,13 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_LOADN: {
             uint16_t slot = READ_U16();
             uint16_t count = READ_U16();
-            memcpy(top, mine + slot, sizeof(KestValue) * count);
+            // Written out rather than handed to `memcpy`. Most runs are two or
+            // three slots — a struct of a few fields, or the fields of one
+            // loaded one after another — and a call that decides how to copy
+            // anything costs more than moving three of them. See D871.
+            for (uint16_t i = 0; i < count; i++) {
+                top[i] = mine[slot + i];
+            }
             top += count;
             break;
         }
@@ -2036,7 +2042,9 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t slot = READ_U16();
             uint16_t count = READ_U16();
             top -= count;
-            memcpy(mine + slot, top, sizeof(KestValue) * count);
+            for (uint16_t i = 0; i < count; i++) {
+                mine[slot + i] = top[i];
+            }
             break;
         }
         case KEST_OP_FIELD: {

@@ -5335,6 +5335,49 @@ fn length(v: Vec2) -> f32 no.alloc {""",
         "caught": "what it costs, and not every",
     },
     {
+        # A struct built out of locals loaded a field at a time. Nothing
+        # running would notice — the same slots arrive in the same order — and
+        # what it costs is a dispatch for every field past the first, on the
+        # shape this language is for. See D871.
+        "what": "a run of slots taken one at a time",
+        "file": "src/compile.c",
+        "from": """    uint32_t width = compiler->last_op == KEST_OP_LOAD    ? 3
+                     : compiler->last_op == KEST_OP_LOADN ? 5
+                                                          : 0;""",
+        "to": """    uint32_t width = compiler->last_op == KEST_OP_LOADN ? 5 : 0;""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "caught": "pair(s) left apart",
+    },
+    {
+        # And what keeps that from folding two instructions a jump lands
+        # between. Taking the first of them back moves where the second
+        # starts, so a target written while both were separate points into the
+        # middle of the one that replaced them. Only a program whose `if` gives
+        # a value that is a local, beside another local next to it, is shaped
+        # to show it — which is why it is written out here rather than left to
+        # an example. See D871.
+        "what": "two instructions folded across something that points between "
+                "them",
+        "file": "src/compile.c",
+        "from": """    if (width == 0 || compiler->last_at < compiler->pointed_at ||""",
+        "to": """    if (width == 0 ||""",
+        "make": ["kest"],
+        "program": "landing.kest",
+        "source": """fn add(a: i32, b: i32) -> i32 {
+    return a + b
+}
+
+fn main() -> i32 {
+    let x: i32 = 3
+    let y: i32 = 4
+    let yes = true
+    return add(if yes -> x else -> x, y) - 7
+}
+""",
+        "caught": "K0604",
+    },
+    {
         # A machine counting an instruction it never ran. What it counts is
         # read against what `emit` printed for the same loop, so a count that
         # is not what the machine did is a number that would answer every

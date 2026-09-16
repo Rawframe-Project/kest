@@ -43,20 +43,20 @@ What it costs to run, measured rather than remembered. `make time` takes three
 numbers on the machine it is run on:
 
 ```
-127 ns per entity per step, best of 7 over 10000, spread 7%
-19 ns for a call and 25 ns for a crossing, which is 6 ns more, best of 7 over 1000000 calls, spread 3%
-10 ns for a hop of the loop, 13 ns with an index read and 29 ns with a read through a reference, which is 16 ns more, best of 7 over 200000 reads, spread 8%
-15 ns for a call in from a host and 19 ns for one the program makes in a loop, best of 7 over 1000000 calls, spread 9%
+128 ns per entity per step, best of 7 over 10000, spread 1%
+20 ns for a call and 27 ns for a crossing, which is 7 ns more, best of 7 over 1000000 calls, spread 2%
+11 ns for a hop of the loop, 14 ns with an index read and 30 ns with a read through a reference, which is 16 ns more, best of 7 over 200000 reads, spread 15%
+16 ns for a call in from a host and 19 ns for one the program makes in a loop, best of 7 over 1000000 calls, spread 11%
 ```
 
 A frame step per entity, a call against a crossing out, a loop hop against an
 index and a reference, and a crossing in against a call. The arithmetic that makes them mean something: on this machine a
 frame of ten thousand entities is about one and a quarter milliseconds, so a
 sixty-hertz budget holds roughly thirteen of those frames; a crossing out costs
-six nanoseconds over a call, which is about a twenty-first of a step, so
+seven nanoseconds over a call, which is about an eighteenth of a step, so
 `no.host` is worth having where a frame crosses many times an entity and worth
 little where it crosses once; a reference an entity is sixteen nanoseconds
-against the same hundred and twenty-seven, which is about an eighth of a step,
+against the same hundred and twenty-eight, which is about an eighth of a step,
 so a world of entities that can be removed costs about an eighth of a frame more
 than a run of entities that cannot; and a crossing *in* costs less than a hop of
 a program's own loop, so a host that drives a program a call at a time is not
