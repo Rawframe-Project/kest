@@ -5581,6 +5581,21 @@ fn main() -> i32 {
         "caught": "K0314 said `error[K0314]: `+` does not apply to `text``",
     },
     {
+        # A walk of what ran that stops one short. Every instruction the
+        # machine has is written by an example and run by one, and the second
+        # half of that is the machine's own count -- so a report that leaves
+        # the last instruction out is a `case` nothing has been seen
+        # dispatching to, said about the one every body ends with. See D890.
+        "what": "a walk of what ran that stops at the last instruction",
+        "file": "src/vm.c",
+        "from": """        for (uint32_t op = 0; runtime->ran != NULL && op <= KEST_OP_RETURN;""",
+        "to": """        for (uint32_t op = 0; runtime->ran != NULL && op < KEST_OP_RETURN;""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-dead.sh",
+        "arguments": [],
+        "caught": "no run of one reaches it, so nothing has seen it work",
+    },
+    {
         # A counter that says the same thing whatever ran. What a frame step
         # costs in instructions is the one number about a frame that is not
         # this machine's, and the only thing that knows it is a build that

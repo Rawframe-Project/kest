@@ -33961,3 +33961,42 @@ of their own called from a single case, and measure the frame against the 48
 instructions an entity the gate now says it costs. If the loop gets smaller and
 the frame gets faster, that is the budget being spent where it pays; if it does
 not, the four nanoseconds are somewhere else and D889 needs a second half.
+
+## The cold cases came out and it got slower
+
+D889 read its own measurement as the size of the dispatch function, so the move
+was to shrink it. `KEST_OP_CALL_HOST` is 116 lines a frame never runs; out of
+the loop, behind a `noinline` a compiler that has one is told about, the frame
+went from 116-119 ns an entity to 119-122. Slower.
+
+The control says that is not noise: two cold cases swapped in the source — same
+program, same instructions, different order — moved nothing. So adding a case
+costs and taking the code of one out does not give it back. What a `case` costs
+is not the bytes it occupies.
+
+That closes the peephole direction. Every fusion a frame would still want — a
+`load` and the `const` after it, a compare against nought, the five slots a
+`store.n` puts away and a `load.n` fetches back six instructions later — needs
+an instruction the machine has not got, and D889 says one of those starts four
+nanoseconds an entity behind. A frame is 48 instructions an entity and 45 with
+its two helpers written out; nothing left in it pays.
+
+What stays is a sentence made true. Every instruction was held to being written
+by an example, and the words that held it said *so no example has run it* — a
+claim, not a check. An instruction written into a chunk and jumped over is a
+`case` nothing has ever dispatched to. The counting build knows, so it is asked:
+all 151 are written by an example **and run by one**.
+
+**Runs:** `make check`, everything passing; `make time` alongside two builds.
+
+**Next:** fewer instructions, not more. The machine has 151 cases and the jump
+family is dozens of them — `jump.true.lt.i`, `jump.false.lt.i`, `jump.true.lt.f`
+and so on, one per comparison per width per sense. Take the coldest end of that
+family — the ones a frame never runs — and try them as one case reading which
+comparison it is from an operand, rather than one case each. That is fewer cases
+and the same work for the hot ones, which is the shape D889 says should pay and
+D890 says nothing else will. Measure the frame against the 48 instructions an
+entity the gate states, and against 116 ns; if a handful of merged cases gives
+time back, the rest of the family follows, and if it does not, the four
+nanoseconds are not in the cases at all and the machine needs a different
+question.

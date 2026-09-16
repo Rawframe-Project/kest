@@ -312,9 +312,28 @@ table = re.search(r'INSTRUCTIONS\[\] = \{(.*?)\n\};',
 instructions = some("the machine's instructions", [] if table is None else [
     m[0] for m in re.findall(r'\{"((?:[^"\\]|\\.)*)",\s*(\w+)\}',
                              table.group(1))])
+#
+# And run, which is the other half of the same sentence and was a claim rather
+# than a check: an instruction written into a chunk and jumped over is a `case`
+# nothing has ever dispatched to, the same as one nothing writes. The build
+# that checks itself counts what it ran, so this is the machine's own answer
+# rather than a reading of the code. What it is worth beyond the claim being
+# true is D889: every instruction the machine has costs every program that
+# runs, so one nobody has ever run is a cost with nothing on the other side.
+# See D890.
 emitted = set()
+walked = set()
 held = set()
+counting = os.path.exists('./kest-debug')
 for path in sorted(glob.glob('examples/*.kest')):
+    if counting:
+        went = subprocess.run(['./kest-debug', 'run', path],
+                              capture_output=True, text=True,
+                              stdin=subprocess.DEVNULL,
+                              env=dict(os.environ, KEST_DEEP='1'))
+        for line in went.stderr.splitlines():
+            if line.startswith('ran '):
+                walked.add(line.split()[1])
     ran = subprocess.run(['./kest', 'emit', path], capture_output=True,
                          text=True, stdin=subprocess.DEVNULL)
     if ran.returncode != 0:
@@ -337,6 +356,10 @@ for name in instructions:
     if name not in emitted:
         print("src/value.h: nothing emits `%s`, so no example has run it"
               % name)
+        failed = 1
+    elif counting and name not in walked:
+        print("src/value.h: an example writes `%s` and no run of one reaches "
+              "it, so nothing has seen it work" % name)
         failed = 1
 # The other way round, which is this check reading its own parse: a word it
 # took for an instruction that is not one of the names means the pattern above
@@ -427,7 +450,8 @@ if not failed:
           "header's %u are called by the command line (%u) and the engine "
           "(%u), and every library function, constant and shape is named "
           "where the checker can see it: %u, and every one of the machine's "
-          "%u instructions is written by an example, holding every one of "
+          "%u instructions is written by an example and run by one, holding "
+          "every one of "
           "the %u kinds a layout can hold"
           % (len(declared), len(public),
              len(public & command_line), len(public & engine),

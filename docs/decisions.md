@@ -27350,3 +27350,62 @@ answer are three. That is work rather than time: the same number on any
 machine, which is why it belongs in the gate where a duration does not. It
 would have said `load.2` removed four an entity without anybody starting a
 clock, and it is what the next thing to try will be weighed against.
+
+## D890: the loop's cost is not its size
+
+D889 measured that an instruction nothing emits and nothing executes costs a
+frame about four nanoseconds an entity, and read that as the size of the one
+function the machine spends its life in. The obvious next move was to make that
+function smaller: take the cold cases out of it, starting with the biggest.
+
+`KEST_OP_CALL_HOST` is a hundred and sixteen lines of what a frame never runs —
+what a host was told it would need, whether what it bound is still there,
+whether it kept a promise made for it, and what it handed back. Moved into a
+function of its own, kept out of the loop with a `noinline` a compiler that has
+one is told about and one that does not ignores:
+
+```text
+in the loop      116  116  117  117  119  127  ns per entity per step
+out of the loop  119  119  120  121  122  129
+```
+
+Slower, by about three nanoseconds. The opposite of what D889 predicted.
+
+**And a control, because a number that moves on any change is not a
+measurement.** Two cold cases swapped in the source — the same program, the
+same instructions, different code laid out in a different order:
+
+```text
+as written       116  116  117  119  127
+two cases swapped 116  117  117  118
+```
+
+Nothing. So it is not that any change to `vm.c` moves the number. D889's
+reading was wrong in its second half: adding a case costs, and taking the code
+of one out does not give it back. What a `case` costs is not the bytes it
+occupies.
+
+*What that leaves* is the harder half of the same sentence. Every remaining
+fusion a frame would want — a `load` and the `const` after it, a compare
+against nought, the five slots a `store.n` puts away and a `load.n` fetches
+back six instructions later — needs an instruction the machine has not got, and
+D889 says one of those starts four nanoseconds an entity behind. A frame is 48
+instructions an entity and 45 with its two helpers written out; there is no
+peephole left in it that pays.
+
+So the direction is the one thing not yet tried: **fewer instructions, not
+more.** A hundred and fifty-one of them, and the jump family alone is dozens of
+near-identical cases that differ by which comparison and which width. Whether
+merging some of them gives back what adding one costs is the question D889 and
+this entry together pose and neither answers.
+
+*What stays* is a thing the counting build can say that nothing was asking it.
+Every instruction the machine has was already held to being written by an
+example; the sentence that held it said *so no example has run it*, which was a
+claim rather than a check — an instruction written into a chunk and jumped over
+is a `case` nothing has ever dispatched to, the same as one nothing writes. It
+is held now: all hundred and fifty-one are written by an example **and run by
+one**. They were, which is the answer this kind of check wants and does not
+always get. And with D889 beside it the rule has a second reason: an
+instruction nobody has ever run is a cost every program pays with nothing on
+the other side.
