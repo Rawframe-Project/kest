@@ -34791,3 +34791,40 @@ front against one that is not, ticked over two round counts and subtracted. If
 the answer is that refilling halves it, that is a sentence `std.table`'s
 documentation should carry and does not; if it is that refilling saves nothing,
 then `refill` is a door nobody needs and the next decision is whether it stays.
+
+## What being told is worth
+
+D909 said a pair costs fifty-one bytes of heap an entity and holds eight.
+`table.refill` is what a program calls when it knows how many are coming, and
+nothing had ever measured what that buys. Both runs make the same room, so what
+is left after subtracting is the pairs rather than the making:
+
+```text
+a pair in a table that grows into them      51 bytes an entity
+a pair in a table that was told             26
+```
+
+Half. And twenty-six is about what growing an array by one element costs, which
+is the whole explanation: a table is three arrays, and one that grows into its
+pairs doubles all three on the way up while one that was told makes its slots
+once and doubles the two that hold the pairs. The saving is exactly the third
+array, paid for over and over.
+
+So `refill` is a door somebody needs, and the sentence that says so is written
+where a reader of `std.table` is rather than in a decision they will never open.
+A program filling a table a frame that does not call it pays twice for the same
+pairs.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same question of the other two containers, because the answer for
+the table says it is worth asking. An array has `array(n, v)` and `clear`, which
+CLAUDE.md already calls *what `store(n)` is on its own: room for `n` and nothing
+in it* — so a frame that fills an array made with room should cost what a
+refilled table costs, and nothing has measured it. And a store has `store(n)`.
+Ask both beside the five already printed: a step that pushes into an array made
+with room, and one that adds to a store made with room, against the same steps
+made with nothing. If being told is worth half everywhere, that is one sentence
+for all three containers and it belongs in `CLAUDE.md` beside the one about
+`clear`; if it is worth nothing for an array, the difference is worth knowing
+before somebody writes the sentence anyway.

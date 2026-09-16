@@ -1275,7 +1275,7 @@ fn onEvents(events: [i32]) -> i32 {
     let all = made(%u)
     let keep: [Npc] = array()
     let seen: table.Table<i32, i32> = table.empty()
-    let found = 0
+%s    let found = 0
     for r in 0..%u {
         found += %s(all, keep, seen)
     }
@@ -1302,10 +1302,17 @@ def what_a_tick_took(body):
     return None if said.get('errors') else said.get('heap')
 
 
-def a_step_takes(which):
+# The room a table is told to make is the same in both runs, so what is left
+# after subtracting is the pairs and not the making. A table told nothing grows
+# into them instead, which is the number beside it.
+TOLD = "    table.refill(seen, %u)\n" % (ENTITIES * ROUNDS * 10)
+
+
+def a_step_takes(which, first=""):
     over = []
     for many in (ROUNDS, ROUNDS * 2):
-        over.append(what_a_tick_took(TICKED % (ENTITIES, many, which)))
+        over.append(what_a_tick_took(TICKED %
+                                     (ENTITIES, first, many, which)))
     if over[0] is None or over[1] is None:
         return None
     return (over[1] - over[0]) // (ROUNDS * ENTITIES)
@@ -1315,6 +1322,7 @@ quiet_frame = a_step_takes('quiet')
 text_frame = a_step_takes('loud')
 grown_frame = a_step_takes('grown')
 keyed_frame = a_step_takes('keyed')
+told_frame = a_step_takes('keyed', TOLD)
 # The three containers this language has, side by side, and the promise beside
 # them. What is held is the order rather than the numbers: nought for the
 # promise, because that is what it means seen from outside; and a pair in a
@@ -1323,12 +1331,14 @@ keyed_frame = a_step_takes('keyed')
 # an array doubles once. The numbers are said for a reader to compare, the way
 # every number from a run here is. See D909.
 if (quiet_frame is None or text_frame is None or grown_frame is None or
-        keyed_frame is None or quiet_frame != 0 or text_frame < 1 or
-        grown_frame <= text_frame or keyed_frame <= grown_frame):
+        keyed_frame is None or told_frame is None or quiet_frame != 0 or
+        text_frame < 1 or grown_frame <= text_frame or
+        keyed_frame <= grown_frame or told_frame >= keyed_frame):
     print("costs: a frame step takes %s byte(s) an entity promising "
           "`no.alloc`, %s making a piece of text, %s growing an array and %s "
-          "putting a pair in a table"
-          % (quiet_frame, text_frame, grown_frame, keyed_frame))
+          "putting a pair in a table, against %s putting one in a table that "
+          "was told how many were coming"
+          % (quiet_frame, text_frame, grown_frame, keyed_frame, told_frame))
     failed = 1
 
 a_frame = a_step_of(HELPED) if have_checked else None
@@ -1713,7 +1723,8 @@ if not failed:
           "itself, and one that promises `no.alloc` takes %u byte(s) of heap "
           "an entity against %u for one that makes a piece of text, %u for "
           "one that grows an array and %u for one that puts a pair in a "
-          "table, which "
+          "table -- %u where the table was told how many were coming -- "
+          "which "
           "is work rather than time and the same count "
           "anywhere, with the rest of it measured on the machine "
           "this ran on"
@@ -1732,6 +1743,6 @@ if not failed:
              with_sign, without_sign, together, turn_ran, runs,
              a_frame, by_hand, reaches, len(instruction_names),
              asked_of_itself, quiet_frame, text_frame, grown_frame,
-             keyed_frame))
+             keyed_frame, told_frame))
 sys.exit(failed)
 PY

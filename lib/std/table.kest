@@ -158,6 +158,14 @@ fn place<K, V>(t: Table<K, V>, key: K, where: i32) no.alloc no.host {
 // copy's handle and leave the caller's table where it was. The marks go with
 // it: what they were for is a probe that has to carry on past a hole, and
 // after this there are no holes to carry on past.
+//
+// A program that knows how many pairs are coming calls this before it puts
+// them in, and what that saves is half: a pair costs 51 bytes of heap in a
+// table that grows into them and 26 in one that was told, because a table is
+// three arrays and every one of the three doubles on the way up. Twenty-six is
+// about what growing an array by one element costs, which is what is left when
+// the slots are made once. Measured by `check-costs.sh`, which prints both.
+// See D910.
 fn refill<K, V>(t: Table<K, V>, room: i32) no.host {
     clear(t.slots)
     for i in 0..room {

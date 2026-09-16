@@ -28185,3 +28185,34 @@ what the compiler's work costs, what the machine's own checking costs, what a
 frame costs in instructions, and now what a frame costs in bytes. The one thing
 this project promised at the top of `CLAUDE.md` — that cost is visible and
 provable — is a gate line rather than a claim.
+
+## D910: what being told is worth
+
+D909 said a pair costs fifty-one bytes of heap an entity and holds eight.
+`table.refill` is what a program calls when it knows how many are coming, and
+nothing here had ever measured what that buys.
+
+Both runs make the same room, so what is left after subtracting is the pairs
+rather than the making:
+
+```text
+a pair in a table that grows into them      51 bytes an entity
+a pair in a table that was told             26
+```
+
+**Half.** And twenty-six is about what growing an array by one element costs
+(twenty-five), which is the whole of the explanation: a table is three arrays —
+the keys, the values and the slots that find them — and a table that grows into
+its pairs doubles all three on the way up, while one that was told makes its
+slots once and doubles the two that hold the pairs. The saving is exactly the
+third array, paid for over and over.
+
+So `refill` is a door somebody needs, and the sentence that says so is now
+written where a reader of `std.table` is rather than in a decision they will
+never open. A program filling a table a frame that does not call it is paying
+twice for the same pairs.
+
+*What the gate holds* is the order: told costs less than not told, and both cost
+more than an array. The numbers are said beside the other four, where a reader
+can compare them; a machine reporting the same heap for every one of the five
+satisfies every number and none of the order, which is what the hole says.

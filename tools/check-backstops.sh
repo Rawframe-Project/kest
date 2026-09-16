@@ -5617,7 +5617,7 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "0 making a piece of text, 0 growing an array",
+        "caught": "0 growing an array and 0 putting a pair in a table",
     },
     {
         # A count of what the build that checks itself asked that says nought
