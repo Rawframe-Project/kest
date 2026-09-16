@@ -27226,7 +27226,9 @@ enum fold ask now.
 
 That is the second time in three turns that making the compiler work out more
 has found something that was already wrong and had nothing reaching it. The
-cost of the fold: the examples went from 78268 to 74872 bytes of code.
+cost of the fold: the examples went from 78268 to 77718 bytes of code. It was
+74872 before the flag was widened, which is the shape of what a name written
+into costs: most of what folds in a body is written into afterwards.
 
 Four probes had to be told about the change, for the reason last turn's two
 were: a value the chunk holds is never loaded out of a frame, so a check

@@ -33836,7 +33836,7 @@ assigns to is now a value the chunk holds, and takes no slot at all: the frame
 neither builds it nor keeps it. One of a held run at a position worked out
 while running is `const.at`; a position written down is the one value. The
 function above went from five slots and four deep to one and one. The examples
-went from 78268 to 74872 bytes of code.
+went from 78268 to 77718 bytes of code.
 
 What answers "never written" is the checker, the same way D866 answers it for a
 walk: the parser writes the bit true and the checker clears it where a scope
