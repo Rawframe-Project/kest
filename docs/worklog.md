@@ -35223,3 +35223,53 @@ compiling costs into the reference the way the container table is written — as
 this machine's, said so — and hold the shape rather than the figure: that it
 grows with the source it read and that the ladder's rungs are in the order the
 ladder is.
+
+## What compiling costs, which the document had wrong (D920)
+
+The `**Next:**` above pointed at `check-ceilings.sh`'s ladder. On the way to it
+the reference turned out to have a nearer version of the same fault, and a worse
+one: it says what each stage of reading `lib/std/text.kest` costs, in four
+numbers quoted from a run, and every one of them was wrong.
+
+```text
+                 the document said    a run says
+lines                      443            445
+as tokens                62736          42884
+as a tree               156080         105685
+checked                 178880         133708
+compiled                230607         157871
+source bytes             14843          15273
+```
+
+The file had grown by two lines and compiling it had got a third cheaper.
+`check-costs.sh` has been measuring all four over that same file all along —
+they are in its summary line — and nothing compared the two. That is the sentence
+D914 wrote, and this is the fourth thing it has caught.
+
+Held now: the check reads the sentence back and compares all six. The file is
+named out of `LIBRARY`, the one the check weighs, rather than written into the
+pattern, so a paragraph about another file is a paragraph about nothing.
+
+And they are said to be this machine's. Bytes of the compiler's memory are this
+machine's word size as much as the program's, the way a container's bytes are, so
+D916's marker for a section quoting a machine's number covers `bytes as tokens`
+too.
+
+The ladder is left where it was. Its numbers are a *comparison between* two
+machine numbers, which is the thing D684 held once and took out for being about
+the machine as much as the program; these were a single machine's numbers written
+in prose, which is the thing D886 found and this is the last of.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** enough documents. Six turns have held every number these documents
+quote, and the last four found four real faults, but the language itself has not
+changed since D913 and the gap a user would meet first is not in the reference.
+`lib/std` is eight modules and thirteen hundred lines, and `io` is `write` and
+`print` — a program in this language cannot read a file. The host boundary has
+everything needed for one and every example that wants a file has the host hand
+it in. So: `std.file`, written in Kest over `extern` doors the command line
+provides, with `read` and `write` of a whole file and the refusals a file has —
+not there, cannot be read, cannot be written — said as this language says a thing
+that might not be there. One module, one example that uses it, the doors bound in
+`main.c` and named in the reference where the others are.

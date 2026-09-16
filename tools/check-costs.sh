@@ -2214,6 +2214,38 @@ if (lexing is None or parsing is None or checking is None or
 # covers something and one that looks as if it does.
 alone = sorted(promised - provided)
 
+# And what the reference says this compiler's own work costs, which is the four
+# numbers this check has been measuring all along and printing in a line nobody
+# reads unless something fails. The document quoted them from a run once and
+# nothing compared them after: by the time anything did, the file had grown by
+# two lines and compiling it had got a third cheaper, so every figure in that
+# paragraph was wrong. The same shape D886 found in the one number before it and
+# D914 found in the container table. The file is named from the one this check
+# weighs rather than written out again, so a paragraph about another file is a
+# paragraph about nothing. See D920.
+COST_SAYS = re.search(as_written(
+    r'For `' + re.escape(LIBRARY) + r'`, which is (\d+) lines: (\d+) bytes as'
+    r' tokens, (\d+) as a tree, (\d+) checked and (\d+) compiled'), REFERENCE)
+READ_SAYS = re.search(as_written(
+    r'For `' + re.escape(LIBRARY) + r'` that is one file and (\d+) bytes,'
+    r' against the (\d+) it costs to compile'), REFERENCE)
+some("the reference's paragraph about what compiling costs", COST_SAYS)
+some("the reference's paragraph about what that cost was paid for", READ_SAYS)
+if COST_SAYS is not None and READ_SAYS is not None:
+    lines_of = len(open(LIBRARY).read().splitlines())
+    said_costs = [int(one_said) for one_said in
+                  COST_SAYS.groups() + READ_SAYS.groups()]
+    ran_costs = [lines_of, lexing, parsing, checking, compiling,
+                 source_bytes, compiling]
+    if said_costs != ran_costs:
+        print("costs: the reference says `%s` is %s line(s) and %s bytes and "
+              "costs %s as tokens, %s as a tree, %s checked and %s compiled, "
+              "and a run says %s line(s), %s bytes, %s, %s, %s and %s"
+              % ((LIBRARY,) + tuple(said_costs[:1] + said_costs[5:6] +
+                                    said_costs[1:5]) +
+                 tuple(ran_costs[:1] + ran_costs[5:6] + ran_costs[1:5])))
+        failed = 1
+
 if not failed:
     print("what the library costs grows the way it should: %u askings of the "
           "text it makes, %u left to the host, %u modules in a loop, %u proved "

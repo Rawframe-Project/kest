@@ -28534,3 +28534,37 @@ The four blocks stay. They hold different shapes — a breakdown by instruction,
 difference between two loops, two counts of two kinds — and folding them into one
 would be a rule that says less about each. What is shared is the list, and the
 list is the part that goes stale.
+
+## D920: what compiling costs, which the document had wrong
+
+The reference says what each stage of reading a file costs, for
+`lib/std/text.kest`, in four numbers beside each other. It quoted them from a run
+once and nothing compared them after. By the time anything did, every one of them
+was wrong:
+
+```text
+                 the document said    a run says
+lines                      443            445
+as tokens                62736          42884
+as a tree               156080         105685
+checked                 178880         133708
+compiled                230607         157871
+source bytes             14843          15273
+```
+
+The file had grown by two lines and compiling it had got a third cheaper. The
+document had been telling a reader the wrong thing for however long that took,
+and `check-costs.sh` had been measuring all four of them the whole time and
+printing them in a line nobody reads unless something fails. Two places for one
+fact, and the one that runs was not reading the one that is read — which is the
+sentence D914 wrote and this is the fourth thing it has caught.
+
+Held now, the same way: the check reads the sentence and compares all six. The
+file is named out of the one the check weighs rather than written into the
+pattern, so a paragraph about another file is a paragraph about nothing.
+
+**And they are this machine's.** Bytes of the compiler's memory are this
+machine's word size and this machine's layouts as much as they are the program,
+the way a container's bytes are (D916). The section says so now, and the rule
+that holds a section quoting a duration or a byte-an-entity to saying whose it is
+covers this kind too.

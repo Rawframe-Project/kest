@@ -5763,6 +5763,35 @@ anywhere, and it is why the gate holds""",
                   "costs says no figure about it",
     },
     {
+        # What the reference says this compiler's own work costs, edited
+        # without running anything. The four numbers were quoted from a run
+        # once and compared against nothing after, and by the time anything
+        # read them every one of them was wrong. See D920.
+        "what": "what compiling costs written down and not measured",
+        "file": "docs/language.md",
+        "from": """105685 as a tree""",
+        "to": """105686 as a tree""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "105686 as a tree, 133708 checked",
+    },
+    {
+        # And the section they are in saying whose machine they are. Bytes of
+        # this compiler's memory are this machine's as much as the program's,
+        # the way a container's bytes are, and D916 holds a section that quotes
+        # one to saying so.
+        "what": "a compiler's cost quoted without whose machine it is",
+        "file": "docs/language.md",
+        "from": """Those are bytes of memory on the machine this was read on""",
+        "to": """Those are bytes of memory""",
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md"],
+        "caught": "quotes a number from a run and does not say it is the "
+                  "machine this was read on",
+    },
+    {
         # Room asked for in a store and not made. `store(n)` makes one with
         # room and this is the same sentence said to one that is already
         # there -- which is what a program has when the store is inside

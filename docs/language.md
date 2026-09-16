@@ -4654,10 +4654,17 @@ Beside the diagnostics is what the run cost the compiler: `cost` is how many
 bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
-each stage of reading a file costs. For `lib/std/text.kest`, which is 443 lines:
-62736 bytes as tokens, 156080 as a tree, 178880 checked and 230607 compiled.
+each stage of reading a file costs. For `lib/std/text.kest`, which is 445 lines:
+42884 bytes as tokens, 105685 as a tree, 133708 checked and 157871 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
+
+Those are bytes of memory on the machine this was read on, and they are held:
+`tools/check-costs.sh` measures all four over the same file and reads this
+sentence back, so a stage that gets dearer or cheaper is a line here to change
+on purpose. It had been wrong for a while before anything read it — the file had
+grown by two lines and compiling it had got a third cheaper — which is what a
+number written down and compared against nothing does.
 
 `read` is every file that cost went on — the one named and everything it
 imports, each with how many bytes it is — and `source` is those added up. A cost
@@ -4665,7 +4672,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 14843 bytes, against the 230607 it costs to compile.
+file and 15273 bytes, against the 157871 it costs to compile.
 
 `parse` says what that tree is made of beside what it cost, and `check` says how
 many types it made beside the ones a program declares — one for every signature,

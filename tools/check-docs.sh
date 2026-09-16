@@ -341,7 +341,8 @@ if sys.argv[1].endswith('language.md'):
     # machine's and one of them anybody's. A reader is inside a section when
     # they read a figure, so a section that quotes one says which it is. A byte
     # count goes with the durations: a handle is a machine word. See D916.
-    A_MACHINE_S = (r'\b\d+ ns\b', r'\b\d+ bytes an entity\b')
+    A_MACHINE_S = (r'\b\d+ ns\b', r'\b\d+ bytes an entity\b',
+                   r'\b\d+ bytes as tokens\b')
     ANYBODY_S = (r'\*\*[a-z-]+ instructions\*\*',
                  r'\*\*[a-z-]+\s+questions\*\*')
     READ_ON = "the machine this was read on"
