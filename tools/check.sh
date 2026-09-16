@@ -1317,6 +1317,16 @@ heard() {
                 say "$what" "$last"
                 ;;
             esac
+        elif [ -z "$out" ]; then
+            # The other half of the sentence above it. A check that passes says
+            # what it did; a check that refuses says what is wrong — and one
+            # that refuses with nothing to say leaves a reader a word and no
+            # reason. It is what `failed = 1` under a condition whose two
+            # complaints both found nothing looks like from here: twelve
+            # conditions in `check-tables.sh` compare two lists that differ by
+            # order alone if anything ever stops sorting them, and that is
+            # exactly this. See D878.
+            complain "$what" "refused and said nothing about why"
         else
             complain "$what" "refused"
             printf '%s\n' "$out" | sed 's/^/    /' | head -12

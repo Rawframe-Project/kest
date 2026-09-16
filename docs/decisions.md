@@ -26674,3 +26674,52 @@ files in turn. What said so was the message itself, which named
 `tools/check-backstops.sh` for an `if` that is in `tools/check-tables.sh` —
 a check that reports the wrong file is a check reading the wrong thing, and this
 one was loud about it.
+
+## D878: a check that refuses says what is wrong
+
+D877 left one shape read rather than held: twelve conditions in
+`check-tables.sh` are `if A != B:` over two loops that report what is in one and
+not the other, and that is a guard only while `A` and `B` cannot differ by order
+alone. All twelve compare values sorted where they were made. The Next was to
+break one and see what the gate says.
+
+**Taking the `sorted` off one side of the keywords rule and swapping two lines in
+`KEYWORDS[]`:**
+
+```
+exit=1
+output bytes: 0
+```
+
+The check refuses and says nothing at all, and what the gate prints is:
+
+```
+tables                             refused
+```
+
+A word and no reason. The condition fired, both loops found nothing to report
+because the two lists hold the same words, and `failed = 1` sits outside them.
+
+*The answer is a rule, and it is the mirror of one the gate already has.* A
+check that passes is held to saying what it did — *passed and said nothing about
+what it did* — and there was no sentence for the other side. There is one now:
+
+```
+tables                             refused and said nothing about why
+```
+
+**One sentence, in one place, over all ten checks and every one written after
+them.** It is broader than the thing that found it: an order-only difference is
+one way to refuse in silence, and any other way lands in the same sentence.
+
+What was *not* done: making the twelve compare sets so the shape cannot arise.
+They already compare sorted values, so the cause is closed; and one of them —
+the pipeline in `CLAUDE.md` against the files in `src` — sorts on purpose and
+checks order separately, so a set is the wrong tool there and a rule written
+over all twelve would have to know which. The symptom is caught in one line and
+the cause is closed twelve times over by how the lists are made.
+
+It has no hole, because it is one of the guards the gate makes about itself and
+what would catch it missing is itself. It was watched working on three checks in
+a copy — one that refused in silence, one that refused with something to say,
+and one that passed — and each was said about differently.

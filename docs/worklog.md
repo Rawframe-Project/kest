@@ -32852,14 +32852,14 @@ Recorded as D865.
 
 **Runs:** `make check`, everything passing, with `TMPDIR=/var/tmp`.
 
-**Next:** the audit found one shape worth holding and one worth only reading:
-that `A != B` over two lists is true when they differ by order alone, and a
-body reporting only membership then fails with nothing to say. Twelve such
-conditions are safe because everything they compare was sorted where it was
-made, and nothing holds that. Take one of the twelve, make its two sides differ
-by order alone, and see what `make check` says; then decide whether the answer
-is a rule, a change to how those lists are made, or a line in the worklog
-saying it was looked at.
+**Next:** three turns have been spent on the gate rather than on the language,
+and the gate is in better shape than the thing it guards. Go back to the
+roadmap's `types` stage with the same question D874 was asked: what would a
+program written in this language want that it cannot have? This time read the
+examples rather than the compiler — thirty-two programs somebody wrote to be
+read — and find the place where one of them works around the language rather
+than using it. One place, with what the workaround costs the reader written
+beside it.
 
 ## A hop of a `for` is one instruction
 
@@ -33421,3 +33421,43 @@ made, and nothing holds that. Take one of the twelve, make its two sides differ
 by order alone, and see what `make check` says; then decide whether the answer
 is a rule, a change to how those lists are made, or a line in the worklog
 saying it was looked at.
+
+## A check that refuses says what is wrong
+
+D877 left one shape read rather than held: twelve conditions that are guards
+only while the two lists they compare cannot differ by order alone. The Next was
+to break one and see.
+
+Taking the `sorted` off one side of the keywords rule and swapping two lines of
+`KEYWORDS[]`: the check exits 1 and writes nothing at all, and the gate prints
+`tables refused` with nothing under it. A word and no reason. The condition
+fired, both loops found nothing because the lists hold the same words, and
+`failed = 1` sits outside them.
+
+The answer is a rule, and it is the mirror of one the gate already has: a check
+that passes is held to saying what it did, and there was no sentence for the
+other side. There is one now — `refused and said nothing about why` — one
+sentence in one place over all ten checks and every one written after them, and
+broader than the thing that found it.
+
+What was not done: making the twelve compare sets so the shape cannot arise.
+They already compare sorted values, and one of them sorts on purpose and checks
+order separately, so a set is the wrong tool there. The symptom is caught in one
+line; the cause is closed twelve times over by how the lists are made.
+
+No hole, because it is one of the guards the gate makes about itself. Watched
+working on three checks in a copy — one refusing in silence, one refusing with
+something to say, one passing — each said about differently.
+
+Recorded as D878.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** three turns have been spent on the gate rather than on the language,
+and the gate is in better shape than the thing it guards. Go back to the
+roadmap's `types` stage with the same question D874 was asked: what would a
+program written in this language want that it cannot have? This time read the
+examples rather than the compiler — thirty-two programs somebody wrote to be
+read — and find the place where one of them works around the language rather
+than using it. One place, with what the workaround costs the reader written
+beside it.
