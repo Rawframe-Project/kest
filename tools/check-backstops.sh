@@ -9884,7 +9884,7 @@ fn main() -> i32 {
         # hands the stamps out and not the store.
         "what": "two stores that stamp their places alike",
         "file": "src/vm.c",
-        "from": "            store->generations[index] = ++*rt->stamps;",
+        "from": "            store->generations[index] = ++rt->stamps;",
         "to": "            store->generations[index] = index + 1;",
         "make": ["kest", "embed"],
         "host": "examples/embed",
@@ -9898,7 +9898,7 @@ fn main() -> i32 {
         # is exactly the shape that finds out.
         "what": "a reference followed whatever it names",
         "file": "src/vm.c",
-        "from": """    if (index >= store->used || !store->live[index] ||
+        "from": """    if (world != store->world || index >= store->used || !store->live[index] ||
         store->generations[index] != generation) {
         return NULL;
     }""",
@@ -9918,11 +9918,12 @@ fn main() -> i32 {
         # holding two different things and neither of them told.
         "what": "a write into a lend that goes somewhere else",
         "file": "src/vm.c",
-        "from": """            unsigned char *at = (--top)->object;
-            pack(at + offset, layout, value);""",
-        "to": """            unsigned char *at = (--top)->object;
-            unsigned char aside[64];
-            pack((at == NULL ? aside : aside) + offset, layout, value);""",
+        "from": """            pack(array->bytes + (size_t)index * array->stride + offset, layout,
+                 value);""",
+        "to": """            {
+                static unsigned char aside[512];
+                pack(aside + offset, layout, value);
+            }""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "into this host's bytes",
