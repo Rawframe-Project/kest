@@ -29006,3 +29006,19 @@ proof about the host's own memory.
 
 Nothing was weakened. Scratch allocation is allocation, and there is no
 exemption for temporary memory.
+
+## D939: a generic is read for what it does and per copy for what it calls
+
+D933 gave the contract graph a node per copy and left the generic declaration's
+own node inert. That was right about calls and wrong about everything else: a
+promise written on a generic that nothing instantiates was then proved against
+nothing at all, and `no.alloc` could be written on `table.empty` without being
+refused.
+
+A declaration is read for what its own body reaches and not for what it calls.
+The first is true whatever the types are — `array()` makes something that can
+grow for every `T` — and the second is settled per copy, where the copies are.
+
+So both halves hold: a template that allocates directly cannot promise, and a
+template whose allocation depends on which overload a copy picks is judged in
+that copy. Which is the difference F8 was about.

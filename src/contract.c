@@ -58,6 +58,14 @@ typedef struct {
     // because a body that breaks one and keeps the other has one thing wrong
     // with it and a reader wants that one. See D853.
     bool about_host;
+    // Whether what is being read is a generic declaration rather than a copy
+    // of one. A declaration has no types until a copy gives it some, so what a
+    // call in it reaches cannot be said -- but what its own body reaches can:
+    // `array()` makes something that can grow whatever `T` is. So a template
+    // is read for what it does and not for what it calls, which leaves a
+    // promise on one that nothing instantiates proved rather than assumed.
+    // See D939.
+    bool a_template;
 } Graph;
 
 
@@ -120,6 +128,11 @@ static int32_t find_called(Graph *graph, const KestExpr *callee) {
 
 static void record_call(Graph *graph, Function *caller, uint32_t callee,
                         KestSpan span) {
+    // What a template calls is settled per copy, and each copy is a node of
+    // its own. See D939.
+    if (graph->a_template) {
+        return;
+    }
     if (caller->call_count == caller->call_capacity) {
         uint32_t grown =
             caller->call_capacity == 0 ? 8 : caller->call_capacity * 2;
@@ -518,12 +531,12 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
 
     for (uint32_t i = 0; i < graph.count; i++) {
         Function *function = &graph.functions[i];
-        // A generic declaration is walked only as its copies. Its own node is
-        // left inert: its body has no types until a copy gives it some, and
-        // nothing calls it under the bare name.
-        if (i < first_copy && function->decl->type_param_count > 0) {
-            continue;
-        }
+        // A generic declaration is read for what its own body reaches and not
+        // for what it calls: the first is true whatever the types are, and the
+        // second is settled per copy. Without it a promise on a generic that
+        // nothing instantiates was proved against nothing at all.
+        graph.a_template = i < first_copy &&
+                           function->decl->type_param_count > 0;
         kest_program_in(program, &units->items[function->unit]);
         // The tree is typed for this copy before it is read, which is the
         // whole of what makes the answer that copy's own.
