@@ -9905,7 +9905,8 @@ fn main() -> i32 {
         "to": """    if (index >= store->used) {
         return NULL;
     }
-    (void)generation;""",
+    (void)generation;
+    (void)world;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "to something dropped still named it",
