@@ -5604,6 +5604,61 @@ fn main() -> i32 {
         "caught": "a build that is not there answered as though it were",
     },
     {
+        # A call handing over one slot more than the body it enters takes. The
+        # callee's names then sit one below where the caller left them and
+        # every slot it reads is somebody else's, while the program keeps
+        # running. `call.value` has been held to this since D058 because that
+        # is the call the promise's second proof cannot see through; this is
+        # the one it can. See D901.
+        "what": "a call handing over more slots than the body takes",
+        "file": "src/compile.c",
+        "from": """        emit(compiler, KEST_OP_CALL, expr->span);
+        emit_u16(compiler, (uint16_t)index, expr->span);
+        emit_u16(compiler, argument_slots, expr->span);""",
+        "to": """        emit(compiler, KEST_OP_CALL, expr->span);
+        emit_u16(compiler, (uint16_t)index, expr->span);
+        emit_u16(compiler, (uint16_t)(argument_slots + 1), expr->span);""",
+        "make": ["debug"],
+        "binary": "kest-debug",
+        "program": "calling.kest",
+        "source": """fn counted(a: i32, b: i32) -> i32 {
+    return a + b
+}
+
+fn main() -> i32 {
+    return counted(1, 2) - 3
+}
+""",
+        "caught": "and `counted` takes 2",
+    },
+    {
+        # A crossing taking back a slot the declaration does not give. What an
+        # extern takes and gives is a layout for each argument and one for the
+        # answer; a host is held to those from its own side and nothing held
+        # the machine to them. See D901.
+        "what": "a crossing taking back what the declaration does not give",
+        "file": "src/compile.c",
+        "from": """    emit(compiler, KEST_OP_CALL_HOST, expr->span);
+    emit_u16(compiler, (uint16_t)slot, expr->span);
+    emit_u16(compiler, argument_slots, expr->span);
+    emit_u16(compiler, result_slots, expr->span);""",
+        "to": """    emit(compiler, KEST_OP_CALL_HOST, expr->span);
+    emit_u16(compiler, (uint16_t)slot, expr->span);
+    emit_u16(compiler, argument_slots, expr->span);
+    emit_u16(compiler, (uint16_t)(result_slots + 1), expr->span);""",
+        "make": ["debug"],
+        "binary": "kest-debug",
+        "program": "crossing.kest",
+        "source": """import std.io
+
+fn main() -> i32 {
+    io.print("hello")
+    return 0
+}
+""",
+        "caught": "is declared to take 1 and give 0",
+    },
+    {
         # A body that comes back with something over. The guard at the top of
         # the machine's loop says a body never went deeper than it was given;
         # a leak of one slot in a body that was given four is inside that and

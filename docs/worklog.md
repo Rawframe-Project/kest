@@ -34426,3 +34426,46 @@ each of those three the way `return` is held now: on entry, nought above the
 named slots; after a crossing into the host, the arguments gone and the result
 in their place. Three equalities where there are three bounds, and the same hole
 each time — a push the compiler counted and the machine did not.
+
+## Three bounds where there were three equalities
+
+D900 held `return` to an equality and named the other three places a frame
+changes hands. Two of the three had nothing holding them.
+
+**A call** reads how many slots the caller pushed out of the instruction and
+takes the callee's frame from there, and never asked whether that number is what
+the body says it takes. One slot out and the callee's names sit one below where
+the caller left them — every slot it reads is somebody else's while the program
+keeps running. `call.value` has been held to this since D058 because it is the
+call the promise's second proof cannot see through; the reason the other was
+left is written beside it — *the shape is the type and the type is checked* —
+which is an argument about the checker, and this is the compiler's arithmetic.
+
+**A crossing** writes how many slots it hands over and takes back, and what the
+declaration says is a layout per argument and one for the answer. A host is held
+to those from its own side; nothing held the machine to them.
+
+```text
+error[K0655]: this call hands over 3 slot(s) from 2 above its own names, and `counted` takes 2
+error[K0655]: this crossing hands over 1 slot(s) and takes back 1, and `Io.write` is declared to take 1 and give 0
+```
+
+Both also hold what `return` holds: the arguments came from above the caller's
+own names rather than out of them. Every example, the library, both instruments
+and both hosts come back clean. The holes are the two `emit_u16` calls that
+write the numbers — add one to either and the machine names the body or the
+declaration that disagrees.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** what is left unheld at that boundary, and it is the interesting half.
+A call's arguments are counted now; what is *in* them is not. The slots a callee
+reads are whatever the caller pushed, and nothing where the frame changes hands
+says the third slot is the `f32` the third parameter wants — the checker said so
+once, before anything ran. That is the same division `kest_frame_fills` draws
+for a host, except a host is asked and the compiler is trusted. The chunk
+already carries `takes`, a layout per argument, for the host to read. Ask it of
+the machine too, in the build that checks itself: at every `call`, walk the
+slots the caller pushed against the layouts the callee declares and hold each to
+being the kind it says. It is `handed_well` — which already exists for a
+crossing — turned inward.

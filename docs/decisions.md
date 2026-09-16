@@ -27876,3 +27876,49 @@ disagree by one slot in a body wide enough to hide it.
 equality. A bound is what you write when you do not know the answer; an equality
 is what you write when you do. The machine has known this one since the day it
 had frames.
+
+## D901: three bounds where there were three equalities
+
+D900 held `return` to an equality and named the other three places a frame
+changes hands. Two of the three had nothing holding them.
+
+**A call.** The machine reads how many slots the caller pushed out of the
+instruction and takes the callee's frame from there. What it never asked is
+whether that number is what the body it is entering says it takes. One slot out
+and the callee's names sit one below where the caller left them: every slot it
+reads is somebody else's, every slot it writes is the caller's, and the program
+keeps running. `call.value` has been held to exactly this since D058, with the
+reason written beside it — *that is the one call the promise's second proof
+cannot see through* — and the reason the other one was left is written beside it
+too: *a program cannot get here with the wrong one, the shape is the type and
+the type is checked.* Which is an argument about the checker, and this is the
+compiler's arithmetic. D900's lesson is that those are two different things.
+
+```text
+error[K0655]: this call hands over 3 slot(s) from 2 above its own names, and `counted` takes 2
+```
+
+**A crossing.** What an extern takes and gives is a layout for each argument and
+one for the answer, and how many slots those come to is the number the compiler
+writes into the instruction. A host is held to those from its own side by
+`kest_frame_fills` and `kest_frame_reads`; nothing held the machine to them.
+
+```text
+error[K0655]: this crossing hands over 1 slot(s) and takes back 1, and `Io.write` is declared to take 1 and give 0
+```
+
+Both also hold the third thing `return` holds: that the arguments came from
+above the caller's own names rather than out of them. Three equalities now where
+there were three bounds, and `call.value` makes four.
+
+Every example, the library, both instruments and both hosts come back clean, in
+the build that checks itself. The two holes are the two `emit_u16` calls that
+write the numbers: add one to either and the machine says which body or which
+declaration disagrees, by name.
+
+*What is left unheld is worth naming.* A call's arguments are counted; what is
+in them is not. The slots a callee reads are whatever the caller pushed, and
+nothing at this boundary says the third slot is the `f32` the third parameter
+wants — that is the checker's, once, before anything runs. It is the same
+division `kest_frame_fills` draws for a host, and the machine trusts its own
+compiler where it does not trust one.

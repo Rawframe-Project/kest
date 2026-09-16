@@ -3374,6 +3374,30 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             KestValue *base = top - argument_slots;
+#if KEST_CHECKED
+            // What a call hands over, held against what it is entering and
+            // against what the caller had to hand. The shape of a call is the
+            // checker's and this is the compiler's arithmetic: a count one
+            // slot out puts the callee's names over the caller's, and every
+            // slot it reads is somebody else's while the program keeps
+            // running. `call.value` has been held to the first of these since
+            // D058, because that is the call the promise's second proof cannot
+            // see through; this is the one it can, and nothing weighed it.
+            // See D901.
+            if (argument_slots != callee->param_slots ||
+                base < mine + frame->chunk->slot_count) {
+                fail(vmp, frame, instruction, "K0655",
+                     "this call hands over %u slot(s) from %d above its own "
+                     "names, and `%s` takes %u",
+                     argument_slots,
+                     (int)(top - mine - frame->chunk->slot_count),
+                     callee->wrote, callee->param_slots);
+                kest_diags_fault(vmp->diags,
+                                 "the compiler's count of the operand stack "
+                                 "and what the machine moved disagree");
+                return false;
+            }
+#endif
             if (base + callee->slot_count + callee->stack_needed > rt->limit) {
                 // With the number, because `out of stack` on its own tells
                 // a reader nothing about how much there was: the two ways to
@@ -3495,6 +3519,40 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t argument_slots = READ_U16();
             uint16_t result_slots = READ_U16();
             KestValue *base = top - argument_slots;
+#if KEST_CHECKED
+            // And the same three numbers at the crossing, held against the
+            // declaration rather than against a body: what an extern takes and
+            // gives is a layout for each argument and one for the answer, and
+            // how many slots those come to is the number the compiler wrote
+            // here. A host is held to this from its own side by
+            // `kest_frame_fills`; nothing held the machine to it. See D901.
+            {
+                uint32_t wanted = 0;
+                for (uint16_t which = 0;
+                     which < module->externs[index].takes_count; which++) {
+                    wanted +=
+                        module->layouts[module->externs[index].takes[which]]
+                            .count;
+                }
+                uint32_t answered =
+                    module->externs[index].gives_value
+                        ? module->layouts[module->externs[index].gives].count
+                        : 0;
+                if (argument_slots != wanted || result_slots != answered ||
+                    base < mine + frame->chunk->slot_count) {
+                    fail(vmp, frame, instruction, "K0655",
+                         "this crossing hands over %u slot(s) and takes back "
+                         "%u, and `%s` is declared to take %u and give %u",
+                         argument_slots, result_slots,
+                         module->externs[index].name, wanted, answered);
+                    kest_diags_fault(vmp->diags,
+                                     "the compiler's count of the operand "
+                                     "stack and what the machine moved "
+                                     "disagree");
+                    return false;
+                }
+            }
+#endif
             // The same convention a Kest call uses: the arguments are where
             // the result goes. Where the machine is, is written down first,
             // because the host may call back in from inside this.
