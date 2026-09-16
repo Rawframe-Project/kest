@@ -1983,6 +1983,40 @@ for named in sorted(meaning):
               % (named, meaning[named], laid_as[named][0]))
         failed = 1
 
+# And the same reading one level down: a shape's pieces are its fields' own
+# pieces, one after another. Asked of the compiler on both sides rather than
+# worked out here -- what a field's type lays out as is a layout this program
+# already has -- so this is two answers held to each other and not a second
+# copy of the rule that makes them. A shape with nothing in it is one slot all
+# the same, and the walk that fills the pieces filled none of it: what a host
+# read was the first kind there is, out of a block the arena had zeroed. See
+# D898.
+laid_together = 0
+for program in (sorted(glob.glob(os.path.join('lib', 'std', '*.kest'))) +
+                sorted(glob.glob(os.path.join('examples', '*.kest')))):
+    pieces_of = laid_out_by(program)
+    for shape in shapes_of(program):
+        if shape['name'] not in pieces_of:
+            continue
+        # One with no fields is one slot all the same, which is D807's answer
+        # and the one place a shape's pieces are not its fields'.
+        flattened = [] if shape.get('fields') else ['nothing']
+        for field in shape.get('fields') or []:
+            if field['type'] not in pieces_of:
+                flattened = None
+                break
+            flattened.extend(pieces_of[field['type']])
+        if flattened is None:
+            continue
+        laid_together += 1
+        if tuple(flattened) != pieces_of[shape['name']]:
+            print("layouts: `%s` is laid out as `%s` and what its fields are "
+                  "laid out as is `%s`"
+                  % (shape['name'], ' '.join(pieces_of[shape['name']]),
+                     ' '.join(flattened)))
+            failed = 1
+some("the shapes laid out beside their fields", laid_together)
+
 holding = {}
 declared_in = {}
 holds_what = {}
@@ -2323,8 +2357,9 @@ if not failed:
     print("%u escapes, "
           % len(accepted), end="")
     print("%u type(s) whose meaning is more than their width saying so in "
-          "what a host is handed, of %u laid out, " % (told, len(laid_as)),
-          end="")
+          "what a host is handed, of %u laid out, and %u shape(s) laid out as "
+          "what their fields are laid out as, "
+          % (told, len(laid_as), laid_together), end="")
     print("%u instructions, %u tokens, %u keywords, %u builtins, "
           "%u primitives, %u reasons, %u promises, %u modules "
           "and %u checks are in step with their names, holding %u pieces of "

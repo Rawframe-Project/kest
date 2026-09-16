@@ -108,6 +108,7 @@ KestSlot kest_slot_of(uint8_t kind) {
     case KEST_L_PAYLOAD:
         return KEST_S_TAGGED;
     case KEST_L_FN:
+    case KEST_L_NOTHING:
     case KEST_L_FLAGS8:
     case KEST_L_FLAGS16:
     case KEST_L_FLAGS32:

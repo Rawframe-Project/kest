@@ -113,6 +113,16 @@ typedef enum {
     // which it is writing writes 0 or 1, and one that does not is told. See
     // D839.
     KEST_L_BOOL,
+    // The one slot a shape with nothing in it takes. A struct with no fields
+    // is one slot of nought (D807) and nothing wrote the piece that says so —
+    // the array was as many pieces as slots and the walk filled none of them,
+    // so what a host read was the first kind there is, out of a block the
+    // arena had zeroed. A layout said `i8`, which is a byte a host may write
+    // anything into, about the one value that type has. What a host writes
+    // there is not weighed, and that is the one thing about this kind that is
+    // not a mistake: the shape has no fields, so nothing in the program ever
+    // reads the slot. See D898.
+    KEST_L_NOTHING,
     // And a set of named bits, at each of the four widths one may sit over.
     // These said `KEST_L_U8` and the rest until D897, which is the width and
     // not what it is: a `u8` holds nought to 255 and a set of two names holds

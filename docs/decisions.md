@@ -27752,3 +27752,44 @@ holds the ones whose meaning is more than their width — a flag set lays out as
 a flag set, an enum begins with a tag — against what a host is actually handed.
 Ten types answer to it today, of a hundred and thirty-seven laid out. A seventh
 occasion will be a failing gate rather than somebody noticing.
+
+## D898: the piece nobody wrote
+
+D897's walk reads a type against its layout from the outside. This is the same
+reading one level down, and it is the one the Next asked for: a shape's pieces
+are its fields' own pieces, one after another. Asked of the compiler on both
+sides — what a field's type lays out as is a layout the program already has —
+so it is two answers held to each other rather than a second copy of the rule
+that makes them.
+
+Forty-eight shapes agreed. One did not:
+
+```text
+rows.Nothing   pieces (i8)   fields ()
+```
+
+A struct with no fields is one slot of nought, which is D807's answer and right.
+The piece that says so was **never written**. The layout builder takes as many
+pieces as the type has slots — one — and the walk that fills them adds one per
+field, of which there are none. So what a host read was whatever the block held,
+and an arena hands out memory that is nought, and nought is the first kind there
+is. A layout said `i8` about the one value that type has, and it said it by
+accident: a signed byte a host may write anything into, in the slot of a shape
+with nothing in it.
+
+`KEST_L_NOTHING` now, written where the walk meets a struct with no members.
+What a host puts there is still not weighed, and that is the one thing about
+this kind that is not a mistake — the shape has no fields, so nothing in the
+program ever reads the slot.
+
+*What makes it worth a decision rather than a line* is that this is not the
+seventh of D897's six. Those were kinds that said the width where the type meant
+more; this is a piece with no kind at all, wearing the first name in the enum
+because the memory it came from was zeroed. The gate's own rule about that —
+*a constant whose kind is whatever the stack held, and two builds of one program
+would mark differently* — was written for `constant_run` in D754 and is the same
+sentence. It was true here and nothing was looking.
+
+So something is. `check-tables.sh` holds every shape's pieces against its
+fields' pieces: forty-eight of them today, and a piece nobody writes is a
+failing gate rather than a kind read out of zeroed memory.

@@ -346,6 +346,15 @@ static uint16_t describe(KestPiece *pieces, uint16_t at, const KestType *type,
         return at + 1;
     }
     if (type->tag == KEST_T_STRUCT) {
+        // One with nothing in it is one slot all the same, and the piece that
+        // says so has to be written: a walk that filled none of them left a
+        // host reading whatever the block had been zeroed to, which is the
+        // first kind there is. See D898.
+        if (type->member_count == 0) {
+            pieces[at].offset = base;
+            pieces[at].kind = KEST_L_NOTHING;
+            return at + 1;
+        }
         for (uint32_t i = 0; i < type->member_count; i++) {
             at = describe(pieces, at, type->members[i].type,
                           (uint16_t)(base + type->members[i].byte_offset));
@@ -1853,8 +1862,8 @@ static const char *const SCALARS[] = {"i8",  "i16", "i32",     "i64",
                                      "u8",  "u16", "u32",     "u64",
                                      "f32", "f64", "word",    "text",
                                      "payload", "tag", "held", "bool",
-                                     "flags8", "flags16", "flags32",
-                                     "flags64", "fn", "ref"};
+                                     "nothing", "flags8", "flags16",
+                                     "flags32", "flags64", "fn", "ref"};
 
 // A reason built where it is kept, because it names the type the word did not
 // fit in (D193).

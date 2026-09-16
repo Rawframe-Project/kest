@@ -34287,3 +34287,47 @@ pieces and asks whether each field's type is the kind beside it. Write that —
 for every shape, flatten its fields to their leaf types and hold that list
 against the run of pieces, name by name. It is the same reading one level down,
 and it is where the seventh will be if there is one.
+
+## The piece nobody wrote
+
+The Next asked for the same reading one level down: a shape's pieces are its
+fields' own pieces, one after another. Asked of the compiler on both sides —
+what a field's type lays out as is a layout the program already has — so it is
+two answers held to each other rather than a second copy of the rule.
+
+Forty-eight shapes agreed. One did not:
+
+```text
+rows.Nothing   pieces (i8)   fields ()
+```
+
+A struct with no fields is one slot of nought, which is D807's answer and right.
+The piece that says so was never written: the builder takes as many pieces as
+the type has slots — one — and the walk that fills them adds one per field, of
+which there are none. So a host read whatever the block held, an arena hands out
+memory that is nought, and nought is the first kind there is. A layout said `i8`
+about the one value that type has, and said it by accident.
+
+`KEST_L_NOTHING` now, written where the walk meets a struct with no members.
+What a host puts there is still not weighed, and that is the one thing here that
+is not a mistake: the shape has no fields, so nothing in the program reads the
+slot.
+
+This is not the seventh of D897's six. Those were kinds that said the width
+where the type meant more; this is a piece with no kind at all, wearing the
+first name in the enum because its memory was zeroed — which is the sentence
+D754 already wrote about constants and nothing was applying here.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the third reading, which is the one neither walk does. D897 holds a
+type against its own layout and D898 holds a shape against its fields'; both
+ask the compiler twice and compare. What nothing asks is whether the layout
+agrees with the **machine** — a piece says where a field is in memory and how
+wide, and what proves it is a host laying its own struct over the same bytes
+and reading back what the program wrote. `examples/embed.c` does that for a
+handful of shapes it wrote by hand. Do it for every shape in the tree instead:
+generate the host's side from what `kest_build_layout` says, write a value from
+the program, read it back through the host's own offsets, and hold the two to
+being the same numbers. A layout that is right about itself and wrong about
+memory is the one thing these two rules cannot see.

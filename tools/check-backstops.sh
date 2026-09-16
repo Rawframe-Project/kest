@@ -5604,6 +5604,29 @@ fn main() -> i32 {
         "caught": "a build that is not there answered as though it were",
     },
     {
+        # A shape with nothing in it, whose one piece nobody wrote. A struct
+        # with no fields is one slot of nought and the walk that fills the
+        # pieces filled none of them -- so what a host read was the first kind
+        # there is, out of a block the arena had zeroed, and a layout said `i8`
+        # about the one value that type has. See D898.
+        "what": "a shape with nothing in it whose piece nobody wrote",
+        "file": "src/value.c",
+        "from": """        if (type->member_count == 0) {
+            pieces[at].offset = base;
+            pieces[at].kind = KEST_L_NOTHING;
+            return at + 1;
+        }""",
+        "to": """        if (false) {
+            pieces[at].offset = base;
+            pieces[at].kind = KEST_L_NOTHING;
+            return at + 1;
+        }""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "and what its fields are laid out as is",
+    },
+    {
         # A set of named bits laid out as the byte it sits over. Six kinds have
         # been split out of a wider one and every one was found by somebody
         # reading a layout and being unable to tell two types apart -- a
