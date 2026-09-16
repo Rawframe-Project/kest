@@ -5581,6 +5581,29 @@ fn main() -> i32 {
         "caught": "K0314 said `error[K0314]: `+` does not apply to `text``",
     },
     {
+        # A build that is not there, answering as though it were. `kest_build`
+        # answers NULL for a program that did not compile, which is the first
+        # thing a host meets, and the next line a host writes is `kest_start`.
+        # Freeing what is not there is not a refusal, the same way it is not
+        # for a machine -- and a host told it was refused is a host that hands
+        # the same nothing back and is told again. See D895.
+        "what": "a build that is not there answering as though it were",
+        "file": "src/build.c",
+        "from": """bool kest_build_free(KestBuild *build) {
+    if (build == NULL) {
+        // Nothing to free is not a refusal, the same as freeing no machine.
+        return true;
+    }""",
+        "to": """bool kest_build_free(KestBuild *build) {
+    if (build == NULL) {
+        // Nothing to free is not a refusal, the same as freeing no machine.
+        return false;
+    }""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a build that is not there answered as though it were",
+    },
+    {
         # A machine that did not start, answering as though it had.
         # `kest_start` says NULL and writes why into the build's report, and a
         # host that carries on regardless knocked on twenty-nine doors -- of

@@ -930,6 +930,9 @@ KestBuild *kest_build(const char *path, const char *library, FILE *errors,
 // machines with `kest_runtime_free`, then the build. `kest_build_report` says
 // which it was. See D324.
 bool kest_build_free(KestBuild *build);
+// Freeing what is not there is not a refusal, the same way it is not for a
+// machine — and the same limit holds: a build that has been freed is not a
+// build that is not there, and its pointer belongs at no door here.
 
 // What the build has said and nobody has been told yet, in the form asked for.
 // A build that compiled says nothing here, and then says something when a
@@ -1093,7 +1096,13 @@ KestRuntime *kest_start(KestBuild *build, const KestHost *host,
 // `kest_build_free`.
 //
 // Answers whether there is no machine now: true when it freed one and true
-// when there was none, false when it was refused. A host that reads the
+// when there was none, false when it was refused. *None* is NULL. A machine
+// that has been freed is not none — it is memory the host handed back, and the
+// pointer is not one to bring to this door or any other. The answer above for
+// a machine that did not start is one this boundary can give because there is
+// nothing to read; for one that has gone there is something to read and it is
+// not the machine's any more. The sanitised build says so at the first door
+// tried; a shipping one says nothing at all. See D895. A host that reads the
 // answer knows what it is still holding without reading the report, and the
 // refusal lasts exactly as long as the call it was asked in — return from the
 // bound function and free it there. Nothing takes it away by force, so a host

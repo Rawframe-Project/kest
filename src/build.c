@@ -656,7 +656,12 @@ bool kest_bound_from(KestBuild *build, const char *name, uint32_t frames,
 
 KestRuntime *kest_start(KestBuild *build, const KestHost *host,
                         const KestLimits *limits) {
-    if (!build->compiled) {
+    // A build that is not there is the more likely of the two: `kest_build`
+    // answers NULL for a program that did not compile, which is the first
+    // thing a host meets, and the next line a host writes is this one. No
+    // machine comes of no build, and there is nowhere to say more -- a report
+    // belongs to a build, and there is none. See D895.
+    if (build == NULL || !build->compiled) {
         return NULL;
     }
     // A machine says what it said. Two machines from one build share the arena

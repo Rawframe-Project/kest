@@ -6661,6 +6661,47 @@ int main(int argc, char **argv) {
         }
     }
 
+    // And the same question asked of the other two things a host holds. A
+    // build that did not compile is the first thing a host meets -- `kest_build`
+    // answers NULL for it -- so this is the more likely of the two, and the
+    // next line a host writes is `kest_start`. Twenty-five doors, and two of
+    // them took the process down. See D895.
+    {
+        KestLimits least;
+        KestReason why = {0, NULL};
+        const KestLayout *laid = NULL;
+        bool quiet = !kest_needs(NULL, &least, &why) &&
+                     !kest_needs_of(NULL, "main", &least, &why) &&
+                     !kest_bound(NULL, 4, &least, &why) &&
+                     !kest_bound_of(NULL, "main", 4, &least, &why) &&
+                     !kest_needs_from(NULL, NULL, &least, &why) &&
+                     !kest_bound_from(NULL, NULL, 4, &least, &why) &&
+                     !kest_host_bind(NULL, "a", NULL, NULL) &&
+                     kest_host_find(NULL, "a", NULL) == NULL &&
+                     kest_build_free(NULL) &&
+                     kest_build_cost(NULL) == 0 &&
+                     kest_build_held(NULL) == 0 &&
+                     kest_build_read(NULL, 0) == NULL &&
+                     kest_build_read_bytes(NULL, 0) == 0 &&
+                     kest_build_read_mark(NULL, 0) == 0 &&
+                     kest_build_mark(NULL) == 0 &&
+                     kest_build_code_mark(NULL) == 0 &&
+                     kest_build_source(NULL) == 0 &&
+                     kest_build_extern(NULL, 0) == NULL &&
+                     kest_extern_takes(NULL, 0) == 0 &&
+                     kest_extern_layout(NULL, 0, 0) == NULL &&
+                     kest_extern_gives(NULL, 0) == NULL &&
+                     kest_build_layout(NULL, "Npc", &laid) == 0 &&
+                     kest_start(NULL, NULL, NULL) == NULL;
+        kest_build_report(NULL, stderr, KEST_FORM_TEXT);
+        kest_host_free(NULL);
+        if (!quiet) {
+            fprintf(stderr, "a build that is not there answered as though it "
+                            "were\n");
+            return 1;
+        }
+    }
+
     // And then the build, which nothing is standing on now.
     if (!kest_build_free(build)) {
         kest_build_report(build, stderr, KEST_FORM_TEXT);

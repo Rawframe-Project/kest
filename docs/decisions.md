@@ -27611,3 +27611,39 @@ one promise or it is a list of them, and a list is what nobody reads.
 `examples/embed.c` knocks on all twenty-nine now, which is what makes the
 sentence checkable rather than said: the host that reads this engine back is the
 one place a promise about the outside can be kept.
+
+## D895: the door a host knocks on first
+
+D894 fixed the twenty-nine doors that take a machine. The Next asked what the
+same doors say to a machine that has been *freed*, and the sanitised build
+answers in one word: `heap-use-after-free`, at twenty-seven of them. The other
+two never reach the pointer.
+
+That one is not fixable and it is worth saying why rather than leaving it as a
+gap. A machine that did not start is a NULL the boundary itself handed over, so
+there is nothing to read and the answer can be *nothing*. A machine that has
+been freed is memory the host gave back: reading it to find out that it is gone
+is the thing that is wrong. Keeping a head alive to answer from would mean
+either a leak of one per machine or a free list, and a free list means a stale
+pointer that one day lands on a live machine and answers as that one — which is
+worse than a crash. The engine keeps its own references honest with stamps; a
+raw `KestRuntime *` is not stamped and cannot be.
+
+So the header says it where a reader is most likely to assume otherwise.
+`kest_runtime_free` answers *true when there was none*, and **none is NULL**: a
+machine that has been freed is not none, and its pointer belongs at no door.
+`kest_build_free` gets the same sentence.
+
+**And the door a host actually knocks on first.** `kest_build` answers NULL for
+a program that did not compile — which is the first thing anybody meets, far
+more often than a machine failing to start — and the next line a host writes is
+`kest_start`. Of the twenty-five doors that take a build or a host, twenty-three
+already answered a NULL; two took the process down, and one of the two was
+`kest_start` itself.
+
+Both answer now, and `examples/embed.c` knocks on all twenty-five. The shape of
+the finding is the same as D894's and so is the lesson: it is not that nobody
+guarded, it is that guarding happened wherever somebody was standing. Twenty-
+three right and two wrong reads, from the outside, exactly like twenty-three
+right and two wrong — a boundary that mostly holds, which is the kind nobody
+checks.

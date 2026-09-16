@@ -34162,3 +34162,40 @@ header already promises `kest_build_free` refuses while a machine is up, so the
 question is what the doors say in the window a host can still make. If it is
 `use after free` rather than an answer, the same rule needs a second half, and
 the sanitised build is what will say so.
+
+## The freed half, and the door a host knocks on first
+
+The same twenty-nine doors with a machine that has been freed: `heap-use-after-
+free` at twenty-seven of them, and the other two never reach the pointer. That
+half is not fixable, and the reason is worth writing down. A machine that did
+not start is a NULL the boundary handed over, so there is nothing to read and
+the answer can be nothing. A machine that has been freed is memory the host gave
+back, and reading it to find out it has gone is the thing that is wrong. A head
+kept alive to answer from is a leak of one per machine, or a free list — and a
+free list means a stale pointer that one day lands on a live machine and answers
+as that one, which is worse than a crash. The engine keeps its own references
+honest with stamps; a raw `KestRuntime *` is not stamped.
+
+So the header says it where a reader would otherwise assume the symmetry:
+`kest_runtime_free` answers *true when there was none*, and **none is NULL**.
+
+Then the other side, which nobody had walked. `kest_build` answers NULL for a
+program that did not compile — the first thing any host meets — and the next
+line a host writes is `kest_start`. Of the twenty-five doors taking a build or a
+host, twenty-three answered a NULL and two took the process down, one of them
+`kest_start`. Both answer now, and `examples/embed.c` knocks on all twenty-five.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the third thing a host holds, which neither walk touched: the values
+it is handed. `KestValue` is a union with no tag, and a host reads the member
+the declaration says — but a host that reads the wrong one gets a number rather
+than a refusal, because there is nothing there to refuse with. The engine
+already holds a host to what it *writes* into a frame (`kest_frame_fills`,
+`kest_frame_reads`, `K0646`); what it does not do is hold a host to what it
+reads out. Ask whether it can: walk every shape a crossing can answer with —
+a number, a truth, a float, text, a struct, a run, a store, a reference, an
+optional, a case with a payload — and for each, write down what a host reading
+the wrong member would get and whether the engine could have said so. Where it
+could, make it say so; where it could not, say why in the header beside the
+union, which is the one place a host reads before it writes any of this.

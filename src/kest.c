@@ -77,6 +77,11 @@ bool kest_host_bind(KestHost *host, const char *name, KestNative function,
 
 KestNative kest_host_find(const KestHost *host, const char *name,
                           void **context) {
+    // A list of no doors holds no door of that name, which is what a host that
+    // could not be made has. See D895.
+    if (host == NULL || name == NULL) {
+        return NULL;
+    }
     for (uint32_t i = 0; i < host->count; i++) {
         if (strcmp(host->items[i].name, name) == 0) {
             if (context != NULL) {
