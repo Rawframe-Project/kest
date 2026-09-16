@@ -3638,6 +3638,12 @@ esac
 # One line each, written into a whole file, because what refuses them is
 # reading rather than meaning. `%b` turns the `\n` in the table into lines.
 mkdir "$scratch"/refused
+# And the other half of every one of them, which is that a program somebody
+# wrote wrongly is not a compiler with a bug. `kest_diags_fault` is the one
+# door those words come out of, and what is behind it is a stage disagreeing
+# with the stage before it -- so a refused program carried on to the compiler
+# and left a hole where a value belongs said it about the reader's mistake. A
+# constant that could not be worked out did exactly that. See D888.
 while IFS='|' read -r code body words; do
     printf '%b\n' "$body" > "$scratch"/refused/one.kest
     refused=$("$kest" check "$scratch"/refused/one.kest 2>&1 </dev/null)
@@ -3646,6 +3652,12 @@ while IFS='|' read -r code body words; do
     *"$code"*"$words"*) ;;
     *)
         complain "check: $code said \`$(printf '%s' "$refused" | head -1)\`"
+        ;;
+    esac
+    emitted=$("$kest" emit "$scratch"/refused/one.kest 2>&1 </dev/null)
+    case "$emitted" in
+    *"which is a fault in the compiler"*)
+        complain "emit: $code made this compiler say the fault was its own"
         ;;
     esac
 done <<'REFUSED'
@@ -4070,6 +4082,16 @@ while IFS='|' read -r code command body words; do
     *"$code"*"$words"*) ;;
     *)
         complain "$command: $code said \`$(printf '%s' "$ran" | head -1)\`"
+        ;;
+    esac
+    # And the same thing asked here, because the one program in this tree that
+    # reached it is on this table: a constant that cannot be worked out is
+    # refused where it is declared, and every use of it used to leave a hole
+    # where a value belongs. See D888.
+    emitted=$("$kest" emit "$scratch"/refused/running.kest 2>&1 </dev/null)
+    case "$emitted" in
+    *"which is a fault in the compiler"*)
+        complain "emit: $code made this compiler say the fault was its own"
         ;;
     esac
 done <<'RUNNING'

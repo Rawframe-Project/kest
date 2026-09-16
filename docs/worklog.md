@@ -33882,3 +33882,34 @@ message: a name whose constant was refused should compile as something of the
 right width and say nothing. Find every refusal that leaves a name or a type
 behind in a state the stage after it faults on, and give each the quiet answer
 the rest of the language already has for an error type.
+
+## One mistake, one message
+
+`const P: Pair = made()` was refused once and then said three more things, each
+of them `K0505` — *which is a fault in the compiler*. The reader's program was
+merely wrong; the compiler told them they had found a bug in it.
+
+A use of a constant that could not be worked out says nothing, on purpose, so
+the mistake is reported once at the declaration. What it also did was leave
+nothing behind where a value belongs, and every stage after that one counts
+slots. It emits something of the right width with nothing in it now — the same
+quiet answer the rest of the language has for an error type. The program is
+refused either way, so nothing runs it.
+
+The guard is worth more than the fix. `kest_diags_fault` is the one door those
+words come out of, so every program in the two tables of refusals — 117 of
+them, one per wording this compiler has been watched saying — now goes through
+`emit` as well, and a fault in what comes back fails the check. Forty more
+shapes written by hand, all of them things that leave an error type behind,
+found nothing else.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** back to the machine. `make time` says a frame step is what it is; the
+last four turns have all been about what the compiler works out before the
+machine starts, and D887 took a run of numbers out of the frame entirely. Run
+`make time` and read the three instruments against what they said at D873 —
+117 ns an entity for a frame step, 10 ns a hop of a `for`. A fold that takes
+values out of a frame should show up in the crossing and in the frame step or
+it is a smaller change than its bytes suggest, and either answer is worth
+writing down: a number that did not move says the work was somewhere else.

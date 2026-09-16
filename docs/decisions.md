@@ -27248,3 +27248,44 @@ every instruction the machine has is written by an example: three instructions
 that compare text stopped being emitted and something said so.
 
 Three holes: the fold, the answer it rests on, and the call.
+
+## D888: a program somebody wrote wrongly is not a bug in the compiler
+
+```text
+const P: Pair = made()
+
+error[K0510]: `P` is made while running, so it is not a constant
+error[K0505]: this takes more off the stack than it put on
+      the compiler's count of the stack went under nothing, which is a
+      fault in the compiler
+error[K0505]: this leaves 0 slot(s) of stack and is 2 wide
+error[K0505]: this leaves 0 slot(s) of stack and is 1 wide
+```
+
+One mistake, four messages, three of them telling a reader that their program
+had found a bug in this compiler. It had not: a use of a constant that could
+not be worked out said nothing, on purpose and rightly — *a use of a constant
+that could not be worked out is not a second thing wrong with the program* —
+and left nothing behind where a value belongs. Every stage after that one
+counts slots, so the count went wrong and the compiler said so in the words it
+keeps for a fault of its own.
+
+The quiet answer is the one the rest of the language already has for an error
+type: something of the right width with nothing in it. The program is refused,
+so nothing runs what is emitted; what it buys is that everything after it
+counts.
+
+*What the walk was for* was finding the others, and the way to find them is
+that `kest_diags_fault` is the one door those words come out of. So every
+program in the two tables of refusals — a hundred and seventeen of them, one
+per wording this compiler has been watched saying — goes through `emit` as well
+now, and a fault in what comes back is a check that fails. It found the one
+above and nothing else; forty more written by hand over the shapes that leave
+an error type behind — a name that is not there, a field a shape has not got, a
+type nobody declared, a call with the wrong arity, a `match` on something that
+is not an enum, a walk over something there is no walk for, a constant used
+through a `let` the frame does not hold — found nothing either.
+
+That is the guard worth having rather than the fix. A fault is this project
+saying it has a bug, and the day a refusal starts leaving a hole behind is a
+day somebody reads that about their own program and believes it.

@@ -851,6 +851,25 @@ static void emit_value_slots(Compiler *compiler, const KestType *type,
     emit_u16(compiler, slots, span);
 }
 
+// A value of the right width and nothing in it, for a place a value belongs
+// and the program was already refused for what is there. Every stage after the
+// one that refused counts slots, so a hole left where a value goes is the
+// compiler telling a reader about its own arithmetic rather than about their
+// program. See D888.
+static void emit_nothing_wide(Compiler *compiler, const KestType *type,
+                              KestSpan span) {
+    uint16_t slots = value_slots(type);
+    if (slots == 0) {
+        slots = 1;
+    }
+    KestValue nothing[16] = {{0}};
+    if (slots > (uint16_t)(sizeof(nothing) / sizeof(nothing[0]))) {
+        stack_push(compiler, slots);
+        return;
+    }
+    emit_value_slots(compiler, type, nothing, slots, span);
+}
+
 // Anything that is a constant when it is written down: a name, a field of one,
 // an element of one. Nothing is copied into slots to be read back out.
 static bool compile_folded(Compiler *compiler, const KestExpr *expr) {
@@ -915,7 +934,14 @@ static void compile_constant(Compiler *compiler, const KestExpr *expr) {
     }
     if (symbol != NULL && symbol->is_const && symbol->would_not_fold) {
         // Said once, at the declaration. A use of a constant that could not be
-        // worked out is not a second thing wrong with the program.
+        // worked out is not a second thing wrong with the program -- but it is
+        // still a value where a value is wanted, and leaving nothing behind
+        // left the stage after this one disagreeing with itself and saying so
+        // in the words it keeps for a fault of its own, about a program
+        // somebody had merely written wrongly. What goes there is nothing of
+        // the right width: the program is refused, so nothing runs it, and
+        // what it is worth is that everything after it counts. See D888.
+        emit_nothing_wide(compiler, symbol->type, expr->span);
         return;
     }
     if (symbol != NULL && symbol->is_const) {

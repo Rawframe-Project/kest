@@ -5581,6 +5581,27 @@ fn main() -> i32 {
         "caught": "K0314 said `error[K0314]: `+` does not apply to `text``",
     },
     {
+        # A constant that could not be worked out, used in a body. It is
+        # refused where it is declared and a use of it is not a second thing
+        # wrong with the program -- so the use said nothing and left nothing
+        # behind, and the stage after this one found a value missing where one
+        # belongs and said so in the words this compiler keeps for a fault of
+        # its own. One mistake became four messages, three of them telling a
+        # reader their program had found a bug in the compiler. See D888.
+        "what": "a refused constant that leaves a hole where a value belongs",
+        "file": "src/compile.c",
+        "from": """        emit_nothing_wide(compiler, symbol->type, expr->span);
+        return;""",
+        "to": """        if (compiler == NULL) {
+            emit_nothing_wide(compiler, symbol->type, expr->span);
+        }
+        return;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "made this compiler say the fault was its own",
+    },
+    {
         # A run written in a body, built again on every call. A `let` whose
         # value is worked out where it stands and whose name nothing assigns
         # to is a value the chunk holds -- and where a table of four numbers
