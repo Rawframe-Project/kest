@@ -45,3 +45,37 @@ The mission's order. `/home/kest/mission/STATE.md` carries which one is open.
     8 host reality and portability
     9 machine-readable surface
     10 documentation and the v1 boundary
+
+## Phase 2, and why it is not in the tree yet
+
+The mission asks for a resolved, typed, immutable per-instance representation
+that the backend consumes. Two of the three things it is for are already true
+by other means, and the third is a rewire this has not done.
+
+**Already true.** Generic instance semantics no longer depend on whichever copy
+was typed into the shared tree last: the compiler retypes before it emits each
+copy, and since D933 the contract proof does the same before it reads one.
+Places are explicit where it mattered — D931 gave array assignment a place made
+of the array and the index rather than an address, which is what F4 needed and
+what an IR would have expressed as a place.
+
+**Not true.** The backend still finds a local by walking its list backwards
+comparing source text, at every mention of a name. `find_local` is that walk.
+
+**What it would take, and why a smaller version is worse.** Slot assignment
+lives in the backend, in twelve `declare_local` sites, several of them inside
+the shapes a `for` lowers to. A resolver that worked out slots of its own would
+be a second place that knows that arithmetic, and the first thing this project
+refuses is two places for one fact. So the resolver has to *own* the
+assignment and the backend has to read it — one walk, one numbering — and that
+is a single change across every declaring and every reading site rather than a
+sequence of green steps.
+
+A resolver was written and measured against that bar. It settles every name in a
+body in one walk and answers per copy, and it was thrown away rather than landed
+with a numbering of its own beside the backend's.
+
+**So the order is**: move slot assignment into the resolver, have
+`declare_local` become the resolver's answer rather than its own arithmetic, and
+then the backend reads a name instead of looking one up. Nothing before that
+step is worth committing, and nothing after it is hard.
