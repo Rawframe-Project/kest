@@ -4268,6 +4268,15 @@ is the crossing.
 19 ns for a call and 25 ns for a crossing, which is 6 ns more, best of 7 over 1000000 calls, spread 3%
 ```
 
+Counted rather than timed, a turn of that loop is **eleven instructions** when
+it calls a function of the program and **nine** when it crosses out. The dearer
+one runs two fewer: a crossing out is one instruction that does a great deal,
+and a call is `call`, the frame written between them, and the callee's own
+`load` and `return`. It is the clearest case on this page of a duration and a
+count disagreeing, and it is why both are printed rather than either alone —
+reading the count as though it were the time would have you move work across the
+boundary to save two instructions and pay six nanoseconds for it.
+
 `tools/reference.kest` is a hop of a loop, a read through an index and a read
 through a reference. A `store<T>` hands out a `ref<T>` and can delete what it holds, so every
 read through one asks whether what was handed out is still there; an index into
@@ -4278,6 +4287,13 @@ check and the optional it comes back in.
 ```
 10 ns for a hop of the loop, 12 ns with an index read and 31 ns with a read through a reference, which is 19 ns more, best of 7 over 200000 reads, spread 14%
 ```
+
+Counted the same way, a hop of that loop is **seven instructions**, an index
+read is **eight** and a read through a reference is **fourteen** — one more than
+the hop for the index and seven more for the reference. The seven are what a
+reference is: the place it names, the stamp held against the one in the store,
+and the optional the answer comes back in, which is a branch whether or not it
+is nothing.
 
 The first of those three is what the other two are measured against, and it is
 the one worth reading first: a hop of a `for` is ten nanoseconds here, so a read

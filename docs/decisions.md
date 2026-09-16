@@ -28440,3 +28440,37 @@ measured on the machine this ran on`. The document now says what the gate says.
 The phrases are read the way `check-tables.sh` reads its own: a piece of the
 sentence rather than the whole of it, with the spacing left open, because a
 sentence too long for a line is written in as many as it takes.
+
+## D917: the other two instruments, counted
+
+D915 counted what a frame step runs and held the reference to the figure. This
+does the same for the other two instruments, and one of them turned out to say
+something neither number says alone.
+
+`tools/crossing.kest` times a call the program makes against a call out to the
+host. A turn of that loop is **eleven instructions** calling inward and **nine**
+crossing out — the dearer one runs *two fewer*. A crossing out is one
+instruction that does a great deal; a call is `call`, the frame written between
+them, and the callee's own `load` and `return`. Nineteen nanoseconds for eleven
+instructions and twenty-five for nine.
+
+That is the case for printing both. A reader with only the count would move work
+across the boundary to save two instructions and pay six nanoseconds an entity
+for it — and a reader with only the duration would think a crossing is a lot of
+work rather than one expensive step. Neither number is wrong and neither is the
+whole of it.
+
+`tools/reference.kest` walks the same values three ways. A hop of the loop is
+**seven instructions**, an index read **eight**, a read through a reference
+**fourteen**: one more for the index, seven more for the reference. Those seven
+are what a `ref<T>` is — the place it names, the stamp held against the store's,
+and the optional the answer comes back in, which is a branch whether or not it
+is nothing. Ten, twelve and thirty-one nanoseconds: the reference read costs
+twice the instructions of the index read and about two and a half times the
+time, so here the two numbers agree and say the same thing twice.
+
+All five are measured on the instruments' own bodies with only `main` replaced,
+the way D915 does it — the loop lengths are a `const`, so the count is written
+in where the constant is and nothing else moves. Every number the reference now
+takes from a run is either held to a figure or said to be a duration, and there
+is no third kind.

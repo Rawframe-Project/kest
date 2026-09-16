@@ -1274,10 +1274,13 @@ def what_a_step_of(over_a):
 # How many and how long are written in by name rather than with a `%`: the
 # bodies have a remainder in them, and a file with a `%` in it is not a format
 # string however carefully the rest of it was written.
-INSTRUMENT = some("the instrument's own bodies", open(
-    os.path.join('tools', 'frame.kest')).read().partition(
-        '\nfn main() -> i32 {')[0])
-COUNTED = INSTRUMENT + """
+def bodies_of(named):
+    return some("the bodies of `tools/%s`" % named, open(
+        os.path.join('tools', named)).read().partition(
+            '\nfn main() -> i32 {')[0])
+
+
+COUNTED = bodies_of('frame.kest') + """
 fn main() -> i32 {
     let all = world(HOW_MANY)
     let seen = 0
@@ -1290,6 +1293,55 @@ fn main() -> i32 {
     return 0
 }
 """
+
+
+# And the other two instruments, counted the same way. The reference quotes a
+# duration for each of them and, since this, a count beside it -- and the two
+# do not always point the same way: a crossing out runs fewer instructions than
+# a call the program makes and takes longer, which is the one thing on that page
+# a reader would get backwards from either number alone. Their loop lengths are
+# a `const`, so the count is written in where the constant is; the bodies
+# themselves are taken as they are, the way the frame's are. See D917.
+CROSSED = bodies_of('crossing.kest').replace(
+    'const CALLS: i32 = 1000000', 'const CALLS: i32 = HOW_MANY') + """
+fn main() -> i32 {
+    let sum: f64 = 0.0
+    for r in 0..HOW_LONG {
+        sum = WHICH_ONE(sum)
+    }
+    if sum < 0.0 {
+        return 1
+    }
+    return 0
+}
+"""
+READ_OF = bodies_of('reference.kest').replace(
+    'const READS: i32 = 200000', 'const READS: i32 = HOW_MANY') + """
+fn main() -> i32 {
+    let world: store<Thing> = store()
+    let where: [ref<Thing>] = array()
+    let items: [Thing] = array()
+    for i in 0..READS {
+        push(where, add(world, Thing(i % 64, 1.0)))
+        push(items, Thing(i % 64, 1.0))
+    }
+    let seen = 0
+    for r in 0..HOW_LONG {
+        seen += WHICH_ONE
+    }
+    if seen < 0 {
+        return 1
+    }
+    return 0
+}
+"""
+
+
+# A sentence of the reference read back as it is written. A sentence too long
+# for a line is written in as many as it takes, so what is looked for is the
+# words with the spacing left open.
+def as_written(said):
+    return r'\s+'.join(said.split())
 
 
 # A number the reference writes out the way a reader reads it. Every other
@@ -1565,6 +1617,75 @@ if step_says is not None and have_checked:
                  sorted((op_name, None if ran_it is None
                          else ran_it.get(op_name))
                         for op_name in at_a_time)))
+        failed = 1
+
+# And the two paragraphs beside the other two instruments. The same rule as the
+# frame's, over the same door: every figure in them measured on the instrument's
+# own bodies rather than on a shape written here. What made these worth writing
+# down is that one of them points the other way -- a crossing out is two
+# instructions fewer than a call and six nanoseconds more -- so a reader given
+# only the count would move work across the boundary to save it. See D917.
+crossed_says = re.search(as_written(
+    r'a turn of that loop is \*\*([a-z-]+) instructions\*\* when it calls a'
+    r' function of the program and \*\*([a-z-]+)\*\* when it crosses out\.'
+    r' The dearer one runs ([a-z-]+) fewer'), REFERENCE)
+some("the reference's paragraph about what a crossing runs", crossed_says)
+ran_here = None
+ran_out = None
+ran_hop = None
+ran_index = None
+ran_ref = None
+if crossed_says is not None and have_checked:
+    ran_here = what_a_step_of(CROSSED.replace('WHICH_ONE', 'ofInside'))[0]
+    ran_out = what_a_step_of(CROSSED.replace('WHICH_ONE', 'ofCrossing'))[0]
+    if (ran_here is None or ran_out is None or
+            in_figures(crossed_says.group(1)) != sum(ran_here.values()) or
+            in_figures(crossed_says.group(2)) != sum(ran_out.values()) or
+            in_figures(crossed_says.group(3)) != (sum(ran_here.values()) -
+                                                  sum(ran_out.values()))):
+        print("costs: the reference says a turn of that loop is %s "
+              "instruction(s) calling a function of the program and %s "
+              "crossing out, %s fewer, and a run says %s and %s"
+              % (in_figures(crossed_says.group(1)),
+                 in_figures(crossed_says.group(2)),
+                 in_figures(crossed_says.group(3)),
+                 None if ran_here is None else sum(ran_here.values()),
+                 None if ran_out is None else sum(ran_out.values())))
+        failed = 1
+
+reading_says = re.search(as_written(
+    r'a hop of that loop is \*\*([a-z-]+) instructions\*\*, an index read is'
+    r' \*\*([a-z-]+)\*\* and a read through a reference is \*\*([a-z-]+)\*\*'
+    r' — ([a-z-]+) more than the hop for the index and ([a-z-]+) more for the'
+    r' reference'), REFERENCE)
+some("the reference's paragraph about what a read runs", reading_says)
+if reading_says is not None and have_checked:
+    ran_hop = what_a_step_of(READ_OF.replace(
+        'WHICH_ONE', 'throughNothing(READS)'))[0]
+    ran_index = what_a_step_of(READ_OF.replace(
+        'WHICH_ONE', 'throughIndexes(items)'))[0]
+    ran_ref = what_a_step_of(READ_OF.replace(
+        'WHICH_ONE', 'throughReferences(world, where)'))[0]
+    if (ran_hop is None or ran_index is None or ran_ref is None or
+            in_figures(reading_says.group(1)) != sum(ran_hop.values()) or
+            in_figures(reading_says.group(2)) != sum(ran_index.values()) or
+            in_figures(reading_says.group(3)) != sum(ran_ref.values()) or
+            in_figures(reading_says.group(4)) != (sum(ran_index.values()) -
+                                                  sum(ran_hop.values())) or
+            in_figures(reading_says.group(5)) != (sum(ran_ref.values()) -
+                                                  sum(ran_hop.values()))):
+        print("costs: the reference says a hop of that loop is %s "
+              "instruction(s), an index read %s and a read through a "
+              "reference %s, %s and %s more than the hop, and a run says %s, "
+              "%s and %s"
+              % (in_figures(reading_says.group(1)),
+                 in_figures(reading_says.group(2)),
+                 in_figures(reading_says.group(3)),
+                 in_figures(reading_says.group(4)),
+                 in_figures(reading_says.group(5)),
+                 None if ran_hop is None else sum(ran_hop.values()),
+                 None if ran_index is None else sum(ran_index.values()),
+                 None if ran_ref is None else sum(ran_ref.values())))
         failed = 1
 
 shutil.rmtree(work, ignore_errors=True)
@@ -1933,7 +2054,11 @@ if not failed:
           "answering %s question(s) about itself in the build that checks "
           "itself, against %s instruction(s) and %s question(s) for the "
           "frame the instrument walks, which is the one the reference "
-          "writes out instruction by instruction, and one that promises "
+          "writes out instruction by instruction, and a turn of a loop "
+          "is %s instruction(s) calling a function of the program "
+          "against %s crossing out, and a hop of one is %s, %s reading "
+          "through an index and %s through a reference, and one that "
+          "promises "
           "`no.alloc` takes %u byte(s) of heap "
           "an entity against %u for one that makes a piece of text, %u for "
           "one that grows an array and %u for one that puts a pair in a "
@@ -1959,6 +2084,11 @@ if not failed:
              a_frame, by_hand, reaches, len(instruction_names),
              asked_of_itself,
              None if ran_it is None else sum(ran_it.values()), asked_it,
+             None if ran_here is None else sum(ran_here.values()),
+             None if ran_out is None else sum(ran_out.values()),
+             None if ran_hop is None else sum(ran_hop.values()),
+             None if ran_index is None else sum(ran_index.values()),
+             None if ran_ref is None else sum(ran_ref.values()),
              quiet_frame, text_frame, grown_frame,
              keyed_frame, stored_frame))
 sys.exit(failed)

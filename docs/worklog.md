@@ -35090,3 +35090,47 @@ an index. Count them the way D915 counted a frame step — the instrument's own
 bodies, subtracted twice — write the counts into the paragraphs beside the
 durations, and hold those. Then every number the reference takes from a run is
 either held to a figure or said to be a duration, and there is no third kind.
+
+## Counting the other two instruments (D917)
+
+D915 held the reference's frame-step count to the run it quotes. The other two
+instruments were quoted the same way in the same section and held to nothing but
+having run. They are counted now, on their own bodies with only `main` replaced,
+and `check-costs.sh` holds every figure in both paragraphs.
+
+```text
+a turn of the loop, calling in    11 instructions   19 ns
+a turn of the loop, crossing out   9                25
+a hop of a loop                    7                10
+a hop with an index read           8                12
+a hop with a reference read       14                31
+```
+
+**The first two disagree.** A crossing out runs two instructions *fewer* than a
+call the program makes and takes six nanoseconds more. A crossing is one
+instruction that does a great deal; a call is `call`, the frame between them, and
+the callee's `load` and `return`. It is the clearest case on that page of a count
+and a duration pointing opposite ways, which is the argument for printing both:
+a reader with only the count would move work across the boundary to save two
+instructions.
+
+The other three agree. A reference read is twice the instructions of an index
+read and about two and a half times the time, and the seven instructions over a
+bare hop are what a `ref<T>` is — a place, a stamp held against the store's, and
+an optional to come back in.
+
+Every number the reference takes from a run is now either held to a figure or
+said to be a duration, and there is no third kind.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** there is a fourth instrument and it is the one left out. `tools/inward`
+is C, because the thing doing the calling is the host, and the reference quotes
+`15 ns for a call in from a host and 18 ns for one the program makes in a loop`
+with nothing beside it. A crossing in cannot be counted the way the other three
+were — the instructions it runs are the program's and the work is the host's, and
+`KEST_DEEP` counts only the first. So the number to put beside that duration is a
+different one: what a crossing in costs the machine, in the things the machine
+can be asked about itself — frames pushed, slots handed over, questions the
+checked build asks at the boundary. Count those, write them beside the
+nanoseconds, and hold them the way the other three are held.

@@ -5690,6 +5690,33 @@ anywhere, and it is why the gate holds""",
                   "count anywhere",
     },
     {
+        # What a crossing out runs, written down and not measured. It is the
+        # one count on that page that points the other way from the duration
+        # beside it -- two instructions fewer and six nanoseconds more -- so it
+        # is the one a reader would most like to be able to trust. See D917.
+        "what": "what a crossing runs written down and not measured",
+        "file": "docs/language.md",
+        "from": """**eleven instructions**""",
+        "to": """**twelve instructions**""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "a turn of that loop is 12 instruction(s)",
+    },
+    {
+        # And what a read through a reference runs. A `ref<T>` is a place, a
+        # stamp held against the store's, and an optional to come back in, and
+        # what those come to is seven instructions over a bare hop. See D917.
+        "what": "what a reference read runs written down and not measured",
+        "file": "docs/language.md",
+        "from": """a read through a reference is **fourteen**""",
+        "to": """a read through a reference is **thirteen**""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "a read through a reference 13",
+    },
+    {
         # Room asked for in a store and not made. `store(n)` makes one with
         # room and this is the same sentence said to one that is already
         # there -- which is what a program has when the store is inside
