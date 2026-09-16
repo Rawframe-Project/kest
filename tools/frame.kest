@@ -32,6 +32,13 @@ import std.io
 // more than a tenth for a reason that is not the language. Run it twice,
 // believe the second, and compare it against a number read the same way.
 //
+// What the calls cost is the difference between two numbers of about a hundred
+// and twenty, so a part in a hundred of either of them is a tenth of it. That
+// is why the two are timed in the same round rather than one loop after the
+// other: measured apart they read anywhere between four and eighteen, and
+// measured together they read five to seven. The spread beside them is the
+// bigger of the two loops' own.
+//
 // The spread it prints is the same question asked inside one run: how far the
 // slowest round was from the fastest. On a quiet machine it is usually a few
 // parts in a hundred and is sometimes a quarter, because one round is enough
@@ -76,6 +83,41 @@ fn turned(one: Npc) -> Npc no.alloc {
     return Npc(one.x, one.y, dx, dy, health)
 }
 
+// And the same frame with those two helpers written out where they are called.
+// It is here for one number: what the two calls cost. A call is the one thing
+// the machine does that is not one instruction — it reads what the callee says
+// about itself, asks twice whether there is room, and writes five fields of a
+// frame — and the only way to weigh it from inside the language is to run the
+// same work without it. Everything else about the two bodies is the same: the
+// same reads, the same arithmetic, the same writes, in the same order.
+//
+// The two also hold each other. They give back the same count over the same
+// entities, so a change to one of the helpers that is not made here — or made
+// differently — is a difference in the answer rather than a difference in a
+// duration. See D873.
+fn stepAlone(world: [Npc], dt: f32) -> i32 no.alloc {
+    let alive = 0
+    for i in 0..len(world) {
+        let was = world[i]
+        let far = Npc(
+            was.x + was.dx * dt,
+            was.y + was.dy * dt,
+            was.dx,
+            was.dy,
+            was.health
+        )
+        let dx = if far.x < 0.0 || far.x > 100.0 -> 0.0 - far.dx else -> far.dx
+        let dy = if far.y < 0.0 || far.y > 100.0 -> 0.0 - far.dy else -> far.dy
+        let health = if far.health > 0 -> far.health - 1 else -> ENTITIES
+        let one = Npc(far.x, far.y, dx, dy, health)
+        world[i] = one
+        if one.health > 0 {
+            alive += 1
+        }
+    }
+    return alive
+}
+
 // A frame. It reads every entity, works on it and writes it back, which is
 // what a frame does and the reason `[Npc]` is bytes rather than handles.
 fn step(world: [Npc], dt: f32) -> i32 no.alloc {
@@ -106,6 +148,7 @@ fn main() -> i32 {
     // that has not decided how fast it is running yet.
     for i in 0..STEPS {
         step(all, 0.016)
+        stepAlone(all, 0.016)
     }
 
     // The best of several rounds rather than the average of them. Anything
@@ -115,6 +158,8 @@ fn main() -> i32 {
     let seen = 0
     let best: i64 = 0
     let worst: i64 = 0
+    let alone: i64 = 0
+    let worstAlone: i64 = 0
     for round in 0..ROUNDS {
         let before = Host.clock()
         for i in 0..STEPS {
@@ -127,28 +172,52 @@ fn main() -> i32 {
         if took > worst {
             worst = took
         }
+
+        // The same round, and the same work with the two calls written out
+        // where they are made. Beside the other rather than after it: what
+        // separates them is one call an entity, and two loops run minutes
+        // apart differ by more than that for reasons that are not the calls.
+        let beforeAlone = Host.clock()
+        for i in 0..STEPS {
+            seen += stepAlone(all, 0.016)
+        }
+        let tookAlone = Host.clock() - beforeAlone
+        if round == 0 || tookAlone < alone {
+            alone = tookAlone
+        }
+        if tookAlone > worstAlone {
+            worstAlone = tookAlone
+        }
     }
 
     // The host's clock counts microseconds, and what is wanted is nanoseconds
     // for one entity in one step.
     let each = best * 1000 / i64(ENTITIES) / i64(STEPS)
+    // And what the two calls an entity cost, which is what is left when the
+    // same work is done without them.
+    let calling = (best - alone) * 1000 / i64(ENTITIES) / i64(STEPS)
     // And how far the slowest round was from it. The best is the number; this
     // is whether to believe it. A machine that is busy or that changes its
     // mind about how fast it runs says so here, and two numbers measured
     // minutes apart can be told apart from two that differ.
-    let spread = (worst - best) * 100 / best
+    // Each loop against its own worst, and the bigger of the two said: what
+    // the calls cost is the difference between two bests, so a round lost in
+    // either of them moves it and a reader has to be told. See D873.
+    let hereSpread = (worst - best) * 100 / best
+    let aloneSpread = (worstAlone - alone) * 100 / alone
+    let spread = if hereSpread > aloneSpread -> hereSpread else -> aloneSpread
     // And whether to believe it, which is what the spread is for and what a
     // reader would otherwise have to know to work out. It is said rather than
     // answered with: a busy machine is not a program that failed. See D551.
     let steady = if spread <= 25 -> ""
         else -> " — the machine was somebody else's"
-    io.print("{each} ns per entity per step, best of {ROUNDS} over {ENTITIES}, spread {spread}%{steady}")
+    io.print("{each} ns per entity per step, {calling} ns of it the two calls it makes, best of {ROUNDS} over {ENTITIES}, spread {spread}%{steady}")
     // And what the work adds up to, which is a number and not a duration:
     // every entity is alive in every step of every round, so this is exactly
     // `ROUNDS * STEPS * ENTITIES` and nothing else. It is here because an
     // instrument that stops doing its work still prints a number, and a
     // smaller number reads like a faster machine. See D549.
-    if seen != ROUNDS * STEPS * ENTITIES {
+    if seen != ROUNDS * STEPS * ENTITIES * 2 {
         return 1
     }
     return 0

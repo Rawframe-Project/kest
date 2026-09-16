@@ -32852,14 +32852,13 @@ Recorded as D865.
 
 **Runs:** `make check`, everything passing, with `TMPDIR=/var/tmp`.
 
-**Next:** every pointer the machine reads through on the way is in a local now,
-so the next thing to weigh is the one instruction it runs that is not one
-instruction: `call`. Two calls and two returns an entity of a frame step, and a
-call reads three fields of the callee, asks two questions about room and writes
-four fields of a frame. Read what `KEST_OP_CALL` does, say which of it a call to
-a body already compiled could have been told beforehand, and measure a frame
-whose helpers are written out by hand against one that calls them — which says
-what the two calls cost before anything is done about them.
+**Next:** six turns of this have said the same thing in six ways — the machine
+is where the time is, and it is close to what this compiler will give. Stop
+optimising and go back to the language. `docs/decisions.md` has D001 to D873 and
+the worklog has every turn; read what the language still cannot do that a
+program written in it would want, pick the one that the roadmap's `types` stage
+points at, and write down what it would take. One thing, with what it costs the
+checker, the compiler and the machine written beside it.
 
 ## A hop of a `for` is one instruction
 
@@ -33189,3 +33188,58 @@ four fields of a frame. Read what `KEST_OP_CALL` does, say which of it a call to
 a body already compiled could have been told beforehand, and measure a frame
 whose helpers are written out by hand against one that calls them — which says
 what the two calls cost before anything is done about them.
+
+## What a call costs, and three ways of making it cheaper that made it dearer
+
+A call is the one instruction that is not one instruction: it reads which body
+from the module's list, asks whether calls may nest one deeper, works out where
+the callee's slots start, asks whether there is room, writes five fields of a
+frame and moves four locals. Two calls and two returns an entity of a frame
+step.
+
+What could it be told beforehand? Almost all of it. Which body is known when the
+call is compiled; how deep calls may nest and where the stack ends are set when
+the machine is made and never move; and what the callee says about itself is in
+a chunk that does not change.
+
+The number first. `tools/frame.kest` measures it now rather than guessing: the
+same frame written twice, once calling two helpers and once with them written
+out where they are called, timed in the same rounds. Five nanoseconds of a
+hundred and seventeen, about a twentieth — two calls and two returns, a little
+over a nanosecond each. Counted rather than timed the two frames are 58.9
+instructions an entity and 55.9: four instructions that cost six nanoseconds,
+against the four loads D872 took out that cost nothing. A dispatch is not a
+dispatch.
+
+Then three attempts, all slower. Holding the run's four fixed numbers in locals
+at the top of `execute` took a frame step from about 118 to about 140. Only
+reading the callee's own three fields once, adding no loop-level local at all,
+took it to about 129. Both worse for the same reason: the dispatch loop is at
+its register budget, and one more value living across the two `fail` branches is
+one the compiler spills — and what it spills is something used every
+instruction. The loads a hoist saves happen twice an entity; the spills happen
+fifty-nine times.
+
+So nothing was done to `KEST_OP_CALL`. D869 and D872 found four fields worth
+holding in locals and this found the fifth that is not: there is a budget, the
+machine is inside it, and the way to tell is to measure rather than to reason
+about which loads a line of C does.
+
+What is kept is the measurement. `stepAlone` sits beside `step` in the
+instrument — the same reads, arithmetic and writes in the same order — and the
+two are held to the same count over the same entities, so a change made to one
+helper and not the other is a wrong answer rather than a wrong duration. Timed
+in one round loop rather than two: apart the difference read four to eighteen,
+together it reads five to seven.
+
+Recorded as D873.
+
+**Runs:** `make check`, everything passing. `make time`, four instruments.
+
+**Next:** six turns of this have said the same thing in six ways — the machine
+is where the time is, and it is close to what this compiler will give. Stop
+optimising and go back to the language. `docs/decisions.md` has D001 to D873 and
+the worklog has every turn; read what the language still cannot do that a
+program written in it would want, pick the one that the roadmap's `types` stage
+points at, and write down what it would take. One thing, with what it costs the
+checker, the compiler and the machine written beside it.

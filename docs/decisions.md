@@ -26374,3 +26374,68 @@ what any one of them costs.** A `load` is a slot read and a pointer bump, and
 the processor is already several instructions ahead by the time it retires. What
 costs is memory the machine reaches through a pointer it cannot prove is
 unchanged, and there were three of those and now there are none.
+
+## D873: what a call costs, and three ways of making it cheaper that made it dearer
+
+A call is the one instruction the machine runs that is not one instruction. It
+reads which body from the module's list, asks whether calls may nest one deeper,
+works out where the callee's slots start, asks whether there is room for them,
+writes five fields of a frame and moves four locals. Two calls and two returns
+an entity of a frame step.
+
+**What could it have been told beforehand?** All of it, more or less: which body
+is known when the call is compiled; how deep calls may nest and where the stack
+ends are set when the machine is made and never move; and what the callee says
+about itself — where its code is, where its constants are, how many slots it
+takes, how much room it works in — is in a chunk that does not change.
+
+**So the number first.** `tools/frame.kest` now measures it rather than
+guessing: the same frame written twice, once calling two helpers and once with
+those helpers written out where they are called, timed in the same rounds.
+
+```
+117 ns per entity per step, 5 ns of it the two calls it makes, best of 7 over 10000, spread 13%
+```
+
+**Five nanoseconds of a hundred and seventeen — about a twentieth.** Two calls
+and two returns, so a little over a nanosecond each. Counted rather than timed,
+the two frames are 58.9 instructions an entity and 55.9: four instructions that
+cost six nanoseconds, against the four `load`s D872 took out that cost nothing.
+*A dispatch is not a dispatch.*
+
+**And then three attempts, all of which made it slower.**
+
+| | a frame step an entity |
+|---|---|
+| as it stands | ~117–120 ns |
+| the run's fixed numbers held in locals | ~139–150 |
+| only the callee's own fields read once | ~129–131 |
+
+The first held four things that genuinely never change during a run — the list
+of bodies, the frames, how deep calls may nest, where the stack ends — in locals
+at the top of `execute`. The second did not add a local to the loop at all: it
+only read `callee->code`, `callee->constants` and `callee->slot_count` once, at
+the top of the call, instead of where each is used.
+
+Both are worse, and for the same reason. *The dispatch loop is at its register
+budget.* It already holds `top`, `ip`, `mine`, `constants`, `frame` and the
+rest, and one more value that must live across the two `fail` branches is one
+the compiler spills — and it spills something that was being used every
+instruction rather than the thing that was added. The loads a hoist saves happen
+twice an entity; the spills it causes happen fifty-nine times.
+
+So nothing was done to `KEST_OP_CALL`, and what this entry leaves is the number
+and the reason. D869 and D872 found four fields worth holding in locals and this
+found the fifth that is not: **there is a budget, the machine is inside it, and
+the way to tell is to try and measure rather than to reason about which loads a
+line of C does.**
+
+*What is kept is the measurement.* `tools/frame.kest` carries `stepAlone`
+beside `step` — the same reads, the same arithmetic, the same writes, in the
+same order, with the calls written out — and the two are held to giving the same
+count over the same entities, so a change made to one helper and not to the
+other is a wrong answer rather than a wrong duration. The two are timed inside
+one round loop rather than one loop after the other: measured apart the
+difference read anywhere between four and eighteen nanoseconds, and measured
+together it reads five to seven. The spread on the line is the bigger of the two
+loops' own.
