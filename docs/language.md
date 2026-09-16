@@ -552,8 +552,8 @@ error[K0636]: `greets` takes text in slot 0 and this did not come from this mach
 ```
 
 Whether an argument holds anything of the sort is a walk of its pieces, not of
-its type: a word is text or a handle, a tag is a tag, and every other kind is a
-number in a slot — which is whatever the host put there. An argument of numbers
+its type: a word is a handle, text is bytes, a tag is a tag, and every other
+kind is a number in a slot — which is whatever the host put there. An argument of numbers
 costs the walk that says so and nothing else.
 
 Which kind of handle a slot holds is read at the door as well. Both kinds begin
@@ -3233,10 +3233,19 @@ memory is shared — and not the widths of the slots they go in. A `bool`
 argument is `KEST_L_U8`, one byte, and the slot it is written into is eight of
 them. Which member of a `KestValue` a slot is written and read through is the
 other reading of the same kind, and `kest_slot_of` says which: `KEST_L_F32` and
-`KEST_L_F64` are `real`, `KEST_L_WORD` is `text` or `object`, `KEST_L_PAYLOAD`
-is whatever the tag beside it says, and every other kind, however narrow, is
-`integer`. A host that reads a kind and writes the width it names writes one
-byte of the eight, and the machine reads all eight.
+`KEST_L_F64` are `real`, `KEST_L_WORD` is `object`, `KEST_L_TEXT` is `text`,
+`KEST_L_PAYLOAD` is whatever the tag beside it says, and every other kind,
+however narrow, is `integer`. Every kind names one member, which is what makes
+the answer worth asking for. A host that reads a kind and writes the width it
+names writes one byte of the eight, and the machine reads all eight.
+
+`KEST_L_TEXT` is the last of the five this kind was hiding, after the tag, the
+byte an optional keeps, a truth and a reference. It said `KEST_L_WORD` until
+D896, which is the width and not what it is: `text`, `[u8]` and `store<T>` were
+one kind, and the answer that came with it — `text` or `object`, whichever the
+type is — sent a host to the declaration for the one thing a layout is for.
+Reading a store's handle through `text` is a walk to a nought byte over the
+machine's own memory.
 
 `KEST_L_TAG` is the four bytes of a tag, written and read as a whole number like
 any other. What it is for is not its width: it is the one piece of a layout that

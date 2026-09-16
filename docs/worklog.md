@@ -34199,3 +34199,49 @@ optional, a case with a payload — and for each, write down what a host reading
 the wrong member would get and whether the engine could have said so. Where it
 could, make it say so; where it could not, say why in the header beside the
 union, which is the one place a host reads before it writes any of this.
+
+## A word was two things
+
+The Next said the engine does not hold a host to what it reads out of a frame.
+It does, and has since D560: every shape a crossing can answer with — fourteen
+of them, from a byte to an optional piece of text — asked of `kest_frame_gives`,
+then `kest_frame_reads` asked with every wrong kind in every slot and with one
+slot too few and one too many. Nothing wrong got through.
+
+What the walk found was in the answers. Three shapes came back the same:
+
+```text
+someText       1 slot(s): word
+aGrowing       1 slot(s): word
+aStore         1 slot(s): word
+```
+
+`text`, `[i32]` and `store<Pair>` were one kind, and the answer beside it —
+read it through `text` or `object`, whichever the type is — sent a host to the
+declaration for the one thing a layout is for. Reading a store's handle through
+`text` is a walk to a nought byte over the machine's own memory. It is not
+something the engine can catch afterwards: a union read is plain C and the
+machine never sees it, so the only place to catch it is in what a host is told
+first.
+
+So `KEST_L_TEXT`, split out of `KEST_L_WORD`, and `KEST_S_TEXT` beside it. Every
+kind names one member now. It is the fifth kind that one was hiding — the tag,
+the byte an optional keeps, a truth, a reference, and now text — and all five
+were the same shape: a name that said the width and not what it is.
+
+It paid at once. Both hosts had declarations to correct and the engine named
+each: *`embed.greets` takes `text` in slot 0 and this host says `word`*. Nine in
+all, every one right about the width and silent about the rest.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the sixth, if there is one. Four of the five splits were found by a
+reader; this one was found by a walk that printed what every shape answers and
+looked for two that matched. Do that walk as a rule rather than by hand: for
+every type this language has, ask the compiler what a value of it lays out as,
+and gather the shapes by the run of kinds they come to. Two different types with
+the same run of kinds are two things a host lends or reads under one name —
+`struct { at: i32?, n: i32 }` against a number, a `bool` and a number was D714's,
+and the only reason it was found is that somebody wrote both down. A list of
+every pair still in that state is either empty, which is worth knowing, or it is
+the next four decisions.

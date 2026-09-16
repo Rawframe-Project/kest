@@ -85,7 +85,7 @@ typedef struct {
     bool gives;
 } Provided;
 
-static const uint8_t one_piece_of_text[] = {KEST_L_WORD};
+static const uint8_t one_piece_of_text[] = {KEST_L_TEXT};
 
 static const Provided provided[] = {
     {"Host.write", write_it, one_piece_of_text, 1, false},

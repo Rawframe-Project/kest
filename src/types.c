@@ -1117,6 +1117,10 @@ uint8_t kest_scalar_of(const KestType *type) {
     // one kind with the handles it is handed beside. See D715.
     case KEST_T_REF:
         return KEST_L_REF;
+    // Bytes rather than a handle, which is the difference a host reading a
+    // frame cannot make out of a width. See D896.
+    case KEST_T_TEXT:
+        return KEST_L_TEXT;
     default:
         return KEST_L_WORD;
     }

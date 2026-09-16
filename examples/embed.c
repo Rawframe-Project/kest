@@ -1045,12 +1045,13 @@ static bool put_number(KestValue *slot, uint8_t kind, double number) {
         slot->integer = (int64_t)number;
         return true;
     case KEST_S_WORD:
+    case KEST_S_TEXT:
     case KEST_S_TAGGED:
-        // Neither is a number this host has one of: a word is text or a
-        // handle, and a payload is whatever the tag beside it says. A host
-        // with one of those lends or reads a tag rather than writing a number,
-        // and saying so here is what keeps this from writing a slot it does
-        // not understand.
+        // None of the three is a number this host has one of: a word is a
+        // handle, text is bytes, and a payload is whatever the tag beside it
+        // says. A host with one of those lends, hands text over or reads a tag
+        // rather than writing a number, and saying so here is what keeps this
+        // from writing a slot it does not understand.
         return false;
     }
     return false;
@@ -1070,8 +1071,9 @@ static bool got_number(const KestValue *slot, uint8_t kind, double *number) {
         *number = (double)slot->integer;
         return true;
     case KEST_S_WORD:
+    case KEST_S_TEXT:
     case KEST_S_TAGGED:
-        // The same two this host has no number for going the other way.
+        // The same three this host has no number for going the other way.
         return false;
     }
     return false;
@@ -2035,7 +2037,7 @@ int main(int argc, char **argv) {
         {"Io.write", 1, false, 0, NULL, 0, false, {0}, 0},
         {"Engine.decide", 1, true, sizeof(int32_t), NULL, 0, false,
          {KEST_L_I32}, 1},
-        {"Engine.name", 0, true, 0, NULL, 0, false, {KEST_L_WORD}, 1},
+        {"Engine.name", 0, true, 0, NULL, 0, false, {KEST_L_TEXT}, 1},
         {"Engine.rank", 1, true, sizeof(Point), crossing, 3, false,
          {KEST_L_I32}, 1},
         {"Engine.hurt", 1, true, sizeof(Event), tagging, 3, true,
@@ -2048,7 +2050,7 @@ int main(int argc, char **argv) {
         // name is a word the machine has to own. Nought bytes for what it
         // takes, because it takes nothing.
         {"Engine.who", 0, true, 0, NULL, 0, false,
-         {KEST_L_WORD, KEST_L_I32}, 2},
+         {KEST_L_TEXT, KEST_L_I32}, 2},
     };
 
     // What the program asks this host for, read rather than guessed: starting
@@ -2726,7 +2728,7 @@ int main(int argc, char **argv) {
         {"footed", {KEST_L_TAG, KEST_L_I32}, 2, {KEST_L_I32}, 1},
         // A shape with a piece of text in it, handed over by value: two slots,
         // and the first is a word the machine has to own.
-        {"greets", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_I32}, 1},
+        {"greets", {KEST_L_TEXT, KEST_L_I32}, 2, {KEST_L_I32}, 1},
         {"whoIs", {0}, 0, {KEST_L_I32}, 1},
         // The other shape with a flag in it: a value, the byte that says
         // whether it is there, and a number. The flag is a byte the same as
@@ -2758,10 +2760,10 @@ int main(int argc, char **argv) {
         {"popped", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         {"took", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         {"emptied", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
-        {"under", {0}, 0, {KEST_L_WORD}, 1},
-        {"named", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
+        {"under", {0}, 0, {KEST_L_TEXT}, 1},
+        {"named", {KEST_L_TEXT}, 1, {KEST_L_I32}, 1},
         {"atOnce", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
-        {"copied", {KEST_L_WORD}, 1, {KEST_L_WORD}, 1},
+        {"copied", {KEST_L_WORD}, 1, {KEST_L_TEXT}, 1},
         {"blank", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_I32}, 1},
         {"first", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         // A place in a store, which is a number rather than a handle: what
@@ -2773,7 +2775,7 @@ int main(int argc, char **argv) {
         {"totalOf", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         {"answerInto", {KEST_L_WORD, KEST_L_I32, KEST_L_I32}, 3,
          {KEST_L_I32}, 1},
-        {"sayInto", {KEST_L_WORD, KEST_L_I32, KEST_L_WORD}, 3,
+        {"sayInto", {KEST_L_WORD, KEST_L_I32, KEST_L_TEXT}, 3,
          {KEST_L_I32}, 1},
         {"worn", {KEST_L_WORD}, 1, {KEST_L_I32}, 1},
         {"moved", {KEST_L_F32, KEST_L_F32, KEST_L_F32, KEST_L_F32}, 4,
@@ -2785,7 +2787,7 @@ int main(int argc, char **argv) {
          {KEST_L_F32}, 1},
         {"heaviestCell", {KEST_L_WORD, KEST_L_I32}, 2,
          {KEST_L_I32, KEST_L_F32}, 2},
-        {"asWritten", {0}, 0, {KEST_L_WORD}, 1},
+        {"asWritten", {0}, 0, {KEST_L_TEXT}, 1},
         {"ranked", {KEST_L_F32, KEST_L_F32, KEST_L_F32}, 3, {KEST_L_I32}, 1},
         // A function value is one slot holding which function it is, which is
         // a word like any other handle — and a word carries no promise, which
@@ -4332,6 +4334,29 @@ int main(int argc, char **argv) {
     // every frame keeps what it was given rather than saying it again — this
     // one asks for the same bytes twice and gets the same text back, which is
     // what makes a name a host says once cost once.
+    // Bytes or a handle, which a layout could not say until D896: `text`,
+    // `[u8]` and `store<T>` were one kind, and the answer that came with it
+    // sent a host to the declaration for the one thing a layout is for.
+    // Reading a store's handle through `text` is a walk to a nought byte over
+    // the machine's own memory; reading text through `object` and handing it
+    // back is the same the other way. They are two kinds now, and the two
+    // members are two answers.
+    {
+        int32_t says = kest_entry(engine.runtime, "under");
+        int32_t lends = kest_entry(engine.runtime, "ownArray");
+        const KestLayout *of_text = kest_frame_gives(engine.runtime, says);
+        const KestLayout *of_handle = kest_frame_gives(engine.runtime, lends);
+        if (says < 0 || lends < 0 || of_text == NULL || of_handle == NULL ||
+            of_text->count != 1 || of_handle->count != 1 ||
+            of_text->pieces[0].kind == of_handle->pieces[0].kind ||
+            kest_slot_of(of_text->pieces[0].kind) != KEST_S_TEXT ||
+            kest_slot_of(of_handle->pieces[0].kind) != KEST_S_WORD ||
+            kest_slot_of(KEST_L_REF) != kest_slot_of(KEST_L_I64)) {
+            fprintf(stderr, "a layout says the same of bytes and of a handle\n");
+            return 1;
+        }
+    }
+
     KestValue name = kest_text(engine.runtime, "the engine", 10);
     size_t paid = kest_heap_used(engine.runtime);
     if (name.text == NULL || strcmp(name.text, "the engine") != 0) {

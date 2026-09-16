@@ -73,8 +73,19 @@ typedef enum {
     KEST_L_U64,
     KEST_L_F32,
     KEST_L_F64,
-    // A handle, a piece of text or a reference: a machine word as it is.
+    // A handle: an array, a store, a function value — a machine word as it is,
+    // read and written through `object`.
     KEST_L_WORD,
+    // And a piece of text, which is a machine word too and is not read like
+    // one. It said `KEST_L_WORD` until D896, which is the width and not what
+    // it is: a host handed a frame saw the same kind for `text`, for `[i32]`
+    // and for `store<T>`, and the answer that came with it — read it through
+    // `text` or `object`, whichever the type is — sent a reader to the
+    // declaration for the one thing a layout is for. Reading a store's handle
+    // through `text` is a `strlen` over the machine's own memory, and nothing
+    // between the two says so. The fifth kind this one was hiding, after the
+    // tag, the byte an optional keeps, a truth and a reference.
+    KEST_L_TEXT,
     // What a case of an enum carries, which the tag beside it says. A host
     // reading a layout switches on the tag and knows what is there; what it
     // must not do is read it as the word a handle is, which is what this said
@@ -123,11 +134,15 @@ typedef enum {
     // `KEST_L_F32` and `KEST_L_F64`: `real`, a `double` in the slot either
     // way, which is what a layout of an `f32` array is not.
     KEST_S_REAL,
-    // `KEST_L_WORD`: `text` or `object`, whichever the type is. A layout says
-    // a machine word and which of the two it is comes from the declaration.
-    // `KEST_L_REF` used to be one of these and is not a word: it is a number,
-    // and it answers `KEST_S_INTEGER` like every other number.
+    // `KEST_L_WORD`: `object`, which is what a handle is. `KEST_L_REF` used to
+    // be one of these and is not a word: it is a number, and it answers
+    // `KEST_S_INTEGER` like every other number. `KEST_L_TEXT` used to be one
+    // too, and answers `KEST_S_TEXT`: every kind names one member now, which
+    // is what makes this answer worth asking for. See D896.
     KEST_S_WORD,
+    // `KEST_L_TEXT`: `text`, which a host reads as the bytes it is and hands
+    // over with `kest_text`.
+    KEST_S_TEXT,
     // `KEST_L_PAYLOAD`: what the case carries, which the tag beside it says. A
     // host reads the tag first and asks this about the type that came with it.
     KEST_S_TAGGED,

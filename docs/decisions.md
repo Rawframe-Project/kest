@@ -27647,3 +27647,59 @@ guarded, it is that guarding happened wherever somebody was standing. Twenty-
 three right and two wrong reads, from the outside, exactly like twenty-three
 right and two wrong — a boundary that mostly holds, which is the kind nobody
 checks.
+
+## D896: a word was two things
+
+The Next said the engine holds a host to what it writes into a frame and not to
+what it reads out. That was wrong, and the walk that found out is the value:
+every shape a crossing can answer with — a byte, a number, a wide number, a
+float, a double, a truth, text, a struct, a fixed run, an optional, a case with
+a payload, a growing array, a store, an optional piece of text — asked of
+`kest_frame_gives`, and then `kest_frame_reads` asked with every wrong kind in
+every slot, and with one slot too few and one too many.
+
+Nothing wrong got through. `kest_frame_reads` holds a host reading a frame
+exactly as `kest_frame_fills` holds one writing into it, and has since D560.
+
+**What the walk found instead was in the answers.** Three of the shapes came
+back the same:
+
+```text
+someText       1 slot(s): word
+aGrowing       1 slot(s): word
+aStore         1 slot(s): word
+```
+
+`text`, `[i32]` and `store<Pair>` were one kind, and the answer beside it —
+*read it through `text` or `object`, whichever the type is* — sent a host to the
+declaration for the one thing a layout is for. A host reading a store's handle
+through `text` walks to a nought byte over the machine's own memory; one reading
+text through `object` and handing it back is the same in reverse. Neither is
+something the engine can catch after the fact, because a union read is plain C
+and the machine never sees it — so the only place it can be caught is in what a
+host is told before it reads.
+
+So `KEST_L_TEXT`, split out of `KEST_L_WORD`, and `KEST_S_TEXT` beside it.
+**Every kind names one member now**, which is what makes `kest_slot_of` an
+answer rather than a hint.
+
+This is the fifth kind that one was hiding: the tag (D708), the byte an optional
+keeps (D714), a truth (D839), a reference (D715), and now text. Every one of the
+five was the same shape — a name that said the width and not what it is — and
+every one of them was found by somebody reading a layout and being unable to
+tell two things apart. That is five for five, and it is the argument for the
+rule the language already keeps for itself: a kind says what a piece *means*,
+not how wide it is.
+
+The split paid at once. Both hosts in this tree had declarations to correct, and
+the engine named each one:
+
+```text
+error[K0634]: `embed.greets` takes `text` in slot 0 and this host says `word`
+```
+
+Eight places in `examples/embed.c` and one in `examples/least.c` — nine
+declarations that had been right about the width and silent about the rest.
+`examples/embed.c` holds the new fact by asking the two doors that answer it:
+`under()` gives bytes and `ownArray()` gives a handle, and the two kinds and the
+two members are four different answers.
