@@ -34469,3 +34469,46 @@ the machine too, in the build that checks itself: at every `call`, walk the
 slots the caller pushed against the layouts the callee declares and hold each to
 being the kind it says. It is `handed_well` — which already exists for a
 crossing — turned inward.
+
+## A host is asked and the compiler was trusted
+
+D901 held a call to handing over as many slots as the body takes. What is in
+them it said nothing about — and that is the half worth having. A body says what
+each argument is made of, a piece a slot, and a host is held to exactly that at
+a crossing.
+
+The division is written down in the header at `kest_frame_fills`: *a frame of
+the right width with the wrong things in it is the mistake this is for.* The
+same sentence is true of the machine reading its own compiler's work, and the
+same door answers it — `fits_the_piece` weighs a host's slot against the kind a
+layout says, and turned inward it weighs the caller's.
+
+```text
+error[K0655]: this call hands `narrow` something in slot 0 that no `i8` holds
+```
+
+Values with a tag in them are left out, for D899's reason: what their slots hold
+is the tag's to say. Every example, the library, both instruments and both hosts
+come back clean and the checked build is no slower. The hole is one width taken
+out of `emit_narrow` — a narrowing left out is a slot holding three hundred
+where an `i8` goes.
+
+That makes four: the count at `return`, the count at a call and at a crossing,
+and what is in a call's slots. The machine now asks of its own compiler three of
+the four things it asks of a host, and the fourth — what a crossing answers with
+— it has asked since D719. There is no longer a question the boundary puts to a
+host that the machine does not put to itself.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same question one floor down. Four turns have held the compiler's
+arithmetic to the machine's where a frame changes hands; what nothing holds is
+the arithmetic *inside* a body — the instructions that move slots rather than
+frames. `load.n`, `store.n`, `load.slots`, `store.slots`, `const.run`,
+`const.at`, `field`, `index` and `elem.addr` each take a count or a stride out
+of the instruction and move that many slots, and each of those numbers is the
+compiler's belief about a type. A count one out reads the slot above the value
+or writes over the one below it, inside the body, where the guards at the frame
+boundary cannot see. Hold each against the layout of what it is moving: the
+chunk knows the type of every local it names, so ask whether the run a `load.n`
+takes is the run the name holds.

@@ -5604,6 +5604,39 @@ fn main() -> i32 {
         "caught": "a build that is not there answered as though it were",
     },
     {
+        # A call putting into a frame something the body it enters does not
+        # hold. The count of the slots is held beside this and says nothing
+        # about what is in them: a narrowing left out is a slot holding three
+        # hundred where an `i8` goes, and the body reads it as whatever the
+        # arithmetic it does next makes of it. A host is asked this at a
+        # crossing and the compiler was trusted. See D902.
+        "what": "a call putting in a frame what the body does not hold",
+        "file": "src/compile.c",
+        "from": """    if (type == NULL || type->width == 64 ||
+        (type->tag != KEST_T_INT && type->tag != KEST_T_FLAGS)) {
+        return;
+    }""",
+        "to": """    if (type == NULL || type->width == 64 || type->width == 8 ||
+        (type->tag != KEST_T_INT && type->tag != KEST_T_FLAGS)) {
+        return;
+    }""",
+        "make": ["debug"],
+        "binary": "kest-debug",
+        "program": "narrowing.kest",
+        "source": """import std.text
+
+fn narrow(n: i8) -> i32 {
+    return i32(n)
+}
+
+fn main() -> i32 {
+    let wide = len(text.repeat("a", 300))
+    return narrow(i8(wide)) - 44
+}
+""",
+        "caught": "something in slot 0 that no `i8` holds",
+    },
+    {
         # A call handing over one slot more than the body it enters takes. The
         # callee's names then sit one below where the caller left them and
         # every slot it reads is somebody else's, while the program keeps

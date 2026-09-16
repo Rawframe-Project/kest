@@ -27922,3 +27922,36 @@ nothing at this boundary says the third slot is the `f32` the third parameter
 wants — that is the checker's, once, before anything runs. It is the same
 division `kest_frame_fills` draws for a host, and the machine trusts its own
 compiler where it does not trust one.
+
+## D902: a host is asked and the compiler was trusted
+
+D901 held a call to handing over as many slots as the body takes. What is *in*
+them it says nothing about, and that is the half worth having: a body says what
+each argument is made of, a piece a slot, and a host is held to exactly that at
+a crossing. The compiler was not.
+
+The division is written down in the header, at `kest_frame_fills`: *a frame of
+the right width with the wrong things in it is the mistake this is for —
+`kest_call` can see how wide a frame is and not what a host meant to put in it.*
+The same sentence is true of the machine reading its own compiler's work, and
+the same door answers it. `fits_the_piece` is what weighs a host's slot against
+the kind a layout says; turned inward it weighs the caller's.
+
+```text
+error[K0655]: this call hands `narrow` something in slot 0 that no `i8` holds
+```
+
+A value with a tag in it is left out, for D899's reason: what its slots hold is
+the tag's to say and the pieces of one are not a run.
+
+Every example, the library, both instruments and both hosts come back clean, and
+the checked build is no slower to notice. The hole is one width taken out of
+`emit_narrow`: a narrowing left out is a slot holding three hundred where an
+`i8` goes, and before this the body read it as whatever the arithmetic it did
+next made of it.
+
+*What this makes four of* is the count at `return` (D900), the count at a call
+and at a crossing (D901), and what is in a call's slots. The machine now asks of
+its own compiler three of the four things it asks of a host, and the fourth —
+what a crossing *answers* with — it has asked since D719. There is no longer a
+question the boundary puts to a host that the machine does not put to itself.

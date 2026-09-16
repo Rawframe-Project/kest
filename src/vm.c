@@ -3397,6 +3397,41 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                                  "and what the machine moved disagree");
                 return false;
             }
+            // And what is in them, which the count says nothing about. A body
+            // says what each argument is made of, a piece a slot, and that is
+            // what a host is held to at a crossing -- a host is asked and the
+            // compiler is trusted, which is the same division `handed_well`
+            // draws from the other side. Turned inward: the slots the caller
+            // pushed, held to the kinds the callee declares. A value with a
+            // tag in it is left out, because what its slots hold is the tag's
+            // to say and the pieces of one are not a run. See D902.
+            {
+                uint32_t slot = 0;
+                for (uint16_t which = 0;
+                     which < callee->takes_count && slot < argument_slots;
+                     which++) {
+                    const KestLayout *what =
+                        &module->layouts[callee->takes[which]];
+                    for (uint16_t piece = 0;
+                         piece < what->count && slot < argument_slots;
+                         piece++, slot++) {
+                        if (what->tagged ||
+                            fits_the_piece(what->pieces[piece].kind,
+                                           base[slot])) {
+                            continue;
+                        }
+                        fail(vmp, frame, instruction, "K0655",
+                             "this call hands `%s` something in slot %u that "
+                             "no `%s` holds",
+                             callee->wrote, slot,
+                             the_width_of(what->pieces[piece].kind));
+                        kest_diags_fault(vmp->diags,
+                                         "what the compiler put in a frame "
+                                         "and what the body takes disagree");
+                        return false;
+                    }
+                }
+            }
 #endif
             if (base + callee->slot_count + callee->stack_needed > rt->limit) {
                 // With the number, because `out of stack` on its own tells
