@@ -59,7 +59,13 @@ least: examples/least
 embed: examples/embed
 embed-debug: examples/embed-debug
 
-# Everything, so that "it passes" is a command rather than a claim.
+# What a change is tried against while it is being written: the build, the
+# examples, the library, the one form, a diagnostic and the other host. Seconds.
+fast: tools/fast.sh
+	@tools/fast.sh
+
+# Everything, so that "it passes" is a command rather than a claim. Minutes.
+# Run at a milestone and before saying something is done, not after every edit.
 check: tools/check.sh
 	@tools/check.sh
 
@@ -96,7 +102,7 @@ clean:
 	rm -rf build kest kest-debug libkest.a examples/embed \
 	    examples/embed-debug examples/least tools/inward
 
-.PHONY: debug least embed embed-debug check time install uninstall clean
+.PHONY: debug least embed embed-debug fast check time install uninstall clean
 
 -include $(RELEASE_OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) build/release/main.d \
     build/debug/main.d build/release/embed.d build/release/least.d

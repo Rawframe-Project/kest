@@ -774,10 +774,14 @@ for entry in decisions.split('\n## ')[1:]:
         failed = 1
 
 # What an entry in the worklog holds. Every one of them says what was run,
-# because an entry that says a thing was done and not what said so is a claim;
-# and the last one says what is next, because that line is what the next turn
-# reads. The older ones without a `**Next:**` are what the file looked like
-# before the loop had one, and are left alone.
+# because an entry that says a thing was done and not what said so is a claim.
+#
+# A `**Next:**` line is not required and is no longer read as a queue. It was,
+# and the entries that carry one are left as they are, but a line saying what
+# somebody thought of next is not a decision that the next turn does it: it made
+# the worklog a source of scope, and scope that comes from the last thing
+# written is scope nobody chose. What is next comes from whoever is directing
+# the work.
 work = open('docs/worklog.md').read()
 entries = re.split(r'\n## ', work)[1:]
 if not entries:
@@ -788,9 +792,6 @@ for entry in entries:
         print("docs/worklog.md: `%s` does not say what was run"
               % entry.split('\n')[0])
         failed = 1
-if entries and '**Next:**' not in entries[-1]:
-    print("docs/worklog.md: the last entry does not say what is next")
-    failed = 1
 
 # A decision named where somebody would chase it has to be one that was made.
 # `D193` in a comment is a promise that `docs/decisions.md` says something

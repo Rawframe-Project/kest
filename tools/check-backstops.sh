@@ -7287,29 +7287,6 @@ left off.
         "caught": "writes `--as-json` and the command line does not read it",
     },
     {
-        # A turn that wrote down what it did and not what comes next. The
-        # `**Next:**` line on the last entry is the one line in these
-        # documents that is read by something other than a person: it is what
-        # the next turn is given, so a document missing it is work that stops
-        # rather than a document that reads badly. Nothing in the entry there
-        # today is there tomorrow, so what this breaks is written after the
-        # file rather than quoted out of it.
-        "what": "an entry that says what was run and not what is next",
-        "file": "docs/worklog.md",
-        "end": """
-## A turn that said what it did and not what comes next
-
-Something was done and written down here, and the line the next turn reads was
-left off.
-
-**Runs:** `make check`, everything passing.
-""",
-        "make": [],
-        "tool": "tools/check-docs.sh",
-        "arguments": ["docs/language.md", "docs/decisions.md"],
-        "caught": "the last entry does not say what is next",
-    },
-    {
         # A section renamed, which is a document a check can no longer read.
         # The rules a host has to keep for itself are held by a host doing each
         # of them wrong on purpose, and what pairs the two is a heading. Rename

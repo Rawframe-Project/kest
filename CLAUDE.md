@@ -36,7 +36,7 @@ tree and holds them to each other.
 | `docs/decisions.md` | Decisions and why. Append-only; supersede, do not delete, and say `supersedes` in that word so the list at the top can be held to it. What a later one replaced is listed there, because nothing here is edited and an entry that is no longer what this project does reads exactly like one that is. |
 | `docs/language.md` | Syntax and semantics reference. |
 | `README.md` | The front page: what this is, how to build it, what runs. It is the one document written for somebody who has not read the others, so it says what the language does and points at the three below rather than repeating them. Held by `check-docs.sh` to naming files that are there, because a front page nothing reads is a front page nothing catches: this one said structs did not run yet for the length of the tree having them. |
-| `docs/worklog.md` | What was built, in order. Newest last. An entry is a heading, what was done and what it turned up, a `**Runs:**` line saying what was run to believe it, and — on the last one — a `**Next:**` line, which is what the next turn reads. `check-docs.sh` holds the two lines. |
+| `docs/worklog.md` | What was built, in order. Newest last. An entry is a heading, what was done and what it turned up, and a `**Runs:**` line saying what was run to believe it, which `check-docs.sh` holds. It is a record and not a queue: entries used to end with a `**Next:**` line that the next turn was given as its work, which made the last thing written the source of what happens next, and scope that comes from the last thing written is scope nobody chose. Those lines are left where they are and nothing reads them. What to do next comes from whoever is directing the work. |
 
 ## Layout
 
@@ -63,6 +63,10 @@ examples/          .kest programs that must keep working. Each one checks
                    `check.sh` runs one of its own.
 tools/             Build and development scripts. `make check` runs all of
                    them and everything else, and is what "it passes" means.
+                   `fast.sh` is the other tier and is not one of them: it is
+                   what `make fast` runs while a change is being written, in a
+                   tenth of a second, and everything in it `make check` does
+                   again.
                    `frame.kest` is the one measurement, run by `make time`.
                    What it prints is a number, what it was taken over, and
                    whether to believe it, and the gate holds the second and
@@ -644,8 +648,7 @@ tools/             Build and development scripts. `make check` runs all of
                    the heap and does not, about a command that says nothing to
                    a tool when nothing is wrong, about a section a check reads
                    under a name it no longer has, about the table of what the
-                   examples run read under a name it no longer has, about an
-                   entry that says what was run and not what is next, about a
+                   examples run read under a name it no longer has, about a
                    host whose binds a check can no longer read, about a fix the words show and the JSON
                    leaves out, about a frame that cost one thing in words and
                    another in JSON, about a peak that is under what the heap
@@ -1021,6 +1024,20 @@ where a build says the library will be is where an install puts it. And it
 is run: `check-commands.sh` installs into somewhere of its own, runs what it
 put there on a program that imports the library, and takes it away again — the
 lines being right is one thing and the files arriving is another.
+
+## Two tiers
+
+`make fast` is what a change is tried against while it is being written: the
+build, every example run for its answer, the library and the instruments
+resolving, the one form, a file with three mistakes in it reported as three and
+said as JSON, and the other host crossing the boundary in both directions. It
+takes about a tenth of a second and it is `tools/fast.sh`. It is not a gate and
+it proves nothing about itself; everything in it is also done by `make check`,
+in more shapes and under more builds.
+
+`make check` is the whole of it and takes minutes. Run it at a milestone and
+before saying something is done — not after every edit, which is what made a
+change cost four full runs of the gate and the gate the reason nothing moved.
 
 `make check` is the whole of it: both builds, both hosts, every example run or
 resolved, every command against every file under the sanitisers, every tool
