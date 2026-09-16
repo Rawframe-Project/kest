@@ -28474,3 +28474,36 @@ the way D915 does it — the loop lengths are a `const`, so the count is written
 in where the constant is and nothing else moves. Every number the reference now
 takes from a run is either held to a figure or said to be a duration, and there
 is no third kind.
+
+## D918: the instrument that cannot count itself
+
+`tools/inward` is the fourth instrument and the last one quoted in the reference
+with nothing beside its duration. D915 and D917 counted the other three by
+running the instrument's own bodies and reading `KEST_DEEP`. This one cannot be
+counted that way, and that turned out to be the thing worth writing down.
+
+A crossing in runs **two instructions** of the program — `load` and `return` —
+and **three** of the questions the checked build asks. A turn of the loop the
+same program runs inside one call in is **eleven** and **twelve**. Beside them:
+fifteen nanoseconds for the two and eighteen for the eleven.
+
+So almost everything a crossing in costs is outside anything the machine counts.
+It is the frame the host writes, the arguments weighed on the way in and the
+answer weighed on the way back, and none of those is an instruction. `KEST_DEEP`
+counts the program's half and the program's half is two instructions. That is
+the whole of what the machine can say about a call it was handed, and it is why
+`tools/inward.c` is C: the thing being measured is on the other side of the door
+from the thing that counts.
+
+It is also the plainest form of the thing D917 found in the crossing out. There,
+the count and the duration pointed opposite ways. Here the count is nearly
+silent and the duration is the whole measurement, and a reader who had only the
+count would conclude a crossing in is free.
+
+**How it is counted.** The program is `tools/inward.c`'s own, read out of the C
+string it keeps it in, the way the other three are read out of their files. The
+host is written by the check, because what has to vary is how many times it
+calls and that is the one thing the instrument fixes; it is compiled against the
+sanitised objects, since the build that checks itself is the one that counts. Two
+runs at two call counts, subtracted, so what the machine does either side of the
+work does not land in the number.

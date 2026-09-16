@@ -1688,6 +1688,154 @@ if reading_says is not None and have_checked:
                  None if ran_ref is None else sum(ran_ref.values())))
         failed = 1
 
+# And the fourth instrument, which is C because the host is what does the
+# calling. This is the one the machine cannot count about itself the way it
+# counts the other three: what a crossing in costs is mostly the frame the host
+# writes, the arguments weighed on the way in and the answer weighed on the way
+# back, and none of that is an instruction. So what is counted is the two
+# things the machine can say about a call it was handed -- the instructions the
+# program runs and the questions the build that checks itself asks -- and the
+# distance between those and the duration is the answer. The program is
+# `tools/inward.c`'s own, read out of the C string it keeps it in; the host is
+# written here, because what has to vary is how many times it calls and that is
+# the one thing that instrument fixes. See D918.
+INWARD = some("the program `tools/inward.c` measures", ''.join(re.findall(
+    r'"((?:[^"\\]|\\.)*)"',
+    re.search(r'PROGRAM\s*=\s*((?:\s*"(?:[^"\\]|\\.)*"\s*)+);',
+              open(os.path.join('tools', 'inward.c')).read()).group(1)
+    )).encode().decode('unicode_escape'))
+CALLING = """#include <stdio.h>
+#include <stdlib.h>
+#include "kest.h"
+
+int main(int argc, char **argv) {
+    if (argc != 6) {
+        return 2;
+    }
+    long rounds = atol(argv[2]);
+    long carried = atol(argv[4]);
+    KestBuild *build = kest_build(argv[1], "lib/", stderr, KEST_FORM_TEXT, 0);
+    if (build == NULL) {
+        return 2;
+    }
+    KestHost *host = kest_host_new();
+    KestRuntime *runtime = host == NULL ? NULL : kest_start(build, host, NULL);
+    kest_host_free(host);
+    if (runtime == NULL) {
+        return 2;
+    }
+    int32_t which = kest_entry(runtime, argv[3]);
+    if (which < 0) {
+        return 2;
+    }
+    for (long i = 0; i < rounds; i++) {
+        KestValue frame[2] = {{0}};
+        if (argv[5][0] == 'r') {
+            frame[0].real = (double)carried;
+        } else {
+            frame[0].integer = (int64_t)carried;
+        }
+        if (!kest_call(runtime, which, frame, 2)) {
+            kest_report(runtime, stderr, KEST_FORM_TEXT);
+            return 3;
+        }
+    }
+    kest_runtime_free(runtime);
+    kest_build_free(build);
+    return 0;
+}
+"""
+
+
+def a_host_that_calls():
+    pieces = [one for one in sorted(glob.glob(
+        os.path.join('build', 'debug', '*.o')))
+        if os.path.basename(one) != 'main.o']
+    if not pieces:
+        return None
+    calling = os.path.join(work, 'calling')
+    with open(calling + '.c', 'w') as writing:
+        writing.write(CALLING)
+    with open(os.path.join(work, 'inward.kest'), 'w') as writing:
+        writing.write(INWARD)
+    built = subprocess.run(
+        ['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-O0', '-g',
+         '-fsanitize=address,undefined', '-Iinclude', '-o', calling,
+         calling + '.c'] + pieces + ['-lm'],
+        capture_output=True, text=True, stdin=subprocess.DEVNULL)
+    return calling if built.returncode == 0 else None
+
+
+def what_a_call_in_runs(calling, named, rounds, carried, member):
+    ran = subprocess.run(
+        [calling, os.path.join(work, 'inward.kest'), str(rounds), named,
+         str(carried), member],
+        capture_output=True, text=True, stdin=subprocess.DEVNULL,
+        env=dict(os.environ, KEST_LIB='lib', KEST_DEEP='1'))
+    if ran.returncode != 0:
+        return None, None
+    ran_added = 0
+    asked_said = None
+    for line in ran.stderr.splitlines():
+        if line.startswith('ran '):
+            ran_added += int(line.split()[2])
+        if line.startswith('guards '):
+            asked_said = int(line.split()[1])
+    return (ran_added or None), asked_said
+
+
+# One call in, and one turn of the loop the same program runs inside one call
+# in. Neither is a difference of the other: a crossing in is a frame the host
+# wrote, and a turn of a loop is a hop and a call the machine reached. Both are
+# taken by subtracting two runs, so what the machine does either side of the
+# work does not land in the number. The instrument's own words for the two.
+def a_crossing_in(calling, named, member):
+    over_what = []
+    asked_over = []
+    for how_far in (ENTITIES * 50, ENTITIES * 100):
+        if named == 'inside':
+            ran_over, asked = what_a_call_in_runs(
+                calling, named, how_far, 1, member)
+        else:
+            ran_over, asked = what_a_call_in_runs(
+                calling, named, 1, how_far, member)
+        if ran_over is None or asked is None:
+            return None, None
+        over_what.append(ran_over)
+        asked_over.append(asked)
+    return ((over_what[1] - over_what[0]) // (ENTITIES * 50),
+            (asked_over[1] - asked_over[0]) // (ENTITIES * 50))
+
+
+inward_says = re.search(as_written(
+    r'a crossing in runs \*\*([a-z-]+) instructions\*\* of the program and'
+    r' \*\*([a-z-]+)\*\* of its questions, against \*\*([a-z-]+)\*\* and'
+    r' \*\*([a-z-]+)\*\* for a turn of that loop'), REFERENCE)
+some("the reference's paragraph about what a crossing in runs", inward_says)
+ran_in = None
+ran_turn = None
+asked_in = None
+asked_turn = None
+if inward_says is not None and have_checked:
+    calling_host = a_host_that_calls()
+    if calling_host is not None:
+        ran_in, asked_in = a_crossing_in(calling_host, 'inside', 'real')
+        ran_turn, asked_turn = a_crossing_in(calling_host, 'many', 'whole')
+    if (ran_in is None or ran_turn is None or
+            in_figures(inward_says.group(1)) != ran_in or
+            in_figures(inward_says.group(2)) != asked_in or
+            in_figures(inward_says.group(3)) != ran_turn or
+            in_figures(inward_says.group(4)) != asked_turn):
+        print("costs: the reference says a crossing in runs %s instruction(s) "
+              "and %s question(s) against %s and %s for a turn of that loop, "
+              "and a run says %s, %s, %s and %s"
+              % (in_figures(inward_says.group(1)),
+                 in_figures(inward_says.group(2)),
+                 in_figures(inward_says.group(3)),
+                 in_figures(inward_says.group(4)),
+                 ran_in, asked_in, ran_turn, asked_turn))
+        failed = 1
+
 shutil.rmtree(work, ignore_errors=True)
 if (one_copy_costs is None or many_copies_costs is None or
         many_copies_costs <= one_copy_costs * 2 or
@@ -2057,8 +2205,10 @@ if not failed:
           "writes out instruction by instruction, and a turn of a loop "
           "is %s instruction(s) calling a function of the program "
           "against %s crossing out, and a hop of one is %s, %s reading "
-          "through an index and %s through a reference, and one that "
-          "promises "
+          "through an index and %s through a reference, and a crossing "
+          "in from a host is %s instruction(s) and %s question(s) "
+          "against %s and %s for a turn of the loop it calls, and one "
+          "that promises "
           "`no.alloc` takes %u byte(s) of heap "
           "an entity against %u for one that makes a piece of text, %u for "
           "one that grows an array and %u for one that puts a pair in a "
@@ -2089,6 +2239,7 @@ if not failed:
              None if ran_hop is None else sum(ran_hop.values()),
              None if ran_index is None else sum(ran_index.values()),
              None if ran_ref is None else sum(ran_ref.values()),
+             ran_in, asked_in, ran_turn, asked_turn,
              quiet_frame, text_frame, grown_frame,
              keyed_frame, stored_frame))
 sys.exit(failed)

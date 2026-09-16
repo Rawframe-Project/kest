@@ -35134,3 +35134,48 @@ different one: what a crossing in costs the machine, in the things the machine
 can be asked about itself — frames pushed, slots handed over, questions the
 checked build asks at the boundary. Count those, write them beside the
 nanoseconds, and hold them the way the other three are held.
+
+## The instrument that cannot count itself (D918)
+
+`tools/inward` was the last number in the reference quoted as a duration with
+nothing beside it. It is counted now, and what the count says is that it cannot
+be counted.
+
+```text
+a crossing in from a host    2 instructions   3 questions   15 ns
+a turn of the loop it calls  11               12            18
+```
+
+Two instructions is `load` and `return` — the whole of the program's half of a
+call in. Fifteen nanoseconds for two instructions against eighteen for eleven
+means almost everything a crossing in costs is outside anything the machine
+counts: the frame the host writes, the arguments weighed on the way in, the
+answer weighed on the way back. None of those is an instruction, and that is why
+that instrument is C.
+
+It is the plainest form of what D917 found in the crossing out. There a count and
+a duration pointed opposite ways; here the count is nearly silent and the
+duration is the whole measurement. A reader with only the count would conclude a
+crossing in is free.
+
+The program is `tools/inward.c`'s own, read out of the C string it keeps it in.
+The host is written by the check, because what has to vary is how many times it
+calls, and it is compiled against the sanitised objects — the build that checks
+itself is the one that counts. Two call counts, subtracted.
+
+Every measurement in `What running costs` now carries a count beside its
+duration, and the four say four different things about the relation between the
+two.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** four instruments, four counts, and the checks that take them are four
+blocks of `check-costs.sh` that read a paragraph, run a program at two sizes and
+compare. Three of them go through `what_a_step_of` and the fourth has two
+functions of its own because its program is called rather than run. That is one
+rule written four times, and the reference is the list of what it is written
+about — each paragraph names its instrument, quotes its figures in bold and says
+what they are of. So read the list out of the document rather than keeping it in
+the check: a paragraph that quotes a bold figure beside an instrument is a thing
+to measure and hold, and an instrument in `tools` whose paragraph quotes none is
+a number nobody wrote down. Then a fifth instrument is a paragraph, not a block.

@@ -4314,6 +4314,19 @@ one `kest_call`.
 15 ns for a call in from a host and 18 ns for one the program makes in a loop, best of 7 over 1000000 calls, spread 6%
 ```
 
+This is the one of the four the machine cannot count about itself. What it can
+say is what it did: a crossing in runs **two instructions** of the program and
+**three** of its questions, against **eleven** and **twelve** for a turn of that
+loop. Fifteen nanoseconds for two instructions and eighteen for eleven — which
+means almost all of what a crossing in costs is outside anything the machine
+counts. It is the frame the host writes, the arguments weighed on the way in and
+the answer weighed on the way back, and none of those is an instruction.
+
+That is why a host writing the frame itself and calling straight in is cheaper
+than the machine reaching an instruction that starts a call, and it is why
+neither number is taken away from the other. What these two counts leave out is
+the work, and the duration beside them is the only thing that sees it.
+
 Those numbers are the machine they were taken on and nothing else — six cores,
 one of them busy with whatever else was running. What carries from one machine
 to another is the shape of them: that a crossing out costs a few nanoseconds

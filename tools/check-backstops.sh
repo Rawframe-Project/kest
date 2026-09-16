@@ -5717,6 +5717,21 @@ anywhere, and it is why the gate holds""",
         "caught": "a read through a reference 13",
     },
     {
+        # What a crossing in runs, written down and not measured. It is the
+        # instrument the machine cannot count about itself -- what a call in
+        # costs is the frame the host wrote and the weighing either side of it,
+        # and none of that is an instruction -- so what is held is the two
+        # things it can say about a call it was handed. See D918.
+        "what": "what a crossing in runs written down and not measured",
+        "file": "docs/language.md",
+        "from": """a crossing in runs **two instructions**""",
+        "to": """a crossing in runs **three instructions**""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "a crossing in runs 3 instruction(s)",
+    },
+    {
         # Room asked for in a store and not made. `store(n)` makes one with
         # room and this is the same sentence said to one that is already
         # there -- which is what a program has when the store is inside
