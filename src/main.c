@@ -83,6 +83,8 @@ static void help(FILE *out) {
     "                    the heap it runs on. A number of bytes, or one\n"
     "                    with K, M or G after it. Without this it asks for\n"
     "                    whatever it needs\n"
+    "  --               everything after this is the program's own, which\n"
+    "                    `std.os` hands it. Nothing before it is\n"
     "  --fuel <steps>    the most steps run, tick and call may take, where\n"
     "                    a step is a jump that goes back or a call. A\n"
     "                    number, or one with K, M or G after it. Without\n"
@@ -256,6 +258,122 @@ static FILE *program_wrote_to = NULL;
 static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
     fputs(frame[0].text, (FILE *)context);
+}
+
+// What `std.os` declares: a file, the words this command was started with, and
+// a clock. They are bound here because this host is a command line and a
+// command line may do those things. A host that is a game engine binds the ones
+// it wants a program to have and refuses the rest by not binding them, which is
+// the whole of the capability model. See D925.
+//
+// What was after `--` on the command line, which is what a program asks for
+// when it asks what it was started with. Kept here rather than threaded through
+// every call, because a bound door is handed a frame and a context and this is
+// neither: it is what the process was started with, and there is one process.
+static char **program_args = NULL;
+static int program_arg_count = 0;
+
+static void os_arg_count(KestValue *frame, KestRuntime *runtime,
+                         void *context) {
+    (void)runtime;
+    (void)context;
+    frame[0].integer = program_arg_count;
+}
+
+// An optional is the value and a byte after it saying whether the value is
+// there, which is two slots in a frame. Nothing is the byte set to nought, and
+// what is written where the value would be is not read.
+static void os_arg(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)context;
+    int32_t at = (int32_t)frame[0].integer;
+    if (program_args == NULL || at < 0 || at >= program_arg_count) {
+        frame[0] = kest_text(runtime, "", 0);
+        frame[1].integer = 0;
+        return;
+    }
+    frame[0] = kest_text(runtime, program_args[at],
+                         (uint32_t)strlen(program_args[at]));
+    frame[1].integer = 1;
+}
+
+// Reading a whole file. Nothing rather than empty text when it cannot be read:
+// a file that is not there and a file with nothing in it are different answers.
+static void os_file_read(KestValue *frame, KestRuntime *runtime,
+                         void *context) {
+    (void)context;
+    FILE *reading = fopen(frame[0].text, "rb");
+    if (reading == NULL) {
+        frame[0] = kest_text(runtime, "", 0);
+        frame[1].integer = 0;
+        return;
+    }
+    size_t room = 4096;
+    size_t held = 0;
+    char *bytes = malloc(room);
+    while (bytes != NULL) {
+        size_t read = fread(bytes + held, 1, room - held, reading);
+        held += read;
+        if (held < room) {
+            break;
+        }
+        char *grown = realloc(bytes, room * 2);
+        if (grown == NULL) {
+            free(bytes);
+            bytes = NULL;
+            break;
+        }
+        bytes = grown;
+        room *= 2;
+    }
+    bool wrong = bytes == NULL || ferror(reading);
+    fclose(reading);
+    if (wrong) {
+        free(bytes);
+        frame[0] = kest_text(runtime, "", 0);
+        frame[1].integer = 0;
+        return;
+    }
+    // A nought among the bytes would make text that stops early, and text that
+    // stops early is a file read as less than it is. Said as nothing rather
+    // than handed over short. See D344's rule, applied to a file.
+    if (memchr(bytes, 0, held) != NULL) {
+        free(bytes);
+        frame[0] = kest_text(runtime, "", 0);
+        frame[1].integer = 0;
+        return;
+    }
+    frame[0] = kest_text(runtime, bytes, (uint32_t)held);
+    frame[1].integer = 1;
+    free(bytes);
+}
+
+static void os_file_write(KestValue *frame, KestRuntime *runtime,
+                          void *context) {
+    (void)runtime;
+    (void)context;
+    const char *path = frame[0].text;
+    const char *bytes = frame[1].text;
+    FILE *writing = fopen(path, "wb");
+    if (writing == NULL) {
+        frame[0].integer = 0;
+        return;
+    }
+    size_t length = strlen(bytes);
+    bool wrote = fwrite(bytes, 1, length, writing) == length;
+    frame[0].integer = (fclose(writing) == 0 && wrote) ? 1 : 0;
+}
+
+static void os_file_exists(KestValue *frame, KestRuntime *runtime,
+                           void *context) {
+    (void)runtime;
+    (void)context;
+    FILE *there = fopen(frame[0].text, "rb");
+    if (there != NULL) {
+        fclose(there);
+        frame[0].integer = 1;
+        return;
+    }
+    frame[0].integer = 0;
 }
 
 // What the standard library declares and every host has to provide. A program
@@ -494,6 +612,11 @@ static KestHost *make_host(FILE *output) {
         !kest_host_bind(host, "Engine.blame", engine_blame, NULL) ||
         !kest_host_bind(host, "Engine.who", engine_who, NULL) ||
         !kest_host_bind(host, "Engine.weigh", engine_weigh, NULL) ||
+        !kest_host_bind(host, "Host.fileRead", os_file_read, NULL) ||
+        !kest_host_bind(host, "Host.fileWrite", os_file_write, NULL) ||
+        !kest_host_bind(host, "Host.fileExists", os_file_exists, NULL) ||
+        !kest_host_bind(host, "Host.argCount", os_arg_count, NULL) ||
+        !kest_host_bind(host, "Host.arg", os_arg, NULL) ||
         !kest_host_bind(host, "Io.read", io_read, NULL) ||
         !kest_host_bind(host, "Io.write", io_write, output)) {
         kest_host_free(host);
@@ -2326,6 +2449,18 @@ int main(int argc, char **argv) {
         kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
                            KEST_STARVED_SAYS);
         return 1;
+    }
+    // What is after `--` is the program's rather than this command's: a file
+    // named there would otherwise be read as another file to compile, and a
+    // count as how many events to send. `std.os` is what a program asks for it
+    // through. See D925.
+    for (int i = 2; i < argc; i++) {
+        if (strcmp(argv[i], "--") == 0) {
+            program_args = &argv[i + 1];
+            program_arg_count = argc - i - 1;
+            argc = i;
+            break;
+        }
     }
     for (int i = 2; i < argc; i++) {
         if (strcmp(argv[i], "--json") == 0) {

@@ -4434,6 +4434,40 @@ machine was somebody else's, which is a thing to know rather than a thing to
 fail — a number read while something else was running is not one to compare
 against another.
 
+## What only a host can do
+
+A program cannot open a file, ask the time or read the words it was started
+with. It asks a host, and a host may say no by not binding the door — which is
+the whole of the capability model here and is what `extern` already meant.
+
+`std.os` is the standard set of those doors: `read`, `write` and `exists` for a
+file; `argCount`, `arg` and `args` for what the program was started with; `now`
+for a clock that only goes forwards, in microseconds from somewhere nobody
+promises anything about.
+
+```kest
+fn howLong(path: text) -> i32 {
+    if let held = os.read(path) {
+        return len(held)
+    }
+    return 0
+}
+```
+
+A file that is not there and a file with nothing in it are different answers, so
+`read` gives nothing rather than empty text. A file holding a nought byte is
+refused the same way, because text that stops at a nought is a file handed over
+as less than it is.
+
+The list of what a host binds is the list of what a program may do. `kest` binds
+all six and hands a program whatever follows `--` on its command line. An engine
+embedding this language binds what it wants a program to have and leaves the
+rest, and a program that asks for an unbound door is refused by name before it
+runs.
+
+And a body that promises `no.host` can reach none of it, which the compiler
+proves. That is what makes `no.host` mean pure rather than merely fast.
+
 ## What is the same everywhere
 
 Three questions get called determinism and they have three different answers
@@ -4779,6 +4813,19 @@ library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
 file and 15273 bytes, against the 157871 it costs to compile.
+
+Each function `check` lists carries an `id`: a number standing for which
+declaration it is, folded from the qualified name, the types it takes and gives,
+and the promises. It survives a blank line, a comment, a moved declaration, a
+renamed local and a changed body, and it moves when the signature or a promise
+moves — so a tool watching a program can tell the thing it saw yesterday from a
+different thing with the same name.
+
+```json
+{ "name": "id.alpha", "parameters": ["i32"], "gives": "i32",
+  "noAlloc": false, "noHost": false, "foreign": false, "named": true,
+  "id": "dfe41484f0987403" }
+```
 
 `parse` says what that tree is made of beside what it cost, and `check` says how
 many types it made beside the ones a program declares — one for every signature,

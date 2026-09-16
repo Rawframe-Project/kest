@@ -28724,3 +28724,36 @@ It is folded here rather than left to whoever reads the JSON because two tools
 folding their own way would have two identities for one declaration. It is
 derived from what the JSON already carries, so nothing new is stored and nothing
 can drift out of step with it.
+
+## D925: a file, the words it was started with, and a clock, as doors
+
+A program in this language could not open a file, read its own arguments or ask
+the time. The host could do all three and hand the result in, which is a real
+answer for an engine embedding Kest and no answer at all for somebody writing a
+tool in it.
+
+`std.os` is the answer, and the shape of it is the point. It is six `extern`
+declarations and thin bodies over them: `read`, `write` and `exists` for a file,
+`argCount`, `arg` and `args` for what the program was started with, and `now`
+for a clock that only goes forwards. There is no global filesystem and no
+ambient clock.
+
+**The capability model is the one that was already here.** Everything a host can
+refuse is a door a host binds, so the list of what a host provides is the list of
+what a program may do. A host that binds none of `std.os` runs programs that do
+not use it and refuses the ones that do, by name, before they run. A host that
+wants a program to read files and not write them binds one and not the other.
+Nothing had to be added for that: it is what `extern` already meant.
+
+And a function that promises `no.host` cannot reach any of it, which the compiler
+proves. So `no.host` is what says a body is pure — no file, no clock, no
+arguments, no crossing at all — and that is the same promise D921's fuel and
+D010's contracts already rest on rather than a second mechanism beside them.
+
+`kest` binds all six, and `--` on its command line says the words after it are
+the program's rather than the command's.
+
+A file is read as text and refused as nothing when it holds a nought byte,
+because text that stops at a nought is a file handed over as less than it is.
+A file that is not there and a file with nothing in it are different answers and
+the door says so: `read` gives nothing rather than empty text.
