@@ -34828,3 +34828,44 @@ made with nothing. If being told is worth half everywhere, that is one sentence
 for all three containers and it belongs in `CLAUDE.md` beside the one about
 `clear`; if it is worth nothing for an array, the difference is worth knowing
 before somebody writes the sentence anyway.
+
+## Being told is worth everything, except to a table
+
+D910 asked what `table.refill` buys and got half. The same question of the other
+two containers does not give half:
+
+| a step that puts an entity into | told nothing | told how many |
+| --- | --- | --- |
+| an array | 25 bytes an entity | **0** |
+| a store | 80 | **0** |
+| a table | 51 | 26 |
+
+An array made with room and emptied, and a store made with room, cost nothing an
+entity — the room was made once, before the frame, and the frame pays for
+nothing. That is the sentence `CLAUDE.md` already half-writes about `array(n, v)`
+and `clear`, with the number behind it.
+
+A table is the odd one out and the reason is in `refill`: it clears and refills
+`t.slots` and nothing else. A table told four hundred pairs are coming makes its
+slots once and still grows its keys and its values by doubling, which is exactly
+the twenty-six left over. The other two go to nought because everything they
+hold was made up front; a table goes to half because only a third of it was.
+
+It cannot be fixed where it stands. A `Table` is a value whose arrays are
+handles — `refill` says so itself — so the keys and values have to be given room
+in place, and the only in-place way to reserve is to push and pop, which needs a
+value of the element type an empty table has not got. The language has
+`array(n, v)`, which makes a new one, and nothing that gives an existing one
+room.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** that gap, which is one builtin. `room(xs, n)` — give an array room for
+`n` without changing what is in it or how many there are. It is what `array(n, v)`
+does for a new one and what nothing does for an old one, and it needs no value
+of the element type because it makes nothing: it is the capacity and not the
+length. With it `table.refill` gives its keys and its values room beside its
+slots and a table told how many are coming costs nought an entity like the other
+two, which is the number to hold it to. A builtin is the lists in `check.c`,
+`compile.c` and `contract.c`, a line in the reference and an example that runs
+it — and the measurement that says it worked is already in the gate.

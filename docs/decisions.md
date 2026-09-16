@@ -28216,3 +28216,42 @@ twice for the same pairs.
 more than an array. The numbers are said beside the other four, where a reader
 can compare them; a machine reporting the same heap for every one of the five
 satisfies every number and none of the order, which is what the hole says.
+
+## D911: being told is worth everything, except to a table
+
+D910 asked what `table.refill` buys and got half. This asks the same of the
+other two containers, and the answer is not half:
+
+| a step that puts an entity into | told nothing | told how many |
+| --- | --- | --- |
+| an array | 25 bytes an entity | **0** |
+| a store | 80 | **0** |
+| a table | 51 | 26 |
+
+An array made with room and emptied, and a store made with room, cost *nothing*
+an entity: the room was made once, before the frame, and the frame pays for
+nothing at all. That is the sentence `CLAUDE.md` already half-writes about
+`array(n, v)` and `clear` — *room for `n` and nothing in it* — with the number
+behind it, and it is the strongest thing this project can say to somebody
+writing a frame budget.
+
+A table is the odd one out, and the reason is in `refill`: it clears and refills
+`t.slots` and nothing else. A table told four hundred pairs are coming makes its
+slots once and still grows its keys and its values by doubling, which is exactly
+the twenty-six that is left. The other two go to nought because *everything*
+they hold was made up front; a table goes to half because only a third of it
+was.
+
+It cannot be fixed where it stands. A `Table` is a value whose arrays are
+handles, and `refill` says so itself — *replacing it would replace the copy's
+handle and leave the caller's table where it was* — so the keys and the values
+have to be given room **in place**, and the only in-place way to reserve is to
+push and pop, which needs a value of the element type that an empty table has
+not got. The language has `array(n, v)`, which makes a new one, and nothing that
+gives an existing one room.
+
+So the finding is a gap with a shape: **an array can be made with room and
+cannot be given room.** That is one builtin, and it is what the next turn is
+for. The measurement stays either way, and the gate now holds all three
+containers to it: nought for an array and a store that were told, and a table
+that was told costing less than one that was not.

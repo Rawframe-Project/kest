@@ -1271,13 +1271,18 @@ fn keyed(world: [Npc], keep: [Npc], seen: table.Table<i32, i32>) -> i32 {
     return table.count(seen)
 }
 
+fn housed(world: [Npc], kept: store<Npc>) -> i32 {
+    for one in world {
+        add(kept, one)
+    }
+    return 1
+}
+
 fn onEvents(events: [i32]) -> i32 {
     let all = made(%u)
-    let keep: [Npc] = array()
-    let seen: table.Table<i32, i32> = table.empty()
 %s    let found = 0
     for r in 0..%u {
-        found += %s(all, keep, seen)
+        found += %s
     }
     return found
 }
@@ -1302,27 +1307,37 @@ def what_a_tick_took(body):
     return None if said.get('errors') else said.get('heap')
 
 
-# The room a table is told to make is the same in both runs, so what is left
-# after subtracting is the pairs and not the making. A table told nothing grows
-# into them instead, which is the number beside it.
-TOLD = "    table.refill(seen, %u)\n" % (ENTITIES * ROUNDS * 10)
+# The room a container is told to make is the same in both runs, so what is
+# left after subtracting is what was put in it and not the making. One told
+# nothing grows into it instead, which is the number beside each.
+ROOM = ENTITIES * ROUNDS * 10
+NOTHING_MADE = ("    let keep: [Npc] = array()\n"
+                "    let seen: table.Table<i32, i32> = table.empty()\n")
+TOLD_TABLE = (NOTHING_MADE + "    table.refill(seen, %u)\n" % ROOM)
+ROOMY_ARRAY = ('    let keep = array(%u, Npc("npc", 100))\n'
+               "    clear(keep)\n"
+               "    let seen: table.Table<i32, i32> = table.empty()\n" % ROOM)
+NO_STORE = "    let kept: store<Npc> = store()\n"
+ROOMY_STORE = "    let kept: store<Npc> = store(%u)\n" % ROOM
 
 
-def a_step_takes(which, first=""):
+def a_step_takes(which, made=NOTHING_MADE):
     over = []
     for many in (ROUNDS, ROUNDS * 2):
-        over.append(what_a_tick_took(TICKED %
-                                     (ENTITIES, first, many, which)))
+        over.append(what_a_tick_took(TICKED % (ENTITIES, made, many, which)))
     if over[0] is None or over[1] is None:
         return None
     return (over[1] - over[0]) // (ROUNDS * ENTITIES)
 
 
-quiet_frame = a_step_takes('quiet')
-text_frame = a_step_takes('loud')
-grown_frame = a_step_takes('grown')
-keyed_frame = a_step_takes('keyed')
-told_frame = a_step_takes('keyed', TOLD)
+quiet_frame = a_step_takes('quiet(all, keep, seen)')
+text_frame = a_step_takes('loud(all, keep, seen)')
+grown_frame = a_step_takes('grown(all, keep, seen)')
+roomy_frame = a_step_takes('grown(all, keep, seen)', ROOMY_ARRAY)
+keyed_frame = a_step_takes('keyed(all, keep, seen)')
+told_frame = a_step_takes('keyed(all, keep, seen)', TOLD_TABLE)
+stored_frame = a_step_takes('housed(all, kept)', NO_STORE)
+housed_frame = a_step_takes('housed(all, kept)', ROOMY_STORE)
 # The three containers this language has, side by side, and the promise beside
 # them. What is held is the order rather than the numbers: nought for the
 # promise, because that is what it means seen from outside; and a pair in a
@@ -1331,14 +1346,18 @@ told_frame = a_step_takes('keyed', TOLD)
 # an array doubles once. The numbers are said for a reader to compare, the way
 # every number from a run here is. See D909.
 if (quiet_frame is None or text_frame is None or grown_frame is None or
-        keyed_frame is None or told_frame is None or quiet_frame != 0 or
+        keyed_frame is None or told_frame is None or roomy_frame is None or
+        stored_frame is None or housed_frame is None or quiet_frame != 0 or
         text_frame < 1 or grown_frame <= text_frame or
-        keyed_frame <= grown_frame or told_frame >= keyed_frame):
+        keyed_frame <= grown_frame or told_frame >= keyed_frame or
+        roomy_frame != 0 or housed_frame != 0 or stored_frame < 1):
     print("costs: a frame step takes %s byte(s) an entity promising "
           "`no.alloc`, %s making a piece of text, %s growing an array and %s "
-          "putting a pair in a table, against %s putting one in a table that "
-          "was told how many were coming"
-          % (quiet_frame, text_frame, grown_frame, keyed_frame, told_frame))
+          "into one made with room, %s putting a pair in a table and %s into "
+          "one told how many were coming, %s adding to a store and %s to one "
+          "made with room"
+          % (quiet_frame, text_frame, grown_frame, roomy_frame, keyed_frame,
+             told_frame, stored_frame, housed_frame))
     failed = 1
 
 a_frame = a_step_of(HELPED) if have_checked else None
@@ -1723,8 +1742,9 @@ if not failed:
           "itself, and one that promises `no.alloc` takes %u byte(s) of heap "
           "an entity against %u for one that makes a piece of text, %u for "
           "one that grows an array and %u for one that puts a pair in a "
-          "table -- %u where the table was told how many were coming -- "
-          "which "
+          "table -- %u where the table was told how many were coming, and "
+          "nought where an array or a store was -- and %u for one that adds "
+          "to a store that was not, which "
           "is work rather than time and the same count "
           "anywhere, with the rest of it measured on the machine "
           "this ran on"
@@ -1743,6 +1763,6 @@ if not failed:
              with_sign, without_sign, together, turn_ran, runs,
              a_frame, by_hand, reaches, len(instruction_names),
              asked_of_itself, quiet_frame, text_frame, grown_frame,
-             keyed_frame, told_frame))
+             keyed_frame, told_frame, stored_frame))
 sys.exit(failed)
 PY
