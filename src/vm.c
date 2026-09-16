@@ -1930,6 +1930,14 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     // between a call and the return that undoes the call, so it goes back into
     // the frame at those two places and nowhere else. See D869.
     KestValue *mine = frame->base;
+    // And where this body's constants are. Every number, every piece of text
+    // and every shape written into a program is read from here, and a frame
+    // step an entity reads eight of them — each one a load of `frame->chunk`
+    // and then a load of what it points at, because nothing tells the compiler
+    // that moving slots cannot be writing the frame. The chunk a body is
+    // running does not change while it runs, so this changes where the body
+    // does. See D872.
+    const KestValue *constants = frame->chunk->constants;
 #define READ_BYTE() (*ip++)
 #define READ_U16()                                                             \
     (ip += 2, (uint16_t)(ip[-2] | ((uint16_t)ip[-1] << 8)))
@@ -1998,10 +2006,10 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 #endif
         switch (READ_BYTE()) {
         case KEST_OP_CONST:
-            *top++ = frame->chunk->constants[READ_U16()];
+            *top++ = constants[READ_U16()];
             break;
         case KEST_OP_CONST_RUN: {
-            const KestValue *from = &frame->chunk->constants[READ_U16()];
+            const KestValue *from = &constants[READ_U16()];
             uint16_t count = READ_U16();
             memcpy(top, from, sizeof(KestValue) * count);
             top += count;
@@ -2014,7 +2022,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             int64_t index = (--top)->integer;
             IN_RUN(index, count);
             memcpy(top,
-                   &frame->chunk->constants[first + (size_t)index * stride],
+                   &constants[first + (size_t)index * stride],
                    sizeof(KestValue) * stride);
             top += stride;
             break;
@@ -3317,6 +3325,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             frame->base = base;
             ip = callee->code;
             mine = base;
+            constants = callee->constants;
             top = base + callee->slot_count;
             break;
         }
@@ -3405,6 +3414,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             frame->base = base;
             ip = callee->code;
             mine = base;
+            constants = callee->constants;
             top = base + callee->slot_count;
             break;
         }
@@ -3540,6 +3550,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             frame = &rt->frames[rt->frame_count - 1];
             ip = frame->ip;
             mine = frame->base;
+            constants = frame->chunk->constants;
             top = base + count;
             break;
         }

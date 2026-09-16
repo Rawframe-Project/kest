@@ -4091,7 +4091,7 @@ inside a promise that nothing reaches the heap — the shape a frame in this
 language is written in.
 
 ```
-128 ns per entity per step, best of 7 over 10000, spread 1%
+125 ns per entity per step, best of 7 over 10000, spread 3%
 ```
 
 What those nanoseconds are spent on is a thing the machine can be asked rather
@@ -4110,7 +4110,7 @@ provides, and both are one argument and one answer, so what is left between them
 is the crossing.
 
 ```
-20 ns for a call and 27 ns for a crossing, which is 7 ns more, best of 7 over 1000000 calls, spread 2%
+19 ns for a call and 27 ns for a crossing, which is 8 ns more, best of 7 over 1000000 calls, spread 6%
 ```
 
 `tools/reference.kest` is a hop of a loop, a read through an index and a read
@@ -4121,12 +4121,12 @@ field of the same values in the same order, so what is left between them is the
 check and the optional it comes back in.
 
 ```
-11 ns for a hop of the loop, 14 ns with an index read and 30 ns with a read through a reference, which is 16 ns more, best of 7 over 200000 reads, spread 15%
+11 ns for a hop of the loop, 13 ns with an index read and 30 ns with a read through a reference, which is 17 ns more, best of 7 over 200000 reads, spread 10%
 ```
 
 The first of those three is what the other two are measured against, and it is
 the one worth reading first: a hop of a `for` is eleven nanoseconds here, so a
-read through an index is about three and a read through a reference about
+read through an index is about two and a read through a reference about
 nineteen.
 Every per-item number on this page carries a hop of a loop, because that is what
 a program written over a run of things is made of — which is why the hop is the
@@ -4141,7 +4141,7 @@ doing the calling is the host. One `kest_call` against one hop of a loop inside
 one `kest_call`.
 
 ```
-16 ns for a call in from a host and 19 ns for one the program makes in a loop, best of 7 over 1000000 calls, spread 11%
+16 ns for a call in from a host and 20 ns for one the program makes in a loop, best of 7 over 1000000 calls, spread 6%
 ```
 
 Those numbers are the machine they were taken on and nothing else — six cores,
@@ -4149,14 +4149,14 @@ one of them busy with whatever else was running. What carries from one machine
 to another is the shape of them: that a crossing out costs a few nanoseconds
 over a call, that a crossing in costs less than a hop of a loop, that a
 reference costs about half as much again as an index, and that all of them are
-small against a frame step. A crossing an entity on this machine is seven
-nanoseconds against a hundred and twenty-eight, which is about an eighteenth of
-the step — so `no.host` is worth having where a frame crosses many times an
-entity and worth little where it crosses once. A reference an entity is sixteen
-nanoseconds more than an index, against the same hundred and twenty-eight, which
-is about an eighth: a world of entities that can be removed costs about an
-eighth of a frame more than a run of entities that cannot, and that is what the
-safety is worth. The index read itself is three.
+small against a frame step. A crossing an entity on this machine is eight
+nanoseconds against a hundred and twenty-five, which is about a sixteenth of the
+step — so `no.host` is worth having where a frame crosses many times an entity
+and worth little where it crosses once. A reference an entity is seventeen
+nanoseconds more than an index, against the same hundred and twenty-five, which
+is about a seventh: a world of entities that can be removed costs about a
+seventh of a frame more than a run of entities that cannot, and that is what the
+safety is worth. The index read itself is two.
 
 Each leaves things out on purpose, and they are each other's omissions. The
 frame leaves out starting up, compiling, crossing and allocating; the two

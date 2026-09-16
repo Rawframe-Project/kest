@@ -32852,13 +32852,14 @@ Recorded as D865.
 
 **Runs:** `make check`, everything passing, with `TMPDIR=/var/tmp`.
 
-**Next:** twenty-one loads an entity are left and they are not a run: they are
-the operands of `mul.f32` and `add.f32`, one slot at a time. Weigh the
-instruction that was not written this turn — a binary operator that takes its
-right operand from a slot rather than from the stack. Count how many of the
-twenty-one it would reach across the examples, count how many operators would
-need one, and say whether the table can carry them; then say what a dispatch is
-worth now that one has been measured at about a nanosecond.
+**Next:** every pointer the machine reads through on the way is in a local now,
+so the next thing to weigh is the one instruction it runs that is not one
+instruction: `call`. Two calls and two returns an entity of a frame step, and a
+call reads three fields of the callee, asks two questions about room and writes
+four fields of a frame. Read what `KEST_OP_CALL` does, say which of it a call to
+a body already compiled could have been told beforehand, and measure a frame
+whose helpers are written out by hand against one that calls them — which says
+what the two calls cost before anything is done about them.
 
 ## A hop of a `for` is one instruction
 
@@ -33140,3 +33141,51 @@ right operand from a slot rather than from the stack. Count how many of the
 twenty-one it would reach across the examples, count how many operators would
 need one, and say whether the table can carry them; then say what a dispatch is
 worth now that one has been measured at about a nanosecond.
+
+## Two things weighed and refused, and the one that paid
+
+The question was an instruction taking its right operand from a slot. Counted
+over the examples, the library and the instruments: 6174 single loads, of which
+589 are the right operand of a binary operator over 27 kinds, and 248 more feed
+a fused jump over 13 kinds. So 837 of 6174, 13.5%, for 40 new instructions. The
+table holds 151 of 256 and could carry them, and that is the whole of the case.
+
+It is not enough, because one instruction reaches more. Half the loads written
+stand beside another one, and where those slots are not a run there is nothing
+for `load.n` to take: `load.two` reaches 1132 of 6174, 18%. So it was written. A
+frame step went from fifty-nine instructions an entity to fifty-five, `load`
+from twenty-one to thirteen, and the time did not move — about 121 before and
+122 after, five rounds alternated. Four dispatches an entity are worth nothing,
+so forty instructions buying fewer would buy less than nothing. Neither is in
+the tree.
+
+The same lesson came back from the other side. D871 found six nanoseconds by
+writing out the `memcpy` in `load.n`; `return` has a `memmove` of the same shape,
+twice an entity. Written out the same way, a frame step went from about 120 to
+about 123. `load.n` moves two or three slots and a return moves five, and what
+the C library does with five beats a loop whose length the compiler cannot see.
+
+What paid was neither. D869 held where the machine is and where its slots are in
+locals; `frame->chunk->constants` is the same thing and was missed — eight
+constants an entity, each two loads through a pointer. Held in a local with the
+same three write-backs, a frame step went from about 120 to about 117. A call in
+a loop 19–21 to 18–20; the hop and the reference read unchanged, their loops
+reading few constants.
+
+So a dispatch is worth about nothing. Fifty-five instructions in a hundred and
+twenty nanoseconds is two apiece, and taking four out changed nothing: the
+average is not what any one of them costs. What costs is memory reached through
+a pointer the compiler cannot prove unchanged, and there were three of those.
+
+Recorded as D872.
+
+**Runs:** `make check`, everything passing. `make time`, four instruments.
+
+**Next:** every pointer the machine reads through on the way is in a local now,
+so the next thing to weigh is the one instruction it runs that is not one
+instruction: `call`. Two calls and two returns an entity of a frame step, and a
+call reads three fields of the callee, asks two questions about room and writes
+four fields of a frame. Read what `KEST_OP_CALL` does, say which of it a call to
+a body already compiled could have been told beforehand, and measure a frame
+whose helpers are written out by hand against one that calls them — which says
+what the two calls cost before anything is done about them.

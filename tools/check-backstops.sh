@@ -5426,20 +5426,48 @@ fn main() -> i32 {
         "caught": "K0602",
     },
     {
-        # And the other half of the same: a callee left reading the slots of
-        # whoever called it. Where a body's slots start is held in a local
-        # beside where it has got to, and a call that does not move it runs the
-        # callee's instructions over the caller's names. See D869.
-        "what": "a callee left standing on the slots of whoever called it",
+        # A callee left reading the constants of whoever called it. Where a
+        # body's constants are is held in a local beside where it has got to
+        # and where its slots are, and a call that does not move it hands the
+        # callee another body's numbers — every literal it reads is somebody
+        # else's. See D872.
+        "what": "a callee left reading the constants of whoever called it",
         "file": "src/vm.c",
         "from": """            ip = callee->code;
             mine = base;
+            constants = callee->constants;
             top = base + callee->slot_count;
             break;
         }
 
         case KEST_OP_CALL_VALUE: {""",
         "to": """            ip = callee->code;
+            mine = base;
+            top = base + callee->slot_count;
+            break;
+        }
+
+        case KEST_OP_CALL_VALUE: {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a number written down did not read back as itself",
+    },
+    {
+        # And the other half of the same: a callee left reading the slots of
+        # whoever called it. Where a body's slots start is held in a local
+        # beside where it has got to, and a call that does not move it runs the
+        # callee's instructions over the caller's names. See D869.
+        "what": "a callee left standing on the slots of whoever called it",
+        "file": "src/vm.c",
+        "from": """            mine = base;
+            constants = callee->constants;
+            top = base + callee->slot_count;
+            break;
+        }
+
+        case KEST_OP_CALL_VALUE: {""",
+        "to": """            constants = callee->constants;
             top = base + callee->slot_count;
             break;
         }

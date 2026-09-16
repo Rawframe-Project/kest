@@ -26315,3 +26315,62 @@ anywhere, the fold because it is five instructions and a hundred and fifty bytes
 of code an entity that nothing now spends. Two holes hold them — one writes the
 loads apart again, caught by a count read out of `emit`; one takes the barrier
 out, caught by the eight-line program above.
+
+## D872: two things weighed and refused, and the one that paid
+
+The question left by D871 was an instruction that takes its right operand from a
+slot rather than from the stack. **Counted first**, over every example, every
+library module and every instrument:
+
+- 6174 single `load` instructions in all;
+- **589** binary operators whose right operand is the load just before them,
+  over **27** kinds;
+- **248** fused jumps in the same shape, over **13** kinds;
+- so **837 of 6174 loads, 13.5%**, for **40** new instructions.
+
+The table holds 151 of a possible 256, so it *could* carry them. That is the
+whole of the case for it, and it is not enough, because there is a cheaper thing
+that reaches more.
+
+**`load.two`.** Half the loads this compiler writes stand beside another one —
+an operator takes two, a call takes several — and where those slots do not sit
+next to each other there is no run for D871's `load.n` to take. One instruction
+for two slots that are not a run reaches **1132 of 6174 loads, 18%**: more than
+the forty would, for one.
+
+So it was written. A frame step an entity went from **fifty-nine instructions to
+fifty-five** — `load` from twenty-one to thirteen — and the time did not move:
+about 121 nanoseconds before and about 122 after, five rounds alternated. *Four
+dispatches an entity are worth nothing.* Forty instructions buying fewer
+dispatches than that would buy less than nothing, so neither is in the tree.
+
+**And a second refusal, which is the same lesson from the other side.** D871
+found six nanoseconds by writing out the `memcpy` in `load.n`. `return` has a
+`memmove` of the same shape, twice an entity here. Written out the same way, a
+frame step went from about 120 to about 123. `load.n` moves two or three slots;
+a return moves five, and what the C library does with five is better than a loop
+whose length the compiler cannot see. *The same edit, the other way, at a
+different size.*
+
+**What paid was neither.** D869 held where the machine is and where its slots
+are in locals, because they are fields behind a pointer and the compiler must
+reload them after anything that might write through one. `frame->chunk->constants`
+is the same thing and was missed: a frame step reads eight constants an entity,
+each of them two loads through a pointer. Held in a local, with the same three
+places written back:
+
+| | a frame step an entity |
+|---|---|
+| D871 | ~120–121 ns |
+| **the constants held in a local** | **~116–117** |
+
+The other instruments: a call in a loop 19–21 to 18–20, a hop of a `for` and a
+read through a reference unchanged — their loops read few constants.
+
+*So what is a dispatch worth?* The machine runs about fifty-five instructions an
+entity in about a hundred and twenty nanoseconds, which is two nanoseconds
+apiece — and taking four of them out changed nothing at all. **The average is not
+what any one of them costs.** A `load` is a slot read and a pointer bump, and
+the processor is already several instructions ahead by the time it retires. What
+costs is memory the machine reaches through a pointer it cannot prove is
+unchanged, and there were three of those and now there are none.
