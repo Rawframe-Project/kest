@@ -1057,6 +1057,111 @@ if (there is None or worked_out is None or 'hash.t' in there or
              'store.n' in there else "read where it stands"))
     failed = 1
 
+# And what a frame step costs in work, which is the number every fusion in this
+# compiler is about and the one thing about a frame that is not this machine's:
+# an instruction count is the same anywhere and a duration is not. Two runs over
+# different numbers of rounds, subtracted, the way a turn of a `for` is weighed
+# above -- the world is built once either way, so what is left is the step. And
+# the same frame with its two helpers written out where they are called beside
+# it, because what a call costs is the one thing a program cannot ask for from
+# inside the language. See D889.
+ENTITIES = 20
+ROUNDS = 4
+
+SHAPED = """module walking
+
+struct Npc {
+    x: f32
+    y: f32
+    dx: f32
+    dy: f32
+    health: i32
+}
+
+"""
+
+HELPED = """fn moved(one: Npc, dt: f32) -> Npc no.alloc {
+    return Npc(one.x + one.dx * dt, one.y + one.dy * dt, one.dx, one.dy,
+               one.health)
+}
+
+fn turned(one: Npc) -> Npc no.alloc {
+    let dx = if one.x < 0.0 -> 0.0 - one.dx else -> one.dx
+    let health = if one.health > 0 -> one.health else -> 1
+    return Npc(one.x, one.y, dx, one.dy, health)
+}
+
+fn step(world: [Npc], dt: f32) -> i32 no.alloc {
+    let alive = 0
+    for i in 0..len(world) {
+        let one = turned(moved(world[i], dt))
+        world[i] = one
+        if one.health > 0 {
+            alive += 1
+        }
+    }
+    return alive
+}
+
+"""
+
+BY_HAND = """fn step(world: [Npc], dt: f32) -> i32 no.alloc {
+    let alive = 0
+    for i in 0..len(world) {
+        let was = world[i]
+        let far = Npc(was.x + was.dx * dt, was.y + was.dy * dt, was.dx, was.dy,
+                      was.health)
+        let dx = if far.x < 0.0 -> 0.0 - far.dx else -> far.dx
+        let health = if far.health > 0 -> far.health else -> 1
+        let one = Npc(far.x, far.y, dx, far.dy, health)
+        world[i] = one
+        if one.health > 0 {
+            alive += 1
+        }
+    }
+    return alive
+}
+
+"""
+
+WALKED = """fn world(count: i32) -> [Npc] {
+    let made: [Npc] = array()
+    for i in 0..count {
+        push(made, Npc(1.0, 2.0, 0.5, 0.5, 100))
+    }
+    return made
+}
+
+fn main() -> i32 {
+    let all = world(%u)
+    let alive = 0
+    for r in 0..%u {
+        alive += step(all, 0.016)
+    }
+    return alive - %u
+}
+"""
+
+
+def a_step_of(middle):
+    over = []
+    for many in (ROUNDS, ROUNDS * 2):
+        over.append(what_it_ran(SHAPED + middle +
+                                WALKED % (ENTITIES, many, ENTITIES * many)))
+    if over[0] is None or over[1] is None:
+        return None
+    return (over[1] - over[0]) // (ROUNDS * ENTITIES)
+
+
+a_frame = a_step_of(HELPED) if have_checked else None
+by_hand = a_step_of(BY_HAND) if have_checked else None
+if have_checked and (a_frame is None or by_hand is None or a_frame < 1 or
+                     by_hand < 1 or a_frame - by_hand < 2):
+    print("costs: a frame step is %s instruction(s) an entity and %s with its "
+          "helpers written out, and a call and its answer are two of them"
+          % (a_frame, by_hand))
+    failed = 1
+
 shutil.rmtree(work, ignore_errors=True)
 if (one_copy_costs is None or many_copies_costs is None or
         many_copies_costs <= one_copy_costs * 2 or
@@ -1417,8 +1522,10 @@ if not failed:
           "and %u narrowing, and a division %u time(s) with a sign and %u "
           "without, and an `i32` `+` cuts what it added in %u instruction(s), "
           "and the machine ran %s of the turn's instruction(s), and slots "
-          "that sit next to each other are taken in %u go(es), all of it "
-          "measured on the machine "
+          "that sit next to each other are taken in %u go(es), and a frame "
+          "step is %s instruction(s) an entity and %s with its two helpers "
+          "written out, which is work rather than time and the same count "
+          "anywhere, with the rest of it measured on the machine "
           "this ran on"
           % (asked, len(left_to_the_host), driven, proved, kept, len(alone),
              lexing, parsing, nodes, loops, checking, types_made, compiling,
@@ -1432,6 +1539,7 @@ if not failed:
              copied_total, copied_bodies, copied_bytes, copied_code,
              copied_quiet, asked_for, reached, run_sized, run_asked,
              run_went, quiet_walk[0], written_walk[0], widening, narrowing,
-             with_sign, without_sign, together, turn_ran, runs))
+             with_sign, without_sign, together, turn_ran, runs,
+             a_frame, by_hand))
 sys.exit(failed)
 PY

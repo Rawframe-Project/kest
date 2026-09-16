@@ -27289,3 +27289,64 @@ through a `let` the frame does not hold — found nothing either.
 That is the guard worth having rather than the fix. A fault is this project
 saying it has a bug, and the day a refusal starts leaving a hole behind is a
 day somebody reads that about their own program and believes it.
+
+## D889: every instruction the machine has costs every program that runs
+
+The last four turns were about what the compiler works out before the machine
+starts, and D887 took a run of numbers out of a frame entirely. `make time`,
+against what D873 measured:
+
+```text
+D873   117 ns per entity per step      10 ns for a hop of the loop
+now    116 ns per entity per step      10 ns for a hop of the loop
+```
+
+Nothing moved, which is the answer: none of that work is on the path a frame
+walks. `tools/frame.kest` has no name in a hot body that the folder can work
+out — every value in it comes out of the array it is walking — so the fold that
+took three thousand bytes out of the examples took nothing out of this.
+
+**Where a frame goes.** Asked of a build that counts, over ten thousand entity
+steps: 63 instructions an entity, of which `load` is 20 and `const` is 9. Half
+of a frame is reading slots and pushing constants, and the top adjacent pair in
+the two helpers is a `load` and the `const` after it.
+
+So: `load.2`, one instruction taking two slots that do not sit next to each
+other, fused the way D871 fuses the ones that do. It removed four instructions
+an entity from the two helpers. It made the frame **slower**, by three to four
+nanoseconds an entity.
+
+**And then the thing worth the turn.** Built again with the instruction in the
+enum, in the name table, in the proof that reads what was emitted and in the
+machine's switch — and the fusion turned off, so nothing ever runs it:
+
+```text
+151 instructions   115  116  116  118  ns per entity per step
+152 instructions   119  120  123  126
+154 instructions   132  132  133  134
+```
+
+An instruction nothing emits and nothing executes costs about four nanoseconds
+an entity, and two of them cost eight. It is not the renumbering — appending at
+the end of the enum, where every existing opcode keeps its number, costs the
+same. It is the size of the one function the machine spends its life in: every
+case is code in the dispatch loop, and the hot cases move further apart as the
+cold ones are added.
+
+That is a law for this project and it is the opposite of what a reader of D868
+and D871 would guess. **A new instruction must earn four nanoseconds an entity
+before it has done anything.** `load.2` earned two and a half. Reverted.
+
+It also says where the next frame's worth of time is: not in fusing pairs, but
+in the hundred and fifty-one cases themselves. D873 found three hoists in
+`KEST_OP_CALL` that all made it slower and called it a register budget; this is
+the same wall measured from the other side, and the budget is instruction cache
+rather than registers.
+
+*What stays* is the way to see it without a clock. `check-costs.sh` now asks a
+counting build what a frame step costs in instructions — 48 an entity, and 45
+with the two helpers written out where they are called, so a call and its
+answer are three. That is work rather than time: the same number on any
+machine, which is why it belongs in the gate where a duration does not. It
+would have said `load.2` removed four an entity without anybody starting a
+clock, and it is what the next thing to try will be weighed against.

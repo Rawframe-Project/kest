@@ -5581,6 +5581,21 @@ fn main() -> i32 {
         "caught": "K0314 said `error[K0314]: `+` does not apply to `text``",
     },
     {
+        # A counter that says the same thing whatever ran. What a frame step
+        # costs in instructions is the one number about a frame that is not
+        # this machine's, and the only thing that knows it is a build that
+        # counts -- so a count that does not count leaves every fusion in this
+        # compiler weighed by a clock and nothing else. See D889.
+        "what": "a walk of the machine that counts each instruction once",
+        "file": "src/vm.c",
+        "from": """            rt->ran[*instruction]++;""",
+        "to": """            rt->ran[*instruction] = 1;""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "a frame step is 0 instruction(s) an entity",
+    },
+    {
         # A constant that could not be worked out, used in a body. It is
         # refused where it is declared and a use of it is not a second thing
         # wrong with the program -- so the use said nothing and left nothing
@@ -11834,7 +11849,7 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # say it is the sentence they read.
         "what": "a machine's numbers said as though they were anybody's",
         "file": "tools/check-costs.sh",
-        "from": '          "measured on the machine "\n          "this ran on"',
+        "from": '          "anywhere, with the rest of it measured on the machine "\n          "this ran on"',
         "to": '          ""',
         "make": ["kest"],
         "tool": "tools/check-tables.sh",

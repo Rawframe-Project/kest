@@ -33913,3 +33913,51 @@ machine starts, and D887 took a run of numbers out of the frame entirely. Run
 values out of a frame should show up in the crossing and in the frame step or
 it is a smaller change than its bytes suggest, and either answer is worth
 writing down: a number that did not move says the work was somewhere else.
+
+## The number did not move, and what that cost to find out
+
+`make time` against D873: 116 ns per entity per step against 117, 10 ns for a
+hop against 10. Nothing moved. The last four turns were all about what the
+compiler works out before the machine starts, and `tools/frame.kest` has no
+name in a hot body the folder can work out — every value comes out of the array
+being walked — so D887's fold took three thousand bytes out of the examples and
+nothing out of this.
+
+A build that counts says where a frame goes: 63 instructions an entity, `load`
+20 of them and `const` 9. So `load.2`, one instruction taking two slots that do
+not sit next to each other, fused the way D871 fuses the ones that do. Four
+fewer instructions an entity, and three to four nanoseconds **slower**.
+
+Then the measurement worth the turn. With the instruction in the enum, the
+table, the proof and the machine's switch, and the fusion turned off so nothing
+ever runs it:
+
+```text
+151 instructions   115  116  116  118  ns per entity per step
+152 instructions   119  120  123  126
+154 instructions   132  132  133  134
+```
+
+An instruction nothing emits and nothing executes costs about four nanoseconds
+an entity. Not the renumbering — appending at the end of the enum costs the
+same. It is the size of the one function the machine spends its life in. So a
+new instruction must earn four nanoseconds before it has done anything;
+`load.2` earned two and a half, and is reverted.
+
+What stays is the way to see this without a clock: `check-costs.sh` asks a
+counting build what a frame step costs in instructions — 48 an entity, 45 with
+the two helpers written out, so a call and its answer are three. Work rather
+than time, the same number on any machine, which is why it belongs in the gate
+where a duration does not.
+
+**Runs:** `make check`, everything passing; `make time`, three instruments.
+
+**Next:** the wall D889 measured, from the side that gives time back. The
+machine is 151 cases in one function and the hot ones are a handful: `load`,
+`const`, `store`, the jumps, the arithmetic. Everything else is cold and sits
+between them. Try moving the cold cases out of the dispatch loop — the ones a
+frame never runs, which the counting build can name exactly — into a function
+of their own called from a single case, and measure the frame against the 48
+instructions an entity the gate now says it costs. If the loop gets smaller and
+the frame gets faster, that is the budget being spent where it pays; if it does
+not, the four nanoseconds are somewhere else and D889 needs a second half.
