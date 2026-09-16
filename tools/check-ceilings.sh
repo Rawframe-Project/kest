@@ -1862,30 +1862,48 @@ fi
 # than refusing, and a run that answers as though nothing had happened. The
 # last is the quietest and the worst — a program compiled with a piece missing
 # and nobody told. See D881.
-aimed=0
-for aimed_at in "check examples/inventory.kest" "run examples/queue.kest" \
-                "check lib/std/text.kest" "run examples/flags.kest" \
-                "emit examples/boxes.kest"; do
-    how=${aimed_at%% *}
-    what=${aimed_at#* }
-    # How many it takes, found rather than written down: a number here would be
-    # one more thing to keep in step with the compiler, and the answer moves
-    # every time anything in the tree does.
+# How many allocations one way of reading one program takes, found rather than
+# written down: a number here would be one more thing to keep in step with the
+# compiler, and the answer moves every time anything in the tree does.
+allocations_of() {
     low=1
     high=200000
     while [ $((high - low)) -gt 1 ]; do
         middle=$(((high + low) / 2))
-        if KEST_REFUSE_AT=$middle ./kest-debug "$how" "$what" \
+        if KEST_REFUSE_AT=$middle ./kest-debug "$1" "$2" \
                 >/dev/null 2>&1 </dev/null; then
             high=$middle
         else
             low=$middle
         fi
     done
-    takes=$high
+    echo $high
+}
+
+aimed=0
+# `machine` is `run` with the compiler's share taken off the front. A program
+# that runs spends most of its allocations being read and compiled — for
+# `queue.kest` two thousand two hundred of two thousand eight hundred — so a
+# spread over the whole of it lands eight refusals in the machine and thirty in
+# the compiler. These two are the machine's own life and nothing else: the heap
+# it hands arrays and text out of, the frames it stands them on, and what it
+# needs to say any of it went wrong. See D882.
+for aimed_at in "check examples/inventory.kest" "run examples/queue.kest" \
+                "check lib/std/text.kest" "run examples/flags.kest" \
+                "emit examples/boxes.kest" "machine examples/words.kest" \
+                "machine examples/pieces.kest"; do
+    how=${aimed_at%% *}
+    what=${aimed_at#* }
+    from_one=0
+    if [ "$how" = machine ]; then
+        how=run
+        from_one=$(allocations_of check "$what")
+    fi
+    takes=$(allocations_of "$how" "$what")
+    span=$((takes - from_one))
     step=1
     while [ $step -le 40 ]; do
-        at_one=$(((takes * step) / 41))
+        at_one=$((from_one + (span * step) / 41))
         [ $at_one -lt 1 ] && at_one=1
         said=$(KEST_REFUSE_AT=$at_one ./kest-debug "$how" "$what" \
                2>&1 </dev/null)
@@ -1964,9 +1982,10 @@ if [ $failed -eq 0 ]; then
          "from both sides over $framed_rungs rung(s), and $told rung(s) where" \
          "a run with no room to write what was wrong wrote it anyway —" \
          "all of it measured on the machine this ran on, and" \
-         "$aimed allocation(s) refused one at a time over five ways of" \
-         "reading five programs, each of them a run that said it had run out," \
-         "said nothing else, and neither died nor answered as though nothing" \
-         "had happened"
+         "$aimed allocation(s) refused one at a time over seven ways of" \
+         "reading six programs, two of them the machine's own life with the" \
+         "compiler's share taken off the front, each of them a run that said" \
+         "it had run out, said nothing else, and neither died nor answered as" \
+         "though nothing had happened"
 fi
 exit $failed

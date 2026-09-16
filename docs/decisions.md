@@ -26895,3 +26895,42 @@ memory, an aim that refuses one allocation and then relents — once there is no
 room there is no room, and a refusal that lets go is a program compiled with a
 piece missing and nobody told — and the one D880 left, which keeps the guess a
 half-built program makes.
+
+## D882: the machine's own life, and what it can say from inside it
+
+The aim was at the compiler. Pointing it at the machine found two things, and
+the first is that the question has an answer already.
+
+**A machine that has truly run out cannot say which line asked.** Once an
+allocation is refused every one after it is refused too, and one of those is the
+allocation a message is written into. So what comes back is
+
+```text
+error[K0639]: there was not enough memory to finish, or to say more about it
+```
+
+and nothing else — from a refusal in the middle of a `push` exactly as from one
+in the middle of parsing. That is the honest sentence: naming the line that
+asked costs memory the machine has not got. The world where it *can* speak is a
+ceiling rather than an empty machine, and the ladder above already holds sixteen
+of those to being a message at the line that asked.
+
+**And the second is that it holds.** Thirty allocations refused inside the
+machine's own life, for every one of the thirty-two examples: nothing died,
+nothing came back nought, nothing blamed the program.
+
+*The machine's own life is the part of the sweep that was thin.* A program that
+runs spends most of its allocations being read and compiled — `queue.kest` two
+thousand two hundred and seventy-eight of two thousand eight hundred and
+twenty-eight — so D881's spread over the whole of a run landed eight refusals in
+the machine and thirty-two in the compiler. So the gate now takes the
+compiler's share off the front: `machine <program>` is `run` bisected twice,
+once for what checking takes and once for the whole, with the forty refusals
+spread over the difference. That is the heap arrays and text come out of, the
+frames they stand on, and what the machine needs to say any of it went wrong.
+
+Seven ways of reading six programs now, two hundred and eighty allocations
+refused one at a time. No sentence was added, so no hole was: the three the
+section already asks — that it refused, that it said nothing but the room, that
+it neither died nor answered as though nothing had happened — are the same three
+for a machine as for a compiler, and they are already held.

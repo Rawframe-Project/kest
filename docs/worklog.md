@@ -32852,13 +32852,13 @@ Recorded as D865.
 
 **Runs:** `make check`, everything passing, with `TMPDIR=/var/tmp`.
 
-**Next:** the aim is at the compiler; the machine has one too. A program that
-runs asks the heap for arrays, for text and for what a store holds, and what
-`kest_heap_used` counts is a ceiling a host chooses. Point `KEST_REFUSE_AT` at a
-running program rather than at a compiling one — the examples that push, join
-and grow — and ask the same three things of the machine: that it refuses, that
-it says which program asked, and that it neither dies nor answers as though the
-push had happened.
+**Next:** three entries have gone into what a compiler does when it has no
+memory, and it does the right thing everywhere anybody has looked. Put the aim
+down and pick the language back up. `docs/language.md` is four thousand lines
+and is the thing a reader meets first: read the first five hundred of them as
+somebody who has never seen this language, and find the place where the document
+explains a thing the language should not have needed explaining. One place, with
+what the explanation is standing in for.
 
 ## A hop of a `for` is one instruction
 
@@ -33603,3 +33603,42 @@ running program rather than at a compiling one — the examples that push, join
 and grow — and ask the same three things of the machine: that it refuses, that
 it says which program asked, and that it neither dies nor answers as though the
 push had happened.
+
+## The machine's own life, and what it can say from inside it
+
+Pointing the aim at the machine found two things, and the first is that the
+question already has an answer. A machine that has truly run out cannot say
+which line asked: once an allocation is refused every one after it is too, and
+one of those is the allocation a message is written into. So what comes back is
+`K0639` and nothing else, from a refusal in the middle of a `push` exactly as
+from one in the middle of parsing. That is the honest sentence — naming the line
+costs memory the machine has not got — and the world where it can speak is a
+ceiling rather than an empty machine, which the ladder already holds sixteen of
+to being a message at the line that asked.
+
+The second is that it holds. Thirty allocations refused inside the machine's own
+life, for every one of the thirty-two examples: nothing died, nothing came back
+nought, nothing blamed the program.
+
+The machine's own life is the part of the sweep that was thin. A program that
+runs spends most of its allocations being read and compiled — `queue.kest` 2278
+of 2828 — so D881's spread landed eight refusals in the machine and thirty-two
+in the compiler. The gate takes the compiler's share off the front now:
+`machine <program>` is `run` bisected twice, once for what checking takes and
+once for the whole, with the refusals spread over the difference. Seven ways of
+reading six programs, 280 allocations refused one at a time.
+
+No sentence was added, so no hole was: the three the section asks are the same
+three for a machine as for a compiler.
+
+Recorded as D882.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** three entries have gone into what a compiler does when it has no
+memory, and it does the right thing everywhere anybody has looked. Put the aim
+down and pick the language back up. `docs/language.md` is four thousand lines
+and is the thing a reader meets first: read the first five hundred of them as
+somebody who has never seen this language, and find the place where the document
+explains a thing the language should not have needed explaining. One place, with
+what the explanation is standing in for.
