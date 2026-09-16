@@ -4230,6 +4230,61 @@ had. The library itself takes the number rather than the words: a host says how
 much heap a machine may have in `KestLimits`, and a build is opened with a
 ceiling of its own.
 
+### What `no.alloc` is about
+
+`no.alloc` is about the **Kest program heap**: the memory a program's arrays,
+stores, text and tables come out of, which `kest_heap_used` reports and
+`kest_heap_reset` empties. A body that promises it performs no allocation on
+that heap, and may only call host functions whose own declaration permits it.
+
+It is not a promise about the process. Three things allocate outside it and are
+outside the contract:
+
+- the compiler's own work, which is over before a program runs;
+- the machinery that writes a diagnostic, which runs when something has already
+  gone wrong;
+- whatever a host's own bound function does inside itself, which this language
+  cannot see and does not claim to.
+
+The third is a declared promise rather than a proved one. An `extern` written
+`no.alloc` is taken at its word about its own memory; what the machine does
+check is that the crossing left the program's heap where it found it, which it
+does after every call to a door that promised. A host that allocates with
+`malloc` inside such a door is not caught and is not claimed to be.
+
+A frame-critical program that must report a failure without touching the program
+heap has `kest_native_failed` for the host side and the fuel and cancel refusals
+for the machine's: none of those allocate on the program heap.
+
+Scratch allocation is allocation. There is no exemption for temporary memory.
+
+### When a host cannot do what it was asked
+
+A bound function gives nothing back. One that could not do what it was asked
+used to write a value that meant nothing, and the program carried on with it.
+
+```c
+static void fetch(KestValue *frame, KestRuntime *runtime, void *context) {
+    if (!open_the_file(context)) {
+        kest_native_failed(runtime, "the file it wanted is not there");
+        return;
+    }
+    frame[0].integer = read_it(context);
+}
+```
+
+The call then refuses where it was made, in the same shape as anything else
+that fails while running:
+
+```text
+error[K0662]: `Host.fetch` could not do what it was asked: the file it wanted is not there
+```
+
+What the door wrote into the frame is not read. The host's words are copied and
+say what could not be done; the code is the machine's. A door that fails is not
+a program that is wrong, so nothing about the program is blamed — the message
+names the door.
+
 ### How long a program may run
 
 The three ceilings above bound memory. `--fuel` bounds time, and it is the one

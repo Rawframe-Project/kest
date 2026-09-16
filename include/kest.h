@@ -939,6 +939,22 @@ uint64_t kest_fuel_left(const KestRuntime *runtime);
 //
 // A machine stays cancelled until a host gives it fuel again. `kest_fuel_set`
 // is what takes it back.
+// A bound function says the crossing failed. It is the one thing a host could
+// not do: `KestNative` gives nothing back, so a door that could not do what it
+// was asked either wrote a value that means nothing or reached for a global of
+// its own, and the program carried on with the first. Called from inside a
+// bound function, and what happens then is that the call refuses at the
+// instruction that made it, in the same shape as anything else that fails while
+// running, with the host's own words under it.
+//
+// `why` is the host's and is copied. Nothing is taken from it but the words: a
+// code is the machine's to allocate, and what a host says is a sentence about
+// what it could not do.
+//
+// Anything the door wrote into the frame is not read. A host that fails and
+// writes an answer is a host that failed.
+void kest_native_failed(KestRuntime *runtime, const char *why);
+
 void kest_cancel(KestRuntime *runtime);
 
 // Whether somebody asked it to stop and it has not been given fuel since.

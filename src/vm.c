@@ -443,6 +443,10 @@ struct KestRuntime {
     // Why the last run stopped, for the two reasons that are not a mistake in
     // the program. Read by nothing but the refusal itself.
     bool stopped_for_fuel;
+    // And what a bound function said when it could not do what it was asked.
+    // NULL when the last crossing worked, which is every crossing that does
+    // not call `kest_native_failed`. See D937.
+    const char *native_failed;
     // The frames live in the arena rather than on the host's stack, so the
     // depth limit is Kest's own number and not whatever the host allows.
     Frame *frames;
@@ -4152,7 +4156,25 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
 #endif
+            rt->native_failed = NULL;
             natives[index](base, rt, rt->contexts[index]);
+            // Whether the host could do what it was asked. It is asked first,
+            // because everything below reads what the door wrote and a door
+            // that failed wrote nothing worth reading. See D937.
+            if (rt->native_failed != NULL) {
+                const char *said = rt->native_failed;
+                rt->native_failed = NULL;
+                rt->running_top = was_top;
+                rt->running_frames = was_frames;
+                fail(vmp, frame, instruction, "K0662",
+                     "`%s` could not do what it was asked: %s",
+                     module->externs[index].name, said);
+                kest_diags_suggest(vmp->diags,
+                                   "the host said so with "
+                                   "`kest_native_failed`, and what it wrote "
+                                   "into the frame was not read");
+                return false;
+            }
             if (promised && kest_heap_used(rt) != held) {
                 rt->running_top = was_top;
                 rt->running_frames = was_frames;
@@ -4613,6 +4635,24 @@ uint64_t kest_fuel_left(const KestRuntime *runtime) {
     // rather than with nought, because nought is the answer for one that has
     // run out and those are opposite things.
     return runtime->fuel_bounded ? runtime->fuel_left : UINT64_MAX;
+}
+
+void kest_native_failed(KestRuntime *runtime, const char *why) {
+    if (runtime == NULL) {
+        return;
+    }
+    // Copied onto the machine's own arena rather than kept: the host's string
+    // may be on its stack, and what reads this is the refusal after the call
+    // has returned. A host with nothing to say still fails, and says so.
+    const char *said = why == NULL ? "" : why;
+    size_t length = strlen(said);
+    char *kept = kest_arena_alloc(runtime->own, length + 1, 1);
+    if (kept == NULL) {
+        runtime->native_failed = "the host could not say why";
+        return;
+    }
+    memcpy(kept, said, length + 1);
+    runtime->native_failed = kept;
 }
 
 void kest_cancel(KestRuntime *runtime) {

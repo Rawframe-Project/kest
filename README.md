@@ -50,15 +50,21 @@ doors covering compile, start, call, layout introspection, lent memory and
 per-machine limits; and a standard library of eight modules written in Kest and
 held to the same rules as a program.
 
-**Partial.** The standard library is eight modules — `io`, `math`, `text`,
-`table`, `sort`, `random`, `vec`, `hash` — and `io` is `write` and `print` over
-a host door. A program cannot open a file, read the command line or ask the
-time; the host can do all three and hand the result in. Resource control is
-three ceilings a host sets — stack slots, call depth and heap bytes — each
-refused in words at the instruction that crossed it; a host cannot yet bound
-how long a program runs. Change detection for reload is there — per-file and
-whole-program marks, and the list of files a build actually read — and it is
-detection and rebuild only.
+**Partial.** The standard library is nine modules — `io`, `math`, `text`,
+`table`, `sort`, `random`, `vec`, `hash`, `os` — which is small. Change
+detection for reload is there — per-file and whole-program marks, and the list
+of files a build actually read — and it is detection and rebuild only; there is
+a host-mediated schema migration prototype outside this repository and nothing
+in it. `check --json` carries a fingerprint per declaration, folded from the
+qualified name, the types and the promises: it is a signature fingerprint and
+not a semantic identity, and it does not survive a rename.
+
+**Resource control.** A host sets four ceilings — stack slots, call depth, heap
+bytes and a budget in steps — and each is refused in words at the instruction
+that crossed it. `kest_cancel` stops a running program from another thread. That
+is enough to stop a program that will not stop; it is **not** a claim that this
+is safe to run code you do not trust, which would need a threat model and fuzz
+evidence this project does not have.
 
 **Not implemented.** Live code replacement in a running machine, and any
 migration of live state across a rebuild: a host reloads by building again and
@@ -66,8 +72,11 @@ starting a new machine, and what the old one held is the host's problem.
 Cross-platform bitwise determinism: `sin`, `cos`, `pow` and `atan2` are the
 host's libm and two platforms may round them differently; `sqrt`, `floor`,
 `ceil` and all integer and `f32`/`f64` arithmetic are exactly specified and do
-not have that problem. No package manager, no debugger, no language server, no
-JIT, no concurrency, no networking, no graphics.
+not have that problem. `no.host` is not determinism — it says a body does not
+cross the boundary, which is a different thing, though every operation that
+could differ between platforms is behind a door it forbids. No package manager,
+no debugger, no language server, no JIT, no concurrency, no networking, no
+graphics.
 
 **Tested on** x86-64 Linux with GCC 15.2 only. The code is C11 and libc and
 nothing else, so it should build elsewhere; nobody has, and this project does

@@ -188,7 +188,16 @@ static void engine_rank(KestValue *frame, KestRuntime *runtime, void *context) {
 // host thinks they are, and that each case carries what this host reads out of
 // it, is held at binding rather than here: a frame is no place to find out.
 // See D704.
+// Whether the door below says it could not do what it was asked, which is the
+// one thing a bound function could not say until D937.
+static bool engine_hurt_refuses = false;
+
 static void engine_hurt(KestValue *frame, KestRuntime *runtime, void *context) {
+    if (engine_hurt_refuses) {
+        frame[0].integer = 4242;
+        kest_native_failed(runtime, "nothing here can be hurt");
+        return;
+    }
     (void)runtime;
     (void)context;
     int64_t cost = 0;
@@ -6287,6 +6296,61 @@ int main(int argc, char **argv) {
             }
         }
         printf("and a handle of the wrong thing is refused both ways round\n");
+    }
+
+    // And a door that could not do what it was asked. A bound function gives
+    // nothing back, so one that failed used to write a value that meant nothing
+    // and the program carried on with it. It says so now, and the call refuses
+    // where it was made, with the host's own words under it. See D937.
+    {
+        KestHost *sorry = kest_host_new();
+        static Decider unasked = {-1, 1, false, true, false, false};
+        if (sorry == NULL ||
+            !kest_host_bind(sorry, "Io.write", io_write, stdout) ||
+            !kest_host_bind(sorry, "Engine.decide", engine_decide, &unasked) ||
+            !kest_host_bind(sorry, "Engine.name", engine_name, &unasked) ||
+            !kest_host_bind(sorry, "Engine.rank", engine_rank, &unasked) ||
+            !kest_host_bind(sorry, "Engine.hurt", engine_hurt, NULL) ||
+            !kest_host_bind(sorry, "Engine.blame", engine_blame, NULL) ||
+            !kest_host_bind(sorry, "Engine.weigh", engine_weigh, NULL) ||
+            !kest_host_bind(sorry, "Engine.who", engine_who, NULL)) {
+            fprintf(stderr, "a host that refuses would not be made\n");
+            return 1;
+        }
+        KestRuntime *refusing = kest_start(build, sorry, NULL);
+        kest_host_free(sorry);
+        int32_t asks = refusing == NULL ? -1 : kest_entry(refusing, "hurtBy");
+        if (refusing == NULL || asks < 0) {
+            fprintf(stderr, "a host that refuses would not start\n");
+            return 1;
+        }
+        // `Engine.hurt` is bound to a body that says it could not: whatever it
+        // wrote is not read, and the call refuses.
+        static Event one_event[1];
+        KestValue lent = kest_borrow(refusing, one_event, 1, "Event",
+                                     sizeof(Event));
+        if (lent.object == NULL) {
+            kest_report(refusing, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        engine_hurt_refuses = true;
+        KestValue frame[8] = {{0}};
+        frame[0] = lent;
+        bool ran = kest_call(refusing, asks, frame, 8);
+        engine_hurt_refuses = false;
+        if (ran) {
+            fprintf(stderr, "a door that said it failed was taken as an "
+                            "answer\n");
+            return 1;
+        }
+        if (!said_that(refusing, "K0662", "could not do what it was asked")) {
+            return 1;
+        }
+        if (!kest_runtime_free(refusing)) {
+            fprintf(stderr, "a machine whose host refused was not freed\n");
+            return 1;
+        }
+        printf("and a door that could not do what it was asked said so\n");
     }
 
     // What a machine is made of, and what starting one costs the build it was

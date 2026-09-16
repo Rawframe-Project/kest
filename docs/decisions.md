@@ -28965,3 +28965,44 @@ from a place in another machine by which world it is in, so the count no longer
 has to be unique across them.
 
 That was the last mutable thing a build had that two machines shared.
+
+## D937: a host can say it could not
+
+`KestNative` gives nothing back. A bound function that could not do what it was
+asked had two choices and both were wrong: write a value that means nothing and
+let the program carry on with it, or reach for a global of its own that the
+machine knows nothing about.
+
+`kest_native_failed(runtime, why)` is the third. The call refuses at the
+instruction that made it, `K0662`, with the host's own words under it — and
+whatever the door wrote into the frame is not read, because a host that failed
+and wrote an answer is a host that failed.
+
+The words are copied onto the machine's own arena rather than kept, since the
+host's string may be on a stack that is gone by the time the refusal is written.
+The code is the machine's and the sentence is the host's: a host allocating
+codes would be a host inventing diagnostics, and a machine writing the sentence
+would be a machine guessing what went wrong.
+
+This is what a frame-critical host needs to report a failure without allocating
+on the program's heap, which is the other half of what `no.alloc` means (D938).
+
+## D938: what `no.alloc` is about, said exactly
+
+The promise was described more broadly than what is measured. Three things
+allocate outside the Kest program heap — the compiler's own work, the machinery
+that writes a diagnostic, and whatever a host does inside a bound function — and
+a reader was entitled to think the promise covered all of them.
+
+It does not, and it should not. `no.alloc` is about the heap a program's arrays,
+stores, text and tables come out of: the one `kest_heap_used` reports and
+`kest_heap_reset` empties. The reference says that now, and says which three
+things are outside it and why.
+
+What the machine still does is check, after every call to a door that promised,
+that the crossing left the program's heap where it found it. That is the whole
+of what it can observe about a host, and it is said as that rather than as a
+proof about the host's own memory.
+
+Nothing was weakened. Scratch allocation is allocation, and there is no
+exemption for temporary memory.
