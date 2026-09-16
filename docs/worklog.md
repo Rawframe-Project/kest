@@ -35312,3 +35312,50 @@ to a number, cancelled, taken back, and every door asked of a machine that is no
 there. `make fast` holds the command line's half.
 
 **Runs:** `make fast`, and `make check`, everything passing.
+
+## A world kept and worked on, and what it costs to keep (D922)
+
+`examples/colony.kest` is a program rather than an example of a rule: settlers
+eat, work, starve and are born, jobs are given out and finished, and the two
+point at each other so the graph has cycles and references that outlive what
+they named. `main` runs a script; `onEvents` is one day an event, which is the
+bulk crossing D007 and the predecessor's W11 both say to write.
+
+It is also the memory study a persistent-world language needs. Ten thousand
+settlers, two thousand jobs, and the heap read after N days:
+
+```text
+days      25        50       100       200       400       800
+heap  2837289   2909574   2928742   2937162   2953162   2985162
+```
+
+It settles to a constant 80 bytes a day. Three variants of the same program say
+which 80:
+
+```text
+the program as written                80 bytes a day
+no temporaries in the day, births kept  0 -- exactly constant over 800 days
+temporaries kept, no births            80
+the array hoisted into the world       35
+```
+
+So **the store is a steady state and the temporaries are not.** Ten thousand
+entities added, removed, reused, referenced through stale handles and cycled
+through each other for eight hundred days cost nothing that accumulates: slot
+reuse works, and a `no.alloc` day is a day that allocates nothing, proved by the
+compiler and confirmed over eight hundred of them.
+
+What grows is what a day makes and drops. Hoisting the array into the world and
+`clear`ing it takes 80 down to 35, and the 35 that is left is one interpolated
+line of text a day. Text is immutable and there is no buffer for it, so that
+class has no answer inside the program.
+
+`kest_heap_reset` makes no difference here and the reason is the shape: the heap
+is thrown away between events, and a batch of days is one event.
+
+What that leaves for a technical lead is written in the sprint report. Nothing
+was changed about the memory model: the evidence says the model is adequate
+where a tick keeps its promise, and the one class that grows has a host-side
+answer today.
+
+**Runs:** `make fast`; `kest tick examples/colony.kest N` at six values of N.

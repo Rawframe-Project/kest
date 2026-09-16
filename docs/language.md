@@ -4433,6 +4433,7 @@ here, is a check that fails.
 | `boxes.kest` | a shape that takes types, and a copy for every set of them |
 | `camera.kest` | `std.vec` and `std.math` where a camera follows something |
 | `chance.kest` | numbers that look random, and two runs from one seed |
+| `colony.kest` | a world kept and worked on a day at a time, which is a program rather than a rule |
 | `embed.kest` | the program the engine beside it runs, frame by frame |
 | `events.kest` | the host calling in, one crossing for a batch |
 | `flags.kest` | bits, which is what a `u8` of state is |

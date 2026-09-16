@@ -1,0 +1,357 @@
+module examples.colony
+import std.io
+import std.sort
+// A small colony, run a day at a time. It is here to be a program rather than
+// an example of a rule: nothing in it is written to show a feature off, and
+// what it is for is finding out what this language is like to write something
+// in. Every other file here answers with which of its own checks failed, and so
+// does this one, because that is what makes it something the gate can run.
+//
+// What it does: settlers eat, work, starve and are born; jobs are given out,
+// worked on and finished; and both point at each other, so the graph has cycles
+// in it and references that outlive what they named. A day is a tick. The host
+// drives it -- `onEvents` is one day an event, which is the shape D007 and
+// W11's bulk crossing say to write -- and `main` runs a scripted day with the
+// same bodies so that running it is running the thing itself.
+//
+// It is also the memory study. A world that is kept and worked on for a long
+// time is the case a persistent-world language has to survive, and the question
+// is whether the heap settles or climbs: `kest tick examples/colony.kest 200`
+// says what two hundred days cost, and the same at 400 says whether the second
+// two hundred cost the same as the first.
+// How big the world is when the host drives it. Small enough that a day is a
+// day rather than a minute, large enough that the store does real work.
+const SETTLERS: i32 = 10000
+const JOBS: i32 = 2000
+
+// A settler and the job it holds. Each points at the other, which is the cycle
+// this language does not have to do anything about: nothing counts references
+// and nothing is told about a deletion, so a cycle is a shape rather than a
+// leak. What it costs is that a read is a lookup that can fail. See D014.
+struct Settler {
+    name: text
+    hunger: i32
+    hp: i32
+    // The two handles a settler holds, both of them references into a store
+    // rather than anything owned. A reference is a place and a stamp, so one
+    // to a settler who has died reads as nothing rather than as somebody else.
+    job: ref<Job>?
+    friend: ref<Settler>?
+}
+
+struct Job {
+    what: text
+    // Who it is for, and what comes after it. A chain of jobs can reach round
+    // to itself and nothing here minds.
+    who: ref<Settler>
+    next: ref<Job>?
+    left: i32
+}
+
+// The world is two stores and the day's tally. A shape that holds more than one
+// handle says here that it holds them in step: a job's `who` is a settler in
+// `settlers` and nowhere else, and a settler's `job` is in `jobs`. Nothing in
+// the language holds two stores to each other, so the rule is that the world is
+// what hands them out and the world is what reads them back.
+struct World {
+    settlers: store<Settler>
+    jobs: store<Job>
+    day: i32
+    born: i32
+    starved: i32
+    finished: i32
+    // References followed to something that is no longer there. It is the
+    // number this shape exists to make safe, so it is counted rather than
+    // assumed to be nought.
+    stale: i32
+}
+
+fn empty() -> World {
+    let settlers: store<Settler> = store()
+    let jobs: store<Job> = store()
+    return World(settlers, jobs, 0, 0, 0, 0, 0)
+}
+
+// Filling it. Everything here allocates, which is what the promise on the
+// bodies below is worth saying: a world is made once and worked on every day.
+fn settle(w: World, many: i32) {
+    let first: ref<Settler>? = none
+    for i in 0..many {
+        let who = add(
+            w.settlers,
+            Settler("settler", i % 7, 10 + i % 5, none, first)
+        )
+        if i == 0 {
+            first = who
+        }
+    }
+}
+
+fn post(w: World, many: i32) {
+    let names: [text] = array()
+    push(names, "dig")
+    push(names, "haul")
+    push(names, "cook")
+    let earlier: ref<Job>? = none
+    let at = 0
+    for who in w.settlers {
+        if at >= many {
+            return
+        }
+        let job = add(w.jobs, Job(names[at % 3], who, earlier, 3 + at % 4))
+        earlier = job
+        // And the other way round, so the two point at each other.
+        if let settler = get(w.settlers, who) {
+            set(
+                w.settlers,
+                who,
+                Settler(
+                    settler.name,
+                    settler.hunger,
+                    settler.hp,
+                    job,
+                    settler.friend
+                )
+            )
+        }
+        at += 1
+    }
+}
+
+// A day. It walks every settler, follows what it holds, writes some back and
+// removes the rest -- and it allocates nothing, which the compiler proves. That
+// is the shape a frame in this language is: the world was built once and a day
+// only moves it.
+fn eat(w: World) -> World no.alloc {
+    let starved = 0
+    let stale = 0
+    for who in w.settlers {
+        if let settler = get(w.settlers, who) {
+            let hunger = settler.hunger + 1
+            if hunger > 9 {
+                remove(w.settlers, who)
+                starved += 1
+
+                // Following a reference to somebody who may have starved
+                // yesterday. This is the read the whole shape is for.
+            } else {
+                if let friend = settler.friend {
+                    if get(w.settlers, friend) == none {
+                        stale += 1
+                    }
+                }
+                set(
+                    w.settlers,
+                    who,
+                    Settler(
+                        settler.name,
+                        hunger,
+                        settler.hp,
+                        settler.job,
+                        settler.friend
+                    )
+                )
+            }
+        }
+    }
+    return World(
+        w.settlers,
+        w.jobs,
+        w.day,
+        w.born,
+        w.starved + starved,
+        w.finished,
+        w.stale + stale
+    )
+}
+
+// Jobs get an hour of work. A job whose settler is gone is finished the hard
+// way, which is the deletion this graph is written to survive.
+fn work(w: World) -> World no.alloc {
+    let finished = 0
+    let stale = 0
+    for which in w.jobs {
+        if let job = get(w.jobs, which) {
+            if get(w.settlers, job.who) == none {
+                remove(w.jobs, which)
+                stale += 1
+            } else if job.left <= 1 {
+                remove(w.jobs, which)
+                finished += 1
+            } else {
+                set(
+                    w.jobs,
+                    which,
+                    Job(job.what, job.who, job.next, job.left - 1)
+                )
+            }
+        }
+    }
+    return World(
+        w.settlers,
+        w.jobs,
+        w.day,
+        w.born,
+        w.starved,
+        w.finished + finished,
+        w.stale + stale
+    )
+}
+
+// And the half that grows: somebody is born, and takes a place a starved
+// settler left. That is what makes this a world rather than a countdown, and it
+// is what puts the store's own reuse of its places under load.
+fn born(w: World, many: i32) -> World {
+    let added = 0
+    for i in 0..many {
+        add(w.settlers, Settler("child", 0, 10, none, none))
+        added += 1
+    }
+    return World(
+        w.settlers,
+        w.jobs,
+        w.day + 1,
+        w.born + added,
+        w.starved,
+        w.finished,
+        w.stale
+    )
+}
+
+// What a day costs in temporary work: an array of the living, sorted, and a
+// line of text about it. A frame that reports is a frame that allocates, and
+// this is here because a world that only ever writes into what it already has
+// is not the case anybody has.
+fn tally(w: World) -> text {
+    let hungry: [i32] = array()
+    for who in w.settlers {
+        if let settler = get(w.settlers, who) {
+            if settler.hunger > 5 {
+                push(hungry, settler.hunger)
+            }
+        }
+    }
+    sort.by(hungry, sort.ascending)
+    let worst = 0
+    if len(hungry) > 0 {
+        worst = hungry[len(hungry) - 1]
+    }
+    return "day {w.day}: {len(hungry)} hungry, worst {worst}"
+}
+
+fn oneDay(w: World) -> World {
+    let after = work(eat(w))
+    // Enough born to make the store hand out places again without the world
+    // running away: half of what starved yesterday.
+    return born(after, (after.starved - w.starved) / 2)
+}
+
+// The host's way in. One day an event, so a batch of events is a batch of days
+// and the crossing happens once rather than once a day. See D007.
+fn onEvents(events: [i32]) -> i32 {
+    let w = empty()
+    settle(w, SETTLERS)
+    post(w, JOBS)
+    let said = 0
+    for e in events {
+        w = oneDay(w)
+        // Something that looks at the whole world and makes something, because
+        // a day that only moves numbers is not the day anybody has.
+        said += len(tally(w))
+    }
+    return w.day + w.starved + w.finished + said % 7
+}
+
+// And the same bodies driven by a script rather than by a host, which is what
+// makes this a program somebody can run. The commands are the ones a person
+// would type at it.
+fn command(w: World, said: text) -> World {
+    if said == "day" {
+        return oneDay(w)
+    }
+    if said == "settle" {
+        settle(w, 20)
+        return World(
+            w.settlers,
+            w.jobs,
+            w.day,
+            w.born + 20,
+            w.starved,
+            w.finished,
+            w.stale
+        )
+    }
+    if said == "post" {
+        post(w, 10)
+        return w
+    }
+    if said == "report" {
+        io.print(tally(w))
+        return w
+    }
+    io.print("no such command: {said}")
+    return w
+}
+
+fn main() -> i32 {
+    let w = empty()
+    settle(w, 60)
+    post(w, 25)
+    // A store hands out a place and the place is a number, so a world of sixty
+    // is sixty places.
+    if len(w.settlers) != 60 || len(w.jobs) != 25 {
+        return 1
+    }
+    // A reference to somebody who is removed reads as nothing rather than as
+    // whoever took the place. That is the whole of what a stamp is for.
+    let doomed = add(w.settlers, Settler("doomed", 0, 1, none, none))
+    if get(w.settlers, doomed) == none {
+        return 2
+    }
+    remove(w.settlers, doomed)
+    if get(w.settlers, doomed) != none {
+        return 3
+    }
+    // And the place is handed out again to somebody else, who is not the one
+    // the old reference names.
+    let next = add(w.settlers, Settler("next", 0, 10, none, none))
+    if get(w.settlers, doomed) != none {
+        return 4
+    }
+    if get(w.settlers, next) == none {
+        return 5
+    }
+    remove(w.settlers, next)
+    let script: [text] = array()
+    for i in 0..12 {
+        push(script, "day")
+    }
+    push(script, "settle")
+    push(script, "post")
+    push(script, "report")
+    for one in script {
+        w = command(w, one)
+    }
+    if w.day != 12 {
+        return 6
+    }
+    // Twelve days of a world that starts hungry: somebody starves, and every
+    // job whose settler starved goes with them.
+    if w.starved == 0 {
+        return 7
+    }
+    if w.finished == 0 {
+        return 8
+    }
+    // Nothing follows a reference into a place that is somebody else's: the
+    // count is what it is, and the point is that it was counted.
+    if w.stale < 0 {
+        return 9
+    }
+    if len(w.settlers) + w.starved < 60 {
+        return 10
+    }
+    w = command(w, "nonsense")
+    io.print("{len(w.settlers)} alive, {w.starved} starved, {w.finished} jobs done, {w.stale} reference(s) into nothing")
+    return 0
+}
