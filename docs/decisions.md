@@ -29056,3 +29056,33 @@ It does ask the program to keep its scratch in the world rather than making it
 each tick. That is the idiom a frame budget wants anyway, and the difference is
 that it is now a thing the compiler can prove rather than a thing a reader has
 to believe.
+
+## D941: a simulation profile, and a run that says whether it holds
+
+`no.host` was being read as determinism. It is not: it says a body does not
+cross the boundary, which is a different claim that happens to imply this one
+today because every operation whose answer could differ between platforms is
+behind a door it forbids. A reader deserves the actual promise, written down,
+and a way to find out whether a machine keeps it.
+
+So there is a profile, version 1, and it says what it assumes about a target,
+where a program's state comes from, what whole numbers and floats do, what
+crossing between them does, what order a walk is in, how hashing and randomness
+behave, and what is rejected. Version 1 rejects `sin`, `cos`, `pow` and `atan2`
+— the host's libm, not required to round correctly — and, having no way yet for
+a host to declare a door deterministic, is exactly what a `no.host` body can
+reach. That is stricter than it needs to be, which is the safe direction.
+
+**It is a number rather than a paragraph.** `examples/determinism.kest`
+exercises every rule in it — wrapping at eight widths in both directions,
+narrowing, saturation and not-a-number across the float boundary, `f32` rounding
+at every step with no contraction, three kinds of walk, hashing including the
+two spellings of nought, a seeded source, and a table's pair order after forty
+puts and thirteen takes — and folds the answers into one. This platform says
+`3909859238992895122`. The gate runs it, so any of those rules changing is a
+number that moves and a line in the reference to change on purpose; a second
+platform either answers the same or prints which of the eight parts does not.
+
+What it does not do is make `deterministic` a promise a function writes. That
+needs a way for a host to declare a door inside the profile, which needs the
+profile to exist first — it does now — and is the next piece.

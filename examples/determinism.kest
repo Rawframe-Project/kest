@@ -1,0 +1,220 @@
+module examples.determinism
+
+import std.io
+import std.hash
+import std.random
+import std.table
+
+// The conformance corpus for the simulation profile. Every claim the reference
+// makes about what is the same everywhere is exercised here and folded into one
+// number, so that "this platform conforms" is a thing a run answers rather than
+// a thing a document asserts.
+//
+// The number below is this profile's answer. A platform that produces it agrees
+// with this one about every rule in the profile; a platform that does not
+// disagrees about at least one, and the parts are printed so a reader can see
+// which.
+//
+// What it does not cover is what the profile does not promise: `Math.sin`,
+// `cos`, `pow` and `atan2` are the host's and are outside it. See D941.
+
+const ANSWER: u64 = 3909859238992895122
+
+struct Piece {
+    name: text
+    mark: u64
+}
+
+// Whole numbers wrap at their own width, in both directions, at every width.
+fn wrapping() -> u64 no.alloc no.host {
+    let mark = hash.start
+    let a: u8 = 255
+    a += 1
+    mark = hash.join(mark, u64(a))
+    let b: u8 = 0
+    b -= 1
+    mark = hash.join(mark, u64(b))
+    let c: i8 = 127
+    c += 1
+    mark = hash.join(mark, u64(u8(c)))
+    let d: i16 = 0 - 32767
+    d -= 1
+    d -= 1
+    mark = hash.join(mark, u64(u16(d)))
+    let e: u32 = 4294967295
+    e += 1
+    mark = hash.join(mark, u64(e))
+    let f: i32 = 2147483647
+    f += 1
+    mark = hash.join(mark, u64(u32(f)))
+    let g: u64 = 18446744073709551615
+    g += 1
+    mark = hash.join(mark, g)
+    let h: i64 = 9223372036854775807
+    h += 1
+    mark = hash.join(mark, u64(h))
+    return mark
+}
+
+// Narrowing keeps the low bits and says so, and widening a signed number
+// carries its sign.
+fn narrowing() -> u64 no.alloc no.host {
+    let mark = hash.start
+    let wide: i32 = 0 - 1
+    mark = hash.join(mark, u64(u8(wide)))
+    mark = hash.join(mark, u64(u16(wide)))
+    mark = hash.join(mark, u64(u32(wide)))
+    let small: i8 = 0 - 3
+    mark = hash.join(mark, u64(u64(i64(small))))
+    let big: u64 = 18446744073709551615
+    mark = hash.join(mark, u64(u32(big)))
+    mark = hash.join(mark, u64(u8(big)))
+    return mark
+}
+
+// A float above what a whole number holds saturates at its end rather than
+// wrapping, and one that is not a number is nought.
+fn crossings() -> u64 no.alloc no.host {
+    let mark = hash.start
+    let big: f64 = 10000000000000000000.0
+    mark = hash.join(mark, u64(big))
+    let past: f64 = 100000000000000000000.0
+    mark = hash.join(mark, u64(past))
+    let under: f64 = 0.0 - 1.0
+    mark = hash.join(mark, u64(u32(under)))
+    let notNumber: f64 = 0.0 / 0.0
+    mark = hash.join(mark, u64(u32(notNumber)))
+    let over: f32 = 3000000000.0
+    mark = hash.join(mark, u64(i32(over)))
+    return mark
+}
+
+// `f32` rounds to `f32` at every step, so a multiply and an add are two
+// roundings and never one fused one, and `f64` is what it is.
+fn rounding() -> u64 no.alloc no.host {
+    let mark = hash.start
+    let a: f32 = 0.1
+    let b: f32 = 0.2
+    let sum = a + b
+    mark = hash.join(mark, u64(u32(sum * 100000000.0)))
+    let x: f32 = 1.0000001
+    let fused = x * x - 1.0
+    mark = hash.join(mark, u64(u32(fused * 100000000000000.0)))
+    let wide: f64 = 0.1
+    let widely = wide + 0.2
+    mark = hash.join(mark, u64(u64(widely * 1000000000000000.0)))
+    // A third of a turn, worked out the same way everywhere because it is only
+    // ever a divide.
+    let third: f64 = 1.0 / 3.0
+    mark = hash.join(mark, u64(u64(third * 1000000000000000.0)))
+    return mark
+}
+
+// Walks are in the order the thing is in: an array by index, a store by place,
+// a range from its first to its last.
+fn ordering() -> u64 {
+    let mark = hash.start
+    let xs: [i32] = array()
+    for i in 0..8 {
+        push(xs, i * 7 % 5)
+    }
+    for one in xs {
+        mark = hash.join(mark, u64(one))
+    }
+    for at, one in xs {
+        mark = hash.join(mark, u64(at * 31 + one))
+    }
+    let where: store<i32> = store()
+    for i in 0..6 {
+        add(where, i)
+    }
+    for r in where {
+        if let held = get(where, r) {
+            mark = hash.join(mark, u64(held))
+        }
+    }
+    return mark
+}
+
+// `hash` is folded from a fixed start with no seed taken from the run, so the
+// same value answers the same number in every run on every machine.
+fn hashing() -> u64 no.alloc no.host {
+    let mark = hash.start
+    mark = hash.join(mark, hash(0))
+    mark = hash.join(mark, hash(1))
+    mark = hash.join(mark, hash(0 - 1))
+    mark = hash.join(mark, hash("kest"))
+    mark = hash.join(mark, hash(""))
+    mark = hash.join(mark, hash(true))
+    mark = hash.join(mark, hash(3.5))
+    // Nought and its other spelling are one key, so they fold alike.
+    mark = hash.join(mark, hash(0.0))
+    mark = hash.join(mark, hash(0.0 - 0.0))
+    return mark
+}
+
+// A seeded source answers the same run of numbers from the same seed, and the
+// library's own shapes over it are the same shapes.
+fn seeded() -> u64 no.alloc no.host {
+    let mark = hash.start
+    let s = random.from(20260917)
+    for i in 0..12 {
+        s = random.next(s)
+        mark = hash.join(mark, random.number(s))
+    }
+    let t = random.from(7)
+    for i in 0..6 {
+        t = random.next(t)
+        mark = hash.join(mark, u64(random.below(t, 100)))
+        mark = hash.join(mark, u64(u32(random.fraction(t) * 1000000.0)))
+    }
+    return mark
+}
+
+// A table walked over its own pairs is in the order the puts and takes left,
+// which is an order and is the same order for the same operations.
+fn keyed() -> u64 {
+    let mark = hash.start
+    let t: table.Table<i32, i32> = table.empty()
+    for i in 0..40 {
+        table.set(t, i * 13 % 40, i)
+    }
+    for i in 0..40 {
+        if i % 3 == 0 {
+            table.remove(t, i)
+        }
+    }
+    for at, key in t.keys {
+        mark = hash.join(mark, u64(key * 65537 + t.values[at]))
+    }
+    return mark
+}
+
+fn main() -> i32 {
+    let parts: [Piece] = array()
+    push(parts, Piece("wrapping", wrapping()))
+    push(parts, Piece("narrowing", narrowing()))
+    push(parts, Piece("crossings", crossings()))
+    push(parts, Piece("rounding", rounding()))
+    push(parts, Piece("ordering", ordering()))
+    push(parts, Piece("hashing", hashing()))
+    push(parts, Piece("seeded", seeded()))
+    push(parts, Piece("keyed", keyed()))
+
+    let whole = hash.start
+    for one in parts {
+        whole = hash.join(whole, one.mark)
+    }
+
+    if whole != ANSWER {
+        // Which part disagrees, because a platform that answers differently is
+        // a platform a reader has to be able to tell about.
+        for one in parts {
+            io.print("{one.name} {one.mark}")
+        }
+        io.print("this platform answers {whole} and the profile says {ANSWER}")
+        return 1
+    }
+    io.print("the simulation profile holds on this platform: {whole}")
+    return 0
+}

@@ -4549,6 +4549,75 @@ runs.
 And a body that promises `no.host` can reach none of it, which the compiler
 proves. That is what makes `no.host` mean pure rather than merely fast.
 
+## The simulation profile, version 1
+
+A simulation that has to run the same twice — a replay, a rollback, a lockstep
+game between two machines — needs to know exactly what is promised. This is
+that promise, written as a version so that a later one can differ and say so.
+
+**What it assumes about a target.** Two's complement integers of 8, 16, 32 and
+64 bits; IEEE-754 binary32 and binary64 with the default rounding mode, round to
+nearest, ties to even; a byte of 8 bits. The rounding mode is not changed by this
+language and must not be changed under it: a host that changes it has left the
+profile, and nothing here can see that it did.
+
+**Where the state comes from.** A program starts with what it is given. There is
+no uninitialised memory a program can read — every allocation arrives as nought
+— and nothing is seeded from the run: not an address, not a clock, not the
+order two files happened to be read in.
+
+**Whole numbers.** Every width wraps at its own end, in both directions.
+Narrowing keeps the low bits. Widening a signed number carries its sign and an
+unsigned one does not. Division truncates toward nought and the remainder takes
+the sign of the left-hand side. Division by nought and the remainder by nought
+are refusals, not values.
+
+**Floats.** `f32` arithmetic rounds to `f32` at every step, so a multiply and an
+add are two roundings and never one fused one — no contraction, ever. `f64` is
+binary64. Subnormals are as IEEE-754 says: no flush to zero and no denormals as
+zero, neither of which this language sets and both of which a host may. Nought
+has two spellings and they compare equal and hash alike. Not-a-number has one
+spelling whatever a divide left in its sign bit, and compares equal to nothing
+including itself.
+
+**Crossing between them.** A float converted to a whole number truncates toward
+nought, saturates at that width's end rather than wrapping, and a float that is
+not a number converts to nought. The same answer folded and at runtime, because
+it is the same function.
+
+**Order.** An array walks by index, a store by place, text by character, a range
+from its first to its last. A table walks its pairs in the order the puts and
+takes left, which is an order rather than a sorted one — the same operations
+give the same order, and a program that wants a sorted one sorts.
+
+**Hashing.** FNV-1a from a fixed start, with nothing taken from the run. The
+same value answers the same number in every run on every machine. `std.hash`'s
+`join` is the one fold, so two programs folding the same fields fold them alike.
+
+**Randomness.** `std.random` is a seeded source and nothing else. The same seed
+gives the same run of numbers, and every function in it promises `no.host`.
+
+**Host promises.** A door is outside this profile unless a host declares it
+inside one, and this version has no way for a host to declare that — so in
+version 1 the profile is exactly what a body that promises `no.host` can reach.
+That is stricter than it needs to be and it is the safe direction: it also
+excludes `sqrt`, `floor` and `ceil`, which IEEE-754 does specify exactly.
+
+**What is rejected.** `Math.sin`, `Math.cos`, `Math.pow` and `Math.atan2` are
+whatever a host binds them to; for the command line that is the platform's libm,
+which is not required to round them correctly. Two platforms may differ in the
+last bit and then diverge. Clocks, files and the words a program was started with
+are outside it for the same reason: they are the host's.
+
+**Conformance.** `examples/determinism.kest` exercises every rule above and folds
+the answers into one number. This platform answers `3909859238992895122`. A
+platform that answers the same agrees about all of it; one that does not prints
+which part disagrees. The gate runs it, so a change to any of these rules is a
+number that moves and a line here to change on purpose.
+
+**Tested on** x86-64 Linux with GCC 15.2. No other platform has been run, and
+none is claimed.
+
 ## What is the same everywhere
 
 Three questions get called determinism and they have three different answers
@@ -4604,6 +4673,7 @@ here, is a check that fails.
 | `camera.kest` | `std.vec` and `std.math` where a camera follows something |
 | `chance.kest` | numbers that look random, and two runs from one seed |
 | `colony.kest` | a world kept and worked on a day at a time, which is a program rather than a rule |
+| `determinism.kest` | every rule the simulation profile promises, folded into one number |
 | `embed.kest` | the program the engine beside it runs, frame by frame |
 | `events.kest` | the host calling in, one crossing for a batch |
 | `flags.kest` | bits, which is what a `u8` of state is |
