@@ -27,19 +27,53 @@ machine with its own limits, and keeps a world between frames.
 
 Fast, easy to use, and good to work on with an AI. What that means concretely,
 and what it cost to decide, is in [docs/decisions.md](docs/decisions.md). The
-language itself is in [docs/language.md](docs/language.md). What actually runs
-today is in [docs/worklog.md](docs/worklog.md).
+language itself is in [docs/language.md](docs/language.md).
 
-What runs: whole numbers and floats at every width, text, `bool`, structs,
-fixed runs, arrays, stores that hand out references, enums that carry values,
-sets of bits, optionals, functions as values, one body written for many types,
-`defer`, `match`, `for` and `while`, and cost contracts the compiler proves
-rather than trusts. A host binds what a program asks of it, is told what every
-shape is laid out as, and is refused in words when it does something it may
-not. The standard library is written in Kest and held to the same rules as a
-program.
+`make fast` is the loop — build, every example, the one form, a diagnostic, the
+boundary — in about a tenth of a second. `make check` is the whole gate and
+takes minutes.
 
-What it costs to run, measured rather than remembered. `make time` takes three
+## What is and is not there
+
+Version 0.1.0. Three states, and nothing is in the first that has not been run.
+
+**Implemented.** Whole numbers and floats at every width with defined wrapping
+and narrowing; `text`; `bool`; structs; fixed runs; arrays; `store<T>` handing
+out generation-checked `ref<T>`; enums that carry values; sets of bits;
+optionals; functions as values; one body written for many types, a copy
+compiled per set; `defer`; `match`; `for` and `while`; the `no.alloc` and
+`no.host` cost contracts, proved by the compiler rather than trusted; a
+bytecode VM of 152 instructions; diagnostics with stable codes, spans, notes,
+suggested fixes and `--json`, all of a file's mistakes in one pass; one
+canonical source form and a formatter that holds it; a C embedding API of 60
+doors covering compile, start, call, layout introspection, lent memory and
+per-machine limits; and a standard library of eight modules written in Kest and
+held to the same rules as a program.
+
+**Partial.** The standard library is eight modules — `io`, `math`, `text`,
+`table`, `sort`, `random`, `vec`, `hash` — and `io` is `write` and `print` over
+a host door. A program cannot open a file, read the command line or ask the
+time; the host can do all three and hand the result in. Resource control is
+three ceilings a host sets — stack slots, call depth and heap bytes — each
+refused in words at the instruction that crossed it; a host cannot yet bound
+how long a program runs. Change detection for reload is there — per-file and
+whole-program marks, and the list of files a build actually read — and it is
+detection and rebuild only.
+
+**Not implemented.** Live code replacement in a running machine, and any
+migration of live state across a rebuild: a host reloads by building again and
+starting a new machine, and what the old one held is the host's problem.
+Cross-platform bitwise determinism: `sin`, `cos`, `pow` and `atan2` are the
+host's libm and two platforms may round them differently; `sqrt`, `floor`,
+`ceil` and all integer and `f32`/`f64` arithmetic are exactly specified and do
+not have that problem. No package manager, no debugger, no language server, no
+JIT, no concurrency, no networking, no graphics.
+
+**Tested on** x86-64 Linux with GCC 15.2 only. The code is C11 and libc and
+nothing else, so it should build elsewhere; nobody has, and this project does
+not call a thing that was never run a thing that works.
+
+What it costs to run, measured rather than remembered. `make time` takes four
 numbers on the machine it is run on:
 
 ```
@@ -70,5 +104,5 @@ What this is not yet: a language anybody should ship a game on. There is one
 machine, one target and no optimiser worth the name, the library is small, and
 the numbers in `docs/worklog.md` are all taken on one developer's machine.
 
-`docs/worklog.md` says what was built and in what order; its last entry is what
-is being worked on now.
+`docs/worklog.md` says what was built and in what order. It is a record, not a
+queue: what is worked on next comes from whoever is directing the work.
