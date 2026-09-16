@@ -1940,6 +1940,17 @@ MEANS_MORE = {"flags": ("flags8", "flags16", "flags32", "flags64"),
               "enum": ("tag",)}
 
 
+def laid_out_in(program):
+    """Every layout a program makes, whole."""
+    ran = subprocess.run(['./kest', 'emit', '--json', program],
+                         capture_output=True, text=True,
+                         stdin=subprocess.DEVNULL,
+                         env=dict(os.environ, KEST_LIB='lib'))
+    if ran.returncode != 0:
+        return []
+    return json.loads(ran.stdout).get('layouts') or []
+
+
 def laid_out_by(program):
     """What each type of a program lays out as, by the name it is laid out under."""
     ran = subprocess.run(['./kest', 'emit', '--json', program],
@@ -2016,6 +2027,45 @@ for program in (sorted(glob.glob(os.path.join('lib', 'std', '*.kest'))) +
                      ' '.join(flattened)))
             failed = 1
 some("the shapes laid out beside their fields", laid_together)
+
+# And the arithmetic of a layout against itself, which is the one thing about it
+# neither reading above can see: those two hold a layout's kinds against what
+# made them, and a kind is not a place. A piece says where in a block it is, and
+# what says that is right is that it is inside the block, on a boundary its own
+# width allows, and not over the piece before it. A host lays its own memory out
+# from these numbers, so an offset that is wrong is a field written over
+# another's and nothing anywhere to say so. See D899.
+HOW_WIDE = {"i8": 1, "u8": 1, "bool": 1, "held": 1, "nothing": 1, "flags8": 1,
+            "i16": 2, "u16": 2, "flags16": 2,
+            "i32": 4, "u32": 4, "f32": 4, "tag": 4, "flags32": 4,
+            "i64": 8, "u64": 8, "f64": 8, "word": 8, "text": 8, "ref": 8,
+            "fn": 8, "flags64": 8}
+placed = 0
+for program in (sorted(glob.glob(os.path.join('lib', 'std', '*.kest'))) +
+                sorted(glob.glob(os.path.join('examples', '*.kest')))):
+    for one in laid_out_in(program):
+        # What a case carries sits where its own case says, so the pieces of a
+        # tagged value are not one run: the widest is described and the rest
+        # are read through the tag. See D708.
+        if one['tagged']:
+            continue
+        placed += 1
+        ended = 0
+        for piece in one['pieces']:
+            wide = HOW_WIDE.get(piece['is'])
+            if wide is None:
+                print("layouts: `%s` holds a `%s` and nothing here knows how "
+                      "wide that is" % (one['of'], piece['is']))
+                failed = 1
+                continue
+            if (piece['byte'] < ended or piece['byte'] % wide != 0 or
+                    piece['byte'] + wide > one['bytes']):
+                print("layouts: `%s` puts a `%s` at byte %u of %u, after one "
+                      "ending at %u" % (one['of'], piece['is'], piece['byte'],
+                                        one['bytes'], ended))
+                failed = 1
+            ended = piece['byte'] + wide
+some("the layouts this tree places", placed)
 
 holding = {}
 declared_in = {}
@@ -2358,8 +2408,9 @@ if not failed:
           % len(accepted), end="")
     print("%u type(s) whose meaning is more than their width saying so in "
           "what a host is handed, of %u laid out, and %u shape(s) laid out as "
-          "what their fields are laid out as, "
-          % (told, len(laid_as), laid_together), end="")
+          "what their fields are laid out as, and %u put together out of "
+          "pieces that fit inside them, "
+          % (told, len(laid_as), laid_together, placed), end="")
     print("%u instructions, %u tokens, %u keywords, %u builtins, "
           "%u primitives, %u reasons, %u promises, %u modules "
           "and %u checks are in step with their names, holding %u pieces of "

@@ -27793,3 +27793,41 @@ sentence. It was true here and nothing was looking.
 So something is. `check-tables.sh` holds every shape's pieces against its
 fields' pieces: forty-eight of them today, and a piece nobody writes is a
 failing gate rather than a kind read out of zeroed memory.
+
+## D899: a kind is not a place
+
+D897 holds a type against its own layout; D898 holds a shape against its
+fields'. Both ask the compiler twice and compare what it says, and both are
+about **kinds** — what a piece is. Neither looks at where a piece is, and a host
+lays its own memory out from exactly that: a piece says a byte offset, and an
+offset that is wrong is a field written over another's with nothing anywhere to
+say so.
+
+So the third reading: every layout in the tree held to its own arithmetic. A
+piece is inside the block it belongs to, on a boundary its own width allows, and
+not over the piece before it. Four hundred and five layouts, and a value with a
+tag in it left out, because what a case carries sits where its own case says and
+the pieces of one are not a run (D708).
+
+Nothing was wrong. That is the answer this kind of walk gives four times in five
+and it is still worth the net: the two holes beside it are a run of something
+laid out a byte apart from where it is, and a kind whose name moved in one of
+the two places it is written — neither of which the readings above can see, and
+both of which put a host's fields on top of each other.
+
+**And the demonstration beside the net.** `examples/embed.c` held six shapes to
+laying out where this host has them, by comparing two descriptions — the host's
+own `offsetof` against the program's layout. Two descriptions that agree can
+still both be wrong about the thing they describe, and what cannot be wrong is
+the program reading back what was written at the places it named. So the same
+three rows go over a second time, written through the layout and nothing else:
+no struct of this host's, no `offsetof`, the bytes going where the program said
+each piece is at the width it said each piece is. `wrote_where` is the other
+half of `kest_slot_of` — that one says which member of a slot a kind is read
+through, and this says how many bytes of a block it is.
+
+It catches nothing the six do not, and it is not there to. It is there because
+`examples/embed.c` is the file somebody writing their first host reads top to
+bottom, and a host that can work from the layout alone is the thing that file is
+for. A host that models the program's shapes in C is one rename away from
+modelling them wrongly; one that asks is not.

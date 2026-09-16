@@ -1030,6 +1030,64 @@ static bool lays_them_out_the_same(KestBuild *build) {
 // it, and make text of it — and what it may not do is change how many
 // there are, because the length is the host's.
 
+// A whole number written into shared memory at the width a piece says it is,
+// which is the other half of `kest_slot_of`: that one says which member of a
+// slot a kind is read through, and this says how many bytes of a block it is.
+// A host that lays its own struct over lent memory is remembering; a host that
+// writes where the layout says and as wide as the layout says is asking. See
+// D899.
+static bool wrote_where(unsigned char *at, uint8_t kind, int64_t number) {
+    switch (kind) {
+    case KEST_L_I8:
+    case KEST_L_U8:
+    case KEST_L_BOOL:
+    case KEST_L_HELD:
+    case KEST_L_NOTHING:
+    case KEST_L_FLAGS8: {
+        uint8_t narrow = (uint8_t)number;
+        memcpy(at, &narrow, 1);
+        return true;
+    }
+    case KEST_L_I16:
+    case KEST_L_U16:
+    case KEST_L_FLAGS16: {
+        uint16_t narrow = (uint16_t)number;
+        memcpy(at, &narrow, 2);
+        return true;
+    }
+    case KEST_L_I32:
+    case KEST_L_U32:
+    case KEST_L_TAG:
+    case KEST_L_FLAGS32: {
+        uint32_t narrow = (uint32_t)number;
+        memcpy(at, &narrow, 4);
+        return true;
+    }
+    case KEST_L_I64:
+    case KEST_L_U64:
+    case KEST_L_FLAGS64: {
+        int64_t wide = number;
+        memcpy(at, &wide, 8);
+        return true;
+    }
+    case KEST_L_F32: {
+        float one = (float)number;
+        memcpy(at, &one, 4);
+        return true;
+    }
+    case KEST_L_F64: {
+        double one = (double)number;
+        memcpy(at, &one, 8);
+        return true;
+    }
+    default:
+        // A word, a piece of text, a reference, a function value, or what a
+        // case carries: none of them is a number this host has one of, and
+        // none of them may be lent.
+        return false;
+    }
+}
+
 // A slot filled through what the program says is in it rather than through
 // what this host remembers. `kest_slot_of` is the other reading of a layout's
 // kinds: the kinds are the type's own widths, where memory is shared, and a
@@ -4709,6 +4767,55 @@ int main(int argc, char **argv) {
         }
         printf("host lent %zu byte rows of a `u16` and a `bool`: 7 and 11 are "
                "on\n", sizeof(Flagged));
+    }
+
+    // And the same block written through the layout and nothing else: no
+    // struct of this host's, no `offsetof` — the bytes go where the program
+    // said each piece is, at the width it said each piece is. What is held
+    // above is two descriptions agreeing, and two descriptions can agree and
+    // both be wrong about memory. What cannot is the program reading back
+    // what was written at the places it named. See D899.
+    {
+        const KestLayout *laid = NULL;
+        if (kest_build_layout(build, "Flagged", &laid) != 1 || laid == NULL) {
+            fprintf(stderr, "the program has no one `Flagged` to lay out\n");
+            return 1;
+        }
+        unsigned char block[3 * 64] = {0};
+        for (unsigned i = 0; i < 3; i++) {
+            unsigned char *row = block + (size_t)i * laid->size;
+            for (uint16_t k = 0; k < laid->count; k++) {
+                // The first piece counts and the second says whether it does,
+                // which is what `howManyOn` adds up. Both are whole numbers of
+                // the width the kind names.
+                if (!wrote_where(row + laid->pieces[k].offset,
+                                 laid->pieces[k].kind, k == 0 ? i + 1 : 1)) {
+                    fprintf(stderr, "a piece of `Flagged` is a kind this host "
+                                    "cannot write\n");
+                    return 1;
+                }
+            }
+        }
+        KestValue run = kest_borrow(engine.runtime, block, 3, "Flagged",
+                                    laid->size);
+        if (run.object == NULL) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        engine.frame[0] = run;
+        if (!asks(&engine, HOW_MANY_ON) || engine.frame[0].integer != 6) {
+            fprintf(stderr, "what was written through the layout read back as "
+                            "%lld rather than 6\n",
+                    (long long)engine.frame[0].integer);
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        if (!kest_lend_ends(engine.runtime, run)) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        printf("and the same rows written through the layout alone read back "
+               "as 6\n");
     }
 
     // And a name two modules wrote, which is the one thing a lend can be wrong

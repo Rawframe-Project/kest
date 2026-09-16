@@ -5604,6 +5604,36 @@ fn main() -> i32 {
         "caught": "a build that is not there answered as though it were",
     },
     {
+        # A run of something laid out a byte apart from where it is. A host
+        # lays its own memory out from these numbers, so a stride that is wrong
+        # is a field written over another's -- and the two readings that hold a
+        # layout to what made it see kinds, which are not places. See D899.
+        "what": "a run of something placed where it does not fit",
+        "file": "src/value.c",
+        "from": """            at = describe(pieces, at, type->element,
+                          (uint16_t)(base + i * type->element->byte_size));""",
+        "to": """            at = describe(pieces, at, type->element,
+                          (uint16_t)(base + i * (type->element->byte_size + 1)));""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "after one ending at",
+    },
+    {
+        # A kind a layout holds that the reading of one has no width for. What
+        # a piece is and how wide it is are one answer in the machine and two
+        # places outside it, and a name that moves in one leaves the other
+        # measuring a piece it cannot name. See D899.
+        "what": "a kind a layout holds that nothing can measure",
+        "file": "src/value.c",
+        "from": """                                     "nothing", "flags8", "flags16",""",
+        "to": """                                     "nowt", "flags8", "flags16",""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "and nothing here knows how wide that is",
+    },
+    {
         # A shape with nothing in it, whose one piece nobody wrote. A struct
         # with no fields is one slot of nought and the walk that fills the
         # pieces filled none of them -- so what a host read was the first kind

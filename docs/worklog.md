@@ -34331,3 +34331,50 @@ generate the host's side from what `kest_build_layout` says, write a value from
 the program, read it back through the host's own offsets, and hold the two to
 being the same numbers. A layout that is right about itself and wrong about
 memory is the one thing these two rules cannot see.
+
+## A kind is not a place
+
+D897 holds a type against its own layout and D898 holds a shape against its
+fields'. Both compare what the compiler says with what the compiler says, and
+both are about kinds. Neither looks at *where* a piece is — and a host lays its
+own memory out from exactly that.
+
+So the third reading: every layout held to its own arithmetic. A piece is inside
+the block, on a boundary its own width allows, and not over the piece before it.
+405 layouts, with tagged values left out because what a case carries sits where
+its own case says and the pieces of one are not a run.
+
+Nothing was wrong, which is the answer four walks in five give and is still
+worth the net. The two holes beside it say what it is for: a run of something
+laid out a byte apart from where it is, and a kind whose name moved in one of
+the two places it is written. Neither is visible to the readings above and both
+put a host's fields on top of each other.
+
+Beside the net, a demonstration. `examples/embed.c` held six shapes to laying
+out where this host has them by comparing two descriptions — its own `offsetof`
+against the program's layout. Two descriptions that agree can both be wrong
+about what they describe; what cannot is the program reading back what was
+written at the places it named. So the same three rows go over again, written
+through the layout and nothing else — no struct of this host's, no `offsetof`.
+`wrote_where` is the other half of `kest_slot_of`: that one says which member of
+a slot a kind is read through, this says how many bytes of a block it is.
+
+It catches nothing the six do not, and is not there to. It is there because
+`examples/embed.c` is what somebody writing their first host reads, and a host
+that can work from the layout alone is what that file is for.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** three walks over layouts have found four things and the fifth walk
+found none, which is where a vein runs out. The boundary a host sees is now read
+from every side: what it is handed, what it holds, what it may not hold, and
+where each piece is. The reading not yet done is the one *inside* — the same
+question asked of the machine rather than of the host. `check.sh` holds what
+every shape takes on the stack against what it takes in memory; nothing holds
+what an instruction says it does to the stack against what it does. The compiler
+counts slots as it emits and the machine counts them as it runs, and D809 made
+the two say so at every statement — but only in the checked build, and only
+about statements. Ask it of every instruction: for each of the 151, what the
+compiler believes it leaves and what the machine actually leaves, held to each
+other over every example. Where they agree is a wall; where they do not is the
+next four decisions.
