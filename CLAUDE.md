@@ -26,9 +26,9 @@ identifiers, error messages. No exceptions.
 decision was superseded the day it was accepted because it was written from a
 summary instead of the documents it cited.
 
-**Five documents, and that is all.** One front page and four that hold the
-work. A sixth is refused by `check-docs.sh`, which reads this table and the
-tree and holds them to each other.
+**Six documents, and that is all.** One front page, four that hold the work, and
+one that says where it is. A seventh is refused by `check-docs.sh`, which reads
+this table and the tree and holds them to each other.
 
 | File | Holds |
 | --- | --- |
@@ -36,6 +36,7 @@ tree and holds them to each other.
 | `docs/decisions.md` | Decisions and why. Append-only; supersede, do not delete, and say `supersedes` in that word so the list at the top can be held to it. What a later one replaced is listed there, because nothing here is edited and an entry that is no longer what this project does reads exactly like one that is. |
 | `docs/language.md` | Syntax and semantics reference. |
 | `README.md` | The front page: what this is, how to build it, what runs. It is the one document written for somebody who has not read the others, so it says what the language does and points at the three below rather than repeating them. Held by `check-docs.sh` to naming files that are there, because a front page nothing reads is a front page nothing catches: this one said structs did not run yet for the length of the tree having them. |
+| `docs/state.md` | Where this is and what is known to be wrong: the defects reproduced against this tree, with the evidence named, and which phase of the work is open. Short, current, and the one read for what to do next. |
 | `docs/worklog.md` | What was built, in order. Newest last. An entry is a heading, what was done and what it turned up, and a `**Runs:**` line saying what was run to believe it, which `check-docs.sh` holds. It is a record and not a queue: entries used to end with a `**Next:**` line that the next turn was given as its work, which made the last thing written the source of what happens next, and scope that comes from the last thing written is scope nobody chose. Those lines are left where they are and nothing reads them. What to do next comes from whoever is directing the work. |
 
 ## Layout
