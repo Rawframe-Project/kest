@@ -34714,3 +34714,41 @@ step twice over different numbers of entities under a machine with a heap, and
 subtract, the way instructions are subtracted now. If a frame step takes bytes
 an entity, that is the number a host budgeting a frame most needs and this
 project has never printed.
+
+## What a frame costs the program
+
+Everything `check-costs.sh` weighs is the compiler's work — reading, checking,
+copying a generic — and it stops at the door of a run. The number on the other
+side is the one a host budgeting a frame needs, and this project had never
+printed it.
+
+A tick says it: `kest tick --json` answers with `heap`, what the program
+allocated and nothing freed. Two ticks over different numbers of rounds,
+subtracted, leave the step — the world built once inside the tick cancels.
+
+```text
+a frame step that promises `no.alloc` takes 0 byte(s) of heap an entity
+against 13 for one that makes a piece of text
+```
+
+Both halves, because either alone is a number nobody can read. Nought is what
+`no.alloc` means seen from outside the promise — proved over the tree, proved
+over what was emitted, and now counted by a machine that ran it. Thirteen is
+what a frame pays for a piece of text an entity, which is the sentence
+`std.text` has been written around since D375 and the first time anybody has put
+a number on it.
+
+The hole takes the heap out of what a tick reports, and the promise and the
+payment read alike.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same number for the other two things a frame can do. A step that
+makes text pays thirteen bytes an entity; what a step pays to **grow an array**
+and to **put a pair in a table** is the other half of what a frame does, and
+`std.table` doubles while `[T]` doubles — so the number is not one number, it is
+a number and a shape. Ask both the way this one was asked: a step that pushes an
+entity a frame and a step that sets a key a frame, ticked over two round counts
+and subtracted. What a reader gets is what the three containers this language
+has cost a frame, side by side, in bytes an entity — and if pushing costs more
+than the element, the next decision is where the rest went.

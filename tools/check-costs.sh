@@ -1211,6 +1211,98 @@ def a_step_asks():
     return (over[1] - over[0]) // (ROUNDS * ENTITIES)
 
 
+# And what a frame step costs the program rather than the machine. Everything
+# above weighs the compiler's work; this is the other side of the door, and it
+# is the number a host budgeting a frame most needs: bytes an entity, a step.
+# Two ticks over different numbers of rounds, subtracted, so the world built
+# once inside the tick cancels and what is left is the step. A body that
+# promises `no.alloc` comes to nought an entity, which is what the promise
+# means read from outside it, and one that makes a piece of text a frame pays
+# for the text -- both halves, because a measurement that says nought for
+# either is a measurement of nothing. See D908.
+TICKED = """module ticking
+
+import std.text
+
+struct Npc {
+    name: text
+    health: i32
+}
+
+fn made(count: i32) -> [Npc] {
+    let all: [Npc] = array()
+    for i in 0..count {
+        push(all, Npc("npc", 100))
+    }
+    return all
+}
+
+fn quiet(world: [Npc]) -> i32 no.alloc {
+    let seen = 0
+    for one in world {
+        if one.health > 0 {
+            seen += 1
+        }
+    }
+    return seen
+}
+
+fn loud(world: [Npc]) -> i32 {
+    let said = 0
+    for one in world {
+        let line = "{one.name}: {one.health}"
+        said += len(line)
+    }
+    return said
+}
+
+fn onEvents(events: [i32]) -> i32 {
+    let all = made(%u)
+    let seen = 0
+    for r in 0..%u {
+        seen += %s(all)
+    }
+    return seen
+}
+
+fn main() -> i32 {
+    return onEvents(array()) - onEvents(array())
+}
+"""
+
+
+def what_a_tick_took(body):
+    where = os.path.join(work, 'ticking.kest')
+    with open(where, 'w') as ticking:
+        ticking.write(body)
+    ran = subprocess.run(['./kest', 'tick', '--json', where],
+                         capture_output=True, text=True,
+                         stdin=subprocess.DEVNULL,
+                         env=dict(os.environ, KEST_LIB='lib'))
+    if ran.returncode != 0:
+        return None
+    said = json.loads(ran.stdout)
+    return None if said.get('errors') else said.get('heap')
+
+
+def a_step_takes(which):
+    over = []
+    for many in (ROUNDS, ROUNDS * 2):
+        over.append(what_a_tick_took(TICKED % (ENTITIES, many, which)))
+    if over[0] is None or over[1] is None:
+        return None
+    return (over[1] - over[0]) // (ROUNDS * ENTITIES)
+
+
+quiet_frame = a_step_takes('quiet')
+text_frame = a_step_takes('loud')
+if (quiet_frame is None or text_frame is None or quiet_frame != 0 or
+        text_frame < 1):
+    print("costs: a frame step that promises `no.alloc` takes %s byte(s) an "
+          "entity and one that makes text takes %s"
+          % (quiet_frame, text_frame))
+    failed = 1
+
 a_frame = a_step_of(HELPED) if have_checked else None
 by_hand = a_step_of(BY_HAND) if have_checked else None
 reaches = what_a_frame_reaches(HELPED) if have_checked else None
@@ -1590,7 +1682,8 @@ if not failed:
           "step is %s instruction(s) an entity and %s with its two helpers "
           "written out, reaching %s of the machine's %u instructions and "
           "answering %s question(s) about itself in the build that checks "
-          "itself, which "
+          "itself, and one that promises `no.alloc` takes %u byte(s) of heap "
+          "an entity against %u for one that makes a piece of text, which "
           "is work rather than time and the same count "
           "anywhere, with the rest of it measured on the machine "
           "this ran on"
@@ -1608,6 +1701,6 @@ if not failed:
              run_went, quiet_walk[0], written_walk[0], widening, narrowing,
              with_sign, without_sign, together, turn_ran, runs,
              a_frame, by_hand, reaches, len(instruction_names),
-             asked_of_itself))
+             asked_of_itself, quiet_frame, text_frame))
 sys.exit(failed)
 PY

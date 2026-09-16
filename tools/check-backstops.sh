@@ -5604,6 +5604,21 @@ fn main() -> i32 {
         "caught": "a build that is not there answered as though it were",
     },
     {
+        # What a tick cost the program, said as nought whatever it cost. It is
+        # the one number a host budgeting a frame reads out of this command --
+        # what the program allocated and nothing freed -- and a frame that
+        # promises nothing and a frame that promises `no.alloc` read alike the
+        # day it stops being asked. See D908.
+        "what": "what a tick cost the program said as nought",
+        "file": "src/main.c",
+        "from": """                    ticked.heap = kest_heap_used(runtime);""",
+        "to": """                    ticked.heap = 0;""",
+        "make": ["kest"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "one that makes text takes 0",
+    },
+    {
         # A count of what the build that checks itself asked that says nought
         # whatever it asked. Every number an instruction carries is read by
         # something that asks whether it could be that number, and what says

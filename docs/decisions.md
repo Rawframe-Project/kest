@@ -28118,3 +28118,35 @@ The hole is the count saying nought whatever was asked. A guard nobody can see
 being asked is a guard nobody knows is there — which is the same sentence this
 project has written about a message, a net and an instruction, and is now
 written about a question.
+
+## D908: what a frame costs the program
+
+Everything `check-costs.sh` weighs is the compiler's work: what reading a file
+costs, what checking it costs, what a copy of a generic costs. It stops at the
+door of a run. The number on the other side of that door is the one a host
+budgeting a frame actually needs, and this project had never printed it.
+
+A tick says it. `kest tick --json` answers with `heap` — what the program
+allocated and nothing freed — and two ticks over different numbers of *rounds*,
+subtracted, leave the step: the world built once inside the tick cancels, and
+what is left is what one step over one entity cost.
+
+```text
+a frame step that promises `no.alloc` takes 0 byte(s) of heap an entity
+against 13 for one that makes a piece of text
+```
+
+Both halves, because either alone is a number nobody can read. Nought is what
+`no.alloc` means seen from outside the promise — the compiler proves it over the
+tree and over what was emitted, and this is the third proof, by a machine that
+ran it and counted. Thirteen is what a frame pays for a piece of text an entity,
+which is the sentence `std.text` has been written around since D375 and the
+first time anybody has put a number on it.
+
+A measurement that said nought for both would be a measurement of nothing, which
+is what the hole says: take the heap out of what a tick reports and the promise
+and the payment read alike.
+
+*It is a count and not a duration*, so it belongs in the gate rather than in
+`make time`: the same thirteen bytes on any machine, because they are the bytes
+the program asked for and not the time this one took to hand them over.
