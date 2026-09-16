@@ -35,7 +35,23 @@
 // they run out — four thousand million of them, after which a stamp handed out
 // again would make a reference from the first occupant read as the newest one,
 // which is the one thing a reference is for.
-#define MOST_STAMPS 0xffffffffu
+// What a reference is made of. It was a thirty-two bit count and a thirty-two
+// bit place, and the count came from the build -- so two machines from two
+// builds of one file both handed out the same first reference, and one of them
+// read the other's world and answered with somebody else's object. A reference
+// now says which world it came from as well, and the count is the world's own.
+//
+// Sixteen, twenty-four and twenty-four: sixty-five thousand worlds alive at
+// once in one process, sixteen million places in a store, and sixteen million
+// times a place may be handed out again before the count is spent. None of
+// this is written down as an ABI: what a reference is made of is the runtime's
+// and is read only by the runtime. See D934.
+#define REF_WORLD_BITS 16
+#define REF_STAMP_BITS 24
+#define REF_INDEX_BITS 24
+#define MOST_STAMPS ((1u << REF_STAMP_BITS) - 1u)
+#define MOST_PLACES ((1u << REF_INDEX_BITS) - 1u)
+#define MOST_WORLDS ((1u << REF_WORLD_BITS) - 1u)
 
 #define KEST_IS_ARRAY 0x4b415252u
 #define KEST_IS_STORE 0x4b53544fu
@@ -361,6 +377,9 @@ typedef struct {
     uint16_t stride;
     // The same, for the same reason: what one place in it holds.
     const KestType *of;
+    // Which machine made it. A reference carries this, so one from another
+    // world names nothing here rather than naming whatever is at that place.
+    uint32_t world;
 } Store;
 
 typedef struct {
@@ -485,6 +504,10 @@ struct KestRuntime {
     // made with, so one handed to a store it did not come from names a place
     // stamped by something else. See D314 and D316.
     uint32_t *stamps;
+    // Which world this machine is, among the ones alive in this process. It
+    // goes into every reference a store of its hands out, so a reference from
+    // another machine names nothing here. See D934.
+    uint32_t world;
     // The build's count of what is standing on it, which this machine is one
     // of until it is freed.
     uint32_t *standing;
@@ -1541,15 +1564,32 @@ static void what_it_needed(Vm *vm, const KestRuntime *rt, int32_t called) {
     kest_arena_rewind(rt->heap, before);
 }
 
-static int64_t pack_ref(uint32_t generation, uint32_t index) {
-    return (int64_t)(((uint64_t)generation << 32) | index);
+static int64_t pack_ref(uint32_t world, uint32_t generation, uint32_t index) {
+    return (int64_t)(((uint64_t)world << (REF_STAMP_BITS + REF_INDEX_BITS)) |
+                     ((uint64_t)generation << REF_INDEX_BITS) |
+                     (uint64_t)index);
 }
 
 // The slot a reference names, or NULL when what it named is gone.
+// Which place a reference names. Read through this and nowhere else: the parts
+// a reference is made of are this file's own and a second place that knew the
+// widths is a second place to change. See D934.
+static uint32_t ref_place(int64_t handle) {
+    return (uint32_t)((uint64_t)handle & MOST_PLACES);
+}
+
 static KestValue *resolve_ref(Store *store, int64_t handle) {
-    uint32_t index = (uint32_t)((uint64_t)handle & 0xffffffffu);
-    uint32_t generation = (uint32_t)((uint64_t)handle >> 32);
-    if (index >= store->used || !store->live[index] ||
+    uint32_t index = ref_place(handle);
+    uint32_t generation =
+        (uint32_t)(((uint64_t)handle >> REF_INDEX_BITS) & MOST_STAMPS);
+    uint32_t world =
+        (uint32_t)(((uint64_t)handle >> (REF_STAMP_BITS + REF_INDEX_BITS)) &
+                   MOST_WORLDS);
+    // Which world it came from is asked first, because a reference from
+    // another one is a different kind of wrong from a reference to a place
+    // that has been handed out again -- and without it the two were the same
+    // question with the same answer.
+    if (world != store->world || index >= store->used || !store->live[index] ||
         store->generations[index] != generation) {
         return NULL;
     }
@@ -2833,6 +2873,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             store->what = KEST_IS_STORE;
+            store->world = rt->world;
             store->stride = READ_U16();
             {
                 uint16_t holds = READ_U16();
@@ -2902,7 +2943,8 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             store->count++;
             memcpy(store->elements + (size_t)index * stride, value,
                    sizeof(KestValue) * stride);
-            (top++)->integer = pack_ref(store->generations[index], index);
+            (top++)->integer =
+                pack_ref(store->world, store->generations[index], index);
             break;
         }
         case KEST_OP_GET: {
@@ -2945,7 +2987,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 (top++)->integer = 0;
                 break;
             }
-            uint32_t index = (uint32_t)((uint64_t)handle & 0xffffffffu);
+            uint32_t index = ref_place(handle);
             store->live[index] = false;
             // The slot keeps the stamp it was handed out with, so a
             // reference made before it was given back still names that stamp
@@ -2992,7 +3034,8 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint32_t index = (uint32_t)(--top)->integer;
             const Store *store = (--top)->object;
             HOLD(store, KEST_IS_STORE, "a store");
-            (top++)->integer = pack_ref(store->generations[index], index);
+            (top++)->integer =
+                pack_ref(store->world, store->generations[index], index);
             break;
         }
         case KEST_OP_COUNT: {
@@ -4409,6 +4452,17 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     // module nobody is counting for, which is its own count starting at
     // nought.
     rt->stamps = &stamped->stamps;
+    // And which world this is. One number for the life of the process, so two
+    // machines never hand out the same reference however they were built --
+    // the count above is the build's and two builds of one file both start it
+    // at nought, which is how a reference made in one world read an object in
+    // another and answered with its value. Relaxed: two threads starting a
+    // machine each want a number of their own and nothing else about them is
+    // ordered by this. See D934.
+    static atomic_uint worlds_so_far;
+    rt->world = (atomic_fetch_add_explicit(&worlds_so_far, 1u,
+                                           memory_order_relaxed) &
+                 MOST_WORLDS);
     // And what says this machine is standing on the build, counted where the
     // machines are rather than where the builds are: freeing the build while
     // one of these is up takes the program out from under it.
