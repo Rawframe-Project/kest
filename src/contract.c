@@ -1,5 +1,7 @@
 #include "contract.h"
 
+#include "check.h"
+
 #include <string.h>
 
 #define NO_SITE ((KestSpan){0, 0})
@@ -427,6 +429,14 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
             }
         }
     }
+    // And one for every copy of a generic, because a copy is what runs and a
+    // declaration is not. The body is one tree that is typed again for each
+    // set of types, so a declaration walked once is whichever copy happened to
+    // be typed into it last -- and a call carries the copy's own name, so the
+    // walk below looked for a node that was not there and read the call as
+    // reaching nothing at all. That is how `check` accepted what `emit`
+    // refused, and refused it as a fault in the compiler. See D933.
+    graph.count += program->instance_count;
     if (graph.count == 0) {
         return true;
     }
@@ -477,9 +487,49 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
       }
     }
 
+    // The copies. Each is the same declaration under another set of types, and
+    // it is named by the symbol the call sites carry.
+    uint32_t first_copy = next;
+    for (uint32_t i = 0; i < program->instance_count; i++) {
+        KestInstance *instance = &program->instances[i];
+        if (instance->type == NULL || instance->symbol == NULL) {
+            graph.count--;
+            continue;
+        }
+        Function *function = &graph.functions[next++];
+        memset(function, 0, sizeof *function);
+        function->decl = instance->decl;
+        function->name = instance->symbol;
+        function->display = instance->symbol;
+        function->promises = about_host ? instance->decl->function.no_host
+                                        : instance->decl->function.no_alloc;
+        function->is_extern = instance->decl->function.is_extern;
+        function->allocates =
+            function->is_extern && (about_host || !function->promises);
+        function->site = NO_SITE;
+        function->unit = 0;
+        for (uint32_t u = 0; u < units->count; u++) {
+            if (&units->items[u] == instance->unit) {
+                function->unit = u;
+                break;
+            }
+        }
+    }
+
     for (uint32_t i = 0; i < graph.count; i++) {
         Function *function = &graph.functions[i];
+        // A generic declaration is walked only as its copies. Its own node is
+        // left inert: its body has no types until a copy gives it some, and
+        // nothing calls it under the bare name.
+        if (i < first_copy && function->decl->type_param_count > 0) {
+            continue;
+        }
         kest_program_in(program, &units->items[function->unit]);
+        // The tree is typed for this copy before it is read, which is the
+        // whole of what makes the answer that copy's own.
+        if (i >= first_copy) {
+            kest_retype_instance(program, &program->instances[i - first_copy]);
+        }
         if (!function->is_extern) {
             walk_block(&graph, function, &function->decl->function.body);
         }
