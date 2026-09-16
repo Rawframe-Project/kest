@@ -4875,8 +4875,8 @@ Beside the diagnostics is what the run cost the compiler: `cost` is how many
 bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
-each stage of reading a file costs. For `lib/std/text.kest`, which is 445 lines:
-42884 bytes as tokens, 105685 as a tree, 133708 checked and 157871 compiled.
+each stage of reading a file costs. For `lib/std/text.kest`, which is 502 lines:
+47588 bytes as tokens, 117793 as a tree, 147528 checked and 174137 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
 
@@ -4893,7 +4893,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 15273 bytes, against the 157871 it costs to compile.
+file and 16955 bytes, against the 174137 it costs to compile.
 
 Each function `check` lists carries an `id`: a number standing for which
 declaration it is, folded from the qualified name, the types it takes and gives,
