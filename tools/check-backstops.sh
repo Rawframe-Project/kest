@@ -9287,9 +9287,9 @@ fn main() -> i32 {
         # not at this one is a number said where it is needed least.
         "what": "the first door refusing without saying what to ask for",
         "file": "src/vm.c",
-        "from": """        // host that has not asked at all. See D571.
-        what_it_needed(vmp, rt, entry);""",
-        "to": """        // host that has not asked at all. See D571.""",
+        "from": """                       "there is no room to call in from here");
+        what_it_needed(runtime, runtime, index);""",
+        "to": """                       "there is no room to call in from here");""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "under it, `this program needs`",
@@ -9866,10 +9866,11 @@ fn main() -> i32 {
         # from over there names whoever is standing here.
         "what": "two machines that stamp their places alike",
         "file": "src/vm.c",
-        "from": "    rt->stamps = &stamped->stamps;",
-        "to": "    rt->stamps = &rt->own_stamps;",
-        "also": ("src/vm.c", "    uint32_t *stamps;\n",
-                 "    uint32_t *stamps;\n    uint32_t own_stamps;\n"),
+        "from": """    rt->world = (atomic_fetch_add_explicit(&worlds_so_far, 1u,
+                                           memory_order_relaxed) &
+                 REF_WORLD_MASK);""",
+        "to": """    (void)worlds_so_far;
+    rt->world = 0;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "from another machine named something here",
@@ -11436,6 +11437,9 @@ static const Keyword KEYWORDS[] = {
                                                    ? KEST_IS_ARRAY
                                                    : KEST_IS_STORE) &&
             frame[*at].object == NULL) {""",
+        "also": ("src/vm.c",
+                 "        if (type->element != NULL && holds != type->element) {",
+                 "        if (false && holds != type->element) {"),
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "without saying `K0636`",
