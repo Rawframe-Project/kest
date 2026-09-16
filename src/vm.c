@@ -1057,9 +1057,10 @@ static size_t format_value(char *out, size_t room, const KestType *type,
     return put_text(out, room, "<no text>");
 }
 
-// Two values of one type are equal when everything that makes them up is.
-// This is only reached for an enum: what a case carries is compared the way
-// the same types are compared on their own.
+// Two values of one type are equal when everything that makes them up is. This
+// is reached for the two things that are values laid out flat — an enum and a
+// struct — and what either of them carries is compared the way the same types
+// are compared on their own. See D874.
 static bool values_equal(const KestType *type, const KestValue *a,
                          const KestValue *b) {
     switch (type->tag) {
@@ -1084,6 +1085,25 @@ static bool values_equal(const KestType *type, const KestValue *a,
         }
         return true;
     }
+    case KEST_T_STRUCT:
+        for (uint32_t m = 0; m < type->member_count; m++) {
+            const KestMember *member = &type->members[m];
+            if (!values_equal(member->type, a + member->offset,
+                              b + member->offset)) {
+                return false;
+            }
+        }
+        return true;
+    case KEST_T_FIXED: {
+        uint16_t stride = type->element->slots == 0 ? 1 : type->element->slots;
+        for (uint32_t i = 0; i < type->count; i++) {
+            if (!values_equal(type->element, a + (size_t)i * stride,
+                              b + (size_t)i * stride)) {
+                return false;
+            }
+        }
+        return true;
+    }
     // One slot with a number in it, which is what these three are and the only
     // thing there is to compare about them.
     case KEST_T_INT:
@@ -1098,9 +1118,7 @@ static bool values_equal(const KestType *type, const KestValue *a,
     case KEST_T_ERROR:
     case KEST_T_VOID:
     case KEST_T_OPTIONAL:
-    case KEST_T_STRUCT:
     case KEST_T_ARRAY:
-    case KEST_T_FIXED:
     case KEST_T_REF:
     case KEST_T_STORE:
     case KEST_T_FN:
@@ -2653,21 +2671,21 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top[-1].integer = (int64_t)bits;
             break;
         }
-        case KEST_OP_HASH_ENUM: {
+        case KEST_OP_HASH_VALUE: {
             const KestType *type = module->layout_types[READ_U16()];
             top -= type->slots;
             uint64_t bits = kest_hash_value(type, top);
             (top++)->integer = (int64_t)bits;
             break;
         }
-        case KEST_OP_EQ_ENUM:
-        case KEST_OP_NE_ENUM: {
+        case KEST_OP_EQ_VALUE:
+        case KEST_OP_NE_VALUE: {
             const KestType *type = module->layout_types[READ_U16()];
             top -= type->slots;
             const KestValue *right = top;
             top -= type->slots;
             bool same = values_equal(type, top, right);
-            (top++)->integer = instruction[0] == KEST_OP_EQ_ENUM ? same : !same;
+            (top++)->integer = instruction[0] == KEST_OP_EQ_VALUE ? same : !same;
             break;
         }
         case KEST_OP_TEXT_LEN:

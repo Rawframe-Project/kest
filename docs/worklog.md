@@ -32852,13 +32852,13 @@ Recorded as D865.
 
 **Runs:** `make check`, everything passing, with `TMPDIR=/var/tmp`.
 
-**Next:** six turns of this have said the same thing in six ways — the machine
-is where the time is, and it is close to what this compiler will give. Stop
-optimising and go back to the language. `docs/decisions.md` has D001 to D873 and
-the worklog has every turn; read what the language still cannot do that a
-program written in it would want, pick the one that the roadmap's `types` stage
-points at, and write down what it would take. One thing, with what it costs the
-checker, the compiler and the machine written beside it.
+**Next:** a struct compares now, and the thing beside it that a program would
+try next is ordering: `a < b` on two structs is refused the same way `==` was.
+Unlike equality there is no one answer — which field decides, and in which
+direction, is the program's to say — so the question is not whether to add it
+but what a program should write instead. Read what `std.sort` asks for, write a
+program that sorts a run of structs by a field, and say whether what it has to
+write is what it should have to write.
 
 ## A hop of a `for` is one instruction
 
@@ -33243,3 +33243,47 @@ the worklog has every turn; read what the language still cannot do that a
 program written in it would want, pick the one that the roadmap's `types` stage
 points at, and write down what it would take. One thing, with what it costs the
 checker, the compiler and the machine written beside it.
+
+## A value laid out flat compares
+
+Six turns of machine work said the same thing six ways, so this one went back to
+the language and asked what a program written in it cannot do. The answer was in
+the first thing anybody would try: two structs did not compare. The comment in
+the checker said comparing two arrays or two structs is a question with more
+than one answer and the one a handle comparison gives is the wrong one — right
+about arrays, wrong about structs. An array is a handle; a struct is not. What a
+struct is is its fields, and comparing them field by field is the answer rather
+than one of several.
+
+The machinery was already there, built for enums: `has_equality` already
+recursed into what a case carries, `values_equal` already walked a type over a
+run of slots, `kest_hash_value` already did the same for hashing, and
+`eq.enum`/`ne.enum`/`hash.enum` already took a layout. So the rule is one
+sentence over three shapes now: a value laid out flat compares when everything
+in it compares — a struct by its fields, `[T; N]` by its elements, an enum by
+its case and what it carries. A handle never does, and a struct holding one is
+refused with the field named rather than the struct.
+
+What it cost: two cases in `has_equality` and a changed suggestion; two widened
+conditions in the compiler and no new instruction, with the three that existed
+renamed `eq.value`, `ne.value` and `hash.value`, because they never were about
+enums; two cases in `values_equal` and two in `kest_hash_value`. The constant
+folder cost nothing, and that was checked rather than assumed — a comparison of
+two values wider than a slot is already refused where it is written, so the
+folder and the machine cannot answer differently about something neither folds.
+The three hash numbers the reference prints and the gate holds did not move.
+
+`examples/rows.kest` shows all three shapes: a `Cell` by its two numbers, a
+`[Cell; 3]` by its cells, and a `Row` by that run and its tag.
+
+Recorded as D874.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** a struct compares now, and the thing beside it that a program would
+try next is ordering: `a < b` on two structs is refused the same way `==` was.
+Unlike equality there is no one answer — which field decides, and in which
+direction, is the program's to say — so the question is not whether to add it
+but what a program should write instead. Read what `std.sort` asks for, write a
+program that sorts a run of structs by a field, and say whether what it has to
+write is what it should have to write.

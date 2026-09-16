@@ -1545,10 +1545,12 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
     // one below where a scalar compare would leave it.
     case KEST_TOK_EQEQ:
     case KEST_TOK_BANGEQ:
-        if (operand != NULL && operand->tag == KEST_T_ENUM) {
+        if (operand != NULL && (operand->tag == KEST_T_ENUM ||
+                                operand->tag == KEST_T_STRUCT ||
+                                operand->tag == KEST_T_FIXED)) {
             stack_pop(compiler, (uint16_t)((operand->slots - 1) * 2));
             emit(compiler,
-                 op == KEST_TOK_EQEQ ? KEST_OP_EQ_ENUM : KEST_OP_NE_ENUM,
+                 op == KEST_TOK_EQEQ ? KEST_OP_EQ_VALUE : KEST_OP_NE_VALUE,
                  span);
             emit_u16(compiler, layout_of(compiler, operand), span);
             break;
@@ -1683,9 +1685,11 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
     if (kest_word_same("hash", name, length)) {
         const KestType *of =
             expr->call.arg_count > 0 ? expr->call.args[0]->type : NULL;
-        if (of != NULL && of->tag == KEST_T_ENUM) {
+        if (of != NULL && (of->tag == KEST_T_ENUM ||
+                           of->tag == KEST_T_STRUCT ||
+                           of->tag == KEST_T_FIXED)) {
             stack_pop(compiler, (uint16_t)(value_slots(of) - 1));
-            emit(compiler, KEST_OP_HASH_ENUM, expr->span);
+            emit(compiler, KEST_OP_HASH_VALUE, expr->span);
             emit_u16(compiler, layout_of(compiler, of), expr->span);
             return true;
         }

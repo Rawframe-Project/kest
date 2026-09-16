@@ -89,11 +89,14 @@ typedef enum {
     KEST_OP_HASH_I,
     KEST_OP_HASH_F,
     KEST_OP_HASH_T,
-    // u16 layout. Over the tag and whatever the case carries, which is what
-    // the value is and all it is.
-    KEST_OP_HASH_ENUM,
-    KEST_OP_EQ_ENUM,
-    KEST_OP_NE_ENUM,
+    // u16 layout. Over a value laid out flat and everything in it: an enum's
+    // tag and whatever its case carries, or a struct's fields. Named for what
+    // they walk rather than for the first thing that needed them — a value is
+    // a value, and what says whether it can be compared at all is whether
+    // everything in it can. See D874.
+    KEST_OP_HASH_VALUE,
+    KEST_OP_EQ_VALUE,
+    KEST_OP_NE_VALUE,
     KEST_OP_TEXT_FROM,  // an array of bytes becomes one piece of text
     // The slot map. A reference is an index with the generation it was handed
     // out at packed above it, so a read can tell a live one from a stale one

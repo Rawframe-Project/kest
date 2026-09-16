@@ -1034,6 +1034,23 @@ static bool has_equality(const KestType *type, const KestType **without) {
             }
         }
         return true;
+    // And a struct, for the same reason and by the same walk: it is a value
+    // laid out flat, so what it is is its fields and nothing else. A field
+    // that does not compare is what stops it, and that field is what is said —
+    // a struct holding an array holds a handle, and comparing handles is the
+    // wrong answer to the question somebody asked. See D874.
+    case KEST_T_STRUCT:
+        for (uint32_t m = 0; m < type->member_count; m++) {
+            if (!has_equality(type->members[m].type, without)) {
+                return false;
+            }
+        }
+        return true;
+    // And that many of something where it stands, which is the third of the
+    // three: `[T; N]` is N of them in a row inside whatever holds it, not a
+    // handle to N of them elsewhere. `[T]` is the handle and is below.
+    case KEST_T_FIXED:
+        return has_equality(type->element, without);
     // Written out rather than left to a `default`, for the reason its twin in
     // `kest_type_has_text` gives: a tag added to the language would otherwise
     // land on this side without anybody deciding it should. An optional is the
@@ -1042,9 +1059,7 @@ static bool has_equality(const KestType *type, const KestType **without) {
     // out. See D541.
     case KEST_T_VOID:
     case KEST_T_OPTIONAL:
-    case KEST_T_STRUCT:
     case KEST_T_ARRAY:
-    case KEST_T_FIXED:
     case KEST_T_REF:
     case KEST_T_STORE:
     case KEST_T_FN:
@@ -3075,8 +3090,11 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
         if (left->tag == KEST_T_OPTIONAL && left_is_none != right_is_none) {
             return builtin(checker, "bool");
         }
-        // Comparing two arrays or two structs is a question with more than one
-        // answer, and the one a handle comparison gives is the wrong one.
+        // A value laid out flat compares when everything in it compares — a
+        // struct is its fields, an enum is its case and what that case
+        // carries, `[T; N]` is N of them in a row. A handle never does: two
+        // arrays are equal when they hold the same things and comparing the
+        // handles answers a different question. See D874.
         const KestType *without = NULL;
         if (!is_error(left) && !has_equality(left, &without)) {
             report(checker, expr->span, "K0314",
@@ -3102,9 +3120,18 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
                        left->tag == KEST_T_STORE) {
                 kest_diags_suggest(checker->program->diags,
                                    "walk them and compare what they hold");
-            } else {
+            } else if (left->tag == KEST_T_FN) {
                 kest_diags_suggest(checker->program->diags,
-                                   "compare the fields that decide it");
+                                   "which body a name stands for is not a "
+                                   "value; compare what they answer");
+            } else {
+                // What is left is a function that gives nothing back, a
+                // module, and a type name inside a copy that was never made:
+                // none of the three is a value with anything in it to compare.
+                // A struct used to land here and does not since D874.
+                kest_diags_suggest(checker->program->diags,
+                                   "there is nothing in one of these that two "
+                                   "of them could differ by");
             }
         }
         return builtin(checker, "bool");

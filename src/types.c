@@ -1131,6 +1131,27 @@ uint64_t kest_hash_value(const KestType *type, const KestValue *slots) {
         }
         return bits;
     }
+    // And a struct, which is a value laid out flat: what it is is its fields,
+    // so what it hashes to is what they hash to, folded the way a case's
+    // payload is. See D874.
+    case KEST_T_STRUCT: {
+        uint64_t bits = kest_mix((uint64_t)type->member_count);
+        for (uint32_t m = 0; m < type->member_count; m++) {
+            const KestMember *member = &type->members[m];
+            bits = bits * 31 ^
+                   kest_hash_value(member->type, slots + member->offset);
+        }
+        return bits;
+    }
+    case KEST_T_FIXED: {
+        uint16_t stride = type->element->slots == 0 ? 1 : type->element->slots;
+        uint64_t bits = kest_mix((uint64_t)type->count);
+        for (uint32_t i = 0; i < type->count; i++) {
+            bits = bits * 31 ^
+                   kest_hash_value(type->element, slots + (size_t)i * stride);
+        }
+        return bits;
+    }
     // One slot with a number in it, which is what these three are: a whole
     // number, a truth and a set of bits are the bits in slot nought and
     // nothing else.
@@ -1145,9 +1166,7 @@ uint64_t kest_hash_value(const KestType *type, const KestValue *slots) {
     case KEST_T_ERROR:
     case KEST_T_VOID:
     case KEST_T_OPTIONAL:
-    case KEST_T_STRUCT:
     case KEST_T_ARRAY:
-    case KEST_T_FIXED:
     case KEST_T_REF:
     case KEST_T_STORE:
     case KEST_T_FN:

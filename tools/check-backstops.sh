@@ -2044,9 +2044,7 @@ yield""",
         "from": r"""    case KEST_T_ERROR:
     case KEST_T_VOID:
     case KEST_T_OPTIONAL:
-    case KEST_T_STRUCT:
     case KEST_T_ARRAY:
-    case KEST_T_FIXED:
     case KEST_T_REF:
     case KEST_T_STORE:
     case KEST_T_FN:
@@ -2059,9 +2057,7 @@ yield""",
         return kest_mix((uint64_t)slots[0].integer);
     case KEST_T_ERROR:
     case KEST_T_VOID:
-    case KEST_T_STRUCT:
     case KEST_T_ARRAY:
-    case KEST_T_FIXED:
     case KEST_T_REF:
     case KEST_T_STORE:
     case KEST_T_FN:
@@ -2104,9 +2100,7 @@ yield""",
         # can write down. See D541.
         "what": "a kind that compares and cannot be written",
         "file": "src/check.c",
-        "from": r"""    case KEST_T_STRUCT:
-    case KEST_T_ARRAY:
-    case KEST_T_FIXED:
+        "from": r"""    case KEST_T_ARRAY:
     case KEST_T_REF:
     case KEST_T_STORE:
     case KEST_T_FN:
@@ -2118,8 +2112,6 @@ yield""",
     *without = type;""",
         "to": r"""    case KEST_T_ARRAY:
         return true;
-    case KEST_T_STRUCT:
-    case KEST_T_FIXED:
     case KEST_T_REF:
     case KEST_T_STORE:
     case KEST_T_FN:
@@ -2141,11 +2133,11 @@ yield""",
         "file": "src/check.c",
         "from": r"""    case KEST_T_VOID:
     case KEST_T_OPTIONAL:
-    case KEST_T_STRUCT:""",
+    case KEST_T_ARRAY:""",
         "to": r"""    case KEST_T_OPTIONAL:
         return true;
     case KEST_T_VOID:
-    case KEST_T_STRUCT:""",
+    case KEST_T_ARRAY:""",
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "arguments": [],
@@ -5376,6 +5368,130 @@ fn main() -> i32 {
 }
 """,
         "caught": "K0604",
+    },
+    {
+        # A struct that stops comparing. What compares and what does not is one
+        # answer in one place, and the day it says a struct does not is the day
+        # every program that asks whether two of them are the same is refused.
+        # See D874.
+        "what": "a struct that stops being a value laid out flat",
+        "file": "src/check.c",
+        "from": """    case KEST_T_STRUCT:
+        for (uint32_t m = 0; m < type->member_count; m++) {
+            if (!has_equality(type->members[m].type, without)) {
+                return false;
+            }
+        }
+        return true;""",
+        "to": """    case KEST_T_STRUCT:
+        *without = type;
+        return false;""",
+        "make": ["kest"],
+        "program": "comparing.kest",
+        "source": """struct Pair {
+    one: i32
+    two: i32
+}
+
+fn main() -> i32 {
+    let a = Pair(1, 2)
+    let b = Pair(1, 3)
+    if a != a {
+        return 300
+    }
+    if a == b {
+        return 301
+    }
+    if hash(a) != hash(a) || hash(a) == hash(b) {
+        return 302
+    }
+    return 0
+}
+""",
+        "caught": "K0314",
+    },
+    {
+        # And the machine's half of it: a walk that says two of one struct are
+        # never the same. The checker lets the comparison through and the
+        # answer is wrong, which is the half no refusal would catch. See D874.
+        "what": "a walk that says two of one struct are never the same",
+        "file": "src/vm.c",
+        "from": """    case KEST_T_STRUCT:
+        for (uint32_t m = 0; m < type->member_count; m++) {
+            const KestMember *member = &type->members[m];
+            if (!values_equal(member->type, a + member->offset,
+                              b + member->offset)) {
+                return false;
+            }
+        }
+        return true;""",
+        "to": """    case KEST_T_STRUCT:
+        return false;""",
+        "make": ["kest"],
+        "program": "comparing.kest",
+        "source": """struct Pair {
+    one: i32
+    two: i32
+}
+
+fn main() -> i32 {
+    let a = Pair(1, 2)
+    let b = Pair(1, 3)
+    if a != a {
+        return 300
+    }
+    if a == b {
+        return 301
+    }
+    if hash(a) != hash(a) || hash(a) == hash(b) {
+        return 302
+    }
+    return 0
+}
+""",
+        "caught": "K0618",
+    },
+    {
+        # And the number standing for one. `hash` covers exactly what `==`
+        # covers, so a struct that compares and hashes to nought is two of them
+        # that differ landing in one place — a table of them walks a list, and
+        # nothing about it is wrong except how long it takes. See D874.
+        "what": "a number standing for a struct that stands for every struct",
+        "file": "src/types.c",
+        "from": """    case KEST_T_STRUCT: {
+        uint64_t bits = kest_mix((uint64_t)type->member_count);
+        for (uint32_t m = 0; m < type->member_count; m++) {
+            const KestMember *member = &type->members[m];
+            bits = bits * 31 ^
+                   kest_hash_value(member->type, slots + member->offset);
+        }
+        return bits;
+    }""",
+        "to": """    case KEST_T_STRUCT:
+        return 0;""",
+        "make": ["kest"],
+        "program": "comparing.kest",
+        "source": """struct Pair {
+    one: i32
+    two: i32
+}
+
+fn main() -> i32 {
+    let a = Pair(1, 2)
+    let b = Pair(1, 3)
+    if a != a {
+        return 300
+    }
+    if a == b {
+        return 301
+    }
+    if hash(a) != hash(a) || hash(a) == hash(b) {
+        return 302
+    }
+    return 0
+}
+""",
+        "caught": "K0618",
     },
     {
         # A machine counting an instruction it never ran. What it counts is

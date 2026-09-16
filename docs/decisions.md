@@ -26439,3 +26439,71 @@ one round loop rather than one loop after the other: measured apart the
 difference read anywhere between four and eighteen nanoseconds, and measured
 together it reads five to seven. The spread on the line is the bigger of the two
 loops' own.
+
+## D874: a value laid out flat compares
+
+Six entries of machine work said the same thing six ways, so this one went back
+to the language and asked what a program written in it cannot do. The answer was
+in the first thing anybody would try:
+
+```
+error[K0314]: `==` does not apply to `Vec2`
+ --> probe.kest:9:8
+  |
+9 |     if a == b {
+  |        ^^^^^^ compare the fields that decide it
+```
+
+Two structs did not compare. The comment in the checker said why —
+*"comparing two arrays or two structs is a question with more than one answer,
+and the one a handle comparison gives is the wrong one"* — and that sentence is
+right about arrays and wrong about structs. **An array is a handle. A struct is
+not.** A struct is a value laid out flat; what it *is* is its fields and nothing
+else, and comparing them field by field is not one answer among several, it is
+the answer.
+
+And the machinery was already there, built for enums:
+
+- `has_equality` in the checker decides which types compare, and already
+  recursed into what an enum's cases carry;
+- `values_equal` in the machine already walked a type over a run of slots;
+- `kest_hash_value` in the types layer already did the same for hashing, and
+  the two are held to covering the same ground;
+- `eq.enum` / `ne.enum` / `hash.enum` already took a layout and worked over a
+  run of slots rather than over one.
+
+So the rule is now one sentence, and it names three shapes rather than one:
+**a value laid out flat compares when everything in it compares — a struct by
+its fields, `[T; N]` by its elements, an enum by its case and what that case
+carries. A handle never does.** A struct holding a `[T]` is still refused, and
+the refusal now names the field rather than the struct:
+
+```
+error[K0314]: `==` does not apply to `Holds`
+  |
+8 |     if a == b {
+  |        ^^^^^^ `Holds` carries a `[i32]`, which does not compare
+```
+
+**What it cost, which is why it was the one to pick:**
+
+- *The checker*: two cases in `has_equality`, one recursing over a struct's
+  members and one over a fixed run's element — the same shape as the enum case
+  beside them. Six lines. And the suggestion under K0314, because the sentence
+  it used to end with was written for structs and structs no longer reach it.
+- *The compiler*: two conditions widened from `tag == KEST_T_ENUM` to the three
+  tags. No new instruction, and the three that existed are renamed
+  `eq.value`, `ne.value` and `hash.value` — they never were about enums, they
+  were about a value laid out flat, and the first thing that needed them gave
+  them the wrong name.
+- *The machine*: two cases in `values_equal` and two in `kest_hash_value`. A
+  struct's fields carry their own offsets; a fixed run's stride is its element's
+  width. Nothing else.
+- *The constant folder*: nothing, and that was checked rather than assumed. A
+  comparison of two values that take more than a slot is already refused where
+  it is written — `const SAME: bool = A == B` says `K0510`, *a constant is
+  worked out before there is a machine* — so the folder and the machine cannot
+  answer differently about something neither of them folds.
+
+The three hash numbers this document prints and the gate holds are for text, a
+whole number and an enum, and none of them moved.

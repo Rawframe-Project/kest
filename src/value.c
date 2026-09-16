@@ -890,7 +890,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"text.enum", U16},
     {"concat", U16},
     {"hash.i", NONE},      {"hash.f", NONE},      {"hash.t", NONE},
-    {"hash.enum", U16},    {"eq.enum", U16},      {"ne.enum", U16},
+    {"hash.value", U16},   {"eq.value", U16},     {"ne.value", U16},
     {"text.from", NONE},
     {"new.store", U16},    {"add", U16},          {"get", U16},
     {"set", U16},          {"remove", NONE},      {"count", NONE},
@@ -1386,9 +1386,9 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_HASH_I:
     case KEST_OP_HASH_F:
     case KEST_OP_HASH_T:
-    case KEST_OP_HASH_ENUM:
-    case KEST_OP_EQ_ENUM:
-    case KEST_OP_NE_ENUM:
+    case KEST_OP_HASH_VALUE:
+    case KEST_OP_EQ_VALUE:
+    case KEST_OP_NE_VALUE:
     case KEST_OP_GET:
     case KEST_OP_SET:
     case KEST_OP_REMOVE:

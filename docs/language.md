@@ -1089,11 +1089,19 @@ fn isSpace(byte: u8) -> bool no.alloc {
 ```
 
 `hash(x)` gives a `u64` standing for a value. It applies to exactly what `==`
-applies to — integers, floats, `bool`, text, a set of bits, and an enum whose
-cases carry those — because a type that compares has one and a type that does
-not has neither. Neither applies to a struct, because which of its
-fields decide is the program's to say: a program that wants one folds the fields
-it means with `std.hash`.
+applies to, because a type that compares has one and a type that does not has
+neither.
+
+**A value laid out flat compares when everything in it compares.** That is
+integers, floats, `bool`, text and a set of bits; a struct, when every field
+does; `[T; N]`, when `T` does; and an enum, when everything its cases carry
+does. A handle never compares, however it is reached: two arrays are equal when
+they hold the same things, and comparing the handles answers a different
+question — so a struct holding a `[T]` is refused, and the refusal names the
+field's type rather than the struct's.
+
+A program that wants some of the fields rather than all of them folds the ones
+it means with `std.hash`:
 
 ```kest
 import std.hash
@@ -1888,8 +1896,10 @@ where it appears.
 Two values of an enum are equal when they are the same case carrying the same
 things, so `door == Door.Locked(7)` asks what it looks like it asks. An enum
 whose cases carry something that does not compare does not compare either, and
-the refusal names what it was. `hash` covers the same ground, over the same
-parts, so the two cannot disagree.
+the refusal names what it was. It is the same rule a struct is held to and for
+the same reason: both are values laid out flat, and what one is is what is in
+it. `hash` covers the same ground, over the same parts, so the two cannot
+disagree.
 
 Two enums are answered together in one `match` rather than one inside
 another. An arm answers a case for each subject, and `else` in a position

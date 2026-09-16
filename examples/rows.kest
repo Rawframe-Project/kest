@@ -99,6 +99,25 @@ fn main() -> i32 {
         return 8
     }
 
+    // And what two of these are worth comparing by, which is everything in
+    // them: a `Cell` is two numbers, a `[Cell; 3]` is three of them in a row,
+    // and a `Row` is that run and a tag. None of it is a handle, so there is
+    // one answer to whether two of them are the same and this is it. A struct
+    // that held a `[Cell]` instead would be refused, because comparing two
+    // handles answers a different question. See D874.
+    if made(1) != made(1) || made(1) == made(2) {
+        return 9
+    }
+    if made(1).cells != made(2).cells || made(1).cells[0] != Cell(1, 0.5) {
+        return 10
+    }
+    // And what compares has a number standing for it, which is the same rule
+    // read the other way: two that are equal hash the same and two that are
+    // not are free to.
+    if hash(made(1)) != hash(made(1)) || hash(made(1)) == hash(made(2)) {
+        return 11
+    }
+
     io.print("a row is three cells and a tag, heaviest {heaviest(r)}")
     return 0
 }
