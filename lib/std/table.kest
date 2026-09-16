@@ -179,6 +179,16 @@ fn refill<K, V>(t: Table<K, V>, room: i32) no.host {
 // is for the marks, and which of the two is asked is which of them is
 // crowding it.
 fn set<K, V>(t: Table<K, V>, key: K, value: V) no.host {
+    // A key has to be one key, which is what `hash` and `==` are asked for. A
+    // value that is not equal to itself -- a float that is not a number, or a
+    // shape holding one -- is a different key every time it is handed over, so
+    // a table given one grew by a pair nothing could find, counted it, and
+    // could never take it out again. What a table holds is what it can find,
+    // so this one is not put in. `math.isNumber` is the question a program
+    // asks before it gets here. See D893.
+    if key != key {
+        return
+    }
     if let at = find(t, key) {
         t.values[at] = value
         return

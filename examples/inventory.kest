@@ -4,6 +4,7 @@ import std.io
 import std.table
 import std.text
 import std.sort
+import std.math
 
 // A container written in Kest rather than built into the language. `[T]`,
 // `store<T>` and `ref<T>` were the only shapes that took a type; a program can
@@ -280,6 +281,31 @@ fn main() -> i32 {
     }
     if !table.has(ground, At(3, 4)) || table.has(ground, At(4, 3)) {
         return 25
+    }
+
+    // What a table counts is what it can find. A key is one key because
+    // `hash` and `==` say so, and a value that is not equal to itself is a
+    // different key every time it is handed over — so a table given one would
+    // count a pair nothing could find and never be able to take it out. It is
+    // not put in. See D893.
+    let places: table.Table<f32, text> = table.empty()
+    table.set(places, 1.5, "half past one")
+    table.set(places, math.sqrt(0.0 - 1.0), "nowhere")
+    if table.count(places) != 1 || len(places.keys) != 1 {
+        return 27
+    }
+    for k in places.keys {
+        if !table.has(places, k) {
+            return 28
+        }
+    }
+
+    // And the two arrays in step, which is what makes walking them instead of
+    // asking worth anything: the value beside a key is that key's.
+    for at, name in stock.keys {
+        if stock.values[at].name != name {
+            return 29
+        }
     }
 
     io.print("{table.count(stock)} kinds carried, worth {total(stock, carried)}")

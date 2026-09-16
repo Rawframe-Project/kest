@@ -34083,3 +34083,47 @@ normalised, the arithmetic at the ends of what an `f32` holds. Write each edge,
 say what it should answer from the rule rather than from what it does, and keep
 the ones that are rules in an example. What is being looked for is the
 eighteen-to-one again.
+
+## The ends of the shelf
+
+Thirty-odd edges of `table`, `sort`, `vec` and `math`, each written down with
+what it should answer taken from the rule. A table asked for what is not there
+and asked twice for one key; two hundred pairs in, out and in again; `keysOf`
+sorted and the table asked afterwards; `keys` and `values` in step after a
+removal from the middle; a sort of nothing, of one, of what is in order, of all
+the same, and one told that nothing comes before anything; a vector of no length
+and one of 1e20s; `abs` of the smallest number there is; a place inside a
+character. All of them right.
+
+One was not:
+
+```text
+let t: table.Table<f32, i32> = table.empty()
+table.set(t, math.sqrt(0.0 - 1.0), 1)
+
+count 1, has false, keys 1
+```
+
+A table finds a key again by `hash` and `==`. A float that is not a number is
+not equal to itself and neither is a shape holding one, so it is a different key
+every time it is handed over: put in, counted, never found, never taken out. A
+world keyed on a position a division left as not-a-number would grow by a pair a
+frame while every lookup said no.
+
+It is not put in now, which makes the rule true the other way round too: what a
+table counts is what it can find. `examples/inventory.kest` holds it by asking
+`has` of every key in `t.keys`, not by counting — the count was the thing that
+was lying.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same ratio twice running — thirty right and one wrong, eighteen
+right and one wrong — and both times the wrong one was an edge no program in the
+tree had needed. The shelf left unwalked is the one a host stands on: the public
+header's sixty functions. Walk `include/kest.h` the same way, from the outside
+— a machine made with nought slots, a lend of nothing, a call by a name that is
+there twice, `kest_needs_from` on a program with no entry, a reset between two
+crossings, a context bound and never used. Say what each should answer from what
+the header promises rather than from what the engine does, and write the ones
+that are rules into `examples/embed.c`, which is the host that already reads
+them back.

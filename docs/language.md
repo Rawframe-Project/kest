@@ -1128,6 +1128,14 @@ a key and nothing else, so `Table<At, text>` over a `struct At { x: i32  y: i32 
 holds a world by its places: `At(1, 2)` is the key rather than a handle to one,
 and two of them holding the same numbers are one key.
 
+What a key has to be is *one* key, and a value that is not equal to itself is
+not one: a float that is not a number, or a shape holding one, is a different
+key every time it is handed over. A table given one would count a pair nothing
+could ever find and could never take it out again, so it is not given one —
+`table.set` with such a key leaves the table as it found it, and what a table
+counts is what it can find. `math.isNumber` is the question to ask before it
+gets there.
+
 A program that wants some of the fields rather than all of them folds the ones
 it means with `std.hash`:
 

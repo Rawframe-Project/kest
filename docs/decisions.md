@@ -27527,3 +27527,46 @@ wrong, and nothing in the tree used the wrong one — `split` is called four tim
 in the examples and not one of those subjects ends with a separator. A library
 function is only as held as the shapes somebody wrote down, and the shapes
 somebody writes down are the ones they needed that day.
+
+## D893: what a table counts is what it can find
+
+The walk D892 asked for, over the four modules a program leans on. Thirty-odd
+edges written down, each with what it should answer taken from the rule rather
+than from a run:
+
+| Asked | Answered |
+| --- | --- |
+| a table for a key that is not there, twice for one key, after every pair was taken out | right |
+| two hundred pairs in, out, and in again — the places a removal leaves behind | right |
+| `keysOf` sorted, and the table asked again afterwards | right |
+| `keys` and `values` in step after a removal from the middle | right |
+| a sort of nothing, of one, of what is in order, of all the same, told nothing comes first | right |
+| a vector of no length, of 1e20s, lerped past both ends, crossed | right |
+| `abs` of the smallest number there is | itself, as written |
+| a place inside a character, and walking back from one | right |
+| a table given a key that is not equal to itself | **counted a pair nothing could find** |
+
+```text
+let t: table.Table<f32, i32> = table.empty()
+table.set(t, math.sqrt(0.0 - 1.0), 1)
+
+count 1, has false, keys 1
+```
+
+A table finds a key again by `hash` and `==` — that is the whole of what it
+wants of one, and it is why a struct is a key. A float that is not a number is
+not equal to itself, and neither is a shape holding one, so it is a different
+key every time it is handed over: put in, counted, never found, never taken out
+again. A world keyed on a position that a division left as not-a-number would
+grow by a pair a frame, and the count would say so while every lookup said no.
+
+It is not put in now. `table.set` asks the one question that costs a comparison
+and leaves the table as it found it, which makes the rule true the other way
+round as well: **what a table counts is what it can find**. That is what
+`examples/inventory.kest` holds — every key in `t.keys` asked of `has` — rather
+than a count, because the count is the thing that was lying.
+
+*What the walk is worth* is the ratio, and it is the same one D892 found: thirty
+answered and one did not, and the one that did not was the edge nobody had
+needed that day. A library is held by the shapes somebody wrote down; the shapes
+somebody writes down are the ones their program had.

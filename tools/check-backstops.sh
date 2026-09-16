@@ -5581,6 +5581,40 @@ fn main() -> i32 {
         "caught": "K0314 said `error[K0314]: `+` does not apply to `text``",
     },
     {
+        # A key that is not one key. A table finds a key again by `hash` and
+        # `==`, so a value that is not equal to itself is a different key every
+        # time it is handed over -- and a table given one counted a pair
+        # nothing could find and could never take it out. What a table counts
+        # is what it can find. See D893.
+        "what": "a table that counts a pair nothing can find",
+        "file": "lib/std/table.kest",
+        "from": """    if key != key {
+        return
+    }""",
+        "to": """    if false && key != key {
+        return
+    }""",
+        "make": ["kest"],
+        "program": "counted.kest",
+        "source": """import std.io
+import std.table
+import std.math
+
+fn main() -> i32 {
+    let t: table.Table<f32, i32> = table.empty()
+    table.set(t, math.sqrt(0.0 - 1.0), 1)
+    for k in t.keys {
+        if !table.has(t, k) {
+            io.print("a table counts a pair nothing can find")
+            return 1
+        }
+    }
+    return 0
+}
+""",
+        "caught": "a table counts a pair nothing can find",
+    },
+    {
         # A cut that stops where the text ran out. The last piece is the one
         # after the last separator, and when a subject ends with one that
         # piece is empty -- so stopping at the end of the text dropped it, and
