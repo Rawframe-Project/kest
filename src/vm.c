@@ -49,9 +49,9 @@
 #define REF_WORLD_BITS 16
 #define REF_STAMP_BITS 24
 #define REF_INDEX_BITS 24
-#define MOST_STAMPS ((1u << REF_STAMP_BITS) - 1u)
-#define MOST_PLACES ((1u << REF_INDEX_BITS) - 1u)
-#define MOST_WORLDS ((1u << REF_WORLD_BITS) - 1u)
+#define MOST_STAMPS 16777215u
+#define MOST_PLACES 16777215u
+#define MOST_WORLDS 65535u
 
 #define KEST_IS_ARRAY 0x4b415252u
 #define KEST_IS_STORE 0x4b53544fu
@@ -503,7 +503,10 @@ struct KestRuntime {
     // build are ever stamped the same. A reference carries the stamp it was
     // made with, so one handed to a store it did not come from names a place
     // stamped by something else. See D314 and D316.
-    uint32_t *stamps;
+    // How many places this machine has handed out. The count is this
+    // machine's: it was the build's, and two machines from one build wrote it
+    // from whatever threads they were on. See D936.
+    uint32_t stamps;
     // Which world this machine is, among the ones alive in this process. It
     // goes into every reference a store of its hands out, so a reference from
     // another machine names nothing here. See D934.
@@ -2931,14 +2934,14 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // so a reference made before it was given back names a stamp
             // nothing carries any more; and a store that has never seen this
             // stamp is a store this reference did not come from.
-            if (*rt->stamps == MOST_STAMPS) {
+            if (rt->stamps == MOST_STAMPS) {
                 fail(vmp, frame, instruction, "K0630",
                      "this machine has handed out %u places in stores, which "
                      "is all it can tell apart",
                      MOST_STAMPS);
                 return false;
             }
-            store->generations[index] = ++*rt->stamps;
+            store->generations[index] = ++rt->stamps;
             store->live[index] = true;
             store->count++;
             memcpy(store->elements + (size_t)index * stride, value,
@@ -4448,10 +4451,15 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
         return NULL;
     }
     rt->limit = rt->stack + rt->stack_slots;
-    // The build's rather than this machine's, and a machine may be made from a
-    // module nobody is counting for, which is its own count starting at
-    // nought.
-    rt->stamps = &stamped->stamps;
+    // This machine's own, not the build's. It was the build's, so two machines
+    // started from one build wrote the same counter from whatever threads they
+    // were on -- a data race, and the one piece of mutable state a build had
+    // that two runtimes shared. What made it safe to move is the world number
+    // below: a place is told apart from a place in another machine by which
+    // world it is in, so the count no longer has to be unique across them.
+    // See D934 and D936.
+    rt->stamps = 0;
+    (void)stamped;
     // And which world this is. One number for the life of the process, so two
     // machines never hand out the same reference however they were built --
     // the count above is the build's and two builds of one file both start it

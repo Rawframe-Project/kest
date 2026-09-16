@@ -551,13 +551,14 @@ for one in options:
 # and emptied four thousand million times. It is in the table because the
 # table's own sentence names `K0630`, which is what it says. See D523.
 SPELLED = {'UINT16_MAX': 65535, 'INT32_MAX': 2147483647,
-           '0xffffffffu': 4294967295}
+           '0xffffffffu': 4294967295, '16777215u': 16777215}
 A_HOSTS_OWN = {'MAX_FRAMES'}
 enforced = set()  # filled below, and held to being filled
 for path in ('src/compile.c', 'src/check.c', 'src/types.c', 'src/vm.c',
              'src/parser.c'):
-    for name, value in re.findall(r'#define (MAX_[A-Z]+|MOST_STAMPS)\s+(\S+)',
-                                  open(path).read()):
+    for name, value in re.findall(
+            r'#define (MAX_[A-Z]+|MOST_STAMPS|MOST_PLACES)\s+(\S+)',
+            open(path).read()):
         if name in A_HOSTS_OWN:
             continue
         if value in SPELLED:

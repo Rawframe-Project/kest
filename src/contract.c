@@ -435,7 +435,7 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
     // be typed into it last -- and a call carries the copy's own name, so the
     // walk below looked for a node that was not there and read the call as
     // reaching nothing at all. That is how `check` accepted what `emit`
-    // refused, and refused it as a fault in the compiler. See D933.
+    // refused, and blamed the compiler for a mistake in the program. See D933.
     graph.count += program->instance_count;
     if (graph.count == 0) {
         return true;

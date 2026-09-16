@@ -1,3 +1,12 @@
+// This file is a host, not the library. The library is ISO C11 and nothing
+// else; a command line has to read a clock that measures elapsed time, and the
+// one C itself has measures processor time. Asked for here so that the request
+// is where the reason is, and guarded so a platform without it still builds --
+// it falls back to C's own wall clock and then to processor time. See D935.
+#if !defined(_POSIX_C_SOURCE)
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #include <errno.h>
 #include <float.h>
 #include <limits.h>
@@ -485,10 +494,33 @@ static void engine_name(KestValue *frame, KestRuntime *runtime, void *context) {
     frame[0] = kest_text(runtime, "kest", 4);
 }
 
+// A clock that measures elapsed time and only goes forwards. `clock()` is the
+// processor time this process has used, which is not that: a program that waits
+// for anything reads a clock that stopped, and `make time` was measuring how
+// busy the processor had been rather than how long a frame took. Where the
+// platform has a monotonic clock this uses it; where it does not, it says so by
+// falling back to the one C itself has, which is a wall clock and can go
+// backwards. See D935.
+static int64_t host_microseconds(void) {
+#if defined(CLOCK_MONOTONIC)
+    struct timespec at;
+    if (clock_gettime(CLOCK_MONOTONIC, &at) == 0) {
+        return (int64_t)at.tv_sec * 1000000 + at.tv_nsec / 1000;
+    }
+#endif
+#if defined(TIME_UTC)
+    struct timespec utc;
+    if (timespec_get(&utc, TIME_UTC) == TIME_UTC) {
+        return (int64_t)utc.tv_sec * 1000000 + utc.tv_nsec / 1000;
+    }
+#endif
+    return (int64_t)clock() * 1000000 / CLOCKS_PER_SEC;
+}
+
 static void host_clock(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
     (void)context;
-    frame[0].integer = (int64_t)clock() * 1000000 / CLOCKS_PER_SEC;
+    frame[0].integer = host_microseconds();
 }
 
 // Memory this program owns, handed to Kest without copying it. A real engine

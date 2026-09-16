@@ -6237,6 +6237,58 @@ int main(int argc, char **argv) {
         printf("and a program that would not stop was stopped, twice over\n");
     }
 
+    // And a handle of the wrong thing. A kind says array or store and a stride
+    // says how far apart two of them are; neither says what is inside one, so a
+    // run of `Row` handed where `[Tile]` was wanted used to be unpacked by the
+    // callee's layout and read past the end of this host's own memory. Both
+    // ways round, because the one that is bigger reads further and the one
+    // that is smaller reads somebody else's fields. See D927.
+    {
+        static Row rows[4];
+        static Tile tiles[4];
+        int32_t wants_tiles = kest_entry(engine.runtime, "worn");
+        int32_t wants_rows = kest_entry(engine.runtime, "heaviest");
+        if (wants_tiles < 0 || wants_rows < 0) {
+            fprintf(stderr, "the program has no `worn` or `heaviest`\n");
+            return 1;
+        }
+        struct {
+            void *data;
+            const char *lent_as;
+            size_t size;
+            int32_t entry;
+            const char *wanted;
+        } crossed[2] = {
+            {rows, "Row", sizeof(Row), wants_tiles, "Tile"},
+            {tiles, "Tile", sizeof(Tile), wants_rows, "Row"},
+        };
+        for (int which = 0; which < 2; which++) {
+            KestValue lent =
+                kest_borrow(engine.runtime, crossed[which].data, 4,
+                            crossed[which].lent_as, crossed[which].size);
+            if (lent.object == NULL) {
+                kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+                return 1;
+            }
+            KestValue frame[8] = {{0}};
+            frame[0] = lent;
+            if (kest_call(engine.runtime, crossed[which].entry, frame, 8)) {
+                fprintf(stderr,
+                        "a run of `%s` was taken where `%s` was wanted\n",
+                        crossed[which].lent_as, crossed[which].wanted);
+                return 1;
+            }
+            if (!said_that(engine.runtime, "K0661", "in slot 0 and this")) {
+                return 1;
+            }
+            if (!kest_lend_ends(engine.runtime, lent)) {
+                kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+                return 1;
+            }
+        }
+        printf("and a handle of the wrong thing is refused both ways round\n");
+    }
+
     // What a machine is made of, and what starting one costs the build it was
     // started on. Two machines that differ in one number: the stack is slots
     // of `KestValue`, so the wider of the two is wider by exactly that many

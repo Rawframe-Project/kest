@@ -38,10 +38,15 @@ extern fn Host.fileExists(path: text) -> bool
 extern fn Host.argCount() -> i32 no.alloc
 extern fn Host.arg(at: i32) -> text?
 
-// A clock that only goes forwards, in microseconds, from somewhere nobody
-// promises anything about. It is for measuring how long something took and for
-// nothing else: two runs do not start it at the same place and two machines do
-// not count it at the same rate.
+// A clock that measures elapsed time and only goes forwards, in microseconds,
+// from somewhere nobody promises anything about. It is for measuring how long
+// something took and for nothing else: two runs do not start it at the same
+// place, and what it says is not a date.
+//
+// What a host binds to it is the host's. `kest` binds the platform's monotonic
+// clock where there is one, and says so: on a platform with none it falls back
+// to a wall clock, which can go backwards. It is not determinism and a body
+// that promises `no.host` cannot read it.
 extern fn Host.clock() -> i64 no.alloc
 
 fn read(path: text) -> text? {

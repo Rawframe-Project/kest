@@ -2536,7 +2536,8 @@ none of them is a wrap or a quiet truncation:
 | 65535 | elements a `[T; N]` holds, and at least one |
 | 65536 | names a program asks the host for |
 | 2147483647 | elements an array or a store holds, and bytes in text |
-| 4294967295 | places in stores a machine hands out, counting the ones taken back |
+| 16777215 | places in one store |
+| 16777215 | times a machine hands out a place, counting the ones taken back |
 
 ```
 error[K0503]: this loop is 156012 bytes of code, and a loop reaches back 65535
