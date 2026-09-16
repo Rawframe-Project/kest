@@ -1026,6 +1026,37 @@ is run: `check-commands.sh` installs into somewhere of its own, runs what it
 put there on a program that imports the library, and takes it away again — the
 lines being right is one thing and the files arriving is another.
 
+## What a new check costs, and when to write one
+
+The self-checking here is large and it is not free. Measured: `make fast` is a
+tenth of a second, `make check` is about eighteen minutes, and six and a half of
+those minutes are the backstops — eight hundred and forty-seven holes, each of
+which copies the tree, builds it and runs a check.
+
+So the rule from here is:
+
+**A defect gets a behavioural test, not a new hole.** Something that escaped is
+something a program can be written to show. Write that program, put it where the
+examples are or where the refusal corpus is, and stop. A new source-text hole is
+a new thing to repoint every time the code it quotes is rewritten, and in one
+sprint of repairs ten of them had to be repointed for that reason alone and none
+of them had found anything.
+
+**The holes that are here stay.** They are what says a net has been seen
+catching something, and that is the discipline this project is built on. What
+changes is that the list does not grow.
+
+**A check that reads a figure is run before the gate is.** Most of what breaks
+`make check` after a real change is a number that moved on purpose — what a
+frame step costs, what compiling costs, how many instructions there are. Those
+live in `tools/check-costs.sh` and `tools/check-tables.sh`, which take three
+seconds each and can be run on their own. Running the two of them before the
+gate turns an eighteen-minute round trip into six seconds.
+
+Seventy-five of the holes prove a sentence another hole already proves. They are
+left alone on purpose: the sentence is the same and the code path is not, and
+nine percent of six minutes is not worth the coverage.
+
 ## Two tiers
 
 `make fast` is what a change is tried against while it is being written: the
@@ -1036,9 +1067,12 @@ takes about a tenth of a second and it is `tools/fast.sh`. It is not a gate and
 it proves nothing about itself; everything in it is also done by `make check`,
 in more shapes and under more builds.
 
-`make check` is the whole of it and takes minutes. Run it at a milestone and
-before saying something is done — not after every edit, which is what made a
-change cost four full runs of the gate and the gate the reason nothing moved.
+`make check` is the whole of it and takes about eighteen minutes. Run it at a
+milestone and before saying something is done — not after every edit, which is
+what made a change cost four full runs of the gate and the gate the reason
+nothing moved. Every check in `tools` also runs on its own, which is how a
+change that moves one figure is answered in seconds rather than in a round
+trip.
 
 `make check` is the whole of it: both builds, both hosts, every example run or
 resolved, every command against every file under the sanitisers, every tool
