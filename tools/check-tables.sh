@@ -20,6 +20,9 @@ import tempfile
 
 failed = 0
 pythons = 0
+# How many conditions gate more than one complaint, which is the shape D877
+# is about: each has to be a guard rather than the first of the things under it.
+guards = 0
 shells = 0
 
 
@@ -669,6 +672,19 @@ if does != told_of:
 # neither was held to the other — a tag moved from one side to the other in one
 # of them compiles, and what a program gets then is `<no text>` where it asked
 # for a value, or a refusal for something the machine can write perfectly well.
+# Every `A - B` written anywhere in a piece of Python, as the pair of names it
+# takes apart. Only names, because a difference of two things that are written
+# out rather than named is not a list this file is holding to another. See D877.
+def taken_apart(node):
+    pairs = set()
+    for one in ast.walk(node):
+        if (isinstance(one, ast.BinOp) and isinstance(one.op, ast.Sub) and
+                isinstance(one.left, ast.Name) and
+                isinstance(one.right, ast.Name)):
+            pairs.add((one.left.id, one.right.id))
+    return pairs
+
+
 def sides(path, opening):
     body = table(path, opening)
     runs = re.findall(r'((?:\s*case (?:KEST_T_\w+):)+)\s*'
@@ -1064,6 +1080,42 @@ for check in tools:
                 if stands_for[name] != what:
                     print("%s: `%s` is a %s and a %s, and one name is one "
                           "thing" % (where, name, stands_for[name], what))
+                    failed = 1
+
+    # And a condition that is one of the things it guards. An `if` with more
+    # than one complaint under it is a claim that when it is true, one of them
+    # has something to say — so a test that asks about `A - B` while the body
+    # complains about `B - A` is not a guard at all: the body's complaint is
+    # behind a question that is not about it, and the day it has something to
+    # say the test is false and nobody hears it. That is exactly what shut the
+    # three sentences holding what compares to what can be written, for as long
+    # as they existed, and the hole for one of them went on catching because
+    # the break it makes opens the guard by accident. See D877.
+    for body in carried:
+        try:
+            tree = ast.parse(textwrap.dedent(body))
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.If):
+                continue
+            complaints = sum(
+                1 for one in ast.walk(node)
+                if isinstance(one, ast.Call) and isinstance(one.func, ast.Name)
+                and one.func.id == 'print')
+            if complaints < 2:
+                continue
+            guards += 1
+            asked = taken_apart(node.test)
+            under = set()
+            for one in node.body + node.orelse:
+                under |= taken_apart(one)
+            for left, right in sorted(under):
+                if (right, left) in asked and (left, right) not in asked:
+                    print("%s: an `if` asks about `%s - %s` and what is under "
+                          "it complains about `%s - %s`, so the second is "
+                          "behind a question that is not about it"
+                          % (where, right, left, left, right))
                     failed = 1
 
 for where in sorted(glob.glob('tools/*.sh')):
@@ -2214,7 +2266,9 @@ if not failed:
     print("%u instructions, %u tokens, %u keywords, %u builtins, "
           "%u primitives, %u reasons, %u promises, %u modules "
           "and %u checks are in step with their names, holding %u pieces of "
-          "Python and %u of shell where a name stands for one thing, %u "
+          "Python and %u of shell where a name stands for one thing and %u "
+          "condition(s) that gate more than one complaint, each of them a "
+          "guard rather than the first of what is under it, %u "
           "refusals asked for, %u of them by a hole and nothing else, "
           "and %u nothing can be made to ask for, every one of the %u codes a "
           "check names being one this compiler has, each of the %u only a hole "
@@ -2236,7 +2290,8 @@ if not failed:
           "compiler says, every one of them one a host can call"
           % (len(ops), len(toks), len(held), len(checked), len(writable),
              len(reasons), len(promise_names), len(listed),
-             len(tools), pythons, shells, len(reading), len(only_a_hole),
+             len(tools), pythons, shells, guards, len(reading),
+             len(only_a_hole),
              len(NOT_REACHED),
              len(every_code), len(only_a_hole), sentences,
              len(HELD), halves // 2,

@@ -5490,6 +5490,24 @@ fn main() -> i32 {
         "caught": "K0618",
     },
     {
+        # The guard that was shut for the wrong reason, put back. Three
+        # sentences hold what compares to what can be written, and the first of
+        # them was written as the condition over all three: the day the lists
+        # came apart the other way, the difference this asks about was still
+        # exactly an optional and nobody heard the other two. What catches it
+        # is a rule about the shape rather than about these lists — a test that
+        # asks about `A - B` while the body complains about `B - A` is not a
+        # guard. See D877.
+        "what": "a condition that is the first of the things it guards",
+        "file": "tools/check-tables.sh",
+        "from": """if says is not None and compares is not None:""",
+        "to": """if says is not None and compares is not None and says - compares != {'OPTIONAL'}:""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "so the second is behind a question that is not about it",
+    },
+    {
         # A machine counting an instruction it never ran. What it counts is
         # read against what `emit` printed for the same loop, so a count that
         # is not what the machine did is a number that would answer every

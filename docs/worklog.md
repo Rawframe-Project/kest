@@ -32852,13 +32852,14 @@ Recorded as D865.
 
 **Runs:** `make check`, everything passing, with `TMPDIR=/var/tmp`.
 
-**Next:** three entries have moved one rule — a value laid out flat compares,
-hashes and writes itself — and each found the gate one rule short. So audit
-rather than extend: `tools/check-tables.sh` holds several pairs of lists to
-each other, and one of those guards was shut for the wrong reason for as long
-as it existed. Read every `if` in that file that gates more than one complaint,
-and say for each whether the condition is a guard or the first of the things
-guarded. Break each one on purpose to find out.
+**Next:** the audit found one shape worth holding and one worth only reading:
+that `A != B` over two lists is true when they differ by order alone, and a
+body reporting only membership then fails with nothing to say. Twelve such
+conditions are safe because everything they compare was sorted where it was
+made, and nothing holds that. Take one of the twelve, make its two sides differ
+by order alone, and see what `make check` says; then decide whether the answer
+is a rule, a change to how those lists are made, or a line in the worklog
+saying it was looked at.
 
 ## A hop of a `for` is one instruction
 
@@ -33374,3 +33375,49 @@ each other, and one of those guards was shut for the wrong reason for as long
 as it existed. Read every `if` in that file that gates more than one complaint,
 and say for each whether the condition is a guard or the first of the things
 guarded. Break each one on purpose to find out.
+
+## A condition is a guard or it is the first of the things it guards
+
+D876 found a rule that never ran: three sentences behind a condition that was
+one of the three. So: every `if` in `check-tables.sh` that gates more than one
+complaint, read and classified. There are fifteen.
+
+Fourteen are guards. Twelve are `if A != B:` over two loops reporting `A - B`
+and `B - A`, so the condition is exactly the disjunction of what it gates. One
+is a `None` guard over a comparison that cannot be made otherwise. One asks
+whether the thing about to be read exists. The fifteenth is the summary.
+
+One more thing was asked of the twelve, because a list is not a set: `A != B`
+over two lists is true when they hold the same things in another order, and a
+body reporting only membership prints nothing and fails anyway — a check that
+says a file is wrong and not what is wrong. All twelve compare values sorted
+where they were made, so order cannot differ. Read rather than held.
+
+What is held is the shape. A test that asks about `A - B` while the body
+complains about `B - A` is not a guard: the complaint is behind a question that
+is not about it, and the day it has something to say the test is false. One
+sentence, decidable by reading the Python, and the exact shape of the bug.
+`check-tables.sh` already parses every check's Python for the rule that a name
+stands for one thing; this reads the same trees. Thirty-one conditions across
+the ten checks gate more than one complaint and every one is read now. A hole
+puts D876's guard back.
+
+Writing it cost two mistakes, both caught by the checks it was being added to.
+The helper was called `out`, which is a list further down the same file. And the
+block went into the second of two loops over the same files, so `where` was that
+loop's and `carried` the first loop's last: the rule read one file's Python and
+named ten files in turn. What said so was the message itself, naming
+`check-backstops.sh` for an `if` that is in `check-tables.sh`.
+
+Recorded as D877.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the audit found one shape worth holding and one worth only reading:
+that `A != B` over two lists is true when they differ by order alone, and a
+body reporting only membership then fails with nothing to say. Twelve such
+conditions are safe because everything they compare was sorted where it was
+made, and nothing holds that. Take one of the twelve, make its two sides differ
+by order alone, and see what `make check` says; then decide whether the answer
+is a rule, a change to how those lists are made, or a line in the worklog
+saying it was looked at.

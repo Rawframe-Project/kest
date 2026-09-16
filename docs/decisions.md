@@ -26629,3 +26629,48 @@ for.*
   still walks `kest_frame_gives`, which is what the paragraph beside it in
   `examples/embed.c` does. What has no text is what holds a handle, and a store
   is asked exactly that a few lines above.
+
+## D877: a condition is a guard or it is the first of the things it guards
+
+D876 found a rule that never ran: three sentences holding what compares to what
+can be written, all three behind a condition that was one of the three. The Next
+was to read every `if` in `tools/check-tables.sh` that gates more than one
+complaint and say, for each, which it is. There are fifteen.
+
+**Fourteen are guards.** Twelve are `if A != B:` over two loops reporting `A - B`
+and `B - A`, so the condition is exactly the disjunction of what it gates —
+nothing can be true under it while it is false. One is a `None` guard over a
+comparison that cannot be made otherwise. One is *did the thing I am about to
+read exist at all*. The fifteenth is the summary, which is not a complaint.
+
+*And one more thing was asked of the twelve, because a list is not a set.* `A !=
+B` over two lists is true when they hold the same things in a different order,
+and a body that reports only membership would then print nothing and fail
+anyway — a check that says a file is wrong and not what is wrong. Every one of
+the twelve compares values that were sorted where they were made, so the order
+cannot differ. Read rather than held, because holding it means tracing where a
+name came from, and the shape below is the one that was actually wrong.
+
+**What is held is the shape.** A test that asks about `A - B` while the body
+complains about `B - A` is not a guard: the complaint is behind a question that
+is not about it, and the day it has something to say the test is false. That is
+one sentence, it is decidable by reading the Python, and it is the exact shape
+of the bug. `check-tables.sh` already parses every check's Python for the rule
+that a name stands for one thing; this reads the same trees:
+
+> `tools/check-tables.sh`: an `if` asks about `says - compares` and what is
+> under it complains about `compares - says`, so the second is behind a question
+> that is not about it
+
+**Thirty-one conditions** across the ten checks gate more than one complaint,
+and every one of them is now read. A hole puts D876's guard back and is caught.
+
+*Writing it cost two mistakes, both caught by the checks it was being added to.*
+The helper was called `out`, which is a list further down the same file — *`out`
+is a list and a set, and one name is one thing*. And the block went into the
+second of two loops over the same files: `where` was that loop's and `carried`
+was the first loop's last, so the rule read one file's Python and named ten
+files in turn. What said so was the message itself, which named
+`tools/check-backstops.sh` for an `if` that is in `tools/check-tables.sh` —
+a check that reports the wrong file is a check reading the wrong thing, and this
+one was loud about it.
