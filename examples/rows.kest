@@ -118,6 +118,20 @@ fn main() -> i32 {
         return 11
     }
 
+    // And what one of these looks like written down, which is what a program
+    // writes to build one: the name and the fields in the order they were
+    // declared, a run in brackets, a text quoted because the bytes on their
+    // own do not say where a field ends. Not a format chosen for structs —
+    // it is the one a case with a payload has always been written in. See
+    // D876.
+    if "{made(4).cells[0]}" != "Cell(1, 0.5)" {
+        return 12
+    }
+    if "{made(4)}" != "Row([Cell(1, 0.5), Cell(2, 1.5), Cell(3, 1.0)], 4)" {
+        return 13
+    }
+
+    io.print("{made(4)}")
     io.print("a row is three cells and a tag, heaviest {heaviest(r)}")
     return 0
 }

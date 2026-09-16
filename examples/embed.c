@@ -3087,10 +3087,16 @@ int main(int argc, char **argv) {
 
     // And a store is a thing the language has no text for, which it says
     // rather than inventing one. What the host wants of a store, only the host
-    // knows.
+    // knows. Since D876 this is the shape that reads that message — a struct
+    // writes itself now — so the message is read here rather than only the
+    // answer: minus one on its own is what a host cannot tell apart from an
+    // index that is no function.
     if (kest_gave_text(engine.runtime, engine.entry[CREATE], engine.frame, said, sizeof(said))
         >= 0) {
         fprintf(stderr, "a store has no text and something wrote one\n");
+        return 1;
+    }
+    if (!said_that(engine.runtime, "K0646", "no text of its own")) {
         return 1;
     }
 
@@ -3844,18 +3850,23 @@ int main(int argc, char **argv) {
                 return 1;
             }
         }
-        // And the same result asked for as words, which this language has
-        // none of: a shape is written by whoever holds it, because what a
-        // `Point` means is the host's to decide. Asking used to be minus one
-        // and silence — a host could not tell it apart from an index that is
-        // no function — and now it says which type it was. See D433.
+        // And the same result asked for as words. A shape had none of its own
+        // until D876 and this host wrote it: asking was minus one and a
+        // message naming the type. It is written now, the way a program writes
+        // one — the name, and the fields in the order they were declared —
+        // and a host that wants its own layout still walks it with
+        // `kest_frame_gives`, which is the paragraph below. What has no text
+        // is what holds a handle, and a store above is asked exactly that.
         char said[64];
-        if (kest_gave_text(engine.runtime, engine.entry[MOVED], engine.frame,
-                           said, sizeof(said)) >= 0) {
-            fprintf(stderr, "a shape was written as though it had words\n");
+        int64_t as_words = kest_gave_text(engine.runtime, engine.entry[MOVED],
+                                          engine.frame, said, sizeof(said));
+        if (as_words < 0) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            fprintf(stderr, "a shape has words now and this had none\n");
             return 1;
         }
-        if (!said_that(engine.runtime, "K0646", "no text of its own")) {
+        if (strcmp(said, "Point([1.75, 2.75, 3.75])") != 0) {
+            fprintf(stderr, "a `Point` wrote itself as `%s`\n", said);
             return 1;
         }
         // And the other half of the same silence: a function that gives

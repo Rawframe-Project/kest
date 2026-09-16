@@ -26572,3 +26572,60 @@ places. `At(1, 2)` is the key rather than a handle to one, and two of them
 holding the same numbers are one key — which is exactly the thing a handle could
 never be. `examples/inventory.kest` keeps one, sets the same place twice and
 reads it back.
+
+## D876: a value laid out flat has a text, and the gate could not see that it did not
+
+The question was whether a struct having no text is a decision or an oversight.
+It is an oversight, and the tree says so in two ways.
+
+**The format is not a choice, because the language already made it.** An enum
+with a payload prints as `Door.Named("side", 1.5)` — the name, the pieces in
+brackets, a text inside quoted. That is the syntax a program writes to *build*
+one, and it is the one rule that needs no arguing about: a struct is
+`Card("ace", 1, Vec2(0.5, 2.0))` and `[T; N]` is `[1, 2, 3]`, because those are
+what somebody would type. Writing a value out has nothing extra to settle that
+comparing two of them does not.
+
+**And the project's own rule already said so.** `kest_type_has_text` is the twin
+of `has_equality`: *a type that compares has a hash and a text, and one that
+does not has none of them.* D874 gave a struct `==` and did not give it a text,
+which broke the rule the day it was written — and `make check` said nothing.
+
+*Why it said nothing is worth more than the feature.* The three sentences that
+hold the two lists together sat behind one condition:
+
+```text
+if says is not None and compares is not None and says - compares != {'OPTIONAL'}:
+```
+
+That condition is the first of the three sentences, not a guard for all three.
+It asks whether something can be written and does not compare; an optional is
+the one that may. When the lists came apart the *other* way — something compares
+and cannot be written — the difference in this direction was still exactly an
+optional, the condition was false, and all three checks stayed shut. The
+backstop hole for that sentence went on catching, because the break it makes
+(an array that compares) also knocks an optional out of the list it is read
+from, which opens the guard by accident. **A rule that only runs when another
+rule is already broken is a rule that is not there.** The three stand on their
+own now, and with `has_text` put back the way D874 left it the middle one says
+*a `struct` compares and cannot be written, which nothing here has an answer
+for.*
+
+**What it cost:**
+
+- *The types layer*: two cases in `kest_type_has_text`, the same shape as the
+  two D874 added beside them.
+- *The machine*: two cases in `format_value` — and two in `missing_text`, which
+  the gate asked for: a host hands a struct in and a field of it may be a text
+  nobody wrote, and writing that is a read through nothing. The rule that the
+  writer and the asker follow the same tags caught it before anything ran.
+- *The compiler*: one condition widened, and `text.enum` renamed `text.value`.
+  It served enums and optionals already and now serves four things; it never
+  was about enums.
+- *The host boundary*: `kest_gave_text` asks `kest_type_has_text`, so a host
+  reading a result as words gets `Point([1.75, 2.75, 3.75])` where it used to
+  get `K0646`. That follows rather than being decided again — the two answers to
+  "can this be written" are one answer — and a host that wants its own layout
+  still walks `kest_frame_gives`, which is what the paragraph beside it in
+  `examples/embed.c` does. What has no text is what holds a handle, and a store
+  is asked exactly that a few lines above.

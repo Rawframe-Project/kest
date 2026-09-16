@@ -32852,12 +32852,13 @@ Recorded as D865.
 
 **Runs:** `make check`, everything passing, with `TMPDIR=/var/tmp`.
 
-**Next:** `==` and `<` are answered; what is left of the same family is
-printing. `"{card}"` on a struct is refused and `kest_type_has_text` is the list
-that says so — the twin of `has_equality`, which grew two shapes in D874 while
-this one did not. Ask whether that is a decision or an oversight: read what
-writing a value out has to settle that comparing two of them does not, and
-either give a struct a text or write down why it cannot have one.
+**Next:** three entries have moved one rule — a value laid out flat compares,
+hashes and writes itself — and each found the gate one rule short. So audit
+rather than extend: `tools/check-tables.sh` holds several pairs of lists to
+each other, and one of those guards was shut for the wrong reason for as long
+as it existed. Read every `if` in that file that gates more than one complaint,
+and say for each whether the condition is a guard or the first of the things
+guarded. Break each one on purpose to find out.
 
 ## A hop of a `for` is one instruction
 
@@ -33324,3 +33325,52 @@ that says so — the twin of `has_equality`, which grew two shapes in D874 while
 this one did not. Ask whether that is a decision or an oversight: read what
 writing a value out has to settle that comparing two of them does not, and
 either give a struct a text or write down why it cannot have one.
+
+## A value laid out flat has a text, and the gate could not see that it did not
+
+Whether a struct having no text was a decision or an oversight: an oversight,
+and the tree says so twice.
+
+The format is not a choice, because the language already made it. An enum with a
+payload prints as `Door.Named("side", 1.5)` — the name, the pieces in brackets,
+a text inside quoted — which is the syntax a program writes to build one. So a
+struct is `Card("ace", 1, Vec2(0.5, 2.0))` and `[T; N]` is `[1, 2, 3]`. Writing
+a value out has nothing extra to settle that comparing two of them does not.
+
+And the project's own rule already said so: `kest_type_has_text` is the twin of
+`has_equality`, and a type that compares has a hash and a text or has none of
+them. D874 broke that the day it was written and `make check` said nothing.
+
+Why it said nothing is worth more than the feature. The three sentences holding
+the two lists together sat behind one condition — that what can be written and
+does not compare is exactly an optional — which is the first of the three, not a
+guard for all of them. When the lists came apart the other way the difference in
+this direction was still exactly an optional, so all three stayed shut. The
+backstop hole went on catching because the break it makes also knocks an
+optional out of the list it is read from, opening the guard by accident. A rule
+that only runs when another rule is already broken is a rule that is not there.
+The three stand on their own now, and with the text taken away again the middle
+one says so.
+
+What it cost: two cases in `kest_type_has_text`; two in `format_value` and two
+in `missing_text`, the second pair asked for by the gate — a host hands a struct
+in and a field of it may be a text nobody wrote, and writing that is a read
+through nothing; one widened condition in the compiler, with `text.enum` renamed
+`text.value` because it served enums and optionals already and serves four
+things now. And the host boundary follows rather than being decided again:
+`kest_gave_text` asks the same question, so a host reading a result as words
+gets `Point([1.75, 2.75, 3.75])` where it got `K0646`. `examples/embed.c` reads
+that text now, and reads the message for a store, which is the shape that still
+has none.
+
+Recorded as D876.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** three entries have moved one rule — a value laid out flat compares,
+hashes and writes itself — and each found the gate one rule short. So audit
+rather than extend: `tools/check-tables.sh` holds several pairs of lists to
+each other, and one of those guards was shut for the wrong reason for as long
+as it existed. Read every `if` in that file that gates more than one complaint,
+and say for each whether the condition is a guard or the first of the things
+guarded. Break each one on purpose to find out.

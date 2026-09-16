@@ -1029,6 +1029,49 @@ static size_t format_value(char *out, size_t room, const KestType *type,
                          used < room ? room - used : 0, ")");
         return used;
     }
+    // A struct written the way a program writes one: its name, and its fields
+    // in the order they were declared. That is not a format chosen here — it
+    // is the one the language already prints a case with a payload in, which
+    // is the same shape for the same reason. A text inside is quoted, as it is
+    // inside a case, because the bytes on their own do not say where one field
+    // ends. See D876.
+    case KEST_T_STRUCT: {
+        size_t used = put_text(out, room, kest_type_written(type));
+        used += put_text(out + (used < room ? used : room),
+                         used < room ? room - used : 0, "(");
+        for (uint32_t m = 0; m < type->member_count; m++) {
+            if (m > 0) {
+                used += put_text(out + (used < room ? used : room),
+                                 used < room ? room - used : 0, ", ");
+            }
+            used += format_value(out + (used < room ? used : room),
+                                 used < room ? room - used : 0,
+                                 type->members[m].type,
+                                 slots + type->members[m].offset);
+        }
+        used += put_text(out + (used < room ? used : room),
+                         used < room ? room - used : 0, ")");
+        return used;
+    }
+    // And that many of something where it stands, written the way one is
+    // written: the elements in brackets, which is what a program builds one
+    // from.
+    case KEST_T_FIXED: {
+        uint16_t stride = type->element->slots == 0 ? 1 : type->element->slots;
+        size_t used = put_text(out, room, "[");
+        for (uint32_t i = 0; i < type->count; i++) {
+            if (i > 0) {
+                used += put_text(out + (used < room ? used : room),
+                                 used < room ? room - used : 0, ", ");
+            }
+            used += format_value(out + (used < room ? used : room),
+                                 used < room ? room - used : 0, type->element,
+                                 slots + (size_t)i * stride);
+        }
+        used += put_text(out + (used < room ? used : room),
+                         used < room ? room - used : 0, "]");
+        return used;
+    }
     // The tag is the last slot, which is where the value stops.
     case KEST_T_OPTIONAL:
         if (slots[type->element->slots].integer == 0) {
@@ -1041,9 +1084,7 @@ static size_t format_value(char *out, size_t room, const KestType *type,
     // and the compiler holds both lists to being every tag there is.
     case KEST_T_ERROR:
     case KEST_T_VOID:
-    case KEST_T_STRUCT:
     case KEST_T_ARRAY:
-    case KEST_T_FIXED:
     case KEST_T_REF:
     case KEST_T_STORE:
     case KEST_T_FN:
@@ -2527,7 +2568,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         }
         case KEST_OP_TEXT_FLAGS:
-        case KEST_OP_TEXT_ENUM: {
+        case KEST_OP_TEXT_VALUE: {
             // Written the way it is built. Every other value's text is the
             // source that makes it and these are no different; D035 says so
             // for a set of bits and D036 for the cases of an enum.
@@ -4253,6 +4294,26 @@ static bool missing_text(const KestType *type, const KestValue *slots) {
         }
         return false;
     }
+    // The two that are written since D876 and so have to be asked about since
+    // D876: a host hands a struct in and a field of it may be a text nobody
+    // wrote, and writing that is a read through nothing.
+    case KEST_T_STRUCT:
+        for (uint32_t m = 0; m < type->member_count; m++) {
+            if (missing_text(type->members[m].type,
+                             slots + type->members[m].offset)) {
+                return true;
+            }
+        }
+        return false;
+    case KEST_T_FIXED: {
+        uint16_t stride = type->element->slots == 0 ? 1 : type->element->slots;
+        for (uint32_t i = 0; i < type->count; i++) {
+            if (missing_text(type->element, slots + (size_t)i * stride)) {
+                return true;
+            }
+        }
+        return false;
+    }
     case KEST_T_OPTIONAL:
         if (slots[type->element->slots].integer == 0) {
             return false;
@@ -4267,9 +4328,7 @@ static bool missing_text(const KestType *type, const KestValue *slots) {
     case KEST_T_FLAGS:
     case KEST_T_ERROR:
     case KEST_T_VOID:
-    case KEST_T_STRUCT:
     case KEST_T_ARRAY:
-    case KEST_T_FIXED:
     case KEST_T_REF:
     case KEST_T_STORE:
     case KEST_T_FN:
@@ -4312,8 +4371,8 @@ int64_t kest_gave_text(KestRuntime *runtime, int32_t entry,
                                       without != NULL ? without : type));
         kest_diags_suggest(runtime->diags,
                            "walk it with `kest_frame_gives` and write what is "
-                           "there: what a struct, a run, a store or a "
-                           "reference means is the host's to decide");
+                           "there: what a store or a reference means is what "
+                           "is behind it, which is the host's to decide");
         return -1;
     }
 

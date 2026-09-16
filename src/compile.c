@@ -2412,14 +2412,15 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             // holds have to come with it. The layout already carries the
             // type, so nothing new is stored for it.
             if (type->tag == KEST_T_FLAGS || type->tag == KEST_T_ENUM ||
-                type->tag == KEST_T_OPTIONAL) {
+                type->tag == KEST_T_OPTIONAL ||
+                type->tag == KEST_T_STRUCT || type->tag == KEST_T_FIXED) {
                 // A run of slots whose text is one, so what the walk of the
                 // parts counts has to come back to one. An optional is the
                 // same shape: what it holds, and a tag after it.
                 stack_pop(compiler, (uint16_t)(value_slots(type) - 1));
                 emit(compiler,
                      type->tag == KEST_T_FLAGS ? KEST_OP_TEXT_FLAGS
-                                               : KEST_OP_TEXT_ENUM,
+                                               : KEST_OP_TEXT_VALUE,
                      expr->span);
                 emit_u16(compiler, layout_of(compiler, type), expr->span);
                 continue;

@@ -3001,6 +3001,10 @@ enum E {
     One(i32)
 }
 
+struct P {
+    x: i32
+}
+
 fn main() -> i32 {
     let n: i32 = 1
     let f: f32 = 1.0
@@ -3009,18 +3013,20 @@ fn main() -> i32 {
     let s = S.A
     let e = E.One(1)
     let o: i32? = 1
-    return len("{n} {f} {b} {t} {s} {e} {o}")
+    let p = P(1)
+    let r: [i32; 2] = [1, 2]
+    return len("{n} {f} {b} {t} {s} {e} {o} {p} {r}")
 }
 KEST
 if ! "$kest" check "$scratch"/holes/writes.kest >/dev/null 2>&1 </dev/null; then
-    complain "check: the seven kinds that write themselves did not all fit in \
+    complain "check: the nine kinds that write themselves did not all fit in \
 a hole"
     "$kest" check "$scratch"/holes/writes.kest 2>&1 </dev/null |
         sed 's/^/    /' | head -4
 fi
-for without in "P:struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let it = P(1)\n    return len(\"{it}\")\n}" \
+for without in "P:struct P {\n    xs: [i32]\n}\n\nfn main() -> i32 {\n    let it = P(array())\n    return len(\"{it}\")\n}" \
                "[i32]:fn main() -> i32 {\n    let it = [1]\n    return len(\"{it}\")\n}" \
-               "[i32; 1]:fn main() -> i32 {\n    let it: [i32; 1] = [1]\n    return len(\"{it}\")\n}" \
+               "[P; 1]:struct P {\n    xs: [i32]\n}\n\nfn main() -> i32 {\n    let it: [P; 1] = [P(array())]\n    return len(\"{it}\")\n}" \
                "store<P>:struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let it: store<P> = store()\n    return len(\"{it}\")\n}" \
                "ref<P>:struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let st: store<P> = store()\n    let it = add(st, P(1))\n    return len(\"{it}\")\n}" \
                "fn(i32) -> i32:fn twice(n: i32) -> i32 {\n    return n + n\n}\n\nfn main() -> i32 {\n    let it: fn(i32) -> i32 = twice\n    return len(\"{it}\")\n}"; do
@@ -3684,7 +3690,7 @@ K0319|struct P {\n    p: P\n}\n\nfn main() -> i32 {\n    return 0\n}|contains it
 K0320|fn main() -> i32 {\n    let a = []\n    return len(a)\n}|no element type
 K0322|fn main() -> i32 {\n    let s = store()\n    return 0\n}|has no type here
 K0323|fn main() -> i32 {\n    if let x = 1 {\n        return x\n    }\n    return 0\n}|opens an optional
-K0324|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let p = P(1)\n    let s = "{p}"\n    return len(s)\n}|no text for
+K0324|struct P {\n    xs: [i32]\n}\n\nfn main() -> i32 {\n    let p = P(array())\n    let s = "{p}"\n    return len(s)\n}|no text for
 K0329|import std.math\n\nfn main() -> i32 {\n    return math.min(1, "a")\n}|these are (a whole number, text)
 K0329|fn pick(n: u8) -> i32 {\n    return 1\n}\n\nfn pick(n: u16) -> i32 {\n    return 2\n}\n\nfn main() -> i32 {\n    return pick(1)\n}|more than one `pick` takes these
 K0329|fn f(n: i32) -> i32 {\n    return n\n}\n\nfn f(n: i32?) -> i32 {\n    return 1\n}\n\nfn main() -> i32 {\n    return f(none) - 1\n}|these are (none)

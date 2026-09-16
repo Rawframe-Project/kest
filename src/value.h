@@ -83,7 +83,11 @@ typedef enum {
     // u16 layout. The names come from the type the layout was made for, and
     // what is written is the source that builds the value.
     KEST_OP_TEXT_FLAGS,
-    KEST_OP_TEXT_ENUM,
+    // The text of a value laid out flat: an enum, a struct, that many of
+    // something where it stands, or an optional holding one of those. Named
+    // for what it walks rather than for the first thing that needed it, the
+    // way the three beside it were in D874. See D876.
+    KEST_OP_TEXT_VALUE,
     KEST_OP_CONCAT,     // u16 count
     // A number standing for a value, over exactly what `==` applies to.
     KEST_OP_HASH_I,

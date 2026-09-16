@@ -959,11 +959,23 @@ io.print("{len(world)} left, and the escort reads \"{escortOf(world, guard)}\"")
 There is no `+` on text. Building a string reaches the heap, so a function
 promising `no.alloc` may hold a string and may not build one.
 
-What a hole holds is a value that can write itself: a number, a truth, text, a
-case of an enum, a set of bits, and an optional of any of those. A struct, an
-array, a run of a written length, a reference, a store and a function value
-have none — what any of them means as text is the program's to decide, and one
-of them in a hole is refused with the type named:
+What a hole holds is a value that can write itself, which is the same list that
+compares: a number, a truth, text, a set of bits, an enum, a struct, `[T; N]`,
+and an optional of any of those. A value laid out flat is written the way a
+program writes one — the name and the fields for a struct, the elements in
+brackets for a run, a text inside quoted because the bytes on their own do not
+say where a field ends:
+
+```text
+Card("ace", 1, Vec2(0.5, 2.0))
+[1, 2, 3]
+Door.Named("side", 1.5)
+```
+
+An array, a reference, a store and a function value have none, and neither does
+anything holding one: what a handle means as text is what is behind it, and
+reaching through one is a different question. One of them in a hole is refused
+with the type named:
 
 ```
 error[K0324]: there is no text for `[i32]`
@@ -1098,7 +1110,9 @@ does; `[T; N]`, when `T` does; and an enum, when everything its cases carry
 does. A handle never compares, however it is reached: two arrays are equal when
 they hold the same things, and comparing the handles answers a different
 question — so a struct holding a `[T]` is refused, and the refusal names the
-field's type rather than the struct's.
+field's type rather than the struct's. Writing one out follows the same line and
+for the same reason: what a handle says as text is what is behind it, which is a
+question about reaching through rather than about the value.
 
 What that buys is that a struct is a key. `std.table` wants `hash` and `==` of
 a key and nothing else, so `Table<At, text>` over a `struct At { x: i32  y: i32 }`
@@ -3293,16 +3307,18 @@ over is gone. `kest_frame_slots` is the wider of the two, which is what a frame
 has to be for both.
 
 Asked for as words, what came back is what a program writes in a hole — a
-number, a `bool`, a case of an enum, a piece of text as what it holds. A shape
-has none of its own, and so does a function that gives nothing back; asking for
-either says which it was rather than answering minus one in silence:
+number, a `bool`, a case of an enum, a struct, a run of a written length, a
+piece of text as what it holds. What holds a handle has no text, and neither
+does a function that gives nothing back; asking for either says which it was
+rather than answering minus one in silence:
 
 ```
 error[K0646]: `moved` gives back `Point`, which has no text of its own
 ```
 
-A host that wants a shape written walks it with `kest_frame_gives` and writes
-what it finds, because what a `Point` means is the host's to decide.
+A host that wants a shape laid out its own way walks it with `kest_frame_gives`
+and writes what it finds, which is what to do when the one the language writes
+is not the one the host wants.
 
 A name nothing knows is -1 and nothing else, because asking whether a program
 defines something is what this is for. Two names are there and still cannot be
@@ -3631,10 +3647,12 @@ is found where it is used, because four bytes at the front of one is what says
 what it is.
 
 What a call answered is read the same way whatever it is: `kest_gave_text`
-writes a number, a `bool`, a case of an enum or text as itself, and says how
-many bytes it needed. A struct, a run, a store or a reference has no text of its
-own and is `K0646` rather than something written wrongly — that is where a host
-walks `kest_frame_gives` and lays the slots out itself.
+writes a number, a `bool`, a case of an enum, a struct, a run of a written
+length or text as itself, and says how many bytes it needed. A store, a
+reference and anything holding one has no text of its own and is `K0646` rather
+than something written wrongly — that is where a host walks `kest_frame_gives`
+and lays the slots out itself, which it may do for a struct too when the way
+the language writes one is not the way it wants.
 
 A program that asks the host for nothing needs no host: `kest_start` takes NULL
 there, and what a host writer writes is a build, a call and what came back.

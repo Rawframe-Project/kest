@@ -887,7 +887,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"text.find", NONE},
     {"text.i", NONE},      {"text.u", NONE},      {"text.f", NONE},
     {"text.f32", NONE},    {"text.b", NONE},     {"text.flags", U16},
-    {"text.enum", U16},
+    {"text.value", U16},
     {"concat", U16},
     {"hash.i", NONE},      {"hash.f", NONE},      {"hash.t", NONE},
     {"hash.value", U16},   {"eq.value", U16},     {"ne.value", U16},
@@ -1354,7 +1354,7 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_TEXT_F32:
     case KEST_OP_TEXT_B:
     case KEST_OP_TEXT_FLAGS:
-    case KEST_OP_TEXT_ENUM:
+    case KEST_OP_TEXT_VALUE:
     case KEST_OP_CONCAT:
     case KEST_OP_TEXT_FROM:
         return true;

@@ -1030,11 +1030,22 @@ not a number"
     sed 's/^/    /' "$scratch"/least-text | head -4
     least_wrong=1
 fi
+# A shape is written the way a program writes one since D876, so this is the
+# host reading one back rather than being refused it.
 if ! ./examples/least examples/least.kest pair >"$scratch"/least-shape 2>&1 ||
-   ! grep -q "K0646" "$scratch"/least-shape; then
+   ! grep -q "gave back Pair(1, 2)" "$scratch"/least-shape; then
+    complain "least" "the smallest host did not read back a shape written the \
+way a program writes one"
+    sed 's/^/    /' "$scratch"/least-shape | tail -4
+    least_wrong=1
+fi
+# And what still has none, which is a handle: what it says as text is what is
+# behind it, and reaching through one is the host's question.
+if ! ./examples/least examples/least.kest held >"$scratch"/least-held 2>&1 ||
+   ! grep -q "K0646" "$scratch"/least-held; then
     complain "least" "the smallest host wrote an answer the language has no \
 text of its own for"
-    sed 's/^/    /' "$scratch"/least-shape | head -4
+    sed 's/^/    /' "$scratch"/least-held | tail -4
     least_wrong=1
 fi
 
@@ -1101,8 +1112,9 @@ for shape in answering numbering; do
 done
 if [ $least_wrong -eq 0 ]; then
     say "least" "the smallest host runs its own program and one that asks for \
-nothing, reads back an answer that is not a number and one the language has no \
-text of its own for, refuses one that asks for a name it has not got, and two \
+nothing, reads back an answer that is not a number, a shape written the way a \
+program writes one and a handle the language has no text of its own for, \
+refuses one that asks for a name it has not got, and two \
 that ask for its own in another shape, calls with a word what takes one, says \
 what a frame of a program with no least costs, what one name of it wants and \
 where it could be called back in from, runs it in a machine sized by that, \

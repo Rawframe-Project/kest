@@ -13,9 +13,9 @@ fn greeting(who: text) -> text {
 }
 
 // An answer the language has no text of its own for, which is where a host
-// with its own structs begins: the machine says so rather than writing
-// something, and `examples/embed.c` is the host that lays one of these out.
-// See D628.
+// with its own structs begins: the machine writes one the way a program writes
+// one since D876, and `examples/embed.c` is the host that lays one out its own
+// way instead. See D628.
 struct Pair {
     a: i32
     b: i32
@@ -23,6 +23,16 @@ struct Pair {
 
 fn pair() -> Pair {
     return Pair(1, 2)
+}
+
+// And the shape that still has none, which is what a handle is: what a store
+// says as text is what is behind it, and reaching through one is the host's
+// question rather than the language's. A host asking for this one as words is
+// told which type it was rather than being handed minus one in silence.
+fn held() -> store<Pair> {
+    let it: store<Pair> = store()
+    add(it, Pair(1, 2))
+    return it
 }
 
 // What the smallest host calls when it is asked for something other than

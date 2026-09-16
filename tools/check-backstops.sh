@@ -1819,9 +1819,7 @@ yield""",
         # something a reader could use.
         "what": "a type the machine writes and the checker refuses",
         "file": "src/vm.c",
-        "from": r"""    case KEST_T_STRUCT:
-    case KEST_T_ARRAY:
-    case KEST_T_FIXED:
+        "from": r"""    case KEST_T_ARRAY:
     case KEST_T_REF:
     case KEST_T_STORE:
     case KEST_T_FN:
@@ -1830,10 +1828,8 @@ yield""",
         break;
     }
     // Nothing reaches this: a hole and the command line both ask""",
-        "to": r"""    case KEST_T_STRUCT:
-    case KEST_T_ARRAY:
+        "to": r"""    case KEST_T_ARRAY:
         return put_text(out, room, "[...]");
-    case KEST_T_FIXED:
     case KEST_T_REF:
     case KEST_T_STORE:
     case KEST_T_FN:
@@ -2286,16 +2282,16 @@ yield""",
         "what": "a kind that writes itself and should not",
         "file": "src/types.c",
         "from": r"""    case KEST_T_VOID:
-    case KEST_T_STRUCT:
-    case KEST_T_ARRAY:""",
-        "to": r"""    case KEST_T_STRUCT:
+    case KEST_T_ARRAY:
+    case KEST_T_REF:""",
+        "to": r"""    case KEST_T_ARRAY:
         return true;
     case KEST_T_VOID:
-    case KEST_T_ARRAY:""",
+    case KEST_T_REF:""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
-        "caught": "check: a hole holding a `P` said",
+        "caught": "check: a hole holding a `[i32]` said",
     },
     {
         # And one that loses it, which is a program that used to print and
@@ -9344,14 +9340,14 @@ fn main() -> i32 {
         "from": """    case KEST_T_FLAGS:
         return true;""",
         "to": """    case KEST_T_FLAGS:
-    case KEST_T_STRUCT:
+    case KEST_T_ARRAY:
         return true;""",
         "also": ("src/types.c",
                  """    case KEST_T_VOID:
-    case KEST_T_STRUCT:
-    case KEST_T_ARRAY:""",
+    case KEST_T_ARRAY:
+    case KEST_T_REF:""",
                  """    case KEST_T_VOID:
-    case KEST_T_ARRAY:"""),
+    case KEST_T_REF:"""),
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "caught": "and the machine does not write one",

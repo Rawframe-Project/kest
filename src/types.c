@@ -1286,6 +1286,19 @@ bool kest_type_has_text(const KestType *type, const KestType **without) {
             }
         }
         return true;
+    // A value laid out flat is written the way a program writes one, which is
+    // the same rule that gave it `==` in D874: a struct is its name and its
+    // fields, `[T; N]` is its elements in brackets, and each is written when
+    // everything in it is. See D876.
+    case KEST_T_STRUCT:
+        for (uint32_t m = 0; m < type->member_count; m++) {
+            if (!kest_type_has_text(type->members[m].type, without)) {
+                return false;
+            }
+        }
+        return true;
+    case KEST_T_FIXED:
+        return kest_type_has_text(type->element, without);
     // `none`, or what it holds written the way it is written on its own.
     // Both are what a program writes, which is the whole of the rule.
     case KEST_T_OPTIONAL:
@@ -1295,9 +1308,7 @@ bool kest_type_has_text(const KestType *type, const KestType **without) {
     // the machine lists the same tags for the same reason, and the two lists
     // are what has to agree.
     case KEST_T_VOID:
-    case KEST_T_STRUCT:
     case KEST_T_ARRAY:
-    case KEST_T_FIXED:
     case KEST_T_REF:
     case KEST_T_STORE:
     case KEST_T_FN:

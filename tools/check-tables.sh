@@ -793,7 +793,13 @@ for what, does_none, takes in (("hash", "makes no hash of", hashes),
 
 some("the types the checker says can be written", says)
 some("the types the machine writes", writes)
-if says is not None and compares is not None and says - compares != {'OPTIONAL'}:
+# Each of the three on its own. They used to sit behind one condition — that
+# what can be written and does not compare is exactly an optional — which is
+# only the first of them: the day a kind compared and could not be written, the
+# difference the other way was still exactly an optional and the guard held all
+# three shut. D874 gave a struct `==` without giving it a text and nothing here
+# said so. See D876.
+if says is not None and compares is not None:
     for one in sorted((says - compares) - {'OPTIONAL'}):
         print("text: a `%s` can be written and does not compare, and an "
               "optional is the one that is both" % one.lower())
