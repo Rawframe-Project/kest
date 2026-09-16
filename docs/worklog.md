@@ -34999,3 +34999,57 @@ what a frame step costs in instructions and how many questions the checked build
 asks. A number that moves is then a gate that fails and a line in the document
 to change on purpose, which is what D886 made of the one number the reference
 already quoted.
+
+## Holding the frame step's instructions (D915)
+
+`docs/language.md` says a frame step an entity is fifty-nine instructions,
+twenty-one of them `load`, eight `const`, four `load.n` and four `store`. Every
+figure is right and nothing compared any of them: D886 found the same shape in
+the one number before it, and D914 fixed it for the container table. This holds
+the paragraph.
+
+Held as prose, because prose spells a number. `tools/check-costs.sh` reads the
+paragraph, reads the figures back through a table of words, and holds the total,
+each instruction the sentence names, the two sums it draws and the questions the
+checked build asks. Which instructions are a move and which are arithmetic is
+read out of the sentence — the ones named before `The arithmetic is` and the
+ones after — rather than kept in a list beside it.
+
+Measured against the instrument, not against a shape written in the check. The
+nanoseconds above that paragraph are `tools/frame.kest`'s, so the instructions
+under them are counted by running `tools/frame.kest`'s own bodies with its
+`main` replaced. The check's own frame, the one it weighs a call with, is
+forty-eight instructions where the instrument's is fifty-nine. Both are printed
+in the gate line now.
+
+```text
+a frame step, the instrument's         59 instructions an entity, 52 questions
+a frame step, this check's own         48                         46
+```
+
+The question count in the document was wrong the moment it was written: the
+forty-six the gate line has printed all along is this check's frame, and the
+instrument's is fifty-two. Nothing had ever compared the two.
+
+Counted by subtracting twice — two step counts and two entity counts — because
+one subtraction leaves the world that was built once or the round's own loop,
+and the difference of two differences leaves neither. Fifty-nine exactly, rather
+than the fifty-nine point six a single subtraction floors.
+
+And the three ordering conditions D914 left behind are gone. A pair above an
+element is what you hold when you do not know the number, and the numbers are
+written down.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the last two numbers in the reference that come off a run are held
+now, and what is not held is the sentence above them: `117 ns per entity per
+step, 5 ns of it the two calls it makes`. A duration is not a pass or a fail and
+never will be, so it cannot be held the way an instruction count is — but which
+of it is this machine's can be said. Five ns for two calls is a claim about a
+processor; fifty-nine instructions with two `call` in them is a claim about the
+language, and a reader given both together cannot tell which is which. The gate
+says of its own three lines whose numbers they are, and `check-tables.sh` holds
+it to saying so. The reference says it of nothing. Say it there, and hold that
+the same way: a paragraph that quotes a duration names the machine it was read
+on, and one that quotes a count says it is the same count anywhere.

@@ -4230,13 +4230,28 @@ without it.
 
 What those nanoseconds are spent on is a thing the machine can be asked rather
 than guessed at: the build that checks itself counts every instruction it runs,
-and `KEST_DEEP=1` makes it say so. Run at two step counts and take the
-difference, and a frame step an entity is **fifty-nine instructions**, of which
-twenty-one are `load`, eight are `const`, four are `load.n` and four are
-`store` — thirty-seven of the fifty-nine, near enough two in three, move a value
-onto the stack or off it. The arithmetic is six: two `mul.f32`, two `add.f32`
-and two on whole numbers. That is what a stack machine is, and it is where the
-next thing to be gone after will be found.
+and `KEST_DEEP=1` makes it say so. Run at two step counts and two entity
+counts and take the difference of the differences — a world is built once
+however many rounds there are, and a round has a loop of its own however many
+entities are in it — and a frame step an entity is **fifty-nine instructions**,
+of which twenty-one are `load`, eight are `const`, four are `load.n` and four
+are `store` — thirty-seven of the fifty-nine, near enough two in three, move a
+value onto the stack or off it. The arithmetic is six: two `mul.f32`, two
+`add.f32`, one `add.i.narrow` and one `sub.i.narrow`. That is what a stack
+machine is, and it is where the next thing to be gone after will be found.
+
+Counting them is not free, and what it costs is the other number this build
+says: over those fifty-nine instructions it asks its own compiler **fifty-two
+questions** about what it is about to do — whose slots these are, whose
+constants, whether what a frame holds is the shape the chunk was declared with.
+That is the machine holding itself to what it was handed rather than trusting
+it, and it is why the count above is worth what it says (D907). None of it is
+in the build that ships.
+
+Both numbers are held. Every figure in the two paragraphs above is measured by
+`tools/check-costs.sh` on the run rather than read back from here, so one that
+moves is a gate that fails and a line to change on purpose rather than a
+sentence that quietly stopped being true.
 
 `tools/crossing.kest` is a call against a crossing out. Two loops that differ by
 one word: one calls a function of the program, the other calls one the host

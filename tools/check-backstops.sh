@@ -5626,6 +5626,40 @@ fn main() -> i32 {
         "caught": "the reference says a table costs 50 byte(s) an entity",
     },
     {
+        # The one number left in these documents that came off a run and had
+        # nothing comparing it: what a frame step costs in instructions. It
+        # was right the day it was written and right by luck every day after,
+        # which is what D886 said about the last one of those. The paragraph
+        # is read back through a table of words, because prose spells a
+        # number. See D915.
+        "what": "a frame step's instructions written down and not measured",
+        "file": "docs/language.md",
+        "from": """**fifty-nine instructions**""",
+        "to": """**fifty-eight instructions**""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "a frame step an entity is 58 instruction(s)",
+    },
+    {
+        # And the other half of that paragraph: what the build that checks
+        # itself asks of its own compiler over those instructions, which is
+        # what the checking costs read as work rather than as a duration. A
+        # different measurement through a different door -- the guards the
+        # machine counts rather than the instructions it ran -- so it is
+        # reached by a hole of its own. See D907 and D915.
+        "what": "what the checked build asks written down and not measured",
+        "file": "docs/language.md",
+        "from": """it asks its own compiler **fifty-two
+questions**""",
+        "to": """it asks its own compiler **fifty-one
+questions**""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-costs.sh",
+        "arguments": [],
+        "caught": "asks 51 question(s) over them",
+    },
+    {
         # Room asked for in a store and not made. `store(n)` makes one with
         # room and this is the same sentence said to one that is already
         # there -- which is what a program has when the store is inside
@@ -5672,7 +5706,7 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "0 making a piece of text, 0 growing an array and 0 into one made with room",
+        "caught": "the reference says a piece of text costs 13 byte(s) an entity and a run says 0",
     },
     {
         # A count of what the build that checks itself asked that says nought

@@ -1211,6 +1211,108 @@ def a_step_asks():
     return (over[1] - over[0]) // (ROUNDS * ENTITIES)
 
 
+# And which instructions those are, one name at a time. A total says a frame
+# got dearer between one day and the next; a breakdown says which instruction
+# did it, and that is the sentence the reference writes about where a frame's
+# time goes -- two in three of them moving a value, six of them doing
+# arithmetic. What makes each count a whole number rather than a division that
+# rounds is subtracting twice. A world is built once however many rounds there
+# are, and a round has a loop of its own however many entities are in it, so
+# one difference leaves one of the two behind whichever way it is taken; the
+# difference of two differences, over entities and over rounds both, leaves
+# neither. See D915.
+def what_it_ran_each(body):
+    where = os.path.join(work, 'running.kest')
+    with open(where, 'w') as running:
+        running.write(body)
+    ran = subprocess.run(['./kest-debug', 'run', where], capture_output=True,
+                         text=True, stdin=subprocess.DEVNULL,
+                         env=dict(os.environ, KEST_LIB='lib', KEST_DEEP='1'))
+    if ran.returncode != 0:
+        return None
+    ran_each = {}
+    for line in ran.stderr.splitlines():
+        if line.startswith('ran '):
+            ran_each[line.split()[1]] = int(line.split()[2])
+    return ran_each or None
+
+
+def twice(over_what):
+    return ((over_what[3] - over_what[2]) -
+            (over_what[1] - over_what[0])) // (ENTITIES * ROUNDS)
+
+
+def what_a_step_of(over_a):
+    ran_over = []
+    asked_over = []
+    for entities_of, rounds_of in ((ENTITIES, ROUNDS),
+                                   (ENTITIES * 2, ROUNDS),
+                                   (ENTITIES, ROUNDS * 2),
+                                   (ENTITIES * 2, ROUNDS * 2)):
+        body = over_a.replace('HOW_MANY', str(entities_of)).replace(
+            'HOW_LONG', str(rounds_of))
+        ran_over.append(what_it_ran_each(body))
+        asked_over.append(what_it_asked(body))
+    if (any(each_one is None for each_one in ran_over) or
+            any(each_one is None for each_one in asked_over)):
+        return None, None
+    per_name = {}
+    for op_name in set().union(*ran_over):
+        tally = twice([each_one.get(op_name, 0) for each_one in ran_over])
+        if tally:
+            per_name[op_name] = tally
+    return per_name or None, twice(asked_over)
+
+
+# And the instrument itself, which is what that paragraph is about. The
+# nanoseconds printed above it came off `tools/frame.kest`, so the instructions
+# under them are read off the same file rather than off a shape written here
+# that happens to look like it -- the one above is a frame of this check's own
+# and is a different frame, forty-eight instructions where this is fifty-nine.
+# Its bodies are taken as they are and only its `main` is replaced, because a
+# copy of a body is a body that stops being the one the reference measured.
+# How many and how long are written in by name rather than with a `%`: the
+# bodies have a remainder in them, and a file with a `%` in it is not a format
+# string however carefully the rest of it was written.
+INSTRUMENT = some("the instrument's own bodies", open(
+    os.path.join('tools', 'frame.kest')).read().partition(
+        '\nfn main() -> i32 {')[0])
+COUNTED = INSTRUMENT + """
+fn main() -> i32 {
+    let all = world(HOW_MANY)
+    let seen = 0
+    for r in 0..HOW_LONG {
+        seen += step(all, 0.016)
+    }
+    if seen < 0 {
+        return 1
+    }
+    return 0
+}
+"""
+
+
+# A number the reference writes out the way a reader reads it. Every other
+# number held here is a figure on both sides; this sentence is prose, and prose
+# spells a number. A word this has no figure for is a sentence nobody can hold,
+# which is what answering nothing rather than nought is for.
+FIGURES = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
+           "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11,
+           "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,
+           "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19,
+           "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60,
+           "seventy": 70, "eighty": 80, "ninety": 90}
+
+
+def in_figures(spelled_out):
+    tallied = 0
+    for half in spelled_out.split('-'):
+        if half not in FIGURES:
+            return None
+        tallied += FIGURES[half]
+    return tallied
+
+
 # And what a frame step costs the program rather than the machine. Everything
 # above weighs the compiler's work; this is the other side of the door, and it
 # is the number a host budgeting a frame most needs: bytes an entity, a step.
@@ -1343,12 +1445,15 @@ stored_frame = a_step_takes('housed(all, kept)', NO_STORE)
 housed_frame = a_step_takes('housed(all, kept)', ROOMY_STORE)
 roomy_store = a_step_takes('housed(all, kept)', TOLD_STORE)
 # The three containers this language has, side by side, and the promise beside
-# them. What is held is the order rather than the numbers: nought for the
-# promise, because that is what it means seen from outside; and a pair in a
-# table above an element in an array above a piece of text, because a table
-# keeps its keys, its values and its slots and each of the three doubles while
-# an array doubles once. The numbers are said for a reader to compare, the way
-# every number from a run here is. See D909.
+# them. What is held here is the noughts -- for the promise, because that is
+# what `no.alloc` means seen from outside, and for a container told how many
+# were coming, because that is what being told is worth. The rest of it is held
+# to the numbers the reference writes, below. It was held to an order once -- a
+# pair in a table above an element in an array above a piece of text -- and an
+# order is what you hold when you do not know the number; D912 put seventy-seven
+# bytes where fifty-one belonged and every one of those held, because seventy-
+# seven is above twenty-five too. The numbers are known and written down now.
+# See D909 and D915.
 # And the table the reference prints of these, held to them. The numbers are
 # measured here and written there, which is two places for one fact -- so the
 # one that runs reads the one that is read, and a row somebody edits without
@@ -1370,10 +1475,9 @@ for which in sorted(WRITTEN_DOWN):
 if (quiet_frame is None or text_frame is None or grown_frame is None or
         keyed_frame is None or told_frame is None or roomy_frame is None or
         stored_frame is None or housed_frame is None or quiet_frame != 0 or
-        text_frame < 1 or grown_frame <= text_frame or
-        keyed_frame <= grown_frame or told_frame != 0 or
+        told_frame != 0 or
         roomy_frame != 0 or housed_frame != 0 or roomy_store is None or
-        roomy_store != 0 or stored_frame < 1):
+        roomy_store != 0):
     print("costs: a frame step takes %s byte(s) an entity promising "
           "`no.alloc`, %s making a piece of text, %s growing an array and %s "
           "into one made with room, %s putting a pair in a table and %s into "
@@ -1397,6 +1501,71 @@ if have_checked and (a_frame is None or by_hand is None or reaches is None or
           % (a_frame, by_hand, reaches, len(instruction_names),
              asked_of_itself))
     failed = 1
+
+# And the reference's own paragraph about that step, held to the run it quotes.
+# It was the last number in these documents taken from a run and written down
+# with nothing comparing it: right the day it was written, and right by luck
+# every day after. The figures there are spelled out, because a paragraph is
+# prose and prose spells a number, so they are read back through a table of
+# words. Which instructions the sentence counts as moving a value and which as
+# arithmetic is read out of the sentence rather than kept in a list here: the
+# ones it names before `The arithmetic is` and the ones it names after. What is
+# held is every figure in it — the total, each instruction it names, both sums
+# it draws, and the questions the checked build asks over them — so a number
+# that moves is a gate that fails and a line to change on purpose. The rule
+# D886 made for the one number the reference quotes from a run and D914 made
+# for the table of what a container costs, said about a paragraph. See D915.
+def named_in(half):
+    at_a_time = {}
+    for how_many, op_name in re.findall(
+            r'([a-z-]+)\s+(?:are\s+|is\s+)?`([a-z0-9._]+)`', half):
+        at_a_time[op_name] = in_figures(how_many)
+    return at_a_time
+
+
+REFERENCE = open(os.path.join('docs', 'language.md')).read()
+step_says = re.search(
+    r'a frame step an entity is \*\*([a-z-]+) instructions\*\*,\s+of which'
+    r'(.*?)—\s+([a-z-]+)\s+of\s+the\s+([a-z-]+),\s+near\s+enough.*?'
+    r'The\s+arithmetic\s+is\s+([a-z-]+):\s+(.*?)\.\s+That\s+is\s+what\s+a'
+    r'\s+stack\s+machine\s+is.*?asks\s+its\s+own\s+compiler'
+    r'\s+\*\*([a-z-]+)\s+questions\*\*',
+    REFERENCE, re.S)
+some("the reference's paragraph about what a frame step runs", step_says)
+ran_it = None
+asked_it = None
+if step_says is not None and have_checked:
+    ran_it, asked_it = what_a_step_of(COUNTED)
+    moves_it = named_in(step_says.group(2))
+    sums_it = named_in(step_says.group(6))
+    at_a_time = dict(moves_it, **sums_it)
+    if (ran_it is None or not moves_it or not sums_it or
+            in_figures(step_says.group(1)) != sum(ran_it.values()) or
+            in_figures(step_says.group(4)) != sum(ran_it.values()) or
+            in_figures(step_says.group(3)) != sum(how_many or 0
+                                                  for how_many
+                                                  in moves_it.values()) or
+            in_figures(step_says.group(5)) != sum(how_many or 0
+                                                  for how_many
+                                                  in sums_it.values()) or
+            in_figures(step_says.group(7)) != asked_it or
+            any(at_a_time[op_name] != ran_it.get(op_name)
+                for op_name in at_a_time)):
+        print("costs: the reference says a frame step an entity is %s "
+              "instruction(s), %s of them moving a value and %s doing "
+              "arithmetic, and that the build that checks itself asks %s "
+              "question(s) over them, and a run says %s, %s, %s and %s — the "
+              "reference names %s and the run ran %s"
+              % (in_figures(step_says.group(1)), in_figures(step_says.group(3)),
+                 in_figures(step_says.group(5)), in_figures(step_says.group(7)),
+                 None if ran_it is None else sum(ran_it.values()),
+                 sum(how_many or 0 for how_many in moves_it.values()),
+                 sum(how_many or 0 for how_many in sums_it.values()),
+                 asked_it, sorted(at_a_time.items()),
+                 sorted((op_name, None if ran_it is None
+                         else ran_it.get(op_name))
+                        for op_name in at_a_time)))
+        failed = 1
 
 shutil.rmtree(work, ignore_errors=True)
 if (one_copy_costs is None or many_copies_costs is None or
@@ -1762,7 +1931,10 @@ if not failed:
           "step is %s instruction(s) an entity and %s with its two helpers "
           "written out, reaching %s of the machine's %u instructions and "
           "answering %s question(s) about itself in the build that checks "
-          "itself, and one that promises `no.alloc` takes %u byte(s) of heap "
+          "itself, against %s instruction(s) and %s question(s) for the "
+          "frame the instrument walks, which is the one the reference "
+          "writes out instruction by instruction, and one that promises "
+          "`no.alloc` takes %u byte(s) of heap "
           "an entity against %u for one that makes a piece of text, %u for "
           "one that grows an array and %u for one that puts a pair in a "
           "table -- nought where it was told how many were coming, as for an "
@@ -1785,7 +1957,9 @@ if not failed:
              run_went, quiet_walk[0], written_walk[0], widening, narrowing,
              with_sign, without_sign, together, turn_ran, runs,
              a_frame, by_hand, reaches, len(instruction_names),
-             asked_of_itself, quiet_frame, text_frame, grown_frame,
+             asked_of_itself,
+             None if ran_it is None else sum(ran_it.values()), asked_it,
+             quiet_frame, text_frame, grown_frame,
              keyed_frame, stored_frame))
 sys.exit(failed)
 PY

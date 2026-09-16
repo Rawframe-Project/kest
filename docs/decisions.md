@@ -28366,3 +28366,48 @@ reference says so where it says the rest: it is a claim about the algorithm,
 true by reading the code, and nobody's measurement. A document that says which
 of its costs are measured is a document a reader can trust about the ones that
 are.
+
+## D915: the paragraph, held the way the table is
+
+D914 wrote four measured numbers into the reference and had the gate hold every
+row. This finishes the sentence it started. One paragraph of the reference was
+still quoting a run with nothing comparing it — what a frame step costs in
+instructions, **fifty-nine** an entity, twenty-one of them `load` and eight
+`const` — which is exactly the shape D886 found and fixed for the one number
+before it. It was right the day it was written and right by luck every day
+after.
+
+It is held now, and held as prose rather than as a table: the figures there are
+spelled out, because a paragraph spells a number, so the check reads them back
+through a table of words. What it holds is every figure in it — the total, each
+instruction the sentence names, both sums it draws, and the questions the build
+that checks itself asks over them. Which of the instructions count as moving a
+value and which as arithmetic is read out of the sentence rather than kept in a
+list beside it: the ones named before `The arithmetic is` and the ones named
+after. A list in the check is a second place for the same fact, and the sentence
+already says it.
+
+**What it is measured against is the instrument, not a shape written here.** The
+nanoseconds above that paragraph came off `tools/frame.kest`, so the
+instructions under them are counted by running `tools/frame.kest`'s own bodies
+with only its `main` replaced. This check already had a frame of its own for the
+cost of a call, and that frame is forty-eight instructions where the
+instrument's is fifty-nine — two different frames, and quoting either at the
+other is a number that is wrong for a reason nobody would ever find. Both are
+printed in the gate line now, each said to be what it is.
+
+**Twice over, so the count is a count.** Subtracting two runs at two step counts
+leaves the world, which is built once; subtracting two at two entity counts
+leaves the round's own loop. The difference of the two differences leaves
+neither, and every instruction comes out a whole number rather than a division
+that rounds — fifty-nine and not fifty-nine point six.
+
+The question count was wrong when it was written down. The gate line had said
+forty-six for years of turns and forty-six is this check's own frame; the
+instrument's is fifty-two. Nothing was broken by it, because nothing had ever
+compared the two. That is the argument for this turn made by the turn itself.
+
+And the three conditions D914 left behind are gone: a pair above an element,
+an element above a piece of text. An order is what you hold when you do not
+know the number. The numbers are known and written down, and holding both is
+holding the weaker one.
