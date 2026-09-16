@@ -5604,6 +5604,35 @@ fn main() -> i32 {
         "caught": "a build that is not there answered as though it were",
     },
     {
+        # A body that comes back with something over. The guard at the top of
+        # the machine's loop says a body never went deeper than it was given;
+        # a leak of one slot in a body that was given four is inside that and
+        # says nothing. Every statement after the leak then worked at the wrong
+        # depth and the caller was handed the right answer anyway, because
+        # `return` moves the result to the bottom of the frame either way.
+        # See D900.
+        "what": "a body that comes back with something over",
+        "file": "src/compile.c",
+        "from": """            if (size == 1) {
+                stack_pop(compiler, 1);
+                emit(compiler, KEST_OP_POP, stmt->span);""",
+        "to": """            if (size == 1) {
+                stack_pop(compiler, 1);""",
+        "make": ["debug"],
+        "binary": "kest-debug",
+        "program": "leaking.kest",
+        "source": """fn counted(a: i32, b: i32, c: i32) -> i32 {
+    return a + b + c
+}
+
+fn main() -> i32 {
+    counted(1, 2, 3)
+    return 0
+}
+""",
+        "caught": "more than it was given",
+    },
+    {
         # A run of something laid out a byte apart from where it is. A host
         # lays its own memory out from these numbers, so a stride that is wrong
         # is a field written over another's -- and the two readings that hold a

@@ -34378,3 +34378,51 @@ about statements. Ask it of every instruction: for each of the 151, what the
 compiler believes it leaves and what the machine actually leaves, held to each
 other over every example. Where they agree is a wall; where they do not is the
 next four decisions.
+
+## What a body comes back with
+
+The Next asked for the same reading inward: what the compiler believes about the
+operand stack, held against what the machine does with it, per instruction.
+
+That first shape is not writable as things stand, and the reason is worth
+keeping. The compiler accounts for a push before it emits the instruction that
+pushes at some sites and after at others, so `stack_depth` at the moment an
+opcode is written means *after this instruction* in most places and *before it*
+in some. A table built from it would be a table of two meanings. The count is
+exact at the ends of expressions and statements — which is what D808 to D810
+hold it to — and it is not a per-instruction truth.
+
+What is exact, and was never asked, is the other end of the same count:
+
+```text
+error[K0655]: this body gives back 1 slot(s) and has 1 more than it was given
+```
+
+The machine holds a body to never going deeper than it was given (D811). That is
+a bound. A body that leaks one slot of four is inside the bound and says nothing
+— every statement after the leak works at the wrong depth and the caller gets
+the right answer anyway, because `return` moves the result to the bottom of the
+frame whatever is above it. Silent in exactly the way that matters.
+
+It is asked now, at `return`, in the build that checks itself: a body comes back
+with what it was given and nothing over. Every example, the library, both
+instruments and both hosts come back clean. The hole is the one line that
+discards the value of an expression statement — take the `pop` away and leave
+the compiler's count alone, and the two disagree by one slot in a body wide
+enough to hide it.
+
+A bound is what you write when you do not know the answer; an equality is what
+you write when you do.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the same question at the other three places a frame changes hands.
+`return` is one of four instructions that move between frames — `call`,
+`call.value` and `call.host` are the others, and each of them leaves the operand
+stack at a depth the compiler worked out. A call puts its arguments where the
+callee's slots begin, so the depth on entry to a body is nought and the depth
+after a call is what the caller had minus the arguments plus the result. Hold
+each of those three the way `return` is held now: on entry, nought above the
+named slots; after a crossing into the host, the arguments gone and the result
+in their place. Three equalities where there are three bounds, and the same hole
+each time — a push the compiler counted and the machine did not.

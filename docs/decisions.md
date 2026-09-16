@@ -27831,3 +27831,48 @@ It catches nothing the six do not, and it is not there to. It is there because
 bottom, and a host that can work from the layout alone is the thing that file is
 for. A host that models the program's shapes in C is one rename away from
 modelling them wrongly; one that asks is not.
+
+## D900: what a body comes back with
+
+Three walks over layouts read the boundary from the outside. This is the same
+question asked inward: what the compiler believes about the operand stack, held
+against what the machine does with it.
+
+The first shape of that — a table of the depth the compiler expects at every
+instruction, compared at every step — turns out not to be writable as things
+stand. The compiler accounts for a push before it emits the instruction that
+pushes at some sites and after at others, so `stack_depth` at the moment an
+opcode is written is the depth *after* that instruction in most places and
+before it in some. A table built from it would be a table of two meanings, and
+a check over two hundred emit sites agreeing on which is a check nobody could
+read. That is worth knowing and worth writing down: the count is exact at the
+ends of expressions and statements, which is what D808 to D810 hold it to, and
+it is not a per-instruction truth.
+
+What *is* exact, and was never asked, is the other end of the same count.
+
+```text
+error[K0655]: this body gives back 1 slot(s) and has 1 more than it was given
+```
+
+The machine already holds a body to never going deeper than it was given —
+D811, at the top of every instruction. That is a bound. A body that leaks one
+slot of four is inside the bound and says nothing: every statement after the
+leak works at the wrong depth, and the caller is handed the right answer anyway,
+because `return` moves the result to the bottom of the frame whatever is above
+it. So the leak is silent in exactly the way that matters — the program keeps
+working, and the compiler's arithmetic and the machine's have quietly parted.
+
+It is asked now, at `return`, in the build that checks itself: a body comes back
+with what it was given and nothing over. D809 held that while the code was being
+made; this holds it against what was made.
+
+Every example, the whole library, both instruments and both hosts come back
+clean. The hole is the one line that discards the value of an expression
+statement: take the `pop` away and leave the compiler's count alone, and the two
+disagree by one slot in a body wide enough to hide it.
+
+*What the turn is really about* is the difference between a bound and an
+equality. A bound is what you write when you do not know the answer; an equality
+is what you write when you do. The machine has known this one since the day it
+had frames.

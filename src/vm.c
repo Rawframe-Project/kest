@@ -3608,6 +3608,30 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 
         case KEST_OP_RETURN: {
             uint16_t count = READ_U16();
+#if KEST_CHECKED
+            // And what a body leaves behind when it goes. The guard at the top
+            // of this loop says a body never went deeper than it was given;
+            // this says it comes back with nothing over, which is the other
+            // end of the same count and the one the machine can be sure of
+            // rather than bounded by. A body that leaks an operand is a body
+            // whose every statement after the leak worked at the wrong depth,
+            // and nothing was wrong enough to be noticed: `return` moves the
+            // result to the bottom of the frame either way, so the caller is
+            // handed the right answer out of a body that lost count. D809 held
+            // this while it was being made and the machine never asked. See
+            // D900.
+            if (top - count != mine + frame->chunk->slot_count) {
+                fail(vmp, frame, instruction, "K0655",
+                     "this body gives back %u slot(s) and has %d more than it "
+                     "was given",
+                     count,
+                     (int)(top - count - mine - frame->chunk->slot_count));
+                kest_diags_fault(vmp->diags,
+                                 "the compiler's count of the operand stack "
+                                 "and what the machine moved disagree");
+                return false;
+            }
+#endif
             // The result lands where the arguments were, which is where the
             // caller left room for it.
             KestValue *base = mine;
