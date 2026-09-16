@@ -34551,3 +34551,42 @@ constants in the chunk's array, which is room the arena handed out and nobody
 wrote. Hold them the way the slots are held now, against `constant_count`. It is
 the same door with a different number in it, and it closes the last place inside
 a body where a wrong number is read rather than refused.
+
+## The constants a body was given
+
+D903 bounded the numbers that reach into a frame. A body reaches two things by a
+number the compiler wrote, and the other is the chunk's constants — `const` an
+index, `const.run` an index and a count, `const.at` a first, a stride and how
+many. Nothing bounded those either.
+
+What is past the end of the constants is not the operand stack, which is the
+difference worth saying: the constants live in an array the arena grew, and what
+follows the last one is room asked for and never written — nought because this
+arena hands out nought, not because anybody decided a value there. A `const.run`
+one long reads it as a value, and a program handed a nought where its text
+should be carries on to the first thing it does with it.
+
+```text
+error[K0655]: this reads constant 3 of the 2 this body was given
+```
+
+Three instructions, the same door as D903's with a different number in it.
+Everything comes back clean; the hole is the one `emit_u16` that writes a
+constant's index.
+
+With this the inside of a body is bounded. Everything an instruction reaches is
+the operand stack, which D811 bounds from above and D900 from below, or a slot
+the body names, or a constant the body was given — and each of the three says so
+now rather than reading what is next to it.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** the numbers that reach *out* of a body, which are the last ones
+unheld. A `call` names a function by an index into the module, `call.host` names
+an extern by another, `array` and `make.array` and `elem.addr` name a layout by
+a third, and `store` and `ref` carry a stamp. Each is a number the compiler
+wrote and the machine reads without asking whether it is one the module has —
+`call` reads `module->functions[index]` and takes the frame from what it finds
+there. The five turns since D900 have bounded everything a body reaches inside
+itself; this is the same question about what it reaches outside, and it is the
+one where reading past the end is a pointer rather than a nought.

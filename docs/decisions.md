@@ -27988,3 +27988,34 @@ bound and an equality, and this one is the bound. The equality needs the type of
 every local, and a chunk records the types of its parameters and nothing else.
 Writing that table down is a decision of its own; this is what can be had
 without it, and it is where a wrong number stops being silent.
+
+## D904: the constants a body was given are the body's
+
+D903 bounded the numbers that reach into a frame. A body reaches two things by a
+number the compiler wrote, and the other one is the chunk's constants: `const`
+takes an index, `const.run` an index and a count, `const.at` a first, a stride
+and how many. Nothing bounded those either.
+
+What is past the end of the constants is not the operand stack, which is the
+difference worth saying. The constants live in an array the arena grew, and what
+follows the last one is room that was asked for and never written — memory that
+is nought because this arena hands out nought, not because anybody decided a
+value there. A `const.run` one long reads it as a value, and a program that has
+been handed a nought where its text should be carries on to the first thing it
+does with it.
+
+```text
+error[K0655]: this reads constant 3 of the 2 this body was given
+```
+
+Three instructions, the same door as D903's with a different number in it, the
+build that checks itself. Every example, the library, both instruments and both
+hosts come back clean. The hole is the one `emit_u16` that writes the index of a
+constant: add one and a body reads past what it was given.
+
+*With this the inside of a body is bounded.* Everything an instruction reaches
+is either the operand stack, which D811 bounds from above and D900 from below,
+or a slot the body names, or a constant the body was given — and each of the
+three now says so rather than reading what is next to it. The numbers are still
+not held to being the *right* numbers; that is the table of local types D903
+named and has not been written.

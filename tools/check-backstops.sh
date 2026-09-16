@@ -5604,6 +5604,33 @@ fn main() -> i32 {
         "caught": "a build that is not there answered as though it were",
     },
     {
+        # A constant read one past the ones a body was given. The same number
+        # written by the same hand as the slots beside it and reaching past the
+        # other end of a body: what follows the constants in the array is room
+        # the arena handed out and nobody wrote, so a value read there is
+        # nought by luck rather than by anybody's decision. See D904.
+        "what": "a constant read past the ones a body was given",
+        "file": "src/compile.c",
+        "from": """    stack_push(compiler, 1);
+    emit(compiler, KEST_OP_CONST, origin);
+    emit_u16(compiler, (uint16_t)index, origin);
+}""",
+        "to": """    stack_push(compiler, 1);
+    emit(compiler, KEST_OP_CONST, origin);
+    emit_u16(compiler, (uint16_t)(index + 1), origin);
+}""",
+        "make": ["debug"],
+        "binary": "kest-debug",
+        "program": "reading.kest",
+        "source": """import std.text
+
+fn main() -> i32 {
+    return len(text.repeat("a", 3)) - 3
+}
+""",
+        "caught": "this reads constant 3 of the 2 this body was given",
+    },
+    {
         # A run of slots read one past the names a body has. Everything inside
         # a frame is reached by a number the compiler wrote into the
         # instruction, and a count one out reads the slot above the value --

@@ -1535,6 +1535,26 @@ typedef struct {
 } Saying;
 
 #if KEST_CHECKED
+// A run of the chunk's own constants, held to being the chunk's. The same
+// number written by the same hand as the slots below, into the same kind of
+// instruction, and reaching past the other end of a body: what follows the
+// constants in the array is room the arena handed out and nobody wrote, so a
+// run one long is a value read out of memory that is nought by luck rather
+// than by anybody's decision. See D904.
+static bool own_constants(Vm *vm, const Frame *frame,
+                          const uint8_t *instruction, uint32_t past) {
+    if (past <= frame->chunk->constant_count) {
+        return true;
+    }
+    fail(vm, frame, instruction, "K0655",
+         "this reads constant %u of the %u this body was given", past,
+         frame->chunk->constant_count);
+    kest_diags_fault(vm->diags,
+                     "what the compiler wrote into an instruction and what the "
+                     "body holds disagree");
+    return false;
+}
+
 // A run of slots a body names, held to being the body's. Everything inside a
 // frame is reached by a number the compiler wrote into the instruction, and a
 // count one out reads the slot above the value or writes over the one below
@@ -2099,13 +2119,26 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
 #endif
         switch (READ_BYTE()) {
-        case KEST_OP_CONST:
-            *top++ = constants[READ_U16()];
+        case KEST_OP_CONST: {
+            uint16_t which = READ_U16();
+#if KEST_CHECKED
+            if (!own_constants(vmp, frame, instruction, which + 1u)) {
+                return false;
+            }
+#endif
+            *top++ = constants[which];
             break;
+        }
         case KEST_OP_CONST_RUN: {
-            const KestValue *from = &constants[READ_U16()];
+            uint16_t first = READ_U16();
             uint16_t count = READ_U16();
-            memcpy(top, from, sizeof(KestValue) * count);
+#if KEST_CHECKED
+            if (!own_constants(vmp, frame, instruction,
+                               (uint32_t)first + count)) {
+                return false;
+            }
+#endif
+            memcpy(top, &constants[first], sizeof(KestValue) * count);
             top += count;
             break;
         }
@@ -2115,6 +2148,12 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t count = READ_U16();
             int64_t index = (--top)->integer;
             IN_RUN(index, count);
+#if KEST_CHECKED
+            if (!own_constants(vmp, frame, instruction,
+                               (uint32_t)first + (uint32_t)count * stride)) {
+                return false;
+            }
+#endif
             memcpy(top,
                    &constants[first + (size_t)index * stride],
                    sizeof(KestValue) * stride);
