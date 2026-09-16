@@ -32852,14 +32852,12 @@ Recorded as D865.
 
 **Runs:** `make check`, everything passing, with `TMPDIR=/var/tmp`.
 
-**Next:** a compiler that has run out of room blames the program. At four rungs
-of one ladder `examples/inventory.kest` said `K0306`, `K0322`, `K0343` and
-`K0512` before it said `K0639`, and each is a guess at what a half-built
-program would have said next. Silencing one uncovers the next, so the answer is
-about when a compiler reports rather than what it says: a build reports as it
-goes, so by the time it knows it has starved it has already printed. Read
-`kest_build_report` and `kest_diags_absorb`, and say what it would take for a
-run that starves to say that and nothing after it.
+**Next:** `KEST_REFUSE_AT` can aim at any allocation, and it has been pointed at
+one program's fifty. Point it at the rest: walk every example and every library
+module the same way and see what else a compiler does when an allocation it
+counted on comes back with nothing. What is being looked for is not more
+messages but the other two kinds — a run that dies rather than refusing, and a
+run that answers as though nothing went wrong.
 
 ## A hop of a `for` is one instruction
 
@@ -33519,3 +33517,48 @@ about when a compiler reports rather than what it says: a build reports as it
 goes, so by the time it knows it has starved it has already printed. Read
 `kest_build_report` and `kest_diags_absorb`, and say what it would take for a
 run that starves to say that and nothing after it.
+
+## A compiler with no room left has nothing to say about a program
+
+D879 wrote it down: at four rungs of one ladder `examples/inventory.kest` said
+`K0306`, `K0322`, `K0343` and `K0512` before it said it had run out. Reading
+`kest_build_report` and `kest_diags_absorb` was the Next and neither was where
+it came from. What prints the noise is four lines of `kest_diags_render`, on
+purpose: what the machine was about to say, before what it says about having had
+nowhere to say it. That is right when the words were worked out while there was
+still room and the only thing missing was somewhere to keep them, and wrong when
+the room had already gone — then they are a guess at what a half-built program
+would have said.
+
+Which of the two it is, asked once, before anything else takes room, and handed
+down to what keeps the last words. The same bit is written on every diagnostic
+that is kept, so a run that starves is rendered without them. The bit is over
+every arena rather than one, because a program is read into an arena of its own
+and checked into another, and the one that runs out is rarely the one the
+diagnostics are kept in.
+
+The reason this took a second entry is that it could not be aimed at: which
+message a half-built program gives depends on exactly which allocation failed,
+so the same program at neighbouring ceilings says different things and a rule
+about it has no hole. Four examples were walked across their whole band and none
+of them blamed anything. So the build that checks itself takes an aim.
+`KEST_REFUSE_AT=n` refuses the nth allocation of the process, counted over every
+arena — the same shape as `KEST_DEEP`, said only when somebody asks, and
+compiled out of the build that ships. With it the bug is one line, and `at` is a
+local in `table.get` that is unknown because the table of locals could not be
+grown.
+
+`check-ceilings.sh` refuses fifty allocations of that program one at a time and
+holds every run that says it ran out to saying nothing else. One hole keeps the
+guess.
+
+Recorded as D880.
+
+**Runs:** `make check`, everything passing.
+
+**Next:** `KEST_REFUSE_AT` can aim at any allocation, and it has been pointed at
+one program's fifty. Point it at the rest: walk every example and every library
+module the same way and see what else a compiler does when an allocation it
+counted on comes back with nothing. What is being looked for is not more
+messages but the other two kinds — a run that dies rather than refusing, and a
+run that answers as though nothing went wrong.

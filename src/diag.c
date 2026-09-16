@@ -213,9 +213,16 @@ void kest_diags_init(KestDiags *diags, KestArena *arena) {
 // the first one to be lost is the one kept, because what stopped a run is the
 // first thing it could not say and everything after it is a consequence. See
 // D848.
+// What the machine was about to say when it found it had nowhere to say it. It
+// is worth keeping when there was still room to work it out in and worth
+// nothing when there was not: a name nobody declared, where the table the name
+// would have been in could not be grown, is the compiler's afternoon written
+// as the program's mistake. Which of the two it was is what the caller saw
+// before it asked for room to keep this. See D880.
 static void keep_the_last_words(KestDiags *diags, const char *code,
-                                const char *format, va_list args) {
-    if (diags == NULL || diags->last_code[0] != '\0') {
+                                const char *format, va_list args,
+                                bool after_the_room) {
+    if (diags == NULL || diags->last_code[0] != '\0' || after_the_room) {
         return;
     }
     snprintf(diags->last_code, sizeof diags->last_code, "%s", code);
@@ -278,7 +285,7 @@ static bool room_to_keep(KestDiags *diags) {
 
 static void add_formatted(KestDiags *diags, KestSeverity severity,
                           const char *code, KestSpan span,
-                          const char *message) {
+                          const char *message, bool after_the_room) {
     diags->held_back = false;
     KestDiag *diag = &diags->items[diags->count++];
     diag->severity = severity;
@@ -289,6 +296,7 @@ static void add_formatted(KestDiags *diags, KestSeverity severity,
     diag->source = diags->source;
     diag->note_count = 0;
     diag->left_out = 0;
+    diag->after_the_room = after_the_room;
 
     if (severity == KEST_SEVERITY_ERROR) {
         diags->error_count++;
@@ -304,11 +312,15 @@ void kest_diags_addv(KestDiags *diags, KestSeverity severity,
     if (diags->muted) {
         return;
     }
+    // Asked before anything here takes room of its own, so that what it says
+    // is whether the room had gone before this was worked out rather than
+    // whether keeping it is what finished the room off.
+    bool after_the_room = kest_arena_refused_anywhere();
     if (!room_to_keep(diags)) {
         return;
     }
     if (!diags_reserve(diags)) {
-        keep_the_last_words(diags, code, format, args);
+        keep_the_last_words(diags, code, format, args, after_the_room);
         kest_diags_starve(diags);
         return;
     }
@@ -316,13 +328,13 @@ void kest_diags_addv(KestDiags *diags, KestSeverity severity,
     va_copy(again, args);
     char *message = format_into(diags->arena, format, args);
     if (message == NULL) {
-        keep_the_last_words(diags, code, format, again);
+        keep_the_last_words(diags, code, format, again, after_the_room);
         va_end(again);
         kest_diags_starve(diags);
         return;
     }
     va_end(again);
-    add_formatted(diags, severity, code, span, message);
+    add_formatted(diags, severity, code, span, message, after_the_room);
 }
 
 void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,
@@ -330,13 +342,14 @@ void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,
     if (diags->muted) {
         return;
     }
+    bool after_the_room = kest_arena_refused_anywhere();
     if (!room_to_keep(diags)) {
         return;
     }
     va_list args;
     if (!diags_reserve(diags)) {
         va_start(args, format);
-        keep_the_last_words(diags, code, format, args);
+        keep_the_last_words(diags, code, format, args, after_the_room);
         va_end(args);
         kest_diags_starve(diags);
         return;
@@ -347,12 +360,12 @@ void kest_diags_add(KestDiags *diags, KestSeverity severity, const char *code,
     va_end(args);
     if (message == NULL) {
         va_start(args, format);
-        keep_the_last_words(diags, code, format, args);
+        keep_the_last_words(diags, code, format, args, after_the_room);
         va_end(args);
         kest_diags_starve(diags);
         return;
     }
-    add_formatted(diags, severity, code, span, message);
+    add_formatted(diags, severity, code, span, message, after_the_room);
 }
 
 void kest_diags_suggestv(KestDiags *diags, const char *format, va_list args) {
@@ -667,6 +680,15 @@ static const char *starved_says(const KestDiags *diags, char *room,
     return room;
 }
 
+// What is worth saying of what was said. A run that starved says what it worked
+// out while it still had room and nothing after: the rest is a guess at what
+// the program would have said next and it reads like an answer. A run that did
+// not starve says all of it, because an allocation refused and coped with is
+// not a mistake in anybody's program. See D880.
+static bool worth_saying(const KestDiags *diags, const KestDiag *one) {
+    return !diags->starved || !one->after_the_room;
+}
+
 void kest_diags_render(const KestDiags *diags, FILE *out) {
     // What a program printed before this happened goes first. The two streams
     // are kept apart on purpose — what a program says is an answer and what
@@ -679,6 +701,9 @@ void kest_diags_render(const KestDiags *diags, FILE *out) {
     }
     for (uint32_t i = 0; i < diags->count; i++) {
         const KestDiag *diag = &diags->items[i];
+        if (!worth_saying(diags, diag)) {
+            continue;
+        }
         const KestSource *source = diag->source;
 
         fprintf(out, "%s[%s]: %s\n", severity_name(diag->severity), diag->code,
@@ -805,11 +830,15 @@ void kest_diags_render_json(const KestDiags *diags, FILE *out) {
 
 void kest_diags_write_json(const KestDiags *diags, FILE *out) {
     fputs("\"diagnostics\":[", out);
+    uint32_t said = 0;
     for (uint32_t i = 0; i < diags->count; i++) {
         const KestDiag *diag = &diags->items[i];
+        if (!worth_saying(diags, diag)) {
+            continue;
+        }
         const KestSource *source = diag->source;
 
-        if (i > 0) {
+        if (said++ > 0) {
             fputc(',', out);
         }
         fprintf(out, "{\"severity\":\"%s\",\"code\":\"%s\"",

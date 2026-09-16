@@ -44,6 +44,15 @@ typedef struct {
     // Which file the span is in. A program is more than one file, so a span
     // on its own does not say where it is.
     const KestSource *source;
+    // Whether the room had already run out when this was worked out. A
+    // compiler with none left goes on and says what a half-built program
+    // suggests: a name nobody declared where a table could not be grown, a
+    // type that cannot be told where a copy could not be made. Which of the
+    // two it is cannot be known when it is said — an arena that refuses once
+    // may be coped with and the build finish, and then nothing was wrong — so
+    // it is marked here and read at the end, where whether the run starved is
+    // known. See D880.
+    bool after_the_room;
     KestNote notes[KEST_MOST_PLACES];
     uint8_t note_count;
     // Places there was no room to show. A diagnostic with more than

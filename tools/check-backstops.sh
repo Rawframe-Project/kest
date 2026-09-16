@@ -3158,10 +3158,11 @@ for file in "$@"; do""",
         # program. See D848.
         "what": "the last thing a run was trying to say, thrown away",
         "file": "src/diag.c",
-        "from": r"""    if (diags == NULL || diags->last_code[0] != '\0') {
+        "from": r"""    if (diags == NULL || diags->last_code[0] != '\0' || after_the_room) {
         return;
     }""",
-        "to": r"""    if (true) {
+        "to": r"""    (void)after_the_room;
+    if (true) {
         return;
     }""",
         "make": [],
@@ -5508,6 +5509,39 @@ fn main() -> i32 {
         "caught": "so the second is behind a question that is not about it",
     },
     {
+        # An aim that never hits. `KEST_REFUSE_AT` is the only way to ask a
+        # compiler what it says when it has nothing left and mean a particular
+        # nothing, so a build where it does nothing is a check that walks fifty
+        # runs and learns from none of them. See D880.
+        "what": "an aim at an allocation that refuses nothing",
+        "file": "src/mem.c",
+        "from": """    return refuse_at != 0 && allocations_so_far >= refuse_at;""",
+        "to": """    return false;""",
+        "make": ["debug"],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "could be refused, so nothing here asked",
+    },
+    {
+        # The words a compiler was about to say when it found it had nowhere to
+        # say them, kept whether or not there was room to work them out in. A
+        # name nobody declared, where the table the name would have been in
+        # could not be grown, is the compiler's afternoon written as the
+        # program's mistake — and a reader who is told their program is wrong
+        # by a compiler that has run out of memory goes looking for a mistake
+        # that is not there. See D880.
+        "what": "a guess kept as what a program said when there was no room "
+                "to work it out",
+        "file": "src/diag.c",
+        "from": """    if (diags == NULL || diags->last_code[0] != '\\0' || after_the_room) {""",
+        "to": """    (void)after_the_room;
+    if (diags == NULL || diags->last_code[0] != '\\0') {""",
+        "make": ["debug"],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "before it said it had run out",
+    },
+    {
         # A machine counting an instruction it never ran. What it counts is
         # read against what `emit` printed for the same loop, so a count that
         # is not what the machine did is a number that would answer every
@@ -6598,6 +6632,7 @@ _Static_assert(MAX_EXTERNS > 1024, "a program may ask for plenty of names");""",
         arena->handed + arena->also + taking > arena->ceiling) {
         arena->refused = taking;
         arena->refused_by_ceiling = true;
+        anybody_refused = true;
         return NULL;
     }
     if (fresh) {''',
@@ -6940,12 +6975,14 @@ const char *kest_scalar_name(uint8_t kind) {""",
         arena->handed + arena->also + taking > arena->ceiling) {
         arena->refused = taking;
         arena->refused_by_ceiling = true;
+        anybody_refused = true;
         return NULL;
     }
     if (fresh) {""",
         "to": """    if (arena->ceiling != 0 &&
         arena->handed + arena->also + taking > arena->ceiling) {
         arena->refused_by_ceiling = true;
+        anybody_refused = true;
         return NULL;
     }
     if (fresh) {""",
@@ -11607,9 +11644,11 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "file": "src/mem.c",
         "from": """            arena->refused = taking;
             arena->refused_by_ceiling = false;
+            anybody_refused = true;
             return NULL;
         }""",
         "to": """            arena->refused_by_ceiling = false;
+            anybody_refused = true;
             return NULL;
         }""",
         "make": ["kest"],
@@ -11641,6 +11680,7 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         arena->handed + arena->also + taking > arena->ceiling) {
         arena->refused = taking;
         arena->refused_by_ceiling = true;
+        anybody_refused = true;
         return NULL;
     }
     if (fresh) {""",
@@ -11648,6 +11688,7 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         arena->handed + arena->also + taking > arena->ceiling) {
         arena->refused = taking;
         arena->refused_by_ceiling = false;
+        anybody_refused = true;
         return NULL;
     }
     if (fresh) {""",

@@ -26790,3 +26790,62 @@ each of them blaming the program for the compiler's afternoon. Not saying
 `K0343` when the checker is out of memory uncovers `K0306` beneath it, so the
 answer is not about any one message: a build reports as it goes, and by the time
 it knows it has starved it has already printed. That is the next entry's.
+
+## D880: a compiler with no room left has nothing to say about a program
+
+D879 met this and wrote it down: at four rungs of one ladder
+`examples/inventory.kest` said `K0306`, `K0322`, `K0343` and `K0512` before it
+said it had run out of room. Each of those blames the program for the
+compiler's afternoon.
+
+**Reading `kest_build_report` and `kest_diags_absorb` was the Next, and neither
+was where it came from.** What prints the noise is four lines of
+`kest_diags_render`, deliberately:
+
+> What it was about to say, before what it says about having had nowhere to say
+> it. A reader wants the program's problem first and this machine's second, and
+> the second without the first is a reader sent to buy memory for a program that
+> was over its own ceiling.
+
+That is right when the words were worked out while there was still room and the
+only thing missing was somewhere to *keep* them. It is wrong when the room had
+already gone, because then the words are a guess: a name nobody declared, where
+the table the name would have been in could not be grown.
+
+**Which of the two it is, asked once, before anything else takes room.** The
+caller knows: `kest_diags_add` looks at whether anything had already been
+refused, and hands that down to `keep_the_last_words`, which keeps nothing when
+the answer is yes. The same bit is written on every diagnostic that *is* kept,
+so a run that starves can be rendered without them — an arena that refuses once
+may be coped with and the build finish, and then nothing was wrong, which is
+why it is marked where it is said and read where the run ends.
+
+*The bit is over every arena rather than one.* A program is read into an arena
+of its own and checked into another, so the one that runs out is rarely the one
+the diagnostics are kept in — `kest_arena_refused_anywhere` is one bit, set
+where a refusal is and forgotten where a build begins.
+
+**And the reason this took a second entry is that it could not be aimed at.**
+Which message a half-built program gives depends on exactly which allocation
+fails, so the same program at neighbouring ceilings says different things, and
+a rule about it has no hole: with the ladder as it stands, breaking the fix
+changes nothing anybody can see. Four examples were walked across their whole
+band and none of them blamed anything.
+
+So the build that checks itself takes an aim. `KEST_REFUSE_AT=n` refuses the
+nth allocation of the process, counted over every arena — the same shape as
+`KEST_DEEP`, said only when somebody asks, and compiled out of the build that
+ships. With it the bug is one line:
+
+```text
+KEST_REFUSE_AT=4600 ./kest-debug check examples/inventory.kest
+error[K0306]: unknown name `at`
+error[K0639]: there was not enough memory to finish, or to say more about it
+```
+
+`at` is a local in `table.get`. It is unknown because the table of locals could
+not be grown.
+
+`check-ceilings.sh` refuses fifty allocations of that program one at a time and
+holds every run that says it ran out to saying nothing else. The hole keeps the
+guess.

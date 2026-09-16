@@ -337,17 +337,68 @@ void kest_arena_rewind(KestArena *arena, KestMark mark) {
     holds_together(arena, "a rewind");
 }
 
+#if KEST_CHECKED
+// Which allocation to refuse, counted over every arena this process makes. A
+// compiler that runs out of room is easy to watch and hard to aim at: which
+// message a half-built program gives depends on exactly which allocation
+// failed, so the same program at neighbouring ceilings says different things
+// and nothing can be asked of it twice. Counted here, in the build that checks
+// itself and only when somebody says where, so the release build is the
+// release build and a run nobody aimed at is the run it always was.
+//
+// It is the only way to ask a compiler what it says when it has nothing left
+// and mean a particular nothing. See D880.
+static uint64_t allocations_so_far;
+static uint64_t refuse_at;
+static bool refuse_asked;
+
+static bool refuse_this_one(void) {
+    if (!refuse_asked) {
+        const char *said = getenv("KEST_REFUSE_AT");
+        refuse_at = said == NULL ? 0 : strtoull(said, NULL, 10);
+        refuse_asked = true;
+    }
+    allocations_so_far++;
+    return refuse_at != 0 && allocations_so_far >= refuse_at;
+}
+#endif
+
+// Whether anything has been refused since the last build opened. One bit,
+// because that is what a reader needs: not which arena ran out but that one
+// did. See D880.
+static bool anybody_refused;
+
+bool kest_arena_refused_anywhere(void) {
+    return anybody_refused;
+}
+
+void kest_arena_forget_refusals(void) {
+    anybody_refused = false;
+}
+
 void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
     size_t offset = (arena->head->used + align - 1) & ~(align - 1);
     bool fresh = offset + size > arena->head->capacity;
     // What this costs, which is the padding as well as the size: a block that
     // is left with a hole in it has handed that hole out to nobody.
     size_t taking = fresh ? size : offset + size - arena->head->used;
+#if KEST_CHECKED
+    // The one somebody aimed at, refused the way the host would have refused
+    // it: not by a ceiling, because nobody set one, and so said with the
+    // sentence a machine with nothing left says.
+    if (refuse_this_one()) {
+        arena->refused = taking;
+        arena->refused_by_ceiling = false;
+        anybody_refused = true;
+        return NULL;
+    }
+#endif
     // Asked before a block is taken from the host, so a refusal costs nothing.
     if (arena->ceiling != 0 &&
         arena->handed + arena->also + taking > arena->ceiling) {
         arena->refused = taking;
         arena->refused_by_ceiling = true;
+        anybody_refused = true;
         return NULL;
     }
     if (fresh) {
@@ -361,6 +412,7 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
             // being made when this happened. See D320.
             arena->refused = taking;
             arena->refused_by_ceiling = false;
+            anybody_refused = true;
             return NULL;
         }
         block->next = arena->head;
@@ -405,6 +457,7 @@ void *kest_arena_extend(KestArena *arena, void *last, size_t was,
         arena->handed + arena->also + taking > arena->ceiling) {
         arena->refused = taking;
         arena->refused_by_ceiling = true;
+        anybody_refused = true;
         return NULL;
     }
     if (offset + want + KEPT_BACK <= block->capacity) {

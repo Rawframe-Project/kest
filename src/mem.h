@@ -134,6 +134,15 @@ void kest_arena_also_refused(KestArena *arena, const KestArena *other);
 // refused, which is why it is read beside the number and not instead of it.
 bool kest_arena_refused_by_ceiling(const KestArena *arena);
 
+// Whether anything has been refused since the last build opened, over every
+// arena rather than over one. A program is read into an arena of its own and
+// checked into another, so the one that runs out is rarely the one a list of
+// diagnostics is kept in — and what a reader needs to know is not which arena
+// it was but that there was no room. Set where a refusal is, forgotten where a
+// build begins. See D880.
+bool kest_arena_refused_anywhere(void);
+void kest_arena_forget_refusals(void);
+
 // What the allocation this arena last refused was asking for, and nought when
 // it has refused nothing. A ceiling stops a program at the allocation that
 // would have crossed it, so what was handed out stops short of the ceiling by

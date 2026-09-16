@@ -5,6 +5,10 @@
 
 KestBuild *kest_build_open(const char *library, char **paths, int count,
                            size_t room) {
+    // A build begins with nobody refused. What was refused before this one is
+    // the last build's afternoon, and a host that compiles twice should not
+    // have the first one's memory hold its tongue about the second. See D880.
+    kest_arena_forget_refusals();
     KestArena *arena = kest_arena_new();
     if (arena == NULL) {
         return NULL;

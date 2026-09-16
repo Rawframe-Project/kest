@@ -1847,6 +1847,41 @@ if [ $died -gt 0 ]; then
          "or refusing"
 fi
 
+# And what a compiler says when it has none left, asked of a particular
+# nothing. Which message a half-built program gives depends on exactly which
+# allocation failed, so a ladder over ceilings meets one of them by luck and
+# nothing can be asked of it twice: `examples/inventory.kest` said four
+# different things at four rungs, each of them blaming the program for the
+# compiler's afternoon. `KEST_REFUSE_AT` refuses the nth allocation in the
+# build that checks itself, which is the only way to mean a particular nothing
+# — and what is held here is that a run which says it has run out says that and
+# nothing else. See D880.
+aimed=0
+for at_one in $(seq 100 100 6000); do
+    said=$(KEST_REFUSE_AT=$at_one ./kest-debug check examples/inventory.kest \
+           2>&1 </dev/null)
+    case "$said" in
+    *K0639*|*K0658*) ;;
+    *) continue ;;
+    esac
+    aimed=$((aimed + 1))
+    blamed=$(printf '%s' "$said" | grep -o 'K[0-9][0-9][0-9][0-9]' |
+             grep -v -e K0639 -e K0658 | sort -u | tr '\n' ' ')
+    if [ -n "$blamed" ]; then
+        echo "ceilings: refusing allocation $at_one of" \
+             "\`examples/inventory.kest\` made it say ${blamed}before it said" \
+             "it had run out, and a compiler with no room left has nothing to" \
+             "say about a program"
+        failed=1
+    fi
+done
+if [ $aimed -eq 0 ]; then
+    echo "ceilings: no allocation of \`examples/inventory.kest\` could be" \
+         "refused, so nothing here asked what a compiler says when it has" \
+         "none left"
+    failed=1
+fi
+
 if [ $failed -eq 0 ]; then
     # What the ladder walked, said so that another machine reads the same
     # sentence with its own numbers: from where this program first runs down to
@@ -1873,6 +1908,8 @@ if [ $failed -eq 0 ]; then
          "and what a handler keeps between the frames it is called in held" \
          "from both sides over $framed_rungs rung(s), and $told rung(s) where" \
          "a run with no room to write what was wrong wrote it anyway —" \
-         "all of it measured on the machine this ran on"
+         "all of it measured on the machine this ran on, and" \
+         "$aimed allocation(s) refused one at a time, each of them a run that" \
+         "said it had run out and said nothing else"
 fi
 exit $failed
