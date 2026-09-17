@@ -29,6 +29,17 @@ libkest.a: $(RELEASE_OBJ)
 build/release/%.o: src/%.c | build/release
 	$(CC) $(WARN) -O2 -Iinclude -DKEST_LIB_DIR='"$(PREFIX)/lib/kest/"' -MMD -MP -c -o $@ $<
 
+# Bytes the compiler was not written for, made from a seed. Built both ways:
+# the release one for a long campaign and the sanitised one for the gate's
+# short one, because a read past the end of something is a report in the
+# second and whatever was next in the first. See D984.
+tools/fuzz: tools/fuzz.c libkest.a include/kest.h
+	$(CC) $(WARN) -O2 -Iinclude -o $@ tools/fuzz.c libkest.a -lm
+
+tools/fuzz-debug: tools/fuzz.c $(DEBUG_OBJ) include/kest.h
+	$(CC) $(HOSTWARN) -O0 -g -fsanitize=address,undefined -Iinclude -o $@ \
+		tools/fuzz.c $(DEBUG_OBJ) -lm
+
 kest-debug: build/debug/main.o $(DEBUG_OBJ)
 	$(CC) -fsanitize=address,undefined -o $@ $^ -lm
 
@@ -123,10 +134,18 @@ uninstall:
 clean:
 	rm -rf build kest kest-debug libkest.a examples/embed \
 	    examples/embed-debug examples/engine examples/engine-debug \
-	    examples/least tools/inward
+	    examples/least tools/inward tools/fuzz tools/fuzz-debug
 
 .PHONY: debug least embed embed-debug engine engine-debug fast check time \
-    install uninstall clean
+    fuzz install uninstall clean
+
+# A short campaign, which is what a gate can afford: eight seeds and four
+# hundred inputs each, sanitised. A longer one is the same command with other
+# numbers, and what a finding is is a seed and a count.
+fuzz: tools/fuzz-debug
+	@for seed in 1 2 3 4 5 6 7 8; do \
+	    ./tools/fuzz-debug $$seed 400 build/fuzz.kest || exit 1; \
+	done
 
 -include $(RELEASE_OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) build/release/main.d \
     build/debug/main.d build/release/embed.d build/release/engine.d \

@@ -830,6 +830,12 @@ tools/             Build and development scripts. `make check` runs all of
                    under another name where the machine allows it, which is why
                    a broken file is written by making a new one rather than by
                    cutting the old one short.
+                   `fuzz.c` is not a check and is not in the list above: it
+                   is a program the gate runs, which makes inputs from a seed
+                   and hands them to the compiler. What it holds is that every
+                   one of them ends in a program or a refusal. A finding is a
+                   seed and a count, which fits in a sentence, so there is no
+                   corpus directory and nothing is written down. See D984.
                    `check-lends.sh` holds what a host says when it lends: a
                    lend is an address, a count and a name, and a name that
                    means two types is a lend of whichever was found first
@@ -1045,6 +1051,9 @@ host         every host, sanitised and not: the one that asks every door
 sanitisers   every command over every file under the sanitisers, and the
              two builds asked which of them checks itself
 nothing      a document with nothing in it, and checks handed no files
+fuzzing      bytes the compiler was not written for, made from eight seeds
+             and handed to it, under the build that checks itself: every one
+             of them a program or a refusal
 room         every check handing back the room it took
 ```
 

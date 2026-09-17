@@ -15,6 +15,8 @@ jobs:
         run: make -j
       - name: fast
         run: make fast
+      - name: bytes it was not written for
+        run: make fuzz
       - name: conformance trace
         run: sh tools/conformance.sh ./kest linux-x86-64.trace
       - uses: actions/upload-artifact@v4

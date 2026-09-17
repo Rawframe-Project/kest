@@ -1719,6 +1719,33 @@ ask "backstops" tools/check-backstops.sh
 wait
 heard
 
+# Bytes the compiler was not written for, sanitised. Eight seeds and four
+# hundred inputs each, which is a minute rather than an afternoon: a gate can
+# afford a short campaign and a long one is the same command with other
+# numbers. What it holds is that every one of them ends in a program or a
+# refusal, which is what not crashing looks like from outside. See D984.
+if [ ! -x tools/fuzz-debug ]; then
+    complain "fuzzing" "there is no sanitised fuzzer to run"
+else
+    fuzzed=0
+    fuzz_wrong=""
+    for seed in 1 2 3 4 5 6 7 8; do
+        said=$(./tools/fuzz-debug "$seed" 400 "$scratch"/fuzz.kest 2>&1) ||
+            fuzz_wrong="seed $seed stopped it"
+        case "$said" in
+        *"none of them stopped this"*) fuzzed=$((fuzzed + 400)) ;;
+        *) fuzz_wrong="seed $seed: $(printf '%s' "$said" | head -3)" ;;
+        esac
+    done
+    if [ -n "$fuzz_wrong" ]; then
+        complain "fuzzing" "bytes this compiler was not written for stopped \
+it: $fuzz_wrong"
+    else
+        say "fuzzing" "$fuzzed input(s) made from eight seeds, every one of \
+them a program or a refusal, under a build that checks itself"
+    fi
+fi
+
 # And what the run leaves on the machine it ran on. Every check above works in
 # a room under this one, so what is still there now is what somebody made and
 # did not take away. The names are printed rather than counted: a check leaves

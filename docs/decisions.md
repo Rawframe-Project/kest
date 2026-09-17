@@ -30834,3 +30834,46 @@ line says what it was written against and `kest doctor` reads it back.
 version, and a version with nothing a reader has to do about it says so. It is
 not the worklog: the worklog is what was built, and the changelog is what
 somebody with a program has to do about it. *Argued.*
+
+## D984. Bytes this compiler was not written for, from a seed
+
+Section 29 of the completion mission asks for fuzz targets over the lexer, the
+parser, the typechecker, generics, the FFI handle decode, the lend and ref
+lifecycles, the UTF-8 boundary, and the bytecode loader.
+
+**One target, because there is one door.** Everything a stranger's bytes can
+reach, they reach through a file: `kest_build` reads it, checks it, compiles
+it, and `kest_start` runs it. So `tools/fuzz.c` writes a file and hands it to
+that door — the whole pipeline on every input, rather than eight harnesses that
+each have to be kept in step with a stage.
+
+The one target the mission names that has nothing to point at is the bytecode
+loader. **There is none**: the bytecode is not a format, nothing writes it to
+disk and nothing reads it from disk (D983). A fuzzer for it would be a fuzzer
+for a door this language does not have.
+
+**Where the inputs come from.** Half are made of pieces of the language, which
+is enough to get past the lexer and rarely past the parser. Half are a real
+program of this tree with between one and eight things done to it: a byte
+changed, a run cut out, a piece put in the middle. A mutation of something that
+compiles usually still parses, which is the only way the checker and the
+compiler are reached at all — random bytes never got past the first stage, and
+pieces alone got past the second about once in a hundred.
+
+**Deterministic, and nothing is written down.** `tools/fuzz 12345 1000` is the
+same thousand inputs on any machine, so a finding is a seed and a count and
+fits in a sentence. There is no corpus directory, no minimiser and no queue:
+those are what a fuzzing programme has and this is a check.
+
+**Under the sanitisers.** A release build answers a read past the end of
+something with whatever was next; this is the one place in this tree where what
+comes next is chosen by a stranger. `make check` runs eight seeds of four
+hundred, which is about a minute; a longer campaign is the same command with
+other numbers.
+
+**What it has found so far: nothing.** 3200 sanitised inputs, every one of them
+a program or a refusal. That is worth saying rather than leaving out — a net
+nobody has seen catch anything is the thing this project says it will not have,
+and what makes this one different from that is that the holes above it have all
+been seen catching something and this is looking for a kind of fault they
+cannot. *Measured.*
