@@ -14,7 +14,7 @@ number has not moved because nothing has been tagged; the ABI and schema
 numbers below have, because a host built against the header in 0.1.0 and linked
 against this library would be reading memory that means something else.
 
-**Kest 0.1.0 → unreleased. ABI 1 → 2. JSON schema 1 → 2. Profile kest-det 1,
+**Kest 0.1.0 → unreleased. ABI 1 → 3. JSON schema 1 → 2. Profile kest-det 1,
 unchanged.**
 
 ### A program may have to change
@@ -40,9 +40,13 @@ unchanged.**
   the two at startup: they differ when the header and the library are from two
   versions of this project. `examples/engine.c` does it in its first six lines.
   See D974.
-- **Three doors were added**: `kest_abi_version`, `kest_profile`,
-  `kest_build_capability`, `kest_count`, `kest_counted` and
-  `kest_counted_entry`. Nothing was taken away and nothing changed shape, so a
+- **Seventeen doors were added** and none was taken away: `kest_abi_version`
+  and `kest_profile` for what shape things are in, `kest_build_capability` for
+  what a program may do, `kest_count`, `kest_counted` and `kest_counted_entry`
+  for what a run did, and `kest_stopped`, `kest_stopped_in`, `kest_resume`,
+  `kest_code_of`, `kest_came_from`, `kest_frames_deep`, `kest_frame_in`,
+  `kest_frame_ip`, `kest_frame_wide`, `kest_frame_slot` and `kest_frame_name`
+  for stopping a machine and asking it where it is. Nothing changed shape, so a
   host built against ABI 1 and recompiled against this header works unchanged.
 - **`kest_text` refuses bytes that are not UTF-8**, under `K0611`, where it used
   to refuse a nought. A host handing over bytes it did not choose has a refusal
@@ -60,6 +64,10 @@ unchanged.**
 - `kest lsp`, a language server that is this compiler (D977), and a VS Code
   extension that is a grammar and a client (D978).
 - `kest profile`, which says what a run did in counts and no durations (D979).
+- `kest debug`, a source-level debugger whose breakpoints are written into the
+  program and taken out again, so a machine nobody is debugging pays nothing
+  (D991).
+- `make release`, one archive with a checksum beside it (D989).
 - `kest new`, `kest build`, `kest test` and `kest doctor`, and a project
   manifest of `name value` lines (D982).
 - `kest check --cost`, which says what the compiler proved about each body
