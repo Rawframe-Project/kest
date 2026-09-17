@@ -30,6 +30,17 @@ asks the question. Evidence is named; nothing here is a claim from a document.
 | E4 | a text slot is a `const char *`; length is `strlen`, so `len` is O(n) and embedded noughts are unrepresentable. The reusable buffer is answered: `fit` and `std.text`'s `fitting` (D940). A length-carrying representation was built and put back, because a cut would allocate under it; D955 says what the two-slot one would take, and the policy about a nought is written down |
 | E5 | `live_from` scanned to the store's high-water mark. It reads a bit a slot and sixty-four at a time now (D954): four thousand walks of a store holding eight things out of two hundred thousand went from 0.22s to 0.02s |
 
+## What the measurements say today
+
+The numbers a decision quotes were true the day it was written, and two of them
+have moved since. This is where the current ones are, so that a reader comparing
+a run with a decision knows which is which.
+
+| | then | now |
+| --- | --- | --- |
+| the colony's steady state, at 200, 400 and 800 days | 2,370,304 bytes (D940) | 2,338,096 bytes, and still flat: a store keeps a bit a slot rather than a byte (D954) |
+| a frame step an entity | 127 ns (D926), 122 after D931 | 115 to 125 ns depending on the run, `make time` on this machine |
+
 ## Phases
 
 The mission's order. `/home/kest/mission/STATE.md` carries which one is open.
