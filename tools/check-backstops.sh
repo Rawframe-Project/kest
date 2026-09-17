@@ -6101,13 +6101,16 @@ fn main() -> i32 {
         # `return` moves the result to the bottom of the frame either way.
         # See D900.
         "what": "a body that comes back with something over",
-        "file": "src/compile.c",
-        "from": r"""            if (size > 0) {
-                stack_pop(compiler, size);
-                ir_emit(compiler, KEST_IR_DROP,""",
-        "to": r"""            if (size > 0) {
-                stack_pop(compiler, size);
-                if (size == 0) ir_emit(compiler, KEST_IR_DROP,""",
+        "file": "src/lower.c",
+        "from": r"""        uint16_t wide = leaves(lower, lower->body->args[op->first_arg]);
+        if (wide == 1) {
+            emit(lower, KEST_OP_POP, span);
+            return;
+        }""",
+        "to": r"""        uint16_t wide = leaves(lower, lower->body->args[op->first_arg]);
+        if (wide == 1) {
+            return;
+        }""",
         "make": ["debug"],
         "binary": "kest-debug",
         "program": "leaking.kest",
