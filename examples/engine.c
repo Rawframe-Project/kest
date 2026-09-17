@@ -194,7 +194,13 @@ static bool one_frame(Engine *engine, int frame, float xs[BODIES],
                                  sizeof(float));
     KestValue there = kest_borrow(engine->runtime, ys, BODIES, "f32",
                                   sizeof(float));
-    bool lent = here.object != NULL && there.object != NULL;
+    // How many the machine says are there, against how many this host lent.
+    // A host driving a world reads a run back and has to know where it stops,
+    // and until D964 it had to ask the program. See D965.
+    uint32_t room = 0;
+    bool lent = here.object != NULL && there.object != NULL &&
+                kest_array_length(engine->runtime, here, &room) == BODIES &&
+                room == BODIES;
     if (lent) {
         KestValue asking[8] = {{0}};
         asking[0] = engine->world[0];

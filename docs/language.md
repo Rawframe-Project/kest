@@ -1782,9 +1782,9 @@ reading of this table that the program disagrees with is a gate that fails.
 | a step that puts an entity into | told nothing | told how many |
 | --- | --- | --- |
 | a piece of text | 13 bytes an entity | — |
-| an array | 25 bytes an entity | 0 bytes an entity |
+| an array | 38 bytes an entity | 0 bytes an entity |
 | a table | 51 bytes an entity | 0 bytes an entity |
-| a store | 77 bytes an entity | 0 bytes an entity |
+| a store | 102 bytes an entity | 0 bytes an entity |
 
 These are bytes, and a byte count is this machine's as much as the program's: a
 handle is a machine word and a header is made of them, so the table above is
@@ -3168,6 +3168,16 @@ the program and a name both sides can agree on.
 What can be lent is what the program's declarations say it takes: a signature
 mentioning `[Point]` is enough, whether or not any body ever reaches into one.
 A type the program never holds in an array cannot be lent, and says so.
+
+How many things there are in an array — one the machine made or one the host
+lent — is `kest_array_length`, which answers that and, where the host asks for
+it, how much room there is. A host driving a world reads a run back and has to
+know where it stops, and the alternative is being told by the program it is
+checking. A value that is not an array of this machine's answers nought, which
+is what an empty one answers too: a host that has to tell those apart asks
+`kest_still_holds` first. There is no such door for a store, because how many
+live places a store holds is a walk and `len` in the language is where that is
+written.
 
 A lend lasts as long as the host says it does. `kest_lend_ends` is the host
 saying the block is not its to lend any more: nothing is freed, because the
@@ -5176,7 +5186,7 @@ bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 502 lines:
-47940 bytes as tokens, 118145 as a tree, 154208 checked and 176589 compiled.
+47940 bytes as tokens, 118145 as a tree, 154208 checked and 177293 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
 
@@ -5193,7 +5203,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 17305 bytes, against the 176589 it costs to compile.
+file and 17305 bytes, against the 177293 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.

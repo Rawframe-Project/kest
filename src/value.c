@@ -2063,6 +2063,10 @@ uint64_t kest_layout_mark(const KestLayout *layout) {
     uint64_t mark = KEST_MARK_START;
     fold_number(&mark, layout->size, 2);
     fold_number(&mark, layout->align, 2);
+    // How many slots it is, which is not how many pieces it has: a piece of
+    // text is one piece and two slots, and a host filling a frame is told the
+    // second. See D964.
+    fold_number(&mark, layout->slots, 2);
     fold_number(&mark, layout->tagged, 1);
     for (uint16_t p = 0; p < layout->count; p++) {
         fold_number(&mark, layout->pieces[p].offset, 2);
@@ -2151,6 +2155,11 @@ uint64_t kest_module_mark(const KestModule *module) {
         const KestLayout *shape = &module->layouts[at];
         fold_number(&mark, shape->size, 2);
         fold_number(&mark, shape->align, 2);
+        // How wide it is in slots, which is not how many pieces it has: a
+        // piece of text is one piece and two slots. A host filling a frame is
+        // told the second, so a build where that moved is a build a host has
+        // to be told about. See D964.
+        fold_number(&mark, shape->slots, 2);
         fold_number(&mark, shape->tagged, 1);
         for (uint16_t piece = 0; piece < shape->count; piece++) {
             fold_number(&mark, shape->pieces[piece].offset, 2);

@@ -3285,14 +3285,16 @@ just_measured=$(cut_heap measured)
 whole_cut=$(cut_heap whole)
 tail_cut=$(cut_heap tail)
 middle_cut=$(cut_heap middle)
+# Every cut costs what measuring costs, which is nothing: a piece of a piece of
+# text is a place inside it and how many bytes of it. A cut out of the middle
+# used to copy, because text was a pointer that had to end in a nought and a
+# piece out of the middle of one does not. See D964.
 if [ -z "$just_measured" ] || [ -z "$middle_cut" ]; then
     complain "call --json: a cut said nothing about what it cost"
-elif [ "$whole_cut" != "$just_measured" ] || [ "$tail_cut" != "$just_measured" ]; then
-    complain "call: a cut that ends where the text ends cost \
-$whole_cut and $tail_cut where measuring it cost $just_measured"
-elif [ "$middle_cut" -le "$just_measured" ]; then
-    complain "call: a cut that stops sooner cost $middle_cut, which is what \
-measuring it costs"
+elif [ "$whole_cut" != "$just_measured" ] || [ "$tail_cut" != "$just_measured" ] ||
+     [ "$middle_cut" != "$just_measured" ]; then
+    complain "call: cuts cost $whole_cut, $tail_cut and $middle_cut where \
+measuring costs $just_measured, and a cut copies nothing"
 fi
 
 # And the two beside it that step rather than cut. `rest` is a place inside the

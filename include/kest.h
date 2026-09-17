@@ -577,6 +577,18 @@ bool kest_text(KestRuntime *runtime, const char *bytes, uint32_t length,
 KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
                       const char *element, size_t size);
 
+// How many there are in an array the machine made or the host lent, and how
+// many it has room for. A host driving a world reads back a run of things and
+// has to know where it stops: the engine host in `examples/engine.c` walked one
+// by asking the program, because there was nowhere to ask the machine. Both
+// answer nought for a value that is not an array of this machine's, which is
+// the same answer an empty one gives -- a host that needs to tell the two apart
+// asks `kest_still_holds` first.
+//
+// `room` may be NULL for a host that only wants the length.
+uint32_t kest_array_length(const KestRuntime *runtime, KestValue array,
+                           uint32_t *room);
+
 // And the end of a lend, which is the host saying the block is not its to lend
 // any more. Nothing is freed: the block was the host's throughout. What
 // changes is what the program holds — every use of it afterwards is a message

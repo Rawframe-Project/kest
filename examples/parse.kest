@@ -116,6 +116,11 @@ fn main() -> i32 {
     if math.abs(placed(written) - 1.25) > 0.0001 {
         return 13
     }
+    // And no places at all, which is a whole number written without a point
+    // and the one way through `text.fixed` that never reaches a buffer.
+    if text.fixed(2.5, 0) != "3" || text.fixed(0.0 - 2.5, 0) != "-3" {
+        return 14
+    }
 
     io.print("read {len(parsed)} fields adding up to {total}, and wrote {written}")
     return 0

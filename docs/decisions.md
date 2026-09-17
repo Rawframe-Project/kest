@@ -29990,3 +29990,73 @@ stack whose top is a register is not the same cost as reading a place. What is
 left to go after is the same door D961 opened: `store` then `load` is another
 3.6% of the frame step, and the pairs are found by counting what runs rather
 than by changing what a machine is.
+
+## D964. Text carries its own length, in two slots
+
+D955 built text as a handle to a header on the heap and put it back, because a
+cut would then allocate and a walk over text is made of cuts. It said what would
+pay for both — text as two slots, the bytes and the length, side by side where
+the value is — and that it was not a change to make in an afternoon. This is
+that change.
+
+**What a piece of text is now.** Two slots: what it is made of, and how many
+bytes that is. `text` is two slots to the compiler, sixteen bytes where a value
+is laid out in memory, and two slots in a frame a host fills. Nothing is on the
+heap that was not on the heap before, and nothing is a handle.
+
+**What it buys, each of which the mission asked for.**
+
+- `len` is a read. It was a walk of the bytes, and a walk charged for by the
+  weighed fuel because it was work. There is no `text.len` work to charge for
+  now: the instruction reads the second slot.
+- A cut is free and reaches nothing. `slice` was the one text builtin that
+  allocated, because a piece of text had to end in a nought and a piece out of
+  the middle of one does not. It is a place inside what it was cut from and how
+  many bytes of it, so `contract.c` no longer says it reaches the heap and the
+  proof over emitted code says the same. Five of the library's `no.alloc`
+  functions are cuts, and they are cheaper rather than refused.
+- A byte at a place is a comparison and a read. `text.at`, `text.in`, `rest`,
+  `matches` and `find` walked to the place they were asked about, because the
+  length was not there to compare against. D371 and D372 wrote that down as the
+  cheaper of two bad answers; there is a better one now.
+- A host reads bytes and a length without measuring. `kest_text_bytes` reads
+  the second slot rather than walking a C string, which is what D955 kept the
+  door for.
+
+**What it costs.** Every text value is a slot wider: a frame that holds four
+pieces of text is four slots bigger, and so is a struct that holds one. A `[text]`
+is sixteen bytes an element rather than eight. That is what a length beside the
+bytes costs, and it is paid where text is kept rather than where it is read.
+
+**What changes for a host, which is an ABI change and is allowed to be.**
+`kest_text` writes two slots rather than answering one value, and answers
+whether it wrote a piece of text or an empty one. `kest_text_bytes` takes a
+pointer to the first of the two. `KestLayout` gained `slots` beside `count`,
+because a piece is no longer a slot: a piece of text is one piece and two slots,
+and every walk that counted pieces to find a slot now counts slots.
+
+**And the one rule that changed for a reader.** Text the machine made ends in a
+nought, and text cut out of the middle of some does not. A host reads bytes and
+a length through `kest_text_bytes` and hands both to whatever it is calling;
+`value.text` read as a C string is right for text the machine made and wrong for
+a cut. The policy about a nought *inside* text is what D955 wrote down and is
+unchanged: there is none, and it is refused where one would be made.
+
+## D965. A host may ask an array how many there are
+
+The engine-like host in `examples/engine.c` lends the machine a run of its own
+memory every frame and reads it back, and it had nowhere to ask how many things
+the program put there: it asked the program, in a number the program answered
+with. That is a host being told by the thing it is checking.
+
+`kest_array_length` answers how many there are and, where a host wants it, how
+much room there is. It asks the same question of the handle every other door
+asks — whether this machine's heap handed it out — so a number a host wrote into
+a slot answers nought rather than being read as a header. Nought is also what an
+empty array answers, and a host that needs to tell the two apart has
+`kest_still_holds`.
+
+It does not answer for a store. A store is a slot map with generations and a
+free list, and how many live places it holds is `len` in the language and a walk
+here; a host that wants that asks the program, which is what a store is for.
+*Argued.*

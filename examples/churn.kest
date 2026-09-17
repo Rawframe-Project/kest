@@ -183,9 +183,8 @@ fn round(world: store<Thing>, from: i32) -> i32 no.alloc no.host {
 }
 
 fn rounds() -> i32 {
-    if os.argCount() < 1 {
-        return ROUNDS
-    }
+    // No guard on how many arguments there are: `os.arg` answers nothing past
+    // the last of them, which is the same question asked once.
     if let written = os.arg(0) {
         if let asked = text.number(written) {
             if asked > 0 {

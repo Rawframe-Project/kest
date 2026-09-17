@@ -5863,6 +5863,29 @@ int main(int argc, char **argv) {
     unsigned char words[16];
     memset(words, 0, sizeof(words));
     engine.frame[0] = kest_borrow(engine.runtime, words, sizeof(words), "u8", 1);
+    // How many there are and how much room there is, which a host had nowhere
+    // to ask until D965. A lend is as long as it is lent and has no room over;
+    // a number a host wrote into a slot is not an array and answers nought,
+    // which is the same answer an empty one gives.
+    {
+        uint32_t room = 0;
+        KestValue not_one = {0};
+        not_one.integer = 12345;
+        if (kest_array_length(engine.runtime, engine.frame[0], &room) !=
+                sizeof(words) ||
+            room != sizeof(words) ||
+            kest_array_length(engine.runtime, not_one, &room) != 0 ||
+            room != 0 || kest_array_length(NULL, engine.frame[0], NULL) != 0) {
+            fprintf(stderr, "a lend of %zu said it was %u long\n",
+                    sizeof(words),
+                    kest_array_length(engine.runtime, engine.frame[0], NULL));
+            return 1;
+        }
+        uint32_t many = kest_array_length(engine.runtime, engine.frame[0],
+                                          &room);
+        printf("a lend of %zu bytes says it is %u long with room for %u\n",
+               sizeof(words), many, room);
+    }
     engine.frame[1].integer = 0;
     kest_text(engine.runtime, "kest", 4, &engine.frame[2]);
     if (engine.frame[0].object == NULL || engine.frame[2].text == NULL ||

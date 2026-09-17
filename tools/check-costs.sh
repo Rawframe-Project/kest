@@ -198,6 +198,7 @@ fn work(n: i32) -> i32 {
 asked_for = 0
 reached = 0
 loose = []
+went = {}
 deep_runs = []
 # What a machine takes when the program has no answer, which `include/kest.h`
 # names and this reads rather than writing a second copy of.
@@ -228,11 +229,23 @@ for deep_path in (sorted(glob.glob(os.path.join('examples', '*.kest')))
         deep_name = ' '.join(deep_words[1:-4])
         asked_for += 1
         reached += deep_room
-        if deep_room > deep_went:
-            loose.append((deep_room - deep_went, deep_name, deep_path))
+        # The furthest any run of this body went, rather than the furthest one
+        # example took it. A body with a branch deeper than the rest is asking
+        # for what that branch needs, and an example that never takes it is an
+        # example rather than a compiler asking for nothing: `text.fixed`
+        # writes a number with no places as two pieces of text joined and
+        # everything else it does as one, so the example that prints a price
+        # never goes as deep as the one that prints a whole number.
+        went[deep_name] = (deep_room,
+                           max(deep_went, went.get(deep_name, (0, 0))[1]),
+                           deep_path)
+for deep_name in sorted(went):
+    deep_room, deep_went, deep_path = went[deep_name]
+    if deep_room > deep_went:
+        loose.append((deep_room - deep_went, deep_name, deep_path))
 for deep_slack, deep_name, deep_path in sorted(loose, reverse=True)[:4]:
-    print("costs: `%s` asks for %u slot(s) it never used, running %s"
-          % (deep_name, deep_slack, deep_path))
+    print("costs: `%s` asks for %u slot(s) no run of it ever used, and the "
+          "deepest was %s" % (deep_name, deep_slack, deep_path))
     failed = 1
 if have_checked:
     some("the bodies the examples run", asked_for)

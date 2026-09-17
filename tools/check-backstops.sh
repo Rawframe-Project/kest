@@ -2480,23 +2480,20 @@ fn main() -> i32 {
         # machine. See D796.
         "what": "a rest that copies what it keeps",
         "file": "src/vm.c",
-        "from": r"""            (top++)->text = text + at;
-            break;
-        }
-        case KEST_OP_TEXT_MATCHES: {""",
+        "from": r"""            TEXT_ON(text.bytes + at, text.length - (uint32_t)at);
+            break;""",
         "to": r"""            {
-                size_t left = strlen(text + at);
+                uint32_t left = text.length - (uint32_t)at;
                 char *copy = kest_arena_alloc(rt->heap, left + 1, 1);
                 if (copy == NULL) {
                     no_room(vmp, frame, instruction, rt);
                     return false;
                 }
-                memcpy(copy, text + at, left + 1);
-                (top++)->text = copy;
+                memcpy(copy, text.bytes + at, left);
+                copy[left] = '\0';
+                TEXT_ON(copy, left);
             }
-            break;
-        }
-        case KEST_OP_TEXT_MATCHES: {""",
+            break;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -2602,11 +2599,11 @@ const char *kest_unsaid(void);""",
         "what": "a fault that stops saying it is a fault",
         "file": "src/vm.c",
         "from": r"""                kest_diags_fault(vmp->diags,
-                                 "a walk over text measures it before its "
-                                 "first turn and reads without asking");""",
+                                 "a walk over text takes its length before "
+                                 "its first turn and reads without asking");""",
         "to": r"""                kest_diags_suggest(vmp->diags,
-                                   "a walk over text measures it before its "
-                                   "first turn and reads without asking");""",
+                                   "a walk over text takes its length before "
+                                   "its first turn and reads without asking");""",
         "make": [],
         "tool": "tools/check-tables.sh",
         "caught": "nothing says whose mistake it is",
@@ -4131,17 +4128,19 @@ for file in "$@"; do""",
         # ran, the status is right, and the answer is short.
         "what": "a host that writes what a program said and stops",
         "file": "src/main.c",
-        "from": r"""static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
-    (void)runtime;
-    fputs(frame[0].text, (FILE *)context);
-}""",
-        "to": r"""static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
-    static uint32_t written = 0;
-    (void)runtime;
-    if (written++ < 4096) {
-        fputs(frame[0].text, (FILE *)context);
-    }
-}""",
+        "from": r"""    uint32_t length = 0;
+    const char *bytes = kest_text_bytes(frame, &length);
+    // Written by its length rather than to a nought: a piece of text cut out
+    // of the middle of another does not end in one. See D964.
+    if (bytes != NULL && length > 0) {
+        fwrite(bytes, 1, length, (FILE *)context);
+    }""",
+        "to": r"""    static uint32_t written = 0;
+    uint32_t length = 0;
+    const char *bytes = kest_text_bytes(frame, &length);
+    if (bytes != NULL && length > 0 && written++ < 4096) {
+        fwrite(bytes, 1, length, (FILE *)context);
+    }""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -4835,9 +4834,11 @@ for file in "$@"; do""",
         # runs, the text is text, and one byte of somebody's input is gone.
         "what": "a read that stops one byte short",
         "file": "src/main.c",
-        "from": r"""    frame[0] = kest_text(runtime, bytes, (uint32_t)held);
+        "from": r"""    kest_text(runtime, bytes, (uint32_t)held, frame);
+    frame[2].integer = 1;
     free(bytes);""",
-        "to": r"""    frame[0] = kest_text(runtime, bytes, (uint32_t)(held > 0 ? held - 1 : 0));
+        "to": r"""    kest_text(runtime, bytes, (uint32_t)(held > 0 ? held - 1 : 0), frame);
+    frame[2].integer = 1;
     free(bytes);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
@@ -4907,18 +4908,12 @@ for file in "$@"; do""",
         # sooner costs more than measuring.
         "what": "a cut that stops sooner handed back without being copied",
         "file": "src/vm.c",
-        "from": r"""            if (text[want] == '\0') {
-                (top++)->text = text + from;
-                break;
-            }""",
-        "to": r"""            if (true) {
-                (top++)->text = text + from;
-                break;
-            }""",
+        "from": r"""            TEXT_ON(text.bytes + from, count);""",
+        "to": r"""            TEXT_ON(text.bytes + from, text.length - (uint32_t)from);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
-        "caught": "a cut that stops sooner cost ",
+        "caught": "a cut that stops sooner",
     },
     {
         # A promise held to a heap that did not move. What the machine holds a
@@ -9681,8 +9676,8 @@ memory""",
         # arguments would start is what they come to.
         "what": "a walk to where an argument starts that steps one a value",
         "file": "src/vm.c",
-        "from": """        at += runtime->module->layouts[chunk->takes[i]].count;""",
-        "to": """        at += 1;""",
+        "from": r"""        at += runtime->module->layouts[chunk->takes[i]].slots;""",
+        "to": r"""        at += 1;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "says a result starts at",
@@ -9770,12 +9765,12 @@ fn main() -> i32 {
         # block instead is a program holding memory its owner has taken back.
         "what": "text made out of a lend that points at the lend",
         "file": "src/vm.c",
-        "from": """            memcpy(text, bytes->bytes, bytes->length);
-            text[bytes->length] = '\\0';
-            (top++)->text = text;""",
-        "to": """            memcpy(text, bytes->bytes, bytes->length);
-            text[bytes->length] = '\\0';
-            (top++)->text = (const char *)bytes->bytes;""",
+        "from": r"""            memcpy(text, bytes->bytes, bytes->length);
+            text[bytes->length] = '\0';
+            TEXT_ON(text, bytes->length);""",
+        "to": r"""            memcpy(text, bytes->bytes, bytes->length);
+            text[bytes->length] = '\0';
+            TEXT_ON((const char *)bytes->bytes, bytes->length);""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "after the lend was taken back",
@@ -9966,7 +9961,7 @@ fn main() -> i32 {
                            "byte %u of what the host handed over is zero, and "
                            "text ends at a zero byte",
                            i);
-            return value;
+            return false;
         }
     }""",
         "to": "    (void)0;",
@@ -11670,14 +11665,20 @@ static const Keyword KEYWORDS[] = {
         # in this project compiles.
         "what": "a host that allocates under a promise made for it",
         "file": "src/main.c",
-        "from": """static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
-    (void)runtime;
-    fputs(frame[0].text, (FILE *)context);
-}""",
-        "to": """static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
-    KestValue copy = kest_text(runtime, frame[0].text, strlen(frame[0].text));
-    fputs(copy.text, (FILE *)context);
-}""",
+        "from": r"""    uint32_t length = 0;
+    const char *bytes = kest_text_bytes(frame, &length);
+    // Written by its length rather than to a nought: a piece of text cut out
+    // of the middle of another does not end in one. See D964.
+    if (bytes != NULL && length > 0) {
+        fwrite(bytes, 1, length, (FILE *)context);
+    }""",
+        "to": r"""    uint32_t length = 0;
+    const char *bytes = kest_text_bytes(frame, &length);
+    KestValue copy[2] = {{0}, {0}};
+    kest_text(runtime, bytes, length, copy);
+    if (copy[0].text != NULL) {
+        fwrite(copy[0].text, 1, (size_t)copy[1].integer, (FILE *)context);
+    }""",
         "make": ["kest"],
         "program": "saying.kest",
         "source": """import std.io
@@ -12472,10 +12473,10 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # still the same arithmetic.
         "what": "a machine hashing text the other way round",
         "file": "src/vm.c",
-        "from": """                bits ^= *c;
+        "from": r"""                bits ^= (unsigned char)text.bytes[i];
                 bits *= 0x100000001b3ULL;""",
-        "to": """                bits *= 0x100000001b3ULL;
-                bits ^= *c;""",
+        "to": r"""                bits *= 0x100000001b3ULL;
+                bits ^= (unsigned char)text.bytes[i];""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -12596,7 +12597,7 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # without either of them looking wrong.
         "what": "a reason left behind by a shape the mark stopped walking",
         "file": "src/value.c",
-        "from": '    for (uint32_t at = 0; at < module->layout_count; at++) {\n        const KestLayout *shape = &module->layouts[at];\n        fold_number(&mark, shape->size, 2);\n        fold_number(&mark, shape->align, 2);\n        fold_number(&mark, shape->tagged, 1);\n        for (uint16_t piece = 0; piece < shape->count; piece++) {\n            fold_number(&mark, shape->pieces[piece].offset, 2);\n            fold_number(&mark, shape->pieces[piece].kind, 1);\n        }\n    }\n',
+        "from": '    for (uint32_t at = 0; at < module->layout_count; at++) {\n        const KestLayout *shape = &module->layouts[at];\n        fold_number(&mark, shape->size, 2);\n        fold_number(&mark, shape->align, 2);\n        // How wide it is in slots, which is not how many pieces it has: a\n        // piece of text is one piece and two slots. A host filling a frame is\n        // told the second, so a build where that moved is a build a host has\n        // to be told about. See D964.\n        fold_number(&mark, shape->slots, 2);\n        fold_number(&mark, shape->tagged, 1);\n        for (uint16_t piece = 0; piece < shape->count; piece++) {\n            fold_number(&mark, shape->pieces[piece].offset, 2);\n            fold_number(&mark, shape->pieces[piece].kind, 1);\n        }\n    }\n',
         "to": "",
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
@@ -13127,8 +13128,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # what keeps them one.
         "what": "a host that calls itself something the reference does not",
         "file": "src/main.c",
-        "from": '    frame[0] = kest_text(runtime, "kest", 4);',
-        "to": '    frame[0] = kest_text(runtime, "kestrel", 7);',
+        "from": '    kest_text(runtime, "kest", 4, frame);',
+        "to": '    kest_text(runtime, "kestrel", 7, frame);',
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/world.kest"],
@@ -13247,10 +13248,10 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # what holds the list is that a run of it says those lines.
         "what": "a host's own rule the engine stopped showing",
         "file": "examples/embed.c",
-        "from": """    printf("and text kept across a heap being thrown away reads what the "
-           "machine made next: `%s`\\n",
-           first_word.text);""",
-        "to": """    printf("and the text this host kept reads `%s`\\n", first_word.text);""",
+        "from": r"""    printf("and text kept across a heap being thrown away reads what the "
+           "machine made next: `%s`\n",
+           first_word[0].text);""",
+        "to": r"""    printf("and the text this host kept reads `%s`\n", first_word[0].text);""",
         "make": ["kest", "embed"],
         "tool": "tools/check-docs.sh",
         "arguments": ["docs/language.md", "docs/decisions.md"],
@@ -14177,7 +14178,7 @@ bool kest_needs_of(""",
         # what it was going to answer with.
         "what": "a byte read out of a lend as though it were signed",
         "file": "src/vm.c",
-        "from": """        case KEST_L_U8:
+        "from": r"""        case KEST_L_U8:
         // The byte an optional keeps after its value is one byte, read the way
         // any other byte is. Its kind is what it is for and not what it is,
         // and what it is is this. See D714. A truth is the third of them, and
@@ -14186,15 +14187,15 @@ bool kest_needs_of(""",
         case KEST_L_HELD: {
             uint8_t v;
             memcpy(&v, at, 1);
-            out[i].integer = v;
+            out[put].integer = v;
             break;
         }""",
-        "to": """        case KEST_L_U8:
+        "to": r"""        case KEST_L_U8:
         case KEST_L_BOOL:
         case KEST_L_HELD: {
             int8_t v;
             memcpy(&v, at, 1);
-            out[i].integer = v;
+            out[put].integer = v;
             break;
         }""",
         "make": ["kest", "embed"],
@@ -14209,18 +14210,18 @@ bool kest_needs_of(""",
         # anywhere saying a word about it.
         "what": "a byte written into a lend out of the wrong end",
         "file": "src/vm.c",
-        "from": """        case KEST_L_I8:
+        "from": r"""        case KEST_L_I8:
         case KEST_L_U8:
         case KEST_L_BOOL:
         case KEST_L_HELD: {
-            uint8_t v = (uint8_t)from[i].integer;
+            uint8_t v = (uint8_t)from[took].integer;
             memcpy(at, &v, 1);
             break;""",
-        "to": """        case KEST_L_I8:
+        "to": r"""        case KEST_L_I8:
         case KEST_L_U8:
         case KEST_L_BOOL:
         case KEST_L_HELD: {
-            uint8_t v = (uint8_t)(from[i].integer >> 8);
+            uint8_t v = (uint8_t)(from[took].integer >> 8);
             memcpy(at, &v, 1);
             break;""",
         "make": ["kest", "embed"],
@@ -14238,10 +14239,14 @@ bool kest_needs_of(""",
         # A byte read out of what a call gave back. The same line is written
         # again for a byte read out of a name, so this says which by taking
         # the line above it as well.
-        "from": """            }
-            (top++)->integer = (unsigned char)text[index];""",
-        "to": """            }
-            (top++)->integer = text[index];""",
+        "from": r"""            (top++)->integer = (unsigned char)text.bytes[index];
+            break;
+        }
+        case KEST_OP_TEXT_IN: {""",
+        "to": r"""            (top++)->integer = text.bytes[index];
+            break;
+        }
+        case KEST_OP_TEXT_IN: {""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/words.kest"],
@@ -14254,10 +14259,10 @@ bool kest_needs_of(""",
         # sixty, and a walk over what a program typed goes on for ever.
         "what": "a byte read out of a name as though it were signed",
         "file": "src/vm.c",
-        "from": """#endif
-            (top++)->integer = (unsigned char)text[index];""",
-        "to": """#endif
-            (top++)->integer = text[index];""",
+        "from": r"""#endif
+            (top++)->integer = (unsigned char)text.bytes[index];""",
+        "to": r"""#endif
+            (top++)->integer = text.bytes[index];""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/words.kest"],
@@ -14288,8 +14293,8 @@ bool kest_needs_of(""",
         # program told its loop is free when it is not.
         "what": "a cut the promise does not count",
         "file": "src/contract.c",
-        "from": """                {"slice", "`slice` copies the piece it names"},""",
-        "to": """                {"slice", NULL},""",
+        "from": r"""                {"slice", NULL},""",
+        "to": r"""                {"slice", "`slice` copies the piece it names"},""",
         "make": ["kest"],
         "program": "cutting.kest",
         "source": """import std.text
@@ -14879,24 +14884,6 @@ fn main() -> i32 {
         "caught": "which is not twice for twice the work",
     },
     {
-        # A cut that copies what it did not have to. Text ends at a nought, so
-        # a piece that ends where the text ends is the one that was already
-        # there and a place inside it is the whole of the answer — which is
-        # what `rest` is. Copying it anyway is every walk that takes the rest
-        # of a line paying for the line again.
-        "what": "a cut that copies what was already ending",
-        "file": "src/vm.c",
-        "from": """            if (text[want] == '\\0') {
-                (top++)->text = text + from;
-                break;
-            }""",
-        "to": "",
-        "make": ["kest"],
-        "tool": "tools/check-commands.sh",
-        "arguments": ["examples/words.kest"],
-        "caught": "a cut that ends where the text ends cost",
-    },
-    {
         # A refusal that names a length nobody measured. A cut walks to the
         # place it was asked for rather than measuring the whole of the text,
         # so what is left after that place is unread — and the one thing that
@@ -14904,12 +14891,12 @@ fn main() -> i32 {
         # for the rest.
         "what": "a cut refused without saying how long the text was",
         "file": "src/vm.c",
-        "from": """                size_t length = seen + strlen(text + seen);
-                fail(vmp, frame, instruction, "K0604",
-                     "%lld bytes from %lld is outside text of %zu bytes",""",
-        "to": """                size_t length = (size_t)seen;
-                fail(vmp, frame, instruction, "K0604",
-                     "%lld bytes from %lld is outside text of %zu bytes",""",
+        "from": r"""                fail(vmp, frame, instruction, "K0604",
+                     "%lld bytes from %lld is outside text of %u bytes",
+                     (long long)count, (long long)from, text.length);""",
+        "to": r"""                fail(vmp, frame, instruction, "K0604",
+                     "%lld bytes from %lld is outside text of %u bytes",
+                     (long long)count, (long long)from, 0u);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/words.kest"],
@@ -14922,12 +14909,12 @@ fn main() -> i32 {
         "what": "a byte read past the end that says nothing about how long "
                 "the text was",
         "file": "src/vm.c",
-        "from": """                size_t length = seen + strlen(text + seen);
-                fail(vmp, frame, instruction, "K0604",
-                     "index %lld is outside text of %zu bytes",""",
-        "to": """                size_t length = (size_t)seen;
-                fail(vmp, frame, instruction, "K0604",
-                     "index %lld is outside text of %zu bytes",""",
+        "from": r"""                fail(vmp, frame, instruction, "K0604",
+                     "index %lld is outside text of %u bytes",
+                     (long long)index, text.length);""",
+        "to": r"""                fail(vmp, frame, instruction, "K0604",
+                     "index %lld is outside text of %u bytes",
+                     (long long)index, 0u);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/words.kest"],

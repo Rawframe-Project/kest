@@ -5760,6 +5760,29 @@ bool kest_still_holds(const KestRuntime *runtime, KestValue kept) {
     return kest_kept_where(runtime, kept) != KEST_KEPT_NOWHERE;
 }
 
+uint32_t kest_array_length(const KestRuntime *runtime, KestValue array,
+                           uint32_t *room) {
+    if (room != NULL) {
+        *room = 0;
+    }
+    // A handle is a pointer and nothing in it says whose: the same question
+    // every other door asks of one, which is whether this machine's heap
+    // handed it out. A number a host wrote into a slot is not an array however
+    // much it looks like one. See D630.
+    if (runtime == NULL || array.object == NULL ||
+        !kest_arena_holds(runtime->heap, array.object)) {
+        return 0;
+    }
+    const Array *held = array.object;
+    if (held->what != KEST_IS_ARRAY) {
+        return 0;
+    }
+    if (room != NULL) {
+        *room = held->capacity;
+    }
+    return held->length;
+}
+
 bool kest_lend_ends(KestRuntime *runtime, KestValue lent) {
     if (runtime == NULL) {
         return false;
