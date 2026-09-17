@@ -1,8 +1,7 @@
 CC ?= cc
 # Read out of the header rather than written here, so there is one place a
 # version is said. See D983.
-KEST_VERSION := $(shell sed -n 's/^#define KEST_VERSION_STRING "\(.*\)"$$/\1/p' \
-    include/kest.h)
+KEST_VERSION := $(shell grep KEST_VERSION_STRING include/kest.h | cut -d'"' -f2)
 WARN := -std=c11 -Wall -Wextra -Wshadow -Wconversion -Werror
 
 # The hosts are held to everything the library is except shadowing. Each is one

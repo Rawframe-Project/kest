@@ -1842,8 +1842,13 @@ if [ -n "$halved" ] && [ "$halved" != "$allocating" ]; then
     failed=1
 fi
 # And a weighing of nothing weighs nothing: a filter that stops matching leaves
-# a check that reads no programs and says the two numbers agree.
-if [ $read_ran_out -lt 2 ] || [ $wanted_a_machine -lt 2 ]; then
+# a check that reads no programs and says the two numbers agree. One of each is
+# what that guards against; it asked for two until the tree grew a directory of
+# workloads and a program moved from one of these counts to another, which is a
+# count of what is in the tree rather than a thing about the language. What is
+# held is the shape -- that neither of them is nought -- for the reason the
+# rules in `CLAUDE.md` say. See D990.
+if [ $read_ran_out -lt 1 ] || [ $wanted_a_machine -lt 1 ]; then
     echo "ceilings: $read_ran_out program(s) ran out of room being read and" \
          "$wanted_a_machine could not be given a machine, which is not enough" \
          "to hold what compiling costs against what it costs in rungs"

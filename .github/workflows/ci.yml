@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: two machines at once, under the thread sanitiser
+      - name: four machines of one build, under the thread sanitiser
         run: |
           make -j kest libkest.a
           cat > /tmp/two.kest <<'KEST'
@@ -58,30 +58,64 @@ jobs:
           }
           KEST
           cat > /tmp/two.c <<'EOF'
+          // Four machines of one build, each on a thread of its own. They are
+          // started here rather than in the workers: starting writes the
+          // build's own stamp counter, so which thread starts a machine is the
+          // host's to decide and it is this one. What runs at once is the
+          // running. See D988.
+          //
+          // Through pthreads rather than C11's own, which is what the gate's
+          // threads check uses: the thread sanitiser does not see through
+          // `thrd_create` and dies in its own interceptor before anything of
+          // this language has run. The threads are the harness and not the
+          // language, so which of the two makes them is the harness's to pick.
           #include <stdio.h>
-          #include <threads.h>
+          #include <pthread.h>
           #include "kest.h"
-          static KestBuild *build;
-          static int turning(void *given) {
-              (void)given;
-              KestRuntime *rt = kest_start(build, NULL, NULL);
-              if (rt == NULL) { return 1; }
+          static void *turning(void *given) {
+              KestRuntime *rt = given;
               KestValue frame[4] = {{0}};
               frame[0].integer = 200000;
-              kest_call(rt, kest_entry(rt, "work"), frame, 4);
-              kest_runtime_free(rt);
-              return 0;
+              int32_t at = kest_entry(rt, "work");
+              if (at < 0 || !kest_call(rt, at, frame, 4)) {
+                  return (void *)1;
+              }
+              return frame[0].integer == 599994 ? NULL : (void *)1;
           }
           int main(void) {
-              build = kest_build("/tmp/two.kest", NULL, stderr, KEST_FORM_TEXT, 0);
+              KestBuild *build = kest_build("/tmp/two.kest", NULL, stderr,
+                                            KEST_FORM_TEXT, 0);
               if (build == NULL) { return 1; }
-              thrd_t a, b, c, d;
-              thrd_create(&a, turning, NULL); thrd_create(&b, turning, NULL);
-              thrd_create(&c, turning, NULL); thrd_create(&d, turning, NULL);
-              thrd_join(a, NULL); thrd_join(b, NULL);
-              thrd_join(c, NULL); thrd_join(d, NULL);
+              KestRuntime *four[4];
+              pthread_t running[4];
+              for (int i = 0; i < 4; i++) {
+                  four[i] = kest_start(build, NULL, NULL);
+                  if (four[i] == NULL) {
+                      kest_build_report(build, stderr, KEST_FORM_TEXT);
+                      return 1;
+                  }
+              }
+              for (int i = 0; i < 4; i++) {
+                  if (pthread_create(&running[i], NULL, turning,
+                                     four[i]) != 0) {
+                      return 1;
+                  }
+              }
+              int wrong = 0;
+              for (int i = 0; i < 4; i++) {
+                  void *said = NULL;
+                  pthread_join(running[i], &said);
+                  wrong += said != NULL ? 1 : 0;
+              }
+              for (int i = 0; i < 4; i++) {
+                  kest_runtime_free(four[i]);
+              }
               kest_build_free(build);
-              printf("four machines of one build ran at once\n");
+              if (wrong != 0) {
+                  fprintf(stderr, "%d of four did not answer\n", wrong);
+                  return 1;
+              }
+              printf("four machines of one build ran at once and agreed\n");
               return 0;
           }
           EOF

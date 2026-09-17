@@ -1719,11 +1719,11 @@ tokens   what a token is and what it carries""",
         "what": "a name for an instruction there is not, with nothing counting",
         "file": "src/value.c",
         "from": r"""_Static_assert(sizeof(INSTRUCTIONS) / sizeof(INSTRUCTIONS[0]) ==
-                   KEST_OP_RETURN + 1,
+                   KEST_OP_STOP + 1,
                "every instruction has a name and nothing else does");""",
         "to": "",
-        "also": ["src/value.c", r"""    {"return", U16},""",
-                 r"""    {"return", U16}, {"return.none", U16},"""],
+        "also": ["src/value.c", r"""    {"stop", NONE},""",
+                 r"""    {"stop", NONE}, {"stop.none", NONE},"""],
         "make": [],
         "tool": "tools/check-tables.sh",
         "caught": "instructions: 157 kinds and 158 names",
@@ -7003,6 +7003,11 @@ struct Vec2 {""",
     case KEST_OP_CALL_VALUE:
     case KEST_OP_CALL_HOST:
     case KEST_OP_RETURN:
+    // Nothing compiles to this, so nothing this proof reads ever holds one.
+    // It is here because the switch has no `default` and that is the point of
+    // the switch: an instruction added to the language has to be decided
+    // about here rather than let through. See D991.
+    case KEST_OP_STOP:
         return false;""",
         "to": """    case KEST_OP_CALL:
         return true;
