@@ -9659,10 +9659,10 @@ memory""",
         # shape, which is the half of a boundary a host cannot see.
         "what": "a frame as wide as the arguments are many",
         "file": "src/compile.c",
-        "from": r"""static void close_body(Compiler *compiler, const KestBlock *block,
+        "from": r"""static bool close_body(Compiler *compiler, const KestBlock *block,
                        KestSpan declared) {
     compiler->body->param_slots = compiler->next_slot;""",
-        "to": r"""static void close_body(Compiler *compiler, const KestBlock *block,
+        "to": r"""static bool close_body(Compiler *compiler, const KestBlock *block,
                        KestSpan declared) {
     compiler->body->param_slots = (uint16_t)compiler->local_count;""",
         "make": ["kest", "embed"],
