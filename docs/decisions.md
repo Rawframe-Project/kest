@@ -31059,3 +31059,53 @@ is `tools/build.bat` and produces the same three binaries, and turning that into
 an archive is the same five lines in the batch file — what is missing is a
 reason to write them before there is a version to tag. The tarball is the shape
 and the second one follows it. *Measured*, on an archive unpacked and run.
+
+## D990. Where the gate's time goes, and why the holes stay
+
+Section 30 of the completion mission asks for the validation to be inspected
+rather than trimmed for its own sake: keep FAST fast, keep FULL useful, and
+"if historical-hole tests consume most time without unique semantic coverage,
+collapse or remove them."
+
+**Where the time goes**, measured on the machine this was written on:
+
+| | |
+| --- | --- |
+| `make fast` | 0.25 s |
+| `make check` | about 11 minutes |
+| of which `check-backstops.sh` | 6 m 34 s |
+| `check-ceilings.sh` | 37 s |
+| `check-costs.sh` | 7 s |
+| everything else | the rest |
+
+So the backstops are two thirds of it, and the condition's first half is met.
+
+**The second half is not, and that is the finding.** 855 holes carry a sentence
+they are caught by. 51 of those sentences are carried by more than one hole, and
+73 holes are the ones past the first. But a hole is not its sentence: six holes
+are caught by `K0505` and each of them breaks a *different place in the compiler
+that raises it*. Deleting five of them would leave five places in this compiler
+that nothing has ever been seen catching. That is coverage, and it is the only
+kind this project has of itself.
+
+What can be taken out is a hole whose *reading* has stopped being reachable, and
+one was this mission: "a cut that copies what was already ending", which stopped
+being a thing a cut does when text became two slots. That is the rule from here
+— a hole goes when what it is about goes, and not because another hole says the
+same sentence.
+
+**What was done instead.** The holes already run twelve at a time on twelve
+cores, each copying a tree that carries the built objects so a hole rebuilds one
+file and relinks. Six and a half minutes for 855 of those is about five and a
+half seconds each, and there is no idle in it. The gate is not slow for a reason
+anybody can remove; it is large because the net is.
+
+**And what a new one costs is still the rule.** This mission added six holes and
+deleted one, against thirteen new decisions and four new commands — because a
+defect gets a behavioural program and only a *new check* gets a hole. The list
+does not grow with the code; it grows with the checks, and there are ten of
+those.
+
+**FAST stayed fast.** Everything added this mission — the cost report, the
+server, the profiler, the project commands, the fuzzer, the reload corpus — is
+in FULL. `make fast` is what it was. *Measured.*

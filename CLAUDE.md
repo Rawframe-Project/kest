@@ -1115,9 +1115,15 @@ live in `tools/check-costs.sh` and `tools/check-tables.sh`, which take three
 seconds each and can be run on their own. Running the two of them before the
 gate turns an eighteen-minute round trip into six seconds.
 
-Seventy-five of the holes prove a sentence another hole already proves. They are
-left alone on purpose: the sentence is the same and the code path is not, and
-nine percent of six minutes is not worth the coverage.
+Seventy-three of the holes prove a sentence another hole already proves. They
+are left alone on purpose, and D990 is the inspection that says why: a hole is
+not its sentence. Six holes are caught by `K0505` and each breaks a different
+place in this compiler that raises it, so deleting five would leave five places
+nothing has ever been seen catching.
+
+A hole goes when what it is about goes, and not because another says the same
+thing. One went that way this year: "a cut that copies what was already ending"
+stopped being a thing a cut does when text became two slots.
 
 ## Two tiers
 
