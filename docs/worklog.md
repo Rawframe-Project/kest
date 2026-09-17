@@ -35676,3 +35676,28 @@ through.
 a loop that never ends, a thousand turns inside a thousand steps and not nine
 hundred and ninety-nine, and four hundred thousand bytes of text that will not
 copy inside a hundred steps and will inside forty thousand.
+
+## Who owns a machine (D952)
+
+A host that wants to run a program on a worker thread had to work out for itself
+what it was allowed to do. Three sentences now: a build is read-only once it is
+built, a machine is one thread's while it runs, and what another thread may do
+to a machine is ask it to stop.
+
+One field was in the way of the second — a build counts how many machines are
+standing on it, and two machines started on two threads would have counted
+themselves up at once. It is an atomic now, read with acquire against the
+release a machine counts itself off with. And a build still carried the stamp
+counter D936 moved into the machine, where nothing has counted since; it is
+gone, so what a machine writes in a build is one field.
+
+The gate asks it: two machines of one build on two threads answering the same
+number, and a third cancelled from the thread that is not running it, which says
+`K0660` at the instruction it had reached. ThreadSanitizer would be better
+evidence and does not work on this machine — a thread that does nothing but
+print dies inside the sanitiser — so what was used is the build that checks
+itself.
+
+**Runs:** `make check`, which has a `threads` section now; and the same host
+built against the sanitised objects, which answered 299995 twice and then
+`K0660`.

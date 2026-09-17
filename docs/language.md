@@ -4428,6 +4428,31 @@ machine stops at the next step the program takes, with the refusal a budget
 spent any other way gives. `examples/engine.c` charges for the door it watches
 the world through.
 
+## Who owns a machine
+
+A build is read-only once it is built. The program, the layouts and every piece
+of text a diagnostic points at are written once and read by every machine made
+from it afterwards; the one field of a build a machine writes is the count of
+how many are standing on it, which is an atomic, so machines may be started and
+freed from any thread.
+
+A machine is one thread's while it runs. Its heap, its stack, its stamps, its
+world and its report are its own, so two machines of one build may run at once
+on two threads and neither can see what the other is doing. That is what makes
+a program a thing a host can run on a worker thread, and it is asked rather than
+asserted: `make check` runs two machines of one build on two threads and
+compares what they answer.
+
+What may be done to a machine from another thread is ask it to stop.
+`kest_cancel` is one store of one word, written to be done from a signal handler
+or from another thread while the machine runs, and the gate does that too — a
+machine stopped from the thread that is not running it says `K0660` at the
+instruction it had reached. Everything else is the owning thread's.
+
+Nothing here locks anything. Two threads calling into one machine is two threads
+writing one stack, and nothing will say so. Concurrency inside the language —
+two things running in one machine — is not in v1.
+
 `kest_cancel` is the other half and costs the same nothing — a host that wants a
 running program to stop for a reason that is not a budget sets it and the
 machine stops the same way, saying `K0660` instead. It is one store of one word,
@@ -5042,7 +5067,7 @@ bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 502 lines:
-47940 bytes as tokens, 118145 as a tree, 154224 checked and 181009 compiled.
+47940 bytes as tokens, 118145 as a tree, 154208 checked and 180993 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
 
@@ -5059,7 +5084,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 17305 bytes, against the 181009 it costs to compile.
+file and 17305 bytes, against the 180993 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.

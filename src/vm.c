@@ -525,7 +525,7 @@ struct KestRuntime {
     uint32_t world;
     // The build's count of what is standing on it, which this machine is one
     // of until it is freed.
-    uint32_t *standing;
+    atomic_uint *standing;
     Array **lent;
     uint32_t lent_count;
     uint32_t lent_capacity;
@@ -4621,7 +4621,7 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     // Counted here rather than where machines are asked for, so that what
     // counts one up is beside what counts it down and a machine that was never
     // made was never counted.
-    ++*rt->standing;
+    atomic_fetch_add_explicit(rt->standing, 1u, memory_order_relaxed);
     // And from here what this machine says is written in its own room rather
     // than in the build's. Everything above this line is said by a machine
     // that never started, which is a machine nobody can ask: those words are
@@ -4703,7 +4703,9 @@ bool kest_runtime_free(KestRuntime *runtime) {
     // is being freed.
     KestArena *own = runtime->own;
     kest_arena_free(runtime->heap);
-    --*runtime->standing;
+    // Released, because a build freed on another thread has to see everything
+    // this machine did to the program before it counts itself off.
+    atomic_fetch_sub_explicit(runtime->standing, 1u, memory_order_release);
     kest_arena_free(own);
     return true;
 }

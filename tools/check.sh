@@ -478,6 +478,171 @@ say "budget" "a loop that never ends stops, a thousand turns is a thousand \
 steps and not nine hundred and ninety-nine, and work an instruction does is \
 charged for"
 
+# Who owns a machine. One machine is one thread's while it runs, and two
+# machines of one build are two worlds that may run at once -- what a build
+# holds is read-only once it is built, and the one field of it a machine writes
+# is the count of what is standing on it. Asked rather than asserted: two
+# threads, one build, a machine each, and then a machine cancelled from the
+# thread that is not running it. See D952.
+threads="$scratch"/threads
+cat > "$threads".kest <<'KEST'
+module threading
+
+extern fn Watch.started() -> i32
+
+fn work(n: i32) -> i32 no.alloc no.host deterministic {
+    let sum = 0
+    for i in 0..n {
+        sum += i % 7
+    }
+    return sum
+}
+
+fn forever() -> i32 {
+    let n = Watch.started()
+    while true {
+        n += 1
+    }
+    return n
+}
+KEST
+cat > "$threads".c <<'EOF'
+#include <stdio.h>
+#include <string.h>
+
+#include "kest.h"
+
+#ifdef __STDC_NO_THREADS__
+int main(void) {
+    printf("no threads\n");
+    return 0;
+}
+#else
+#include <stdatomic.h>
+#include <threads.h>
+
+static atomic_int running;
+
+static void watch_started(KestValue *frame, KestRuntime *runtime,
+                          void *context) {
+    (void)runtime;
+    (void)context;
+    atomic_store(&running, 1);
+    frame[0].integer = 0;
+}
+
+typedef struct {
+    KestRuntime *runtime;
+    const char *call;
+    int64_t answered;
+    int ran;
+} Worker;
+
+static int turning(void *given) {
+    Worker *worker = given;
+    KestValue frame[4] = {{0}};
+    frame[0].integer = 100000;
+    worker->ran = kest_call(worker->runtime,
+                            kest_entry(worker->runtime, worker->call), frame,
+                            4) ? 1 : 0;
+    worker->answered = frame[0].integer;
+    return 0;
+}
+
+static KestRuntime *machine(KestBuild *build) {
+    KestHost *host = kest_host_new();
+    if (host == NULL || !kest_host_bind(host, "Watch.started", watch_started,
+                                        NULL)) {
+        return NULL;
+    }
+    KestRuntime *runtime = kest_start(build, host, NULL);
+    kest_host_free(host);
+    return runtime;
+}
+
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        return 2;
+    }
+    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT, 0);
+    if (build == NULL) {
+        return 2;
+    }
+    // Two machines of one build, one thread each, both running at once. What
+    // they share is the program and nothing else: the heap, the stack, the
+    // stamps and the world are the machine's.
+    Worker first = {machine(build), "work", 0, 0};
+    Worker second = {machine(build), "work", 0, 0};
+    if (first.runtime == NULL || second.runtime == NULL) {
+        kest_build_report(build, stderr, KEST_FORM_TEXT);
+        return 3;
+    }
+    thrd_t one;
+    thrd_t two;
+    if (thrd_create(&one, turning, &first) != thrd_success ||
+        thrd_create(&two, turning, &second) != thrd_success) {
+        return 4;
+    }
+    thrd_join(one, NULL);
+    thrd_join(two, NULL);
+    if (!first.ran || !second.ran || first.answered != second.answered) {
+        fprintf(stderr,
+                "two machines of one build answered %lld and %lld\n",
+                (long long)first.answered, (long long)second.answered);
+        return 5;
+    }
+    printf("two machines answered %lld\n", (long long)first.answered);
+
+    // And a machine asked to stop by the thread that is not running it, which
+    // is one store of one word and is the only thing a host may do to a
+    // machine somebody else is running.
+    Worker held = {machine(build), "forever", 0, 0};
+    if (held.runtime == NULL) {
+        return 3;
+    }
+    atomic_store(&running, 0);
+    thrd_t spinning;
+    if (thrd_create(&spinning, turning, &held) != thrd_success) {
+        return 4;
+    }
+    while (atomic_load(&running) == 0) {
+    }
+    kest_cancel(held.runtime);
+    thrd_join(spinning, NULL);
+    if (held.ran) {
+        fprintf(stderr,
+                "a machine cancelled from another thread ran on\n");
+        return 6;
+    }
+    kest_report(held.runtime, stdout, KEST_FORM_TEXT);
+    if (!kest_runtime_free(held.runtime) ||
+        !kest_runtime_free(first.runtime) ||
+        !kest_runtime_free(second.runtime) || !kest_build_free(build)) {
+        fprintf(stderr,
+                "what two threads made could not be given back\n");
+        return 7;
+    }
+    return 0;
+}
+#endif
+EOF
+if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$threads" "$threads".c \
+        libkest.a -lm 2>"$scratch"/check-why; then
+    complain "threads" "the host that runs two machines at once does not build"
+    sed 's/^/    /' "$scratch"/check-why | head -3
+elif ! said=$("$threads" "$threads".kest 2>&1); then
+    complain "threads" "two machines of one build on two threads: $said"
+elif [ "${said#*no threads}" != "$said" ]; then
+    say "threads" "this C library has no threads of its own, so who owns a \
+machine was not asked"
+elif [ "${said#*K0660}" = "$said" ]; then
+    complain "threads" "a machine cancelled from another thread said \
+\`$(printf '%s' "$said" | tail -1)\`"
+else
+    say "threads" "two machines of one build ran at once and one was stopped \
+from the thread that was not running it"
+fi
+
 # Every word this language keeps, written where a name belongs. It has to be
 # refused there — the parse wants a name and a keyword is not one — and what
 # this holds is that it is refused *in a moment*. One of them was not: a

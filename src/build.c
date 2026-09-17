@@ -326,7 +326,12 @@ bool kest_build_free(KestBuild *build) {
         // Nothing to free is not a refusal, the same as freeing no machine.
         return true;
     }
-    if (build->module.machines > 0) {
+    // Acquired against the release a machine counts itself off with: a build
+    // freed on one thread has to see what a machine on another did before it
+    // went. See D952.
+    unsigned standing = atomic_load_explicit(&build->module.machines,
+                                             memory_order_acquire);
+    if (standing > 0) {
         // The program is in here and the machines are standing on it: what
         // they run, what their layouts say, and every piece of text a
         // diagnostic points at are all on this arena. Freeing it under them is
@@ -336,8 +341,7 @@ bool kest_build_free(KestBuild *build) {
         kest_diags_add(&build->diags, KEST_SEVERITY_ERROR, "K0640", nowhere,
                        "this build cannot be freed while %u machine%s standing "
                        "on it",
-                       build->module.machines,
-                       build->module.machines == 1 ? " is" : "s are");
+                       standing, standing == 1 ? " is" : "s are");
         kest_diags_suggest(&build->diags,
                            "free every machine this build made, and then the "
                            "build");

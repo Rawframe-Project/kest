@@ -1,6 +1,8 @@
 #ifndef KEST_VALUE_H
 #define KEST_VALUE_H
 
+#include <stdatomic.h>
+
 #include "kest.h"
 #include "types.h"
 
@@ -411,18 +413,18 @@ typedef struct {
     KestExtern *externs;
     uint32_t extern_count;
     uint32_t extern_capacity;
-    // What the next place handed out in a store is stamped with. It is here
-    // rather than in a machine because two machines from one build are two
-    // worlds of one program, and a reference from one of them handed to the
-    // other would otherwise name whatever is standing in that place: both
-    // would have started counting at one. See D316.
-    uint32_t stamps;
     // How many machines are standing on this program. Freeing the build takes
     // the program out from under every one of them, so the build is refused
-    // while any of them is still there. It is here for the same reason the
-    // stamps are: what the machines have in common is the build, and this is
-    // the part of it they all touch. See D324.
-    uint32_t machines;
+    // while any of them is still there. It is here because what the machines
+    // have in common is the build, and it is the one field of a build a
+    // machine writes -- which is why it is an atomic: two machines started on
+    // two threads count themselves up at once, and a count that is not one is
+    // a build freed under a machine that is still running. See D324 and D952.
+    //
+    // What said a stamp counter belonged here too was D316, and D936 moved it
+    // into the machine: two machines of one build are two worlds and a
+    // reference carries which. Nothing counts stamps here now.
+    atomic_uint machines;
     // Whether a chunk could not be given another byte or another constant.
     // What that leaves behind is a body with the end missing, which reads as
     // an instruction of the wrong width to anything that walks it -- so the

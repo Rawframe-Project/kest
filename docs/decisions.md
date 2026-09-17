@@ -29418,3 +29418,47 @@ the machine stops at the next step the program takes.
 What it is not is a way for a host to bound itself. A door that takes a second
 takes a second whatever it charges; what this buys is that the program is told,
 which is what a budget is for.
+
+## D952: one machine is one thread's, and two machines are two worlds
+
+A host that wants to run a program on a worker thread has to know what it is
+allowed to do, and this library had never said. What it had instead was a set of
+true facts nobody had put together: a build is read-only once it is built, a
+machine's heap and stack and world are its own, and `kest_cancel` is one store
+of one word so that a signal handler can use it.
+
+So the promise is written down and it is three sentences. **A build is
+read-only.** The program, the layouts, and every piece of text a diagnostic
+points at are written once and read after. **A machine is one thread's while it
+runs.** Everything it changes is its own, so two machines of one build may run
+at once and neither can see the other. **What another thread may do to a machine
+is stop it**, which is the one store of one word `kest_cancel` already was.
+
+**One field was in the way.** A build carries how many machines are standing on
+it, counted up when one starts and down when one is freed, and that is the one
+field of a build a machine writes. Two machines started on two threads would
+have counted themselves up at once, and a count that came out at one is a build
+freed under a machine that is still running. It is an atomic now, and the count
+is read with acquire against the release a machine counts itself off with.
+
+And a field that was in the way of reading it: a build still carried a stamp
+counter that D936 moved into the machine, where nothing has counted since. It is
+gone, so what a machine writes in a build is one field and can be said in a
+sentence.
+
+**It is asked rather than asserted.** `make check` builds a host that runs two
+machines of one build on two threads and compares what they answer, and then
+starts a third, lets it run, and cancels it from the thread that is not running
+it — which has to come back as `K0660` at the instruction it had reached. Where
+the C library has no threads of its own the check says so rather than passing
+quietly.
+
+ThreadSanitizer would be better evidence than a run that agrees, and it does not
+work on the machine this was written on: a program whose thread does nothing but
+print dies in the sanitiser's own code before it runs. What was used instead is
+the build that checks itself, which says nothing about races and does say
+whether two threads left the heap and the stacks intact.
+
+What is not promised: nothing here locks anything, two threads calling into one
+machine is two threads writing one stack, and concurrency inside the language is
+not in v1.

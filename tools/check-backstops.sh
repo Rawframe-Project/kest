@@ -5791,7 +5791,7 @@ anywhere, and it is why the gate holds""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "118146 as a tree, 154224 checked",
+        "caught": "118146 as a tree, 154208 checked",
     },
     {
         # And the section they are in saying whose machine they are. Bytes of
@@ -12738,7 +12738,7 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # after this one is a machine reading memory that has been given back.
         "what": "a build freed out from under its machines",
         "file": "src/build.c",
-        "from": """    if (build->module.machines > 0) {""",
+        "from": """    if (standing > 0) {""",
         "to": """    if (false) {""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
@@ -12750,8 +12750,10 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # it reads is nought, and every host is told its machines are gone.
         "what": "a build that never counts a machine it made",
         "file": "src/vm.c",
-        "from": """    ++*rt->standing;""",
-        "to": """    if (rt == NULL) { ++*rt->standing; }""",
+        "from": """    atomic_fetch_add_explicit(rt->standing, 1u, memory_order_relaxed);""",
+        "to": """    if (rt == NULL) {
+        atomic_fetch_add_explicit(rt->standing, 1u, memory_order_relaxed);
+    }""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "did not say how many were standing on it",
@@ -12788,7 +12790,7 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "to": """    if (unbound) {
         kest_arena_free(rt->heap);
         kest_arena_free(own);
-        ++*rt->standing;
+        atomic_fetch_add_explicit(rt->standing, 1u, memory_order_relaxed);
         return NULL;
     }""",
         "make": ["kest", "embed"],

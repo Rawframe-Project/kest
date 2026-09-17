@@ -501,6 +501,25 @@ typedef void (*KestNative)(KestValue *frame, KestRuntime *runtime,
 // which of the three it was is in the report and nowhere else.
 KestValue kest_text(KestRuntime *runtime, const char *bytes, uint32_t length);
 
+// Who owns what, which is the whole of what this library promises about
+// threads. A build is read-only once it has been built: the program, the
+// layouts, the text a diagnostic points at, all of it is written once and read
+// by every machine after. The one field of it a machine writes is the count of
+// how many are standing on it, and that is an atomic, so machines may be
+// started and freed from any thread.
+//
+// A machine is one thread's while it runs. Everything it changes is its own --
+// its heap, its stack, its stamps, its world, its report -- so two machines of
+// one build may run at once on two threads and neither can see what the other
+// is doing. What may be done to a machine from another thread is ask it to
+// stop: `kest_cancel` is one store of one word and is written to be done from
+// a signal handler or from another thread while the machine runs. Everything
+// else here is the owning thread's.
+//
+// What this library does not do is lock anything. Two threads calling into one
+// machine is two threads writing one stack, and nothing here will tell you.
+// See D952.
+
 // A machine that did not start is a machine with nothing in it. `kest_start`
 // answers NULL and writes why into the build's report, which is where a host
 // finds out; a host that carries on regardless gets, at every door below, the
