@@ -31170,3 +31170,122 @@ It does not set a breakpoint inside a call the host makes back in. And it is a
 command line rather than DAP — one surface finished beats two started, and the
 editor extension starts `kest lsp` rather than this. *Measured*, on a program
 driven through it in the gate.
+
+## D992. The persistent memory story, said once
+
+Section 9 of the completion mission asks for exactly one documented default
+persistent memory story and forbids leaving it at "arena plus user discipline"
+or "currently arena until we decide". This is that one story, gathered from the
+decisions that made it.
+
+**Kest 1.0 has no managed persistent heap, and the evidence is the trial.** A
+world with a constant live set, worked on for a hundred times the usual
+horizon, runs in the room it started in:
+
+| | 100 rounds | 1000 | 10000 |
+| --- | --- | --- | --- |
+| `keep` | 482K | 482K | 482K |
+| `reuse` | 482K | 482K | 482K |
+
+Flat to the byte across a hundredfold. Section 9's criterion is under five per
+cent of growth across a tenfold; this is nought across a hundredfold. A
+collector is the answer to a question this language does not have.
+
+**What the story is**, in the order a program meets it:
+
+- **A value is a value.** A struct is copied; a run of them is a run of them.
+  Nothing is shared that was not handed over.
+- **What a thing holds, it keeps.** An array is a buffer with room in it, and
+  `fit`, `clear` and `room` write into what is already there (D940). A world
+  that writes into what its things already hold does not grow, which is `reuse`.
+- **What a round builds, a block puts back.** `scratch { }` is working memory
+  that goes back where it was, proved not to escape (D966), and it will not
+  grow what outlives it (D972).
+- **What a round wants to keep, it copies.** Build in the block, copy into the
+  buffer the thing already owns — which is `keep`, and is why a world whose
+  text changes every round is flat (D967).
+- **What is taken out is taken out.** A store hands its places back, and a
+  reference to a place that was handed out again reads as nothing (D975).
+- **What is abandoned is not collected**, and that is the one thing a program
+  has to know: `replace` — a new piece of text and a new run of numbers every
+  round, the old ones dropped — grows, and the trial says by how much. The
+  language refuses nothing there; it makes the other way writable and measures
+  both.
+
+**What a host has, under all of it**: a heap it sized, a ceiling it set, and
+`kest_reset` to throw the whole of it away between worlds. That is the fourth
+thing, and it is the one a frame-budgeted host actually reaches for.
+
+**And what would have changed this.** If the trial had climbed, section 9 names
+what to do about it, and the shape of the answer would have been a store owning
+its payloads rather than a tracing collector — because the identity is already
+checked and the domain is already bounded. It did not climb. *Measured*, on
+`examples/churn.kest` at a hundredfold.
+
+## D993. Bytes are `[u8]`, and a buffer is one with room in it
+
+Section 10 of the completion mission asks for a `bytes` abstraction distinct
+from text and a reusable `buffer`, and lists what each has to do.
+
+**Bytes are `[u8]`, and that is the whole of it.** Arbitrary bytes including
+nought; `len` is a read; a host lends one with `kest_borrow` and reads it back
+as `(address, count)`; it is a different type from `text` and the compiler says
+so. Every requirement in the section is met by a type this language already
+had, and a second one would be the same thing with another name.
+
+**A buffer is an array with room in it.** `array(n, v)` then `clear` is a run
+with room for `n` and nothing in it (D940); `room(a, n)` asks for more; `push`
+grows; `fit` writes where there is room and answers `false` where there is not,
+which is what makes filling one a thing a `no.alloc` body can do. There is no
+freeze: text made out of a buffer is a copy, because a cut that shared the
+buffer would be text that changes when somebody writes into it.
+
+**What goes between them.** `text.bytes(t)` takes a piece of text apart and
+`text(a)` puts one back together, walking it once to hold it to being UTF-8
+(D971). That walk is the only place either conversion costs anything, and it is
+where it belongs: a run of bytes is whatever it holds and text is UTF-8, so the
+door between them is where the difference is paid for.
+
+**What is not there and is not coming.** No `bytes` keyword, no `buffer` type,
+no builder object. Three names for one thing is three things to learn and three
+things to hold in step. *Argued*, and held by the library: `std.text` is written
+in terms of `[u8]` and its `no.alloc` promises are what says the buffer works.
+
+## D994. The reference is the normative one
+
+Section 7 of the completion mission asks for a concise normative specification
+that becomes the semantic authority for the checker, the compiler, the machine,
+the tests, the debugger, the determinism corpus and the FFI — and says it is
+not documentation theatre.
+
+**It is `docs/language.md`, and it already was.** What section 7 lists as the
+minimum — value against identity, aggregate copying, evaluation order,
+assignment order, aliasing, mutation, overflow, shifts, division, narrowing,
+float to integer, the f32 and f64 profile, traps, `defer` ordering, direct and
+indirect calls, generic instances, contract compatibility, recursion, arrays,
+stores, references, iteration, invalidation, relocation, equality, text and
+bytes, the three promises, fuel, cancellation, every ceiling, host failure and
+what state may already have changed — is in it, with a section each.
+
+Writing a second document beside it would be two documents to keep in step, and
+the one that is held to a run would win every disagreement anyway. So what was
+missing was not a document: it was **saying which one is the authority.** This
+says it, and `CLAUDE.md` says it where a reader meets the six.
+
+**What holds it there.** `check-docs.sh` holds every diagnostic the reference
+quotes to being one a run of this compiler says, every JSON name to one a run
+writes and back, every command and option to one the command line answers to,
+every library call to one the library has, every file it names to being there,
+every `kest` block to parsing and being in the one form, every block that
+declares a `main` to compiling, running and writing what is written under it,
+and every figure it quotes to what a run answers. That is what makes it
+normative rather than descriptive: a sentence in it that stopped being true is
+a check that fails.
+
+**Where it and the compiler disagree**, one of them is a defect, and the rule is
+that the reference says what the answer is meant to be. Three times this mission
+the compiler was right and the reference was stale — the clock's fallbacks, what
+a nought inside text is, what `--version` prints — and each time the reference
+was the thing that changed, because each time the compiler's behaviour was the
+one that had been thought about. That is not the rule failing; it is the rule
+working in the direction it usually works. *Argued.*
