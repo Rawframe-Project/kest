@@ -10923,8 +10923,8 @@ fn main() -> i32 {
     for (uint32_t i = 0; i < count; i++) {
         put_char(printer, '\n');
         indent(printer);""",
-        "to": r"""    uint32_t held = printer->depth;
-    printer->depth = printer->column / 4;
+        "to": r"""    int held = printer->depth;
+    printer->depth = (int)(printer->column / 4);
     for (uint32_t i = 0; i < count; i++) {
         put_char(printer, '\n');
         indent(printer);""",
