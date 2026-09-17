@@ -4743,10 +4743,12 @@ for file in "$@"; do""",
         "file": "src/value.c",
         "from": r"""                chunk->no_alloc ? "true" : "false",
                 chunk->no_host ? "true" : "false",
-                chunk->deterministic ? "true" : "false");""",
+                chunk->deterministic ? "true" : "false",
+                (unsigned long long)body_mark(chunk));""",
         "to": r"""                "false",
                 chunk->no_host ? "true" : "false",
-                chunk->deterministic ? "true" : "false");""",
+                chunk->deterministic ? "true" : "false",
+                (unsigned long long)body_mark(chunk));""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -6124,10 +6126,12 @@ fn main() -> i32 {
         # layout to what made it see kinds, which are not places. See D899.
         "what": "a run of something placed where it does not fit",
         "file": "src/value.c",
-        "from": """            at = describe(pieces, at, type->element,
-                          (uint16_t)(base + i * type->element->byte_size));""",
-        "to": """            at = describe(pieces, at, type->element,
-                          (uint16_t)(base + i * (type->element->byte_size + 1)));""",
+        "from": """            at = describe(arena, pieces, at, type->element,
+                          (uint16_t)(base + i * type->element->byte_size),
+                          under(arena, path, which, true));""",
+        "to": """            at = describe(arena, pieces, at, type->element,
+                          (uint16_t)(base + i * (type->element->byte_size + 1)),
+                          under(arena, path, which, true));""",
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "arguments": [],
@@ -6158,11 +6162,13 @@ fn main() -> i32 {
         "from": """        if (type->member_count == 0) {
             pieces[at].offset = base;
             pieces[at].kind = KEST_L_NOTHING;
+            pieces[at].name = path;
             return at + 1;
         }""",
         "to": """        if (false) {
             pieces[at].offset = base;
             pieces[at].kind = KEST_L_NOTHING;
+            pieces[at].name = path;
             return at + 1;
         }""",
         "make": ["kest"],
@@ -11392,9 +11398,11 @@ static const Keyword KEYWORDS[] = {
         "file": "src/value.c",
         "from": """        pieces[at].offset = base;
         pieces[at].kind = KEST_L_TAG;
+        pieces[at].name = path;
         at++;""",
         "to": """        pieces[at].offset = base;
         pieces[at].kind = type->slots > 1 ? KEST_L_TAG : KEST_L_I32;
+        pieces[at].name = path;
         at++;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
@@ -11926,13 +11934,9 @@ fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc no.host deterministic 
         # writes.
         "what": "a public header only some compilers will read",
         "file": "include/kest.h",
-        "from": """typedef struct {
-    uint16_t offset;
-    uint8_t kind;
+        "from": """    const char *name;
 } KestPiece;""",
-        "to": """typedef struct {
-    uint16_t offset;
-    uint8_t kind;
+        "to": """    const char *name;
     char spare[0];
 } KestPiece;""",
         "make": ["kest"],

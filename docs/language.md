@@ -2941,8 +2941,8 @@ the two cannot come apart about what a name means.
 The lend compares the size, because the size is what it is given. Two types of
 the same size with their fields in a different order are the same size, so a
 host that cares compares where the fields are: the layout says one piece a
-slot, each a byte offset and what is there, and `offsetof` says the same thing
-on the host's side. It says what the whole is aligned to as well, which is not
+slot, each a byte offset, what is there and what the program calls it, and
+`offsetof` says the first two on the host's side. It says what the whole is aligned to as well, which is not
 the size and is not in the pieces: it is where a host may put one, and
 `_Alignof` says it there. A host lending an array of something the program
 reads eight bytes at a time has to have put it where an eight byte read is
@@ -2959,6 +2959,17 @@ that say what they are; the word says some piece is a payload, not that there
 is nothing to walk. A host reads the tag and knows what a payload holds; what
 it must not do is take one for the machine word a handle is, which is what
 those pieces were called before they had a name of their own.
+
+**What a piece is called** is a path from the value being asked about rather
+than a word: `x` for a field, `where.x` for a field of a field, `cells[2].at`
+for one of a run laid out where it stands. It is null where a piece is nobody's
+field — a scalar asked about on its own, the byte that says whether an optional
+is there, a slot a case carries, which `kest_case_of` names instead. A host
+doing schema work — a save format, a reloader, something matching a program
+against bytes it already has — was reading names out of `check --json` and bytes
+out of the layout, which is two doors for one question and two things to keep in
+step. `examples/embed.c` reads the seven pieces of a `Row` by name before it
+lends one.
 
 A refused lend points at the declaration it is about. Two types of one name
 carry a note at each, and the fix names the one that can be asked for, since a
@@ -4979,7 +4990,7 @@ bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 502 lines:
-47940 bytes as tokens, 118145 as a tree, 154224 checked and 180819 compiled.
+47940 bytes as tokens, 118145 as a tree, 154224 checked and 181009 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
 
@@ -4996,20 +5007,43 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 17305 bytes, against the 180819 it costs to compile.
+file and 17305 bytes, against the 181009 it costs to compile.
 
-Each function `check` lists carries an `id`: a number standing for which
-declaration it is, folded from the qualified name, the types it takes and gives,
-and the promises. It survives a blank line, a comment, a moved declaration, a
-renamed local and a changed body, and it moves when the signature or a promise
-moves — so a tool watching a program can tell the thing it saw yesterday from a
-different thing with the same name.
+Four things get called identity, and they are four different questions. What a
+`check` listing answers is the second of them.
+
+| | The question | Where it is answered |
+| --- | --- | --- |
+| the declaration | which declaration is this | its module, name and place, which `check` lists |
+| the signature | what does it promise a caller | `signature`, below |
+| the body | what did it compile to | `body`, which `emit` says per chunk |
+| an object | which value is this, while it runs | a `ref`, which is a world, a stamp and a place |
+
+Each function `check` lists carries a `signature`: a number folded from the
+qualified name, the types it takes and gives, and the promises. It survives a
+blank line, a comment, a moved declaration, a renamed local, a changed body and
+a generic's type parameter renamed — `fn pick<T>(a: T) -> T` and the same
+declaration written with `U` are one signature, because the name is the
+declaration's own and no caller can see it. It moves when the signature or a
+promise moves, which is when a caller has to be told.
 
 ```json
 { "name": "id.alpha", "parameters": ["i32"], "gives": "i32",
   "noAlloc": false, "noHost": false, "deterministic": false,
-  "foreign": false, "named": true, "id": "dfe41484f0987403" }
+  "foreign": false, "named": true, "signature": "dfe41484f0987403" }
 ```
+
+What it is not is a name that survives refactoring: a declaration renamed or
+moved to another module is a different signature, which is the truth rather
+than a shortcoming — a host that has to follow a declaration across a rename
+needs a mapping somebody wrote down, and a fold of the current spelling cannot
+be one.
+
+Each chunk `emit` lists carries a `body`: a number folded from the instructions
+and the constants they reach, and nothing else. It is what a host rebuilding a
+body asks — this function's code changed and its signature did not — and it is
+not a semantic identity: two bodies that mean the same thing and compile
+differently are two numbers.
 
 `parse` says what that tree is made of beside what it cost, and `check` says how
 many types it made beside the ones a program declares — one for every signature,
@@ -5482,9 +5516,11 @@ shape:
 {
   "layouts": [
     {"bytes": 8, "align": 4, "tagged": false, "of": "doc.Point",
-     "pieces": [{"byte": 0, "is": "i32"}, {"byte": 4, "is": "i32"}]},
+     "pieces": [{"byte": 0, "is": "i32", "name": "x"},
+                {"byte": 4, "is": "i32", "name": "y"}]},
     {"bytes": 8, "align": 4, "tagged": true, "of": "doc.Shape",
-     "pieces": [{"byte": 0, "is": "i32"}, {"byte": 4, "is": "payload"}]}
+     "pieces": [{"byte": 0, "is": "i32", "name": null},
+                {"byte": 4, "is": "payload", "name": null}]}
   ],
   "hosts": ["Host.sqrt", "Host.write"],
   "needs": {
@@ -5506,6 +5542,7 @@ shape:
       "noAlloc": false,
       "noHost": false,
       "deterministic": false,
+      "body": "f742d7f540da42c1",
       "why": null,
       "where": null,
       "least": {"slots": 8, "frames": 2},

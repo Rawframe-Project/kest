@@ -29186,3 +29186,68 @@ What it does not read is a hole that writes after a file rather than into one:
 those quote nothing, which is why they are written that way — a worklog's last
 entry is whichever is last, and what stays true is that another can be put
 after it.
+
+## D945: four things get called identity, and they are four questions
+
+`check --json` answered a number called `id`, folded from a declaration's
+qualified name, the types it takes and gives, and its promises. The name was
+wrong in a way that matters: a host reading it for what a name suggests — this
+declaration, the same one it saw yesterday, across whatever happened in between
+— was reading a fold of the current spelling, which survives a comment and a
+moved line and does not survive a rename.
+
+So the four are written down and named apart. **The declaration** is its module,
+its name and where it is written, which `check` already lists. **The signature**
+is what it promises a caller — the name, the types, the promises — and is what
+that number is; it is called `signature` now. **The body** is what it compiled
+to, which `emit` says per chunk as `body`, folded from the instructions and the
+constants they reach and nothing else. **An object** is a `ref`, which is a
+world, a stamp and a place, and is not any of the other three.
+
+**The signature no longer moves when a generic's type parameter is renamed.**
+`fn pick<T>(a: T, b: T) -> T` and the same declaration written with `U` are one
+function said twice: the name is the declaration's own, no caller can see it,
+and a fingerprint that told them apart moved when nothing a caller could act on
+had. The fold writes a type parameter as where it stands in the declaration's
+list rather than as what somebody called it. Which position it is in is part of
+the signature and stays so, because a call that writes its types out binds them
+by position.
+
+**The body is what a reload asks about.** A host rebuilding one function wants
+to know that this body changed and this signature did not; those were one number
+before, so any change to either meant both. The body fold leaves out the name,
+what it takes and gives, and the promises — they are the signature's — and it is
+not offered as a semantic identity: two bodies that mean the same thing and
+compile differently are two numbers, and the document says so.
+
+What this does not do is pretend a fold of a spelling survives refactoring. A
+declaration renamed or moved is a different signature. A host that has to follow
+one across a rename needs a mapping somebody wrote down, which is the next piece
+of this and is not a hash.
+
+## D946: a piece of a layout says what the program calls it
+
+A layout said where each piece of a value sits and what is there, and not what
+it is called. A host doing schema work — a save format, a reloader, something
+matching a program it has just read against bytes it already has — needs both,
+and was reading the names out of `check --json` and the bytes out of the layout:
+two doors for one question, joined by a rule the host had to keep for itself.
+
+So a piece carries its name. It is a path rather than a word, because a piece is
+a slot of the whole value and not of the field it came from: `x` for a field,
+`where.x` for a field of a field, `cells[2].at` for one of a run laid out where
+it stands. Null where a piece is nobody's field — a scalar asked about on its
+own, the byte that says whether an optional is there, and a slot a case carries,
+which is named by the case rather than by the shape and has `kest_case_of` for a
+door.
+
+It is said in all three places a layout is said in: what a host reads through
+`kest_build_layout` and `kest_frame_layout`, the words `emit` prints, and the
+object `emit --json` writes, which `check-commands.sh` holds to each other.
+`examples/embed.c` reads the seven pieces of a `Row` by name before it lends
+one, which is the door being used rather than declared.
+
+What it does not do is make a layout a schema. A schema is a thing a host keeps
+between two versions of a program and this is what one version says; the part
+that maps a field somebody renamed onto the field it used to be is a mapping
+written down, and that is the next piece.

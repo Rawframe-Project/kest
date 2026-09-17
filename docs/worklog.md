@@ -35562,3 +35562,35 @@ read before anything is copied now. A tree with two of them moved says so in
 **Runs:** `tools/check-backstops.sh` whole, 6m46s, 836 holes that run something;
 and the same file over a copy with two quotations deliberately moved, which
 refuses in 0.114s and names them.
+
+## Four identities, and a layout that says what it is looking at (D945, D946)
+
+`check --json` answered a number called `id`. A host reading it for what the
+name suggests — this declaration, the one it saw yesterday, whatever happened in
+between — was reading a fold of the current spelling.
+
+So the four things that get called identity are written down and named apart:
+the declaration, which is its module and name and place; the signature, which is
+what it promises a caller and is what that number folds and is called
+`signature` now; the body, which is what it compiled to and is a new number
+`emit` says per chunk; and an object, which is a `ref` and is a world, a stamp
+and a place. A host rebuilding one function asks the third and not the second,
+and those were one number before.
+
+The signature also stopped moving when a generic's type parameter is renamed.
+`fn pick<T>(a: T) -> T` and the same declaration written with `U` are one
+function said twice, and the fold writes a type parameter as where it stands in
+the declaration's list rather than as what somebody called it. Which position it
+is in is still part of it, because a call that writes its types out binds them
+by position.
+
+And a piece of a layout says what the program calls it, as a path rather than a
+word: `cells[2].at` is a piece of a `Row`, not of a `Cell`. That was the gap the
+boundary audit found — a host doing schema work read names out of `check --json`
+and bytes out of the layout, two doors for one question. `examples/embed.c`
+reads the seven pieces of a `Row` by name before it lends one.
+
+**Runs:** `make check`; `examples/embed` for the names a host reads; two copies
+of one module differing only in a type parameter's name, answering one
+signature; and a body fingerprint that survives a comment and moves when the
+body does.

@@ -187,6 +187,17 @@ KestSlot kest_slot_of(uint8_t kind);
 typedef struct {
     uint16_t offset;
     uint8_t kind;
+    // What the program calls this piece, as a path from the value a host is
+    // asking about: `x` for a field, `where.x` for a field of a field,
+    // `cells[2]` for one of a run laid out where it stands. NULL where a piece
+    // is not a named thing -- a scalar asked about on its own, a slot a case
+    // carries, the byte that says whether an optional is there.
+    //
+    // A host doing schema work -- a save format, a reloader, something
+    // matching a program against bytes it already has -- was reading names out
+    // of `check --json` and bytes out of here, which is two doors for one
+    // question and two things to keep in step. See D946.
+    const char *name;
 } KestPiece;
 
 // How a value is laid out in memory, as against how it sits on the stack. One

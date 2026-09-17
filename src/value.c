@@ -336,13 +336,33 @@ static bool holds_a_tag(const KestType *type) {
     return false;
 }
 
+// A field's name under the one it is a field of, which is what a host asking
+// about a shape reads a piece by. Made where the piece is, because the walk
+// below is the only place that knows both halves. See D946.
+static const char *under(KestArena *arena, const char *path, const char *name,
+                         bool an_index) {
+    if (path == NULL) {
+        return an_index ? NULL : name;
+    }
+    size_t room = strlen(path) + strlen(name) + 2;
+    char *joined = KEST_ARENA_ARRAY(arena, char, room);
+    if (joined == NULL) {
+        return path;
+    }
+    snprintf(joined, room, an_index ? "%s%s" : "%s.%s", path, name);
+    return joined;
+}
+
 // One piece per slot, in the order the slots are, each with where it is in
-// memory. A nested struct contributes its own pieces at its own offset.
-static uint16_t describe(KestPiece *pieces, uint16_t at, const KestType *type,
-                         uint16_t base) {
+// memory and what the program calls it. A nested struct contributes its own
+// pieces at its own offset and under its own name.
+static uint16_t describe(KestArena *arena, KestPiece *pieces, uint16_t at,
+                         const KestType *type, uint16_t base,
+                         const char *path) {
     if (type == NULL) {
         pieces[at].offset = base;
         pieces[at].kind = KEST_L_WORD;
+        pieces[at].name = path;
         return at + 1;
     }
     if (type->tag == KEST_T_STRUCT) {
@@ -353,11 +373,13 @@ static uint16_t describe(KestPiece *pieces, uint16_t at, const KestType *type,
         if (type->member_count == 0) {
             pieces[at].offset = base;
             pieces[at].kind = KEST_L_NOTHING;
+            pieces[at].name = path;
             return at + 1;
         }
         for (uint32_t i = 0; i < type->member_count; i++) {
-            at = describe(pieces, at, type->members[i].type,
-                          (uint16_t)(base + type->members[i].byte_offset));
+            at = describe(arena, pieces, at, type->members[i].type,
+                          (uint16_t)(base + type->members[i].byte_offset),
+                          under(arena, path, type->members[i].name, false));
         }
         return at;
     }
@@ -365,14 +387,21 @@ static uint16_t describe(KestPiece *pieces, uint16_t at, const KestType *type,
     // inside a struct is.
     if (type->tag == KEST_T_FIXED) {
         for (uint32_t i = 0; i < type->count; i++) {
-            at = describe(pieces, at, type->element,
-                          (uint16_t)(base + i * type->element->byte_size));
+            char which[16];
+            snprintf(which, sizeof(which), "[%u]", i);
+            at = describe(arena, pieces, at, type->element,
+                          (uint16_t)(base + i * type->element->byte_size),
+                          under(arena, path, which, true));
         }
         return at;
     }
     if (type->tag == KEST_T_OPTIONAL) {
-        at = describe(pieces, at, type->element, base);
+        at = describe(arena, pieces, at, type->element, base, path);
         pieces[at].offset = (uint16_t)(base + type->element->byte_size);
+        // The byte that says whether it is there is not the field: a host
+        // reading names off these is reading what a program wrote, and nobody
+        // wrote this one.
+        pieces[at].name = NULL;
         // The byte says it is the one that says whether the value is there,
         // rather than saying it is a byte. What is worth saying is what a host
         // cannot work out: a number, this byte and a number is a shape a
@@ -397,6 +426,7 @@ static uint16_t describe(KestPiece *pieces, uint16_t at, const KestType *type,
         // says so. See D708.
         pieces[at].offset = base;
         pieces[at].kind = KEST_L_TAG;
+        pieces[at].name = path;
         at++;
 
         const KestVariantType *widest = NULL;
@@ -413,12 +443,16 @@ static uint16_t describe(KestPiece *pieces, uint16_t at, const KestType *type,
                                  : 4;
             pieces[at].offset = (uint16_t)(base + where);
             pieces[at].kind = KEST_L_PAYLOAD;
+            // What a case carries is named by the case rather than by the
+            // shape: `kest_case_of` is the door to those.
+            pieces[at].name = NULL;
             at++;
         }
         return at;
     }
     pieces[at].offset = base;
     pieces[at].kind = kest_scalar_of(type);
+    pieces[at].name = path;
     return at + 1;
 }
 
@@ -537,8 +571,8 @@ static bool lay_out_cases(KestModule *module, const KestType *type) {
         }
         uint16_t at = 0;
         for (uint32_t p = 0; p < variant->payload_count; p++) {
-            at = describe(carries, at, variant->payload[p],
-                          variant->byte_offsets[p]);
+            at = describe(module->arena, carries, at, variant->payload[p],
+                          variant->byte_offsets[p], NULL);
         }
         variant->carries = carries;
         variant->carry_count = at;
@@ -618,7 +652,7 @@ int32_t kest_module_layout(KestModule *module, const KestType *type) {
     if (pieces == NULL) {
         return -1;
     }
-    describe(pieces, 0, type, 0);
+    describe(module->arena, pieces, 0, type, 0, NULL);
 
     if (!lay_out_cases(module, type)) {
         return -1;
@@ -2053,6 +2087,27 @@ static void fold_number(uint64_t *mark, uint64_t value, unsigned bytes) {
     *mark = kest_mark_number(*mark, value, bytes);
 }
 
+// What one body is, for a host asking whether this function's code changed
+// while everything else about it stayed as it was. The instructions and the
+// constants they reach, and nothing else: not the name, not what it takes or
+// gives and not the promises, because those are the signature and the
+// signature has a fingerprint of its own. A reload that rebuilds a body is the
+// thing this answers, and a number that moved because a comment moved is a
+// rebuild nobody asked for. See D945.
+static uint64_t body_mark(const KestChunk *chunk) {
+    uint64_t mark = KEST_MARK_START;
+    fold(&mark, chunk->code, chunk->code_count);
+    for (uint32_t which = 0; which < chunk->constant_count; which++) {
+        fold_number(&mark, chunk->constant_classes[which], 1);
+        if (chunk->constant_classes[which] == KEST_CONST_TEXT) {
+            fold_text(&mark, chunk->constants[which].text);
+        } else {
+            fold_number(&mark, (uint64_t)chunk->constants[which].integer, 8);
+        }
+    }
+    return mark;
+}
+
 uint64_t kest_module_mark(const KestModule *module) {
     if (module == NULL) {
         return 0;
@@ -2142,9 +2197,18 @@ void kest_module_disassemble_json(const KestModule *module,
         }
         fputs(",\"pieces\":[", out);
         for (uint16_t p = 0; p < layout->count; p++) {
-            fprintf(out, "%s{\"byte\":%u,\"is\":\"%s\"}", p == 0 ? "" : ",",
-                    layout->pieces[p].offset,
+            fprintf(out, "%s{\"byte\":%u,\"is\":\"%s\",\"name\":",
+                    p == 0 ? "" : ",", layout->pieces[p].offset,
                     SCALARS[layout->pieces[p].kind]);
+            // Null rather than left out where a piece is nobody's field, so a
+            // tool reading these reads the same shape for every piece. See
+            // D946.
+            if (layout->pieces[p].name == NULL) {
+                fputs("null", out);
+            } else {
+                kest_json_text(layout->pieces[p].name, out);
+            }
+            fputc('}', out);
         }
         fputs("]}", out);
     }
@@ -2241,13 +2305,14 @@ void kest_module_disassemble_json(const KestModule *module,
                 ",\"parameterSlots\":%u,\"slots\":%u,\"deep\":%u"
                 ",\"folded\":%u,\"foldedSlots\":%u"
                 ",\"noAlloc\":%s,\"noHost\":%s,\"deterministic\":%s"
-                ",\"why\":",
+                ",\"body\":\"%016llx\",\"why\":",
                 chunk->code_count, chunk->code_capacity,
                 chunk->constant_count, chunk->param_slots, chunk->slot_count, chunk->stack_needed,
                 chunk->folded, chunk->folded_slots,
                 chunk->no_alloc ? "true" : "false",
                 chunk->no_host ? "true" : "false",
-                chunk->deterministic ? "true" : "false");
+                chunk->deterministic ? "true" : "false",
+                (unsigned long long)body_mark(chunk));
         if (reasons != NULL && reasons[i].reach != 0) {
             kest_json_text(kest_reach_name((KestReach)reasons[i].reach), out);
             fputs(",\"where\":", out);
@@ -2307,6 +2372,12 @@ void kest_module_disassemble(const KestModule *module,
         for (uint16_t p = 0; p < layout->count; p++) {
             fprintf(out, " +%u %s", layout->pieces[p].offset,
                     SCALARS[layout->pieces[p].kind]);
+            // The name where there is one, so the words say what the object
+            // says: a reader of a listing and a tool reading the JSON beside
+            // it are reading one thing.
+            if (layout->pieces[p].name != NULL) {
+                fprintf(out, " %s", layout->pieces[p].name);
+            }
         }
         fputc('\n', out);
     }

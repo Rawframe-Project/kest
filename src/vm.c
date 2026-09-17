@@ -126,7 +126,7 @@ static uint16_t pack_typed(unsigned char *to, const KestType *type,
 static uint16_t move_scalar(KestValue *out, const KestType *type,
                             const unsigned char *from, bool reading,
                             unsigned char *to) {
-    KestPiece piece = {0, kest_scalar_of(type)};
+    KestPiece piece = {0, kest_scalar_of(type), NULL};
     KestLayout one = {&piece, 1, 0, 0, NULL, false, false};
     if (reading) {
         // Nothing here is a tag: a scalar moved on its own is one piece of a

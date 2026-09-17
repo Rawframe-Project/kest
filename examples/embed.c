@@ -980,6 +980,33 @@ static bool lays_them_out_the_same(KestBuild *build) {
     KestPiece event[3];
     event_pieces(event);
 
+    // And what the program calls each of those pieces, which is the other half
+    // of what a host doing schema work needs and used to be behind another
+    // door: a save format matching bytes it already has against a program it
+    // has just read wants the name and the byte together. `Row` is three
+    // `Cell`s laid out where they stand and a tag, so a name here is a path
+    // and not a word. See D946.
+    {
+        const char *called[] = {"cells[0].at", "cells[0].weight",
+                                "cells[1].at", "cells[1].weight",
+                                "cells[2].at", "cells[2].weight", "tag"};
+        const KestLayout *of_a_row = NULL;
+        if (kest_build_layout(build, "Row", &of_a_row) != 1 ||
+            of_a_row->count != 7) {
+            fprintf(stderr, "the program has no one `Row` of seven pieces\n");
+            return 1;
+        }
+        for (uint16_t p = 0; p < of_a_row->count; p++) {
+            const char *says = of_a_row->pieces[p].name;
+            if (says == NULL || strcmp(says, called[p]) != 0) {
+                fprintf(stderr, "`Row` piece %u is called `%s` and this host "
+                                "reads `%s`\n",
+                        p, says == NULL ? "nothing" : says, called[p]);
+                return 1;
+            }
+        }
+    }
+
     const struct {
         const char *name;
         size_t size;

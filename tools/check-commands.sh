@@ -627,7 +627,9 @@ sweep_one() {
             "%d byte%s aligned %d%s: %s"
             % (one["bytes"], "" if one["bytes"] == 1 else "s", one["align"],
                ", tagged" if one["tagged"] else "",
-               " ".join("+%d %s" % (piece["byte"], piece["is"])
+               " ".join("+%d %s%s" % (piece["byte"], piece["is"],
+                                      "" if piece["name"] is None
+                                      else " " + piece["name"])
                         for piece in one["pieces"])))
     if layouts != written_out:
         print("layouts: %s printed, %s in the JSON" % (layouts, written_out))

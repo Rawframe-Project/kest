@@ -4047,6 +4047,67 @@ static void write_where(const KestSource *source, KestSpan span, FILE *out) {
     fprintf(out, ",\"line\":%u,\"column\":%u", line, column);
 }
 
+// Whether a byte can be part of a name, for reading one out of a type written
+// as words.
+static bool a_name_byte(char byte) {
+    return (byte >= 'a' && byte <= 'z') || (byte >= 'A' && byte <= 'Z') ||
+           (byte >= '0' && byte <= '9') || byte == '_';
+}
+
+// A type written with a generic's own type parameters put as where they stand
+// rather than as what somebody called them. `fn pick<T>(a: T, b: T) -> T` and
+// the same declaration with `U` written in place of `T` are one function said
+// twice: the name is the declaration's own and nothing outside it can see it,
+// so a fingerprint that tells the two apart is one that moves when nothing a
+// caller can act on has. See D945.
+static const char *where_it_stands(KestArena *arena, const char *written,
+                                   const KestType *of) {
+    if (of->type_param_count == 0 || of->type_param_names == NULL) {
+        return written;
+    }
+    // `#` and the number are never longer than the shortest name a program can
+    // write plus two, so three times is room enough for a type written
+    // entirely out of them.
+    size_t room = strlen(written) * 3 + 8;
+    char *out = KEST_ARENA_ARRAY(arena, char, room);
+    if (out == NULL) {
+        return written;
+    }
+    size_t at = 0;
+    size_t put = 0;
+    while (written[at] != '\0' && put + 8 < room) {
+        // Only where a name begins: `Pair` is not two names because it ends
+        // in one, and a field of a module is not one either.
+        if (at > 0 && (a_name_byte(written[at - 1]) || written[at - 1] == '.')) {
+            out[put++] = written[at++];
+            continue;
+        }
+        uint32_t which = of->type_param_count;
+        size_t length = 0;
+        for (uint32_t i = 0; i < of->type_param_count; i++) {
+            size_t wide = strlen(of->type_param_names[i]);
+            if (strncmp(written + at, of->type_param_names[i], wide) == 0 &&
+                !a_name_byte(written[at + wide])) {
+                which = i;
+                length = wide;
+                break;
+            }
+        }
+        if (which == of->type_param_count) {
+            out[put++] = written[at++];
+            continue;
+        }
+        int said = snprintf(out + put, room - put, "#%u", which);
+        if (said < 0) {
+            return written;
+        }
+        put += (size_t)said;
+        at += length;
+    }
+    out[put] = '\0';
+    return out;
+}
+
 void kest_program_dump_json(const KestProgram *program, KestArena *arena,
                             FILE *out) {
     fputs("\"types\":[", out);
@@ -4160,9 +4221,13 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
                 symbol->type->deterministic ? "true" : "false",
                 symbol->type->is_foreign ? "true" : "false",
                 symbol->named ? "true" : "false");
-        // And a number standing for which declaration this is, folded from
-        // what is already printed beside it rather than from where it is
-        // written. A tool that watches a file -- a reloader, a save format, a
+        // And a number standing for this declaration and what it promises a
+        // caller, folded from what is already printed beside it rather than
+        // from where it is written. It is a signature, which is one of four
+        // things that get called identity and is the only one of them this
+        // number is: not where the declaration is, not what its body compiled
+        // to -- `emit` says that per chunk -- and not what a value made while
+        // it runs is. See D924 and D945. A tool that watches a file -- a reloader, a save format, a
         // debugger, something reading a diff -- needs to know that the thing
         // it saw yesterday is the thing it is looking at today, and a line
         // number is not that: a blank line above it moves every one of them.
@@ -4178,11 +4243,14 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
                                               strlen(symbol->name));
         stands_for = kest_mark_bytes(stands_for, "(", 1);
         for (uint32_t p = 0; p < symbol->type->param_count; p++) {
-            const char *one = kest_type_name(arena, symbol->type->params[p]);
+            const char *one = where_it_stands(
+                arena, kest_type_name(arena, symbol->type->params[p]),
+                symbol->type);
             stands_for = kest_mark_bytes(stands_for, one, strlen(one));
             stands_for = kest_mark_bytes(stands_for, ",", 1);
         }
-        const char *gives = kest_type_name(arena, symbol->type->result);
+        const char *gives = where_it_stands(
+            arena, kest_type_name(arena, symbol->type->result), symbol->type);
         stands_for = kest_mark_bytes(stands_for, ")->", 3);
         stands_for = kest_mark_bytes(stands_for, gives, strlen(gives));
         char promised[4] = {symbol->type->no_alloc ? 'a' : '-',
@@ -4190,7 +4258,7 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
                             symbol->type->deterministic ? 'd' : '-',
                             symbol->type->is_foreign ? 'f' : '-'};
         stands_for = kest_mark_bytes(stands_for, promised, sizeof(promised));
-        fprintf(out, ",\"id\":\"%016llx\"",
+        fprintf(out, ",\"signature\":\"%016llx\"",
                 (unsigned long long)stands_for);
         write_where(symbol->source, symbol->span, out);
         fputc('}', out);
