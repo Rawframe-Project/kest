@@ -35847,3 +35847,19 @@ lasts, what a host may keep past a rewind — for the reader who needs one fact
 and not the document.
 
 **Runs:** `make check`.
+
+## What a three-address form of the same code would run
+
+The backend decision said "if half of the movement goes"; this counts it
+instead. Under the standard translation — a push of a local or a constant
+becomes an operand named by whatever consumes it, a store that the producing
+instruction could have made directly is that instruction, everything else is one
+for one — the frame step runs 288 million three-address instructions where the
+stack form runs 896 million. That is 3.11 times fewer, and 2.22 for the ants.
+
+It settles the adoption rule's third clause and leaves the first exactly where it
+was: a three-address instruction decodes more operands, so the time does not fall
+by what the count falls by, and how much is left is the thing only an
+implementation says.
+
+**Runs:** `KEST_DEEP=1 ./kest-debug run` over the two programs, counted by kind.
