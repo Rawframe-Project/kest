@@ -35887,3 +35887,29 @@ backend decision is measured now, and it says the same thing the decision did.
 
 **Runs:** `make check`; `make time` against the previous commit's binary, three
 runs each in the same sitting; `KEST_DEEP=1` counts before and after.
+
+## And the same two instructions over four programs
+
+The frame step is the one measurement, so it is the one the last entry quotes.
+Counted the same way on the build that checks itself, over the others:
+
+```text
+                     before       after     fewer
+ants.kest            146931      130431     11.2%
+colony.kest           27146       22971     15.4%
+crossing.kest     168000566   151000502     10.1%
+reference.kest     50800909    43600815     14.2%
+```
+
+Ten to fifteen per cent of what they run, against twenty and a half for the
+frame step — which is what it should be: the frame step is arithmetic in a loop
+over an array of value structs, and that is the shape where a local and a
+constant are most of what a body does.
+
+The durations of the other three move less than their counts: they are about a
+call and a crossing, and a crossing is one instruction that does a great deal.
+That is the same thing D917 wrote down — a count and a duration answer different
+questions — said again from the other side.
+
+**Runs:** `KEST_DEEP=1` counts on both builds, and both instruments run back to
+back in the same sitting.
