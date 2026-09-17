@@ -1406,6 +1406,18 @@ size_t kest_runtime_cost(const KestRuntime *runtime);
 // host has before there is a machine.
 const char *kest_build_extern(const KestBuild *build, uint32_t at);
 
+// And the same list said as capabilities rather than as names: the receiver of
+// each extern, once each, in the order they were first asked for, or NULL past
+// the last. `extern fn Io.write(...)` asks for `Io`, and a host walks these to
+// decide what a program may do before it binds a single function.
+//
+// A capability here is the receiver and nothing else. There is no second
+// mechanism: what a program can do is what the host bound, so denying one is
+// not binding it, and this is the list to read before deciding. An extern with
+// no receiver -- a bare `extern fn name()` -- is under the empty capability,
+// which is a host binding one function and meaning it. See D981.
+const char *kest_build_capability(const KestBuild *build, uint32_t at);
+
 // The three below answer a place past the last one the way they answer a real
 // extern that takes nothing or gives nothing back. `K0648` says which, and
 // goes to `kest_build_report`: the walk above ends at NULL and asking past

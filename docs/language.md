@@ -2561,6 +2561,43 @@ a call through a value carries both — a number that names a function of anothe
 shape is `K0657` at the call rather than a body reading the slots below the ones
 it was given.
 
+## What a program may do
+
+A program can do exactly what the host bound and nothing else. There is no
+ambient anything: no filesystem, no clock, no environment, no process, no
+network. `io.print` reaches the outside because `std.io` declares
+`extern fn Io.write(...)` and something bound it; a host that binds nothing has
+a program that computes and answers.
+
+A **capability is the receiver of an extern**. `extern fn Io.write(...)` is
+under `Io`, `extern fn Clock.now()` is under `Clock`, and a bare
+`extern fn tick()` is under the empty one. There is no second mechanism and no
+list to keep in step: what a program may do is what was bound, so denying a
+capability is not binding it.
+
+What a host reads before it decides is `kest_build_capability`, which walks the
+receivers once each, and `kest_build_extern`, which walks every name. Both are
+asked of the build, which is what a host has before there is a machine, so the
+decision is made before anything runs rather than one failed start at a time.
+
+```
+the program asks for the capability `Engine`
+the program asks for the capability `Io`
+```
+
+**What this is and is not.** It is a boundary for code you wrote or code you
+trust to be cooperative, inside a host that decides what it may reach. It is
+**not** a sandbox for code that is trying to get out. A budget stops a program
+that will not stop and a heap ceiling stops one that grows, and neither of those
+is a threat model: running code you do not trust in your own process is a
+different product, and it is Wasm or another process rather than this. The
+reference says so here so that nobody reads the ceilings as a security claim.
+
+What the compiler itself is bounded by, for source somebody else wrote, is
+`--room` for the memory reading and compiling may take and the table below for
+everything a program can have too many of. Compile time is not bounded and is
+not claimed to be. See D981.
+
 ## What there is a most of
 
 A few numbers are what they are because an instruction holds them in two bytes

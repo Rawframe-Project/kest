@@ -30699,3 +30699,43 @@ kept. It is not part of `make check`, because a duration is not a pass or a
 fail. The comparators are found rather than built: `bench/run.sh` reads
 `KEST_CPP`, `KEST_LUAU` and `KEST_DAS` and leaves a row out when what would run
 it is not there, so the suite runs on a machine with none of them. *Measured.*
+
+## D981. A capability is the receiver of an extern, and there is no second one
+
+Section 20 of the completion mission asks for one honest trust claim and enough
+capability control for cooperative code: a filesystem capability, a time
+capability, a process capability, an environment capability, and host-specific
+names.
+
+**They are already there and they are called something else.** A program can do
+exactly what the host bound. `std.io` writes because it declares
+`extern fn Io.write(...)` and a host bound it; a host that binds nothing has a
+program that computes and answers and reaches nothing. There is no ambient
+filesystem, no ambient clock, no ambient environment — not because they are
+refused, but because there is nowhere for them to come from.
+
+So the capability is the receiver: `Io`, `Clock`, `Fs`, whatever the host and
+the program agree to call it. Adding a second mechanism — a table of capability
+names beside the binds — would be a second list to keep in step with the first,
+and the first is the one that decides.
+
+**What was missing was the reading.** A host could walk `kest_build_extern` and
+see `Io.write`, `Io.read`, `Fs.open` and work out the groups itself.
+`kest_build_capability` walks the receivers once each instead, so a host decides
+what a program may do in groups and before it binds anything. Both are asked of
+the build, which is what a host has before there is a machine.
+
+**The trust claim, said once.** This is a boundary for code the host wrote or
+trusts to be cooperative. A budget stops a program that will not stop; a heap
+ceiling stops one that grows; a capability boundary stops one from reaching what
+it was not given. None of those is a threat model, and together they are not
+one: code that is actively trying to get out of a process is a different
+product, and the answer to it is another process or Wasm. The reference says so
+where a reader meets the ceilings, so that they are not read as a security
+claim.
+
+**What the compiler is bounded by**, for source somebody else wrote: `--room`
+bounds the memory reading and compiling may take, and *What there is a most of*
+bounds everything a program can have too many of — names, nesting, loops,
+`defer`s, `match` arms, generic copies. Compile time is not bounded, and is not
+claimed to be. *Argued.*

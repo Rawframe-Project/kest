@@ -299,6 +299,47 @@ const char *kest_build_extern(const KestBuild *build, uint32_t at) {
     return build->module.externs[at].name;
 }
 
+// How much of a name is the receiver: everything before the last dot, or
+// nothing for a name with none. `Io.write` is `Io`; a bare `write` is the
+// empty capability.
+static size_t receiver_of(const char *name, const char **from) {
+    const char *dot = strrchr(name, '.');
+    *from = name;
+    return dot == NULL ? 0 : (size_t)(dot - name);
+}
+
+const char *kest_build_capability(const KestBuild *build, uint32_t at) {
+    if (build == NULL) {
+        return NULL;
+    }
+    // Walked rather than kept: a program asks the host for a few names and a
+    // host asks this a few times, so a list built and held would be a list to
+    // keep in step with the module for no reader in a hurry.
+    uint32_t seen = 0;
+    for (uint32_t i = 0; i < build->module.extern_count; i++) {
+        const char *from = NULL;
+        size_t length = receiver_of(build->module.externs[i].name, &from);
+        bool first = true;
+        for (uint32_t before = 0; before < i && first; before++) {
+            const char *earlier = NULL;
+            size_t was = receiver_of(build->module.externs[before].name,
+                                     &earlier);
+            first = was != length || memcmp(earlier, from, length) != 0;
+        }
+        if (!first) {
+            continue;
+        }
+        if (seen == at) {
+            // Kept on the build's own arena, which lives as long as the build
+            // and therefore as long as a host may hold what it was handed.
+            const char *held = kest_arena_strndup(build->arena, from, length);
+            return held == NULL ? "" : held;
+        }
+        seen++;
+    }
+    return NULL;
+}
+
 uint32_t kest_extern_takes(const KestBuild *build, uint32_t at) {
     if (no_extern_at(build, at)) {
         return 0;

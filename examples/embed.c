@@ -2206,6 +2206,24 @@ int main(int argc, char **argv) {
          {KEST_L_TEXT, KEST_L_I32}, 2},
     };
 
+    // What the program may do, which is a question a host answers before it
+    // answers what to bind: a capability is the receiver of an extern, so
+    // walking these is walking what the program will ask for in groups rather
+    // than one function at a time. A host that will not give a program the
+    // filesystem reads this and binds nothing under that name. See D981.
+    {
+        uint32_t how_many = 0;
+        for (uint32_t i = 0; kest_build_capability(build, i) != NULL; i++) {
+            const char *asked = kest_build_capability(build, i);
+            printf("the program asks for the capability `%s`\n",
+                   asked[0] == '\0' ? "(none)" : asked);
+            how_many++;
+        }
+        if (how_many == 0) {
+            printf("the program asks for no capability at all\n");
+        }
+    }
+
     // What the program asks this host for, read rather than guessed: starting
     // refuses a name that is not bound, and finding that out from the refusal
     // is finding it out one failed start at a time. Every one of them is

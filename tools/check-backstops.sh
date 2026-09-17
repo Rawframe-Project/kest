@@ -666,9 +666,9 @@ fn main() -> i32 {
         "what": "the checked build asked for by name rather than by value",
         "file": "src/vm.c",
         "from": r"""#if KEST_CHECKED
-        if (rt->ran != NULL) {""",
+        if (rt->ran_checked != NULL) {""",
         "to": r"""#ifdef KEST_CHECKED
-        if (rt->ran != NULL) {""",
+        if (rt->ran_checked != NULL) {""",
         "make": ["kest"],
         "in_build": True,
         "caught": "went_slots",
@@ -6281,8 +6281,10 @@ fn main() -> i32 {
         # dispatching to, said about the one every body ends with. See D890.
         "what": "a walk of what ran that stops at the last instruction",
         "file": "src/vm.c",
-        "from": """        for (uint32_t op = 0; runtime->ran != NULL && op <= KEST_OP_RETURN;""",
-        "to": """        for (uint32_t op = 0; runtime->ran != NULL && op < KEST_OP_RETURN;""",
+        "from": """        for (uint32_t op = 0; runtime->ran_checked != NULL &&
+                              op <= KEST_OP_RETURN;""",
+        "to": """        for (uint32_t op = 0; runtime->ran_checked != NULL &&
+                              op < KEST_OP_RETURN;""",
         "make": ["kest", "debug"],
         "tool": "tools/check-dead.sh",
         "arguments": [],
@@ -6296,8 +6298,8 @@ fn main() -> i32 {
         # compiler weighed by a clock and nothing else. See D889.
         "what": "a walk of the machine that counts each instruction once",
         "file": "src/vm.c",
-        "from": """            rt->ran[*instruction]++;""",
-        "to": """            rt->ran[*instruction] = 1;""",
+        "from": """            rt->ran_checked[*instruction]++;""",
+        "to": """            rt->ran_checked[*instruction] = 1;""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
@@ -6542,9 +6544,9 @@ fn main() -> i32 {
         # made. See D870.
         "what": "a machine that counts an instruction it never ran",
         "file": "src/vm.c",
-        "from": """            rt->ran[*instruction]++;""",
-        "to": """            rt->ran[*instruction]++;
-            rt->ran[KEST_OP_POP]++;""",
+        "from": """            rt->ran_checked[*instruction]++;""",
+        "to": """            rt->ran_checked[*instruction]++;
+            rt->ran_checked[KEST_OP_POP]++;""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",
         "caught": "where it is written and the machine ran",
@@ -7642,10 +7644,14 @@ _Static_assert(MAX_EXTERNS > 1024, "a program may ask for plenty of names");""",
         # front of a call through a value -- and a hole that quotes it alone
         # breaks whichever is written first. Which one a hole is about is a
         # thing a hole has to say.
-        "from": """            const KestChunk *callee = module->functions[index];
+        "from": """            if (rt->entered != NULL && index < rt->entered_room) {
+                rt->entered[index]++;
+            }
 
             if (rt->frame_count == rt->call_depth) {""",
-        "to": """            const KestChunk *callee = module->functions[index];
+        "to": """            if (rt->entered != NULL && index < rt->entered_room) {
+                rt->entered[index]++;
+            }
 
             if (false) {""",
         "make": ["kest"],
