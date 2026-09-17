@@ -141,26 +141,27 @@ static void *grow(KestArena *arena, void *items, uint32_t count,
     return moved;
 }
 
-void kest_ir_program_init(KestIrProgram *program, KestArena *arena) {
+void kest_ir_program_init(KestIrProgram *program, KestArena *arena,
+                          KestIrWritten written, void *backend) {
     memset(program, 0, sizeof *program);
     program->arena = arena;
+    program->written = written;
+    program->backend = backend;
 }
 
-KestIrBody *kest_ir_body_add(KestIrProgram *program) {
-    if (program->count == program->capacity) {
-        uint32_t capacity = program->capacity;
-        void *bodies = grow(program->arena, program->bodies, program->count,
-                            &capacity, sizeof(KestIrBody), 16);
-        if (bodies == NULL) {
-            program->out_of_memory = true;
-            return NULL;
-        }
-        program->bodies = bodies;
-        program->capacity = capacity;
-    }
-    KestIrBody *body = &program->bodies[program->count++];
-    memset(body, 0, sizeof *body);
-    return body;
+KestIrBody *kest_ir_body_begin(KestIrProgram *program) {
+    program->before = kest_arena_mark(program->arena);
+    memset(&program->body, 0, sizeof program->body);
+    return &program->body;
+}
+
+bool kest_ir_body_end(KestIrProgram *program) {
+    bool went = program->out_of_memory
+                    ? false
+                    : program->written(program->backend, &program->body);
+    kest_arena_rewind(program->arena, program->before);
+    memset(&program->body, 0, sizeof program->body);
+    return went;
 }
 
 uint32_t kest_ir_place_add(KestIrProgram *program, KestIrBody *body,

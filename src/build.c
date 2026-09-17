@@ -79,14 +79,18 @@ bool kest_build_emit(KestBuild *build) {
     // that is finished holds neither. See D748 and D962.
     KestIrProgram ir;
     KestArena *bodies = kest_arena_new();
-    if (bodies == NULL) {
+    KestLower *writes = bodies == NULL
+                            ? NULL
+                            : kest_lower_new(build->program, &build->module,
+                                             bodies);
+    if (writes == NULL) {
+        kest_arena_free(bodies);
         kest_diags_starve(&build->diags);
         return false;
     }
-    kest_ir_program_init(&ir, bodies);
+    kest_ir_program_init(&ir, bodies, kest_lower_body, writes);
     bool compiled =
-        kest_compile(build->program, &build->units, &build->module, &ir) &&
-        kest_lower(build->program, &build->module, &ir);
+        kest_compile(build->program, &build->units, &build->module, &ir);
     kest_arena_free(bodies);
     if (!compiled || build->module.out_of_room) {
         kest_diags_starve(&build->diags);

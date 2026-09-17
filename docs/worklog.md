@@ -35913,3 +35913,46 @@ questions — said again from the other side.
 
 **Runs:** `KEST_DEEP=1` counts on both builds, and both instruments run back to
 back in the same sitting.
+
+## A body between the tree and the machine
+
+The compiler was a tree walk that wrote instructions. There was nothing between
+what a program means and how this machine runs it, so anything that wanted the
+first without the second had to start again from the tree. D959 wrote down why
+that had not been repaired — it is one change across every place that declares a
+name and every place that reads one — and D962 is that change made.
+
+What the walk writes now is a body: values, places, typed three-address
+operations and branches, one body per concrete function. `src/ir.c` is the
+shape and `src/lower.c` is this machine's reading of it. The walk itself did not
+move: every refusal, every fold, every shape of lowering came across, which is
+why the diff is nine hundred lines in one file rather than a rewrite.
+
+What says it means the same is a disassembly of every example, every library
+module and every instrument, before and against after. Forty-eight files; four-
+teen are byte for byte what they were, and the thirty-four that are not differ
+in exactly three ways:
+
+```text
+   137  `load` then `const`        became  `load.k`
+   112  `pop.n 1`                  became  `pop`
+    17  `field` at offset nought   became  14 `pop.n` and 3 nothing
+```
+
+Each is the backend doing in one place what it used to do in three. The first is
+the one worth reading: the pair fusion D961 added lived in `emit_constant`, and
+a constant that had been folded went out through `emit_value_slots`, which never
+tried it. There is one door now and every constant goes through it. The frame
+step is thirty-eight instructions an entity where it was forty-six.
+
+Two things the change turned up that were nothing to do with it. A name that
+could not be made because the host had run out was handed to `strlen` in three
+places in `types.c`, which the ceiling ladder found the moment the allocation
+numbers moved. And what a build holds when it is done grew by the bodies, which
+is what the arena of their own is for: the trees have had one since D748 and the
+bodies have one now, freed where the trees are.
+
+**Runs:** `make check`; `kest emit` over every `.kest` file in the tree,
+compared file by file against the same before the change; `KEST_REFUSE_AT`
+swept over `examples/flags.kest` at every thirty-seventh allocation of fifteen
+hundred.

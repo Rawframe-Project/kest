@@ -6,10 +6,14 @@
 // can be between one and where it lands.
 #define MAX_REACH UINT16_MAX
 
-typedef struct {
+struct KestLower {
     KestProgram *program;
     KestModule *module;
     KestArena *arena;
+    // Which chunk comes next. Bodies arrive in the order the module's
+    // functions were registered in, which is what makes this a count rather
+    // than a search.
+    uint32_t next;
     KestChunk *chunk;
     const KestIrBody *body;
 
@@ -38,7 +42,9 @@ typedef struct {
     uint32_t pointed_at;
 
     bool out_of_memory;
-} Lower;
+};
+
+typedef struct KestLower Lower;
 
 static void refuse(Lower *lower, KestSpan span, const char *code,
                    const char *format, ...) {
@@ -933,28 +939,30 @@ static bool lower_body(Lower *lower, const KestIrBody *body, KestChunk *chunk) {
     return !lower->out_of_memory;
 }
 
-bool kest_lower(KestProgram *program, KestModule *module,
-                const KestIrProgram *ir) {
-    Lower lower = {0};
-    lower.program = program;
-    lower.module = module;
-    lower.arena = ir->arena;
-    if (ir->count > module->count) {
+KestLower *kest_lower_new(KestProgram *program, KestModule *module,
+                          KestArena *arena) {
+    KestLower *lower = KEST_ARENA_NEW(arena, KestLower);
+    if (lower == NULL) {
+        return NULL;
+    }
+    lower->program = program;
+    lower->module = module;
+    lower->arena = arena;
+    return lower;
+}
+
+bool kest_lower_body(void *reading, const KestIrBody *body) {
+    Lower *lower = reading;
+    if (lower->next >= lower->module->count) {
         return false;
     }
-    for (uint32_t i = 0; i < ir->count; i++) {
-        const KestIrBody *body = &ir->bodies[i];
-        // A body that is not what a body is would be written as instructions
-        // that mean something else, so it is refused rather than written.
-        kest_diags_in(program->diags, body->source);
-        const char *wrong = kest_ir_verify(body);
-        if (wrong != NULL) {
-            kest_diags_disagree(program->diags, body->declared, "%s", wrong);
-            return false;
-        }
-        if (!lower_body(&lower, body, module->functions[i])) {
-            return false;
-        }
+    kest_diags_in(lower->program->diags, body->source);
+    // A body that is not what a body is would be written as instructions that
+    // mean something else, so it is refused rather than written.
+    const char *wrong = kest_ir_verify(body);
+    if (wrong != NULL) {
+        kest_diags_disagree(lower->program->diags, body->declared, "%s", wrong);
+        return false;
     }
-    return !lower.out_of_memory;
+    return lower_body(lower, body, lower->module->functions[lower->next++]);
 }

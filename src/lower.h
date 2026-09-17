@@ -3,11 +3,16 @@
 
 #include "ir.h"
 
-// Writes the stack machine's bytecode for every body. It is one of two readers
-// of the same bodies and decides nothing about what a program means: what it
-// decides is which instruction, how wide a jump is, and which pairs of
-// instructions are worth writing as one.
-bool kest_lower(KestProgram *program, KestModule *module,
-                const KestIrProgram *ir);
+// The stack machine as a reader of bodies. It is handed one at a time and
+// decides nothing about what a program means: what it decides is which
+// instruction, how wide a jump is, and which pairs of instructions are worth
+// writing as one.
+typedef struct KestLower KestLower;
+
+// Made in the arena the bodies are in, which is where its own working memory
+// goes. Answers NULL when there is none.
+KestLower *kest_lower_new(KestProgram *program, KestModule *module,
+                          KestArena *arena);
+bool kest_lower_body(void *lower, const KestIrBody *body);
 
 #endif

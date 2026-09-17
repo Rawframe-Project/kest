@@ -40,6 +40,7 @@ a run with a decision knows which is which.
 | --- | --- | --- |
 | the colony's steady state, at 200, 400 and 800 days | 2,370,304 bytes (D940) | 2,338,096 bytes, and still flat: a store keeps a bit a slot rather than a byte (D954) |
 | a frame step an entity | 127 ns (D926), 122 after D931 | 115 to 125 ns depending on the run, `make time` on this machine |
+| what a frame step runs, an entity | 57 instructions (D958) | 38, after D961 took the two commonest pairs of pushes and D962 gave every constant the same door |
 
 ## Phases
 
@@ -47,9 +48,9 @@ The mission's order. `/home/kest/mission/STATE.md` carries which one is open.
 
     0 baseline and reproduction    done
     1 semantic and embedding repair    done
-    2 one resolved per-instance representation   not landed, D959
+    2 one resolved per-instance representation   done   D962
     3 temporaries, text, buffer, store   done but for `scratch { }`,
-                                         which is gated on 2:
+                                         which phase 2 has now opened:
                                          D940, D954, D955, D956, D957
     4 validation correction            done   D944
     5 backend decision                 done   D958, which is: keep the
@@ -60,48 +61,23 @@ The mission's order. `/home/kest/mission/STATE.md` carries which one is open.
     9 machine-readable surface         done   D947
     10 documentation and the v1 boundary
 
-## Phase 2, and why it is not in the tree yet
+## Phase 2, which is in the tree now
 
-This is D959 now, and D958 is the backend decision that stands on it. What
-follows is the same reason written before either of them was a decision.
+D962 is the change D959 wrote down and did not make. `src/ir.h` is one body per
+concrete function: values each read by an operation after it, places that say
+what reaches a thing rather than an address already worked out, typed
+three-address operations, and branches naming what they land on. `compile`
+writes a body and no instruction; `lower` writes this machine's bytecode from
+one and decides nothing about what a program means; `build` calls them in order.
 
-The mission asks for a resolved, typed, immutable per-instance representation
-that the backend consumes. Two of the three things it is for are already true
-by other means, and the third is a rewire this has not done.
+What D959 said it would take turned out to be what it took: the walk kept its
+shape, and what changed was the layer under it. What D959 said the half about
+names was worth also turned out to be right — this language refuses shadowing,
+so reading a resolved name buys nothing a scan does not already give. What the
+body is for is the second backend and the lexical `scratch { }`, and both are
+open.
 
-**Already true.** Generic instance semantics no longer depend on whichever copy
-was typed into the shared tree last: the compiler retypes before it emits each
-copy, and since D933 the contract proof does the same before it reads one.
-Places are explicit where it mattered — D931 gave array assignment a place made
-of the array and the index rather than an address, which is what F4 needed and
-what an IR would have expressed as a place.
-
-**Not true.** The backend still finds a local by walking its list backwards
-comparing source text, at every mention of a name. `find_local` is that walk.
-
-**What it would take, and why a smaller version is worse.** Slot assignment
-lives in the backend, in twelve `declare_local` sites, several of them inside
-the shapes a `for` lowers to. A resolver that worked out slots of its own would
-be a second place that knows that arithmetic, and the first thing this project
-refuses is two places for one fact. So the resolver has to *own* the
-assignment and the backend has to read it — one walk, one numbering — and that
-is a single change across every declaring and every reading site rather than a
-sequence of green steps.
-
-A resolver was written and measured against that bar. It settles every name in a
-body in one walk and answers per copy, and it was thrown away rather than landed
-with a numbering of its own beside the backend's.
-
-**And one thing that was found while deciding it.** The half of a resolver that
-is about names rather than slots — the backend reading what the checker resolved
-instead of scanning its own list — buys nothing here, because this language
-refuses shadowing: `K0318` says a name is declared once in a body, so there is
-exactly one local of a name in scope and the scan cannot find a different one
-from the checker. What a resolved representation is for in this tree is the
-second backend and the lexical `scratch { }`, and neither of those exists yet.
-That is why this is where it is rather than half-done.
-
-**So the order is**: move slot assignment into the resolver, have
-`declare_local` become the resolver's answer rather than its own arithmetic, and
-then the backend reads a name instead of looking one up. Nothing before that
-step is worth committing, and nothing after it is hard.
+What says the change means the same is a disassembly of every `.kest` file in
+the tree before and after: fourteen files byte for byte, and the rest differing
+in three ways that are each the backend doing in one place what it did in
+three. D962 lists them.

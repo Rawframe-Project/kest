@@ -317,18 +317,31 @@ typedef struct {
     bool returns_value;
 } KestIrBody;
 
+// What a backend is, from here: something handed one body at a time. It
+// answers false when it cannot go on, which stops the walk.
+typedef bool (*KestIrWritten)(void *backend, const KestIrBody *body);
+
 typedef struct {
     KestArena *arena;
-    KestIrBody *bodies;
-    uint32_t count;
-    uint32_t capacity;
+    // Where the arena was before this body. One body is alive at a time: it is
+    // written, handed to the backend, and let go. What that saves is the peak,
+    // and the peak is what a program compiled under a ceiling meets — holding
+    // every body of a program at once put five of the ladder's programs over
+    // the reading ceiling that used to reach the one after it.
+    KestMark before;
+    KestIrWritten written;
+    void *backend;
+    KestIrBody body;
     bool out_of_memory;
 } KestIrProgram;
 
-// Making one. Every part of a body is arena memory and none of it is freed on
-// its own.
-void kest_ir_program_init(KestIrProgram *program, KestArena *arena);
-KestIrBody *kest_ir_body_add(KestIrProgram *program);
+// Making one, and the one body at a time that goes through it. Every part of a
+// body is arena memory and none of it is freed on its own; what frees all of it
+// is the end of the body.
+void kest_ir_program_init(KestIrProgram *program, KestArena *arena,
+                          KestIrWritten written, void *backend);
+KestIrBody *kest_ir_body_begin(KestIrProgram *program);
+bool kest_ir_body_end(KestIrProgram *program);
 
 uint32_t kest_ir_place_add(KestIrProgram *program, KestIrBody *body,
                            const KestIrPlace *place);

@@ -3905,11 +3905,7 @@ static uint32_t unit_index(const KestUnits *units, const KestUnitInfo *unit) {
 // and a field nobody wrote is a field holding what the function before it had.
 static bool open_body(Compiler *compiler, KestChunk *chunk,
                       const KestType *signature) {
-    KestIrBody *body = kest_ir_body_add(compiler->ir);
-    if (body == NULL) {
-        compiler->out_of_memory = true;
-        return false;
-    }
+    KestIrBody *body = kest_ir_body_begin(compiler->ir);
     body->symbol = chunk->name;
     body->source = chunk->source;
     body->declared = chunk->declared;
@@ -3933,6 +3929,11 @@ static bool open_body(Compiler *compiler, KestChunk *chunk,
     body->no_host = chunk->no_host;
     body->deterministic = chunk->deterministic;
     compiler->body = body;
+    // The stack of values this walk keeps is in the bodies' arena too, so a
+    // body that has been let go takes it with it: what is left over from the
+    // last one is a pointer into memory that has been handed back.
+    compiler->values = NULL;
+    compiler->value_capacity = 0;
     compiler->value_count = 0;
     compiler->local_count = 0;
     compiler->next_slot = 0;
@@ -3944,7 +3945,7 @@ static bool open_body(Compiler *compiler, KestChunk *chunk,
     return true;
 }
 
-static void close_body(Compiler *compiler, const KestBlock *block,
+static bool close_body(Compiler *compiler, const KestBlock *block,
                        KestSpan declared) {
     compiler->body->param_slots = compiler->next_slot;
     compile_block(compiler, block);
@@ -3954,6 +3955,16 @@ static void close_body(Compiler *compiler, const KestBlock *block,
     ir_carries(compiler, at, 0, 0, 0);
     compiler->body->slot_count = compiler->slot_high_water;
     compiler->body->stack_needed = compiler->stack_high_water;
+    // Handed to the backend and let go. Nothing in it is read again, which is
+    // what keeps one body's worth of memory alive rather than a program's.
+    bool went = kest_ir_body_end(compiler->ir);
+    compiler->body = NULL;
+    if (!went) {
+        compiler->out_of_memory = compiler->out_of_memory ||
+                                  compiler->ir->out_of_memory;
+        compiler->failed = true;
+    }
+    return went;
 }
 
 // Two functions compiled under one name. Not a `fault` — that one takes a
@@ -4152,7 +4163,9 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
                         : NULL;
                 declare_local(&compiler, decl->function.params[p]->name, type);
             }
-            close_body(&compiler, &decl->function.body, decl->name);
+            if (!close_body(&compiler, &decl->function.body, decl->name)) {
+                return false;
+            }
         }
     }
 
@@ -4184,8 +4197,11 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
                               ? instance->type->params[p]
                               : NULL);
         }
-        close_body(&compiler, &decl->function.body, decl->name);
+        bool went = close_body(&compiler, &decl->function.body, decl->name);
         kest_unbind_types(program);
+        if (!went) {
+            return false;
+        }
     }
 
     // Every element type a signature mentions gets a layout, whether or not a
