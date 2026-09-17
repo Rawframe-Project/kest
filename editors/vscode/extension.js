@@ -12,6 +12,18 @@ let client;
 // the command line in a terminal, on the file in front of the person. When
 // there is a protocol this becomes a debug adapter and nothing else here
 // changes. See D978.
+// A word a shell will take as one word. What goes in here is a path somebody
+// else chose and a command out of a setting, and a path with a space in it is
+// two words to a shell -- which is a broken command on a good day and a
+// different command on a bad one. Windows quotes with `"` and everything else
+// with `'`, and each escapes its own quote.
+function quoted(word) {
+    if (process.platform === "win32") {
+        return `"${String(word).replace(/"/g, '""')}"`;
+    }
+    return "'" + String(word).split("'").join("'\\''") + "'";
+}
+
 function debugThisFile() {
     const editor = window.activeTextEditor;
     if (!editor || editor.document.languageId !== "kest") {
@@ -21,7 +33,9 @@ function debugThisFile() {
     const command = workspace.getConfiguration("kest").get("path") || "kest";
     const terminal = window.createTerminal("kest debug");
     terminal.show();
-    terminal.sendText(`${command} debug ${editor.document.fileName}`);
+    terminal.sendText(
+        `${quoted(command)} debug ${quoted(editor.document.fileName)}`
+    );
 }
 
 function activate(context) {
