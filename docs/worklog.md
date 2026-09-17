@@ -36072,3 +36072,58 @@ had, and that a block moves where things sit on a heap nothing can ask about.
 
 **Runs:** `examples/determinism.kest` three times; `check` against `emit` over
 fifty files; four programs written for the four sentences above.
+
+## Windows, macOS, and what a second platform is for
+
+Three platforms built and run in CI, and held to writing the same bytes for
+every example. The port itself was three things and not a build system, because
+the tree includes no POSIX header at all: path separators, a real monotonic
+clock on each, and a batch file with the same file list the Makefile has.
+
+What the second and third platforms found was in the tests rather than the
+language. Windows writes two bytes for a line end in the mode a process starts
+in, so the two platforms wrote different files; an example named a path
+beginning with a slash, which is a path one of them has not got; a test that
+holds the machine to refusing a misaligned lend relied on where an array
+happened to land, and on macOS it landed somewhere else. Each of those had been
+passing for a reason that had nothing to do with what it was about.
+
+**Runs:** `make check`; the CI matrix over linux-x86-64, windows-x86-64 and
+macos-arm64, with a job that diffs the three traces; `make fuzz`; four machines
+of one build under the thread sanitiser.
+
+## The tools a language has, and the one instruction nothing compiles to
+
+A language server that is the compiler, a source debugger, a profiler, a cost
+report, four project commands and an editor extension. The one that decided the
+others was the profiler: a test at the top of the machine's dispatch loop
+measured 107 ns an entity against 139, which is a third of the machine, so
+nothing that costs a running program anything was allowed in. The profiler
+counts at the four places something happens worth counting and reads the total
+off the budget counter the machine already keeps; the debugger writes a
+breakpoint into the program and takes it out again.
+
+Three defects came out of driving those rather than reading them: a world
+emptied by a block that grew it, a reload that accepted a changed signature,
+and a walk of the code that read a breakpoint as an instruction.
+
+**Runs:** `make check`, which now drives the server, the debugger, the profiler
+and the project commands; `make time` before and after the profiler; seven
+reload edits; 3200 fuzzed inputs under the sanitisers.
+
+## What it costs beside other languages, and why there is no AOT
+
+Four workloads in this language, C++, Luau and Daslang, each answering with a
+checksum so that two runs can be shown to have done the same work. Twelve to
+fifteen times a C++ baseline on straight compute, three times on text, three on
+the one with checked identity in it — and against Daslang, faster on one of the
+two and eleven per cent slower on the other, where section 14's trigger for
+generating C is twice as slow.
+
+The other trigger needed a budget said out loud: ten thousand entities at sixty
+hertz, which a frame step of 107 ns an entity uses six and a half per cent of.
+Neither fired. Kest 1.0 is VM-only and that is the architecture rather than a
+plan.
+
+**Runs:** `bench/run.sh` best of seven with all three comparators built on this
+machine; `make time`.
