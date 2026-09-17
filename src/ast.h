@@ -200,6 +200,10 @@ typedef enum {
     KEST_STMT_BREAK,
     KEST_STMT_CONTINUE,
     KEST_STMT_BLOCK,
+    // A block whose working memory goes back where it was when it ends: what
+    // the program made inside it is gone, and nothing made inside it may be
+    // kept. See D966.
+    KEST_STMT_SCRATCH,
     KEST_STMT_DEFER,
 } KestStmtKind;
 

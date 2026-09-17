@@ -4469,6 +4469,7 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         }
         break;
 
+    case KEST_STMT_SCRATCH:
     case KEST_STMT_BLOCK:
         check_block(checker, &stmt->block);
         break;
@@ -4531,6 +4532,7 @@ static bool stmt_returns(const KestStmt *stmt) {
     switch (stmt->kind) {
     case KEST_STMT_RETURN:
         return true;
+    case KEST_STMT_SCRATCH:
     case KEST_STMT_BLOCK:
         return always_returns(&stmt->block);
     case KEST_STMT_EXPR:

@@ -203,6 +203,14 @@ typedef enum {
     KEST_IR_CALL_VALUE,
     KEST_IR_CALL_HOST,
 
+    // A block whose working memory goes back where it was when it ends. What
+    // the program made inside it is gone at the close, so nothing made inside
+    // it may be kept: `kest_ir_escapes` is what holds that, and it is here
+    // rather than in the walk that wrote the body because it is a question
+    // about the whole of one. See D966.
+    KEST_IR_REGION_OPEN,
+    KEST_IR_REGION_CLOSE,
+
     // Going somewhere else in the same body. A branch names the operation it
     // lands on; `target` is that, and is filled in when the walk reaches it.
     KEST_IR_GO,
@@ -371,6 +379,13 @@ void kest_ir_lands_here(KestIrBody *body, uint32_t branch);
 // promise is about is on the operation itself, because that is where anything
 // walking a body reads it.
 const char *kest_ir_word(KestIrKind kind);
+
+// What a body does that a region cannot allow: something made inside one and
+// kept past it. Answers what is wrong and where, or NULL. The rule is that
+// shorter-lived memory does not reach longer-lived state, followed through
+// every value a body makes. See D966.
+const char *kest_ir_escapes(const KestIrBody *body, KestArena *arena,
+                            KestSpan *where);
 
 // Holds a body to what a body is: every value made once and read once, every
 // branch landing on an operation this body has, and every place

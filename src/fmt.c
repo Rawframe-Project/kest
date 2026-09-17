@@ -789,6 +789,7 @@ static bool prints_flat(const KestStmt *stmt) {
         return true;
     case KEST_STMT_WHILE:
     case KEST_STMT_FOR:
+    case KEST_STMT_SCRATCH:
     case KEST_STMT_BLOCK:
         return false;
     }
@@ -894,8 +895,9 @@ static void print_stmt(Printer *printer, const KestStmt *stmt, bool bare) {
         put(printer, "continue\n");
         break;
 
+    case KEST_STMT_SCRATCH:
     case KEST_STMT_BLOCK:
-        put(printer, "{\n");
+        put(printer, stmt->kind == KEST_STMT_SCRATCH ? "scratch {\n" : "{\n");
         printer->depth++;
         printer->previous_line = 0;
         for (uint32_t i = 0; i < stmt->block.count; i++) {

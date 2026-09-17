@@ -407,6 +407,17 @@ static void walk_stmt(Graph *graph, Function *function, const KestStmt *stmt) {
     case KEST_STMT_RETURN:
         walk_expr(graph, function, stmt->result);
         break;
+    case KEST_STMT_SCRATCH:
+        // A block of working memory is a block that has some. A promise to
+        // reach no heap has none to put back, so writing one inside such a
+        // function is the promise being kept by a body that has nothing to do
+        // with it — refused where it is written rather than allowed and
+        // pointless. See D966.
+        reaches(graph, function, stmt->span,
+                "a `scratch { }` block is working memory, and a promise to "
+                "reach no heap has none");
+        walk_block(graph, function, &stmt->block);
+        break;
     case KEST_STMT_BLOCK:
         walk_block(graph, function, &stmt->block);
         break;

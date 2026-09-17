@@ -415,6 +415,11 @@ typedef struct {
     uint32_t world;
 } Store;
 
+// How many working-memory blocks one machine may have open at once. Nesting is
+// lexical and a body is refused for more than eight, but a body that calls
+// itself can open one a call deep, so this is a number met while running.
+#define KEST_KEPT_DEEP 64
+
 // What a piece of text is: bytes and how many. It is two slots wherever a
 // value lives, and this is the pair read out of them. See D964.
 typedef struct {
@@ -555,6 +560,15 @@ struct KestRuntime {
     uint32_t scratch_given[KEST_SCRATCH_DEEP];
     uint32_t scratch_count;
     uint32_t scratch_handed;
+    // And the program's own, which is a different question with the same
+    // answer: a `scratch { }` block marks the heap and puts it back. They are
+    // kept apart from the host's because the host's are refused while a
+    // program is running, which is exactly when these are open. See D966.
+    // Taken from this machine's own room the first time a program opens one,
+    // so a program with no `scratch { }` in it pays nothing for the door.
+    KestMark *kept;
+    uint32_t kept_count;
+    uint32_t kept_room;
     // Every lend the host has not ended, so that ending one ends every handle
     // over that block: a host lending the same memory twice has two handles
     // and one block, and it is the block it takes back. See D283.
@@ -2302,8 +2316,8 @@ static bool stopped_here(Vm *vmp, KestRuntime *rt, Frame *frame,
     return false;
 }
 
-static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
-                    uint16_t *returned) {
+static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
+                     uint16_t *returned) {
     const KestModule *module = rt->module;
     KestNative *natives = rt->natives;
     Vm *vmp = rt;
@@ -4030,6 +4044,55 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         }
 
+        case KEST_OP_SCRATCH: {
+            uint16_t where = READ_U16();
+            if (rt->kept_count == rt->kept_room &&
+                rt->kept_room < KEST_KEPT_DEEP) {
+                uint32_t room = rt->kept_room == 0 ? 8 : rt->kept_room * 2;
+                KestMark *grown = KEST_ARENA_ARRAY(rt->own, KestMark, room);
+                if (grown == NULL) {
+                    no_room(vmp, frame, instruction, rt);
+                    return false;
+                }
+                for (uint32_t i = 0; i < rt->kept_count; i++) {
+                    grown[i] = rt->kept[i];
+                }
+                rt->kept = grown;
+                rt->kept_room = room;
+            }
+            if (rt->kept_count == KEST_KEPT_DEEP) {
+                fail(vmp, frame, instruction, "K0656",
+                     "this machine holds %u working-memory blocks at once",
+                     (unsigned)KEST_KEPT_DEEP);
+                kest_diags_suggest(vmp->diags,
+                                   "a `scratch { }` inside a function that "
+                                   "calls itself opens one a call deep");
+                return false;
+            }
+            rt->kept[rt->kept_count] = kest_arena_mark(rt->heap);
+            mine[where].integer = (int64_t)rt->kept_count++;
+            break;
+        }
+        case KEST_OP_UNSCRATCH: {
+            uint16_t where = READ_U16();
+            uint32_t was = (uint32_t)mine[where].integer;
+#if KEST_CHECKED
+            rt->guarded++;
+            if (was >= rt->kept_count) {
+                fail(vmp, frame, instruction, "K0655",
+                     "this puts the heap back to a block that is not open");
+                kest_diags_fault(vmp->diags,
+                                 "a block the compiler opened and the machine "
+                                 "did not");
+                return false;
+            }
+#endif
+            if (was < rt->kept_count) {
+                kest_arena_rewind(rt->heap, rt->kept[was]);
+                rt->kept_count = was;
+            }
+            break;
+        }
         case KEST_OP_CALL: {
             SPEND();
             uint16_t index = READ_U16();
@@ -4499,6 +4562,24 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 #undef READ_BYTE
 #undef READ_U16
 #undef BINARY_I
+}
+
+// A run, and what it leaves behind when it stops. Everything a `scratch { }`
+// opened and did not close goes back where it was: a refusal, the fuel running
+// out, a host saying no and a machine that was cancelled all stop a body where
+// it stands, and a block put back only by the code that opened it is a block
+// nothing puts back then. A diagnostic is written in the machine's own room
+// rather than on this heap, so there is nothing here to take away with it.
+// See D617 and D966.
+static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
+                    uint16_t *returned) {
+    uint32_t held = rt->kept_count;
+    bool went = run_body(rt, entry, arg_slots, returned);
+    while (rt->kept_count > held) {
+        rt->kept_count--;
+        kest_arena_rewind(rt->heap, rt->kept[rt->kept_count]);
+    }
+    return went;
 }
 
 // The module is taken as something to write to rather than only to read,
@@ -5067,6 +5148,7 @@ bool kest_heap_reset(KestRuntime *runtime) {
     runtime->lent_capacity = 0;
     // And every mark, because a mark is a place on the heap that has gone.
     runtime->scratch_count = 0;
+    runtime->kept_count = 0;
     return true;
 }
 

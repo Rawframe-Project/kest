@@ -645,15 +645,22 @@ from the thread that was not running it"
 # What a world costs when it is worked on rather than grown, which is the
 # question a persistent-world language has to answer and the one a garbage
 # collector is usually the answer to. `examples/churn.kest` is the same round
-# written two ways -- a new piece of text and a new run of numbers for every
-# thing, and the same round written into what the thing already holds -- and
-# what is held here is that the second settles and the first does not.
+# written three ways -- a new piece of text and a new run of numbers for every
+# thing, the same round written into what the thing already holds, and a name
+# built in a block of working memory and copied into what the thing holds --
+# and what is held here is that the last two settle and the first does not.
+#
+# The third is the one worth reading: it writes a new name every round, which
+# is what the first does and the second gives up on, and it settles because
+# what it built is gone when the block ends and what it kept is bytes in a
+# buffer the thing already had. See D966 and D967.
 #
 # Said as a ceiling rather than as a count of bytes, because a ceiling is what a
 # host gives a machine and `--room` is where a program meets it: a shape that
 # settles runs in the same room however many rounds it is given, and a shape
 # that does not needs more. See D956.
 for asking in "reuse 100 512K runs" "reuse 400 512K runs" \
+        "keep 100 512K runs" "keep 400 512K runs" \
         "replace 100 4M runs" "replace 400 4M refuses"; do
     shape=${asking%% *}
     rest_of=${asking#* }
@@ -673,8 +680,10 @@ the study says it $wanted"
     fi
 done
 say "memory" "a round written into what a thing already holds runs four \
-hundred times in the room a hundred took, and the same round written with a \
-new piece of text and a new run of numbers every time does not"
+hundred times in the room a hundred took, and so does one that builds a new \
+name every round in a block of working memory and copies it into what the \
+thing holds, and the same round written with a new piece of text and a new run \
+of numbers every time does not"
 fi
 
 # Every word this language keeps, written where a name belongs. It has to be

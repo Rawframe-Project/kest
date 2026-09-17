@@ -816,6 +816,15 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         emit_u16(lower, op->imm[2], span);
         return;
 
+    case KEST_IR_REGION_OPEN:
+        emit(lower, KEST_OP_SCRATCH, span);
+        emit_u16(lower, op->imm[0], span);
+        return;
+    case KEST_IR_REGION_CLOSE:
+        emit(lower, KEST_OP_UNSCRATCH, span);
+        emit_u16(lower, op->imm[0], span);
+        return;
+
     case KEST_IR_GO:
         // Back to where a loop began, or on to somewhere not written yet.
         // Which of the two it is is which way it goes.

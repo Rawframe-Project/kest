@@ -1777,6 +1777,20 @@ static KestStmt *parse_statement(Parser *parser) {
                         start);
     }
 
+    // A word rather than a keyword: `scratch` followed by a brace is a thing
+    // no other statement can be, and a keyword is paid for by everybody who
+    // wanted the name. See the rule about words in `CLAUDE.md`.
+    if (is_word(parser, 0, "scratch") &&
+        peek_at(parser, 1).kind == KEST_TOK_LBRACE) {
+        advance(parser);
+        KestStmt *stmt = new_stmt(parser, KEST_STMT_SCRATCH, start);
+        if (stmt == NULL) {
+            return NULL;
+        }
+        parse_block(parser, &stmt->block);
+        return stmt;
+    }
+
     if (check(parser, KEST_TOK_LBRACE)) {
         KestStmt *stmt = new_stmt(parser, KEST_STMT_BLOCK, start);
         if (stmt == NULL) {

@@ -307,6 +307,12 @@ static void print_stmt(const KestStmt *stmt, const KestSource *source,
     case KEST_STMT_CONTINUE:
         fputs("(continue)\n", out);
         break;
+    case KEST_STMT_SCRATCH:
+        fputs("(scratch\n", out);
+        print_block(&stmt->block, source, depth + 1, out);
+        indent(out, depth);
+        fputs(")\n", out);
+        break;
     case KEST_STMT_BLOCK:
         fputs("(block\n", out);
         print_block(&stmt->block, source, depth + 1, out);

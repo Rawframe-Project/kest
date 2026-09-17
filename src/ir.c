@@ -100,6 +100,9 @@ static const struct {
     [KEST_IR_CALL_HOST] = {"call.host",
                            KEST_IR_EFFECT_HOST | KEST_IR_EFFECT_UNSETTLED},
 
+    [KEST_IR_REGION_OPEN] = {"region.open", KEST_IR_EFFECT_NONE},
+    [KEST_IR_REGION_CLOSE] = {"region.close", KEST_IR_EFFECT_NONE},
+
     [KEST_IR_GO] = {"go", KEST_IR_EFFECT_NONE},
     [KEST_IR_ASK] = {"ask", KEST_IR_EFFECT_NONE},
     [KEST_IR_GIVE] = {"give", KEST_IR_EFFECT_NONE},
@@ -302,6 +305,244 @@ void kest_ir_lands_here(KestIrBody *body, uint32_t branch) {
 // What a body has to be for a backend to read it without asking anything else.
 // Said as a sentence rather than an index, because what a reader does with the
 // answer is print it, and a number would send them back here.
+// Whether a value of this type can hold anything the machine keeps. A number
+// made inside a working-memory block is a number afterwards; a piece of text
+// made there is a place that is not there any more.
+static bool can_hold(const KestType *type) {
+    const KestType *what = NULL;
+    return kest_type_holds_own(type, &what);
+}
+
+// Whether what an operation leaves is made out of what it read rather than out
+// of the heap. A cut of a piece of text is the piece it was cut from; an
+// element read out of an array is the array's; a value out of its parts is its
+// parts. Everything else that can hold what the machine keeps -- a call, a
+// piece of text built, an array made -- is taken to have made it here, because
+// what a called body did with the heap is not this body's to know.
+static bool passes_through(uint16_t kind) {
+    switch (kind) {
+    case KEST_IR_CONST:
+    case KEST_IR_CONST_AT:
+    case KEST_IR_TRUE:
+    case KEST_IR_FALSE:
+    case KEST_IR_LOAD:
+    case KEST_IR_ADDR:
+    case KEST_IR_MAKE:
+    case KEST_IR_PART:
+    case KEST_IR_TURN:
+    case KEST_IR_MEET:
+    case KEST_IR_TEXT_SLICE:
+    case KEST_IR_TEXT_REST:
+    case KEST_IR_POP_LAST:
+    case KEST_IR_TAKE:
+    case KEST_IR_STORE_GET:
+    case KEST_IR_STORE_REF:
+        return true;
+    default:
+        return false;
+    }
+}
+
+// Whether something can be written into a value of this type that holds what
+// the machine keeps. A run of bytes cannot: copying a piece of text into one
+// copies the bytes, and what the block made is gone with the block. A run of
+// text can, and so can a store of a shape with text in it, and so can a
+// reference to one. This is what tells a keep from a copy. See D966.
+static bool can_keep(const KestType *type) {
+    if (type == NULL) {
+        return false;
+    }
+    switch (type->tag) {
+    case KEST_T_ARRAY:
+    case KEST_T_STORE:
+    case KEST_T_REF:
+    case KEST_T_OPTIONAL:
+        return can_hold(type->element) || can_keep(type->element);
+    case KEST_T_STRUCT:
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            if (can_keep(type->members[i].type)) {
+                return true;
+            }
+        }
+        return false;
+    case KEST_T_ENUM:
+        for (uint32_t c = 0; c < type->case_count; c++) {
+            for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
+                if (can_keep(type->cases[c].payload[p])) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    case KEST_T_FIXED:
+        return can_hold(type->element) || can_keep(type->element);
+    default:
+        return false;
+    }
+}
+
+static bool value_kept(const bool *made, const KestIrBody *body,
+                       const KestIrOp *op, uint16_t which) {
+    if (which >= op->arg_count) {
+        return false;
+    }
+    KestIrRef ref = body->args[op->first_arg + which];
+    return ref < body->value_count && made[ref];
+}
+
+const char *kest_ir_escapes(const KestIrBody *body, KestArena *arena,
+                            KestSpan *where) {
+    bool *made = KEST_ARENA_ARRAY(arena, bool,
+                                  body->value_count == 0 ? 1
+                                                         : body->value_count);
+    bool *kept = KEST_ARENA_ARRAY(arena, bool,
+                                  body->slot_count == 0 ? 1 : body->slot_count);
+    uint16_t inside[16];
+    uint32_t open = 0;
+    if (made == NULL || kept == NULL) {
+        return "there was no room to follow what a block keeps";
+    }
+    for (uint32_t i = 0; i < body->op_count; i++) {
+        const KestIrOp *op = &body->ops[i];
+        *where = op->span;
+        if (op->kind == KEST_IR_REGION_OPEN) {
+            if (open < sizeof(inside) / sizeof(inside[0])) {
+                inside[open] = op->imm[1];
+            }
+            open++;
+            continue;
+        }
+        if (op->kind == KEST_IR_REGION_CLOSE) {
+            // A way out of the block rather than the end of it: the heap goes
+            // back here and the block is still what a value made inside it
+            // belongs to, so this one is not what stops the counting.
+            if (op->imm[2] != 0) {
+                continue;
+            }
+            if (open > 0) {
+                open--;
+                uint16_t from = open < sizeof(inside) / sizeof(inside[0])
+                                    ? inside[open]
+                                    : 0;
+                for (uint16_t slot = from; slot < body->slot_count; slot++) {
+                    kept[slot] = false;
+                }
+            }
+            continue;
+        }
+        if (open == 0) {
+            continue;
+        }
+        uint16_t nearest = inside[(open - 1) < 16 ? open - 1 : 15];
+        const KestIrPlace *place =
+            op->place == KEST_IR_NO_PLACE ? NULL : &body->places[op->place];
+
+        // What a value is made of: something the block made, or something made
+        // out of one. A comparison of two pieces of text is a truth and not a
+        // piece of text, which is why the type is asked rather than the
+        // operation.
+        bool reads_one = false;
+        for (uint16_t a = 0; a < op->arg_count; a++) {
+            reads_one = reads_one || value_kept(made, body, op, a);
+        }
+        if (place != NULL && op->kind == KEST_IR_LOAD) {
+            if (place->kind == KEST_IR_PLACE_SLOT) {
+                for (uint16_t s = 0; s < place->slots; s++) {
+                    uint32_t at = (uint32_t)place->slot + s;
+                    reads_one = reads_one ||
+                                (at < body->slot_count && kept[at]);
+                }
+            } else if (place->base < body->value_count) {
+                reads_one = reads_one || made[place->base];
+            }
+        }
+        if (op->dest != KEST_IR_NONE &&
+            can_hold(body->values[op->dest].type) &&
+            (reads_one || !passes_through(op->kind))) {
+            made[op->dest] = true;
+        }
+
+        switch ((KestIrKind)op->kind) {
+        case KEST_IR_PUT: {
+            if (!value_kept(made, body, op, (uint16_t)(op->arg_count - 1))) {
+                break;
+            }
+            if (place == NULL) {
+                break;
+            }
+            if (place->kind == KEST_IR_PLACE_SLOT) {
+                if (place->slot < nearest) {
+                    return "this keeps what the block made in a name the "
+                           "block does not own";
+                }
+                for (uint16_t s = 0; s < place->slots; s++) {
+                    uint32_t at = (uint32_t)place->slot + s;
+                    if (at < body->slot_count) {
+                        kept[at] = true;
+                    }
+                }
+                break;
+            }
+            if (place->base >= body->value_count || !made[place->base]) {
+                return "this puts what the block made into something that "
+                       "outlives it";
+            }
+            break;
+        }
+        // Everything a container is written through. The thing written into is
+        // the first of what they read, and what goes in is the rest: a block's
+        // own array may hold the block's own text, and nothing else may.
+        case KEST_IR_APPEND:
+        case KEST_IR_FIT:
+        case KEST_IR_STORE_ADD:
+        case KEST_IR_STORE_SET: {
+            bool into = value_kept(made, body, op, 0);
+            for (uint16_t a = 1; a < op->arg_count; a++) {
+                if (value_kept(made, body, op, a) && !into) {
+                    return "this puts what the block made into something that "
+                           "outlives it";
+                }
+            }
+            break;
+        }
+        case KEST_IR_GIVE:
+            if (value_kept(made, body, op, 0)) {
+                return "this gives back what the block made, and the block "
+                       "puts it away";
+            }
+            break;
+        // A call that is handed what the block made and something older to put
+        // it in. What a called body does with what it is given is its own, so
+        // this is the one shape that cannot be followed and is refused
+        // instead. A crossing into the host is not one of these: see D966.
+        case KEST_IR_CALL:
+        case KEST_IR_CALL_VALUE: {
+            bool any = false;
+            for (uint16_t a = 0; a < op->arg_count; a++) {
+                any = any || value_kept(made, body, op, a);
+            }
+            if (!any) {
+                break;
+            }
+            for (uint16_t a = 0; a < op->arg_count; a++) {
+                KestIrRef ref = body->args[op->first_arg + a];
+                if (ref >= body->value_count || made[ref]) {
+                    continue;
+                }
+                if (can_keep(body->values[ref].type)) {
+                    return "this hands what the block made to something that "
+                           "outlives it and could keep it";
+                }
+            }
+            break;
+        }
+        default:
+            break;
+        }
+    }
+    return NULL;
+}
+
 const char *kest_ir_verify(const KestIrBody *body) {
     for (uint32_t i = 0; i < body->op_count; i++) {
         const KestIrOp *op = &body->ops[i];

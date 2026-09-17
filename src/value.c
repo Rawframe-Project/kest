@@ -949,6 +949,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"jump.true.eq.f", JUMP}, {"jump.true.ne.f", JUMP},
     {"loop", BACK},
 {"next.less.i", WALK}, {"next.less.u", WALK},
+    {"scratch", U16},      {"unscratch", U16},
     {"call", U16_U16},     {"call.value", U16_U16},
     {"call.host", U16_U16_U16},
     {"return", U16},
@@ -1400,6 +1401,8 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_TEXT_LEN:
     case KEST_OP_TEXT_AT:
     case KEST_OP_TEXT_IN:
+    case KEST_OP_SCRATCH:
+    case KEST_OP_UNSCRATCH:
     case KEST_OP_TEXT_SLICE:
     case KEST_OP_TEXT_REST:
     case KEST_OP_TEXT_MATCHES:

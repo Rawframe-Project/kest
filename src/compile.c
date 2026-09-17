@@ -23,6 +23,10 @@ _Static_assert(MAX_EXTERNS <= (uint32_t)UINT16_MAX + 1,
 #define MAX_LOOPS 16
 #define MAX_BREAKS 32
 #define MAX_DEFERS 32
+// How many working-memory blocks may be open at once in one body. Nesting is
+// lexical, so this is a number a program can be refused for where it is
+// written rather than one it can meet while running.
+#define MAX_REGIONS 8
 // A jump and a loop carry how far as two bytes, so this is how much code there
 // can be between one and where it lands.
 #define MAX_REACH UINT16_MAX
@@ -58,6 +62,8 @@ typedef struct {
     // How many deferred statements were outstanding when the loop opened, so
     // a `break` knows which of them it is leaving.
     uint16_t deferred;
+    // And how many working-memory blocks, for the same reason.
+    uint16_t regions;
     uint32_t breaks[MAX_BREAKS];
     uint32_t break_count;
     // `continue` jumps forward to a pad placed after the body, because in a
@@ -101,6 +107,14 @@ typedef struct {
     // what the loop it is leaving added. See D061.
     const KestExpr *deferred[MAX_DEFERS];
     uint16_t defer_count;
+
+    // The working-memory blocks this walk is inside, innermost last, each
+    // with the slot holding which one it is. A `return`, a `break` or a
+    // `continue` out of one closes it on the way; every other way out is the
+    // machine's, because a body that is refused has no code left to run. See
+    // D966.
+    uint16_t regions[MAX_REGIONS];
+    uint16_t region_count;
 
     // Compiling an expression always leaves one value behind and compiling a
     // statement leaves none, so following the emit sites gives the exact
@@ -799,6 +813,8 @@ static double parse_real(Compiler *compiler, KestSpan span) {
 
 static void emit_constant(Compiler *compiler, KestValue value,
                           KestConstClass class, const KestType *type,
+                          KestSpan span);
+static void close_regions(Compiler *compiler, uint16_t from, bool leaving,
                           KestSpan span);
 static void compile_expr(Compiler *compiler, const KestExpr *expr);
 static void compile_block(Compiler *compiler, const KestBlock *block);
@@ -3080,6 +3096,7 @@ static Loop *open_loop(Compiler *compiler, KestSpan span) {
     Loop *loop = &compiler->loops[compiler->loop_count++];
     loop->start = compiler->body->op_count;
     loop->deferred = compiler->defer_count;
+    loop->regions = compiler->region_count;
     loop->break_count = 0;
     loop->continue_count = 0;
     return loop;
@@ -3826,6 +3843,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         // that defers asked for its answer's width less room than it uses.
         // See D811.
         run_deferred(compiler, 0, stmt->span);
+        close_regions(compiler, 0, true, stmt->span);
         stack_pop(compiler, size);
         uint32_t at = ir_emit(compiler, KEST_IR_GIVE,
                               stmt->result == NULL ? NULL : stmt->result->type,
@@ -3840,6 +3858,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         }
         Loop *loop = &compiler->loops[compiler->loop_count - 1];
         run_deferred(compiler, loop->deferred, stmt->span);
+        close_regions(compiler, loop->regions, true, stmt->span);
         if (loop->continue_count == MAX_BREAKS) {
             refuse(compiler, stmt->span, "K0502",
                    "a loop holds at most %d continues", MAX_BREAKS);
@@ -3855,12 +3874,39 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         }
         Loop *loop = &compiler->loops[compiler->loop_count - 1];
         run_deferred(compiler, loop->deferred, stmt->span);
+        close_regions(compiler, loop->regions, true, stmt->span);
         if (loop->break_count == MAX_BREAKS) {
             refuse(compiler, stmt->span, "K0502",
                    "a loop holds at most %d breaks", MAX_BREAKS);
             break;
         }
         loop->breaks[loop->break_count++] = ir_go(compiler, stmt->span);
+        break;
+    }
+
+    case KEST_STMT_SCRATCH: {
+        if (compiler->region_count == MAX_REGIONS) {
+            refuse(compiler, stmt->span, "K0502",
+                   "working-memory blocks nest more than %d deep",
+                   MAX_REGIONS);
+            break;
+        }
+        uint16_t names = compiler->local_count;
+        uint16_t slots = compiler->next_slot;
+        uint16_t which = reserve_slot(compiler, 1);
+        uint32_t opened = ir_emit(compiler, KEST_IR_REGION_OPEN, NULL, 0, NULL,
+                                  0, stmt->span);
+        // Which slot holds it, and where the names declared inside it start:
+        // a value written into a name below that is a value kept past the
+        // block, and the walk over the body reads both. See D966.
+        ir_carries(compiler, opened, which, compiler->next_slot, 0);
+        compiler->regions[compiler->region_count++] = which;
+        compile_block(compiler, &stmt->block);
+        close_regions(compiler, (uint16_t)(compiler->region_count - 1), false,
+                      stmt->span);
+        compiler->region_count--;
+        compiler->local_count = names;
+        compiler->next_slot = slots;
         break;
     }
 
@@ -3885,6 +3931,24 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
 static bool leaves_early(const KestStmt *stmt) {
     return stmt->kind == KEST_STMT_RETURN || stmt->kind == KEST_STMT_BREAK ||
            stmt->kind == KEST_STMT_CONTINUE;
+}
+
+// Closing the working-memory blocks this leaves, innermost first. What is put
+// back is the heap; what is not put back is anything the body worked out into
+// a slot, which is why the answer is worked out before this runs.
+static void close_regions(Compiler *compiler, uint16_t from, bool leaving,
+                          KestSpan span) {
+    for (uint16_t i = compiler->region_count; i > from; i--) {
+        uint32_t at = ir_emit(compiler, KEST_IR_REGION_CLOSE, NULL, 0, NULL, 0,
+                              span);
+        // Whether this is the block ending or a way out of it. The one that
+        // ends it is where the walk over the body stops counting; the ones a
+        // `return`, a `break` or a `continue` write are the machine putting
+        // the heap back on the way past, and the block is still open as far as
+        // what may be kept goes. See D966.
+        ir_carries(compiler, at, compiler->regions[i - 1], 0,
+                   leaving ? 1 : 0);
+    }
 }
 
 static void run_deferred(Compiler *compiler, uint16_t from, KestSpan span) {
@@ -3973,6 +4037,7 @@ static bool open_body(Compiler *compiler, KestChunk *chunk,
     compiler->stack_high_water = 0;
     compiler->depth = 0;
     compiler->loop_count = 0;
+    compiler->region_count = 0;
     return true;
 }
 
@@ -3986,6 +4051,20 @@ static bool close_body(Compiler *compiler, const KestBlock *block,
     ir_carries(compiler, at, 0, 0, 0);
     compiler->body->slot_count = compiler->slot_high_water;
     compiler->body->stack_needed = compiler->stack_high_water;
+    // What a working-memory block keeps, followed over the whole body rather
+    // than watched while it was written: the block is what says a value is
+    // shorter-lived, and what it reaches is a question about the body. See
+    // D966.
+    KestSpan escaped = declared;
+    const char *keeps = kest_ir_escapes(compiler->body, compiler->ir->arena,
+                                        &escaped);
+    if (keeps != NULL) {
+        refuse(compiler, escaped, "K0408", "%s", keeps);
+        kest_diags_suggest(compiler->program->diags,
+                           "what a `scratch { }` block makes is gone when it "
+                           "ends: copy out a number, or make the thing outside "
+                           "the block");
+    }
     // Handed to the backend and let go. Nothing in it is read again, which is
     // what keeps one body's worth of memory alive rather than a program's.
     bool went = kest_ir_body_end(compiler->ir);

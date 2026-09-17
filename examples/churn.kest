@@ -109,6 +109,29 @@ fn reusing(world: store<Thing>, round: i32) -> i32 no.alloc no.host {
     return touched
 }
 
+// And the shape that has both: a name made where it is wanted and kept where
+// the thing already has room for it. What the round builds is one round's
+// working memory and goes back when the block ends; what it keeps is the bytes
+// it copied into the buffer the thing already had. That is what a world with
+// changing text wants, and it is the one of these three that neither abandons
+// what it replaced nor gives up on writing a name. See D966 and D967.
+fn keeping(world: store<Thing>, round: i32) -> i32 {
+    let touched = 0
+    for r in world {
+        if let one = get(world, r) {
+            scratch {
+                let name = "thing {one.id} at {round}"
+                clear(one.said)
+                if !text.fitting(one.said, name) {
+                    return 0 - 1
+                }
+            }
+            touched += 1
+        }
+    }
+    return touched
+}
+
 // Identities deleted and made again, which is what a world does between the
 // rounds that only change things: the store hands the places back out, so what
 // this costs is work rather than growth, and the ring is mended as it goes.
@@ -195,12 +218,13 @@ fn rounds() -> i32 {
     return ROUNDS
 }
 
-// Which of the three shapes to run, because what this is for is comparing them
-// and a run that does all three at once is one number for three questions.
+// Which of the four shapes to run, because what this is for is comparing them
+// and a run that does all four at once is one number for four questions.
 // `replace` is the first way anybody writes a round, `reuse` is the same round
-// written into what the thing already holds, and `turn` is neither: it is
-// identities going and coming back. Nothing said runs all of them, which is
-// what `make check` does.
+// written into what the thing already holds, `keep` is a name built in a block
+// of working memory and copied into what the thing holds, and `turn` is none of
+// them: it is identities going and coming back. Nothing said runs all of them,
+// which is what `make check` does.
 fn shape() -> text {
     if let written = os.arg(1) {
         return written
@@ -213,10 +237,12 @@ fn main() -> i32 {
     let which = shape()
     let doing_replace = which == "all" || which == "replace"
     let doing_reuse = which == "all" || which == "reuse"
+    let doing_keep = which == "all" || which == "keep"
     let doing_turn = which == "all" || which == "turn"
 
     let replaced = build(THINGS)
     let reused = build(THINGS)
+    let kept = build(THINGS)
     for i in 0..how_many {
         if doing_replace {
             if replacing(replaced, i) != THINGS {
@@ -226,6 +252,11 @@ fn main() -> i32 {
         if doing_reuse {
             if reusing(reused, i) != THINGS {
                 return 2
+            }
+        }
+        if doing_keep {
+            if keeping(kept, i) != THINGS {
+                return 8
             }
         }
         if doing_turn && i % 16 == 0 {
@@ -244,6 +275,19 @@ fn main() -> i32 {
     }
     if round(reused, 1) != THINGS {
         return 6
+    }
+    if round(kept, 1) != THINGS {
+        return 9
+    }
+    // And what the block copied out is in the buffer the thing keeps.
+    if doing_keep {
+        for r in kept {
+            if let one = get(kept, r) {
+                if len(one.said) < 8 {
+                    return 10
+                }
+            }
+        }
     }
     // And what is in them is what the last round wrote.
     if doing_replace {

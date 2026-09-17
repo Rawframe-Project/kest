@@ -281,6 +281,12 @@ typedef enum {
     KEST_OP_NEXT_LESS_I, // u16 slot, u16 limit slot, u16 backward offset
     KEST_OP_NEXT_LESS_U, // u16 slot, u16 limit slot, u16 backward offset
 
+    // Working memory: where the heap is, kept in a slot, and the heap put back
+    // to it. What the program made in between is gone. A body that is refused
+    // does not reach the second of these, so the machine puts back what a run
+    // left open rather than trusting the code to. See D966.
+    KEST_OP_SCRATCH,     // u16 slot
+    KEST_OP_UNSCRATCH,   // u16 slot
     KEST_OP_CALL,        // u16 function, u16 argument slots
     // Through a value rather than a name. Which function it is sits on top of
     // the arguments; what it promises is in its type, so a cost contract is
