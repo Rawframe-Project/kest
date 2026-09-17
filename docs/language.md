@@ -4428,6 +4428,27 @@ machine stops at the next step the program takes, with the refusal a budget
 spent any other way gives. `examples/engine.c` charges for the door it watches
 the world through.
 
+## What this has been run on
+
+x86-64 Linux, GCC 15.2. That is the whole list, and nothing else is claimed:
+this project does not call a thing that was never run a thing that works.
+
+The library is C11 and libc and nothing else — `check-header.sh` compiles the
+public header to the standard with nothing beyond it — so it should build
+anywhere that has a C11 compiler. What "should" is worth is a build nobody has
+done. For a reader taking it somewhere else, these are the places that know
+where they are:
+
+| | What is assumed | Where |
+| --- | --- | --- |
+| paths | a separator is `/`, and a backslash is a character a filename may hold | `last_separator` in `src/loader.c`, which every reading of a path goes through |
+| the library | it is beside the program, or `../lib/kest`, or where an install put it | `kest_library_path` in `src/loader.c`, and `KEST_LIB` in front of all of them |
+| a clock | `CLOCK_MONOTONIC`, then `timespec_get`, then `clock` | `host_microseconds` in `src/main.c`, which is the command line rather than the library |
+| widths | `%zu` for a `size_t` and `%llu` for a `uint64_t` | every message, held by the compiler reading the format against what is handed to it |
+
+Windows is **unverified**. Nothing here has been built or run there and the
+table above is what a port would read first, not a list of what would be wrong.
+
 ## Who owns a machine
 
 A build is read-only once it is built. The program, the layouts and every piece

@@ -106,9 +106,19 @@ static char *read_file(KestArena *arena, const char *path, size_t *length) {
     return text;
 }
 
+// Where the last separator in a path is, or NULL. Every reading of a path in
+// this file goes through it, because what a separator is is the one thing about
+// a path that belongs to the platform rather than to the program. This is
+// written for the one this is built and run on, where it is `/` and a backslash
+// is a character a filename may hold. A port to a platform where that is not
+// true changes this and nothing else in this file. See D953.
+static const char *last_separator(const char *path) {
+    return strrchr(path, '/');
+}
+
 // The directory a path is in, with its separator, or an empty string.
 static const char *directory_of(KestArena *arena, const char *path) {
-    const char *slash = strrchr(path, '/');
+    const char *slash = last_separator(path);
     if (slash == NULL) {
         return "";
     }
@@ -343,7 +353,7 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
         // stream is the case this is really for: it is nowhere, so an import
         // of its own resolves under `/dev` and there is nothing there.
         if (blamed_in != NULL) {
-            const char *slash = strrchr(path, '/');
+            const char *slash = last_separator(path);
             if (from_library) {
                 kest_diags_suggest(diags,
                                    "a `std` import resolves from the library, "
@@ -629,7 +639,7 @@ const char *kest_library_path(KestArena *arena, const char *program) {
         snprintf(scratch, sizeof(scratch), "%s%s", given,
                  given[length - 1] == '/' ? "" : "/");
     } else {
-        const char *slash = strrchr(program, '/');
+        const char *slash = last_separator(program);
         int length = slash == NULL ? 0 : (int)(slash - program) + 1;
 
         // Beside the program, which is where it is in a source tree, and then

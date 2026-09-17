@@ -29462,3 +29462,28 @@ whether two threads left the heap and the stacks intact.
 What is not promised: nothing here locks anything, two threads calling into one
 machine is two threads writing one stack, and concurrency inside the language is
 not in v1.
+
+## D953: what this has been run on, and the four places that know where they are
+
+This has been built and run on x86-64 Linux with GCC 15.2 and nowhere else.
+Games eventually mean Windows, and the mission this is part of asks for a build
+and a test there or a clear mark that there has not been one. There has not
+been one.
+
+So the mark is written where a reader looks — the reference and the front page —
+and beside it the four things in this tree that know which platform they are on:
+what a path separator is, where the library is looked for, what a clock is, and
+what a width is called in a message. Three of those were already in one place
+each. The first was in three, and is in one now: `last_separator` in
+`src/loader.c`, which every reading of a path goes through.
+
+It is written for this platform on purpose. Here `/` separates and a backslash
+is a character a filename may hold, so treating both as separators would break
+a file somebody can name today for a platform nobody has built for. What the one
+function buys is that a port changes one line rather than finding three, and
+that a reader can see the assumption rather than reading it out of a `strrchr`.
+
+What this is not is a portability layer. There are no `#ifdef`s for a platform
+nobody has run, because untested code for an unbuilt target is a claim rather
+than a port. When somebody has a Windows machine, the table in the reference is
+what they read first.

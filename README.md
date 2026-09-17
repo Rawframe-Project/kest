@@ -80,7 +80,8 @@ graphics.
 
 **Tested on** x86-64 Linux with GCC 15.2 only. The code is C11 and libc and
 nothing else, so it should build elsewhere; nobody has, and this project does
-not call a thing that was never run a thing that works.
+not call a thing that was never run a thing that works. Windows is unverified;
+`docs/language.md` says what a port would read first.
 
 What it costs to run, measured rather than remembered. `make time` takes four
 numbers on the machine it is run on:

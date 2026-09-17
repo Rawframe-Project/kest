@@ -35701,3 +35701,17 @@ itself.
 **Runs:** `make check`, which has a `threads` section now; and the same host
 built against the sanitised objects, which answered 299995 twice and then
 `K0660`.
+
+## Where this has been run, and the four places that know where they are (D953)
+
+x86-64 Linux with GCC 15.2, and nowhere else. Windows is marked unverified in
+the reference and on the front page rather than left to a reader to assume, and
+beside the mark is what a port reads first: what a path separator is, where the
+library is looked for, what a clock is, and what a width is called in a message.
+Three of those were in one place each already; the first was in three
+`strrchr(path, '/')` calls and is in one function now.
+
+No `#ifdef`s for a platform nobody has built for. Untested code for an unbuilt
+target is a claim rather than a port.
+
+**Runs:** `make check`.
