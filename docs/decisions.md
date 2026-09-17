@@ -30354,3 +30354,33 @@ already writes: what a block makes does not reach longer-lived state, and a
 world that got bigger inside a block is longer-lived state that the block wrote.
 A block is for working memory. *Measured*, on the trial above and on three
 programs in the refusal corpus.
+
+## D973. The library is held to shadowing and the hosts are not
+
+MSVC's `/W4` says C4456 where GCC's `-Wshadow` says the same thing, and neither
+was on. Turning it on found three in the library and forty-three in the two
+example hosts, and the two numbers mean different things.
+
+The three in the library were worth finding, and one of them shows why:
+`examples/embed.c` had
+
+```
+for (const char *at = said; (at = line_of(at, line, sizeof(line))) != NULL;) {
+    const char *at = strstr(line, "calling this needs ");
+```
+
+where the `sscanf` under it reads whichever `at` is nearer — and which that is
+is a thing a reader has to work out rather than read. In the library that is
+what a shadowed name looks like every time, so `-Wshadow` is an error in
+`src/` and the three were renamed.
+
+The forty-three are in one `main` of blocks run one after another, each asking
+one question of the boundary and each declaring what it needs. A block that
+declares `said` where the block above it declared `said` is two names for two
+things in two places, which is not what shadowing is a warning about. Renaming
+them buys a reader nothing and costs forty-three names that are worse than the
+ones there. So `HOSTWARN` is `WARN` without it, and the Windows build says
+`/wd4456` for the same two files and for the same reason.
+
+What that leaves is the one above, which stays as it is and works: the inner
+name is the one meant. *Argued.*

@@ -14,6 +14,9 @@ rem running. `_CRT_SECURE_NO_WARNINGS` turns off the advice to use Microsoft's
 rem own spellings of `fopen` and `snprintf`, which are not C11 and are not what
 rem this is written in.
 set "WARN=/nologo /std:c11 /experimental:c11atomics /W4 /WX /O2 /Iinclude /D_CRT_SECURE_NO_WARNINGS /DKEST_LIB_DIR=\"lib/kest/\""
+rem The hosts are not held to C4456, which is what `-Wshadow` is called here,
+rem for the reason the Makefile gives. See D973.
+set "HOSTWARN=%WARN% /wd4456"
 set "OBJ="
 for %%f in (src\*.c) do (
     if /I not "%%~nxf"=="main.c" (
@@ -26,10 +29,10 @@ lib /nologo /out:"%OUT%\kest.lib" !OBJ! || exit /b 1
 cl %WARN% /c /Fo"%OUT%\main.obj" src\main.c || exit /b 1
 cl /nologo /Fe"%OUT%\kest.exe" "%OUT%\main.obj" "%OUT%\kest.lib" || exit /b 1
 
-cl %WARN% /c /Fo"%OUT%\embed.obj" examples\embed.c || exit /b 1
+cl %HOSTWARN% /c /Fo"%OUT%\embed.obj" examples\embed.c || exit /b 1
 cl /nologo /Fe"%OUT%\embed.exe" "%OUT%\embed.obj" "%OUT%\kest.lib" || exit /b 1
 
-cl %WARN% /c /Fo"%OUT%\engine.obj" examples\engine.c || exit /b 1
+cl %HOSTWARN% /c /Fo"%OUT%\engine.obj" examples\engine.c || exit /b 1
 cl /nologo /Fe"%OUT%\engine.exe" "%OUT%\engine.obj" "%OUT%\kest.lib" || exit /b 1
 
 echo built %OUT%\kest.exe, %OUT%\embed.exe and %OUT%\engine.exe

@@ -395,8 +395,14 @@ static bool value_kept(const bool *made, const KestIrBody *body,
 // does to a thing that outlives it; `push`, `room` and `add` ask for more.
 // See D972.
 static bool grows_the_heap(KestIrKind kind) {
-    return kind == KEST_IR_APPEND || kind == KEST_IR_ROOM ||
-           kind == KEST_IR_STORE_ADD;
+    switch (kind) {
+    case KEST_IR_APPEND:
+    case KEST_IR_ROOM:
+    case KEST_IR_STORE_ADD:
+        return true;
+    default:
+        return false;
+    }
 }
 
 const char *kest_ir_escapes(const KestIrBody *body, KestArena *arena,

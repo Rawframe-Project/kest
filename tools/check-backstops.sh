@@ -9967,29 +9967,27 @@ fn main() -> i32 {
         "caught": "into this host's bytes",
     },
     {
-        # Bytes with a nought among them taken as text. Text ends at its first
-        # nought, so what a program would hold is shorter than what the host
-        # handed over and nobody would be told: a name cut in half, a line that
-        # says less than it holds. It is the third of the three ways a nought
-        # gets into text and the one nothing had ever asked about.
-        "what": "bytes with a nought among them taken as text",
+        # Bytes a host hands over that are not UTF-8, taken as text. Text is
+        # UTF-8 and a run of the host's own bytes is whatever the host has in
+        # it, so this is the door between the two and the only place the walk
+        # is paid for. Without it a program holds bytes it can cut in the
+        # middle of nothing and hand to anybody, and nobody is told. See D971.
+        "what": "bytes that are not utf-8 taken as text",
         "file": "src/vm.c",
-        "from": """    for (uint32_t i = 0; i < length; i++) {
-        if (bytes[i] == 0) {
-            KestSpan nowhere = {0, 0};
-            kest_diags_in(runtime->diags, NULL);
-            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0611",
-                           nowhere,
-                           "byte %u of what the host handed over is zero, and "
-                           "text ends at a zero byte",
-                           i);
-            return false;
-        }
+        "from": """    uint32_t bad = 0;
+    if (!kest_utf8_whole(bytes, length, &bad)) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0611", nowhere,
+                       "byte %u of what the host handed over begins no "
+                       "character, and text is UTF-8",
+                       bad);
+        return false;
     }""",
         "to": "    (void)0;",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "were taken as text",
+        "caught": "was taken as text",
     },
     {
         # A mistake in the words at a command line, said to a person and not to

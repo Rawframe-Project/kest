@@ -199,22 +199,22 @@ sweep_one() {
         # for text, which is enough for a call to happen.
         chosen=$("$kest" check "$file" --json 2>/dev/null </dev/null |
                  python3 -c '
-    import json
-    import sys
+import json
+import sys
 
-    TYPED = {"i8": "0", "i16": "0", "i32": "0", "i64": "0", "u8": "0", "u16": "0",
-             "u32": "0", "u64": "0", "f32": "0", "f64": "0", "bool": "false",
-             "text": "x"}
+TYPED = {"i8": "0", "i16": "0", "i32": "0", "i64": "0", "u8": "0", "u16": "0",
+         "u32": "0", "u64": "0", "f32": "0", "f64": "0", "bool": "false",
+         "text": "x"}
 
-    held = json.load(sys.stdin)
-    for one in held.get("functions", []):
-        if one.get("foreign") or one.get("file") != sys.argv[1]:
-            continue
-        takes = one.get("parameters") or []
-        if any(what not in TYPED for what in takes):
-            continue
-        print(" ".join([one["name"]] + [TYPED[what] for what in takes]))
-        break
+held = json.load(sys.stdin)
+for one in held.get("functions", []):
+    if one.get("foreign") or one.get("file") != sys.argv[1]:
+        continue
+    takes = one.get("parameters") or []
+    if any(what not in TYPED for what in takes):
+        continue
+    print(" ".join([one["name"]] + [TYPED[what] for what in takes]))
+    break
     ' "$file")
         if [ -n "$chosen" ]; then
             # shellcheck disable=SC2086
@@ -254,187 +254,187 @@ sweep_one() {
                   echo "----";
                   "$kest" check "$file" --json 2>/dev/null </dev/null; } |
                 python3 -c '
-    import json
-    import re
-    import sys
+import json
+import re
+import sys
 
-    text, _, written = sys.stdin.read().partition("\n----\n")
-    printed = set()
-    shapes = {}
-    laid = {}
-    laid_out = None
-    summarised = {}
-    for line in text.splitlines():
-        # To the two spaces the layout begins after, rather than to the
-        # first space in it: a copy of a shape over two types is called
-        # `Pair<i32, text>`, and a name read to the first space is half of
-        # one. No file in this tree had a copy over two types until one was
-        # written, which is why a reading that could not spell one held.
-        what = re.match(r"(struct|enum|flags) (.+?)  (.*)$", line)
-        if what:
-            printed.add(what.group(2))
-            # And what it is laid out as, which is the rest of that line, with
-            # the lines under it kept in order beneath it: a field is a slot
-            # and a byte and a name and a type, and a case is a tag and a name
-            # and what it carries. See D592.
-            laid_out = what.group(2)
-            laid.setdefault(laid_out, []).append(what.group(3).rstrip())
-        under = re.match(r"  (slot |bit |\d+ )(.*)$", line)
-        if under and laid_out is not None:
-            laid[laid_out].append(re.sub(r"\s+", " ",
-                                         (under.group(1) +
-                                          under.group(2)).rstrip()))
-        called = re.match(r"(?:extern )?fn ([^(]+)\((.*)$", line)
-        if called:
-            printed.add(called.group(1))
-            # And what it takes and gives back, kept whole rather than split
-            # on the commas: a copy of a shape over two types is written
-            # `Pair<i32, text>`, and a list read by splitting is one that
-            # comes apart on the first of those. A list per name, because a
-            # module written in two widths declares one name twice and a
-            # reading that keeps the last of them reads half a module.
-            # See D591.
-            shapes.setdefault(called.group(1), []).append(called.group(2))
-        held = re.match(r"const (\S+):", line)
-        if held:
-            printed.add(held.group(1))
-        # And the line a module gets when a file imported it, which is a count
-        # of what the object writes out one at a time. It is the third thing
-        # this command prints and the only one that is a summary: what a
-        # reader is shown instead of two hundred lines of a library they did
-        # not write. See D593.
-        counted = re.match(r"([^ ]+)  (\d.*)$", line)
-        if counted and not line.startswith(("struct ", "enum ", "flags ",
-                                            "fn ", "extern fn ", "const ")):
-            summarised[counted.group(1)] = counted.group(2).rstrip()
+text, _, written = sys.stdin.read().partition("\n----\n")
+printed = set()
+shapes = {}
+laid = {}
+laid_out = None
+summarised = {}
+for line in text.splitlines():
+    # To the two spaces the layout begins after, rather than to the
+    # first space in it: a copy of a shape over two types is called
+    # `Pair<i32, text>`, and a name read to the first space is half of
+    # one. No file in this tree had a copy over two types until one was
+    # written, which is why a reading that could not spell one held.
+    what = re.match(r"(struct|enum|flags) (.+?)  (.*)$", line)
+    if what:
+        printed.add(what.group(2))
+        # And what it is laid out as, which is the rest of that line, with
+        # the lines under it kept in order beneath it: a field is a slot
+        # and a byte and a name and a type, and a case is a tag and a name
+        # and what it carries. See D592.
+        laid_out = what.group(2)
+        laid.setdefault(laid_out, []).append(what.group(3).rstrip())
+    under = re.match(r"  (slot |bit |\d+ )(.*)$", line)
+    if under and laid_out is not None:
+        laid[laid_out].append(re.sub(r"\s+", " ",
+                                     (under.group(1) +
+                                      under.group(2)).rstrip()))
+    called = re.match(r"(?:extern )?fn ([^(]+)\((.*)$", line)
+    if called:
+        printed.add(called.group(1))
+        # And what it takes and gives back, kept whole rather than split
+        # on the commas: a copy of a shape over two types is written
+        # `Pair<i32, text>`, and a list read by splitting is one that
+        # comes apart on the first of those. A list per name, because a
+        # module written in two widths declares one name twice and a
+        # reading that keeps the last of them reads half a module.
+        # See D591.
+        shapes.setdefault(called.group(1), []).append(called.group(2))
+    held = re.match(r"const (\S+):", line)
+    if held:
+        printed.add(held.group(1))
+    # And the line a module gets when a file imported it, which is a count
+    # of what the object writes out one at a time. It is the third thing
+    # this command prints and the only one that is a summary: what a
+    # reader is shown instead of two hundred lines of a library they did
+    # not write. See D593.
+    counted = re.match(r"([^ ]+)  (\d.*)$", line)
+    if counted and not line.startswith(("struct ", "enum ", "flags ",
+                                        "fn ", "extern fn ", "const ")):
+        summarised[counted.group(1)] = counted.group(2).rstrip()
 
-    everything = json.loads(written or "{}")
-    named = set()
-    for one in json.loads(written or "{}").get("types", []):
+everything = json.loads(written or "{}")
+named = set()
+for one in json.loads(written or "{}").get("types", []):
+    if one.get("file") == sys.argv[1]:
+        named.add(one["name"])
+for what in ("functions", "constants"):
+    for one in json.loads(written or "{}").get(what, []):
         if one.get("file") == sys.argv[1]:
             named.add(one["name"])
-    for what in ("functions", "constants"):
-        for one in json.loads(written or "{}").get(what, []):
-            if one.get("file") == sys.argv[1]:
-                named.add(one["name"])
 
-    for name in sorted(printed - named):
-        print("printed and not in the JSON: %s" % name)
-    for name in sorted(named - printed):
-        print("in the JSON and not printed: %s" % name)
+for name in sorted(printed - named):
+    print("printed and not in the JSON: %s" % name)
+for name in sorted(named - printed):
+    print("in the JSON and not printed: %s" % name)
 
-    # And what each of them takes and gives back, which the two forms said in
-    # two shapes and nothing read together: the words put it after an arrow
-    # and leave the arrow off a function that gives nothing, and the object
-    # says `nothing` under `gives`. The promise is a word after the type in
-    # one and a field in the other. One fact, two spellings, and the object is
-    # the one a tool reads.
-    of_the_same_name = {}
-    for one in json.loads(written or "{}").get("functions", []):
-        if one.get("file") != sys.argv[1] or one["name"] not in shapes:
-            continue
-        gives = one["gives"]
-        of_the_same_name.setdefault(one["name"], []).append(
-            "%s)%s%s%s%s" % (", ".join(one["parameters"]),
-                             "" if gives == "nothing" else " -> " + gives,
-                             " no.alloc" if one["noAlloc"] else "",
-                             " no.host" if one["noHost"] else "",
-                             " deterministic" if one["deterministic"] else ""))
-    # And the same for a shape: what it is laid out as, and what is under it.
-    # The words say it in a line and a run of lines beneath, and the object
-    # says it in numbers and a list; a reader of one has never been held to
-    # what the other says, and a layout is the half of a program a host is
-    # written against. See D592.
-    def how_it_lies(one):
-        many = "" if one["bytes"] == 1 else "s"
-        if one["kind"] == "flags":
-            said = ["1 slot, %d byte%s over %s" % (one["bytes"], many,
-                                                   one["over"])]
-            for bit in one["bits"]:
-                said.append("bit %d %s" % (bit["bit"], bit["name"]))
-            return said
-        said = ["%d slot%s, %d byte%s aligned %d"
-                % (one["slots"], "" if one["slots"] == 1 else "s",
-                   one["bytes"], many, one["align"])]
-        if one["kind"] == "struct":
-            for field in one["fields"]:
-                said.append("slot +%d byte +%d %s: %s"
-                            % (field["slot"], field["byte"], field["name"],
-                               field["type"]))
-            return said
-        for case in one["cases"]:
-            carries = "".join(" slot +%d byte +%d %s"
-                              % (what["slot"], what["byte"], what["type"])
-                              for what in case["carries"])
-            said.append("%d %s%s" % (case["tag"], case["name"], carries))
+# And what each of them takes and gives back, which the two forms said in
+# two shapes and nothing read together: the words put it after an arrow
+# and leave the arrow off a function that gives nothing, and the object
+# says `nothing` under `gives`. The promise is a word after the type in
+# one and a field in the other. One fact, two spellings, and the object is
+# the one a tool reads.
+of_the_same_name = {}
+for one in json.loads(written or "{}").get("functions", []):
+    if one.get("file") != sys.argv[1] or one["name"] not in shapes:
+        continue
+    gives = one["gives"]
+    of_the_same_name.setdefault(one["name"], []).append(
+        "%s)%s%s%s%s" % (", ".join(one["parameters"]),
+                         "" if gives == "nothing" else " -> " + gives,
+                         " no.alloc" if one["noAlloc"] else "",
+                         " no.host" if one["noHost"] else "",
+                         " deterministic" if one["deterministic"] else ""))
+# And the same for a shape: what it is laid out as, and what is under it.
+# The words say it in a line and a run of lines beneath, and the object
+# says it in numbers and a list; a reader of one has never been held to
+# what the other says, and a layout is the half of a program a host is
+# written against. See D592.
+def how_it_lies(one):
+    many = "" if one["bytes"] == 1 else "s"
+    if one["kind"] == "flags":
+        said = ["1 slot, %d byte%s over %s" % (one["bytes"], many,
+                                               one["over"])]
+        for bit in one["bits"]:
+            said.append("bit %d %s" % (bit["bit"], bit["name"]))
         return said
+    said = ["%d slot%s, %d byte%s aligned %d"
+            % (one["slots"], "" if one["slots"] == 1 else "s",
+               one["bytes"], many, one["align"])]
+    if one["kind"] == "struct":
+        for field in one["fields"]:
+            said.append("slot +%d byte +%d %s: %s"
+                        % (field["slot"], field["byte"], field["name"],
+                           field["type"]))
+        return said
+    for case in one["cases"]:
+        carries = "".join(" slot +%d byte +%d %s"
+                          % (what["slot"], what["byte"], what["type"])
+                          for what in case["carries"])
+        said.append("%d %s%s" % (case["tag"], case["name"], carries))
+    return said
 
-    for one in json.loads(written or "{}").get("types", []):
-        if one.get("file") != sys.argv[1] or one["name"] not in laid:
+for one in json.loads(written or "{}").get("types", []):
+    if one.get("file") != sys.argv[1] or one["name"] not in laid:
+        continue
+    if laid[one["name"]] != how_it_lies(one):
+        print("%s: printed %s and the JSON says %s"
+              % (one["name"], laid[one["name"]], how_it_lies(one)))
+
+# And the name this file puts its own declarations under, which is the one
+# thing a reader of the object needs to go from a name in the file to a
+# name in here: `factorial` in a file that says `module examples.math` is
+# `math.factorial`, and neither the line the file wrote nor the path it is
+# at says that. Held against the names themselves. See D598.
+own = set()
+for what in ("types", "functions", "constants"):
+    for one in everything.get(what, []):
+        if one.get("file") == sys.argv[1]:
+            own.add(one["name"].split(".")[0] if "." in one["name"]
+                    else None)
+if own and own != {everything.get("module")}:
+    print("module: says %r and what it declares is under %s"
+          % (everything.get("module"), sorted(str(one) for one in own)))
+
+# And the counts in those lines, worked out from the list the object
+# writes: the words say a module holds so many types and so many functions
+# and how many of those a host provides, and the object says every one of
+# them under its own name. Two readings of one import, and the summary is
+# the one nothing could check.
+root = ""
+for what in ("types", "functions", "constants"):
+    for one in everything.get(what, []):
+        if one.get("file") == sys.argv[1] and "." in one["name"]:
+            root = one["name"].split(".")[0]
+holds = {}
+for what in ("types", "functions", "constants"):
+    for one in everything.get(what, []):
+        module = one["name"].split(".")[0] if "." in one["name"] else ""
+        if module in ("", root):
             continue
-        if laid[one["name"]] != how_it_lies(one):
-            print("%s: printed %s and the JSON says %s"
-                  % (one["name"], laid[one["name"]], how_it_lies(one)))
+        has = holds.setdefault(module, {"types": 0, "functions": 0,
+                                        "foreign": 0})
+        if what == "functions":
+            has["functions"] += 1
+            has["foreign"] += 1 if one["foreign"] else 0
+        else:
+            has["types"] += 1
+for module in sorted(set(holds) | set(summarised)):
+    has = holds.get(module, {"types": 0, "functions": 0, "foreign": 0})
+    pieces = []
+    if has["types"]:
+        pieces.append("%d type%s" % (has["types"],
+                                     "" if has["types"] == 1 else "s"))
+    if has["functions"]:
+        pieces.append("%d function%s"
+                      % (has["functions"],
+                         "" if has["functions"] == 1 else "s"))
+    if has["foreign"]:
+        pieces.append("%d the host provides" % has["foreign"])
+    if summarised.get(module) != ", ".join(pieces):
+        print("%s: printed `%s` and the JSON counts `%s`"
+              % (module, summarised.get(module), ", ".join(pieces)))
 
-    # And the name this file puts its own declarations under, which is the one
-    # thing a reader of the object needs to go from a name in the file to a
-    # name in here: `factorial` in a file that says `module examples.math` is
-    # `math.factorial`, and neither the line the file wrote nor the path it is
-    # at says that. Held against the names themselves. See D598.
-    own = set()
-    for what in ("types", "functions", "constants"):
-        for one in everything.get(what, []):
-            if one.get("file") == sys.argv[1]:
-                own.add(one["name"].split(".")[0] if "." in one["name"]
-                        else None)
-    if own and own != {everything.get("module")}:
-        print("module: says %r and what it declares is under %s"
-              % (everything.get("module"), sorted(str(one) for one in own)))
-
-    # And the counts in those lines, worked out from the list the object
-    # writes: the words say a module holds so many types and so many functions
-    # and how many of those a host provides, and the object says every one of
-    # them under its own name. Two readings of one import, and the summary is
-    # the one nothing could check.
-    root = ""
-    for what in ("types", "functions", "constants"):
-        for one in everything.get(what, []):
-            if one.get("file") == sys.argv[1] and "." in one["name"]:
-                root = one["name"].split(".")[0]
-    holds = {}
-    for what in ("types", "functions", "constants"):
-        for one in everything.get(what, []):
-            module = one["name"].split(".")[0] if "." in one["name"] else ""
-            if module in ("", root):
-                continue
-            has = holds.setdefault(module, {"types": 0, "functions": 0,
-                                            "foreign": 0})
-            if what == "functions":
-                has["functions"] += 1
-                has["foreign"] += 1 if one["foreign"] else 0
-            else:
-                has["types"] += 1
-    for module in sorted(set(holds) | set(summarised)):
-        has = holds.get(module, {"types": 0, "functions": 0, "foreign": 0})
-        pieces = []
-        if has["types"]:
-            pieces.append("%d type%s" % (has["types"],
-                                         "" if has["types"] == 1 else "s"))
-        if has["functions"]:
-            pieces.append("%d function%s"
-                          % (has["functions"],
-                             "" if has["functions"] == 1 else "s"))
-        if has["foreign"]:
-            pieces.append("%d the host provides" % has["foreign"])
-        if summarised.get(module) != ", ".join(pieces):
-            print("%s: printed `%s` and the JSON counts `%s`"
-                  % (module, summarised.get(module), ", ".join(pieces)))
-
-    for name in sorted(of_the_same_name):
-        if sorted(of_the_same_name[name]) != sorted(shapes[name]):
-            print("%s: printed %s and the JSON says %s"
-                  % (name, sorted(shapes[name]),
-                     sorted(of_the_same_name[name])))
+for name in sorted(of_the_same_name):
+    if sorted(of_the_same_name[name]) != sorted(shapes[name]):
+        print("%s: printed %s and the JSON says %s"
+              % (name, sorted(shapes[name]),
+                 sorted(of_the_same_name[name])))
     ' "$file")
         if [ -n "$said" ]; then
             complain "check $file: the two forms disagree"
@@ -448,46 +448,46 @@ sweep_one() {
                         echo "----";
                         "$kest" lex "$file" --json 2>/dev/null </dev/null; } |
                       python3 -c '
-    import json
-    import re
-    import sys
+import json
+import re
+import sys
 
-    text, _, written = sys.stdin.read().partition("\n----\n")
-    printed = []
-    remarks = []
-    for line in text.splitlines():
-        step = re.match(r"\s*(\d+):(\d+)\s+(\S+(?: \S+)*?)\s\s+(.*)$", line)
-        if step:
-            where = (int(step.group(1)), int(step.group(2)), step.group(4))
-            # A comment is not a token, and the two forms say the same list of
-            # them: it is printed where it was written and the object writes
-            # them out on their own. See D595.
-            if step.group(3) == "comment":
-                remarks.append(where)
-            else:
-                printed.append((int(step.group(1)), int(step.group(2)),
-                                step.group(3), step.group(4)))
+text, _, written = sys.stdin.read().partition("\n----\n")
+printed = []
+remarks = []
+for line in text.splitlines():
+    step = re.match(r"\s*(\d+):(\d+)\s+(\S+(?: \S+)*?)\s\s+(.*)$", line)
+    if step:
+        where = (int(step.group(1)), int(step.group(2)), step.group(4))
+        # A comment is not a token, and the two forms say the same list of
+        # them: it is printed where it was written and the object writes
+        # them out on their own. See D595.
+        if step.group(3) == "comment":
+            remarks.append(where)
+        else:
+            printed.append((int(step.group(1)), int(step.group(2)),
+                            step.group(3), step.group(4)))
 
-    said = json.loads(written or "{}")
-    machine = [(one["line"], one["column"], one["kind"], one["text"])
-               for one in said.get("tokens", [])]
-    aside = [(one["line"], one["column"], one["text"])
-             for one in said.get("comments", [])]
-    if remarks != aside:
-        print("comments: %s printed, %s in the JSON"
-              % (remarks[:2], aside[:2]))
+said = json.loads(written or "{}")
+machine = [(one["line"], one["column"], one["kind"], one["text"])
+           for one in said.get("tokens", [])]
+aside = [(one["line"], one["column"], one["text"])
+         for one in said.get("comments", [])]
+if remarks != aside:
+    print("comments: %s printed, %s in the JSON"
+          % (remarks[:2], aside[:2]))
 
-    # What a token says is compared where the printed form shows it whole. A
-    # token that is a line break prints as one — the reader sees the line end —
-    # and the JSON writes the two characters that stand for it, which is the same
-    # byte said two ways rather than two answers.
-    if len(printed) != len(machine):
-        print("%u tokens printed, %u in the JSON" % (len(printed), len(machine)))
-    else:
-        for at, (one, two) in enumerate(zip(printed, machine)):
-            if one[:3] != two[:3] or (one[3] and one[3] != two[3]):
-                print("token %u: %s printed, %s in the JSON" % (at, one, two))
-                break
+# What a token says is compared where the printed form shows it whole. A
+# token that is a line break prints as one — the reader sees the line end —
+# and the JSON writes the two characters that stand for it, which is the same
+# byte said two ways rather than two answers.
+if len(printed) != len(machine):
+    print("%u tokens printed, %u in the JSON" % (len(printed), len(machine)))
+else:
+    for at, (one, two) in enumerate(zip(printed, machine)):
+        if one[:3] != two[:3] or (one[3] and one[3] != two[3]):
+            print("token %u: %s printed, %s in the JSON" % (at, one, two))
+            break
     ')
         if [ -n "$read_twice" ]; then
             complain "lex $file: the two forms disagree"
@@ -503,224 +503,224 @@ sweep_one() {
                     echo "----";
                     "$kest" emit "$file" --json 2>/dev/null </dev/null; } |
                   python3 -c '
-    import json
-    import re
-    import sys
+import json
+import re
+import sys
 
-    text, _, written = sys.stdin.read().partition("\n----\n")
+text, _, written = sys.stdin.read().partition("\n----\n")
 
-    printed = {}
-    name = None
-    layouts = []
-    on_its_own = {}
-    called = {}
-    hosts = []
-    needs = None
-    for line in text.splitlines():
-        lays = re.match(r"layout \d+  (.*)$", line)
-        if lays:
-            # The whole of the line rather than the count of them: a layout is
-            # what a host lays memory out against, and counting them holds
-            # that there are as many as there are. What each one is was in
-            # both forms and read in neither. See D594.
-            layouts.append(lays.group(1).rstrip())
-            continue
-        if line.startswith("host "):
-            hosts.append(line[len("host "):].strip())
-            continue
-        asked = re.match(r"needs (\d+) slots and (\d+) frames", line)
-        if asked:
-            needs = (int(asked.group(1)), int(asked.group(2)))
-            continue
-        # And what one entry wants on its own, which is printed only where it
-        # is less than the whole: a host that calls one function is not made to
-        # pay for the deepest of the ones it never will, and this is the line
-        # that says so. The object lists every one of them either way.
-        alone = re.match(r"\s+(\d+) and (\d+) for `(.+)` on its own$", line)
-        if alone:
-            on_its_own[alone.group(3)] = (int(alone.group(1)),
-                                          int(alone.group(2)))
-            continue
-        # A name may have spaces in it — a copy of a generic is named for the
-        # types it was given, and one of those is a function type — so what ends
-        # the name is the two spaces before what it is wide, not the first space.
-        written_fn = re.match(r"fn (.+?)  (\d+) parameter slots?, (\d+) slots?, "
-                              r"(\d+) deep(, promises `no.alloc`)?"
-                              r"(?:, promises `no.host`)?"
-                              r"(?:, promises `deterministic`)?"
-                              r"(?:, (reaches itself|calls through a value))?$",
-                              line)
-        if written_fn:
-            name = written_fn.group(1)
-            printed[name] = {"wide": tuple(int(written_fn.group(i))
-                                           for i in (2, 3, 4)),
-                             "promises": written_fn.group(5) is not None,
-                             # Which function the walk for what a program needs
-                             # stopped at, said beside that function in both
-                             # forms. See D600.
-                             "why": written_fn.group(6),
-                             # And where that came from, on the line under it
-                             # when it is somebody else. See D602.
-                             "where": None,
-                             "least": None,
-                             "code": []}
-            continue
-        came_from = re.match(r"\s+in (\S.*)$", line)
-        if came_from and name is not None:
-            printed[name]["where"] = came_from.group(1)
-            continue
-        # And what a machine to call this one takes, which is not the numbers
-        # on the line above it: those are the frame this function has of its
-        # own. See D603.
-        to_call_it = re.match(r"\s+(\d+) slots? and (\d+) frames? to call it$",
-                              line)
-        if to_call_it and name is not None:
-            printed[name]["least"] = (int(to_call_it.group(1)),
-                                      int(to_call_it.group(2)))
-            continue
-        step = re.match(r"\s+(\d+)\s+(\S+)\s*(.*)$", line)
-        if step and name is not None:
-            # And what the instruction carries. A number a jump is written
-            # with is shown twice — the step it takes and the place that
-            # reaches — so what is read here is what stands before the arrow,
-            # and the numbers a slot or a count is written with carry a `+`
-            # or sit beside a `<` or an `of`. See D451.
-            # And what a call says it reaches, which is the name after the
-            # semicolon: the number is an index into a list a reader would
-            # otherwise count, and the object says the same list. See D599.
-            # Everything after the semicolon, because a copy of a generic is
-            # named for the types it was given and one of those can be a
-            # function type with spaces in it.
-            # At the first semicolon rather than the last: a copy of a
-            # generic over a fixed array is named `middleOf#[T; 3]$i32`, and
-            # the one that ends the operands is the one before all of that.
-            reaches = re.match(r"[^;]*;\s(.*)$", step.group(3))
-            if step.group(2) == "call" and reaches:
-                called.setdefault(name, []).append(reaches.group(1))
-            carries = []
-            for word in re.split(r"\s*(?:;|->)", step.group(3))[0].split():
-                word = word.lstrip("+")
-                if word.isdigit():
-                    carries.append(int(word))
-            printed[name]["code"].append((int(step.group(1)), step.group(2),
-                                          carries))
+printed = {}
+name = None
+layouts = []
+on_its_own = {}
+called = {}
+hosts = []
+needs = None
+for line in text.splitlines():
+    lays = re.match(r"layout \d+  (.*)$", line)
+    if lays:
+        # The whole of the line rather than the count of them: a layout is
+        # what a host lays memory out against, and counting them holds
+        # that there are as many as there are. What each one is was in
+        # both forms and read in neither. See D594.
+        layouts.append(lays.group(1).rstrip())
+        continue
+    if line.startswith("host "):
+        hosts.append(line[len("host "):].strip())
+        continue
+    asked = re.match(r"needs (\d+) slots and (\d+) frames", line)
+    if asked:
+        needs = (int(asked.group(1)), int(asked.group(2)))
+        continue
+    # And what one entry wants on its own, which is printed only where it
+    # is less than the whole: a host that calls one function is not made to
+    # pay for the deepest of the ones it never will, and this is the line
+    # that says so. The object lists every one of them either way.
+    alone = re.match(r"\s+(\d+) and (\d+) for `(.+)` on its own$", line)
+    if alone:
+        on_its_own[alone.group(3)] = (int(alone.group(1)),
+                                      int(alone.group(2)))
+        continue
+    # A name may have spaces in it — a copy of a generic is named for the
+    # types it was given, and one of those is a function type — so what ends
+    # the name is the two spaces before what it is wide, not the first space.
+    written_fn = re.match(r"fn (.+?)  (\d+) parameter slots?, (\d+) slots?, "
+                          r"(\d+) deep(, promises `no.alloc`)?"
+                          r"(?:, promises `no.host`)?"
+                          r"(?:, promises `deterministic`)?"
+                          r"(?:, (reaches itself|calls through a value))?$",
+                          line)
+    if written_fn:
+        name = written_fn.group(1)
+        printed[name] = {"wide": tuple(int(written_fn.group(i))
+                                       for i in (2, 3, 4)),
+                         "promises": written_fn.group(5) is not None,
+                         # Which function the walk for what a program needs
+                         # stopped at, said beside that function in both
+                         # forms. See D600.
+                         "why": written_fn.group(6),
+                         # And where that came from, on the line under it
+                         # when it is somebody else. See D602.
+                         "where": None,
+                         "least": None,
+                         "code": []}
+        continue
+    came_from = re.match(r"\s+in (\S.*)$", line)
+    if came_from and name is not None:
+        printed[name]["where"] = came_from.group(1)
+        continue
+    # And what a machine to call this one takes, which is not the numbers
+    # on the line above it: those are the frame this function has of its
+    # own. See D603.
+    to_call_it = re.match(r"\s+(\d+) slots? and (\d+) frames? to call it$",
+                          line)
+    if to_call_it and name is not None:
+        printed[name]["least"] = (int(to_call_it.group(1)),
+                                  int(to_call_it.group(2)))
+        continue
+    step = re.match(r"\s+(\d+)\s+(\S+)\s*(.*)$", line)
+    if step and name is not None:
+        # And what the instruction carries. A number a jump is written
+        # with is shown twice — the step it takes and the place that
+        # reaches — so what is read here is what stands before the arrow,
+        # and the numbers a slot or a count is written with carry a `+`
+        # or sit beside a `<` or an `of`. See D451.
+        # And what a call says it reaches, which is the name after the
+        # semicolon: the number is an index into a list a reader would
+        # otherwise count, and the object says the same list. See D599.
+        # Everything after the semicolon, because a copy of a generic is
+        # named for the types it was given and one of those can be a
+        # function type with spaces in it.
+        # At the first semicolon rather than the last: a copy of a
+        # generic over a fixed array is named `middleOf#[T; 3]$i32`, and
+        # the one that ends the operands is the one before all of that.
+        reaches = re.match(r"[^;]*;\s(.*)$", step.group(3))
+        if step.group(2) == "call" and reaches:
+            called.setdefault(name, []).append(reaches.group(1))
+        carries = []
+        for word in re.split(r"\s*(?:;|->)", step.group(3))[0].split():
+            word = word.lstrip("+")
+            if word.isdigit():
+                carries.append(int(word))
+        printed[name]["code"].append((int(step.group(1)), step.group(2),
+                                      carries))
 
-    said = json.loads(written or "{}")
-    machine = {}
-    for one in said.get("functions", []):
-        machine[one["name"]] = {
-            "wide": (one["parameterSlots"], one["slots"], one["deep"]),
-            "promises": one["noAlloc"],
-            "why": one["why"],
-            # The words leave it off where it is the function itself, because
-            # a function that is the reason says so by being it.
-            "where": None if one["where"] == one["name"] else one["where"],
-            "least": None if one["least"] is None else (one["least"]["slots"],
-                                                        one["least"]["frames"]),
-            "code": [(step["at"], step["op"], step["operands"])
-                     for step in said and one["code"]],
-        }
+said = json.loads(written or "{}")
+machine = {}
+for one in said.get("functions", []):
+    machine[one["name"]] = {
+        "wide": (one["parameterSlots"], one["slots"], one["deep"]),
+        "promises": one["noAlloc"],
+        "why": one["why"],
+        # The words leave it off where it is the function itself, because
+        # a function that is the reason says so by being it.
+        "where": None if one["where"] == one["name"] else one["where"],
+        "least": None if one["least"] is None else (one["least"]["slots"],
+                                                    one["least"]["frames"]),
+        "code": [(step["at"], step["op"], step["operands"])
+                 for step in said and one["code"]],
+    }
 
-    written_out = []
-    for one in said.get("layouts", []):
-        written_out.append(
-            "%d byte%s aligned %d%s: %s"
-            % (one["bytes"], "" if one["bytes"] == 1 else "s", one["align"],
-               ", tagged" if one["tagged"] else "",
-               " ".join("+%d %s%s" % (piece["byte"], piece["is"],
-                                      "" if piece["name"] is None
-                                      else " " + piece["name"])
-                        for piece in one["pieces"])))
-    if layouts != written_out:
-        print("layouts: %s printed, %s in the JSON" % (layouts, written_out))
-    if hosts != said.get("hosts", []):
-        print("hosts: %s printed, %s in the JSON" % (hosts, said.get("hosts")))
-    # Every name a call says it reaches is the function the object has at the
-    # index that call carries: two readings of what calls what, which is the
-    # one thing the emitted code knows about every use of a function.
-    every = [one["name"] for one in said.get("functions", [])]
-    for one in said.get("functions", []):
-        reached = [every[step["operands"][0]]
-                   for step in one["code"]
-                   if step["op"] == "call"
-                   and step["operands"][0] < len(every)]
-        if called.get(one["name"], []) != reached:
-            print("%s: calls %s printed and %s in the JSON"
-                  % (one["name"], called.get(one["name"], []), reached))
+written_out = []
+for one in said.get("layouts", []):
+    written_out.append(
+        "%d byte%s aligned %d%s: %s"
+        % (one["bytes"], "" if one["bytes"] == 1 else "s", one["align"],
+           ", tagged" if one["tagged"] else "",
+           " ".join("+%d %s%s" % (piece["byte"], piece["is"],
+                                  "" if piece["name"] is None
+                                  else " " + piece["name"])
+                    for piece in one["pieces"])))
+if layouts != written_out:
+    print("layouts: %s printed, %s in the JSON" % (layouts, written_out))
+if hosts != said.get("hosts", []):
+    print("hosts: %s printed, %s in the JSON" % (hosts, said.get("hosts")))
+# Every name a call says it reaches is the function the object has at the
+# index that call carries: two readings of what calls what, which is the
+# one thing the emitted code knows about every use of a function.
+every = [one["name"] for one in said.get("functions", [])]
+for one in said.get("functions", []):
+    reached = [every[step["operands"][0]]
+               for step in one["code"]
+               if step["op"] == "call"
+               and step["operands"][0] < len(every)]
+    if called.get(one["name"], []) != reached:
+        print("%s: calls %s printed and %s in the JSON"
+              % (one["name"], called.get(one["name"], []), reached))
 
-    asked = said.get("needs")
-    if needs is not None and asked is not None and \
-            needs != (asked["slots"], asked["frames"]):
-        print("needs: %s printed, %s in the JSON" % (needs, asked))
-    # And what a walk about one function says against what the walk over all of
-    # them wrote down for it. `needs.entries` is one walk an entry, and the
-    # `why` beside each function is one walk over everything: a function with
-    # no answer has none whichever way it was asked, and a caller of one has
-    # none either. See D601.
-    for one in (asked or {}).get("entries", []):
-        for said_one in said.get("functions", []):
-            plain = said_one["name"].split("#")[0].split(".")[-1]
-            if plain != one["name"]:
-                continue
-            asked_alone = (None if one.get("slots") is None
-                           else (one["slots"], one["frames"]))
-            beside = (None if said_one["least"] is None
-                      else (said_one["least"]["slots"],
-                            said_one["least"]["frames"]))
-            if ((one.get("slots") is None) != (said_one["why"] is not None)
-                    or one.get("where") != said_one["where"]
-                    or asked_alone != beside):
-                print("%s: asked on its own it says %r in %r wanting %r and "
-                      "beside it %r in %r wanting %r"
-                      % (said_one["name"], one.get("why"), one.get("where"),
-                         asked_alone, said_one["why"], said_one["where"],
-                         beside))
-
-    # Every entry printed is one the object has with the same two numbers, and
-    # every entry the object has that wants less than the whole is printed:
-    # the words leave out the ones that want exactly what everything wants,
-    # because a line that says the same number twice is a line to read twice.
-    if asked is not None:
-        listed = dict((one["name"], (one["slots"], one["frames"]))
-                      for one in asked.get("entries", []))
-        smaller = dict((name_of, numbers) for name_of, numbers in listed.items()
-                       if numbers != (asked["slots"], asked["frames"]))
-        if on_its_own != smaller:
-            print("needs: printed %s on their own, and the JSON has %s"
-                  % (sorted(on_its_own.items()), sorted(smaller.items())))
-    for missing in sorted(set(printed) - set(machine)):
-        print("printed and not in the JSON: %s" % missing)
-    for missing in sorted(set(machine) - set(printed)):
-        print("in the JSON and not printed: %s" % missing)
-    for name in sorted(set(printed) & set(machine)):
-        if printed[name]["wide"] != machine[name]["wide"]:
-            print("%s: %s printed, %s in the JSON"
-                  % (name, printed[name]["wide"], machine[name]["wide"]))
-        if printed[name]["promises"] != machine[name]["promises"]:
-            print("%s: promises %s printed, %s in the JSON"
-                  % (name, printed[name]["promises"], machine[name]["promises"]))
-        if printed[name]["least"] != machine[name]["least"]:
-            print("%s: %r to call it printed and %r in the JSON"
-                  % (name, printed[name]["least"], machine[name]["least"]))
-        if (printed[name]["why"] != machine[name]["why"]
-                or printed[name]["where"] != machine[name]["where"]):
-            print("%s: the walk stopped here saying %r in %r printed and %r "
-                  "in %r in the JSON"
-                  % (name, printed[name]["why"], printed[name]["where"],
-                     machine[name]["why"], machine[name]["where"]))
-        if len(printed[name]["code"]) != len(machine[name]["code"]):
-            print("%s: %u instructions printed, %u in the JSON"
-                  % (name, len(printed[name]["code"]), len(machine[name]["code"])))
+asked = said.get("needs")
+if needs is not None and asked is not None and \
+        needs != (asked["slots"], asked["frames"]):
+    print("needs: %s printed, %s in the JSON" % (needs, asked))
+# And what a walk about one function says against what the walk over all of
+# them wrote down for it. `needs.entries` is one walk an entry, and the
+# `why` beside each function is one walk over everything: a function with
+# no answer has none whichever way it was asked, and a caller of one has
+# none either. See D601.
+for one in (asked or {}).get("entries", []):
+    for said_one in said.get("functions", []):
+        plain = said_one["name"].split("#")[0].split(".")[-1]
+        if plain != one["name"]:
             continue
-        for was, now in zip(printed[name]["code"], machine[name]["code"]):
-            # Every number the printed form writes plainly is the number the
-            # JSON writes in that place. What a jump steps by is the one thing
-            # the printed form shows only as where it lands, so the JSON may
-            # carry one more than is read here and no fewer.
-            if (was[:2] != now[:2] or len(now[2]) < len(was[2])
-                    or now[2][:len(was[2])] != was[2]):
-                print("%s: %s printed, %s in the JSON" % (name, was, now))
-                break
+        asked_alone = (None if one.get("slots") is None
+                       else (one["slots"], one["frames"]))
+        beside = (None if said_one["least"] is None
+                  else (said_one["least"]["slots"],
+                        said_one["least"]["frames"]))
+        if ((one.get("slots") is None) != (said_one["why"] is not None)
+                or one.get("where") != said_one["where"]
+                or asked_alone != beside):
+            print("%s: asked on its own it says %r in %r wanting %r and "
+                  "beside it %r in %r wanting %r"
+                  % (said_one["name"], one.get("why"), one.get("where"),
+                     asked_alone, said_one["why"], said_one["where"],
+                     beside))
+
+# Every entry printed is one the object has with the same two numbers, and
+# every entry the object has that wants less than the whole is printed:
+# the words leave out the ones that want exactly what everything wants,
+# because a line that says the same number twice is a line to read twice.
+if asked is not None:
+    listed = dict((one["name"], (one["slots"], one["frames"]))
+                  for one in asked.get("entries", []))
+    smaller = dict((name_of, numbers) for name_of, numbers in listed.items()
+                   if numbers != (asked["slots"], asked["frames"]))
+    if on_its_own != smaller:
+        print("needs: printed %s on their own, and the JSON has %s"
+              % (sorted(on_its_own.items()), sorted(smaller.items())))
+for missing in sorted(set(printed) - set(machine)):
+    print("printed and not in the JSON: %s" % missing)
+for missing in sorted(set(machine) - set(printed)):
+    print("in the JSON and not printed: %s" % missing)
+for name in sorted(set(printed) & set(machine)):
+    if printed[name]["wide"] != machine[name]["wide"]:
+        print("%s: %s printed, %s in the JSON"
+              % (name, printed[name]["wide"], machine[name]["wide"]))
+    if printed[name]["promises"] != machine[name]["promises"]:
+        print("%s: promises %s printed, %s in the JSON"
+              % (name, printed[name]["promises"], machine[name]["promises"]))
+    if printed[name]["least"] != machine[name]["least"]:
+        print("%s: %r to call it printed and %r in the JSON"
+              % (name, printed[name]["least"], machine[name]["least"]))
+    if (printed[name]["why"] != machine[name]["why"]
+            or printed[name]["where"] != machine[name]["where"]):
+        print("%s: the walk stopped here saying %r in %r printed and %r "
+              "in %r in the JSON"
+              % (name, printed[name]["why"], printed[name]["where"],
+                 machine[name]["why"], machine[name]["where"]))
+    if len(printed[name]["code"]) != len(machine[name]["code"]):
+        print("%s: %u instructions printed, %u in the JSON"
+              % (name, len(printed[name]["code"]), len(machine[name]["code"])))
+        continue
+    for was, now in zip(printed[name]["code"], machine[name]["code"]):
+        # Every number the printed form writes plainly is the number the
+        # JSON writes in that place. What a jump steps by is the one thing
+        # the printed form shows only as where it lands, so the JSON may
+        # carry one more than is read here and no fewer.
+        if (was[:2] != now[:2] or len(now[2]) < len(was[2])
+                or now[2][:len(was[2])] != was[2]):
+            print("%s: %s printed, %s in the JSON" % (name, was, now))
+            break
     ')
         if [ -n "$walked" ]; then
             complain "emit $file: the two forms disagree"
@@ -739,54 +739,54 @@ sweep_one() {
                      echo "----";
                      "$kest" emit "$file" --json 2>/dev/null </dev/null; } |
                    python3 -c '
-    import json
-    import sys
+import json
+import sys
 
-    declared, _, emitted = sys.stdin.read().partition("\n----\n")
+declared, _, emitted = sys.stdin.read().partition("\n----\n")
 
-    # A host provides a foreign function, so there is no chunk for one. What a
-    # host promises is checked where it is called and said as K0631.
-    promised = {}
-    for one in json.loads(declared.strip() or "{}").get("functions", []):
-        if one.get("foreign"):
-            continue
-        promised.setdefault(one["name"], set()).add(
-            (one["noAlloc"], one["noHost"], one["deterministic"]))
+# A host provides a foreign function, so there is no chunk for one. What a
+# host promises is checked where it is called and said as K0631.
+promised = {}
+for one in json.loads(declared.strip() or "{}").get("functions", []):
+    if one.get("foreign"):
+        continue
+    promised.setdefault(one["name"], set()).add(
+        (one["noAlloc"], one["noHost"], one["deterministic"]))
 
-    # And where each chunk was declared, which is a place `check` lists a
-    # declaration at: a chunk is compiled from one of them, so a place that is
-    # none of them is a listing nobody can join to the program it is of. Two
-    # chunks written the same and declared in one place are one generic
-    # compiled twice; in two places they are two functions of a name, and that
-    # is the only thing that tells them apart. See D612.
-    where = set()
-    for one in json.loads(declared.strip() or "{}").get("functions", []):
-        where.add((one.get("file"), one.get("line"), one.get("column")))
+# And where each chunk was declared, which is a place `check` lists a
+# declaration at: a chunk is compiled from one of them, so a place that is
+# none of them is a listing nobody can join to the program it is of. Two
+# chunks written the same and declared in one place are one generic
+# compiled twice; in two places they are two functions of a name, and that
+# is the only thing that tells them apart. See D612.
+where = set()
+for one in json.loads(declared.strip() or "{}").get("functions", []):
+    where.add((one.get("file"), one.get("line"), one.get("column")))
 
-    for one in json.loads(emitted.strip() or "{}").get("functions", []):
-        place = (one.get("file"), one.get("line"), one.get("column"))
-        if place not in where:
-            print("%s is declared at %s, which declares nothing"
-                  % (one["name"], place))
-            continue
-        # A chunk is named for the types it was made with, and a declaration is
-        # not. What it was written as is what a chunk carries, so the two are
-        # joined on that rather than on this reader cutting the name at the
-        # `#` — which would be one rule of this compiler kept in a second
-        # place, true until one of the two changed. See D611.
-        if one["wrote"] != one["name"].split("#")[0]:
-            print("%s is written %s" % (one["name"], one["wrote"]))
-            continue
-        # Two declarations under one name that disagree about the promise
-        # cannot be told apart this way, and are left to the checker.
-        says = promised.get(one["wrote"])
-        if says is None or len(says) != 1:
-            continue
-        said = next(iter(says))
-        carries = (one["noAlloc"], one["noHost"], one["deterministic"])
-        if carries != said:
-            print("%s: the declaration promises %s and the chunk carries %s"
-                  % (one["name"], said, carries))
+for one in json.loads(emitted.strip() or "{}").get("functions", []):
+    place = (one.get("file"), one.get("line"), one.get("column"))
+    if place not in where:
+        print("%s is declared at %s, which declares nothing"
+              % (one["name"], place))
+        continue
+    # A chunk is named for the types it was made with, and a declaration is
+    # not. What it was written as is what a chunk carries, so the two are
+    # joined on that rather than on this reader cutting the name at the
+    # `#` — which would be one rule of this compiler kept in a second
+    # place, true until one of the two changed. See D611.
+    if one["wrote"] != one["name"].split("#")[0]:
+        print("%s is written %s" % (one["name"], one["wrote"]))
+        continue
+    # Two declarations under one name that disagree about the promise
+    # cannot be told apart this way, and are left to the checker.
+    says = promised.get(one["wrote"])
+    if says is None or len(says) != 1:
+        continue
+    said = next(iter(says))
+    carries = (one["noAlloc"], one["noHost"], one["deterministic"])
+    if carries != said:
+        print("%s: the declaration promises %s and the chunk carries %s"
+              % (one["name"], said, carries))
     ')
         if [ -n "$carried" ]; then
             complain "emit $file: a chunk carries what its declaration does not"
@@ -798,24 +798,24 @@ sweep_one() {
         # words inside a JSON array without anything noticing.
         for command in lex parse check emit run fmt tick; do
             if ! "$kest" "$command" "$file" --json 2>/dev/null </dev/null | python3 -c '
-    import json
-    import re
-    import sys
+import json
+import re
+import sys
 
-    # And what shape it is in, which is the one field a tool reads before it
-    # knows what the others mean. Every object a command writes carries it, and
-    # the number is the header'"'"'s rather than one written here: two places
-    # saying which shape this is is one of them wrong the day it changes.
-    # See D947.
-    schema = int(re.search(r"#define KEST_JSON_SCHEMA (\d+)",
-                           open("include/kest.h").read()).group(1))
-    lines = [line for line in sys.stdin.read().splitlines() if line.strip()]
-    if not lines:
+# And what shape it is in, which is the one field a tool reads before it
+# knows what the others mean. Every object a command writes carries it, and
+# the number is the header'"'"'s rather than one written here: two places
+# saying which shape this is is one of them wrong the day it changes.
+# See D947.
+schema = int(re.search(r"#define KEST_JSON_SCHEMA (\d+)",
+                       open("include/kest.h").read()).group(1))
+lines = [line for line in sys.stdin.read().splitlines() if line.strip()]
+if not lines:
+    raise SystemExit(1)
+for line in lines:
+    said = json.loads(line)
+    if not isinstance(said, dict) or said.get("schema") != schema:
         raise SystemExit(1)
-    for line in lines:
-        said = json.loads(line)
-        if not isinstance(said, dict) or said.get("schema") != schema:
-            raise SystemExit(1)
     ' 2>/dev/null; then
                 complain "$command $file --json: not one object a line saying \
 which shape it is in"
@@ -1730,47 +1730,47 @@ sides=$( { "$kest" check "$both_at/second.kest" "$both_at/first.kest" 2>&1 \
            "$kest" check "$both_at/second.kest" "$both_at/first.kest" --json \
            2>&1 </dev/null; } |
          python3 -c '
-    import json
-    import re
-    import sys
+import json
+import re
+import sys
 
-    words, _, machine = sys.stdin.read().partition("\n----\n")
+words, _, machine = sys.stdin.read().partition("\n----\n")
 
-    written = []
-    counted = {}
-    for line in words.splitlines():
-        one = re.match(r"(?:extern )?fn ([A-Za-z0-9_.]+)\(", line)
-        if one:
-            written.append(one.group(1))
-            continue
-        many = re.match(r"([a-z][A-Za-z0-9_.]*)\s+(?:\d+ types?, )?"
-                        r"(\d+) functions?", line)
-        if many:
-            counted[many.group(1)] = int(many.group(2))
+written = []
+counted = {}
+for line in words.splitlines():
+    one = re.match(r"(?:extern )?fn ([A-Za-z0-9_.]+)\(", line)
+    if one:
+        written.append(one.group(1))
+        continue
+    many = re.match(r"([a-z][A-Za-z0-9_.]*)\s+(?:\d+ types?, )?"
+                    r"(\d+) functions?", line)
+    if many:
+        counted[many.group(1)] = int(many.group(2))
 
-    try:
-        told = json.loads(machine or "{}").get("functions", [])
-    except ValueError:
-        print("what was said as JSON is not JSON")
-        raise SystemExit(0)
-    under = {}
-    for one in told:
-        module = one["name"].rsplit(".", 1)[0]
-        under.setdefault(module, []).append(one["name"])
+try:
+    told = json.loads(machine or "{}").get("functions", [])
+except ValueError:
+    print("what was said as JSON is not JSON")
+    raise SystemExit(0)
+under = {}
+for one in told:
+    module = one["name"].rsplit(".", 1)[0]
+    under.setdefault(module, []).append(one["name"])
 
-    if not written or not counted:
-        print("the words wrote out %u and counted %u modules"
-              % (len(written), len(counted)))
-        raise SystemExit(0)
+if not written or not counted:
+    print("the words wrote out %u and counted %u modules"
+          % (len(written), len(counted)))
+    raise SystemExit(0)
 
-    first = written[0].rsplit(".", 1)[0]
-    if sorted(written) != sorted(under.get(first, [])):
-        print("%s: %s written out and %s in the JSON"
-              % (first, sorted(written), sorted(under.get(first, []))))
-    for module, how_many in sorted(counted.items()):
-        if len(under.get(module, [])) != how_many:
-            print("%s: %u counted and %u in the JSON"
-                  % (module, how_many, len(under.get(module, []))))
+first = written[0].rsplit(".", 1)[0]
+if sorted(written) != sorted(under.get(first, [])):
+    print("%s: %s written out and %s in the JSON"
+          % (first, sorted(written), sorted(under.get(first, []))))
+for module, how_many in sorted(counted.items()):
+    if len(under.get(module, [])) != how_many:
+        print("%s: %u counted and %u in the JSON"
+              % (module, how_many, len(under.get(module, []))))
     ')
 if [ -n "$sides" ]; then
     complain "check: a program of two files says one thing in words and another in JSON"
@@ -2234,79 +2234,79 @@ two_ways() {
               echo "----";
               "$kest" "$@" --json 2>&1 </dev/null; } |
             python3 -c '
-    import json
-    import re
-    import sys
+import json
+import re
+import sys
 
-    words, _, machine = sys.stdin.read().partition("\n----\n")
+words, _, machine = sys.stdin.read().partition("\n----\n")
 
-    # What the words say: a diagnostic begins at a line with a code in it, and
-    # everything under it belongs to it until the next one. A place is a line
-    # with an arrow, and what is said about a place is what follows the carets
-    # under it. A diagnostic with nowhere to point says its fix on a line of
-    # its own, indented and under nothing.
-    said = []
-    for line in words.splitlines():
-        head = re.match(r"error\[(K\d{4})\]: (.*)", line)
-        if head:
-            said.append({"code": head.group(1), "message": head.group(2),
-                         "places": [], "labels": []})
-            continue
-        if not said:
-            continue
-        where = re.match(r"\s*--> (.*):(\d+):(\d+)$", line)
-        if where:
-            said[-1]["places"].append((where.group(1), int(where.group(2)),
-                                       int(where.group(3))))
-            continue
-        under = re.match(r"\s*\|\s*\^+ (.*)$", line)
-        if under:
-            said[-1]["labels"].append(under.group(1))
-            continue
-        alone = re.match(r"\s+(\S.*)$", line)
-        if alone and not said[-1]["places"] and not said[-1]["labels"]:
-            said[-1]["labels"].append(alone.group(1))
+# What the words say: a diagnostic begins at a line with a code in it, and
+# everything under it belongs to it until the next one. A place is a line
+# with an arrow, and what is said about a place is what follows the carets
+# under it. A diagnostic with nowhere to point says its fix on a line of
+# its own, indented and under nothing.
+said = []
+for line in words.splitlines():
+    head = re.match(r"error\[(K\d{4})\]: (.*)", line)
+    if head:
+        said.append({"code": head.group(1), "message": head.group(2),
+                     "places": [], "labels": []})
+        continue
+    if not said:
+        continue
+    where = re.match(r"\s*--> (.*):(\d+):(\d+)$", line)
+    if where:
+        said[-1]["places"].append((where.group(1), int(where.group(2)),
+                                   int(where.group(3))))
+        continue
+    under = re.match(r"\s*\|\s*\^+ (.*)$", line)
+    if under:
+        said[-1]["labels"].append(under.group(1))
+        continue
+    alone = re.match(r"\s+(\S.*)$", line)
+    if alone and not said[-1]["places"] and not said[-1]["labels"]:
+        said[-1]["labels"].append(alone.group(1))
 
-    try:
-        written = json.loads(machine or "{}").get("diagnostics", [])
-    except ValueError:
-        # A form that is not JSON is a thing the check below says plainly; what
-        # this would say is a stack trace, which says it in a language nobody
-        # reading this speaks.
-        print("what was said as JSON is not JSON")
-        raise SystemExit(0)
-    if len(said) != len(written):
-        print("%u in the words and %u in the JSON" % (len(said), len(written)))
-        raise SystemExit(0)
+try:
+    written = json.loads(machine or "{}").get("diagnostics", [])
+except ValueError:
+    # A form that is not JSON is a thing the check below says plainly; what
+    # this would say is a stack trace, which says it in a language nobody
+    # reading this speaks.
+    print("what was said as JSON is not JSON")
+    raise SystemExit(0)
+if len(said) != len(written):
+    print("%u in the words and %u in the JSON" % (len(said), len(written)))
+    raise SystemExit(0)
 
-    for one, two in zip(said, written):
-        if one["code"] != two.get("code"):
-            print("%s in the words and %s in the JSON"
-                  % (one["code"], two.get("code")))
-            continue
-        if one["message"] != two.get("message"):
-            print("%s: %r in the words and %r in the JSON"
-                  % (one["code"], one["message"], two.get("message")))
-        first = one["places"][0] if one["places"] else None
-        told = (two.get("file"), two.get("line"), two.get("column"))
-        if first != (None if told == (None, None, None) else told):
-            print("%s: %s in the words and %s in the JSON"
-                  % (one["code"], first, told))
-        # What is under the first caret is the fix and what is under the rest
-        # is a note apiece, so the labels are the fix and the notes in order.
-        notes = [note.get("message") for note in two.get("notes", [])]
-        wanted = list(notes)
-        if two.get("suggestion") is not None:
-            wanted = [two["suggestion"]] + wanted
-        if one["labels"] != wanted:
-            print("%s: %s under the carets and %s in the JSON"
-                  % (one["code"], one["labels"], wanted))
-        places = one["places"][1:]
-        pointed = [(note.get("file"), note.get("line"), note.get("column"))
-                   for note in two.get("notes", [])]
-        if places != pointed:
-            print("%s: %s said after the first and %s in the JSON"
-                  % (one["code"], places, pointed))
+for one, two in zip(said, written):
+    if one["code"] != two.get("code"):
+        print("%s in the words and %s in the JSON"
+              % (one["code"], two.get("code")))
+        continue
+    if one["message"] != two.get("message"):
+        print("%s: %r in the words and %r in the JSON"
+              % (one["code"], one["message"], two.get("message")))
+    first = one["places"][0] if one["places"] else None
+    told = (two.get("file"), two.get("line"), two.get("column"))
+    if first != (None if told == (None, None, None) else told):
+        print("%s: %s in the words and %s in the JSON"
+              % (one["code"], first, told))
+    # What is under the first caret is the fix and what is under the rest
+    # is a note apiece, so the labels are the fix and the notes in order.
+    notes = [note.get("message") for note in two.get("notes", [])]
+    wanted = list(notes)
+    if two.get("suggestion") is not None:
+        wanted = [two["suggestion"]] + wanted
+    if one["labels"] != wanted:
+        print("%s: %s under the carets and %s in the JSON"
+              % (one["code"], one["labels"], wanted))
+    places = one["places"][1:]
+    pointed = [(note.get("file"), note.get("line"), note.get("column"))
+               for note in two.get("notes", [])]
+    if places != pointed:
+        print("%s: %s said after the first and %s in the JSON"
+              % (one["code"], places, pointed))
     ')
     if [ -n "$both" ]; then
         complain "$what: a diagnostic says one thing in words and another in JSON"
@@ -2384,99 +2384,99 @@ ticked=$( { "$kest" tick "$ticking" 3 2>&1 </dev/null;
             echo "----";
             "$kest" tick "$ticking" 3 --json 2>&1 </dev/null; } |
           python3 -c '
-    import json
-    import re
-    import sys
+import json
+import re
+import sys
 
-    words, _, machine = sys.stdin.read().partition("\n----\n")
+words, _, machine = sys.stdin.read().partition("\n----\n")
 
-    said = {}
-    for line in words.splitlines():
-        many = re.match(r"onEvents\s+(\d+) crossings?"
-                        r"(?:\s+returned (-?\d+))?$", line)
-        if many:
-            said["onEvents"] = {"crossings": int(many.group(1)),
-                                "gave": None if many.group(2) is None
-                                        else int(many.group(2))}
-            continue
-        one = re.match(r"onEvent\s+(\d+) crossings?"
-                       r"(?:\s+returned (-?\d+))?, peak (\d+) bytes$", line)
-        if one:
-            said["onEvent"] = {"crossings": int(one.group(1)),
-                               "gave": None if one.group(2) is None
-                                       else int(one.group(2)),
-                               "peak": int(one.group(3))}
-            continue
-        over = re.match(r"events\s+(\d+) lent:\s*(.*)$", line)
-        if over:
-            said["events"] = {"count": int(over.group(1)),
-                              "lent": [int(one) for one
-                                       in over.group(2).split(",")]}
-            continue
-        counted = re.match(r"events\s+(\d+), counted up from nought$", line)
-        if counted:
-            said["events"] = {"count": int(counted.group(1)), "lent": None}
-            continue
-        heap = re.match(r"heap\s+(\d+) bytes, (.*)$", line)
-        if heap:
-            said["heap"] = int(heap.group(1))
-            thrown = re.match(r"thrown away (\d+) times?$", heap.group(2))
-            said["thrown"] = 0 if thrown is None else int(thrown.group(1))
-            continue
-        made = re.match(r"machine\s+(\d+) bytes, (\d+) slots and "
-                        r"(\d+) frames?$", line)
-        if made:
-            said["machine"] = {"bytes": int(made.group(1)),
-                               "slots": int(made.group(2)),
-                               "frames": int(made.group(3))}
-            continue
-        spent = re.match(r"cost\s+(\d+) bytes to compile$", line)
-        if spent:
-            said["cost"] = int(spent.group(1))
+said = {}
+for line in words.splitlines():
+    many = re.match(r"onEvents\s+(\d+) crossings?"
+                    r"(?:\s+returned (-?\d+))?$", line)
+    if many:
+        said["onEvents"] = {"crossings": int(many.group(1)),
+                            "gave": None if many.group(2) is None
+                                    else int(many.group(2))}
+        continue
+    one = re.match(r"onEvent\s+(\d+) crossings?"
+                   r"(?:\s+returned (-?\d+))?, peak (\d+) bytes$", line)
+    if one:
+        said["onEvent"] = {"crossings": int(one.group(1)),
+                           "gave": None if one.group(2) is None
+                                   else int(one.group(2)),
+                           "peak": int(one.group(3))}
+        continue
+    over = re.match(r"events\s+(\d+) lent:\s*(.*)$", line)
+    if over:
+        said["events"] = {"count": int(over.group(1)),
+                          "lent": [int(one) for one
+                                   in over.group(2).split(",")]}
+        continue
+    counted = re.match(r"events\s+(\d+), counted up from nought$", line)
+    if counted:
+        said["events"] = {"count": int(counted.group(1)), "lent": None}
+        continue
+    heap = re.match(r"heap\s+(\d+) bytes, (.*)$", line)
+    if heap:
+        said["heap"] = int(heap.group(1))
+        thrown = re.match(r"thrown away (\d+) times?$", heap.group(2))
+        said["thrown"] = 0 if thrown is None else int(thrown.group(1))
+        continue
+    made = re.match(r"machine\s+(\d+) bytes, (\d+) slots and "
+                    r"(\d+) frames?$", line)
+    if made:
+        said["machine"] = {"bytes": int(made.group(1)),
+                           "slots": int(made.group(2)),
+                           "frames": int(made.group(3))}
+        continue
+    spent = re.match(r"cost\s+(\d+) bytes to compile$", line)
+    if spent:
+        said["cost"] = int(spent.group(1))
 
-    try:
-        written = json.loads(machine.splitlines()[-1] if machine.strip()
-                             else "{}")
-    except ValueError:
-        print("what was said as JSON is not JSON")
-        raise SystemExit(0)
-    for what in ("onEvents", "onEvent", "events", "cost", "machine", "heap",
-                 "thrown"):
-        if (what in said) != (what in written):
-            print("%s: %s in the words and %s in the JSON"
-                  % (what, what in said, what in written))
-            continue
-        if what in said and said[what] != written[what]:
-            print("%s: %s in the words and %s in the JSON"
-                  % (what, said[what], written[what]))
-    if not said:
-        print("a tick said nothing about what it cost")
-        raise SystemExit(0)
+try:
+    written = json.loads(machine.splitlines()[-1] if machine.strip()
+                         else "{}")
+except ValueError:
+    print("what was said as JSON is not JSON")
+    raise SystemExit(0)
+for what in ("onEvents", "onEvent", "events", "cost", "machine", "heap",
+             "thrown"):
+    if (what in said) != (what in written):
+        print("%s: %s in the words and %s in the JSON"
+              % (what, what in said, what in written))
+        continue
+    if what in said and said[what] != written[what]:
+        print("%s: %s in the words and %s in the JSON"
+              % (what, said[what], written[what]))
+if not said:
+    print("a tick said nothing about what it cost")
+    raise SystemExit(0)
 
-    # And what the numbers mean, which is the half no comparison of two forms
-    # can see: both of them saying the same wrong thing agree.
-    if said["onEvent"]["crossings"] != int(sys.argv[1]):
-        print("a tick of %s events crossed %d times"
-              % (sys.argv[1], said["onEvent"]["crossings"]))
-    if said["onEvents"]["crossings"] != 1:
-        print("a batch of events crossed %d times"
-              % said["onEvents"]["crossings"])
-    # The most it held is at least what it was holding at the end, whether the
-    # heap was thrown away between events or never at all.
-    if said["onEvent"]["peak"] < said["heap"]:
-        print("the most the heap held was %d and it ended holding %d"
-              % (said["onEvent"]["peak"], said["heap"]))
-    # And what it ran over is as many as it crossed, whichever way they came.
-    if said["events"]["count"] != said["onEvent"]["crossings"]:
-        print("it ran over %d events and crossed %d times"
-              % (said["events"]["count"], said["onEvent"]["crossings"]))
-    # And what the machine cost, which is a number a host pays once against a
-    # number it pays every frame. The command line asks the program what it
-    # needs and hands that over, so a machine here is smaller than one nobody
-    # asked about. See D576.
-    if said["machine"]["slots"] >= 65536 or said["machine"]["frames"] >= 1024:
-        print("a machine the program was asked about took %d slots and %d "
-              "frames" % (said["machine"]["slots"], said["machine"]["frames"]))
+# And what the numbers mean, which is the half no comparison of two forms
+# can see: both of them saying the same wrong thing agree.
+if said["onEvent"]["crossings"] != int(sys.argv[1]):
+    print("a tick of %s events crossed %d times"
+          % (sys.argv[1], said["onEvent"]["crossings"]))
+if said["onEvents"]["crossings"] != 1:
+    print("a batch of events crossed %d times"
+          % said["onEvents"]["crossings"])
+# The most it held is at least what it was holding at the end, whether the
+# heap was thrown away between events or never at all.
+if said["onEvent"]["peak"] < said["heap"]:
+    print("the most the heap held was %d and it ended holding %d"
+          % (said["onEvent"]["peak"], said["heap"]))
+# And what it ran over is as many as it crossed, whichever way they came.
+if said["events"]["count"] != said["onEvent"]["crossings"]:
+    print("it ran over %d events and crossed %d times"
+          % (said["events"]["count"], said["onEvent"]["crossings"]))
+# And what the machine cost, which is a number a host pays once against a
+# number it pays every frame. The command line asks the program what it
+# needs and hands that over, so a machine here is smaller than one nobody
+# asked about. See D576.
+if said["machine"]["slots"] >= 65536 or said["machine"]["frames"] >= 1024:
+    print("a machine the program was asked about took %d slots and %d "
+          "frames" % (said["machine"]["slots"], said["machine"]["frames"]))
     ' 3)
 if [ -n "$ticked" ]; then
     complain "tick: what a frame cost is one thing in words and another in JSON"
@@ -2529,32 +2529,32 @@ apart=$( { "$kest" tick --json "$scratch"/talking.kest 2 2>"$scratch"/talking.er
            "$kest" tick --json "$scratch"/falling.kest 2 2>"$scratch"/falling.err
            echo "----"
            cat "$scratch"/falling.err; } | python3 -c '
-    import json
-    import sys
+import json
+import sys
 
-    # Padded rather than unpacked, because a stream holding what another one
-    # is for is exactly what this is looking for and a run of the wrong shape
-    # is that: read as four, whatever came.
-    parts = [part.strip() for part in sys.stdin.read().split("\n----\n")]
-    worked, quiet, fell, said = (parts + ["", "", "", ""])[:4]
-
-
-    def object_of(text):
-        try:
-            return json.loads(text)
-        except ValueError:
-            return None
+# Padded rather than unpacked, because a stream holding what another one
+# is for is exactly what this is looking for and a run of the wrong shape
+# is that: read as four, whatever came.
+parts = [part.strip() for part in sys.stdin.read().split("\n----\n")]
+worked, quiet, fell, said = (parts + ["", "", "", ""])[:4]
 
 
-    # One sentence for all of it, because every way this can be wrong is the
-    # same way: something is in the stream the other one is for.
-    ran = object_of(worked)
-    stopped = object_of(fell)
-    if (ran is None or stopped is None or ran["diagnostics"]
-            or not stopped["diagnostics"] or quiet != "event\nevent"
-            or said != "event"):
-        print("tick: a tick answered %r and %r, and the program wrote %r "
-              "and %r" % (worked[:40], fell[:40], quiet, said))
+def object_of(text):
+    try:
+        return json.loads(text)
+    except ValueError:
+        return None
+
+
+# One sentence for all of it, because every way this can be wrong is the
+# same way: something is in the stream the other one is for.
+ran = object_of(worked)
+stopped = object_of(fell)
+if (ran is None or stopped is None or ran["diagnostics"]
+        or not stopped["diagnostics"] or quiet != "event\nevent"
+        or said != "event"):
+    print("tick: a tick answered %r and %r, and the program wrote %r "
+          "and %r" % (worked[:40], fell[:40], quiet, said))
     ')
 if [ -n "$apart" ]; then
     complain "$apart"
@@ -2589,22 +2589,22 @@ beside=$( { "$kest" call "$scratch"/answering.kest twice 21 \
                 2>"$scratch"/answering-json.err
             echo "----"
             cat "$scratch"/answering-json.err; } | python3 -c '
-    import json
-    import sys
+import json
+import sys
 
-    parts = [part.strip() for part in sys.stdin.read().split("\n----\n")]
-    plainly, wrote, asked, wrote_again = (parts + ["", "", "", ""])[:4]
-    try:
-        object_said = json.loads(asked)
-    except ValueError:
-        object_said = None
-    # One sentence again: every way this is wrong is one stream holding what
-    # the other one is for.
-    if (plainly != "42" or object_said is None
-            or object_said.get("result") != "42"
-            or wrote != "working it out" or wrote_again != "working it out"):
-        print("call: a call answered %r and %r, and the program wrote %r and %r"
-              % (plainly[:40], asked[:40], wrote, wrote_again))
+parts = [part.strip() for part in sys.stdin.read().split("\n----\n")]
+plainly, wrote, asked, wrote_again = (parts + ["", "", "", ""])[:4]
+try:
+    object_said = json.loads(asked)
+except ValueError:
+    object_said = None
+# One sentence again: every way this is wrong is one stream holding what
+# the other one is for.
+if (plainly != "42" or object_said is None
+        or object_said.get("result") != "42"
+        or wrote != "working it out" or wrote_again != "working it out"):
+    print("call: a call answered %r and %r, and the program wrote %r and %r"
+          % (plainly[:40], asked[:40], wrote, wrote_again))
     ')
 if [ -n "$beside" ]; then
     complain "$beside"
@@ -2638,51 +2638,51 @@ replied=$( { "$kest" run --json "$scratch"/answering-run.kest 2>/dev/null
              echo "----"
              "$kest" check --json "$scratch"/quiet-run.kest 2>/dev/null; } |
            python3 -c '
-    import json
-    import sys
+import json
+import sys
 
-    parts = [part.strip() for part in sys.stdin.read().split("\n----\n")]
-    answering, quiet, declared, declared_quiet = (parts + [""] * 4)[:4]
-
-
-    def object_and_status(said):
-        lines = said.splitlines()
-        try:
-            return json.loads("\n".join(lines[:-1])), lines[-1]
-        except (ValueError, IndexError):
-            return None, None
+parts = [part.strip() for part in sys.stdin.read().split("\n----\n")]
+answering, quiet, declared, declared_quiet = (parts + [""] * 4)[:4]
 
 
-    def gives_back(said):
-        try:
-            functions = json.loads(said)["functions"]
-        except (ValueError, KeyError):
-            return None
-        for one in functions:
-            if one["name"].split(".")[-1] == "main":
-                return one["gives"] != "nothing"
+def object_and_status(said):
+    lines = said.splitlines()
+    try:
+        return json.loads("\n".join(lines[:-1])), lines[-1]
+    except (ValueError, IndexError):
+        return None, None
+
+
+def gives_back(said):
+    try:
+        functions = json.loads(said)["functions"]
+    except (ValueError, KeyError):
         return None
+    for one in functions:
+        if one["name"].split(".")[-1] == "main":
+            return one["gives"] != "nothing"
+    return None
 
 
-    # Three readings of one fact and one sentence about all of them: what the
-    # checker says `main` gives back, what a run answered, and what it exited
-    # with. The checker knew before there was a machine, the run found out
-    # after the call, and a status says the same nought for a program that
-    # answered nought and one that answers nothing at all. See D589.
-    gave, status = object_and_status(answering)
-    nothing, quiet_status = object_and_status(quiet)
-    if (gave is None or nothing is None or gave.get("answered") != 7
-            or status != "7" or "answered" not in nothing
-            or nothing["answered"] is not None or quiet_status != "0"
-            or gives_back(declared) is not True
-            or gives_back(declared_quiet) is not False):
-        print("run: a run answered %r and exited %r where the checker said "
-              "%r, and one that gives nothing answered %r and exited %r "
-              "where the checker said %r"
-              % (None if gave is None else gave.get("answered"), status,
-                 gives_back(declared),
-                 None if nothing is None else nothing.get("answered"),
-                 quiet_status, gives_back(declared_quiet)))
+# Three readings of one fact and one sentence about all of them: what the
+# checker says `main` gives back, what a run answered, and what it exited
+# with. The checker knew before there was a machine, the run found out
+# after the call, and a status says the same nought for a program that
+# answered nought and one that answers nothing at all. See D589.
+gave, status = object_and_status(answering)
+nothing, quiet_status = object_and_status(quiet)
+if (gave is None or nothing is None or gave.get("answered") != 7
+        or status != "7" or "answered" not in nothing
+        or nothing["answered"] is not None or quiet_status != "0"
+        or gives_back(declared) is not True
+        or gives_back(declared_quiet) is not False):
+    print("run: a run answered %r and exited %r where the checker said "
+          "%r, and one that gives nothing answered %r and exited %r "
+          "where the checker said %r"
+          % (None if gave is None else gave.get("answered"), status,
+             gives_back(declared),
+             None if nothing is None else nothing.get("answered"),
+             quiet_status, gives_back(declared_quiet)))
     ')
 if [ -n "$replied" ]; then
     complain "$replied"
@@ -2710,42 +2710,42 @@ made=$( { "$kest" fmt "$scratch"/untidy.kest 2>/dev/null </dev/null
           echo "----"
           "$kest" fmt --json "$scratch"/tidy.kest 2>/dev/null </dev/null; } |
         python3 -c '
-    import json
-    import sys
+import json
+import sys
 
-    parts = sys.stdin.read().split("\n----\n")
-    printed, written, already = (parts + ["", "", ""])[:3]
-    printed = printed + "\n"
-
-
-    def object_of(text):
-        try:
-            return json.loads(text)
-        except ValueError:
-            return None
+parts = sys.stdin.read().split("\n----\n")
+printed, written, already = (parts + ["", "", ""])[:3]
+printed = printed + "\n"
 
 
-    said = object_of(written)
-    formed = object_of(already)
-    was = open(sys.argv[1]).read()
-    # And the edit put back where it was taken from: what the object says to
-    # replace, replaced in the file it was read from, is the file the object
-    # carries. A tool that formats on save applies that and nothing else, so
-    # the two have to be one answer at two grains. A file already in the one
-    # form has no edit at all. See D597.
-    edit = None if said is None else said.get("edit")
-    rebuilt = was if edit is None else (was[:edit["offset"]] + edit["text"]
-                                        + was[edit["offset"] + edit["length"]:])
-    if (said is None or formed is None or said.get("text") != printed
-            or printed == was or said.get("formed") or rebuilt != printed
-            or formed.get("edit") is not None or not formed.get("formed")):
-        print("fmt: a file written badly printed %d bytes, the object carries "
-              "%s, its edit puts back %d, and a formed one says %r and %r"
-              % (len(printed),
-                 "nothing" if said is None or said.get("text") is None else
-                 str(len(said["text"])) + " bytes", len(rebuilt),
-                 None if formed is None else formed.get("formed"),
-                 None if formed is None else formed.get("edit")))
+def object_of(text):
+    try:
+        return json.loads(text)
+    except ValueError:
+        return None
+
+
+said = object_of(written)
+formed = object_of(already)
+was = open(sys.argv[1]).read()
+# And the edit put back where it was taken from: what the object says to
+# replace, replaced in the file it was read from, is the file the object
+# carries. A tool that formats on save applies that and nothing else, so
+# the two have to be one answer at two grains. A file already in the one
+# form has no edit at all. See D597.
+edit = None if said is None else said.get("edit")
+rebuilt = was if edit is None else (was[:edit["offset"]] + edit["text"]
+                                    + was[edit["offset"] + edit["length"]:])
+if (said is None or formed is None or said.get("text") != printed
+        or printed == was or said.get("formed") or rebuilt != printed
+        or formed.get("edit") is not None or not formed.get("formed")):
+    print("fmt: a file written badly printed %d bytes, the object carries "
+          "%s, its edit puts back %d, and a formed one says %r and %r"
+          % (len(printed),
+             "nothing" if said is None or said.get("text") is None else
+             str(len(said["text"])) + " bytes", len(rebuilt),
+             None if formed is None else formed.get("formed"),
+             None if formed is None else formed.get("edit")))
     ' "$scratch"/untidy.kest)
 if [ -n "$made" ]; then
     complain "$made"
@@ -2822,14 +2822,14 @@ case "$unfinished" in
     ;;
 esac
 held_anyway=$("$kest" check "$telling" --json 2>&1 </dev/null | python3 -c '
-    import json
-    import sys
+import json
+import sys
 
-    said = json.load(sys.stdin)
-    if said.get("errors", 0) < 1:
-        print("a program that did not check said nothing was wrong")
-    if not said.get("functions"):
-        print("a program that did not check said it holds nothing")
+said = json.load(sys.stdin)
+if said.get("errors", 0) < 1:
+    print("a program that did not check said nothing was wrong")
+if not said.get("functions"):
+    print("a program that did not check said it holds nothing")
     ')
 if [ -n "$held_anyway" ]; then
     complain "check: what a tool is given about a program that did not check"

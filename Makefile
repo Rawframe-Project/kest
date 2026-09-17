@@ -1,6 +1,14 @@
 CC ?= cc
 WARN := -std=c11 -Wall -Wextra -Wshadow -Werror
 
+# The hosts are held to everything the library is except shadowing. Each is one
+# long `main` of blocks run one after another, and a block that declares `said`
+# where the block above it declared `said` is two names for two things in two
+# places rather than one name for two things in one. In the library a shadowed
+# name is what `sscanf(at, ...)` reading the wrong `at` looks like, so there it
+# is an error. See D973.
+HOSTWARN := -std=c11 -Wall -Wextra -Werror
+
 # Where the standard library ends up, which the compiler has to be able to
 # find when nothing else says where it is.
 PREFIX ?= /usr/local
@@ -35,7 +43,7 @@ build/release build/debug:
 # object and gone once it is linked, and holding the public header to being
 # used is holding it to what these two call.
 build/release/embed.o: examples/embed.c include/kest.h | build/release
-	$(CC) $(WARN) -O2 -Iinclude -MMD -MP -c -o $@ $<
+	$(CC) $(HOSTWARN) -O2 -Iinclude -MMD -MP -c -o $@ $<
 
 examples/embed: build/release/embed.o libkest.a
 	$(CC) -o $@ $^
@@ -44,19 +52,19 @@ examples/embed: build/release/embed.o libkest.a
 # public boundary in both directions, so it is the only thing that can say
 # whether lending memory is right.
 examples/embed-debug: examples/embed.c $(DEBUG_OBJ)
-	$(CC) $(WARN) -O0 -g -fsanitize=address,undefined -Iinclude -o $@ $^
+	$(CC) $(HOSTWARN) -O0 -g -fsanitize=address,undefined -Iinclude -o $@ $^
 
 # The engine: a host in the shape a host has, built both ways. It drives a
 # world a frame at a time and reloads the program under it, which is the one
 # thing no other host here does.
 build/release/engine.o: examples/engine.c include/kest.h | build/release
-	$(CC) $(WARN) -O2 -Iinclude -MMD -MP -c -o $@ $<
+	$(CC) $(HOSTWARN) -O2 -Iinclude -MMD -MP -c -o $@ $<
 
 examples/engine: build/release/engine.o libkest.a
 	$(CC) -o $@ $^
 
 examples/engine-debug: examples/engine.c $(DEBUG_OBJ)
-	$(CC) $(WARN) -O0 -g -fsanitize=address,undefined -Iinclude -o $@ $^
+	$(CC) $(HOSTWARN) -O0 -g -fsanitize=address,undefined -Iinclude -o $@ $^
 
 # The smallest host there is, built the same way: a host writer reads it, and a
 # host nobody builds is a host that stops working without saying so.
