@@ -46,6 +46,18 @@ examples/embed: build/release/embed.o libkest.a
 examples/embed-debug: examples/embed.c $(DEBUG_OBJ)
 	$(CC) $(WARN) -O0 -g -fsanitize=address,undefined -Iinclude -o $@ $^
 
+# The engine: a host in the shape a host has, built both ways. It drives a
+# world a frame at a time and reloads the program under it, which is the one
+# thing no other host here does.
+build/release/engine.o: examples/engine.c include/kest.h | build/release
+	$(CC) $(WARN) -O2 -Iinclude -MMD -MP -c -o $@ $<
+
+examples/engine: build/release/engine.o libkest.a
+	$(CC) -o $@ $^
+
+examples/engine-debug: examples/engine.c $(DEBUG_OBJ)
+	$(CC) $(WARN) -O0 -g -fsanitize=address,undefined -Iinclude -o $@ $^
+
 # The smallest host there is, built the same way: a host writer reads it, and a
 # host nobody builds is a host that stops working without saying so.
 build/release/least.o: examples/least.c include/kest.h | build/release
@@ -58,6 +70,8 @@ debug: kest-debug
 least: examples/least
 embed: examples/embed
 embed-debug: examples/embed-debug
+engine: examples/engine
+engine-debug: examples/engine-debug
 
 # What a change is tried against while it is being written: the build, the
 # examples, the library, the one form, a diagnostic and the other host. Seconds.
@@ -100,9 +114,12 @@ uninstall:
 
 clean:
 	rm -rf build kest kest-debug libkest.a examples/embed \
-	    examples/embed-debug examples/least tools/inward
+	    examples/embed-debug examples/engine examples/engine-debug \
+	    examples/least tools/inward
 
-.PHONY: debug least embed embed-debug fast check time install uninstall clean
+.PHONY: debug least embed embed-debug engine engine-debug fast check time \
+    install uninstall clean
 
 -include $(RELEASE_OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) build/release/main.d \
-    build/debug/main.d build/release/embed.d build/release/least.d
+    build/debug/main.d build/release/embed.d build/release/engine.d \
+    build/release/least.d

@@ -1279,7 +1279,7 @@ HELD = ("check-ceilings.sh", "check-commands.sh", "check-costs.sh",
 # read from the top rather than by name: a worklog with no entry in it is one
 # whose every heading was written another way, and a hole breaks one place.
 NOT_SAID = (("check-lends.sh", "the host that lends by name does not build"),
-            ("check-dead.sh", "%s is not built; `make embed` first"),
+            ("check-dead.sh", "%s is not built; `make embed engine` first"),
             ("check-docs.sh", "docs/language.md: the engine is not built, so "
                               "what it prints for a host's own rules is a "
                               "list nothing reads"),

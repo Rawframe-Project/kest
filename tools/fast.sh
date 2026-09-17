@@ -36,15 +36,28 @@ say build "release and the other host"
 # itself and answers with which of its own checks failed, so a number here is a
 # line in that file. This is the language's own coverage: the examples are what
 # `docs/language.md` says each rule is run by.
+# A file with a `main` is a program and has to run; one without is what a host
+# drives, and there is nothing here to drive it with. Which it is is read from
+# the file, because a program the command line cannot start says why it could
+# not start rather than that there was nothing to run.
 ran=0
+driven=0
 for one in examples/*.kest; do
+    if ! grep -q '^fn main(' "$one"; then
+        if ! ./kest check "$one" >"$scratch"/said 2>&1 </dev/null; then
+            say examples "$one: $(head -3 "$scratch"/said)"
+            failed=1
+        fi
+        driven=$((driven + 1))
+        continue
+    fi
     if ! ./kest run "$one" >"$scratch"/said 2>"$scratch"/why </dev/null; then
         say examples "$one answered $(cat "$scratch"/why | head -3)"
         failed=1
     fi
     ran=$((ran + 1))
 done
-say examples "$ran run, each answering nought"
+say examples "$ran run, each answering nought, and $driven a host drives"
 
 # The library and the instruments resolve. They are not run here -- an
 # instrument is a measurement and a measurement is not a pass -- but a library

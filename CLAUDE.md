@@ -45,8 +45,15 @@ this table and the tree and holds them to each other.
 include/kest.h     Public embedding API. The only header a host includes.
 libkest.a          The language. `kest` is one host of it and
                    `examples/embed.c` is another. `make embed-debug` builds
-                   that one under the sanitisers, which is the only thing
-                   that crosses the public boundary in both directions.
+                   that one under the sanitisers, which is where the public
+                   boundary is crossed in both directions and weighed.
+                   `examples/engine.c` is the third and is the shape a host
+                   has rather than a list of doors: it builds a program,
+                   keeps a world between frames, lends its own memory a frame
+                   at a time, and reloads the program under a world it saved.
+                   `make engine` and `make engine-debug` build it. It is read
+                   by somebody writing a host; the other is read by somebody
+                   asking whether a door works.
 src/               Implementation. One module per .c/.h pair.
 docs/              The four documents above.
 lib/std/           The standard library, written in Kest and held to the
@@ -974,7 +981,7 @@ was written, and what stays in the tree is the guard.
 What the gate does itself, beside the checks in `tools` that it asks:
 
 ```
-build        both builds and both hosts
+build        both builds and every host
 asking       a host asking what came back before anything came back, and
              every copy of one body walked to the end
 returns      files written on the spot: line endings, noughts inside text,
@@ -1004,7 +1011,8 @@ least        the smallest host running its own program and one that asks for
              name it has not got and two that ask for its own in another
              shape, calling with a word what takes one, and saying what
              compiling had to say about a program that compiled
-host         both hosts, sanitised and not
+host         every host, sanitised and not: the one that asks every door
+             and the engine that drives a world and reloads under it
 sanitisers   every command over every file under the sanitisers, and the
              two builds asked which of them checks itself
 nothing      a document with nothing in it, and checks handed no files
@@ -1080,7 +1088,7 @@ nothing moved. Every check in `tools` also runs on its own, which is how a
 change that moves one figure is answered in seconds rather than in a round
 trip.
 
-`make check` is the whole of it: both builds, both hosts, every example run or
+`make check` is the whole of it: both builds, every host, every example run or
 resolved, every command against every file under the sanitisers, every tool
 named above, and a handful of files written on the spot for what no file in the
 tree is: one that holds nothing, one that holds a comment and nothing else,

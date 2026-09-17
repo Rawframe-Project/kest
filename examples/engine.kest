@@ -1,0 +1,204 @@
+module examples.engine
+
+// The program an engine drives. `examples/embed.c` is the other host in this
+// tree and is a meta-test: it asks every door this language has, one after
+// another, and is long because the list is. This one is the other thing — a
+// frame loop, a world kept between frames, a save and a reload — written to be
+// read rather than to be complete. See D949.
+//
+// What makes it a world rather than a list is that the bodies name each other:
+// each chases the next one round and the last chases the first. A save that
+// cannot write that down is a save that loses the world, so this is where a
+// reload is either true or not.
+
+// Every body carries a number of its own. It is what a save writes when it has
+// to say which body another one chases: a reference is a world, a stamp and a
+// place in the machine that made it, and the machine somebody starts tomorrow
+// has none of the three.
+struct Body {
+    id: i32
+    x: f32
+    y: f32
+    vx: f32
+    vy: f32
+    chases: ref<Body>?
+}
+
+struct World {
+    bodies: store<Body>
+    made: i32
+}
+
+// The host asks for this once and keeps what comes back between frames. What
+// it keeps is two slots -- a handle and a number -- and they are the machine's
+// for as long as the machine is.
+fn begin(many: i32) -> World {
+    let bodies: store<Body> = store(many)
+    let made: [ref<Body>] = array()
+    for i in 0..many {
+        let at = f32(i)
+        push(made, add(bodies, Body(i, at, 0.0 - at, 1.0, 0.5, none)))
+    }
+    // A ring: each chases the next, and the last chases the first. Nothing
+    // counts references and nothing is told when one goes, so two values may
+    // name each other and a walk of them comes back round.
+    for i in 0..len(made) {
+        if let one = get(bodies, made[i]) {
+            let linked = one
+            linked.chases = made[(i + 1) % len(made)]
+            set(bodies, made[i], linked)
+        }
+    }
+    return World(bodies, many)
+}
+
+// One frame. Every body leans toward the one it chases and then moves. It
+// reaches no heap, calls nothing of the host's, and answers the same on every
+// machine that keeps the simulation profile -- which is the three things a
+// frame step in this language can promise, and is why an engine can put it in
+// a frame at all.
+fn step(w: World, dt: f32) -> i32 no.alloc no.host deterministic {
+    let moved = 0
+    for r in w.bodies {
+        if let one = get(w.bodies, r) {
+            let body = one
+            if let after = body.chases {
+                if let ahead = get(w.bodies, after) {
+                    body.vx += (ahead.x - body.x) * dt
+                    body.vy += (ahead.y - body.y) * dt
+                }
+            }
+            body.x += body.vx * dt
+            body.y += body.vy * dt
+            set(w.bodies, r, body)
+            moved += 1
+        }
+    }
+    return moved
+}
+
+// The engine's own memory, filled in place: nothing is copied across the
+// boundary and nothing is made on the heap. The arrays are lent for the call
+// and ended after it, so nothing here keeps a handle to one.
+fn place(w: World, xs: [f32], ys: [f32]) -> i32 no.alloc no.host {
+    let at = 0
+    for r in w.bodies {
+        if at >= len(xs) || at >= len(ys) {
+            break
+        }
+        if let one = get(w.bodies, r) {
+            xs[at] = one.x
+            ys[at] = one.y
+            at += 1
+        }
+    }
+    return at
+}
+
+// A save is numbers, written into memory the host owns. Which body another one
+// chases is written as that body's own number and never as the bits of a
+// reference.
+fn save(w: World, ids: [i32], xs: [f32], ys: [f32], vxs: [f32], vys: [f32], chases: [i32]) -> i32 no.alloc no.host {
+    let at = 0
+    for r in w.bodies {
+        if at >= len(ids) {
+            break
+        }
+        if let one = get(w.bodies, r) {
+            ids[at] = one.id
+            xs[at] = one.x
+            ys[at] = one.y
+            vxs[at] = one.vx
+            vys[at] = one.vy
+            chases[at] = 0 - 1
+            if let after = one.chases {
+                if let ahead = get(w.bodies, after) {
+                    chases[at] = ahead.id
+                }
+            }
+            at += 1
+        }
+    }
+    return at
+}
+
+// And a world made again out of those numbers, in a machine that has never
+// seen the one they came from. The references are made here: a number that
+// stood for a body is looked up among the ones this call has just made, which
+// is what remapping is and is the whole of what a save can promise.
+fn restore(ids: [i32], xs: [f32], ys: [f32], vxs: [f32], vys: [f32], chases: [i32]) -> World {
+    let bodies: store<Body> = store(len(ids))
+    let made: [ref<Body>] = array()
+    for i in 0..len(ids) {
+        push(
+            made,
+            add(bodies, Body(ids[i], xs[i], ys[i], vxs[i], vys[i], none))
+        )
+    }
+    for i in 0..len(chases) {
+        if chases[i] < 0 {
+            continue
+        }
+        for j in 0..len(ids) {
+            if ids[j] != chases[i] {
+                continue
+            }
+            if let one = get(bodies, made[i]) {
+                let linked = one
+                linked.chases = made[j]
+                set(bodies, made[i], linked)
+            }
+            break
+        }
+    }
+    return World(bodies, len(ids))
+}
+
+// How far round the ring a walk gets before it comes back to where it started,
+// which is the one question a save either answers or loses. A world of eight
+// bodies answers eight; one whose references were written down as bits and
+// read back in another machine answers whatever that machine had there.
+fn round(w: World, from: i32) -> i32 no.alloc no.host {
+    let steps = 0
+    let at: ref<Body>? = none
+    for r in w.bodies {
+        if let one = get(w.bodies, r) {
+            if one.id == from {
+                at = r
+            }
+        }
+    }
+    while steps <= w.made {
+        if let here = at {
+            if let one = get(w.bodies, here) {
+                steps += 1
+                if let after = one.chases {
+                    at = after
+                    if let ahead = get(w.bodies, after) {
+                        if ahead.id == from {
+                            return steps
+                        }
+                    }
+                    continue
+                }
+            }
+        }
+        return 0 - steps
+    }
+    return 0 - steps
+}
+
+extern fn Engine.watch(tick: i32) -> i32
+extern fn Engine.refuse(why: i32) -> i32
+
+// A crossing out and, if the host does it, a crossing back in from inside the
+// host's own function. What the program sees of that is a number.
+fn watched(w: World, tick: i32) -> i32 {
+    return Engine.watch(tick) + w.made
+}
+
+// And a door the host refuses at. What comes back is a machine that stopped
+// where the call was rather than a number nobody can tell from an answer.
+fn refused(why: i32) -> i32 {
+    return Engine.refuse(why)
+}

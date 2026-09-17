@@ -2,6 +2,8 @@ build/
 *.d
 examples/embed
 examples/embed-debug
+examples/engine
+examples/engine-debug
 examples/least
 tools/inward
 kest

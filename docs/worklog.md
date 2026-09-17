@@ -35615,3 +35615,33 @@ reloads, which is a reload's schema check written out.
 **Runs:** `make check`; the seven commands over a file, each answering an object
 that says `"schema":1`; two modules differing in one field's name, answering two
 shape marks; `examples/embed`.
+
+## A third host, which is a host rather than a list of doors (D949)
+
+`examples/embed.c` asks every door this language has and is seven thousand
+lines, and none of them is an example of writing a host. So there is
+`examples/engine.c`: five hundred lines, read start to finish, doing what an
+engine does in the order it does it — read the three promises before putting a
+step in a frame, sixty frames, its own memory lent every eighth frame and ended
+when the frame ends, a crossing out and a crossing back in from inside it, a
+door of its own that refuses, a budget spent down to nothing with the world
+still where it was, a cancel and the frame after it, a save, a reload and a
+teardown.
+
+The reload is the part that had nowhere else to live: build the candidate beside
+the running one, refuse if `Body` is a different shape than the bytes were saved
+as, make the world again in the new machine, walk the ring to see that it is
+still a ring, and only then let go of the old build and the old machine. What
+says it worked is that the bodies chase each other round: a save writes which
+body another one chases as that body's own number, never as the bits of a
+reference, and a walk of the ring in the new machine comes back round in eight
+steps. It also starts a second machine over the same build and hands it the
+first machine's world, which is refused rather than followed.
+
+Two things in the gate turned out to be about the command line rather than about
+examples. A file with no `main` is now read as one rather than found out about
+from what a run said — `examples/engine.kest` has doors this command line does
+not bind, so `kest run` says that rather than that there was nothing to run.
+
+**Runs:** `make check`; `examples/engine` and `examples/engine-debug`, the
+second under the sanitisers.

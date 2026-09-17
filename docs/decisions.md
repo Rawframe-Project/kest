@@ -29302,3 +29302,54 @@ does not.
 `examples/embed.c` asks it of `Row` across each of its three reloads, which is
 the shape of a reload's schema check written out: build again, ask, and only
 then read the old bytes.
+
+## D949: a third host, in the shape a host has
+
+`examples/embed.c` is seven thousand lines and it should be: it asks every door
+this language has and reads back what each one says, and the list is long. What
+it is not is an example of writing a host. A reader who wants to know how to
+drive a program a frame at a time has to find that shape inside a meta-test,
+and the shape is not there — it is spread across sixty blocks that each ask one
+thing.
+
+So there is a third host, `examples/engine.c`, five hundred lines, written to
+be read start to finish. It builds a program, asks it for a world, and keeps
+that world between frames — two slots, a store handle and a number, which is
+what an engine keeps. Then it does what an engine does, in the order an engine
+does it: read the three promises before installing a step in a frame, run sixty
+frames, lend its own two arrays every eighth frame and end the lends when the
+frame ends, cross out to a door of its own and be crossed back into from inside
+it, be refused by another door of its own, spend a budget down to nothing and
+find the world still where it was, be cancelled and carry on after fuel, save
+the world as numbers, and build the program again underneath it.
+
+**The reload is the part that had nowhere else to live.** The mission asks for
+detect, rebuild, validate, snapshot, remap, publish, and keep the old world when
+any of it fails, and every one of those is a host's to sequence rather than
+this library's to do. What the library owes is the doors, and they were all
+here: a build is read-only once built, a second build stands beside the first,
+`kest_layout_mark` says whether the shape the bytes were saved as is the shape
+the new program has, and a machine that never publishes is freed with everything
+in it. The host does them in that order and nothing touches the running world
+until the candidate has answered — a candidate that will not build, whose `Body`
+is a different shape, or whose world cannot be made again is discarded whole,
+and the engine is exactly where it was.
+
+**The ring is what says it worked.** The bodies in `examples/engine.kest` chase
+each other round: each names the next and the last names the first. A save
+writes which body another one chases as that body's own number and never as the
+bits of a reference — those are a world, a stamp and a place in the machine that
+made them, and the machine started after a reload has none of the three. What
+the host asks after restoring is how many steps a walk of the ring takes to come
+back to where it started, and the answer has to be the number of bodies. A save
+that wrote the bits down would answer whatever the new machine had at those bits,
+which is the defect this is the test for.
+
+**And two machines stay two worlds.** The engine starts a second machine over
+the same build, makes the same world in it from the same numbers, and then hands
+the first machine's world handle to the second: it is refused rather than
+followed. That is D934 asked on purpose by a host, which is where a host finds
+it out if it is not asked.
+
+The gate builds and runs it under both builds beside the other host, and
+`check-dead.sh` counts it among the hosts the public header is held to.

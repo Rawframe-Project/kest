@@ -27,9 +27,10 @@ OBJECTS = "build/release"
 # read for what they make and what they ask for; which host calls what is still
 # read out of the release ones, because there is one of each there. See D870.
 CHECKED = "build/debug"
-# The two hosts. A tool that quietly skips one is a tool that says the public
-# header is used when nothing has looked.
-HOSTS = ["main.o", "embed.o"]
+# The hosts. A tool that quietly skips one is a tool that says the public
+# header is used when nothing has looked. Three of them: the command line, the
+# one that asks every door, and the engine that drives a world. See D949.
+HOSTS = ["main.o", "embed.o", "engine.o"]
 
 failed = 0
 
@@ -56,7 +57,7 @@ def symbols(path):
 
 for host in HOSTS:
     if not os.path.exists(os.path.join(OBJECTS, host)):
-        print("%s is not built; `make embed` first" % host)
+        print("%s is not built; `make embed engine` first" % host)
         sys.exit(1)
 
 declared = {}
@@ -150,7 +151,8 @@ for name, header in sorted(declared.items()):
 # for each of them and a claim nothing holds is a claim that goes stale. What
 # the library's own modules call each other is not that.
 command_line = wanted.get(os.path.join(OBJECTS, "main.o"), set())
-engine = wanted.get(os.path.join(OBJECTS, "embed.o"), set())
+engine = (wanted.get(os.path.join(OBJECTS, "embed.o"), set()) |
+          wanted.get(os.path.join(OBJECTS, "engine.o"), set()))
 # Read out of the public header itself rather than out of where a name was
 # first seen: `kest_runtime_free` is declared in both, and the file a name is
 # attributed to is whichever was read first.
@@ -442,9 +444,11 @@ if of_told == 0 or of_untold != 0:
     failed = 1
 
 if not failed:
-    # Which of the two hosts calls what, because the header says there is
+    # Which of the hosts calls what, because the header says there is
     # somewhere to look for each of its functions and this is where that is
-    # counted. The internal headers are held to being called from outside the
+    # counted. The two that are not the command line are counted together:
+    # both of them are an engine, and what a reader is being told is that a
+    # function has a host to look at rather than which file it is in. The internal headers are held to being called from outside the
     # file that has them; the public one is held to a host.
     print("every declaration is there and is called: %u, of which the public "
           "header's %u are called by the command line (%u) and the engine "

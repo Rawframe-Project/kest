@@ -53,7 +53,8 @@ if ! make >/dev/null 2>"$scratch"/check-why; then
     sed 's/^/    /' "$scratch"/check-why | head -10
     exit 1
 fi
-if ! make debug embed embed-debug least tools/inward >/dev/null \
+if ! make debug embed embed-debug engine engine-debug least tools/inward \
+        >/dev/null \
         2>"$scratch"/check-why; then
     complain "build" "the sanitised build does not build"
     sed 's/^/    /' "$scratch"/check-why | head -10
@@ -63,7 +64,7 @@ fi
 # cannot start, is every check below this reporting its own confusing failure —
 # a probe that passes when a command fails would pass for the wrong reason, and
 # `make` saying nothing is not the same as there being something to run.
-for built in ./kest ./kest-debug ./examples/embed ./examples/embed-debug ./examples/least ./tools/inward; do
+for built in ./kest ./kest-debug ./examples/embed ./examples/embed-debug ./examples/engine ./examples/engine-debug ./examples/least ./tools/inward; do
     if [ ! -x "$built" ]; then
         complain "build" "$built was built and is not there"
         exit 1
@@ -73,13 +74,25 @@ if ! ./kest help >/dev/null 2>&1 || ! ./kest-debug help >/dev/null 2>&1; then
     complain "build" "what was built does not answer"
     exit 1
 fi
-say "build" "release, sanitised, and both hosts, and all four answer"
+say "build" "release, sanitised, and every host, and the two command lines \
+answer"
 
 # A file with a `main` has to run and answer nought; one without has to
-# resolve. Which it is comes from the file rather than from a list here.
+# resolve. Which it is comes from the file rather than from a list here -- read
+# out of it, because a program whose doors this command line does not bind says
+# why it could not start rather than that there was nothing to run, and the two
+# are not the same news.
 ran=0
 resolved=0
 for file in $sources; do
+    if ! grep -q '^fn main(' "$file"; then
+        if ./kest check "$file" >/dev/null 2>&1; then
+            resolved=$((resolved + 1))
+        else
+            complain "examples" "$file does not resolve"
+        fi
+        continue
+    fi
     # Nothing on the standard input, so an example that reads gets what it
     # would get from an empty file rather than what somebody's terminal
     # happens to have in it. An example is a program that answers the same
@@ -1122,13 +1135,19 @@ and \
 says what compiling had to say about a program that compiled"
 fi
 
-for host in ./examples/embed ./examples/embed-debug; do
+# The meta-test that asks every door, and the engine that drives a world a
+# frame at a time and reloads the program under it. Both under both builds,
+# because a host is where the public boundary is crossed in both directions and
+# the sanitised build is the only thing that can say whether that went right.
+for host in ./examples/embed ./examples/embed-debug ./examples/engine \
+        ./examples/engine-debug; do
     if ! "$host" >/dev/null 2>"$scratch"/check-why; then
         complain "host" "$host failed"
         sed 's/^/    /' "$scratch"/check-why | head -10
     fi
 done
-say "host" "both crossings, sanitised and not"
+say "host" "every crossing, sanitised and not: the one that asks every door \
+and the engine that drives a world and reloads under it"
 
 # Every command against every file, under the sanitisers, looking at what it
 # said rather than at what it returned: a command that fails for a reason is

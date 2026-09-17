@@ -2608,6 +2608,18 @@ where somebody can read it, rather than only where it is enforced.
 
 ## The host boundary
 
+There are three hosts in this tree and they are for three different readers.
+`kest` is the command line, in `src/main.c`. `examples/embed.c` asks every door
+this language has, one after another, and is long because the list is — it is
+where a door is held to what it says, and it is what to read when one of them
+does not do what this document says. `examples/engine.c` is the shape a host
+has rather than a list of doors: it builds a program, asks it for a world, keeps
+that world between frames, lends its own memory a frame at a time, spends a
+budget, is refused by a door of its own, saves the world as numbers and builds
+the program again under it without losing what it had. It is five hundred lines
+and it is meant to be read start to finish by somebody writing a host of their
+own. See D949.
+
 The default shape is one crossing carrying a borrowed view of contiguous host
 storage. Per-value crossing stays expressible and is visible where it is
 written, because it costs between four and ten times as much.
