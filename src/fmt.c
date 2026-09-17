@@ -444,7 +444,7 @@ static void print_operand(Printer *printer, const KestExpr *expr, int limit) {
 // How much room ` else -> ...` wants, so an `if` that gives a value knows
 // whether the rest of it fits on the line it is on.
 static uint32_t else_width(Printer *printer, const KestBranch *branch) {
-    uint32_t width = strlen(" else");
+    uint32_t width = (uint32_t)strlen(" else");
     if (branch->otherwise != NULL) {
         return width + 1 + measure(printer, branch->otherwise);
     }
