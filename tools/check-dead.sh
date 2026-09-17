@@ -354,7 +354,18 @@ for path in sorted(glob.glob('examples/*.kest')):
         if line.startswith('layout '):
             held |= set(re.findall(r'\+\d+ (\S+)', line))
 
+# `stop` is the one instruction nothing compiles to: a debugger writes it over
+# an instruction it wants to stop at and puts the byte back afterwards, which is
+# what makes a breakpoint cost a machine nothing. It is exercised by the
+# debugger rather than by an example, and `check-commands.sh` drives a program
+# through it. Written down here rather than left out quietly, because an
+# instruction nothing runs and an instruction nothing runs *and nobody
+# noticed* look the same from outside. See D991.
+WRITTEN_BY_A_DEBUGGER = {"stop"}
+
 for name in instructions:
+    if name in WRITTEN_BY_A_DEBUGGER:
+        continue
     if name not in emitted:
         print("src/value.h: nothing emits `%s`, so no example has run it"
               % name)

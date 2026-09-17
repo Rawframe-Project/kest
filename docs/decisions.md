@@ -31109,3 +31109,64 @@ those.
 **FAST stayed fast.** Everything added this mission — the cost report, the
 server, the profiler, the project commands, the fuzzer, the reload corpus — is
 in FULL. `make fast` is what it was. *Measured.*
+
+## D991. A debugger that writes itself into the program and takes itself out
+
+Section 23 of the completion mission asks for a real source-level debugging
+surface and lists what it has to do: source breakpoints, continue, step into,
+step over, a stack trace, locals and parameters, values for core types, the
+reason a run stopped, and the boundary a host is on the other side of.
+
+**The design is decided by one measurement.** D979 measured a test at the top
+of the dispatch loop at a third of the machine — 107 ns an entity against 139 —
+and a debugger that made every program a third slower to be debuggable would be
+a debugger nobody could ship. So there is no hook and no flag: a breakpoint is
+**written into the code**. `kest debug` puts `stop` over the first byte of an
+instruction, keeps the byte it wrote over, and puts it back when the machine
+stops there. A machine nobody is debugging runs the program that was compiled,
+byte for byte, and pays nothing.
+
+`stop` is the one instruction nothing compiles to. That is why it is in the
+instruction set and why the switch that says which instructions reach the heap
+has a case for it: the switch has no `default`, and that is the point of the
+switch.
+
+**Stopping and carrying on.** The machine's frames are a list rather than the C
+stack, so a stop is a return with everything where it was: the frame keeps the
+instruction the byte was written over and where the operand stack had got to,
+and `kest_resume` picks both up. What a `scratch { }` opened stays open, because
+the body that opened it has not got to the end of it. A stop is not a refusal
+and says nothing into the report, which is why `kest_stopped` exists: a host
+asks it to tell one from the other.
+
+**Stepping is a loop of one-instruction moves.** A step to the next line
+patches every line of the bodies in play, patches the instruction after the one
+the machine is standing on, takes the standing one out, and lets the machine
+go — until the line changes. The instruction after is what makes a loop work: a
+loop jumps back to the line it came from, and the patch that would have caught
+it is the one that had to come out for the machine to move at all. `next` is the
+same with "and not deeper than it was", which is how a call is stepped over.
+
+**Names.** A stopped machine that can say slot 4 holds 12 and cannot say slot 4
+is `total` is a memory viewer. The IR has kept what a body called its slots
+since D962, because the escape pass wanted them; the backend now writes them
+into the chunk, and `kest_frame_name` reads them back with what kind the slot
+is, so a value is shown as what it holds. It is the only thing in a chunk that
+is about the source rather than about running, and the mark does not fold it: a
+program with a local renamed is the same program to run.
+
+**What driving it found**, which is the third defect this mission found by
+asking rather than reading: everything that reads the code walks it an
+instruction at a time, and a walk that met a breakpoint read a one-byte
+instruction where a three-byte one is and stepped into the middle of the next.
+The debugger reported the wrong line, and a wrong line looks exactly like a
+right one. So the bytes go back before anything is asked and the breakpoints go
+on again after — and there is a hole that takes that out and watches the gate
+catch it.
+
+**What it does not do.** It does not show a host frame: a crossing into the
+host is not a frame of this machine, and what the host does there is the host's.
+It does not set a breakpoint inside a call the host makes back in. And it is a
+command line rather than DAP — one surface finished beats two started, and the
+editor extension starts `kest lsp` rather than this. *Measured*, on a program
+driven through it in the gate.

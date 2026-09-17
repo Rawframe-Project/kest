@@ -36,7 +36,7 @@
 // numbers, or what any of them mean. It does not go up for a new function or
 // a new enum case added at the end, which a host built against the older
 // number does not know about and cannot be hurt by. See D974.
-#define KEST_ABI_VERSION 2
+#define KEST_ABI_VERSION 3
 
 // What deterministic code is held to, named and numbered. `deterministic` is a
 // promise about a profile rather than about arithmetic in the abstract: which
@@ -1082,6 +1082,64 @@ KestRefusal kest_heap_refused_by(const KestRuntime *runtime);
 // ceiling is. The other two are always a number, because a machine always has
 // a stack and a depth.
 void kest_allowed(const KestRuntime *runtime, KestLimits *limits);
+
+// Where a debugger stopped this machine, as an offset into the code of the
+// body it stopped in, or -1 for a machine that is not stopped. A machine stops
+// when it runs the one instruction nothing compiles to, which is what a
+// debugger writes over the first byte of an instruction it wants to stop at.
+//
+// A stopped machine is not finished and is not broken: its frames, its stack
+// and its heap are where they were, what a `scratch { }` opened is still open,
+// and nothing has been said into the report. `kest_call` answers false for one,
+// so a host asks this to tell a stop from a refusal. See D991.
+int64_t kest_stopped(const KestRuntime *runtime);
+
+// Which body it stopped in, by the number `kest_entry` answers with, or -1.
+int32_t kest_stopped_in(const KestRuntime *runtime);
+
+// Carries on from where it stopped. The instruction the breakpoint was written
+// over is run first, so a debugger puts the byte back before calling this.
+// Answers what `kest_call` would have: false for a machine that stopped again,
+// which `kest_stopped` tells from a refusal.
+//
+// A resume is the rest of the call that stopped, so it answers the same way:
+// `frame` and `room` are where what comes back is written, the same frame the
+// call was made with. NULL for a host that does not want it.
+bool kest_resume(KestRuntime *runtime, KestValue *frame, uint32_t room);
+
+// The bytes a body was compiled to, and how many, so a debugger can write a
+// breakpoint over one and put it back. Nothing else should write here: this is
+// the program the machine is running.
+uint8_t *kest_code_of(KestRuntime *runtime, int32_t entry, uint32_t *count);
+
+// Where in the source the instruction at this offset came from, or -1. One per
+// instruction, which is what makes a breakpoint at a line a breakpoint at an
+// instruction and what makes a stack trace say where.
+int64_t kest_came_from(const KestRuntime *runtime, int32_t entry,
+                       uint32_t at);
+
+// How many frames deep the machine is, and what each is: `kest_frame_in` is
+// which body, by the number `kest_entry` answers with, and `kest_frame_ip` is
+// how far into its code it is. Nought frames for a machine that is not
+// running and not stopped.
+uint32_t kest_frames_deep(const KestRuntime *runtime);
+int32_t kest_frame_in(const KestRuntime *runtime, uint32_t deep);
+int64_t kest_frame_ip(const KestRuntime *runtime, uint32_t deep);
+
+// One slot of one frame, for reading a local out of a stopped machine. False
+// past the last frame and past the slots that frame has.
+bool kest_frame_slot(const KestRuntime *runtime, uint32_t deep, uint16_t slot,
+                     KestValue *into);
+
+// What the body called that slot, or NULL for one it did not name. `kind` is
+// what a layout piece is, so a host reads the slot as what it holds. A body
+// that reused a slot after a scope ended gave it more than one name and the
+// last is the one answered.
+const char *kest_frame_name(const KestRuntime *runtime, uint32_t deep,
+                            uint16_t slot, uint16_t *slots, uint8_t *kind);
+
+// How many slots a frame has, which is how far a host walks looking for names.
+uint16_t kest_frame_wide(const KestRuntime *runtime, uint32_t deep);
 
 // Give this machine a budget, or take its budget away with
 // `KEST_FUEL_UNLIMITED`. One unit is one step, and a step is a jump that goes

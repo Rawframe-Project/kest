@@ -440,6 +440,11 @@ typedef struct {
     const uint8_t *ip;
     // Where this call's slots begin. The operand stack sits above them.
     KestValue *base;
+    // And where the operand stack had got to when a debugger stopped the
+    // machine here. It is written at one instruction and read at one, so a
+    // machine nobody is debugging never touches it: everywhere else the top is
+    // a register, for the reason D869 gives. See D991.
+    KestValue *stopped_top;
 } Frame;
 
 struct KestRuntime {
@@ -473,6 +478,16 @@ struct KestRuntime {
     uint64_t fuel_left;
     uint64_t fuel_given;
     bool fuel_bounded;
+    // Where a debugger stopped this machine, or NULL. A machine that stopped
+    // is not finished and is not broken: its frames, its stack and its heap
+    // are where they were, and `kest_resume` carries on from the instruction
+    // the breakpoint was written over. Nothing in the hot path reads it: it is
+    // written by the one instruction nothing compiles to. See D991.
+    const uint8_t *stopped_at;
+    // Where the call a host made put its arguments, kept so that a run which
+    // stopped and carried on can hand back what came out of it: the copy out
+    // is at the end of `kest_call` and a resume does not go through there.
+    KestValue *called_floor;
     // Written by a host that may not be this thread and read by the machine.
     // An `_Atomic int` and nothing weaker: `volatile sig_atomic_t` says the
     // compiler will not cache it and says nothing at all about what another
@@ -2356,19 +2371,26 @@ static uint16_t read_u16(const uint8_t **ip) {
     return (uint16_t)(at[0] | ((uint16_t)at[1] << 8));
 }
 
+// `entry` of -1 is a machine carrying on from where a debugger stopped it:
+// the frames are where they were, and the instruction and the operand stack
+// come out of the frame the stop wrote them into. See D991.
 static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                      uint16_t *returned) {
+    bool carrying_on = entry < 0;
     const KestModule *module = rt->module;
     KestNative *natives = rt->natives;
     Vm *vmp = rt;
 
-    const KestChunk *chunk = module->functions[entry];
+    const KestChunk *chunk =
+        carrying_on ? rt->frames[rt->frame_count - 1].chunk
+                    : module->functions[entry];
     // Where this run of the machine starts. Nothing is running unless a host
     // function called back in, and then it starts above what that one left.
     KestValue *floor = rt->running_top != NULL ? rt->running_top : rt->stack;
     uint32_t under = rt->running_frames;
-    if (under >= rt->call_depth ||
-        floor + chunk->slot_count + chunk->stack_needed > rt->limit) {
+    if (!carrying_on &&
+        (under >= rt->call_depth ||
+         floor + chunk->slot_count + chunk->stack_needed > rt->limit)) {
         KestSpan nowhere = {0, 0};
         kest_diags_in(rt->diags, NULL);
         kest_diags_add(rt->diags, KEST_SEVERITY_ERROR, "K0602", nowhere,
@@ -2382,14 +2404,21 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         return false;
     }
 
-    rt->frame_count = under;
-    Frame *frame = &rt->frames[rt->frame_count++];
-    frame->chunk = chunk;
-    frame->ip = chunk->code;
-    frame->base = floor;
-
-    KestValue *top = floor + (chunk->slot_count > arg_slots ? chunk->slot_count
-                                                            : arg_slots);
+    Frame *frame = NULL;
+    KestValue *top = NULL;
+    if (carrying_on) {
+        frame = &rt->frames[rt->frame_count - 1];
+        top = frame->stopped_top;
+    } else {
+        rt->frame_count = under;
+        frame = &rt->frames[rt->frame_count++];
+        frame->chunk = chunk;
+        frame->ip = chunk->code;
+        frame->base = floor;
+        frame->stopped_top = NULL;
+        top = floor + (chunk->slot_count > arg_slots ? chunk->slot_count
+                                                     : arg_slots);
+    }
     // Where the machine is, held here rather than in the frame. Every
     // instruction reads at least one byte and most read two more, and through a
     // pointer that is a load and a store each time: nothing tells the compiler
@@ -4522,6 +4551,19 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         }
 
+        // A breakpoint. The machine stops where it is: the frame keeps the
+        // instruction the byte was written over and where the operand stack
+        // had got to, so `kest_resume` picks both up and carries on. Nothing
+        // is unwound and nothing is said -- a stop is not a refusal. See D991.
+        case KEST_OP_STOP: {
+            frame->ip = instruction;
+            frame->stopped_top = top;
+            rt->stopped_at = instruction;
+            rt->running_frames = 0;
+            rt->running_top = NULL;
+            return false;
+        }
+
         case KEST_OP_RETURN: {
             uint16_t count = READ_U16();
 #if KEST_CHECKED
@@ -4625,7 +4667,14 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                     uint16_t *returned) {
     uint32_t held = rt->kept_count;
+    rt->stopped_at = NULL;
     bool went = run_body(rt, entry, arg_slots, returned);
+    // A machine a debugger stopped is not a machine that finished: what a
+    // `scratch { }` opened is still open, because the body that opened it has
+    // not got to the end of it. See D991.
+    if (rt->stopped_at != NULL) {
+        return went;
+    }
     while (rt->kept_count > held) {
         rt->kept_count--;
         kest_arena_rewind(rt->heap, rt->kept[rt->kept_count]);
@@ -5049,6 +5098,127 @@ KestRefusal kest_heap_refused_by(const KestRuntime *runtime) {
     }
     return kest_arena_refused_by_ceiling(runtime->heap) ? KEST_REFUSED_CEILING
                                                         : KEST_REFUSED_MACHINE;
+}
+
+int64_t kest_stopped(const KestRuntime *runtime) {
+    if (runtime == NULL || runtime->stopped_at == NULL ||
+        runtime->frame_count == 0) {
+        return -1;
+    }
+    const Frame *frame = &runtime->frames[runtime->frame_count - 1];
+    return (int64_t)(runtime->stopped_at - frame->chunk->code);
+}
+
+int32_t kest_stopped_in(const KestRuntime *runtime) {
+    if (runtime == NULL || runtime->stopped_at == NULL ||
+        runtime->frame_count == 0) {
+        return -1;
+    }
+    const KestChunk *chunk = runtime->frames[runtime->frame_count - 1].chunk;
+    for (uint32_t i = 0; i < runtime->module->count; i++) {
+        if (runtime->module->functions[i] == chunk) {
+            return (int32_t)i;
+        }
+    }
+    return -1;
+}
+
+bool kest_resume(KestRuntime *runtime, KestValue *frame, uint32_t room) {
+    if (runtime == NULL || runtime->stopped_at == NULL) {
+        return false;
+    }
+    uint16_t returned = 0;
+    KestValue *floor = runtime->called_floor;
+    if (!execute(runtime, -1, 0, &returned)) {
+        return false;
+    }
+    // What came back, put where the call that stopped would have put it. A
+    // resume is the rest of that call, so it answers the same way.
+    if (frame != NULL && floor != NULL && returned > 0) {
+        uint32_t many = returned < room ? returned : room;
+        memcpy(frame, floor, sizeof(KestValue) * many);
+    }
+    return true;
+}
+
+uint8_t *kest_code_of(KestRuntime *runtime, int32_t entry, uint32_t *count) {
+    if (runtime == NULL || entry < 0 ||
+        (uint32_t)entry >= runtime->module->count) {
+        if (count != NULL) {
+            *count = 0;
+        }
+        return NULL;
+    }
+    KestChunk *chunk = runtime->module->functions[entry];
+    if (count != NULL) {
+        *count = chunk->code_count;
+    }
+    return chunk->code;
+}
+
+int64_t kest_came_from(const KestRuntime *runtime, int32_t entry,
+                       uint32_t at) {
+    if (runtime == NULL || entry < 0 ||
+        (uint32_t)entry >= runtime->module->count) {
+        return -1;
+    }
+    // Through the one walk that knows where an instruction starts, which is
+    // what D751 leaves behind: one origin an instruction and not one a byte,
+    // so finding the one that covers an offset is a walk of the code.
+    return (int64_t)kest_chunk_origin(runtime->module->functions[entry], at);
+}
+
+uint32_t kest_frames_deep(const KestRuntime *runtime) {
+    return runtime == NULL ? 0 : runtime->frame_count;
+}
+
+int32_t kest_frame_in(const KestRuntime *runtime, uint32_t deep) {
+    if (runtime == NULL || deep >= runtime->frame_count) {
+        return -1;
+    }
+    const KestChunk *chunk = runtime->frames[deep].chunk;
+    for (uint32_t i = 0; i < runtime->module->count; i++) {
+        if (runtime->module->functions[i] == chunk) {
+            return (int32_t)i;
+        }
+    }
+    return -1;
+}
+
+int64_t kest_frame_ip(const KestRuntime *runtime, uint32_t deep) {
+    if (runtime == NULL || deep >= runtime->frame_count) {
+        return -1;
+    }
+    const Frame *frame = &runtime->frames[deep];
+    return (int64_t)(frame->ip - frame->chunk->code);
+}
+
+bool kest_frame_slot(const KestRuntime *runtime, uint32_t deep, uint16_t slot,
+                     KestValue *into) {
+    if (runtime == NULL || into == NULL || deep >= runtime->frame_count) {
+        return false;
+    }
+    const Frame *frame = &runtime->frames[deep];
+    if (slot >= frame->chunk->slot_count) {
+        return false;
+    }
+    *into = frame->base[slot];
+    return true;
+}
+
+const char *kest_frame_name(const KestRuntime *runtime, uint32_t deep,
+                            uint16_t slot, uint16_t *slots, uint8_t *kind) {
+    if (runtime == NULL || deep >= runtime->frame_count) {
+        return NULL;
+    }
+    return kest_chunk_named(runtime->frames[deep].chunk, slot, slots, kind);
+}
+
+uint16_t kest_frame_wide(const KestRuntime *runtime, uint32_t deep) {
+    if (runtime == NULL || deep >= runtime->frame_count) {
+        return 0;
+    }
+    return runtime->frames[deep].chunk->slot_count;
 }
 
 bool kest_count(KestRuntime *runtime, bool on) {
@@ -6199,6 +6369,7 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
     }
 
     uint16_t returned = 0;
+    runtime->called_floor = floor;
     if (!execute(runtime, index, chunk->param_slots, &returned)) {
         return false;
     }

@@ -63,6 +63,7 @@ __declspec(dllimport) int __stdcall QueryPerformanceFrequency(long long *rate);
 #include "diag.h"
 #include "lexer.h"
 #include "mem.h"
+#include "debug.h"
 #include "lsp.h"
 #include "project.h"
 #include "parser.h"
@@ -133,6 +134,11 @@ static void help(FILE *out) {
             "  doctor [dir]      what this command line is, where it looks\n"
             "                    for the library, whether it found it, and\n"
             "                    what the project here says about itself\n"
+            "  debug <file>      run it with breakpoints: `break <line>`,\n"
+            "                    `run`, `continue`, `step`, `next`, `where`\n"
+            "                    and `locals`. A breakpoint is written into\n"
+            "                    the code and taken out again, so a machine\n"
+            "                    nobody is debugging pays nothing for it\n"
             "  lsp               answer an editor over the standard streams:\n"
             "                    what is wrong, what a name is, where it was\n"
             "                    declared, what else names it, what a file\n"
@@ -2162,7 +2168,12 @@ static int run(const char *command, const char *executable, char **paths,
     // rather than a thing of its own so that what is measured is the program
     // as it is run, and not a program run some other way. See D979.
     bool profiling = strcmp(command, "profile") == 0;
-    bool running = strcmp(command, "run") == 0 || ticking || profiling;
+    // `debug` is a run with somebody asking it questions. It is a run rather
+    // than a thing of its own so that what is debugged is the program as it is
+    // run, with the same host bound and the same limits. See D991.
+    bool debugging = strcmp(command, "debug") == 0;
+    bool running = strcmp(command, "run") == 0 || ticking || profiling ||
+                   debugging;
     KestCounted counted = {0};
     bool was_counted = false;
     Entered *bodies = NULL;
@@ -2517,6 +2528,10 @@ static int run(const char *command, const char *executable, char **paths,
                                            "there is nothing to run");
                         }
                         kest_diags_suggest(&build->diags, "add `fn main() { }`");
+                    } else if (debugging) {
+                        exit_code = kest_debug_serve(build, runtime, entry,
+                                                     stdin, stdout);
+                        answered = false;
                     } else if (kest_call(runtime, at, frame, 1)) {
                         answered = kest_frame_gives(runtime, at) != NULL;
                         exit_code = answered ? frame[0].integer : 0;
@@ -3124,6 +3139,7 @@ int main(int argc, char **argv) {
     if (strcmp(argv[1], "check") == 0 || strcmp(argv[1], "emit") == 0 ||
         strcmp(argv[1], "run") == 0 || strcmp(argv[1], "tick") == 0 ||
         strcmp(argv[1], "profile") == 0 || strcmp(argv[1], "build") == 0 ||
+        strcmp(argv[1], "debug") == 0 ||
         strcmp(argv[1], "call") == 0) {
         // Without a file, what the project says to work on. A project is a
         // thing to be inside rather than a thing to name at every command, so

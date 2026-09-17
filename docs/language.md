@@ -4134,6 +4134,56 @@ far, and `kest_counted_entry` says how many times one function was entered, by
 the number `kest_entry` answered with. A machine nobody asked pays one test of
 a pointer that is nothing.
 
+## Stopping a program
+
+`kest debug` runs a program with breakpoints in it:
+
+```
+kest debug game.kest
+> break 42
+  breakpoint at game.kest:42:9 in game.step
+> run
+stopped at game.kest:42:9 in game.step
+> where
+  -> game.kest:42:9 in game.step
+     game.kest:88:12 in game.main
+> locals
+  world                slot 0  12
+  hungry               slot 2  3
+> next
+stopped at game.kest:43:5 in game.step
+> continue
+```
+
+`break <line>` is a line of the file that was named; `break other.kest:12` is a
+line of another. `step` stops wherever the machine goes next, `next` steps over
+a call, `where` is the frames with the innermost first, and `locals` is what the
+body called its slots and what is in them.
+
+A breakpoint is **written into the code**: the debugger puts an instruction
+nothing compiles to over the first byte of one and puts the byte back when the
+machine stops there. So a machine nobody is debugging runs the program that was
+compiled, byte for byte, and pays nothing at all — there is no test in the
+machine's loop, because one measured a third of the machine. See D979 and D991.
+
+A stopped machine is not finished and is not broken: its frames, its stack and
+its heap are where they were, and what a `scratch { }` opened is still open.
+
+A host does all of this itself through nine doors. `kest_code_of` hands over the
+bytes a body was compiled to, which is what a breakpoint is written into;
+`kest_came_from` says where in the source the instruction at a byte came from,
+which is what makes a breakpoint at a line a breakpoint at an instruction.
+`kest_stopped` says how far into a body the machine stopped and `kest_stopped_in`
+says which body — both answer -1 for a machine that is running or finished, so
+a host tells a stop from a refusal by asking rather than by reading the report.
+`kest_resume` carries on. `kest_frames_deep`, `kest_frame_in` and
+`kest_frame_ip` are the frames, innermost last, which is a stack trace; and
+`kest_frame_wide`, `kest_frame_slot` and `kest_frame_name` are what a frame
+holds, what each slot is and what the body called it.
+
+What it does not do: show a frame of the host, which is not a frame of this
+machine; or stop inside a call the host makes back in.
+
 ## An editor
 
 `kest lsp` is this compiler answering an editor, over the standard streams and

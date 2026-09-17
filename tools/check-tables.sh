@@ -1853,6 +1853,11 @@ LEFT_OUT = {
                                    "many instructions there are and is read "
                                    "off the code either way",
     ("KestChunk", "origin_capacity"): "room rather than what is in it",
+    ("KestChunk", "named"): "what a body called its slots, which a debugger "
+                            "shows and the machine never reads: a program with "
+                            "a local renamed is the same program to run",
+    ("KestChunk", "named_count"): "how many of those there are",
+    ("KestChunk", "named_capacity"): "room rather than what is in it",
     ("KestChunk", "next_instruction"): "where the next opcode goes while a "
                                        "body is being written, which is "
                                        "nothing once one is",

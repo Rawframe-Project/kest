@@ -9983,6 +9983,24 @@ fn main() -> i32 {
         "caught": "the workflow a reader starts with does not work",
     },
     {
+        # A machine stopped where a breakpoint is not. Everything that reads
+        # the code walks it an instruction at a time, and a walk that met a
+        # breakpoint would read a one-byte instruction where a three-byte one
+        # is and step into the middle of the next -- so a debugger that asked
+        # about the code as it stands would answer about the wrong line, and
+        # the answer looks exactly like a right one. See D991.
+        "what": "a debugger that reads the code with its own marks in it",
+        "file": "src/debug.c",
+        "from": """    const KestSource *source = source_of(held, entry);
+    as_it_was(held);""",
+        "to": """    const KestSource *source = source_of(held, entry);
+    (void)0;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a machine stopped and asked about",
+    },
+    {
         # A run that says it called nothing. The counts are taken at the two
         # places something happens worth counting -- a body entered and a
         # crossing made -- and a profile of a program that says every body was

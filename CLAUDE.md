@@ -914,6 +914,7 @@ compile  ast -> ir
 vm       bytecode execution
 build    the stages as one thing, which is what a host has
 lsp      the same build, answering an editor
+debug    the same machine, stopped and asked about
 main     CLI
 ```
 

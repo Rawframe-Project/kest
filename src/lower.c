@@ -973,5 +973,17 @@ bool kest_lower_body(void *reading, const KestIrBody *body) {
         kest_diags_disagree(lower->program->diags, body->declared, "%s", wrong);
         return false;
     }
-    return lower_body(lower, body, lower->module->functions[lower->next++]);
+    KestChunk *into = lower->module->functions[lower->next++];
+    // What the body called its slots, carried through so a stopped machine can
+    // say `hungry` rather than `slot 4`. The IR has kept them since D962
+    // because the escape pass wanted them; this is the second reader. See
+    // D991.
+    for (uint32_t i = 0; i < body->name_count; i++) {
+        const KestIrName *one = &body->names[i];
+        kest_chunk_names(lower->module, into, one->name, one->slot,
+                         one->slots,
+                         one->type == NULL ? (uint8_t)KEST_L_WORD
+                                           : kest_scalar_of(one->type));
+    }
+    return lower_body(lower, body, into);
 }

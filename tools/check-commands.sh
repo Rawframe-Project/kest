@@ -5310,6 +5310,77 @@ if [ "$agreed" != "yes" ]; then
     complain "profile: a body called four times is not said to be"
 fi
 
+# The debugger, driven the way a person drives it: a breakpoint at a line, a
+# run that stops there, the frames, what the body called its slots and what is
+# in them, a step that moves a line, and a run to the end. What it holds is
+# that a breakpoint stops the machine where the line is and that carrying on
+# from one goes somewhere else -- which is the whole of what a breakpoint in a
+# loop needs and the thing that is easy to get wrong.
+#
+# One sentence, because what went wrong is written into it. See D991.
+mkdir -p "$scratch"/stopping
+cat > "$scratch"/stopping/stopping.kest <<'KEST'
+fn counted(upto: i32) -> i32 {
+    let total = 0
+    for i in 0..upto {
+        total += i
+    }
+    return total
+}
+
+fn main() -> i32 {
+    if counted(4) != 6 {
+        return 1
+    }
+    return 0
+}
+KEST
+printf 'break 4\nrun\nwhere\nlocals\nnext\nlocals\ncontinue\nlocals\ncontinue\ncontinue\ncontinue\nquit\n' |
+    "$kest" debug "$scratch"/stopping/stopping.kest \
+        >"$scratch"/stopping/said 2>&1
+debug_wrong=""
+case "$(cat "$scratch"/stopping/said)" in
+*"stopping.kest:4:"*) ;;
+*) debug_wrong="a breakpoint at a line did not stop where the line is" ;;
+esac
+if [ -z "$debug_wrong" ]; then
+    case "$(cat "$scratch"/stopping/said)" in
+    *"-> "*"in counted"*"   "*"in main"*) ;;
+    *) debug_wrong="the frames do not say what called what" ;;
+    esac
+fi
+if [ -z "$debug_wrong" ]; then
+    case "$(cat "$scratch"/stopping/said)" in
+    *"total"*"slot"*|*"upto"*"slot"*) ;;
+    *) debug_wrong="a stopped machine does not say what the body called its \
+slots" ;;
+    esac
+fi
+if [ -z "$debug_wrong" ]; then
+    # Four turns of the loop and a run to the end: a breakpoint in a loop that
+    # could not be carried on from would stop at the same place for ever.
+    seen=$(grep -c 'stopped at' "$scratch"/stopping/said)
+    case "$(cat "$scratch"/stopping/said)" in
+    *"the program finished"*)
+        if [ "$seen" -lt 4 ]; then
+            debug_wrong="a breakpoint in a loop was met $seen time(s)"
+        fi
+        ;;
+    *) debug_wrong="a program under the debugger did not finish" ;;
+    esac
+fi
+# And the program itself, which a breakpoint written into it and taken out
+# again must leave exactly as it was.
+if [ -z "$debug_wrong" ]; then
+    if ! "$kest" run "$scratch"/stopping/stopping.kest >/dev/null 2>&1; then
+        debug_wrong="a program that had been debugged does not run"
+    fi
+fi
+if [ -n "$debug_wrong" ]; then
+    complain "debug: a machine stopped and asked about: $debug_wrong"
+    sed 's/^/    /' "$scratch"/stopping/said | head -8
+fi
+
 # The language server, driven the way an editor drives it: opened, asked what a
 # name is, asked where it was declared, asked what else names it, asked what the
 # file declares, asked for the one form, and then handed a buffer with a mistake

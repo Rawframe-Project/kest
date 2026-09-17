@@ -792,6 +792,10 @@ void kest_chunk_take_back(KestChunk *chunk, uint32_t to) {
     }
 }
 
+uint32_t kest_op_wide(uint8_t op) {
+    return kest_op_width(op);
+}
+
 uint32_t kest_chunk_origin(const KestChunk *chunk, uint32_t offset) {
     // Walked rather than looked up: a table of where every instruction starts
     // would be the thing this is for getting rid of. What reads one is a
@@ -812,6 +816,63 @@ uint32_t kest_chunk_origin(const KestChunk *chunk, uint32_t offset) {
     }
     return chunk->origin_count > 0 ? chunk->origins[chunk->origin_count - 1]
                                    : 0;
+}
+
+bool kest_chunk_names(KestModule *module, KestChunk *chunk, const char *name,
+                      uint16_t slot, uint16_t slots, uint8_t kind) {
+    if (chunk == NULL || name == NULL) {
+        return false;
+    }
+    if (chunk->named_count == chunk->named_capacity) {
+        uint16_t grown = chunk->named_capacity == 0
+                             ? 8
+                             : (uint16_t)(chunk->named_capacity * 2);
+        if (grown <= chunk->named_capacity) {
+            return false;
+        }
+        KestNamed *moved = KEST_ARENA_ARRAY(module->arena, KestNamed, grown);
+        if (moved == NULL) {
+            // A name a debugger cannot show is not worth refusing a compile
+            // over. What it costs is that a stopped machine says the slot and
+            // not what it was called.
+            return false;
+        }
+        for (uint16_t i = 0; i < chunk->named_count; i++) {
+            moved[i] = chunk->named[i];
+        }
+        chunk->named = moved;
+        chunk->named_capacity = grown;
+    }
+    KestNamed *one = &chunk->named[chunk->named_count++];
+    one->name = name;
+    one->slot = slot;
+    one->slots = slots;
+    one->kind = kind;
+    return true;
+}
+
+const char *kest_chunk_named(const KestChunk *chunk, uint16_t slot,
+                             uint16_t *slots, uint8_t *kind) {
+    if (chunk == NULL) {
+        return NULL;
+    }
+    // Backwards, because the last name written for a slot is the one a body
+    // gave it most recently and a body that reuses a slot after a scope ends
+    // gave it two.
+    for (uint16_t i = chunk->named_count; i > 0; i--) {
+        const KestNamed *one = &chunk->named[i - 1];
+        if (one->slot != slot) {
+            continue;
+        }
+        if (slots != NULL) {
+            *slots = one->slots;
+        }
+        if (kind != NULL) {
+            *kind = one->kind;
+        }
+        return one->name;
+    }
+    return NULL;
 }
 
 bool kest_chunk_emit_u16(KestModule *module, KestChunk *chunk, uint16_t value,
@@ -953,16 +1014,17 @@ static const Instruction INSTRUCTIONS[] = {
     {"call", U16_U16},     {"call.value", U16_U16},
     {"call.host", U16_U16_U16},
     {"return", U16},
+    {"stop", NONE},
 };
 
 // One name an opcode, and the compiler counts them, the same way the token
 // names are counted. What each is called is `check-tables.sh`'s to hold.
 _Static_assert(sizeof(INSTRUCTIONS) / sizeof(INSTRUCTIONS[0]) ==
-                   KEST_OP_RETURN + 1,
+                   KEST_OP_STOP + 1,
                "every instruction has a name and nothing else does");
 
 const char *kest_op_name(uint8_t op) {
-    return op <= KEST_OP_RETURN ? INSTRUCTIONS[op].name : "?";
+    return op <= KEST_OP_STOP ? INSTRUCTIONS[op].name : "?";
 }
 
 static uint16_t read_u16(const KestChunk *chunk, uint32_t offset) {
@@ -1517,6 +1579,11 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_CALL_VALUE:
     case KEST_OP_CALL_HOST:
     case KEST_OP_RETURN:
+    // Nothing compiles to this, so nothing this proof reads ever holds one.
+    // It is here because the switch has no `default` and that is the point of
+    // the switch: an instruction added to the language has to be decided
+    // about here rather than let through. See D991.
+    case KEST_OP_STOP:
         return false;
     }
     return false;

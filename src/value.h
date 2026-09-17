@@ -296,6 +296,13 @@ typedef enum {
     // which is resolved by name before the program runs.
     KEST_OP_CALL_HOST,   // u16 extern, u16 argument slots, u16 result slots
     KEST_OP_RETURN,  // u16 count
+    // Where a debugger put one. Nothing compiles to this: `kest debug` writes
+    // it over the first byte of an instruction, keeps the byte it wrote over,
+    // and puts it back when the machine stops there -- which is how a
+    // breakpoint costs the machine nothing at all when nobody is debugging.
+    // The machine stops with its frames where they are and a host carries on
+    // with `kest_resume`. See D991.
+    KEST_OP_STOP,
 } KestOp;
 
 // What a constant's bits mean. The virtual machine never reads this; it is
@@ -305,6 +312,15 @@ typedef enum {
     KEST_CONST_FLOAT,
     KEST_CONST_TEXT,
 } KestConstClass;
+
+// One name a body gave a slot. `kind` is what a layout piece is, so a
+// debugger reads the slot as what it holds rather than as bits.
+typedef struct {
+    const char *name;
+    uint16_t slot;
+    uint16_t slots;
+    uint8_t kind;
+} KestNamed;
 
 typedef struct {
     const char *name;
@@ -355,6 +371,19 @@ typedef struct {
     // stands is written into the chunk a slot at a time, so this is the size
     // of what the function was given. See D679.
     uint32_t folded_slots;
+    // The names this body gave its slots, for a debugger and for nothing
+    // else. Without them a stopped machine can say slot 4 holds 12 and cannot
+    // say that slot 4 is `hungry` -- which is the difference between a
+    // debugger and a memory viewer. It is the only thing in a chunk that is
+    // about the source rather than about running, and it is what a chunk
+    // costs for that: one entry a name, and a body with no names has none.
+    //
+    // No liveness in it: a name is written down once with the slot it was
+    // given, and a body that reuses a slot after a scope ends has two names
+    // for it and both are shown. A debugger says so. See D991.
+    KestNamed *named;
+    uint16_t named_count;
+    uint16_t named_capacity;
     // In slots, not in names: a struct parameter is a run of them.
     uint16_t param_slots;
     // What each of them is, in the order they are written: an index into the
@@ -572,6 +601,10 @@ int32_t kest_module_entry(const KestModule *module, const char *name);
 // a chunk with nothing in it. See D751.
 uint32_t kest_chunk_origin(const KestChunk *chunk, uint32_t offset);
 
+// How many bytes the instruction at a byte is, which is how a walk of the code
+// finds where the next one starts. Nought for a byte that is no instruction.
+uint32_t kest_op_wide(uint8_t op);
+
 // What an instruction is called. The list of them is `value.c`'s and this is
 // the one way anything else asks it, which is what keeps a machine that says
 // what it ran from holding a second copy of the names. See D870.
@@ -584,6 +617,18 @@ const char *kest_op_name(uint8_t op);
 // back one at a time, which left every origin after a fused jump naming the
 // instruction after the one it is for. See D804.
 void kest_chunk_take_back(KestChunk *chunk, uint32_t to);
+
+// Writes down that this body called a slot something. Quietly does nothing
+// when there is no room: a name a debugger cannot show is not worth refusing a
+// compile over. See D991.
+bool kest_chunk_names(KestModule *module, KestChunk *chunk, const char *name,
+                      uint16_t slot, uint16_t slots, uint8_t kind);
+
+// What this body called the slot, or NULL. The last name written for a slot is
+// the one answered, because a body that reuses a slot after a scope ends gave
+// it a second name and the second is the one in scope where the code is now.
+const char *kest_chunk_named(const KestChunk *chunk, uint16_t slot,
+                             uint16_t *slots, uint8_t *kind);
 
 bool kest_chunk_emit(KestModule *module, KestChunk *chunk, uint8_t byte,
                      uint32_t origin);

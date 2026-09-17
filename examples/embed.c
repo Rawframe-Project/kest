@@ -6893,6 +6893,113 @@ int main(int argc, char **argv) {
                nowhere_near.stack_slots);
     }
 
+    // A machine stopped where a breakpoint is, which is what a host writing a
+    // debugger does: one instruction written over, a run that comes back
+    // without finishing, the frames and what a body called its slots read out
+    // of it, and then the byte put back and the machine let go. Nothing here
+    // is a refusal and the report is empty, which is why `kest_stopped` exists
+    // to tell one from the other. See D991.
+    {
+        KestBuild *stopping = kest_build(path, NULL, stderr, KEST_FORM_TEXT, 0);
+        if (stopping == NULL) {
+            fprintf(stderr, "the program would not build a second time\n");
+            return 1;
+        }
+        // A host of its own, because the one above was freed the moment the
+        // first machine had read it: what a machine keeps is its own copy.
+        KestHost *watching = kest_host_new();
+        if (watching == NULL ||
+            !kest_host_bind(watching, "Io.write", io_write, stdout) ||
+            !kest_host_bind(watching, "Engine.decide", engine_decide,
+                            &decider) ||
+            !kest_host_bind(watching, "Engine.name", engine_name, &decider) ||
+            !kest_host_bind(watching, "Engine.rank", engine_rank, &decider) ||
+            !kest_host_bind(watching, "Engine.hurt", engine_hurt, NULL) ||
+            !kest_host_bind(watching, "Engine.blame", engine_blame,
+                            &blaming) ||
+            !kest_host_bind(watching, "Engine.weigh", engine_weigh,
+                            &decider) ||
+            !kest_host_bind(watching, "Engine.who", engine_who, &decider)) {
+            fprintf(stderr, "a second host could not be bound\n");
+            return 1;
+        }
+        KestRuntime *watched = kest_start(stopping, watching, NULL);
+        kest_host_free(watching);
+        if (watched == NULL) {
+            kest_build_report(stopping, stderr, KEST_FORM_TEXT);
+            kest_build_free(stopping);
+            return 1;
+        }
+        int32_t doubled = kest_entry(watched, "doubled");
+        uint32_t many = 0;
+        uint8_t *code = kest_code_of(watched, doubled, &many);
+        if (doubled < 0 || code == NULL || many == 0) {
+            fprintf(stderr, "there is nothing to put a breakpoint in\n");
+            return 1;
+        }
+        // Over the first instruction of the body, which is the one place a
+        // breakpoint is certainly at the start of an instruction without
+        // walking anything.
+        // The instruction nothing compiles to, which is the last one there
+        // is. A host that writes a debugger reads the number out of a header
+        // of its own or out of `kest emit`; this one writes it down, because
+        // the public header does not hand out the instruction set and should
+        // not: what a breakpoint is is the machine's business and this is the
+        // one host in this tree that has to know it.
+        uint8_t was = code[0];
+        code[0] = 157;
+        KestValue asking[4] = {{0}};
+        asking[0].integer = 21;
+        bool finished = kest_call(watched, doubled, asking, 4);
+        if (finished || kest_stopped(watched) != 0 ||
+            kest_stopped_in(watched) != doubled) {
+            fprintf(stderr, "a machine did not stop where a breakpoint is\n");
+            return 1;
+        }
+        if (kest_frames_deep(watched) != 1 ||
+            kest_frame_in(watched, 0) != doubled ||
+            kest_frame_ip(watched, 0) != 0) {
+            fprintf(stderr, "a stopped machine says the wrong frame\n");
+            return 1;
+        }
+        if (kest_came_from(watched, doubled, 0) < 0) {
+            fprintf(stderr, "a stopped machine cannot say where it is\n");
+            return 1;
+        }
+        uint16_t slots = 0;
+        uint8_t kind = 0;
+        const char *called = kest_frame_name(watched, 0, 0, &slots, &kind);
+        KestValue held_here = {0};
+        if (called == NULL || strcmp(called, "n") != 0 ||
+            kest_frame_wide(watched, 0) == 0 ||
+            !kest_frame_slot(watched, 0, 0, &held_here) ||
+            held_here.integer != 21) {
+            fprintf(stderr, "a stopped machine cannot say what it holds\n");
+            return 1;
+        }
+        // Put back, and let go: the instruction the byte was written over runs
+        // first, so the program is the program again.
+        code[0] = was;
+        if (!kest_resume(watched, asking, 4) || kest_stopped(watched) >= 0) {
+            kest_report(watched, stderr, KEST_FORM_TEXT);
+            fprintf(stderr, "a machine that was stopped did not carry on\n");
+            return 1;
+        }
+        if (asking[0].integer != 42) {
+            fprintf(stderr, "a machine that carried on answered %lld\n",
+                    (long long)asking[0].integer);
+            return 1;
+        }
+        printf("a machine stopped at a breakpoint, said `%s` held %lld, and "
+               "carried on to %lld\n",
+               called, (long long)held_here.integer,
+               (long long)asking[0].integer);
+        if (!kest_runtime_free(watched) || !kest_build_free(stopping)) {
+            fprintf(stderr, "what was stopped could not be given back\n");
+            return 1;
+        }
+    }
+
     // And the other side of the answer: outside a call there is nothing
     // standing on the machine, so this is the free that happens. Nothing takes
     // a machine away by force — a host that asked from inside a call and never
