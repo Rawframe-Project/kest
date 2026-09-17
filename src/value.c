@@ -921,7 +921,9 @@ typedef struct {
 static const Instruction INSTRUCTIONS[] = {
     {"const", U16},        {"const.run", U16_U16},
     {"const.at", U16_U16_U16},        {"load", U16},         {"store", U16},
-    {"load.n", U16_U16},   {"store.n", U16_U16},  {"field", U16_U16_U16},
+    {"load.n", U16_U16},   {"store.n", U16_U16},
+    {"load2", U16_U16},    {"load.k", U16_U16},
+    {"field", U16_U16_U16},
     {"array", U16_U16},    {"make.array", U16},   {"push", U16},         {"fit", U16},
     {"room", U16},
     {"index", U16},        {"pop.last", U16},     {"take", U16},
@@ -1413,6 +1415,8 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_STORE:
     case KEST_OP_LOADN:
     case KEST_OP_STOREN:
+    case KEST_OP_LOAD2:
+    case KEST_OP_LOADK:
     case KEST_OP_FIELD:
     case KEST_OP_INDEX:
     case KEST_OP_POP_LAST:

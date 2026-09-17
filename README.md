@@ -43,7 +43,7 @@ out generation-checked `ref<T>`; enums that carry values; sets of bits;
 optionals; functions as values; one body written for many types, a copy
 compiled per set; `defer`; `match`; `for` and `while`; the `no.alloc`,
 `no.host` and `deterministic` promises, proved by the compiler rather than
-trusted; a bytecode VM of 153 instructions; diagnostics with stable codes,
+trusted; a bytecode VM of 155 instructions; diagnostics with stable codes,
 spans, notes, suggested fixes and `--json`, all of a file's mistakes in one
 pass, with the shape of every object a command writes versioned; one canonical
 source form and a formatter that holds it; a C embedding API of 70 doors

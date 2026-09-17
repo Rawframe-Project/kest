@@ -35863,3 +35863,27 @@ by what the count falls by, and how much is left is the thing only an
 implementation says.
 
 **Runs:** `KEST_DEEP=1 ./kest-debug run` over the two programs, counted by kind.
+
+## The two commonest pairs of pushes, as one instruction each (D961)
+
+The backend measurement said two thirds of what the frame step runs is moving a
+value onto the stack or off it, and that two pairs are most of it: a local then a
+constant, 14.3% of everything, and a local then another local not beside it,
+9.7%. Both are now one instruction — `load.k` and `load2` — written where the
+compiler already folds two adjacent loads into one `load.n`, with the same guard
+about anything jumping into the middle.
+
+Measured: 896 million instructions became 712 million, 20.5% fewer; timed back
+to back, three runs each, 117/117/116 ns an entity became 108/108/109 — 7.5%
+faster. An entity is forty-six instructions where it was fifty-seven.
+
+The more valuable half is what that says about the register backend. The
+instructions removed were the cheapest: 184 million of them bought 9 ns of 117,
+which is about 0.95 ns for a push against 2.5 ns for an average instruction. A
+three-address form runs 3.11 times fewer instructions, but if what it removes is
+pushes, the time it takes away is about a quarter — roughly 1.35 times, where
+the adoption rule asks for one and a half. The number that was missing from the
+backend decision is measured now, and it says the same thing the decision did.
+
+**Runs:** `make check`; `make time` against the previous commit's binary, three
+runs each in the same sitting; `KEST_DEEP=1` counts before and after.

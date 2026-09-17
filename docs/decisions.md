@@ -29804,3 +29804,42 @@ called a signature, `no.host` is not called determinism, the clock is what it is
 because that would need a threat model and fuzz evidence this project does not
 have, and saying so is the only honest thing to do with a claim you cannot
 support.
+
+## D961: the two commonest pairs of pushes, as one instruction each
+
+D958 measured what this machine runs and found that two thirds of it is moving a
+value onto the stack or off it, and that two pairs are most of that: a local
+followed by a constant is 14.3% of everything the frame step runs, and a local
+followed by another local that is not beside it is 9.7%. A pair of instructions
+that always appear together is one instruction with two operands.
+
+So there are two more instructions. `load.k` pushes a local and then a constant;
+`load2` pushes two locals. Neither is a new thing the machine can do — each is
+exactly the two it replaces, in the order they were in — and the compiler writes
+them where it already writes the loads, in the same place and by the same rule
+that makes two loads of slots beside each other one `load.n` (D871): the last
+instruction is known, `pointed_at` says whether anything jumps into the middle
+of what is about to be folded, and a fold that cannot be made is not made.
+
+**What it bought, measured.** The frame step ran 896 million instructions and
+runs 712 million: 20.5% fewer. Timed back to back on the same machine, three
+runs each, it was 117, 117 and 116 nanoseconds an entity and is 108, 108 and
+109 — **7.5% faster**. An entity is forty-six instructions where it was
+fifty-seven.
+
+**And what that says about the backend question, which is worth more than the
+seven per cent.** The instructions removed were the cheapest ones: 184 million
+of them bought nine nanoseconds an entity out of a hundred and seventeen, which
+is about 0.95 ns for a push against 2.5 ns for the average instruction this
+workload runs. D958 counted that a three-address form of the same code would run
+3.11 times fewer instructions — but if what it removes is pushes and stores, and
+a push is worth about a third of an average instruction, the time it would take
+away is about a quarter rather than two thirds. That is roughly 1.35 times, and
+the mission's adoption rule asks for one and a half.
+
+So the number that was missing from D958 — what a removed push is worth in time
+— is measured now, and it says the register backend probably does **not** clear
+the bar on this workload. The decision to keep the stack backend stands, and it
+stands on a measurement rather than on the absence of one. What is left of that
+third is what fusing more pairs would take: `store` then `load` is another 3.6%,
+and the same door is open on it.

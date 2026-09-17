@@ -2512,6 +2512,36 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             *top++ = mine[slot];
             break;
         }
+        // The two pairs this machine runs most of, each as one instruction.
+        // They do what the two they replace did, in the order they did it:
+        // what is saved is a dispatch and a read of the next opcode, which
+        // over a frame step is a quarter of everything. See D961.
+        case KEST_OP_LOAD2: {
+            uint16_t first = READ_U16();
+            uint16_t second = READ_U16();
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, first, first + 1u) ||
+                !own_slots(vmp, frame, instruction, second, second + 1u)) {
+                return false;
+            }
+#endif
+            *top++ = mine[first];
+            *top++ = mine[second];
+            break;
+        }
+        case KEST_OP_LOADK: {
+            uint16_t slot = READ_U16();
+            uint16_t which = READ_U16();
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, slot, slot + 1u) ||
+                !own_constants(vmp, frame, instruction, which + 1u)) {
+                return false;
+            }
+#endif
+            *top++ = mine[slot];
+            *top++ = constants[which];
+            break;
+        }
         case KEST_OP_STORE: {
             uint16_t slot = READ_U16();
 #if KEST_CHECKED

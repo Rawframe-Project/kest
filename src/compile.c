@@ -189,11 +189,39 @@ static void emit_u16(Compiler *compiler, uint16_t value, KestSpan origin) {
     }
 }
 
+// Whether the last thing emitted was a load of one slot, and which. It is the
+// same question `load_before` asks and a narrower one: a run of slots cannot be
+// the first half of either pair below, because what follows it is not where it
+// ends. See D961.
+static bool one_load_before(const Compiler *compiler, uint16_t *slot) {
+    if (compiler->last_op != KEST_OP_LOAD ||
+        compiler->last_at < compiler->pointed_at ||
+        compiler->last_at + 3 != compiler->chunk->code_count) {
+        return false;
+    }
+    const uint8_t *at = compiler->chunk->code + compiler->last_at;
+    *slot = (uint16_t)(at[1] | ((uint16_t)at[2] << 8));
+    return true;
+}
+
 static void emit_constant(Compiler *compiler, KestValue value,
                           KestConstClass class, KestSpan origin) {
     uint32_t index =
         kest_chunk_constant(compiler->module, compiler->chunk, value, class);
     stack_push(compiler, 1);
+    // A local and then a constant is the commonest pair this machine runs --
+    // every `x + 1`, every `i < n` against a written number -- and it is one
+    // instruction with two operands. See D961.
+    uint16_t slot = 0;
+    if (index <= UINT16_MAX && one_load_before(compiler, &slot)) {
+        kest_chunk_take_back(compiler->chunk, compiler->last_at);
+        compiler->last_op = compiler->before_op;
+        compiler->last_at = compiler->before_at;
+        emit(compiler, KEST_OP_LOADK, origin);
+        emit_u16(compiler, slot, origin);
+        emit_u16(compiler, (uint16_t)index, origin);
+        return;
+    }
     emit(compiler, KEST_OP_CONST, origin);
     emit_u16(compiler, (uint16_t)index, origin);
 }
@@ -507,6 +535,19 @@ static void emit_load(Compiler *compiler, uint16_t slot, uint16_t size,
         compiler->last_at = compiler->before_at;
         slot = before;
         size = (uint16_t)(took + size);
+    }
+    // And two that do not sit next to each other are still two pushes, which
+    // is one instruction with two operands. The pair is a tenth of what the
+    // frame step runs. See D961.
+    uint16_t first = 0;
+    if (size == 1 && one_load_before(compiler, &first)) {
+        kest_chunk_take_back(compiler->chunk, compiler->last_at);
+        compiler->last_op = compiler->before_op;
+        compiler->last_at = compiler->before_at;
+        emit(compiler, KEST_OP_LOAD2, origin);
+        emit_u16(compiler, first, origin);
+        emit_u16(compiler, slot, origin);
+        return;
     }
     emit(compiler, size == 1 ? KEST_OP_LOAD : KEST_OP_LOADN, origin);
     emit_u16(compiler, slot, origin);

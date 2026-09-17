@@ -271,19 +271,27 @@ fn main() -> i32 {
         return 5;""",
         "program": "jumping.kest",
         # Enough branching that a walk stepping wrongly cannot land back on
-        # the end by luck, which a four instruction program can.
-        "source": """fn main() -> i32 {
-    let n = 0
+        # the end by luck, which a four instruction program can — and in a
+        # body of its own, because a mis-step has to end somewhere that is not
+        # a `return` and `main` is short enough to land on one.
+        "source": """fn count(n: i32) -> i32 {
+    let m = 0
     let i = 0
-    while i < 3 {
-        if i == 1 {
-            n += 2
-        } else {
-            n += 1
+    while i < n {
+        if i == 2 {
+            m += 10
         }
+        if i == 4 {
+            m += 100
+        }
+        m += 1
         i += 1
     }
-    return n - 4
+    return m
+}
+
+fn main() -> i32 {
+    return count(6) - 116
 }
 """,
         "caught": "K0406",
@@ -1724,7 +1732,7 @@ tokens   what a token is and what it carries""",
                  r"""    {"return", U16}, {"return.none", U16},"""],
         "make": [],
         "tool": "tools/check-tables.sh",
-        "caught": "instructions: 153 kinds and 154 names",
+        "caught": "instructions: 155 kinds and 156 names",
     },
     {
         # And the same for the tokens, which is the other list this rule was
@@ -5638,12 +5646,12 @@ fn main() -> i32 {
         # number. See D915.
         "what": "a frame step's instructions written down and not measured",
         "file": "docs/language.md",
-        "from": """**fifty-seven instructions**""",
-        "to": """**fifty-six instructions**""",
+        "from": """**forty-six instructions**""",
+        "to": """**forty-five instructions**""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "a frame step an entity is 56 instruction(s)",
+        "caught": "a frame step an entity is 45 instruction(s)",
     },
     {
         # And the other half of that paragraph: what the build that checks
@@ -5654,7 +5662,7 @@ fn main() -> i32 {
         # reached by a hole of its own. See D907 and D915.
         "what": "what the checked build asks written down and not measured",
         "file": "docs/language.md",
-        "from": """it asks its own compiler **fifty-one
+        "from": """it asks its own compiler **fifty-two
 questions**""",
         "to": """it asks its own compiler **fifty
 questions**""",
@@ -5700,7 +5708,7 @@ anywhere, and it is why the gate holds""",
         # is the one a reader would most like to be able to trust. See D917.
         "what": "what a crossing runs written down and not measured",
         "file": "docs/language.md",
-        "from": """**eleven instructions**""",
+        "from": """**ten instructions**""",
         "to": """**twelve instructions**""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",
@@ -5713,7 +5721,7 @@ anywhere, and it is why the gate holds""",
         # what those come to is seven instructions over a bare hop. See D917.
         "what": "what a reference read runs written down and not measured",
         "file": "docs/language.md",
-        "from": """a read through a reference is **fourteen**""",
+        "from": """a read through a reference is **twelve**""",
         "to": """a read through a reference is **thirteen**""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",
@@ -5944,12 +5952,10 @@ fn main() -> i32 {
         # nought by luck rather than by anybody's decision. See D904.
         "what": "a constant read past the ones a body was given",
         "file": "src/compile.c",
-        "from": """    stack_push(compiler, 1);
-    emit(compiler, KEST_OP_CONST, origin);
+        "from": """    emit(compiler, KEST_OP_CONST, origin);
     emit_u16(compiler, (uint16_t)index, origin);
 }""",
-        "to": """    stack_push(compiler, 1);
-    emit(compiler, KEST_OP_CONST, origin);
+        "to": """    emit(compiler, KEST_OP_CONST, origin);
     emit_u16(compiler, (uint16_t)(index + 1), origin);
 }""",
         "make": ["debug"],

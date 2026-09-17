@@ -20,6 +20,15 @@ typedef enum {
     // is moving a run of slots rather than following a pointer.
     KEST_OP_LOADN,   // u16 slot, u16 count
     KEST_OP_STOREN,  // u16 slot, u16 count
+    // Two pushes in one instruction, which is what the two commonest pairs in
+    // this machine are: a local and another local that is not beside it, and a
+    // local and a constant. Counted over the frame step, those two pairs are a
+    // quarter of everything it runs -- a push is the cheapest thing the
+    // machine does and it is most of what it does, so the dispatch is the
+    // cost. Neither is a new thing the machine can do: each is the two
+    // instructions it replaces, written as one. See D961.
+    KEST_OP_LOAD2,   // u16 slot, u16 slot
+    KEST_OP_LOADK,   // u16 slot, u16 constant
     // Keeps one member of the struct on top of the stack and drops the rest.
     // Only needed where the struct is not rooted in a slot, because a field of
     // a local is reached by adding to the slot number instead.
