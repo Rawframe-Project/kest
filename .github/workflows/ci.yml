@@ -24,6 +24,71 @@ jobs:
           name: trace-linux-x86-64
           path: linux-x86-64.trace
 
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: build
+        run: make -j
+      - name: fast
+        run: make fast
+      - name: conformance trace
+        run: sh tools/conformance.sh ./kest macos-arm64.trace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trace-macos-arm64
+          path: macos-arm64.trace
+
+  threads:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: two machines at once, under the thread sanitiser
+        run: |
+          make -j kest libkest.a
+          cat > /tmp/two.kest <<'KEST'
+          module two
+
+          fn work(n: i32) -> i32 no.alloc no.host deterministic {
+              let sum = 0
+              for i in 0..n {
+                  sum += i % 7
+              }
+              return sum
+          }
+          KEST
+          cat > /tmp/two.c <<'EOF'
+          #include <stdio.h>
+          #include <threads.h>
+          #include "kest.h"
+          static KestBuild *build;
+          static int turning(void *given) {
+              (void)given;
+              KestRuntime *rt = kest_start(build, NULL, NULL);
+              if (rt == NULL) { return 1; }
+              KestValue frame[4] = {{0}};
+              frame[0].integer = 200000;
+              kest_call(rt, kest_entry(rt, "work"), frame, 4);
+              kest_runtime_free(rt);
+              return 0;
+          }
+          int main(void) {
+              build = kest_build("/tmp/two.kest", NULL, stderr, KEST_FORM_TEXT, 0);
+              if (build == NULL) { return 1; }
+              thrd_t a, b, c, d;
+              thrd_create(&a, turning, NULL); thrd_create(&b, turning, NULL);
+              thrd_create(&c, turning, NULL); thrd_create(&d, turning, NULL);
+              thrd_join(a, NULL); thrd_join(b, NULL);
+              thrd_join(c, NULL); thrd_join(d, NULL);
+              kest_build_free(build);
+              printf("four machines of one build ran at once\n");
+              return 0;
+          }
+          EOF
+          cc -std=c11 -O1 -g -fsanitize=thread -Iinclude -o /tmp/two /tmp/two.c \
+              $(ls src/*.c | grep -v main.c) -lm
+          /tmp/two
+
   package:
     runs-on: ubuntu-latest
     steps:
@@ -70,12 +135,14 @@ jobs:
           path: windows-x86-64.trace
 
   agree:
-    needs: [linux, windows]
+    needs: [linux, windows, macos]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with: { pattern: trace-*, merge-multiple: true }
-      - name: the two platforms say the same thing
+      - name: every platform says the same thing
         run: |
           diff -u linux-x86-64.trace windows-x86-64.trace \
-            && echo "both platforms said the same thing"
+            && echo "linux and windows said the same thing"
+          diff -u linux-x86-64.trace macos-arm64.trace \
+            && echo "linux and macos said the same thing"
