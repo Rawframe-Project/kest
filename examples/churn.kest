@@ -1,0 +1,261 @@
+module examples.churn
+
+import std.io
+import std.os
+import std.text
+
+// The second memory workload. `colony.kest` is a world that is kept and worked
+// on; this one is the same question asked of the things a world holds rather
+// than of the world: text replaced in live entries, arrays replaced in live
+// entries, identities deleted and made again, cycles held throughout, and all
+// of it for as long as somebody asks.
+//
+// It answers with which of its own checks failed, like every example here, and
+// what it is for is the number beside it: `kest run examples/churn.kest -- 200`
+// runs two hundred rounds, and what that costs against four hundred is whether
+// this shape settles or climbs. `tools/check-costs.sh` asks it both ways and
+// holds the answer.
+//
+// The two shapes are written side by side on purpose. One round writes a new
+// name and a new run of tags for every thing, which is what anybody writes
+// first; the other writes into what the thing already holds, which is what
+// D940's `fit` is for. They do the same work and they do not cost the same
+// thing, and this is where that is a number rather than an argument.
+
+const THINGS: i32 = 200
+const ROUNDS: i32 = 200
+const NAME: i32 = 24
+const TAGS: i32 = 8
+
+// What one of them is. The two runs it holds are held in step with what it is
+// for rather than with each other: `said` is room for the name and nothing
+// else writes into it, and `tags` is as many numbers as a round writes and is
+// written where it stands. Nothing in the language holds two runs to each
+// other, so the rule is that a round is what writes both.
+struct Thing {
+    id: i32
+    // Replaced every round in the first shape, written into every round in the
+    // second. A piece of text is bytes on the heap; a run of them is a buffer
+    // the thing keeps.
+    name: text
+    said: [u8]
+    tags: [i32]
+    // The ring, which is what makes this a world rather than a list: each
+    // names the next and the last names the first, so nothing here is ever
+    // unreachable and a walk of it comes back round.
+    next: ref<Thing>?
+}
+
+fn build(many: i32) -> store<Thing> {
+    let world: store<Thing> = store(many)
+    let made: [ref<Thing>] = array()
+    for i in 0..many {
+        // Room rather than length: `clear` keeps what `array(n, v)` took, so
+        // what the thing holds is a buffer with nothing in it and room for
+        // what a round writes. See D940.
+        let said: [u8] = array(NAME, u8(32))
+        clear(said)
+        push(made, add(world, Thing(i, "", said, array(TAGS, 0), none)))
+    }
+    for i in 0..len(made) {
+        if let one = get(world, made[i]) {
+            let linked = one
+            linked.next = made[(i + 1) % len(made)]
+            set(world, made[i], linked)
+        }
+    }
+    return world
+}
+
+// One round written the way anybody writes it first: a new piece of text and a
+// new run of numbers for every live thing, and the old ones abandoned. Nothing
+// here is wrong; what it costs is what this measures.
+fn replacing(world: store<Thing>, round: i32) -> i32 {
+    let touched = 0
+    for r in world {
+        if let one = get(world, r) {
+            let changed = one
+            changed.name = "thing {one.id} at {round}"
+            let tags: [i32] = array()
+            for i in 0..TAGS {
+                push(tags, one.id * round + i)
+            }
+            changed.tags = tags
+            set(world, r, changed)
+            touched += 1
+        }
+    }
+    return touched
+}
+
+// And the same round written to reuse what the thing already holds: the name is
+// written into the run of bytes it keeps and the tags are written where they
+// are. It promises `no.alloc`, which is the whole of the difference said in a
+// way the compiler proves. See D940.
+fn reusing(world: store<Thing>, round: i32) -> i32 no.alloc no.host {
+    let touched = 0
+    for r in world {
+        if let one = get(world, r) {
+            clear(one.said)
+            if !text.fittingNumber(one.said, one.id * 1000 + round) {
+                return 0 - 1
+            }
+            for i in 0..len(one.tags) {
+                one.tags[i] = one.id * round + i
+            }
+            touched += 1
+        }
+    }
+    return touched
+}
+
+// Identities deleted and made again, which is what a world does between the
+// rounds that only change things: the store hands the places back out, so what
+// this costs is work rather than growth, and the ring is mended as it goes.
+fn turning(world: store<Thing>, round: i32) -> i32 {
+    let gone: [ref<Thing>] = array()
+    for r in world {
+        if let one = get(world, r) {
+            if one.id % 8 == round % 8 {
+                push(gone, r)
+            }
+        }
+    }
+    let made = 0
+    for r in gone {
+        if let one = get(world, r) {
+            let id = one.id
+            let after = one.next
+            remove(world, r)
+            let said: [u8] = array(NAME, u8(32))
+            clear(said)
+            let again = add(world, Thing(id, "", said, array(TAGS, 0), after))
+            // Whoever named the one that went names the new one, so the ring
+            // is a ring again. A reference to what was there reads as nothing
+            // rather than as whoever is there now, which is what makes this
+            // safe to do at all.
+            for other in world {
+                if let holder = get(world, other) {
+                    if let names = holder.next {
+                        if get(world, names) == none {
+                            let mended = holder
+                            mended.next = again
+                            set(world, other, mended)
+                        }
+                    }
+                }
+            }
+            made += 1
+        }
+    }
+    return made
+}
+
+// How far round the ring a walk gets before it comes back to where it started.
+fn round(world: store<Thing>, from: i32) -> i32 no.alloc no.host {
+    let at: ref<Thing>? = none
+    for r in world {
+        if let one = get(world, r) {
+            if one.id == from && at == none {
+                at = r
+            }
+        }
+    }
+    let steps = 0
+    while steps <= len(world) {
+        if let here = at {
+            if let one = get(world, here) {
+                steps += 1
+                if let after = one.next {
+                    at = after
+                    if let ahead = get(world, after) {
+                        if ahead.id == from {
+                            return steps
+                        }
+                    }
+                    continue
+                }
+            }
+        }
+        return 0 - steps
+    }
+    return 0 - steps
+}
+
+fn rounds() -> i32 {
+    if os.argCount() < 1 {
+        return ROUNDS
+    }
+    if let written = os.arg(0) {
+        if let asked = text.number(written) {
+            if asked > 0 {
+                return asked
+            }
+        }
+    }
+    return ROUNDS
+}
+
+// Which of the three shapes to run, because what this is for is comparing them
+// and a run that does all three at once is one number for three questions.
+// `replace` is the first way anybody writes a round, `reuse` is the same round
+// written into what the thing already holds, and `turn` is neither: it is
+// identities going and coming back. Nothing said runs all of them, which is
+// what `make check` does.
+fn shape() -> text {
+    if let written = os.arg(1) {
+        return written
+    }
+    return "all"
+}
+
+fn main() -> i32 {
+    let how_many = rounds()
+    let which = shape()
+    let doing_replace = which == "all" || which == "replace"
+    let doing_reuse = which == "all" || which == "reuse"
+    let doing_turn = which == "all" || which == "turn"
+
+    let replaced = build(THINGS)
+    let reused = build(THINGS)
+    for i in 0..how_many {
+        if doing_replace {
+            if replacing(replaced, i) != THINGS {
+                return 1
+            }
+        }
+        if doing_reuse {
+            if reusing(reused, i) != THINGS {
+                return 2
+            }
+        }
+        if doing_turn && i % 16 == 0 {
+            if turning(replaced, i) <= 0 {
+                return 3
+            }
+            if turning(reused, i) <= 0 {
+                return 4
+            }
+        }
+    }
+
+    // The ring is still a ring in both, after everything that was done to them.
+    if round(replaced, 1) != THINGS {
+        return 5
+    }
+    if round(reused, 1) != THINGS {
+        return 6
+    }
+    // And what is in them is what the last round wrote.
+    if doing_replace {
+        for r in replaced {
+            if let one = get(replaced, r) {
+                if !text.starts(one.name, "thing ") {
+                    return 7
+                }
+            }
+        }
+    }
+    io.print("{how_many} rounds of {which} over {THINGS} things, and the ring came back round")
+    return 0
+}

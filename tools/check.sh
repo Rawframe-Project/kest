@@ -641,6 +641,40 @@ elif [ "${said#*K0660}" = "$said" ]; then
 else
     say "threads" "two machines of one build ran at once and one was stopped \
 from the thread that was not running it"
+
+# What a world costs when it is worked on rather than grown, which is the
+# question a persistent-world language has to answer and the one a garbage
+# collector is usually the answer to. `examples/churn.kest` is the same round
+# written two ways -- a new piece of text and a new run of numbers for every
+# thing, and the same round written into what the thing already holds -- and
+# what is held here is that the second settles and the first does not.
+#
+# Said as a ceiling rather than as a count of bytes, because a ceiling is what a
+# host gives a machine and `--room` is where a program meets it: a shape that
+# settles runs in the same room however many rounds it is given, and a shape
+# that does not needs more. See D956.
+for asking in "reuse 100 512K runs" "reuse 400 512K runs" \
+        "replace 100 4M runs" "replace 400 4M refuses"; do
+    shape=${asking%% *}
+    rest_of=${asking#* }
+    turns=${rest_of%% *}
+    rest_of=${rest_of#* }
+    room=${rest_of%% *}
+    wanted=${rest_of#* }
+    if ./kest run --room "$room" examples/churn.kest -- "$turns" "$shape" \
+            >/dev/null 2>&1; then
+        said=runs
+    else
+        said=refuses
+    fi
+    if [ "$said" != "$wanted" ]; then
+        complain "memory" "$turns rounds of \`$shape\` in $room $said, and \
+the study says it $wanted"
+    fi
+done
+say "memory" "a round written into what a thing already holds runs four \
+hundred times in the room a hundred took, and the same round written with a \
+new piece of text and a new run of numbers every time does not"
 fi
 
 # Every word this language keeps, written where a name belongs. It has to be

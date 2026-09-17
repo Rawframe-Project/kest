@@ -4829,6 +4829,7 @@ here, is a check that fails.
 | `camera.kest` | `std.vec` and `std.math` where a camera follows something |
 | `chance.kest` | numbers that look random, and two runs from one seed |
 | `colony.kest` | a world kept and worked on a day at a time, which is a program rather than a rule |
+| `churn.kest` | the same round written to reuse what a thing holds and to replace it, which is what memory costs |
 | `determinism.kest` | every rule the simulation profile promises, folded into one number |
 | `embed.kest` | the program the engine beside it runs, frame by frame |
 | `events.kest` | the host calling in, one crossing for a batch |

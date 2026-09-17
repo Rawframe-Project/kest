@@ -29563,3 +29563,50 @@ would be made — in a literal by the lexer, in `text(bytes)` by the machine, an
 at the boundary by `kest_text` — and what a host is handed therefore ends in one.
 That is a rule about what text is and not about how it is kept, so the
 representation above may change without it changing.
+
+## D956: what a world costs when it is worked on rather than grown
+
+`colony.kest` is the memory study this project had: a world kept for eight
+hundred days, which settles at 2,370,304 bytes and stays there. What it does not
+answer is the other half of the question, which is what happens to the things a
+world holds when a round replaces what they carry rather than adding to them —
+text swapped in live entries, arrays swapped, identities deleted and made again,
+and cycles held throughout.
+
+So there is a second workload, and it is the same round written twice.
+`replacing` writes a new piece of text and a new run of numbers for every thing,
+which is what anybody writes first. `reusing` writes into what the thing already
+holds — the name into a run of bytes made once and cleared each round, the tags
+where they stand — which is what `fit` is for, and it promises `no.alloc`, so
+the compiler proves the difference rather than a reader believing it. `turning`
+is neither: identities going and coming back.
+
+**What it measures with is a ceiling, not a count.** A host gives a machine a
+heap and `--room` is where a program meets one, so what this says is the room a
+shape runs in rather than the bytes it happened to use. On the machine this was
+written on, over two hundred things:
+
+| | 100 rounds | 200 rounds | 400 rounds |
+| --- | --- | --- | --- |
+| `replace` | 4M | 8M | 16M |
+| `reuse` | 512K | 512K | 512K |
+| `turn` | 512K | 1M | 1M |
+
+**The first row is not a defect.** Nothing is given back while a program runs
+(D012), so a round that makes a new piece of text every time for every thing is
+a round that costs what it makes. The second row is the answer to the mission's
+question: a round that reuses what it holds reaches a steady state and stays
+there, without a whole-world reset and without the program being written round
+the heap — what it is written round is the buffer, which is a thing the language
+has and the compiler holds it to.
+
+The third row is the honest middle: an identity that comes back needs the runs
+it holds made again, because a place handed back out holds bytes nothing may
+read. That settles too, at twice the room, which is the recreation running
+ahead of the rounds that reuse.
+
+**What this does not say** is that memory is bounded. It is one workload and
+two shapes of one round; what it says is that this shape of round, written this
+way, settles — and that the way to write it is a thing the language proves
+rather than a thing a reader remembers. `make check` holds the two rows that
+matter.

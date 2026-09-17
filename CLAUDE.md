@@ -991,6 +991,9 @@ budget       a loop that never ends stopping, a thousand turns costing a
              an instruction does that is not a step being charged for
 threads      two machines of one build running at once on two threads, and
              one of them stopped from the thread that is not running it
+memory       a world worked on rather than grown: the same round written to
+             reuse what a thing holds running in the room it started in, and
+             the same round written to replace it needing more
 keywords     every word this language keeps written into every place a name
              belongs, refused in a moment rather than never
 promises     every function that can keep a promise saying so: all of the

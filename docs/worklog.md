@@ -35759,3 +35759,25 @@ written down in the reference where it belongs.
 **Runs:** `make check`; the attempt itself ran every example and both hosts
 before it was put back, which is what says the trade is what it is rather than
 what somebody guessed.
+
+## The second memory workload (D956)
+
+`colony.kest` says a world kept for eight hundred days settles. `churn.kest` is
+the other half: what happens to the things a world holds when a round replaces
+what they carry. The same round is written twice — a new piece of text and a new
+run of numbers for every thing, and the same round written into what the thing
+already holds — and beside them identities going and coming back, with a ring of
+references held throughout.
+
+Measured as the room a shape runs in, which is what a host gives a machine, over
+two hundred things: `replace` needs 4M at a hundred rounds, 8M at two hundred
+and 16M at four hundred; `reuse` runs four hundred rounds in the 512K a hundred
+took; `turn` settles at twice that. The first row is not a defect — nothing is
+given back while a program runs — and the second is the answer: a round that
+reuses what it holds reaches a steady state, and what it is written round is a
+buffer the compiler proves rather than a rule a reader remembers.
+
+`make check` has a `memory` section holding the two rows that matter.
+
+**Runs:** `make check`; the ladder above, by hand, over three shapes and three
+round counts.

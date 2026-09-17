@@ -1499,6 +1499,11 @@ read_ran_out=0
 no_answer=0
 wanted_a_machine=0
 wanted_its_input=0
+# And a program whose own run meets the ceiling before its reading does, which
+# is a kind of its own rather than a thing gone wrong: a program that makes as
+# much as `churn.kest` makes runs out of heap where a small one is still being
+# compiled. See D956.
+ran_out_running=0
 refused_anywhere=0
 ran_throughout=0
 said_nothing=0
@@ -1735,6 +1740,7 @@ for program in examples/*.kest "$scratch"/steps.kest "$scratch"/chains.kest; do
                >>"$scratch"/rungs-machine
         ;;
     K0642) wanted_its_input=$((wanted_its_input + 1)) ;;
+    K0605) ran_out_running=$((ran_out_running + 1)) ;;
     "") ran_throughout=$((ran_throughout + 1)) ;;
     *)
         echo "ceilings: $program was left out of the weighing because it" \
@@ -1976,7 +1982,8 @@ if [ $failed -eq 0 ]; then
          "$wanted_a_machine that could not be given a machine, two of them" \
          "written here in the two shapes furthest apart, $written against" \
          "$dearest for the dearest example anybody wrote — beside" \
-         "$wanted_its_input that wanted an input, $no_answer with no" \
+         "$wanted_its_input that wanted an input, $ran_out_running whose own" \
+         "run met the ceiling before their reading did, $no_answer with no" \
          "answer for what they need, $refused_anywhere refused wherever they" \
          "are run, $ran_throughout that ran at every rung and $said_nothing" \
          "that said nothing about what they cost, and a ladder of its own" \
