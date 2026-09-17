@@ -28,6 +28,7 @@ another and is not named here is a check that fails.
 | D685 | D686 | the two dearest weighed are held, not each kind's own dear end |
 | D647 | D649 | the ladder walks two programs, because their bands sit apart |
 | D648 | D649 | a band starts where the program's own cost ran out, and is steady |
+| D969 | D970 | Windows is built and run in CI, not written down as unverified |
 | D541 | D727 | an optional answers `== none`, which is not a comparison of two |
 | D708 | D713 | the pair a tag and a number were one of is an enum carrying nothing |
 | D040 | D759 | a generic named rather than called is `K0362`, not `K0343` |
@@ -30227,3 +30228,75 @@ That is the whole of what portability work there was to do without the platform
 to do it on. The table of what this tree assumes about where it is — path
 separators, where the library is, the clock, the widths a message prints — is
 where a port starts, and it is four rows because the library is C11 and libc.
+
+## D970. Two platforms, and each reads its own clock and its own paths
+
+*supersedes* D969, which said Windows was unverified because there was no
+Windows to verify it on. There is one: `gh` is authenticated against this
+repository, so GitHub Actions can run a Windows x86-64 job, and a platform
+nobody can reach and a platform nobody has asked are different things. This is
+the asking.
+
+**What a port turned out to be.** The tree includes no POSIX header at all — no
+`unistd.h`, no `sys/*`, no `dirent.h`, no `pthread` — because the library is
+ISO C11 and libc and the two hosts are written to the same rule. So the port is
+three things and not a build system:
+
+- **Paths.** `src/loader.c` read `/` and nothing else, and D953 said a port
+  changes that and nothing else in the file. It does: `KEST_PATH_SEPARATOR`
+  reads either byte on Windows and `/` alone everywhere else, because a
+  backslash is a character a filename may hold on a platform that is not
+  Windows and reading it as a separator would cut a name in half. What is
+  written is always `/`, which both platforms accept, so two spellings of one
+  path are one name here.
+- **The clock.** `host_microseconds` had two fallbacks under `CLOCK_MONOTONIC`:
+  C's own wall clock and then processor time. Neither is a clock that only goes
+  forwards, and a fallback that is not what the function says it is is worse
+  than a platform that will not build — a build that will not build is read by
+  whoever ports it, and a clock that goes backwards is read by nobody until a
+  frame time comes out negative. There are two platforms and each has a real
+  monotonic clock: `QueryPerformanceCounter` on Windows and `CLOCK_MONOTONIC`
+  everywhere else. There is no third branch.
+- **The build.** `tools/build.bat` is the same file list and the same defines
+  the `Makefile` has, written the one way MSVC can be told them.
+
+**What says it is supported.** `.github/workflows/ci.yml` builds both, runs
+every example on both, and holds the two to saying the same thing byte for
+byte: each writes a trace of what every example answered and what it wrote, and
+a third job diffs them. A platform is supported when that job is green and not
+before. *Measured.*
+
+## D971. Text is UTF-8, and a nought is a character
+
+Section 10 of the completion mission asks for text that is valid UTF-8 with
+`U+0000` preserved. Text here was neither: nothing checked that bytes arriving
+at run time were UTF-8, and a nought was refused in three places on the grounds
+that "text ends at a zero byte" — which stopped being true at D964, when text
+became the bytes and how many.
+
+**A nought is a byte text may hold.** It is written `\0`, `len` counts it, `==`
+and `hash` see past it, and a host is handed it with the length beside it. What
+it cost to allow was every place that still measured text instead of reading
+the count beside it: the length a literal stands for, which `kest_literal_text`
+now hands back rather than leaving to `strlen`; the length of a constant worked
+out where it was written, which is read from what was written rather than
+measured; what a value is written as, what two values compare as, what a value
+hashes to, and what a chunk's mark is folded over — where two pieces of text the
+same up to a nought and different after it had folded alike, which is a reload
+that says nothing moved.
+
+**Text is UTF-8, asked at the two doors it can arrive through.** A source file
+was already held to it by `K0107`. Bytes arriving at run time are held to it
+where they arrive: `text(bytes)` in the machine and `kest_text` at the
+boundary, each walking what it is handed once through the one decoder this
+compiler has, so a byte the compiler refuses and a byte the machine refuses are
+the same byte. `K0604` and `K0611` keep their codes and say what they now
+refuse. Nothing else walks anything, because everything the machine makes out of
+text that was already whole is whole — which is what keeps a cut free and keeps
+`std.text`'s `no.alloc` promises true.
+
+**What is not claimed.** Codepoint counting is `std.text`'s and is O(n) and says
+so. A cut is by byte and may land inside a character; `charBack`, `charWidth`
+and `charAt` are what a program cuts on a boundary with. Graphemes are nobody's
+here. *Argued*, on a run: `tools/check.sh` holds the nought going through in
+both directions and the byte that begins no character being refused in both.

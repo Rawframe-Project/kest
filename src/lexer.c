@@ -85,13 +85,19 @@ static const char *escapes_written(KestArena *arena) {
     return out;
 }
 
+// The bytes a written piece of text stands for, and how many there are. The
+// count is handed back rather than measured afterwards, because a nought is a
+// byte text may hold since D971 and measuring would stop at the first one.
 const char *kest_literal_text(KestArena *arena, const KestSource *source,
-                              KestSpan span) {
+                              KestSpan span, size_t *length_out) {
     const char *raw = kest_span_text(source, span);
     size_t length = span.length;
 
     char *text = kest_arena_alloc(arena, length + 1, 1);
     if (text == NULL) {
+        if (length_out != NULL) {
+            *length_out = 0;
+        }
         return "";
     }
 
@@ -108,7 +114,13 @@ const char *kest_literal_text(KestArena *arena, const KestSource *source,
         // and this is not the place to say it twice.
         text[used++] = stands_for == NULL ? raw[i] : *stands_for;
     }
+    // Still ended with a nought, for a host that reads the bytes as a C
+    // string where it knows there is none inside. What says how long it is is
+    // the count beside it. See D964 and D971.
     text[used] = '\0';
+    if (length_out != NULL) {
+        *length_out = used;
+    }
     return text;
 }
 
@@ -452,21 +464,6 @@ static KestToken scan_string(KestLexer *lexer, uint32_t start) {
         }
         if (c == '\\') {
             char escape = at(lexer, 1);
-            // A nought is a byte like any other and text is not: text ends at
-            // its first one, so a piece of it with one in the middle is a
-            // piece that says less than it holds. The machine refuses one
-            // that arrives from an array or from a host; this is the third
-            // way in, and the only one that can be refused where it is
-            // written.
-            if (escape == '0') {
-                kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0110",
-                               span_from(lexer->offset, lexer->offset + 2),
-                               "a zero byte inside text, and text ends at a "
-                               "zero byte");
-                kest_diags_suggest(lexer->diags,
-                                   "hold bytes in a `[u8]` when one of them is "
-                                   "nought; `'\\0'` is that byte on its own");
-            }
             if (escape == '\0' || escape_means(escape) == NULL) {
                 kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0103",
                                span_from(lexer->offset, lexer->offset + 2),
@@ -890,6 +887,31 @@ static void check_text(const KestSource *source, KestDiags *diags) {
     }
 }
 
+
+// Whether a run of bytes is UTF-8, and where it stops being so. Text in this
+// language is UTF-8 -- a file is held to it by `K0107` and this is the same
+// question asked of bytes that arrive at runtime, from an array or from a
+// host. It is the one decoder there is, so a byte the compiler refuses and a
+// byte the machine refuses are the same byte. See D971.
+bool kest_utf8_whole(const char *bytes, uint32_t length, uint32_t *bad) {
+    uint32_t at = 0;
+    while (at < length) {
+        if ((unsigned char)bytes[at] < 0x80) {
+            at++;
+            continue;
+        }
+        uint32_t code = 0;
+        uint32_t width = decoded(bytes, length, at, &code);
+        if (width == 0) {
+            if (bad != NULL) {
+                *bad = at;
+            }
+            return false;
+        }
+        at += width;
+    }
+    return true;
+}
 
 KestToken *kest_lex_range(KestArena *arena, const KestSource *source,
                           KestDiags *diags, uint32_t start, uint32_t end,

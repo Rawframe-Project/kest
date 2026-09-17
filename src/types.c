@@ -514,7 +514,8 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
         KestSpan content = {expr->span.offset + 1, expr->span.length - 2};
         out->integer =
             (unsigned char)kest_literal_text(program->arena,
-                                             program->source, content)[0];
+                                             program->source, content,
+                                             NULL)[0];
         return true;
     }
     case KEST_EXPR_FLOAT:
@@ -525,7 +526,8 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
         return true;
     case KEST_EXPR_STRING: {
         KestSpan content = {expr->span.offset + 1, expr->span.length - 2};
-        out->text = kest_literal_text(program->arena, program->source, content);
+        out->text = kest_literal_text(program->arena, program->source, content,
+                                      NULL);
         return true;
     }
     case KEST_EXPR_BOOL:
@@ -928,6 +930,39 @@ static bool builds_rather_than_calls(const KestExpr *expr) {
            (callee->type == NULL || callee->type->tag != KEST_T_FN);
 }
 
+// How many bytes a piece of text worked out where it was written is. Measuring
+// it would stop at a nought, and a nought is a byte text may hold since D971,
+// so this reads it from the source the value came from instead: a written
+// piece of text says how long it is, and a name that stands for one is asked
+// about whatever it stands for. Anything else has no written form to read and
+// is measured, which is right for every value that cannot hold a nought.
+static size_t folded_text_length(KestProgram *program, const KestExpr *expr,
+                                 const char *bytes, uint32_t depth) {
+    if (expr != NULL && depth <= 32) {
+        switch (expr->kind) {
+        case KEST_EXPR_STRING: {
+            KestSpan content = {expr->span.offset + 1, expr->span.length - 2};
+            size_t length = 0;
+            kest_literal_text(program->arena, program->source, content,
+                              &length);
+            return length;
+        }
+        case KEST_EXPR_NAME: {
+            const KestExpr *written = constant_written(
+                program, kest_span_text(program->source, expr->span),
+                expr->span.length);
+            if (written != NULL) {
+                return folded_text_length(program, written, bytes, depth + 1);
+            }
+            break;
+        }
+        default:
+            break;
+        }
+    }
+    return strlen(bytes);
+}
+
 static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
                            KestValue *out, uint32_t room, uint32_t depth,
                            const char **why) {
@@ -1104,7 +1139,10 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
         if (room < 2) {
             return 0;
         }
-        out[1].integer = one.text == NULL ? 0 : (int64_t)strlen(one.text);
+        out[1].integer =
+            one.text == NULL
+                ? 0
+                : (int64_t)folded_text_length(program, expr, one.text, 0);
         return 2;
     }
     return 1;
@@ -1175,7 +1213,7 @@ uint64_t kest_hash_value(const KestType *type, const KestValue *slots) {
         // Through the one fold this compiler has, which is what a file is
         // marked with and what a program's `hash` over text answers. See D663.
         return kest_mark_bytes(KEST_MARK_START, slots[0].text,
-                               strlen(slots[0].text));
+                               (size_t)slots[1].integer);
     case KEST_T_ENUM: {
         uint64_t bits = kest_mix((uint64_t)slots[0].integer);
         uint32_t which = (uint32_t)slots[0].integer;

@@ -2082,20 +2082,39 @@ uint64_t kest_layout_mark(const KestLayout *layout) {
     return mark;
 }
 
-// What one body is, for a host asking whether this function's code changed
-// while everything else about it stayed as it was. The instructions and the
-// constants they reach, and nothing else: not the name, not what it takes or
-// gives and not the promises, because those are the signature and the
-// signature has a fingerprint of its own. A reload that rebuilds a body is the
-// thing this answers, and a number that moved because a comment moved is a
-// rebuild nobody asked for. See D945.
+// How many bytes a text constant is. Text is two constants since D964 -- the
+// bytes and how many -- so the count is the one after it, and what a mark is
+// taken over is that many bytes rather than as far as the first nought, which
+// is a byte text may hold since D971. Two pieces of text that are the same up
+// to a nought and differ after it are two programs, and a mark that could not
+// tell them apart is a reload that says nothing moved.
+static size_t text_constant_length(const KestChunk *chunk, uint32_t which,
+                                   const char *bytes) {
+    if (bytes == NULL) {
+        return 0;
+    }
+    if (which + 1 < chunk->constant_count) {
+        return (size_t)chunk->constants[which + 1].integer;
+    }
+    return strlen(bytes);
+}
+
+// The bytes of a text constant, folded over as many as there are. A constant
+// with no bytes at all is folded as the empty one, so that a chunk which has
+// one and a chunk which does not are two chunks.
+static void fold_text_bytes(uint64_t *mark, const char *bytes, size_t length) {
+    fold(mark, bytes == NULL ? "" : bytes, bytes == NULL ? 1 : length);
+}
+
 static uint64_t body_mark(const KestChunk *chunk) {
     uint64_t mark = KEST_MARK_START;
     fold(&mark, chunk->code, chunk->code_count);
     for (uint32_t which = 0; which < chunk->constant_count; which++) {
         fold_number(&mark, chunk->constant_classes[which], 1);
         if (chunk->constant_classes[which] == KEST_CONST_TEXT) {
-            fold_text(&mark, chunk->constants[which].text);
+            fold_text_bytes(&mark, chunk->constants[which].text,
+                            text_constant_length(
+                                chunk, which, chunk->constants[which].text));
         } else {
             fold_number(&mark, (uint64_t)chunk->constants[which].integer, 8);
         }
@@ -2124,7 +2143,9 @@ uint64_t kest_module_mark(const KestModule *module) {
         for (uint32_t which = 0; which < chunk->constant_count; which++) {
             fold_number(&mark, chunk->constant_classes[which], 1);
             if (chunk->constant_classes[which] == KEST_CONST_TEXT) {
-                fold_text(&mark, chunk->constants[which].text);
+                fold_text_bytes(&mark, chunk->constants[which].text,
+                            text_constant_length(
+                                chunk, which, chunk->constants[which].text));
             } else {
                 fold_number(&mark,
                             (uint64_t)chunk->constants[which].integer, 8);

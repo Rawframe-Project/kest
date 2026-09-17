@@ -180,45 +180,60 @@ case "$said" in
 esac
 rm -f "$inside"
 
-# A nought inside text, which is the third way to make a piece of text that
-# says less than it holds. The machine refuses the other two — one that comes
-# out of an array and one a host hands over — and this one is refused where it
-# is written, which is the only one of the three that can be.
+# A nought inside text. It is a character like any other and text carries how
+# long it is, so what this asks is that it goes through and is counted: three
+# bytes written, three bytes long, and the nought still the second of them.
+# Nothing else in the tree writes one. See D971.
 nought="$scratch"/check-nought.kest
 printf 'fn main() -> i32 {\n    let s = "a\\0b"\n    return len(s) - 3\n}\n' \
     > "$nought"
-said=$(./kest check "$nought" 2>&1 </dev/null)
-case "$said" in
-*K0110*) ;;
-*)
-    complain "returns" "a nought written inside text is not refused"
-    printf '%s\n' "$said" | sed 's/^/    /' | head -3
-    ;;
-esac
+if ! ./kest run "$nought" >"$scratch"/nought-said 2>&1 </dev/null; then
+    complain "returns" "a nought written inside text is not text"
+    sed 's/^/    /' "$scratch"/nought-said | head -3
+fi
 rm -f "$nought"
 
-# And the same nought coming the other way: gathered into a run of bytes and
-# asked to be text. Nothing in the tree does that, so this is the only place
-# the machine's own refusal is ever heard.
+# And what text is not: a byte that begins no character, gathered into a run of
+# bytes and asked to be text. A run of bytes holds whatever it holds and text
+# is UTF-8, so this is the door between them and the only place the machine's
+# own refusal is ever heard.
 gathered="$scratch"/check-gathered.kest
 cat > "$gathered" <<'EOF'
 fn main() -> i32 {
     let a: [u8] = array()
     push(a, 104)
-    push(a, 0)
+    push(a, 255)
     push(a, 105)
     return len(text(a))
 }
 EOF
 said=$(./kest run "$gathered" 2>&1 </dev/null)
 case "$said" in
-*K0604*"is zero"*) ;;
+*K0604*"begins no character"*) ;;
 *)
-    complain "returns" "a nought gathered into text is not refused"
+    complain "returns" "a byte that begins no character is taken as text"
     printf '%s\n' "$said" | sed 's/^/    /' | head -3
     ;;
 esac
 rm -f "$gathered"
+
+# And the nought the same way round: gathered into a run of bytes and asked to
+# be text, where it is a character and goes through.
+held="$scratch"/check-held.kest
+cat > "$held" <<'EOF'
+fn main() -> i32 {
+    let a: [u8] = array()
+    push(a, 104)
+    push(a, 0)
+    push(a, 105)
+    return len(text(a)) - 3
+}
+EOF
+if ! ./kest run "$held" >"$scratch"/held-said 2>&1 </dev/null; then
+    complain "returns" "a nought gathered into text is not three bytes"
+    sed 's/^/    /' "$scratch"/held-said | head -3
+fi
+rm -f "$held"
 
 # A host asking what came back before anything came back. `kest_gave_text`
 # says what is in a frame, and a frame nothing has been called with is

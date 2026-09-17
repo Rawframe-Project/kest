@@ -1083,17 +1083,10 @@ character: `'ı'` is two bytes and is refused, and so is `'ab'`. The escapes are
 the ones a string has — `\n`, `\t`, `\r`, `\\`, `\"`, `\{`, `\}`, `\0` — so a byte
 written in a string and a byte written on its own are one spelling.
 
-One of them is not allowed inside text at all. Text ends at its first zero
-byte, so a piece of it with one in the middle says less than it holds:
-
-```
-error[K0110]: a zero byte inside text, and text ends at a zero byte
-      hold bytes in a `[u8]` when one of them is nought; `'\0'` is that byte on its own
-```
-
-which is the same refusal the machine makes for a zero byte arriving from an
-array or from a host, said where it is written instead. `'\0'` on its own is a
-`u8` of nought and is a byte like any other.
+All of them are allowed inside text, `\0` with the rest. Text carries how many
+bytes it is rather than ending at the first nought, so a nought in the middle
+of a piece of text is a character in the middle of a piece of text and `len`
+counts it. `'\0'` on its own is a `u8` of nought and is the same byte. See D971.
 
 One of them is not allowed as itself. A carriage return inside text, written
 as the byte rather than as `\r`, is refused:
@@ -1309,16 +1302,17 @@ machine answers with `K0604`, which is the same rule at the only moment it can
 be asked.
 
 Bytes that are not text live in a `[u8]`. That is the type for what a file
-holds, what a host lends, and anything with a nought in it: text ends at its
-first nought and a run of bytes does not, so the two are different things and
-this language says which it means. `std.text` has `bytes(t)` for taking a piece
-of text apart and `text(a)` puts one back together, refusing an array with a
-nought in it — where it is written when it is written down, and where it runs
-when it is gathered:
+holds, what a host lends, and anything at all: a run of bytes is whatever it
+holds and text is UTF-8, so the two are different things and this language says
+which it means. `std.text` has `bytes(t)` for taking a piece of text apart and
+`text(a)` puts one back together, refusing an array that is not UTF-8 — which
+is the one walk either way costs, and the one place it is paid for:
 
 ```
-error[K0604]: byte 1 is zero, and text ends at a zero byte
+error[K0604]: byte 1 begins no character, and text is UTF-8
 ```
+
+A nought goes through: it is a character, and text counts it like any other.
 
 `fit(xs, value)` is `push` with the growth taken out: it writes where there is
 room, answers `false` where there is not, and never reaches the heap. That is
@@ -1376,9 +1370,8 @@ heap, and gathered as bytes takes 1680. `call --json` says `heap` for the one
 call it makes, which is how `tools/check-costs.sh` asks every library function
 that makes text what twice as much costs. That is why `std.text` writes `join`,
 `repeat`, `upper` and `lower` this way rather than out of `slice`, which copies
-the whole of what it is given at every step. A zero byte in the array is refused
-at run time, because text ends at its first zero and one in the middle would
-quietly cut the rest off.
+the whole of what it is given at every step. An array that is not UTF-8 is
+refused at run time, because text is UTF-8 and a run of bytes is not.
 
 ## Keywords
 
@@ -4501,13 +4494,21 @@ Where a value is laid out in memory — inside an array, a store or a struct a
 host lays out — a piece of text is sixteen bytes for the same reason: what it
 is made of, and how many. See D964.
 
-**No nought inside.** Text holds no nought byte. It is refused where one would
-be made: in a literal by the lexer, in `text(bytes)` by the machine, and at the
-boundary by `kest_text`. That is a rule about what text is rather than about how
-it is kept.
+**Text is UTF-8.** A file is held to it while it is read, and bytes that arrive
+at run time are held to it where they arrive: `text(bytes)` in the machine and
+`kest_text` at the boundary each walk what they are handed once and refuse a
+byte that begins no character. Everything the machine makes out of text that
+was already whole is whole, so nothing else walks anything.
 
-**A cut does not end in a nought.** Text the machine made does: what `text()`,
-an interpolation and a join write ends in one. A cut is a place inside another
+**A nought is a character.** `U+0000` is text like any other codepoint: it is
+written `\0`, `len` counts it, `==` and `hash` see past it, and a host is handed
+it with the length beside it. What that costs is that text the machine made is
+not always a C string even when it does end in a nought — the length is what
+says how long it is. See D971.
+
+**A cut does not end in a nought.** Text the machine made is written with one
+after it: what `text()`, an interpolation and a join write has a nought past
+the end, which is not part of it and is not what says where it ends. A cut is a place inside another
 piece and how many bytes of it, so the byte after it belongs to what it was cut
 from. A host reading text hands the bytes and the length to whatever it is
 calling rather than treating what it was given as a C string.

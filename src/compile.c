@@ -802,9 +802,10 @@ static void ir_narrow(Compiler *compiler, const KestType *type,
 // written with holes in it.
 // What a string literal holds, and what a number literal is worth. Both are
 // the lexer's to know, because both are about how a thing is spelled.
-static const char *literal_text(Compiler *compiler, KestSpan span) {
+static const char *literal_text(Compiler *compiler, KestSpan span,
+                               size_t *length) {
     return kest_literal_text(compiler->program->arena, compiler->program->source,
-                             span);
+                             span, length);
 }
 
 static double parse_real(Compiler *compiler, KestSpan span) {
@@ -946,10 +947,11 @@ static void emit_value_slots(Compiler *compiler, const KestType *type,
 // A piece of text the body holds, which is two values: what it is made of and
 // how many bytes that is. See D964.
 static void emit_text_constant(Compiler *compiler, const char *bytes,
-                               const KestType *type, KestSpan span) {
+                               size_t length, const KestType *type,
+                               KestSpan span) {
     KestValue held[2] = {{0}, {0}};
     held[0].text = bytes == NULL ? "" : bytes;
-    held[1].integer = (int64_t)strlen(held[0].text);
+    held[1].integer = bytes == NULL ? 0 : (int64_t)length;
     emit_value_slots(compiler, type, held, 2, span);
 }
 
@@ -2432,15 +2434,17 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
     case KEST_EXPR_STRING: {
         KestValue value = {0};
         KestSpan content = {expr->span.offset + 1, expr->span.length - 2};
-        value.text = literal_text(compiler, content);
-        emit_text_constant(compiler, value.text, expr->type, expr->span);
+        size_t length = 0;
+        value.text = literal_text(compiler, content, &length);
+        emit_text_constant(compiler, value.text, length, expr->type,
+                           expr->span);
         break;
     }
     case KEST_EXPR_BYTE: {
         // The same escapes a string has, read the same way, so a byte written
         // in one and a byte written on its own are one spelling.
         KestSpan content = {expr->span.offset + 1, expr->span.length - 2};
-        const char *held = literal_text(compiler, content);
+        const char *held = literal_text(compiler, content, NULL);
         KestValue value = {0};
         value.integer = (unsigned char)held[0];
         emit_constant(compiler, value, KEST_CONST_INT, expr->type, expr->span);
@@ -2759,8 +2763,9 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             const KestTextPart *part = &expr->text.parts[i];
             if (part->value == NULL) {
                 KestValue value = {0};
-                value.text = literal_text(compiler, part->text);
-                emit_text_constant(compiler, value.text, expr->type,
+                size_t length = 0;
+                value.text = literal_text(compiler, part->text, &length);
+                emit_text_constant(compiler, value.text, length, expr->type,
                                    expr->span);
                 continue;
             }

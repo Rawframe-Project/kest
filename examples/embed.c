@@ -1465,20 +1465,45 @@ static bool lends_bytes(Engine *engine) {
     letters[0] = 'k';
     letters[1] = 'e';
 
-    // And the same bytes with a nought among them, which is a run of bytes a
-    // program may hold and may not make text of. Nothing refuses the lend,
-    // because nothing about it is wrong; what refuses is the asking.
+    // And the same bytes with a nought among them, which is a character like
+    // any other and so text a program may make: four bytes in and four bytes
+    // of text out, with the nought still in the middle of it. See D971.
     letters[2] = 0;
     engine->frame[0] = kest_borrow(engine->runtime, letters, 4, "u8", sizeof(letters[0]));
     if (engine->frame[0].object == NULL) {
         kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
         return false;
     }
-    if (kest_call(engine->runtime, engine->entry[READABLE], engine->frame, sizeof(engine->frame) / sizeof(engine->frame[0]))) {
-        fprintf(stderr, "text was made of bytes with a nought among them\n");
+    if (!kest_call(engine->runtime, engine->entry[READABLE], engine->frame, sizeof(engine->frame) / sizeof(engine->frame[0]))) {
+        kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
         return false;
     }
-    printf("and refused to read them with a nought among them\n");
+    if (engine->frame[0].integer != 4) {
+        fprintf(stderr, "a nought among the bytes cut the text short at %lld\n",
+                (long long)engine->frame[0].integer);
+        return false;
+    }
+    printf("and read four bytes with a nought among them as four\n");
+
+    // And a byte that begins no character, which is what text is not. This is
+    // the door where a run of bytes and text meet, so it is where being UTF-8
+    // is asked about; nothing refuses the lend, because nothing about it is
+    // wrong. What refuses is the asking.
+    letters[2] = (char)0xff;
+    engine->frame[0] = kest_borrow(engine->runtime, letters, 4, "u8", sizeof(letters[0]));
+    if (engine->frame[0].object == NULL) {
+        kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+        return false;
+    }
+    if (kest_call(engine->runtime, engine->entry[READABLE], engine->frame, sizeof(engine->frame) / sizeof(engine->frame[0]))) {
+        fprintf(stderr, "text was made of a byte that begins no character\n");
+        return false;
+    }
+    if (!said_that(engine->runtime, "K0604", "begins no character")) {
+        return false;
+    }
+    printf("and refused a byte that begins no character\n");
+    letters[2] = 'a';
 
     // And the four things that would change how many there are. The length of
     // a lent run is the host's, so a program may read and write what is there
@@ -4474,22 +4499,34 @@ int main(int argc, char **argv) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
-    // And bytes with a nought among them, which is a run a host may hold and
-    // may not hand over as text: text ends at its first nought, so what came
-    // back would be shorter than what was given and nobody would be told. The
-    // program never sees it — what comes back is empty and the machine says
-    // which byte it was.
+    // And bytes with a nought among them, which a host may hand over as text:
+    // a nought is a character and text carries how long it is, so five bytes
+    // in are five bytes out with the nought still the fourth of them. What is
+    // refused is a byte that begins no character, because text is UTF-8 and
+    // this is the door it arrives through. See D971.
     const char cut[6] = {'h', 'a', 'l', 0, 'f', 0};
     KestValue halved[2] = {{0}, {0}};
     kest_text(engine.runtime, cut, 5, halved);
-    if (halved[0].text == NULL || halved[0].text[0] != '\0') {
-        fprintf(stderr, "bytes with a nought among them were taken as text\n");
+    if (halved[0].text == NULL || halved[1].integer != 5 ||
+        memcmp(halved[0].text, cut, 5) != 0) {
+        fprintf(stderr, "bytes with a nought among them were cut short\n");
         return 1;
     }
-    if (!said_that(engine.runtime, "K0611", "is zero")) {
+    printf("and took %zu bytes with a nought among them\n", sizeof(cut) - 1);
+
+    const char broken[3] = {'h', (char)0xff, 'i'};
+    KestValue refused[2] = {{0}, {0}};
+    kest_text(engine.runtime, broken, 3, refused);
+    // What comes back for a refusal is an empty piece of text, which is what
+    // the door writes before it asks anything. See D436.
+    if (refused[0].text == NULL || refused[1].integer != 0) {
+        fprintf(stderr, "a byte that begins no character was taken as text\n");
         return 1;
     }
-    printf("and refused %zu bytes with a nought among them\n", sizeof(cut) - 1);
+    if (!said_that(engine.runtime, "K0611", "begins no character")) {
+        return 1;
+    }
+    printf("and refused a byte that begins no character\n");
 
     KestValue again[2] = {{0}, {0}};
     kest_text(engine.runtime, "the engine", 10, again);

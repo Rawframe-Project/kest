@@ -1,4 +1,5 @@
 #include "vm.h"
+#include "lexer.h"
 
 // The sanitised build is told where every block a host has ends, which is the
 // one thing a library cannot work out for itself about somebody else's memory.
@@ -751,17 +752,19 @@ bool kest_text(KestRuntime *runtime, const char *bytes, uint32_t length,
     // in: a host that handed a pointer of its own would be promising to keep
     // it as long as the program holds it, and a program holds a piece of text
     // for as long as it likes.
-    for (uint32_t i = 0; i < length; i++) {
-        if (bytes[i] == 0) {
-            KestSpan nowhere = {0, 0};
-            kest_diags_in(runtime->diags, NULL);
-            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0611",
-                           nowhere,
-                           "byte %u of what the host handed over is zero, and "
-                           "text ends at a zero byte",
-                           i);
-            return false;
-        }
+    // Text is UTF-8. A nought is a byte it may hold, since D971, and a byte
+    // that begins no character is not: a host that hands over bytes of its own
+    // is the boundary where that is worth one walk, because everything the
+    // machine makes out of text that was already whole is whole. See D971.
+    uint32_t bad = 0;
+    if (!kest_utf8_whole(bytes, length, &bad)) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0611", nowhere,
+                       "byte %u of what the host handed over begins no "
+                       "character, and text is UTF-8",
+                       bad);
+        return false;
     }
     char *held = kest_arena_alloc(runtime->heap, length + 1, 1);
     if (held == NULL) {
@@ -1078,21 +1081,37 @@ static size_t put_text(char *out, size_t room, const char *text) {
 // A string is written as a string, quotes and escapes and all, because what
 // is being written is the source and not the content. A hole holding text on
 // its own is the content, which is the exception D035 names.
-static size_t put_quoted(char *out, size_t room, const char *text) {
+static size_t put_quoted(char *out, size_t room, const char *text,
+                        size_t length) {
     size_t used = 0;
     if (used < room) {
         out[used] = '"';
     }
     used++;
-    for (const char *c = text; *c != '\0'; c++) {
-        if (*c == '"' || *c == '\\') {
+    for (size_t i = 0; i < length; i++) {
+        char c = text[i];
+        // A nought is written as the escape that stands for it rather than as
+        // itself, because what this writes is the source a reader takes back
+        // and a nought written as itself is a piece of text that ends there.
+        if (c == '\0') {
+            if (used < room) {
+                out[used] = '\\';
+            }
+            used++;
+            if (used < room) {
+                out[used] = '0';
+            }
+            used++;
+            continue;
+        }
+        if (c == '"' || c == '\\') {
             if (used < room) {
                 out[used] = '\\';
             }
             used++;
         }
         if (used < room) {
-            out[used] = *c;
+            out[used] = c;
         }
         used++;
     }
@@ -1158,7 +1177,10 @@ static size_t format_value(char *out, size_t room, const KestType *type,
                         type->width == 32);
         return put_text(out, room, buffer);
     case KEST_T_TEXT:
-        return put_quoted(out, room, slots[0].text);
+        // How long it is is the slot beside it, not a measurement: a nought
+        // is a byte text may hold since D971 and measuring stops at one.
+        return put_quoted(out, room, slots[0].text,
+                          (size_t)slots[1].integer);
     case KEST_T_FLAGS:
         return format_flags(out, room, type, (uint64_t)slots[0].integer);
     case KEST_T_ENUM: {
@@ -1277,7 +1299,8 @@ static bool values_equal(const KestType *type, const KestValue *a,
     case KEST_T_REF:
         return a[0].integer == b[0].integer;
     case KEST_T_TEXT:
-        return strcmp(a[0].text, b[0].text) == 0;
+        return a[1].integer == b[1].integer &&
+               memcmp(a[0].text, b[0].text, (size_t)a[1].integer) == 0;
     case KEST_T_ENUM: {
         if (a[0].integer != b[0].integer) {
             return false;
@@ -3395,14 +3418,15 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                                    bytes->length);
                 return false;
             }
-            // Text ends at its first zero byte, so one in the middle would
-            // quietly cut the rest off. Saying so beats losing it.
-            for (uint32_t i = 0; i < bytes->length; i++) {
-                if (bytes->bytes[i] == 0) {
-                    fail(vmp, frame, instruction, "K0604",
-                         "byte %u is zero, and text ends at a zero byte", i);
-                    return false;
-                }
+            // Text is UTF-8 and a run of bytes is whatever it holds, so this
+            // is the door where the two meet and the one place the walk is
+            // paid for. A nought is fine: it is a character. See D971.
+            uint32_t bad = 0;
+            if (!kest_utf8_whole((const char *)bytes->bytes, bytes->length,
+                                 &bad)) {
+                fail(vmp, frame, instruction, "K0604",
+                     "byte %u begins no character, and text is UTF-8", bad);
+                return false;
             }
             memcpy(text, bytes->bytes, bytes->length);
             text[bytes->length] = '\0';
@@ -5581,7 +5605,7 @@ int64_t kest_gave_text(KestRuntime *runtime, int32_t entry,
     // which is the exception D035 names: a hole holding one writes the
     // content, and this is the same question asked from outside.
     size_t needed = type->tag == KEST_T_TEXT
-                        ? strlen(frame[0].text)
+                        ? (size_t)frame[1].integer
                         : kest_write_value(NULL, 0, type, frame);
     if (out != NULL && room > 0) {
         size_t fits = needed < room - 1 ? needed : room - 1;

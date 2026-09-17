@@ -121,8 +121,13 @@ KestToken *kest_lex_range(KestArena *arena, const KestSource *source,
 
 // What a string literal holds: the characters between its quotes with the
 // escapes read. The span is the content, without them.
+// Whether a run of bytes is UTF-8 throughout, and the offset of the first byte
+// that is not where it is not. Text is UTF-8: a source file is held to it while
+// it is read and bytes arriving at runtime are held to it where they arrive.
+bool kest_utf8_whole(const char *bytes, uint32_t length, uint32_t *bad);
+
 const char *kest_literal_text(KestArena *arena, const KestSource *source,
-                              KestSpan span);
+                              KestSpan span, size_t *length);
 
 // What a number literal is worth, as a double. An `f32` is narrowed by
 // whatever wanted it, because the narrowing is about the type and not about

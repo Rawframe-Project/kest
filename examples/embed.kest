@@ -379,9 +379,10 @@ fn joinedPieces(count: i32) -> i32 {
 }
 
 // A run of the host's own bytes, made into a piece of text without the host
-// having said what its bytes mean. Text ends at its first nought and a run of
-// bytes does not, so this is where the two meet: what comes back is text if
-// every byte the host lent is one text may hold, and a refusal if one is not.
+// having said what its bytes mean. Text is UTF-8 and a run of bytes is
+// whatever it holds, so this is where the two meet: what comes back is text if
+// what the host lent is UTF-8 throughout, and a refusal if it is not. A nought
+// is a character and goes through. See D971.
 fn readable(raw: [u8]) -> i32 {
     return len(text(raw))
 }
