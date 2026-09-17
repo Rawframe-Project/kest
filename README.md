@@ -44,7 +44,8 @@ For an editor, `editors/vscode` is a grammar and a client that starts
 `kest lsp` — which is this compiler, so what an editor says about a file and
 what `kest check` says about it cannot differ.
 
-[docs/language.md](docs/language.md) is the reference and reads front to back:
+The reference is [the language document](docs/language.md) and reads front to
+back:
 what a program is made of, then values, then promises, then the boundary a host
 crosses. `examples/` is thirty-six programs that run, each checking itself.
 

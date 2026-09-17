@@ -1726,7 +1726,7 @@ tokens   what a token is and what it carries""",
                  r"""    {"stop", NONE}, {"stop.none", NONE},"""],
         "make": [],
         "tool": "tools/check-tables.sh",
-        "caught": "instructions: 157 kinds and 158 names",
+        "caught": "instructions: 158 kinds and 159 names",
     },
     {
         # And the same for the tokens, which is the other list this rule was
@@ -7014,6 +7014,7 @@ struct Vec2 {""",
     case KEST_OP_CALL_VALUE:
     case KEST_OP_CALL_HOST:
     case KEST_OP_RETURN:
+    case KEST_OP_STOP:
         return false;""",
         "make": ["kest", "embed"],
         "tool": "tools/check-dead.sh",
@@ -15393,7 +15394,7 @@ def put_out_of_order(hole):
         shutil.copytree("examples", os.path.join(work, "examples"),
                         copy_function=bring,
                         ignore=shutil.ignore_patterns("embed", "embed-debug"))
-        for what in ("Makefile", "CLAUDE.md", "README.md"):
+        for what in ("Makefile", "CLAUDE.md", "README.md", "CHANGELOG.md"):
             bring(what, os.path.join(work, what))
         # The times come with these: an archive that looks newer than the
         # objects in it is one nothing rebuilds.

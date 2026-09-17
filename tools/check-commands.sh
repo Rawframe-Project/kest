@@ -56,7 +56,13 @@ expect() {
         complain "$command $file: worked and said $said_anyway"
         return
     fi
-    if ! printf '%s' "$out" | grep -qE "$pattern"; then
+    # Through a file rather than a pipe: `grep -q` stops at the first match
+    # and closes what is feeding it, and a `printf` still holding bytes for a
+    # pipe nobody is reading fails -- which is a check refusing for a reason
+    # that has nothing to do with what it checks. It is a race, so it showed on
+    # another machine and not on this one.
+    printf '%s' "$out" > "$scratch"/cmd-out
+    if ! grep -qE "$pattern" "$scratch"/cmd-out; then
         complain "$command $file: printed nothing matching /$pattern/"
     fi
 }

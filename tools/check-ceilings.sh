@@ -755,8 +755,9 @@ for one in "stamping:this machine has handed out 1000 places in stores" \
     file=${one%%:*}
     said_it=${one#*:}
     out=$("$work/kest" run "$work/$file.kest" 2>&1 </dev/null)
-    if printf '%s' "$out" | grep -q K0630 &&
-       printf '%s' "$out" | grep -qF "$said_it"; then
+    printf '%s' "$out" > "$scratch"/rung-said
+    if grep -q K0630 "$scratch"/rung-said &&
+       grep -qF "$said_it" "$scratch"/rung-said; then
         reached=$((reached + 1))
     else
         echo "ceilings: $file.kest was not told it had reached the ceiling"
@@ -818,9 +819,10 @@ HOST
 if ! builds lending "lends until it cannot"; then
     failed=1
 elif out=$("$work/lending" "$work/holding.kest" 2>&1 </dev/null) &&
-     printf '%s' "$out" | grep -q K0643 &&
-     printf '%s' "$out" | grep -qF "of its 65536 bytes left" &&
-     printf '%s' "$out" | grep -qF "end the ones this host is done with"; then
+     { printf '%s' "$out" > "$scratch"/lent-said; } &&
+     grep -q K0643 "$scratch"/lent-said &&
+     grep -qF "of its 65536 bytes left" "$scratch"/lent-said &&
+     grep -qF "end the ones this host is done with" "$scratch"/lent-said; then
     reached=$((reached + 1))
 else
     echo "ceilings: a host that lent until the heap it gave ran out was told" \
