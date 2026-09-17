@@ -5182,6 +5182,74 @@ case "$chose" in
     ;;
 esac
 
+# A project made, built, tested and looked over, which is the workflow section
+# 22 asks for and the first thing a reader does. It is made in a room of this
+# check's own, because `new` refuses a directory that is already there -- which
+# is the whole of how somebody does not lose a project.
+#
+# One sentence for all of it, because what went wrong is written into it and a
+# sentence per case is a sentence per case to be seen said. See D982.
+mkdir -p "$scratch"/projects
+here=$(pwd)
+wrong=""
+(cd "$scratch"/projects && "$here/$kest" new demo) >"$scratch"/projects/made 2>&1 ||
+    wrong="a project could not be made"
+if [ -z "$wrong" ] && [ ! -f "$scratch"/projects/demo/kest.project ]; then
+    wrong="a project was made with no manifest in it"
+fi
+if [ -z "$wrong" ] && [ ! -f "$scratch"/projects/demo/src/main.kest ]; then
+    wrong="a project was made with no program in it"
+fi
+if [ -z "$wrong" ]; then
+    case "$(cd "$scratch"/projects/demo && "$here/$kest" doctor 2>&1)" in
+    *"nothing here is wrong"*) ;;
+    *) wrong="a project this command line just made is wrong" ;;
+    esac
+fi
+if [ -z "$wrong" ]; then
+    # `build` with no file at all, which is what being inside a project means,
+    # and nothing said, which is what a build that worked says.
+    if ! (cd "$scratch"/projects/demo && "$here/$kest" build) \
+            >"$scratch"/projects/built 2>&1; then
+        wrong="a project this command line just made will not build"
+    elif [ -s "$scratch"/projects/built ]; then
+        wrong="a build that worked said something"
+    fi
+fi
+if [ -z "$wrong" ]; then
+    case "$(cd "$scratch"/projects/demo &&
+            "$here/$kest" test tests/adding.kest 2>&1)" in
+    *"1 of 1 passed"*) ;;
+    *) wrong="a test this command line just wrote does not pass" ;;
+    esac
+fi
+if [ -z "$wrong" ]; then
+    # And a test that fails, which is what a runner is for.
+    printf 'fn main() -> i32 {\n    return 7\n}\n' \
+        > "$scratch"/projects/demo/tests/failing.kest
+    said_it=$(cd "$scratch"/projects/demo &&
+        "$here/$kest" test tests/failing.kest 2>&1) &&
+        said_it="$said_it and came back nought"
+    case "$said_it" in
+    *FAILED*"answered 7"*) ;;
+    *) wrong="a test that fails is not said to have" ;;
+    esac
+fi
+if [ -z "$wrong" ]; then
+    # And a manifest with a line nothing knows, which is refused rather than
+    # read past: a misspelt line reads exactly like one that is not there.
+    printf 'project one\nentyr src/main.kest\n' \
+        > "$scratch"/projects/kest.project
+    case "$(cd "$scratch"/projects && "$here/$kest" doctor 2>&1)" in
+    *"says something this does not know"*) ;;
+    *) wrong="a project with a line nothing knows is read anyway" ;;
+    esac
+    rm -f "$scratch"/projects/kest.project
+fi
+if [ -n "$wrong" ]; then
+    complain "project: the workflow a reader starts with does not work: $wrong"
+fi
+
 # What `kest profile` says a run did, held to the two things it is: counts and
 # no durations. A program that calls a body four times is said to have called
 # it four times, and a run says the same numbers in both forms -- the object a

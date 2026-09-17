@@ -30739,3 +30739,98 @@ bounds the memory reading and compiling may take, and *What there is a most of*
 bounds everything a program can have too many of — names, nesting, loops,
 `defer`s, `match` arms, generic copies. Compile time is not bounded, and is not
 claimed to be. *Argued.*
+
+## D982. A project is a page of `name value` lines, and there is no registry
+
+Section 22 of the completion mission asks for a reproducible project model and
+says the one thing not to build: a public package registry.
+
+**The manifest.** `kest.project` is lines of `name value` and nothing else: no
+sections, no quoting, no nesting, no parser worth the name. A manifest is read
+by a person as often as by a tool and there is nothing in it that wants a
+shape, so what it is written in is the simplest thing that can say it. A name
+this compiler does not know is refused rather than skipped, because a manifest
+with a misspelt line reads exactly like one without it.
+
+```
+project demo
+entry src/main.kest
+source src
+tests tests
+kest 0.1.0
+profile kest-det 1
+```
+
+**A dependency is a `source` line.** There is no registry, so a dependency is a
+directory somebody put somewhere and a project says where. Nothing is
+downloaded, nothing is locked, and nothing here has an opinion about how it got
+there — a submodule, a vendored copy, a sibling checkout. That is the whole of
+the dependency story and it is a final boundary rather than a first step.
+
+**Four commands.** `kest new` makes a directory with a project, a program and a
+test in it. `kest build` compiles and says nothing when it compiles. `kest test`
+runs each program named and reads what it answered. `kest doctor` says what this
+command line is, where it looks for the library, whether it found it, and what
+the project here says about itself — which is the command somebody runs when
+something is wrong and they do not know what.
+
+**`build` produces nothing, on purpose.** There is no artifact because the
+bytecode is not a format anything else reads and is not stable (D983), and what
+ships is the source beside the runtime. So a build is the knowledge that it
+compiles, which is what a gate wants and all there is to want.
+
+**A test is a program.** It checks itself and answers with which check failed,
+which is what every example in this tree already is. There is no framework, no
+assertion library and no discovery: a number is a place in a file, and the files
+are named because reading a directory is the one thing this tree does not do —
+the library has no POSIX header in it and `kest test tests/*.kest` is what a
+shell is for. *Argued.*
+
+## D983. Four numbers, four policies, and what is not stable
+
+Section 32 of the completion mission asks for a versioning and compatibility
+policy: semantic versioning, source compatibility, C ABI compatibility, JSON
+and tooling schema versioning, deterministic profile versioning, manifest
+versioning, and a bytecode stability policy.
+
+**There are four numbers and they move for four reasons.** D974 put them where
+a host and a tool can read them; this says when each moves and what a reader
+has to do.
+
+| | What it is | It goes up when | A reader has to |
+| --- | --- | --- | --- |
+| `KEST_VERSION_STRING` | what the language calls itself | anything below does, or a release is made | read the changelog |
+| `KEST_ABI_VERSION` | what shape the doors are in | a function's arguments or answer, a struct's fields or their order, an enum's cases or their numbers, or what any of them mean | recompile, and read what changed |
+| `KEST_JSON_SCHEMA` | what shape the objects a command writes are in | a field changes meaning, goes away, or is added where a reader was told the list was everything | read the new field, or ignore it knowingly |
+| `KEST_PROFILE_VERSION` | what `deterministic` promises | an operation's answer changes for the same input | re-record a replay, re-verify a save |
+
+**Semantic versioning, of the language.** Before 1.0, a minor number may break a
+program and says so in the changelog. From 1.0: a patch changes nothing a
+program or a host can see; a minor adds and does not take away — a new builtin,
+a new door, a new field at the end; a major may take away. The ABI number moves
+independently and may move inside a minor, because a host recompiles and a
+program does not.
+
+**Source compatibility** is about programs: a program that compiled under one
+version compiles under the next unless a major says otherwise. A new keyword is
+a major, which is why D179 refuses to keep a word back for a feature that does
+not exist.
+
+**The bytecode is not stable and is not a format.** It is what this compiler
+hands this machine in this process. Nothing writes it to disk, nothing reads it
+from disk, and there is no loader for one — which is why there is nothing for a
+`kest build` to produce and why section 20's "bytecode/artifact loader" fuzz
+target has nothing to point at. What ships is the source beside the runtime.
+Making it a format would mean versioning it, validating it, and treating
+anything that arrives as hostile, and none of those is a thing this language
+needs to be what it is.
+
+**The manifest** is `name value` lines and carries no version of its own: a
+name it does not know is refused, so a project written for a later version is
+refused by an earlier one with a message rather than read half way. A `kest`
+line says what it was written against and `kest doctor` reads it back.
+
+**Where a reader is told.** `CHANGELOG.md`, newest first, one section a
+version, and a version with nothing a reader has to do about it says so. It is
+not the worklog: the worklog is what was built, and the changelog is what
+somebody with a program has to do about it. *Argued.*

@@ -4063,6 +4063,46 @@ function answers, a struct's fields or their order, an enum's cases or their
 numbers, or what any of them mean. It does not go up for something added at the
 end, which a host built against the older number does not know about. See D974.
 
+## A project
+
+A file on its own is a program: `kest run one.kest` needs nothing around it.
+A project is what a directory becomes when there is more than one file and
+somebody else has to build it.
+
+```
+kest new demo
+cd demo
+kest build
+kest test tests/*.kest
+kest doctor
+```
+
+`kest.project` is lines of `name value` and nothing else:
+
+```
+project demo
+entry src/main.kest
+source src
+tests tests
+kest 0.1.0
+profile kest-det 1
+```
+
+`entry` is what `check`, `build` and `run` work on when no file is named, so
+being inside a project means not naming one. `source` says where this project's
+modules are, and a **dependency is another `source` line** pointing at wherever
+somebody put it: there is no registry, nothing is downloaded and nothing is
+locked. A name the compiler does not know is refused rather than skipped,
+because a misspelt line reads exactly like one that is not there.
+
+`kest build` compiles and says nothing when it compiles. There is no artifact:
+the bytecode is not a format anything else reads and is not stable, and what
+ships is the source beside the runtime. `kest test` runs each program named and
+reads what it answered — a test here is a program that checks itself and answers
+with which check failed, which is what every example in this tree is, so there
+is no framework and no discovery. `kest doctor` is what somebody runs when
+something is wrong and they do not know what. See D982.
+
 ## What a run did
 
 `kest profile` runs a program and says what it cost, in counts:

@@ -9,6 +9,16 @@
 #endif
 
 #if defined(_WIN32)
+// And one more, for making a directory. There is no way in ISO C to make one
+// and `kest new` has to; the library has no such need and does not have this.
+__declspec(dllimport) int __cdecl _mkdir(const char *path);
+#define KEST_MAKE_DIRECTORY(path) _mkdir(path)
+#else
+#include <sys/stat.h>
+#define KEST_MAKE_DIRECTORY(path) mkdir((path), 0755)
+#endif
+
+#if defined(_WIN32)
 // Two doors out of the platform, declared here rather than by including
 // `<windows.h>`. That header defines `near` and `far` as nothing -- names from
 // a memory model this machine has not had for thirty years and names this file
@@ -36,6 +46,7 @@ __declspec(dllimport) int __stdcall QueryPerformanceFrequency(long long *rate);
 #include "lexer.h"
 #include "mem.h"
 #include "lsp.h"
+#include "project.h"
 #include "parser.h"
 #include "fmt.h"
 #include "loader.h"
@@ -91,6 +102,19 @@ static void help(FILE *out) {
             "                    how many crossings into the host, what the\n"
             "                    heap holds and what the budget cost. Counts\n"
             "                    and no durations: a clock is the host's\n"
+            "  new <name>        a directory with a project, a program and a\n"
+            "                    test in it, ready to run\n"
+            "  build [file]      compile it and say nothing if it compiles.\n"
+            "                    Without a file, what the project says to\n"
+            "                    build. There is no artifact: bytecode is not\n"
+            "                    a format anything else reads, and what ships\n"
+            "                    is the source beside the runtime\n"
+            "  test <files>      run each one and read what it answered. A\n"
+            "                    test here is a program that checks itself\n"
+            "                    and answers with which check failed\n"
+            "  doctor [dir]      what this command line is, where it looks\n"
+            "                    for the library, whether it found it, and\n"
+            "                    what the project here says about itself\n"
             "  lsp               answer an editor over the standard streams:\n"
             "                    what is wrong, what a name is, where it was\n"
             "                    declared, what else names it, what a file\n"
@@ -1885,6 +1909,206 @@ static void say_profile(const KestCounted *counted, const Entered *bodies,
     }
 }
 
+// A project made, checked, run against its own programs, and looked over. Four
+// commands that are about a project rather than about a file, and the project
+// is a manifest of `name value` lines. See D982.
+static bool write_file(const char *path, const char *bytes, bool json) {
+    FILE *file = fopen(path, "wb");
+    if (file == NULL) {
+        refused_at_the_words(json, "K0701", "`%s` could not be written", path);
+        return false;
+    }
+    size_t length = strlen(bytes);
+    bool wrote = fwrite(bytes, 1, length, file) == length;
+    wrote = fclose(file) == 0 && wrote;
+    if (!wrote) {
+        refused_at_the_words(json, "K0701", "`%s` could not be written", path);
+    }
+    return wrote;
+}
+
+static int make_project(const char *name, bool json) {
+    if (name == NULL || name[0] == '\0') {
+        refused_at_the_words(json, "K0649", "`new` needs a name");
+        return 1;
+    }
+    KestArena *arena = kest_arena_new();
+    if (arena == NULL) {
+        refused_at_the_words(json, "K0605", "out of memory");
+        return 1;
+    }
+    char path[1024];
+    // The directory, and the two inside it. A directory that is already there
+    // is said about rather than written into: making a project over one that
+    // exists is how somebody loses a project.
+    if (KEST_MAKE_DIRECTORY(name) != 0) {
+        kest_arena_free(arena);
+        refused_at_the_words(json, "K0701",
+                             "`%s` is already there, or could not be made",
+                             name);
+        return 1;
+    }
+    snprintf(path, sizeof(path), "%s/src", name);
+    KEST_MAKE_DIRECTORY(path);
+    snprintf(path, sizeof(path), "%s/tests", name);
+    KEST_MAKE_DIRECTORY(path);
+
+    const char *manifest = kest_project_written(arena, name);
+    snprintf(path, sizeof(path), "%s/%s", name, KEST_PROJECT_FILE);
+    bool wrote = manifest != NULL && write_file(path, manifest, json);
+
+    snprintf(path, sizeof(path), "%s/src/main.kest", name);
+    wrote = wrote && write_file(path,
+                                "module src.main\n"
+                                "\n"
+                                "import std.io\n"
+                                "\n"
+                                "fn main() -> i32 {\n"
+                                "    io.print(\"hello\")\n"
+                                "    return 0\n"
+                                "}\n",
+                                json);
+
+    // A test is a program that checks itself and answers with which check
+    // failed, which is what every example in this language is. There is no
+    // framework: a number is a place in a file.
+    snprintf(path, sizeof(path), "%s/tests/adding.kest", name);
+    wrote = wrote && write_file(path,
+                                "module tests.adding\n"
+                                "\n"
+                                "fn main() -> i32 {\n"
+                                "    if 1 + 1 != 2 {\n"
+                                "        return 1\n"
+                                "    }\n"
+                                "    return 0\n"
+                                "}\n",
+                                json);
+    kest_arena_free(arena);
+    if (!wrote) {
+        return 1;
+    }
+    if (json) {
+        printf("{\"schema\":%u,\"made\":\"%s\"}\n", (unsigned)KEST_JSON_SCHEMA,
+               name);
+    } else {
+        printf("made %s: a project, a program and a test\n", name);
+        printf("  cd %s && kest run src/main.kest\n", name);
+    }
+    return 0;
+}
+
+// What a project says, read back. `doctor` is the command somebody runs when
+// something is wrong and they do not know what: it says what this command line
+// is, where it looks for the library, whether it found it, what the project
+// says about itself and whether what the project names is there.
+static int look_over(const char *executable, const char *where, bool json) {
+    KestArena *arena = kest_arena_new();
+    if (arena == NULL) {
+        refused_at_the_words(json, "K0605", "out of memory");
+        return 1;
+    }
+    const char *library = kest_library_path(arena, executable);
+    const char *why = NULL;
+    KestProject *project = kest_project_read(arena, where == NULL ? "" : where,
+                                             &why);
+    uint32_t profile = 0;
+    const char *named = kest_profile(&profile);
+
+    bool wrong = false;
+    if (json) {
+        printf("{\"schema\":%u,\"version\":\"%s\",\"abi\":%u,\"json\":%u,"
+               "\"profile\":\"%s %u\",\"library\":",
+               (unsigned)KEST_JSON_SCHEMA, kest_version(), kest_abi_version(),
+               (unsigned)KEST_JSON_SCHEMA, named, profile);
+        kest_json_text(library, stdout);
+    } else {
+        printf("kest %s%s, abi %u, json %u, profile %s %u\n", kest_version(),
+               kest_checked() ? " checked" : "", kest_abi_version(),
+               (unsigned)KEST_JSON_SCHEMA, named, profile);
+        printf("library    %s\n", library);
+    }
+
+    // Whether the library is where it says it is, asked by reading one of its
+    // files rather than by looking at the directory: what matters is whether
+    // an import resolves.
+    char probe[1024];
+    snprintf(probe, sizeof(probe), "%sstd/io.kest", library);
+    FILE *file = fopen(probe, "rb");
+    bool found = file != NULL;
+    if (file != NULL) {
+        fclose(file);
+    }
+    if (!found) {
+        wrong = true;
+    }
+    if (json) {
+        printf(",\"libraryFound\":%s", found ? "true" : "false");
+    } else {
+        printf("           %s\n",
+               found ? "found, and `import std.io` will resolve"
+                     : "NOT found: set KEST_LIB, or install");
+    }
+
+    if (why != NULL) {
+        wrong = true;
+        if (json) {
+            printf(",\"project\":null,\"projectSaid\":");
+            kest_json_text(why, stdout);
+        } else {
+            printf("project    %s\n", why);
+        }
+    } else if (project == NULL) {
+        if (json) {
+            printf(",\"project\":null,\"projectSaid\":null");
+        } else {
+            printf("project    none here, which is fine: a file is a program\n");
+        }
+    } else {
+        FILE *entry = project->entry[0] == '\0' ? NULL
+                                                : fopen(project->entry, "rb");
+        bool entry_there = entry != NULL;
+        if (entry != NULL) {
+            fclose(entry);
+        }
+        if (!entry_there) {
+            wrong = true;
+        }
+        if (json) {
+            printf(",\"project\":{\"name\":");
+            kest_json_text(project->name, stdout);
+            printf(",\"entry\":");
+            kest_json_text(project->entry, stdout);
+            printf(",\"entryFound\":%s,\"kest\":", entry_there ? "true"
+                                                              : "false");
+            kest_json_text(project->needs_kest, stdout);
+            printf(",\"profile\":");
+            kest_json_text(project->profile, stdout);
+            printf(",\"sources\":[");
+            for (uint32_t i = 0; i < project->source_count; i++) {
+                fputs(i == 0 ? "" : ",", stdout);
+                kest_json_text(project->sources[i], stdout);
+            }
+            printf("]},\"projectSaid\":null");
+        } else {
+            printf("project    %s, from %s\n", project->name, project->path);
+            printf("entry      %s%s\n", project->entry,
+                   entry_there ? "" : "  NOT there");
+            printf("written    against kest %s, profile %s\n",
+                   project->needs_kest, project->profile);
+            for (uint32_t i = 0; i < project->source_count; i++) {
+                printf("source     %s\n", project->sources[i]);
+            }
+        }
+    }
+    if (json) {
+        printf(",\"wrong\":%s}\n", wrong ? "true" : "false");
+    } else if (!wrong) {
+        printf("nothing here is wrong\n");
+    }
+    kest_arena_free(arena);
+    return wrong ? 1 : 0;
+}
+
 static int run(const char *command, const char *executable, char **paths,
                int path_count, bool json, int32_t count, const int32_t *given,
                bool reset, size_t room, uint64_t fuel, bool costing) {
@@ -1925,7 +2149,11 @@ static int run(const char *command, const char *executable, char **paths,
     bool was_counted = false;
     Entered *bodies = NULL;
     uint32_t body_count = 0;
-    bool emitting = strcmp(command, "emit") == 0;
+    // `build` is `emit` with nothing printed: what a build produces is the
+    // knowledge that it compiles, because the bytecode is not a format
+    // anything else reads and what ships is the source. See D982.
+    bool building = strcmp(command, "build") == 0;
+    bool emitting = strcmp(command, "emit") == 0 || building;
     bool checking = strcmp(command, "check") == 0;
     bool calling = strcmp(command, "call") == 0;
     bool failed_to_choose = false;
@@ -1963,7 +2191,7 @@ static int run(const char *command, const char *executable, char **paths,
                 }
             }
         } else if (emitting) {
-            if (kest_build_emit(build) && !json) {
+            if (kest_build_emit(build) && !json && !building) {
                 kest_module_disassemble(&build->module, EVERY_CALL, stdout);
             }
             // In JSON it goes inside the object below, because a stream that
@@ -2474,7 +2702,7 @@ static int run(const char *command, const char *executable, char **paths,
             fputc(',', stdout);
             kest_program_dump_json(build->program, build->arena, stdout);
         }
-        if (emitting && build->compiled) {
+        if (emitting && !building && build->compiled) {
             // And what the machine will run, as one number. Said where the
             // instructions are said, because it is those and not the file they
             // came from. See D659.
@@ -2610,6 +2838,48 @@ static int run(const char *command, const char *executable, char **paths,
                      : (int)(exit_code & 0xff);
     kest_build_free(build);
     return status;
+}
+
+// Every program named, run for its answer. A test in this language is a
+// program that checks itself and answers with which check failed, which is
+// what every example here is: there is no framework, and a number is a place
+// in a file. See D982.
+static int run_tests(const char *executable, char **paths, int path_count,
+                     bool json, size_t room, uint64_t fuel) {
+    int failed = 0;
+    if (json) {
+        printf("{\"schema\":%u,\"tests\":[", (unsigned)KEST_JSON_SCHEMA);
+    }
+    for (int i = 0; i < path_count; i++) {
+        char *one[1] = {paths[i]};
+        // Each on its own, because a program that will not compile is one
+        // program that will not compile and the rest still run.
+        int status = run("run", executable, one, 1, false, 0, NULL, false,
+                         room, fuel, false);
+        if (status != 0) {
+            failed++;
+        }
+        if (json) {
+            printf("%s{\"file\":", i == 0 ? "" : ",");
+            kest_json_text(paths[i], stdout);
+            printf(",\"answered\":%d}", status);
+        } else {
+            printf("%-40s %s\n", paths[i],
+                   status == 0 ? "passed" : "FAILED");
+            if (status != 0) {
+                printf("    it answered %d, which is the check that failed\n",
+                       status);
+            }
+        }
+    }
+    if (json) {
+        printf("],\"failed\":%d,\"ran\":%d}\n", failed, path_count);
+    } else if (path_count == 0) {
+        printf("no programs were named, so nothing ran\n");
+    } else {
+        printf("%d of %d passed\n", path_count - failed, path_count);
+    }
+    return failed == 0 ? 0 : 1;
 }
 
 int main(int argc, char **argv) {
@@ -2809,17 +3079,68 @@ int main(int argc, char **argv) {
         return status;
     }
 
+    if (strcmp(argv[1], "test") == 0) {
+        int status = run_tests(argv[0], paths, path_count, json, room, fuel);
+        free(paths);
+        free(given);
+        return status;
+    }
+
+    // A project made, and a project looked over. Neither takes a file: `new`
+    // takes a name and `doctor` takes a directory or nothing at all.
+    if (strcmp(argv[1], "new") == 0) {
+        int status = make_project(argc > 2 ? argv[2] : NULL, json);
+        free(paths);
+        free(given);
+        return status;
+    }
+
+    if (strcmp(argv[1], "doctor") == 0) {
+        int status = look_over(argv[0], argc > 2 ? argv[2] : "", json);
+        free(paths);
+        free(given);
+        return status;
+    }
+
     if (strcmp(argv[1], "check") == 0 || strcmp(argv[1], "emit") == 0 ||
         strcmp(argv[1], "run") == 0 || strcmp(argv[1], "tick") == 0 ||
-        strcmp(argv[1], "profile") == 0 || strcmp(argv[1], "call") == 0) {
+        strcmp(argv[1], "profile") == 0 || strcmp(argv[1], "build") == 0 ||
+        strcmp(argv[1], "call") == 0) {
+        // Without a file, what the project says to work on. A project is a
+        // thing to be inside rather than a thing to name at every command, so
+        // `kest build` in a directory with one is `kest build` on its entry.
+        // See D982.
+        char *from_project = NULL;
         if (path_count == 0) {
-            refused_at_the_words(json, "K0649", "`%s` needs a file", argv[1]);
+            KestArena *asking = kest_arena_new();
+            const char *why = NULL;
+            KestProject *here =
+                asking == NULL ? NULL : kest_project_read(asking, "", &why);
+            if (here != NULL && here->entry[0] != '\0') {
+                size_t length = strlen(here->entry);
+                from_project = malloc(length + 1);
+                if (from_project != NULL) {
+                    memcpy(from_project, here->entry, length + 1);
+                    paths[0] = from_project;
+                    path_count = 1;
+                }
+            }
+            if (asking != NULL) {
+                kest_arena_free(asking);
+            }
+        }
+        if (path_count == 0) {
+            refused_at_the_words(json, "K0649",
+                                 "`%s` needs a file, and there is no project "
+                                 "here saying which",
+                                 argv[1]);
             free(paths);
             return usage(json);
         }
         int status =
             run(argv[1], argv[0], paths, path_count, json, count, given,
                 reset, room, fuel, costing);
+        free(from_project);
         free(paths);
         free(given);
         return status;

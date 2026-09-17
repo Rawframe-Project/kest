@@ -4759,10 +4759,10 @@ for file in "$@"; do""",
         # this went unnoticed the first time.
         "what": "a listing written beside the object a tool reads",
         "file": "src/main.c",
-        "from": r"""            if (kest_build_emit(build) && !json) {
+        "from": r"""            if (kest_build_emit(build) && !json && !building) {
                 kest_module_disassemble(&build->module, EVERY_CALL, stdout);
             }""",
-        "to": r"""            if (kest_build_emit(build)) {
+        "to": r"""            if (kest_build_emit(build) && !building) {
                 kest_module_disassemble(&build->module, EVERY_CALL, stdout);
             }""",
         "make": ["kest"],
@@ -9967,6 +9967,20 @@ fn main() -> i32 {
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "into this host's bytes",
+    },
+    {
+        # A project made with no manifest in it. `kest new` writes four things
+        # and a project without the first of them is a directory with some
+        # Kest in it: every command that reads a project reads nothing, and
+        # each of them carries on as though a file had been named. See D982.
+        "what": "a project made without the thing that makes it one",
+        "file": "src/main.c",
+        "from": """    const char *manifest = kest_project_written(arena, name);""",
+        "to": """    const char *manifest = "";""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "the workflow a reader starts with does not work",
     },
     {
         # A run that says it called nothing. The counts are taken at the two
@@ -15342,7 +15356,10 @@ def put_out_of_order(hole):
                 # this saves is nothing rather than everything.
                 shutil.copy2(where, to)
 
-        for what in ("src", "include", "lib", "tools", "docs"):
+        # `editors` comes too, because `check-tables.sh` reads the grammar in
+        # it and a check that cannot find what it reads says nothing about the
+        # hole it was given. See D978.
+        for what in ("src", "include", "lib", "tools", "docs", "editors"):
             shutil.copytree(what, os.path.join(work, what),
                             copy_function=bring)
         # The two hosts are making into this one, so they are made rather than
