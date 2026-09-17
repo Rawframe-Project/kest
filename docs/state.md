@@ -53,8 +53,11 @@ The mission's order. `/home/kest/mission/STATE.md` carries which one is open.
                                          which phase 2 has now opened:
                                          D940, D954, D955, D956, D957
     4 validation correction            done   D944
-    5 backend decision                 done   D958, which is: keep the
-                                              stack backend for v1
+    5 backend decision                 done   D958 counted it, D961
+                                              measured a push, and D963
+                                              built the second backend and
+                                              measured it: 1.35 times
+                                              slower, so keep the stack one
     6 a determinism profile that is true  done   D941, D942, D943
     7 identity, schema, reload         done   D945 to D949
     8 host reality and portability     done   D949 to D953

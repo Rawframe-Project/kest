@@ -29932,14 +29932,14 @@ measurements of something else. This is the thing itself: a second backend,
 reading the same bodies D962 made, and the same work run by both machines in
 the same process.
 
-**What was built.** `src/slots.h` on the branch `slots-experiment` is a narrow
+**What was built.** On the branch `slots-experiment`, `slots.h` is a narrow
 three-address instruction set: one byte an operand, which is either a place in
 the frame or a value the chunk holds. A frame is one run of slots — the names a
 body declared, and above them a place for every value it makes — and where a
 value goes is the depth at which it was made, which `kest_ir_windows` answers
 for either backend. There is no register allocator, because a body's values are
 made and read in the order a tree walk makes them and that order already gives
-each of them a place. `src/slots.c` writes it, refusing a body it cannot write;
+each of them a place. `slots.c` writes it, refusing a body it cannot write;
 `execute_slots` in `src/vm.c` runs it, beside the machine that was already
 there and using the same guards, so a refusal is the same refusal. A program is
 run by it when the entry and everything it calls were written for it.

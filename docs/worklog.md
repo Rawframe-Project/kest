@@ -35960,7 +35960,7 @@ hundred.
 ## The second machine, built and measured
 
 The mission's section 5 asks for a slot backend rather than an argument about
-one, so there is one: `src/slots.c` and `execute_slots`, on the branch
+one, so there is one: `slots.c` and `execute_slots`, on the branch
 `slots-experiment`, reading the same bodies the stack backend reads. It took
 the shape the bodies already had — a value is made and read in order, so where
 it goes is the depth at which it was made, and there is no allocator.
