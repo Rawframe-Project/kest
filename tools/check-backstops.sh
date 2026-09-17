@@ -1726,7 +1726,7 @@ tokens   what a token is and what it carries""",
                  r"""    {"return", U16}, {"return.none", U16},"""],
         "make": [],
         "tool": "tools/check-tables.sh",
-        "caught": "instructions: 155 kinds and 156 names",
+        "caught": "instructions: 157 kinds and 158 names",
     },
     {
         # And the same for the tokens, which is the other list this rule was
