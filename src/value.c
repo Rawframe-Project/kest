@@ -652,15 +652,14 @@ int32_t kest_module_layout(KestModule *module, const KestType *type) {
     if (pieces == NULL) {
         return -1;
     }
-    describe(module->arena, pieces, 0, type, 0, NULL);
-
     if (!lay_out_cases(module, type)) {
         return -1;
     }
 
     KestLayout *layout = &module->layouts[module->layout_count];
     layout->pieces = pieces;
-    layout->count = slots;
+    layout->count = describe(module->arena, pieces, 0, type, 0, NULL);
+    layout->slots = slots;
     layout->type = type;
     layout->tagged = holds_a_tag(type);
     layout->by_the_type = by_the_type(type);
@@ -1363,7 +1362,6 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_ROOM:
     case KEST_OP_ADD:
     case KEST_OP_NEW_STORE:
-    case KEST_OP_TEXT_SLICE:
     case KEST_OP_TEXT_I:
     case KEST_OP_TEXT_U:
     case KEST_OP_TEXT_F:
@@ -1402,6 +1400,7 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_TEXT_LEN:
     case KEST_OP_TEXT_AT:
     case KEST_OP_TEXT_IN:
+    case KEST_OP_TEXT_SLICE:
     case KEST_OP_TEXT_REST:
     case KEST_OP_TEXT_MATCHES:
     case KEST_OP_TEXT_FIND:

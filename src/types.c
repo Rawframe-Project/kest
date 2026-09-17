@@ -345,13 +345,21 @@ static bool add_primitive(KestProgram *program, const char *name,
     if (type == NULL) {
         return false;
     }
-    type->slots = tag == KEST_T_VOID ? 0 : 1;
-    // A handle and a piece of text are a machine word. A number is what it
-    // says it is.
-    type->byte_size = tag == KEST_T_VOID ? 0
-                      : width == 0 || width == 1 ? (tag == KEST_T_BOOL ? 1 : 8)
-                                                 : (uint16_t)(width / 8);
-    type->byte_align = type->byte_size == 0 ? 1 : type->byte_size;
+    // A piece of text is two: what it is made of and how many bytes that is.
+    // Its length is part of it rather than something to go and count, which is
+    // what makes `len` a read and a cut free. See D964.
+    type->slots = tag == KEST_T_VOID ? 0 : (tag == KEST_T_TEXT ? 2 : 1);
+    // A handle is a machine word. A piece of text is two of them where it is
+    // laid out in memory, for the same reason it is two slots: what it is made
+    // of, and how many bytes that is. A number is what it says it is.
+    type->byte_size = tag == KEST_T_VOID   ? 0
+                      : tag == KEST_T_TEXT ? 16
+                      : width == 0 || width == 1
+                          ? (tag == KEST_T_BOOL ? 1 : 8)
+                          : (uint16_t)(width / 8);
+    type->byte_align = type->byte_size == 0 ? 1
+                       : tag == KEST_T_TEXT ? 8
+                                            : type->byte_size;
     type->name = name;
     type->width = width;
     type->is_signed = is_signed;
@@ -1088,6 +1096,17 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
         return 0;
     }
     out[0] = one;
+    // A piece of text is two: what it is made of and how many bytes that is.
+    // The fold above works out the first and this is the second, which is the
+    // one place a value worked out where it was written has a width that is
+    // not one. See D964.
+    if (type != NULL && type->tag == KEST_T_TEXT) {
+        if (room < 2) {
+            return 0;
+        }
+        out[1].integer = one.text == NULL ? 0 : (int64_t)strlen(one.text);
+        return 2;
+    }
     return 1;
 }
 

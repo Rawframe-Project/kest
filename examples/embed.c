@@ -131,7 +131,13 @@ typedef struct {
 
 static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
-    fputs(frame[0].text, (FILE *)context);
+    uint32_t length = 0;
+    const char *bytes = kest_text_bytes(frame, &length);
+    // Written by its length rather than to a nought: text cut out of the
+    // middle of some does not end in one. See D964.
+    if (bytes != NULL && length > 0) {
+        fwrite(bytes, 1, length, (FILE *)context);
+    }
 }
 
 // What this host decides with, and the reason it is a thing rather than a
@@ -266,10 +272,11 @@ static void engine_who(KestValue *frame, KestRuntime *runtime, void *context) {
     const char *said = "one of the host's";
     if (decider != NULL && !decider->answers_as_the_machine) {
         frame[0].text = said;
+        frame[1].integer = (int64_t)strlen(said);
     } else {
-        frame[0] = kest_text(runtime, said, (uint32_t)strlen(said));
+        kest_text(runtime, said, (uint32_t)strlen(said), frame);
     }
-    frame[1].integer = decider != NULL && decider->answers_too_wide
+    frame[2].integer = decider != NULL && decider->answers_too_wide
                            ? (int64_t)1 << 40
                            : 3;
 }
@@ -412,9 +419,10 @@ static void engine_name(KestValue *frame, KestRuntime *runtime, void *context) {
         // buffer would not be, which is the difference nothing at this
         // crossing could see. See D717.
         frame[0].text = said;
+        frame[1].integer = (int64_t)strlen(said);
         return;
     }
-    frame[0] = kest_text(runtime, said, (uint32_t)strlen(said));
+    kest_text(runtime, said, (uint32_t)strlen(said), frame);
 }
 
 // Whether the program lays a type out where this host has it. The lend
@@ -885,7 +893,9 @@ static bool frame_adds_up(KestRuntime *runtime, int32_t entry,
                 return false;
             }
         }
-        at += layout->count;
+        // How wide it is rather than how many pieces it has: a piece of text
+        // is one piece and two slots. See D964.
+        at += layout->slots;
     }
     // Past the last one there is nothing, and where a result written over the
     // arguments would start is what they come to.
@@ -901,7 +911,7 @@ static bool frame_adds_up(KestRuntime *runtime, int32_t entry,
         return false;
     }
     const KestLayout *gives = kest_frame_gives(runtime, entry);
-    uint32_t back = gives == NULL ? 0 : gives->count;
+    uint32_t back = gives == NULL ? 0 : gives->slots;
     uint32_t wider = at > back ? at : back;
     if (kest_frame_slots(runtime, entry) != wider) {
         fprintf(stderr, "`%s` needs a frame %u wide and what it takes (%u) "
@@ -3153,7 +3163,7 @@ int main(int argc, char **argv) {
         return 1;
     }
     decider.answers_too_wide = false;
-    if (!said_that(engine.runtime, "K0652", "`i32` in slot 1")) {
+    if (!said_that(engine.runtime, "K0652", "`i32` in slot 2")) {
         return 1;
     }
     printf("and a crossing that answered a number too wide for the field it "
@@ -3523,8 +3533,10 @@ int main(int argc, char **argv) {
     // And text handed over with no bytes to copy, which comes back as an
     // empty piece of text — the same thing a host handing over an empty one
     // on purpose gets. See D436.
-    if (kest_text(engine.runtime, NULL, 4).text == NULL ||
-        kest_text(engine.runtime, NULL, 4).text[0] != '\0') {
+    KestValue no_bytes[2] = {{0}, {0}};
+    if (kest_text(engine.runtime, NULL, 4, no_bytes) ||
+        no_bytes[0].text == NULL || no_bytes[0].text[0] != '\0' ||
+        no_bytes[1].integer != 0) {
         fprintf(stderr, "text made of nothing was not empty\n");
         return 1;
     }
@@ -4451,9 +4463,11 @@ int main(int argc, char **argv) {
         }
     }
 
-    KestValue name = kest_text(engine.runtime, "the engine", 10);
+    KestValue name[2] = {{0}, {0}};
+    kest_text(engine.runtime, "the engine", 10, name);
     size_t paid = kest_heap_used(engine.runtime);
-    if (name.text == NULL || strcmp(name.text, "the engine") != 0) {
+    if (name[0].text == NULL || strcmp(name[0].text, "the engine") != 0 ||
+        name[1].integer != 10) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
@@ -4463,8 +4477,9 @@ int main(int argc, char **argv) {
     // program never sees it — what comes back is empty and the machine says
     // which byte it was.
     const char cut[6] = {'h', 'a', 'l', 0, 'f', 0};
-    KestValue halved = kest_text(engine.runtime, cut, 5);
-    if (halved.text == NULL || halved.text[0] != '\0') {
+    KestValue halved[2] = {{0}, {0}};
+    kest_text(engine.runtime, cut, 5, halved);
+    if (halved[0].text == NULL || halved[0].text[0] != '\0') {
         fprintf(stderr, "bytes with a nought among them were taken as text\n");
         return 1;
     }
@@ -4473,19 +4488,25 @@ int main(int argc, char **argv) {
     }
     printf("and refused %zu bytes with a nought among them\n", sizeof(cut) - 1);
 
-    KestValue again = kest_text(engine.runtime, "the engine", 10);
-    if (again.text == NULL || kest_heap_used(engine.runtime) == paid) {
+    KestValue again[2] = {{0}, {0}};
+    kest_text(engine.runtime, "the engine", 10, again);
+    if (again[0].text == NULL || kest_heap_used(engine.runtime) == paid) {
         fprintf(stderr, "saying the same bytes twice cost nothing\n");
         return 1;
     }
-    printf("host said %zu bytes of text and paying twice cost %zu more\n",
-           strlen(name.text), kest_heap_used(engine.runtime) - paid);
+    {
+        uint32_t wide = 0;
+        kest_text_bytes(name, &wide);
+        printf("host said %u bytes of text and paying twice cost %zu more\n",
+               wide, kest_heap_used(engine.runtime) - paid);
+    }
 
     // And what a host must not hand over: bytes of its own, which the program
     // would hold for as long as it liked while this host got on with its life.
     // Nothing about the pointer says where it came from, so what says it is
     // the machine asking whether it gave that address out.
-    engine.frame[0] = name;
+    engine.frame[0] = name[0];
+    engine.frame[1] = name[1];
     if (!kest_call(engine.runtime, engine.entry[NAMED], engine.frame,
                    sizeof(engine.frame) / sizeof(engine.frame[0]))) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
@@ -4533,7 +4554,7 @@ int main(int argc, char **argv) {
     // heap it is on, which is as long as nothing throws that away — so a host
     // holding a name between frames asks the machine rather than remembering
     // for it.
-    if (!kest_still_holds(engine.runtime, name)) {
+    if (!kest_still_holds(engine.runtime, name[0])) {
         fprintf(stderr, "the machine had lost text nothing had thrown away\n");
         return 1;
     }
@@ -5198,13 +5219,14 @@ int main(int argc, char **argv) {
     // first of its two slots is a word the machine has to own — the same
     // question a piece of text handed over on its own gets, one field in.
     // See D718.
-    KestValue a_name = kest_text(engine.runtime, "kept", 4);
-    if (a_name.text == NULL) {
+    KestValue a_name[2] = {{0}, {0}};
+    if (!kest_text(engine.runtime, "kept", 4, a_name)) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
-    engine.frame[0] = a_name;
-    engine.frame[1].integer = 5;
+    engine.frame[0] = a_name[0];
+    engine.frame[1] = a_name[1];
+    engine.frame[2].integer = 5;
     if (!asks(&engine, GREETS) || engine.frame[0].integer != 9) {
         fprintf(stderr, "a shape with a name in it greeted %lld\n",
                 (long long)engine.frame[0].integer);
@@ -5623,7 +5645,7 @@ int main(int argc, char **argv) {
     // And after the heap that name was on was thrown away. Nothing about the
     // pointer this host is holding changed; what changed is whose memory it
     // is, which is the one thing a host cannot see for itself.
-    if (kest_still_holds(engine.runtime, name)) {
+    if (kest_still_holds(engine.runtime, name[0])) {
         fprintf(stderr, "the machine still had text it had thrown away\n");
         return 1;
     }
@@ -5842,7 +5864,7 @@ int main(int argc, char **argv) {
     memset(words, 0, sizeof(words));
     engine.frame[0] = kest_borrow(engine.runtime, words, sizeof(words), "u8", 1);
     engine.frame[1].integer = 0;
-    engine.frame[2] = kest_text(engine.runtime, "kest", 4);
+    kest_text(engine.runtime, "kest", 4, &engine.frame[2]);
     if (engine.frame[0].object == NULL || engine.frame[2].text == NULL ||
         !asks(&engine, SAY_INTO) || engine.frame[0].integer != 4) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
@@ -5878,30 +5900,32 @@ int main(int argc, char **argv) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
-    KestValue first_word = kest_text(engine.runtime, "the engine", 10);
-    if (first_word.text == NULL || !kest_heap_reset(engine.runtime)) {
+    KestValue first_word[2] = {{0}, {0}};
+    kest_text(engine.runtime, "the engine", 10, first_word);
+    if (first_word[0].text == NULL || !kest_heap_reset(engine.runtime)) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
-    if (kest_still_holds(engine.runtime, first_word)) {
+    if (kest_still_holds(engine.runtime, first_word[0])) {
         fprintf(stderr, "text survived the heap it was on\n");
         return 1;
     }
-    KestValue next_word = kest_text(engine.runtime, "the second", 10);
-    if (next_word.text == NULL) {
+    KestValue next_word[2] = {{0}, {0}};
+    kest_text(engine.runtime, "the second", 10, next_word);
+    if (next_word[0].text == NULL) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
-    if (next_word.text != first_word.text) {
+    if (next_word[0].text != first_word[0].text) {
         fprintf(stderr,
                 "the first thing on an emptied heap went somewhere else, so "
                 "this host has nothing to say about the text it kept\n");
         return 1;
     }
-    if (!kest_still_holds(engine.runtime, first_word) ||
-        strcmp(first_word.text, "the second") != 0) {
+    if (!kest_still_holds(engine.runtime, first_word[0]) ||
+        strcmp(first_word[0].text, "the second") != 0) {
         fprintf(stderr, "text kept across a reset reads `%s`\n",
-                first_word.text);
+                first_word[0].text);
         return 1;
     }
     if (!said_nothing(engine.runtime, "a heap was thrown away twice")) {
@@ -5909,7 +5933,7 @@ int main(int argc, char **argv) {
     }
     printf("and text kept across a heap being thrown away reads what the "
            "machine made next: `%s`\n",
-           first_word.text);
+           first_word[0].text);
 
     // And the same for a lend, which the paragraph above says has the same
     // shape and this host had never shown. It has one thing text has not: a
@@ -5965,23 +5989,24 @@ int main(int argc, char **argv) {
         return 1;
     }
     KestValue written = engine.frame[0];
-    KestValue made = kest_text(engine.runtime, "made while running", 18);
-    if (made.text == NULL) {
+    KestValue made[2] = {{0}, {0}};
+    kest_text(engine.runtime, "made while running", 18, made);
+    if (made[0].text == NULL) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
     if (kest_kept_where(engine.runtime, written) != KEST_KEPT_PROGRAM ||
-        kest_kept_where(engine.runtime, made) != KEST_KEPT_HEAP) {
+        kest_kept_where(engine.runtime, made[0]) != KEST_KEPT_HEAP) {
         fprintf(stderr, "text out of the file is %s and text made while "
                         "running is %s\n",
                 keeping(kest_kept_where(engine.runtime, written)),
-                keeping(kest_kept_where(engine.runtime, made)));
+                keeping(kest_kept_where(engine.runtime, made[0])));
         return 1;
     }
     // Both say yes to the question that has one answer, which is why that one
     // cannot be what a host keeping a value between frames reads.
     if (!kest_still_holds(engine.runtime, written) ||
-        !kest_still_holds(engine.runtime, made)) {
+        !kest_still_holds(engine.runtime, made[0])) {
         fprintf(stderr, "the machine has text it says it has not\n");
         return 1;
     }
@@ -5990,7 +6015,7 @@ int main(int argc, char **argv) {
         return 1;
     }
     // And what the two are worth afterwards, which is what the asking was for.
-    if (kest_kept_where(engine.runtime, made) != KEST_KEPT_NOWHERE) {
+    if (kest_kept_where(engine.runtime, made[0]) != KEST_KEPT_NOWHERE) {
         fprintf(stderr, "text made while running outlived the heap\n");
         return 1;
     }
@@ -6817,8 +6842,9 @@ int main(int argc, char **argv) {
         char many[512];
         memset(many, 'x', sizeof(many) - 1);
         many[sizeof(many) - 1] = '\0';
-        if (kest_text(starved, many, sizeof(many) - 1).text == NULL ||
-            kest_text(starved, many, sizeof(many) - 1).text[0] != '\0') {
+        KestValue too_much[2] = {{0}, {0}};
+        if (kest_text(starved, many, sizeof(many) - 1, too_much) ||
+            too_much[0].text == NULL || too_much[0].text[0] != '\0') {
             fprintf(stderr, "text was made where there was no room for it\n");
             return 1;
         }
@@ -7045,7 +7071,9 @@ int main(int argc, char **argv) {
         char out[8];
         KestValue frame[4] = {{0}};
         KestLimits allowed;
-        bool quiet = kest_text(NULL, "hi", 2).text != NULL &&
+        KestValue nowhere[2] = {{0}, {0}};
+        bool quiet = !kest_text(NULL, "hi", 2, nowhere) &&
+                     nowhere[0].text != NULL &&
                      kest_borrow(NULL, numbers, 2, "i32", 4).object == NULL &&
                      !kest_lend_ends(NULL, nothing) &&
                      !kest_still_holds(NULL, nothing) &&

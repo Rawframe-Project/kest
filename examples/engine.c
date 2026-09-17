@@ -88,14 +88,14 @@ static void engine_watch(KestValue *frame, KestRuntime *runtime,
 // the call refuses at the instruction that made it, with these words under it.
 // And what a door of this host's reads when the program hands it text: the
 // bytes and how many there are, asked for rather than measured here. What that
-// buys is a host that does not have to be rewritten the day this language
-// carries a length beside the bytes. See D955.
+// buys is a host that did not have to be rewritten the day this language
+// started carrying a length beside the bytes, which is the day D964 came.
 static void engine_named(KestValue *frame, KestRuntime *runtime,
                          void *context) {
     (void)runtime;
     (void)context;
     uint32_t length = 0;
-    const char *bytes = kest_text_bytes(frame[0], &length);
+    const char *bytes = kest_text_bytes(frame, &length);
     frame[0].integer = bytes == NULL ? 0 : (int64_t)length;
 }
 

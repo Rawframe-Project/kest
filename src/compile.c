@@ -850,11 +850,16 @@ static void value_classes(const KestType *type, uint8_t *classes,
         }
         return;
     }
-    classes[(*at)++] =
-        type != NULL && type->tag == KEST_T_FLOAT
-            ? KEST_CONST_FLOAT
-            : (type != NULL && type->tag == KEST_T_TEXT ? KEST_CONST_TEXT
-                                                        : KEST_CONST_INT);
+    // A piece of text is two slots: what it is made of, and how many bytes
+    // that is. See D964.
+    if (type != NULL && type->tag == KEST_T_TEXT) {
+        classes[(*at)++] = KEST_CONST_TEXT;
+        classes[(*at)++] = KEST_CONST_INT;
+        return;
+    }
+    classes[(*at)++] = type != NULL && type->tag == KEST_T_FLOAT
+                           ? KEST_CONST_FLOAT
+                           : KEST_CONST_INT;
 }
 
 // The run put in the chunk beside the code, with what each of its slots means
@@ -920,6 +925,16 @@ static void emit_value_slots(Compiler *compiler, const KestType *type,
     stack_push(compiler, slots);
     uint32_t at = ir_emit(compiler, KEST_IR_CONST, type, 0, type, slots, span);
     ir_carries(compiler, at, (uint16_t)first, slots, 0);
+}
+
+// A piece of text the body holds, which is two values: what it is made of and
+// how many bytes that is. See D964.
+static void emit_text_constant(Compiler *compiler, const char *bytes,
+                               const KestType *type, KestSpan span) {
+    KestValue held[2] = {{0}, {0}};
+    held[0].text = bytes == NULL ? "" : bytes;
+    held[1].integer = (int64_t)strlen(held[0].text);
+    emit_value_slots(compiler, type, held, 2, span);
 }
 
 // One value the body holds. The same operation as a run of them, because one
@@ -1756,12 +1771,16 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
             fault(compiler, span, "this is an operator with no instruction");
             return;
         }
+        // Two values of one width come off and one truth goes on, whatever
+        // the width is: a piece of text is two slots now and an enum is as
+        // many as its widest case. See D964.
+        uint16_t wide = value_slots(operand);
+        if (wide > 1) {
+            stack_pop(compiler, (uint16_t)((wide - 1) * 2));
+        }
         bool whole = operand != NULL && (operand->tag == KEST_T_ENUM ||
                                          operand->tag == KEST_T_STRUCT ||
                                          operand->tag == KEST_T_FIXED);
-        if (whole) {
-            stack_pop(compiler, (uint16_t)((operand->slots - 1) * 2));
-        }
         uint32_t at = ir_emit(compiler, how, operand, 2, expr->type, 1, span);
         if (whole) {
             ir_carries(compiler, at, layout_of(compiler, operand), 0, 0);
@@ -1800,20 +1819,24 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         } else if (subject != NULL && subject->tag == KEST_T_TEXT) {
             counts = KEST_IR_TEXT_LEN;
         }
+        stack_pop(compiler, value_slots(subject));
+        stack_push(compiler, 1);
         ir_emit(compiler, counts, subject, 1, expr->type, 1, expr->span);
         return true;
     }
 
+    // A piece of text is two slots, so what these take and leave is counted
+    // rather than written down as one each. See D964.
     if (kest_word_same("slice", name, length)) {
-        stack_pop(compiler, 3);
-        stack_push(compiler, 1);
-        ir_emit(compiler, KEST_IR_TEXT_SLICE, expr->type, 3, expr->type, 1,
+        stack_pop(compiler, 4);
+        stack_push(compiler, 2);
+        ir_emit(compiler, KEST_IR_TEXT_SLICE, expr->type, 3, expr->type, 2,
                 expr->span);
         return true;
     }
 
     if (kest_word_same("matches", name, length)) {
-        stack_pop(compiler, 3);
+        stack_pop(compiler, 5);
         stack_push(compiler, 1);
         ir_emit(compiler, KEST_IR_TEXT_MATCHES, expr->type, 3, expr->type, 1,
                 expr->span);
@@ -1821,9 +1844,9 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
     }
 
     if (kest_word_same("rest", name, length)) {
-        stack_pop(compiler, 2);
-        stack_push(compiler, 1);
-        ir_emit(compiler, KEST_IR_TEXT_REST, expr->type, 2, expr->type, 1,
+        stack_pop(compiler, 3);
+        stack_push(compiler, 2);
+        ir_emit(compiler, KEST_IR_TEXT_REST, expr->type, 2, expr->type, 2,
                 expr->span);
         return true;
     }
@@ -1836,7 +1859,7 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
             emit_constant(compiler, zero, KEST_CONST_INT, whole_type(compiler),
                           expr->span);
         }
-        stack_pop(compiler, 3);
+        stack_pop(compiler, 5);
         stack_push(compiler, 2);
         ir_emit(compiler, KEST_IR_TEXT_FIND, expr->type, 3, expr->type, 2,
                 expr->span);
@@ -1906,9 +1929,8 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         bool whole = of != NULL && (of->tag == KEST_T_ENUM ||
                                     of->tag == KEST_T_STRUCT ||
                                     of->tag == KEST_T_FIXED);
-        if (whole) {
-            stack_pop(compiler, (uint16_t)(value_slots(of) - 1));
-        }
+        stack_pop(compiler, value_slots(of));
+        stack_push(compiler, 1);
         uint32_t at =
             ir_emit(compiler, KEST_IR_HASH, of, 1, expr->type, 1, expr->span);
         if (whole) {
@@ -2248,7 +2270,9 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
     }
     if (callee->type != NULL && callee->type->tag == KEST_T_TEXT &&
         expr->call.arg_count == 1) {
-        ir_emit(compiler, KEST_IR_TEXT_FROM, callee->type, 1, callee->type, 1,
+        stack_pop(compiler, 1);
+        stack_push(compiler, 2);
+        ir_emit(compiler, KEST_IR_TEXT_FROM, callee->type, 1, callee->type, 2,
                 expr->span);
         return;
     }
@@ -2393,7 +2417,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         KestValue value = {0};
         KestSpan content = {expr->span.offset + 1, expr->span.length - 2};
         value.text = literal_text(compiler, content);
-        emit_constant(compiler, value, KEST_CONST_TEXT, expr->type, expr->span);
+        emit_text_constant(compiler, value.text, expr->type, expr->span);
         break;
     }
     case KEST_EXPR_BYTE: {
@@ -2698,7 +2722,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         const KestType *one = object == NULL || object->element == NULL
                                   ? expr->type
                                   : object->element;
-        stack_pop(compiler, 2);
+        stack_pop(compiler, (uint16_t)(value_slots(object) + 1));
         if (object != NULL && object->tag == KEST_T_TEXT) {
             stack_push(compiler, 1);
             ir_emit(compiler, KEST_IR_TEXT_AT, object, 2, expr->type, 1,
@@ -2720,7 +2744,8 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             if (part->value == NULL) {
                 KestValue value = {0};
                 value.text = literal_text(compiler, part->text);
-                emit_constant(compiler, value, KEST_CONST_TEXT, expr->type, expr->span);
+                emit_text_constant(compiler, value.text, expr->type,
+                                   expr->span);
                 continue;
             }
             compile_expr(compiler, part->value);
@@ -2731,27 +2756,27 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             // A set of bits is written the way it is built, so the names it
             // holds have to come with it. The layout already carries the
             // type, so nothing new is stored for it.
-            if (type->tag == KEST_T_FLAGS || type->tag == KEST_T_ENUM ||
-                type->tag == KEST_T_OPTIONAL ||
-                type->tag == KEST_T_STRUCT || type->tag == KEST_T_FIXED) {
-                // A run of slots whose text is one, so what the walk of the
-                // parts counts has to come back to one. An optional is the
-                // same shape: what it holds, and a tag after it.
-                stack_pop(compiler, (uint16_t)(value_slots(type) - 1));
-                uint32_t written = ir_emit(compiler, KEST_IR_TEXT_OF, type, 1,
-                                           expr->type, 1, expr->span);
+            // A run of slots whose text is a piece of text, so what the
+            // walk of the parts counts has to come back to the two slots one
+            // is. An optional is the same shape: what it holds, and a tag
+            // after it. See D964.
+            bool laid_out = type->tag == KEST_T_FLAGS ||
+                            type->tag == KEST_T_ENUM ||
+                            type->tag == KEST_T_OPTIONAL ||
+                            type->tag == KEST_T_STRUCT ||
+                            type->tag == KEST_T_FIXED;
+            stack_pop(compiler, value_slots(type));
+            stack_push(compiler, 2);
+            uint32_t written = ir_emit(compiler, KEST_IR_TEXT_OF, type, 1,
+                                       expr->type, 2, expr->span);
+            if (laid_out) {
                 ir_carries(compiler, written, layout_of(compiler, type), 0, 0);
-                continue;
             }
-            // What a number is written as is read off its type, so there is
-            // one operation here and not four.
-            ir_emit(compiler, KEST_IR_TEXT_OF, type, 1, expr->type, 1,
-                    expr->span);
         }
-        stack_pop(compiler, (uint16_t)expr->text.count);
-        stack_push(compiler, 1);
+        stack_pop(compiler, (uint16_t)(expr->text.count * 2));
+        stack_push(compiler, 2);
         uint32_t joined = ir_emit(compiler, KEST_IR_TEXT_JOIN, expr->type,
-                                  (uint16_t)expr->text.count, expr->type, 1,
+                                  (uint16_t)expr->text.count, expr->type, 2,
                                   expr->span);
         ir_carries(compiler, joined, (uint16_t)expr->text.count, 0, 0);
         break;
@@ -3580,12 +3605,15 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         uint16_t slots = compiler->next_slot;
         compiler->depth++;
 
-        uint16_t walked_slot = reserve_slot(compiler, 1);
+        // How wide the thing being walked is: a piece of text is two slots
+        // and everything else a walk goes over is one. See D964.
+        uint16_t walked = value_slots(sequence);
+        uint16_t walked_slot = reserve_slot(compiler, walked);
         uint16_t index_slot = reserve_slot(compiler, 1);
 
         compile_expr(compiler, stmt->each->sequence);
-        stack_pop(compiler, 1);
-        store_slots(compiler, walked_slot, 1, NULL, stmt->span);
+        stack_pop(compiler, walked);
+        store_slots(compiler, walked_slot, walked, sequence, stmt->span);
 
         KestValue zero = {0};
         emit_constant(compiler, zero, KEST_CONST_INT, whole_type(compiler), stmt->span);
@@ -3609,8 +3637,11 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
                 emit_constant(compiler, names_count, KEST_CONST_INT, whole_type(compiler),
                               stmt->span);
             } else {
+                stack_push(compiler, walked);
+                load_slots(compiler, walked_slot, walked, sequence,
+                           stmt->span);
+                stack_pop(compiler, walked);
                 stack_push(compiler, 1);
-                load_slots(compiler, walked_slot, 1, sequence, stmt->span);
                 ir_emit(compiler,
                         over_text ? KEST_IR_TEXT_LEN : KEST_IR_LEN, sequence,
                         1, whole_type(compiler), 1, stmt->span);

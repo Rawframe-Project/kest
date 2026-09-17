@@ -127,7 +127,8 @@ static uint16_t move_scalar(KestValue *out, const KestType *type,
                             const unsigned char *from, bool reading,
                             unsigned char *to) {
     KestPiece piece = {0, kest_scalar_of(type), NULL};
-    KestLayout one = {&piece, 1, 0, 0, NULL, false, false};
+    uint16_t wide = type != NULL && type->tag == KEST_T_TEXT ? 2 : 1;
+    KestLayout one = {&piece, 1, wide, 0, 0, NULL, false, false};
     if (reading) {
         // Nothing here is a tag: a scalar moved on its own is one piece of a
         // width, and what a tag is is the piece that says which.
@@ -135,7 +136,7 @@ static uint16_t move_scalar(KestValue *out, const KestType *type,
     } else {
         pack(to, &one, out);
     }
-    return 1;
+    return wide;
 }
 
 static uint16_t unpack_typed(KestValue *out, const KestType *type,
@@ -252,25 +253,36 @@ static void unpack(KestValue *out, const KestLayout *layout,
         unpack_typed(out, layout->type, from, told);
         return;
     }
-    for (uint16_t i = 0; i < layout->count; i++) {
+    // A piece is not a slot: a piece of text is one piece and two slots, so
+    // the walk over the pieces counts the slots as it goes. See D964.
+    uint16_t put = 0;
+    for (uint16_t i = 0; i < layout->count; i++, put++) {
         const unsigned char *at = from + layout->pieces[i].offset;
         switch (layout->pieces[i].kind) {
+        case KEST_L_TEXT: {
+            memcpy(&out[put], at, 8);
+            uint64_t many;
+            memcpy(&many, at + 8, 8);
+            out[put + 1].integer = (int64_t)many;
+            put++;
+            break;
+        }
         case KEST_L_I8: {
             int8_t v;
             memcpy(&v, at, 1);
-            out[i].integer = v;
+            out[put].integer = v;
             break;
         }
         case KEST_L_I16: {
             int16_t v;
             memcpy(&v, at, 2);
-            out[i].integer = v;
+            out[put].integer = v;
             break;
         }
         case KEST_L_I32: {
             int32_t v;
             memcpy(&v, at, 4);
-            out[i].integer = v;
+            out[put].integer = v;
             break;
         }
         case KEST_L_U8:
@@ -282,35 +294,35 @@ static void unpack(KestValue *out, const KestLayout *layout,
         case KEST_L_HELD: {
             uint8_t v;
             memcpy(&v, at, 1);
-            out[i].integer = v;
+            out[put].integer = v;
             break;
         }
         case KEST_L_U16: {
             uint16_t v;
             memcpy(&v, at, 2);
-            out[i].integer = v;
+            out[put].integer = v;
             break;
         }
         case KEST_L_U32: {
             uint32_t v;
             memcpy(&v, at, 4);
-            out[i].integer = v;
+            out[put].integer = v;
             break;
         }
         case KEST_L_F32: {
             float v;
             memcpy(&v, at, 4);
-            out[i].real = v;
+            out[put].real = v;
             break;
         }
         case KEST_L_F64: {
             double v;
             memcpy(&v, at, 8);
-            out[i].real = v;
+            out[put].real = v;
             break;
         }
         default:
-            memcpy(&out[i], at, 8);
+            memcpy(&out[put], at, 8);
             break;
         }
     }
@@ -322,41 +334,49 @@ static void pack(unsigned char *to, const KestLayout *layout,
         pack_typed(to, layout->type, from);
         return;
     }
-    for (uint16_t i = 0; i < layout->count; i++) {
+    uint16_t took = 0;
+    for (uint16_t i = 0; i < layout->count; i++, took++) {
         unsigned char *at = to + layout->pieces[i].offset;
         switch (layout->pieces[i].kind) {
+        case KEST_L_TEXT: {
+            memcpy(at, &from[took], 8);
+            uint64_t many = (uint64_t)from[took + 1].integer;
+            memcpy(at + 8, &many, 8);
+            took++;
+            break;
+        }
         case KEST_L_I8:
         case KEST_L_U8:
         case KEST_L_BOOL:
         case KEST_L_HELD: {
-            uint8_t v = (uint8_t)from[i].integer;
+            uint8_t v = (uint8_t)from[took].integer;
             memcpy(at, &v, 1);
             break;
         }
         case KEST_L_I16:
         case KEST_L_U16: {
-            uint16_t v = (uint16_t)from[i].integer;
+            uint16_t v = (uint16_t)from[took].integer;
             memcpy(at, &v, 2);
             break;
         }
         case KEST_L_I32:
         case KEST_L_U32: {
-            uint32_t v = (uint32_t)from[i].integer;
+            uint32_t v = (uint32_t)from[took].integer;
             memcpy(at, &v, 4);
             break;
         }
         case KEST_L_F32: {
-            float v = (float)from[i].real;
+            float v = (float)from[took].real;
             memcpy(at, &v, 4);
             break;
         }
         case KEST_L_F64: {
-            double v = from[i].real;
+            double v = from[took].real;
             memcpy(at, &v, 8);
             break;
         }
         default:
-            memcpy(at, &from[i], 8);
+            memcpy(at, &from[took], 8);
             break;
         }
     }
@@ -394,6 +414,20 @@ typedef struct {
     // world names nothing here rather than naming whatever is at that place.
     uint32_t world;
 } Store;
+
+// What a piece of text is: bytes and how many. It is two slots wherever a
+// value lives, and this is the pair read out of them. See D964.
+typedef struct {
+    const char *bytes;
+    uint32_t length;
+} Said;
+
+static Said said(const KestValue *slots) {
+    Said out;
+    out.bytes = slots[0].text;
+    out.length = (uint32_t)slots[1].integer;
+    return out;
+}
 
 typedef struct {
     const KestChunk *chunk;
@@ -672,11 +706,15 @@ static void note_declaration(KestRuntime *runtime, const KestLayout *layout,
     kest_diags_note(runtime->diags, type->declared_in, type->span, "%s", label);
 }
 
-KestValue kest_text(KestRuntime *runtime, const char *bytes, uint32_t length) {
-    KestValue value = {0};
-    value.text = "";
+bool kest_text(KestRuntime *runtime, const char *bytes, uint32_t length,
+               KestValue *into) {
+    if (into == NULL) {
+        return false;
+    }
+    into[0].text = "";
+    into[1].integer = 0;
     if (runtime == NULL) {
-        return value;
+        return false;
     }
     // Nothing to copy is not the same as nothing to say. What comes back for
     // it is an empty piece of text, which is also what comes back for a host
@@ -693,7 +731,7 @@ KestValue kest_text(KestRuntime *runtime, const char *bytes, uint32_t length) {
                            "a host with nothing to say hands over an empty "
                            "piece of text; an address of nothing is bytes that "
                            "were never there");
-        return value;
+        return false;
     }
     // Copied into the machine's heap, which is what the program's own text is
     // in: a host that handed a pointer of its own would be promising to keep
@@ -708,7 +746,7 @@ KestValue kest_text(KestRuntime *runtime, const char *bytes, uint32_t length) {
                            "byte %u of what the host handed over is zero, and "
                            "text ends at a zero byte",
                            i);
-            return value;
+            return false;
         }
     }
     char *held = kest_arena_alloc(runtime->heap, length + 1, 1);
@@ -717,12 +755,13 @@ KestValue kest_text(KestRuntime *runtime, const char *bytes, uint32_t length) {
         kest_diags_in(runtime->diags, NULL);
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0605", nowhere,
                        "out of memory");
-        return value;
+        return false;
     }
     memcpy(held, bytes, length);
     held[length] = '\0';
-    value.text = held;
-    return value;
+    into[0].text = held;
+    into[1].integer = length;
+    return true;
 }
 
 // A lend that could not be written down. What it costs is a header and a place
@@ -1978,7 +2017,8 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
                                "over");
             return false;
         }
-        *at += 1;
+        // Two slots: what it is made of, and how many bytes that is. See D964.
+        *at += 2;
         return true;
     }
     if (type->tag == KEST_T_ARRAY || type->tag == KEST_T_STORE) {
@@ -2386,17 +2426,35 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 // ones that differ early are cheap and two long ones that are the same are
 // not. Counted rather than left to `strcmp`, because what is charged for has
 // to be what was done. See D950.
+// A piece of text off the stack and a piece of text onto it. Text is two slots
+// -- what it is made of, and how many bytes that is -- so its length is part
+// of it rather than something to go and count. See D964.
+#define TEXT_OFF() (top -= 2, said(top))
+#define TEXT_ON(from, many)                                                    \
+    do {                                                                       \
+        (top++)->text = (from);                                                \
+        (top++)->integer = (int64_t)(many);                                    \
+    } while (0)
+
+// How far two pieces of text had to be read to be put in order, which is what
+// comparing them costs: it stops at the first byte that differs, so two long
+// ones that differ early are cheap and two long ones that are the same are
+// not. Counted rather than left to `memcmp`, because what is charged for has
+// to be what was done. See D950.
 #define TEXT_ORDER(test)                                                       \
     do {                                                                       \
-        KestValue right = *--top;                                              \
-        KestValue left = *--top;                                               \
-        size_t read = 0;                                                       \
-        while (left.text[read] != '\0' &&                                      \
-               left.text[read] == right.text[read]) {                          \
+        Said right = TEXT_OFF();                                               \
+        Said left = TEXT_OFF();                                                \
+        uint32_t read = 0;                                                     \
+        while (read < left.length && read < right.length &&                    \
+               left.bytes[read] == right.bytes[read]) {                        \
             read++;                                                            \
         }                                                                      \
-        int order = (int)(unsigned char)left.text[read] -                      \
-                    (int)(unsigned char)right.text[read];                      \
+        int order = read == left.length && read == right.length ? 0            \
+                    : read == left.length                       ? -1           \
+                    : read == right.length                      ? 1            \
+                    : (int)(unsigned char)left.bytes[read] -                   \
+                          (int)(unsigned char)right.bytes[read];               \
         (top++)->integer = (test);                                             \
         SPEND_WORK(read);                                                      \
     } while (0)
@@ -2622,10 +2680,10 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             array->of = layout->type;
             array->bytes = bytes;
 
-            top -= (size_t)count * layout->count;
+            top -= (size_t)count * layout->slots;
             for (uint16_t i = 0; i < count; i++) {
                 pack(bytes + (size_t)i * layout->size, layout,
-                     top + (size_t)i * layout->count);
+                     top + (size_t)i * layout->slots);
             }
             (top++)->object = array;
             break;
@@ -2634,7 +2692,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
             const KestLayout *layout = &module->layouts[of_which];
-            top -= layout->count;
+            top -= layout->slots;
             KestValue *fill = top;
             int64_t count = (--top)->integer;
             SPEND_WORK(count < 0 ? 0 : (uint64_t)count);
@@ -2672,7 +2730,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // is `array(n, v)` and `clear` — the reservation this language has
             // instead of a word for one.
             bool nothing = true;
-            for (uint16_t i = 0; i < layout->count && nothing; i++) {
+            for (uint16_t i = 0; i < layout->slots && nothing; i++) {
                 nothing = fill[i].integer == 0;
             }
             if (!nothing) {
@@ -2759,7 +2817,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
             const KestLayout *layout = &module->layouts[of_which];
-            top -= layout->count;
+            top -= layout->slots;
             KestValue *value = top;
             Array *array = (--top)->object;
             HOLD(array, KEST_IS_ARRAY, "an array");
@@ -2832,7 +2890,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
             const KestLayout *layout = &module->layouts[of_which];
-            top -= layout->count;
+            top -= layout->slots;
             KestValue *value = top;
             Array *array = (--top)->object;
             HOLD(array, KEST_IS_ARRAY, "an array");
@@ -2862,7 +2920,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             IN_ARRAY(index, array);
             READ_INTO(top, layout,
                       array->bytes + (size_t)index * array->stride);
-            top += layout->count;
+            top += layout->slots;
             break;
         }
         case KEST_OP_POP_LAST: {
@@ -2877,17 +2935,17 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             if (array->length == 0) {
-                for (uint16_t i = 0; i < layout->count; i++) {
+                for (uint16_t i = 0; i < layout->slots; i++) {
                     top[i].integer = 0;
                 }
-                top += layout->count;
+                top += layout->slots;
                 (top++)->integer = 0;
                 break;
             }
             array->length--;
             READ_INTO(top, layout,
                       array->bytes + (size_t)array->length * array->stride);
-            top += layout->count;
+            top += layout->slots;
             (top++)->integer = 1;
             break;
         }
@@ -2906,7 +2964,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             IN_ARRAY(index, array);
             unsigned char *at = array->bytes + (size_t)index * array->stride;
             READ_INTO(top, layout, at);
-            top += layout->count;
+            top += layout->slots;
             // What is after it keeps its order, which is the whole difference
             // between this and a store: a position here means something.
             memmove(at, at + array->stride,
@@ -2985,7 +3043,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             const KestLayout *layout = &module->layouts[of_which];
             const unsigned char *at = (--top)->object;
             READ_INTO(top, layout, at + offset);
-            top += layout->count;
+            top += layout->slots;
             break;
         }
         // A place in an array, given as the array and the index rather than as
@@ -3006,7 +3064,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             IN_ARRAY(index, array);
             READ_INTO(top, layout,
                       array->bytes + (size_t)index * array->stride + offset);
-            top += layout->count;
+            top += layout->slots;
             break;
         }
         case KEST_OP_STORE_ELEM: {
@@ -3014,7 +3072,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
             const KestLayout *layout = &module->layouts[of_which];
-            top -= layout->count;
+            top -= layout->slots;
             KestValue *value = top;
             int64_t index = (--top)->integer;
             Array *array = (--top)->object;
@@ -3235,7 +3293,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             format_value(text, length, type, top);
             text[length] = '\0';
-            (top++)->text = text;
+            TEXT_ON(text, length);
             break;
         }
         case KEST_OP_TEXT_I:
@@ -3269,15 +3327,16 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             memcpy(text, buffer, (size_t)written + 1);
-            top[-1].text = text;
+            top--;
+            TEXT_ON(text, written);
             break;
         }
         case KEST_OP_CONCAT: {
             uint16_t count = READ_U16();
-            top -= count;
+            top -= (uint32_t)count * 2;
             size_t length = 0;
             for (uint16_t i = 0; i < count; i++) {
-                length += strlen(top[i].text);
+                length += said(top + i * 2).length;
             }
             // The same ceiling an array has, and text is where a program
             // reaches it without meaning to: two of these joined is a new one
@@ -3301,12 +3360,12 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             size_t used = 0;
             for (uint16_t i = 0; i < count; i++) {
-                size_t piece = strlen(top[i].text);
-                memcpy(text + used, top[i].text, piece);
-                used += piece;
+                Said piece = said(top + i * 2);
+                memcpy(text + used, piece.bytes, piece.length);
+                used += piece.length;
             }
             text[used] = '\0';
-            (top++)->text = text;
+            TEXT_ON(text, used);
             break;
         }
         case KEST_OP_TEXT_FROM: {
@@ -3333,7 +3392,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             memcpy(text, bytes->bytes, bytes->length);
             text[bytes->length] = '\0';
-            (top++)->text = text;
+            TEXT_ON(text, bytes->length);
             break;
         }
         // One round of a mixer over the bits, which is what a table wants of
@@ -3352,14 +3411,14 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_HASH_T: {
             // FNV-1a over the bytes, because text is its bytes (D021) and two
             // pieces that compare equal are the same bytes.
-            const char *text = top[-1].text;
+            Said text = TEXT_OFF();
             uint64_t bits = 0xcbf29ce484222325ULL;
-            for (const unsigned char *c = (const unsigned char *)text;
-                 *c != '\0'; c++) {
-                bits ^= *c;
+            for (uint32_t i = 0; i < text.length; i++) {
+                bits ^= (unsigned char)text.bytes[i];
                 bits *= 0x100000001b3ULL;
             }
-            top[-1].integer = (int64_t)bits;
+            (top++)->integer = (int64_t)bits;
+            SPEND_WORK(text.length);
             break;
         }
         case KEST_OP_HASH_VALUE: {
@@ -3380,182 +3439,135 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         }
         case KEST_OP_TEXT_LEN: {
-            size_t counted = strlen(top[-1].text);
-            top[-1].integer = (int64_t)counted;
-            SPEND_WORK(counted);
+            // A read rather than a walk: how many bytes there are is part of
+            // what a piece of text is. See D964.
+            Said text = TEXT_OFF();
+            (top++)->integer = (int64_t)text.length;
             break;
         }
         case KEST_OP_TEXT_AT: {
             int64_t index = (--top)->integer;
-            const char *text = (--top)->text;
-            // Walked to rather than measured, the way a cut and the rest are:
-            // a byte at a place costs the walk to that place. Measuring first
-            // made reading the first byte of a line cost the whole line, which
-            // is what a loop over text pays on every step. See D372.
-            int64_t seen = 0;
-            while (seen < index && text[seen] != '\0') {
-                seen++;
-            }
-            if (index < 0 || seen < index || text[index] == '\0') {
-                // Measured only to say so: the refusal names how long the
-                // text was, and the run that pays for the rest of the walk is
-                // the one that is stopping.
-                size_t length = seen + strlen(text + seen);
+            Said text = TEXT_OFF();
+            // How many bytes there are is part of the value, so a byte at a
+            // place is a comparison and a read rather than a walk. What this
+            // used to cost was the walk to the place, which is what made
+            // reading the first byte of a line cost the whole line. See D372
+            // and D964.
+            if (index < 0 || (uint64_t)index >= text.length) {
                 fail(vmp, frame, instruction, "K0604",
-                     "index %lld is outside text of %zu bytes",
-                     (long long)index, length);
+                     "index %lld is outside text of %u bytes",
+                     (long long)index, text.length);
                 return false;
             }
-            (top++)->integer = (unsigned char)text[index];
+            (top++)->integer = (unsigned char)text.bytes[index];
             break;
         }
         case KEST_OP_TEXT_IN: {
-            const char *text = mine[READ_U16()].text;
+            const KestValue *held = &mine[READ_U16()];
             int64_t index = mine[READ_U16()].integer;
+            Said text = said(held);
 #if KEST_CHECKED
             // The one read in this language that does not ask. What makes it
-            // right is the walk: the handle was taken and the length measured
-            // before the first turn, so the place is there. A build that
-            // checks itself asks anyway, because nothing else can — a byte
-            // past the end of a piece of text is a byte the arena handed out
-            // for something else, so it is neither poisoned nor unmapped and
-            // the sanitisers see nothing. Walked rather than measured, the
-            // way everything else that reaches a place in text is. See D409.
-            int64_t seen = 0;
-            while (seen < index && text[seen] != '\0') {
-                seen++;
-            }
-            if (index < 0 || seen < index || text[index] == '\0') {
+            // right is the walk: the handle was taken before the first turn
+            // and the length is part of it, so the place is there. A build
+            // that checks itself asks anyway, because nothing else can — a
+            // byte past the end of a piece of text is a byte the arena handed
+            // out for something else, so it is neither poisoned nor unmapped
+            // and the sanitisers see nothing. See D409.
+            if (index < 0 || (uint64_t)index >= text.length) {
                 fail(vmp, frame, instruction, "K0645",
-                     "a walk read byte %lld of text of %zu bytes",
-                     (long long)index, (size_t)seen + strlen(text + seen));
+                     "a walk read byte %lld of text of %u bytes",
+                     (long long)index, text.length);
                 kest_diags_fault(vmp->diags,
-                                 "a walk over text measures it before its "
-                                 "first turn and reads without asking");
+                                 "a walk over text takes its length before "
+                                 "its first turn and reads without asking");
                 return false;
             }
 #endif
-            (top++)->integer = (unsigned char)text[index];
-            SPEND_WORK((uint64_t)index);
+            (top++)->integer = (unsigned char)text.bytes[index];
             break;
         }
         case KEST_OP_TEXT_SLICE: {
             int64_t count = (--top)->integer;
             int64_t from = (--top)->integer;
-            const char *text = (--top)->text;
-
-            // Walked to rather than measured, the way `rest` is: what a cut
-            // costs is the part it reaches and not the part after it, and
-            // measuring first is that walk done twice. Cutting three bytes out
-            // of a megabyte read the megabyte. See D371.
-            int64_t want = from < 0 || count < 0 ? 0 : from + count;
-            int64_t seen = 0;
-            while (seen < want && text[seen] != '\0') {
-                seen++;
-            }
-            // What the walk above read, which is what this cut cost whether
-            // or not anything is copied after it.
-            SPEND_WORK((uint64_t)seen);
-            if (from < 0 || count < 0 || seen < want) {
-                // Measured only to say so: a refusal names the length, and
-                // what it costs to say is paid by the run that is stopping.
-                size_t length = seen + strlen(text + seen);
+            Said text = TEXT_OFF();
+            // A cut is a place inside what it was cut from and how many bytes
+            // of it: nothing is copied and nothing reaches the heap, which is
+            // what makes a walk over text free. It cost a copy when a piece of
+            // text was a pointer that had to end in a nought, and that is what
+            // D955 could not pay for. See D964.
+            if (from < 0 || count < 0 ||
+                (uint64_t)from + (uint64_t)count > text.length) {
                 fail(vmp, frame, instruction, "K0604",
-                     "%lld bytes from %lld is outside text of %zu bytes",
-                     (long long)count, (long long)from, length);
+                     "%lld bytes from %lld is outside text of %u bytes",
+                     (long long)count, (long long)from, text.length);
                 return false;
             }
-            // A cut that ends where the text already ends is a place inside
-            // it: the nought after it is the one that was there, so there is
-            // nothing to copy. That is what `rest` is, and this is the same
-            // question asked with a length — `slice(t, i, len(t) - i)` is the
-            // rest of it however it is spelled. See D370.
-            if (text[want] == '\0') {
-                (top++)->text = text + from;
-                break;
-            }
-            char *piece = kest_arena_alloc(rt->heap, (size_t)count + 1, 1);
-            if (piece == NULL) {
-                no_room(vmp, frame, instruction, rt);
-                // Measured here for the same reason a refusal measures: the
-                // run is stopping either way, and what it is stopping in the
-                // middle of is what a reader wants to know.
-                kest_diags_suggest(vmp->diags,
-                                   "it was taking %lld bytes out of text of "
-                                   "%zu",
-                                   (long long)count,
-                                   (size_t)want + strlen(text + want));
-                return false;
-            }
-            memcpy(piece, text + from, (size_t)count);
-            piece[count] = '\0';
-            (top++)->text = piece;
+            TEXT_ON(text.bytes + from, count);
             break;
         }
         case KEST_OP_TEXT_REST: {
             int64_t at = (--top)->integer;
-            const char *text = (--top)->text;
-            // Walked to rather than measured, because what this costs is the
-            // part being stepped over and not the part being kept. A loop that
-            // takes the rest of the rest reads each byte once between them.
-            int64_t seen = 0;
-            while (seen < at && text[seen] != '\0') {
-                seen++;
-            }
-            if (at < 0 || seen < at) {
-                // Measured only to say so. Walking to a place that is not
-                // there costs what is there; saying how much that was costs
-                // nothing that matters, because the program is stopping.
+            Said text = TEXT_OFF();
+            if (at < 0 || (uint64_t)at > text.length) {
                 fail(vmp, frame, instruction, "K0604",
-                     "the rest from %lld is outside text of %zu bytes",
-                     (long long)at, strlen(text));
+                     "the rest from %lld is outside text of %u bytes",
+                     (long long)at, text.length);
                 return false;
             }
-            (top++)->text = text + at;
+            TEXT_ON(text.bytes + at, text.length - (uint32_t)at);
             break;
         }
         case KEST_OP_TEXT_MATCHES: {
-            const char *needle = (--top)->text;
+            Said needle = TEXT_OFF();
             int64_t at = (--top)->integer;
-            const char *text = (--top)->text;
-            int64_t seen = 0;
-            while (seen < at && text[seen] != '\0') {
-                seen++;
-            }
-            if (at < 0 || seen < at) {
+            Said text = TEXT_OFF();
+            if (at < 0 || (uint64_t)at > text.length) {
                 fail(vmp, frame, instruction, "K0604",
-                     "looking at %lld, which is outside text of %zu bytes",
-                     (long long)at, strlen(text));
+                     "looking at %lld, which is outside text of %u bytes",
+                     (long long)at, text.length);
                 return false;
             }
-            const char *from = text + at;
-            size_t i = 0;
-            while (needle[i] != '\0' && from[i] == needle[i]) {
-                i++;
+            bool same = (uint64_t)at + needle.length <= text.length;
+            uint32_t read = 0;
+            while (same && read < needle.length &&
+                   text.bytes[at + read] == needle.bytes[read]) {
+                read++;
             }
-            (top++)->integer = needle[i] == '\0';
+            (top++)->integer = same && read == needle.length;
+            SPEND_WORK(read);
             break;
         }
         case KEST_OP_TEXT_FIND: {
             int64_t from = (--top)->integer;
-            const char *needle = (--top)->text;
-            const char *haystack = (--top)->text;
-            // The same walk, and it may stop where the text does: looking from
-            // the end of a text finds nothing, which is an answer rather than
-            // a mistake.
-            int64_t seen = 0;
-            while (seen < from && haystack[seen] != '\0') {
-                seen++;
-            }
-            if (from < 0 || seen < from) {
+            Said needle = TEXT_OFF();
+            Said haystack = TEXT_OFF();
+            // Looking from the end of a text finds nothing, which is an answer
+            // rather than a mistake.
+            if (from < 0 || (uint64_t)from > haystack.length) {
                 fail(vmp, frame, instruction, "K0604",
-                     "looking from %lld, which is outside text of %zu bytes",
-                     (long long)from, (size_t)seen + strlen(haystack + seen));
+                     "looking from %lld, which is outside text of %u bytes",
+                     (long long)from, haystack.length);
                 return false;
             }
-            const char *at = strstr(haystack + from, needle);
-            (top++)->integer = at == NULL ? 0 : (int64_t)(at - haystack);
-            (top++)->integer = at != NULL;
+            int64_t found = -1;
+            uint64_t read = 0;
+            for (uint64_t start = (uint64_t)from;
+                 found < 0 && start + needle.length <= haystack.length;
+                 start++) {
+                uint32_t i = 0;
+                while (i < needle.length &&
+                       haystack.bytes[start + i] == needle.bytes[i]) {
+                    i++;
+                }
+                read += i + 1;
+                if (i == needle.length) {
+                    found = (int64_t)start;
+                }
+            }
+            (top++)->integer = found < 0 ? 0 : found;
+            (top++)->integer = found >= 0;
+            SPEND_WORK(read);
             break;
         }
         case KEST_OP_LEN: {
@@ -4074,7 +4086,11 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                         &module->layouts[callee->takes[which]];
                     for (uint16_t piece = 0;
                          piece < what->count && slot < argument_slots;
-                         piece++, slot++) {
+                         piece++,
+                                  slot += what->pieces[piece - 1].kind ==
+                                                  KEST_L_TEXT
+                                              ? 2
+                                              : 1) {
                         if (what->tagged ||
                             fits_the_piece(what->pieces[piece].kind,
                                            base[slot])) {
@@ -4230,11 +4246,11 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                      which < module->externs[index].takes_count; which++) {
                     wanted +=
                         module->layouts[module->externs[index].takes[which]]
-                            .count;
+                            .slots;
                 }
                 uint32_t answered =
                     module->externs[index].gives_value
-                        ? module->layouts[module->externs[index].gives].count
+                        ? module->layouts[module->externs[index].gives].slots
                         : 0;
             rt->guarded++;
                 if (argument_slots != wanted || result_slots != answered ||
@@ -4430,17 +4446,22 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 rt->guarded++;
                 const KestLayout *given =
                     &module->layouts[frame->chunk->gives];
+                uint16_t slot = 0;
                 for (uint16_t piece = 0;
-                     !given->tagged && piece < given->count && piece < count;
-                     piece++) {
+                     !given->tagged && piece < given->count && slot < count;
+                     piece++,
+                              slot += given->pieces[piece - 1].kind ==
+                                              KEST_L_TEXT
+                                          ? 2
+                                          : 1) {
                     if (fits_the_piece(given->pieces[piece].kind,
-                                       (top - count)[piece])) {
+                                       (top - count)[slot])) {
                         continue;
                     }
                     fail(vmp, frame, instruction, "K0655",
                          "this gives back something in slot %u that no `%s` "
                          "holds",
-                         piece, the_width_of(given->pieces[piece].kind));
+                         slot, the_width_of(given->pieces[piece].kind));
                     kest_diags_fault(vmp->diags,
                                      "what the compiler put in a frame and "
                                      "what the body gives back disagree");
@@ -5333,9 +5354,9 @@ uint32_t kest_frame_at(KestRuntime *runtime, int32_t entry, uint32_t which) {
     const KestChunk *chunk = runtime->module->functions[entry];
     uint32_t at = 0;
     for (uint32_t i = 0; i < which && i < chunk->takes_count; i++) {
-        // One piece a slot, so what a layout holds is how wide the argument
-        // is as well as what is in it.
-        at += runtime->module->layouts[chunk->takes[i]].count;
+        // How wide the argument is, which is not how many pieces it has: a
+        // piece of text is one piece and two slots. See D964.
+        at += runtime->module->layouts[chunk->takes[i]].slots;
     }
     return at;
 }
@@ -5686,12 +5707,10 @@ bool kest_takes_text(KestRuntime *runtime, int32_t entry, KestValue *frame,
         // own bytes: what a program holds it must own, so it is copied the
         // way anything else a host hands over is copied.
         if (type != NULL && type->tag == KEST_T_TEXT) {
-            KestValue given = kest_text(runtime, words[i],
-                                        (uint32_t)strlen(words[i]));
-            if (given.text == NULL) {
+            if (!kest_text(runtime, words[i], (uint32_t)strlen(words[i]),
+                           &frame[at])) {
                 return false;
             }
-            frame[at] = given;
         } else if (!kest_value_read(runtime->diags->arena, words[i], type,
                                     &frame[at], &why)) {
             kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0635",
@@ -5702,7 +5721,7 @@ bool kest_takes_text(KestRuntime *runtime, int32_t entry, KestValue *frame,
                                "says, the way the language writes one");
             return false;
         }
-        at += layout->count;
+        at += layout->slots;
     }
     return true;
 }
@@ -5911,14 +5930,20 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
             // cannot make gets into a program. Read off the piece rather than
             // out of the type, because the type is what the walk above costs
             // and this is the case it was skipping. See D836.
+            // A piece is not a slot: a piece of text is one piece and two,
+            // so the walk counts the slots as it goes. See D964.
+            uint16_t slot = 0;
             for (uint16_t p = 0; p < layout->count; p++) {
-                if (!fits_the_piece(layout->pieces[p].kind, frame[at + p])) {
-                    narrower_than_that(runtime, name, at + p,
-                                       layout->pieces[p].kind, frame[at + p]);
+                if (!fits_the_piece(layout->pieces[p].kind,
+                                    frame[at + slot])) {
+                    narrower_than_that(runtime, name, at + slot,
+                                       layout->pieces[p].kind,
+                                       frame[at + slot]);
                     return false;
                 }
+                slot += layout->pieces[p].kind == KEST_L_TEXT ? 2 : 1;
             }
-            at += layout->count;
+            at += layout->slots;
             continue;
         }
         Saying door = {false, NULL, NULL};

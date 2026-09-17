@@ -266,7 +266,13 @@ static FILE *program_wrote_to = NULL;
 // one of them. See D769.
 static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)runtime;
-    fputs(frame[0].text, (FILE *)context);
+    uint32_t length = 0;
+    const char *bytes = kest_text_bytes(frame, &length);
+    // Written by its length rather than to a nought: a piece of text cut out
+    // of the middle of another does not end in one. See D964.
+    if (bytes != NULL && length > 0) {
+        fwrite(bytes, 1, length, (FILE *)context);
+    }
 }
 
 // What `std.os` declares: a file, the words this command was started with, and
@@ -296,13 +302,13 @@ static void os_arg(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)context;
     int32_t at = (int32_t)frame[0].integer;
     if (program_args == NULL || at < 0 || at >= program_arg_count) {
-        frame[0] = kest_text(runtime, "", 0);
-        frame[1].integer = 0;
+        kest_text(runtime, "", 0, frame);
+        frame[2].integer = 0;
         return;
     }
-    frame[0] = kest_text(runtime, program_args[at],
-                         (uint32_t)strlen(program_args[at]));
-    frame[1].integer = 1;
+    kest_text(runtime, program_args[at],
+              (uint32_t)strlen(program_args[at]), frame);
+    frame[2].integer = 1;
 }
 
 // Reading a whole file. Nothing rather than empty text when it cannot be read:
@@ -310,10 +316,20 @@ static void os_arg(KestValue *frame, KestRuntime *runtime, void *context) {
 static void os_file_read(KestValue *frame, KestRuntime *runtime,
                          void *context) {
     (void)context;
-    FILE *reading = fopen(frame[0].text, "rb");
+    char path[4096];
+    uint32_t wide = 0;
+    const char *named = kest_text_bytes(frame, &wide);
+    if (named == NULL || wide >= sizeof path) {
+        kest_text(runtime, "", 0, frame);
+        frame[2].integer = 0;
+        return;
+    }
+    memcpy(path, named, wide);
+    path[wide] = '\0';
+    FILE *reading = fopen(path, "rb");
     if (reading == NULL) {
-        frame[0] = kest_text(runtime, "", 0);
-        frame[1].integer = 0;
+        kest_text(runtime, "", 0, frame);
+        frame[2].integer = 0;
         return;
     }
     size_t room = 4096;
@@ -338,8 +354,8 @@ static void os_file_read(KestValue *frame, KestRuntime *runtime,
     fclose(reading);
     if (wrong) {
         free(bytes);
-        frame[0] = kest_text(runtime, "", 0);
-        frame[1].integer = 0;
+        kest_text(runtime, "", 0, frame);
+        frame[2].integer = 0;
         return;
     }
     // A nought among the bytes would make text that stops early, and text that
@@ -347,12 +363,12 @@ static void os_file_read(KestValue *frame, KestRuntime *runtime,
     // than handed over short. See D344's rule, applied to a file.
     if (memchr(bytes, 0, held) != NULL) {
         free(bytes);
-        frame[0] = kest_text(runtime, "", 0);
-        frame[1].integer = 0;
+        kest_text(runtime, "", 0, frame);
+        frame[2].integer = 0;
         return;
     }
-    frame[0] = kest_text(runtime, bytes, (uint32_t)held);
-    frame[1].integer = 1;
+    kest_text(runtime, bytes, (uint32_t)held, frame);
+    frame[2].integer = 1;
     free(bytes);
 }
 
@@ -360,14 +376,22 @@ static void os_file_write(KestValue *frame, KestRuntime *runtime,
                           void *context) {
     (void)runtime;
     (void)context;
-    const char *path = frame[0].text;
-    const char *bytes = frame[1].text;
+    char path[4096];
+    uint32_t wide = 0;
+    const char *named = kest_text_bytes(frame, &wide);
+    uint32_t length = 0;
+    const char *bytes = kest_text_bytes(frame + 2, &length);
+    if (named == NULL || bytes == NULL || wide >= sizeof path) {
+        frame[0].integer = 0;
+        return;
+    }
+    memcpy(path, named, wide);
+    path[wide] = '\0';
     FILE *writing = fopen(path, "wb");
     if (writing == NULL) {
         frame[0].integer = 0;
         return;
     }
-    size_t length = strlen(bytes);
     bool wrote = fwrite(bytes, 1, length, writing) == length;
     frame[0].integer = (fclose(writing) == 0 && wrote) ? 1 : 0;
 }
@@ -376,7 +400,16 @@ static void os_file_exists(KestValue *frame, KestRuntime *runtime,
                            void *context) {
     (void)runtime;
     (void)context;
-    FILE *there = fopen(frame[0].text, "rb");
+    char path[4096];
+    uint32_t wide = 0;
+    const char *named = kest_text_bytes(frame, &wide);
+    if (named == NULL || wide >= sizeof path) {
+        frame[0].integer = 0;
+        return;
+    }
+    memcpy(path, named, wide);
+    path[wide] = '\0';
+    FILE *there = fopen(path, "rb");
     if (there != NULL) {
         fclose(there);
         frame[0].integer = 1;
@@ -457,7 +490,7 @@ static void io_read(KestValue *frame, KestRuntime *runtime, void *context) {
     char *bytes = malloc(room);
     if (bytes == NULL) {
         program_could_not_read = true;
-        frame[0] = kest_text(runtime, "", 0);
+        kest_text(runtime, "", 0, frame);
         return;
     }
     for (;;) {
@@ -482,7 +515,7 @@ static void io_read(KestValue *frame, KestRuntime *runtime, void *context) {
         program_could_not_read = true;
         held = 0;
     }
-    frame[0] = kest_text(runtime, bytes, (uint32_t)held);
+    kest_text(runtime, bytes, (uint32_t)held, frame);
     free(bytes);
 }
 
@@ -491,7 +524,7 @@ static void io_read(KestValue *frame, KestRuntime *runtime, void *context) {
 // holds it, and a program holds a piece of text for as long as it likes.
 static void engine_name(KestValue *frame, KestRuntime *runtime, void *context) {
     (void)context;
-    frame[0] = kest_text(runtime, "kest", 4);
+    kest_text(runtime, "kest", 4, frame);
 }
 
 // A clock that measures elapsed time and only goes forwards. `clock()` is the

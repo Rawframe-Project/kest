@@ -273,13 +273,14 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
                 {"pop", NULL},
                 {"push", "`push` grows what it is given"},
                 {"remove", NULL},
-                // What is left of a piece of text is a place inside it, so
-                // there is nothing to copy: `rest` and `slice` differ in that
-                // one of them ends where it was already ending.
+                // A piece of a piece of text is a place inside it and how
+                // many bytes of it, so there is nothing to copy. It used to
+                // cost one: a piece of text was a pointer that had to end in
+                // a nought, so a cut out of the middle was a copy. See D964.
                 {"rest", NULL},
                 {"room", "`room` makes room in what it is given"},
                 {"set", NULL},
-                {"slice", "`slice` copies the piece it names"},
+                {"slice", NULL},
                 {"store", "`store()` makes something that can grow"},
             };
             for (uint32_t i = 0; i < sizeof(REACHES) / sizeof(REACHES[0]); i++) {

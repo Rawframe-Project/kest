@@ -80,13 +80,20 @@ typedef union {
 // second is the one that survives this language carrying a length beside them.
 //
 // `length` may be NULL for a host that only wants the bytes, and what it
-// answers costs a walk of them, which is what measuring a C string is. Nothing
-// and nought for a slot with no address in it.
+// answers costs nothing: how many bytes there are is the second slot of the
+// two a piece of text is, so this reads it rather than measuring. Nothing and
+// nought for a slot with no address in it. See D964.
+//
+// What it hands back is not always a C string. Text the machine made ends in a
+// nought and text cut out of the middle of some does not, because a cut is a
+// place inside what it was cut from and nothing is copied. A host that wants
+// one hands the bytes and the length to whatever it is calling, or copies
+// them. See D964.
 //
 // Asked of a slot the program says is text: a slot carries no tag, so eight
 // bytes that are a number are not an address. `kest_frame_layout` is what says
 // which slots of a frame are text. See D955.
-const char *kest_text_bytes(KestValue value, uint32_t *length);
+const char *kest_text_bytes(const KestValue *value, uint32_t *length);
 
 // What one scalar inside a value is, where memory is shared.
 typedef enum {
@@ -236,6 +243,9 @@ typedef struct {
 typedef struct {
     const KestPiece *pieces;
     uint16_t count;
+    // How many slots the value is, which is not how many pieces it has: a
+    // piece of text is one piece and two slots. See D964.
+    uint16_t slots;
     uint16_t size;
     uint16_t align;
     const void *type;
@@ -511,11 +521,16 @@ typedef void (*KestNative)(KestValue *frame, KestRuntime *runtime,
 // program holds a piece of text for as long as it likes.
 //
 // Text ends at its first zero byte, so a zero inside `length` is a mistake
-// rather than a cut: it is `K0611` and what comes back is empty. So is what
-// comes back for no address to copy from, and for a heap with no room to copy
-// into. An empty piece of text is also what a host asking for one gets, so
-// which of the three it was is in the report and nowhere else.
-KestValue kest_text(KestRuntime *runtime, const char *bytes, uint32_t length);
+// rather than a cut: it is `K0611` and what is written is empty. So is what is
+// written for no address to copy from, and for a heap with no room to copy
+// into, and this answers false for each of the three; which of them it was is
+// in the report. An empty piece of text is what a host asking for one gets,
+// and that answers true.
+//
+// It writes two slots, because a piece of text is two: what it is made of, and
+// how many bytes that is. `into` is where the first goes. See D964.
+bool kest_text(KestRuntime *runtime, const char *bytes, uint32_t length,
+               KestValue *into);
 
 // Who owns what, which is the whole of what this library promises about
 // threads. A build is read-only once it has been built: the program, the
