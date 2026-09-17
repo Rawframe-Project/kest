@@ -30063,3 +30063,103 @@ It does not answer for a store. A store is a slot map with generations and a
 free list, and how many live places it holds is `len` in the language and a walk
 here; a host that wants that asks the program, which is what a store is for.
 *Argued.*
+
+## D966. `scratch { }`: a block whose working memory goes back where it was
+
+D957 gave a host `kest_scratch_mark` and `kest_scratch_rewind` and said what it
+could not give: the rule that what is kept past a rewind must not be anything
+the program made after the mark. A host keeps that rule; nothing proves it. This
+is the language saying the same thing and proving it.
+
+**What it is.** `scratch { ... }` is a statement. Entering it marks the heap;
+leaving it puts the heap back. Everything the program made inside is gone.
+
+It is a word rather than a keyword, by the rule in `CLAUDE.md`: `scratch`
+followed by a brace is a thing no other statement can be, and a keyword is paid
+for by everybody who wanted the name.
+
+**What is proved.** `kest_ir_escapes` walks a body and follows what a block
+made. A value is the block's if it was made while the block was open and can
+hold what the machine keeps, unless it is a reading of something older: a
+constant, a name declared outside, an element of an array that is not the
+block's, a cut of text that is not the block's, a value out of parts that are
+not. Everything else — a call's answer, a piece of text built, an array made —
+is the block's, because what a called body did with the heap is not this body's
+to know.
+
+A value that is the block's is refused where it would outlive the block:
+
+- given back from the function;
+- written into a name the block does not own — a name declared before it;
+- written into an array, a store or memory the host laid out that is not the
+  block's own;
+- handed to a call beside something older that could keep it.
+
+That last one is what tells a keep from a copy, and it is the rule that makes
+the thing useful. `text.fitting(out, piece)` where `out` is `[u8]` copies bytes
+into a buffer: a run of bytes cannot hold what the machine keeps, so nothing of
+the block survives in it and the call is allowed. `set(world, r, changed)` where
+`changed` holds text is a keep, and is refused. What decides is whether
+something holding what the machine keeps can be written into the older argument.
+
+**What is a rule rather than a refusal.** A crossing into the host may be handed
+what the block made. A host that keeps it past the call keeps a pointer into
+memory that goes, which is exactly the rule D957 wrote down for
+`kest_scratch_mark` and is the host's to keep either way. Refusing it instead
+would refuse `io.print` inside a block, which is most of what a block is for.
+The reference says so where a host reads it.
+
+**Put back on every way out.** A `return`, a `break` and a `continue` out of a
+block close it on the way past, written by the compiler. Everything else — a
+refusal, the fuel running out, a host saying no, a machine cancelled — stops a
+body where it stands with no code left to run, so the machine puts back what a
+run left open when the run ends. A block put back only by the code that opened
+it is a block nothing puts back then. Measured: a loop inside a block that runs
+out of fuel leaves the heap at nought; the same loop without the block leaves
+7,666 bytes. *Measured.*
+
+**And what it costs.** Nothing to have: the marks are taken from the machine's
+own room the first time a program opens one, so a program with no block in it
+pays for no door. `no.alloc` refuses a block, because a promise to reach no heap
+has no working memory to put back.
+
+## D967. What a world with changing text costs, and the idiom that bounds it
+
+D956 measured `examples/churn.kest`: a round that writes a new name and a new
+run of numbers for every live thing needs 4M at a hundred rounds, 8M at two
+hundred and 16M at four hundred, and the same round written into what the thing
+already holds runs four hundred in 512K. The second gives up on writing a name
+at all, so what was left open was a world whose text really does change.
+
+`scratch { }` closes it. A third shape, `keep`, builds the name where it is
+wanted and copies it into the buffer the thing already had:
+
+```kest
+scratch {
+    let name = "thing {one.id} at {round}"
+    clear(one.said)
+    if !text.fitting(one.said, name) {
+        return 0 - 1
+    }
+}
+```
+
+What the round builds is one round's working memory and goes back when the
+block ends; what it keeps is bytes in a run the thing already owns. Measured the
+way D956 measured the other two, as the least room the shape runs in:
+
+| rounds | replace | reuse | keep |
+| --- | --- | --- | --- |
+| 100 | 4M | 512K | 512K |
+| 200 | 8M | 512K | 512K |
+| 400 | 16M | 512K | 512K |
+
+*Measured.* `make check`'s `memory` section holds all three.
+
+**So the answer to E is an idiom rather than a collector.** A world whose text
+changes keeps a buffer per thing and writes into it; the text it is written from
+is one round's working memory. What remains monotonic until the world is reset
+is a world that replaces what it holds with something new and keeps the new
+thing — which is what `replace` is, and what the reference now says out loud.
+D012 stands: nothing is given back while a program runs, and a block is where
+that stops being the whole story.

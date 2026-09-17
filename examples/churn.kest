@@ -126,6 +126,7 @@ fn keeping(world: store<Thing>, round: i32) -> i32 {
                     return 0 - 1
                 }
             }
+
             touched += 1
         }
     }

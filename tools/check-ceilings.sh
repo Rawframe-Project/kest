@@ -166,6 +166,26 @@ def defers():
         "\n".join("    defer note(%d)" % i for i in range(33)))
 
 
+def blocks():
+    # Nine blocks one inside another, which is one more than a body holds. The
+    # nesting is lexical, so this is refused where it is written. See D966.
+    return ("fn main() -> i32 {\n    let n = 0\n%s\n%s    n += 1\n%s\n"
+            "    return n - 1\n}\n"
+            % ("\n".join("    " * (i + 1) + "scratch {" for i in range(9)),
+               "    " * 10,
+               "\n".join("    " * (9 - i) + "}" for i in range(9))))
+
+
+def held():
+    # And the ones a machine holds open at once, which nesting in one body
+    # cannot reach: a body with a block in it that calls itself opens one a
+    # call deep. Met while running, so this is a program that runs.
+    return ("fn deeper(n: i32) -> i32 {\n    scratch {\n"
+            "        if n <= 0 {\n            return 0\n        }\n"
+            "        return deeper(n - 1) + 1\n    }\n}\n\n"
+            "fn main() -> i32 {\n    return deeper(200)\n}\n")
+
+
 def names():
     return "fn main() -> i32 {\n%s\n    return 0\n}\n" % (
         "\n".join("    let n%d = %d" % (i, i) for i in range(300)))
@@ -275,6 +295,8 @@ PROBES = [
     ("bytes of code a jump reaches", reaches, "K0503"),
     ("bytes of code a jump reaches", jumps, "K0503"),
     ("bytes of code a jump reaches", walking, "K0503"),
+    ("`scratch { }` blocks one inside another", blocks, "K0502"),
+    ("`scratch { }` blocks one machine holds open", held, "K0656"),
     ("things one `match` chooses between", subjects, "K0339"),
     ("combinations one `match` answers", combinations, "K0333"),
     ("elements a `[T; N]` holds", elements, "K0326"),

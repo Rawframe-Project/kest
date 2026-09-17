@@ -4059,7 +4059,7 @@ static bool close_body(Compiler *compiler, const KestBlock *block,
     const char *keeps = kest_ir_escapes(compiler->body, compiler->ir->arena,
                                         &escaped);
     if (keeps != NULL) {
-        refuse(compiler, escaped, "K0408", "%s", keeps);
+        refuse(compiler, escaped, "K0507", "%s", keeps);
         kest_diags_suggest(compiler->program->diags,
                            "what a `scratch { }` block makes is gone when it "
                            "ends: copy out a number, or make the thing outside "

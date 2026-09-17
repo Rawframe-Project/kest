@@ -2584,6 +2584,8 @@ none of them is a wrap or a quiet truncation:
 | 32 | `break`s in one loop, and 32 `continue`s |
 | 32 | `defer`s in a function |
 | 65535 | bytes of code a jump reaches, or a loop reaches back |
+| 8 | `scratch { }` blocks one inside another in one body |
+| 64 | `scratch { }` blocks one machine holds open at once |
 | 8 | things one `match` chooses between at once |
 | 256 | combinations one `match` answers, before it needs an `else` |
 | 65535 | elements a `[T; N]` holds, and at least one |
@@ -2599,10 +2601,13 @@ error[K0502]: a function holds at most 256 names
 error[K0502]: a loop holds at most 32 continues
 ```
 
-All but the last are the compiler's, found before a program runs. The last is
-the machine's, because how many a program has is not a thing the compiler can
-see coming, and it is one number rather than three: an array, a store and text
-are counted by the same `len`, which gives back an `i32`.
+All but the last three are the compiler's, found before a program runs. The
+last is the machine's, because how many a program has is not a thing the
+compiler can see coming, and it is one number rather than three: an array, a
+store and text are counted by the same `len`, which gives back an `i32`. So are
+the blocks a machine holds open: nesting in one body is lexical and refused
+where it is written, and a body with a block in it that calls itself opens one a
+call deep, which is a number met while running.
 
 A program that runs into one of these is a program that would be worth reading
 again anyway. They are here because a number a program can run into belongs
@@ -4511,6 +4516,51 @@ calling rather than treating what it was given as a C string.
 and how many there are and costs nothing: it reads the second slot. A host that
 reads the `text` member itself gets the same bytes and has to know whether the
 piece is one the machine made.
+
+## A block of working memory
+
+A frame that builds something to look at it and then throws it away pays for
+what it built, and nothing is given back while a program runs (D012). A
+`scratch { }` block is where that stops:
+
+```kest
+scratch {
+    let line = "{name}: {score}"
+    io.print(line)
+}
+```
+
+Entering it marks the heap and leaving it puts the heap back, so the block costs
+the same every time round the loop rather than every time round the loop costing
+the last one.
+
+**Nothing made inside may be kept.** That is proved rather than asked for. A
+value the block made is refused where it would outlive the block: given back
+from the function, written into a name declared outside it, put into an array or
+a store that is not the block's own, or handed to a call beside something older
+that could keep it.
+
+```
+error[K0408]: this gives back what the block made, and the block puts it away
+```
+
+What is allowed is copying out. A number is a number afterwards. Bytes copied
+into a run of bytes are bytes: `text.fitting(out, piece)` where `out` is `[u8]`
+copies, because a run of bytes cannot hold what the machine keeps. That is the
+idiom for a world whose text changes — build the name in a block, copy it into
+the buffer the thing already has — and `examples/churn.kest` measures what it
+saves.
+
+**A crossing is a rule rather than a refusal.** A host may be handed what the
+block made, because refusing that would refuse `io.print` inside a block. A host
+that keeps it past the call keeps a pointer into memory that goes — the same
+rule `kest_scratch_mark` asks of a host, said in the language.
+
+**Every way out puts it back.** A `return`, a `break` and a `continue` close the
+block on the way past. A refusal, the fuel running out, a host saying no and a
+machine cancelled stop a body where it stands, and the machine puts back what a
+run left open. A promise of `no.alloc` refuses a block: a body that reaches no
+heap has no working memory to put back.
 
 ## A frame's working memory
 

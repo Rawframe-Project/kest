@@ -418,7 +418,7 @@ typedef struct {
 // How many working-memory blocks one machine may have open at once. Nesting is
 // lexical and a body is refused for more than eight, but a body that calls
 // itself can open one a call deep, so this is a number met while running.
-#define KEST_KEPT_DEEP 64
+#define MAX_KEPT 64
 
 // What a piece of text is: bytes and how many. It is two slots wherever a
 // value lives, and this is the pair read out of them. See D964.
@@ -4047,7 +4047,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_SCRATCH: {
             uint16_t where = READ_U16();
             if (rt->kept_count == rt->kept_room &&
-                rt->kept_room < KEST_KEPT_DEEP) {
+                rt->kept_room < MAX_KEPT) {
                 uint32_t room = rt->kept_room == 0 ? 8 : rt->kept_room * 2;
                 KestMark *grown = KEST_ARENA_ARRAY(rt->own, KestMark, room);
                 if (grown == NULL) {
@@ -4060,10 +4060,10 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 rt->kept = grown;
                 rt->kept_room = room;
             }
-            if (rt->kept_count == KEST_KEPT_DEEP) {
+            if (rt->kept_count == MAX_KEPT) {
                 fail(vmp, frame, instruction, "K0656",
                      "this machine holds %u working-memory blocks at once",
-                     (unsigned)KEST_KEPT_DEEP);
+                     (unsigned)MAX_KEPT);
                 kest_diags_suggest(vmp->diags,
                                    "a `scratch { }` inside a function that "
                                    "calls itself opens one a call deep");
