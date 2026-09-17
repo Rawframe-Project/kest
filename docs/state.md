@@ -117,23 +117,14 @@ relied on where an array happened to land, and a line end that made two
 platforms write different bytes. Both were in the tests rather than the
 language, which is the useful half of what a second platform is for.
 
-## Phase 2, which is in the tree now
+## Where to read about a piece of it
 
-D962 is the change D959 wrote down and did not make. `src/ir.h` is one body per
-concrete function: values each read by an operation after it, places that say
-what reaches a thing rather than an address already worked out, typed
-three-address operations, and branches naming what they land on. `compile`
-writes a body and no instruction; `lower` writes this machine's bytecode from
-one and decides nothing about what a program means; `build` calls them in order.
+This note says where the work is and what went wrong. Why a thing is the way it
+is belongs in `docs/decisions.md`, which is append-only and says what each
+decision rests on; what a reader with a program has to do about a change belongs
+in `CHANGELOG.md`; and what a program means belongs in `docs/language.md`, which
+is the normative one (D994).
 
-What D959 said it would take turned out to be what it took: the walk kept its
-shape, and what changed was the layer under it. What D959 said the half about
-names was worth also turned out to be right — this language refuses shadowing,
-so reading a resolved name buys nothing a scan does not already give. What the
-body is for is the second backend and the lexical `scratch { }`, and both are
-open.
-
-What says the change means the same is a disassembly of every `.kest` file in
-the tree before and after: fourteen files byte for byte, and the rest differing
-in three ways that are each the backend doing in one place what it did in
-three. D962 lists them.
+The one thing to read first, for somebody picking this up: the completion
+mission's sections above, each with the decision that answered it. Every one of
+those decisions names what it was measured or argued on.
