@@ -124,10 +124,10 @@ What it costs to run, measured rather than remembered. `make time` takes four
 numbers on the machine it is run on:
 
 ```
-115 ns per entity per step, 8 ns of it the two calls it makes, best of 7 over 10000, spread 10%
-19 ns for a call and 29 ns for a crossing, which is 10 ns more, best of 7 over 1000000 calls, spread 7%
-10 ns for a hop of the loop, 13 ns with an index read and 30 ns with a read through a reference, which is 17 ns more, best of 7 over 200000 reads, spread 6%
-24 ns for a call in from a host and 19 ns for one the program makes in a loop, best of 7 over 1000000 calls, spread 12%
+118 ns per entity per step, 7 ns of it the two calls it makes, best of 7 over 10000, spread 21%
+19 ns for a call and 26 ns for a crossing, which is 7 ns more, best of 7 over 1000000 calls, spread 6%
+13 ns for a hop of the loop, 17 ns with an index read and 33 ns with a read through a reference, which is 16 ns more, best of 7 over 200000 reads, spread 3%
+23 ns for a call in from a host and 19 ns for one the program makes in a loop, best of 7 over 1000000 calls, spread 6%
 ```
 
 A frame step per entity, a call against a crossing out, a loop hop against an
