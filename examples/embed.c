@@ -5091,34 +5091,41 @@ int main(int argc, char **argv) {
     arriving[0].as.hit = 4;
     arriving[1].tag = EVENT_HIT;
     arriving[1].as.hit = 5;
-    // Written into the packet where a reader would have put them: one byte in,
-    // so that nothing about the buffer is aligned for an `Event`.
-    memcpy(packet + 1, arriving, sizeof(arriving));
-    if (kest_borrow(engine.runtime, packet + 1, 2, "Event", sizeof(Event))
+    // Written into the packet where a reader would have put them: at the first
+    // address in it that an `Event` may not sit at, which is worked out from
+    // what the program says an `Event` is aligned to rather than guessed. One
+    // byte in is not one byte out of alignment if the array itself did not
+    // begin on a multiple -- and on one of the three platforms this is built
+    // for it did not, so the test passed there for a reason that had nothing
+    // to do with what it is about.
+    const KestLayout *an_event = NULL;
+    kest_build_layout(build, "Event", &an_event);
+    uint32_t wants =
+        an_event == NULL || an_event->align == 0 ? 4 : an_event->align;
+    unsigned char *askew = packet;
+    while (((uintptr_t)askew % wants) == 0) {
+        askew++;
+    }
+    memcpy(askew, arriving, sizeof(arriving));
+    if (kest_borrow(engine.runtime, askew, 2, "Event", sizeof(Event))
             .object != NULL) {
         // What the machine was told, said out loud: a refusal that did not
         // happen is a refusal about *something*, and which of the three
-        // numbers it is about is the whole of what to do next. A message that
-        // says only that it was allowed is a message that costs a round trip
-        // to another machine to learn anything from.
-        const KestLayout *shaped = NULL;
-        kest_build_layout(build, "Event", &shaped);
+        // numbers it is about is the whole of what to do next.
         fprintf(stderr,
                 "a lend of a byte buffer as `Event` was allowed: the address "
                 "is %u past a multiple of %u, this host makes an `Event` %zu "
                 "bytes, and the program makes it %u wide and %u aligned\n",
-                (unsigned)((uintptr_t)(packet + 1) %
-                           (shaped == NULL ? 1u : shaped->align)),
-                shaped == NULL ? 1u : shaped->align, sizeof(Event),
-                shaped == NULL ? 0u : shaped->size,
-                shaped == NULL ? 0u : shaped->align);
+                (unsigned)((uintptr_t)askew % wants), wants, sizeof(Event),
+                an_event == NULL ? 0u : an_event->size,
+                an_event == NULL ? 0u : an_event->align);
         return 1;
     }
     if (!said_that(engine.runtime, "K0610", "past a multiple of that")) {
         return 1;
     }
     Event unpacked[2];
-    memcpy(unpacked, packet + 1, sizeof(unpacked));
+    memcpy(unpacked, askew, sizeof(unpacked));
     engine.frame[0] =
         kest_borrow(engine.runtime, unpacked, 2, "Event", sizeof(Event));
     if (engine.frame[0].object == NULL) {
