@@ -35545,3 +35545,20 @@ called it.
 
 **Runs:** `make check`; `examples/determinism.kest`, which answers
 `3909859238992895122` on this platform.
+
+## Committed junk, and being told about a stale quotation in a second (D944)
+
+`kest-before` was a 413 KB ELF binary committed by accident on the sixteenth and
+named by nothing in the tree. It is gone and `.gitignore` holds the name.
+
+And the validation tax got measured rather than described. Every backstop quotes
+a piece of this tree; twelve of those quotations went stale in one afternoon,
+and the cost of that was not the repointing but the being told — a hole whose
+anchor has moved says so from inside its own run, after a copy of the tree is
+made and built, which is six and a half minutes for the list. The quotations are
+read before anything is copied now. A tree with two of them moved says so in
+0.114 seconds, naming both.
+
+**Runs:** `tools/check-backstops.sh` whole, 6m46s, 836 holes that run something;
+and the same file over a copy with two quotations deliberately moved, which
+refuses in 0.114s and names them.

@@ -29160,3 +29160,29 @@ words to add a promise to.
 This is the same rule for all three promises and it caught nothing else, which
 is what was wanted: it is not a new refusal, it is the existing one arriving in
 the file that made the promise rather than in the file that called it.
+
+## D944: a hole's quotation is read before anything is built
+
+Every backstop quotes a piece of this tree and puts it out of order, so every
+one of them goes stale the day the code it quotes is rewritten. That is the tax
+this discipline is paid for and it is a fair one — but what it cost was not the
+repointing, it was being told.
+
+A hole that no longer matches says so from inside its own run: after a copy of
+the tree is made and built, one hole at a time, eight at a time, six and a half
+minutes for the list. Twelve quotations went stale in one afternoon's work on
+the promises, which is a gate run to find out that twelve strings are out of
+date, another to find out whether the repointing took, and the rest of the
+afternoon.
+
+So the quotations are read first, before a byte is copied. It is not a new
+check: a quotation that is not there is a hole that breaks nothing, which is
+what this whole file refuses already. What changed is when a reader hears about
+it — every stale one at once, in a tenth of a second, naming the file each is
+in. The run that found this took 6m46s to say it; the same tree with two
+quotations moved now says it in 0.114s.
+
+What it does not read is a hole that writes after a file rather than into one:
+those quote nothing, which is why they are written that way — a worklog's last
+entry is whichever is last, and what stays true is that another can be put
+after it.

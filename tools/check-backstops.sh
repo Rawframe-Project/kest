@@ -15058,6 +15058,52 @@ fn main() -> i32 {
 
 failed = 0
 
+# Every hole quotes a piece of this tree, and a quotation goes stale the day the
+# code it quotes is rewritten. That is read here, before anything is copied or
+# built, because the alternative is what it cost the day this was written: a
+# hole whose anchor has moved says so after its own copy of the tree has been
+# made and built, so twelve stale quotations are six and a half minutes to be
+# told that twelve strings are out of date, and they are told one after another
+# rather than all at once. Reading the files these name takes a second and says
+# all of them. See D944.
+#
+# It is not a check on the holes: a quotation that is not there is a hole that
+# breaks nothing, which is the thing this whole file exists to refuse. What
+# changes is when a reader hears about it.
+moved = []
+read_already = {}
+
+
+def still_there(where, quoted):
+    """Whether a file still holds what a hole quotes of it."""
+    if where not in read_already:
+        try:
+            read_already[where] = open(where).read()
+        except OSError:
+            read_already[where] = None
+    return read_already[where] is not None and quoted in read_already[where]
+
+
+for hole in BREAKS:
+    # A hole that writes after a file rather than into it quotes nothing, which
+    # is why it is written that way: what it breaks is read from the end.
+    if "from" in hole and "end" not in hole:
+        if not still_there(hole["file"], hole["from"]):
+            moved.append((hole["what"], hole["file"]))
+            continue
+    if "also" in hole:
+        second, was, _ = hole["also"]
+        if not still_there(second, was):
+            moved.append((hole["what"], second))
+
+if moved:
+    for what, where in moved:
+        print("%s: the code this expects to break has moved, in %s"
+              % (what, where))
+    print("%u hole(s) quote a tree that has been rewritten since, so nothing "
+          "was put out of order" % len(moved))
+    sys.exit(1)
+
 # What each hole took of what it was given. The walls above stop a hole that
 # runs away and say nothing about a hole that is nearly there, and a wall
 # nobody is told about is one whose neighbour finds out first. Threads write

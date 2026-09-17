@@ -1046,6 +1046,12 @@ of them had found anything.
 catching something, and that is the discipline this project is built on. What
 changes is that the list does not grow.
 
+**A stale quotation is found in a second.** Every hole quotes a piece of this
+tree, and a quotation goes stale when the code it quotes is rewritten.
+`check-backstops.sh` reads all of them before it copies or builds anything, so
+the answer to that is a tenth of a second and a list, rather than six and a half
+minutes and a hole at a time. See D944.
+
 **A check that reads a figure is run before the gate is.** Most of what breaks
 `make check` after a real change is a number that moved on purpose — what a
 frame step costs, what compiling costs, how many instructions there are. Those
