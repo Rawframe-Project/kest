@@ -19,6 +19,16 @@ unchanged.**
 
 ### A program may have to change
 
+- **The deterministic profile answers a different number.** It is
+  `2470919380724047420`, where it was `3909859238992895122`. Nothing about how a
+  program runs changed: the conformance corpus grew a ninth part covering a
+  nought with a sign on it, how far a number goes before it is nought, and a
+  thing that is not a number — three things a platform can be wrong about while
+  agreeing about every arithmetic rule. The profile number itself is still
+  `kest-det 1`, because what `deterministic` promises did not change; what
+  changed is how much of it is checked. A host that wrote the old number down
+  beside a replay writes the new one. See D995.
+
 - **A nought is a character.** `"a\0b"` was refused and is now three bytes of
   text that `len` counts as three. Nothing that compiled before stops
   compiling; what changes is that a program which relied on `\0` being refused
@@ -67,7 +77,11 @@ unchanged.**
 - `kest debug`, a source-level debugger whose breakpoints are written into the
   program and taken out again, so a machine nobody is debugging pays nothing
   (D991).
-- `make release`, one archive with a checksum beside it (D989).
+- `make release`, one archive with a checksum beside it, unpacked and run in CI
+  (D989). The build is reproducible: two clean builds are the same bytes.
+- Windows x86-64 and macOS arm64 beside Linux, all three held to writing the
+  same bytes for every example (D970, D995).
+- A VS Code command that opens `kest debug` on the file in front of you (D978).
 - `kest new`, `kest build`, `kest test` and `kest doctor`, and a project
   manifest of `name value` lines (D982).
 - `kest check --cost`, which says what the compiler proved about each body
