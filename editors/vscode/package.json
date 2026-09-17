@@ -56,6 +56,21 @@
           "description": "The `kest` command to run. The extension speaks to `kest lsp`, which is the compiler, so this is the one thing to set."
         }
       }
+    },
+    "commands": [
+      {
+        "command": "kest.debug",
+        "title": "Kest: debug this file",
+        "category": "Kest"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "kest.debug",
+          "when": "editorLangId == kest"
+        }
+      ]
     }
   },
   "dependencies": {

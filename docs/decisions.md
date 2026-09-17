@@ -30612,6 +30612,13 @@ programs as samples. The `language_id` is left out because it is theirs to
 allocate. Whether they take it is not this repository's to decide, and nothing
 here waits on it. Nothing is faked: there is no corpus written to be counted.
 
+**Debugging.** The extension offers one command, *Kest: debug this file*, which
+opens `kest debug` in a terminal on the file in front of the person. That is
+what integrating a debugger that is a command line looks like. It is not a debug
+adapter: D991 chose a command line over DAP because one surface finished beats
+two started, and when there is a protocol this command becomes an adapter and
+nothing else in the extension changes.
+
 **The one dependency.** `vscode-languageclient` is the standard client and this
 extension has it. The language has none; an editor plugin is not the language.
 *Argued.*
