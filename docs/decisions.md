@@ -29698,8 +29698,24 @@ the experiment, then the rule.
 **What the fallback branch asks for instead** — improving places, aggregate
 copying and inlining where measured — is what D931's `load.elem`/`store.elem`
 already did once: 46.51 instructions an entity became 43.51. The same door is
-open on the movement above, and the measurement says where to look: `load` at a
-third of everything is a program pushing what it is about to use.
+open on the movement above, and the measurement says where to look. Over the
+first five hundred million instructions of the same frame step, counted in
+pairs:
+
+| what follows what | share of all instructions |
+| --- | --- |
+| `load` then `const` | 14.3% |
+| `load` then `load` | 9.7% |
+| `store` then `load` | 3.6% |
+| `load` then `store` | 3.6% |
+
+A pair of instructions that always appear together is one instruction with two
+operands. Fusing the first two would take about a quarter of what the machine
+runs, which is a third of what a register backend is predicted to take and costs
+two instructions rather than a second backend. It is not done here: it moves
+every instruction count in this tree and it is an optimisation rather than a
+thing the mission asked for, and what it is worth is written down so that the
+next person weighing it has the number rather than the argument.
 
 ## D959: the resolved representation, and why it is still not in the tree
 
