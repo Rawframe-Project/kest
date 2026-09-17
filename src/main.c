@@ -11,7 +11,9 @@
 #if defined(_WIN32)
 // And one more, for making a directory. There is no way in ISO C to make one
 // and `kest new` has to; the library has no such need and does not have this.
-__declspec(dllimport) int __cdecl _mkdir(const char *path);
+// Through the header rather than declared here, because it is the C library's
+// rather than the platform's and how it is linked is the library's business.
+#include <direct.h>
 #define KEST_MAKE_DIRECTORY(path) _mkdir(path)
 #else
 #include <sys/stat.h>
