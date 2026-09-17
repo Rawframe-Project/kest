@@ -6632,9 +6632,27 @@ fn main() -> i32 {
 
         case KEST_OP_CALL_VALUE: {""",
         "make": ["kest"],
-        "tool": "tools/check-commands.sh",
-        "arguments": ["examples/math.kest"],
-        "caught": "a number written down did not read back as itself",
+        # A program of its own rather than an example: a machine whose callee
+        # stands on the caller's slots reads a count out of whatever was there,
+        # and an example with a loop in it runs on that count until the memory
+        # runs out. What is wanted is a call and an answer.
+        "program": "calling.kest",
+        "source": """import std.io
+
+fn twice(n: i32) -> i32 {
+    return n * 2
+}
+
+fn main() -> i32 {
+    let spare = 7
+    if twice(21) != 42 {
+        io.print("a call read the slots of whoever called it")
+        return 1
+    }
+    return spare - 7
+}
+""",
+        "caught": "a call read the slots of whoever called it",
     },
     {
         # Arithmetic and the cut behind it written as two instructions again.
@@ -8397,7 +8415,11 @@ fn main() -> i32 {
         "to": """    rt->call_depth = wants_frames;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "saying nothing wants",
+        # Caught by the arithmetic rather than by the order: what a host that
+        # says nothing is given is the program's worst plus the way back in,
+        # and a worst one slot over makes that sum wrong. It used to be caught
+        # by the order above it, while the two numbers were one slot apart.
+        "caught": "for the program and",
     },
     {
         # The program's own worst one slot over. Naming what a host calls is
@@ -8412,7 +8434,11 @@ fn main() -> i32 {
         "to": r"""    least->stack_slots = walked->slots + 1;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "saying nothing wants",
+        # Caught by the arithmetic rather than by the order: what a host that
+        # says nothing is given is the program's worst plus the way back in,
+        # and a worst one slot over makes that sum wrong. It used to be caught
+        # by the order above it, while the two numbers were one slot apart.
+        "caught": "for the program and",
     },
     {
         # A machine that keeps everything nobody has asked for. It does not
@@ -9712,7 +9738,8 @@ fn main() -> i32 {
     return 0
 }
 """,
-        "caught": "K0633]: `io.print#text` calls into the host 2 slots and 2 frames in, where `io.write#text` was measured",
+        "caught": "K0633]: `io.print#text` calls into the host 4 slots and 2 "
+                   "frames in, where `io.write#text` was measured",
     },
     {
         # A copy of a generic that carries no promise where the generic made
@@ -13404,7 +13431,12 @@ fn main() -> i32 {
     return 0
 }
 """,
-        "caught": "K0505",
+        # Caught by the program rather than by the compiler: comparing an
+        # optional the long way round is a comparison of two slots against one
+        # value, and the answer is wrong rather than the width being. The
+        # program says which check failed, which is what an example here is
+        # for.
+        "caught": "asking about nothing left the stack one along",
     },
     {
         # An `if let` whose name nothing reads, asked about like any other
@@ -14309,10 +14341,10 @@ fn main() -> i32 {
     return counted("kest") - 4
 }
 """,
-        # Caught by the other half of the same promise: the tree walk let it
-        # through and what was emitted says otherwise, which is the fault
-        # `K0405` is for.
-        "caught": "the promise was allowed and the code says otherwise",
+        # Caught by the tree walk itself: a cut reaches nothing (D964), so a
+        # table saying it does refuses the library's own functions that cut
+        # before any program reaches one.
+        "caught": "this allocates, and",
     },
     {
         # A character asked for whole when only part of it is there. Text

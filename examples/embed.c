@@ -75,9 +75,12 @@ typedef struct {
 } Mark;
 
 // The shape the program keeps in a store, declared here only to be refused: a
-// host cannot lend one, because the name in it is the machine's.
+// host cannot lend one, because the name in it is the machine's. Laid out the
+// way the program lays it out, so that the size is not what refuses it: a
+// piece of text is what it is made of and how many bytes that is. See D964.
 typedef struct {
     const char *name;
+    uint64_t said;
     int32_t health;
 } Npc;
 
