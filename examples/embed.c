@@ -5096,7 +5096,22 @@ int main(int argc, char **argv) {
     memcpy(packet + 1, arriving, sizeof(arriving));
     if (kest_borrow(engine.runtime, packet + 1, 2, "Event", sizeof(Event))
             .object != NULL) {
-        fprintf(stderr, "a lend of a byte buffer as `Event` was allowed\n");
+        // What the machine was told, said out loud: a refusal that did not
+        // happen is a refusal about *something*, and which of the three
+        // numbers it is about is the whole of what to do next. A message that
+        // says only that it was allowed is a message that costs a round trip
+        // to another machine to learn anything from.
+        const KestLayout *shaped = NULL;
+        kest_build_layout(build, "Event", &shaped);
+        fprintf(stderr,
+                "a lend of a byte buffer as `Event` was allowed: the address "
+                "is %u past a multiple of %u, this host makes an `Event` %zu "
+                "bytes, and the program makes it %u wide and %u aligned\n",
+                (unsigned)((uintptr_t)(packet + 1) %
+                           (shaped == NULL ? 1u : shaped->align)),
+                shaped == NULL ? 1u : shaped->align, sizeof(Event),
+                shaped == NULL ? 0u : shaped->size,
+                shaped == NULL ? 0u : shaped->align);
         return 1;
     }
     if (!said_that(engine.runtime, "K0610", "past a multiple of that")) {
