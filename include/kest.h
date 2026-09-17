@@ -1063,6 +1063,51 @@ void kest_cancel(KestRuntime *runtime);
 // Whether somebody asked it to stop and it has not been given fuel since.
 bool kest_cancelled(const KestRuntime *runtime);
 
+// How deep a host may nest what it marks. A scratch is a frame's worth of
+// working memory and a host that wants nine of them at once is a host doing
+// something this is not for.
+#define KEST_SCRATCH_DEEP 8
+
+// Marks where the heap is, and answers a number to put it back by. Nought when
+// it could not: while the program is running, with anything lent, and past the
+// depth above, each of which says why into `kest_report`.
+//
+// What it is for is a frame's working memory. A host that calls a query which
+// makes text, an array, a store — anything on the heap — and reads the answer
+// out, marks before the call and puts the heap back after it, and then the
+// query costs the same every frame rather than every frame costing the last
+// one. It is `kest_heap_reset` with a place to go back to rather than the
+// beginning.
+//
+// What a host must not do is keep anything the program made after the mark. A
+// piece of text, an array, a store or a reference into one that came out of a
+// call after the mark is gone when the heap goes back, and the machine cannot
+// tell: a handle is a pointer. What is safe to read out is what a host copies
+// out — a number, or `kest_gave_text` into a buffer of the host's own — and
+// what is safe to keep is what was made before the mark.
+//
+// The program's own state is the same rule said again: anything it pushed into
+// a store or an array that was made before the mark is on the heap after it,
+// so a host that marks, calls a frame step that adds to its world, and puts the
+// heap back has taken the world's memory out from under it. Mark round a query
+// and not round a step that keeps something.
+//
+// This language will have a `scratch { }` of its own, where the compiler proves
+// that nothing escapes; that needs lifetime facts it does not have yet. Until
+// then this is the host's to get right, and it is written down rather than
+// implied. See D957.
+uint32_t kest_scratch_mark(KestRuntime *runtime);
+
+// And back to it: everything the program made since is gone and the heap is
+// where it was. True when it was put back. False, with why in `kest_report`,
+// for a mark this machine did not hand out, one that has already been used,
+// one from before a reset, and for a rewind while the program is running or
+// with anything lent.
+//
+// A mark under one that is still open takes the ones above it with it, which is
+// what makes nesting mean anything.
+bool kest_scratch_rewind(KestRuntime *runtime, uint32_t mark);
+
 // Throws the heap away and starts it again. Nothing in the machine survives a
 // call, so between calls there is nothing of the program's left to point at
 // it; what this invalidates is every handle the *host* is still holding. An

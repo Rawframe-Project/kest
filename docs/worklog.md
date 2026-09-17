@@ -35781,3 +35781,23 @@ buffer the compiler proves rather than a rule a reader remembers.
 
 **Runs:** `make check`; the ladder above, by hand, over three shapes and three
 round counts.
+
+## A frame's working memory (D957)
+
+A host that calls a query every frame pays for what the query made every frame,
+because nothing is given back while a program runs. The only door out of that
+threw the whole heap away, including what the host was keeping.
+
+`kest_scratch_mark` answers a number saying where the heap is and
+`kest_scratch_rewind` puts it back there; eight may be open at once and one
+under another takes the ones above it. The machine refuses what it can see — a
+mark or a rewind while the program runs, either with anything lent, a ninth
+mark, a rewind to a mark it never handed out — and what it cannot see is written
+down in three places instead: what a host keeps past a rewind must not be
+anything the program made after the mark.
+
+`examples/engine.c` marks round a query that costs 451 bytes, copies the answer
+out with `kest_gave_text`, puts the heap back to where it was, and runs the next
+frame on a world that is still there.
+
+**Runs:** `make check`; `examples/engine` and `examples/engine-debug`.

@@ -527,6 +527,56 @@ int main(int argc, char **argv) {
         return 1;
     }
 
+    // A query, and the heap put back after it. What the engine wants is how
+    // many bodies the answer described, and what it does not want is the text
+    // that said so: it marks, calls, copies the number out, and puts the heap
+    // where it was. A frame loop that does this costs the same every frame
+    // rather than every frame costing the last one. See D957.
+    {
+        size_t before = kest_heap_used(engine.runtime);
+        uint32_t mark = kest_scratch_mark(engine.runtime);
+        int32_t describe = kest_entry(engine.runtime, "describe");
+        KestValue asking[8] = {{0}};
+        asking[0] = engine.world[0];
+        asking[1] = engine.world[1];
+        if (mark == 0 || describe < 0 ||
+            !kest_call(engine.runtime, describe, asking, 8)) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            fprintf(stderr, "a query would not run\n");
+            return 1;
+        }
+        // Copied out while it is still there, which is the one way to keep
+        // what a query answered: a handle of the machine's is gone when the
+        // heap goes back, and bytes in a buffer of this host's own are not.
+        char about[256];
+        if (kest_gave_text(engine.runtime, describe, asking, about,
+                           sizeof(about)) < 0 ||
+            strncmp(about, "0 at ", 5) != 0) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            fprintf(stderr, "a query answered `%s`\n", about);
+            return 1;
+        }
+        size_t cost = kest_heap_used(engine.runtime);
+        if (cost <= before) {
+            fprintf(stderr, "a query that makes text cost nothing\n");
+            return 1;
+        }
+        if (!kest_scratch_rewind(engine.runtime, mark) ||
+            kest_heap_used(engine.runtime) != before) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            fprintf(stderr, "the heap did not go back to where it was\n");
+            return 1;
+        }
+        // And the world is where it was, which is the half a host has to get
+        // right: the mark went round a query and not round a step that keeps
+        // something.
+        if (!one_frame(&engine, 1, xs, ys)) {
+            return 1;
+        }
+        printf("a query cost %zu bytes and the heap went back to %zu\n",
+               cost - before, before);
+    }
+
     // And a door this host refuses at, which the program does not carry on
     // from.
     int32_t refused = kest_entry(engine.runtime, "refused");

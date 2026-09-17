@@ -12680,16 +12680,14 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # next is nothing, because it was told this worked.
         "what": "a heap thrown away from inside a call",
         "file": "src/vm.c",
-        "from": """bool kest_heap_reset(KestRuntime *runtime) {
-    if (runtime == NULL) {
-        return false;
-    }
-    if (is_running(runtime)) {""",
-        "to": """bool kest_heap_reset(KestRuntime *runtime) {
-    if (runtime == NULL) {
-        return false;
-    }
-    if (false) {""",
+        "from": """static bool between_calls(KestRuntime *runtime, const char *doing) {
+    if (!is_running(runtime)) {
+        return true;
+    }""",
+        "to": """static bool between_calls(KestRuntime *runtime, const char *doing) {
+    if (true) {
+        return true;
+    }""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "thrown away while the program was running",

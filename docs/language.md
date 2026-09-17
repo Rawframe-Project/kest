@@ -4472,6 +4472,45 @@ beside them. What that costs today is the walk measuring a C string costs, done
 once by the library rather than once by every host. See D955, which is also
 where the representation this does not have yet is written down.
 
+## A frame's working memory
+
+A host that calls a query — something that makes text, or an array, or a store,
+and answers — pays for what it made, and nothing is given back while a program
+runs. A frame loop that does that every frame is a frame loop where every frame
+costs the last one.
+
+`kest_scratch_mark` answers a number saying where the heap is, and
+`kest_scratch_rewind` puts it back there. Everything the program made since is
+gone and the heap is where it was, so the query costs the same every frame.
+Eight of them may be open at once, and putting the heap back to one under
+another takes the ones above it with it.
+
+What a host must not do is keep anything the program made after the mark. A
+piece of text, an array, a store, or a reference into one, is a pointer into the
+heap and the machine cannot tell that it has gone. What is safe to keep is what
+the host copies out — a number, or `kest_gave_text` into a buffer of its own —
+and what was there before the mark. The program's own state is the same rule
+said again: a step that pushes into the world's store puts that memory after the
+mark, so a mark goes round a query and not round a step that keeps something.
+
+The machine refuses what it can see: a mark or a rewind while the program is
+running, either with anything lent — a lend is a header on the heap and a place
+in a list beside it — a mark past the eighth, and a rewind to a number this
+machine did not hand out or has already put back to. Throwing the heap away
+takes every mark with it.
+
+```c
+uint32_t mark = kest_scratch_mark(runtime);
+kest_call(runtime, query, frame, room);
+kest_gave_text(runtime, query, frame, mine, sizeof(mine));
+kest_scratch_rewind(runtime, mark);
+```
+
+A `scratch { }` the compiler proves nothing escapes from is what this language
+will have instead, and it needs lifetime facts the compiler does not have yet.
+Until then this is the host's to get right, which is why it is written down
+here. `examples/engine.c` marks round a query and puts the heap back.
+
 ## Who owns a machine
 
 A build is read-only once it is built. The program, the layouts and every piece

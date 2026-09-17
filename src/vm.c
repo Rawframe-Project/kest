@@ -512,6 +512,15 @@ struct KestRuntime {
     // The link is the block pointer, which an ended lend has no use for.
     // See D241.
     Array *spare_lends;
+    // Where a host asked the heap to be put back to, newest last, and the
+    // number each was handed out under. A mark is a place in this list and the
+    // number that says which time it was: a host that keeps one past a rewind
+    // holds a number nothing answers to rather than a place that has moved.
+    // See D957.
+    KestMark scratch[KEST_SCRATCH_DEEP];
+    uint32_t scratch_given[KEST_SCRATCH_DEEP];
+    uint32_t scratch_count;
+    uint32_t scratch_handed;
     // Every lend the host has not ended, so that ending one ends every handle
     // over that block: a host lending the same memory twice has two handles
     // and one block, and it is the block it takes back. See D283.
@@ -4885,19 +4894,115 @@ bool kest_heap_allow(KestRuntime *runtime, size_t bytes) {
     return true;
 }
 
+// What a host may not do to the heap while the program is standing on it, said
+// once for the three doors that say it: what it is holding is on it.
+static bool between_calls(KestRuntime *runtime, const char *doing) {
+    if (!is_running(runtime)) {
+        return true;
+    }
+    KestSpan nowhere = {0, 0};
+    kest_diags_in(runtime->diags, NULL);
+    kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0613", nowhere,
+                   "the heap cannot be %s while the program is running",
+                   doing);
+    kest_diags_suggest(runtime->diags,
+                       "what it is holding is on it; do this between calls "
+                       "rather than inside one");
+    return false;
+}
+
+uint32_t kest_scratch_mark(KestRuntime *runtime) {
+    if (runtime == NULL) {
+        return 0;
+    }
+    if (!between_calls(runtime, "marked")) {
+        return 0;
+    }
+    // Anything lent is a header on the heap and a place in a list beside it,
+    // both of which a rewind would take. A host that ends its lends first has
+    // nothing here to lose; one that does not is told rather than finding out
+    // at the next read. See D957.
+    if (runtime->lent_count > 0) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0613", nowhere,
+                       "the heap cannot be marked while %u thing%s lent",
+                       runtime->lent_count,
+                       runtime->lent_count == 1 ? " is" : "s are");
+        kest_diags_suggest(runtime->diags,
+                           "end what is lent first: a lend is a header on the "
+                           "heap and a place in a list beside it");
+        return 0;
+    }
+    if (runtime->scratch_count == KEST_SCRATCH_DEEP) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0613", nowhere,
+                       "this machine holds %u marks at once and there is one "
+                       "more",
+                       (unsigned)KEST_SCRATCH_DEEP);
+        kest_diags_suggest(runtime->diags,
+                           "put the heap back to one of them before marking "
+                           "again");
+        return 0;
+    }
+    uint32_t at = runtime->scratch_count++;
+    runtime->scratch[at] = kest_arena_mark(runtime->heap);
+    runtime->scratch_given[at] = ++runtime->scratch_handed;
+    return runtime->scratch_given[at];
+}
+
+bool kest_scratch_rewind(KestRuntime *runtime, uint32_t mark) {
+    if (runtime == NULL || mark == 0) {
+        return false;
+    }
+    if (!between_calls(runtime, "put back")) {
+        return false;
+    }
+    if (runtime->lent_count > 0) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0613", nowhere,
+                       "the heap cannot be put back while %u thing%s lent",
+                       runtime->lent_count,
+                       runtime->lent_count == 1 ? " is" : "s are");
+        kest_diags_suggest(runtime->diags,
+                           "end what is lent first: a lend is a header on the "
+                           "heap and a place in a list beside it");
+        return false;
+    }
+    for (uint32_t at = runtime->scratch_count; at > 0; at--) {
+        if (runtime->scratch_given[at - 1] != mark) {
+            continue;
+        }
+        kest_arena_rewind(runtime->heap, runtime->scratch[at - 1]);
+        // The ones above it go with it, which is what nesting is, and so does
+        // what the machine itself keeps on the heap: the list of what is lent
+        // and the headers it was saving for the next lend are both on it and
+        // both may be above the mark.
+        runtime->scratch_count = at - 1;
+        runtime->spare_lends = NULL;
+        runtime->lent = NULL;
+        runtime->lent_count = 0;
+        runtime->lent_capacity = 0;
+        return true;
+    }
+    KestSpan nowhere = {0, 0};
+    kest_diags_in(runtime->diags, NULL);
+    kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0613", nowhere,
+                   "this machine has no mark %u to put the heap back to",
+                   mark);
+    kest_diags_suggest(runtime->diags,
+                       "a mark is answered by `kest_scratch_mark` and is used "
+                       "once; a heap thrown away takes every one of them");
+    return false;
+}
+
 bool kest_heap_reset(KestRuntime *runtime) {
     if (runtime == NULL) {
         return false;
     }
-    if (is_running(runtime)) {
-        KestSpan nowhere = {0, 0};
-        kest_diags_in(runtime->diags, NULL);
-        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0613", nowhere,
-                       "the heap cannot be thrown away while the program is "
-                       "running");
-        kest_diags_suggest(runtime->diags,
-                           "what it is holding is on it; reset between calls "
-                           "rather than inside one");
+    if (!between_calls(runtime, "thrown away")) {
         return false;
     }
     // The same heap, emptied. It was a new one and a free of the old one,
@@ -4909,6 +5014,8 @@ bool kest_heap_reset(KestRuntime *runtime) {
     runtime->lent = NULL;
     runtime->lent_count = 0;
     runtime->lent_capacity = 0;
+    // And every mark, because a mark is a place on the heap that has gone.
+    runtime->scratch_count = 0;
     return true;
 }
 

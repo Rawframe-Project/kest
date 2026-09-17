@@ -29610,3 +29610,40 @@ two shapes of one round; what it says is that this shape of round, written this
 way, settles — and that the way to write it is a thing the language proves
 rather than a thing a reader remembers. `make check` holds the two rows that
 matter.
+
+## D957: a frame's working memory, marked and put back
+
+Nothing is given back while a program runs (D012). A host that calls a query
+every frame — something that makes text or an array to answer with — pays for
+what it made every frame, and the only door out of that was
+`kest_heap_reset`, which throws everything away including what the host is
+keeping.
+
+So the heap can be marked and put back to a mark. `kest_scratch_mark` answers a
+number and `kest_scratch_rewind` goes back to it; eight may be open at once and
+one under another takes the ones above with it. A query that cost four hundred
+and fifty bytes costs four hundred and fifty bytes again next frame rather than
+nine hundred.
+
+**What the machine can refuse, it refuses.** A mark or a rewind while the
+program is running, either of them with anything lent — a lend is a header on
+the heap and a place in a list beside it, and a rewind would take both — a
+ninth mark, and a rewind to a number this machine never handed out or has
+already gone back to. A heap thrown away takes every mark with it, because a
+mark is a place on a heap that is not there any more.
+
+**What it cannot refuse is the rule this rests on**, and so the rule is written
+down in three places rather than implied in none: what a host keeps past a
+rewind must not be anything the program made after the mark. A handle is a
+pointer and the machine cannot tell that what it points at has gone. A host
+copies out what it wants to keep — a number, or `kest_gave_text` into a buffer
+of its own — and marks round a query rather than round a step that puts
+something in the world.
+
+That rule is exactly what a `scratch { }` in the language would prove instead of
+asking for, and proving it needs lifetime facts through structs, optionals,
+payloads, arrays, stores and function contexts — which is the phase this mission
+gates on an IR that is not there. This is the half that can be had without it,
+and the half that cannot is named rather than pretended. `examples/engine.c`
+marks round a query, copies the answer out, puts the heap back, and runs the
+next frame on a world that is still where it was.

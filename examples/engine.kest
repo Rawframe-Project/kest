@@ -188,6 +188,19 @@ fn round(w: World, from: i32) -> i32 no.alloc no.host {
     return 0 - steps
 }
 
+// A query: what the engine asks between frames rather than in one. It makes
+// text and an array to answer, which is what a query does and what a host that
+// wants the answer without the memory marks round. See D957.
+fn describe(w: World) -> text {
+    let said = ""
+    for r in w.bodies {
+        if let one = get(w.bodies, r) {
+            said = "{said}{one.id} at {i32(one.x)},{i32(one.y)}; "
+        }
+    }
+    return said
+}
+
 extern fn Engine.watch(tick: i32) -> i32
 extern fn Engine.named(what: text) -> i32
 extern fn Engine.refuse(why: i32) -> i32
