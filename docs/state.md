@@ -4,10 +4,13 @@ This is the engineering note. It is short on purpose and it is kept current:
 `docs/worklog.md` is history, `docs/decisions.md` is why, `CHANGELOG.md` is what
 a reader with a program has to do about it, and this is where the work is.
 
-## Reproduced defects
+## Reproduced defects, all fixed
 
 Each was reproduced against this tree with the smallest program or host that
-asks the question. Evidence is named; nothing here is a claim from a document.
+asks the question, and each is fixed and held by something that runs. Evidence
+is named; nothing here is a claim from a document. **None of these is open** --
+the list stays because what caught a thing is worth knowing, and because a
+reader who finds the same shape again should find the first one beside it.
 
 | | what | evidence |
 | --- | --- | --- |
@@ -39,7 +42,7 @@ a run with a decision knows which is which.
 | | then | now |
 | --- | --- | --- |
 | the colony's steady state, at 200, 400 and 800 days | 2,370,304 bytes (D940) | 2,338,096 bytes, and still flat: a store keeps a bit a slot rather than a byte (D954) |
-| a frame step an entity | 127 ns (D926), 122 after D931 | 115 to 125 ns depending on the run, `make time` on this machine |
+| a frame step an entity | 127 ns (D926), 122 after D931 | 107 to 110 ns, `make time` on this machine, and the number D979 would not pay a third of |
 | what an array of text costs a frame, an entity | 25 bytes (D915) | 38, because a piece of text in one is sixteen bytes rather than eight (D964) |
 | what a frame step runs, an entity | 57 instructions (D958) | 38, after D961 took the two commonest pairs of pushes and D962 gave every constant the same door |
 
