@@ -4465,7 +4465,7 @@ than implied. This is that list and where each one is.
 | the threading model | *Who owns a machine* |
 | what a heap ceiling covers | *What there is a most of*: the heap a program runs on, which is not what compiling it took |
 | whether the ABI is stable | it is not. The front page says so under **Experimental**, and every door here is a door that has moved this month |
-| which backend this is | the stack machine, and D958 says what was measured and why the other one is not adopted on a prediction |
+| which backend this is | the stack machine, and D963 says what the second one measured: 1.35 times slower over three shapes of work, built and weighed rather than predicted |
 
 ## What this has been run on
 
@@ -4804,8 +4804,15 @@ the whole of the capability model here and is what `extern` already meant.
 
 `std.os` is the standard set of those doors: `read`, `write` and `exists` for a
 file; `argCount`, `arg` and `args` for what the program was started with; `now`
-for a clock that only goes forwards, in microseconds from somewhere nobody
-promises anything about.
+for a clock in microseconds from somewhere nobody promises anything about.
+
+What `now` is worth is the host's. The command line reads `CLOCK_MONOTONIC`
+where the platform has it, which only goes forwards; where it does not, it falls
+back to `timespec_get` and then to `clock`, and neither of those is that — the
+first is a wall clock that can go backwards and the second is processor time.
+A host that needs a clock that only goes forwards binds one that is, and the
+table in *What this has been run on* says where the command line's lives. This
+is a door rather than a promise: `deterministic` refuses it either way.
 
 ```kest
 fn howLong(path: text) -> i32 {

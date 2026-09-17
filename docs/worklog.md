@@ -36056,3 +36056,19 @@ code left to run.
 **Runs:** `make check`; `examples/churn.kest` at a hundred, two hundred and four
 hundred rounds against seven ceilings each; a host of two dozen lines that gives
 a machine two thousand steps and reads the heap after the refusal.
+
+## The profile, asked again after three changes
+
+The conformance run answers `3909859238992895122`, which is what it answered
+before the bodies, the two-slot text and the blocks. Beside it: `check` and
+`emit` agree on every file in the tree, a `deterministic` generic keeps its
+promise inside a block as well as outside one, the four transcendental
+crossings are still refused under the promise, and `no.host` still refuses for
+a different reason than `deterministic` does.
+
+What could have moved and did not is written in D968. The short of it is that
+text compares and hashes by the bytes it says it has, which are the bytes it
+had, and that a block moves where things sit on a heap nothing can ask about.
+
+**Runs:** `examples/determinism.kest` three times; `check` against `emit` over
+fifty files; four programs written for the four sentences above.

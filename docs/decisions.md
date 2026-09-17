@@ -30163,3 +30163,67 @@ is a world that replaces what it holds with something new and keeps the new
 thing — which is what `replace` is, and what the reference now says out loud.
 D012 stands: nothing is given back while a program runs, and a block is where
 that stops being the whole story.
+
+## D968. The determinism profile after the IR, the text and the blocks
+
+D941 wrote the profile down and D942 and D943 made `deterministic` a promise the
+compiler proves. Three things have moved under it since: what a program means is
+written down once and read by a backend (D962), a piece of text carries its own
+length (D964), and a body may have a block of working memory in it (D966). Each
+of those is a change to how a program is kept, and the profile is about what it
+answers. This is the revalidation section 9 of the continuation asks for.
+
+**The conformance run answers the same number.** `examples/determinism.kest`
+folds the whole profile into one: integer conversions at every width, `f32` and
+`f64` arithmetic, text compared and hashed, a store and an array walked, a
+seeded random sequence. It answered `3909859238992895122` before any of the
+three changes and answers `3909859238992895122` after them, three runs in a row.
+*Measured.*
+
+**And the four things the number does not by itself say.**
+
+- `check`, `emit` and `run` agree: every `.kest` file in this tree is accepted
+  or refused the same way by the first two, over fifty files. The gate asks the
+  third of them the same question against the examples.
+- A generic keeps its promise at its declaration and in a copy made inside a
+  block: a `deterministic` generic that builds text compiles, runs and answers
+  the same inside a `scratch { }` as outside one.
+- `sin`, `cos`, `pow` and `atan2` are still outside the profile: a
+  `deterministic` function that reaches one is `K0401`, naming the crossing in
+  `std.math` and the promise it broke.
+- `no.host` is not `deterministic` and neither implies the other: the same
+  function under `no.host` is refused for calling the host, which is a different
+  sentence about a different promise.
+
+**What the three changes could have moved, and did not.** Two-slot text compares
+by bytes with the lengths beside them, which puts a piece and the piece it
+starts with in the same order the nought did. It hashes the bytes it says it has,
+which for a cut is the bytes a copy of that cut used to hold. And a block of
+working memory changes where things sit on the heap and nothing else: no
+operation in this language answers an address, so where a value was made is not
+a thing a program can read. *Argued*, and held by the number above.
+
+**Still one platform.** x86-64 Linux, GCC 15.2. Nothing here says anything about
+a second one, and D941's sentence stands: a profile answered by one machine is a
+profile one machine keeps.
+
+## D969. Windows is still unverified, and the clock says so where a reader is
+
+Section 10 of the continuation asks for a Windows build if one is available and
+says to keep `UNVERIFIED_PLATFORM` if it is not. There is no Windows here and no
+cross-compiler for one: `uname` says Linux and there is no `mingw`, no `cl` and
+no `wine` on this machine. So it stays unverified, and nothing here says
+otherwise.
+
+What the section also asks for is the part that could be done: no false
+promises about a fallback. `host_microseconds` in `src/main.c` reads
+`CLOCK_MONOTONIC` where the platform has it and falls back to `timespec_get`
+and then to `clock`, and the comment beside it has said since D935 that neither
+fallback is a clock that only goes forwards. The reference did not: it called
+`os.now` "a clock that only goes forwards" full stop. It says what each of the
+three is now, and that a host needing one that only goes forwards binds one.
+
+That is the whole of what portability work there was to do without the platform
+to do it on. The table of what this tree assumes about where it is — path
+separators, where the library is, the clock, the widths a message prints — is
+where a port starts, and it is four rows because the library is C11 and libc.
