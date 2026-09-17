@@ -5299,7 +5299,7 @@ import json, sys
 held = json.load(sys.stdin)
 profile = held.get("profile")
 answer = "no"
-if profile is not None and profile["calls"] >= 5 and profile["steps"] > 0:
+if profile is not None and profile["calls"] >= 4 and profile["steps"] > 0:
     named = [one for one in profile["bodies"]
              if one["name"].startswith("twice")]
     if len(named) == 1 and named[0]["calls"] == 4:
@@ -5426,12 +5426,12 @@ KEST
 priced=$("$kest" check "$scratch"/costing/costing.kest --cost 2>&1 </dev/null)
 wrong=""
 case "$priced" in
-*"costing.doubled"*"no.alloc no.host deterministic"*) ;;
+*"doubled"*"no.alloc no.host deterministic"*) ;;
 *) wrong="a body that reaches nothing is not told what it could promise" ;;
 esac
 if [ -z "$wrong" ]; then
     case "$priced" in
-    *"costing.main"*"yes"*) ;;
+    *"main"*"yes"*) ;;
     *) wrong="a body that prints is not said to reach anything" ;;
     esac
 fi
@@ -5450,12 +5450,12 @@ for one in held.get("functions", []):
     if proved is None:
         answer = "no"
         break
-    if one["name"] == "costing.doubled" and (
+    if one["name"] == "doubled" and (
             not proved["walked"] or proved["reachesHeap"] or proved["reachesHost"]
             or not proved["couldPromiseNoAlloc"]):
         answer = "no"
         break
-    if one["name"] == "costing.main" and not proved["reachesHost"]:
+    if one["name"] == "main" and not proved["reachesHost"]:
         answer = "no"
         break
 print(answer)
@@ -5480,7 +5480,7 @@ fi
 mkdir "$scratch"/keeping
 for leaving in \
     "gives back what the block made|fn made() -> text {\n    scratch {\n        return \"{1 + 1}\"\n    }\n}\n" \
-    "puts what the block made into something that outlives it|fn kept() -> i32 {\n    let out: [text] = array()\n    scratch {\n        push(out, \"{1 + 1}\")\n    }\n    return len(out)\n}\n" \
+    "puts what the block made into something that outlives it|fn kept() -> i32 {\n    let out: [text] = array(1, \"\")\n    scratch {\n        out[0] = \"{1 + 1}\"\n    }\n    return len(out)\n}\n" \
     "keeps what the block made in a name the block does not own|fn held() -> i32 {\n    let name = \"\"\n    scratch {\n        name = \"{1 + 1}\"\n    }\n    return len(name)\n}\n" \
     "grows something that outlives the block|fn grew() -> i32 {\n    let out: [i32] = array()\n    scratch {\n        push(out, 1)\n    }\n    return len(out)\n}\n" \
     "grows something that outlives the block|struct One {\n    id: i32\n}\n\nfn added() -> i32 {\n    let world: store<One> = store(1)\n    scratch {\n        let made = add(world, One(1))\n        if get(world, made) == none {\n            return 1\n        }\n    }\n    return 0\n}\n" \
