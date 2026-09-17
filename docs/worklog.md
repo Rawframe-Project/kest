@@ -35996,7 +35996,8 @@ better one.
 What came out of it beyond `len`:
 
 - `slice` came off the list of builtins that reach the heap, in the tree walk
-  and in the proof over emitted code. A cut is free.
+  and in the proof over emitted code. A cut is free, and `text.charAt` and
+  `text.trim` promise `no.alloc` now because they are cuts and nothing else.
 - A piece of text is sixteen bytes where a value is laid out in memory, so an
   array of them costs 38 bytes an entity where it cost 25, and a store 102
   where it cost 77. The reference's table says so.

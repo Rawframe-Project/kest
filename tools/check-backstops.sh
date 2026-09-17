@@ -5779,12 +5779,12 @@ anywhere, and it is why the gate holds""",
         # read them every one of them was wrong. See D920.
         "what": "what compiling costs written down and not measured",
         "file": "docs/language.md",
-        "from": """118145 as a tree""",
-        "to": """118146 as a tree""",
+        "from": """118161 as a tree""",
+        "to": """118162 as a tree""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "118146 as a tree, 154208 checked",
+        "caught": "118162 as a tree, 154224 checked",
     },
     {
         # And the section they are in saying whose machine they are. Bytes of

@@ -30022,6 +30022,9 @@ heap that was not on the heap before, and nothing is a handle.
 - A host reads bytes and a length without measuring. `kest_text_bytes` reads
   the second slot rather than walking a C string, which is what D955 kept the
   door for.
+- Two more of the library's functions promise `no.alloc` and keep it:
+  `text.charAt` and `text.trim` are cuts and nothing else, and the check that
+  writes the promise on everything and counts the refusals is what found them.
 
 **What it costs.** Every text value is a slot wider: a frame that holds four
 pieces of text is four slots bigger, and so is a struct that holds one. A `[text]`
