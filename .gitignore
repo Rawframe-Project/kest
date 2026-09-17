@@ -6,5 +6,6 @@ examples/least
 tools/inward
 kest
 kest-debug
+kest-before
 libkest.a
 *.o
