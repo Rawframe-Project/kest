@@ -4231,7 +4231,7 @@ RUNNING
 # naming a constant in a module that has no such constant. The refusal is about
 # two files at once, so it is asked here and what it said goes in with the rest.
 # See D683.
-mkdir "$scratch"/counting
+mkdir -p "$scratch"/counting
 cat > "$scratch"/counting/held.kest <<'KEST'
 module counting.held
 
@@ -5187,7 +5187,7 @@ esac
 # it four times, and a run says the same numbers in both forms -- the object a
 # run writes carries the profile rather than a second object on another
 # stream. See D979.
-mkdir "$scratch"/counting
+mkdir -p "$scratch"/counting
 cat > "$scratch"/counting/counting.kest <<'KEST'
 fn twice(n: i32) -> i32 {
     return n * 2
@@ -5207,7 +5207,7 @@ KEST
 "$kest" profile "$scratch"/counting/counting.kest \
     >"$scratch"/counting/out 2>"$scratch"/counting/said </dev/null
 case "$(cat "$scratch"/counting/said)" in
-*"counting.twice"*"4 call(s)"*) ;;
+*"twice#i32"*"4 call(s)"*) ;;
 *)
     complain "profile: a body called four times is not said to be"
     sed 's/^/    /' "$scratch"/counting/said | head -4
@@ -5233,7 +5233,7 @@ profile = held.get("profile")
 answer = "no"
 if profile is not None and profile["calls"] >= 5 and profile["steps"] > 0:
     named = [one for one in profile["bodies"]
-             if one["name"].startswith("counting.twice")]
+             if one["name"].startswith("twice")]
     if len(named) == 1 and named[0]["calls"] == 4:
         answer = "yes"
 print(answer)
@@ -5248,7 +5248,7 @@ fi
 # in it that is not on the disk. The last is the one that says the overlay
 # works: a server answering about the saved copy would say the file is fine.
 # See D977.
-mkdir "$scratch"/serving
+mkdir -p "$scratch"/serving
 cat > "$scratch"/serving/serving.kest <<'KEST'
 fn doubled(n: i32) -> i32 {
     return n * 2
@@ -5342,7 +5342,7 @@ fi
 # of one walk that disagree are one of them wrong. One sentence for all of it,
 # because what went wrong is written into it and a sentence per case is a
 # sentence per case to be seen said. See D976.
-mkdir "$scratch"/costing
+mkdir -p "$scratch"/costing
 cat > "$scratch"/costing/costing.kest <<'KEST'
 import std.io
 

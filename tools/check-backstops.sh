@@ -10003,8 +10003,10 @@ fn main() -> i32 {
         # printing a number nobody measured. See D979.
         "what": "a count of steps printed as a duration",
         "file": "src/main.c",
-        "from": """            "%llu step(s), %llu call(s), %llu crossing(s) into the host, """",
-        "to": """            "%llu ns, %llu call(s), %llu crossing(s) into the host, """",
+        "from": '            "%llu step(s), %llu call(s), %llu crossing(s) ' \
+                'into the host, "',
+        "to": '            "%llu ns, %llu call(s), %llu crossing(s) ' \
+              'into the host, "',
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
