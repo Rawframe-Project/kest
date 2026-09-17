@@ -628,14 +628,14 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
                                                 held.integer);
             return true;
         }
-        double real = from_real ? held.real
-                      : (from != NULL && from->tag == KEST_T_INT &&
-                         !from->is_signed)
-                          ? (double)(uint64_t)held.integer
-                          : (double)held.integer;
+        double as_real = from_real ? held.real
+                         : (from != NULL && from->tag == KEST_T_INT &&
+                            !from->is_signed)
+                             ? (double)(uint64_t)held.integer
+                             : (double)held.integer;
         // A slot holds a double either way, so widening is nothing and
         // narrowing is a rounding.
-        out->real = to->width == 32 ? (double)(float)real : real;
+        out->real = to->width == 32 ? (double)(float)as_real : as_real;
         return true;
     }
     // `box.CELLS` inside a constant: a constant another module declared, which

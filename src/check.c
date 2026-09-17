@@ -4584,9 +4584,9 @@ static bool check_function(KestProgram *program, Checker *checker,
         // The shape somebody writes when they expect the last thing in a body
         // to be what it gives back. A `match` or an `if` whose arms give
         // values is a value, and a value on its own is not a return.
-        const KestBlock *body = &decl->function.body;
+        const KestBlock *written = &decl->function.body;
         const KestStmt *last =
-            body->count == 0 ? NULL : body->items[body->count - 1];
+            written->count == 0 ? NULL : written->items[written->count - 1];
         if (last != NULL && last->kind == KEST_STMT_EXPR &&
             last->value != NULL &&
             ((last->value->kind == KEST_EXPR_MATCH &&

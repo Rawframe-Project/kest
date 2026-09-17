@@ -4365,10 +4365,10 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // run is where a host function above it left the machine, which is
             // the same place a call back in would start from.
             if (rt->host_measured) {
-                const KestValue *floor =
+                const KestValue *bottom =
                     rt->running_top != NULL ? rt->running_top : rt->stack;
                 uint32_t deep = rt->frame_count - rt->running_frames;
-                uint32_t wide = (uint32_t)(top - floor);
+                uint32_t wide = (uint32_t)(top - bottom);
                 if (deep > rt->host_frames || wide > rt->host_slots) {
                     fail(vmp, frame, instruction, "K0633",
                          "`%s` calls into the host %u slots and %u frames in, "

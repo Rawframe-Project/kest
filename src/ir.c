@@ -390,6 +390,15 @@ static bool value_kept(const bool *made, const KestIrBody *body,
     return ref < body->value_count && made[ref];
 }
 
+// Whether an operation on a container asks the heap for more room. `fit` and
+// `set` write into what is already there and are what a `scratch { }` block
+// does to a thing that outlives it; `push`, `room` and `add` ask for more.
+// See D972.
+static bool grows_the_heap(KestIrKind kind) {
+    return kind == KEST_IR_APPEND || kind == KEST_IR_ROOM ||
+           kind == KEST_IR_STORE_ADD;
+}
+
 const char *kest_ir_escapes(const KestIrBody *body, KestArena *arena,
                             KestSpan *where) {
     bool *made = KEST_ARENA_ARRAY(arena, bool,
@@ -494,9 +503,24 @@ const char *kest_ir_escapes(const KestIrBody *body, KestArena *arena,
         // own array may hold the block's own text, and nothing else may.
         case KEST_IR_APPEND:
         case KEST_IR_FIT:
+        case KEST_IR_ROOM:
         case KEST_IR_STORE_ADD:
         case KEST_IR_STORE_SET: {
             bool into = value_kept(made, body, op, 0);
+            // And growing one that is older than the block. The heap goes
+            // back where it was when the block ends, and a container that
+            // outlives the block would go back with it -- not the bytes it
+            // was given inside, which nobody could reach anyway, but the ones
+            // it already had, because a bump arena hands out what is next and
+            // what is next is above the mark. A world grown inside a block
+            // was emptied by the end of it, and nothing said so. So this is
+            // refused where it is written: `fit` and `set` write into room a
+            // thing already has and are what a block does, and `push`, `room`
+            // and `add` ask for more and are not. See D972.
+            if (!into && grows_the_heap((KestIrKind)op->kind)) {
+                return "this grows something that outlives the block, and "
+                       "what a block takes it gives back";
+            }
             for (uint16_t a = 1; a < op->arg_count; a++) {
                 if (value_kept(made, body, op, a) && !into) {
                     return "this puts what the block made into something that "

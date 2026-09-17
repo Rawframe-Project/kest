@@ -5181,12 +5181,18 @@ esac
 # And what a block of working memory will not let out, which is proved over a
 # body rather than over a tree and so is said where a body is written. Three
 # ways out of one: given back, put in something older, kept in a name the block
-# does not own. See D966.
+# does not own. And the fourth, which is not a thing getting out but a thing
+# outside getting bigger: the heap goes back where it was, so a world grown
+# inside a block was emptied by the end of it and nothing said so. See D966
+# and D972.
 mkdir "$scratch"/keeping
 for leaving in \
     "gives back what the block made|fn made() -> text {\n    scratch {\n        return \"{1 + 1}\"\n    }\n}\n" \
     "puts what the block made into something that outlives it|fn kept() -> i32 {\n    let out: [text] = array()\n    scratch {\n        push(out, \"{1 + 1}\")\n    }\n    return len(out)\n}\n" \
-    "keeps what the block made in a name the block does not own|fn held() -> i32 {\n    let name = \"\"\n    scratch {\n        name = \"{1 + 1}\"\n    }\n    return len(name)\n}\n"; do
+    "keeps what the block made in a name the block does not own|fn held() -> i32 {\n    let name = \"\"\n    scratch {\n        name = \"{1 + 1}\"\n    }\n    return len(name)\n}\n" \
+    "grows something that outlives the block|fn grew() -> i32 {\n    let out: [i32] = array()\n    scratch {\n        push(out, 1)\n    }\n    return len(out)\n}\n" \
+    "grows something that outlives the block|struct One {\n    id: i32\n}\n\nfn added() -> i32 {\n    let world: store<One> = store(1)\n    scratch {\n        let made = add(world, One(1))\n        if get(world, made) == none {\n            return 1\n        }\n    }\n    return 0\n}\n" \
+    "grows something that outlives the block|fn roomed() -> i32 {\n    let out: [i32] = array()\n    scratch {\n        room(out, 64)\n    }\n    return len(out)\n}\n"; do
     wanted_out=${leaving%%|*}
     written_out=${leaving#*|}
     # shellcheck disable=SC2059

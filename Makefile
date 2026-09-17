@@ -1,5 +1,5 @@
 CC ?= cc
-WARN := -std=c11 -Wall -Wextra -Werror
+WARN := -std=c11 -Wall -Wextra -Wshadow -Werror
 
 # Where the standard library ends up, which the compiler has to be able to
 # find when nothing else says where it is.

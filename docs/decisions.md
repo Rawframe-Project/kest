@@ -30300,3 +30300,57 @@ so. A cut is by byte and may land inside a character; `charBack`, `charWidth`
 and `charAt` are what a program cuts on a boundary with. Graphemes are nobody's
 here. *Argued*, on a run: `tools/check.sh` holds the nought going through in
 both directions and the byte that begins no character being refused in both.
+
+## D972. A block of working memory will not let a thing outside it grow
+
+The completion mission's section 9 asks for a fixed-live-set trial: a world with
+a constant number of live things, worked on for ten and a hundred times the
+usual horizon, held to a high-water mark that does not climb. `examples/churn`
+is that world and the trial is the smallest room each shape runs in, found by
+halving. What it says:
+
+| | 100 rounds | 1000 | 10000 |
+| --- | --- | --- | --- |
+| `keep` | 482K | 482K | 482K |
+| `reuse` | 482K | 482K | 482K |
+| `replace` | 2670K | 22355K | over 64M |
+| `turn` | 536K | 965K | 5267K |
+
+The first two are flat to the byte across a hundredfold, which is what the
+criterion asks for and more than it asks for. `replace` climbs, which is the
+whole point of it being there. `turn` — identities deleted and made again —
+climbs too, and that was not known.
+
+**What `turn` was really doing.** Two things, and only one of them is about
+reclamation. It made a new buffer and a new run of tags for every thing it
+remade, which the program can hand through instead: taking `one.said` and
+`one.tags` out before `remove` and giving them to `add` took the hundredfold
+from 5267K to 873K. What was left was a `[ref<Thing>]` made once per call and
+abandoned — working memory, which is what `scratch { }` is for.
+
+**And that is where the defect was.** A `scratch { }` block marks the heap and
+rewinds to the mark. A bump arena hands out what comes next, so anything a
+program grows inside the block — a `push` onto an array older than the block, a
+`room`, an `add` to a world — is above the mark and goes back with everything
+else. A store grown inside a block was **emptied by the end of it**, including
+the things that were in it before the block opened, with no refusal and no
+message: `get` on a handle made before the block answered nothing afterwards.
+That is silent loss of a world and it is a P1.
+
+**What was done about it.** Refused where it is written. `kest_ir_escapes`
+already knows which values a block made; the fourth way out of a block is now a
+thing outside it getting bigger, and `push`, `room` and `add` on something the
+block did not make are `K0507`. `fit`, `set` and `clear` write into room a
+thing already has and are untouched, which is the whole of D940's idiom and the
+whole of D967's.
+
+**Why refusing rather than a second arena.** A second arena — the block's own,
+with growth of older things still going to the heap — would let both happen,
+and it is the larger change: every allocation in the machine would have to ask
+which arena the thing it is growing lives in, and the heap ceiling a host sets
+would have to be shared between two. Against that, what the rule costs a
+program is one restructuring, and the rule is the one section 11 of the mission
+already writes: what a block makes does not reach longer-lived state, and a
+world that got bigger inside a block is longer-lived state that the block wrote.
+A block is for working memory. *Measured*, on the trial above and on three
+programs in the refusal corpus.
