@@ -50,3 +50,7 @@ if not errorlevel 1 (
 
 echo built %OUT%\kest.exe, %OUT%\embed.exe and %OUT%\engine.exe
 endlocal
+rem `echo` does not clear what the last command left behind, and the last
+rem command was a `findstr` that found nothing -- which is the good answer and
+rem is errorlevel 1. Said here rather than left to whatever ran last.
+exit /b 0
