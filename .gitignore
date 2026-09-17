@@ -13,3 +13,4 @@ libkest.a
 *.o
 bench/*-cpp
 kest-colony-day.txt
+build/

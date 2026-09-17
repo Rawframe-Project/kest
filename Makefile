@@ -1,4 +1,8 @@
 CC ?= cc
+# Read out of the header rather than written here, so there is one place a
+# version is said. See D983.
+KEST_VERSION := $(shell sed -n 's/^#define KEST_VERSION_STRING "\(.*\)"$$/\1/p' \
+    include/kest.h)
 WARN := -std=c11 -Wall -Wextra -Wshadow -Wconversion -Werror
 
 # The hosts are held to everything the library is except shadowing. Each is one
@@ -125,6 +129,25 @@ install: kest libkest.a
 	cp libkest.a $(DESTDIR)$(PREFIX)/lib/libkest.a
 	cp lib/std/*.kest $(DESTDIR)$(PREFIX)/lib/kest/std/
 
+# A release, which is an install into a directory of its own plus the source a
+# host vendors and the extension an editor wants, in one archive with its
+# checksum beside it. There is no artifact from the compiler in it: the
+# bytecode is not a format (D983), so what ships is the command line, the
+# library, the header, the standard library and the source. See D989.
+RELEASE := kest-$(KEST_VERSION)-$(shell uname -s | tr A-Z a-z)-$(shell uname -m)
+
+release: kest libkest.a
+	rm -rf build/$(RELEASE)
+	$(MAKE) install DESTDIR=build/$(RELEASE) PREFIX=
+	mkdir -p build/$(RELEASE)/src build/$(RELEASE)/editors
+	cp src/*.c src/*.h build/$(RELEASE)/src/
+	cp -r editors/vscode build/$(RELEASE)/editors/
+	cp README.md CHANGELOG.md build/$(RELEASE)/
+	cp -r docs build/$(RELEASE)/docs
+	cd build && tar czf $(RELEASE).tar.gz $(RELEASE)
+	cd build && sha256sum $(RELEASE).tar.gz > $(RELEASE).tar.gz.sha256
+	@echo "wrote build/$(RELEASE).tar.gz and its checksum"
+
 uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/bin/kest
 	rm -f $(DESTDIR)$(PREFIX)/include/kest.h
@@ -137,7 +160,7 @@ clean:
 	    examples/least tools/inward tools/fuzz tools/fuzz-debug
 
 .PHONY: debug least embed embed-debug engine engine-debug fast check time \
-    fuzz install uninstall clean
+    fuzz release install uninstall clean
 
 # A short campaign, which is what a gate can afford: eight seeds and four
 # hundred inputs each, sanitised. A longer one is the same command with other

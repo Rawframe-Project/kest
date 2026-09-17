@@ -31031,3 +31031,31 @@ in it is bound to the thread that made it — and two machines of one build may
 run at once because a build is read-only once it is built. The thing that is
 not allowed is two threads in one machine, and nothing stops it but the host:
 this language does not own the threads. *Measured.*
+
+## D989. A release is an install plus the source, in one archive
+
+Section 25 of the completion mission lists what a release has to carry: the
+command line, the public header, the static library, vendorable modular source,
+the standard library, version metadata, license notices and checksums.
+
+**`make release` is `make install` into a directory of its own with four more
+things beside it**: `src/` for a host that vendors rather than links, the VS
+Code extension, the documents, and the changelog. Then one `.tar.gz` and a
+`.sha256` next to it. The version in the name is read out of the header, so
+there is one place a version is said.
+
+There is nothing from the compiler in it. The bytecode is not a format
+(D983), so a release carries no built program and no artifact to load — what
+ships is the command line, the library and the source. That is also why there
+is no amalgamation (D986): the modular source *is* the vendorable form.
+
+**It is unpacked and run in CI.** The `package` job builds it, checks the
+checksum, unpacks it into a directory that is not the tree, and runs `kest
+--version` and a program out of the unpacked copy with `KEST_LIB` pointing
+inside it. An archive nobody has unpacked is an archive nobody knows about.
+
+**What is not in it**: a Windows archive built the same way. The Windows build
+is `tools/build.bat` and produces the same three binaries, and turning that into
+an archive is the same five lines in the batch file — what is missing is a
+reason to write them before there is a version to tag. The tarball is the shape
+and the second one follows it. *Measured*, on an archive unpacked and run.

@@ -15,6 +15,12 @@ make PREFIX=/usr/local
 sudo make install PREFIX=/usr/local
 ```
 
+`make release` writes one archive with a checksum beside it: the command line,
+the header, the static library, the standard library, the modular source a host
+vendors, the VS Code extension and the documents. There is nothing built from a
+program in it — the bytecode is not a format, so what ships is the source
+beside the runtime. See D989.
+
 ## Starting
 
 Once `kest` is on the path, one command makes something that runs:
