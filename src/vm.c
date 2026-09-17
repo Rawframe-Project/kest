@@ -2339,6 +2339,13 @@ static bool stopped_here(Vm *vmp, KestRuntime *rt, Frame *frame,
     return false;
 }
 
+// Two bytes of a stream of instructions, little end first, stepping past them.
+static uint16_t read_u16(const uint8_t **ip) {
+    const uint8_t *at = *ip;
+    *ip = at + 2;
+    return (uint16_t)(at[0] | ((uint16_t)at[1] << 8));
+}
+
 static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                      uint16_t *returned) {
     const KestModule *module = rt->module;
@@ -2452,8 +2459,11 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }                                                                      \
     } while (0)
 #define READ_BYTE() (*ip++)
-#define READ_U16()                                                             \
-    (ip += 2, (uint16_t)(ip[-2] | ((uint16_t)ip[-1] << 8)))
+// Through a function rather than a comma expression, because a comma inside a
+// subscript is a thing one of the two compilers this is built with warns
+// about wherever it appears -- and `module->layout_types[READ_U16()]` is
+// exactly that. What it does is the same either way. See D970.
+#define READ_U16() read_u16(&ip)
 
     // One macro per storage class rather than thirty near-identical cases.
     // The operands are already the right kind: the compiler chose which

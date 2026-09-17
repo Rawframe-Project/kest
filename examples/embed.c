@@ -769,8 +769,8 @@ static bool reads_the_cases(const KestLayout *layout, uint16_t piece) {
                     named == NULL ? "nothing" : named, count);
             return false;
         }
-        for (uint16_t piece = 0; piece < count; piece++) {
-            if (carries[piece].kind != ours[tag].kind) {
+        for (uint16_t which = 0; which < count; which++) {
+            if (carries[which].kind != ours[tag].kind) {
                 fprintf(stderr,
                         "`%s` carries something other than what this host "
                         "reads out of it\n",
@@ -1489,7 +1489,7 @@ static bool lends_bytes(Engine *engine) {
     // the door where a run of bytes and text meet, so it is where being UTF-8
     // is asked about; nothing refuses the lend, because nothing about it is
     // wrong. What refuses is the asking.
-    letters[2] = (char)0xff;
+    letters[2] = 0xff;
     engine->frame[0] = kest_borrow(engine->runtime, letters, 4, "u8", sizeof(letters[0]));
     if (engine->frame[0].object == NULL) {
         kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
@@ -4535,9 +4535,12 @@ int main(int argc, char **argv) {
     }
     printf("and took %zu bytes with a nought among them\n", sizeof(cut) - 1);
 
-    const char broken[3] = {'h', (char)0xff, 'i'};
+    // Written as bytes rather than as characters, because a byte that begins
+    // no character is not one and a compiler is right to say so about a `char`
+    // that will not hold it.
+    const unsigned char broken[3] = {'h', 0xff, 'i'};
     KestValue refused[2] = {{0}, {0}};
-    kest_text(engine.runtime, broken, 3, refused);
+    kest_text(engine.runtime, (const char *)broken, 3, refused);
     // What comes back for a refusal is an empty piece of text, which is what
     // the door writes before it asks anything. See D436.
     if (refused[0].text == NULL || refused[1].integer != 0) {
