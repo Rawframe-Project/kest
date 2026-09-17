@@ -11,6 +11,17 @@
 #define KEST_VERSION_PATCH 0
 #define KEST_VERSION_STRING "0.1.0"
 
+// What shape the JSON every command writes is in, which is a different thing
+// from the version above: a compiler that has moved on in ways no tool can see
+// writes the same objects, and a field that changes meaning or goes away is a
+// tool reading the wrong thing whatever the compiler calls itself. Every object
+// a command writes begins with it, so a tool reads one number before it reads
+// anything it has to understand.
+//
+// It goes up when a field changes what it means, is taken away, or is added
+// where a reader was told the list was everything. See D947.
+#define KEST_JSON_SCHEMA 1
+
 // Every function declared here is called by one of the two hosts written
 // against it, so there is somewhere to look for each: `src/main.c` is a
 // command line — it compiles, runs, calls one function, ticks a program and
@@ -222,6 +233,21 @@ typedef struct {
     // every call. See D840.
     bool by_the_type;
 } KestLayout;
+
+// A number that moves when this shape does: its size, what it is aligned to,
+// whether anything in it is a tag, and for every piece where it sits, what is
+// there and what the program calls it.
+//
+// It is what a host doing schema work keeps beside the bytes it saved. After a
+// reload, the same number means the same shape and nothing to migrate; a
+// different one means a field moved, changed width or changed name, and the
+// host either maps the old onto the new or refuses. Folded here rather than
+// left to a host, because two hosts folding their own way would have two
+// numbers for one shape. Nought for no layout.
+//
+// What it does not say is which of those changed. A host that needs that walks
+// the pieces, which is what they are for. See D948.
+uint64_t kest_layout_mark(const KestLayout *layout);
 
 // Which case the tag at a piece of this value names, and what that case
 // carries: the name as the program wrote it, and one piece a slot over the

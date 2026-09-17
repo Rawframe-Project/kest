@@ -2679,7 +2679,8 @@ what was wrong with it if anything was, and — for the run that answers with a
 file rather than with a question about one — the file:
 
 ```json
-{"diagnostics": [], "errors": 0, "file": "doc.kest", "formed": false,
+{"schema": 1, "diagnostics": [], "errors": 0, "file": "doc.kest",
+ "formed": false,
  "text": "module doc\n\nfn twice(n: i32) -> i32 {\n    return n * 2\n}\n",
  "edit": {"offset": 12, "length": 34, "line": 3, "column": 1,
           "text": "fn twice(n: i32) -> i32 {\n    return n * "}}
@@ -2700,7 +2701,7 @@ file reads.
 `run --json` says what the program answered:
 
 ```json
-{"diagnostics": [], "errors": 0, "cost": 24495, "answered": 7}
+{"schema": 1, "diagnostics": [], "errors": 0, "cost": 24495, "answered": 7}
 ```
 
 `answered` is null for a `main` that gives nothing back, because nothing and
@@ -4944,11 +4945,20 @@ error[K0401]: this allocates, and `chain.stepFrame` promises `no.alloc`
    |            ^^^^^^^^^ which calls `chain.second`
 ```
 
+Every object a command writes begins with `schema`, which says what shape the
+rest of it is in. It is not the compiler's version: a compiler that has moved on
+in ways no tool can see writes the same objects, and a field that changes what it
+means is a tool reading the wrong thing whatever the compiler calls itself. The
+number goes up when a field changes meaning, is taken away, or is added where a
+reader was told the list was everything — and a tool that reads it first knows
+before it reads anything else whether it understands what follows. It is 1.
+
 The same run with `--json` emits the identical set, notes and all, for
 tooling and for models repairing their own output, which is this:
 
 ```json
 {
+  "schema": 1,
   "diagnostics": [
     {
       "severity": "error",
@@ -5050,18 +5060,18 @@ many types it made beside the ones a program declares — one for every signatur
 every optional and every run of something:
 
 ```json
-{ "diagnostics": [], "errors": 0, "cost": 41180, "held": 41180,
+{ "schema": 1, "diagnostics": [], "errors": 0, "cost": 41180, "held": 41180,
   "askings": 5, "tokenBytes": 12, "tokenRoom": 256,
   "tokens": [], "comments": [] }
 ```
 
 ```json
-{ "diagnostics": [], "errors": 0, "cost": 156080, "nodes": 978,
+{ "schema": 1, "diagnostics": [], "errors": 0, "cost": 156080, "nodes": 978,
   "nodeBytes": { "expression": 48, "statement": 48, "declaration": 88 } }
 ```
 
 ```json
-{ "diagnostics": [], "errors": 0, "cost": 178880, "held": 154304,
+{ "schema": 1, "diagnostics": [], "errors": 0, "cost": 178880, "held": 154304,
   "askings": 380, "typesMade": 58, "typeBytes": 168 }
 ```
 
@@ -5139,7 +5149,8 @@ on another is not the same program to run. That is the mark saying so rather
 than hiding it.
 
 ```json
-{ "diagnostics": [], "errors": 0, "cost": 230607, "codeMark": "d02b0a4a1e5c3f81",
+{ "schema": 1, "diagnostics": [], "errors": 0, "cost": 230607,
+  "codeMark": "d02b0a4a1e5c3f81",
   "folds": 3, "asked": 7, "copies": 66, "copiedBodies": 23,
   "copiedBytes": 3887,
   "holds": { "code": 4608, "origins": 5632, "constants": 1024,
@@ -5205,6 +5216,15 @@ answers is whether this is the same file, and the same program, which a size
 cannot: two edits that keep the length are the same size and a different
 program. `kest_build_read_mark` and `kest_build_mark` are the same numbers for a
 host.
+
+Each layout `emit` lists carries a `mark` of its own: a number folded from the
+size, the alignment, whether anything in it is a tag, and every piece's offset,
+kind and name. It is what a host that saved bytes asks before it reads them back
+into a program it has just built again — the same number is the same shape and
+nothing to migrate, a different one is a field that moved, changed width or
+changed name. It does not say which of those it was; a host that needs that
+walks the pieces. `kest_layout_mark` is the same number for a host, and
+`examples/embed.c` asks it of `Row` across each of its three reloads.
 
 What that cost was paid for is `kest_build_read`, which is every file the
 loader read, by position and ending at NULL, with `kest_build_read_bytes` for

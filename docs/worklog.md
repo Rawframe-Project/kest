@@ -35594,3 +35594,24 @@ reads the seven pieces of a `Row` by name before it lends one.
 of one module differing only in a type parameter's name, answering one
 signature; and a body fingerprint that survives a comment and moves when the
 body does.
+
+## A surface that says what shape it is in, and a shape that has a number (D947, D948)
+
+`--json` is what a tool reads and it said nothing about itself. Every object
+every command writes now begins with `schema`, which is 1, and goes up when a
+field changes meaning, is taken away, or is added where a reader was told the
+list was everything. It is written in the one door every command's object goes
+through, and the number lives in the public header where a host can see it;
+`check-commands.sh` reads it from there and holds all seven commands to saying
+it.
+
+And a layout has a mark — size, alignment, tagged, and every piece's offset,
+kind and name — which is the question that comes before reading any of the
+names D946 added: is this the shape I saved these bytes as? Every host doing
+schema work would otherwise write that walk, and two of them would write it
+differently. `examples/embed.c` asks it of `Row` across each of its three
+reloads, which is a reload's schema check written out.
+
+**Runs:** `make check`; the seven commands over a file, each answering an object
+that says `"schema":1`; two modules differing in one field's name, answering two
+shape marks; `examples/embed`.

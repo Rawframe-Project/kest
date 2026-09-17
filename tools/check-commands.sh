@@ -799,16 +799,26 @@ sweep_one() {
         for command in lex parse check emit run fmt tick; do
             if ! "$kest" "$command" "$file" --json 2>/dev/null </dev/null | python3 -c '
     import json
+    import re
     import sys
 
+    # And what shape it is in, which is the one field a tool reads before it
+    # knows what the others mean. Every object a command writes carries it, and
+    # the number is the header'"'"'s rather than one written here: two places
+    # saying which shape this is is one of them wrong the day it changes.
+    # See D947.
+    schema = int(re.search(r"#define KEST_JSON_SCHEMA (\d+)",
+                           open("include/kest.h").read()).group(1))
     lines = [line for line in sys.stdin.read().splitlines() if line.strip()]
     if not lines:
         raise SystemExit(1)
     for line in lines:
-        if not isinstance(json.loads(line), dict):
+        said = json.loads(line)
+        if not isinstance(said, dict) or said.get("schema") != schema:
             raise SystemExit(1)
     ' 2>/dev/null; then
-                complain "$command $file --json: not one object a line"
+                complain "$command $file --json: not one object a line saying \
+which shape it is in"
             fi
         done
 }
@@ -3932,7 +3942,7 @@ for asking in "nonsense@unknown command \`nonsense\`" \
     # output because that is where a tool is reading.
     answered=$("$kest" $words --json 2>/dev/null </dev/null)
     case "$answered" in
-    '{"diagnostics":[{"severity":"error","code":"K0649"'*) ;;
+    '{"schema":'*',"diagnostics":[{"severity":"error","code":"K0649"'*) ;;
     *)
         complain "check: \`kest $words --json\` wrote \
 \`$(printf '%s' "$answered" | head -1)\`"

@@ -6907,6 +6907,16 @@ int main(int argc, char **argv) {
     {
         size_t built = 0;
         size_t started = 0;
+        // And what a host that saved bytes asks before it reads them back into
+        // a program it has just built again: whether the shape it saved them
+        // as is the shape this build has. The same number is nothing to
+        // migrate; a different one is a field that moved, changed width or
+        // changed name, and a host that does not ask lays its old bytes over a
+        // new struct. See D948.
+        const KestLayout *was = NULL;
+        uint64_t shaped = kest_build_layout(build, "Row", &was) == 1
+                              ? kest_layout_mark(was)
+                              : 0;
         for (int cycle = 0; cycle < 3; cycle++) {
             KestHost *over = kest_host_new();
             static Decider quietly = {-1, 1, false, true, false, false};
@@ -6930,6 +6940,13 @@ int main(int argc, char **argv) {
             if (again == NULL) {
                 kest_build_report(reloaded, stderr, KEST_FORM_TEXT);
                 fprintf(stderr, "a reload would not start\n");
+                return 1;
+            }
+            const KestLayout *now = NULL;
+            if (kest_build_layout(reloaded, "Row", &now) != 1 ||
+                kest_layout_mark(now) != shaped) {
+                fprintf(stderr, "`Row` is a different shape after a reload of "
+                                "the same file\n");
                 return 1;
             }
             size_t costs = kest_build_cost(reloaded);

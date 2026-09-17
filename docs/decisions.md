@@ -29251,3 +29251,54 @@ What it does not do is make a layout a schema. A schema is a thing a host keeps
 between two versions of a program and this is what one version says; the part
 that maps a field somebody renamed onto the field it used to be is a mapping
 written down, and that is the next piece.
+
+## D947: every object a command writes says what shape it is in
+
+`--json` is the surface a tool reads, and a tool reading it had no way to find
+out whether it was reading the shape it was written for. The compiler's own
+version does not answer that: a compiler that has moved on in ways no tool can
+see writes the same objects, and a field that changed meaning is a tool reading
+the wrong thing whatever the compiler calls itself.
+
+So every object every command writes begins with `schema`, and it is 1. It goes
+up when a field changes what it means, is taken away, or is added where a reader
+was told the list was everything — the three ways a reader that was right
+yesterday is wrong today. A field added beside others that were never claimed to
+be all of them is not one of those, which is what keeps the number from moving
+every week.
+
+It is written in one place — `kest_diags_write_json`, which every command's
+object goes through, and the one-line refusal beside it — rather than at each
+command, because a command that wrote its own is a command that can forget. The
+number itself is in `include/kest.h`, where a host reading the objects can see
+it, and `check-commands.sh` reads it from there and holds all seven commands to
+saying it: two places saying which shape this is is one of them wrong the day it
+changes.
+
+## D948: a shape has a number, so a host can ask whether it is the one it saved
+
+D946 gave a layout's pieces their names, which is what a host doing schema work
+reads. What it did not give is the question that comes before reading any of
+them: is this the shape I saved these bytes as?
+
+A host could walk the pieces and compare them itself, and every host doing this
+would write that walk, and two of them would write it differently — one folding
+the names and one not, one folding the alignment and one taking it for granted.
+That is two answers to one question, which is what this project puts in the
+library rather than in a paragraph.
+
+So a layout has a mark: the size, the alignment, whether anything in it is a
+tag, and for every piece where it sits, what is there and what the program calls
+it. The name is in it on purpose: a field somebody renamed is a field a save
+format has to be told about, and a number that stayed the same would be the host
+told nothing.
+
+What it does not say is which of those changed, which is the same trade the
+program's own mark makes: a number answers *whether*, and the pieces answer
+*what*. A host that has to migrate walks them; a host that only has to refuse
+does not.
+
+`emit --json` says it per layout and `kest_layout_mark` is the door.
+`examples/embed.c` asks it of `Row` across each of its three reloads, which is
+the shape of a reload's schema check written out: build again, ask, and only
+then read the old bytes.

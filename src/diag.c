@@ -815,8 +815,10 @@ void kest_diags_say_one(FILE *out, bool as_json, const char *code,
                 message);
         return;
     }
-    fprintf(out, "{\"diagnostics\":[{\"severity\":\"%s\",\"code\":\"%s\"",
-            severity_name(KEST_SEVERITY_ERROR), code);
+    fprintf(out,
+            "{\"schema\":%d,\"diagnostics\":[{\"severity\":\"%s\""
+            ",\"code\":\"%s\"",
+            KEST_JSON_SCHEMA, severity_name(KEST_SEVERITY_ERROR), code);
     fputs(",\"message\":", out);
     kest_json_text(message, out);
     fputs("}],\"errors\":1}\n", out);
@@ -829,6 +831,12 @@ void kest_diags_render_json(const KestDiags *diags, FILE *out) {
 }
 
 void kest_diags_write_json(const KestDiags *diags, FILE *out) {
+    // First, and in every object every command writes, because this is the one
+    // field a tool reads before it knows what the rest of them mean. It is
+    // written here rather than at each command because every one of those goes
+    // through this door: a command that wrote its own would be a command that
+    // could forget. See D947.
+    fprintf(out, "\"schema\":%d,", KEST_JSON_SCHEMA);
     fputs("\"diagnostics\":[", out);
     uint32_t said = 0;
     for (uint32_t i = 0; i < diags->count; i++) {

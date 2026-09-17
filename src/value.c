@@ -2087,6 +2087,25 @@ static void fold_number(uint64_t *mark, uint64_t value, unsigned bytes) {
     *mark = kest_mark_number(*mark, value, bytes);
 }
 
+uint64_t kest_layout_mark(const KestLayout *layout) {
+    if (layout == NULL) {
+        return 0;
+    }
+    uint64_t mark = KEST_MARK_START;
+    fold_number(&mark, layout->size, 2);
+    fold_number(&mark, layout->align, 2);
+    fold_number(&mark, layout->tagged, 1);
+    for (uint16_t p = 0; p < layout->count; p++) {
+        fold_number(&mark, layout->pieces[p].offset, 2);
+        fold_number(&mark, layout->pieces[p].kind, 1);
+        // The name is part of the shape for the question this answers: a field
+        // somebody renamed is a field a save format has to be told about, and
+        // a number that stayed the same would be the host told nothing.
+        fold_text(&mark, layout->pieces[p].name);
+    }
+    return mark;
+}
+
 // What one body is, for a host asking whether this function's code changed
 // while everything else about it stayed as it was. The instructions and the
 // constants they reach, and nothing else: not the name, not what it takes or
@@ -2210,7 +2229,8 @@ void kest_module_disassemble_json(const KestModule *module,
             }
             fputc('}', out);
         }
-        fputs("]}", out);
+        fprintf(out, "],\"mark\":\"%016llx\"}",
+                (unsigned long long)kest_layout_mark(layout));
     }
 
     fputs("],\"hosts\":[", out);
