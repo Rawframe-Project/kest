@@ -6,6 +6,14 @@ on:
   pull_request:
   workflow_dispatch:
 
+# One run of this at a time, and a push that arrives while one is going cancels
+# it. The whole gate is ten minutes of one runner, so a run of commits stacks
+# up behind itself and the newest -- the one anybody is waiting on -- is the
+# one that waits longest. What matters is whether `main` is good now.
+concurrency:
+  group: kest-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   linux:
     runs-on: ubuntu-latest
