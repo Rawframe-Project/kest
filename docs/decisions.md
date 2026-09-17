@@ -29675,12 +29675,23 @@ or off it. It is not one workload: the ants are 54.9%, the colony 60.7%, and the
 instrument that measures a crossing 45.2%. A machine whose instructions name
 their operands where they are does not run most of those.
 
-**What that predicts.** If half of the movement goes, the frame step runs 1.51
-times fewer instructions; at seven tenths, 1.90; at nine tenths, 2.57. The gap
-this language has against Luau and Daslang was measured as instruction count and
-not dispatch (127 ns an entity a step, 46.51 instructions an entity, 2.74 ns
-each), so instructions removed are time removed almost one for one. The rule's
-first clause is very likely to be met.
+**What that predicts.** Counted rather than guessed at, under the standard
+translation: a push of a local or a constant becomes an operand named by the
+instruction that consumes it and runs nothing; a store that puts a result where
+the producing instruction could have written it is that instruction; everything
+else is one for one. The frame step runs 896 million stack instructions and
+288 million three-address ones — 3.11 times fewer. The ants, which are a walk
+over an array of value structs rather than arithmetic in a loop, are 2.22 times
+fewer.
+
+That is the third clause of the rule — the dynamic operation count — and it is
+met by a wide margin on both. What it is not is the first clause: a three-address
+instruction decodes more operands than a stack one, so time does not fall by what
+the count falls by, and how much of it is left is the thing only an
+implementation says. The gap this language has against Luau and Daslang was
+measured as instruction count rather than dispatch (127 ns an entity a step,
+46.51 instructions an entity, 2.74 ns each), which is why the count is worth this
+much attention and still is not the answer.
 
 **And the decision is to keep the stack backend for v1**, because the rule says
 *measured*, and a prediction is not a measurement. What the rule asks for is a
