@@ -13079,10 +13079,12 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "file": "src/main.c",
         "from": """        printf("kest %s%s, abi %u, json %u, profile %s %u\\n", kest_version(),
                kest_checked() ? " checked" : "", kest_abi_version(),
-               (unsigned)KEST_JSON_SCHEMA, named, profile);""",
+               (unsigned)KEST_JSON_SCHEMA, named, profile);
+        return 0;""",
         "to": """        printf("%s", kest_checked() ? "" : "");
         (void)named;
-        (void)profile;""",
+        (void)profile;
+        return 0;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/world.kest"],

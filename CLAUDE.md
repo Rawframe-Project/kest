@@ -1051,6 +1051,12 @@ host         every host, sanitised and not: the one that asks every door
 sanitisers   every command over every file under the sanitisers, and the
              two builds asked which of them checks itself
 nothing      a document with nothing in it, and checks handed no files
+reload       the edits a reload has to have an answer for, each driven
+             through the host that does the whole protocol: a body changed, a
+             field added, taken away, renamed, a type changed, a signature
+             changed, and a program that will not build. Every one of them
+             ends with a world -- the new program's or the one the host was
+             holding -- and never half of either
 fuzzing      bytes the compiler was not written for, made from eight seeds
              and handed to it, under the build that checks itself: every one
              of them a program or a refusal

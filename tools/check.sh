@@ -1719,6 +1719,54 @@ ask "backstops" tools/check-backstops.sh
 wait
 heard
 
+# The edits a reload has to have an answer for, each one driven through the
+# host that does the whole protocol. What is held is not that every edit
+# reloads -- most of them must not -- but that every one of them ends with a
+# world: either the new program's, or the one the host was already holding,
+# and never half of either. See D985.
+#
+# One sentence, because what went wrong is written into it.
+mkdir -p "$scratch"/reloading
+reload_wrong=""
+for edit in \
+    "a body only|s/^fn describe(w: World) -> text {$/fn describe(w: World) -> text {\\n    let unused = 0/|kept" \
+    "a field added|s/^    id: i32$/    id: i32\n    weight: f32/|refused" \
+    "a field taken away|s/^    vy: f32$//|refused" \
+    "a field renamed|s/^    vx: f32$/    dx: f32/|refused" \
+    "a type changed to one that does not fit|s/^    x: f32$/    x: f64/|refused" \
+    "a signature changed|s/^fn round(w: World, from: i32)/fn round(w: World, from: i32, more: i32)/|refused" \
+    "a program that will not build|s/^struct Body {/struct Body {{/|refused"; do
+    what=${edit%%|*}
+    rest_of=${edit#*|}
+    doing=${rest_of%%|*}
+    wanted=${rest_of##*|}
+    cp examples/engine.kest "$scratch"/reloading/after.kest
+    sed -i "$doing" "$scratch"/reloading/after.kest 2>/dev/null
+    said=$(./examples/engine examples/engine.kest \
+        "$scratch"/reloading/after.kest 2>&1)
+    status=$?
+    if [ $status -ne 0 ]; then
+        reload_wrong="$what left the host with nothing"
+        break
+    fi
+    case "$said" in
+    *"a reload kept the ring"*) got=kept ;;
+    *"the reload did not happen and the world is the one it was"*) got=refused ;;
+    *) got="said nothing about what happened" ;;
+    esac
+    if [ "$got" != "$wanted" ]; then
+        reload_wrong="$what was $got and the study says $wanted"
+        break
+    fi
+done
+if [ -n "$reload_wrong" ]; then
+    complain "reload" "an edit a reload has to have an answer for: $reload_wrong"
+else
+    say "reload" "seven edits a reload has to have an answer for, each ending \
+with a world: the new program's where the shape did not move, and the one the \
+host was holding where it did"
+fi
+
 # Bytes the compiler was not written for, sanitised. Eight seeds and four
 # hundred inputs each, which is a minute rather than an afternoon: a gate can
 # afford a short campaign and a long one is the same command with other

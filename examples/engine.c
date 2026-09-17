@@ -33,6 +33,10 @@ typedef struct {
     int32_t restore;
     int32_t round;
     int32_t watched;
+    // How wide each of those was the first time it was looked up, so a reload
+    // that changed one is caught before this host calls it. Nought is one
+    // nobody has looked at yet. See D985.
+    uint32_t wide[7];
 } Engine;
 
 // What this host saved of a world, which is numbers and nothing else. Which
@@ -106,6 +110,12 @@ static void engine_refuse(KestValue *frame, KestRuntime *runtime,
     kest_native_failed(runtime, "this engine has no such thing to give");
 }
 
+// How wide each door was the first time this host looked, so a reload can be
+// held to it. A name found again is not the same function: a `round` that
+// takes one more thing than it did is a call this host makes with a frame the
+// program does not agree with, and nothing but this notices. The shape of the
+// world is checked by its layout's mark; the shape of a *call* is this. See
+// D985.
 static bool entries(Engine *engine) {
     const struct {
         const char *name;
@@ -119,6 +129,16 @@ static bool entries(Engine *engine) {
         if (*doors[i].into < 0) {
             fprintf(stderr, "the program has no `%s` to call\n",
                     doors[i].name);
+            return false;
+        }
+        uint32_t wide = kest_frame_takes(engine->runtime, *doors[i].into);
+        if (engine->wide[i] == 0) {
+            engine->wide[i] = wide;
+        } else if (engine->wide[i] != wide) {
+            fprintf(stderr,
+                    "`%s` took %u slot(s) and now takes %u, and this engine "
+                    "calls it with what it took\n",
+                    doors[i].name, engine->wide[i], wide);
             return false;
         }
     }
@@ -469,7 +489,14 @@ static bool worlds_stay_apart(Engine *engine, const Saved *saved) {
 
 int main(int argc, char **argv) {
     const char *path = argc > 1 ? argv[1] : "examples/engine.kest";
-    Engine engine = {NULL, NULL, {{0}, {0}}, -1, -1, -1, -1, -1, -1, -1};
+    // What to reload *from*, which is the same file unless a second one is
+    // named. A reload in a real host is the file changing under it; a second
+    // path is the only way to say "and now it is this" without editing a file
+    // somebody else is reading. It is what the edit corpus is driven with.
+    // See D985.
+    const char *after = argc > 2 ? argv[2] : path;
+    Engine engine = {NULL, NULL, {{0}, {0}}, -1, -1, -1, -1, -1, -1, -1,
+                     {0, 0, 0, 0, 0, 0, 0}};
     engine.build = kest_build(path, NULL, stderr, KEST_FORM_TEXT, 0);
     if (engine.build == NULL) {
         return 1;
@@ -605,8 +632,23 @@ int main(int argc, char **argv) {
     if (!worlds_stay_apart(&engine, &saved)) {
         return 1;
     }
-    if (!reload(&engine, path, &saved)) {
-        return 1;
+    if (!reload(&engine, after, &saved)) {
+        // A reload that would not happen is not a reason to stop: the whole
+        // point is that the world this host is holding is the world it was
+        // holding, so it says so and carries on with it.
+        printf("the reload did not happen and the world is the one it was\n");
+        for (int frame = 0; frame < FRAMES; frame++) {
+            if (!one_frame(&engine, frame, xs, ys)) {
+                return 1;
+            }
+        }
+        driving = NULL;
+        if (!kest_runtime_free(engine.runtime) ||
+            !kest_build_free(engine.build)) {
+            fprintf(stderr, "this engine could not give back what it had\n");
+            return 1;
+        }
+        return 0;
     }
     for (int frame = 0; frame < FRAMES; frame++) {
         if (!one_frame(&engine, frame, xs, ys)) {

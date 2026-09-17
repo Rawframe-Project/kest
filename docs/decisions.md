@@ -30877,3 +30877,42 @@ nobody has seen catch anything is the thing this project says it will not have,
 and what makes this one different from that is that the holes above it have all
 been seen catching something and this is looking for a kind of fault they
 cannot. *Measured.*
+
+## D985. The edits a reload has to have an answer for, driven
+
+Section 18 of the completion mission asks for a reload model that is a product
+feature rather than an experiment, and for an edit corpus: a body-only edit, a
+field added, a field removed, a rename, a signature change, an incompatible type
+change, and a failure injected at each stage.
+
+**The model was already right and nothing had driven it.** `examples/engine.c`
+does the transaction in the order a transaction happens: build the candidate
+beside the running one, refuse if the shape the world was saved as is not the
+shape the new program has, make the world again in the new machine, and let go
+of the old one only then. Nothing touches the running world until the candidate
+has answered. What was missing was somebody trying the edits.
+
+**So the host takes a second path**: `engine <program> <what it reloads from>`.
+A reload in a real host is the file changing underneath it, and a second path is
+the only way to say "and now it is this" without editing a file somebody else is
+reading. `check.sh` drives seven edits through it and holds each to ending with
+a world — the new program's where the shape did not move, and the one the host
+was already holding where it did. Never half of either.
+
+**What driving it found.** A **signature change reloaded**. The host checked the
+mark of the layout the world is saved as, which is the shape of the *data*, and
+nothing checked the shape of a *call*: `round` took one more thing than it did
+and the host went on calling it with what it used to take. A name found again is
+not the same function. So the host now reads `kest_frame_takes` for every door
+the first time it looks and holds a reload to it — the data's shape by its
+layout mark, the call's shape by how wide its frame is.
+
+That is the second time this mission has found the same shape of defect: a
+thing that was true when it was written, stayed written, and stopped being
+checked because nothing asked. The answer both times was to ask.
+
+**Universal suspended-frame migration is not part of this** and is not "later".
+A reload here happens at a quiescent boundary the host chooses, between frames,
+with the world rebuilt from what the program wrote down. A host that wants to
+reload in the middle of a call wants something this language does not do.
+*Measured*, on seven edits in the gate.

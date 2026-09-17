@@ -15,6 +15,35 @@ make PREFIX=/usr/local
 sudo make install PREFIX=/usr/local
 ```
 
+## Starting
+
+Once `kest` is on the path, one command makes something that runs:
+
+```
+kest new game
+cd game
+kest build
+kest run
+kest test tests/*.kest
+kest doctor
+```
+
+`kest new` writes a project, a program and a test. `kest.project` is lines of
+`name value` and says what to build; being inside a project is why `kest build`
+and `kest run` need no file after them. `kest doctor` is what to run when
+something is wrong and it is not obvious what: it says what this command line
+is, where it looks for the standard library and whether it found it.
+
+For an editor, `editors/vscode` is a grammar and a client that starts
+`kest lsp` — which is this compiler, so what an editor says about a file and
+what `kest check` says about it cannot differ.
+
+[docs/language.md](docs/language.md) is the reference and reads front to back:
+what a program is made of, then values, then promises, then the boundary a host
+crosses. `examples/` is thirty-six programs that run, each checking itself.
+
+## Installing
+
 Installing puts `kest`, `kest.h`, `libkest.a` and the standard library where
 another project looks. The compiler looks for the library in four places, in
 this order: `$KEST_LIB`, then `lib/` beside itself, which is where it is in a
