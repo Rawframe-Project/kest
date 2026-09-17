@@ -35801,3 +35801,30 @@ out with `kest_gave_text`, puts the heap back to where it was, and runs the next
 frame on a world that is still there.
 
 **Runs:** `make check`; `examples/engine` and `examples/engine-debug`.
+
+## The backend decision, and the number it rests on (D958, D959)
+
+The build that checks itself counts every instruction it runs, so what a
+workload is made of is a thing to ask. The frame step this project measures with
+runs 896 million instructions and 67.9% of them are moving a value onto the
+stack or off it: `load` is 35.7% on its own, `const` 14.3%, `store` 7.1%. The
+ants are 54.9%, the colony 60.7%, the crossing instrument 45.2%.
+
+A machine whose instructions name their operands where they are does not run
+most of those. If half of the movement goes the frame step runs 1.51 times fewer
+instructions; at seven tenths, 1.90; at nine tenths, 2.57. The gap against Luau
+and Daslang was measured as instruction count rather than dispatch, so those are
+close to time.
+
+The decision is to keep the stack backend for v1 anyway, because the rule this
+mission wrote before the measurement says *measured*, and a prediction is not a
+measurement: it asks for a second backend on a shared resolved representation,
+run against the same corpus. That representation is D959 — designed, tried,
+thrown away rather than landed with a numbering of its own beside the backend's,
+and written down with the order it has to be done in.
+
+So: the evidence says the experiment is worth doing and says where to look, and
+nothing is adopted on a prediction.
+
+**Runs:** the histograms above, from `KEST_DEEP=1 ./kest-debug run` over four
+programs.

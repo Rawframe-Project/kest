@@ -29647,3 +29647,96 @@ gates on an IR that is not there. This is the half that can be had without it,
 and the half that cannot is named rather than pretended. `examples/engine.c`
 marks round a query, copies the answer out, puts the heap back, and runs the
 next frame on a world that is still where it was.
+
+## D958: the backend decision, and the number it rests on
+
+The mission this work is part of asks for a decision between the stack machine
+this language has and a register or slot machine, with a rule written before the
+measurement: adopt the second if a representative workload improves by half
+again or better, nothing regresses materially, the dynamic operation count falls
+substantially, semantics and diagnostics hold, and the whole thing is one IR and
+one runtime.
+
+**What was measured.** The build that checks itself counts every instruction it
+runs, so what a workload is made of is a thing to ask rather than to model. Over
+the frame step this project measures with, 896 million instructions:
+
+| | share |
+| --- | --- |
+| `load` | 35.7% |
+| `const` | 14.3% |
+| `load.n` | 7.1% |
+| `store` | 7.1% |
+| `store.n` | 3.6% |
+| everything else | 32.2% |
+
+Two thirds of what the machine runs — 67.9% — is moving a value onto the stack
+or off it. It is not one workload: the ants are 54.9%, the colony 60.7%, and the
+instrument that measures a crossing 45.2%. A machine whose instructions name
+their operands where they are does not run most of those.
+
+**What that predicts.** If half of the movement goes, the frame step runs 1.51
+times fewer instructions; at seven tenths, 1.90; at nine tenths, 2.57. The gap
+this language has against Luau and Daslang was measured as instruction count and
+not dispatch (127 ns an entity a step, 46.51 instructions an entity, 2.74 ns
+each), so instructions removed are time removed almost one for one. The rule's
+first clause is very likely to be met.
+
+**And the decision is to keep the stack backend for v1**, because the rule says
+*measured*, and a prediction is not a measurement. What the rule asks for is a
+second backend built on a shared IR, run against the same corpus, compared on
+the same workloads — and this language does not have the IR the mission makes
+that experiment stand on (see D959). Adopting on a prediction would be the thing
+the rule was written to stop.
+
+What this is not is a decision against the register machine. It is the strongest
+piece of evidence this project has that the experiment is worth doing, and it is
+written down with the number so that whoever does it starts from a measurement
+rather than from an argument. The conditions are unchanged: the IR first, then
+the experiment, then the rule.
+
+**What the fallback branch asks for instead** — improving places, aggregate
+copying and inlining where measured — is what D931's `load.elem`/`store.elem`
+already did once: 46.51 instructions an entity became 43.51. The same door is
+open on the movement above, and the measurement says where to look: `load` at a
+third of everything is a program pushing what it is about to use.
+
+## D959: the resolved representation, and why it is still not in the tree
+
+The mission asks for a resolved, typed, immutable per-instance representation
+that the backend consumes, and gates the backend experiment on it. `docs/state.md`
+has carried the reason it is not here since the reproduction phase; this is the
+same reason, written where decisions are kept, because it is one now.
+
+**Two of the three things it is for are already true by other means.** Generic
+instance semantics no longer depend on which copy was typed last: the compiler
+retypes before it emits each copy (D933) and the contract proof does the same
+before it reads one (D939). Places are explicit where it mattered — D931 gave
+array assignment a place made of the array and the index rather than an address,
+which is what the relocation defect needed and what an IR would have expressed
+as a place.
+
+**The third is a rewire, and it is one change or none.** The backend finds a
+local by walking its list backwards comparing source text, at every mention of a
+name. Slot assignment lives in the backend, in twelve `declare_local` sites,
+several of them inside the shapes a `for` lowers to. A resolver that worked out
+slots of its own would be a second place that knows that arithmetic, and the
+first thing this project refuses is two places for one fact. So the resolver has
+to own the assignment and the backend has to read it — one walk, one numbering —
+and that is a single change across every declaring and every reading site rather
+than a sequence of green steps. A resolver was written and measured against that
+bar and thrown away rather than landed with a numbering of its own.
+
+**What it is worth, said honestly.** The thing it would buy that nothing else
+does is the backend experiment in D958 — a second backend reading the same
+resolved bodies. What it would buy on its own is a name mention that is a read
+rather than a search, and a compiler that cannot disagree with its checker about
+what a name means. Neither of those is a defect anybody has reproduced here: the
+one that came closest (a `for` binding observing a write through an alias) was
+repaired in the checker's own terms (D932).
+
+So it stays out, with its order written down: move slot assignment into the
+resolver, make `declare_local` the resolver's answer rather than its own
+arithmetic, and then the backend reads a name instead of looking one up. Nothing
+before that step is worth committing and nothing after it is hard. It is the
+first thing after v1 and the thing D958's experiment stands on.

@@ -27,28 +27,32 @@ asks the question. Evidence is named; nothing here is a claim from a document.
 | --- | --- |
 | F10 | `no.alloc` is documented more broadly than what is measured: diagnostic and trap machinery allocate outside the program heap |
 | E3 | the library has no process-global mutable state; what is shared is the build's stamp counter, which two runtimes of one build write without synchronisation. That is what F9 rests on |
-| E4 | a text slot is a `const char *`; length is `strlen`, so `len` is O(n) and embedded noughts are unrepresentable. The reusable buffer is answered: `fit` and `std.text`'s `fitting` (D940). O(1) length is not |
-| E5 | `live_from` scans to the store's high-water mark, so walking a store is O(high-water) rather than O(live) |
+| E4 | a text slot is a `const char *`; length is `strlen`, so `len` is O(n) and embedded noughts are unrepresentable. The reusable buffer is answered: `fit` and `std.text`'s `fitting` (D940). A length-carrying representation was built and put back, because a cut would allocate under it; D955 says what the two-slot one would take, and the policy about a nought is written down |
+| E5 | `live_from` scanned to the store's high-water mark. It reads a bit a slot and sixty-four at a time now (D954): four thousand walks of a store holding eight things out of two hundred thousand went from 0.22s to 0.02s |
 
 ## Phases
 
 The mission's order. `/home/kest/mission/STATE.md` carries which one is open.
 
     0 baseline and reproduction    done
-    1 semantic and embedding repair
-    2 one resolved per-instance representation
-    3 temporaries, text, buffer, store   buffer done (D940); O(1) text
-                                         length and the store's own
-                                         representation are open
-    4 validation correction
-    5 backend decision from that representation
-    6 a determinism profile that is true
-    7 identity, schema, reload
-    8 host reality and portability
-    9 machine-readable surface
+    1 semantic and embedding repair    done
+    2 one resolved per-instance representation   not landed, D959
+    3 temporaries, text, buffer, store   done but for `scratch { }`,
+                                         which is gated on 2:
+                                         D940, D954, D955, D956, D957
+    4 validation correction            done   D944
+    5 backend decision                 done   D958, which is: keep the
+                                              stack backend for v1
+    6 a determinism profile that is true  done   D941, D942, D943
+    7 identity, schema, reload         done   D945 to D949
+    8 host reality and portability     done   D949 to D953
+    9 machine-readable surface         done   D947
     10 documentation and the v1 boundary
 
 ## Phase 2, and why it is not in the tree yet
+
+This is D959 now, and D958 is the backend decision that stands on it. What
+follows is the same reason written before either of them was a decision.
 
 The mission asks for a resolved, typed, immutable per-instance representation
 that the backend consumes. Two of the three things it is for are already true
