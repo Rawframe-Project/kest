@@ -5101,14 +5101,22 @@ which is not required to round them correctly. Two platforms may differ in the
 last bit and then diverge. Clocks, files and the words a program was started with
 are outside it for the same reason: they are the host's.
 
-**Conformance.** `examples/determinism.kest` exercises every rule above and folds
-the answers into one number. This platform answers `3909859238992895122`. A
-platform that answers the same agrees about all of it; one that does not prints
-which part disagrees. The gate runs it, so a change to any of these rules is a
-number that moves and a line here to change on purpose.
+**Conformance.** `examples/determinism.kest` exercises every rule above —
+wrapping, narrowing, the crossings from float to whole number, how `f32` and
+`f64` round, a nought with a sign on it, how far a number goes before it is
+nought, a thing that is not a number, what order a walk goes in, how text
+hashes, a seeded stream and a table walked — and folds the answers into one
+number. Nine parts, and each is printed so a platform that disagrees says which.
 
-**Tested on** x86-64 Linux with GCC 15.2. No other platform has been run, and
-none is claimed.
+**Tested on three platforms**, and this is what makes the profile a claim rather
+than a hope: Linux x86-64 with GCC, Windows x86-64 with MSVC and macOS arm64
+with clang all build in CI, run every example, and are held to writing the same
+bytes — the same conformance number and the same output for every program in
+the tree. The job that does it diffs the three traces and is the thing that
+fails if a platform is added and does not agree. See D970.
+
+One platform answering `2470919380724047420` says nothing on its own; three
+answering it is the promise.
 
 ## What is the same everywhere
 

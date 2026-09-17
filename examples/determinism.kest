@@ -18,7 +18,7 @@ import std.table
 // What it does not cover is what the profile does not promise: `Math.sin`,
 // `cos`, `pow` and `atan2` are the host's and are outside it. See D941.
 
-const ANSWER: u64 = 3909859238992895122
+const ANSWER: u64 = 2470919380724047420
 
 struct Piece {
     name: text
@@ -110,6 +110,56 @@ fn rounding() -> u64 no.alloc no.host {
     return mark
 }
 
+// The three edges of a float that a platform can be wrong about without being
+// wrong about anything else: a nought with a sign on it, a number too small to
+// be kept the usual way, and a thing that is not a number.
+//
+// None of it reads bits: this language has no door onto the bits of a float
+// and should not have one for this. What is read is what a program can see —
+// whether dividing by a signed nought goes one way or the other, how many
+// halvings a smallest number survives before it is nought, and whether a thing
+// that is not a number is equal to itself. A platform that flushes the small
+// ones to nought answers a smaller count and says so here rather than in a
+// simulation that drifts a month later.
+fn edges() -> u64 no.alloc no.host {
+    let mark = hash.start
+
+    // A nought with a sign on it compares equal to one without and divides the
+    // other way, which is the whole of what a sign on a nought is.
+    let nought: f64 = 0.0
+    let signed = 0.0 - nought
+    mark = hash.join(mark, u64(i32(if nought == signed -> 1 else -> 0)))
+    let up = 1.0 / nought
+    let down = 1.0 / signed
+    mark = hash.join(mark, u64(i32(if up > 0.0 -> 1 else -> 0)))
+    mark = hash.join(mark, u64(i32(if down < 0.0 -> 1 else -> 0)))
+
+    // How far down a number goes before it is nought, halving. A platform that
+    // keeps the small ones gets further than one that does not.
+    let small: f64 = 1.0
+    let steps = 0
+    while small > 0.0 && steps < 2000 {
+        small = small / 2.0
+        steps += 1
+    }
+    mark = hash.join(mark, u64(steps))
+    let narrow: f32 = 1.0
+    let narrowSteps = 0
+    while narrow > 0.0 && narrowSteps < 2000 {
+        narrow = narrow / 2.0
+        narrowSteps += 1
+    }
+    mark = hash.join(mark, u64(narrowSteps))
+
+    // And a thing that is not a number, which is not equal to itself and is
+    // not less than or greater than anything.
+    let notNumber = nought / nought
+    mark = hash.join(mark, u64(i32(if notNumber == notNumber -> 1 else -> 0)))
+    mark = hash.join(mark, u64(i32(if notNumber < 1.0 -> 1 else -> 0)))
+    mark = hash.join(mark, u64(i32(if notNumber > 1.0 -> 1 else -> 0)))
+    return mark
+}
+
 // Walks are in the order the thing is in: an array by index, a store by place,
 // a range from its first to its last.
 fn ordering() -> u64 {
@@ -196,6 +246,7 @@ fn main() -> i32 {
     push(parts, Piece("narrowing", narrowing()))
     push(parts, Piece("crossings", crossings()))
     push(parts, Piece("rounding", rounding()))
+    push(parts, Piece("edges", edges()))
     push(parts, Piece("ordering", ordering()))
     push(parts, Piece("hashing", hashing()))
     push(parts, Piece("seeded", seeded()))

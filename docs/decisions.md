@@ -31289,3 +31289,32 @@ a nought inside text is, what `--version` prints — and each time the reference
 was the thing that changed, because each time the compiler's behaviour was the
 one that had been thought about. That is not the rule failing; it is the rule
 working in the direction it usually works. *Argued.*
+
+## D995. Three edges of a float, and three platforms held to them
+
+Section 16 of the completion mission lists what a deterministic profile has to
+specify, and three of them were in the list and not in the corpus: a nought with
+a sign on it, subnormals, and whether a thing that is not a number is
+observable.
+
+They are the three a platform can be wrong about without being wrong about
+anything else. An arm64 machine with flush-to-zero on and an x86-64 machine
+without it agree about every arithmetic rule in the profile and disagree about
+how far a number goes before it is nought — and a simulation built on the second
+drifts on the first a month later, in a way that reads as a bug in the
+simulation.
+
+**None of it reads bits.** This language has no door onto the bits of a float
+and should not grow one for a test. What `edges()` reads is what a program can
+see: whether a signed nought compares equal to an unsigned one and divides the
+other way, how many halvings the smallest number survives before it is nought,
+and whether a thing that is not a number is equal to itself or less than or
+greater than anything. Nine answers folded into one, and the conformance number
+moved to `2470919380724047420` because of it.
+
+**And what makes any of this a promise**: the number is answered the same on
+Linux x86-64 with GCC, Windows x86-64 with MSVC and macOS arm64 with clang. One
+platform answering a number says nothing; three answering it is the claim. The
+CI job that holds them writes a trace of what every example answered and what it
+printed on each, and diffs the three — so it is every program in the tree that
+agrees, not one. *Measured.*
