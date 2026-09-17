@@ -28,6 +28,24 @@ __declspec(dllimport) int __cdecl _mkdir(const char *path);
 // sixty-four-bit count, which is what is read out of it. See D970.
 __declspec(dllimport) int __stdcall QueryPerformanceCounter(long long *count);
 __declspec(dllimport) int __stdcall QueryPerformanceFrequency(long long *rate);
+
+// And the two streams put in the mode where a byte written is the byte that
+// comes out. Windows writes two bytes for a line end in the mode it starts in,
+// so what a program wrote and what came out were different files -- and a
+// language whose gate holds two platforms to saying the same thing byte for
+// byte cannot have one of them adding a byte. What a program writes is what it
+// writes. See D970.
+#include <fcntl.h>
+#include <io.h>
+#define KEST_BYTES_OUT()                                                     \
+    do {                                                                     \
+        _setmode(_fileno(stdout), _O_BINARY);                                \
+        _setmode(_fileno(stderr), _O_BINARY);                                \
+    } while (0)
+#else
+#define KEST_BYTES_OUT()                                                     \
+    do {                                                                     \
+    } while (0)
 #endif
 
 #include <errno.h>
@@ -2883,6 +2901,7 @@ static int run_tests(const char *executable, char **paths, int path_count,
 }
 
 int main(int argc, char **argv) {
+    KEST_BYTES_OUT();
     if (argc < 2) {
         // No words at all, so no form to answer in but the one a person
         // reads: `--json` is a word, and there are none.

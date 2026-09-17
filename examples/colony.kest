@@ -390,7 +390,11 @@ fn main() -> i32 {
     }
     // And out to a file, read back, so that the one thing a program could not
     // do before this sprint is a thing this program does. See D925.
-    let where = "/tmp/kest-colony-day.txt"
+    // Beside whatever is running this rather than in a named directory: a
+    // path that begins with a slash is a path one of the two platforms this
+    // is built for has not got, and this example ran everywhere except the
+    // one place nobody had run it. See D970.
+    let where = "kest-colony-day.txt"
     if !save(w, where) {
         return 11
     }
