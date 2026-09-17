@@ -1,5 +1,7 @@
 #include "build.h"
 
+#include "slots.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -56,6 +58,21 @@ bool kest_build_check(KestBuild *build) {
     return build->diags.error_count == 0;
 }
 
+// The two backends as one thing to hand a body to. The bodies' arena is rewound
+// after each one, so both have to have read it before that happens.
+typedef struct {
+    KestLower *stack;
+    KestSlotWriter *slots;
+} BothWays;
+
+static bool written_both(void *to, const KestIrBody *body) {
+    BothWays *both = to;
+    if (!kest_lower_body(both->stack, body)) {
+        return false;
+    }
+    return both->slots == NULL || kest_slots_body(both->slots, body);
+}
+
 bool kest_build_emit(KestBuild *build) {
     if (build->compiled) {
         return true;
@@ -88,9 +105,33 @@ bool kest_build_emit(KestBuild *build) {
         kest_diags_starve(&build->diags);
         return false;
     }
-    kest_ir_program_init(&ir, bodies, kest_lower_body, writes);
+    // And the second machine, when this build was asked for it. It reads the
+    // same bodies the first one does, one after the other, which is what an
+    // experiment about two backends has to be: not two compilers, one seam.
+    // See `slots.h`.
+    BothWays both = {writes, NULL};
+    if (getenv("KEST_SLOTS") != NULL) {
+        both.slots = kest_slots_new(build->program, &build->module,
+                                    build->arena);
+    }
+    kest_ir_program_init(&ir, bodies, written_both, &both);
     bool compiled =
         kest_compile(build->program, &build->units, &build->module, &ir);
+    if (both.slots != NULL && compiled) {
+        build->module.slots = both.slots;
+    }
+    if (both.slots != NULL && getenv("KEST_SLOTS_SAY") != NULL) {
+        fprintf(stderr, "slots: %u of %u bodies not written: %s\n",
+                both.slots->refused, both.slots->count,
+                both.slots->why == NULL ? "" : both.slots->why);
+        for (uint32_t i = 0; i < both.slots->count; i++) {
+            const KestSlotBody *one = kest_slots_of(both.slots, i);
+            fprintf(stderr, "slots: %-28s %4u stack %4u slot\n",
+                    build->module.functions[i]->name,
+                    build->module.functions[i]->origin_count,
+                    one->written ? one->instructions : 0);
+        }
+    }
     kest_arena_free(bodies);
     if (!compiled || build->module.out_of_room) {
         kest_diags_starve(&build->diags);

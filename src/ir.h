@@ -367,6 +367,14 @@ uint32_t kest_ir_op(KestIrProgram *program, KestIrBody *body, KestIrKind kind,
 // got to now.
 void kest_ir_lands_here(KestIrBody *body, uint32_t branch);
 
+// Where each value sits when a body is given a window rather than a stack: the
+// depth at which it was made, counted in slots, and how deep the deepest of
+// them goes. A backend that pushes and pops has this by construction and never
+// asks; one that writes to places has to know it, and it is answered here
+// because it is one answer about a body. Answers what is wrong, or NULL.
+const char *kest_ir_windows(const KestIrBody *body, KestArena *arena,
+                            uint16_t **out, uint16_t *deepest);
+
 // What each operation is called, where a reader sees it. What it does that a
 // promise is about is on the operation itself, because that is where anything
 // walking a body reads it.

@@ -302,6 +302,83 @@ void kest_ir_lands_here(KestIrBody *body, uint32_t branch) {
 // What a body has to be for a backend to read it without asking anything else.
 // Said as a sentence rather than an index, because what a reader does with the
 // answer is print it, and a number would send them back here.
+#define UNTOLD 0xFFFFFFFFu
+// Where each value sits when a body is given a window rather than a stack: the
+// depth at which it was made, counted in slots. A backend that pushes and pops
+// has this by construction and never asks; one that writes to places has to
+// know it. It is answered here rather than in either of them because it is one
+// answer about a body, and because getting it wrong in a backend is a backend
+// that reads the wrong slot rather than one that refuses.
+//
+// Two operations are not what they look like. `meet` reads one value per way of
+// arriving and only one of them is there, so it takes the width of one rather
+// than of all of them. And `ask` on a wider value reads the slot on top and
+// leaves the rest where they are, which is what an `if let` binds.
+const char *kest_ir_windows(const KestIrBody *body, KestArena *arena,
+                            uint16_t **out, uint16_t *deepest) {
+    uint16_t *window = KEST_ARENA_ARRAY(arena, uint16_t,
+                                        body->value_count == 0
+                                            ? 1
+                                            : body->value_count);
+    uint32_t *landing = KEST_ARENA_ARRAY(arena, uint32_t,
+                                         body->op_count == 0 ? 1
+                                                             : body->op_count);
+    if (window == NULL || landing == NULL) {
+        return "there was no room to work out where a body's values sit";
+    }
+    for (uint32_t i = 0; i < body->op_count; i++) {
+        landing[i] = UNTOLD;
+    }
+    uint32_t depth = 0;
+    uint32_t high = 0;
+    for (uint32_t i = 0; i < body->op_count; i++) {
+        const KestIrOp *op = &body->ops[i];
+        if (landing[i] != UNTOLD) {
+            depth = landing[i];
+        }
+        uint32_t took = 0;
+        for (uint16_t a = 0; a < op->arg_count; a++) {
+            took += body->values[body->args[op->first_arg + a]].slots;
+        }
+        uint16_t gives = op->dest == KEST_IR_NONE
+                             ? 0
+                             : body->values[op->dest].slots;
+        if (op->kind == KEST_IR_MEET) {
+            took = gives;
+        } else if (op->kind == KEST_IR_ASK) {
+            took = 1;
+        }
+        if (took > depth) {
+            return "an operation reads deeper than the body has made";
+        }
+        depth -= took;
+        if (op->dest != KEST_IR_NONE) {
+            window[op->dest] = (uint16_t)(op->kind == KEST_IR_ASK
+                                              ? depth - gives
+                                              : depth);
+        }
+        if (op->kind != KEST_IR_ASK) {
+            depth += gives;
+        }
+        if (depth > high) {
+            high = depth;
+        }
+        if (op->kind == KEST_IR_GO || op->kind == KEST_IR_ASK) {
+            if (op->target < body->op_count) {
+                if (landing[op->target] != UNTOLD &&
+                    landing[op->target] != depth) {
+                    return "two ways to one place leave different amounts "
+                           "behind them";
+                }
+                landing[op->target] = depth;
+            }
+        }
+    }
+    *out = window;
+    *deepest = (uint16_t)high;
+    return NULL;
+}
+
 const char *kest_ir_verify(const KestIrBody *body) {
     for (uint32_t i = 0; i < body->op_count; i++) {
         const KestIrOp *op = &body->ops[i];

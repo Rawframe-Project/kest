@@ -1,5 +1,7 @@
 #include "vm.h"
 
+#include "slots.h"
+
 // The sanitised build is told where every block a host has ends, which is the
 // one thing a library cannot work out for itself about somebody else's memory.
 #if KEST_CHECKED
@@ -111,6 +113,24 @@ typedef struct {
 // Memory to stack and back. Everything goes through memcpy, because a
 // borrowed block is aligned the way its owner aligned it and not the way this
 // machine would like.
+// What each machine has run, for the experiment that weighs one against the
+// other. Counted only in the build that checks itself, which is where every
+// other count in this project is taken.
+#if KEST_CHECKED
+static uint64_t ran_by_the_stack;
+static uint64_t ran_by_the_slots;
+#endif
+
+void kest_slots_counted(uint64_t *by_the_stack, uint64_t *by_the_slots) {
+#if KEST_CHECKED
+    *by_the_stack = ran_by_the_stack;
+    *by_the_slots = ran_by_the_slots;
+#else
+    *by_the_stack = 0;
+    *by_the_slots = 0;
+#endif
+}
+
 static void unpack(KestValue *out, const KestLayout *layout,
                    const unsigned char *from, TagRead *told);
 static void pack(unsigned char *to, const KestLayout *layout,
@@ -400,6 +420,9 @@ typedef struct {
     const uint8_t *ip;
     // Where this call's slots begin. The operand stack sits above them.
     KestValue *base;
+    // And what the second machine is running here, when it is the one running.
+    // See `slots.h`.
+    const KestSlotBody *slots;
 } Frame;
 
 struct KestRuntime {
@@ -2411,6 +2434,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     while (true) {
         const uint8_t *instruction = ip;
 #if KEST_CHECKED
+        ran_by_the_stack++;
         if (rt->ran != NULL) {
             rt->ran[*instruction]++;
         }
@@ -4480,6 +4504,459 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 #undef BINARY_I
 }
 
+// Where an operand is: a place in the frame, or a value the chunk holds.
+static KestValue slot_read(const KestValue *mine, const KestValue *constants,
+                           uint16_t operand) {
+    return (operand & KEST_SLOT_HELD)
+               ? constants[operand & (KEST_SLOT_HELD - 1)]
+               : mine[operand];
+}
+
+static const KestValue *slot_run(KestValue *mine, const KestValue *constants,
+                                 uint16_t operand) {
+    return (operand & KEST_SLOT_HELD)
+               ? &constants[operand & (KEST_SLOT_HELD - 1)]
+               : &mine[operand];
+}
+
+// The second machine, and what section 5 of the continuation asks for: the
+// same bodies, run by something that names where every value is instead of
+// pushing it. It lives here rather than in a file of its own because most of
+// what a machine is is its guards, and those are written once above: what is
+// new below is the reading of operands and nothing about what a program means.
+//
+// A frame is one run of slots — the names a body declared, and above them a
+// place for every value it makes — so an operand is a place in that run, or a
+// value the chunk holds when the top bit is set.
+static bool execute_slots(KestRuntime *rt, const KestSlotWriter *written,
+                          int32_t entry, uint16_t arg_slots,
+                          uint16_t *returned) {
+    const KestModule *module = rt->module;
+    Vm *vmp = rt;
+
+    const KestChunk *chunk = module->functions[entry];
+    const KestSlotBody *body = kest_slots_of(written, (uint32_t)entry);
+    KestValue *floor = rt->running_top != NULL ? rt->running_top : rt->stack;
+    uint32_t under = rt->running_frames;
+    if (body == NULL || !body->written || under >= rt->call_depth ||
+        floor + body->frame_slots > rt->limit) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(rt->diags, NULL);
+        kest_diags_add(rt->diags, KEST_SEVERITY_ERROR, "K0602", nowhere,
+                       "there is no room to call in from here");
+        return false;
+    }
+    (void)arg_slots;
+
+    rt->frame_count = under;
+    Frame *frame = &rt->frames[rt->frame_count++];
+    frame->chunk = chunk;
+    frame->ip = body->code;
+    frame->base = floor;
+    frame->slots = body;
+
+    const uint8_t *ip = body->code;
+    KestValue *mine = frame->base;
+    const KestValue *constants = chunk->constants;
+    uint64_t slice = take_fuel(rt);
+    if (slice == 0) {
+        frame->ip = ip;
+        return stopped_here(vmp, rt, frame, ip);
+    }
+
+// The same step of the budget the first machine spends, spent at the same two
+// places: a branch that goes back, and a call. See D921.
+#define SPEND()                                                                \
+    do {                                                                       \
+        if (slice == 0) {                                                      \
+            slice = take_fuel(rt);                                             \
+            if (slice == 0) {                                                  \
+                frame->ip = ip;                                                \
+                return stopped_here(vmp, rt, frame, instruction);              \
+            }                                                                  \
+        }                                                                      \
+        slice--;                                                               \
+    } while (0)
+// Through a function rather than a test written into the macro: the operand is
+// read out of the instruction as the argument, so it is read once however many
+// times the answer is looked at.
+#define SAT(x) slot_read(mine, constants, (x))
+#define SRUN(x) slot_run(mine, constants, (x))
+#define SU16() ((uint16_t)*ip++)
+#define SWHERE() (ip += 2, (uint16_t)(ip[-2] | ((uint16_t)ip[-1] << 8)))
+#define SLOT_ARITH(field, expression)                                          \
+    do {                                                                       \
+        uint16_t d = SU16();                                                   \
+        KestValue left = SAT(SU16());                                          \
+        KestValue right = SAT(SU16());                                         \
+        mine[d].field = (expression);                                          \
+    } while (0)
+#define SLOT_ONE(field, expression)                                            \
+    do {                                                                       \
+        uint16_t d = SU16();                                                   \
+        KestValue one = SAT(SU16());                                           \
+        mine[d].field = (expression);                                          \
+    } while (0)
+
+    while (true) {
+        const uint8_t *instruction = ip;
+#if KEST_CHECKED
+        ran_by_the_slots++;
+#endif
+        switch ((KestSlotOp)*ip++) {
+        case KEST_SLOT_MOVE: {
+            uint16_t to = SU16();
+            uint16_t from = SU16();
+            uint16_t many = SU16();
+            // One slot written rather than a run copied: most moves are one,
+            // and a copy whose length the compiler cannot see is a call.
+            if (many == 1) {
+                mine[to] = SAT(from);
+                break;
+            }
+            memmove(&mine[to], SRUN(from), sizeof(KestValue) * many);
+            break;
+        }
+        case KEST_SLOT_PART: {
+            uint16_t to = SU16();
+            uint16_t from = SU16();
+            uint16_t into = SU16();
+            uint16_t many = SU16();
+            if (many == 1) {
+                mine[to] = SRUN(from)[into];
+                break;
+            }
+            memmove(&mine[to], SRUN(from) + into, sizeof(KestValue) * many);
+            break;
+        }
+        case KEST_SLOT_ELEM: {
+            uint16_t to = SU16();
+            const Array *array = SAT(SU16()).object;
+            int64_t index = SAT(SU16()).integer;
+            uint16_t of_which = SU16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
+            HOLD(array, KEST_IS_ARRAY, "an array");
+            IN_ARRAY(index, array);
+            READ_INTO(&mine[to], layout,
+                      array->bytes + (size_t)index * array->stride);
+            break;
+        }
+        case KEST_SLOT_SET_ELEM: {
+            Array *array = SAT(SU16()).object;
+            int64_t index = SAT(SU16()).integer;
+            uint16_t what = SU16();
+            uint16_t of_which = SU16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
+            HOLD(array, KEST_IS_ARRAY, "an array");
+            IN_ARRAY(index, array);
+            pack(array->bytes + (size_t)index * array->stride, layout,
+                 SRUN(what));
+            break;
+        }
+        case KEST_SLOT_LEN: {
+            uint16_t to = SU16();
+            const Array *array = SAT(SU16()).object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
+            mine[to].integer = (int64_t)array->length;
+            break;
+        }
+        case KEST_SLOT_ADD_I:
+            SLOT_ARITH(integer, left.integer + right.integer);
+            break;
+        case KEST_SLOT_SUB_I:
+            SLOT_ARITH(integer, left.integer - right.integer);
+            break;
+        case KEST_SLOT_MUL_I:
+            SLOT_ARITH(integer, left.integer * right.integer);
+            break;
+        case KEST_SLOT_DIV_I: {
+            uint16_t d = SU16();
+            KestValue left = SAT(SU16());
+            KestValue right = SAT(SU16());
+            if (right.integer == 0) {
+                fail(vmp, frame, instruction, "K0601", "division by zero");
+                return false;
+            }
+            mine[d].integer = left.integer / right.integer;
+            break;
+        }
+        case KEST_SLOT_MOD_I: {
+            uint16_t d = SU16();
+            KestValue left = SAT(SU16());
+            KestValue right = SAT(SU16());
+            if (right.integer == 0) {
+                fail(vmp, frame, instruction, "K0601", "division by zero");
+                return false;
+            }
+            mine[d].integer = left.integer % right.integer;
+            break;
+        }
+        case KEST_SLOT_DIV_U: {
+            uint16_t d = SU16();
+            KestValue left = SAT(SU16());
+            KestValue right = SAT(SU16());
+            if (right.integer == 0) {
+                fail(vmp, frame, instruction, "K0601", "division by zero");
+                return false;
+            }
+            mine[d].integer =
+                (int64_t)((uint64_t)left.integer / (uint64_t)right.integer);
+            break;
+        }
+        case KEST_SLOT_MOD_U: {
+            uint16_t d = SU16();
+            KestValue left = SAT(SU16());
+            KestValue right = SAT(SU16());
+            if (right.integer == 0) {
+                fail(vmp, frame, instruction, "K0601", "division by zero");
+                return false;
+            }
+            mine[d].integer =
+                (int64_t)((uint64_t)left.integer % (uint64_t)right.integer);
+            break;
+        }
+        case KEST_SLOT_NEG_I:
+            SLOT_ONE(integer, -one.integer);
+            break;
+        case KEST_SLOT_AND_I:
+            SLOT_ARITH(integer, left.integer & right.integer);
+            break;
+        case KEST_SLOT_OR_I:
+            SLOT_ARITH(integer, left.integer | right.integer);
+            break;
+        case KEST_SLOT_XOR_I:
+            SLOT_ARITH(integer, left.integer ^ right.integer);
+            break;
+        case KEST_SLOT_SHL:
+            SLOT_ARITH(integer,
+                       (int64_t)((uint64_t)left.integer
+                                 << (right.integer & 63)));
+            break;
+        case KEST_SLOT_SHR_I:
+            SLOT_ARITH(integer, left.integer >> (right.integer & 63));
+            break;
+        case KEST_SLOT_SHR_U:
+            SLOT_ARITH(integer,
+                       (int64_t)((uint64_t)left.integer >>
+                                 (right.integer & 63)));
+            break;
+        case KEST_SLOT_ADD_F:
+            SLOT_ARITH(real, left.real + right.real);
+            break;
+        case KEST_SLOT_SUB_F:
+            SLOT_ARITH(real, left.real - right.real);
+            break;
+        case KEST_SLOT_MUL_F:
+            SLOT_ARITH(real, left.real * right.real);
+            break;
+        case KEST_SLOT_DIV_F:
+            SLOT_ARITH(real, left.real / right.real);
+            break;
+        case KEST_SLOT_NEG_F:
+            SLOT_ONE(real, -one.real);
+            break;
+        case KEST_SLOT_ADD_F32:
+            SLOT_ARITH(real, (float)(left.real + right.real));
+            break;
+        case KEST_SLOT_SUB_F32:
+            SLOT_ARITH(real, (float)(left.real - right.real));
+            break;
+        case KEST_SLOT_MUL_F32:
+            SLOT_ARITH(real, (float)(left.real * right.real));
+            break;
+        case KEST_SLOT_DIV_F32:
+            SLOT_ARITH(real, (float)(left.real / right.real));
+            break;
+        case KEST_SLOT_NEG_F32:
+            SLOT_ONE(real, (float)-one.real);
+            break;
+        case KEST_SLOT_NARROW: {
+            uint16_t d = SU16();
+            KestValue one = SAT(SU16());
+            uint16_t kind = SU16();
+            mine[d].integer = kest_narrow_to(kind, one.integer);
+            break;
+        }
+        case KEST_SLOT_LT_I:
+            SLOT_ARITH(integer, left.integer < right.integer);
+            break;
+        case KEST_SLOT_LE_I:
+            SLOT_ARITH(integer, left.integer <= right.integer);
+            break;
+        case KEST_SLOT_GT_I:
+            SLOT_ARITH(integer, left.integer > right.integer);
+            break;
+        case KEST_SLOT_GE_I:
+            SLOT_ARITH(integer, left.integer >= right.integer);
+            break;
+        case KEST_SLOT_EQ_I:
+            SLOT_ARITH(integer, left.integer == right.integer);
+            break;
+        case KEST_SLOT_NE_I:
+            SLOT_ARITH(integer, left.integer != right.integer);
+            break;
+        case KEST_SLOT_LT_U:
+            SLOT_ARITH(integer,
+                       (uint64_t)left.integer < (uint64_t)right.integer);
+            break;
+        case KEST_SLOT_LE_U:
+            SLOT_ARITH(integer,
+                       (uint64_t)left.integer <= (uint64_t)right.integer);
+            break;
+        case KEST_SLOT_GT_U:
+            SLOT_ARITH(integer,
+                       (uint64_t)left.integer > (uint64_t)right.integer);
+            break;
+        case KEST_SLOT_GE_U:
+            SLOT_ARITH(integer,
+                       (uint64_t)left.integer >= (uint64_t)right.integer);
+            break;
+        case KEST_SLOT_LT_F:
+            SLOT_ARITH(integer, left.real < right.real);
+            break;
+        case KEST_SLOT_LE_F:
+            SLOT_ARITH(integer, left.real <= right.real);
+            break;
+        case KEST_SLOT_GT_F:
+            SLOT_ARITH(integer, left.real > right.real);
+            break;
+        case KEST_SLOT_GE_F:
+            SLOT_ARITH(integer, left.real >= right.real);
+            break;
+        case KEST_SLOT_EQ_F:
+            SLOT_ARITH(integer, left.real == right.real);
+            break;
+        case KEST_SLOT_NE_F:
+            SLOT_ARITH(integer, left.real != right.real);
+            break;
+        case KEST_SLOT_NOT:
+            SLOT_ONE(integer, !one.integer);
+            break;
+        case KEST_SLOT_TRUE:
+            mine[SU16()].integer = 1;
+            break;
+        case KEST_SLOT_FALSE:
+            mine[SU16()].integer = 0;
+            break;
+        case KEST_SLOT_GO: {
+            uint16_t lands = SWHERE();
+            if (body->code + lands <= instruction) {
+                SPEND();
+            }
+            ip = body->code + lands;
+            break;
+        }
+        case KEST_SLOT_GO_FALSE: {
+            KestValue asked = SAT(SU16());
+            uint16_t lands = SWHERE();
+            if (!asked.integer) {
+                ip = body->code + lands;
+            }
+            break;
+        }
+        case KEST_SLOT_GO_TRUE: {
+            KestValue asked = SAT(SU16());
+            uint16_t lands = SWHERE();
+            if (asked.integer) {
+                ip = body->code + lands;
+            }
+            break;
+        }
+        case KEST_SLOT_NEXT_LESS_I: {
+            uint16_t count = SU16();
+            uint16_t limit = SU16();
+            uint16_t lands = SWHERE();
+            mine[count].integer++;
+            if (mine[count].integer < mine[limit].integer) {
+                SPEND();
+                ip = body->code + lands;
+            }
+            break;
+        }
+        case KEST_SLOT_NEXT_LESS_U: {
+            uint16_t count = SU16();
+            uint16_t limit = SU16();
+            uint16_t lands = SWHERE();
+            mine[count].integer =
+                (int64_t)((uint64_t)mine[count].integer + 1);
+            if ((uint64_t)mine[count].integer <
+                (uint64_t)mine[limit].integer) {
+                SPEND();
+                ip = body->code + lands;
+            }
+            break;
+        }
+        case KEST_SLOT_CALL: {
+            uint16_t gives = SU16();
+            uint16_t which = SU16();
+            uint16_t first = SU16();
+            uint16_t takes = SU16();
+            (void)gives;
+            (void)takes;
+            OF_THE_MODULE(which, module->count, "a function");
+            const KestSlotBody *into = kest_slots_of(written, which);
+            if (into == NULL || !into->written) {
+                fail(vmp, frame, instruction, "K0655",
+                     "this calls a body this machine was not given");
+                return false;
+            }
+            if (rt->frame_count >= rt->call_depth ||
+                mine + first + into->frame_slots > rt->limit) {
+                fail(vmp, frame, instruction, "K0602",
+                     "this call needs more room than the machine has");
+                return false;
+            }
+            SPEND();
+            frame->ip = ip;
+            frame = &rt->frames[rt->frame_count++];
+            frame->chunk = module->functions[which];
+            frame->base = mine + first;
+            frame->slots = into;
+            ip = into->code;
+            mine = frame->base;
+            constants = frame->chunk->constants;
+            body = into;
+            break;
+        }
+        case KEST_SLOT_GIVE: {
+            uint16_t what = SU16();
+            uint16_t many = SU16();
+            if (many > 0) {
+                memmove(mine, SRUN(what), sizeof(KestValue) * many);
+            }
+            rt->frame_count--;
+            if (rt->frame_count == under) {
+                rt->fuel_left = rt->fuel_bounded ? rt->fuel_left + slice : 0;
+                if (returned != NULL) {
+                    *returned = many;
+                }
+                return true;
+            }
+            frame = &rt->frames[rt->frame_count - 1];
+            ip = frame->ip;
+            mine = frame->base;
+            constants = frame->chunk->constants;
+            body = frame->slots;
+            break;
+        }
+        case KEST_SLOT_OP_COUNT:
+        default:
+            fail(vmp, frame, instruction, "K0655",
+                 "this machine has no such instruction");
+            return false;
+        }
+    }
+#undef SPEND
+#undef SWHERE
+#undef SAT
+#undef SRUN
+#undef SU16
+#undef SLOT_ARITH
+#undef SLOT_ONE
+}
+
 // The module is taken as something to write to rather than only to read,
 // because one thing in it is: what the next place handed out in a store is
 // stamped with belongs to the build, so two machines made from it are two
@@ -5951,7 +6428,16 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
     }
 
     uint16_t returned = 0;
-    if (!execute(runtime, index, chunk->param_slots, &returned)) {
+    // Which machine. The second one is there only when the build was asked for
+    // it and could write every body a program has; otherwise this is the one
+    // machine there has always been. See `slots.h`.
+    const KestSlotWriter *written = runtime->module->slots;
+    bool went = written != NULL &&
+                        kest_slots_reaches(written, (uint32_t)index)
+                    ? execute_slots(runtime, written, index,
+                                    chunk->param_slots, &returned)
+                    : execute(runtime, index, chunk->param_slots, &returned);
+    if (!went) {
         return false;
     }
     if (returned > 0) {

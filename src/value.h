@@ -416,6 +416,10 @@ typedef struct {
     // the program registered `world.spawn`, and this is what tells them apart
     // without the host having to know there was a difference.
     const char *alias;
+    // The same program written for the second machine, when the build was
+    // asked for it and could write every body of it. `void *` because what it
+    // is lives above this file in the pipeline. See `slots.h`.
+    void *slots;
     KestChunk **functions;
     uint32_t count;
     uint32_t capacity;

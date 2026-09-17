@@ -66,6 +66,17 @@ build/release/least.o: examples/least.c include/kest.h | build/release
 examples/least: build/release/least.o libkest.a
 	$(CC) -o $@ $^
 
+# The backend experiment: the same work run by both machines. It is not part of
+# `make check` for the reason none of the instruments are — a duration is not a
+# pass or a fail.
+tools/twoways: tools/twoways.c libkest.a
+	$(CC) $(WARN) -O2 -Iinclude -Isrc -o $@ $^ -lm
+
+# And the same thing under the build that counts what it runs, which is where
+# the instruction count comes from.
+tools/twoways-debug: tools/twoways.c $(DEBUG_OBJ)
+	$(CC) $(WARN) -O0 -g -fsanitize=address,undefined -Iinclude -Isrc -o $@ $^ -lm
+
 debug: kest-debug
 least: examples/least
 embed: examples/embed
