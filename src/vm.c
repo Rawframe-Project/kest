@@ -6070,7 +6070,8 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
                                        frame[at + slot]);
                     return false;
                 }
-                slot += layout->pieces[p].kind == KEST_L_TEXT ? 2 : 1;
+                slot = (uint16_t)(slot +
+                          (layout->pieces[p].kind == KEST_L_TEXT ? 2 : 1));
             }
             at += layout->slots;
             continue;

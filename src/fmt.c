@@ -449,7 +449,8 @@ static uint32_t else_width(Printer *printer, const KestBranch *branch) {
         return width + 1 + measure(printer, branch->otherwise);
     }
     if (branch->else_value != NULL) {
-        return width + strlen(" -> ") + measure(printer, branch->else_value);
+        return width + (uint32_t)strlen(" -> ") +
+           measure(printer, branch->else_value);
     }
     return width;
 }

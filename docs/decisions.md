@@ -30383,4 +30383,15 @@ ones there. So `HOSTWARN` is `WARN` without it, and the Windows build says
 `/wd4456` for the same two files and for the same reason.
 
 What that leaves is the one above, which stays as it is and works: the inner
-name is the one meant. *Argued.*
+name is the one meant.
+
+`/W4` also says C4244 where GCC says `-Wconversion`, which was not on either.
+That one found twelve in the library and none of them was a defect — every one
+a narrowing the code already meant — so all twelve say so with a cast and
+`-Wconversion` is on. Twelve is what a codebase that writes `(uint32_t)` where
+it means one looks like after nine hundred decisions; it is the reason this
+warning could be turned on at all rather than written down as too large.
+
+The rule from here: the two builds are held to the same set. A warning one
+compiler has and the other does not is either turned on in both or turned off in
+both, with the reason beside it. *Argued.*

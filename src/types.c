@@ -2307,8 +2307,10 @@ KestType *kest_resolve_type_ref(KestProgram *program,
         // where it is held. Where it is already known, it is known here.
         KestType *run = kest_fixed_of(program, element, (uint32_t)how_many);
         if (element != NULL && element->byte_size != 0 &&
-            !sized_within(program, (uint32_t)element->byte_size * how_many,
-                          (uint32_t)element->slots * how_many, program->source,
+            !sized_within(program,
+                          (uint32_t)(element->byte_size * how_many),
+                          (uint32_t)(element->slots * how_many),
+                          program->source,
                           ref->count, kest_type_name(program->arena, run))) {
             return error_type(program);
         }
@@ -2941,7 +2943,7 @@ static bool measure_struct(KestProgram *program, KestType *type) {
             return refuse_cycle(program, type);
         }
         type->members[i].offset = offset;
-        offset += member == NULL ? 1 : member->slots;
+        offset = (uint16_t)(offset + (member == NULL ? 1 : member->slots));
 
         // The bytes are laid out the way a C compiler would, so an array of
         // these can be the array the host already has.
@@ -2988,11 +2990,11 @@ static bool measure_enum(KestProgram *program, KestType *type) {
                 align = held_align;
             }
             variant->offsets[p] = slots;
-            slots += held == NULL ? 1 : held->slots;
+            slots = (uint16_t)(slots + (held == NULL ? 1 : held->slots));
             bytes = (uint16_t)((bytes + held_align - 1) / held_align *
                                held_align);
             variant->byte_offsets[p] = bytes;
-            bytes += held == NULL ? 8 : held->byte_size;
+            bytes = (uint16_t)(bytes + (held == NULL ? 8 : held->byte_size));
         }
         if (slots > payload_slots) {
             payload_slots = slots;

@@ -1,5 +1,5 @@
 CC ?= cc
-WARN := -std=c11 -Wall -Wextra -Wshadow -Werror
+WARN := -std=c11 -Wall -Wextra -Wshadow -Wconversion -Werror
 
 # The hosts are held to everything the library is except shadowing. Each is one
 # long `main` of blocks run one after another, and a block that declares `said`

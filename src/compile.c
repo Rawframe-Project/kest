@@ -234,7 +234,7 @@ static uint32_t ir_emit(Compiler *compiler, KestIrKind kind,
         // Reading more than the body has made. The walk and this are out of
         // step, which is this project's mistake rather than the program's.
         fault(compiler, span, "an operation reads more than the body has made");
-        takes = compiler->value_count;
+        takes = (uint16_t)compiler->value_count;
     }
     compiler->value_count -= takes;
     uint32_t at = kest_ir_op(compiler->ir, compiler->body, kind, type,
@@ -2839,7 +2839,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             // Both ways leave the same thing, so the depth after the `if` is
             // the depth after either one of them.
             stack_pop(compiler, gives);
-            ways += gives > 0 ? 1 : 0;
+            ways = (uint16_t)(ways + (gives > 0 ? 1 : 0));
         } else {
             compile_block(compiler, &branch->then_body);
         }
@@ -2863,11 +2863,11 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         if (branch->otherwise != NULL) {
             compile_expr(compiler, branch->otherwise);
             stack_pop(compiler, gives);
-            ways += gives > 0 ? 1 : 0;
+            ways = (uint16_t)(ways + (gives > 0 ? 1 : 0));
         } else if (branch->else_value != NULL) {
             compile_expr(compiler, branch->else_value);
             stack_pop(compiler, gives);
-            ways += gives > 0 ? 1 : 0;
+            ways = (uint16_t)(ways + (gives > 0 ? 1 : 0));
         } else if (branch->has_else) {
             compile_block(compiler, &branch->else_body);
         }
@@ -2985,7 +2985,7 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
                 // Every arm leaves the same thing, so the depth after the
                 // match is the depth after any one of them.
                 stack_pop(compiler, gives);
-                ways += gives > 0 ? 1 : 0;
+                ways = (uint16_t)(ways + (gives > 0 ? 1 : 0));
             } else {
                 compile_block(compiler, &arm->body);
             }
