@@ -4430,6 +4430,28 @@ machine stops at the next step the program takes, with the refusal a budget
 spent any other way gives. `examples/engine.c` charges for the door it watches
 the world through.
 
+## What is exact, and where it is written
+
+The mission this language was put through asks for a list of the things a host
+or a program must not have to guess at, each of them written down exactly rather
+than implied. This is that list and where each one is.
+
+| | Where |
+| --- | --- |
+| what `no.alloc` means, exactly | *Cost contracts*, above: the builtins that reach the heap, what a run of a written length does not, and what a foreign function is judged by |
+| what `no.host` means | the same section: nothing a body writes crosses out of a program, and the only way out is a call to an `extern` |
+| the deterministic profile | *The simulation profile, version 1*, and `examples/determinism.kest`, which answers whether a platform keeps it |
+| what text is, and what a buffer costs | *What a piece of text is*, and D940 for `fit` and D956 for what a round costs written two ways |
+| store and ref identity and lifetime | *References*, and D934 for what a `ref` carries — a world, a stamp and a place |
+| lend and borrow lifetime | *The host boundary*: a lend is the host's block with a header over it, and ending one is where a host drops the handle |
+| the scratch rule | *A frame's working memory*: what a host keeps past a rewind must not be anything the program made after the mark |
+| what a fuel unit is | *What there is a most of*: a step is a jump that goes back or a call, and work an instruction does is charged by weight |
+| what cancellation promises | the same section, and *Who owns a machine* for doing it from another thread |
+| the threading model | *Who owns a machine* |
+| what a heap ceiling covers | *What there is a most of*: the heap a program runs on, which is not what compiling it took |
+| whether the ABI is stable | it is not. The front page says so under **Experimental**, and every door here is a door that has moved this month |
+| which backend this is | the stack machine, and D958 says what was measured and why the other one is not adopted on a prediction |
+
 ## What this has been run on
 
 x86-64 Linux, GCC 15.2. That is the whole list, and nothing else is claimed:

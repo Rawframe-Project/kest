@@ -35828,3 +35828,22 @@ nothing is adopted on a prediction.
 
 **Runs:** the histograms above, from `KEST_DEEP=1 ./kest-debug run` over four
 programs.
+
+## The v1 boundary (D960)
+
+The front page classifies what is here rather than describing it: implemented,
+partial, not implemented, experimental, and what has been run on what. The
+counts that had gone stale are right again — nine modules in both places that
+say it, three promises, 153 instructions, seventy doors — and the ABI is marked
+experimental, which is the truthful thing to say about a surface that moved four
+times this month.
+
+Beside it, four stages with their conditions, and where this tree is against
+each. v0.x now; alpha wants the resolved representation and the backend chosen
+from it, which are the two things D958 and D959 name; beta wants a second
+platform and an ABI candidate. And in the reference, a table saying where each
+exact rule is written — what `no.alloc` means, what a fuel unit is, what a lend
+lasts, what a host may keep past a rewind — for the reader who needs one fact
+and not the document.
+
+**Runs:** `make check`.

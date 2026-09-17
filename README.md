@@ -41,23 +41,26 @@ Version 0.1.0. Three states, and nothing is in the first that has not been run.
 and narrowing; `text`; `bool`; structs; fixed runs; arrays; `store<T>` handing
 out generation-checked `ref<T>`; enums that carry values; sets of bits;
 optionals; functions as values; one body written for many types, a copy
-compiled per set; `defer`; `match`; `for` and `while`; the `no.alloc` and
-`no.host` cost contracts, proved by the compiler rather than trusted; a
-bytecode VM of 152 instructions; diagnostics with stable codes, spans, notes,
-suggested fixes and `--json`, all of a file's mistakes in one pass; one
-canonical source form and a formatter that holds it; a C embedding API of 60
-doors covering compile, start, call, layout introspection, lent memory and
-per-machine limits; and a standard library of eight modules written in Kest and
-held to the same rules as a program.
+compiled per set; `defer`; `match`; `for` and `while`; the `no.alloc`,
+`no.host` and `deterministic` promises, proved by the compiler rather than
+trusted; a bytecode VM of 153 instructions; diagnostics with stable codes,
+spans, notes, suggested fixes and `--json`, all of a file's mistakes in one
+pass, with the shape of every object a command writes versioned; one canonical
+source form and a formatter that holds it; a C embedding API of 70 doors
+covering compile, start, call, layout introspection with field names, lent
+memory, a frame's working memory marked and put back, and per-machine limits;
+and a standard library of nine modules written in Kest and held to the same
+rules as a program.
 
-**Partial.** The standard library is nine modules — `io`, `math`, `text`,
-`table`, `sort`, `random`, `vec`, `hash`, `os` — which is small. Change
-detection for reload is there — per-file and whole-program marks, and the list
-of files a build actually read — and it is detection and rebuild only; there is
-a host-mediated schema migration prototype outside this repository and nothing
-in it. `check --json` carries a fingerprint per declaration, folded from the
-qualified name, the types and the promises: it is a signature fingerprint and
-not a semantic identity, and it does not survive a rename.
+**Partial.** The standard library — `io`, `math`, `text`, `table`, `sort`,
+`random`, `vec`, `hash`, `os` — is small. Reload is host-mediated and the whole
+protocol is in `examples/engine.c`: detect with the per-file and whole-program
+marks, build the candidate beside the running one, refuse if a shape's mark says
+it moved, make the world again from numbers the program wrote, and publish only
+then — but what carries a world across is a save the program writes and reads,
+not anything this language does for it. `check --json` carries a `signature` per
+declaration, folded from the qualified name, the types and the promises: it is a
+signature fingerprint, it is named one, and it does not survive a rename.
 
 **Resource control.** A host sets four ceilings — stack slots, call depth, heap
 bytes and a budget in steps — and each is refused in words at the instruction
@@ -66,17 +69,54 @@ is enough to stop a program that will not stop; it is **not** a claim that this
 is safe to run code you do not trust, which would need a threat model and fuzz
 evidence this project does not have.
 
-**Not implemented.** Live code replacement in a running machine, and any
-migration of live state across a rebuild: a host reloads by building again and
-starting a new machine, and what the old one held is the host's problem.
-Cross-platform bitwise determinism: `sin`, `cos`, `pow` and `atan2` are the
-host's libm and two platforms may round them differently; `sqrt`, `floor`,
-`ceil` and all integer and `f32`/`f64` arithmetic are exactly specified and do
-not have that problem. `no.host` is not determinism — it says a body does not
-cross the boundary, which is a different thing, though every operation that
-could differ between platforms is behind a door it forbids. No package manager,
-no debugger, no language server, no JIT, no concurrency, no networking, no
-graphics.
+**Not implemented.** Live code replacement in a running machine: a host reloads
+by building again and starting a new machine, and moving the world across is the
+host's, through a save the program writes. A `scratch { }` the compiler proves
+nothing escapes from; what there is instead is the host marking the heap and
+putting it back, with the rule written down rather than proved. A resolved
+per-instance representation, which is what a second backend would read — the
+stack backend stays for v1 and D958 says what the measurement predicts of the
+other one. Cross-platform bitwise determinism for `sin`, `cos`, `pow` and
+`atan2`: they are the host's libm and two platforms may round them differently,
+where `sqrt`, `floor`, `ceil` and all integer and `f32`/`f64` arithmetic are
+exactly specified and do not have that problem. `no.host` is not determinism —
+that is what `deterministic` is, and the two are separate promises. No package
+manager, no debugger, no language server, no JIT, no concurrency inside the
+language, no networking, no graphics.
+
+**Experimental.** Everything about the embedding ABI. It has changed four times
+this month — a promise added to what a host may ask about, names on the pieces
+of a layout, a shape's own mark, a door for reading text, and marking the heap —
+and it will change again before it is called stable. A host written against it
+today is a host that recompiles.
+
+## Where this is on the way to v1
+
+Four stages, and what each of them asks for. This is **v0.x**: an experimental
+language that can be used, on a semantic baseline that has been reproduced and
+repaired, with an ABI that is still moving.
+
+**Alpha** wants the defects reproduced in `docs/state.md` fixed — they are — a
+resolved representation in use, a bounded story for temporary memory, a backend
+chosen at semantic parity, a real host example, and the deterministic profile
+implemented on a tested platform. Four of those six are here: the repairs
+(D927–D939), the memory story (D940, D954, D956, D957), the host
+(`examples/engine.c`, D949) and the profile (D941–D943, answered by a run). The
+two that are not are one thing: the resolved representation (D959), which the
+backend decision stands on (D958).
+
+**Beta** wants a second platform built and tested, an ABI stabilisation
+candidate, versioned tooling output, host-mediated migration validated, and a
+generated-C path only if evidence asked for it. Versioned output is here (D947)
+and so is migration, validated by a host that does the whole protocol (D949).
+Windows is not: it is unverified and marked so rather than claimed.
+
+**v1** wants a documented supported subset that is correct, an embedding ABI
+stable enough to write against, bounded representative workloads, no known
+critical defects of the reviewed classes, a practical validation loop, and an
+architecture a reader can understand without a worklog. The validation loop is
+here — a tenth of a second and eighteen minutes, and what each of them is for is
+written down. The rest waits on alpha and beta.
 
 **Tested on** x86-64 Linux with GCC 15.2 only. The code is C11 and libc and
 nothing else, so it should build elsewhere; nobody has, and this project does
@@ -87,10 +127,10 @@ What it costs to run, measured rather than remembered. `make time` takes four
 numbers on the machine it is run on:
 
 ```
-117 ns per entity per step, 5 ns of it the two calls it makes, best of 7 over 10000, spread 13%
-19 ns for a call and 25 ns for a crossing, which is 6 ns more, best of 7 over 1000000 calls, spread 3%
-10 ns for a hop of the loop, 12 ns with an index read and 31 ns with a read through a reference, which is 19 ns more, best of 7 over 200000 reads, spread 14%
-15 ns for a call in from a host and 18 ns for one the program makes in a loop, best of 7 over 1000000 calls, spread 6%
+115 ns per entity per step, 8 ns of it the two calls it makes, best of 7 over 10000, spread 10%
+19 ns for a call and 29 ns for a crossing, which is 10 ns more, best of 7 over 1000000 calls, spread 7%
+10 ns for a hop of the loop, 13 ns with an index read and 30 ns with a read through a reference, which is 17 ns more, best of 7 over 200000 reads, spread 6%
+24 ns for a call in from a host and 19 ns for one the program makes in a loop, best of 7 over 1000000 calls, spread 12%
 ```
 
 A frame step per entity, a call against a crossing out, a loop hop against an

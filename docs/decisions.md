@@ -29740,3 +29740,40 @@ resolver, make `declare_local` the resolver's answer rather than its own
 arithmetic, and then the backend reads a name instead of looking one up. Nothing
 before that step is worth committing and nothing after it is hard. It is the
 first thing after v1 and the thing D958's experiment stands on.
+
+## D960: the v1 boundary, and four stages with conditions
+
+A version number is a claim, and this project has spent a mission finding out
+that claims are the thing to be careful with. So the stages are written down
+with what each of them asks for, on the page somebody reads before they have a
+working `kest`, and this tree is put where it actually is: **v0.x**, which is an
+experimental language that can be used, on a baseline that has been reproduced
+and repaired, with an ABI that is still moving.
+
+**Alpha** asks for six things and four of them are here: the reproduced defects
+repaired, a bounded story for temporary memory, a real host example, and a
+deterministic profile answered by a run on a tested platform. The two that are
+not are one thing — the resolved representation (D959) and the backend chosen
+from it (D958) — and they are named rather than counted as nearly done.
+
+**Beta** asks for a second platform, an ABI stabilisation candidate, versioned
+tooling output, migration validated, and generated C only if evidence asked.
+Two are here. Windows is unverified and marked so; the ABI has moved four times
+this month and saying it is a candidate would be the kind of claim this mission
+was for.
+
+**v1** asks for a documented supported subset that is correct, an ABI stable
+enough to write against, bounded workloads, no known critical defects of the
+reviewed classes, a practical validation loop, and an architecture a reader can
+understand without a worklog. The loop is here and so is the architecture: the
+reference says what is exact and where, in a table written for the reader who
+needs one fact rather than the document.
+
+**And the stale claims are gone**, which was the other half of this. The library
+is nine modules in both places that count them, the promises are three, the
+instruction set is 153, the embedding API is seventy doors, a fingerprint is
+called a signature, `no.host` is not called determinism, the clock is what it is
+(D935), and nothing here says this is safe to run code you do not trust —
+because that would need a threat model and fuzz evidence this project does not
+have, and saying so is the only honest thing to do with a claim you cannot
+support.
