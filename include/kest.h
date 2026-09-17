@@ -72,6 +72,22 @@ typedef union {
     void *object;
 } KestValue;
 
+// The bytes of a piece of text a slot holds, and how many there are. It is the
+// door to read one through: `text` above is what this language keeps text as
+// today — a run of bytes ending in a nought, on the machine's heap — and a
+// host that reads the member is a host written against that, where one that
+// asks is a host written against text. The two are the same bytes now and the
+// second is the one that survives this language carrying a length beside them.
+//
+// `length` may be NULL for a host that only wants the bytes, and what it
+// answers costs a walk of them, which is what measuring a C string is. Nothing
+// and nought for a slot with no address in it.
+//
+// Asked of a slot the program says is text: a slot carries no tag, so eight
+// bytes that are a number are not an address. `kest_frame_layout` is what says
+// which slots of a frame are text. See D955.
+const char *kest_text_bytes(KestValue value, uint32_t *length);
+
 // What one scalar inside a value is, where memory is shared.
 typedef enum {
     KEST_L_I8,

@@ -189,12 +189,19 @@ fn round(w: World, from: i32) -> i32 no.alloc no.host {
 }
 
 extern fn Engine.watch(tick: i32) -> i32
+extern fn Engine.named(what: text) -> i32
 extern fn Engine.refuse(why: i32) -> i32
 
 // A crossing out and, if the host does it, a crossing back in from inside the
 // host's own function. What the program sees of that is a number.
 fn watched(w: World, tick: i32) -> i32 {
     return Engine.watch(tick) + w.made
+}
+
+// A piece of text handed to the host, which reads it as bytes and a length
+// rather than measuring it. What comes back is how many there were.
+fn named() -> i32 {
+    return Engine.named("ten bytes!")
 }
 
 // And a door the host refuses at. What comes back is a machine that stopped

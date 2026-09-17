@@ -4451,6 +4451,27 @@ where they are:
 Windows is **unverified**. Nothing here has been built or run there and the
 table above is what a port would read first, not a list of what would be wrong.
 
+## What a piece of text is
+
+Bytes, on the machine's heap, ending in a nought. A slot holds where they
+start, so `len` walks them and a cut that ends where the text already ends is a
+place inside it rather than a copy — which is what makes a walk over text
+allocate nothing, and what five of `std.text`'s `no.alloc` functions are built
+on.
+
+**No nought inside.** Text holds no nought byte. It is refused where one would
+be made: in a literal by the lexer, in `text(bytes)` by the machine, and at the
+boundary by `kest_text`. So a host is handed bytes that end in a nought and may
+give them to a C library, and the rule is about what text is rather than how it
+is kept.
+
+**What a host reads it through** is `kest_text_bytes`, which answers the bytes
+and how many there are. A host may read the `text` member of a slot instead and
+get the same bytes; what it gives up is the day this language carries a length
+beside them. What that costs today is the walk measuring a C string costs, done
+once by the library rather than once by every host. See D955, which is also
+where the representation this does not have yet is written down.
+
 ## Who owns a machine
 
 A build is read-only once it is built. The program, the layouts and every piece

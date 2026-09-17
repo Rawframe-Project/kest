@@ -35733,3 +35733,29 @@ the live ones would be a walk in the order things were added, and the simulation
 profile says a store walks by place.
 
 **Runs:** `make check`; the two builds timed over the same program.
+
+## Text that carries its own length, built and put back (D955)
+
+Text here is a pointer to bytes ending in a nought, so `len` walks them. The
+mission asks for a representation that carries a length, and one was built: a
+header on the heap with a length and a pointer, the way an array and a store are
+handles. It ran — every example, both hosts, the sanitised build — and then it
+was put back, because a cut allocates under it. Sixteen bytes, every `rest` and
+every `slice`, which is what a walk over text is made of; five of the library's
+`no.alloc` functions are built on those two reaching nothing, and the sentence
+"a walk over text costs nothing" would have become false. For a language with a
+frame budget that trade is the wrong way round.
+
+What pays for both is text as two slots — the bytes and the length side by side
+— which a cut can share without allocating. That reaches the slot arithmetic,
+the layouts, the constant pool and the boundary, and it is a change to make on
+purpose rather than between two others. D955 says so and says what it would take.
+
+What is kept is `kest_text_bytes`: the door a host reads text through, which
+answers the same bytes today and keeps working the day the representation
+changes. `examples/engine.c` reads through it, and the nought-inside policy is
+written down in the reference where it belongs.
+
+**Runs:** `make check`; the attempt itself ran every example and both hosts
+before it was put back, which is what says the trade is what it is rather than
+what somebody guessed.

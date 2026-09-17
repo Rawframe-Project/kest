@@ -29515,3 +29515,51 @@ it; what it would cost is the promise, and the promise is worth more.
 It is also three bytes an entity cheaper: a store told nothing costs 77 bytes an
 entity where it cost 80, which is the table in the reference and is held by
 `check-costs.sh`.
+
+## D955: text carrying its own length, built and put back
+
+The mission this work is part of asks for a length-carrying text representation:
+`len` in constant time, an explicit byte length where a host reads one, a policy
+for a nought inside, and no accidental repeated measuring. Text here is a
+`const char *` in a slot, ending in a nought, so `len` walks it. It was built
+the other way and put back, and this says why, because the reason is the
+interesting part.
+
+**What was built.** Text as a handle, the way an array and a store are handles:
+a header on the heap holding a length and a pointer to the bytes, and a slot
+holding the header. Everything follows from that — `len` is a read, a nought
+inside is representable, a host is handed a length, and a cut is a header over
+the bytes it was cut from rather than a copy, so cutting out of the middle of a
+piece of text stopped copying as well. It ran: every example, both hosts, the
+sanitised build.
+
+**What it cost.** A cut allocates. Sixteen bytes, on the heap, every time — and
+`rest` and `slice` are what a walk over text is made of, so a walk over text
+stopped being free. Five of the library's functions promise `no.alloc` over
+exactly that, `contract.c` says those two builtins reach nothing, and the proof
+over emitted code says the same; all three would have had to change, and the
+sentence "a walk over text costs nothing" would have become false. This language
+is for programs with a frame budget. A representation that trades a walk in
+`len` for an allocation in every cut is the wrong way round for them.
+
+**What would pay for both** is text as two slots — the bytes and the length,
+side by side where the value is — which is what a cut can share without
+allocating and what makes `len` a read. That is not a header and a pointer; it
+is a change to what a value is, and it reaches the slot arithmetic in the
+compiler, the layouts, the constant pool, the packing at the boundary and the
+shape of `kest_text`. It is the right v1 representation and it is not a change
+to make in an afternoon between two others.
+
+**What is kept from the attempt.** `kest_text_bytes` is the door a host reads
+text through: the bytes and how many there are, asked for rather than measured
+by every host for itself. It answers the same bytes the `text` member does today
+and costs the walk that measuring a C string costs — and a host written against
+it keeps working when text starts carrying a length, which a host written
+against the member does not. `examples/engine.c` reads through it.
+
+**And the policy, which was the part that needed writing down rather than
+building.** Text in this language holds no nought byte. It is refused where one
+would be made — in a literal by the lexer, in `text(bytes)` by the machine, and
+at the boundary by `kest_text` — and what a host is handed therefore ends in one.
+That is a rule about what text is and not about how it is kept, so the
+representation above may change without it changing.

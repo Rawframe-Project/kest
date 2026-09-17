@@ -15,6 +15,19 @@ struct KestHost {
     uint32_t capacity;
 };
 
+const char *kest_text_bytes(KestValue value, uint32_t *length) {
+    if (value.text == NULL) {
+        if (length != NULL) {
+            *length = 0;
+        }
+        return NULL;
+    }
+    if (length != NULL) {
+        *length = (uint32_t)strlen(value.text);
+    }
+    return value.text;
+}
+
 const char *kest_version(void) {
     return KEST_VERSION_STRING;
 }

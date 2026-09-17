@@ -86,6 +86,19 @@ static void engine_watch(KestValue *frame, KestRuntime *runtime,
 // And the other half of that door: what a host says when it cannot do what it
 // was asked. The program does not carry on with a number that means nothing --
 // the call refuses at the instruction that made it, with these words under it.
+// And what a door of this host's reads when the program hands it text: the
+// bytes and how many there are, asked for rather than measured here. What that
+// buys is a host that does not have to be rewritten the day this language
+// carries a length beside the bytes. See D955.
+static void engine_named(KestValue *frame, KestRuntime *runtime,
+                         void *context) {
+    (void)runtime;
+    (void)context;
+    uint32_t length = 0;
+    const char *bytes = kest_text_bytes(frame[0], &length);
+    frame[0].integer = bytes == NULL ? 0 : (int64_t)length;
+}
+
 static void engine_refuse(KestValue *frame, KestRuntime *runtime,
                           void *context) {
     (void)context;
@@ -121,6 +134,7 @@ static KestRuntime *started(KestBuild *build) {
         return NULL;
     }
     if (!kest_host_bind(host, "Engine.watch", engine_watch, NULL) ||
+        !kest_host_bind(host, "Engine.named", engine_named, NULL) ||
         !kest_host_bind(host, "Engine.refuse", engine_refuse, NULL)) {
         kest_host_free(host);
         return NULL;
@@ -498,6 +512,18 @@ int main(int argc, char **argv) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         fprintf(stderr, "a crossing back in from a host function answered "
                         "%lld\n", (long long)crossing[0].integer);
+        return 1;
+    }
+
+    // And a door that reads what the program hands it: text is bytes and a
+    // length on this side of the boundary, whatever it is on the other.
+    int32_t named = kest_entry(engine.runtime, "named");
+    KestValue saying[8] = {{0}};
+    if (named < 0 || !kest_call(engine.runtime, named, saying, 8) ||
+        saying[0].integer != 10) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        fprintf(stderr, "a door handed text answered %lld\n",
+                (long long)saying[0].integer);
         return 1;
     }
 
