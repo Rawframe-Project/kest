@@ -29921,3 +29921,72 @@ It is not a second checker: everything in a body was decided before it was
 written and nothing in it refuses a program. And it is not a second pipeline:
 the tree walk that used to emit is the tree walk that now writes a body, so
 every refusal, every fold and every shape of lowering came across intact.
+
+## D963. The second backend was built, and the stack machine keeps the frame
+
+D958 counted what a three-address form of this language would run and got 3.11
+times fewer instructions. D961 measured what a removed push is worth in time and
+argued from the two that a register backend would come to about 1.35 times,
+under the mission's bar of one and a half. Both were arguments from
+measurements of something else. This is the thing itself: a second backend,
+reading the same bodies D962 made, and the same work run by both machines in
+the same process.
+
+**What was built.** `src/slots.h` on the branch `slots-experiment` is a narrow
+three-address instruction set: one byte an operand, which is either a place in
+the frame or a value the chunk holds. A frame is one run of slots — the names a
+body declared, and above them a place for every value it makes — and where a
+value goes is the depth at which it was made, which `kest_ir_windows` answers
+for either backend. There is no register allocator, because a body's values are
+made and read in the order a tree walk makes them and that order already gives
+each of them a place. `src/slots.c` writes it, refusing a body it cannot write;
+`execute_slots` in `src/vm.c` runs it, beside the machine that was already
+there and using the same guards, so a refusal is the same refusal. A program is
+run by it when the entry and everything it calls were written for it.
+
+**What it was measured on.** Three shapes of work over ten thousand value
+structs, a hundred steps a round, seven rounds, best of them, in one process:
+a frame step whose work is in two helpers it calls, the same step with the
+helpers written out, and a walk that reads one field and branches on it. All
+three answered the same number on both machines — 999800, 999800 and 124500000
+— which is what says they ran the same work.
+
+| | stack | slot | fewer instructions | time |
+| --- | --- | --- | --- | --- |
+| a frame step, with calls | 117.0 ns | 160.3 ns | 4.4% | 1.37× slower |
+| the same, written out | 107.4 ns | 151.5 ns | 4.7% | 1.41× slower |
+| a walk that branches | 28.4 ns | 36.3 ns | 10.0% | 1.28× slower |
+
+The geometric mean is **1.35 times slower**, which is 0.74 of the stack
+machine's speed. The rule the mission set is one and a half times faster.
+**The slot backend is rejected, by measurement.** *Measured.*
+
+**Why 3.11 did not happen, which is the part worth keeping.** The same three
+workloads were counted again with the stack backend's pair fusions turned off —
+the form D958 counted against — and they run 497,003,024, 476,003,024 and
+105,009,100 instructions. With the fusions on they run 322,008,162, 301,008,162
+and 70,007,700. So the fusions are worth **35%, 37% and 33%** of what those
+bodies run, and the three-address form is worth **4.4%, 4.7% and 10%** more.
+Against the unfused form the slot machine runs 1.61 times fewer instructions on
+the frame step, and nearly all of that the stack machine already has.
+
+That is the finding: **`load.k`, `load2`, `load.n`, the fused compare and jump,
+the fused cut and `next.less` remove the same pairs a three-address form
+removes, in the stack machine's own terms and at one byte an operand.** A
+machine that names where every value is has to read those names, and three
+one-byte operands and two tests for whether each is a constant cost more than
+the top of a stack that is already in a register. The count is the ceiling:
+five to ten per cent fewer instructions cannot be one and a half times faster
+however well the loop is written.
+
+**What is kept.** The bodies, which are D962 and are on `main`. The window
+walk, `kest_ir_windows`, stays on the branch with the backend that needs it.
+The branch stays as the evidence and is not merged: two production machines for
+one language is the thing section 5 says not to leave behind, and this one lost.
+
+**What it says about where the time goes instead.** 67.9% of the frame step was
+data movement when D958 counted it, and it still is — but moving a value onto a
+stack whose top is a register is not the same cost as reading a place. What is
+left to go after is the same door D961 opened: `store` then `load` is another
+3.6% of the frame step, and the pairs are found by counting what runs rather
+than by changing what a machine is.

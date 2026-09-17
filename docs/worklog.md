@@ -35956,3 +35956,23 @@ bodies have one now, freed where the trees are.
 compared file by file against the same before the change; `KEST_REFUSE_AT`
 swept over `examples/flags.kest` at every thirty-seventh allocation of fifteen
 hundred.
+
+## The second machine, built and measured
+
+The mission's section 5 asks for a slot backend rather than an argument about
+one, so there is one: `src/slots.c` and `execute_slots`, on the branch
+`slots-experiment`, reading the same bodies the stack backend reads. It took
+the shape the bodies already had — a value is made and read in order, so where
+it goes is the depth at which it was made, and there is no allocator.
+
+It answers the same numbers and runs 1.35 times slower. What makes that worth
+reading rather than filing is the third column: the same work counted with the
+stack backend's pair fusions turned off runs half again as many instructions,
+so the fusions and the three-address form are after the same pairs, and the
+stack machine got there first at one byte an operand.
+
+D963 has the table. The branch is not merged and is not meant to be.
+
+**Runs:** `tools/twoways` and `tools/twoways-debug` on the branch, each
+machine, three shapes of work, seven rounds, in one sitting; and again with the
+fusions in `src/lower.c` disabled.
