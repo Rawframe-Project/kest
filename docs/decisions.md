@@ -31061,6 +31061,13 @@ checksum, unpacks it into a directory that is not the tree, and runs `kest
 --version` and a program out of the unpacked copy with `KEST_LIB` pointing
 inside it. An archive nobody has unpacked is an archive nobody knows about.
 
+**The build is reproducible**, which is a thing to check rather than to assume:
+nothing in this tree reads `__DATE__`, `__TIME__` or `__FILE__`, so two clean
+builds of one checkout with one compiler are the same bytes. Measured — `make
+clean && make` twice gives `kest` and `libkest.a` with the same SHA-256 both
+times. What that buys a host is that an archive can be rebuilt and compared,
+which is the only way a checksum means anything past the download.
+
 **What is not in it**: a Windows archive built the same way. The Windows build
 is `tools/build.bat` and produces the same three binaries, and turning that into
 an archive is the same five lines in the batch file — what is missing is a
