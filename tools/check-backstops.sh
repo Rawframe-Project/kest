@@ -1011,8 +1011,10 @@ fn main() -> i32 {
         "what": "a deferred call counted below the answer it runs above",
         "file": "src/compile.c",
         "from": r"""        run_deferred(compiler, 0, stmt->span);
+        close_regions(compiler, 0, true, stmt->span);
         stack_pop(compiler, size);""",
-        "to": r"""        stack_pop(compiler, size);
+        "to": r"""        close_regions(compiler, 0, true, stmt->span);
+        stack_pop(compiler, size);
         run_deferred(compiler, 0, stmt->span);""",
         "make": ["debug"],
         "binary": "kest-debug",
@@ -3372,8 +3374,8 @@ for file in "$@"; do""",
         # against a number of its own and pass.
         "what": "a probe for a ceiling the table does not name",
         "file": "tools/check-ceilings.sh",
-        "from": r"""    ("`defer`s in a function", defers, "K0502"),""",
-        "to": r"""    ("`defer`s in a body", defers, "K0502"),""",
+        "from": r"""    ("`defer`s in a function", defers, "K0502", "emit"),""",
+        "to": r"""    ("`defer`s in a body", defers, "K0502", "emit"),""",
         "make": [],
         "tool": "tools/check-ceilings.sh",
         "arguments": [],
@@ -11997,10 +11999,12 @@ fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc no.host deterministic 
         # going round again was the one nothing ran.
         "what": "a `continue` that does not give back what the turn took",
         "file": "src/compile.c",
-        "from": """        Loop *loop = &compiler->loops[compiler->loop_count - 1];
+        "from": r"""        Loop *loop = &compiler->loops[compiler->loop_count - 1];
         run_deferred(compiler, loop->deferred, stmt->span);
+        close_regions(compiler, loop->regions, true, stmt->span);
         if (loop->continue_count == MAX_BREAKS) {""",
-        "to": """        Loop *loop = &compiler->loops[compiler->loop_count - 1];
+        "to": r"""        Loop *loop = &compiler->loops[compiler->loop_count - 1];
+        close_regions(compiler, loop->regions, true, stmt->span);
         if (loop->continue_count == MAX_BREAKS) {""",
         "make": ["kest"],
         "program": "skipping.kest",

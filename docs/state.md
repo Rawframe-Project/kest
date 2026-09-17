@@ -50,10 +50,10 @@ The mission's order. `/home/kest/mission/STATE.md` carries which one is open.
     0 baseline and reproduction    done
     1 semantic and embedding repair    done
     2 one resolved per-instance representation   done   D962
-    3 temporaries, text, buffer, store   done but for `scratch { }`,
-                                         which phase 2 has now opened:
-                                         D940, D954, D955, D956, D957,
-                                         and text is D964
+    3 temporaries, text, buffer, store   done: D940, D954, D956, D957,
+                                         text is D964, `scratch { }` is
+                                         D966 and what a changing world
+                                         costs is D967
     4 validation correction            done   D944
     5 backend decision                 done   D958 counted it, D961
                                               measured a push, and D963

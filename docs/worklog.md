@@ -36015,3 +36015,44 @@ question it was asking.
 
 **Runs:** `make check`; every example; both hosts; `tools/check-costs.sh` and
 `tools/check-commands.sh` on their own while the numbers were being put right.
+
+## A block whose working memory goes back where it was
+
+`scratch { }`. The runtime half has been there since D957 — a host marks the
+heap and puts it back — and what was missing was the language saying it and
+proving the rule the host has to keep by hand.
+
+The proof is a walk over the body, which is what the bodies D962 made are for:
+a value is the block's if it was made while the block was open and can hold what
+the machine keeps, unless it is a reading of something older. The four ways out
+it refuses are given back, written into a name declared outside, put into a
+container that is not the block's, and handed to a call beside something older
+that could keep it. The last is the one that makes the thing usable rather than
+decorative: it is what tells a copy from a keep, and it is decided by asking
+whether something holding what the machine keeps could be written into the older
+argument. A run of bytes cannot, so `text.fitting(out, piece)` copies and is
+allowed.
+
+Two measurements came out of it.
+
+```text
+                      100 rounds   200   400
+replace                       4M    8M   16M
+reuse                       512K  512K  512K
+keep                        512K  512K  512K
+```
+
+`keep` is the third shape of `examples/churn.kest`: a new name built every
+round in a block and copied into the buffer the thing already had. It writes a
+name, which `reuse` gives up on, and it settles where `replace` climbs. That is
+the answer to the churn question — an idiom rather than a collector — and the
+`memory` section of the gate holds all three.
+
+And the other: a loop inside a block that runs out of fuel leaves the heap at
+nought where the same loop without the block leaves 7,666 bytes. What puts it
+back is the machine rather than the code, because a body that is refused has no
+code left to run.
+
+**Runs:** `make check`; `examples/churn.kest` at a hundred, two hundred and four
+hundred rounds against seven ceilings each; a host of two dozen lines that gives
+a machine two thousand steps and reads the heap after the refusal.

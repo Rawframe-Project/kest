@@ -4541,7 +4541,7 @@ a store that is not the block's own, or handed to a call beside something older
 that could keep it.
 
 ```
-error[K0408]: this gives back what the block made, and the block puts it away
+error[K0507]: this gives back what the block made, and the block puts it away
 ```
 
 What is allowed is copying out. A number is a number afterwards. Bytes copied

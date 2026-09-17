@@ -281,25 +281,28 @@ def elements():
 # this list was the one nobody was keeping: the table could say 48 `defer`s
 # while the compiler refused at 32, and the comment above said the two were
 # held in step. See D521.
+# The fourth of each row is which command meets it: all but one are refused
+# where a program is written, and the blocks a machine holds open at once is met
+# by a program that runs. See D966.
 PROBES = [
-    ("names in a function", names, "K0502"),
-    ("names in a function", binding, "K0502"),
-    ("loops one inside another", loops, "K0502"),
-    ("expressions one inside another", nesting, "K0215"),
+    ("names in a function", names, "K0502", "emit"),
+    ("names in a function", binding, "K0502", "emit"),
+    ("loops one inside another", loops, "K0502", "emit"),
+    ("expressions one inside another", nesting, "K0215", "emit"),
     # The other row with two sentences in it: what a loop holds of each.
-    ("`break`s in one loop", breaks, "K0502"),
-    ("`break`s in one loop", continues, "K0502"),
-    ("`defer`s in a function", defers, "K0502"),
+    ("`break`s in one loop", breaks, "K0502", "emit"),
+    ("`break`s in one loop", continues, "K0502", "emit"),
+    ("`defer`s in a function", defers, "K0502", "emit"),
     # Two sentences under one row: what a loop reaches back over, and what a
     # jump reaches forward over. Meeting one of them is not meeting the other.
-    ("bytes of code a jump reaches", reaches, "K0503"),
-    ("bytes of code a jump reaches", jumps, "K0503"),
-    ("bytes of code a jump reaches", walking, "K0503"),
-    ("`scratch { }` blocks one inside another", blocks, "K0502"),
-    ("`scratch { }` blocks one machine holds open", held, "K0656"),
-    ("things one `match` chooses between", subjects, "K0339"),
-    ("combinations one `match` answers", combinations, "K0333"),
-    ("elements a `[T; N]` holds", elements, "K0326"),
+    ("bytes of code a jump reaches", reaches, "K0503", "emit"),
+    ("bytes of code a jump reaches", jumps, "K0503", "emit"),
+    ("bytes of code a jump reaches", walking, "K0503", "emit"),
+    ("`scratch { }` blocks one inside another", blocks, "K0502", "emit"),
+    ("`scratch { }` blocks one machine holds open", held, "K0656", "run"),
+    ("things one `match` chooses between", subjects, "K0339", "emit"),
+    ("combinations one `match` answers", combinations, "K0333", "emit"),
+    ("elements a `[T; N]` holds", elements, "K0326", "emit"),
 ]
 
 # The rows that are not met here: what `len` counts to is a refusal the machine
@@ -318,7 +321,7 @@ failed = 0
 for number, what in rows:
     if any(lowered in what for lowered in LOWERED):
         continue
-    if not any(phrase in what for phrase, _, _ in PROBES):
+    if not any(phrase in what for phrase, _, _, _ in PROBES):
         print("limits: nothing runs into `%s`, so its message is one nobody "
               "has seen" % what.strip())
         failed = 1
@@ -356,7 +359,7 @@ for phrase, path, define, written_as in DEFINED:
         failed = 1
 
 met = 0
-for phrase, program, code in PROBES:
+for phrase, program, code, how in PROBES:
     written = [number for number, what in rows if phrase in what]
     if not written:
         print("limits: nothing in the table says `%s`, so there is no number "
@@ -366,7 +369,7 @@ for phrase, program, code in PROBES:
     number = written[0]
     path = os.path.join(WHERE, "one-too-many.kest")
     open(path, "w").write(program())
-    said = subprocess.run([os.path.join(WHERE, "kest"), "emit", path],
+    said = subprocess.run([os.path.join(WHERE, "kest"), how, path],
                           capture_output=True, text=True,
                           stdin=subprocess.DEVNULL)
     out = said.stdout + said.stderr
