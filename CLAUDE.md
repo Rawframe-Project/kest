@@ -1044,10 +1044,12 @@ lines being right is one thing and the files arriving is another.
 
 ## What a new check costs, and when to write one
 
-The self-checking here is large and it is not free. Measured: `make fast` is a
-tenth of a second, `make check` is about eighteen minutes, and six and a half of
-those minutes are the backstops — eight hundred and forty-seven holes, each of
-which copies the tree, builds it and runs a check.
+The self-checking here is large and it is not free. Measured on the machine this
+was written on: `make fast` is a quarter of a second, `make check` is about ten
+minutes, and six and a half of those are the backstops — eight hundred and
+forty-seven holes, each of which copies the tree, builds it and runs a check.
+Both numbers are this machine's; what is the same anywhere is that the gate is
+mostly the holes.
 
 So the rule from here is:
 
@@ -1085,11 +1087,11 @@ nine percent of six minutes is not worth the coverage.
 build, every example run for its answer, the library and the instruments
 resolving, the one form, a file with three mistakes in it reported as three and
 said as JSON, and the other host crossing the boundary in both directions. It
-takes about a tenth of a second and it is `tools/fast.sh`. It is not a gate and
+takes about a quarter of a second and it is `tools/fast.sh`. It is not a gate and
 it proves nothing about itself; everything in it is also done by `make check`,
 in more shapes and under more builds.
 
-`make check` is the whole of it and takes about eighteen minutes. Run it at a
+`make check` is the whole of it and takes about ten minutes. Run it at a
 milestone and before saying something is done — not after every edit, which is
 what made a change cost four full runs of the gate and the gate the reason
 nothing moved. Every check in `tools` also runs on its own, which is how a

@@ -30,8 +30,8 @@ and what it cost to decide, is in [docs/decisions.md](docs/decisions.md). The
 language itself is in [docs/language.md](docs/language.md).
 
 `make fast` is the loop — build, every example, the one form, a diagnostic, the
-boundary — in about a tenth of a second. `make check` is the whole gate and
-takes minutes.
+boundary — in about a quarter of a second. `make check` is the whole gate and
+takes about ten minutes on the machine this was written on.
 
 ## What is and is not there
 
@@ -115,7 +115,7 @@ Windows is not: it is unverified and marked so rather than claimed.
 stable enough to write against, bounded representative workloads, no known
 critical defects of the reviewed classes, a practical validation loop, and an
 architecture a reader can understand without a worklog. The validation loop is
-here — a tenth of a second and eighteen minutes, and what each of them is for is
+here — a quarter of a second and ten minutes, and what each of them is for is
 written down. The rest waits on alpha and beta.
 
 **Tested on** x86-64 Linux with GCC 15.2 only. The code is C11 and libc and
