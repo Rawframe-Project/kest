@@ -30677,22 +30677,30 @@ index, a generation and a check at every read what this language does with
 `store` and `ref`, so what it measures is what the checking costs rather than
 what it saves.
 
-**What it says, on the machine this was written on**, best of five, GCC 15.2
-`-O2` for the C++ and Luau 0.6 for the Lua:
+**What it says, on the machine this was written on**, best of seven, GCC 15.2
+`-O2` for the C++, Luau from its own release and Daslang built from source.
+Every number is the whole run, compiling included, because three of the four
+compile what they are given before they run it:
 
-| workload | Kest | C++ | Luau |
-| --- | --- | --- | --- |
-| kernel | 148 ms | 13 ms | 109 ms |
-| control | 169 ms | 13 ms | 127 ms |
-| graph | 23 ms | 8 ms | 29 ms |
-| words | 60 ms | 20 ms | 44 ms |
+| workload | Kest | C++ | Luau | Daslang |
+| --- | --- | --- | --- | --- |
+| kernel | 108 ms | 9 ms | 75 ms | 114 ms |
+| control | 132 ms | 9 ms | 91 ms | 119 ms |
+| graph | 16 ms | 5 ms | 20 ms | — |
+| words | 41 ms | 13 ms | 27 ms | — |
 
-All four checksums agree across all three. Read plainly: this language is
-between eleven and thirteen times a C++ baseline on straight compute, three
-times on text, and **under three times on the workload with identity in it**;
-against Luau it is about a third slower on compute and text and a quarter
-faster on identity. That is the position, and it is not a claim of superiority
-anywhere — it is where a bytecode machine with a checked handle in it sits.
+Every checksum agrees everywhere. Read plainly: this language is **twelve to
+fifteen times a C++ baseline on straight compute**, three times on text, and
+**three times on the workload with identity in it**. Against Luau it is about
+forty per cent slower on compute and text and **a quarter faster on identity**,
+where the comparator writes the index and the generation by hand. Against
+Daslang it is **faster on one of the two and eleven per cent slower on the
+other**.
+
+That is the position, and it is not a claim of superiority anywhere — it is
+where a bytecode machine with a checked handle in it sits. The two Daslang
+rows are the ones section 14 of the mission turns on, and D987 is what they
+decided.
 
 **What is not here.** No harness to validate, no orchestrator, no history
 kept. It is not part of `make check`, because a duration is not a pass or a
@@ -30945,3 +30953,46 @@ A single file would save a host one line of its own makefile.
 **So Kest 1.0 has no amalgamation.** Not "later": the cost is renaming the
 compiler's own vocabulary and the benefit is one line. What is shipped is the
 modular source, and it is vendorable exactly as it stands. *Measured.*
+
+## D987. Kest 1.0 is VM-only, and the trigger for generating C was not met
+
+Section 14 of the completion mission asks for a final shipping strategy and
+gives two triggers for building a generated-C path, either of which is enough:
+the selected VM staying more than twice as slow as Daslang on representative
+guest-compute workloads on the same machine, or a complete host workload
+missing a predeclared shipping budget because of guest execution.
+
+**Neither happened.**
+
+The first was measured rather than argued. Daslang was fetched and built from
+source on this machine and two of D980's workloads were written in it — the
+numeric one and the branch-heavy one, which are what "guest compute" means.
+Best of seven, whole runs, compiling included for both:
+
+| | Kest | Daslang |
+| --- | --- | --- |
+| kernel | 108 ms | 114 ms |
+| control | 132 ms | 119 ms |
+
+Kest is faster on one and eleven per cent slower on the other. The trigger is
+two hundred per cent. It is not close.
+
+The second needed a budget said out loud, so here it is: **ten thousand entities
+at sixty hertz.** `make time` measures a frame step at 107 ns an entity on this
+machine, which is 1.07 ms for ten thousand of them against a 16.7 ms frame —
+**six and a half per cent of the budget**. A complete host workload does not
+miss it and is not near missing it.
+
+**So Kest 1.0 is VM-only, and that is the final architecture rather than "AOT
+later".** There is no generated-C path, no stub for one and no place in the
+tree where one would go. If a workload is ever found that misses a predeclared
+budget because of guest execution, the resolved bodies of D962 are what a
+generator would read — that is what having one semantic representation buys,
+and it is a fact about the architecture rather than a plan.
+
+**What the numbers also say, which is worth keeping.** Twelve to fifteen times
+a C++ baseline is what a bytecode machine costs, and the slot backend of D963
+was measured and could not close it. Nothing in the frame budget above needs it
+closed. The workload where this language is *faster* than the comparator is the
+one with checked identity in it, where the comparator writes the index and the
+generation by hand — which is the thing this language is for. *Measured.*

@@ -149,6 +149,32 @@ nothing else, so it should build elsewhere; nobody has, and this project does
 not call a thing that was never run a thing that works. Windows is unverified;
 `docs/language.md` says what a port would read first.
 
+## Trying it in an hour
+
+Everything below runs from a clean checkout on Linux or Windows, and nothing
+needs anything but a C compiler.
+
+1. `make && make fast` — the build and the loop, about a quarter of a second.
+2. `kest new game && cd game && kest build && kest run` — a project from
+   nothing to running.
+3. `make engine && ./examples/engine` — a host in the shape a host has: a world
+   kept between frames, memory lent a frame at a time, a save written and a
+   reload done under it.
+4. `make embed && ./examples/embed` — the other host, which asks every door
+   this language has one after another. Read it when writing your own.
+5. `kest profile examples/colony.kest` — what a run did, in counts.
+6. `kest check --cost examples/colony.kest` — what the compiler proved about
+   each body, and which promise it keeps and does not make.
+7. `KEST_CPP=1 sh bench/run.sh` — four workloads beside a C++ baseline. Set
+   `KEST_LUAU` and `KEST_DAS` too if you have them.
+8. `editors/vscode` — a grammar and a client for `kest lsp`, which is this
+   compiler.
+
+Where it sits against other languages, measured on one machine and written
+down with the workloads beside it, is [D980](docs/decisions.md). Why there is no
+AOT path is [D987](docs/decisions.md). What it does not claim is in
+*What a program may do* in [the reference](docs/language.md).
+
 What it costs to run, measured rather than remembered. `make time` takes four
 numbers on the machine it is run on:
 
