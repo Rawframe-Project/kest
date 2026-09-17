@@ -5051,6 +5051,8 @@ bool kest_entry_promises(KestRuntime *runtime, int32_t entry,
         return runtime->module->functions[entry]->no_alloc;
     case KEST_PROMISE_NO_HOST:
         return runtime->module->functions[entry]->no_host;
+    case KEST_PROMISE_DETERMINISTIC:
+        return runtime->module->functions[entry]->deterministic;
     }
     return false;
 }

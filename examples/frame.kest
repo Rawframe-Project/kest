@@ -47,7 +47,7 @@ fn stepFrame(npcs: [Npc], dt: f32) -> f32 no.alloc {
     return total
 }
 
-fn main() -> i32 no.host {
+fn main() -> i32 no.host deterministic {
     let world: store<Npc> = store(4)
     let quests: store<Quest> = store(2)
 

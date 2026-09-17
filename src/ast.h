@@ -34,6 +34,10 @@ struct KestTypeRef {
     // wanted. See D853.
     bool no_alloc;
     bool no_host;
+    // The third promise: the same answer on every machine that keeps the
+    // simulation profile. Not a `no`, because it says what a body does. See
+    // D942.
+    bool deterministic;
 };
 
 typedef enum {
@@ -335,6 +339,7 @@ typedef struct {
             bool is_extern;
             bool no_alloc;
             bool no_host;
+            bool deterministic;
             KestBlock body;
         } function;
     };

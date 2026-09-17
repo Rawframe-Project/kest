@@ -335,10 +335,11 @@ sweep_one() {
             continue
         gives = one["gives"]
         of_the_same_name.setdefault(one["name"], []).append(
-            "%s)%s%s%s" % (", ".join(one["parameters"]),
-                           "" if gives == "nothing" else " -> " + gives,
-                           " no.alloc" if one["noAlloc"] else "",
-                           " no.host" if one["noHost"] else ""))
+            "%s)%s%s%s%s" % (", ".join(one["parameters"]),
+                             "" if gives == "nothing" else " -> " + gives,
+                             " no.alloc" if one["noAlloc"] else "",
+                             " no.host" if one["noHost"] else "",
+                             " deterministic" if one["deterministic"] else ""))
     # And the same for a shape: what it is laid out as, and what is under it.
     # The words say it in a line and a run of lines beneath, and the object
     # says it in numbers and a list; a reader of one has never been held to
@@ -546,6 +547,7 @@ sweep_one() {
         written_fn = re.match(r"fn (.+?)  (\d+) parameter slots?, (\d+) slots?, "
                               r"(\d+) deep(, promises `no.alloc`)?"
                               r"(?:, promises `no.host`)?"
+                              r"(?:, promises `deterministic`)?"
                               r"(?:, (reaches itself|calls through a value))?$",
                               line)
         if written_fn:
@@ -747,7 +749,7 @@ sweep_one() {
         if one.get("foreign"):
             continue
         promised.setdefault(one["name"], set()).add(
-            (one["noAlloc"], one["noHost"]))
+            (one["noAlloc"], one["noHost"], one["deterministic"]))
 
     # And where each chunk was declared, which is a place `check` lists a
     # declaration at: a chunk is compiled from one of them, so a place that is
@@ -779,9 +781,10 @@ sweep_one() {
         if says is None or len(says) != 1:
             continue
         said = next(iter(says))
-        if (one["noAlloc"], one["noHost"]) != said:
+        carries = (one["noAlloc"], one["noHost"], one["deterministic"])
+        if carries != said:
             print("%s: the declaration promises %s and the chunk carries %s"
-                  % (one["name"], said, (one["noAlloc"], one["noHost"])))
+                  % (one["name"], said, carries))
     ')
         if [ -n "$carried" ]; then
             complain "emit $file: a chunk carries what its declaration does not"
@@ -3696,6 +3699,8 @@ K0216|fn f() -> i32 no.allocate {\n    return 0\n}|`no.allocate` is not a promis
 K0216|fn f() -> i32 alloc {\n    return 0\n}|a promise is written `no.alloc`
 K0216|fn f() -> i32 no.alloc no.alloc {\n    return 0\n}|`no.alloc` is written once
 K0401|extern fn Host.now() -> i64\n\nfn tick() -> i64 no.host {\n    return Host.now()\n}\n\nfn main() -> i32 {\n    return 0\n}|this calls the host, and `tick` promises `no.host`
+K0401|extern fn Host.now() -> i64\n\nfn tick() -> i64 deterministic {\n    return Host.now()\n}\n\nfn main() -> i32 {\n    return 0\n}|this reaches outside the simulation profile, and `tick` promises `deterministic`
+K0216|fn f() -> i32 deterministic deterministic {\n    return 0\n}|`deterministic` is written once
 K0214|fn main() -> i32 {\n    let n = 5\n    n %= 2\n    return n\n}|is not one of the four this language has
 K0303|struct P {\n    x: i32\n    x: i32\n}\n\nfn main() -> i32 {\n    return 0\n}|declared twice
 K0305|fn f(a: i32, a: i32) -> i32 {\n    return a\n}\n\nfn main() -> i32 {\n    return f(1, 2)\n}|declared twice

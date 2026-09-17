@@ -11,7 +11,7 @@ import std.io
 // the host lent it. `onEvent` is here because it has to stay expressible, not
 // because it is the one to reach for.
 
-fn onEvents(events: [i32]) -> i32 no.alloc no.host {
+fn onEvents(events: [i32]) -> i32 no.alloc no.host deterministic {
     let total = 0
     for e in events {
         if e % 3 == 0 {
@@ -21,7 +21,7 @@ fn onEvents(events: [i32]) -> i32 no.alloc no.host {
     return total
 }
 
-fn onEvent(event: i32) -> i32 no.alloc no.host {
+fn onEvent(event: i32) -> i32 no.alloc no.host deterministic {
     if event % 3 == 0 {
         return event
     }

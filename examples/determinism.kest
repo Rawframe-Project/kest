@@ -206,15 +206,22 @@ fn main() -> i32 {
         whole = hash.join(whole, one.mark)
     }
 
+    // Every part, on every run, because a platform that answers differently is
+    // a platform a reader has to be able to tell about -- and a reader who can
+    // only see the parts when something is wrong has nothing to compare a
+    // working run against.
+    for one in parts {
+        io.print("{one.name} {one.mark}")
+    }
+
+    // The same sentence either way. What a reader compares between two
+    // platforms is this line, and a line that is one shape when the answer
+    // agrees and another when it does not is two lines to compare.
+    let said = "this platform answers {whole} and the profile says {ANSWER}"
+    io.print(said)
     if whole != ANSWER {
-        // Which part disagrees, because a platform that answers differently is
-        // a platform a reader has to be able to tell about.
-        for one in parts {
-            io.print("{one.name} {one.mark}")
-        }
-        io.print("this platform answers {whole} and the profile says {ANSWER}")
         return 1
     }
-    io.print("the simulation profile holds on this platform: {whole}")
+    io.print("the simulation profile holds on this platform")
     return 0
 }

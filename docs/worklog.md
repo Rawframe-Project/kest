@@ -35454,3 +35454,94 @@ of the layout. Two doors for one question, and neither is wrong.
 
 **Runs:** `make fast`; the W01 host lending a hundred thousand of each of six
 arrays.
+
+## Nine defects somebody else found, reproduced and repaired (D927 to D939)
+
+An outside reading of this tree named nine things wrong with it. Every one was
+reproduced here first, with the smallest program or host that asks the question
+and with the evidence named — four of them under the sanitisers — and then
+repaired. The table is in `docs/state.md`, which is the short document that says
+where this is; what follows is what the repairs turned out to be about.
+
+**Three of them were one mistake in two places: a handle that does not carry
+what it is a handle to.** A lent run of one element type was accepted where
+another was wanted and read eight sixteen-byte values out of eight eight-byte
+ones, which is a global-buffer-overflow into the host's own memory. An array and
+a store now carry the element's type and the boundary refuses the wrong one with
+`K0661` (D927). A reference made in one world resolved in another and answered
+an unrelated object's value; a reference is now `world:16 | stamp:24 | place:24`
+and a world that did not make it will not follow it (D934). And the counter that
+stamps places was the build's, which two machines of one build wrote without
+synchronising — it is the machine's now (D936).
+
+**Two were the machine trusting a number it had not checked.** A call wider than
+the stack wrote the arguments and then refused, which is a use-after-poison
+before a `K0602`; the room is asked for before the copy (D928). And a body of
+straight-line work ran to the end after the machine had been cancelled, because
+cancel was only looked at where a jump goes back or a call is made — it is asked
+at the door as well, through an `atomic_int` with acquire and release, and the
+fuel slice is handed back before a host runs so a reentrant call is not charged
+for what the outer one reserved (D929).
+
+**Two were the compiler being careful where it should have been structural.** A
+`for` binding could observe a mutation made through an alias in a struct, which
+the handle test now walks the whole type to find (D932); and `a[0] = grow(a)`
+put its answer in the buffer that had just been abandoned, because the address
+was worked out before the call. Assignment keeps the array and the index across
+the right-hand side and `load.elem` and `store.elem` are what an element access
+emits (D931) — which also took the frame step from 46.51 instructions an entity
+to 43.51.
+
+**One was a proof reading the wrong copy.** `check` accepted what `emit` and
+`run` refused, and said so with `K0405`, the code for a fault in this compiler,
+about a mistake in the program. A generic's copies share one tree, so the
+contract proof now retypes before it reads each copy and is a graph node per
+copy (D933) — and a declaration is read for what its own body reaches rather
+than for what it calls, because what a template calls is settled per copy
+(D939).
+
+**And one was arithmetic.** `u64` of a float above what an `i64` holds saturated
+at 2^63, folded and at runtime, because the conversion went through a signed
+type on the way (D930).
+
+**Runs:** `make check`; `examples/embed.c` for the two boundary refusals in both
+directions; the probes under `/var/tmp/repro` for the five a host has to ask
+about, under AddressSanitizer.
+
+## The third promise (D942, D943)
+
+D941 wrote the simulation profile down and gave it a run that answers whether a
+platform keeps it. What it left out was the part a program can act on: a reader
+had a document and a number and no way to say in the source that this body is
+one of the bodies the document is about.
+
+So `deterministic` is a promise a function writes, beside `no.alloc` and
+`no.host` and proved the same two ways. It is spelled as a word rather than as a
+`no` because it says what a body does, and the parser reads the three in any
+order from one table — a word and whether it is written after `no.` — which
+`check-tables.sh` holds to the `KestPromise` the header hands a host. A host
+asks with `KEST_PROMISE_DETERMINISTIC` before it installs a step it means to
+replay or to compare between two machines.
+
+What it refuses today is a reach outside the profile, which is a call to a door
+the host provides and nothing else, so the bodies that can promise it are
+exactly the bodies that can promise `no.host`. They are written separately
+because they say different things: `no.host` is about where control goes and
+this is about what comes back, and the two part company the day a host can
+declare a door inside the profile. It is on 103 of the library's functions and
+on four of the doors a host enters in the examples.
+
+**What it turned up.** The gate asks every promise the same question — write it
+on every function that has not got it, and the compiler must refuse exactly the
+ones that carry it nowhere — and for this one it said `sort.by` could promise it.
+It cannot: `by` calls the comparator it was handed. What made the gate wrong was
+that nothing was being proved at all — a generic declaration has no types until
+a copy gives it some, the library on its own instantiates nothing, and the
+branch that asks what a value promises was reading a tree with no type on it. A
+parameter's shape does not depend on `T`, so the proof now reads the shape the
+parameter was written as and quotes it back from the source (D943). The refusal
+arrives in the file that made the promise rather than in the file of whoever
+called it.
+
+**Runs:** `make check`; `examples/determinism.kest`, which answers
+`3909859238992895122` on this platform.

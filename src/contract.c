@@ -57,7 +57,11 @@ typedef struct {
     // the host provides. Walked once for each rather than once for both,
     // because a body that breaks one and keeps the other has one thing wrong
     // with it and a reader wants that one. See D853.
-    bool about_host;
+    // Which promise this walk is about: nought for `no.alloc`, one for
+    // `no.host`, two for `deterministic`. The graph is the same graph for all
+    // three -- the calls a body makes are the calls a body makes -- and what
+    // differs is what counts as reaching. See D942.
+    int about;
     // Whether what is being read is a generic declaration rather than a copy
     // of one. A declaration has no types until a copy gives it some, so what a
     // call in it reaches cannot be said -- but what its own body reaches can:
@@ -77,7 +81,9 @@ static void reaches(Graph *graph, Function *function, KestSpan span,
     // a call to something the host provides, and that is a call like any
     // other: found where calls are found and followed where calls are
     // followed.
-    if (graph->about_host) {
+    // Only `no.alloc` is about what a body does to the heap. The other two are
+    // about what it calls, which is followed where calls are followed.
+    if (graph->about != 0) {
         return;
     }
     function->allocates = true;
@@ -104,6 +110,47 @@ static void reaches(Graph *graph, Function *function, KestSpan span,
 
 static const char *span_text(Graph *graph, KestSpan span) {
     return kest_span_text(graph->program->source, span);
+}
+
+// The shape a parameter was written as, for a call through a value in a generic
+// declaration. A template has no types until a copy gives it some, so what a
+// call in one reaches cannot be read off the tree -- but a parameter's shape is
+// written down whatever `T` turns out to be, and a promise is part of a shape.
+// Without this a promise on a generic that nothing instantiates was proved
+// against nothing, and the refusal arrived at the first use, in the file of
+// whoever called it rather than the file that made the promise. See D943.
+static const KestTypeRef *written_shape(Graph *graph, Function *function,
+                                        const KestExpr *callee) {
+    if (callee->kind != KEST_EXPR_NAME || function->decl == NULL) {
+        return NULL;
+    }
+    const char *text = span_text(graph, callee->span);
+    for (uint32_t i = 0; i < function->decl->function.param_count; i++) {
+        const KestField *param = function->decl->function.params[i];
+        if (param->type == NULL || param->type->kind != KEST_TYPE_FN ||
+            param->name.length != callee->span.length) {
+            continue;
+        }
+        if (memcmp(span_text(graph, param->name), text,
+                   callee->span.length) == 0) {
+            return param->type;
+        }
+    }
+    return NULL;
+}
+
+// And the words it was written in, which are the words to suggest the promise
+// be added to. Taken from the source rather than made from a type, because
+// there is no type here to make one from.
+static const char *shape_written(Graph *graph, KestSpan span) {
+    char *copy = KEST_ARENA_ARRAY(graph->program->arena, char, span.length + 1);
+    if (copy == NULL) {
+        graph->out_of_memory = true;
+        return NULL;
+    }
+    memcpy(copy, span_text(graph, span), span.length);
+    copy[span.length] = '\0';
+    return copy;
 }
 
 static int32_t find_exact(Graph *graph, const char *text, size_t length) {
@@ -261,14 +308,30 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
         // which is what keeps this provable at all.
         if (callee->type != NULL && callee->type->tag == KEST_T_FN &&
             callee->type->symbol == NULL && !callee->type->is_foreign &&
-            !(graph->about_host ? callee->type->no_host
-                                : callee->type->no_alloc)) {
+            !(graph->about == 2   ? callee->type->deterministic
+              : graph->about == 1 ? callee->type->no_host
+                                  : callee->type->no_alloc)) {
             if (function->site.length == 0) {
                 function->site = expr->span;
                 function->shape =
                     kest_type_name(graph->program->arena, callee->type);
             }
             function->allocates = true;
+        }
+        if (graph->a_template &&
+            (callee->type == NULL || callee->type->tag != KEST_T_FN)) {
+            const KestTypeRef *written =
+                written_shape(graph, function, callee);
+            if (written != NULL &&
+                !(graph->about == 2   ? written->deterministic
+                  : graph->about == 1 ? written->no_host
+                                      : written->no_alloc)) {
+                if (function->site.length == 0) {
+                    function->site = expr->span;
+                    function->shape = shape_written(graph, written->span);
+                }
+                function->allocates = true;
+            }
         }
         // Building a struct is not a call and does not reach anything. A
         // dotted callee is an extern named for its host type.
@@ -433,10 +496,10 @@ static bool trace(Graph *graph, uint32_t index, Path *path) {
 }
 
 static bool prove_promise(KestProgram *program, const KestUnits *units,
-                          bool about_host) {
+                          int about) {
     Graph graph = {0};
     graph.program = program;
-    graph.about_host = about_host;
+    graph.about = about;
 
     for (uint32_t u = 0; u < units->count; u++) {
         for (uint32_t i = 0; i < units->items[u].unit.count; i++) {
@@ -490,15 +553,16 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
         }
         function->name = symbol->type->symbol;
         function->display = symbol->name;
-        function->promises = about_host ? decl->function.no_host
-                                       : decl->function.no_alloc;
+        function->promises = about == 2   ? decl->function.deterministic
+                             : about == 1 ? decl->function.no_host
+                                          : decl->function.no_alloc;
         function->is_extern = decl->function.is_extern;
         // A foreign body is not here to be read, so its promise is the only
         // thing there is to go on — and about the host there is nothing to go
         // on either way: a function the host provides is the host, whatever it
         // says about the heap.
         function->allocates =
-            function->is_extern && (about_host || !function->promises);
+            function->is_extern && (about == 1 || !function->promises);
         function->site = NO_SITE;
       }
     }
@@ -517,11 +581,13 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
         function->decl = instance->decl;
         function->name = instance->symbol;
         function->display = instance->symbol;
-        function->promises = about_host ? instance->decl->function.no_host
-                                        : instance->decl->function.no_alloc;
+        function->promises =
+            about == 2   ? instance->decl->function.deterministic
+            : about == 1 ? instance->decl->function.no_host
+                         : instance->decl->function.no_alloc;
         function->is_extern = instance->decl->function.is_extern;
         function->allocates =
-            function->is_extern && (about_host || !function->promises);
+            function->is_extern && (about == 1 || !function->promises);
         function->site = NO_SITE;
         function->unit = 0;
         for (uint32_t u = 0; u < units->count; u++) {
@@ -594,7 +660,9 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
         if (!trace(&graph, i, &path)) {
             path.site = function->decl->name;
         }
-        const char *promise = about_host ? "no.host" : "no.alloc";
+        const char *promise = about == 2   ? "deterministic"
+                              : about == 1 ? "no.host"
+                                           : "no.alloc";
         kest_program_in(program, &units->items[path.unit]);
         kest_diags_in(program->diags, program->source);
 
@@ -610,7 +678,13 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
             kest_diags_suggest(program->diags,
                                "write the promise into the shape: `%s %s`",
                                path.shape, promise);
-        } else if (about_host) {
+        } else if (about == 2) {
+            kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0401",
+                           path.site,
+                           "this reaches outside the simulation profile, and "
+                           "`%s` promises `deterministic`",
+                           function->display);
+        } else if (about == 1) {
             kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0401",
                            path.site,
                            "this calls the host, and `%s` promises `no.host`",
@@ -627,7 +701,7 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
 
         if (path.ends_in_extern) {
             kest_diags_suggest(program->diags,
-                               about_host ? "`%s` is the host's"
+                               about != 0 ? "`%s` is the host's"
                                           : "`%s` is declared to allocate",
                                path.names[path.count - 1]);
         }
@@ -699,6 +773,7 @@ bool kest_check_contracts(KestProgram *program, const KestUnits *units) {
     // Both are run whatever the first says, because a program with two
     // promises broken has two things to fix and finding out about the second
     // one build later is what a compiler that reports everything is for.
-    bool held = prove_promise(program, units, false);
-    return prove_promise(program, units, true) && held;
+    bool held = prove_promise(program, units, 0);
+    bool crossing = prove_promise(program, units, 1);
+    return prove_promise(program, units, 2) && crossing && held;
 }

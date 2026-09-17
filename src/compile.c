@@ -2210,7 +2210,7 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
         compiler->module, foreign->foreign_name,
         declared == NULL ? callee->span : declared->span,
         declared == NULL ? compiler->program->source : declared->source,
-        foreign->no_alloc);
+        foreign->no_alloc, foreign->deterministic);
     if (slot < 0) {
         compiler->out_of_memory = true;
         return;
@@ -3830,6 +3830,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
                                       : symbol->type->result->slots;
             chunk->no_alloc = symbol->type->no_alloc;
             chunk->no_host = symbol->type->no_host;
+            chunk->deterministic = symbol->type->deterministic;
             chunk->param_slots = 0;
         }
     }
@@ -3860,6 +3861,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
                                   : instance->type->result->slots;
         chunk->no_alloc = instance->type->no_alloc;
         chunk->no_host = instance->type->no_host;
+        chunk->deterministic = instance->type->deterministic;
     }
 
     // Every constant is worked out here, where it is declared, rather than at

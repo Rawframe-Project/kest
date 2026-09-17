@@ -4565,12 +4565,10 @@ for file in "$@"; do""",
         # true is a flag that answers the same whatever is so.
         "what": "a flag that says every name is reached",
         "file": "src/types.c",
-        "from": r"""                symbol->type->no_alloc ? "true" : "false",
-                symbol->type->no_host ? "true" : "false",
+        "from": r"""                symbol->type->deterministic ? "true" : "false",
                 symbol->type->is_foreign ? "true" : "false",
                 symbol->named ? "true" : "false");""",
-        "to": r"""                symbol->type->no_alloc ? "true" : "false",
-                symbol->type->no_host ? "true" : "false",
+        "to": r"""                symbol->type->deterministic ? "true" : "false",
                 symbol->type->is_foreign ? "true" : "false",
                 "true");""",
         "make": ["kest"],
@@ -4744,9 +4742,11 @@ for file in "$@"; do""",
         "what": "a chunk that does not carry the promise it was declared with",
         "file": "src/value.c",
         "from": r"""                chunk->no_alloc ? "true" : "false",
-                chunk->no_host ? "true" : "false");""",
+                chunk->no_host ? "true" : "false",
+                chunk->deterministic ? "true" : "false");""",
         "to": r"""                "false",
-                chunk->no_host ? "true" : "false");""",
+                chunk->no_host ? "true" : "false",
+                chunk->deterministic ? "true" : "false");""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -5106,8 +5106,10 @@ for file in "$@"; do""",
         # refuses, and a rule half held is a rule.
         "what": "a promise refused where none was wanted",
         "file": "src/types.c",
-        "from": """        return (a->no_alloc || !b->no_alloc) && (a->no_host || !b->no_host);""",
-        "to": """        return a->no_alloc == b->no_alloc && a->no_host == b->no_host;""",
+        "from": """        return (a->no_alloc || !b->no_alloc) && (a->no_host || !b->no_host) &&
+               (a->deterministic || !b->deterministic);""",
+        "to": """        return a->no_alloc == b->no_alloc && a->no_host == b->no_host &&
+               a->deterministic == b->deterministic;""",
         "program": "wanted.kest",
         "source": """fn long(word: text) -> bool no.alloc {
     return len(word) > 4
@@ -5134,7 +5136,8 @@ fn main() -> i32 {
     {
         "what": "a promise that does not survive being handed over",
         "file": "src/types.c",
-        "from": """        return (a->no_alloc || !b->no_alloc) && (a->no_host || !b->no_host);""",
+        "from": """        return (a->no_alloc || !b->no_alloc) && (a->no_host || !b->no_host) &&
+               (a->deterministic || !b->deterministic);""",
         "to": """        return a->no_host || !b->no_host;""",
         "program": "handed.kest",
         # The one call the second proof cannot follow: which chunk it enters
@@ -5318,14 +5321,14 @@ total += held""",
         # being all promises and gains no program is one nothing weighs.
         "what": "a library module that reaches the heap and nothing weighs",
         "file": "lib/std/vec.kest",
-        "from": """fn length(v: Vec2) -> f32 no.alloc {""",
+        "from": """fn length(v: Vec2) -> f32 no.alloc deterministic {""",
         "to": """fn spare(n: i32) -> [i32] {
     let out: [i32] = array()
     push(out, n)
     return out
 }
 
-fn length(v: Vec2) -> f32 no.alloc {""",
+fn length(v: Vec2) -> f32 no.alloc deterministic {""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "what it costs, and not every",
@@ -5781,12 +5784,12 @@ anywhere, and it is why the gate holds""",
         # read them every one of them was wrong. See D920.
         "what": "what compiling costs written down and not measured",
         "file": "docs/language.md",
-        "from": """117793 as a tree""",
-        "to": """117794 as a tree""",
+        "from": """118145 as a tree""",
+        "to": """118146 as a tree""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "117794 as a tree, 147528 checked",
+        "caught": "118146 as a tree, 154224 checked",
     },
     {
         # And the section they are in saying whose machine they are. Bytes of
@@ -6412,12 +6415,12 @@ fn main() -> i32 {
         # people and people read the sentence. See D886.
         "what": "a number the reference quotes that a run no longer says",
         "file": "docs/language.md",
-        "from": """numbers together say how much of that finding out answered: 97 of 299 for""",
-        "to": """numbers together say how much of that finding out answered: 97 of 300 for""",
+        "from": """numbers together say how much of that finding out answered: 97 of 329 for""",
+        "to": """numbers together say how much of that finding out answered: 97 of 330 for""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",
         "arguments": ["docs/language.md", "docs/decisions.md"],
-        "caught": "the reference says 97 of 300 were worked out for `examples/numbers.kest`",
+        "caught": "the reference says 97 of 330 were worked out for `examples/numbers.kest`",
     },
     {
         # A suggestion under somebody else's refusal. A suggestion goes to the
@@ -6834,7 +6837,7 @@ fn main() -> i32 {
         # grows with the square of its input would get in.
         "what": "a library function of a shape nothing knows how to weigh",
         "file": "lib/std/text.kest",
-        "from": """fn charsOf(subject: text) -> [text] no.host {""",
+        "from": """fn charsOf(subject: text) -> [text] no.host deterministic {""",
         "to": """fn pieces(count: i32) -> [text] {
     let made: [text] = array()
     let at = 0
@@ -6845,7 +6848,7 @@ fn main() -> i32 {
     return made
 }
 
-fn charsOf(subject: text) -> [text] no.host {""",
+fn charsOf(subject: text) -> [text] no.host deterministic {""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "which this does not know how to ask for",
@@ -6857,8 +6860,8 @@ fn charsOf(subject: text) -> [text] no.host {""",
         # costs are fine about a tree that does not compile.
         "what": "a library nothing can be asked what it costs",
         "file": "lib/std/text.kest",
-        "from": """fn repeat(subject: text, times: i32) -> text no.host {""",
-        "to": """fn repeat(subject: text, times: i32) -> text no.host {
+        "from": """fn repeat(subject: text, times: i32) -> text no.host deterministic {""",
+        "to": """fn repeat(subject: text, times: i32) -> text no.host deterministic {
     let unknown = nowhere(subject)""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
@@ -6870,12 +6873,12 @@ fn charsOf(subject: text) -> [text] no.host {""",
         # the loop that holds the functions had never been seen catching one.
         "what": "a library function nothing has ever reached",
         "file": "lib/std/math.kest",
-        "from": """fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc no.host {""",
+        "from": """fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc no.host deterministic {""",
         "to": """fn nobody(value: i32) -> i32 no.alloc no.host {
     return value
 }
 
-fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc no.host {""",
+fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc no.host deterministic {""",
         "make": ["kest", "embed"],
         "tool": "tools/check-dead.sh",
         "caught": "so nothing has run it",
@@ -10962,8 +10965,8 @@ static const Keyword KEYWORDS[] = {
         # D857.
         "what": "a promise the parser reads under another name",
         "file": "src/parser.c",
-        "from": r"""                      : is_word(parser, 2, "host")  ? no_host""",
-        "to": r"""                      : is_word(parser, 2, "hosted")  ? no_host""",
+        "from": r"""    {"host", true},""",
+        "to": r"""    {"hosted", true},""",
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "caught": "the parser reads",
@@ -10989,10 +10992,10 @@ static const Keyword KEYWORDS[] = {
         # two files that say nothing.
         "what": "a promise the parser stopped reading",
         "file": "src/parser.c",
-        "from": r"""    while (is_word(parser, 0, "no") &&
-           peek_at(parser, 1).kind == KEST_TOK_DOT) {""",
-        "to": r"""    while (false && is_word(parser, 0, "no") &&
-           peek_at(parser, 1).kind == KEST_TOK_DOT) {""",
+        "from": r"""        if (!is_word(parser, 0, "no") ||
+            peek_at(parser, 1).kind != KEST_TOK_DOT) {""",
+        "to": r"""        if (true || !is_word(parser, 0, "no") ||
+            peek_at(parser, 1).kind != KEST_TOK_DOT) {""",
         "make": ["kest"],
         "tool": "tools/check-fmt.sh",
         "arguments": ["examples/math.kest"],
@@ -11625,14 +11628,14 @@ static const Keyword KEYWORDS[] = {
         # sizes cost.
         "what": "a library function that copies everything every time",
         "file": "lib/std/text.kest",
-        "from": """fn repeat(subject: text, times: i32) -> text no.host {
+        "from": """fn repeat(subject: text, times: i32) -> text no.host deterministic {
     let out: [u8] = array()
     for i in 0..times {
         append(out, subject)
     }
     return text(out)
 }""",
-        "to": """fn repeat(subject: text, times: i32) -> text {
+        "to": """fn repeat(subject: text, times: i32) -> text no.host deterministic {
     let out = ""
     for i in 0..times {
         out = "{out}{subject}"
@@ -11859,10 +11862,10 @@ fn main() -> i32 {
         # A constant rather than a function, because the function half of this
         # has been caught since it was written and the two are one rule now:
         # a name in the library that nothing in the tree reaches.
-        "from": """fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc no.host {""",
+        "from": """fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc no.host deterministic {""",
         "to": """const NOBODY: i32 = 3
 
-fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc no.host {""",
+fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc no.host deterministic {""",
         "make": ["kest", "embed"],
         "tool": "tools/check-dead.sh",
         "caught": "so nothing has ever used it",
@@ -11942,9 +11945,9 @@ fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc no.host {""",
         # the check itself had never been seen catching anything.
         "what": "a library the costs check should refuse",
         "file": "lib/std/text.kest",
-        "from": """fn upper(subject: text) -> text no.host {
+        "from": """fn upper(subject: text) -> text no.host deterministic {
     let out = bytes(subject)""",
-        "to": """fn upper(subject: text) -> text {
+        "to": """fn upper(subject: text) -> text no.host deterministic {
     let piece = ""
     for i in 0..len(subject) {
         piece = "{piece}{slice(subject, i, 1)}"
@@ -14396,7 +14399,7 @@ fn main() -> i32 {
         # nobody. This is the check that can see a gap rather than a leftover.
         "what": "a function written for one width and not the other",
         "file": "lib/std/math.kest",
-        "from": """fn abs(value: i64) -> i64 no.alloc no.host {
+        "from": """fn abs(value: i64) -> i64 no.alloc no.host deterministic {
     return if value < 0 -> 0 - value else -> value
 }""",
         "to": "",

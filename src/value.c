@@ -662,7 +662,8 @@ const char *kest_case_of(const KestLayout *layout, uint16_t piece, int32_t tag,
 }
 
 int32_t kest_module_extern(KestModule *module, const char *name, KestSpan span,
-                           const KestSource *source, bool promises) {
+                           const KestSource *source, bool promises,
+                           bool deterministic) {
     for (uint32_t i = 0; i < module->extern_count; i++) {
         if (strcmp(module->externs[i].name, name) == 0) {
             return (int32_t)i;
@@ -685,6 +686,7 @@ int32_t kest_module_extern(KestModule *module, const char *name, KestSpan span,
     module->externs[module->extern_count].gives = 0;
     module->externs[module->extern_count].gives_value = false;
     module->externs[module->extern_count].promises = promises;
+    module->externs[module->extern_count].deterministic = deterministic;
     return (int32_t)module->extern_count++;
 }
 
@@ -1521,7 +1523,7 @@ static bool op_allocates(uint8_t op) {
 // instruction: what reaches the heap is a list of them, and what reaches the
 // host is `KEST_OP_CALL_HOST` and nothing else. See D853.
 static int32_t breaks_in(const KestModule *module, uint32_t which,
-                         uint8_t *state, uint32_t *where, bool about_host) {
+                         uint8_t *state, uint32_t *where, int about) {
     if (state[which] != 0) {
         return -1;
     }
@@ -1530,15 +1532,31 @@ static int32_t breaks_in(const KestModule *module, uint32_t which,
     const KestChunk *chunk = module->functions[which];
     for (uint32_t at = 0; at < chunk->code_count;) {
         uint8_t op = chunk->code[at];
-        if (about_host ? op == KEST_OP_CALL_HOST : op_allocates(op)) {
+        if (about == 0 && op_allocates(op)) {
             *where = at;
             return (int32_t)which;
+        }
+        if (about == 1 && op == KEST_OP_CALL_HOST) {
+            *where = at;
+            return (int32_t)which;
+        }
+        // And a crossing out of the simulation profile, which is a crossing to
+        // a door that does not promise it is inside one. `no.host` refuses
+        // every crossing; this refuses the ones nobody has vouched for.
+        // See D942.
+        if (about == 2 && op == KEST_OP_CALL_HOST) {
+            uint16_t door = read_u16(chunk, at + 1);
+            if (door >= module->extern_count ||
+                !module->externs[door].deterministic) {
+                *where = at;
+                return (int32_t)which;
+            }
         }
         if (op == KEST_OP_CALL) {
             uint16_t callee = read_u16(chunk, at + 1);
             if (callee < module->count) {
                 int32_t found =
-                    breaks_in(module, callee, state, where, about_host);
+                    breaks_in(module, callee, state, where, about);
                 if (found >= 0) {
                     return found;
                 }
@@ -1630,14 +1648,15 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
     }
 
     for (uint32_t i = 0; i < module->count; i++) {
-        for (int about_host = 0; about_host < 2; about_host++) {
-            if (!(about_host ? module->functions[i]->no_host
-                             : module->functions[i]->no_alloc)) {
+        for (int about = 0; about < 3; about++) {
+            if (!(about == 2   ? module->functions[i]->deterministic
+                  : about == 1 ? module->functions[i]->no_host
+                               : module->functions[i]->no_alloc)) {
                 continue;
             }
             memset(state, 0, module->count);
             uint32_t where = 0;
-            int32_t at = breaks_in(module, i, state, &where, about_host != 0);
+            int32_t at = breaks_in(module, i, state, &where, about);
             if (at < 0) {
                 continue;
             }
@@ -1651,7 +1670,10 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
 
             kest_diags_in(diags, guilty->source);
             kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0405", span,
-                           about_host
+                           about == 2
+                               ? "this reaches outside the simulation "
+                                 "profile, and `%s` promises `deterministic`"
+                           : about == 1
                                ? "this calls the host, and `%s` promises "
                                  "`no.host`"
                                : "this reaches the heap, and `%s` promises "
@@ -2069,6 +2091,7 @@ uint64_t kest_module_mark(const KestModule *module) {
         fold_number(&mark, chunk->returns_value, 1);
         fold_number(&mark, chunk->no_alloc, 1);
         fold_number(&mark, chunk->no_host, 1);
+        fold_number(&mark, chunk->deterministic, 1);
     }
     for (uint32_t at = 0; at < module->extern_count; at++) {
         const KestExtern *host = &module->externs[at];
@@ -2079,6 +2102,7 @@ uint64_t kest_module_mark(const KestModule *module) {
         fold_number(&mark, host->gives, 2);
         fold_number(&mark, host->gives_value, 1);
         fold_number(&mark, host->promises, 1);
+        fold_number(&mark, host->deterministic, 1);
     }
     for (uint32_t at = 0; at < module->layout_count; at++) {
         const KestLayout *shape = &module->layouts[at];
@@ -2216,12 +2240,14 @@ void kest_module_disassemble_json(const KestModule *module,
                 ",\"bytes\":%u,\"room\":%u,\"constants\":%u"
                 ",\"parameterSlots\":%u,\"slots\":%u,\"deep\":%u"
                 ",\"folded\":%u,\"foldedSlots\":%u"
-                ",\"noAlloc\":%s,\"noHost\":%s,\"why\":",
+                ",\"noAlloc\":%s,\"noHost\":%s,\"deterministic\":%s"
+                ",\"why\":",
                 chunk->code_count, chunk->code_capacity,
                 chunk->constant_count, chunk->param_slots, chunk->slot_count, chunk->stack_needed,
                 chunk->folded, chunk->folded_slots,
                 chunk->no_alloc ? "true" : "false",
-                chunk->no_host ? "true" : "false");
+                chunk->no_host ? "true" : "false",
+                chunk->deterministic ? "true" : "false");
         if (reasons != NULL && reasons[i].reach != 0) {
             kest_json_text(kest_reach_name((KestReach)reasons[i].reach), out);
             fputs(",\"where\":", out);
@@ -2357,12 +2383,14 @@ void kest_module_disassemble(const KestModule *module,
                 came_from = module->functions[reasons[i].from]->name;
             }
         }
-        fprintf(out, "fn %s  %u parameter slot%s, %u slot%s, %u deep%s%s%s%s\n",
+        fprintf(out,
+                "fn %s  %u parameter slot%s, %u slot%s, %u deep%s%s%s%s%s\n",
                 chunk->name, chunk->param_slots,
                 chunk->param_slots == 1 ? "" : "s", chunk->slot_count,
                 chunk->slot_count == 1 ? "" : "s", chunk->stack_needed,
                 chunk->no_alloc ? ", promises `no.alloc`" : "",
                 chunk->no_host ? ", promises `no.host`" : "",
+                chunk->deterministic ? ", promises `deterministic`" : "",
                 stopped_at[0] == '\0' ? "" : ", ", stopped_at);
         if (came_from[0] != '\0') {
             fprintf(out, "     in %s\n", came_from);

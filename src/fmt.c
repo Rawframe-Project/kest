@@ -312,6 +312,9 @@ static void print_type(Printer *printer, const KestTypeRef *type) {
         if (type->no_host) {
             put(printer, " no.host");
         }
+        if (type->deterministic) {
+            put(printer, " deterministic");
+        }
         break;
     }
 }
@@ -975,6 +978,9 @@ static void print_signature(Printer *printer, const KestDecl *decl) {
     }
     if (decl->function.no_host) {
         put(printer, " no.host");
+    }
+    if (decl->function.deterministic) {
+        put(printer, " deterministic");
     }
 }
 

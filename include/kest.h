@@ -677,17 +677,21 @@ const char *kest_entry_wrote(KestRuntime *runtime, int32_t entry);
 //
 // `kest_frame_at` answers how wide the arguments are together when `which` is
 // past the last one, which is where a result written over them would start.
-// The promises a function can make, which are the two this language has. They
-// are spelled with a dot in a program — `no.alloc`, `no.host` — so the
+// The promises a function can make, which are the three this language has. Two
+// of them are spelled with a dot in a program — `no.alloc`, `no.host` — so the
 // namespace can hold more without taking more keywords, and they are named here
 // for the same reason: a host asks about one of them by saying which, and a
-// third one added to the language is a case added here rather than a door added
-// beside the one below. See D857.
+// fourth one added to the language is a case added here rather than a door
+// added beside the one below. See D857 and D942.
 typedef enum {
     // Nothing this function does reaches the heap.
     KEST_PROMISE_NO_ALLOC,
     // Nothing it does calls back out into the host.
     KEST_PROMISE_NO_HOST,
+    // Every machine keeping the simulation profile answers the same for it,
+    // which is what a host replaying inputs or checking two peers against
+    // each other needs said about a body before it runs one.
+    KEST_PROMISE_DETERMINISTIC,
 } KestPromise;
 
 // Whether the one at `entry` made the promise asked about, which the compiler

@@ -373,6 +373,7 @@ typedef struct {
     // proved twice and the second proof reads what is written here. See D853.
     bool no_alloc;
     bool no_host;
+    bool deterministic;
 } KestChunk;
 
 // A function the program declared and the host must provide.
@@ -393,6 +394,9 @@ typedef struct {
     // and it is the one promise in this language that the machine has to hold
     // somebody else to.
     bool promises;
+    // And whether it promises to be inside the simulation profile, which is
+    // what lets a `deterministic` body call it. See D942.
+    bool deterministic;
 } KestExtern;
 
 typedef struct {
@@ -571,7 +575,8 @@ bool kest_chunk_emit_u16(KestModule *module, KestChunk *chunk, uint16_t value,
 // Records a name the host must provide and returns where it sits in the list.
 // Declaring the same one twice records it once.
 int32_t kest_module_extern(KestModule *module, const char *name, KestSpan span,
-                           const KestSource *source, bool promises);
+                           const KestSource *source, bool promises,
+                           bool deterministic);
 // What the program expects the extern at `at` to take and give. The layouts
 // are the caller's to work out, because working one out is the compiler's job
 // and this file is where they are kept.

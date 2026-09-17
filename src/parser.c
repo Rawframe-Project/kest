@@ -467,35 +467,101 @@ static KestSpan parse_path(Parser *parser) {
     return span_between(start, end);
 }
 
-// The promises after a signature, and what is said about anything else written
-// where they go. They are spelled with a dot so the namespace can hold more of
-// them without taking more keywords, and it holds two: `no.alloc`, which is
-// about the heap, and `no.host`, which is about calling out of the program.
-// Either order, each once.
+// The promises this language has, in the one place that says which they are: a
+// word, and whether it is written after `no.`. Two are about what a body does
+// not do -- `no.alloc` about the heap and `no.host` about calling out of the
+// program -- and the third is about what it does. A list rather than a branch
+// each, because a promise is a thing this language has and a fourth one is a
+// row here rather than a rewrite of what reads them. `check-tables.sh` holds
+// it to what the header names, so a promise a program can write and a host
+// cannot ask about is a check that fails. See D857 and D942.
+static const struct {
+    const char *word;
+    bool after_no;
+} PROMISES[] = {
+    {"alloc", true},
+    {"host", true},
+    {"deterministic", false},
+};
+
+#define PROMISE_COUNT (sizeof(PROMISES) / sizeof(PROMISES[0]))
+
+// How they are written together, for the message that says what there is. Made
+// from the list above rather than written beside it, because the two would
+// disagree the day one of them changed and the wrong one is the one a reader
+// is shown.
+static void promise_list(char *out, size_t room) {
+    size_t written = 0;
+    for (size_t at = 0; at < PROMISE_COUNT && written + 1 < room; at++) {
+        const char *between = at == 0                    ? ""
+                              : at + 1 == PROMISE_COUNT  ? " and "
+                                                         : ", ";
+        int said = snprintf(out + written, room - written, "%s`%s%s`", between,
+                            PROMISES[at].after_no ? "no." : "",
+                            PROMISES[at].word);
+        if (said < 0) {
+            break;
+        }
+        written += (size_t)said;
+    }
+}
+
+// What is said about anything else written where a promise goes.
 //
 // A word that is not one of them went unread until D852: the parser found no
 // promise, went looking for a body, found an identifier and said `expected `{``.
 // `no` and a dot is somebody writing a promise whatever follows it, so what
 // follows it is read and answered for. See D852 and D853.
-static void match_promises(Parser *parser, bool *no_alloc, bool *no_host) {
-    *no_alloc = false;
-    *no_host = false;
-    while (is_word(parser, 0, "no") &&
-           peek_at(parser, 1).kind == KEST_TOK_DOT) {
+static void match_promises(Parser *parser, bool *no_alloc, bool *no_host,
+                           bool *deterministic) {
+    bool *written[] = {no_alloc, no_host, deterministic};
+    _Static_assert(sizeof(written) / sizeof(written[0]) == PROMISE_COUNT,
+                   "one flag per promise this language has");
+    for (size_t at = 0; at < PROMISE_COUNT; at++) {
+        *written[at] = false;
+    }
+    // One loop over all of them, in whatever order they are written. A promise
+    // written as a word on its own is unambiguous here, because what follows a
+    // signature is a promise or a body and a body begins with a brace.
+    for (;;) {
+        bool took = false;
+        for (size_t at = 0; at < PROMISE_COUNT && !took; at++) {
+            if (PROMISES[at].after_no || !is_word(parser, 0, PROMISES[at].word)) {
+                continue;
+            }
+            if (*written[at]) {
+                error_at(parser, peek(parser).span, "K0216",
+                         "`%s` is written once", PROMISES[at].word);
+            }
+            *written[at] = true;
+            advance(parser);
+            took = true;
+        }
+        if (took) {
+            continue;
+        }
+        if (!is_word(parser, 0, "no") ||
+            peek_at(parser, 1).kind != KEST_TOK_DOT) {
+            break;
+        }
         KestToken word = peek_at(parser, 2);
         KestSpan whole = span_between(peek(parser).span, word.span);
-        bool *which = is_word(parser, 2, "alloc")   ? no_alloc
-                      : is_word(parser, 2, "host")  ? no_host
-                                                    : NULL;
+        bool *which = NULL;
+        for (size_t at = 0; at < PROMISE_COUNT; at++) {
+            if (PROMISES[at].after_no && is_word(parser, 2, PROMISES[at].word)) {
+                which = written[at];
+            }
+        }
         if (which == NULL) {
             if (word.kind != KEST_TOK_IDENT) {
                 return;
             }
+            char there_are[96];
+            promise_list(there_are, sizeof(there_are));
             error_at(parser, whole, "K0216",
                      "`no.%.*s` is not a promise this language has",
                      (int)word.span.length, span_text(parser, word.span));
-            suggest(parser,
-                    "this language has `no.alloc` and `no.host`");
+            suggest(parser, "this language has %s", there_are);
             parser->position += 3;
             continue;
         }
@@ -511,12 +577,14 @@ static void match_promises(Parser *parser, bool *no_alloc, bool *no_host) {
     // And a promise with its first half left off. `alloc` where a body goes is
     // not a name this language has any use for, so saying `expected `{`` about
     // it is true and no help at all.
-    if (is_word(parser, 0, "alloc") || is_word(parser, 0, "host")) {
+    for (size_t at = 0; at < PROMISE_COUNT; at++) {
+        if (!PROMISES[at].after_no || !is_word(parser, 0, PROMISES[at].word)) {
+            continue;
+        }
         error_at(parser, peek(parser).span, "K0216",
-                 "a promise is written `no.%.*s`",
-                 (int)peek(parser).span.length,
-                 span_text(parser, peek(parser).span));
+                 "a promise is written `no.%s`", PROMISES[at].word);
         advance(parser);
+        break;
     }
 }
 
@@ -570,7 +638,8 @@ static KestTypeRef *parse_type(Parser *parser) {
         // The same words a declaration uses through the same door, because
         // they are the same promises and two readings of one promise are two
         // things that agree until somebody changes one.
-        match_promises(parser, &type->no_alloc, &type->no_host);
+        match_promises(parser, &type->no_alloc, &type->no_host,
+                       &type->deterministic);
         type->span =
             span_between(start, parser->tokens[parser->position - 1].span);
         return type;
@@ -1917,7 +1986,8 @@ static KestDecl *parse_function(Parser *parser, KestSpan start, bool is_extern) 
     if (match(parser, KEST_TOK_ARROW)) {
         decl->function.result = parse_type(parser);
     }
-    match_promises(parser, &decl->function.no_alloc, &decl->function.no_host);
+    match_promises(parser, &decl->function.no_alloc,
+                   &decl->function.no_host, &decl->function.deterministic);
 
     if (is_extern) {
         decl->span =

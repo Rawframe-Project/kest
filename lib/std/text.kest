@@ -6,7 +6,7 @@ module std.text
 
 // The number a piece of text spells, or nothing when it spells something else.
 // Reads nothing but bytes, so it allocates nothing.
-fn number(digits: text) -> i32? no.alloc no.host {
+fn number(digits: text) -> i32? no.alloc no.host deterministic {
     // Counted in `i64` so that running out of room is something that can be
     // seen: an `i32` given more than it holds wraps without a word, and a text
     // spelling a number this cannot give back is a text this cannot read. The
@@ -48,7 +48,7 @@ fn number(digits: text) -> i32? no.alloc no.host {
 //
 // Worked out a digit at a time in `f64` and narrowed once, which is the same
 // two roundings every other number in this module goes through.
-fn real(digits: text) -> f32? no.alloc no.host {
+fn real(digits: text) -> f32? no.alloc no.host deterministic {
     let negative = false
     let seen = 0
     let whole: f64 = 0.0
@@ -109,7 +109,7 @@ fn real(digits: text) -> f32? no.alloc no.host {
 // nothing after the point is worth anything at that size. A number that rounds
 // to nothing is written without a sign in front of it: `-0.0` is a number this
 // language has and not a thing anybody wants in a file.
-fn fixed(value: f32, places: i32) -> text no.host {
+fn fixed(value: f32, places: i32) -> text no.host deterministic {
     let want = places
     if want < 0 {
         want = 0
@@ -162,7 +162,7 @@ fn fixed(value: f32, places: i32) -> text no.host {
 // pretends otherwise: what a program means by a character is the program's to
 // say. Text already that wide comes back as it is, because losing the end of
 // something to fit a column is worse than a column that does not fit.
-fn right(subject: text, width: i32) -> text no.host {
+fn right(subject: text, width: i32) -> text no.host deterministic {
     let out: [u8] = array()
     for i in len(subject)..width {
         push(out, ' ')
@@ -172,7 +172,7 @@ fn right(subject: text, width: i32) -> text no.host {
 }
 
 // And to the left of it, which is where a name belongs.
-fn left(subject: text, width: i32) -> text no.host {
+fn left(subject: text, width: i32) -> text no.host deterministic {
     let out = bytes(subject)
     for i in len(subject)..width {
         push(out, ' ')
@@ -180,15 +180,15 @@ fn left(subject: text, width: i32) -> text no.host {
     return text(out)
 }
 
-fn contains(subject: text, needle: text) -> bool no.alloc no.host {
+fn contains(subject: text, needle: text) -> bool no.alloc no.host deterministic {
     return find(subject, needle) != none
 }
 
-fn starts(subject: text, prefix: text) -> bool no.alloc no.host {
+fn starts(subject: text, prefix: text) -> bool no.alloc no.host deterministic {
     return matches(subject, 0, prefix)
 }
 
-fn ends(subject: text, suffix: text) -> bool no.alloc no.host {
+fn ends(subject: text, suffix: text) -> bool no.alloc no.host deterministic {
     if len(suffix) > len(subject) {
         return false
     }
@@ -201,7 +201,7 @@ fn ends(subject: text, suffix: text) -> bool no.alloc no.host {
 // number of bytes. A byte in the middle of a character says nothing about
 // where the character began, which is why this answers nought for one rather
 // than guessing.
-fn charBytes(first: u8) -> i32 no.alloc no.host {
+fn charBytes(first: u8) -> i32 no.alloc no.host deterministic {
     if first < u8(128) {
         return 1
     }
@@ -226,7 +226,7 @@ fn charBytes(first: u8) -> i32 no.alloc no.host {
 // begins a character of its own ends the one before it, and a piece of text
 // that stops sooner ends it too. So this is the width to walk by, and
 // `charBytes` is the question about one byte on its own.
-fn charWidth(piece: text) -> i32 no.alloc no.host {
+fn charWidth(piece: text) -> i32 no.alloc no.host deterministic {
     if piece == "" {
         return 0
     }
@@ -254,7 +254,7 @@ fn charWidth(piece: text) -> i32 no.alloc no.host {
 // walk forwards. What it lands on has to reach where it started from — bytes
 // that disagree are a byte on its own, which is what walking forwards makes of
 // them too, so the two walks agree about every place in any text at all.
-fn charBack(subject: text, at: i32) -> i32 no.alloc no.host {
+fn charBack(subject: text, at: i32) -> i32 no.alloc no.host deterministic {
     if at <= 0 {
         return 0
     }
@@ -276,7 +276,7 @@ fn charBack(subject: text, at: i32) -> i32 no.alloc no.host {
 // that begin no character are counted as one each, because text that is not
 // UTF-8 is still text and a count that stops at the first of them is a count
 // nobody can use.
-fn chars(subject: text) -> i32 no.alloc no.host {
+fn chars(subject: text) -> i32 no.alloc no.host deterministic {
     // Walked by keeping what is left rather than by counting from the start.
     // `rest` costs the bytes it steps over and nothing else, so the whole walk
     // reads the text once; an index would make every step measure from the
@@ -296,7 +296,7 @@ fn chars(subject: text) -> i32 no.alloc no.host {
 // the whole of the text walked once per character. This is one walk, and it
 // pays for one piece of text each, which is what a program that wants them all
 // is asking for.
-fn charsOf(subject: text) -> [text] no.host {
+fn charsOf(subject: text) -> [text] no.host deterministic {
     let out: [text] = array()
     let tail = subject
     while tail != "" {
@@ -311,7 +311,7 @@ fn charsOf(subject: text) -> [text] no.host {
 // nothing when there is no such place. It is text of its own, because a
 // character is not a number here: what a byte means is a program's to say, and
 // what a character means is Unicode's.
-fn charAt(subject: text, index: i32) -> text? no.host {
+fn charAt(subject: text, index: i32) -> text? no.host deterministic {
     let count = 0
     let tail = subject
     while tail != "" {
@@ -330,12 +330,12 @@ fn charAt(subject: text, index: i32) -> text? no.host {
     return none
 }
 
-fn isSpace(byte: u8) -> bool no.alloc no.host {
+fn isSpace(byte: u8) -> bool no.alloc no.host deterministic {
     return byte == ' ' || byte == '\t' || byte == '\n' || byte == '\r'
 }
 
 // Without the spaces at either end. Cuts, so it reaches the heap.
-fn trim(subject: text) -> text no.host {
+fn trim(subject: text) -> text no.host deterministic {
     // Both ends found in one walk forwards, because forwards is the cheap
     // direction: `rest` steps a byte at a time and `tail[0]` is the byte it is
     // standing on, where `subject[to - 1]` is the walk from the front again on
@@ -367,7 +367,7 @@ fn trim(subject: text) -> text no.host {
 // where the text ran out instead lost the last piece whenever it was the empty
 // one, so `split("a,b,", ",")` was two pieces and joining them back gave
 // `a,b`. See D892.
-fn split(subject: text, separator: text) -> [text] no.host {
+fn split(subject: text, separator: text) -> [text] no.host deterministic {
     let pieces: [text] = array()
     if len(separator) == 0 {
         push(pieces, subject)
@@ -394,13 +394,13 @@ fn split(subject: text, separator: text) -> [text] no.host {
 // Text is its bytes, so a run of bytes is what it is built from. Gathering
 // them costs nothing and `text(bytes)` pays for the copy once, which is what
 // a loop that builds a string a piece at a time needs.
-fn bytes(subject: text) -> [u8] no.host {
+fn bytes(subject: text) -> [u8] no.host deterministic {
     let out: [u8] = array()
     append(out, subject)
     return out
 }
 
-fn append(out: [u8], piece: text) no.host {
+fn append(out: [u8], piece: text) no.host deterministic {
     for byte in piece {
         push(out, byte)
     }
@@ -412,7 +412,7 @@ fn append(out: [u8], piece: text) no.host {
 // piece fitted, and a piece that did not fit is a buffer that holds what fitted
 // before it -- so a caller that wants all or nothing asks `room(out)` first.
 // See D940.
-fn fitting(out: [u8], piece: text) -> bool no.alloc no.host {
+fn fitting(out: [u8], piece: text) -> bool no.alloc no.host deterministic {
     for byte in piece {
         if !fit(out, byte) {
             return false
@@ -424,7 +424,7 @@ fn fitting(out: [u8], piece: text) -> bool no.alloc no.host {
 // And a whole number written into one the same way, most significant digit
 // first, without making any text on the way. It is the piece a tally line is
 // mostly made of.
-fn fittingNumber(out: [u8], value: i32) -> bool no.alloc no.host {
+fn fittingNumber(out: [u8], value: i32) -> bool no.alloc no.host deterministic {
     if value == 0 {
         return fit(out, 48)
     }
@@ -464,7 +464,7 @@ fn fittingNumber(out: [u8], value: i32) -> bool no.alloc no.host {
 }
 
 // The pieces with the separator between them, which is what `split` undoes.
-fn join(pieces: [text], separator: text) -> text no.host {
+fn join(pieces: [text], separator: text) -> text no.host deterministic {
     let out: [u8] = array()
     for i in 0..len(pieces) {
         if i > 0 {
@@ -475,7 +475,7 @@ fn join(pieces: [text], separator: text) -> text no.host {
     return text(out)
 }
 
-fn repeat(subject: text, times: i32) -> text no.host {
+fn repeat(subject: text, times: i32) -> text no.host deterministic {
     let out: [u8] = array()
     for i in 0..times {
         append(out, subject)
@@ -485,7 +485,7 @@ fn repeat(subject: text, times: i32) -> text no.host {
 
 // ASCII only, and deliberately: a byte is a byte, and what an upper case `ı`
 // is depends on a language rather than on a table this could carry.
-fn upper(subject: text) -> text no.host {
+fn upper(subject: text) -> text no.host deterministic {
     let out = bytes(subject)
     for i in 0..len(out) {
         out[i] = if out[i] >= 'a' && out[i] <= 'z' -> out[i] - 32 else -> out[i]
@@ -493,7 +493,7 @@ fn upper(subject: text) -> text no.host {
     return text(out)
 }
 
-fn lower(subject: text) -> text no.host {
+fn lower(subject: text) -> text no.host deterministic {
     let out = bytes(subject)
     for i in 0..len(out) {
         out[i] = if out[i] >= 'A' && out[i] <= 'Z' -> out[i] + 32 else -> out[i]

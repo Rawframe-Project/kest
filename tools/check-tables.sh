@@ -220,15 +220,24 @@ for reading in sorted(glob.glob('tools/check-*.sh')):
 # the parser will not read is a door onto nothing. The namespace was spelled
 # with a dot so it could hold more of them, and this is what makes adding one a
 # thing that has to be done in all three places or not at all. See D857.
-promise_words = some("the promises the parser reads", sorted(set(re.findall(
-    r'is_word\(parser, 2, "([a-z]+)"\)', open('src/parser.c').read()))))
+# Read from the one list the parser keeps rather than from the branches that
+# read it, and in both shapes: a promise is a `no` and a word or a word on its
+# own, and the third of them says what a body does rather than what it does
+# not. A reading that only knew the first shape would have called it no promise
+# at all. See D942.
+promise_words = some("the promises the parser reads", sorted(
+    ("no." if after_no == "true" else "") + word
+    for word, after_no in re.findall(
+        r'\{"([a-z]+)", (true|false)\}',
+        table('src/parser.c',
+              r'\} PROMISES\[\] = \{(.*?)\};'))))
 promise_names = some("the promises the header names", sorted(re.findall(
     r'(KEST_PROMISE_[A-Z_]+),',
     table('include/kest.h', r'typedef enum \{(.*?)\} KestPromise;'))))
-if sorted("KEST_PROMISE_NO_" + word.upper()
+if sorted("KEST_PROMISE_" + word.replace(".", "_").upper()
           for word in promise_words) != promise_names:
     print("promises: the parser reads %s and the header names %s"
-          % (", ".join("`no.%s`" % w for w in promise_words),
+          % (", ".join("`%s`" % w for w in promise_words),
              ", ".join(promise_names)))
     failed = 1
 # And every one of them is in the one place a host reads to learn there is a

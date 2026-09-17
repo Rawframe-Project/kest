@@ -147,6 +147,7 @@ struct KestType {
     // And that it calls nothing the host provides, which is the other promise
     // and is proved the same way. See D853.
     bool no_host;
+    bool deterministic;
     bool is_foreign;
 };
 

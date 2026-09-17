@@ -477,7 +477,7 @@ say "keywords" "every one of the $(printf '%s\n' $keywords | grep -c .) word(s) 
 # can be kept is a rule or it is a habit, and the two are told apart by whether
 # anything notices when it stops being true.
 promise_kept=""
-for promise in no.alloc no.host; do
+for promise in no.alloc no.host deterministic; do
     promised="$scratch"/promised
     rm -rf "$promised"
     cp -r lib "$promised"

@@ -282,12 +282,14 @@ what names the copies.
 
 `kest_entry_promises` answers whether a function made a promise, which the
 compiler proved against the code it emitted. Which promise is asked by naming
-it — `KEST_PROMISE_NO_ALLOC` or `KEST_PROMISE_NO_HOST` — because a promise is a
-thing to name rather than a door to add, and the language has room for more of
-them than it has today. They are the things about a function a host can act on
-before calling it: a frame step that may reach the heap is one an engine puts
-somewhere other than a frame, and one that may call back in is one a host
-driving frames from inside its own lock cannot install at all. What a program
+it — `KEST_PROMISE_NO_ALLOC`, `KEST_PROMISE_NO_HOST` or
+`KEST_PROMISE_DETERMINISTIC` — because a promise is a thing to name rather than
+a door to add, and the language has room for more of them than it has today.
+They are the things about a function a host can act on before calling it: a
+frame step that may reach the heap is one an engine puts somewhere other than a
+frame, one that may call back in is one a host driving frames from inside its
+own lock cannot install at all, and one that keeps the simulation profile is one
+a host may replay from inputs or run on two machines and compare. What a program
 costs in other ways — how many of its values were worked out where they stand,
 what reading it cost — is in what `--json` prints, because a host cannot do
 anything about those and a tool reading them can.
@@ -298,6 +300,9 @@ if (!kest_entry_promises(runtime, at, KEST_PROMISE_NO_ALLOC)) {
 }
 if (!kest_entry_promises(runtime, at, KEST_PROMISE_NO_HOST)) {
     // it may call back in: not while this host holds its own lock
+}
+if (!kest_entry_promises(runtime, at, KEST_PROMISE_DETERMINISTIC)) {
+    // two machines may answer differently: not a step to replay or to compare
 }
 ```
 
@@ -2472,7 +2477,7 @@ error[K0402]: nothing promises about what this calls, and `apply` promises `no.a
   |            ^^^^ write the promise into the shape: `fn(i32) -> i32 no.alloc`
 ```
 
-There are two promises, and a word written where one goes that is neither of
+There are three promises, and a word written where one goes that is none of
 them is answered for rather than left to be a body that never turned up:
 
 ```
@@ -2480,7 +2485,7 @@ error[K0216]: `no.allocate` is not a promise this language has
  --> promise.kest:1:15
   |
 1 | fn f() -> i32 no.allocate {
-  |               ^^^^^^^^^^^ this language has `no.alloc` and `no.host`
+  |               ^^^^^^^^^^^ this language has `no.alloc`, `no.host` and `deterministic`
 ```
 
 The same is said of a promise written with its first half left off and of one
@@ -2502,11 +2507,32 @@ error[K0401]: this calls the host, and `tick` promises `no.host`
   |            ^^^^^^^^^^ `Host.now` is the host's
 ```
 
-Both are written after one signature in one order, `no.alloc no.host`, and read
-in either; each is written once. Each is asked about on its own where a value
-goes somewhere: a value promising more may go where one promising less is
-wanted, and one that promises the heap and not the host is neither above nor
-below one that promises the other way.
+`deterministic` is the third, and it is the one written as a word rather than as
+a `no`: it says what a body does — answer the same on every machine that keeps
+the simulation profile — rather than what it does not. What it refuses is a
+reach outside that profile, which today is a call to a door the host provides:
+
+```
+error[K0401]: this reaches outside the simulation profile, and `drifts` promises `deterministic`
+ --> drifts.kest:6:12
+  |
+6 |     return Host.now()
+  |            ^^^^^^^^^^ `drifts.Host.now` is the host's
+```
+
+That is the same refusal `no.host` gives about the same line, said in the words
+of the promise that was made. The two are not one promise: `no.host` is about
+where control goes and `deterministic` is about what comes back, and a host that
+declares a door inside the profile will make a body that reaches it one and not
+the other. Until there is a way to declare that, every `no.host` body can
+promise `deterministic` and no other body can — which is what the compiler
+proves, so the promise is never wider than the profile. See D941 and D942.
+
+The three are written after one signature in any order — `no.alloc no.host
+deterministic` is how the library writes them — and each is written once. Each
+is asked about on its own where a value goes somewhere: a value promising more
+may go where one promising less is wanted, and one that promises the heap and
+not the host is neither above nor below one that promises the other way.
 
 The promise is proved twice: once against the tree, where a refusal can name
 the path, and once against the instructions that were emitted for it, where
@@ -4603,6 +4629,11 @@ version 1 the profile is exactly what a body that promises `no.host` can reach.
 That is stricter than it needs to be and it is the safe direction: it also
 excludes `sqrt`, `floor` and `ceil`, which IEEE-754 does specify exactly.
 
+**Saying so.** A function that keeps the profile writes `deterministic`, which
+the compiler proves the way it proves the other two, and which a host asks about
+with `KEST_PROMISE_DETERMINISTIC` before it installs a step. The promise is what
+a reader and a host act on; the profile above is what it means.
+
 **What is rejected.** `Math.sin`, `Math.cos`, `Math.pow` and `Math.atan2` are
 whatever a host binds them to; for the command line that is the platform's libm,
 which is not required to round them correctly. Two platforms may differ in the
@@ -4645,17 +4676,19 @@ round those correctly. Two platforms may differ in the last bit and then diverge
 `Math.sqrt` does not have that problem — IEEE-754 requires it to be correctly
 rounded — and neither do `Math.floor` and `Math.ceil`.
 
-**The profile that rejects what does not qualify already exists.** It is
-`no.host`. Every operation in this language whose answer could differ between
-platforms is behind a host door, and a function that promises `no.host` cannot
-call one — the compiler proves it and refuses the program otherwise. So a
-simulation written to be reproducible across machines is a simulation whose step
-promises `no.host`, and that is a thing the compiler checks rather than a thing
-a reader has to remember.
+**The profile that rejects what does not qualify is written down and is a
+promise.** A step that has to be reproducible across machines writes
+`deterministic`, and the compiler refuses the program if the body can reach
+outside the profile above. Today that reach is a host door and nothing else:
+every operation in this language whose answer could differ between platforms is
+behind one. So the bodies that can promise `deterministic` are exactly the ones
+that can promise `no.host`, and the two are written separately because they say
+different things and will part company the day a host can declare a door inside
+the profile.
 
 It is stricter than it needs to be, which is the right way round: it also
 excludes `sqrt`, which would have been fine. A program that wants it writes its
-own over `no.host` arithmetic.
+own over arithmetic that is inside the profile.
 
 ## Where each rule is run
 
@@ -4946,7 +4979,7 @@ bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 502 lines:
-47588 bytes as tokens, 117793 as a tree, 147528 checked and 174137 compiled.
+47940 bytes as tokens, 118145 as a tree, 154224 checked and 180819 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
 
@@ -4963,7 +4996,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 16955 bytes, against the 174137 it costs to compile.
+file and 17305 bytes, against the 180819 it costs to compile.
 
 Each function `check` lists carries an `id`: a number standing for which
 declaration it is, folded from the qualified name, the types it takes and gives,
@@ -4974,8 +5007,8 @@ different thing with the same name.
 
 ```json
 { "name": "id.alpha", "parameters": ["i32"], "gives": "i32",
-  "noAlloc": false, "noHost": false, "foreign": false, "named": true,
-  "id": "dfe41484f0987403" }
+  "noAlloc": false, "noHost": false, "deterministic": false,
+  "foreign": false, "named": true, "id": "dfe41484f0987403" }
 ```
 
 `parse` says what that tree is made of beside what it cost, and `check` says how
@@ -5127,7 +5160,7 @@ where it is written, and the compiler works out every constant, so what `emit`
 says is what `check` said and more. `asked` beside them is how many times the
 folder was asked and there was nothing to work out — a field of a local, a name that is not a constant. The compiler asks
 of anything that might be one, because asking is how it finds out, and the two
-numbers together say how much of that finding out answered: 97 of 299 for
+numbers together say how much of that finding out answered: 97 of 329 for
 `examples/numbers.kest`.
 
 Each file also carries a `mark`, and the object has one for the program: a
@@ -5239,6 +5272,7 @@ has to provide marked as one, and a line for each module it imported.
       "gives": "i32",
       "noAlloc": false,
       "noHost": false,
+      "deterministic": false,
       "foreign": false,
       "named": true,
       "file": "doc.kest",
@@ -5471,6 +5505,7 @@ shape:
       "foldedSlots": 0,
       "noAlloc": false,
       "noHost": false,
+      "deterministic": false,
       "why": null,
       "where": null,
       "least": {"slots": 8, "frames": 2},

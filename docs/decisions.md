@@ -29086,3 +29086,77 @@ platform either answers the same or prints which of the eight parts does not.
 What it does not do is make `deterministic` a promise a function writes. That
 needs a way for a host to declare a door inside the profile, which needs the
 profile to exist first — it does now — and is the next piece.
+
+## D942: `deterministic` is a promise a function writes
+
+D941 wrote the simulation profile down and gave it a run that says whether a
+platform keeps it. What it left was the part a program can act on: a reader had
+a document and a number, and no way to say in the source that this body is one
+of the ones the document is about. `no.host` was standing in for it and is not
+it — it says where control goes, and what a reader wanted said is what comes
+back.
+
+So there is a third promise, and it is spelled `deterministic` rather than
+`no.something`, because it says what a body does. It is written after a
+signature with the other two, in any order, once each, and it is part of a
+function's type the way the others are: a value promising it may go where one
+promising nothing is wanted and not the other way round.
+
+**It is proved, not asserted.** The same two proofs the other promises get: the
+contract graph, which can name the path from the promise down to the line that
+breaks it, and the walk over the instructions that were emitted, which is where
+a disagreement between the two is a fault in this compiler rather than a
+mistake in the program. What it refuses is a reach outside the profile, which
+today is a call to a door the host provides and nothing else — the refusal is
+`K0401` in the words of the promise that was made, and `K0402` where the call is
+through a value whose shape says nothing.
+
+**It is not `no.host` under another name, and the tree says so in three
+places.** The parser reads it as a word rather than as a `no` and a word;
+`KestChunk` and `KestExtern` carry it beside the other two and the program's
+mark folds it, so a chunk that promised it yesterday and does not today is a
+number that moves; and `kest_entry_promises` answers about
+`KEST_PROMISE_DETERMINISTIC`, which is the door a host replaying inputs or
+comparing two peers asks through. Today every `no.host` body can promise it and
+no other body can. The day a host can declare a door inside the profile, that
+stops being true and nothing in the language has to change.
+
+**One list rather than a branch each.** The promises were three branches in the
+parser and two names in the header, and adding the third meant finding all of
+them. They are now one table in `src/parser.c` — a word and whether it is
+written after `no.` — read by what matches them, by the message that says what
+this language has, and by `check-tables.sh`, which holds it to the header's
+`KestPromise`. A fourth promise is a row and a case; a promise a program can
+write that a host cannot ask about is a check that fails.
+
+The gate asks all three the same question it asked two: writing a promise on
+every function that has not got it, and requiring the compiler to refuse
+exactly the ones that carry it in none. `deterministic` is now on 103 of the
+library's functions and on four of the doors a host enters in the examples.
+
+## D943: a generic's promise is proved where it is written
+
+The gate asks the library whether every function that can keep a promise says
+so, and for `deterministic` it answered that `sort.by` could. It cannot: `by`
+calls the comparator it was handed, and a comparator that promises `no.alloc`
+and `no.host` promises nothing about answering the same on two machines.
+
+What made the gate wrong was that the proof said nothing at all. A generic
+declaration has no types until a copy gives it some, so a call through a value
+in one was read off a tree that had no type on it, and the branch that asks what
+a value promises was skipped. The library on its own instantiates nothing, so
+the promise was proved against nothing — and the refusal arrived at the first
+program that called `sort.by`, pointing into `lib/std/sort.kest` from somebody
+else's file.
+
+A parameter's shape does not depend on `T`. `before: fn(T, T) -> bool no.alloc
+no.host` says what it promises whatever `T` turns out to be, and it is written
+in the declaration. So when a template calls a name that is one of its own
+parameters and the tree has no type to read, the proof reads the shape the
+parameter was written as, and the suggestion quotes it back from the source —
+there is no type here to make a name from, and the words somebody wrote are the
+words to add a promise to.
+
+This is the same rule for all three promises and it caught nothing else, which
+is what was wanted: it is not a new refusal, it is the existing one arriving in
+the file that made the promise rather than in the file that called it.
