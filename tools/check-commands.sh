@@ -5335,9 +5335,26 @@ fn main() -> i32 {
     return 0
 }
 KEST
-printf 'break 4\nrun\nwhere\nlocals\nnext\nlocals\ncontinue\nlocals\ncontinue\ncontinue\ncontinue\nquit\n' |
-    "$kest" debug "$scratch"/stopping/stopping.kest \
-        >"$scratch"/stopping/said 2>&1
+# Written to a file and read from it rather than piped in: a debugger stops
+# reading the moment it is told to quit, and a `printf` still holding bytes for
+# a pipe nobody is reading is a `printf` that fails -- which is a check that
+# refuses for a reason that has nothing to do with what it is checking.
+cat > "$scratch"/stopping/asking <<'STOPPING'
+break 4
+run
+where
+locals
+next
+locals
+continue
+locals
+continue
+continue
+continue
+quit
+STOPPING
+"$kest" debug "$scratch"/stopping/stopping.kest \
+    <"$scratch"/stopping/asking >"$scratch"/stopping/said 2>&1
 debug_wrong=""
 case "$(cat "$scratch"/stopping/said)" in
 *"stopping.kest:4:"*) ;;
