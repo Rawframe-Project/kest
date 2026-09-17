@@ -92,6 +92,15 @@ A resolver was written and measured against that bar. It settles every name in a
 body in one walk and answers per copy, and it was thrown away rather than landed
 with a numbering of its own beside the backend's.
 
+**And one thing that was found while deciding it.** The half of a resolver that
+is about names rather than slots — the backend reading what the checker resolved
+instead of scanning its own list — buys nothing here, because this language
+refuses shadowing: `K0318` says a name is declared once in a body, so there is
+exactly one local of a name in scope and the scan cannot find a different one
+from the checker. What a resolved representation is for in this tree is the
+second backend and the lexical `scratch { }`, and neither of those exists yet.
+That is why this is where it is rather than half-done.
+
 **So the order is**: move slot assignment into the resolver, have
 `declare_local` become the resolver's answer rather than its own arithmetic, and
 then the backend reads a name instead of looking one up. Nothing before that
