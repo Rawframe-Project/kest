@@ -311,7 +311,7 @@ fn charsOf(subject: text) -> [text] no.host deterministic {
 // nothing when there is no such place. It is text of its own, because a
 // character is not a number here: what a byte means is a program's to say, and
 // what a character means is Unicode's.
-fn charAt(subject: text, index: i32) -> text? no.host deterministic {
+fn charAt(subject: text, index: i32) -> text? no.alloc no.host deterministic {
     let count = 0
     let tail = subject
     while tail != "" {
@@ -335,7 +335,7 @@ fn isSpace(byte: u8) -> bool no.alloc no.host deterministic {
 }
 
 // Without the spaces at either end. Cuts, so it reaches the heap.
-fn trim(subject: text) -> text no.host deterministic {
+fn trim(subject: text) -> text no.alloc no.host deterministic {
     // Both ends found in one walk forwards, because forwards is the cheap
     // direction: `rest` steps a byte at a time and `tail[0]` is the byte it is
     // standing on, where `subject[to - 1]` is the walk from the front again on

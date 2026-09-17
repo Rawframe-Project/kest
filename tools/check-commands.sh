@@ -3320,7 +3320,7 @@ fi
 
 # And the two beside it that step rather than cut. `rest` is a place inside the
 # text it was given and `find` is a number, so neither has anything to copy --
-# which is what eight of the library's `no.alloc` functions are built on. The
+# which is what ten of the library's `no.alloc` functions are built on. The
 # proof that holds them says so out of a table in `contract.c`; this says the
 # machine agrees, because a table saying a builtin reaches nothing and a
 # machine reaching for something is a promise kept on paper. See D796.
