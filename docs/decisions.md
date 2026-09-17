@@ -30395,3 +30395,39 @@ warning could be turned on at all rather than written down as too large.
 The rule from here: the two builds are held to the same set. A warning one
 compiler has and the other does not is either turned on in both or turned off in
 both, with the reason beside it. *Argued.*
+
+## D974. Three numbers a host reads, and the profile `deterministic` means
+
+Section 17 of the completion mission asks for a versioned C ABI and section 32
+for versioned everything. There was one number, `KEST_VERSION_STRING`, and it
+answers a different question from the ones a host actually has.
+
+**Four numbers, because they move for four reasons.**
+
+- `KEST_VERSION_STRING` is what the language calls itself.
+- `KEST_JSON_SCHEMA` is what shape the objects a command writes are in, and has
+  been there since D947.
+- `KEST_ABI_VERSION` is what shape the doors are in. A host is compiled against
+  this header and linked against a library built from some other copy of this
+  tree, and nothing in C notices: a struct that gained a field, a function whose
+  arguments changed, an enum with a case put in the middle are all a host
+  reading memory that means something else. The number is in the header for the
+  host's compiler and `kest_abi_version()` reads it out of the library, and a
+  host comparing the two finds out before it crosses. `examples/embed.c` does
+  that in its first six lines, which is where a host should.
+- `KEST_PROFILE_NAME` and `KEST_PROFILE_VERSION` say what `deterministic` is a
+  promise about. It is a promise about a profile rather than about arithmetic in
+  the abstract — which operations are in it, how each rounds, what is refused —
+  so a host keeping a replay or shipping a save writes the profile down beside
+  it. `kest_profile()` reads it out of the library.
+
+**When each goes up.** The ABI number goes up when anything a host can see
+changes: a function's arguments or what it answers, a struct's fields or their
+order, an enum's cases or their numbers, or what any of them mean. It does not
+go up for a function or an enum case added at the end, which a host built
+against the older number does not know about and cannot be hurt by. The profile
+number goes up when an operation's answer changes for the same input.
+
+`kest --version` prints all four, because a person filing a report and a script
+deciding whether to run both need them and there is no reason to make them ask
+twice. *Argued.*

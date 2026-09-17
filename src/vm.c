@@ -4537,10 +4537,11 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 for (uint16_t piece = 0;
                      !given->tagged && piece < given->count && slot < count;
                      piece++,
-                              slot += given->pieces[piece - 1].kind ==
-                                              KEST_L_TEXT
-                                          ? 2
-                                          : 1) {
+                              slot = (uint16_t)(slot +
+                                                (given->pieces[piece - 1]
+                                                         .kind == KEST_L_TEXT
+                                                     ? 2
+                                                     : 1))) {
                     if (fits_the_piece(given->pieces[piece].kind,
                                        (top - count)[slot])) {
                         continue;

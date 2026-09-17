@@ -2963,7 +2963,7 @@ static bool measure_struct(KestProgram *program, KestType *type) {
     type->slots = offset == 0 ? 1 : offset;
     type->byte_align = align;
     type->byte_size =
-        bytes == 0 ? 1 : (uint16_t)((bytes + align - 1) / align * align);
+        (uint16_t)(bytes == 0 ? 1 : (bytes + align - 1) / align * align);
     return true;
 }
 

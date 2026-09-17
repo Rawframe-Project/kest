@@ -4005,6 +4005,27 @@ against one it did not compile itself — the same string `kest --version`
 prints, out of the same place, so the library and the command line cannot
 disagree about what they are.
 
+Three more numbers go with it, because a host has three more questions and
+they move for different reasons. `KEST_ABI_VERSION` is what shape the doors
+below are in, and `kest_abi_version` reads the same number out of the library:
+a host compares the two before it crosses at all, because a header and a
+library from two versions of this project are a host reading memory that means
+something else and nothing in C notices. `KEST_JSON_SCHEMA` is what shape the
+objects a command writes are in. `kest_profile` answers with the name and the
+number of the profile `deterministic` is a promise about — a promise about a
+named profile rather than about arithmetic in the abstract — which a host
+keeping a replay or shipping a save writes down beside it. `kest --version`
+prints all four:
+
+```
+kest 0.1.0, abi 1, json 1, profile kest-det 1
+```
+
+The ABI number goes up when anything a host can see changes: arguments, what a
+function answers, a struct's fields or their order, an enum's cases or their
+numbers, or what any of them mean. It does not go up for something added at the
+end, which a host built against the older number does not know about. See D974.
+
 ## Running
 
 `kest run` calls `main`. A `main` that returns `i32` supplies the process exit

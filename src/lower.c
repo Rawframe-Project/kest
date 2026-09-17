@@ -113,7 +113,7 @@ static uint16_t load_before(const Lower *lower, uint16_t *slot) {
     }
     const uint8_t *at = lower->chunk->code + lower->last_at;
     *slot = (uint16_t)(at[1] | ((uint16_t)at[2] << 8));
-    return width == 3 ? 1 : (uint16_t)(at[3] | ((uint16_t)at[4] << 8));
+    return (uint16_t)(width == 3 ? 1 : (at[3] | ((uint16_t)at[4] << 8)));
 }
 
 // Two loads of slots that sit next to each other are one load of both. A struct

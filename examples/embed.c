@@ -1925,6 +1925,27 @@ static bool weighs_what_it_costs(Engine *engine) {
 }
 
 int main(int argc, char **argv) {
+    // The first thing a host does, before it crosses at all: ask the library
+    // what shape its doors are in and compare it with the number this host's
+    // own compiler read out of the header. They differ when the header and the
+    // library are two versions of this project, and everything below is then a
+    // promise the library did not make. It costs one comparison at startup and
+    // it is the only thing that catches it. See D974.
+    if (kest_abi_version() != KEST_ABI_VERSION) {
+        fprintf(stderr,
+                "this host was built against abi %u and the library it is "
+                "linked to is abi %u\n",
+                (unsigned)KEST_ABI_VERSION, kest_abi_version());
+        return 1;
+    }
+    {
+        uint32_t profile = 0;
+        const char *named = kest_profile(&profile);
+        printf("host and library agree on abi %u, and `deterministic` here "
+               "means %s %u\n",
+               kest_abi_version(), named, profile);
+    }
+
     // NULL for the library, which is the compiler finding its own: what
     // `KEST_LIB` says, or where it was installed.
     const char *path = argc > 1 ? argv[1] : "examples/embed.kest";

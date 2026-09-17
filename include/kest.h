@@ -22,6 +22,30 @@
 // where a reader was told the list was everything. See D947.
 #define KEST_JSON_SCHEMA 1
 
+// What shape the doors below are in, which is a third thing again. A host is
+// compiled against this header and linked against a library built from some
+// other copy of the tree, and nothing in C notices: a struct that gained a
+// field, a function whose arguments changed, an enum with a case inserted in
+// the middle are all a host reading memory that means something else. So the
+// number is here for the host's compiler and `kest_abi_version` is there for
+// the library, and a host that compares them is a host that finds out before
+// it crosses rather than after.
+//
+// It goes up when anything a host can see changes: a function's arguments or
+// what it answers, a struct's fields or their order, an enum's cases or their
+// numbers, or what any of them mean. It does not go up for a new function or
+// a new enum case added at the end, which a host built against the older
+// number does not know about and cannot be hurt by. See D974.
+#define KEST_ABI_VERSION 1
+
+// What deterministic code is held to, named and numbered. `deterministic` is a
+// promise about a profile rather than about arithmetic in the abstract: which
+// operations are in it, how each rounds, what is refused. A host that keeps a
+// replay or ships a save reads this and writes it down beside them, because a
+// run under one profile and a run under another are two runs. See D974.
+#define KEST_PROFILE_NAME "kest-det"
+#define KEST_PROFILE_VERSION 1
+
 // Every function declared here is called by one of the two hosts written
 // against it, so there is somewhere to look for each: `src/main.c` is a
 // command line — it compiles, runs, calls one function, ticks a program and
@@ -33,6 +57,17 @@
 // Returns the version this library was built as, for a host that links against
 // a Kest it did not compile itself.
 const char *kest_version(void);
+
+// What shape the doors are in, as the library was built. A host compares it
+// with `KEST_ABI_VERSION`, which is what its own compiler read, and the two
+// differing means the header and the library are two versions of this project:
+// everything below is a promise the library did not make. See D974.
+uint32_t kest_abi_version(void);
+
+// What deterministic code in this library is held to: the profile's name and
+// its number, which together are what a replay or a save is written under. A
+// host that keeps either writes this down beside it. See D974.
+const char *kest_profile(uint32_t *version);
 
 // And whether that library checks itself: built under a sanitiser, with the
 // readings that only that build does. A host asks this rather than asking its

@@ -32,6 +32,19 @@ const char *kest_version(void) {
     return KEST_VERSION_STRING;
 }
 
+// Read out of this library rather than out of whatever header the caller
+// compiled against, which is the whole of what it is for.
+uint32_t kest_abi_version(void) {
+    return KEST_ABI_VERSION;
+}
+
+const char *kest_profile(uint32_t *version) {
+    if (version != NULL) {
+        *version = KEST_PROFILE_VERSION;
+    }
+    return KEST_PROFILE_NAME;
+}
+
 KestHost *kest_host_new(void) {
     return calloc(1, sizeof(KestHost));
 }

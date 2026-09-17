@@ -2493,8 +2493,16 @@ int main(int argc, char **argv) {
         // a guard that stopped matching would be that build with none of them
         // in it, running everything and finding nothing, and the run would
         // read exactly as it does now.
-        printf("kest %s%s\n", kest_version(),
-               kest_checked() ? " checked" : "");
+        uint32_t profile = 0;
+        const char *named = kest_profile(&profile);
+        // What a host and a tool have to agree with, said where a person and a
+        // script both read it: the language's own version, the shape the doors
+        // are in, the shape the JSON is in, and which deterministic profile
+        // this build holds `deterministic` to. Four numbers because they move
+        // for four different reasons. See D974.
+        printf("kest %s%s, abi %u, json %u, profile %s %u\n", kest_version(),
+               kest_checked() ? " checked" : "", kest_abi_version(),
+               (unsigned)KEST_JSON_SCHEMA, named, profile);
         return 0;
     }
 
