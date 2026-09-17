@@ -8,7 +8,12 @@ setlocal enabledelayedexpansion
 if "%~1"=="" ( set "OUT=build\win" ) else ( set "OUT=%~1" )
 if not exist "%OUT%" mkdir "%OUT%"
 
-set "WARN=/nologo /std:c11 /W4 /WX /O2 /Iinclude /DKEST_LIB_DIR=\"lib/kest/\""
+rem `/experimental:c11atomics` is what MSVC calls C11's own `<stdatomic.h>`,
+rem which the machine uses for the one word a host may write while a program is
+rem running. `_CRT_SECURE_NO_WARNINGS` turns off the advice to use Microsoft's
+rem own spellings of `fopen` and `snprintf`, which are not C11 and are not what
+rem this is written in.
+set "WARN=/nologo /std:c11 /experimental:c11atomics /W4 /WX /O2 /Iinclude /D_CRT_SECURE_NO_WARNINGS /DKEST_LIB_DIR=\"lib/kest/\""
 set "OBJ="
 for %%f in (src\*.c) do (
     if /I not "%%~nxf"=="main.c" (
