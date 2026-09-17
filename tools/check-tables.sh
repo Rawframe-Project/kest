@@ -197,6 +197,36 @@ if held != printed_words:
               % ", ".join("`%s`" % w for w in only_printed))
     failed = 1
 
+# And the same words again in the grammar an editor colours a file with, which
+# is the third list of them. A keyword the lexer holds that the grammar does not
+# is a word that stops looking like a keyword the day it is added; one the
+# grammar has and the lexer does not is a word coloured as something a program
+# may not write, which it may. The grammar is read as JSON rather than with a
+# pattern, because it is JSON and a pattern over it is the thing that stops
+# matching. See D978.
+import json as grammar_json
+
+coloured = set()
+with open("editors/vscode/syntaxes/kest.tmLanguage.json") as reading:
+    for rule in grammar_json.load(reading)["repository"]["keyword"]["patterns"]:
+        found = re.search(r"\\b\(([a-z|.\\]+)\)\\b", rule["match"])
+        if found:
+            coloured.update(found.group(1).replace("\\", "").split("|"))
+# `flags` and `scratch` are words rather than keywords -- a program may use
+# either as a name where a declaration does not begin -- and both are coloured,
+# because a reader meeting one at the start of a line is meeting a declaration.
+# Everything else in the grammar has to be a word the lexer keeps.
+words = set(held) | {"flags", "scratch"}
+if some("the words the grammar colours", sorted(coloured)) and coloured != words:
+    for word in sorted(words - coloured):
+        print("keywords: the lexer holds `%s` and the grammar does not colour "
+              "it" % word)
+        failed = 1
+    for word in sorted(coloured - words):
+        print("keywords: the grammar colours `%s` and it is not a word this "
+              "language keeps" % word)
+        failed = 1
+
 # What a check writes into its own scratch and then never looks at. A program
 # built and not run is a probe that says nothing, and what it looks like from
 # outside is a check with one more thing in it — which is the shape D534 found

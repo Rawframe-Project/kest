@@ -1,0 +1,64 @@
+{
+  "name": "kest",
+  "displayName": "Kest",
+  "description": "Kest language support: syntax, diagnostics, go to definition, references, rename, hover, completion and the one form. Everything semantic comes from `kest lsp`, which is the compiler itself.",
+  "version": "0.1.0",
+  "publisher": "rawframe",
+  "license": "SEE LICENSE IN LICENSE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Rawframe-Project/kest"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Formatters"
+  ],
+  "activationEvents": [
+    "onLanguage:kest"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "kest",
+        "aliases": [
+          "Kest",
+          "kest"
+        ],
+        "extensions": [
+          ".kest"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "kest",
+        "scopeName": "source.kest",
+        "path": "./syntaxes/kest.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "kest",
+        "path": "./snippets/kest.json"
+      }
+    ],
+    "configuration": {
+      "title": "Kest",
+      "properties": {
+        "kest.path": {
+          "type": "string",
+          "default": "kest",
+          "description": "The `kest` command to run. The extension speaks to `kest lsp`, which is the compiler, so this is the one thing to set."
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  }
+}

@@ -30574,3 +30574,39 @@ A name stands for one thing. They are under `proved`.
 is a command of the one command line, so an editor and a person run the same
 compiler and cannot disagree about what a file says. *Argued*, on a driven
 session in the gate.
+
+## D978. An editor gets a grammar and a client, and nothing that parses Kest
+
+Section 24 of the completion mission asks for a maintained VS Code extension
+and says the one thing not to do: "Do not duplicate semantic parsing in
+TextMate."
+
+**So the extension is four files and none of them understands Kest.**
+`package.json` says what a `.kest` file is and what starts the server;
+`language-configuration.json` says what a comment and a bracket are;
+`snippets/kest.json` is eleven shapes somebody types every day; and
+`extension.js` starts `kest lsp` and gets out of the way. Everything that
+requires knowing what a program means — what is wrong with it, what a name is,
+where it was declared, what else names it, the one form — comes back over the
+protocol from the compiler, which is D977.
+
+**The grammar is the exception and is held.** Colouring cannot wait for a
+compile, so `kest.tmLanguage.json` does know what a keyword looks like — and
+that is a second list of the words this language keeps, which is the shape
+every list in this project has been wrong in at least once. So
+`check-tables.sh` reads the grammar as JSON, pulls the words out of it, and
+holds them to the lexer's own list both ways: a keyword the lexer holds that
+the grammar does not colour, and a word the grammar colours that this language
+does not keep. `flags` and `scratch` are the two allowed past it, because they
+are words rather than keywords and a reader meeting either at the start of a
+line is meeting a declaration.
+
+**Linguist.** `editors/linguist/languages.yml.fragment` is the metadata GitHub's
+language detection asks for, pointing at the same grammar and naming four real
+programs as samples. The `language_id` is left out because it is theirs to
+allocate. Whether they take it is not this repository's to decide, and nothing
+here waits on it. Nothing is faked: there is no corpus written to be counted.
+
+**The one dependency.** `vscode-languageclient` is the standard client and this
+extension has it. The language has none; an editor plugin is not the language.
+*Argued.*

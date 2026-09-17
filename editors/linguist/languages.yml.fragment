@@ -1,0 +1,24 @@
+# What GitHub Linguist needs to know about Kest, in the shape its own
+# `languages.yml` wants. The grammar it points at is `editors/vscode`, which is
+# the one this project maintains; there is no second grammar, because two
+# grammars are two answers about what a file looks like.
+#
+# `language_id` is allocated by Linguist and is left out here on purpose: it is
+# theirs to give. Everything else is this project's to say.
+#
+# Samples for the submission are the tree's own examples, which are real
+# programs that run rather than files written to be counted:
+#   examples/colony.kest    a world kept and worked on
+#   examples/ants.kest      a frame over an array of value structs
+#   examples/registry.kest  a store and references outside a game
+#   lib/std/table.kest      a hash table written in the language
+Kest:
+  type: programming
+  color: "#2f6f4e"
+  extensions:
+    - ".kest"
+  tm_scope: source.kest
+  ace_mode: text
+  codemirror_mode: null
+  interpreters:
+    - kest

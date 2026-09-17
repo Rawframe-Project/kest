@@ -1,0 +1,165 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Kest",
+  "scopeName": "source.kest",
+  "fileTypes": ["kest"],
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#string" },
+    { "include": "#byte" },
+    { "include": "#number" },
+    { "include": "#declaration" },
+    { "include": "#promise" },
+    { "include": "#keyword" },
+    { "include": "#type" },
+    { "include": "#builtin" },
+    { "include": "#call" },
+    { "include": "#operator" }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.double-slash.kest",
+      "match": "//.*$"
+    },
+    "string": {
+      "name": "string.quoted.double.kest",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.kest",
+          "match": "\\\\[ntr\\\\\"{}0]"
+        },
+        {
+          "name": "meta.embedded.kest",
+          "begin": "\\{",
+          "end": "\\}",
+          "beginCaptures": {
+            "0": { "name": "punctuation.section.embedded.begin.kest" }
+          },
+          "endCaptures": {
+            "0": { "name": "punctuation.section.embedded.end.kest" }
+          },
+          "patterns": [
+            { "include": "#number" },
+            { "include": "#builtin" },
+            { "include": "#operator" }
+          ]
+        }
+      ]
+    },
+    "byte": {
+      "name": "constant.character.kest",
+      "match": "'(\\\\[ntr\\\\\"{}0]|[^'\\\\])'"
+    },
+    "number": {
+      "patterns": [
+        {
+          "name": "constant.numeric.float.kest",
+          "match": "\\b[0-9][0-9_]*\\.[0-9][0-9_]*([eE][-+]?[0-9]+)?\\b"
+        },
+        {
+          "name": "constant.numeric.hex.kest",
+          "match": "\\b0[xX][0-9a-fA-F_]+\\b"
+        },
+        {
+          "name": "constant.numeric.binary.kest",
+          "match": "\\b0[bB][01_]+\\b"
+        },
+        {
+          "name": "constant.numeric.integer.kest",
+          "match": "\\b[0-9][0-9_]*\\b"
+        }
+      ]
+    },
+    "declaration": {
+      "patterns": [
+        {
+          "match": "\\b(fn)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.declaration.function.kest" },
+            "2": { "name": "entity.name.function.kest" }
+          }
+        },
+        {
+          "match": "\\b(struct|enum|flags)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.declaration.type.kest" },
+            "2": { "name": "entity.name.type.kest" }
+          }
+        },
+        {
+          "match": "\\b(module|import)\\s+([A-Za-z_][A-Za-z0-9_.]*)",
+          "captures": {
+            "1": { "name": "keyword.control.import.kest" },
+            "2": { "name": "entity.name.namespace.kest" }
+          }
+        },
+        {
+          "match": "\\b(const)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.declaration.constant.kest" },
+            "2": { "name": "variable.other.constant.kest" }
+          }
+        },
+        {
+          "match": "\\b(let)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": { "name": "keyword.declaration.variable.kest" },
+            "2": { "name": "variable.other.kest" }
+          }
+        }
+      ]
+    },
+    "promise": {
+      "name": "storage.modifier.kest",
+      "match": "\\b(no\\.alloc|no\\.host|deterministic)\\b"
+    },
+    "keyword": {
+      "patterns": [
+        {
+          "name": "keyword.control.kest",
+          "match": "\\b(break|continue|else|for|if|in|match|return|while|defer)\\b"
+        },
+        {
+          "name": "keyword.declaration.kest",
+          "match": "\\b(const|enum|extern|fn|import|let|module|struct|flags|scratch)\\b"
+        },
+        {
+          "name": "constant.language.kest",
+          "match": "\\b(true|false|none)\\b"
+        }
+      ]
+    },
+    "type": {
+      "patterns": [
+        {
+          "name": "support.type.primitive.kest",
+          "match": "\\b(i8|i16|i32|i64|u8|u16|u32|u64|f32|f64|bool|text)\\b"
+        },
+        {
+          "name": "support.type.kest",
+          "match": "\\b(store|ref)\\b"
+        },
+        {
+          "name": "entity.name.type.kest",
+          "match": "\\b[A-Z][A-Za-z0-9_]*\\b"
+        }
+      ]
+    },
+    "builtin": {
+      "name": "support.function.builtin.kest",
+      "match": "\\b(array|store|add|get|set|remove|push|pop|len|clear|room|fit|find|matches|rest|slice|hash|text)\\b(?=\\s*\\()"
+    },
+    "call": {
+      "match": "\\b([A-Za-z_][A-Za-z0-9_]*)\\s*(?=\\()",
+      "captures": {
+        "1": { "name": "entity.name.function.call.kest" }
+      }
+    },
+    "operator": {
+      "name": "keyword.operator.kest",
+      "match": "(\\->|\\.\\.|==|!=|<=|>=|&&|\\|\\||\\+=|-=|\\*=|/=|%=|[-+*/%<>=!&|^~?:.])"
+    }
+  }
+}

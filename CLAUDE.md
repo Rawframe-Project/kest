@@ -69,6 +69,13 @@ examples/          .kest programs that must keep working. Each one checks
                    nothing can run it (D222). A `main` that gives nothing back is a shape the
                    language has and no example is written that way, so
                    `check.sh` runs one of its own.
+editors/           What an editor needs, and nothing that parses Kest. The
+                   VS Code extension is a grammar, a language configuration,
+                   snippets and a client that starts `kest lsp`; every
+                   semantic answer comes from the compiler, because a second
+                   parser in an editor is a second answer about what a file
+                   means. `editors/linguist` is the metadata GitHub's language
+                   detection asks for, pointing at the same grammar. See D978.
 tools/             Build and development scripts. `make check` runs all of
                    them and everything else, and is what "it passes" means.
                    `fast.sh` is the other tier and is not one of them: it is

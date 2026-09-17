@@ -9963,6 +9963,33 @@ fn main() -> i32 {
         "caught": "into this host's bytes",
     },
     {
+        # A word this language keeps that an editor does not colour as one.
+        # The grammar is the one thing in this tree that is not held by the
+        # compiler -- an editor reads it and nothing else does -- so the list
+        # in it and the list in the lexer are two lists, and two lists come
+        # apart on the day one of them grows. See D978.
+        "what": "a keyword the grammar stopped colouring",
+        "file": "editors/vscode/syntaxes/kest.tmLanguage.json",
+        "from": "|match|return|while|defer)",
+        "to": "|return|while|defer)",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "and the grammar does not colour it",
+    },
+    {
+        # And a word the grammar colours that this language does not keep,
+        # which is a name somebody is shown as one they may not use.
+        "what": "a word coloured as a keyword that is not one",
+        "file": "editors/vscode/syntaxes/kest.tmLanguage.json",
+        "from": "|flags|scratch)",
+        "to": "|flags|scratch|yield)",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "is not a word this language keeps",
+    },
+    {
         # An editor answered by a reader of this compiler rather than by this
         # compiler. The index the checker writes while it resolves is what
         # every answer about a name comes out of; without it the server has a
