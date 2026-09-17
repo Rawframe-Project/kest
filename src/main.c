@@ -100,6 +100,12 @@ static void help(FILE *out) {
             "  --check           fmt names the files it would rewrite, without\n"
             "                    writing them, and exits non-zero\n"
             "  --reset           tick throws the heap away between events\n"
+            "  --cost            check says what it proved about each body:\n"
+            "                    whether it reaches the heap, whether it\n"
+            "                    crosses to the host, whether anything in it\n"
+            "                    is outside the deterministic profile, and\n"
+            "                    which promise it keeps and does not make.\n"
+            "                    The same facts are in --json either way\n"
     "  --room <amount>   the most this command may ask this machine for,\n"
     "                    all of it: reading and compiling the program and\n"
     "                    the heap it runs on. A number of bytes, or one\n"
@@ -1835,7 +1841,7 @@ static KestRuntime *a_machine_within(KestBuild *build, KestHost *host,
 
 static int run(const char *command, const char *executable, char **paths,
                int path_count, bool json, int32_t count, const int32_t *given,
-               bool reset, size_t room, uint64_t fuel) {
+               bool reset, size_t room, uint64_t fuel, bool costing) {
     KestBuild *build = kest_build_open(kest_library_path(NULL, executable),
                                        paths,
                                        strcmp(command, "call") == 0
@@ -2477,6 +2483,17 @@ static int run(const char *command, const char *executable, char **paths,
         // JSON the object carries more than the diagnostics, so that one is
         // written here.
         kest_build_report(build, stderr, KEST_FORM_TEXT);
+        // What the compiler proved about each body, which is a different thing
+        // from what the body says about itself. Four columns and no times:
+        // a static count of instructions is not a duration and saying one in
+        // nanoseconds would be a number nobody measured. What is here is what
+        // was walked -- the heap, the host, and whether every operation is in
+        // the deterministic profile -- and `could` for a promise the body
+        // keeps and does not make. See D976.
+        if (costing && checking && build->program != NULL &&
+            build->diags.error_count == 0) {
+            kest_program_costs(build->program, stdout);
+        }
     }
 
     int status = build->diags.error_count > 0 || failed_to_choose
@@ -2540,6 +2557,10 @@ int main(int argc, char **argv) {
     int32_t *given = NULL;
     bool told_it = false;
     bool reset = false;
+    // `check --cost`: what the compiler proved about each body, said to a
+    // person. The same facts are in `--json` whether this was asked for or
+    // not, because a tool reads one shape. See D976.
+    bool costing = false;
     FormatMode mode = FORMAT_PRINT;
     // Gathered rather than sliced out of argv, because a number among them is
     // how many events to send and not a file to read.
@@ -2573,6 +2594,8 @@ int main(int argc, char **argv) {
             mode = FORMAT_CHECK;
         } else if (strcmp(argv[i], "--reset") == 0) {
             reset = true;
+        } else if (strcmp(argv[i], "--cost") == 0) {
+            costing = true;
         } else if (strcmp(argv[i], "--fuel") == 0) {
             // The count is the word after, for the reason `--room`'s is.
             if (i + 1 >= argc) {
@@ -2680,7 +2703,7 @@ int main(int argc, char **argv) {
         }
         int status =
             run(argv[1], argv[0], paths, path_count, json, count, given,
-                reset, room, fuel);
+                reset, room, fuel, costing);
         free(paths);
         free(given);
         return status;

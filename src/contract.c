@@ -652,6 +652,26 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
         }
     }
 
+    // What the walk found, written back where a reader can be told it. A body
+    // that reaches nothing and promises nothing is a promise somebody could
+    // make, and `kest check --cost` is where that is said. A generic is
+    // written once per copy of it and the copies are OR-ed, because a copy is
+    // what runs. See D976.
+    for (uint32_t i = 0; i < graph.count; i++) {
+        Function *function = &graph.functions[i];
+        if (function->decl == NULL || !function->allocates) {
+            continue;
+        }
+        KestDecl *written = (KestDecl *)function->decl;
+        if (about == 0) {
+            written->function.reaches_heap = true;
+        } else if (about == 1) {
+            written->function.reaches_host = true;
+        } else {
+            written->function.not_deterministic = true;
+        }
+    }
+
     for (uint32_t i = 0; i < graph.count; i++) {
         Function *function = &graph.functions[i];
         if (!function->promises || !function->allocates ||

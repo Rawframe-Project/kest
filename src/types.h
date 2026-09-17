@@ -565,6 +565,13 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
 
 // The same, as JSON: what a tool asks when it wants to know what is in a
 // program rather than what is wrong with one.
+// What the promises' proof found about every body in this program, written for
+// a person: one line each, saying what it reaches and what it could promise and
+// does not. There are no durations in it -- a count of instructions is not a
+// time, and one printed as though it were is a number nobody measured. See
+// D976.
+void kest_program_costs(const KestProgram *program, FILE *out);
+
 void kest_program_dump_json(const KestProgram *program, KestArena *arena,
                             FILE *out);
 

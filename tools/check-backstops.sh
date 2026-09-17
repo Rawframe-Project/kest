@@ -9965,6 +9965,26 @@ fn main() -> i32 {
         "caught": "into this host's bytes",
     },
     {
+        # What the compiler proved about a body, said as nothing. The walk is
+        # the promises' own and it runs whether or not anything promises; what
+        # `check --cost` does is say what it found. A reader told that every
+        # body reaches nothing is a reader told that every promise is
+        # available, which is the answer a walk that found nothing gives and
+        # the answer a walk nobody wrote gives. See D976.
+        "what": "a walk of the promises that says every body is free",
+        "file": "src/contract.c",
+        "from": """        KestDecl *written = (KestDecl *)function->decl;
+        if (about == 0) {
+            written->function.reaches_heap = true;""",
+        "to": """        KestDecl *written = (KestDecl *)function->decl;
+        if (about == 3) {
+            written->function.reaches_heap = true;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "what the compiler proved is not what it says",
+    },
+    {
         # Bytes a host hands over that are not UTF-8, taken as text. Text is
         # UTF-8 and a run of the host's own bytes is whatever the host has in
         # it, so this is the door between the two and the only place the walk

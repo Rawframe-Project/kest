@@ -4187,6 +4187,61 @@ static const char *where_it_stands(KestArena *arena, const char *written,
     return out;
 }
 
+void kest_program_costs(const KestProgram *program, FILE *out) {
+    uint32_t said = 0;
+    for (uint32_t i = 0; i < program->global_count; i++) {
+        const KestSymbol *symbol = &program->globals[i];
+        if (symbol->type->tag != KEST_T_FN) {
+            continue;
+        }
+        bool foreign = symbol->type->is_foreign || symbol->decl == NULL ||
+                       symbol->decl->kind != KEST_DECL_FN ||
+                       symbol->decl->function.is_extern;
+        if (said == 0) {
+            // What each column is, because a table of `yes` and `no` with no
+            // heading is a table nobody can read, and because the last one is
+            // the only one that is advice rather than a fact.
+            fprintf(out, "%-40s %-6s %-6s %-6s %s\n", "what the compiler "
+                                                       "proved",
+                    "heap", "host", "varies", "could promise");
+        }
+        said++;
+        if (foreign) {
+            // Judged by what it declares, because there is no body here to
+            // walk. Nothing is proved about one and it says so rather than
+            // saying no.
+            fprintf(out, "%-40s %-6s %-6s %-6s %s\n", symbol->name, "?", "?",
+                    "?", "the host says");
+            continue;
+        }
+        bool heap = symbol->decl->function.reaches_heap;
+        bool host = symbol->decl->function.reaches_host;
+        bool varies = symbol->decl->function.not_deterministic;
+        char could[64];
+        size_t used = 0;
+        if (!heap && !symbol->type->no_alloc) {
+            used += (size_t)snprintf(could + used, sizeof(could) - used,
+                                     "%sno.alloc", used == 0 ? "" : " ");
+        }
+        if (!host && !symbol->type->no_host) {
+            used += (size_t)snprintf(could + used, sizeof(could) - used,
+                                     "%sno.host", used == 0 ? "" : " ");
+        }
+        if (!varies && !symbol->type->deterministic) {
+            snprintf(could + used, sizeof(could) - used, "%sdeterministic",
+                     used == 0 ? "" : " ");
+        } else if (used == 0) {
+            snprintf(could, sizeof(could), "%s", "");
+        }
+        fprintf(out, "%-40s %-6s %-6s %-6s %s\n", symbol->name,
+                heap ? "yes" : "no", host ? "yes" : "no",
+                varies ? "yes" : "no", could);
+    }
+    if (said == 0) {
+        fprintf(out, "this program declares no function\n");
+    }
+}
+
 void kest_program_dump_json(const KestProgram *program, KestArena *arena,
                             FILE *out) {
     fputs("\"types\":[", out);
@@ -4300,6 +4355,35 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
                 symbol->type->deterministic ? "true" : "false",
                 symbol->type->is_foreign ? "true" : "false",
                 symbol->named ? "true" : "false");
+        // What the promises' proof found, beside what the declaration says.
+        // The two are different questions: one is what a caller was told and
+        // the other is what the compiler walked the call graph and saw. A body
+        // that reaches nothing and says nothing is a promise somebody could
+        // make, and `could` says so. A foreign body is judged by what it
+        // declares, because there is no body here to walk, so nothing is
+        // proved about one and `could` is false. See D976.
+        {
+            bool foreign = symbol->type->is_foreign || symbol->decl == NULL ||
+                           symbol->decl->kind != KEST_DECL_FN ||
+                           symbol->decl->function.is_extern;
+            bool heap = foreign || symbol->decl->function.reaches_heap;
+            bool host = foreign || symbol->decl->function.reaches_host;
+            bool varies = foreign || symbol->decl->function.not_deterministic;
+            fprintf(out,
+                    ",\"cost\":{\"proved\":%s,\"reachesHeap\":%s,"
+                    "\"reachesHost\":%s,\"notDeterministic\":%s,"
+                    "\"couldPromiseNoAlloc\":%s,\"couldPromiseNoHost\":%s,"
+                    "\"couldPromiseDeterministic\":%s}",
+                    foreign ? "false" : "true", heap ? "true" : "false",
+                    host ? "true" : "false", varies ? "true" : "false",
+                    !foreign && !heap && !symbol->type->no_alloc ? "true"
+                                                                 : "false",
+                    !foreign && !host && !symbol->type->no_host ? "true"
+                                                                : "false",
+                    !foreign && !varies && !symbol->type->deterministic
+                        ? "true"
+                        : "false");
+        }
         // And a number standing for this declaration and what it promises a
         // caller, folded from what is already printed beside it rather than
         // from where it is written. It is a signature, which is one of four

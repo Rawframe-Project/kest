@@ -2691,7 +2691,7 @@ what was wrong with it if anything was, and — for the run that answers with a
 file rather than with a question about one — the file:
 
 ```json
-{"schema": 1, "diagnostics": [], "errors": 0, "file": "doc.kest",
+{"schema": 2, "diagnostics": [], "errors": 0, "file": "doc.kest",
  "formed": false,
  "text": "module doc\n\nfn twice(n: i32) -> i32 {\n    return n * 2\n}\n",
  "edit": {"offset": 12, "length": 34, "line": 3, "column": 1,
@@ -2713,7 +2713,7 @@ file reads.
 `run --json` says what the program answered:
 
 ```json
-{"schema": 1, "diagnostics": [], "errors": 0, "cost": 24495, "answered": 7}
+{"schema": 2, "diagnostics": [], "errors": 0, "cost": 24495, "answered": 7}
 ```
 
 `answered` is null for a `main` that gives nothing back, because nothing and
@@ -5225,14 +5225,16 @@ in ways no tool can see writes the same objects, and a field that changes what i
 means is a tool reading the wrong thing whatever the compiler calls itself. The
 number goes up when a field changes meaning, is taken away, or is added where a
 reader was told the list was everything — and a tool that reads it first knows
-before it reads anything else whether it understands what follows. It is 1.
+before it reads anything else whether it understands what follows. It is 2: it
+was 1 until `cost` was added to every function `check` writes out, which is a
+field added where a reader was told the list was everything.
 
 The same run with `--json` emits the identical set, notes and all, for
 tooling and for models repairing their own output, which is this:
 
 ```json
 {
-  "schema": 1,
+  "schema": 2,
   "diagnostics": [
     {
       "severity": "error",
@@ -5334,18 +5336,18 @@ many types it made beside the ones a program declares — one for every signatur
 every optional and every run of something:
 
 ```json
-{ "schema": 1, "diagnostics": [], "errors": 0, "cost": 41180, "held": 41180,
+{ "schema": 2, "diagnostics": [], "errors": 0, "cost": 41180, "held": 41180,
   "askings": 5, "tokenBytes": 12, "tokenRoom": 256,
   "tokens": [], "comments": [] }
 ```
 
 ```json
-{ "schema": 1, "diagnostics": [], "errors": 0, "cost": 156080, "nodes": 978,
+{ "schema": 2, "diagnostics": [], "errors": 0, "cost": 156080, "nodes": 978,
   "nodeBytes": { "expression": 48, "statement": 48, "declaration": 88 } }
 ```
 
 ```json
-{ "schema": 1, "diagnostics": [], "errors": 0, "cost": 178880, "held": 154304,
+{ "schema": 2, "diagnostics": [], "errors": 0, "cost": 178880, "held": 154304,
   "askings": 380, "typesMade": 58, "typeBytes": 168 }
 ```
 
@@ -5423,7 +5425,7 @@ on another is not the same program to run. That is the mark saying so rather
 than hiding it.
 
 ```json
-{ "schema": 1, "diagnostics": [], "errors": 0, "cost": 230607,
+{ "schema": 2, "diagnostics": [], "errors": 0, "cost": 230607,
   "codeMark": "d02b0a4a1e5c3f81",
   "folds": 3, "asked": 7, "copies": 66, "copiedBodies": 23,
   "copiedBytes": 3887,
@@ -5572,7 +5574,28 @@ the program says on its way there. `kest check --json` adds what the program
 holds beside what is wrong with it: every type with its
 layout and every function with what it takes, what it returns, whether it
 promises `no.alloc`, whether the host has to provide it, and where it was
-declared. The file that was named is given in full, with a function the host
+declared.
+
+Beside what each function *says* is what the compiler *proved* about it, under
+`cost`. The promises' own walk of the call graph runs whether or not anything
+promises anything, so what it found is there to be read: whether the body
+reaches the heap, whether it crosses to the host, whether anything in it is
+outside the deterministic profile, and — the one field that is advice rather
+than a fact — which promise it keeps and does not make. A function the host
+provides has `proved` false, because there is no body here to walk and what it
+declares is all there is. `kest check --cost` says the same thing to a person:
+
+```
+what the compiler proved                 heap   host   varies could promise
+math.factorial                           no     no     no     no.alloc no.host deterministic
+math.main                                yes    yes    yes
+```
+
+There are no durations in it. A count of instructions is not a time, and a
+static count printed as nanoseconds is a number nobody measured; what a frame
+costs is `make time` and `kest tick`, which run something. See D976.
+
+The file that was named is given in full, with a function the host
 has to provide marked as one, and a line for each module it imported.
 
 ```json
@@ -5603,6 +5626,15 @@ has to provide marked as one, and a line for each module it imported.
       "deterministic": false,
       "foreign": false,
       "named": true,
+      "cost": {
+        "proved": true,
+        "reachesHeap": false,
+        "reachesHost": false,
+        "notDeterministic": false,
+        "couldPromiseNoAlloc": true,
+        "couldPromiseNoHost": true,
+        "couldPromiseDeterministic": true
+      },
       "file": "doc.kest",
       "line": 10,
       "column": 4

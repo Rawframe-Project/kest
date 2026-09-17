@@ -344,6 +344,17 @@ typedef struct {
             bool no_alloc;
             bool no_host;
             bool deterministic;
+            // What the promise's proof found about this body, whether or not
+            // it promises anything. The proof walks the call graph three
+            // times -- once for the heap, once for the host, once for what is
+            // not deterministic -- and each walk writes what it found here, so
+            // a body that could keep a promise and does not say so is a thing
+            // a reader can be told rather than a thing they have to try. For a
+            // generic these are true if any copy of it is, because a copy is
+            // what runs. See D976.
+            bool reaches_heap;
+            bool reaches_host;
+            bool not_deterministic;
             KestBlock body;
         } function;
     };

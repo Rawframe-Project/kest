@@ -30485,3 +30485,45 @@ visited afterwards and a place added during one may or may not be, so a program
 that adds while walking collects and adds after. That is the rule, and the
 order is the one `deterministic` promises. *Argued*, on `registry.kest` and
 `colony.kest`.
+
+## D976. A cost report is what was proved, and carries no times
+
+Section 23 of the completion mission asks for a structural cost report and says
+what it must not be: "not fake nanosecond prophecy", "do not publish exact time
+claims from static opcode counts". So the question is what a compiler can say
+about a body that is true.
+
+**What it can say is what it already walked.** The promises' proof walks the
+call graph three times — once for what reaches the heap, once for what crosses
+to the host, once for what is outside the deterministic profile — and it walks
+every body, whether or not anything promises anything. What it found was thrown
+away for every body that promised nothing. It is kept now, on the declaration,
+and that is the whole of the report: three facts and one piece of advice.
+
+| | |
+| --- | --- |
+| `reachesHeap` | proved, by the walk |
+| `reachesHost` | proved, by the walk |
+| `notDeterministic` | proved, by the walk |
+| `proved` | false for a body the host provides, because there is none here to walk |
+| `couldPromise*` | keeps the promise and does not make it |
+
+The last is the useful one and the one nothing else could say. A body that
+reaches nothing and promises nothing is a promise somebody could make, and
+before this the only way to find out was to write the promise and compile. The
+gate has been doing exactly that for the library since D853 — writing
+`no.alloc` on every function and counting what the compiler refuses — which is
+a whole build per promise per function. Now it is a field.
+
+**What it does not carry.** No times, no instruction counts read as times, no
+stack or frame sizes — those are the compiler's and `check` does not compile, so
+`emit` says them and `tick` measures them. No "O(n) operations" count: what is
+`O(n)` depends on what a program hands it and a number that says `1` for
+`len(a)` and `1` for `sort(a)` is worse than no number. What a frame costs is a
+run.
+
+**Two forms, one walk.** `--json` carries it whether or not `--cost` was asked
+for, because a tool reads one shape and an object that changes with the options
+is an object a tool has to ask twice. `--cost` is the same facts as a table for
+a person. `check-commands.sh` reads both and holds them to agreeing, because
+two readers of one walk that disagree are one of them wrong. *Argued.*

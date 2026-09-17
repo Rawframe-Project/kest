@@ -5178,6 +5178,73 @@ case "$chose" in
     ;;
 esac
 
+# What `check --cost` says about a body, held to the two things it is for: a
+# body that reaches nothing is said to reach nothing and is told which promise
+# it keeps and does not make, and a body that prints reaches both. The facts
+# are the same ones `--json` carries, read here both ways, because two readers
+# of one walk that disagree are one of them wrong. One sentence for all of it,
+# because what went wrong is written into it and a sentence per case is a
+# sentence per case to be seen said. See D976.
+mkdir "$scratch"/costing
+cat > "$scratch"/costing/costing.kest <<'KEST'
+import std.io
+
+fn doubled(n: i32) -> i32 {
+    return n * 2
+}
+
+fn main() -> i32 {
+    io.print("{doubled(21)}")
+    return 0
+}
+KEST
+priced=$("$kest" check "$scratch"/costing/costing.kest --cost 2>&1 </dev/null)
+wrong=""
+case "$priced" in
+*"costing.doubled"*"no.alloc no.host deterministic"*) ;;
+*) wrong="a body that reaches nothing is not told what it could promise" ;;
+esac
+if [ -z "$wrong" ]; then
+    case "$priced" in
+    *"costing.main"*"yes"*) ;;
+    *) wrong="a body that prints is not said to reach anything" ;;
+    esac
+fi
+if [ -z "$wrong" ]; then
+    # The same walk read the other way. The Python answers with a word rather
+    # than with a sentence, because a sentence written in a check is a sentence
+    # that has to have been seen said and this one is the same complaint as the
+    # two above.
+    agrees=$("$kest" check "$scratch"/costing/costing.kest --json 2>/dev/null \
+        </dev/null | python3 -c '
+import json, sys
+held = json.load(sys.stdin)
+answer = "yes"
+for one in held.get("functions", []):
+    cost = one.get("cost")
+    if cost is None:
+        answer = "no"
+        break
+    if one["name"] == "costing.doubled" and (
+            not cost["proved"] or cost["reachesHeap"] or cost["reachesHost"]
+            or not cost["couldPromiseNoAlloc"]):
+        answer = "no"
+        break
+    if one["name"] == "costing.main" and not cost["reachesHost"]:
+        answer = "no"
+        break
+print(answer)
+')
+    if [ "$agrees" != "yes" ]; then
+        wrong="the JSON and the words are two readers of one walk"
+    fi
+fi
+if [ -n "$wrong" ]; then
+    complain "check --cost: what the compiler proved is not what it says: \
+$wrong"
+    printf '%s\n' "$priced" | sed 's/^/    /' | head -6
+fi
+
 # And what a block of working memory will not let out, which is proved over a
 # body rather than over a tree and so is said where a body is written. Three
 # ways out of one: given back, put in something older, kept in a name the block
