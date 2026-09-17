@@ -3311,6 +3311,9 @@ if [ -z "$just_measured" ] || [ -z "$middle_cut" ]; then
     complain "call --json: a cut said nothing about what it cost"
 elif [ "$whole_cut" != "$just_measured" ] || [ "$tail_cut" != "$just_measured" ] ||
      [ "$middle_cut" != "$just_measured" ]; then
+    # Nothing has been made to say this: a cut that copies is a cut that
+    # allocates, and the promise's two proofs catch that where it is written
+    # rather than here. What is held by a hole is the length, above.
     complain "call: cuts cost $whole_cut, $tail_cut and $middle_cut where \
 measuring costs $just_measured, and a cut copies nothing"
 fi

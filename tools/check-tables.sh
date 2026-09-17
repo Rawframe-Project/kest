@@ -1291,6 +1291,14 @@ HELD = ("check-ceilings.sh", "check-commands.sh", "check-costs.sh",
 # read from the top rather than by name: a worklog with no entry in it is one
 # whose every heading was written another way, and a hole breaks one place.
 NOT_SAID = (("check-lends.sh", "the host that lends by name does not build"),
+            # A cut that copies is a cut that reaches the heap, and the two
+            # proofs of the `no.alloc` promise catch that where it is written
+            # rather than where it is paid for. What a hole holds here is the
+            # length a cut comes back with, which is the line above this one.
+            # See D964.
+            ("check-commands.sh",
+             "call: cuts cost $whole_cut, $tail_cut and $middle_cut where "
+             "measuring costs $just_measured, and a cut copies nothing"),
             ("check-dead.sh", "%s is not built; `make embed engine` first"),
             ("check-docs.sh", "docs/language.md: the engine is not built, so "
                               "what it prints for a host's own rules is a "

@@ -6644,12 +6644,13 @@ fn twice(n: i32) -> i32 {
 }
 
 fn main() -> i32 {
-    let spare = 7
-    if twice(21) != 42 {
+    let total = 0
+    total = twice(21)
+    if total != 42 {
         io.print("a call read the slots of whoever called it")
         return 1
     }
-    return spare - 7
+    return total - 42
 }
 """,
         "caught": "a call read the slots of whoever called it",
@@ -8415,11 +8416,7 @@ fn main() -> i32 {
         "to": """    rt->call_depth = wants_frames;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        # Caught by the arithmetic rather than by the order: what a host that
-        # says nothing is given is the program's worst plus the way back in,
-        # and a worst one slot over makes that sum wrong. It used to be caught
-        # by the order above it, while the two numbers were one slot apart.
-        "caught": "for the program and",
+        "caught": "saying nothing wants",
     },
     {
         # The program's own worst one slot over. Naming what a host calls is
@@ -14906,7 +14903,25 @@ fn main() -> i32 {
         "what": "a piece per character that grows with the text",
         "file": "lib/std/text.kest",
         "from": """        push(out, slice(tail, 0, wide))""",
-        "to": """        push(out, slice(subject, 0, len(subject) - len(tail) + wide))""",
+        "to": """        push(out, "{subject}")""",
+        "make": ["kest"],
+        # A piece that is the whole of what it was cut from rather than a cut
+        # of it. A cut reaches nothing since D964, so a mutation that only
+        # moved where the cut started cost the same either way; this one makes
+        # each piece a copy, which is what the doubling holds.
+        "tool": "tools/check-costs.sh",
+        "caught": "which is not twice for twice the work",
+    },
+    {
+        # And the same doubling asked of a module rather than of one function:
+        # a table that grows by a pair instead of doubling is a module whose
+        # cost in a loop grows with the square of what is put in it. The two
+        # sentences are the same rule over two lists, so each has a hole.
+        # See D910 and D912.
+        "what": "a table that grows by a pair at a time",
+        "file": "lib/std/table.kest",
+        "from": r"""            refill(t, len(t.slots))""",
+        "to": r"""            refill(t, len(t.keys) + 1)""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "which is not twice for twice the work",
