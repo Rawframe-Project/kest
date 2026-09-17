@@ -9989,18 +9989,19 @@ fn main() -> i32 {
         "caught": "the workflow a reader starts with does not work",
     },
     {
-        # A machine stopped where a breakpoint is not. Everything that reads
-        # the code walks it an instruction at a time, and a walk that met a
-        # breakpoint would read a one-byte instruction where a three-byte one
-        # is and step into the middle of the next -- so a debugger that asked
-        # about the code as it stands would answer about the wrong line, and
-        # the answer looks exactly like a right one. See D991.
-        "what": "a debugger that reads the code with its own marks in it",
+        # A breakpoint this put in on somebody's behalf, written down as one
+        # somebody asked for. They are told apart by one flag, and the ones
+        # this put in are taken out when the step ends: a step breakpoint that
+        # stays is a machine that stops at every instruction for ever, which
+        # is what a debugger that never comes back looks like. See D991.
+        "what": "a debugger whose own marks are taken for somebody's",
         "file": "src/debug.c",
-        "from": """    const KestSource *source = source_of(held, entry);
-    as_it_was(held);""",
-        "to": """    const KestSource *source = source_of(held, entry);
-    (void)0;""",
+        "from": """    if (after < many) {
+        write_one(held, in, after, false);
+    }""",
+        "to": """    if (after < many) {
+        write_one(held, in, after, true);
+    }""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
