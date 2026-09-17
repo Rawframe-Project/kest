@@ -1,10 +1,15 @@
 // This file is a host, not the library. The library is ISO C11 and nothing
 // else; a command line has to read a clock that measures elapsed time, and the
 // one C itself has measures processor time. Asked for here so that the request
-// is where the reason is, and guarded so a platform without it still builds --
-// it falls back to C's own wall clock and then to processor time. See D935.
+// is where the reason is. There are two platforms and each has a real
+// monotonic clock, so there is no third branch and no fallback that is not one:
+// see `host_microseconds`. D935, and D970 for the Windows half.
 #if !defined(_POSIX_C_SOURCE)
 #define _POSIX_C_SOURCE 200809L
+#endif
+
+#if defined(_WIN32)
+#include <windows.h>
 #endif
 
 #include <errno.h>
@@ -530,24 +535,40 @@ static void engine_name(KestValue *frame, KestRuntime *runtime, void *context) {
 // A clock that measures elapsed time and only goes forwards. `clock()` is the
 // processor time this process has used, which is not that: a program that waits
 // for anything reads a clock that stopped, and `make time` was measuring how
-// busy the processor had been rather than how long a frame took. Where the
-// platform has a monotonic clock this uses it; where it does not, it says so by
-// falling back to the one C itself has, which is a wall clock and can go
-// backwards. See D935.
+// busy the processor had been rather than how long a frame took. See D935.
+//
+// Every platform this is built for has a real monotonic clock and this reads
+// it: `QueryPerformanceCounter` on Windows, `CLOCK_MONOTONIC` elsewhere. There
+// is no third case. A wall clock is not a monotonic clock and `clock()` is
+// neither, so neither is written here under that name — a fallback that is not
+// what the function says it is is worse than a platform that will not build,
+// because a build that will not build is read by whoever ports it and a clock
+// that goes backwards is read by nobody until a frame time comes out negative.
+// See D970.
 static int64_t host_microseconds(void) {
-#if defined(CLOCK_MONOTONIC)
+#if defined(_WIN32)
+    // The counter is a count of ticks and the frequency is fixed while the
+    // system is running, so it is asked for once. Seconds and remainder are
+    // taken apart before scaling, because ticks times a million overflows a
+    // signed 64-bit count after about two and a half hours at 10 MHz.
+    static LARGE_INTEGER per_second;
+    if (per_second.QuadPart == 0 && !QueryPerformanceFrequency(&per_second)) {
+        return 0;
+    }
+    LARGE_INTEGER now;
+    if (!QueryPerformanceCounter(&now)) {
+        return 0;
+    }
+    int64_t ticks = (int64_t)now.QuadPart;
+    int64_t rate = (int64_t)per_second.QuadPart;
+    return ticks / rate * 1000000 + ticks % rate * 1000000 / rate;
+#else
     struct timespec at;
     if (clock_gettime(CLOCK_MONOTONIC, &at) == 0) {
         return (int64_t)at.tv_sec * 1000000 + at.tv_nsec / 1000;
     }
+    return 0;
 #endif
-#if defined(TIME_UTC)
-    struct timespec utc;
-    if (timespec_get(&utc, TIME_UTC) == TIME_UTC) {
-        return (int64_t)utc.tv_sec * 1000000 + utc.tv_nsec / 1000;
-    }
-#endif
-    return (int64_t)clock() * 1000000 / CLOCKS_PER_SEC;
 }
 
 static void host_clock(KestValue *frame, KestRuntime *runtime, void *context) {

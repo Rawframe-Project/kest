@@ -106,14 +106,29 @@ static char *read_file(KestArena *arena, const char *path, size_t *length) {
     return text;
 }
 
+// What a byte in a path means. A separator is the one thing about a path that
+// belongs to the platform rather than to the program, and D953 said a port
+// changes this and nothing else in this file. This is that port: on Windows a
+// path is separated by either byte and a name may hold neither, so both are
+// read; everywhere else a backslash is a character a filename may have and
+// reading it as a separator would cut a name in half. What is *written* is
+// always `/`, which every platform this builds on accepts. See D970.
+#if defined(_WIN32)
+#define KEST_PATH_SEPARATOR(c) ((c) == '/' || (c) == '\\')
+#else
+#define KEST_PATH_SEPARATOR(c) ((c) == '/')
+#endif
+
 // Where the last separator in a path is, or NULL. Every reading of a path in
-// this file goes through it, because what a separator is is the one thing about
-// a path that belongs to the platform rather than to the program. This is
-// written for the one this is built and run on, where it is `/` and a backslash
-// is a character a filename may hold. A port to a platform where that is not
-// true changes this and nothing else in this file. See D953.
+// this file goes through it.
 static const char *last_separator(const char *path) {
-    return strrchr(path, '/');
+    const char *found = NULL;
+    for (const char *at = path; *at != '\0'; at++) {
+        if (KEST_PATH_SEPARATOR(*at)) {
+            found = at;
+        }
+    }
+    return found;
 }
 
 // The directory a path is in, with its separator, or an empty string.
@@ -227,19 +242,19 @@ static const char *tidied(KestArena *arena, const char *path) {
     }
     size_t used = 0;
     for (size_t i = 0; i < length;) {
-        if (path[i] == '/' && used > 0 && out[used - 1] == '/') {
+        if (KEST_PATH_SEPARATOR(path[i]) && used > 0 && out[used - 1] == '/') {
             i++;
             continue;
         }
-        if (path[i] == '.' && path[i + 1] == '/' &&
+        if (path[i] == '.' && KEST_PATH_SEPARATOR(path[i + 1]) &&
             (used == 0 || out[used - 1] == '/')) {
             i += 2;
             continue;
         }
         // `a/b/../c` is `a/c`, and `../c` at the front is left as it is
         // because there is nothing above it to take away.
-        if (path[i] == '.' && path[i + 1] == '.' && path[i + 2] == '/' &&
-            used > 1) {
+        if (path[i] == '.' && path[i + 1] == '.' &&
+            KEST_PATH_SEPARATOR(path[i + 2]) && used > 1) {
             size_t back = used - 1;
             while (back > 0 && out[back - 1] != '/') {
                 back--;
@@ -252,7 +267,10 @@ static const char *tidied(KestArena *arena, const char *path) {
                 continue;
             }
         }
-        out[used++] = path[i++];
+        // A separator is written the one way, so that two spellings of one
+        // path are one name here however the platform let them be typed.
+        out[used++] = KEST_PATH_SEPARATOR(path[i]) ? '/' : path[i];
+        i++;
     }
     out[used] = '\0';
     return out;
