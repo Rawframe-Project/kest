@@ -727,13 +727,18 @@ bool kest_needs_when(KestBuild *build, KestLimits *least, KestReason *why);""",
         "file": "include/kest.h",
         "from": r"""bool kest_bound(KestBuild *build, uint32_t frames, KestLimits *most,
                 KestReason *why);""",
-        "to": r"""bool kest_bound(KestBuild *build, int32_t frames, KestLimits *most,
+        "to": r"""bool kest_bound(KestBuild *build, size_t frames, KestLimits *most,
                 KestReason *why);""",
+        # The definition comes with it, and so does the one line under it that
+        # the width reaches: a hole that leaves a tree which will not build is
+        # a hole nothing can be seen catching. The two edits are one quotation
+        # because `also` takes one.
         "also": ["src/build.c",
                  """bool kest_bound(KestBuild *build, uint32_t frames, KestLimits *most,
                 KestReason *why) {""",
-                 """bool kest_bound(KestBuild *build, int32_t frames, KestLimits *most,
-                KestReason *why) {"""],
+                 """bool kest_bound(KestBuild *build, size_t frames, KestLimits *most,
+                KestReason *why) {
+    (void)0;"""],
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "caught": "and one is the other with a ceiling on frames",

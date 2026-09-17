@@ -577,7 +577,7 @@ bool kest_bound(KestBuild *build, uint32_t frames, KestLimits *most,
         return false;
     }
     most->heap_bytes = 0;
-    most->call_depth = frames == 0 ? KEST_CALL_DEPTH : frames;
+    most->call_depth = frames == 0 ? KEST_CALL_DEPTH : (uint32_t)frames;
     most->stack_slots = a_chain_of(walked->widest, walked->in_a_turn,
                                    walked->off_the_turns, most->call_depth);
     return true;

@@ -33,11 +33,20 @@ expect() {
     file=$1
     command=$2
     pattern=$3
+    # A name of this call's own where there is one. The sweep runs eight of
+    # these at once and `mine` is what each of them was given; two runs writing
+    # to one file is the thing that made a check fail one time in six for no
+    # reason anybody could see. A call outside the sweep has no `mine` and is
+    # the only one running, so it may share.
+    # Beside the sweep's room rather than in it: what is in that directory is
+    # counted and read back, so a file of this call's own left there is a file
+    # the count does not expect.
+    said_in=$scratch/cmd${mine:+-${mine##*/}}
 
-    out=$("$kest" "$command" "$file" 2>"$scratch"/cmd-err)
+    out=$("$kest" "$command" "$file" 2>"$said_in".err)
     status=$?
     if [ $status -ne 0 ]; then
-        if [ ! -s "$scratch"/cmd-err ]; then
+        if [ ! -s "$said_in".err ]; then
             complain "$command $file: failed and said nothing"
         fi
         return
@@ -51,8 +60,8 @@ expect() {
     # command that worked says nothing there. A reader who has to tell the
     # answer from the complaints by reading them is a reader a pipe cannot
     # be. See D585.
-    if [ -s "$scratch"/cmd-err ]; then
-        said_anyway=$(head -1 "$scratch"/cmd-err)
+    if [ -s "$said_in".err ]; then
+        said_anyway=$(head -1 "$said_in".err)
         complain "$command $file: worked and said $said_anyway"
         return
     fi
@@ -61,8 +70,8 @@ expect() {
     # pipe nobody is reading fails -- which is a check refusing for a reason
     # that has nothing to do with what it checks. It is a race, so it showed on
     # another machine and not on this one.
-    printf '%s' "$out" > "$scratch"/cmd-out
-    if ! grep -qE "$pattern" "$scratch"/cmd-out; then
+    printf '%s' "$out" > "$said_in".out
+    if ! grep -qE "$pattern" "$said_in".out; then
         complain "$command $file: printed nothing matching /$pattern/"
     fi
 }
