@@ -60,9 +60,13 @@ The mission's order. `/home/kest/mission/STATE.md` carries which one is open.
                                               built the second backend and
                                               measured it: 1.35 times
                                               slower, so keep the stack one
-    6 a determinism profile that is true  done   D941, D942, D943
+    6 a determinism profile that is true  done   D941, D942, D943, and asked
+                                              again after the three changes
+                                              under it: D968
     7 identity, schema, reload         done   D945 to D949
-    8 host reality and portability     done   D949 to D953
+    8 host reality and portability     done   D949 to D953, and D969 for
+                                              what a clock is where there
+                                              is no monotonic one
     9 machine-readable surface         done   D947
     10 documentation and the v1 boundary
 

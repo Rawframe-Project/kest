@@ -43,7 +43,9 @@ out generation-checked `ref<T>`; enums that carry values; sets of bits;
 optionals; functions as values; one body written for many types, a copy
 compiled per set; `defer`; `match`; `for` and `while`; the `no.alloc`,
 `no.host` and `deterministic` promises, proved by the compiler rather than
-trusted; a bytecode VM of 155 instructions; diagnostics with stable codes,
+trusted; a `scratch { }` block whose working memory goes back where it was, and
+which the compiler proves nothing escapes from; a bytecode VM of 157
+instructions; diagnostics with stable codes,
 spans, notes, suggested fixes and `--json`, all of a file's mistakes in one
 pass, with the shape of every object a command writes versioned; one canonical
 source form and a formatter that holds it; a C embedding API of 70 doors
@@ -71,12 +73,7 @@ evidence this project does not have.
 
 **Not implemented.** Live code replacement in a running machine: a host reloads
 by building again and starting a new machine, and moving the world across is the
-host's, through a save the program writes. A `scratch { }` the compiler proves
-nothing escapes from; what there is instead is the host marking the heap and
-putting it back, with the rule written down rather than proved. A resolved
-per-instance representation, which is what a second backend would read — the
-stack backend stays for v1 and D958 says what the measurement predicts of the
-other one. Cross-platform bitwise determinism for `sin`, `cos`, `pow` and
+host's, through a save the program writes. Cross-platform bitwise determinism for `sin`, `cos`, `pow` and
 `atan2`: they are the host's libm and two platforms may round them differently,
 where `sqrt`, `floor`, `ceil` and all integer and `f32`/`f64` arithmetic are
 exactly specified and do not have that problem. `no.host` is not determinism —
@@ -99,11 +96,11 @@ repaired, with an ABI that is still moving.
 **Alpha** wants the defects reproduced in `docs/state.md` fixed — they are — a
 resolved representation in use, a bounded story for temporary memory, a backend
 chosen at semantic parity, a real host example, and the deterministic profile
-implemented on a tested platform. Four of those six are here: the repairs
-(D927–D939), the memory story (D940, D954, D956, D957), the host
-(`examples/engine.c`, D949) and the profile (D941–D943, answered by a run). The
-two that are not are one thing: the resolved representation (D959), which the
-backend decision stands on (D958).
+implemented on a tested platform. All six are here: the repairs (D927–D939), the
+resolved bodies the backend reads (D962), the memory story (D940, D954, D956,
+D957, and D966 and D967 for a world whose text changes), the backend chosen by
+building the other one and weighing it (D963), the host (`examples/engine.c`,
+D949) and the profile (D941–D943, answered by a run and asked again in D968).
 
 **Beta** wants a second platform built and tested, an ABI stabilisation
 candidate, versioned tooling output, host-mediated migration validated, and a
