@@ -9,7 +9,15 @@
 #endif
 
 #if defined(_WIN32)
-#include <windows.h>
+// Two doors out of the platform, declared here rather than by including
+// `<windows.h>`. That header defines `near` and `far` as nothing -- names from
+// a memory model this machine has not had for thirty years and names this file
+// uses -- and brings in some tens of thousands of lines for two functions. The
+// types are what the platform documents: `BOOL` is `int`, `WINAPI` is
+// `__stdcall`, and a `LARGE_INTEGER` is a union whose whole is a signed
+// sixty-four-bit count, which is what is read out of it. See D970.
+__declspec(dllimport) int __stdcall QueryPerformanceCounter(long long *count);
+__declspec(dllimport) int __stdcall QueryPerformanceFrequency(long long *rate);
 #endif
 
 #include <errno.h>
@@ -551,16 +559,16 @@ static int64_t host_microseconds(void) {
     // system is running, so it is asked for once. Seconds and remainder are
     // taken apart before scaling, because ticks times a million overflows a
     // signed 64-bit count after about two and a half hours at 10 MHz.
-    static LARGE_INTEGER per_second;
-    if (per_second.QuadPart == 0 && !QueryPerformanceFrequency(&per_second)) {
+    static long long per_second;
+    if (per_second == 0 && !QueryPerformanceFrequency(&per_second)) {
         return 0;
     }
-    LARGE_INTEGER now;
+    long long now = 0;
     if (!QueryPerformanceCounter(&now)) {
         return 0;
     }
-    int64_t ticks = (int64_t)now.QuadPart;
-    int64_t rate = (int64_t)per_second.QuadPart;
+    int64_t ticks = (int64_t)now;
+    int64_t rate = (int64_t)per_second;
     return ticks / rate * 1000000 + ticks % rate * 1000000 / rate;
 #else
     struct timespec at;

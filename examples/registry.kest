@@ -1,0 +1,209 @@
+module examples.registry
+
+import std.io
+
+// The same `store<T>` and `ref<T>` a world of entities is made of, asked of
+// something that is not a game: a registry of assets, each naming the ones it
+// is built from. What a build system, a package manager and an asset pipeline
+// all have is this shape — things with identities, things naming other things,
+// things going away while something still points at them — and whether the
+// language's one answer to identity is general or is a game feature wearing a
+// general name is a question with a program in it rather than an argument.
+//
+// What it holds to: a name is found again, a dependency that was deleted reads
+// as nothing rather than as whoever took its place, a cycle is found rather
+// than walked for ever, and what is built is built after what it is built from.
+// See D975.
+
+const MOST: i32 = 64
+
+// One asset. `from` is what it is built out of, and a reference in it may name
+// something that has been taken out of the registry since — which is the whole
+// reason a reference is checked rather than followed.
+struct Asset {
+    name: text
+    // What it is built from, in the order somebody wrote them down. A run of
+    // references is held in step with nothing: each is checked where it is
+    // read, so a hole in the middle is a hole and not a fault.
+    from: [ref<Asset>]
+    // What a build wrote, or nothing. Enough to tell built from not built
+    // without this example growing a build system.
+    built: bool
+}
+
+fn named(registry: store<Asset>, wanted: text) -> ref<Asset>? no.alloc no.host {
+    for r in registry {
+        if let one = get(registry, r) {
+            if one.name == wanted {
+                return r
+            }
+        }
+    }
+    return none
+}
+
+// Whether everything this is built from is built, which is the one question a
+// build asks. A reference naming something that is gone answers `false`, and
+// says so by being a reference that resolves to nothing rather than by a flag
+// beside it.
+fn ready(registry: store<Asset>, which: ref<Asset>) -> bool no.alloc no.host {
+    if let one = get(registry, which) {
+        for r in one.from {
+            if let before = get(registry, r) {
+                if !before.built {
+                    return false
+                }
+            } else {
+                return false
+            }
+        }
+        return true
+    }
+    return false
+}
+
+// How deep the chain under something goes, or nought where it comes back round
+// to itself. A registry with a cycle in it is a registry somebody wrote wrongly
+// and the answer is a number rather than a program that does not end: the walk
+// is bounded by how many there are, which is what makes a cycle findable
+// without keeping a mark on every one of them.
+fn depth(registry: store<Asset>, which: ref<Asset>, left: i32) -> i32 no.alloc no.host {
+    if left <= 0 {
+        return 0 - 1
+    }
+    if let one = get(registry, which) {
+        let deepest = 0
+        for r in one.from {
+            let under = depth(registry, r, left - 1)
+            if under < 0 {
+                return under
+            }
+            if under + 1 > deepest {
+                deepest = under + 1
+            }
+        }
+        return deepest
+    }
+    return 0
+}
+
+// One pass of a build: everything whose dependencies are all built becomes
+// built. Repeated until nothing changes, which is the whole of what a topological
+// order is when the thing doing it does not need the order written down.
+fn pass(registry: store<Asset>) -> i32 no.alloc no.host {
+    let done = 0
+    for r in registry {
+        if let one = get(registry, r) {
+            if !one.built && ready(registry, r) {
+                let changed = one
+                changed.built = true
+                set(registry, r, changed)
+                done += 1
+            }
+        }
+    }
+    return done
+}
+
+fn add_asset(registry: store<Asset>, name: text, from: [ref<Asset>]) -> ref<Asset> {
+    return add(registry, Asset(name, from, false))
+}
+
+fn main() -> i32 {
+    let registry: store<Asset> = store(MOST)
+
+    let none_of_them: [ref<Asset>] = array()
+    let font = add_asset(registry, "font", none_of_them)
+    let atlas_from: [ref<Asset>] = array()
+    push(atlas_from, font)
+    let atlas = add_asset(registry, "atlas", atlas_from)
+    let screen_from: [ref<Asset>] = array()
+    push(screen_from, atlas)
+    push(screen_from, font)
+    let screen = add_asset(registry, "screen", screen_from)
+
+    // A name is found again, which is the least a registry does.
+    if named(registry, "atlas") == none {
+        return 1
+    }
+    if named(registry, "shader") != none {
+        return 2
+    }
+
+    // Nothing is built and the deepest chain is two.
+    if ready(registry, screen) {
+        return 3
+    }
+    if depth(registry, screen, MOST) != 2 {
+        return 4
+    }
+
+    // Built in order, and a pass that builds nothing is where it stops.
+    let rounds = 0
+    let built = 0
+    while true {
+        let did = pass(registry)
+        if did == 0 {
+            break
+        }
+        built += did
+        rounds += 1
+        if rounds > MOST {
+            return 5
+        }
+    }
+    // Three built, and in no more passes than there are of them. How many it
+    // takes depends on what order a store walks in, and what this holds is
+    // that everything is built and that a pass building nothing is the end --
+    // not an order nothing promises.
+    if built != 3 || rounds < 1 || rounds > 3 {
+        return 6
+    }
+    if !ready(registry, screen) {
+        return 7
+    }
+
+    // And the part a registry has that a list has not: something goes away
+    // while something else still names it. What `screen` holds is a reference
+    // to a place, and the place is handed out again to somebody else — so the
+    // reference reads as nothing rather than as whoever is there now, which is
+    // what makes taking things out of a live registry safe at all.
+    remove(registry, atlas)
+    if ready(registry, screen) {
+        return 8
+    }
+    let again = add_asset(registry, "atlas.v2", none_of_them)
+    if get(registry, atlas) != none {
+        return 9
+    }
+    if ready(registry, screen) {
+        return 10
+    }
+    if let one = get(registry, again) {
+        if one.name != "atlas.v2" {
+            return 11
+        }
+    } else {
+        return 12
+    }
+
+    // A cycle is a number rather than a walk that does not end.
+    let looping: [ref<Asset>] = array()
+    let first = add_asset(registry, "a", looping)
+    let second_from: [ref<Asset>] = array()
+    push(second_from, first)
+    let second = add_asset(registry, "b", second_from)
+    if let one = get(registry, first) {
+        let changed = one
+        let back: [ref<Asset>] = array()
+        push(back, second)
+        changed.from = back
+        set(registry, first, changed)
+    }
+    if depth(registry, first, MOST) >= 0 {
+        return 13
+    }
+
+    io.print("{len(registry)} assets, built in {rounds} pass(es), and a deleted one reads as nothing")
+    return 0
+}

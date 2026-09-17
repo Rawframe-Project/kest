@@ -3598,11 +3598,9 @@ for file in "$@"; do""",
         # is not there.
         "what": "a version that says its name and refuses",
         "file": "src/main.c",
-        "from": r"""        printf("kest %s%s\n", kest_version(),
-               kest_checked() ? " checked" : "");
+        "from": r"""               (unsigned)KEST_JSON_SCHEMA, named, profile);
         return 0;""",
-        "to": r"""        printf("kest %s%s\n", kest_version(),
-               kest_checked() ? " checked" : "");
+        "to": r"""               (unsigned)KEST_JSON_SCHEMA, named, profile);
         return 1;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
@@ -12945,9 +12943,12 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # rather than a person, and what a tool does with nothing is carry on.
         "what": "a version that says nothing",
         "file": "src/main.c",
-        "from": """        printf("kest %s%s\\n", kest_version(),
-               kest_checked() ? " checked" : "");""",
-        "to": """        printf("%s", kest_checked() ? "" : "");""",
+        "from": """        printf("kest %s%s, abi %u, json %u, profile %s %u\\n", kest_version(),
+               kest_checked() ? " checked" : "", kest_abi_version(),
+               (unsigned)KEST_JSON_SCHEMA, named, profile);""",
+        "to": """        printf("%s", kest_checked() ? "" : "");
+        (void)named;
+        (void)profile;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/world.kest"],

@@ -30431,3 +30431,57 @@ number goes up when an operation's answer changes for the same input.
 `kest --version` prints all four, because a person filing a report and a script
 deciding whether to run both need them and there is no reason to make them ask
 twice. *Argued.*
+
+## D975. `store<T>` and `ref<T>` stay compiler-aware, and what a reference is
+
+Section 12 of the completion mission asks where `store/ref` belongs — language
+core, compiler-aware runtime, or ordinary library — and says not to leave the
+placement ambiguous.
+
+**It stays compiler-aware, and the reason is the promises.** A store is not a
+container the language could be indifferent to: `no.alloc` has to know that
+`get` and `set` reach nothing and that `add` reaches the heap, `deterministic`
+has to know what order a walk goes in, the layout a host reads has to know how
+wide a `ref<T>` is, and the escape pass of D966 has to know that `add` grows
+something. An ordinary library could provide a generation-checked handle — it
+is a number and an array — and it could not provide any of those. What it also
+could not provide is the refusal: a handle used as something it is not is
+caught because the machine knows what a handle is.
+
+What is *not* in the language is any policy about what a store is for. There is
+no entity, no component, no system, no archetype. `examples/registry.kest` is
+the same store and the same reference holding assets that name what they are
+built from — found by name, built in passes, one deleted while another still
+points at it, and a cycle answered with a number rather than walked for ever.
+It uses nothing `colony.kest` does not.
+
+**What a reference is made of, as a policy rather than as an implementation.**
+Sixty-four bits: sixteen of world, twenty-four of stamp, twenty-four of place.
+The world is the machine's, so a reference from another machine is refused
+before anything is read — which is the defect F9 was. The stamp is the
+machine's own counter, so a place handed out again carries a stamp nothing else
+in that machine has: two stores of one machine cannot confuse a place, which a
+per-slot generation would allow, because every store of one machine shares the
+world. The place is which slot.
+
+**Rollover is refused, not wrapped.** A machine that has handed out 16,777,215
+places says `K0630` and stops. That is the exhaustion rule section 12 asks for
+rather than "practically unlikely": the count cannot wrap, so a stale reference
+cannot become a live one. `check-ceilings.sh` lowers the ceiling in a copy of
+the tree and watches the refusal happen, so it is a message somebody has seen.
+What it costs is that a machine which adds to stores sixteen million times has
+to be restarted; what it buys is that no reference is ever wrong.
+
+**Never write the bits down.** A reference is the runtime's and means nothing
+outside the machine that made it — a different run has a different world and a
+different stamp. A save writes the program's own durable identity for a thing
+and reads it back into whatever reference the new machine hands out, which is
+what `examples/engine.c` does across a reload. Nothing in the header hands a
+host the parts of a reference, and nothing should.
+
+**Iteration.** A walk of a store goes over live places in ascending slot order,
+which is what makes it deterministic; a place taken out during a walk is not
+visited afterwards and a place added during one may or may not be, so a program
+that adds while walking collects and adds after. That is the rule, and the
+order is the one `deterministic` promises. *Argued*, on `registry.kest` and
+`colony.kest`.

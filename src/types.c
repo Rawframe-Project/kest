@@ -27,7 +27,12 @@ double kest_left_over(double left, double right) {
     // A nought to divide by, either side not a number, or an infinity being
     // divided: C answers all of those with what is not a number, and this is
     // where a float differs from a whole number, which stops instead.
-    double nothing = 0.0;
+    // `volatile`, because the division is the point: a compiler that folds it
+    // says "potential divide by 0" about the one place here that means to, and
+    // a warning about what was written on purpose is a warning nobody reads.
+    // There is no `NAN` to reach for -- the library is libc and this file does
+    // not include `<math.h>` for one constant. See D970.
+    volatile double nothing = 0.0;
     if (left != left || right != right || right == 0.0 ||
         left - left != 0.0) {
         return nothing / nothing;

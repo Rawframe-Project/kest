@@ -5007,6 +5007,7 @@ here, is a check that fails.
 | `math.kest` | a loop, a chain of `if`, and a function that answers with text |
 | `numbers.kest` | what a number does at the end of its range, at every width |
 | `parse.kest` | reading a line of fields out of the standard library |
+| `registry.kest` | the same store and reference asked of assets naming what they are built from, which is not a game |
 | `physics.kest` | helpers that take and return vectors, called from a hot path |
 | `pieces.kest` | text built a piece at a time, which is built as bytes |
 | `player.kest` | a struct is a value, so a function changes its own copy |
