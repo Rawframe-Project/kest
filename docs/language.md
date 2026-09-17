@@ -4384,6 +4384,23 @@ going round or going deeper — and a budget on them bounds every program that
 would not stop. What it does not bound is a long body with no loop in it, which
 the program's own size bounds.
 
+And a step is charged for work as well as for going round, because some
+instructions do as much of it as the program asked for. Joining two pieces of
+text, making text out of bytes, cutting a piece out of one, asking how long one
+is, putting two of them in order, filling a run of something, making room for
+one, and the push or the add that has to copy what is already there: each costs
+a unit for every sixty-four bytes or elements it touched, on top of the one the
+instruction itself costs. Without that a program can spend a second inside one
+instruction without spending a unit of its budget, which is the whole of what a
+budget is for. The ones that are already a loop in Kest — sorting, joining a
+list — are charged as the loop they are.
+
+What a program pays is what it did rather than what it holds: `slice` is charged
+for the part it walked to and not for the rest of the text, an array made with
+`array(n, v)` is charged once for its `n`, and a `push` that could grow where it
+stood pays nothing for the growth. A program that says how many there will be
+pays for them once.
+
 It is a count and not a duration, so two machines given the same budget stop at
 the same place. A `for` over a thousand costs 999 steps, because the thousandth
 turn does not go back; a `while` over a thousand costs 1000; and `f(50)` calling
@@ -4397,6 +4414,19 @@ carry on from the middle of the call that stopped: that call returned.
 frame reads after a tick to learn what that tick cost, and a machine with no
 budget answers it with every bit set rather than with nought — nought is what a
 machine that has run out says, and those are opposite things.
+
+What a host's own doors cost the program is the host's to say. A bound function
+may read a file, walk a scene or ask another system something, and the machine
+sees a call and a value: `kest_fuel_spend` is where a host charges for it, in
+the same units and at the same rate the machine charges its own instructions —
+one for the crossing and one for every sixty-four bytes or elements of what the
+door did. It is called from inside the bound function, where the program's
+budget is whole, because the slice the machine was spending is given back before
+a door is entered. A host that spends more than is left does not stop the call
+it is inside — that call is the host's and the machine is not running — but the
+machine stops at the next step the program takes, with the refusal a budget
+spent any other way gives. `examples/engine.c` charges for the door it watches
+the world through.
 
 `kest_cancel` is the other half and costs the same nothing — a host that wants a
 running program to stop for a reason that is not a budget sets it and the

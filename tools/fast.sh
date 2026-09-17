@@ -154,6 +154,19 @@ fn main() -> i32 {
     return 0
 }
 KEST
+# And the work an instruction does that is not a step. This one takes four
+# steps and copies four hundred thousand bytes, which is what a budget that
+# only counted steps could not see at all. See D950.
+cat >"$scratch"/weighs.kest <<'KEST'
+module weighs
+
+fn main() -> i32 {
+    let out: [u8] = array(200000, u8(65))
+    let big = text(out)
+    let joined = "{big}{big}"
+    return len(joined) - 400000
+}
+KEST
 if ./kest run --fuel 2000 "$scratch"/spin.kest >"$scratch"/spun 2>&1 </dev/null; then
     say fuel "a program with a loop that never ends ran to the end"
     failed=1
@@ -170,8 +183,17 @@ elif ! ./kest run --fuel 1000 "$scratch"/turns.kest >/dev/null 2>&1 </dev/null; 
 elif ./kest run --fuel 999 "$scratch"/turns.kest >/dev/null 2>&1 </dev/null; then
     say fuel "a thousand turns ran inside nine hundred and ninety-nine steps"
     failed=1
+elif ./kest run --fuel 100 "$scratch"/weighs.kest >/dev/null 2>&1 </dev/null; then
+    say fuel "four hundred thousand bytes of text were copied inside a \
+hundred steps"
+    failed=1
+elif ! ./kest run --fuel 40000 "$scratch"/weighs.kest >/dev/null 2>&1 \
+        </dev/null; then
+    say fuel "the same work would not run inside forty thousand"
+    failed=1
 else
-    say fuel "a loop that never ends stops, and a budget is a number"
+    say fuel "a loop that never ends stops, a budget is a number, and work is \
+charged for"
 fi
 
 # The boundary. `examples/embed` is the other host in this tree and it runs the

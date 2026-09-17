@@ -986,6 +986,9 @@ asking       a host asking what came back before anything came back, and
              every copy of one body walked to the end
 returns      files written on the spot: line endings, noughts inside text,
              and a promise around a `defer`
+budget       a loop that never ends stopping, a thousand turns costing a
+             thousand steps and not nine hundred and ninety-nine, and work
+             an instruction does that is not a step being charged for
 keywords     every word this language keeps written into every place a name
              belongs, refused in a moment rather than never
 promises     every function that can keep a promise saying so: all of the

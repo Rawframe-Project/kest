@@ -59,6 +59,11 @@ static Engine *driving = NULL;
 static void engine_watch(KestValue *frame, KestRuntime *runtime,
                          void *context) {
     (void)context;
+    // What this door costs the program. The machine cannot see anything a host
+    // does, so a budget that is not told about it is a budget with a hole in
+    // it the size of every crossing. This one walks the world it is watching,
+    // so it charges for what that came to.
+    kest_fuel_spend(runtime, BODIES * sizeof(float));
     frame[0].integer = 0;
     if (driving == NULL || driving->round < 0) {
         return;

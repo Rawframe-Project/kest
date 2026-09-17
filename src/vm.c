@@ -2176,6 +2176,13 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
 // waits for, and the cold half then costs a thousandth of nothing.
 #define FUEL_SLICE 1024u
 
+// What work costs, where an instruction does as much of it as the program
+// asked for: a unit for every this many bytes or elements. It is a divisor
+// rather than a rate so that work and steps are counted in one currency, and
+// it is here rather than inside the loop because a host spends at the same
+// rate through `kest_fuel_spend`. See D950.
+#define FUEL_PER_UNIT 64u
+
 // The next slice, or nought for a run that is over. Nought means one of two
 // things and the flag beside the counter is what says which: a host that asked
 // this program to stop, or a budget that is spent.
@@ -2298,6 +2305,31 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }                                                                      \
         slice--;                                                               \
     } while (0)
+// And a step for work one instruction does that is not one step. Copying a
+// piece of text, filling a run of something, making room for it: a single
+// opcode there does as much work as the program asked for, and a budget that
+// counted a megabyte copy as one step is a budget a program can spend a second
+// inside without spending a unit of. One unit per FUEL_PER_UNIT bytes or
+// elements, on top of the one the instruction itself costs.
+//
+// Charged where the amount is known, which for a piece of text this had to
+// read is after reading it: a budget may go over by one instruction's work and
+// not by more, and the alternative is measuring everything twice. See D950.
+#define SPEND_WORK(work)                                                       \
+    do {                                                                       \
+        if (rt->fuel_bounded) {                                                \
+            uint64_t owed = (uint64_t)(work) / FUEL_PER_UNIT;                  \
+            while (owed > slice) {                                             \
+                owed -= slice;                                                 \
+                slice = take_fuel(rt);                                         \
+                if (slice == 0) {                                              \
+                    frame->ip = ip;                                            \
+                    return stopped_here(vmp, rt, frame, instruction);          \
+                }                                                              \
+            }                                                                  \
+            slice -= owed;                                                     \
+        }                                                                      \
+    } while (0)
 #define READ_BYTE() (*ip++)
 #define READ_U16()                                                             \
     (ip += 2, (uint16_t)(ip[-2] | ((uint16_t)ip[-1] << 8)))
@@ -2305,6 +2337,26 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     // One macro per storage class rather than thirty near-identical cases.
     // The operands are already the right kind: the compiler chose which
     // instruction this is by reading the type the checker resolved.
+// How far two pieces of text had to be read to be put in order, which is what
+// comparing them costs: it stops at the first byte that differs, so two long
+// ones that differ early are cheap and two long ones that are the same are
+// not. Counted rather than left to `strcmp`, because what is charged for has
+// to be what was done. See D950.
+#define TEXT_ORDER(test)                                                       \
+    do {                                                                       \
+        KestValue right = *--top;                                              \
+        KestValue left = *--top;                                               \
+        size_t read = 0;                                                       \
+        while (left.text[read] != '\0' &&                                      \
+               left.text[read] == right.text[read]) {                          \
+            read++;                                                            \
+        }                                                                      \
+        int order = (int)(unsigned char)left.text[read] -                      \
+                    (int)(unsigned char)right.text[read];                      \
+        (top++)->integer = (test);                                             \
+        SPEND_WORK(read);                                                      \
+    } while (0)
+
 #define BINARY_I(field, expression)                                            \
     do {                                                                       \
         KestValue right = *--top;                                              \
@@ -2474,6 +2526,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
             const KestLayout *layout = &module->layouts[of_which];
+            SPEND_WORK((uint64_t)count);
             Array *array = kest_arena_alloc(rt->heap, sizeof(Array), 16);
             unsigned char *bytes = kest_arena_alloc(
                 rt->heap, (size_t)count * layout->size + 1, 16);
@@ -2510,6 +2563,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top -= layout->count;
             KestValue *fill = top;
             int64_t count = (--top)->integer;
+            SPEND_WORK(count < 0 ? 0 : (uint64_t)count);
             if (count < 0) {
                 fail(vmp, frame, instruction, "K0604",
                      "an array cannot have %lld elements", (long long)count);
@@ -2561,6 +2615,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             const KestLayout *layout = &module->layouts[of_which];
             int64_t wanted = (--top)->integer;
             void *given = (--top)->object;
+            SPEND_WORK(wanted < 0 ? 0 : (uint64_t)wanted);
             // The two things in this language that grow, through the one
             // instruction: a store is made with room by `store(n)` and an
             // array by `array(n, v)`, and this is the same sentence said to
@@ -2679,6 +2734,11 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                         memcpy(bytes, array->bytes,
                                (size_t)array->length * layout->size);
                     }
+                    // What that copy cost. Only the push that could not grow
+                    // where it stood pays it: the one that could moved
+                    // nothing, and a program that says how many there will be
+                    // never arrives here at all. See D950.
+                    SPEND_WORK((uint64_t)array->length);
                     // The handle is the header, and the header is what moved
                     // nothing, so every reference to this array sees the
                     // growth.
@@ -2892,6 +2952,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
         case KEST_OP_NEW_STORE: {
             int64_t room = (--top)->integer;
+            SPEND_WORK(room < 0 ? 0 : (uint64_t)room);
             if (room < 0) {
                 fail(vmp, frame, instruction, "K0604",
                      "a store cannot have room for %lld", (long long)room);
@@ -2940,6 +3001,11 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                          "this store holds %d, which is all `len` can count",
                          MAX_COUNTED);
                     return false;
+                }
+                // What a store that has to grow copies, charged before it
+                // does: four runs of what it holds. See D950.
+                if (store->used == store->capacity) {
+                    SPEND_WORK((uint64_t)store->used);
                 }
                 if (store->used == store->capacity &&
                     !grow_store(rt->heap, store)) {
@@ -3150,6 +3216,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                      length);
                 return false;
             }
+            SPEND_WORK(length);
             char *text = kest_arena_alloc(rt->heap, length + 1, 1);
             if (text == NULL) {
                 no_room(vmp, frame, instruction, rt);
@@ -3171,6 +3238,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_TEXT_FROM: {
             const Array *bytes = (--top)->object;
             HOLD(bytes, KEST_IS_ARRAY, "an array");
+            SPEND_WORK(bytes->length);
             char *text = kest_arena_alloc(rt->heap, bytes->length + 1, 1);
             if (text == NULL) {
                 no_room(vmp, frame, instruction, rt);
@@ -3237,9 +3305,12 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             (top++)->integer = instruction[0] == KEST_OP_EQ_VALUE ? same : !same;
             break;
         }
-        case KEST_OP_TEXT_LEN:
-            top[-1].integer = (int64_t)strlen(top[-1].text);
+        case KEST_OP_TEXT_LEN: {
+            size_t counted = strlen(top[-1].text);
+            top[-1].integer = (int64_t)counted;
+            SPEND_WORK(counted);
             break;
+        }
         case KEST_OP_TEXT_AT: {
             int64_t index = (--top)->integer;
             const char *text = (--top)->text;
@@ -3291,6 +3362,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
 #endif
             (top++)->integer = (unsigned char)text[index];
+            SPEND_WORK((uint64_t)index);
             break;
         }
         case KEST_OP_TEXT_SLICE: {
@@ -3307,6 +3379,9 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             while (seen < want && text[seen] != '\0') {
                 seen++;
             }
+            // What the walk above read, which is what this cut cost whether
+            // or not anything is copied after it.
+            SPEND_WORK((uint64_t)seen);
             if (from < 0 || count < 0 || seen < want) {
                 // Measured only to say so: a refusal names the length, and
                 // what it costs to say is paid by the run that is stopping.
@@ -3687,23 +3762,23 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             BINARY_I(integer, left.real != right.real);
             break;
         case KEST_OP_EQ_T:
-            BINARY_I(integer, strcmp(left.text, right.text) == 0);
+            TEXT_ORDER(order == 0);
             break;
         case KEST_OP_NE_T:
-            BINARY_I(integer, strcmp(left.text, right.text) != 0);
+            TEXT_ORDER(order != 0);
             break;
 
         case KEST_OP_LT_T:
-            BINARY_I(integer, strcmp(left.text, right.text) < 0);
+            TEXT_ORDER(order < 0);
             break;
         case KEST_OP_LE_T:
-            BINARY_I(integer, strcmp(left.text, right.text) <= 0);
+            TEXT_ORDER(order <= 0);
             break;
         case KEST_OP_GT_T:
-            BINARY_I(integer, strcmp(left.text, right.text) > 0);
+            TEXT_ORDER(order > 0);
             break;
         case KEST_OP_GE_T:
-            BINARY_I(integer, strcmp(left.text, right.text) >= 0);
+            TEXT_ORDER(order >= 0);
             break;
 
         case KEST_OP_NOT:
@@ -4652,6 +4727,18 @@ void kest_fuel_set(KestRuntime *runtime, uint64_t instructions) {
     // instruction and stop again saying somebody had asked it to.
     atomic_store_explicit(&runtime->cancel_asked, 0, memory_order_relaxed);
     runtime->stopped_for_fuel = false;
+}
+
+void kest_fuel_spend(KestRuntime *runtime, uint64_t work) {
+    if (runtime == NULL || !runtime->fuel_bounded) {
+        return;
+    }
+    // The same rate the machine charges itself at, so a host and a program are
+    // spending one currency: a unit for the crossing, and one for every
+    // sixty-four bytes or elements of what the door did. See D951.
+    uint64_t owed = 1 + work / FUEL_PER_UNIT;
+    runtime->fuel_left = runtime->fuel_left > owed ? runtime->fuel_left - owed
+                                                  : 0;
 }
 
 uint64_t kest_fuel_left(const KestRuntime *runtime) {

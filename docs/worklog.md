@@ -35645,3 +35645,34 @@ not bind, so `kest run` says that rather than that there was nothing to run.
 
 **Runs:** `make check`; `examples/engine` and `examples/engine-debug`, the
 second under the sanitisers.
+
+## What a budget could not see (D950, D951)
+
+A budget is spent at a jump that goes back and at a call, which bounds every
+program that would not stop and was the whole of what the machine charged for.
+`text(bytes)` over a megabyte is one instruction. So is joining two of them,
+asking how long one is, comparing two that are the same, and filling an array of
+a million — a program with a budget of ten could do all of them and have nine
+left.
+
+So the instructions that do as much work as the program asked for are charged by
+weight: a unit for every sixty-four bytes or elements they touched, on top of the
+one the instruction costs. What is charged is what was done — `slice` pays for
+the walk to where the cut ends and not for the rest, a comparison pays for the
+bytes it read before they differed, a `push` that could grow where it stood pays
+nothing, and a program that says how many there will be pays once.
+
+And the header was saying a unit was an instruction, which it has not been since
+D921. The reference had it right. The header is the file somebody embedding this
+reads, so that was the worse way round.
+
+The other half is the work the machine cannot see. A bound function may read a
+file or walk a scene and the machine sees a call and a value, so
+`kest_fuel_spend` is where a host charges for it, in the same units and at the
+same rate. `examples/engine.c` charges for the door it watches the world
+through.
+
+**Runs:** `make check`, which has a `budget` section now under both builds:
+a loop that never ends, a thousand turns inside a thousand steps and not nine
+hundred and ninety-nine, and four hundred thousand bytes of text that will not
+copy inside a hundred steps and will inside forty thousand.

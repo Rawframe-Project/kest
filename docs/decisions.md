@@ -29353,3 +29353,68 @@ it out if it is not asked.
 
 The gate builds and runs it under both builds beside the other host, and
 `check-dead.sh` counts it among the hosts the public header is held to.
+
+## D950: a budget is charged for work as well as for going round
+
+D921 put the budget where it costs nothing: a unit is spent at a jump that goes
+back and at a call, because those are the two things a program does to go on
+doing something, and checking at every instruction cost a sixth of everything.
+That bounds every program that would not stop. What it does not bound is an
+instruction that does as much work as the program asked for.
+
+`text(bytes)` over a megabyte is one instruction. So is joining two pieces of a
+megabyte, asking how long one is, comparing two that are the same, and filling
+an array of a million. A program with a budget of ten could do all of them and
+have nine left, which makes a budget something a host cannot rely on for the one
+thing it is for.
+
+So those instructions are charged by weight: a unit for every sixty-four bytes
+or elements they touched, on top of the one the instruction costs. The number is
+a divisor rather than a rate — it keeps the charge in the same units as the
+steps, and sixty-four is about where copying a byte and taking a step round a
+loop are worth arguing about on the machine this was written on.
+
+**What is charged is what was done.** `slice` walks to where the cut ends and is
+charged for that walk, not for the rest of the text — which is the same rule the
+walk itself follows. A comparison stops at the first byte that differs and is
+charged for the bytes it read, which is why it counts them rather than leaving
+it to `strcmp`. A `push` that could grow where it stood copied nothing and pays
+nothing; the one that had to move pays for what it moved. A program that says
+how many there will be pays once, at the `array(n, v)` or the `store(n)`, and
+never again.
+
+**And the header was saying something else.** It said a unit was an instruction
+and a budget of a thousand ran a thousand of them. The reference had it right
+and the header had it wrong, which is the worse way round: the header is the
+file somebody embedding this reads, and D921 was a year of being right in one
+document and wrong in the other. Both say the same thing now.
+
+What this does not do is make a budget a clock. Two machines given the same
+budget still stop in the same place, because what is counted is the program's
+work and not the machine's time.
+
+## D951: a host says what its own doors cost
+
+D950 made the machine charge for the work its own instructions do. The other
+half of that is the work it cannot see. A bound function may read a file, walk a
+scene, ask another system something and come back with a number, and what the
+machine knows about it is that a call went out and a value came back. A program
+that wanted to run for a second inside somebody else's budget only had to find a
+host door that did something.
+
+So `kest_fuel_spend` is the door a host charges through, in the same units the
+machine spends and at the same rate: one for the crossing and one for every
+sixty-four bytes or elements of what was done. One currency, because two would
+be a host guessing how many of its units are one of the machine's.
+
+It is called from inside the bound function, which is the only place a host
+knows what the work came to. That is also the place where the program's budget
+is whole: D929 gives the slice back before a door is entered, so what is spent
+here is spent against what the program has left rather than against a number the
+machine is still holding. A host that spends more than is left does not stop the
+call it is inside — that call is the host's and the machine is not running — and
+the machine stops at the next step the program takes.
+
+What it is not is a way for a host to bound itself. A door that takes a second
+takes a second whatever it charges; what this buys is that the program is told,
+which is what a budget is for.

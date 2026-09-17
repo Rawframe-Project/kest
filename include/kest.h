@@ -944,11 +944,18 @@ KestRefusal kest_heap_refused_by(const KestRuntime *runtime);
 void kest_allowed(const KestRuntime *runtime, KestLimits *limits);
 
 // Give this machine a budget, or take its budget away with
-// `KEST_FUEL_UNLIMITED`. One unit is one instruction: a budget of a thousand
-// runs a thousand instructions and then stops at the instruction that would
-// have been the thousand and first, which is the same number whatever machine
-// this is on — an instruction count is the program's and a duration is the
-// machine's.
+// `KEST_FUEL_UNLIMITED`. One unit is one step, and a step is a jump that goes
+// back or a call: those are the two things a program does to go on doing
+// something, and a budget on them bounds every program that would not stop.
+// On top of that, an instruction that does as much work as the program asked
+// for — joining text, filling a run of something, making room for one, reading
+// a piece of text to its end — costs a unit for every sixty-four bytes or
+// elements of it, because a budget that counted a megabyte copy as one step is
+// one a program can spend a second inside without spending a unit of.
+//
+// It is a count and not a duration, so two machines given the same budget stop
+// in the same place — what a step costs is the machine's and how many there
+// are is the program's. See D921 and D950.
 //
 // This is the door a host replenishes through. A machine that stopped for want
 // of fuel is not broken and is not finished: its stack, its heap and everything
@@ -961,6 +968,26 @@ void kest_allowed(const KestRuntime *runtime, KestLimits *limits);
 // functions; what it may not do is expect the call it is inside to see the new
 // budget, because that call is already spending the old one.
 void kest_fuel_set(KestRuntime *runtime, uint64_t instructions);
+
+// What a door of the host's cost the program, said by the host that knows.
+// A bound function may do as much work as it likes and the machine cannot see
+// any of it: what crossed out was a call and what comes back is a value. A host
+// that reads a file, walks a scene or asks another system something charges for
+// it here, in the same units the machine spends — a unit is a step, and work is
+// a unit for every sixty-four bytes or elements of it, which is the rate the
+// machine charges its own instructions at.
+//
+// Called from inside a bound function, where the program's budget is whole:
+// the slice the machine was spending is given back before a door is entered, so
+// what is spent here is spent against what the program has left. A host that
+// spends more than that does not stop the call it is inside — that call is the
+// host's and the machine is not running — but the machine stops at the next
+// step the program takes, which is the same refusal a budget spent any other
+// way gives.
+//
+// Nothing for a machine with no budget, which is a host charging for work
+// nobody is counting. See D951.
+void kest_fuel_spend(KestRuntime *runtime, uint64_t work);
 
 // What is left of it, and `KEST_FUEL_UNLIMITED`'s own answer — every bit set —
 // for a machine with no budget. A host that watches a frame reads this after a

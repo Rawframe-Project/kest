@@ -402,6 +402,82 @@ rm -f "$deferred"
 
 say "returns" "line endings, noughts inside text, and a promise around a \`defer\`"
 
+# What a budget is, asked of both builds. A program that would not stop has to
+# stop; a program that would has to be given the number of steps it takes and
+# not one fewer; and work an instruction does that is not a step has to be
+# charged for, which is the part a budget that only counted steps could not see
+# at all. See D921 and D950.
+cat >"$scratch"/spin.kest <<'KEST'
+module spin
+
+fn main() -> i32 {
+    while true {
+    }
+    return 0
+}
+KEST
+cat >"$scratch"/turns.kest <<'KEST'
+module turns
+
+fn turns(n: i32) -> i32 {
+    let sum = 0
+    for i in 0..n {
+        sum += i
+    }
+    return sum
+}
+
+fn main() -> i32 {
+    if turns(1000) != 499500 {
+        return 1
+    }
+    return 0
+}
+KEST
+cat >"$scratch"/weighs.kest <<'KEST'
+module weighs
+
+fn main() -> i32 {
+    let out: [u8] = array(200000, u8(65))
+    let big = text(out)
+    let joined = "{big}{big}"
+    return len(joined) - 400000
+}
+KEST
+for which in ./kest ./kest-debug; do
+    if "$which" run --fuel 2000 "$scratch"/spin.kest \
+            >"$scratch"/spun 2>&1 </dev/null; then
+        complain "budget" "$which ran a loop that never ends to the end"
+    elif ! grep -q 'K0659' "$scratch"/spun; then
+        complain "budget" "$which said something else about a program that ran \
+out of steps"
+        sed 's/^/    /' "$scratch"/spun | head -3
+    fi
+    if ! "$which" run --fuel 1000 "$scratch"/turns.kest \
+            >/dev/null 2>&1 </dev/null; then
+        complain "budget" "$which would not run a thousand turns inside a \
+thousand steps"
+    fi
+    if "$which" run --fuel 999 "$scratch"/turns.kest \
+            >/dev/null 2>&1 </dev/null; then
+        complain "budget" "$which ran a thousand turns inside nine hundred and \
+ninety-nine steps"
+    fi
+    if "$which" run --fuel 100 "$scratch"/weighs.kest \
+            >/dev/null 2>&1 </dev/null; then
+        complain "budget" "$which copied four hundred thousand bytes of text \
+inside a hundred steps"
+    fi
+    if ! "$which" run --fuel 40000 "$scratch"/weighs.kest \
+            >/dev/null 2>&1 </dev/null; then
+        complain "budget" "$which would not do that work inside forty thousand"
+    fi
+done
+rm -f "$scratch"/spin.kest "$scratch"/turns.kest "$scratch"/weighs.kest
+say "budget" "a loop that never ends stops, a thousand turns is a thousand \
+steps and not nine hundred and ninety-nine, and work an instruction does is \
+charged for"
+
 # Every word this language keeps, written where a name belongs. It has to be
 # refused there — the parse wants a name and a keyword is not one — and what
 # this holds is that it is refused *in a moment*. One of them was not: a
