@@ -30996,3 +30996,38 @@ was measured and could not close it. Nothing in the frame budget above needs it
 closed. The workload where this language is *faster* than the comparator is the
 one with checked identity in it, where the comparator writes the index and the
 generation by hand — which is the thing this language is for. *Measured.*
+
+## D988. One guest thread a machine, and a world split across four of them
+
+Section 19 of the completion mission asks for a final decision on concurrency
+and one partitioned host workload measured.
+
+**The decision, which was already the design and is now written down.** One
+machine runs one guest thread at a time. There are no guest threads, no async
+scheduler and no actor syntax, and those are final 1.0 non-goals rather than
+postponed features. What a host gets instead is machines: independent runtimes
+on independent host threads, each with its own stack, its own heap and its own
+world, sharing nothing.
+
+The one thing a host may do to a machine somebody else is running is cancel it,
+which is a store of one word and is why `kest_cancel` is the only door that is
+safe from another thread. Everything else waits until the call comes back.
+
+**What was measured.** `check.sh` now splits a piece of work across four
+machines on four threads, a quarter each, and adds the four answers up. It is
+the number one machine gives for the whole of it. That is what partitioning
+buys and what it costs: there is no shared memory, so there is nothing to lock
+and nothing to merge except the host adding numbers — and `deterministic`
+survives being cut into pieces, because each piece is a run of its own under the
+same profile.
+
+Beside it, since before this: two machines of one build running at once and
+answering the same, and one cancelled from the thread that is not running it.
+Those three together are the whole of the concurrency story.
+
+**What a host has to know**, and what the header says: a machine belongs to one
+host thread at a time. A quiescent machine may move to another thread — nothing
+in it is bound to the thread that made it — and two machines of one build may
+run at once because a build is read-only once it is built. The thing that is
+not allowed is two threads in one machine, and nothing stops it but the host:
+this language does not own the threads. *Measured.*

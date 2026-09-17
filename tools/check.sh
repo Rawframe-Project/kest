@@ -513,6 +513,17 @@ fn work(n: i32) -> i32 no.alloc no.host deterministic {
     return sum
 }
 
+// The same work over a piece of it, which is what a shard is. A host that
+// splits a frame across machines calls this with a range each and adds the
+// answers up; nothing is shared, because there is nothing to share.
+fn part(from: i32, upto: i32) -> i32 no.alloc no.host deterministic {
+    let sum = 0
+    for i in from..upto {
+        sum += i % 7
+    }
+    return sum
+}
+
 fn forever() -> i32 {
     let n = Watch.started()
     while true {
@@ -551,12 +562,21 @@ typedef struct {
     const char *call;
     int64_t answered;
     int ran;
+    // The piece of the work this one was given, for a shard. Nought and nought
+    // is a worker that calls with one number instead.
+    int64_t from;
+    int64_t upto;
 } Worker;
 
 static int turning(void *given) {
     Worker *worker = given;
     KestValue frame[4] = {{0}};
-    frame[0].integer = 100000;
+    if (worker->upto > 0) {
+        frame[0].integer = worker->from;
+        frame[1].integer = worker->upto;
+    } else {
+        frame[0].integer = 100000;
+    }
     worker->ran = kest_call(worker->runtime,
                             kest_entry(worker->runtime, worker->call), frame,
                             4) ? 1 : 0;
@@ -586,8 +606,8 @@ int main(int argc, char **argv) {
     // Two machines of one build, one thread each, both running at once. What
     // they share is the program and nothing else: the heap, the stack, the
     // stamps and the world are the machine's.
-    Worker first = {machine(build), "work", 0, 0};
-    Worker second = {machine(build), "work", 0, 0};
+    Worker first = {machine(build), "work", 0, 0, 0, 0};
+    Worker second = {machine(build), "work", 0, 0, 0, 0};
     if (first.runtime == NULL || second.runtime == NULL) {
         kest_build_report(build, stderr, KEST_FORM_TEXT);
         return 3;
@@ -611,7 +631,57 @@ int main(int argc, char **argv) {
     // And a machine asked to stop by the thread that is not running it, which
     // is one store of one word and is the only thing a host may do to a
     // machine somebody else is running.
-    Worker held = {machine(build), "forever", 0, 0};
+    // And a world split across four machines on four threads, which is what
+    // partitioning is: four runtimes of one build, each given a quarter of
+    // the work, and the four answers added up. What this holds is that the
+    // sum is the number one machine gives for the whole of it -- so a host
+    // may shard a frame and get the same answer, and `deterministic` survives
+    // being cut into pieces. There is no shared memory: what each machine has
+    // is its own, and the merge is the host adding four numbers. See D988.
+    Worker shards[4];
+    thrd_t running_them[4];
+    for (int i = 0; i < 4; i++) {
+        shards[i].runtime = machine(build);
+        shards[i].call = "part";
+        shards[i].answered = 0;
+        shards[i].ran = 0;
+        shards[i].from = i * 25000;
+        shards[i].upto = (i + 1) * 25000;
+        if (shards[i].runtime == NULL) {
+            return 8;
+        }
+    }
+    for (int i = 0; i < 4; i++) {
+        if (thrd_create(&running_them[i], turning, &shards[i]) !=
+            thrd_success) {
+            return 9;
+        }
+    }
+    int64_t merged = 0;
+    for (int i = 0; i < 4; i++) {
+        thrd_join(running_them[i], NULL);
+        if (!shards[i].ran) {
+            fprintf(stderr, "a quarter of a world did not run\n");
+            return 10;
+        }
+        merged += shards[i].answered;
+    }
+    if (merged != first.answered) {
+        fprintf(stderr,
+                "a world in four machines answered %lld and the whole of it "
+                "answered %lld\n",
+                (long long)merged, (long long)first.answered);
+        return 11;
+    }
+    printf("four machines over a quarter each answered %lld, which is what "
+           "one machine answers for the whole of it\n", (long long)merged);
+    for (int i = 0; i < 4; i++) {
+        if (!kest_runtime_free(shards[i].runtime)) {
+            return 12;
+        }
+    }
+
+    Worker held = {machine(build), "forever", 0, 0, 0, 0};
     if (held.runtime == NULL) {
         return 3;
     }
@@ -653,9 +723,14 @@ machine was not asked"
 elif [ "${said#*K0660}" = "$said" ]; then
     complain "threads" "a machine cancelled from another thread said \
 \`$(printf '%s' "$said" | tail -1)\`"
+elif [ "${said#*four machines over a quarter each}" = "$said" ]; then
+    complain "threads" "a world split across four machines did not answer \
+what one machine answers for the whole of it"
+    printf '%s\n' "$said" | sed 's/^/    /' | head -3
 else
-    say "threads" "two machines of one build ran at once and one was stopped \
-from the thread that was not running it"
+    say "threads" "two machines of one build ran at once, a world in four \
+machines over a quarter each answered what one machine answers for the whole \
+of it, and one was stopped from the thread that was not running it"
 
 # What a world costs when it is worked on rather than grown, which is the
 # question a persistent-world language has to answer and the one a garbage
