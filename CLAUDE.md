@@ -1009,7 +1009,7 @@ was written, and what stays in the tree is the guard.
 What the gate does itself, beside the checks in `tools` that it asks:
 
 ```
-build        both builds and every host
+build        both builds, every host, and the fuzzer the gate runs
 asking       a host asking what came back before anything came back, and
              every copy of one body walked to the end
 returns      files written on the spot: line endings, noughts inside text,

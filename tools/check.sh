@@ -54,6 +54,7 @@ if ! make >/dev/null 2>"$scratch"/check-why; then
     exit 1
 fi
 if ! make debug embed embed-debug engine engine-debug least tools/inward \
+        tools/fuzz-debug \
         >/dev/null \
         2>"$scratch"/check-why; then
     complain "build" "the sanitised build does not build"
