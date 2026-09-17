@@ -369,7 +369,12 @@ typedef struct {
     uint32_t what;
     KestValue *elements;
     uint32_t *generations;
-    bool *live;
+    // Which slots are live, a bit each rather than a byte each. A walk of a
+    // store is a walk of this, and what it costs is what it has to read: at a
+    // byte a slot, a store that had held a million and holds eight read a
+    // megabyte to find them. At a bit a slot it reads sixteen kilobytes, and a
+    // word of nothing is one test rather than sixty-four. See D954.
+    uint64_t *live;
     uint32_t *free_slots;
     uint32_t free_count;
     // How far a walk goes, and how far the counts have been written. They are
@@ -1366,13 +1371,43 @@ static bool values_equal(const KestType *type, const KestValue *a,
         }                                                                    \
     } while (0)
 
+// How many words of the live bitmap that many slots need.
+#define LIVE_WORDS(slots) (((size_t)(slots) + 63u) / 64u)
+
+static bool is_live(const Store *store, uint32_t index) {
+    return (store->live[index / 64u] & (UINT64_C(1) << (index % 64u))) != 0;
+}
+
+static void mark_live(Store *store, uint32_t index, bool live) {
+    uint64_t bit = UINT64_C(1) << (index % 64u);
+    if (live) {
+        store->live[index / 64u] |= bit;
+    } else {
+        store->live[index / 64u] &= ~bit;
+    }
+}
+
 // The first live slot at or after `from`, or -1. A store hands out slots that
-// go dead, so a walk of one looks rather than counts.
+// go dead, so a walk of one looks rather than counts -- and it looks a word at
+// a time, so a run of dead slots is skipped sixty-four at a time rather than
+// one at a time. The order is the order the slots are in, which is what the
+// simulation profile promises a walk of a store is. See D954.
 static int64_t live_from(const Store *store, int64_t from) {
-    for (uint32_t i = from < 0 ? 0 : (uint32_t)from; i < store->used; i++) {
-        if (store->live[i]) {
-            return (int64_t)i;
+    uint32_t at = from < 0 ? 0 : (uint32_t)from;
+    while (at < store->used) {
+        // What is left of the word this slot is in, with the slots before it
+        // taken off: the first turn starts in the middle of a word and every
+        // turn after it starts at the beginning of one.
+        uint64_t word = store->live[at / 64u] >> (at % 64u);
+        if (word != 0) {
+            uint32_t found = at;
+            while ((word & 1u) == 0) {
+                word >>= 1;
+                found++;
+            }
+            return found < store->used ? (int64_t)found : -1;
         }
+        at = (at / 64u + 1u) * 64u;
     }
     return -1;
 }
@@ -1604,8 +1639,8 @@ static KestValue *resolve_ref(Store *store, int64_t handle) {
     // another one is a different kind of wrong from a reference to a place
     // that has been handed out again -- and without it the two were the same
     // question with the same answer.
-    if (world != store->world || index >= store->used || !store->live[index] ||
-        store->generations[index] != generation) {
+    if (world != store->world || index >= store->used ||
+        !is_live(store, index) || store->generations[index] != generation) {
         return NULL;
     }
     return store->elements + (size_t)index * store->stride;
@@ -1619,7 +1654,7 @@ static bool room_for(KestArena *heap, Store *store, uint32_t capacity) {
     KestValue *elements =
         KEST_ARENA_ARRAY(heap, KestValue, (size_t)capacity * store->stride);
     uint32_t *generations = KEST_ARENA_ARRAY(heap, uint32_t, capacity);
-    bool *live = KEST_ARENA_ARRAY(heap, bool, capacity);
+    uint64_t *live = KEST_ARENA_ARRAY(heap, uint64_t, LIVE_WORDS(capacity));
     uint32_t *free_slots = KEST_ARENA_ARRAY(heap, uint32_t, capacity);
     if (elements == NULL || generations == NULL || live == NULL ||
         free_slots == NULL) {
@@ -1630,7 +1665,7 @@ static bool room_for(KestArena *heap, Store *store, uint32_t capacity) {
                sizeof(KestValue) * store->used * store->stride);
         memcpy(generations, store->generations,
                sizeof(uint32_t) * store->used);
-        memcpy(live, store->live, sizeof(bool) * store->used);
+        memcpy(live, store->live, sizeof(uint64_t) * LIVE_WORDS(store->used));
     }
     if (store->free_count > 0) {
         memcpy(free_slots, store->free_slots,
@@ -3036,7 +3071,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             store->generations[index] = ++rt->stamps;
-            store->live[index] = true;
+            mark_live(store, index, true);
             store->count++;
             memcpy(store->elements + (size_t)index * stride, value,
                    sizeof(KestValue) * stride);
@@ -3085,7 +3120,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 break;
             }
             uint32_t index = ref_place(handle);
-            store->live[index] = false;
+            mark_live(store, index, false);
             // The slot keeps the stamp it was handed out with, so a
             // reference made before it was given back still names that stamp
             // and the slot is not live: stale stays stale. What the slot gets

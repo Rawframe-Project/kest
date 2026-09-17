@@ -29487,3 +29487,31 @@ What this is not is a portability layer. There are no `#ifdef`s for a platform
 nobody has run, because untested code for an unbuilt target is a claim rather
 than a port. When somebody has a Windows machine, the table in the reference is
 what they read first.
+
+## D954: which slots are live is a bit each
+
+A store hands out places and takes them back, so a walk of one looks rather than
+counts: it reads whether each slot is live from where it stands. That was a byte
+a slot, and the walk read every one of them from nought to the high-water mark.
+A store that had held two hundred thousand and holds eight read two hundred
+thousand bytes to find them, every time round.
+
+It is a bit a slot now, read a word at a time: a run of sixty-four dead slots is
+one test and a shift rather than sixty-four reads. Measured, on the machine this
+was written on, over a store with a high-water mark of two hundred thousand and
+eight live things in it: four thousand walks took 0.22s before and 0.02s after,
+and the second number is mostly the two hundred thousand adds and removes that
+set the thing up.
+
+**The order is the order the slots are in**, which is what it was and what the
+simulation profile promises a walk of a store is. That is why this is a bitmap
+and not a list of the live ones: a list would be in the order things were added,
+and a store that hands a slot back out would walk it where it was added rather
+than where it sits. Both are orders and only one of them is the one this
+language has already written down. What a list would buy is a walk that costs
+nothing at all for a store with a high-water mark of a million and one thing in
+it; what it would cost is the promise, and the promise is worth more.
+
+It is also three bytes an entity cheaper: a store told nothing costs 77 bytes an
+entity where it cost 80, which is the table in the reference and is held by
+`check-costs.sh`.

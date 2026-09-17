@@ -1784,7 +1784,7 @@ reading of this table that the program disagrees with is a gate that fails.
 | a piece of text | 13 bytes an entity | — |
 | an array | 25 bytes an entity | 0 bytes an entity |
 | a table | 51 bytes an entity | 0 bytes an entity |
-| a store | 80 bytes an entity | 0 bytes an entity |
+| a store | 77 bytes an entity | 0 bytes an entity |
 
 These are bytes, and a byte count is this machine's as much as the program's: a
 handle is a machine word and a header is made of them, so the table above is
@@ -1797,7 +1797,9 @@ means read from outside it. Being told is worth everything: the room is made
 once, before the frame, and the frame pays for nothing. A store is the dearest
 because it grows four runs at once — what it holds, what each has counted, which
 are live and which are free — and a table is dearer than an array because it
-grows three.
+grows three. Which are live is a bit a slot rather than a byte, which is why the
+store is three bytes an entity cheaper than it was and why a walk of one reads
+sixty-four slots at a time.
 
 Not everything about a cost here is a number this project measures. `remove`
 from an array shifts what comes after it and `remove` from a store does not:

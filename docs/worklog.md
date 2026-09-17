@@ -35715,3 +35715,21 @@ No `#ifdef`s for a platform nobody has built for. Untested code for an unbuilt
 target is a claim rather than a port.
 
 **Runs:** `make check`.
+
+## A walk of a store, sixty-four slots at a time (D954)
+
+Which slots of a store are live was a byte each, and a walk read every one of
+them from nought to the high-water mark. A store that had held two hundred
+thousand and holds eight read two hundred thousand bytes to find them.
+
+It is a bit each now and the walk reads a word at a time. Four thousand walks of
+a store with a high-water mark of two hundred thousand and eight live things:
+0.22s before, 0.02s after, and most of what is left is the setup. It is three
+bytes an entity cheaper too, so the container table in the reference says 77
+where it said 80.
+
+The order did not change and that is the point of doing it this way: a list of
+the live ones would be a walk in the order things were added, and the simulation
+profile says a store walks by place.
+
+**Runs:** `make check`; the two builds timed over the same program.

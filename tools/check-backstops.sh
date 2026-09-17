@@ -4780,11 +4780,11 @@ for file in "$@"; do""",
         # whatever the other store happens to keep there.
         "what": "a reference read in whatever store it is handed to",
         "file": "src/vm.c",
-        "from": r"""    if (world != store->world || index >= store->used || !store->live[index] ||
-        store->generations[index] != generation) {""",
+        "from": r"""    if (world != store->world || index >= store->used ||
+        !is_live(store, index) || store->generations[index] != generation) {""",
         "to": r"""    (void)generation;
     if (world != store->world || index >= store->used ||
-        !store->live[index]) {""",
+        !is_live(store, index)) {""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -5824,7 +5824,7 @@ anywhere, and it is why the gate holds""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "made with room and 80 to one told afterwards",
+        "caught": "made with room and 77 to one told afterwards",
     },
     {
         # Room asked for and not made. A program that knows how many are coming
@@ -9910,11 +9910,12 @@ fn main() -> i32 {
         # is exactly the shape that finds out.
         "what": "a reference followed whatever it names",
         "file": "src/vm.c",
-        "from": """    if (world != store->world || index >= store->used || !store->live[index] ||
-        store->generations[index] != generation) {
+        "from": """    if (world != store->world || index >= store->used ||
+        !is_live(store, index) || store->generations[index] != generation) {
         return NULL;
     }""",
-        "to": """    if (index >= store->used) {
+        "to": """    (void)is_live;
+    if (index >= store->used) {
         return NULL;
     }
     (void)generation;
