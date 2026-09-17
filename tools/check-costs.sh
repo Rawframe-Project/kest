@@ -1907,9 +1907,17 @@ if sorted(written_bold) != sorted(held_bold):
 # instrument is a thing the gate runs and expects a number from, and one whose
 # paragraph quotes no count is a duration with nothing under it -- which is what
 # all four of them were before D915.
+# `fuzz.c` is not one. An instrument is a thing the gate takes a *number* from
+# and the reference says what that number was measured over; the fuzzer answers
+# with how many inputs ended in a program or a refusal, which is a count of
+# what it did rather than a measurement of anything. Written down here rather
+# than left out quietly, because a name missing from a list and a name written
+# down as not belonging in it read the same from outside. See D984.
+NOT_AN_INSTRUMENT = ('tools/fuzz.c',)
 INSTRUMENTS = some("the instruments in `tools`", sorted(
-    glob.glob(os.path.join('tools', '*.kest')) +
-    glob.glob(os.path.join('tools', '*.c'))))
+    one for one in (glob.glob(os.path.join('tools', '*.kest')) +
+                    glob.glob(os.path.join('tools', '*.c')))
+    if one not in NOT_AN_INSTRUMENT))
 told_of = {}
 for piece_of in re.split(r'(?=`tools/)', RUNNING):
     named_of = re.match(r'`tools/([\w.]+)`', piece_of)

@@ -10087,12 +10087,13 @@ fn main() -> i32 {
         # the answer a walk nobody wrote gives. See D976.
         "what": "a walk of the promises that says every body is free",
         "file": "src/contract.c",
-        "from": """        KestDecl *written = (KestDecl *)function->decl;
-        if (about == 0) {
-            written->function.reaches_heap = true;""",
-        "to": """        KestDecl *written = (KestDecl *)function->decl;
-        if (about == 3) {
-            written->function.reaches_heap = true;""",
+        "from": """        if (function->decl == NULL || !function->allocates) {
+            continue;
+        }""",
+        "to": """        if (function->decl == NULL || !function->allocates ||
+            function->allocates) {
+            continue;
+        }""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],

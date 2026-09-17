@@ -30916,3 +30916,32 @@ A reload here happens at a quiescent boundary the host chooses, between frames,
 with the world rebuilt from what the program wrote down. A host that wants to
 reload in the middle of a call wants something this language does not do.
 *Measured*, on seven edits in the gate.
+
+## D986. There is no amalgamation, and the reason is a measurement
+
+Section 25 of the completion mission asks for an optional generated
+amalgamation — one `kest.c` and one `kest.h` for a host that would rather
+vendor a file than a directory — and says to ship it if it reduces clean-machine
+setup without serious downside, and not to carry it if it does not.
+
+**It was built and it does not compile.** `src/*.c` concatenated in pipeline
+order is 40,815 lines and **68 static functions share a name with a static
+function in another module**: `error_type` is one thing in `types.c` and
+another in `check.c`, `span_text` is one thing in `parser.c` and another in
+`check.c`, and so on down. In separate translation units that is exactly right
+— a static name is the file's own and a short one is the readable one. In one
+file it is 28 refusals from the compiler.
+
+Making it work means renaming sixty-eight internal functions, every one of them
+to something longer, purely so that a packaging convenience exists. That is a
+worse compiler for a better zip file.
+
+**And the convenience is already there.** What this project ships is
+`include/kest.h` and `src/*.c`: a host adds one glob to its build and links
+libc. There is no configure step, no generated header, no dependency and no
+build system to adopt — which is the whole of what an amalgamation is for.
+A single file would save a host one line of its own makefile.
+
+**So Kest 1.0 has no amalgamation.** Not "later": the cost is renaming the
+compiler's own vocabulary and the benefit is one line. What is shipped is the
+modular source, and it is vendorable exactly as it stands. *Measured.*
