@@ -3285,6 +3285,24 @@ just_measured=$(cut_heap measured)
 whole_cut=$(cut_heap whole)
 tail_cut=$(cut_heap tail)
 middle_cut=$(cut_heap middle)
+# And what a cut is, which is the length that was asked for. A piece of text is
+# a place and how many bytes of it, so a cut that kept the length it was cut
+# from would be a piece of text reading past where it stops and nothing costing
+# anything to say so. See D964.
+cut_says() {
+    "$kest" call --json "$cutting" "$1" abcdefghij 2>/dev/null </dev/null |
+        sed -n 's/.*"result":"\([0-9-]*\)".*/\1/p'
+}
+for cut_asking in "measured|10" "whole|10" "tail|8" "middle|8" "stepped|8"; do
+    cut_name=${cut_asking%%|*}
+    cut_wanted=${cut_asking#*|}
+    cut_answered=$(cut_says "$cut_name")
+    if [ "$cut_answered" != "$cut_wanted" ]; then
+        complain "call: \`$cut_name\` of ten bytes is $cut_answered bytes \
+and a cut is as long as it was asked for"
+    fi
+done
+
 # Every cut costs what measuring costs, which is nothing: a piece of a piece of
 # text is a place inside it and how many bytes of it. A cut out of the middle
 # used to copy, because text was a pointer that had to end in a nought and a

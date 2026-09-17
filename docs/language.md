@@ -4485,24 +4485,32 @@ table above is what a port would read first, not a list of what would be wrong.
 
 ## What a piece of text is
 
-Bytes, on the machine's heap, ending in a nought. A slot holds where they
-start, so `len` walks them and a cut that ends where the text already ends is a
-place inside it rather than a copy — which is what makes a walk over text
-allocate nothing, and what five of `std.text`'s `no.alloc` functions are built
-on.
+Bytes and how many there are: two slots, side by side wherever the value is.
+The length is part of a piece of text rather than something to go and count, so
+`len` is a read, a byte at a place is a comparison and a read, and a cut is a
+place inside what it was cut from and how many bytes of it. None of those
+reaches the heap, which is what a walk over text is made of and what eight of
+`std.text`'s `no.alloc` functions are built on.
+
+Where a value is laid out in memory — inside an array, a store or a struct a
+host lays out — a piece of text is sixteen bytes for the same reason: what it
+is made of, and how many. See D964.
 
 **No nought inside.** Text holds no nought byte. It is refused where one would
 be made: in a literal by the lexer, in `text(bytes)` by the machine, and at the
-boundary by `kest_text`. So a host is handed bytes that end in a nought and may
-give them to a C library, and the rule is about what text is rather than how it
-is kept.
+boundary by `kest_text`. That is a rule about what text is rather than about how
+it is kept.
+
+**A cut does not end in a nought.** Text the machine made does: what `text()`,
+an interpolation and a join write ends in one. A cut is a place inside another
+piece and how many bytes of it, so the byte after it belongs to what it was cut
+from. A host reading text hands the bytes and the length to whatever it is
+calling rather than treating what it was given as a C string.
 
 **What a host reads it through** is `kest_text_bytes`, which answers the bytes
-and how many there are. A host may read the `text` member of a slot instead and
-get the same bytes; what it gives up is the day this language carries a length
-beside them. What that costs today is the walk measuring a C string costs, done
-once by the library rather than once by every host. See D955, which is also
-where the representation this does not have yet is written down.
+and how many there are and costs nothing: it reads the second slot. A host that
+reads the `text` member itself gets the same bytes and has to know whether the
+piece is one the machine made.
 
 ## A frame's working memory
 

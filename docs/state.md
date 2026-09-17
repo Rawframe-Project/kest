@@ -27,7 +27,7 @@ asks the question. Evidence is named; nothing here is a claim from a document.
 | --- | --- |
 | F10 | `no.alloc` is documented more broadly than what is measured: diagnostic and trap machinery allocate outside the program heap |
 | E3 | the library has no process-global mutable state; what is shared is the build's stamp counter, which two runtimes of one build write without synchronisation. That is what F9 rests on |
-| E4 | a text slot is a `const char *`; length is `strlen`, so `len` is O(n) and embedded noughts are unrepresentable. The reusable buffer is answered: `fit` and `std.text`'s `fitting` (D940). A length-carrying representation was built and put back, because a cut would allocate under it; D955 says what the two-slot one would take, and the policy about a nought is written down |
+| E4 | FIXED. Text is two slots — the bytes and how many — since D964: `len` is a read, a cut reaches nothing and `slice` came off the list of builtins that allocate, and a host reads bytes and a length through `kest_text_bytes` without measuring. The reusable buffer was already answered (D940). A nought inside is still refused, which is what D955 wrote down; what is new is that a cut does not end in one and the reference says so |
 | E5 | `live_from` scanned to the store's high-water mark. It reads a bit a slot and sixty-four at a time now (D954): four thousand walks of a store holding eight things out of two hundred thousand went from 0.22s to 0.02s |
 
 ## What the measurements say today
@@ -40,6 +40,7 @@ a run with a decision knows which is which.
 | --- | --- | --- |
 | the colony's steady state, at 200, 400 and 800 days | 2,370,304 bytes (D940) | 2,338,096 bytes, and still flat: a store keeps a bit a slot rather than a byte (D954) |
 | a frame step an entity | 127 ns (D926), 122 after D931 | 115 to 125 ns depending on the run, `make time` on this machine |
+| what an array of text costs a frame, an entity | 25 bytes (D915) | 38, because a piece of text in one is sixteen bytes rather than eight (D964) |
 | what a frame step runs, an entity | 57 instructions (D958) | 38, after D961 took the two commonest pairs of pushes and D962 gave every constant the same door |
 
 ## Phases
@@ -51,7 +52,8 @@ The mission's order. `/home/kest/mission/STATE.md` carries which one is open.
     2 one resolved per-instance representation   done   D962
     3 temporaries, text, buffer, store   done but for `scratch { }`,
                                          which phase 2 has now opened:
-                                         D940, D954, D955, D956, D957
+                                         D940, D954, D955, D956, D957,
+                                         and text is D964
     4 validation correction            done   D944
     5 backend decision                 done   D958 counted it, D961
                                               measured a push, and D963

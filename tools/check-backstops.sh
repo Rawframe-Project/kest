@@ -992,14 +992,12 @@ fn main() -> i32 {
         # every answer is right. See D812.
         "what": "a body given more room than it works out in",
         "file": "src/compile.c",
-        "from": r"""static void stack_push(Compiler *compiler, uint16_t count) {
-    compiler->stack_depth += count;""",
-        "to": r"""static void stack_push(Compiler *compiler, uint16_t count) {
-    compiler->stack_depth += count;
-    compiler->stack_high_water = (uint16_t)(compiler->stack_depth + 1);""",
+        "from": r"""    compiler->body->stack_needed = compiler->stack_high_water;""",
+        "to": r"""    compiler->body->stack_needed =
+        (uint16_t)(compiler->stack_high_water + 1);""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",
-        "caught": "slot(s) it never used, running",
+        "caught": "slot(s) no run of it ever used",
     },
     {
         # A deferred call counted where it is written rather than where it
@@ -4835,10 +4833,8 @@ for file in "$@"; do""",
         "what": "a read that stops one byte short",
         "file": "src/main.c",
         "from": r"""    kest_text(runtime, bytes, (uint32_t)held, frame);
-    frame[2].integer = 1;
     free(bytes);""",
         "to": r"""    kest_text(runtime, bytes, (uint32_t)(held > 0 ? held - 1 : 0), frame);
-    frame[2].integer = 1;
     free(bytes);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
@@ -4913,7 +4909,7 @@ for file in "$@"; do""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
-        "caught": "a cut that stops sooner",
+        "caught": "and a cut is as long as it was asked for",
     },
     {
         # A promise held to a heap that did not move. What the machine holds a
@@ -5821,7 +5817,7 @@ anywhere, and it is why the gate holds""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "made with room and 77 to one told afterwards",
+        "caught": "made with room and 102 to one told afterwards",
     },
     {
         # Room asked for and not made. A program that knows how many are coming
@@ -5954,7 +5950,7 @@ fn main() -> i32 {
     return len(text.repeat("a", 3)) - 3
 }
 """,
-        "caught": "this reads constant 3 of the 2 this body was given",
+        "caught": "this reads constant 4 of the 3 this body was given",
     },
     {
         # A run of slots read one past the names a body has. Everything inside
@@ -6085,7 +6081,7 @@ fn main() -> i32 {
     return 0
 }
 """,
-        "caught": "is declared to take 1 and give 0",
+        "caught": "is declared to take 2 and give 0",
     },
     {
         # A body that comes back with something over. The guard at the top of

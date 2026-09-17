@@ -35976,3 +35976,41 @@ D963 has the table. The branch is not merged and is not meant to be.
 **Runs:** `tools/twoways` and `tools/twoways-debug` on the branch, each
 machine, three shapes of work, seven rounds, in one sitting; and again with the
 fusions in `src/lower.c` disabled.
+
+## Text carries its own length
+
+D955 built text as a handle and put it back, and wrote down what would pay for
+both: two slots, the bytes and the length, side by side where the value is. That
+is what this is, and what it took was every place that believed a piece of text
+was one slot.
+
+The compiler side is mostly the width: `text` is two slots, a text constant is
+two values, and everything that counted slots for a comparison, an
+interpolation, a walk or a builtin now counts what the type says instead of one.
+The machine side is shorter than it was: `text.at`, `text.in`, `rest`, `slice`,
+`matches` and `find` walked to the place they were asked about because there was
+no length to compare against, and each of them is a comparison and a read now.
+D371 and D372 wrote that walk down as the cheaper of two bad answers; there is a
+better one.
+
+What came out of it beyond `len`:
+
+- `slice` came off the list of builtins that reach the heap, in the tree walk
+  and in the proof over emitted code. A cut is free.
+- A piece of text is sixteen bytes where a value is laid out in memory, so an
+  array of them costs 38 bytes an entity where it cost 25, and a store 102
+  where it cost 77. The reference's table says so.
+- `KestLayout` has `slots` beside `count`, because a piece is no longer a slot.
+  Every walk in the machine and in both hosts that counted pieces to find a slot
+  was found by the gate saying a crossing handed over the wrong number.
+- `kest_text` writes two slots and answers whether it wrote a piece of text;
+  `kest_text_bytes` takes a pointer to the first of the two and costs nothing.
+
+And one thing the gate turned up that is not about text: `check-costs.sh` held
+every body's operand depth to what one example reached, so a library function
+with a branch deeper than the rest failed the moment two of its paths stopped
+being the same depth. It holds the deepest any run went now, which is the
+question it was asking.
+
+**Runs:** `make check`; every example; both hosts; `tools/check-costs.sh` and
+`tools/check-commands.sh` on their own while the numbers were being put right.
