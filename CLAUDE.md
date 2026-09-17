@@ -889,6 +889,7 @@ lower    ir -> bytecode
 compile  ast -> ir
 vm       bytecode execution
 build    the stages as one thing, which is what a host has
+lsp      the same build, answering an editor
 main     CLI
 ```
 

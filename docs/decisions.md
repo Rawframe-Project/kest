@@ -30527,3 +30527,50 @@ for, because a tool reads one shape and an object that changes with the options
 is an object a tool has to ask twice. `--cost` is the same facts as a table for
 a person. `check-commands.sh` reads both and holds them to agreeing, because
 two readers of one walk that disagree are one of them wrong. *Argued.*
+
+## D977. A language server that is this compiler, not a reader of it
+
+Section 23 of the completion mission asks for a small real language server and
+says the one thing not to do: "Do not build a second parser/compiler inside the
+LSP." That is the same rule as section 8's one resolved semantic
+representation, said about an editor instead of a backend.
+
+**So `kest lsp` is the compiler.** It is a module in the pipeline, above
+`build` and below `main`, and every answer it gives comes from a build of the
+file: what is wrong with it is the diagnostics a check makes, the one form is
+`kest_format`, and what a name is, where it was declared and what else names it
+come from an index the checker writes as it resolves.
+
+**The index is the new part.** The checker resolved every name and threw the
+answer away. It keeps them now — where the name is written, where what it names
+is declared, what type it is, and whether it is a name in one body — which
+makes hover, go to definition, find references and rename four readings of one
+table rather than four walks of a tree. Thirty lines in `check.c` and a hundred
+in `types.c`, against a second parser.
+
+**What a buffer being typed in needed.** A build reads files from the disk and
+an editor has a file that has not been saved, so answering from the disk is
+answering about a different file. `kest_loader_overlay` puts one buffer in
+front of the disk for one path. There is one at a time, because there is one
+file in front of the person; nothing else in this tree ever sets one.
+
+**What it answers.** Diagnostics, hover, definition, references, document
+symbols, workspace symbols, rename, completion, formatting. What it does not:
+rename across files, because this server holds one file and a rename that
+reaches another is a rename it half does; and incremental changes, because
+applying an edit twice is the one way a server can be wrong about what the file
+says, and a whole document costs a copy of a file somebody is typing into.
+
+**Two mistakes worth writing down.** The path was kept in the arena a message
+is read into, which is rewound the moment the message is answered — so every
+answer after the first was about a path made of whatever the next message wrote
+there, and the server silently answered nothing. And the per-function facts of
+D976 were first written into the JSON under `cost`, which the program's own
+`cost` already was: the ceilings check reads `"cost":<number>` with a pattern
+and found `{` instead, and a hundred and twenty ladders stopped being walked.
+A name stands for one thing. They are under `proved`.
+
+**No second process.** There is no `kest-lsp` binary and no daemon: `kest lsp`
+is a command of the one command line, so an editor and a person run the same
+compiler and cannot disagree about what a file says. *Argued*, on a driven
+session in the gate.

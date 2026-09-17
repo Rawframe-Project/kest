@@ -53,7 +53,34 @@ static char *read_stream(KestArena *arena, FILE *file, size_t *length) {
     return text;
 }
 
+// What an editor has in a buffer that is not on the disk yet. There is one at
+// a time, because there is one file being typed in at a time, and it is read
+// before the disk is: a language server that answered about the saved copy
+// would answer about a file the person in front of it is not looking at. Set
+// and cleared by whoever is driving; nothing else in this tree ever sets one.
+// See D977.
+static const char *overlaid_path;
+static const char *overlaid_text;
+static size_t overlaid_length;
+
+void kest_loader_overlay(const char *path, const char *text, size_t length) {
+    overlaid_path = path;
+    overlaid_text = text;
+    overlaid_length = length;
+}
+
 static char *read_file(KestArena *arena, const char *path, size_t *length) {
+    if (overlaid_path != NULL && strcmp(overlaid_path, path) == 0) {
+        char *held = kest_arena_alloc(arena, overlaid_length + 1, 1);
+        if (held == NULL) {
+            return NULL;
+        }
+        memcpy(held, overlaid_text, overlaid_length);
+        held[overlaid_length] = '\0';
+        *length = overlaid_length;
+        return held;
+    }
+
     FILE *file = fopen(path, "rb");
     if (file == NULL) {
         return NULL;

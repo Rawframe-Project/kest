@@ -35,6 +35,7 @@ __declspec(dllimport) int __stdcall QueryPerformanceFrequency(long long *rate);
 #include "diag.h"
 #include "lexer.h"
 #include "mem.h"
+#include "lsp.h"
 #include "parser.h"
 #include "fmt.h"
 #include "loader.h"
@@ -85,6 +86,10 @@ static void help(FILE *out) {
             "  parse <file>...   print the syntax tree\n"
             "  lex <file>...     print the token stream, whatever is wrong\n"
             "\n"
+            "  lsp               answer an editor over the standard streams:\n"
+            "                    what is wrong, what a name is, where it was\n"
+            "                    declared, what else names it, what a file\n"
+            "                    declares and the one form\n"
             "  help              this, and `-h` and `--help` are it too\n"
             "\n"
             "options:\n"
@@ -2529,6 +2534,13 @@ int main(int argc, char **argv) {
                kest_checked() ? " checked" : "", kest_abi_version(),
                (unsigned)KEST_JSON_SCHEMA, named, profile);
         return 0;
+    }
+
+    // The language server, which is this compiler answering an editor rather
+    // than a person. It reads and writes one stream each and takes no files:
+    // which file it is about is what the editor says. See D977.
+    if (strcmp(argv[1], "lsp") == 0) {
+        return kest_lsp_serve(kest_library_path(NULL, argv[0]), stdin, stdout);
     }
 
     if (strcmp(argv[1], "help") == 0 || strcmp(argv[1], "-h") == 0 ||

@@ -2579,6 +2579,46 @@ uint32_t kest_overloads(KestProgram *program, const char *name, size_t length,
     return count;
 }
 
+void kest_program_used(KestProgram *program, const KestSource *source,
+                       KestSpan span, const KestSource *declared_in,
+                       KestSpan declared, const KestType *type,
+                       bool is_local) {
+    if (program == NULL || source == NULL || !program->index_names) {
+        return;
+    }
+    if (program->use_count == program->use_capacity) {
+        uint32_t grown =
+            program->use_capacity == 0 ? 64 : program->use_capacity * 2;
+        KestUse *moved = KEST_ARENA_ARRAY(program->arena, KestUse, grown);
+        if (moved == NULL) {
+            // An index for an editor is not worth refusing a compile over:
+            // what it costs is that the editor knows less about this file,
+            // and what refusing would cost is the file not compiling at all.
+            return;
+        }
+        if (program->use_count > 0) {
+            memcpy(moved, program->uses,
+                   sizeof(KestUse) * program->use_count);
+        }
+        program->uses = moved;
+        program->use_capacity = grown;
+    }
+    KestUse *one = &program->uses[program->use_count++];
+    one->source = source;
+    one->span = span;
+    one->declared_in = declared_in;
+    one->declared = declared;
+    one->type = type;
+    one->is_local = is_local;
+}
+
+const KestUse *kest_program_uses(const KestProgram *program, uint32_t *count) {
+    if (count != NULL) {
+        *count = program == NULL ? 0 : program->use_count;
+    }
+    return program == NULL ? NULL : program->uses;
+}
+
 KestSymbol *kest_symbol_at(KestProgram *program, const KestSource *source,
                            KestSpan span) {
     for (uint32_t i = 0; i < program->global_count; i++) {
@@ -3814,13 +3854,14 @@ static KestSpan module_span(const KestUnitInfo *unit) {
 }
 
 bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
-                KestProgram **out) {
+                bool index_names, KestProgram **out) {
     KestProgram *program = KEST_ARENA_NEW(arena, KestProgram);
     if (program == NULL) {
         return false;
     }
     program->arena = arena;
     program->diags = diags;
+    program->index_names = index_names;
     program->alias = "";
     program->files = units;
     *out = program;
@@ -4370,7 +4411,7 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
             bool host = foreign || symbol->decl->function.reaches_host;
             bool varies = foreign || symbol->decl->function.not_deterministic;
             fprintf(out,
-                    ",\"cost\":{\"proved\":%s,\"reachesHeap\":%s,"
+                    ",\"proved\":{\"walked\":%s,\"reachesHeap\":%s,"
                     "\"reachesHost\":%s,\"notDeterministic\":%s,"
                     "\"couldPromiseNoAlloc\":%s,\"couldPromiseNoHost\":%s,"
                     "\"couldPromiseDeterministic\":%s}",

@@ -4026,6 +4026,25 @@ function answers, a struct's fields or their order, an enum's cases or their
 numbers, or what any of them mean. It does not go up for something added at the
 end, which a host built against the older number does not know about. See D974.
 
+## An editor
+
+`kest lsp` is this compiler answering an editor, over the standard streams and
+in the Language Server Protocol. It is the same build a `check` is: what is
+wrong with the file is the diagnostics that check made, the one form is what
+`kest fmt` would write, and what a name is, where it was declared and what else
+names it come from the index the checker writes while it resolves. There is no
+second parser, because a second parser is a second answer.
+
+It answers `textDocument/publishDiagnostics`, `hover`, `definition`,
+`references`, `documentSymbol`, `workspace/symbol`, `rename`, `completion` and
+`formatting`. A buffer that has not been saved is what it reads: the client
+sends the whole document on every change and the compiler reads that rather
+than the disk.
+
+What it does not do: rename across files, because it holds the one file the
+editor opened; and incremental changes, because applying an edit twice is the
+one way a server can be wrong about what a file says.
+
 ## Running
 
 `kest run` calls `main`. A `main` that returns `i32` supplies the process exit
@@ -5226,7 +5245,7 @@ means is a tool reading the wrong thing whatever the compiler calls itself. The
 number goes up when a field changes meaning, is taken away, or is added where a
 reader was told the list was everything — and a tool that reads it first knows
 before it reads anything else whether it understands what follows. It is 2: it
-was 1 until `cost` was added to every function `check` writes out, which is a
+was 1 until `proved` was added to every function `check` writes out, which is a
 field added where a reader was told the list was everything.
 
 The same run with `--json` emits the identical set, notes and all, for
@@ -5276,7 +5295,7 @@ bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 502 lines:
-47956 bytes as tokens, 118161 as a tree, 154224 checked and 177309 compiled.
+47956 bytes as tokens, 118161 as a tree, 154256 checked and 177353 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
 
@@ -5293,7 +5312,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 17323 bytes, against the 177309 it costs to compile.
+file and 17323 bytes, against the 177353 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.
@@ -5577,7 +5596,7 @@ promises `no.alloc`, whether the host has to provide it, and where it was
 declared.
 
 Beside what each function *says* is what the compiler *proved* about it, under
-`cost`. The promises' own walk of the call graph runs whether or not anything
+`proved`. The promises' own walk of the call graph runs whether or not anything
 promises anything, so what it found is there to be read: whether the body
 reaches the heap, whether it crosses to the host, whether anything in it is
 outside the deterministic profile, and — the one field that is advice rather
@@ -5626,8 +5645,8 @@ has to provide marked as one, and a line for each module it imported.
       "deterministic": false,
       "foreign": false,
       "named": true,
-      "cost": {
-        "proved": true,
+      "proved": {
+        "walked": true,
         "reachesHeap": false,
         "reachesHost": false,
         "notDeterministic": false,

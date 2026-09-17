@@ -666,6 +666,9 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
         if (!checker->writing_to_a_name) {
             local->read = true;
         }
+        kest_program_used(checker->program, checker->program->source,
+                          expr->span, checker->program->source, local->span,
+                          local->type, true);
         return local->type;
     }
 
@@ -676,6 +679,9 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
     KestSymbol *global = kest_lookup_global(checker->program, name, length);
     if (global != NULL) {
         global->named = true;
+        kest_program_used(checker->program, checker->program->source,
+                          expr->span, global->source, global->span,
+                          global->type, false);
         // A generic function is not one function, so there is nothing to
         // hand around: which copy would it be?
         if (!checker->naming_callee && global->type->tag == KEST_T_FN &&

@@ -25,6 +25,10 @@ struct KestBuild {
     // for — so what keeps it from being said twice is a bit of its own.
     bool starve_said;
     bool compiled;
+    // Whether the checker keeps where every name was written and what it
+    // named. Set between opening a build and checking it, by whoever is going
+    // to ask -- which is the language server and nothing else. See D977.
+    bool index_names;
     // The one walk of the whole program, worked out when somebody first asks
     // and handed to everybody who asks after, machines included. See D607.
     KestWalk walked;
@@ -52,6 +56,9 @@ KestBuild *kest_build_open(const char *library, char **paths, int count,
 // of a name a host wrote plainly. One field, so the two directions of one rule
 // cannot come apart.
 const char *kest_build_name(KestBuild *build, const char *name);
+// Asks the next check to keep the index an editor reads. Nothing else wants
+// it and it is a third again of what a finished build holds, so it is off.
+void kest_build_index_names(KestBuild *build, bool keep);
 bool kest_build_check(KestBuild *build);
 bool kest_build_emit(KestBuild *build);
 

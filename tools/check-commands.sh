@@ -5178,6 +5178,99 @@ case "$chose" in
     ;;
 esac
 
+# The language server, driven the way an editor drives it: opened, asked what a
+# name is, asked where it was declared, asked what else names it, asked what the
+# file declares, asked for the one form, and then handed a buffer with a mistake
+# in it that is not on the disk. The last is the one that says the overlay
+# works: a server answering about the saved copy would say the file is fine.
+# See D977.
+mkdir "$scratch"/serving
+cat > "$scratch"/serving/serving.kest <<'KEST'
+fn doubled(n: i32) -> i32 {
+    return n * 2
+}
+
+fn main() -> i32 {
+    return doubled(0)
+}
+KEST
+served=$(python3 - "$kest" "$scratch"/serving/serving.kest <<'PY'
+import json, os, subprocess, sys
+
+kest, path = sys.argv[1], os.path.abspath(sys.argv[2])
+text = open(path).read()
+broken = text.replace("doubled(0)", "nothing_at_all(0)")
+uri = "file://" + path
+where = {"textDocument": {"uri": uri}, "position": {"line": 5, "character": 12}}
+messages = [
+    {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+    {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+     "params": {"textDocument": {"uri": uri, "languageId": "kest",
+                                 "version": 1, "text": text}}},
+    {"jsonrpc": "2.0", "id": 2, "method": "textDocument/hover",
+     "params": where},
+    {"jsonrpc": "2.0", "id": 3, "method": "textDocument/definition",
+     "params": where},
+    {"jsonrpc": "2.0", "id": 4, "method": "textDocument/references",
+     "params": where},
+    {"jsonrpc": "2.0", "id": 5, "method": "textDocument/documentSymbol",
+     "params": {"textDocument": {"uri": uri}}},
+    {"jsonrpc": "2.0", "id": 6, "method": "textDocument/formatting",
+     "params": {"textDocument": {"uri": uri}, "options": {}}},
+    {"jsonrpc": "2.0", "method": "textDocument/didChange",
+     "params": {"textDocument": {"uri": uri, "version": 2},
+                "contentChanges": [{"text": broken}]}},
+]
+body = b""
+for one in messages:
+    written = json.dumps(one).encode()
+    body += b"Content-Length: %d\r\n\r\n" % len(written) + written
+ran = subprocess.run([kest, "lsp"], input=body, capture_output=True)
+
+answers = {}
+published = []
+out = ran.stdout
+at = 0
+while True:
+    head = out.find(b"Content-Length: ", at)
+    if head < 0:
+        break
+    blank = out.find(b"\r\n\r\n", head)
+    if blank < 0:
+        break
+    many = int(out[head + 16:blank])
+    said = json.loads(out[blank + 4:blank + 4 + many])
+    at = blank + 4 + many
+    if "id" in said:
+        answers[said["id"]] = said.get("result")
+    elif said.get("method") == "textDocument/publishDiagnostics":
+        published.append(said["params"]["diagnostics"])
+
+wrong = []
+if not answers.get(1, {}).get("capabilities", {}).get("hoverProvider"):
+    wrong.append("it says it cannot answer what a name is")
+told = answers.get(2)
+if not told or "doubled" not in json.dumps(told):
+    wrong.append("it does not say what a name is")
+if not answers.get(3) or answers[3].get("range", {}).get("start", {}).get(
+        "line") != 0:
+    wrong.append("it does not say where a name was declared")
+if len(answers.get(4) or []) != 1:
+    wrong.append("it does not say what else names one")
+if len(answers.get(5) or []) != 2:
+    wrong.append("it does not say what the file declares")
+formatted = answers.get(6)
+if not formatted or "fn doubled" not in formatted[0].get("newText", ""):
+    wrong.append("it does not give back the one form")
+if len(published) != 2 or published[0] or not published[1]:
+    wrong.append("it does not answer about the buffer it was handed")
+print("; ".join(wrong) if wrong else "yes")
+PY
+)
+if [ "$served" != "yes" ]; then
+    complain "lsp: the editor was not answered by this compiler: $served"
+fi
+
 # What `check --cost` says about a body, held to the two things it is for: a
 # body that reaches nothing is said to reach nothing and is told which promise
 # it keeps and does not make, and a body that prints reaches both. The facts
@@ -5221,16 +5314,16 @@ import json, sys
 held = json.load(sys.stdin)
 answer = "yes"
 for one in held.get("functions", []):
-    cost = one.get("cost")
-    if cost is None:
+    proved = one.get("proved")
+    if proved is None:
         answer = "no"
         break
     if one["name"] == "costing.doubled" and (
-            not cost["proved"] or cost["reachesHeap"] or cost["reachesHost"]
-            or not cost["couldPromiseNoAlloc"]):
+            not proved["walked"] or proved["reachesHeap"] or proved["reachesHost"]
+            or not proved["couldPromiseNoAlloc"]):
         answer = "no"
         break
-    if one["name"] == "costing.main" and not cost["reachesHost"]:
+    if one["name"] == "costing.main" and not proved["reachesHost"]:
         answer = "no"
         break
 print(answer)

@@ -4315,10 +4315,8 @@ for file in "$@"; do""",
         "what": "what is wrong with a program written nowhere",
         "file": "src/main.c",
         "from": r"""        kest_build_report(build, stderr, KEST_FORM_TEXT);
-    }
-""",
-        "to": r"""    }
-""",
+        // What the compiler proved about each body""",
+        "to": r"""        // What the compiler proved about each body""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -5784,7 +5782,7 @@ anywhere, and it is why the gate holds""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "118162 as a tree, 154224 checked",
+        "caught": "118162 as a tree, 154256 checked",
     },
     {
         # And the section they are in saying whose machine they are. Bytes of
@@ -9963,6 +9961,25 @@ fn main() -> i32 {
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "into this host's bytes",
+    },
+    {
+        # An editor answered by a reader of this compiler rather than by this
+        # compiler. The index the checker writes while it resolves is what
+        # every answer about a name comes out of; without it the server has a
+        # tree and no answers, and says nothing about every name in the file
+        # while still saying what is wrong with it -- which reads, in an
+        # editor, exactly like a file with nothing interesting in it.
+        # See D977.
+        "what": "an editor told nothing about any name in the file",
+        "file": "src/check.c",
+        "from": """        kest_program_used(checker->program, checker->program->source,
+                          expr->span, global->source, global->span,
+                          global->type, false);""",
+        "to": "        (void)0;",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "the editor was not answered by this compiler",
     },
     {
         # What the compiler proved about a body, said as nothing. The walk is

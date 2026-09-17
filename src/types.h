@@ -185,6 +185,29 @@ typedef struct {
 } KestSymbol;
 
 // Everything one file declares, after names have been resolved to types.
+// One place a name was written, and what it turned out to name. The checker
+// resolves every name once and threw the answer away; an editor asking "what
+// is this" and "where else is it" has to have the same answer the compiler
+// had, and working it out again in a second reader is the second semantic
+// pipeline this project does not have. So the answers are kept. See D977.
+typedef struct {
+    // The file the name is written in, and where in it.
+    const KestSource *source;
+    KestSpan span;
+    // Where what it names is declared, which is what "go to definition" is.
+    // `declared_in` is NULL for a name whose declaration has no file -- a
+    // builtin, or a type the language provides.
+    const KestSource *declared_in;
+    KestSpan declared;
+    // What it is, written the way a message writes one. Kept as the type
+    // rather than as text, because text of a type costs an allocation and
+    // most of these are never asked about.
+    const KestType *type;
+    // Whether what it names is a name in one body. A local and a global with
+    // one spelling are two things, and renaming one must not touch the other.
+    bool is_local;
+} KestUse;
+
 typedef struct {
     KestArena *arena;
     // How many times this compiler has worked a value out where it was
@@ -257,6 +280,16 @@ typedef struct {
     KestInstance *instances;
     uint32_t instance_count;
     uint32_t instance_capacity;
+    // Where every name was written and what it named. Filled by the checker,
+    // read by whatever asks about a place in a file. See D977.
+    KestUse *uses;
+    uint32_t use_count;
+    uint32_t use_capacity;
+    // Whether to keep them at all. A compile run out of a build does not want
+    // an index of every name in the program and should not pay for one: the
+    // library's is a third again of what a finished build holds. An editor
+    // asks for it and everybody else does not. See D977.
+    bool index_names;
     // Constants that a `[T; N]` counted with. A type is resolved before the
     // constants are declared — a struct's fields are what a constant of that
     // struct is measured from — so there is no symbol to mark when a count
@@ -309,12 +342,27 @@ void kest_program_holds(const KestProgram *program, uint32_t *types,
 
 double kest_left_over(double left, double right);
 
+// `index_names` keeps the answers the checker works out for every name, which
+// is what an editor reads and what nothing else does.
 bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
+                bool index_names,
                 KestProgram **out);
 
 // Points the program at one file, so what follows resolves names the way that
 // file writes them.
 void kest_program_in(KestProgram *program, const KestUnitInfo *unit);
+
+// Writes down that a name was written here and what it named. Quietly does
+// nothing when there is no room, because an index for an editor is not worth
+// refusing a compile over.
+void kest_program_used(KestProgram *program, const KestSource *source,
+                       KestSpan span, const KestSource *declared_in,
+                       KestSpan declared, const KestType *type, bool is_local);
+
+// Every name written in this program, in the order they were read. What an
+// editor asks of it: which use is under this offset, which declaration it
+// points at, and which other uses point at the same one.
+const KestUse *kest_program_uses(const KestProgram *program, uint32_t *count);
 
 // Lookup as a file writes it: its own names bare, everything else prefixed
 // with the module it came from.

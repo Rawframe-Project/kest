@@ -33,11 +33,18 @@ KestBuild *kest_build_open(const char *library, char **paths, int count,
     return build;
 }
 
+void kest_build_index_names(KestBuild *build, bool keep) {
+    if (build != NULL) {
+        build->index_names = keep;
+    }
+}
+
 bool kest_build_check(KestBuild *build) {
     if (build->diags.error_count > 0 || build->units.count == 0) {
         return false;
     }
     if (!kest_check(build->arena, &build->diags, &build->units,
+                    build->index_names,
                     &build->program)) {
         // Nothing to read and nothing said, which is a stage that could not
         // write down either the program or what was wrong with it. A caller
