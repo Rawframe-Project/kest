@@ -80,13 +80,15 @@ optionals; functions as values; one body written for many types, a copy
 compiled per set; `defer`; `match`; `for` and `while`; the `no.alloc`,
 `no.host` and `deterministic` promises, proved by the compiler rather than
 trusted; a `scratch { }` block whose working memory goes back where it was, and
-which the compiler proves nothing escapes from; a bytecode VM of 157
-instructions; diagnostics with stable codes,
+which the compiler proves nothing escapes from; a bytecode VM of 158
+instructions, one of which nothing compiles to and a debugger writes; diagnostics with stable codes,
 spans, notes, suggested fixes and `--json`, all of a file's mistakes in one
 pass, with the shape of every object a command writes versioned; one canonical
-source form and a formatter that holds it; a C embedding API of 70 doors
+source form and a formatter that holds it; a C embedding API of 88 doors
 covering compile, start, call, layout introspection with field names, lent
-memory, a frame's working memory marked and put back, and per-machine limits;
+memory, a frame's working memory marked and put back, per-machine limits, what
+a program may do, what a run did, and stopping a machine and asking it where it
+is;
 and a standard library of nine modules written in Kest and held to the same
 rules as a program.
 
@@ -104,57 +106,64 @@ signature fingerprint, it is named one, and it does not survive a rename.
 bytes and a budget in steps — and each is refused in words at the instruction
 that crossed it. `kest_cancel` stops a running program from another thread. That
 is enough to stop a program that will not stop; it is **not** a claim that this
-is safe to run code you do not trust, which would need a threat model and fuzz
-evidence this project does not have.
+is safe to run code you do not trust. What it *is* a claim about is written
+where a reader meets the ceilings, under *What a program may do* in the
+reference: a boundary for code the host wrote or trusts to be cooperative, and
+not a sandbox for code that is trying to get out. There is a fuzzer now and it
+has found nothing in 3200 inputs, which is evidence about the compiler and not a
+threat model.
 
-**Not implemented.** Live code replacement in a running machine: a host reloads
-by building again and starting a new machine, and moving the world across is the
-host's, through a save the program writes. Cross-platform bitwise determinism for `sin`, `cos`, `pow` and
+**Not implemented, and not planned.** Live code replacement in a running
+machine: a host reloads by building again and starting a new machine, and moving
+the world across is the host's, through a save the program writes — the whole
+protocol is in `examples/engine.c` and seven edits are driven through it by the
+gate (D985). Cross-platform bitwise determinism for `sin`, `cos`, `pow` and
 `atan2`: they are the host's libm and two platforms may round them differently,
 where `sqrt`, `floor`, `ceil` and all integer and `f32`/`f64` arithmetic are
 exactly specified and do not have that problem. `no.host` is not determinism —
 that is what `deterministic` is, and the two are separate promises. No package
-manager, no debugger, no language server, no JIT, no concurrency inside the
-language, no networking, no graphics.
+registry, no JIT, no generated-C path (D987), no concurrency inside the
+language (D988), no networking, no graphics.
 
-**Experimental.** Everything about the embedding ABI. It has changed four times
-this month — a promise added to what a host may ask about, names on the pieces
-of a layout, a shape's own mark, a door for reading text, and marking the heap —
-and it will change again before it is called stable. A host written against it
-today is a host that recompiles.
+**The embedding ABI has a number and a policy.** `KEST_ABI_VERSION` is what
+shape the doors are in and `kest_abi_version()` reads the same number out of the
+library, so a host compares the two before it crosses and finds out before it
+reads memory that means something else. What moves it, and what moves the other
+three numbers beside it, is D983. It is not frozen — this is v0.x — but it is no
+longer a thing that changes without saying so.
 
-## Where this is on the way to v1
+## Where this is
 
-Four stages, and what each of them asks for. This is **v0.x**: an experimental
-language that can be used, on a semantic baseline that has been reproduced and
-repaired, with an ABI that is still moving.
+**v0.x**, and what that means concretely rather than as a grade.
 
-**Alpha** wants the defects reproduced in `docs/state.md` fixed — they are — a
-resolved representation in use, a bounded story for temporary memory, a backend
-chosen at semantic parity, a real host example, and the deterministic profile
-implemented on a tested platform. All six are here: the repairs (D927–D939), the
-resolved bodies the backend reads (D962), the memory story (D940, D954, D956,
-D957, and D966 and D967 for a world whose text changes), the backend chosen by
-building the other one and weighing it (D963), the host (`examples/engine.c`,
-D949) and the profile (D941–D943, answered by a run and asked again in D968).
+**What is decided and finished.** One resolved representation the backend reads
+(D962) and the other backend built, measured and rejected by a predeclared rule
+(D963). Text that carries its own length and is UTF-8 where it arrives (D964,
+D971). A persistent memory story with a trial behind it: flat to the byte across
+a hundredfold, and no collector (D992). `scratch { }` with what it will not let
+out proved over the bodies (D966, D972). `store` and `ref` placed, with a
+rollover policy that refuses rather than wraps (D975). Four version numbers and
+what moves each (D974, D983). A capability boundary that is the receiver of an
+extern, and one honest trust claim (D981). VM-only, with the AOT trigger
+measured and not met (D987).
 
-**Beta** wants a second platform built and tested, an ABI stabilisation
-candidate, versioned tooling output, host-mediated migration validated, and a
-generated-C path only if evidence asked for it. Versioned output is here (D947)
-and so is migration, validated by a host that does the whole protocol (D949).
-Windows is not: it is unverified and marked so rather than claimed.
+**What it ships beside the compiler.** A language server that *is* the compiler
+(D977), a source debugger whose breakpoints cost a running machine nothing
+(D991), a profiler that counts and does not time (D979), a cost report that says
+what was proved (D976), a formatter, a project manifest and four commands
+(D982), a VS Code extension (D978), and one release archive with a checksum
+(D989).
 
-**v1** wants a documented supported subset that is correct, an embedding ABI
-stable enough to write against, bounded representative workloads, no known
-critical defects of the reviewed classes, a practical validation loop, and an
-architecture a reader can understand without a worklog. The validation loop is
-here — a quarter of a second and ten minutes, and what each of them is for is
-written down. The rest waits on alpha and beta.
+**What it is tested on.** Linux x86-64, Windows x86-64 and macOS arm64, all
+three built and run in CI, and held to writing the same bytes for every example
+— which is what makes the deterministic profile a claim rather than a hope. The
+whole gate runs on Linux; a fuzzer of 3200 inputs runs under the sanitisers; the
+thread sanitiser runs four machines of one build at once.
 
-**Tested on** x86-64 Linux with GCC 15.2 only. The code is C11 and libc and
-nothing else, so it should build elsewhere; nobody has, and this project does
-not call a thing that was never run a thing that works. Windows is unverified;
-`docs/language.md` says what a port would read first.
+**What is still v0.x about it.** The ABI is versioned and not frozen. The
+standard library is small. There is one machine, one target family and no
+optimiser worth the name. And nobody outside this project has written a program
+in it, which is the one thing a repository cannot do for itself.
 
 ## Trying it in an hour
 
