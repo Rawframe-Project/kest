@@ -1,8 +1,8 @@
 # Where this is, and what is known to be wrong
 
-This is the engineering note for the v1 convergence mission. It is short on
-purpose and it is kept current: `docs/worklog.md` is history and is not read for
-what to do next.
+This is the engineering note. It is short on purpose and it is kept current:
+`docs/worklog.md` is history, `docs/decisions.md` is why, `CHANGELOG.md` is what
+a reader with a program has to do about it, and this is where the work is.
 
 ## Reproduced defects
 
@@ -45,30 +45,77 @@ a run with a decision knows which is which.
 
 ## Phases
 
-The mission's order. `/home/kest/mission/STATE.md` carries which one is open.
+The completion mission's sections, and which are answered. `/home/kest/mission/`
+carries the mission itself; this is what the tree has to show for it.
 
-    0 baseline and reproduction    done
-    1 semantic and embedding repair    done
-    2 one resolved per-instance representation   done   D962
-    3 temporaries, text, buffer, store   done: D940, D954, D956, D957,
-                                         text is D964, `scratch { }` is
-                                         D966 and what a changing world
-                                         costs is D967
-    4 validation correction            done   D944
-    5 backend decision                 done   D958 counted it, D961
-                                              measured a push, and D963
-                                              built the second backend and
-                                              measured it: 1.35 times
-                                              slower, so keep the stack one
-    6 a determinism profile that is true  done   D941, D942, D943, and asked
-                                              again after the three changes
-                                              under it: D968
-    7 identity, schema, reload         done   D945 to D949
-    8 host reality and portability     done   D949 to D953, and D969 for
-                                              what a clock is where there
-                                              is no monotonic one
-    9 machine-readable surface         done   D947
-    10 documentation and the v1 boundary
+    0  baseline and regression truth      done: fast, the focused
+                                          regressions, the sanitisers, and
+                                          three new defects found by driving
+                                          rather than reading -- D972, D985,
+                                          D991
+    1  the semantics this ships           done: the reference is the
+                                          normative one and says so, D994
+    2  one resolved representation        done  D962
+    3  persistent memory, decided         done  D992, on the trial in D972
+    4  text, bytes and buffer             done  D964, D971, D993
+    5  temporary memory and scratch       done  D966, D972
+    6  `store` and `ref` placed           done  D975
+    7  the execution backend              done  D963
+    8  shipping: VM-only or generated C   done  D987, measured against
+                                          Daslang and a frame budget
+    9  effects and contracts              done  D853, D976 for what the
+                                          proof found
+    10 the deterministic profile          done  D974 for the version, and
+                                          three platforms held to one trace
+    11 the C ABI                          done  D974, D981, D983
+    12 reload and identity                done  D985
+    13 concurrency                        done  D988
+    14 the sandbox claim                  done  D981
+    15 the standard library               small and said to be
+    16 project and dependencies           done  D982
+    17 tooling                            done  D976, D977, D979, D991
+    18 the editor                         done  D978
+    19 packaging                          done  D986 (no amalgamation), D989
+    20 platforms and CI                   done: linux, windows, macos
+    21 the benchmark suite                done  D980
+    23 fuzz and sanitisers                done  D984
+    24 validation cleanup                 done  D990
+    25 documentation                      done  D994
+    26 versioning and release policy      done  D983
+    27 the evaluation package             done: an hour's worth on the front
+                                          page, and a release archive
+
+## What is left, and it is not engineering
+
+Nobody outside this project has written a program in Kest. That is the one
+thing in the completion mission's section 33 that a repository cannot do for
+itself, and it is not a thing to fake. The evaluation package is the answer to
+the part that *is* this repository's: a clean checkout, eight commands, and
+numbers beside three other languages.
+
+## What was found by driving rather than reading
+
+Three defects this year were in things that were true when they were written,
+stayed written, and stopped being checked because nothing asked. Each was found
+the same way: by making the thing do what it says.
+
+- A `store` grown inside a `scratch { }` block was emptied by the end of it,
+  taking with it what it held before the block opened. No refusal and no
+  message. Found by running the fixed-live-set trial section 9 asks for
+  (D972).
+- A reload accepted a program whose entry took one more argument than it did,
+  because the host checked the shape of the *world* and nothing checked the
+  shape of a *call*. Found by driving seven edits through the host that does
+  the whole protocol (D985).
+- Everything that reads the code walks it an instruction at a time, and a walk
+  that met a breakpoint read a one-byte instruction where a three-byte one is.
+  The debugger reported the wrong line, and a wrong line looks exactly like a
+  right one. Found by stepping (D991).
+
+Two more were found by building for a second and third platform: a test that
+relied on where an array happened to land, and a line end that made two
+platforms write different bytes. Both were in the tests rather than the
+language, which is the useful half of what a second platform is for.
 
 ## Phase 2, which is in the tree now
 
