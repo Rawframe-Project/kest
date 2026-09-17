@@ -156,6 +156,18 @@ def bare(text):
 
 report("instructions", ops, written, lambda k: bare(k[len('KEST_OP_'):]))
 
+# And the operations a body is written in, which are the same kind of list one
+# stage further back: a name a reader sees beside what the operation does that
+# a promise is about. A row written under the wrong name would give a reader
+# one operation's name for another's work, and nothing else here would say so.
+operations = some("operations", [name for name in names(
+    table('src/ir.h', r'typedef enum \{([^}]*)\} KestIrKind;'), 'KEST_IR_')
+    if name != 'KEST_IR_OP_COUNT'])
+called = some("operation names", [m[0] for m in re.findall(
+    r'\[KEST_IR_\w+\] = \{"((?:[^"\\]|\\.)*)",\s*(\w+)',
+    table('src/ir.c', r'IR_OPS\[\] = \{(.*?)\n\};'))])
+report("operations", operations, called, lambda k: bare(k[len('KEST_IR_'):]))
+
 toks = some("token kinds", names(
     table('src/lexer.h', r'typedef enum \{(.*?)\} KestTokenKind;'),
     'KEST_TOK_'))

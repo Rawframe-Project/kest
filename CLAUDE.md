@@ -884,7 +884,9 @@ check    function bodies against those declarations
 contract proves the `no.alloc` promises
 value    runtime values, the instruction set, the disassembler
 fmt      ast -> the one form the language has
-compile  ast -> bytecode
+ir       what a checked program means, written down once
+lower    ir -> bytecode
+compile  ast -> ir
 vm       bytecode execution
 build    the stages as one thing, which is what a host has
 main     CLI

@@ -298,11 +298,13 @@ fn main() -> i32 {
     },
     {
         "what": "a `return` wider than the function gives back",
-        "file": "src/compile.c",
-        "from": """        emit(compiler, KEST_OP_RETURN, stmt->span);
-        emit_u16(compiler, size, stmt->span);""",
-        "to": """        emit(compiler, KEST_OP_RETURN, stmt->span);
-        emit_u16(compiler, size + 1, stmt->span);""",
+        "file": "src/lower.c",
+        "from": r"""    case KEST_IR_GIVE:
+        emit(lower, KEST_OP_RETURN, span);
+        emit_u16(lower, op->imm[0], span);""",
+        "to": r"""    case KEST_IR_GIVE:
+        emit(lower, KEST_OP_RETURN, span);
+        emit_u16(lower, (uint16_t)(op->imm[0] + 1), span);""",
         "program": "returning.kest",
         # A host sizes its frame from the declaration, so a wider return is
         # read back past the end of what the host has.
@@ -1048,9 +1050,9 @@ fn main() -> i32 {
         "file": "src/compile.c",
         "from": r"""        if (in_slots) {
             stack_pop(compiler, size);
-            emit_store(compiler, slot, size, stmt->span);""",
+            store_slots(compiler, slot, size, target->type, stmt->span);""",
         "to": r"""        if (in_slots) {
-            emit_store(compiler, slot, size, stmt->span);""",
+            store_slots(compiler, slot, size, target->type, stmt->span);""",
         "make": ["kest"],
         "program": "leaving.kest",
         "source": """fn main() -> i32 {
@@ -1069,12 +1071,10 @@ fn main() -> i32 {
         # that was wrong in the middle. See D810.
         "what": "a count taken below nothing",
         "file": "src/compile.c",
-        "from": r"""            if (size == 1) {
-                stack_pop(compiler, 1);
-                emit(compiler, KEST_OP_POP, stmt->span);""",
-        "to": r"""            if (size == 1) {
-                stack_pop(compiler, 2);
-                emit(compiler, KEST_OP_POP, stmt->span);""",
+        "from": r"""            if (size > 0) {
+                stack_pop(compiler, size);""",
+        "to": r"""            if (size > 0) {
+                stack_pop(compiler, (uint16_t)(size + 1));""",
         "make": ["kest"],
         "program": "under.kest",
         "source": """fn side(n: i32) -> i32 {
@@ -1120,11 +1120,9 @@ fn main() -> i32 {
         "what": "one of a run read at the width it is about to become",
         "file": "src/compile.c",
         "from": r"""        stack_push(compiler, value_slots(one));
-        emit(compiler, KEST_OP_INDEX, expr->span);
-        emit_u16(compiler, layout_of(compiler, one), expr->span);""",
+        uint32_t held = elem_place(compiler, ir_top(compiler, 1),""",
         "to": r"""        stack_push(compiler, value_slots(expr->type));
-        emit(compiler, KEST_OP_INDEX, expr->span);
-        emit_u16(compiler, layout_of(compiler, one), expr->span);""",
+        uint32_t held = elem_place(compiler, ir_top(compiler, 1),""",
         "make": ["kest"],
         "program": "picked.kest",
         "source": """import std.random
@@ -1151,10 +1149,10 @@ fn main() -> i32 {
         "what": "a byte literal counted twice against the stack",
         "file": "src/compile.c",
         "from": r"""        value.integer = (unsigned char)held[0];
-        emit_constant(compiler, value, KEST_CONST_INT, expr->span);""",
+        emit_constant(compiler, value, KEST_CONST_INT, expr->type, expr->span);""",
         "to": r"""        value.integer = (unsigned char)held[0];
         stack_push(compiler, 1);
-        emit_constant(compiler, value, KEST_CONST_INT, expr->span);""",
+        emit_constant(compiler, value, KEST_CONST_INT, expr->type, expr->span);""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "and a byte is a byte",
@@ -1170,13 +1168,9 @@ fn main() -> i32 {
         "what": "a struct with nothing in it built as no slots",
         "file": "src/compile.c",
         "from": r"""        if (callee->type->member_count == 0) {
-            KestValue nothing = {0};
-            emit_constant(compiler, nothing, KEST_CONST_INT, expr->span);
-        }""",
+            KestValue nothing = {0};""",
         "to": r"""        if (false) {
-            KestValue nothing = {0};
-            emit_constant(compiler, nothing, KEST_CONST_INT, expr->span);
-        }""",
+            KestValue nothing = {0};""",
         "make": ["kest"],
         "program": "empty.kest",
         "source": """import std.io
@@ -5349,11 +5343,11 @@ fn length(v: Vec2) -> f32 no.alloc deterministic {""",
         # what it costs is a dispatch for every field past the first, on the
         # shape this language is for. See D871.
         "what": "a run of slots taken one at a time",
-        "file": "src/compile.c",
-        "from": """    uint32_t width = compiler->last_op == KEST_OP_LOAD    ? 3
-                     : compiler->last_op == KEST_OP_LOADN ? 5
-                                                          : 0;""",
-        "to": """    uint32_t width = compiler->last_op == KEST_OP_LOADN ? 5 : 0;""",
+        "file": "src/lower.c",
+        "from": r"""    uint32_t width = lower->last_op == KEST_OP_LOAD    ? 3
+                     : lower->last_op == KEST_OP_LOADN ? 5
+                                                       : 0;""",
+        "to": r"""    uint32_t width = lower->last_op == KEST_OP_LOADN ? 5 : 0;""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "pair(s) left apart",
@@ -5370,9 +5364,9 @@ fn length(v: Vec2) -> f32 no.alloc deterministic {""",
         # and D887.
         "what": "two instructions folded across something that points between "
                 "them",
-        "file": "src/compile.c",
-        "from": """    if (width == 0 || compiler->last_at < compiler->pointed_at ||""",
-        "to": """    if (width == 0 ||""",
+        "file": "src/lower.c",
+        "from": r"""    if (width == 0 || lower->last_at < lower->pointed_at ||""",
+        "to": r"""    if (width == 0 ||""",
         "make": ["kest"],
         "program": "landing.kest",
         "source": """fn add(a: i32, b: i32) -> i32 {
@@ -5951,13 +5945,11 @@ fn main() -> i32 {
         # the arena handed out and nobody wrote, so a value read there is
         # nought by luck rather than by anybody's decision. See D904.
         "what": "a constant read past the ones a body was given",
-        "file": "src/compile.c",
-        "from": """    emit(compiler, KEST_OP_CONST, origin);
-    emit_u16(compiler, (uint16_t)index, origin);
-}""",
-        "to": """    emit(compiler, KEST_OP_CONST, origin);
-    emit_u16(compiler, (uint16_t)(index + 1), origin);
-}""",
+        "file": "src/lower.c",
+        "from": r"""    emit(lower, count == 1 ? KEST_OP_CONST : KEST_OP_CONST_RUN, origin);
+    emit_u16(lower, (uint16_t)index, origin);""",
+        "to": r"""    emit(lower, count == 1 ? KEST_OP_CONST : KEST_OP_CONST_RUN, origin);
+    emit_u16(lower, (uint16_t)(index + 1), origin);""",
         "make": ["debug"],
         "binary": "kest-debug",
         "program": "reading.kest",
@@ -5977,16 +5969,16 @@ fn main() -> i32 {
         # see. What is above the names is what the body was in the middle of
         # working out. See D903.
         "what": "a run of slots read past the names a body has",
-        "file": "src/compile.c",
-        "from": """    emit(compiler, size == 1 ? KEST_OP_LOAD : KEST_OP_LOADN, origin);
-    emit_u16(compiler, slot, origin);
+        "file": "src/lower.c",
+        "from": r"""    emit(lower, size == 1 ? KEST_OP_LOAD : KEST_OP_LOADN, origin);
+    emit_u16(lower, slot, origin);
     if (size != 1) {
-        emit_u16(compiler, size, origin);
+        emit_u16(lower, size, origin);
     }""",
-        "to": """    emit(compiler, size == 1 ? KEST_OP_LOAD : KEST_OP_LOADN, origin);
-    emit_u16(compiler, slot, origin);
+        "to": r"""    emit(lower, size == 1 ? KEST_OP_LOAD : KEST_OP_LOADN, origin);
+    emit_u16(lower, slot, origin);
     if (size != 1) {
-        emit_u16(compiler, (uint16_t)(size + 1), origin);
+        emit_u16(lower, (uint16_t)(size + 1), origin);
     }""",
         "make": ["debug"],
         "binary": "kest-debug",
@@ -6049,13 +6041,15 @@ fn main() -> i32 {
         # is the call the promise's second proof cannot see through; this is
         # the one it can. See D901.
         "what": "a call handing over more slots than the body takes",
-        "file": "src/compile.c",
-        "from": """        emit(compiler, KEST_OP_CALL, expr->span);
-        emit_u16(compiler, (uint16_t)index, expr->span);
-        emit_u16(compiler, argument_slots, expr->span);""",
-        "to": """        emit(compiler, KEST_OP_CALL, expr->span);
-        emit_u16(compiler, (uint16_t)index, expr->span);
-        emit_u16(compiler, (uint16_t)(argument_slots + 1), expr->span);""",
+        "file": "src/lower.c",
+        "from": r"""    case KEST_IR_CALL:
+        emit(lower, KEST_OP_CALL, span);
+        emit_u16(lower, op->imm[0], span);
+        emit_u16(lower, op->imm[1], span);""",
+        "to": r"""    case KEST_IR_CALL:
+        emit(lower, KEST_OP_CALL, span);
+        emit_u16(lower, op->imm[0], span);
+        emit_u16(lower, (uint16_t)(op->imm[1] + 1), span);""",
         "make": ["debug"],
         "binary": "kest-debug",
         "program": "calling.kest",
@@ -6075,15 +6069,17 @@ fn main() -> i32 {
         # answer; a host is held to those from its own side and nothing held
         # the machine to them. See D901.
         "what": "a crossing taking back what the declaration does not give",
-        "file": "src/compile.c",
-        "from": """    emit(compiler, KEST_OP_CALL_HOST, expr->span);
-    emit_u16(compiler, (uint16_t)slot, expr->span);
-    emit_u16(compiler, argument_slots, expr->span);
-    emit_u16(compiler, result_slots, expr->span);""",
-        "to": """    emit(compiler, KEST_OP_CALL_HOST, expr->span);
-    emit_u16(compiler, (uint16_t)slot, expr->span);
-    emit_u16(compiler, argument_slots, expr->span);
-    emit_u16(compiler, (uint16_t)(result_slots + 1), expr->span);""",
+        "file": "src/lower.c",
+        "from": r"""    case KEST_IR_CALL_HOST:
+        emit(lower, KEST_OP_CALL_HOST, span);
+        emit_u16(lower, op->imm[0], span);
+        emit_u16(lower, op->imm[1], span);
+        emit_u16(lower, op->imm[2], span);""",
+        "to": r"""    case KEST_IR_CALL_HOST:
+        emit(lower, KEST_OP_CALL_HOST, span);
+        emit_u16(lower, op->imm[0], span);
+        emit_u16(lower, op->imm[1], span);
+        emit_u16(lower, (uint16_t)(op->imm[2] + 1), span);""",
         "make": ["debug"],
         "binary": "kest-debug",
         "program": "crossing.kest",
@@ -6106,11 +6102,12 @@ fn main() -> i32 {
         # See D900.
         "what": "a body that comes back with something over",
         "file": "src/compile.c",
-        "from": """            if (size == 1) {
-                stack_pop(compiler, 1);
-                emit(compiler, KEST_OP_POP, stmt->span);""",
-        "to": """            if (size == 1) {
-                stack_pop(compiler, 1);""",
+        "from": r"""            if (size > 0) {
+                stack_pop(compiler, size);
+                ir_emit(compiler, KEST_IR_DROP,""",
+        "to": r"""            if (size > 0) {
+                stack_pop(compiler, size);
+                if (size == 0) ir_emit(compiler, KEST_IR_DROP,""",
         "make": ["debug"],
         "binary": "kest-debug",
         "program": "leaking.kest",
@@ -6652,10 +6649,10 @@ fn main() -> i32 {
         # written over `i32` makes, which is a twelfth of a frame step. See
         # D868.
         "what": "a cut written apart from the arithmetic that needed it",
-        "file": "src/compile.c",
-        "from": """    case KEST_OP_ADD_I:
+        "file": "src/lower.c",
+        "from": r"""    case KEST_OP_ADD_I:
         return KEST_OP_ADD_I_NARROW;""",
-        "to": """    case KEST_OP_ADD_I:
+        "to": r"""    case KEST_OP_ADD_I:
         return KEST_OP_NARROW;""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
@@ -9662,11 +9659,12 @@ memory""",
         # shape, which is the half of a boundary a host cannot see.
         "what": "a frame as wide as the arguments are many",
         "file": "src/compile.c",
-        "from": """            compiler.chunk->param_slots = compiler.next_slot;
-            remember_takes(&compiler, symbol == NULL ? NULL : symbol->type);""",
-        "to": """            compiler.chunk->param_slots =
-                (uint16_t)decl->function.param_count;
-            remember_takes(&compiler, symbol == NULL ? NULL : symbol->type);""",
+        "from": r"""static void close_body(Compiler *compiler, const KestBlock *block,
+                       KestSpan declared) {
+    compiler->body->param_slots = compiler->next_slot;""",
+        "to": r"""static void close_body(Compiler *compiler, const KestBlock *block,
+                       KestSpan declared) {
+    compiler->body->param_slots = (uint16_t)compiler->local_count;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "needs a frame 1 wide and what it takes (3)",
@@ -12354,8 +12352,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # name — which reads like a measurement and says nothing.
         "what": "the size of a given value counted as one",
         "file": "src/compile.c",
-        "from": """    compiler->chunk->folded_slots += slots;""",
-        "to": """    compiler->chunk->folded_slots += slots != 0;""",
+        "from": r"""    compiler->body->folded_slots += slots;""",
+        "to": r"""    compiler->body->folded_slots += slots != 0;""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "is a number saying nothing",
@@ -12368,8 +12366,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # something that did not happen.
         "what": "a given value that takes no room",
         "file": "src/compile.c",
-        "from": """    compiler->chunk->folded_slots += slots;""",
-        "to": """    compiler->chunk->folded_slots += slots * 0;""",
+        "from": r"""    compiler->body->folded_slots += slots;""",
+        "to": r"""    compiler->body->folded_slots += slots * 0;""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "and a value takes a slot at least",
@@ -14813,16 +14811,20 @@ fn main() -> i32 {
         # sanitisers say nothing; only the build that checks itself can tell.
         "what": "a walk that reads a byte past what it measured",
         "file": "src/compile.c",
-        "from": """                emit(compiler, over_text ? KEST_OP_TEXT_LEN : KEST_OP_LEN,
-                     stmt->span);""",
-        "to": """                emit(compiler, over_text ? KEST_OP_TEXT_LEN : KEST_OP_LEN,
-                     stmt->span);
+        "from": r"""                ir_emit(compiler,
+                        over_text ? KEST_IR_TEXT_LEN : KEST_IR_LEN, sequence,
+                        1, whole_type(compiler), 1, stmt->span);""",
+        "to": r"""                ir_emit(compiler,
+                        over_text ? KEST_IR_TEXT_LEN : KEST_IR_LEN, sequence,
+                        1, whole_type(compiler), 1, stmt->span);
                 if (over_text) {
                     KestValue one = {0};
                     one.integer = 1;
-                    emit_constant(compiler, one, KEST_CONST_INT, stmt->span);
+                    emit_constant(compiler, one, KEST_CONST_INT,
+                                  whole_type(compiler), stmt->span);
                     stack_pop(compiler, 1);
-                    emit(compiler, KEST_OP_ADD_I, stmt->span);
+                    ir_emit(compiler, KEST_IR_ADD, whole_type(compiler), 2,
+                            whole_type(compiler), 1, stmt->span);
                 }""",
         "make": ["debug"],
         "binary": "kest-debug",

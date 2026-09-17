@@ -74,7 +74,20 @@ bool kest_build_emit(KestBuild *build) {
     // module said nothing was wrong — `emit` under a ceiling wrote every
     // instruction of a program and one fewer layout than it has, and came back
     // nought. See D845.
-    bool compiled = kest_compile(build->program, &build->units, &build->module);
+    // The bodies go in an arena of their own, the way the trees do and for the
+    // same reason: a backend reads them and nothing after it does, so a build
+    // that is finished holds neither. See D748 and D962.
+    KestIrProgram ir;
+    KestArena *bodies = kest_arena_new();
+    if (bodies == NULL) {
+        kest_diags_starve(&build->diags);
+        return false;
+    }
+    kest_ir_program_init(&ir, bodies);
+    bool compiled =
+        kest_compile(build->program, &build->units, &build->module, &ir) &&
+        kest_lower(build->program, &build->module, &ir);
+    kest_arena_free(bodies);
     if (!compiled || build->module.out_of_room) {
         kest_diags_starve(&build->diags);
     }

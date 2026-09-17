@@ -2712,6 +2712,11 @@ static bool resolve_struct_fields(KestProgram *program, const KestUnit *unit) {
             continue;
         }
         const char *name = qualified(program, decl->name);
+        // A name nothing could be made for is a host with nothing left, and
+        // looking a type up by a name that is not there reads nothing at all.
+        if (name == NULL) {
+            return false;
+        }
         KestType *type = kest_find_type(program, name, strlen(name));
         if (type == NULL || type->members != NULL) {
             continue;
@@ -3029,6 +3034,11 @@ static bool resolve_flags_cases(KestProgram *program, const KestUnit *unit) {
             continue;
         }
         const char *name = qualified(program, decl->name);
+        // A name nothing could be made for is a host with nothing left, and
+        // looking a type up by a name that is not there reads nothing at all.
+        if (name == NULL) {
+            return false;
+        }
         KestType *type = kest_find_type(program, name, strlen(name));
         if (type == NULL || type->cases != NULL) {
             continue;
@@ -3126,6 +3136,11 @@ static bool resolve_enum_cases(KestProgram *program, const KestUnit *unit) {
             continue;
         }
         const char *name = qualified(program, decl->name);
+        // A name nothing could be made for is a host with nothing left, and
+        // looking a type up by a name that is not there reads nothing at all.
+        if (name == NULL) {
+            return false;
+        }
         KestType *type = kest_find_type(program, name, strlen(name));
         if (type == NULL || type->cases != NULL) {
             continue;

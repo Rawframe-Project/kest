@@ -867,40 +867,6 @@ uint32_t kest_chunk_constant_run(KestModule *module, KestChunk *chunk,
     return first;
 }
 
-uint32_t kest_chunk_constant(KestModule *module, KestChunk *chunk,
-                             KestValue value, KestConstClass class) {
-    // Constants are compared by their bits, so the same number written twice
-    // is stored once. The class is part of the comparison because the integer
-    // 0 and the float 0.0 have the same bits and are not the same constant to
-    // a reader.
-    for (uint32_t i = 0; i < chunk->constant_count; i++) {
-        if (chunk->constant_classes[i] == class &&
-            memcmp(&chunk->constants[i], &value, sizeof(KestValue)) == 0) {
-            return i;
-        }
-    }
-    if (chunk->constant_count == chunk->constant_capacity) {
-        uint32_t capacity = chunk->constant_capacity;
-        void *values = grow_from(module->arena, chunk->constants,
-                                 chunk->constant_count, &capacity,
-                                 sizeof(KestValue), FLOOR_CONSTANTS);
-        uint32_t class_capacity = chunk->constant_capacity;
-        void *classes = grow_from(module->arena, chunk->constant_classes,
-                                  chunk->constant_count, &class_capacity,
-                                  sizeof(uint8_t), FLOOR_CONSTANTS);
-        if (values == NULL || classes == NULL) {
-            module->out_of_room = true;
-            return 0;
-        }
-        chunk->constants = values;
-        chunk->constant_classes = classes;
-        chunk->constant_capacity = capacity;
-    }
-    chunk->constant_classes[chunk->constant_count] = (uint8_t)class;
-    chunk->constants[chunk->constant_count] = value;
-    return chunk->constant_count++;
-}
-
 typedef enum {
     NONE,
     U16,

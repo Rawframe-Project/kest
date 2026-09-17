@@ -5,6 +5,7 @@
 #include "compile.h"
 #include "contract.h"
 #include "loader.h"
+#include "lower.h"
 #include "vm.h"
 
 // A compiled program and everything it was compiled from. One arena holds all

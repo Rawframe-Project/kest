@@ -641,10 +641,11 @@ const char *kest_reach_name(KestReach reach);
 // one, because `3` and `3.0` are not the same value in this language.
 int kest_write_real(char *buffer, size_t size, double value, bool narrow);
 
-uint32_t kest_chunk_constant(KestModule *module, KestChunk *chunk,
-                             KestValue value, KestConstClass class);
-// The same for a run of them, kept together and in order because what reads
-// them back is one copy. Gives where the run starts.
+// A run of values the chunk holds, kept together and in order because what
+// reads them back is one copy, and shared with a run already there that is the
+// same. One value is a run of one: there used to be a door for that as well,
+// and two doors for one question are two answers the day either moves.
+// Gives where the run starts.
 uint32_t kest_chunk_constant_run(KestModule *module, KestChunk *chunk,
                                  const KestValue *values,
                                  const uint8_t *classes, uint32_t count);

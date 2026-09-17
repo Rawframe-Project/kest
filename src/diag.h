@@ -209,6 +209,14 @@ void kest_diags_suggestv(KestDiags *diags, const char *format, va_list args);
 // noticed. `why` is what was expected, without a full stop. See D410.
 void kest_diags_fault(KestDiags *diags, const char *why);
 
+// And what the halves of this compiler say when one of them meets what the
+// other allowed: the same refusal in the same words, said in one place because
+// there are three of them now — the walk that writes a body, the backend that
+// reads one, and the proof over what was emitted. `what` is what was found,
+// without a full stop and without the clause that follows it.
+void kest_diags_disagree(KestDiags *diags, KestSpan span, const char *what, ...)
+    KEST_SAYS(3, 4);
+
 void kest_diags_suggest(KestDiags *diags, const char *format, ...)
     KEST_SAYS(2, 3);
 

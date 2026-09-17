@@ -241,6 +241,19 @@ void kest_diags_fault(KestDiags *diags, const char *why) {
     kest_diags_suggest(diags, "%s, which is a fault in the compiler", why);
 }
 
+void kest_diags_disagree(KestDiags *diags, KestSpan span, const char *what,
+                         ...) {
+    char said[256];
+    va_list args;
+    va_start(args, what);
+    vsnprintf(said, sizeof said, what, args);
+    va_end(args);
+    kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0505", span,
+                   "%s, which the checker allowed", said);
+    kest_diags_fault(diags, "the two halves of the compiler disagree about "
+                            "what a program is");
+}
+
 void kest_diags_in(KestDiags *diags, const KestSource *source) {
     diags->source = source;
 }

@@ -29843,3 +29843,81 @@ the bar on this workload. The decision to keep the stack backend stands, and it
 stands on a measurement rather than on the absence of one. What is left of that
 third is what fusing more pairs would take: `store` then `load` is another 3.6%,
 and the same door is open on it.
+
+## D962. What a program means is written down once, and a backend reads it
+
+The compiler walked the checked tree and wrote instructions as it went. That
+made the tree the only statement of what a program does and the emitted code
+the only statement of how, with nothing between them: anything that wanted the
+first without the second — a second backend, a walk that asks where a value
+came from, a lifetime that has to be followed through a call — had to ask the
+tree again and resolve the names again. D959 said that was a rewire and one
+change or none, and left it out. This is that change.
+
+**What is between them now.** `src/ir.h` is one body per concrete function:
+one declaration, or one copy of a generic. A body is values, places,
+operations and branches.
+
+- A **value** is made by one operation and read by one that comes after it.
+  They are made in the order a walk of the tree makes them, so a body's values
+  are consumed innermost first. What that buys is a stack backend that needs no
+  scratch slots and a slot backend whose window position is the depth at which
+  the value was made.
+- A **place** is what reaches a thing rather than an address already worked
+  out: a run of slots in the frame, one of a fixed run at an index, one of an
+  array or a store as the handle and the index, or somewhere inside memory the
+  host laid out. The one that matters is the third: an element stays the array
+  and the index until the moment it is read or written, which is what D931
+  needed and what an address worked out early cannot give.
+- An **operation** is typed and three-address. There is one addition and not
+  eleven: whether it is signed, how wide it is and whether it is a float are
+  the type's to say, and the backend reads them. The same goes for the six
+  comparisons, for what a value is written as, and for which way a shift fills.
+- **Control flow** is a branch naming the operation it lands on. The mission's
+  suggested form was basic blocks; what it required of them is here, and what a
+  tree walk writes is a list. A backend that wants blocks works them out from
+  the branch targets in one walk, which is cheaper than keeping a second shape
+  in step with the first.
+- Every operation carries what it does that a promise is about: reaches the
+  heap, crosses into the host, answers differently on two machines, writes
+  something readable again, may move what a handle points at, costs more the
+  more there is of it. One list, in `src/ir.c`, beside the name.
+
+**Three modules where there were one.** `compile` walks the tree and writes a
+body; it writes no instruction at all. `lower` writes the stack machine's
+bytecode from a body; it decides nothing about what a program means — what it
+decides is which instruction, how wide a jump is, and which pairs are worth
+writing as one. `ir` is the thing between them. `build` calls them in order,
+which is what `build` is for, and is why `lower` sits above `compile` in the
+pipeline rather than below it.
+
+**Held to being a body.** `kest_ir_verify` reads every body before it is
+lowered: every operation reading a value this body made and made earlier, every
+branch landing on an operation this body has, every place naming what it
+reaches, and no value nothing reads. A body that is not one is refused with
+`K0505` rather than written as instructions that mean something else.
+
+**What came out the other side, measured.** Every example, every library module
+and every instrument was disassembled before and after and the two compared.
+Fourteen files are byte for byte what they were. The rest differ in exactly
+three ways, all of them the backend doing what it now does in one place instead
+of three:
+
+- 137 pairs of `load` then `const` are one `load.k`. The fusion was in
+  `emit_constant` and a folded constant went out through another door that
+  never tried it; there is one door now.
+- 112 `pop.n 1` are `pop`. Dropping one slot is `pop` wherever it is dropped
+  from; two places used the wide form because they counted slots rather than
+  asking how wide the value was.
+- 17 `field` at offset nought are 14 `pop.n` and 3 nothing at all. The front of
+  a run is the run with what is above it dropped, which is the same answer and
+  one instruction less to read.
+
+That is 140 fewer instructions across the tree and not one that means something
+else. *Measured.*
+
+**What it is not.** It is not SSA: a name is a place and a place is written to.
+It is not a second checker: everything in a body was decided before it was
+written and nothing in it refuses a program. And it is not a second pipeline:
+the tree walk that used to emit is the tree walk that now writes a body, so
+every refusal, every fold and every shape of lowering came across intact.
