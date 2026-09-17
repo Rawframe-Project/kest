@@ -69,6 +69,14 @@ examples/          .kest programs that must keep working. Each one checks
                    nothing can run it (D222). A `main` that gives nothing back is a shape the
                    language has and no example is written that way, so
                    `check.sh` runs one of its own.
+bench/             Four shapes of work and what each costs, in this language
+                   and in the two beside it. Not part of `make check`: a
+                   duration is not a pass or a fail. It is here to catch a
+                   change that made something slower and to say where this
+                   language sits, which is a thing to know rather than a thing
+                   to claim. The comparators are found rather than built:
+                   `bench/run.sh` leaves a row out when what would run it is
+                   not there. See D980.
 editors/           What an editor needs, and nothing that parses Kest. The
                    VS Code extension is a grammar, a language configuration,
                    snippets and a client that starts `kest lsp`; every

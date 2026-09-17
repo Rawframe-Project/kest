@@ -1,0 +1,78 @@
+module bench.graph
+
+import std.io
+
+// Checked identity, which is the one thing here another language has to build
+// by hand: a world of things naming each other, walked, with some of them taken
+// out and made again so that a name held from before is a name that reads as
+// nothing. The comparators do the same with an index and a generation beside
+// it, because that is what a program written without this does.
+
+const MANY: i32 = 4000
+const ROUNDS: i32 = 60
+
+struct Node {
+    value: i32
+    next: ref<Node>?
+}
+
+fn main() -> i32 {
+    let world: store<Node> = store(MANY)
+    let made: [ref<Node>] = array()
+    for i in 0..MANY {
+        push(made, add(world, Node(i, none)))
+    }
+    for i in 0..MANY {
+        if let one = get(world, made[i]) {
+            let linked = one
+            linked.next = made[(i + 1) % MANY]
+            set(world, made[i], linked)
+        }
+    }
+
+    let total = 0
+    let round = 0
+    while round < ROUNDS {
+        // A walk of the ring, reading through a reference each step.
+        let at = made[0]
+        let steps = 0
+        while steps < MANY {
+            if let one = get(world, at) {
+                total += one.value
+                if let after = one.next {
+                    at = after
+                } else {
+                    return 1
+                }
+            } else {
+                return 2
+            }
+            steps += 1
+        }
+        // And every eighth round, a tenth of them taken out and made again.
+        if round % 8 == 0 {
+            for i in 0..MANY {
+                if i % 10 != round % 10 {
+                    continue
+                }
+                if let one = get(world, made[i]) {
+                    let value = one.value
+                    let after = one.next
+                    remove(world, made[i])
+                    let again = add(world, Node(value, after))
+                    // Whoever named the one that went names the new one.
+                    let before = (i + MANY - 1) % MANY
+                    if let holder = get(world, made[before]) {
+                        let mended = holder
+                        mended.next = again
+                        set(world, made[before], mended)
+                    }
+                    made[i] = again
+                }
+            }
+        }
+        round += 1
+    }
+    io.print("graph {total}")
+    return 0
+}

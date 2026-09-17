@@ -11,3 +11,4 @@ kest-debug
 kest-before
 libkest.a
 *.o
+bench/*-cpp

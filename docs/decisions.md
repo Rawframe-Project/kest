@@ -30654,3 +30654,48 @@ are where a duration comes from, and both run something.
 **Where it is said.** On the error stream for a person, and inside the object a
 run writes for a tool — one run is one object, and a second object on another
 stream is two things to put back together. *Measured.*
+
+## D980. Four workloads, three languages, and where this one sits
+
+Sections 21 and 27 of the completion mission ask for a small durable benchmark
+suite and say what it must not become: "not a research lab", "do not spend days
+validating the benchmark harness instead of the language."
+
+**So it is four programs, three comparators and a shell script.** Each workload
+answers with a checksum, so a run of one language and a run of another can be
+*shown* to have done the same work rather than assumed to have:
+
+| | what it is |
+| --- | --- |
+| `kernel` | numbers in and numbers out — a frame with no handles in it |
+| `control` | branches rather than arithmetic — a rule of behaviour |
+| `graph` | checked identity, which the comparators write by hand |
+| `words` | text made, joined, split and searched |
+
+`graph` is the one worth reading twice. The C++ and Luau versions do with an
+index, a generation and a check at every read what this language does with
+`store` and `ref`, so what it measures is what the checking costs rather than
+what it saves.
+
+**What it says, on the machine this was written on**, best of five, GCC 15.2
+`-O2` for the C++ and Luau 0.6 for the Lua:
+
+| workload | Kest | C++ | Luau |
+| --- | --- | --- | --- |
+| kernel | 148 ms | 13 ms | 109 ms |
+| control | 169 ms | 13 ms | 127 ms |
+| graph | 23 ms | 8 ms | 29 ms |
+| words | 60 ms | 20 ms | 44 ms |
+
+All four checksums agree across all three. Read plainly: this language is
+between eleven and thirteen times a C++ baseline on straight compute, three
+times on text, and **under three times on the workload with identity in it**;
+against Luau it is about a third slower on compute and text and a quarter
+faster on identity. That is the position, and it is not a claim of superiority
+anywhere — it is where a bytecode machine with a checked handle in it sits.
+
+**What is not here.** No harness to validate, no orchestrator, no history
+kept. It is not part of `make check`, because a duration is not a pass or a
+fail. The comparators are found rather than built: `bench/run.sh` reads
+`KEST_CPP`, `KEST_LUAU` and `KEST_DAS` and leaves a row out when what would run
+it is not there, so the suite runs on a machine with none of them. *Measured.*

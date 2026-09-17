@@ -1,0 +1,39 @@
+module bench.words
+
+import std.io
+import std.text
+
+// Text and containers: made, joined, searched and counted. The shape a program
+// has when it is writing a log, reading a save or building a name -- which is
+// what most of a program that is not a frame is doing.
+
+const MANY: i32 = 2000
+const ROUNDS: i32 = 20
+
+fn main() -> i32 {
+    let found = 0
+    let round = 0
+    while round < ROUNDS {
+        let pieces: [text] = array()
+        for i in 0..MANY {
+            push(pieces, "item {i} of {MANY} in round {round}")
+        }
+        let whole = text.join(pieces, ",")
+        if text.contains(whole, "item 1999 ") {
+            found += 1
+        }
+        let back = text.split(whole, ",")
+        if len(back) != MANY {
+            return 1
+        }
+        for one in back {
+            if text.starts(one, "item 1 ") {
+                found += 1
+            }
+        }
+        found += len(whole) % 7
+        round += 1
+    }
+    io.print("words {found}")
+    return 0
+}

@@ -1,0 +1,59 @@
+module bench.kernel
+
+import std.io
+
+// Numbers in, numbers out: the shape a frame of a simulation has when nothing
+// it touches is a handle. A run of value structs walked and each one moved,
+// which is what `examples/ants.kest` does for a person and this does for a
+// clock. The checksum is what says two languages ran the same work.
+
+const MANY: i32 = 20000
+// Written here rather than taken from the command line, because one of the
+// three languages this is run beside has no arguments to take and a workload
+// that is the same work has to be the same work.
+const ROUNDS: i32 = 100
+
+struct Body {
+    x: f64
+    y: f64
+    dx: f64
+    dy: f64
+}
+
+fn step(world: [Body], rounds: i32) -> f64 no.alloc no.host deterministic {
+    let i = 0
+    while i < rounds {
+        for at in 0..len(world) {
+            let one = world[at]
+            one.x += one.dx
+            one.y += one.dy
+            if one.x < 0.0 || one.x > 1000.0 {
+                one.dx = 0.0 - one.dx
+            }
+            if one.y < 0.0 || one.y > 1000.0 {
+                one.dy = 0.0 - one.dy
+            }
+            world[at] = one
+        }
+        i += 1
+    }
+    let sum: f64 = 0.0
+    for one in world {
+        sum += one.x + one.y
+    }
+    return sum
+}
+
+fn main() -> i32 {
+    let world: [Body] = array()
+    for i in 0..MANY {
+        let f = f64(i)
+        push(
+            world,
+            Body(f % 1000.0, f * 7.0 % 1000.0, 1.0 + f % 3.0, 1.0 + f % 5.0)
+        )
+    }
+    let answer = step(world, ROUNDS)
+    io.print("kernel {i64(answer)}")
+    return 0
+}

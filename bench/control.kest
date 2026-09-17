@@ -1,0 +1,78 @@
+module bench.control
+
+import std.io
+
+// Branches rather than arithmetic: the shape a rule of behaviour has, where
+// what costs is deciding rather than adding. Every turn reads a state, looks at
+// three numbers and picks what to do next, which is what an actor in a
+// simulation spends its frame on.
+
+const MANY: i32 = 5000
+const ROUNDS: i32 = 200
+
+fn decide(state: i32, health: i32, seen: i32, cover: i32) -> i32 no.alloc no.host deterministic {
+    if health < 20 {
+        if cover > 0 {
+            return 3
+        }
+        return 4
+    }
+    if state == 0 {
+        if seen > 0 {
+            return 1
+        }
+        return 0
+    }
+    if state == 1 {
+        if seen == 0 {
+            return 2
+        }
+        if health > 60 {
+            return 1
+        }
+        return 3
+    }
+    if state == 2 {
+        if seen > 0 {
+            return 1
+        }
+        if cover > 2 {
+            return 0
+        }
+        return 2
+    }
+    if state == 3 {
+        if health > 40 {
+            return 1
+        }
+        return 3
+    }
+    if seen > 0 && health > 30 {
+        return 1
+    }
+    return 4
+}
+
+fn main() -> i32 {
+    let state: [i32] = array()
+    let health: [i32] = array()
+    for i in 0..MANY {
+        push(state, i % 5)
+        push(health, i % 100)
+    }
+    let taken = 0
+    let round = 0
+    while round < ROUNDS {
+        for at in 0..MANY {
+            let seen = (at + round) % 7 - 3
+            let cover = (at * 3 + round) % 5
+            let next = decide(state[at], health[at], seen, cover)
+            state[at] = next
+            health[at] = (health[at] + next * 3 + 1) % 100
+            taken += next
+        }
+        round += 1
+    }
+    io.print("control {taken}")
+    return 0
+}
