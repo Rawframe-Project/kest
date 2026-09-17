@@ -29,6 +29,7 @@ another and is not named here is a check that fails.
 | D647 | D649 | the ladder walks two programs, because their bands sit apart |
 | D648 | D649 | a band starts where the program's own cost ran out, and is steady |
 | D969 | D970 | Windows is built and run in CI, not written down as unverified |
+| D955 | D971 | a nought is a byte text may hold, and text is UTF-8 where it arrives |
 | D541 | D727 | an optional answers `== none`, which is not a comparison of two |
 | D708 | D713 | the pair a tag and a number were one of is an enum carrying nothing |
 | D040 | D759 | a generic named rather than called is `K0362`, not `K0343` |
@@ -30268,6 +30269,10 @@ before. *Measured.*
 
 ## D971. Text is UTF-8, and a nought is a character
 
+*supersedes* D955, which wrote down that text holds no nought because text
+ended at one. It stopped ending at one when D964 made text the bytes and how
+many, and the rule outlived the reason.
+
 Section 10 of the completion mission asks for text that is valid UTF-8 with
 `U+0000` preserved. Text here was neither: nothing checked that bytes arriving
 at run time were UTF-8, and a nought was refused in three places on the grounds
@@ -30610,3 +30615,42 @@ here waits on it. Nothing is faked: there is no corpus written to be counted.
 **The one dependency.** `vscode-languageclient` is the standard client and this
 extension has it. The language has none; an editor plugin is not the language.
 *Argued.*
+
+## D979. A profiler counts, and does not make the program a third slower
+
+Section 23 of the completion mission asks for an opt-in profiling mode and
+lists what it should say: call counts, a VM operation histogram, allocations,
+host crossings, budget spent. It also says not to let profiling change release
+semantics.
+
+**The histogram was the whole problem.** Counting each instruction is one test
+and one increment at the top of the dispatch loop. Measured with `make time`:
+**107 ns an entity a step without it and 139 with it** — a third of the
+machine, paid by every program whether or not anybody is profiling. A profiler
+that makes a program a third slower is measuring a different program, so there
+is no per-instruction count in the release build. The build that checks itself
+still takes one under `KEST_DEEP`, where a third is nothing beside what a
+sanitiser costs.
+
+**What is counted instead is what costs nothing to count.** A body entered and
+a crossing made are rare enough that a test and an increment at each is free.
+And the total is already being counted by something else: a budget is spent in
+steps, and the machine keeps that counter and returns what a run did not spend.
+So a run being profiled is given the largest budget there is — nothing can
+spend it — and what is gone from it at the end is what the run cost, in the
+same currency a host's frame budget is written in. A profile and a budget are
+then the same unit, which is what a host watching a frame actually wants.
+
+`kest profile` says: steps, calls, crossings into the host, what the heap
+holds, what a budget cost if one was set, and how many times each body was
+entered.
+
+**No durations.** A machine counts what it did; how long that took on the
+machine it ran on is the host's clock. A number of nanoseconds worked out from
+a count of steps is a number nobody measured, and `check-backstops.sh` has a
+hole that prints one to watch the gate catch it. `make time` and `kest tick`
+are where a duration comes from, and both run something.
+
+**Where it is said.** On the error stream for a person, and inside the object a
+run writes for a tool — one run is one object, and a second object on another
+stream is two things to put back together. *Measured.*

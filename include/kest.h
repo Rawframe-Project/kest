@@ -36,7 +36,7 @@
 // numbers, or what any of them mean. It does not go up for a new function or
 // a new enum case added at the end, which a host built against the older
 // number does not know about and cannot be hurt by. See D974.
-#define KEST_ABI_VERSION 1
+#define KEST_ABI_VERSION 2
 
 // What deterministic code is held to, named and numbered. `deterministic` is a
 // promise about a profile rather than about arithmetic in the abstract: which
@@ -1001,6 +1001,49 @@ void kest_report(KestRuntime *runtime, FILE *out, KestForm form);
 // that promises `no.alloc` answers nought, which is that promise read from
 // outside rather than taken on faith.
 size_t kest_heap_used(const KestRuntime *runtime);
+
+// What a run did, counted rather than timed. A machine counts what it did; a
+// clock belongs to the host, which is the one thing that can say how long a
+// thing took on the machine it is running on. See D979.
+typedef struct {
+    // What the run spent, in the unit a budget is spent in: the same steps
+    // `kest_fuel_set` bounds, so a profile and a frame budget are in the same
+    // currency and a host can read one against the other. It is not one per
+    // instruction -- work an instruction does is charged for, which is what
+    // makes a budget bound time rather than code size.
+    //
+    // There is no count per instruction here. Taking one is a test at the top
+    // of the dispatch loop, and that measured a third of the machine: a
+    // profiler that makes a program a third slower is measuring a different
+    // program. The build that checks itself counts them under `KEST_DEEP`,
+    // where a third is nothing beside what a sanitiser costs. See D979.
+    uint64_t steps;
+    // Times it crossed into something the host provides.
+    uint64_t crossings;
+    // Bodies entered, added up, which is every call the program made.
+    uint64_t calls;
+    // What the budget was and what is left of it. A machine with no budget
+    // says nought for both.
+    uint64_t fuel_given;
+    uint64_t fuel_left;
+    // What the program's heap holds now. What the most it ever held was is a
+    // question about a frame rather than about a run, and `kest tick` answers
+    // that one.
+    size_t heap;
+} KestCounted;
+
+// Starts or stops counting. A machine that is not counting pays one test of a
+// pointer that is nothing, and a machine that is asked twice keeps what it had
+// rather than starting again. Returns false when there was no room to count in,
+// which is a question the caller asked rather than anything about the program.
+bool kest_count(KestRuntime *runtime, bool on);
+
+// What has been counted so far, or false for a machine nobody asked.
+bool kest_counted(const KestRuntime *runtime, KestCounted *into);
+
+// How many times one function of this program was entered, by the number
+// `kest_entry` answers with. Nought for a machine nobody asked.
+uint64_t kest_counted_entry(const KestRuntime *runtime, int32_t entry);
 
 // And what the allocation that was refused was asking for, or nought when
 // nothing has been refused — which a heap thrown away with `kest_heap_reset`

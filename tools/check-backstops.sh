@@ -9963,6 +9963,54 @@ fn main() -> i32 {
         "caught": "into this host's bytes",
     },
     {
+        # A run that says it called nothing. The counts are taken at the two
+        # places something happens worth counting -- a body entered and a
+        # crossing made -- and a profile of a program that says every body was
+        # entered nought times reads exactly like a program that did nothing.
+        # See D979.
+        "what": "a profile that says every body was entered nought times",
+        "file": "src/vm.c",
+        "from": """            if (rt->entered != NULL && index < rt->entered_room) {
+                rt->entered[index]++;
+            }""",
+        "to": "            (void)0;",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a body called four times is not said to be",
+    },
+    {
+        # A measurement written where the program is writing. What a run did is
+        # about the run and what the program wrote is the program's answer, and
+        # a tool reading one off the other stream gets both mixed. See D979.
+        "what": "what a run did written where the program writes",
+        "file": "src/main.c",
+        "from": """static void say_profile(const KestCounted *counted, const Entered *bodies,
+                        uint32_t body_count) {
+    fprintf(stderr,""",
+        "to": """static void say_profile(const KestCounted *counted, const Entered *bodies,
+                        uint32_t body_count) {
+    fprintf(stdout,""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "what a run did was written where the program writes",
+    },
+    {
+        # A count said as a duration. A machine counts what it did; how long
+        # that took on the machine it ran on is the host's clock, and a
+        # profiler that prints nanoseconds worked out from a count of steps is
+        # printing a number nobody measured. See D979.
+        "what": "a count of steps printed as a duration",
+        "file": "src/main.c",
+        "from": """            "%llu step(s), %llu call(s), %llu crossing(s) into the host, """",
+        "to": """            "%llu ns, %llu call(s), %llu crossing(s) into the host, """",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a count was written as a duration",
+    },
+    {
         # A word this language keeps that an editor does not colour as one.
         # The grammar is the one thing in this tree that is not held by the
         # compiler -- an editor reads it and nothing else does -- so the list

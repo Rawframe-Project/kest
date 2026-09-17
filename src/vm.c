@@ -520,7 +520,7 @@ struct KestRuntime {
     // holds a machine to being smaller than a walk of the program it runs, and
     // it refused one carrying these before anybody had asked to read them.
     // Nought here is a machine that is not counting. See D870.
-    uint64_t *ran;
+    uint64_t *ran_checked;
     // And how many questions this build asked of its own compiler on the way:
     // every number an instruction carries is read by something that asks
     // whether it could be that number (D900 to D906), and this is how many
@@ -530,6 +530,16 @@ struct KestRuntime {
     // the line above. See D907.
     uint64_t guarded;
 #endif
+    // What a run did, counted when a caller asked and not otherwise. Every
+    // build can be asked, because a profile of the build that checks itself is
+    // a profile of a machine doing things this one does not. What it costs a
+    // run nobody asked is one test of a pointer that is nothing, at the top of
+    // the loop and at the four places something happens worth counting. It is
+    // counts and not durations: a machine counts what it did and a clock is
+    // the host's. See D979.
+    uint64_t *entered;
+    uint32_t entered_room;
+    uint64_t crossings;
     // How much had been said when this started, and how much of it has been
     // written out since. What failed to compile is not this machine's to
     // report and is not reported twice.
@@ -2516,8 +2526,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     while (true) {
         const uint8_t *instruction = ip;
 #if KEST_CHECKED
-        if (rt->ran != NULL) {
-            rt->ran[*instruction]++;
+        if (rt->ran_checked != NULL) {
+            rt->ran_checked[*instruction]++;
         }
         // The compiler's count of the operand stack, held by the machine that
         // moves it. A body is given its named slots and this many above them,
@@ -4133,6 +4143,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t argument_slots = READ_U16();
             OF_THE_MODULE(index, module->count, "a function");
             const KestChunk *callee = module->functions[index];
+            if (rt->entered != NULL && index < rt->entered_room) {
+                rt->entered[index]++;
+            }
 
             if (rt->frame_count == rt->call_depth) {
                 fail(vmp, frame, instruction, "K0602",
@@ -4329,6 +4342,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t argument_slots = READ_U16();
             uint16_t result_slots = READ_U16();
             OF_THE_MODULE(index, module->extern_count, "a door of the host");
+            if (rt->entered != NULL) {
+                rt->crossings++;
+            }
             KestValue *base = top - argument_slots;
 #if KEST_CHECKED
             // And the same three numbers at the crossing, held against the
@@ -4685,7 +4701,7 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     // the reading, and the reading was somebody's question rather than the
     // program's. See D870.
     if (getenv("KEST_DEEP") != NULL) {
-        rt->ran = KEST_ARENA_ARRAY(own, uint64_t, KEST_OP_RETURN + 1);
+        rt->ran_checked = KEST_ARENA_ARRAY(own, uint64_t, KEST_OP_RETURN + 1);
     }
 #endif
     if (rt->host_measured && reached + rt->host_slots > 0) {
@@ -4899,11 +4915,12 @@ bool kest_runtime_free(KestRuntime *runtime) {
         // sort it. See D870.
         fprintf(stderr, "guards %llu\n",
                 (unsigned long long)runtime->guarded);
-        for (uint32_t op = 0; runtime->ran != NULL && op <= KEST_OP_RETURN;
+        for (uint32_t op = 0; runtime->ran_checked != NULL &&
+                              op <= KEST_OP_RETURN;
              op++) {
-            if (runtime->ran[op] > 0) {
+            if (runtime->ran_checked[op] > 0) {
                 fprintf(stderr, "ran %s %llu\n", kest_op_name((uint8_t)op),
-                        (unsigned long long)runtime->ran[op]);
+                        (unsigned long long)runtime->ran_checked[op]);
             }
         }
     }
@@ -5032,6 +5049,71 @@ KestRefusal kest_heap_refused_by(const KestRuntime *runtime) {
     }
     return kest_arena_refused_by_ceiling(runtime->heap) ? KEST_REFUSED_CEILING
                                                         : KEST_REFUSED_MACHINE;
+}
+
+bool kest_count(KestRuntime *runtime, bool on) {
+    if (runtime == NULL) {
+        return false;
+    }
+    if (!on) {
+        runtime->entered = NULL;
+        runtime->entered_room = 0;
+        return true;
+    }
+    if (runtime->entered != NULL) {
+        return true;
+    }
+    uint32_t bodies = runtime->module == NULL ? 0 : runtime->module->count;
+    uint64_t *entered =
+        KEST_ARENA_ARRAY(runtime->own, uint64_t, bodies == 0 ? 1 : bodies);
+    if (entered == NULL) {
+        return false;
+    }
+    runtime->entered = entered;
+    runtime->entered_room = bodies;
+    runtime->crossings = 0;
+    // Every instruction is counted by the budget, which is a counter the
+    // machine already keeps and already pays for when it has one. So a run
+    // being counted is given the largest budget there is: nothing can spend
+    // it, and what is gone from it at the end is what the machine ran.
+    // Counting the instructions any other way is a test at the top of the
+    // dispatch loop, which measured a third of the machine -- and a profiler
+    // that makes a program a third slower is measuring a different program.
+    // See D979.
+    if (!runtime->fuel_bounded) {
+        runtime->fuel_bounded = true;
+        runtime->fuel_given = UINT64_MAX;
+        runtime->fuel_left = UINT64_MAX;
+    }
+    return true;
+}
+
+bool kest_counted(const KestRuntime *runtime, KestCounted *into) {
+    if (runtime == NULL || into == NULL || runtime->entered == NULL) {
+        return false;
+    }
+    memset(into, 0, sizeof(*into));
+    into->steps = runtime->fuel_given - runtime->fuel_left;
+    for (uint32_t which = 0; which < runtime->entered_room; which++) {
+        into->calls += runtime->entered[which];
+    }
+    into->crossings = runtime->crossings;
+    // The budget a caller set, which is not the one counting borrowed: a run
+    // given the largest there is was given none by anybody.
+    into->fuel_given =
+        runtime->fuel_given == UINT64_MAX ? 0 : runtime->fuel_given;
+    into->fuel_left =
+        runtime->fuel_given == UINT64_MAX ? 0 : runtime->fuel_left;
+    into->heap = kest_arena_used(runtime->heap);
+    return true;
+}
+
+uint64_t kest_counted_entry(const KestRuntime *runtime, int32_t entry) {
+    if (runtime == NULL || runtime->entered == NULL || entry < 0 ||
+        (uint32_t)entry >= runtime->entered_room) {
+        return 0;
+    }
+    return runtime->entered[entry];
 }
 
 size_t kest_heap_used(const KestRuntime *runtime) {

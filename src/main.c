@@ -86,6 +86,11 @@ static void help(FILE *out) {
             "  parse <file>...   print the syntax tree\n"
             "  lex <file>...     print the token stream, whatever is wrong\n"
             "\n"
+            "  profile <file>    run it and say what it did: how many steps\n"
+            "                    of a budget, how many calls of each body,\n"
+            "                    how many crossings into the host, what the\n"
+            "                    heap holds and what the budget cost. Counts\n"
+            "                    and no durations: a clock is the host's\n"
             "  lsp               answer an editor over the standard streams:\n"
             "                    what is wrong, what a name is, where it was\n"
             "                    declared, what else names it, what a file\n"
@@ -1844,6 +1849,42 @@ static KestRuntime *a_machine_within(KestBuild *build, KestHost *host,
     return runtime;
 }
 
+// One body and how many times it was entered, kept past the machine that
+// counted them: the object a run writes is written after the machine is gone.
+typedef struct {
+    const char *name;
+    uint64_t calls;
+} Entered;
+
+// What a run did, said to a person. Counts and no durations: the machine
+// counted what it did and a clock is the host's, so a number of nanoseconds
+// here would be this command line's clock read out as though it were the
+// program's cost. `make time` and `kest tick` are where a duration comes from,
+// and both run something.
+//
+// On the error stream, because what a program wrote is the program's answer
+// and a measurement written into the middle of it is a line nobody asked for.
+// See D979.
+static void say_profile(const KestCounted *counted, const Entered *bodies,
+                        uint32_t body_count) {
+    fprintf(stderr,
+            "%llu step(s), %llu call(s), %llu crossing(s) into the host, "
+            "%zu byte(s) of heap",
+            (unsigned long long)counted->steps,
+            (unsigned long long)counted->calls,
+            (unsigned long long)counted->crossings, counted->heap);
+    if (counted->fuel_given > 0) {
+        fprintf(stderr, ", %llu of %llu step(s) of budget spent",
+                (unsigned long long)(counted->fuel_given - counted->fuel_left),
+                (unsigned long long)counted->fuel_given);
+    }
+    fputc('\n', stderr);
+    for (uint32_t which = 0; which < body_count; which++) {
+        fprintf(stderr, "  %-40s %llu call(s)\n", bodies[which].name,
+                (unsigned long long)bodies[which].calls);
+    }
+}
+
 static int run(const char *command, const char *executable, char **paths,
                int path_count, bool json, int32_t count, const int32_t *given,
                bool reset, size_t room, uint64_t fuel, bool costing) {
@@ -1875,7 +1916,15 @@ static int run(const char *command, const char *executable, char **paths,
     }
 
     bool ticking = strcmp(command, "tick") == 0;
-    bool running = strcmp(command, "run") == 0 || ticking;
+    // `profile` is a run with the machine counting what it does. It is a run
+    // rather than a thing of its own so that what is measured is the program
+    // as it is run, and not a program run some other way. See D979.
+    bool profiling = strcmp(command, "profile") == 0;
+    bool running = strcmp(command, "run") == 0 || ticking || profiling;
+    KestCounted counted = {0};
+    bool was_counted = false;
+    Entered *bodies = NULL;
+    uint32_t body_count = 0;
     bool emitting = strcmp(command, "emit") == 0;
     bool checking = strcmp(command, "check") == 0;
     bool calling = strcmp(command, "call") == 0;
@@ -2194,6 +2243,13 @@ static int run(const char *command, const char *executable, char **paths,
                     KestValue frame[1] = {{0}};
                     const char *entry = kest_build_name(build, KEST_MAIN);
                     kest_diags_in(&build->diags, root);
+                    if (profiling && !kest_count(runtime, true)) {
+                        KestSpan nowhere = {0, 0};
+                        kest_diags_add(&build->diags, KEST_SEVERITY_ERROR,
+                                       "K0605", nowhere,
+                                       "there was no room to count what this "
+                                       "run does");
+                    }
                     int32_t at = kest_entry(runtime, entry);
                     if (at < 0) {
                         // A file with nothing in it has no `main` for a
@@ -2232,6 +2288,33 @@ static int run(const char *command, const char *executable, char **paths,
                             kest_diags_suggest(&build->diags,
                                                "answer inside that range, and "
                                                "print what does not fit");
+                        }
+                    }
+                }
+                if (profiling) {
+                    was_counted = kest_counted(runtime, &counted);
+                    // Read out while the machine is still there, because the
+                    // object a run writes is written after it is gone.
+                    if (was_counted) {
+                        bodies = KEST_ARENA_ARRAY(build->arena, Entered,
+                                                  build->module.count == 0
+                                                      ? 1
+                                                      : build->module.count);
+                        for (uint32_t which = 0;
+                             bodies != NULL && which < build->module.count;
+                             which++) {
+                            uint64_t times =
+                                kest_counted_entry(runtime, (int32_t)which);
+                            if (times == 0) {
+                                continue;
+                            }
+                            bodies[body_count].name =
+                                build->module.functions[which]->name;
+                            bodies[body_count].calls = times;
+                            body_count++;
+                        }
+                        if (!json) {
+                            say_profile(&counted, bodies, body_count);
                         }
                     }
                 }
@@ -2304,12 +2387,12 @@ static int run(const char *command, const char *executable, char **paths,
         // past the first are. A reader with all three can say what the rule
         // cost here rather than what it costs in general. See D778.
         {
-            uint32_t bodies = 0;
+            uint32_t from_bodies = 0;
             uint32_t bytes = 0;
-            uint32_t made = kest_module_copied(&build->module, &bodies, &bytes);
+            uint32_t made = kest_module_copied(&build->module, &from_bodies, &bytes);
             fprintf(stdout, ",\"copies\":%u,\"copiedBodies\":%u"
                             ",\"copiedBytes\":%u",
-                    made, bodies, bytes);
+                    made, from_bodies, bytes);
             // And what the module itself is still holding, which is the part
             // of `held` that has somewhere to be looked up rather than being
             // a number with nothing under it. See D784.
@@ -2414,6 +2497,27 @@ static int run(const char *command, const char *executable, char **paths,
             } else {
                 fputs(",\"answered\":null", stdout);
             }
+        }
+        // What the run did, inside the object the run writes rather than
+        // beside it: one run is one object, and a second object on another
+        // stream is two things for a tool to put back together. See D979.
+        if (was_counted) {
+            fprintf(stdout,
+                    ",\"profile\":{\"steps\":%llu,\"calls\":%llu,"
+                    "\"crossings\":%llu,\"heap\":%zu,\"fuelGiven\":%llu,"
+                    "\"fuelLeft\":%llu,\"bodies\":[",
+                    (unsigned long long)counted.steps,
+                    (unsigned long long)counted.calls,
+                    (unsigned long long)counted.crossings, counted.heap,
+                    (unsigned long long)counted.fuel_given,
+                    (unsigned long long)counted.fuel_left);
+            for (uint32_t which = 0; which < body_count; which++) {
+                fprintf(stdout, "%s{\"name\":", which == 0 ? "" : ",");
+                kest_json_text(bodies[which].name, stdout);
+                fprintf(stdout, ",\"calls\":%llu}",
+                        (unsigned long long)bodies[which].calls);
+            }
+            fputs("]}", stdout);
         }
         // The one command whose answer is a value says it here rather than
         // beside the JSON, where a person would not look and a tool could not
@@ -2707,7 +2811,7 @@ int main(int argc, char **argv) {
 
     if (strcmp(argv[1], "check") == 0 || strcmp(argv[1], "emit") == 0 ||
         strcmp(argv[1], "run") == 0 || strcmp(argv[1], "tick") == 0 ||
-        strcmp(argv[1], "call") == 0) {
+        strcmp(argv[1], "profile") == 0 || strcmp(argv[1], "call") == 0) {
         if (path_count == 0) {
             refused_at_the_words(json, "K0649", "`%s` needs a file", argv[1]);
             free(paths);

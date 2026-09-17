@@ -4026,6 +4026,37 @@ function answers, a struct's fields or their order, an enum's cases or their
 numbers, or what any of them mean. It does not go up for something added at the
 end, which a host built against the older number does not know about. See D974.
 
+## What a run did
+
+`kest profile` runs a program and says what it cost, in counts:
+
+```
+42 step(s), 15 call(s), 2 crossing(s) into the host, 42 byte(s) of heap
+  math.factorial#i32                       4 call(s)
+  math.gcd#i32,i32                         6 call(s)
+```
+
+A step is what a budget is spent in — the same unit `--fuel` bounds — so a
+profile and a frame budget are in one currency and a host can read either
+against the other. What it does not say is how long anything took: a machine
+counts what it did, and how long that took on the machine it ran on is the
+host's clock. `make time` and `kest tick` are where a duration comes from, and
+both run something.
+
+There is no count per instruction. Taking one is a test at the top of the
+machine's loop and it measured a third of the machine; a profiler that makes a
+program a third slower is measuring a different program. The build that checks
+itself takes one under `KEST_DEEP`. See D979.
+
+It goes to the error stream, because what the program wrote is the program's
+answer. With `--json` it is a `profile` field of the object the run writes.
+
+A host counts the same things through the same doors: `kest_count` turns it on
+for a machine, `kest_counted` fills a `KestCounted` with what it has done so
+far, and `kest_counted_entry` says how many times one function was entered, by
+the number `kest_entry` answered with. A machine nobody asked pays one test of
+a pointer that is nothing.
+
 ## An editor
 
 `kest lsp` is this compiler answering an editor, over the standard streams and

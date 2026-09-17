@@ -3488,20 +3488,28 @@ $((reach_converted - reach_gathered)) over gathering them, where the bytes and \
 the nought after them are eleven"
 fi
 
-# Text that ends in the middle of a character, which is what text arriving a
-# piece at a time does. The library counts a character by its first byte, so
-# the last one of a half-read line says it is three bytes wide when two are
-# there — and asking for it used to stop the program at a line it could not
-# help. What is there is what comes back.
+# Text that begins or ends in the middle of a character, which is what a cut
+# by byte makes. The library counts a character by its first byte, so the last
+# one of a half-read line says it is three bytes wide when two are there -- and
+# asking for it used to stop the program at a line it could not help. What is
+# there is what comes back.
+#
+# Made with a cut rather than out of bytes, because bytes that are not UTF-8
+# are not text since D971 and `text(a)` refuses them. A cut is by byte and may
+# land anywhere, so it is where a half-read character still comes from.
 mkdir "$scratch"/cut
 cat > "$scratch"/cut/cut.kest <<'KEST'
 import std.text
 
 fn main() -> i32 {
-    let raw: [u8] = array()
-    push(raw, u8(104))
-    push(raw, u8(226))
-    let half = text(raw)
+    // `h` and then a character two bytes wide, cut one byte short of the end
+    // of it: two characters by the library's counting, the second of them a
+    // byte.
+    let whole = "hı"
+    let half = slice(whole, 0, 2)
+    if len(half) != 2 {
+        return 8
+    }
     if text.chars(half) != 2 {
         return 1
     }
@@ -3512,15 +3520,11 @@ fn main() -> i32 {
     } else {
         return 3
     }
-    // And a character that says it is three bytes wide with something that is
+    // And a character that says it is two bytes wide with something that is
     // not the middle of one after it: what ends it is that byte, so the `i`
     // is a character of its own rather than something swallowed by the one
     // before it.
-    let swallowing: [u8] = array()
-    push(swallowing, u8(104))
-    push(swallowing, u8(226))
-    push(swallowing, u8(105))
-    let three = text(swallowing)
+    let three = "{half}i"
     if text.chars(three) != 3 {
         return 4
     }
@@ -3531,7 +3535,7 @@ fn main() -> i32 {
     } else {
         return 6
     }
-    // And the walk back, which has to land where the walk forwards started —
+    // And the walk back, which has to land where the walk forwards started --
     // on text somebody chose the bytes of and on text nobody did.
     if !walksBack("hız") || !walksBack(half) || !walksBack(three) {
         return 7
@@ -4216,7 +4220,7 @@ K0604|run|fn main() -> i32 {\n    let from = 5\n    if let at = find("ab", "b", 
 K0604|run|fn main() -> i32 {\n    let n = 0 - 1\n    let a: [i32] = array(n, 0)\n    return len(a)\n}|an array cannot have -1 elements
 K0604|run|fn main() -> i32 {\n    let n = 0 - 1\n    let s: store<i32> = store(n)\n    return 0\n}|a store cannot have room for -1
 K0604|run|fn main() -> i32 {\n    let at = 1\n    return len(slice("ab", at, 9))\n}|9 bytes from 1 is outside text of 2 bytes
-K0604|run|fn main() -> i32 {\n    let b: [u8] = array()\n    push(b, 0)\n    return len(text(b))\n}|byte 0 is zero, and text ends at a zero byte
+K0604|run|fn main() -> i32 {\n    let b: [u8] = array()\n    push(b, 255)\n    return len(text(b))\n}|byte 0 begins no character, and text is UTF-8
 K0604|run|fn main() -> i32 {\n    let v: [i32; 2] = [1, 2]\n    let i = 5\n    return v[i]\n}|index 5 is outside 2 of them
 K0604|run|fn main() -> i32 {\n    let a: [i32] = array()\n    let i = 5\n    return a[i]\n}|index 5 is outside an array of length 0
 K0604|run|fn main() -> i32 {\n    let i = 9\n    return i32("ab"[i])\n}|index 9 is outside text of 2 bytes
@@ -5177,6 +5181,66 @@ case "$chose" in
     printf '%s\n' "$chose" | sed 's/^/    /' | head -4
     ;;
 esac
+
+# What `kest profile` says a run did, held to the two things it is: counts and
+# no durations. A program that calls a body four times is said to have called
+# it four times, and a run says the same numbers in both forms -- the object a
+# run writes carries the profile rather than a second object on another
+# stream. See D979.
+mkdir "$scratch"/counting
+cat > "$scratch"/counting/counting.kest <<'KEST'
+fn twice(n: i32) -> i32 {
+    return n * 2
+}
+
+fn main() -> i32 {
+    let total = 0
+    for i in 0..4 {
+        total += twice(i)
+    }
+    if total != 12 {
+        return 1
+    }
+    return 0
+}
+KEST
+"$kest" profile "$scratch"/counting/counting.kest \
+    >"$scratch"/counting/out 2>"$scratch"/counting/said </dev/null
+case "$(cat "$scratch"/counting/said)" in
+*"counting.twice"*"4 call(s)"*) ;;
+*)
+    complain "profile: a body called four times is not said to be"
+    sed 's/^/    /' "$scratch"/counting/said | head -4
+    ;;
+esac
+case "$(cat "$scratch"/counting/said)" in
+*ns*|*second*|*millisecond*)
+    complain "profile: a count was written as a duration, and a clock is the \
+host's"
+    ;;
+esac
+if [ -s "$scratch"/counting/out ]; then
+    complain "profile: what a run did was written where the program writes"
+fi
+# And the same run read the other way. The Python answers with a word rather
+# than a sentence, because a sentence written in a check is a sentence that has
+# to have been seen said and this is the same complaint as the ones above.
+agreed=$("$kest" profile --json "$scratch"/counting/counting.kest \
+    2>/dev/null </dev/null | python3 -c '
+import json, sys
+held = json.load(sys.stdin)
+profile = held.get("profile")
+answer = "no"
+if profile is not None and profile["calls"] >= 5 and profile["steps"] > 0:
+    named = [one for one in profile["bodies"]
+             if one["name"].startswith("counting.twice")]
+    if len(named) == 1 and named[0]["calls"] == 4:
+        answer = "yes"
+print(answer)
+')
+if [ "$agreed" != "yes" ]; then
+    complain "profile: a body called four times is not said to be"
+fi
 
 # The language server, driven the way an editor drives it: opened, asked what a
 # name is, asked where it was declared, asked what else names it, asked what the
