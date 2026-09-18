@@ -1,4 +1,5 @@
 #include "vm.h"
+#include "ground.h"
 #include "lexer.h"
 
 // The sanitised build is told where every block a host has ends, which is the
@@ -411,6 +412,11 @@ typedef struct {
     uint16_t stride;
     // The same, for the same reason: what one place in it holds.
     const KestType *of;
+    // And how it is laid out, kept rather than looked up: a walk of what a
+    // world can still reach reads every live place in it, and looking the
+    // layout up would be a search of the module for every one of them. See
+    // D996.
+    const KestLayout *holds;
     // Which machine made it. A reference carries this, so one from another
     // world names nothing here rather than naming whatever is at that place.
     uint32_t world;
@@ -463,8 +469,55 @@ struct KestRuntime {
     KestValue *stack;
     KestValue *limit;
     // Separate from the arena the compiler used, so what a running program
-    // allocates is visibly its own.
+    // allocates is visibly its own. What is on it is what lasts as long as the
+    // machine does and is never given back a piece at a time: the frames of a
+    // world, the list of what is lent, the runs a store keeps beside its
+    // places. What a program makes and replaces is not here -- see `ground`.
     KestArena *heap;
+    // And where what a program makes stands: text, arrays and worlds, in
+    // places that are given back when nothing can reach them. An arena could
+    // not give one back without giving all of them back, which is what made a
+    // world that replaces a name every round grow without bound. See D996.
+    KestGround *ground;
+    // What the host has told this machine to keep whatever the program can
+    // reach. A handle the host holds and does not hand back in is one the
+    // walk cannot see, and a walk that cannot see it gives its memory away.
+    // See D996.
+    KestValue *held_by_host;
+    uint32_t held_count;
+    uint32_t held_room;
+    // And what the host itself was handed and did not ask to keep: text this
+    // machine made for a host, and the header in front of a block a host
+    // lent. Neither is reachable from anything the program holds, and both
+    // are the machine's memory until the heap goes.
+    void **handed;
+    uint32_t handed_count;
+    uint32_t handed_room;
+    // How much may be taken before a walk is worth doing. It is what was
+    // still standing after the last walk, so a world that is bigger walks
+    // less often for the same fraction of its size -- and never below a floor,
+    // so a program holding almost nothing does not walk on every allocation.
+    size_t walk_at;
+    // The most this machine was ever holding at once, which is what says a
+    // world has settled where the number above says only what it holds now.
+    size_t most;
+    // What a walk has met and not yet read, and whether it ran out of room to
+    // remember. Kept on the machine rather than made for each walk, because a
+    // walk happens where a program has just failed to get memory and is not a
+    // place to be asking the host for more of it than it must.
+    void **grey;
+    uint32_t grey_count;
+    uint32_t grey_room;
+    bool walk_broke;
+    // What the machine has just made and has not yet written anywhere a walk
+    // can read. Making a store is four runs and a header, and until the last
+    // of them is there the first four are named by nothing but a local
+    // variable of this C — which a walk cannot read, and a sweep after one
+    // would hand back memory the machine is in the middle of using. Six is
+    // the deepest any of them goes: a store's four runs, its header, and the
+    // elements of an array in front of its header. See D996.
+    const void *in_hand[6];
+    uint32_t hands;
     // What the host allowed the heap, kept so a reset gets the same ceiling
     // and so a refusal can say which of the two it was.
     size_t heap_bytes;
@@ -664,6 +717,324 @@ struct KestRuntime {
 
 typedef struct KestRuntime Vm;
 
+// How much may be taken before a walk of what can still be reached is worth
+// doing. Under this a program that makes almost nothing would walk on every
+// other allocation, and what it would find is nothing.
+#define WALK_FLOOR (256u * 1024u)
+
+// What sits in front of the elements of an array, so that a walk that met
+// those elements without meeting the header can still read them. An address of
+// an element is a thing a program holds -- that is what `KEST_OP_ELEM_ADDR`
+// makes -- and a walk that could not follow one would give away what the
+// elements name. See D996.
+typedef struct {
+    const KestLayout *layout;
+    // How many elements there is room for, not how many there are: what is
+    // past the length was left as nought when the room was taken, so reading
+    // it finds nothing to follow, and a length kept in step here would be a
+    // second place to remember at every push and pop.
+    uint32_t places;
+    uint16_t stride;
+    // Whether anything in an element is an address at all, so an array of
+    // numbers is stepped over rather than read.
+    bool follow_them;
+    // And whether what is in one has to be read every eight bytes rather than
+    // by its pieces, which is what a value holding a tagged union is: which
+    // type a payload slot holds depends on the tag beside it.
+    bool loose;
+} Elems;
+
+static void follow(Vm *rt, const void *at);
+
+// Held for as long as it takes to write it somewhere, and let go after. The
+// two are always in one function and always in that order, so the count going
+// back to what it was is what says a hand was emptied.
+static void *in_hand(Vm *rt, void *at) {
+    if (at != NULL && rt->hands < (uint32_t)(sizeof(rt->in_hand) /
+                                             sizeof(rt->in_hand[0]))) {
+        rt->in_hand[rt->hands++] = at;
+    }
+    return at;
+}
+
+static void hands_off(Vm *rt, uint32_t was) {
+    rt->hands = was;
+}
+
+// Everything from here to there, taken as though each eight bytes might be an
+// address. The machine's slots carry no tags -- the language is statically
+// typed and an instruction knows what it is working on -- so a walk over them
+// cannot be told which hold addresses, and what it does instead is ask the
+// ground about each. An eight-byte number that happens to name a place keeps
+// that place, which costs memory and cannot cost correctness: nothing is
+// moved, so a number read as an address is never written through. See D996.
+static void follow_loosely(Vm *rt, const KestValue *from, const KestValue *to) {
+    for (const KestValue *at = from; at < to; at++) {
+        follow(rt, at->object);
+    }
+}
+
+static void follow_packed(Vm *rt, const unsigned char *bytes,
+                          const Elems *head) {
+    if (!head->follow_them) {
+        return;
+    }
+    size_t span = (size_t)head->places * head->stride;
+    if (head->loose || head->layout == NULL) {
+        for (size_t at = 0; at + 8 <= span; at += 8) {
+            void *what;
+            memcpy(&what, bytes + at, 8);
+            follow(rt, what);
+        }
+        return;
+    }
+    const KestLayout *layout = head->layout;
+    for (uint32_t which = 0; which < head->places; which++) {
+        const unsigned char *one = bytes + (size_t)which * head->stride;
+        for (uint16_t piece = 0; piece < layout->count; piece++) {
+            KestScalar kind = layout->pieces[piece].kind;
+            if (kind != KEST_L_TEXT && kind != KEST_L_WORD) {
+                continue;
+            }
+            void *what;
+            memcpy(&what, one + layout->pieces[piece].offset, 8);
+            follow(rt, what);
+        }
+    }
+}
+
+// One place in a world, which is slots rather than packed bytes: a piece of
+// text is one piece of a layout and two of these. See D964.
+static void follow_slots(Vm *rt, const KestValue *entry,
+                         const KestLayout *layout, uint16_t slots) {
+    if (layout == NULL || layout->tagged) {
+        follow_loosely(rt, entry, entry + slots);
+        return;
+    }
+    uint16_t slot = 0;
+    for (uint16_t piece = 0; piece < layout->count && slot < slots; piece++) {
+        KestScalar kind = layout->pieces[piece].kind;
+        if (kind == KEST_L_TEXT) {
+            follow(rt, entry[slot].text);
+            slot += 2;
+            continue;
+        }
+        if (kind == KEST_L_WORD) {
+            follow(rt, entry[slot].object);
+        }
+        slot++;
+    }
+}
+
+// What a walk has met and not yet read. It is a list rather than the C stack
+// because the shapes a program builds are the program's to decide: a world
+// whose places name arrays whose elements name worlds is as deep as somebody
+// wrote it, and a walk that went as deep as that in calls would run off the
+// stack of the host rather than say anything.
+static bool later(Vm *rt, void *at) {
+    if (rt->grey_count == rt->grey_room) {
+        uint32_t bigger = rt->grey_room == 0 ? 256 : rt->grey_room * 2;
+        void **grown = realloc(rt->grey, (size_t)bigger * sizeof(void *));
+        if (grown == NULL) {
+            rt->walk_broke = true;
+            return false;
+        }
+        rt->grey = grown;
+        rt->grey_room = bigger;
+    }
+    rt->grey[rt->grey_count++] = at;
+    return true;
+}
+
+static void follow(Vm *rt, const void *at) {
+    if (!kest_ground_mark(rt->ground, at)) {
+        return;
+    }
+    void *start = kest_ground_start(rt->ground, at);
+    if (start == NULL || kest_ground_kind(rt->ground, at) == KEST_GROUND_PLAIN) {
+        return;
+    }
+    later(rt, start);
+}
+
+static void read_one(Vm *rt, void *start) {
+    switch (kest_ground_kind(rt->ground, start)) {
+    case KEST_GROUND_PLAIN:
+        break;
+    case KEST_GROUND_ARRAY: {
+        Array *array = start;
+        // A lend is a header of the machine's in front of a block that is the
+        // host's, and the host's block is not this machine's to keep or to
+        // give away. A header the host has ended holds the next spare one in
+        // the same field, which is not elements either.
+        if (array->what == KEST_IS_ARRAY && !array->borrowed) {
+            follow(rt, array->bytes);
+        }
+        break;
+    }
+    case KEST_GROUND_ELEMS: {
+        Elems *head = start;
+        follow_packed(rt, (const unsigned char *)(head + 1), head);
+        break;
+    }
+    case KEST_GROUND_STORE: {
+        Store *store = start;
+        follow(rt, store->elements);
+        follow(rt, store->generations);
+        follow(rt, store->live);
+        follow(rt, store->free_slots);
+        if (store->elements == NULL || store->live == NULL) {
+            break;
+        }
+        for (uint32_t which = 0; which < store->used; which++) {
+            uint64_t bit = (uint64_t)1 << (which % 64);
+            if ((store->live[which / 64] & bit) == 0) {
+                continue;
+            }
+            follow_slots(rt, store->elements + (size_t)which * store->stride,
+                         store->holds, store->stride);
+        }
+        break;
+    }
+    }
+}
+
+// Where the machine's slots have got to, which is what a walk reads to the top
+// of. A host that called in is above whatever was already running, so the
+// higher of the two is the edge.
+static KestValue *the_edge(Vm *rt, KestValue *reach) {
+    KestValue *edge = reach;
+    if (rt->running_top != NULL && (edge == NULL || rt->running_top > edge)) {
+        edge = rt->running_top;
+    }
+    return edge == NULL ? rt->stack : edge;
+}
+
+// What can still be reached, and then what cannot given back. Nothing is
+// moved: a value stays where it was made, which is what lets a walk read a
+// slot it cannot be sure is an address and lets a program hold the address of
+// an element or of a piece of text cut out of another. See D996.
+static void gather(Vm *rt, KestValue *reach) {
+    if (rt->ground == NULL || kest_ground_open_count(rt->ground) != 0) {
+        return;
+    }
+    rt->walk_broke = false;
+    rt->grey_count = 0;
+    follow_loosely(rt, rt->stack, the_edge(rt, reach));
+    for (uint32_t i = 0; i < rt->hands; i++) {
+        follow(rt, rt->in_hand[i]);
+    }
+    for (uint32_t i = 0; i < rt->held_count; i++) {
+        follow(rt, rt->held_by_host[i].object);
+    }
+    for (uint32_t i = 0; i < rt->handed_count; i++) {
+        follow(rt, rt->handed[i]);
+    }
+    for (uint32_t i = 0; i < rt->lent_count; i++) {
+        follow(rt, rt->lent[i]);
+    }
+    for (Array *spare = rt->spare_lends; spare != NULL;
+         spare = (Array *)(void *)spare->bytes) {
+        follow(rt, spare);
+    }
+    while (rt->grey_count > 0 && !rt->walk_broke) {
+        read_one(rt, rt->grey[--rt->grey_count]);
+    }
+    if (rt->walk_broke) {
+        // A walk that could not remember where it had got to has not seen
+        // everything, and a sweep after one of those gives away memory the
+        // program can still reach. So it takes nothing.
+        kest_ground_unmark(rt->ground);
+        return;
+    }
+    kest_ground_sweep(rt->ground);
+    size_t standing = kest_ground_used(rt->ground);
+    rt->walk_at = standing < WALK_FLOOR ? WALK_FLOOR : standing;
+}
+
+// What this machine handed a host and nothing in the program names. A host
+// holds it in its own memory, which no walk of this machine's can read, so it
+// is kept until the heap goes -- which is exactly how long it lasted before
+// there was a walk at all, and exactly what `kest_still_holds` says about it.
+// See D996.
+// Whether this machine handed the address out, which is now two questions: the
+// arena still holds what lasts as long as the machine, and the ground holds
+// what a program makes. A host asking whether what it kept is still the
+// machine's is asking about both.
+static bool ours(const KestRuntime *rt, const void *at) {
+    return kest_arena_holds(rt->heap, at) || kest_ground_holds(rt->ground, at);
+}
+
+static bool handed_over(Vm *rt, void *at) {
+    if (at == NULL) {
+        return true;
+    }
+    if (rt->handed_count == rt->handed_room) {
+        uint32_t bigger = rt->handed_room == 0 ? 16 : rt->handed_room * 2;
+        void **grown = realloc(rt->handed, (size_t)bigger * sizeof(void *));
+        if (grown == NULL) {
+            return false;
+        }
+        rt->handed = grown;
+        rt->handed_room = bigger;
+    }
+    rt->handed[rt->handed_count++] = at;
+    return true;
+}
+
+// Room for something the program is making. What makes this different from
+// asking the ground directly is the two things that happen when there is not
+// enough: a walk, and then the same ask again. A program running under a tight
+// ceiling is one where the room it needs is there and is held by something
+// nothing can reach.
+// Whether anything in one of these is an address, so an array of numbers is
+// stepped over by a walk rather than read element by element.
+static bool holds_addresses(const KestLayout *layout) {
+    if (layout->tagged) {
+        return true;
+    }
+    for (uint16_t piece = 0; piece < layout->count; piece++) {
+        KestScalar kind = layout->pieces[piece].kind;
+        if (kind == KEST_L_TEXT || kind == KEST_L_WORD) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// The ceiling a host set is one number over two places, and only one of them
+// can be told about it: what the arena has handed out is already spent, so
+// what the ground may ask for is the rest. Said before every take rather than
+// once, because the arena's share moves.
+static void under_the_ceiling(Vm *rt) {
+    if (rt->heap_bytes == 0) {
+        return;
+    }
+    size_t elsewhere = kest_arena_used(rt->heap);
+    kest_ground_cap(rt->ground,
+                    rt->heap_bytes > elsewhere ? rt->heap_bytes - elsewhere : 1);
+}
+
+static void *take(Vm *rt, KestValue *reach, size_t bytes, KestGroundKind kind) {
+    under_the_ceiling(rt);
+    if (kest_ground_since(rt->ground) >= rt->walk_at) {
+        gather(rt, reach);
+    }
+    void *at = kest_ground_take_as(rt->ground, bytes, kind);
+    if (at == NULL) {
+        gather(rt, reach);
+        at = kest_ground_take_as(rt->ground, bytes, kind);
+    }
+    if (at != NULL) {
+        size_t holding = kest_heap_used(rt);
+        if (holding > rt->most) {
+            rt->most = holding;
+        }
+    }
+    return at;
+}
+
+
 // What the program calls a type, which is the last piece of the name it is
 // registered under. A host writes `Event`, not the module it came from.
 // The program's side of a disagreement about a lend, written the way a
@@ -791,7 +1162,14 @@ bool kest_text(KestRuntime *runtime, const char *bytes, uint32_t length,
                        bad);
         return false;
     }
-    char *held = kest_arena_alloc(runtime->heap, length + 1, 1);
+    // No walk here: a host asks for this between calls, when what the program
+    // holds is named by the host's own memory and by nothing a walk can read.
+    under_the_ceiling(runtime);
+    char *held = kest_ground_take_as(runtime->ground, length + 1,
+                                     KEST_GROUND_PLAIN);
+    if (held != NULL && !handed_over(runtime, held)) {
+        held = NULL;
+    }
     if (held == NULL) {
         KestSpan nowhere = {0, 0};
         kest_diags_in(runtime->diags, NULL);
@@ -969,7 +1347,7 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     // that lends those bytes as a run of numbers has made the one thing this
     // language says cannot be written into a thing that can. A literal rewritten
     // that way stays rewritten for every machine the build starts. See D720.
-    if (data != NULL && (kest_arena_holds(runtime->heap, data) ||
+    if (data != NULL && (ours(runtime, data) ||
                          kest_arena_holds(runtime->module->arena, data))) {
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0653", nowhere,
                        "this host lent %u `%s` at an address this machine owns",
@@ -1048,7 +1426,9 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     if (array != NULL) {
         runtime->spare_lends = (Array *)(void *)array->bytes;
     } else {
-        array = kest_arena_alloc(runtime->heap, sizeof(Array), 16);
+        under_the_ceiling(runtime);
+        array = kest_ground_take_as(runtime->ground, sizeof(Array),
+                                    KEST_GROUND_ARRAY);
     }
     if (array == NULL) {
         no_room_to_lend(runtime);
@@ -1582,6 +1962,16 @@ static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
 // An allocation that did not happen. Which of the two it was is the difference
 // between a machine that has run out and a host that said this much and no
 // more, and only one of those is anybody's mistake.
+// What the allocation that did not happen was asking for. There are two places
+// a running program's memory comes from and either may be the one that ran
+// out, so the number is read from whichever refused: the ground forgets its
+// refusal the moment it hands something out, so a number there is this
+// refusal and not an older one.
+static size_t was_refused(const KestRuntime *rt) {
+    size_t ground = kest_ground_refused(rt->ground);
+    return ground != 0 ? ground : kest_arena_refused(rt->heap);
+}
+
 static void no_room(Vm *vm, const Frame *frame, const uint8_t *instruction,
                     const KestRuntime *rt) {
     if (rt->heap_bytes != 0) {
@@ -1591,7 +1981,7 @@ static void no_room(Vm *vm, const Frame *frame, const uint8_t *instruction,
         fail(vm, frame, instruction, "K0617",
              "the program has used %zu of the %zu bytes it was given, and this "
              "asked for %zu more",
-             kest_heap_used(rt), rt->heap_bytes, kest_arena_refused(rt->heap));
+             kest_heap_used(rt), rt->heap_bytes, was_refused(rt));
         return;
     }
     // And the same two numbers when nobody set a ceiling, because a host
@@ -1601,7 +1991,7 @@ static void no_room(Vm *vm, const Frame *frame, const uint8_t *instruction,
     fail(vm, frame, instruction, "K0605",
          "the program has used %zu bytes and this asked for %zu more, which "
          "this machine has not got",
-         kest_heap_used(rt), kest_arena_refused(rt->heap));
+         kest_heap_used(rt), was_refused(rt));
 }
 
 // And what it was doing when it ran out. What a host raises a ceiling by is not
@@ -1756,16 +2146,79 @@ static KestValue *resolve_ref(Store *store, int64_t handle) {
     return store->elements + (size_t)index * store->stride;
 }
 
+// Room for the elements of an array, with what they are in front of them. The
+// one extra byte is what an array of nothing is: a block of nought bytes is a
+// place nothing was handed out at, and two arrays with no elements would be
+// the same array.
+static unsigned char *elements_for(Vm *rt, KestValue *reach,
+                                   const KestLayout *layout, uint32_t places) {
+    size_t span = sizeof(Elems) + (size_t)places * layout->size + 1;
+    Elems *head = take(rt, reach, span, KEST_GROUND_ELEMS);
+    if (head == NULL) {
+        return NULL;
+    }
+    head->layout = layout;
+    head->places = places;
+    head->stride = layout->size;
+    head->loose = layout->tagged;
+    head->follow_them = holds_addresses(layout);
+    return (unsigned char *)(void *)(head + 1);
+}
+
+// And more of them, in the place they are in where it has the room. An array
+// built by pushing costs what it holds rather than twice that, which is what
+// this is for: the place a run of a hundred and twenty-eight bytes sits in
+// holds two hundred and fifty-six.
+static unsigned char *elements_grown(Vm *rt, KestValue *reach, Array *array,
+                                     const KestLayout *layout,
+                                     uint32_t capacity) {
+    size_t want = sizeof(Elems) + (size_t)capacity * layout->size + 1;
+    if (array->bytes != NULL) {
+        Elems *head = ((Elems *)(void *)array->bytes) - 1;
+        size_t had = sizeof(Elems) + (size_t)array->capacity * layout->size + 1;
+        if (kest_ground_grow(rt->ground, head, had, want) != NULL) {
+            head->places = capacity;
+            return array->bytes;
+        }
+    }
+    uint32_t hands = rt->hands;
+    unsigned char *fresh = in_hand(rt, elements_for(rt, reach, layout, capacity));
+    hands_off(rt, hands);
+    if (fresh != NULL && array->bytes != NULL && array->length > 0) {
+        memcpy(fresh, array->bytes, (size_t)array->length * layout->size);
+    }
+    return fresh;
+}
+
 // Room for that many, which is what growing is and what being told how many
 // there will be is. The four runs beside each other are what a slot costs: the
 // value, how many times the slot has been used, whether it is live, and the
 // list of the ones that are not.
-static bool room_for(KestArena *heap, Store *store, uint32_t capacity) {
+static bool room_for(Vm *rt, KestValue *reach, Store *store,
+                     uint32_t capacity) {
+    // Four takes rather than one, and any of them may set off a walk that
+    // would find the ones before it named by nothing. So each is held until
+    // the store names them all.
+    uint32_t hands = rt->hands;
     KestValue *elements =
-        KEST_ARENA_ARRAY(heap, KestValue, (size_t)capacity * store->stride);
-    uint32_t *generations = KEST_ARENA_ARRAY(heap, uint32_t, capacity);
-    uint64_t *live = KEST_ARENA_ARRAY(heap, uint64_t, LIVE_WORDS(capacity));
-    uint32_t *free_slots = KEST_ARENA_ARRAY(heap, uint32_t, capacity);
+        in_hand(rt, take(rt, reach,
+                         sizeof(KestValue) * (size_t)capacity * store->stride,
+                         KEST_GROUND_PLAIN));
+    uint32_t *generations =
+        elements == NULL ? NULL
+                         : in_hand(rt, take(rt, reach,
+                                            sizeof(uint32_t) * capacity,
+                                            KEST_GROUND_PLAIN));
+    uint64_t *live =
+        generations == NULL
+            ? NULL
+            : in_hand(rt, take(rt, reach, sizeof(uint64_t) * LIVE_WORDS(capacity),
+                               KEST_GROUND_PLAIN));
+    uint32_t *free_slots =
+        live == NULL ? NULL
+                     : take(rt, reach, sizeof(uint32_t) * capacity,
+                            KEST_GROUND_PLAIN);
+    hands_off(rt, hands);
     if (elements == NULL || generations == NULL || live == NULL ||
         free_slots == NULL) {
         return false;
@@ -1789,8 +2242,8 @@ static bool room_for(KestArena *heap, Store *store, uint32_t capacity) {
     return true;
 }
 
-static bool grow_store(KestArena *heap, Store *store) {
-    return room_for(heap, store, store->capacity == 0 ? 8
+static bool grow_store(Vm *rt, KestValue *reach, Store *store) {
+    return room_for(rt, reach, store, store->capacity == 0 ? 8
                                                       : store->capacity * 2);
 }
 
@@ -2059,7 +2512,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
                                "an empty piece of it is text as well");
             return false;
         }
-        if (!kest_arena_holds(runtime->heap, frame[*at].text) &&
+        if (!ours(runtime, frame[*at].text) &&
             !kest_arena_holds(runtime->module->arena, frame[*at].text)) {
             if (saying->at_a_crossing) {
                 fail(runtime, saying->frame, saying->instruction, "K0652",
@@ -2108,7 +2561,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
                                "nobody filled");
             return false;
         }
-        if (!kest_arena_holds(runtime->heap, frame[*at].object)) {
+        if (!ours(runtime, frame[*at].object)) {
             if (saying->at_a_crossing) {
                 fail(runtime, saying->frame, saying->instruction, "K0652",
                      "`%s` answers with a handle in slot %u that did not come "
@@ -2745,9 +3198,18 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
             const KestLayout *layout = &module->layouts[of_which];
             SPEND_WORK((uint64_t)count);
-            Array *array = kest_arena_alloc(rt->heap, sizeof(Array), 16);
-            unsigned char *bytes = kest_arena_alloc(
-                rt->heap, (size_t)count * layout->size + 1, 16);
+            // The elements first, because the header names them and a walk
+            // set off by taking the header would find elements nothing names.
+            // The other way round the elements are simply not reachable yet
+            // and the header is not there to say they should be.
+            uint32_t hands = rt->hands;
+            unsigned char *bytes =
+                in_hand(rt, elements_for(rt, top, layout, count));
+            Array *array = bytes == NULL
+                               ? NULL
+                               : take(rt, top, sizeof(Array),
+                                      KEST_GROUND_ARRAY);
+            hands_off(rt, hands);
             if (array == NULL || bytes == NULL) {
                 no_room(vmp, frame, instruction, rt);
                 // What it was making, because nothing here was growing: a
@@ -2788,9 +3250,21 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
 
-            Array *array = kest_arena_alloc(rt->heap, sizeof(Array), 16);
-            unsigned char *bytes = kest_arena_alloc(
-                rt->heap, (size_t)count * layout->size + 1, 16);
+            // What fills it is above the top, because the count was taken
+            // off after it: a walk has to read to the top of what is live and
+            // not to the top of the stack.
+            KestValue *reach = fill + layout->slots;
+            uint32_t hands = rt->hands;
+            unsigned char *bytes =
+                count > (int64_t)UINT32_MAX
+                    ? NULL
+                    : in_hand(rt, elements_for(rt, reach, layout,
+                                               (uint32_t)count));
+            Array *array = bytes == NULL
+                               ? NULL
+                               : take(rt, reach, sizeof(Array),
+                                      KEST_GROUND_ARRAY);
+            hands_off(rt, hands);
             if (array == NULL || bytes == NULL) {
                 no_room(vmp, frame, instruction, rt);
                 // How many was said by the program rather than written into
@@ -2833,6 +3307,10 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             const KestLayout *layout = &module->layouts[of_which];
             int64_t wanted = (--top)->integer;
             void *given = (--top)->object;
+            // What was taken off the stack is still what this is about, so a
+            // walk set off by making room has to read to above it rather than
+            // to where the stack now ends.
+            KestValue *reach = top + 2;
             SPEND_WORK(wanted < 0 ? 0 : (uint64_t)wanted);
             // The two things in this language that grow, through the one
             // instruction: a store is made with room by `store(n)` and an
@@ -2849,7 +3327,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                     return false;
                 }
                 if (wanted > (int64_t)store->capacity &&
-                    !room_for(rt->heap, store, (uint32_t)wanted)) {
+                    !room_for(rt, reach, store, (uint32_t)wanted)) {
                     no_room_growing(vmp, frame, instruction, rt, "a store",
                                     store->used,
                                     sizeof(KestValue) * store->stride,
@@ -2877,22 +3355,11 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // loop of pushes pays for a run of them.
             if (wanted > (int64_t)array->capacity) {
                 uint32_t capacity = (uint32_t)wanted;
-                size_t was = (size_t)array->capacity * layout->size + 1;
-                size_t want = (size_t)capacity * layout->size + 1;
                 unsigned char *grown =
-                    array->capacity == 0
-                        ? NULL
-                        : kest_arena_extend(rt->heap, array->bytes, was, want);
+                    elements_grown(rt, reach, array, layout, capacity);
                 if (grown == NULL) {
-                    grown = kest_arena_alloc(rt->heap, want, 8);
-                    if (grown == NULL) {
-                        no_room(vmp, frame, instruction, rt);
-                        return false;
-                    }
-                    if (array->length > 0) {
-                        memcpy(grown, array->bytes,
-                               (size_t)array->length * layout->size);
-                    }
+                    no_room(vmp, frame, instruction, rt);
+                    return false;
                 }
                 array->bytes = grown;
                 array->capacity = capacity;
@@ -2926,43 +3393,30 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             if (array->length == array->capacity) {
                 uint32_t capacity = array->capacity == 0 ? 8
                                                          : array->capacity * 2;
-                size_t was = (size_t)array->capacity * layout->size + 1;
-                size_t want = (size_t)capacity * layout->size + 1;
-                // Bigger where it stands, when nothing has been handed out
-                // since this was — which is what a loop filling one array is,
-                // and what a loop that also makes text is not. Then there is
-                // no copy and no block left behind, and an array built by
-                // pushing costs what it holds rather than twice that.
-                unsigned char *grown =
-                    array->capacity == 0
-                        ? NULL
-                        : kest_arena_extend(rt->heap, array->bytes, was, want);
-                if (grown != NULL) {
-                    array->bytes = grown;
-                    array->capacity = capacity;
-                } else {
-                    unsigned char *bytes =
-                        kest_arena_alloc(rt->heap, want, 16);
-                    if (bytes == NULL) {
-                        no_room_growing(vmp, frame, instruction, rt, "an array",
-                                        array->length, layout->size, capacity);
-                        return false;
-                    }
-                    if (array->length > 0) {
-                        memcpy(bytes, array->bytes,
-                               (size_t)array->length * layout->size);
-                    }
-                    // What that copy cost. Only the push that could not grow
+                // Bigger where it stands, when the place it is in has the
+                // room — which is what a loop filling one array is. Then
+                // there is no copy and no place left behind, and an array
+                // built by pushing costs what it holds rather than twice
+                // that.
+                unsigned char *was = array->bytes;
+                unsigned char *grown = elements_grown(
+                    rt, value + layout->slots, array, layout, capacity);
+                if (grown == NULL) {
+                    no_room_growing(vmp, frame, instruction, rt, "an array",
+                                    array->length, layout->size, capacity);
+                    return false;
+                }
+                if (grown != was) {
+                    // What the copy cost. Only the push that could not grow
                     // where it stood pays it: the one that could moved
                     // nothing, and a program that says how many there will be
                     // never arrives here at all. See D950.
                     SPEND_WORK((uint64_t)array->length);
-                    // The handle is the header, and the header is what moved
-                    // nothing, so every reference to this array sees the
-                    // growth.
-                    array->bytes = bytes;
-                    array->capacity = capacity;
                 }
+                // The handle is the header, and the header is what moved
+                // nothing, so every reference to this array sees the growth.
+                array->bytes = grown;
+                array->capacity = capacity;
             }
             pack(array->bytes + (size_t)array->length * layout->size, layout,
                  value);
@@ -3176,8 +3630,11 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                      "a store cannot have room for %lld", (long long)room);
                 return false;
             }
-            Store *store = kest_arena_alloc(rt->heap, sizeof(Store), 16);
+            uint32_t hands = rt->hands;
+            Store *store = in_hand(rt, take(rt, top + 1, sizeof(Store),
+                                            KEST_GROUND_STORE));
             if (store == NULL) {
+                hands_off(rt, hands);
                 no_room(vmp, frame, instruction, rt);
                 kest_diags_suggest(vmp->diags, "it was making a store");
                 return false;
@@ -3189,11 +3646,13 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 uint16_t holds = READ_U16();
                 OF_THE_MODULE(holds, module->layout_count, "a layout");
                 store->of = module->layouts[holds].type;
+                store->holds = &module->layouts[holds];
             }
             // Made here rather than at the first `add`, which is the whole of
             // what a count buys: the growth is where the program asked for it
             // instead of in whichever frame filled the last slot.
-            if (room > 0 && !room_for(rt->heap, store, (uint32_t)room)) {
+            if (room > 0 && !room_for(rt, top + 1, store, (uint32_t)room)) {
+                hands_off(rt, hands);
                 no_room(vmp, frame, instruction, rt);
                 kest_diags_suggest(vmp->diags,
                                    "it was making a store with room for %lld",
@@ -3201,6 +3660,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             (top++)->object = store;
+            hands_off(rt, hands);
             break;
         }
         case KEST_OP_ADD: {
@@ -3226,7 +3686,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                     SPEND_WORK((uint64_t)store->used);
                 }
                 if (store->used == store->capacity &&
-                    !grow_store(rt->heap, store)) {
+                    !grow_store(rt, top, store)) {
                     // A store grows by four runs at once — what it holds, what
                     // each has counted, which are live and which are free —
                     // so what it was reaching for is wider than one of them.
@@ -3368,7 +3828,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t held = type->slots;
             top -= held;
             size_t length = format_value(NULL, 0, type, top);
-            char *text = kest_arena_alloc(rt->heap, length + 1, 1);
+            char *text = take(rt, top + held, length + 1, KEST_GROUND_PLAIN);
             if (text == NULL) {
                 no_room(vmp, frame, instruction, rt);
                 kest_diags_suggest(vmp->diags,
@@ -3403,7 +3863,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 written = snprintf(buffer, sizeof(buffer), "%s",
                                    top[-1].integer ? "true" : "false");
             }
-            char *text = kest_arena_alloc(rt->heap, (size_t)written + 1, 1);
+            char *text =
+                take(rt, top, (size_t)written + 1, KEST_GROUND_PLAIN);
             if (text == NULL) {
                 no_room(vmp, frame, instruction, rt);
                 kest_diags_suggest(vmp->diags,
@@ -3436,7 +3897,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             SPEND_WORK(length);
-            char *text = kest_arena_alloc(rt->heap, length + 1, 1);
+            char *text = take(rt, top + (uint32_t)count * 2, length + 1,
+                              KEST_GROUND_PLAIN);
             if (text == NULL) {
                 no_room(vmp, frame, instruction, rt);
                 kest_diags_suggest(vmp->diags,
@@ -3458,7 +3920,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             const Array *bytes = (--top)->object;
             HOLD(bytes, KEST_IS_ARRAY, "an array");
             SPEND_WORK(bytes->length);
-            char *text = kest_arena_alloc(rt->heap, bytes->length + 1, 1);
+            char *text =
+                take(rt, top + 1, bytes->length + 1, KEST_GROUND_PLAIN);
             if (text == NULL) {
                 no_room(vmp, frame, instruction, rt);
                 kest_diags_suggest(vmp->diags,
@@ -4142,6 +4605,12 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                                    "calls itself opens one a call deep");
                 return false;
             }
+            if (!kest_ground_open(rt->ground)) {
+                no_room(vmp, frame, instruction, rt);
+                kest_diags_suggest(vmp->diags,
+                                   "it was opening a block of working memory");
+                return false;
+            }
             rt->kept[rt->kept_count] = kest_arena_mark(rt->heap);
             mine[where].integer = (int64_t)rt->kept_count++;
             break;
@@ -4162,7 +4631,10 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 #endif
             if (was < rt->kept_count) {
                 kest_arena_rewind(rt->heap, rt->kept[was]);
-                rt->kept_count = was;
+                while (rt->kept_count > was) {
+                    kest_ground_close(rt->ground);
+                    rt->kept_count--;
+                }
             }
             break;
         }
@@ -4678,6 +5150,7 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     while (rt->kept_count > held) {
         rt->kept_count--;
         kest_arena_rewind(rt->heap, rt->kept[rt->kept_count]);
+        kest_ground_close(rt->ground);
     }
     return went;
 }
@@ -4795,6 +5268,8 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     rt->said_copy = KEST_ARENA_ARRAY(own, uint8_t, module->count + 1);
     rt->said_layout = KEST_ARENA_ARRAY(own, uint8_t, module->layout_count + 1);
     rt->heap = kest_arena_new();
+    rt->ground = kest_ground_new();
+    rt->walk_at = WALK_FLOOR;
     rt->heap_bytes = limits == NULL ? 0 : limits->heap_bytes;
     if (rt->heap != NULL) {
         kest_arena_cap(rt->heap, rt->heap_bytes);
@@ -4839,6 +5314,7 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
                            "`kest_needs` says what the program wants; a "
                            "number a host picks over that is a number this "
                            "machine has to be able to take");
+        kest_ground_free(rt->ground);
         kest_arena_free(rt->heap);
         kest_arena_free(own);
         return NULL;
@@ -4890,6 +5366,7 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
         // Both of them, because a machine that never started is a machine
         // nobody can free: what it took is the machine's own since D574, and
         // the last door out is the one that has to put it back.
+        kest_ground_free(rt->ground);
         kest_arena_free(rt->heap);
         kest_arena_free(own);
         return NULL;
@@ -4979,6 +5456,10 @@ bool kest_runtime_free(KestRuntime *runtime) {
     // it: what is being freed here is the thing holding the pointers to what
     // is being freed.
     KestArena *own = runtime->own;
+    kest_ground_free(runtime->ground);
+    free(runtime->grey);
+    free(runtime->held_by_host);
+    free(runtime->handed);
     kest_arena_free(runtime->heap);
     // Released, because a build freed on another thread has to see everything
     // this machine did to the program before it counts itself off.
@@ -5086,15 +5567,20 @@ size_t kest_runtime_cost(const KestRuntime *runtime) {
 }
 
 size_t kest_heap_wanted(const KestRuntime *runtime) {
-    return runtime == NULL ? 0 : kest_arena_refused(runtime->heap);
+    return runtime == NULL ? 0 : was_refused(runtime);
 }
 
 KestRefusal kest_heap_refused_by(const KestRuntime *runtime) {
-    // Read beside the number rather than instead of it: what an arena
-    // remembers is the last refusal, and until there has been one there is
-    // nothing to say about who made it.
-    if (runtime == NULL || kest_arena_refused(runtime->heap) == 0) {
+    // Read beside the number rather than instead of it: what the two places a
+    // program's memory comes from remember is the last refusal, and until
+    // there has been one there is nothing to say about who made it.
+    if (runtime == NULL || was_refused(runtime) == 0) {
         return KEST_REFUSED_NOTHING;
+    }
+    if (kest_ground_refused(runtime->ground) != 0) {
+        return kest_ground_refused_by_ceiling(runtime->ground)
+                   ? KEST_REFUSED_CEILING
+                   : KEST_REFUSED_MACHINE;
     }
     return kest_arena_refused_by_ceiling(runtime->heap) ? KEST_REFUSED_CEILING
                                                         : KEST_REFUSED_MACHINE;
@@ -5287,7 +5773,32 @@ uint64_t kest_counted_entry(const KestRuntime *runtime, int32_t entry) {
 }
 
 size_t kest_heap_used(const KestRuntime *runtime) {
-    return runtime == NULL ? 0 : kest_arena_used(runtime->heap);
+    if (runtime == NULL) {
+        return 0;
+    }
+    // Both, because a program's memory is in both: what lasts as long as the
+    // machine is on the arena, and what the program makes stands on the
+    // ground. A host that read one of them would be told a world of text
+    // costs nothing.
+    //
+    // What the ground is asked, rather than what is standing on it. The
+    // difference is the places it is holding and has not handed out, and that
+    // is memory the host has given up either way -- so it is the number a
+    // ceiling is held against and the number a host with a memory budget
+    // wants. A plot nothing is in goes back to the host, so this settles
+    // where a world settles. See D996.
+    return kest_arena_used(runtime->heap) + kest_ground_asked(runtime->ground);
+}
+
+size_t kest_heap_taken(const KestRuntime *runtime) {
+    if (runtime == NULL) {
+        return 0;
+    }
+    return kest_arena_taken(runtime->heap) + kest_ground_taken(runtime->ground);
+}
+
+size_t kest_heap_most(const KestRuntime *runtime) {
+    return runtime == NULL ? 0 : runtime->most;
 }
 
 bool kest_heap_allow(KestRuntime *runtime, size_t bytes) {
@@ -5395,6 +5906,15 @@ bool kest_scratch_rewind(KestRuntime *runtime, uint32_t mark) {
             continue;
         }
         kest_arena_rewind(runtime->heap, runtime->scratch[at - 1]);
+        // And the ground with it. A mark is a place on the arena and the
+        // ground has no places in that order -- what a program made is given
+        // back when nothing can reach it, not when it was made -- so what a
+        // rewind does here is the walk: between calls nothing of the
+        // program's is running, so what is still wanted is what the host said
+        // it keeps and what it was handed, and everything else goes. A host
+        // that marks round a query gets the query's memory back, which is
+        // what a mark was for. See D996.
+        gather(runtime, NULL);
         // The ones above it go with it, which is what nesting is, and so does
         // what the machine itself keeps on the heap: the list of what is lent
         // and the headers it was saving for the next lend are both on it and
@@ -5428,6 +5948,15 @@ bool kest_heap_reset(KestRuntime *runtime) {
     // which is a call to the host and back every time round a loop that
     // resets, and a host that resets is a host with a frame to fit into.
     kest_arena_reset(runtime->heap);
+    // And everything standing on the ground with it, which is what a host
+    // that throws the heap away is throwing away: `kest_still_holds` answers
+    // false for every one of them afterwards, the same as it always did.
+    kest_ground_free(runtime->ground);
+    runtime->ground = kest_ground_new();
+    runtime->walk_at = WALK_FLOOR;
+    runtime->most = 0;
+    runtime->held_count = 0;
+    runtime->handed_count = 0;
     // Every one of those was on it, and so was the list of what is lent.
     runtime->spare_lends = NULL;
     runtime->lent = NULL;
@@ -6103,7 +6632,7 @@ KestKept kest_kept_where(const KestRuntime *runtime, KestValue kept) {
     // a call in asks about: what a program made while running, and what the
     // file it came from wrote. Text and handles are the same pointer here —
     // what is being asked about is the memory and not what is written in it.
-    if (kest_arena_holds(runtime->heap, kept.object)) {
+    if (ours(runtime, kept.object)) {
         // A lend is a header of the machine's in front of a block that is not,
         // and a host asking about one is asking about the block. Found by
         // address in the list of what is lent rather than by reading what is
@@ -6139,7 +6668,7 @@ uint32_t kest_array_length(const KestRuntime *runtime, KestValue array,
     // handed it out. A number a host wrote into a slot is not an array however
     // much it looks like one. See D630.
     if (runtime == NULL || array.object == NULL ||
-        !kest_arena_holds(runtime->heap, array.object)) {
+        !ours(runtime, array.object)) {
         return 0;
     }
     const Array *held = array.object;
@@ -6152,6 +6681,55 @@ uint32_t kest_array_length(const KestRuntime *runtime, KestValue array,
     return held->length;
 }
 
+bool kest_keeps(KestRuntime *runtime, KestValue kept) {
+    if (runtime == NULL) {
+        return false;
+    }
+    if (!kest_ground_holds(runtime->ground, kept.object)) {
+        // Not the machine's to keep: a pointer of the host's own, or one from
+        // a heap that has gone. Saying so is not an error — a host that says
+        // this about everything it holds is a host that is right about all of
+        // it — and there is nothing to remember.
+        return true;
+    }
+    for (uint32_t i = 0; i < runtime->held_count; i++) {
+        if (runtime->held_by_host[i].object == kept.object) {
+            return true;
+        }
+    }
+    if (runtime->held_count == runtime->held_room) {
+        uint32_t bigger = runtime->held_room == 0 ? 8 : runtime->held_room * 2;
+        KestValue *grown = realloc(runtime->held_by_host,
+                                   (size_t)bigger * sizeof(KestValue));
+        if (grown == NULL) {
+            KestSpan nowhere = {0, 0};
+            kest_diags_in(runtime->diags, NULL);
+            kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0605",
+                           nowhere, "out of memory");
+            return false;
+        }
+        runtime->held_by_host = grown;
+        runtime->held_room = bigger;
+    }
+    runtime->held_by_host[runtime->held_count++] = kept;
+    return true;
+}
+
+bool kest_lets_go(KestRuntime *runtime, KestValue kept) {
+    if (runtime == NULL) {
+        return false;
+    }
+    for (uint32_t i = 0; i < runtime->held_count; i++) {
+        if (runtime->held_by_host[i].object == kept.object) {
+            runtime->held_by_host[i] =
+                runtime->held_by_host[runtime->held_count - 1];
+            runtime->held_count--;
+            return true;
+        }
+    }
+    return false;
+}
+
 bool kest_lend_ends(KestRuntime *runtime, KestValue lent) {
     if (runtime == NULL) {
         return false;
@@ -6160,7 +6738,7 @@ bool kest_lend_ends(KestRuntime *runtime, KestValue lent) {
     kest_diags_in(runtime->diags, NULL);
     // The same question a call in asks, for the same reason: what is at an
     // address the machine never handed out is whatever is there.
-    if (!kest_arena_holds(runtime->heap, lent.object) ||
+    if (!ours(runtime, lent.object) ||
         !KEST_HANDLE_IS(lent.object, KEST_IS_ARRAY)) {
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0637", nowhere,
                        "this is not a lend this machine gave out");

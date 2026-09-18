@@ -36,7 +36,7 @@
 // numbers, or what any of them mean. It does not go up for a new function or
 // a new enum case added at the end, which a host built against the older
 // number does not know about and cannot be hurt by. See D974.
-#define KEST_ABI_VERSION 3
+#define KEST_ABI_VERSION 4
 
 // What deterministic code is held to, named and numbered. `deterministic` is a
 // promise about a profile rather than about arithmetic in the abstract: which
@@ -671,6 +671,36 @@ bool kest_lend_ends(KestRuntime *runtime, KestValue lent);
 // away, rather than asking afterwards. See D353.
 bool kest_still_holds(const KestRuntime *runtime, KestValue kept);
 
+// And the thing a host has to say before keeping one. What a program makes
+// stands on memory the machine gives back when nothing can reach it, and what
+// it walks to decide that is its own: the slots of the program that is
+// running, and the worlds and runs those name. A handle in the host's own
+// memory is not in that walk — the machine cannot read the host's variables —
+// so a host that keeps one across a call that allocates is holding a pointer
+// to memory the machine has given away.
+//
+// There are two ways to be right about this, and a host picks one:
+//
+//   - hand it back in. A handle in the frame of the call is one the walk
+//     reads, so a host that passes its world into every call it makes about
+//     that world needs nothing else. This is what `examples/engine.c` does.
+//   - say so here. The machine then keeps it whatever the program can reach,
+//     until `kest_lets_go` or `kest_heap_reset`.
+//
+// Answers false when there is no room to remember it, and true for anything
+// else — including a value that is not the machine's at all, which keeps
+// nothing and costs nothing.
+//
+// This is not reference counting and a host does not have to balance it: one
+// value said twice is kept once, and a heap thrown away forgets every one of
+// them. See D996.
+bool kest_keeps(KestRuntime *runtime, KestValue kept);
+
+// And the other end of it: the machine stops keeping this for the host's sake,
+// and it lasts as long as the program can reach it and no longer. Answers
+// whether the machine was keeping it.
+bool kest_lets_go(KestRuntime *runtime, KestValue kept);
+
 // And which of the two places it is in, which is what the answer above is a
 // yes to both of. A host keeping a value between frames is choosing between
 // two lifetimes with one pointer in its hand: what the program made while
@@ -989,18 +1019,32 @@ void kest_report(KestRuntime *runtime, FILE *out, KestForm form);
 // were. A host that reads what it is told never meets this. See D618.
 #define KEST_MOST_UNREAD 16
 
-// How many bytes the running program has allocated. Nothing frees them, so this
-// only goes up, and a host watching it is watching the cost D012 defers. The
-// one thing that moves it the other way is `kest_heap_reset`, which throws the
-// whole of it away and puts this back to nothing — what a program is holding is
-// a different number from what it has asked for, and this is the second.
+// How many bytes the running program is holding. It goes down as well as up:
+// what a program makes and then replaces is given back, so a world that
+// rewrites a name every round holds what the world holds rather than what it
+// has ever written. `kest_heap_reset` puts it back to nothing. See D996.
+//
+// This is what a ceiling is held against and what a host watching a frame
+// budget reads. It is not what a call cost: a call that made a megabyte of
+// text and let it go answers the same as one that made nothing, and the two
+// numbers below are what tell them apart.
+size_t kest_heap_used(const KestRuntime *runtime);
+
+// How many bytes the running program has ever been handed. This only goes up,
+// until `kest_heap_reset` puts it back to nothing.
 //
 // Asked on either side of a call, the difference is what that call cost, which
 // is the number a host with a frame budget wants: a total is a number without
 // a scale, and a frame is what a host has to fit into. A call into a function
 // that promises `no.alloc` answers nought, which is that promise read from
 // outside rather than taken on faith.
-size_t kest_heap_used(const KestRuntime *runtime);
+size_t kest_heap_taken(const KestRuntime *runtime);
+
+// And the most it was ever holding at once, which is the number that says a
+// program has settled: a world driven ten times as long that stops at the same
+// figure is a world whose memory is bounded by what it holds rather than by
+// how long it has been running. See D996.
+size_t kest_heap_most(const KestRuntime *runtime);
 
 // What a run did, counted rather than timed. A machine counts what it did; a
 // clock belongs to the host, which is the one thing that can say how long a
