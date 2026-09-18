@@ -48,23 +48,29 @@ fn step(world: [Body], wall: f32) -> f32 no.alloc no.host deterministic {
 }
 
 // The same frame written to cross once a body rather than once a frame, so
-// that what a crossing costs is a number rather than an argument. The host
-// calls this one per body with the four numbers.
-fn one(x: f32, y: f32, dx: f32, dy: f32, wall: f32) -> f32 no.alloc no.host
-        deterministic {
-    let nx = x + dx
-    let ny = y + dy
-    if nx < 0.0 {
-        nx = 0.0 - nx
-    } else if nx > wall {
-        nx = wall - (nx - wall)
+// that what a crossing costs is a number rather than an argument. It does the
+// work `step` does to one body and answers the body, because a comparison
+// between two ways of crossing is only a comparison while both do the same
+// work: one that answered a number and left the body alone would be a cheaper
+// program rather than a cheaper boundary.
+fn one(body: Body, wall: f32) -> Body no.alloc no.host deterministic {
+    body.x += body.dx
+    body.y += body.dy
+    if body.x < 0.0 {
+        body.x = 0.0 - body.x
+        body.dx = 0.0 - body.dx
+    } else if body.x > wall {
+        body.x = wall - (body.x - wall)
+        body.dx = 0.0 - body.dx
     }
-    if ny < 0.0 {
-        ny = 0.0 - ny
-    } else if ny > wall {
-        ny = wall - (ny - wall)
+    if body.y < 0.0 {
+        body.y = 0.0 - body.y
+        body.dy = 0.0 - body.dy
+    } else if body.y > wall {
+        body.y = wall - (body.y - wall)
+        body.dy = 0.0 - body.dy
     }
-    return nx + ny
+    return body
 }
 
 // How many are past the middle, which is a read of the host's memory that
@@ -99,7 +105,8 @@ fn main() -> i32 {
     if counted(world, 100.0) < 0 {
         return 3
     }
-    if one(1.0, 2.0, 3.0, 4.0, 100.0) != 10.0 {
+    let moved = one(Body(1.0, 2.0, 3.0, 4.0), 100.0)
+    if moved.x != 4.0 || moved.y != 6.0 {
         return 4
     }
     return 0

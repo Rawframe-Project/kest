@@ -124,6 +124,12 @@ tools/inward: tools/inward.c libkest.a include/kest.h
 bench/measure: bench/measure.c libkest.a include/kest.h
 	$(CC) $(WARN) -O2 -Iinclude -o $@ bench/measure.c libkest.a -lm
 
+# The frame workload's host, which owns the bodies and lends them: what a
+# frame costs when the data is the host's and crosses once, against what it
+# costs when every value crosses on its own, against the same arithmetic in C.
+bench/frame: bench/frame.c bench/frame.kest libkest.a include/kest.h
+	$(CC) $(WARN) -O2 -Iinclude -o $@ bench/frame.c libkest.a -lm
+
 # Where another project looks.
 install: kest libkest.a
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
@@ -184,7 +190,7 @@ clean:
 	rm -rf build kest kest-debug libkest.a examples/embed \
 	    examples/embed-debug examples/engine examples/engine-debug \
 	    examples/least tools/inward tools/fuzz tools/fuzz-debug \
-	    bench/measure \
+	    bench/measure bench/frame \
 	    bench/control-cpp bench/graph-cpp bench/kernel-cpp bench/words-cpp
 
 .PHONY: debug least embed embed-debug engine engine-debug fast check time \

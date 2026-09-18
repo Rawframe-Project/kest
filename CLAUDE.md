@@ -93,6 +93,19 @@ bench/             Four shapes of work and what each costs, in this language
                    machine, and the dispersion beside the middle is what says
                    how much of that there was. `make bench/measure` builds it.
                    See D1004.
+                   `bench/agents.kest` and `bench/frame.{kest,c}` are the
+                   reference programs the optimizing is measured on rather
+                   than the four workloads above, which are one shape each.
+                   The first is a persistent world — twenty thousand agents in
+                   a store, references both ways so the graph has cycles, a run
+                   of tags on each, identities going and coming back, and a
+                   live set that does not change; it is what found D1005. The
+                   second is the boundary: a host that owns the bodies and
+                   drives them three ways over the same data, one crossing a
+                   frame, one crossing a body, and the same arithmetic in C,
+                   all three answering one checksum so the difference between
+                   them is the boundary and nothing else. `make bench/frame`
+                   builds that host.
 editors/           What an editor needs, and nothing that parses Kest. The
                    VS Code extension is a grammar, a language configuration,
                    snippets and a client that starts `kest lsp`; every

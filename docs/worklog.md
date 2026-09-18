@@ -36363,3 +36363,31 @@ mistake to make in this language.
 **Runs:** `kest run bench/agents.kest -- 20000 100`; `examples/holding.kest`
 under both builds, and under a copy of the tree with the defect put back, where
 it refuses; `make fast`; `tools/check-docs.sh` and `tools/check-fmt.sh`.
+
+## The second reference program: what a frame costs at the boundary
+
+`bench/frame.kest` and `bench/frame.c` are the host-driven half: a C host that
+owns twenty thousand bodies as a contiguous run of four floats each, and drives
+them three ways over the same data — lent where they stand and crossed once a
+frame, passed and answered one body at a time, and the same arithmetic in C.
+All three answer one checksum, so what differs between them is the boundary.
+
+    lend      1373 us a frame     68.7 ns a body
+    fine      1410 us a frame     70.5 ns a body
+    native      40 us a frame      2.0 ns a body
+
+The first version of the fine path answered a number and left the body alone,
+and its checksum said so: 2059067 against 2013350. It writes the body back
+through the frame now, which is what makes it the same work.
+
+What the numbers say is not what was expected. One crossing a body is two and a
+half per cent dearer than one crossing a whole frame — so a crossing is cheap
+against what the machine does with what crossed. The batched path pays, per
+body, an index with a bounds check, four floats read out of packed bytes into
+slots, the arithmetic, and four written back; the fine path is handed slots and
+gives slots. The thing to attack is reading an element of a lent run, not the
+boundary. See D1006.
+
+**Runs:** `make bench/frame`; the host at 20000 bodies over 50 frames;
+`kest run bench/frame.kest` for the program's own checks; `make fast`;
+`tools/check-fmt.sh`, `tools/check-tables.sh` and `tools/check-docs.sh`.

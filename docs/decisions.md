@@ -31792,3 +31792,43 @@ holding freshly made arrays or text, and holds enough of them for the heap to
 be walked while one is being added, could lose a payload. Nothing about the
 language changes and nothing a program can write changes; the machine reads one
 more slot of its own stack than it did.
+
+## D1006. What a frame costs at the boundary, measured three ways over one checksum
+
+**Decided.** `bench/frame.c` drives the same twenty thousand bodies three ways
+and requires all three to answer the same number: one crossing a frame with the
+host's memory lent where it stands, one crossing a body with the body passed
+and answered, and the same arithmetic written in C. A comparison between two
+ways of crossing is only a comparison while both do the same work.
+
+**What it says.** On this machine, twenty thousand bodies, fifty frames, the
+middle of each:
+
+    lend      1373 us     68.7 ns a body
+    fine      1410 us     70.5 ns a body
+    native      40 us      2.0 ns a body
+
+**The surprise, which is the reason this is written down.** One crossing a body
+costs almost the same as one crossing a frame — two and a half per cent — where
+D007 measured the outward crossing as the dear direction and said the shape to
+reach for is one call carrying a batch. Both are true and they are not about the
+same thing. A crossing is cheap against what the machine does with what crossed:
+the batched frame pays, per body, an index with a bounds check, a read of four
+floats out of packed bytes into slots, the arithmetic, and a write of four
+floats back — and the fine one is handed its four numbers already in slots and
+gives four back, so it pays a crossing and skips all of that.
+
+So the thing to attack is not the boundary. It is that reading one element of a
+lent run costs about what a whole host crossing costs.
+
+**What it is not.** `native` is not a claim about anything and no document
+outside this one and the benchmark's own output will carry it. It is what this
+machine does when nothing crosses at all, which is the floor the other two are
+read against. Thirty-four times it is a number to work on, not a number to
+print.
+
+**Why the first version of `one` was wrong.** It answered a number and left the
+body alone, which made it 2059067 against the other two at 2013350. Two
+programs that answer different checksums are two programs. The rule the
+benchmark now holds is the one the mission asks for: the fine path writes the
+body back through the frame it was given.
