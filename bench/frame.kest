@@ -1,0 +1,106 @@
+module bench.frame
+
+// The guest half of the host-driven frame workload. The host owns the bodies,
+// lends them a frame at a time, and reads what comes back; nothing here
+// allocates, calls out, or depends on the machine it runs on, and the compiler
+// proves all three.
+//
+// It is the second of the three reference programs the post-v1 performance
+// work is measured on, and the one that is about the boundary rather than the
+// language: what a frame costs when the data is the host's and crosses once,
+// against what it costs when every value crosses on its own. `bench/frame.c`
+// is the host and the one with the clock in it.
+
+struct Body {
+    x: f32
+    y: f32
+    dx: f32
+    dy: f32
+}
+
+// The hot phase. A run of value structs walked and each one moved, with the
+// wall it bounces off written as a branch rather than as arithmetic, because a
+// frame of a simulation is branches as much as it is multiplies.
+fn step(world: [Body], wall: f32) -> f32 no.alloc no.host deterministic {
+    let sum: f32 = 0.0
+    for at in 0..len(world) {
+        let one = world[at]
+        one.x += one.dx
+        one.y += one.dy
+        if one.x < 0.0 {
+            one.x = 0.0 - one.x
+            one.dx = 0.0 - one.dx
+        } else if one.x > wall {
+            one.x = wall - (one.x - wall)
+            one.dx = 0.0 - one.dx
+        }
+        if one.y < 0.0 {
+            one.y = 0.0 - one.y
+            one.dy = 0.0 - one.dy
+        } else if one.y > wall {
+            one.y = wall - (one.y - wall)
+            one.dy = 0.0 - one.dy
+        }
+        world[at] = one
+        sum += one.x + one.y
+    }
+    return sum
+}
+
+// The same frame written to cross once a body rather than once a frame, so
+// that what a crossing costs is a number rather than an argument. The host
+// calls this one per body with the four numbers.
+fn one(x: f32, y: f32, dx: f32, dy: f32, wall: f32) -> f32 no.alloc no.host
+        deterministic {
+    let nx = x + dx
+    let ny = y + dy
+    if nx < 0.0 {
+        nx = 0.0 - nx
+    } else if nx > wall {
+        nx = wall - (nx - wall)
+    }
+    if ny < 0.0 {
+        ny = 0.0 - ny
+    } else if ny > wall {
+        ny = wall - (ny - wall)
+    }
+    return nx + ny
+}
+
+// How many are past the middle, which is a read of the host's memory that
+// answers with one number rather than writing anything back.
+fn counted(world: [Body], wall: f32) -> i32 no.alloc no.host deterministic {
+    let many = 0
+    for body in world {
+        if body.x > wall / 2.0 {
+            many += 1
+        }
+    }
+    return many
+}
+
+fn main() -> i32 {
+    // A host is what drives this, and a program in this tree answers with
+    // which of its own checks failed. So: a run of its own, so that running
+    // the file is running the thing it does.
+    let world: [Body] = array()
+    for i in 0..1000 {
+        let f = f32(i)
+        push(world, Body(f % 100.0, f * 3.0 % 100.0, 1.0 + f % 3.0, 2.0))
+    }
+    let first = step(world, 100.0)
+    if first <= 0.0 {
+        return 1
+    }
+    let second = step(world, 100.0)
+    if second <= 0.0 {
+        return 2
+    }
+    if counted(world, 100.0) < 0 {
+        return 3
+    }
+    if one(1.0, 2.0, 3.0, 4.0, 100.0) != 10.0 {
+        return 4
+    }
+    return 0
+}

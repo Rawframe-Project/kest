@@ -11815,9 +11815,9 @@ static const Keyword KEYWORDS[] = {
         "what": "a heap that ran out and was freed under the machine",
         "file": "src/vm.c",
         "from": """                if (store->used == store->capacity &&
-                    !grow_store(rt, top, store)) {""",
+                    !grow_store(rt, reach, store)) {""",
         "to": """                if (store->used == store->capacity &&
-                    !grow_store(rt, top, store)) {
+                    !grow_store(rt, reach, store)) {
                     kest_arena_free(rt->heap);""",
         "make": ["embed-debug"],
         "host": "examples/embed-debug",
