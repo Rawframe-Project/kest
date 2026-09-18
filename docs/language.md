@@ -6176,9 +6176,17 @@ two answers:
   "machine": {"bytes": 296, "slots": 8, "frames": 1},
   "heap": 24,
   "taken": 24,
+  "allowed": 0,
   "thrown": 0
 }
 ```
+
+`allowed` is what the machine was given to put on the heap: what the command
+was allowed, less what reading and compiling took and less what a machine for
+the program costs. It is nought when nothing said `--room`, because then there
+is no ceiling and nothing to divide. A reader holding the three against what
+the command was given is reading this command's own arithmetic, which is the
+one thing a run that never reaches its ceiling cannot say.
 
 `heap` is what the program is holding when the last event is over and `taken`
 is every byte it was handed on the way: they are the same number for a run that

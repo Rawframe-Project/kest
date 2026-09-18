@@ -896,6 +896,13 @@ typedef struct {
     // world that makes a name a frame and lets it go holds nothing at the end
     // of it and paid for every one. See D996.
     size_t taken;
+    // And what the machine was allowed to put on the heap, which is a number
+    // the command line works out rather than one a program reaches: what it
+    // was given, less what reading and compiling took and less what a machine
+    // for it costs. A reader holding the three against what the command was
+    // given is holding this command's own arithmetic, which is the one thing
+    // a run that never reaches its ceiling cannot say. See D849 and D996.
+    size_t allowed;
     // How many times the heap was thrown away between events. Without it, a
     // run that allocated nothing and a run that threw everything away say the
     // same thing: nought bytes and none of them freed, which is true of the
@@ -2421,6 +2428,7 @@ static int run(const char *command, const char *executable, char **paths,
                     kest_allowed(runtime, &given_room);
                     ticked.slots = given_room.stack_slots;
                     ticked.frames = given_room.call_depth;
+                    ticked.allowed = given_room.heap_bytes;
                     ticked.ran = true;
                     if (!ticked.bulk && !ticked.single && !ticked.named) {
                         // Driving a program that takes no events looks the
@@ -2504,8 +2512,8 @@ static int run(const char *command, const char *executable, char **paths,
                                    ticked.heap, ticked.thrown,
                                    ticked.thrown == 1 ? "" : "s");
                         } else {
-                            printf("heap      %zu bytes, none of it freed\n",
-                                   ticked.heap);
+                            printf("heap      %zu bytes, %zu taken\n",
+                                   ticked.heap, ticked.taken);
                         }
                     }
                 } else {
@@ -2857,8 +2865,10 @@ static int run(const char *command, const char *executable, char **paths,
                     ",\"machine\":{\"bytes\":%zu,\"slots\":%u,"
                     "\"frames\":%u}",
                     ticked.machine, ticked.slots, ticked.frames);
-            fprintf(stdout, ",\"heap\":%zu,\"taken\":%zu,\"thrown\":%d",
-                    ticked.heap, ticked.taken, ticked.thrown);
+            fprintf(stdout,
+                    ",\"heap\":%zu,\"taken\":%zu,\"allowed\":%zu,"
+                    "\"thrown\":%d",
+                    ticked.heap, ticked.taken, ticked.allowed, ticked.thrown);
         }
         fputs("}\n", stdout);
     } else {

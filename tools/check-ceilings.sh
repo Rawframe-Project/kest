@@ -623,26 +623,37 @@ else
             2>/dev/null </dev/null)
         kept=$?
         # And what the whole of it came to: what reading and compiling took,
-        # what a machine for it took, and what the program put on the heap,
-        # against what the command was allowed. `--room` says it is the most a command asks for, all of it,
-        # and the build kept a ceiling of the whole number while the program
-        # ran — a second purse the same size as the first, and twenty thousand
-        # bytes allowed came to twenty-four thousand spent. Read whatever the
-        # run did, because what was spent was spent whether it finished or not.
-        # See D849.
-        spent=$(printf '%s' "$answered" | sed -n 's/.*"cost":\([0-9]*\).*/\1/p')
-        # The widest moment rather than what is left at the end of it. What is
-        # left at the end is wherever the last walk put it, and a machine with
-        # room to spare walks less often -- so a run that ends just before one
-        # holds what a run that ends just after does not. What a ceiling has to
-        # cover is the widest moment. See D996.
-        grew=$(printf '%s' "$answered" | sed -n 's/.*"peak":\([0-9]*\).*/\1/p')
+        # what a machine for it took, and what the program was allowed to put
+        # on the heap, against what the command was given. `--room` says it is
+        # the most a command asks for, all of it, and the build kept a ceiling
+        # of the whole number while the program ran — a second purse the same
+        # size as the first, and twenty thousand bytes allowed came to
+        # twenty-four thousand spent. See D849.
+        #
+        # Asked of the run that is refused rather than of the one that
+        # finishes. Both are given the same arithmetic, and only the refused
+        # one has spent what was kept back for saying things -- so only there
+        # does the sum come up against what the command was given. The one
+        # that finishes never reaches its ceiling at all, because what it made
+        # is given back. See D996.
+        refused=$(./kest tick --json --room $rung "$work/greedy.kest" 200 \
+            2>/dev/null </dev/null)
+        spent=$(printf '%s' "$refused" | sed -n 's/.*"cost":\([0-9]*\).*/\1/p')
+        grew=$(printf '%s' "$refused" |
+            sed -n 's/.*"allowed":\([0-9]*\).*/\1/p')
         # The machine beside them, which is the third of the three: what it
-        # cost to make and what it may spend saying what happens, weighed
-        # together because a wall against the first is a wall against nothing.
-        engine=$(printf '%s' "$answered" |
+        # cost to make and what it spent saying what happened, weighed together
+        # because a wall against the first is a wall against nothing.
+        engine=$(printf '%s' "$refused" |
             sed -n 's/.*"machine":{"bytes":\([0-9]*\).*/\1/p')
-        if [ -z "$spent" ] || [ -z "$grew" ] || [ -z "$engine" ]; then
+        # And the widest moment the one that finished reached, which has to be
+        # inside what it was allowed: the ceiling said from the other side.
+        peak=$(printf '%s' "$answered" | sed -n 's/.*"peak":\([0-9]*\).*/\1/p')
+        held=$(printf '%s' "$answered" | sed -n 's/.*,"heap":\([0-9]*\).*/\1/p')
+        allowed=$(printf '%s' "$answered" |
+            sed -n 's/.*"allowed":\([0-9]*\).*/\1/p')
+        if [ -z "$spent" ] || [ -z "$grew" ] || [ -z "$engine" ] ||
+           [ -z "$peak" ] || [ -z "$held" ] || [ -z "$allowed" ]; then
             echo "ceilings: a run under \`--room $rung\` says nothing about" \
                  "what it took, so the number it was given holds nothing"
             failed=1
@@ -650,6 +661,11 @@ else
             echo "ceilings: a run allowed $rung bytes took $spent reading and" \
                  "compiling, $engine for a machine and $grew more on the" \
                  "heap, which is $((spent + engine + grew))"
+            failed=1
+        elif [ "$peak" -gt "$allowed" ]; then
+            echo "ceilings: a run allowed $allowed bytes on the heap held" \
+                 "$peak at its widest, so the ceiling it was given is kept" \
+                 "nowhere"
             failed=1
         fi
         # And that `--reset` does what it says, which is now a thing to read
@@ -674,13 +690,11 @@ else
                  "made is kept nowhere it can be given back from"
             failed=1
         fi
-        ./kest tick --room $rung "$work/greedy.kest" 200 \
-            >/dev/null 2>&1 </dev/null
-        greedy_kept=$?
         ./kest tick --reset --room $rung "$work/greedy.kest" 200 \
             >/dev/null 2>&1 </dev/null
         greedy_thrown=$?
-        if [ "$greedy_kept" -eq 0 ] || [ "$greedy_thrown" -eq 0 ]; then
+        if [ -z "$(printf '%s' "$refused" | grep -o '"errors":[1-9]')" ] ||
+           [ "$greedy_thrown" -eq 0 ]; then
             echo "ceilings: a handler asking for more than the whole of" \
                  "\`--room $rung\` in one event was not refused, so the" \
                  "ceiling it was given is kept nowhere"

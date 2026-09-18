@@ -3092,8 +3092,12 @@ for file in "$@"; do""",
         # against. See D849.
         "what": "a driven run that will not say what the heap came to",
         "file": "src/main.c",
-        "from": r"""            fprintf(stdout, ",\"heap\":%zu,\"taken\":%zu,\"thrown\":%d",""",
-        "to": r"""            fprintf(stdout, ",\"grew\":%zu,\"taken\":%zu,\"thrown\":%d",""",
+        "from": r"""            fprintf(stdout,
+                    ",\"heap\":%zu,\"taken\":%zu,\"allowed\":%zu,"
+                    "\"thrown\":%d",""",
+        "to": r"""            fprintf(stdout,
+                    ",\"grew\":%zu,\"taken\":%zu,\"allowed\":%zu,"
+                    "\"thrown\":%d",""",
         "make": [],
         "tool": "tools/check-ceilings.sh",
         "arguments": [],
@@ -3154,7 +3158,7 @@ for file in "$@"; do""",
         "make": [],
         "tool": "tools/check-ceilings.sh",
         "arguments": [],
-        "caught": "more on the heap, which is",
+        "caught": "says nothing about what it took",
     },
     {
         # What a run was about to say, thrown away because there was no room to
@@ -4734,10 +4738,15 @@ for file in "$@"; do""",
         # the same one.
         "what": "a heap thrown away once more in the JSON than in the words",
         "file": "src/main.c",
-        "from": r"""            fprintf(stdout, ",\"heap\":%zu,\"taken\":%zu,\"thrown\":%d",
-                    ticked.heap, ticked.taken, ticked.thrown);""",
-        "to": r"""            fprintf(stdout, ",\"heap\":%zu,\"taken\":%zu,\"thrown\":%d",
-                    ticked.heap, ticked.taken, ticked.thrown + 1);""",
+        "from": r"""            fprintf(stdout,
+                    ",\"heap\":%zu,\"taken\":%zu,\"allowed\":%zu,"
+                    "\"thrown\":%d",
+                    ticked.heap, ticked.taken, ticked.allowed, ticked.thrown);""",
+        "to": r"""            fprintf(stdout,
+                    ",\"heap\":%zu,\"taken\":%zu,\"allowed\":%zu,"
+                    "\"thrown\":%d",
+                    ticked.heap, ticked.taken, ticked.allowed,
+                    ticked.thrown + 1);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -5631,7 +5640,7 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "the reference says a table costs 50 byte(s) an entity",
+        "caught": "the reference says a table costs 75 byte(s) an entity",
     },
     {
         # The one number left in these documents that came off a run and had
@@ -9062,12 +9071,16 @@ fn main() -> i32 {
         # reads the program's own words with a refusal wedged into them.
         "what": "a run that says a refusal into what the program wrote",
         "file": "src/main.c",
-        "from": """            fprintf(stdout, ",\\"heap\\":%zu,\\"taken\\":%zu,\\"thrown\\":%d",
-                    ticked.heap, ticked.taken, ticked.thrown);
+        "from": """            fprintf(stdout,
+                    ",\\"heap\\":%zu,\\"taken\\":%zu,\\"allowed\\":%zu,"
+                    "\\"thrown\\":%d",
+                    ticked.heap, ticked.taken, ticked.allowed, ticked.thrown);
         }
         fputs("}\\n", stdout);""",
-        "to": """            fprintf(stdout, ",\\"heap\\":%zu,\\"taken\\":%zu,\\"thrown\\":%d",
-                    ticked.heap, ticked.taken, ticked.thrown);
+        "to": """            fprintf(stdout,
+                    ",\\"heap\\":%zu,\\"taken\\":%zu,\\"allowed\\":%zu,"
+                    "\\"thrown\\":%d",
+                    ticked.heap, ticked.taken, ticked.allowed, ticked.thrown);
         }
         fputs("}\\n", stdout);
         kest_build_report(build, stderr, KEST_FORM_TEXT);""",
