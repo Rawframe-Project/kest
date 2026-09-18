@@ -165,8 +165,10 @@ clean:
 # hundred inputs each, sanitised. A longer one is the same command with other
 # numbers, and what a finding is is a seed and a count.
 fuzz: tools/fuzz-debug
-	@for seed in 1 2 3 4 5 6 7 8; do \
-	    ./tools/fuzz-debug $$seed 400 build/fuzz.kest || exit 1; \
+	@for what in source handles lends refs text migrate; do \
+	    for seed in 1 2 3 4 5 6 7 8; do \
+	        ./tools/fuzz-debug $$seed 400 build/fuzz.kest $$what || exit 1; \
+	    done; \
 	done
 
 -include $(RELEASE_OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) build/release/main.d \

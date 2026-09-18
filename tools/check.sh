@@ -1866,30 +1866,43 @@ with a world: the new program's where the shape did not move, and the one the \
 host was holding where it did"
 fi
 
-# Bytes the compiler was not written for, sanitised. Eight seeds and four
-# hundred inputs each, which is a minute rather than an afternoon: a gate can
-# afford a short campaign and a long one is the same command with other
-# numbers. What it holds is that every one of them ends in a program or a
-# refusal, which is what not crashing looks like from outside. See D984.
+# The boundaries a stranger's bytes arrive through, sanitised. Eight seeds and
+# four hundred inputs each, which is a minute rather than an afternoon: a gate
+# can afford a short campaign and a long one is the same command with other
+# numbers.
+#
+# Six of them, because a compiler is not the only thing here somebody else's
+# bytes reach. The doors a host hands a handle to are reached by a host, and so
+# are the life of a lend, a reference into a world being changed underneath it,
+# bytes handed over as text, and a program edited under a world that is already
+# running. What each holds is written where it is written; what they share is
+# that every input ends in an answer or a refusal, which is what not crashing
+# looks like from outside. See D984 and D997.
 if [ ! -x tools/fuzz-debug ]; then
     complain "fuzzing" "there is no sanitised fuzzer to run"
 else
     fuzzed=0
     fuzz_wrong=""
-    for seed in 1 2 3 4 5 6 7 8; do
-        said=$(./tools/fuzz-debug "$seed" 400 "$scratch"/fuzz.kest 2>&1) ||
-            fuzz_wrong="seed $seed stopped it"
-        case "$said" in
-        *"none of them stopped this"*) fuzzed=$((fuzzed + 400)) ;;
-        *) fuzz_wrong="seed $seed: $(printf '%s' "$said" | head -3)" ;;
-        esac
+    for what in source handles lends refs text migrate; do
+        for seed in 1 2 3 4 5 6 7 8; do
+            said=$(./tools/fuzz-debug "$seed" 400 "$scratch"/fuzz.kest \
+                "$what" 2>&1) || fuzz_wrong="$what at seed $seed stopped it"
+            case "$said" in
+            *"none of them stopped this"*) fuzzed=$((fuzzed + 400)) ;;
+            *) fuzz_wrong="$what at seed $seed: \
+$(printf '%s' "$said" | head -3)" ;;
+            esac
+        done
     done
     if [ -n "$fuzz_wrong" ]; then
         complain "fuzzing" "bytes this compiler was not written for stopped \
 it: $fuzz_wrong"
     else
-        say "fuzzing" "$fuzzed input(s) made from eight seeds, every one of \
-them a program or a refusal, under a build that checks itself"
+        say "fuzzing" "$fuzzed input(s) made from eight seeds over six \
+boundaries -- what a program is written in, the handles a host hands over, the \
+life of a lend, a reference into a world being changed underneath it, bytes \
+handed over as text, and a program edited under a world that is running -- \
+every one of them an answer or a refusal, under a build that checks itself"
     fi
 fi
 
