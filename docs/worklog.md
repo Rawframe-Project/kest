@@ -36127,3 +36127,143 @@ plan.
 
 **Runs:** `bench/run.sh` best of seven with all three comparators built on this
 machine; `make time`.
+
+## A heap a program can be given pieces of back
+
+The machine's persistent memory was a bump arena, so a program that wrote a new
+name into a live thing every round abandoned the old one and the arena
+abandoned it forever. Two hundred things over ten thousand rounds was two
+hundred megabytes of text nothing could reach, and the round that replaces what
+a thing holds ran out of sixty-four of them.
+
+`src/ground.c` is fixed-width places in aligned plots, with a bit a place for
+what is in use, what a walk reached and what kind of thing is there. The
+machine walks what it can still reach -- its own slots read loosely, because
+they carry no tags, and the worlds a host says it keeps -- and gives the rest
+back. Non-moving, because a piece of text cut out of another names a place
+inside it and so does the address of an element: `kest_ground_start` is what
+turns an inside place into the thing it is inside of, and a count kept on each
+value could not have been kept on one.
+
+What it turned up was the shape of the change rather than a defect in it. A
+handle a host keeps in its own memory is invisible to the walk, and both hosts
+in this tree keep a world across calls that do not hand it back, so the ABI
+grew `kest_keeps` and `kest_lets_go` and went to 4. What a call cost had been
+measured everywhere as a difference of what the machine was holding, and what
+it is holding now goes down, so `kest_heap_taken` and `kest_heap_most` are the
+two numbers that took the old meaning over and the JSON went to schema 3. The
+ceiling had been held against what the ground asked the host for, which meant a
+machine given sixty-four kilobytes could allocate nothing; it is held against
+what the program holds. And a first plot of sixty-four kilobytes per size class
+put the footprint up, so a plot is sixteen.
+
+The six shapes in `examples/churn.kest` -- text replaced, runs replaced, a name
+built in working memory, a run of things that each hold text, half the world
+taken out at once, identities going and coming back -- hold the same memory at
+ten times the rounds and at a hundred. The round that replaces what a thing
+holds runs ten thousand times in four megabytes. See D996.
+
+**Runs:** `make check`; the memory section of `tools/check.sh` at 200, 2000 and
+20000 rounds; `make embed-debug` and `make engine-debug` under ASan and UBSan;
+twenty backstop holes repointed and five rewritten, because breaking the arena
+stopped breaking a program's memory.
+
+## Six boundaries somebody else's bytes arrive through
+
+The fuzzer had one target, which was source text, and the boundaries where a
+host's own bytes arrive had none. `tools/fuzz.c` takes the name of a boundary
+now: source, handles, lends, refs, text, migrate -- what a program is written
+in, the handles a host hands over, the life of a lend, a reference into a world
+being changed underneath it, bytes handed over as text, and a program edited
+under a world that is already running. What is held is that every one of them
+ends in an answer or a refusal.
+
+What it found on its first run was this harness misusing `kest_text_bytes`,
+which reads two slots and had been handed the address of one. Nothing in the
+language. See D997.
+
+**Runs:** the gate's 19200 inputs from eight seeds under the sanitised build;
+the campaign the reference asks for before a release, ten seeds of twenty
+thousand on each of the six, 1,200,000 inputs, 60 of 60 clean.
+
+## One version, four promises
+
+The reference had said `abi 1, json 1` for months while the machine said four
+and three, which is the shape of defect a document gets when nothing reads it.
+The version is in one place in `include/kest.h` and everything else reads it,
+and `tools/check-docs.sh` holds eleven places to a run of `kest --version`: the
+header's five constants, every document that prints them, the front page's
+sentence, the changelog's newest section, the archive name and the editor
+extension.
+
+`kest 1.0.0, abi 4, json 3, profile kest-det 1`. What 1.x promises is in the
+reference: a program that checks under 1.x checks under every later one, the C
+ABI is frozen, the JSON has its own number, the profile has a third, the
+bytecode is none of them and is not a compatibility surface. See D998.
+
+**Runs:** `make check`; seven backstop holes, one of them a sentence.
+
+## What a compiler made, in a tree meant to hold what somebody wrote
+
+The gate reads the first four bytes of everything in the tree and names what a
+compiler made that `make clean` does not take away, with the list of what is
+cleaned read from the `Makefile` rather than written twice. It found the four
+`bench/*-cpp` comparators, which nothing had ever removed. Guarded rather than
+holed, because `check.sh` is not one of the checks held to their own sentences:
+the gate plants a built thing in a room of its own and confirms the walk names
+it. See D999.
+
+**Runs:** `make check`; the guard watched finding a planted binary and watched
+saying nothing about a tree with none.
+
+## An archive nobody unpacked is a directory listing
+
+Linux had an archive nothing opened and Windows had none. `tools/package.bat`
+is the second one, and every commit now unpacks each into an empty directory
+and asks three questions: the binary says what it is, a program it has never
+seen runs through it, and a host compiles against the header and the library
+that are in the archive. The third is the one nothing was asking and the one an
+archive is for. Both carry the binary, the header, the static library, the
+standard library, the vendorable source, the editor extension, the documents,
+LICENSE, and a VERSION written by asking the binary inside the archive. See
+D1000.
+
+**Runs:** the `package` and `windows` jobs; both archives unpacked in a clean
+room on their own platform, run, and built against -- `cl /std:c11` on Windows,
+`cc` on Linux.
+
+## Two defects the gate found on the way
+
+The pattern that finds a decision named in a comment read exactly three digits,
+so every reference to D1000 and past it would have stopped being read with
+nothing to say so. It surfaced because a hole quoted D999 as a number nobody
+had written, D999 was then written, and the replacement number was not caught:
+the check said what was wrong with it by failing to fail. See D1001.
+
+And the ladder of address spaces. The loader refuses a small one in two
+sentences, only one of which holds the word `error`, and the walk *down* the
+ladder had known both since D761 while the walk *up* read for that word alone.
+Adding `src/ground.c` made the binary big enough to move a CI runner from the
+first sentence to the second, so the up-walk read a refusal as a run and took
+the bottom rung of the ladder for the top: `runnable` printed as the first
+level tried, with no rungs walked. It is a defect this tree could not have
+found on this machine, and the gate found it because CI runs on one that is not
+this one. See D1002.
+
+**Runs:** `tools/check-docs.sh` and `tools/check-ceilings.sh` on their own; the
+whole gate; the CI run below, where the ladder now walks 120 rungs over three
+programs, 102 run and 18 refused in words.
+
+## 1.0.0, tagged and published
+
+The release commit is `875e364`. All seven jobs of the workflow are green on
+it -- `linux`, `macos`, `threads`, `package`, `windows`, `agree` and
+`linux-full`, which is `make check` and says `everything passes` -- and the
+three platforms answer the conformance trace byte for byte. `v1.0.0` is an
+annotated tag on that commit and the release carries both archives and their
+checksums, downloaded again afterwards and verified from the release rather
+than from the build.
+
+**Runs:** GitHub Actions run 35371205585, all seven jobs; `sha256sum -c` on
+both archives downloaded from the release; the Linux archive unpacked from that
+download and run, saying `kest 1.0.0, abi 4, json 3, profile kest-det 1`.
