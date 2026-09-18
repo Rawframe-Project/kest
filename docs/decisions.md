@@ -31565,3 +31565,38 @@ built thing in it, walked, and the sentence it has to answer with looked for. A
 walk that found nothing and a walk that looked at nothing print the same
 nothing, and this is the one check here written inside the gate rather than
 beside it. *Measured.*
+
+## D1000. An archive nobody unpacked is a directory listing
+
+**Decided.** Both platforms write an archive, both carry the same things, and
+every commit unpacks each into an empty directory and asks it three questions:
+the binary says what it is, a program it has never seen runs through it, and a
+host compiles against the header and the library that are *in the archive*
+rather than the ones in the tree it was built from.
+
+**Why the third one.** The first two pass for an archive that is missing the
+header, the static library, or both — a command line finds its standard library
+beside it and never looks at either. What an archive is *for* is somebody
+building a host against it, and that is the thing nothing was asking. The
+Windows side had no archive at all: it built, it ran the conformance trace, and
+there was nothing to download. *Measured.*
+
+**What is in one.** The command line, the header, the static library, the
+standard library, the modular source because the runtime is vendorable, the VS
+Code extension, the documents, the licence, and a `VERSION`. The manifest is
+written by asking the binary in the archive what it is rather than by repeating
+a number beside it, so an archive cannot say it is something the thing inside it
+is not — which is the one mistake a name written by hand makes, and the reason
+the name of the archive is cut out of the header too. See D998.
+
+**Installing one is unpacking it.** Nothing is written outside the directory it
+lands in: `bin/kest` looks for the standard library in `lib/kest` beside it, so
+a host adds `bin` to its path or names the binary where it is, and a host
+embedding the runtime compiles against the header and links the library out of
+the same directory. No package manager and no registry is needed for 1.0, and
+none is claimed.
+
+**What is not here.** No installer, no package-manager submission, no
+marketplace publication. Those are accounts and review queues rather than
+engineering, and an archive that unpacks and runs is the whole of what this
+repository can be held to. *Argued.*

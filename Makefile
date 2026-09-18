@@ -135,14 +135,30 @@ install: kest libkest.a
 # library, the header, the standard library and the source. See D989.
 RELEASE := kest-$(KEST_VERSION)-$(shell uname -s | tr A-Z a-z)-$(shell uname -m)
 
+# What ships. The sources go in beside the library because the runtime is
+# vendorable: a host that would rather build it than link it copies `src` and
+# `include` and has the whole of it. `VERSION` is written by asking the binary
+# in the archive rather than by repeating a number here, so an archive cannot
+# say it is something the thing inside it is not. See D998 and D1000.
 release: kest libkest.a
 	rm -rf build/$(RELEASE)
 	$(MAKE) install DESTDIR=build/$(RELEASE) PREFIX=
 	mkdir -p build/$(RELEASE)/src build/$(RELEASE)/editors
 	cp src/*.c src/*.h build/$(RELEASE)/src/
 	cp -r editors/vscode build/$(RELEASE)/editors/
-	cp README.md CHANGELOG.md build/$(RELEASE)/
+	cp README.md CHANGELOG.md LICENSE build/$(RELEASE)/
 	cp -r docs build/$(RELEASE)/docs
+	./kest --version > build/$(RELEASE)/VERSION
+	@echo "$(shell uname -s | tr A-Z a-z)-$(shell uname -m)" \
+	    >> build/$(RELEASE)/VERSION
+	@echo "unpack it anywhere; bin/kest finds lib/kest beside it" \
+	    >> build/$(RELEASE)/VERSION
+	@echo "what it is and how to build a host against it: README.md" \
+	    >> build/$(RELEASE)/VERSION
+	@echo "what changed: CHANGELOG.md. what it means: docs/language.md" \
+	    >> build/$(RELEASE)/VERSION
+	@echo "the licence every file of it is under: LICENSE" \
+	    >> build/$(RELEASE)/VERSION
 	cd build && tar czf $(RELEASE).tar.gz $(RELEASE)
 	cd build && sha256sum $(RELEASE).tar.gz > $(RELEASE).tar.gz.sha256
 	@echo "wrote build/$(RELEASE).tar.gz and its checksum"

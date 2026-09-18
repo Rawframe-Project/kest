@@ -15,11 +15,27 @@ make PREFIX=/usr/local
 sudo make install PREFIX=/usr/local
 ```
 
-`make release` writes one archive with a checksum beside it: the command line,
-the header, the static library, the standard library, the modular source a host
-vendors, the VS Code extension and the documents. There is nothing built from a
-program in it — the bytecode is not a format, so what ships is the source
-beside the runtime. See D989.
+`make release` on Linux and `tools\package.bat` on Windows each write one
+archive with a checksum beside it: the command line, the header, the static
+library, the standard library, the modular source a host vendors, the VS Code
+extension, the documents, the licence, and a `VERSION` written by asking the
+binary in the archive what it is. There is nothing built from a program in it —
+the bytecode is not a format, so what ships is the source beside the runtime.
+See D989, D998 and D1000.
+
+Installing one is unpacking it. Nothing is written outside the directory it
+lands in and nothing has to be: `bin/kest` looks for the standard library in
+`lib/kest` beside it, so a host that would rather not install anything at all
+adds `bin` to its path, or names the binary where it is. A host embedding the
+runtime compiles against `include/kest.h` and links `lib/libkest.a` — or
+`lib\kest.lib` on Windows — out of the same directory, and needs nothing else
+installed. `make uninstall` takes away exactly what `make install` put there,
+and an unpacked archive is taken away by deleting it.
+
+Every commit unpacks both archives into an empty directory and asks the three
+questions that matter: the binary says what it is, a program it has never seen
+runs through it, and a host compiles against the header and library that are in
+the archive rather than the ones in this tree.
 
 ## Starting
 

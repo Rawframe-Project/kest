@@ -143,8 +143,21 @@ jobs:
           sha256sum -c kest-*.tar.gz.sha256
           mkdir out && tar xzf kest-*.tar.gz -C out
           cd out/kest-*
-          KEST_LIB=lib/kest/ ./bin/kest --version
-          KEST_LIB=lib/kest/ ./bin/kest run "$GITHUB_WORKSPACE/examples/math.kest"
+          export KEST_LIB=lib/kest/
+          ./bin/kest --version
+          ./bin/kest run "$GITHUB_WORKSPACE/examples/math.kest"
+          # And a host built against the header and the library that are in
+          # the archive, which is the question an archive is for. See D1000.
+          printf '%s\n' '#include "kest.h"' '#include <stdio.h>' \
+              'int main(void) {' \
+              '    if (kest_abi_version() != KEST_ABI_VERSION) { return 1; }' \
+              '    printf("a host built against the archive says %s, abi %u\\n",' \
+              '           kest_version(), kest_abi_version());' \
+              '    return 0;' \
+              '}' > host.c
+          cc -std=c11 -Wall -Wextra -Werror -Iinclude -o host host.c \
+              lib/libkest.a -lm
+          ./host
       - uses: actions/upload-artifact@v4
         with:
           name: release-linux-x86-64
@@ -171,10 +184,56 @@ jobs:
           export KEST_LIB=lib/
           sh tools/conformance.sh ./build/win/kest.exe windows-x86-64.trace
           cat windows-x86-64.trace
+      - name: an archive, unpacked and run
+        shell: cmd
+        run: tools\package.bat
+      # Unpacked into a room of its own and used the way somebody who
+      # downloaded it would: the binary asked what it is, a program it has
+      # never seen run through it, and a host compiled against the header and
+      # the library that are in the archive rather than the ones in this tree.
+      # An archive nobody unpacked is a directory listing. See D1000.
+      - name: what is in it, from a clean room
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem build\kest-*-windows-x86_64.zip
+          $said = Get-Content "$($zip.FullName).sha256"
+          $hash = (Get-FileHash -Algorithm SHA256 $zip.FullName).Hash.ToLower()
+          if (-not $said.StartsWith($hash)) {
+            throw "the checksum beside the archive is not the archive's"
+          }
+          Expand-Archive -Path $zip.FullName -DestinationPath out
+          $root = (Get-ChildItem out -Directory)[0].FullName
+          $env:KEST_LIB = "$root\lib\kest\"
+          & "$root\bin\kest.exe" --version
+          if ($LASTEXITCODE -ne 0) { throw "the archive's kest.exe would not run" }
+          Set-Content hello.kest @(
+            'import std.text', '',
+            'fn main() -> i32 {',
+            '    let said = text.repeat("ok", 2)',
+            '    return len(said) - 4',
+            '}')
+          & "$root\bin\kest.exe" run hello.kest
+          if ($LASTEXITCODE -ne 0) { throw "the archive would not run a program" }
+          Set-Content host.c @(
+            '#include "kest.h"', '#include <stdio.h>',
+            'int main(void) {',
+            '    if (kest_abi_version() != KEST_ABI_VERSION) { return 1; }',
+            '    printf("a host built against the archive says %s, abi %u\n",',
+            '           kest_version(), kest_abi_version());',
+            '    return 0;',
+            '}')
+          cl /nologo /std:c11 /I"$root\include" host.c "$root\lib\kest.lib" /Fe:host.exe
+          if ($LASTEXITCODE -ne 0) { throw "a host would not build against the archive" }
+          .\host.exe
+          if ($LASTEXITCODE -ne 0) { throw "a host built against the archive would not run" }
       - uses: actions/upload-artifact@v4
         with:
           name: trace-windows-x86-64
           path: windows-x86-64.trace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-windows-x86-64
+          path: build/kest-*-windows-x86_64.zip*
 
   agree:
     needs: [linux, windows, macos]
