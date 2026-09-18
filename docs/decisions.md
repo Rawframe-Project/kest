@@ -31736,3 +31736,59 @@ tree that asks for POSIX by name, and it says why where it asks.
 
 **What it is not.** Not part of `make check`, for the reason nothing that
 measures a duration is: a duration is not a pass or a fail.
+
+## D1005. A value being added to a store is a root while the store grows
+
+**Decided.** `KEST_OP_ADD` reads the machine's slots to above the value being
+added rather than to where the stack ends, which is what `set` at a position
+and `push` already did.
+
+**What went wrong.** Adding to a full store takes four runs at once — the
+values, what each place has counted, which places are live and which are free —
+and any of those four may set off the walk that decides what can still be
+reached. The instruction pops the value off the stack before it grows:
+
+    top -= stride;
+    KestValue *value = top;
+    Store *store = (--top)->object;
+
+so the value sits above `top`, and the walk was told to read to `top`. For a
+value holding something made a moment before — an array built by the expression
+that is being added, named by nothing else anywhere — the walk found it
+unreachable and gave the place back. The copy that follows then wrote a handle
+to a place something else now holds into the store, and the next read of it
+said `K0612: this is not an array`.
+
+Everything else about the entry was right, which is what made it hard to see: a
+piece of text that is a constant of the module is not on this heap, an `i32` is
+not a handle, and a reference is a place and a stamp rather than an address. It
+was the freshly allocated payload and only that.
+
+**How it was found.** `bench/agents.kest`, the first of the reference programs
+written for the post-v1 performance work, refused to run at twelve thousand
+agents and ran at ten thousand. Narrowed to thirty-five lines: a store of a
+struct holding a run of structs, filled with a payload made per entry, failing
+somewhere between five thousand one hundred and five thousand two hundred of
+them — which is a number of bytes rather than a number of entries, and so a
+walk. Confirmed by raising `WALK_FLOOR` to a gigabyte in a copy of the tree,
+where it does not fail at all.
+
+**Why the other two were right and this one was not.** `set` at a position
+writes `KestValue *reach = top + 2` and says why in a comment; `push` passes
+`value + layout->slots`. Both were written knowing the value outlives the pop.
+This one is the third of three and the only one that grows four blocks rather
+than one, so it is the one where a walk is likeliest — and it read to the wrong
+place.
+
+**What holds it now.** `examples/holding.kest`, which fills a store with eight
+thousand entries whose payload is made fresh and at a size that differs, reads
+every one of them back, and then replaces every payload eight times over. Put
+back into a copy of the tree, the defect stops that example with the diagnostic
+it gave. A behavioural test rather than a backstop hole, which is what a defect
+that escaped gets.
+
+**What it means for 1.0.0.** It shipped. A program that keeps a store of things
+holding freshly made arrays or text, and holds enough of them for the heap to
+be walked while one is being added, could lose a payload. Nothing about the
+language changes and nothing a program can write changes; the machine reads one
+more slot of its own stack than it did.

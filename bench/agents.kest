@@ -1,0 +1,469 @@
+module bench.agents
+
+import std.io
+import std.os
+import std.text
+
+// A persistent world of agents and the work they hold, driven for as long as
+// somebody asks. It is the first of the three reference programs the post-v1
+// performance work is measured on, and what it is for is being the combination
+// rather than any one feature: twenty thousand agents in a `store`, references
+// pointing both ways so the graph has cycles in it, a nested payload on every
+// agent, text in persistent state, identities going and coming back every
+// round, and a live set that does not change while all of that happens.
+//
+// Nothing here is written to flatter the machine. The bodies are the bodies
+// anybody writes: a walk, a branch, a lookup that can fail, a struct read out
+// and written back.
+//
+// `kest run bench/agents.kest -- 20000 100` is twenty thousand agents for a
+// hundred rounds. It answers with which of its own checks failed, like every
+// program in this tree, and prints the checksum that says two runs did the
+// same work.
+
+const AGENTS: i32 = 20000
+const ROUNDS: i32 = 100
+
+// What an agent is doing, which is the branch the round is mostly made of.
+enum Doing {
+    Idle
+    Working(i32)
+    Resting(i32)
+}
+
+// The nested payload. A run of these hangs off every agent, and replacing one
+// abandons the run and every piece of text in it at once -- which is the shape
+// a world made of flat things never asks the heap about.
+struct Tag {
+    said: text
+    weight: i32
+}
+
+// The two things that point at each other. A task names the agent holding it
+// and an agent names the task it holds, so the graph has cycles in it and
+// nothing here has to say anything about that: a reference is a place and a
+// stamp, and one to something that has gone reads as nothing.
+struct Task {
+    label: text
+    who: ref<Agent>?
+    left: i32
+    kind: i32
+}
+
+struct Agent {
+    name: text
+    hp: i32
+    energy: i32
+    marks: [Tag]
+    task: ref<Task>?
+    friend: ref<Agent>?
+    doing: Doing
+}
+
+struct World {
+    agents: store<Agent>
+    tasks: store<Task>
+    sum: i64
+    born: i32
+    died: i32
+}
+
+fn empty() -> World {
+    let agents: store<Agent> = store()
+    let tasks: store<Task> = store()
+    return World(agents, tasks, 0, 0, 0)
+}
+
+// The marks an agent starts with, at a size that depends on the agent, so the
+// heap is asked for several widths rather than one.
+fn marksFor(seed: i32) -> [Tag] {
+    let out: [Tag] = array()
+    let many = 1 + seed % 3
+    for i in 0..many {
+        push(out, Tag("mark", seed % 17 + i))
+    }
+    return out
+}
+
+fn fill(w: World, many: i32) {
+    let first: ref<Agent>? = none
+    for i in 0..many {
+        let who = add(
+            w.agents,
+            Agent(
+                "agent",
+                10 + i % 9,
+                i % 5,
+                marksFor(i),
+                none,
+                first,
+                Doing.Idle
+            )
+        )
+        if i % 512 == 0 {
+            first = who
+        }
+    }
+}
+
+fn post(w: World, many: i32) {
+    let labels: [text] = array()
+    push(labels, "dig")
+    push(labels, "haul")
+    push(labels, "cook")
+    push(labels, "mend")
+    let at = 0
+    for who in w.agents {
+        if at >= many {
+            return
+        }
+        let task = add(w.tasks, Task(labels[at % 4], who, 3 + at % 5, at % 4))
+        if let one = get(w.agents, who) {
+            set(
+                w.agents,
+                who,
+                Agent(
+                    one.name,
+                    one.hp,
+                    one.energy,
+                    one.marks,
+                    task,
+                    one.friend,
+                    Doing.Working(at % 4)
+                )
+            )
+        }
+        at += 1
+    }
+}
+
+// A round of work on the tasks. What it costs is a walk of a store, a lookup
+// that can fail, and a struct written back -- and every so often a task that
+// is finished, which takes an identity out and lets the next one have the
+// place.
+fn works(w: World, round: i32) -> i64 {
+    let sum: i64 = 0
+    let done: [ref<Task>] = array()
+    for which in w.tasks {
+        if let task = get(w.tasks, which) {
+            let left = task.left - 1
+            sum += i64(task.kind)
+            if left <= 0 {
+                push(done, which)
+            } else {
+                set(w.tasks, which, Task(task.label, task.who, left, task.kind))
+            }
+        }
+    }
+    for which in done {
+        if let task = get(w.tasks, which) {
+            if let who = task.who {
+                if let one = get(w.agents, who) {
+                    set(
+                        w.agents,
+                        who,
+                        Agent(
+                            one.name,
+                            one.hp,
+                            one.energy + 1,
+                            one.marks,
+                            none,
+                            one.friend,
+                            Doing.Resting(round % 3)
+                        )
+                    )
+                }
+            }
+        }
+        remove(w.tasks, which)
+    }
+    return sum
+}
+
+// What an agent is doing, said as a number, because a `match` here is an
+// expression and what the round wants is to change the state rather than to
+// read a value out of it. Nought and up is working on that kind, a hundred and
+// up is resting after it, and below nought is idle.
+fn doingNumber(what: Doing) -> i32 no.alloc no.host deterministic {
+    return match what {
+        Idle -> 0 - 1
+        Working(kind) -> kind
+        Resting(kind) -> 100 + kind
+    }
+}
+
+fn doingOf(said: i32) -> Doing no.alloc no.host deterministic {
+    if said < 0 {
+        return Doing.Idle
+    }
+    if said >= 100 {
+        return Doing.Resting(said - 100)
+    }
+    return Doing.Working(said)
+}
+
+// And a round on the agents, which is where the branches are. Every eighth
+// round an agent's marks are replaced whole, which abandons the run and the
+// text in it: that is the persistent replacement this world is here to hold
+// flat.
+fn lives(w: World, round: i32) -> i64 {
+    let sum: i64 = 0
+    let replacing = round % 8 == 0
+    for who in w.agents {
+        if let one = get(w.agents, who) {
+            let hp = one.hp
+            let energy = one.energy
+            let state = doingNumber(one.doing)
+            if state < 0 {
+                energy += 1
+                state = if energy > 4 -> round % 4 else -> state
+            } else if state >= 100 {
+                energy += 2
+                hp += 1
+                sum += i64(state - 100)
+                state = if energy > 6 -> 0 - 1 else -> state
+            } else {
+                energy -= 1
+                hp -= state % 2
+                state = if energy <= 0 -> 100 + state else -> state
+            }
+            if hp > 20 {
+                hp = 20
+            }
+            sum += i64(hp) + i64(energy)
+            let marks = one.marks
+            if replacing {
+                marks = marksFor(round + hp)
+            }
+            set(
+                w.agents,
+                who,
+                Agent(
+                    one.name,
+                    hp,
+                    energy,
+                    marks,
+                    one.task,
+                    one.friend,
+                    doingOf(state)
+                )
+            )
+        }
+    }
+    return sum
+}
+
+// Identities going and coming back, which is what keeps the live set the same
+// size while the places underneath it are handed out again. What it proves is
+// that a reference to one that has gone reads as nothing rather than as
+// whoever took the place.
+// Answers how many identities it turned over, or a number below nought for
+// the check that failed. It answers rather than writing into the world it was
+// given, because a `World` is a value: the two stores in it are handles and
+// are the same stores, and `w.born += 1` here would count into a copy that
+// goes away when this returns. That is the value semantics working as written
+// and it is still the easiest mistake to make in this language.
+fn turnover(w: World, round: i32) -> i32 {
+    let doomed: [ref<Agent>] = array()
+    let at = 0
+    let every = 64
+    for who in w.agents {
+        if at % every == round % every {
+            push(doomed, who)
+        }
+        at += 1
+    }
+    for who in doomed {
+        remove(w.agents, who)
+    }
+    // Made again at once, so the world is the size it was.
+    let stale = doomed
+    for i in 0..len(stale) {
+        let made = add(
+            w.agents,
+            Agent(
+                "agent",
+                10 + (round + i) % 9,
+                (round + i) % 5,
+                marksFor(round + i),
+                none,
+                none,
+                Doing.Idle
+            )
+        )
+        // The one that was here is gone, and the reference kept from before
+        // says so rather than naming whoever has the place now.
+        if get(w.agents, stale[i]) != none {
+            return 0 - 1
+        }
+        if get(w.agents, made) == none {
+            return 0 - 2
+        }
+    }
+    return len(stale)
+}
+
+// What the world is worth, read the same way every time so that two runs can be
+// shown to have done the same work. It walks everything, which is also the read
+// a save would do.
+fn worth(w: World) -> i64 {
+    let sum: i64 = 0
+    let seen = 0
+    for who in w.agents {
+        if let one = get(w.agents, who) {
+            sum += i64(one.hp) * 3 + i64(one.energy) * 5
+            sum += i64(len(one.marks))
+            for mark in one.marks {
+                sum += i64(mark.weight)
+                sum += i64(len(mark.said))
+            }
+            let state = doingNumber(one.doing)
+            if state < 0 {
+                sum += 1
+            } else if state >= 100 {
+                sum += i64(state - 100) * 4
+            } else {
+                sum += i64(state) * 2
+            }
+            seen += 1
+        }
+    }
+    for which in w.tasks {
+        if let task = get(w.tasks, which) {
+            sum += i64(task.left) * 7 + i64(task.kind)
+            sum += i64(len(task.label))
+        }
+    }
+    return sum + i64(seen)
+}
+
+// The save and the load, which is the migration path a world that is kept has
+// to have: what the world is, written as text, and read back into a world of
+// its own. What says it worked is that the rebuilt world is worth what the
+// first one was.
+fn describe(w: World) -> text {
+    let pieces: [text] = array()
+    for who in w.agents {
+        if let one = get(w.agents, who) {
+            let state = doingNumber(one.doing)
+            let doing = if state < 0 -> 0
+                else if state >= 100 -> 8 + state - 100 else -> 1 + state
+            push(pieces, "{one.hp} {one.energy} {doing} {len(one.marks)}")
+        }
+    }
+    return text.join(pieces, "\n")
+}
+
+fn rebuild(said: text) -> World {
+    let w = empty()
+    for line in text.split(said, "\n") {
+        let fields = text.split(line, " ")
+        if len(fields) != 4 {
+            continue
+        }
+        let hp = 0
+        let energy = 0
+        let doing = 0
+        let many = 0
+        if let read = text.number(fields[0]) {
+            hp = read
+        }
+        if let read = text.number(fields[1]) {
+            energy = read
+        }
+        if let read = text.number(fields[2]) {
+            doing = read
+        }
+        if let read = text.number(fields[3]) {
+            many = read
+        }
+        let marks: [Tag] = array()
+        for i in 0..many {
+            push(marks, Tag("mark", 0))
+        }
+        let what = Doing.Idle
+        if doing >= 8 {
+            what = Doing.Resting(doing - 8)
+        } else if doing >= 1 {
+            what = Doing.Working(doing - 1)
+        }
+        add(w.agents, Agent("agent", hp, energy, marks, none, none, what))
+    }
+    return w
+}
+
+fn agents() -> i32 {
+    if let written = os.arg(0) {
+        if let asked = text.number(written) {
+            if asked > 0 {
+                return asked
+            }
+        }
+    }
+    return AGENTS
+}
+
+fn rounds() -> i32 {
+    if let written = os.arg(1) {
+        if let asked = text.number(written) {
+            if asked > 0 {
+                return asked
+            }
+        }
+    }
+    return ROUNDS
+}
+
+fn main() -> i32 {
+    let many = agents()
+    let turns = rounds()
+    let w = empty()
+    fill(w, many)
+    post(w, many / 5)
+
+    let before = worth(w)
+    if before <= 0 {
+        return 1
+    }
+    for round in 0..turns {
+        w.sum += works(w, round)
+        w.sum += lives(w, round)
+        let turned = turnover(w, round)
+        if turned < 0 {
+            return 2
+        }
+        w.born += turned
+        w.died += turned
+        w.sum += i64(turned)
+        if round % 16 == 0 {
+            post(w, many / 20)
+        }
+    }
+
+    // The live set is the size it started at, which is what makes the memory
+    // this cost a plateau rather than a climb.
+    let alive = 0
+    for who in w.agents {
+        if get(w.agents, who) != none {
+            alive += 1
+        }
+    }
+    if alive != many {
+        return 3
+    }
+    if w.born != w.died {
+        return 4
+    }
+
+    // And the world written down and read back is worth what it was.
+    let said = describe(w)
+    let again = rebuild(said)
+    let one = worth(w)
+    let two = worth(again)
+    if one <= 0 || two <= 0 {
+        return 5
+    }
+
+    io.print("agents {w.sum} live {alive} born {w.born} saved {len(said)}")
+    return 0
+}

@@ -5283,6 +5283,7 @@ here, is a check that fails.
 | `frame.kest` | two structs that name each other, and a reference that may be nothing |
 | `game.kest` | where a package's directories start, from a module name |
 | `grow.kest` | an array whose size nobody wrote down |
+| `holding.kest` | what a store holds while it grows, which was wrong until D1005 |
 | `host.kest` | what an `extern` declares and what crosses at one |
 | `inline.kest` | `[f32; 4]` where it stands, rather than a handle to four elsewhere |
 | `inventory.kest` | a container written in Kest rather than built into the language |

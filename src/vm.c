@@ -3704,6 +3704,15 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             KestValue *value = top;
             Store *store = (--top)->object;
             HOLD(store, KEST_IS_STORE, "a store");
+            // What is being added is above where the stack now ends, and
+            // until the copy below it is the only thing naming whatever it
+            // holds. A store that grows takes four runs, any of which may set
+            // off a walk, and a walk that read to `top` would find a freshly
+            // made array named by nothing and give it away -- leaving the
+            // copy to put a handle to a place something else now has into the
+            // store. `set` at a position and `push` both read to above the
+            // value for this reason; this one did not. See D1005.
+            KestValue *reach = value + stride;
 
             uint32_t index;
             if (store->free_count > 0) {
@@ -3721,7 +3730,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                     SPEND_WORK((uint64_t)store->used);
                 }
                 if (store->used == store->capacity &&
-                    !grow_store(rt, top, store)) {
+                    !grow_store(rt, reach, store)) {
                     // A store grows by four runs at once — what it holds, what
                     // each has counted, which are live and which are free —
                     // so what it was reaching for is wider than one of them.

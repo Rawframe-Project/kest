@@ -1,0 +1,105 @@
+module examples.holding
+
+import std.io
+
+// What a store holds while it is growing, which is a thing a program can be
+// written to show and was wrong until D1005.
+//
+// Adding to a full store takes four runs at once -- the values, the counts,
+// which places are live and which are free -- and any of those may set off the
+// walk that decides what can still be reached. The value being added is on the
+// machine's stack above where the stack now ends, and for a value holding
+// something made a moment ago it is the only thing naming it. A walk that read
+// to the wrong place found that array named by nobody, gave it away, and then
+// the add copied a handle to a place something else had taken.
+//
+// So: fill a store with things whose payload is made fresh for each one, at a
+// size that differs, and read every one of them back. The count is what it
+// takes to grow the store several times and to walk in between; at two
+// thousand nothing failed and at five thousand it did.
+
+const MANY: i32 = 8000
+
+struct Tag {
+    said: text
+    weight: i32
+}
+
+// A piece of text before the run, because the two together are what a walk of
+// a place in a store has to step over in the right order.
+struct Thing {
+    name: text
+    hp: i32
+    marks: [Tag]
+}
+
+fn marksFor(seed: i32) -> [Tag] {
+    let out: [Tag] = array()
+    for i in 0..1 + seed % 3 {
+        push(out, Tag("mark", seed % 17 + i))
+    }
+    return out
+}
+
+fn main() -> i32 {
+    let world: store<Thing> = store()
+    for i in 0..MANY {
+        add(world, Thing("thing", i % 9, marksFor(i)))
+    }
+
+    // Every payload is still there and still says what it was made with. A
+    // handle to a place that was given away reads as something that is not an
+    // array, which stops the program rather than answering wrongly -- so what
+    // this checks is that it answers at all, and then that it answers right.
+    let marks = 0
+    let weight = 0
+    let named = 0
+    for who in world {
+        if let one = get(world, who) {
+            marks += len(one.marks)
+            for mark in one.marks {
+                weight += mark.weight
+                named += len(mark.said)
+            }
+        }
+    }
+    if marks != 15999 {
+        return 1
+    }
+    if named != marks * 4 {
+        return 2
+    }
+    if weight <= 0 {
+        return 3
+    }
+
+    // And the same while the store is being worked on rather than filled: a
+    // payload replaced in a live place is a new run every time, and the one it
+    // replaced is what the next walk gives back.
+    for round in 0..8 {
+        for who in world {
+            if let one = get(world, who) {
+                set(
+                    world,
+                    who,
+                    Thing(one.name, one.hp, marksFor(round + one.hp))
+                )
+            }
+        }
+    }
+    let after = 0
+    for who in world {
+        if let one = get(world, who) {
+            after += len(one.marks)
+            for mark in one.marks {
+                after += mark.weight - mark.weight
+            }
+        }
+    }
+    if after <= 0 {
+        return 4
+    }
+
+    io.print("holding {marks} {named} {after}")
+    return 0
+}

@@ -36326,3 +36326,40 @@ and write the whole of it back. See D1004.
 **Runs:** `make bench/measure`; the harness over all four workloads; the
 histogram from `kest-debug` under `KEST_DEEP=1`; `make fast`;
 `tools/check-tables.sh` and `tools/check-docs.sh`.
+
+## The first reference program, and what it found in a day
+
+`bench/agents.kest` is the first of the three reference workloads the post-v1
+performance work is measured on: twenty thousand agents in a `store`, tasks and
+agents pointing at each other so the graph has cycles, a run of tags on every
+agent, text in persistent state, identities going and coming back every round,
+and a live set that does not change while all of that happens.
+
+It would not run. At ten thousand agents it answered; at twelve thousand it
+stopped with `K0612: this is not an array` reading a payload it had just
+written. Narrowed to thirty-five lines and to a number of bytes rather than a
+number of entries — five thousand one hundred worked and five thousand two
+hundred did not — which said it was the walk. Raising `WALK_FLOOR` to a
+gigabyte in a copy of the tree made it go away entirely.
+
+`KEST_OP_ADD` pops the value off the stack and then may grow the store, which
+takes four runs at once and so is the likeliest place in the machine for a walk
+to happen. The walk was told to read the slots to where the stack now ends,
+which is *below* the value being added — and for a value holding an array made
+by the expression being added, that value is the only thing naming it. The walk
+gave the array away and the copy wrote a handle to a place something else now
+held. `set` at a position and `push` both read to above the value and say why;
+this was the third of the three and the only one that grows four blocks.
+
+It shipped in 1.0.0. `examples/holding.kest` is what holds it now, and it was
+watched refusing in a copy of the tree with the defect put back. See D1005.
+
+The other thing the program turned up is not a defect: `w.born += 1` inside a
+function that took a `World` counts into a copy. A `World` is a value, the two
+stores in it are handles and so are shared, and the plain fields are not. That
+is the value semantics working exactly as written, and it is still the easiest
+mistake to make in this language.
+
+**Runs:** `kest run bench/agents.kest -- 20000 100`; `examples/holding.kest`
+under both builds, and under a copy of the tree with the defect put back, where
+it refuses; `make fast`; `tools/check-docs.sh` and `tools/check-fmt.sh`.
