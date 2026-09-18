@@ -12879,7 +12879,7 @@ trap 'rm -rf "$scratch"/work' EXIT""",
     plot->what = IS_PLOT;""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
-        "caught": "which is not this compiler saying it has run out",
+        "caught": "was read as a host's own",
     },
     {
         # And the other way: a ceiling this machine kept, handed back as the
