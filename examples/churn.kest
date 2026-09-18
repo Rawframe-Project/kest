@@ -27,6 +27,15 @@ const ROUNDS: i32 = 200
 const NAME: i32 = 24
 const TAGS: i32 = 8
 
+// What one of them carries that is itself made of things with runs in them: a
+// run of these is a payload inside a payload, and replacing it abandons both
+// at once. A world made of flat things says nothing about that, and a world is
+// rarely made of flat things.
+struct Tag {
+    said: text
+    weight: i32
+}
+
 // What one of them is. The two runs it holds are held in step with what it is
 // for rather than with each other: `said` is room for the name and nothing
 // else writes into it, and `tags` is as many numbers as a round writes and is
@@ -40,6 +49,10 @@ struct Thing {
     name: text
     said: [u8]
     tags: [i32]
+    // And a run of things that each hold a piece of text, which is what makes
+    // this a nested payload rather than two payloads side by side: the run is
+    // one thing to give back and every name in it is another.
+    marks: [Tag]
     // The ring, which is what makes this a world rather than a list: each
     // names the next and the last names the first, so nothing here is ever
     // unreachable and a walk of it comes back round.
@@ -55,7 +68,8 @@ fn build(many: i32) -> store<Thing> {
         // what a round writes. See D940.
         let said: [u8] = array(NAME, u8(32))
         clear(said)
-        push(made, add(world, Thing(i, "", said, array(TAGS, 0), none)))
+        let marks: [Tag] = array()
+        push(made, add(world, Thing(i, "", said, array(TAGS, 0), marks, none)))
     }
     for i in 0..len(made) {
         if let one = get(world, made[i]) {
@@ -86,6 +100,70 @@ fn replacing(world: store<Thing>, round: i32) -> i32 {
         }
     }
     return touched
+}
+
+// A round that replaces what a thing holds inside what a thing holds, and
+// does it at a size that is different every round: a run of tags, each with a
+// name in it as long as the round says. What a flat replacement abandons is
+// one block a thing; this abandons one block and as many names as there were,
+// and a world that settles under it is one where giving a thing back gives
+// back what was inside it.
+fn nesting(world: store<Thing>, round: i32) -> i32 {
+    let touched = 0
+    for r in world {
+        if let one = get(world, r) {
+            let changed = one
+            let marks: [Tag] = array()
+            let how_many = 1 + (round + one.id) % 6
+            for i in 0..how_many {
+                push(marks, Tag(text.repeat("tag {one.id}.{i} ", 1 + i), i))
+            }
+            changed.marks = marks
+            set(world, r, changed)
+            touched += 1
+        }
+    }
+    return touched
+}
+
+// Half the world taken out at once and made again at once, which is not the
+// same shape as one going and coming back: what a burst asks is whether the
+// room of everything that went is there for everything that comes, in one go,
+// rather than a place at a time with room to tidy up in between.
+fn bursting(world: store<Thing>, round: i32) -> i32 {
+    let gone: [ref<Thing>] = array()
+    for r in world {
+        if let one = get(world, r) {
+            if one.id % 2 == round % 2 {
+                push(gone, r)
+            }
+        }
+    }
+    for r in gone {
+        remove(world, r)
+    }
+    let made = 0
+    for i in 0..len(gone) {
+        let said: [u8] = array(NAME, u8(32))
+        clear(said)
+        let marks: [Tag] = array()
+        let fresh = add(
+            world,
+            Thing(
+                i,
+                "one of the second half",
+                said,
+                array(TAGS, 0),
+                marks,
+                none
+            )
+        )
+        if get(world, fresh) == none {
+            return 0 - 1
+        }
+        made += 1
+    }
+    return made
 }
 
 // And the same round written to reuse what the thing already holds: the name is
@@ -153,7 +231,11 @@ fn turning(world: store<Thing>, round: i32) -> i32 {
             remove(world, r)
             let said: [u8] = array(NAME, u8(32))
             clear(said)
-            let again = add(world, Thing(id, "", said, array(TAGS, 0), after))
+            let marks: [Tag] = array()
+            let again = add(
+                world,
+                Thing(id, "", said, array(TAGS, 0), marks, after)
+            )
             // Whoever named the one that went names the new one, so the ring
             // is a ring again. A reference to what was there reads as nothing
             // rather than as whoever is there now, which is what makes this
@@ -223,9 +305,10 @@ fn rounds() -> i32 {
 // and a run that does all four at once is one number for four questions.
 // `replace` is the first way anybody writes a round, `reuse` is the same round
 // written into what the thing already holds, `keep` is a name built in a block
-// of working memory and copied into what the thing holds, and `turn` is none of
-// them: it is identities going and coming back. Nothing said runs all of them,
-// which is what `make check` does.
+// of working memory and copied into what the thing holds, `nest` replaces a run
+// of things that each hold text, `burst` takes half the world out at once and
+// makes it again, and `turn` is none of them: it is identities going and coming
+// back. Nothing said runs all of them, which is what `make check` does.
 fn shape() -> text {
     if let written = os.arg(1) {
         return written
@@ -240,10 +323,14 @@ fn main() -> i32 {
     let doing_reuse = which == "all" || which == "reuse"
     let doing_keep = which == "all" || which == "keep"
     let doing_turn = which == "all" || which == "turn"
+    let doing_nest = which == "all" || which == "nest"
+    let doing_burst = which == "all" || which == "burst"
 
     let replaced = build(THINGS)
     let reused = build(THINGS)
     let kept = build(THINGS)
+    let nested = build(THINGS)
+    let burst = build(THINGS)
     for i in 0..how_many {
         if doing_replace {
             if replacing(replaced, i) != THINGS {
@@ -258,6 +345,16 @@ fn main() -> i32 {
         if doing_keep {
             if keeping(kept, i) != THINGS {
                 return 8
+            }
+        }
+        if doing_nest {
+            if nesting(nested, i) != THINGS {
+                return 11
+            }
+        }
+        if doing_burst && i % 4 == 0 {
+            if bursting(burst, i) <= 0 {
+                return 12
             }
         }
         if doing_turn && i % 16 == 0 {
@@ -289,6 +386,28 @@ fn main() -> i32 {
                 }
             }
         }
+    }
+    // And what a nested payload holds is what the last round put in it, which
+    // is the half a run of blocks given back could get wrong without anything
+    // else noticing: the run is there and what is in it is somebody else's.
+    if doing_nest {
+        for r in nested {
+            if let one = get(nested, r) {
+                if len(one.marks) == 0 {
+                    return 13
+                }
+                for i in 0..len(one.marks) {
+                    if !text.starts(one.marks[i].said, "tag ") {
+                        return 14
+                    }
+                }
+            }
+        }
+    }
+    // And the world that lost half of itself every fourth round still holds
+    // what a world holds.
+    if doing_burst && len(burst) != THINGS {
+        return 15
     }
     // And what is in them is what the last round wrote.
     if doing_replace {

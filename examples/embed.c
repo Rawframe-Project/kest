@@ -7037,6 +7037,27 @@ int main(int argc, char **argv) {
         }
     }
 
+    // What a host keeps is the machine's to keep for it until the host says
+    // otherwise, and the second saying is not a refusal -- it is the answer
+    // that the machine was not keeping it, which is what a host that let go
+    // twice wants to be told rather than left to guess. A heap thrown away
+    // forgets every one of them, which is why this is asked of something made
+    // after the last one. See D996.
+    KestValue on_purpose[2] = {{0}, {0}};
+    if (!kest_text(engine.runtime, "kept on purpose", 15, on_purpose) ||
+        !kest_keeps(engine.runtime, on_purpose[0]) ||
+        !kest_lets_go(engine.runtime, on_purpose[0]) ||
+        kest_lets_go(engine.runtime, on_purpose[0])) {
+        fprintf(stderr, "something kept on purpose was not let go of\n");
+        return 1;
+    }
+    printf("and what this host kept on purpose it let go of, once\n");
+    // And the most this machine ever held at once, which is the number that
+    // says what a host has to make room for: what it is holding now is where
+    // it happens to be, and a frame budget is sized by the worst of a run.
+    printf("this machine held %zu bytes at most, and %zu of them now\n",
+           kest_heap_most(engine.runtime), kest_heap_used(engine.runtime));
+
     // And the other side of the answer: outside a call there is nothing
     // standing on the machine, so this is the free that happens. Nothing takes
     // a machine away by force — a host that asked from inside a call and never

@@ -1020,10 +1020,10 @@ static void *take(Vm *rt, KestValue *reach, size_t bytes, KestGroundKind kind) {
     if (kest_ground_since(rt->ground) >= rt->walk_at) {
         gather(rt, reach);
     }
-    void *at = kest_ground_take_as(rt->ground, bytes, kind);
+    void *at = kest_ground_take(rt->ground, bytes, kind);
     if (at == NULL) {
         gather(rt, reach);
-        at = kest_ground_take_as(rt->ground, bytes, kind);
+        at = kest_ground_take(rt->ground, bytes, kind);
     }
     if (at != NULL) {
         size_t holding = kest_heap_used(rt);
@@ -1165,7 +1165,7 @@ bool kest_text(KestRuntime *runtime, const char *bytes, uint32_t length,
     // No walk here: a host asks for this between calls, when what the program
     // holds is named by the host's own memory and by nothing a walk can read.
     under_the_ceiling(runtime);
-    char *held = kest_ground_take_as(runtime->ground, length + 1,
+    char *held = kest_ground_take(runtime->ground, length + 1,
                                      KEST_GROUND_PLAIN);
     if (held != NULL && !handed_over(runtime, held)) {
         held = NULL;
@@ -1427,7 +1427,7 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
         runtime->spare_lends = (Array *)(void *)array->bytes;
     } else {
         under_the_ceiling(runtime);
-        array = kest_ground_take_as(runtime->ground, sizeof(Array),
+        array = kest_ground_take(runtime->ground, sizeof(Array),
                                     KEST_GROUND_ARRAY);
     }
     if (array == NULL) {
@@ -5760,7 +5760,8 @@ bool kest_counted(const KestRuntime *runtime, KestCounted *into) {
         runtime->fuel_given == UINT64_MAX ? 0 : runtime->fuel_given;
     into->fuel_left =
         runtime->fuel_given == UINT64_MAX ? 0 : runtime->fuel_left;
-    into->heap = kest_arena_used(runtime->heap);
+    into->heap = kest_heap_used(runtime);
+    into->most = kest_heap_most(runtime);
     return true;
 }
 
@@ -5798,7 +5799,16 @@ size_t kest_heap_taken(const KestRuntime *runtime) {
 }
 
 size_t kest_heap_most(const KestRuntime *runtime) {
-    return runtime == NULL ? 0 : runtime->most;
+    if (runtime == NULL) {
+        return 0;
+    }
+    // What the machine wrote down while running, against what it is holding
+    // now: a host asking between calls is asking after everything that took
+    // memory without the machine running -- text it handed over, headers in
+    // front of what it lent -- and the most it ever held is at least what it
+    // is holding.
+    size_t holding = kest_heap_used(runtime);
+    return holding > runtime->most ? holding : runtime->most;
 }
 
 bool kest_heap_allow(KestRuntime *runtime, size_t bytes) {

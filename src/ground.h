@@ -51,9 +51,8 @@ void kest_ground_free(KestGround *ground);
 // alignment every place has, which is sixteen: the machine asks for eight and
 // for sixteen and nothing wider, so one alignment serves both and a place does
 // not have to say which it is.
-void *kest_ground_take(KestGround *ground, size_t bytes);
-void *kest_ground_take_as(KestGround *ground, size_t bytes,
-                          KestGroundKind kind);
+void *kest_ground_take(KestGround *ground, size_t bytes,
+                       KestGroundKind kind);
 
 // What the place an address is in holds, and PLAIN for an address this did not
 // hand out — which is safe to read as nothing to follow, because it is.
@@ -129,7 +128,6 @@ size_t kest_ground_taken(const KestGround *ground);
 // How much has been taken since the last sweep, which is what says when the
 // next one is worth doing.
 size_t kest_ground_since(const KestGround *ground);
-void kest_ground_swept(KestGround *ground);
 
 // The most this may ask the host for, over the places it holds. Nought is no
 // ceiling, which is what it has until somebody says otherwise. Past it a take

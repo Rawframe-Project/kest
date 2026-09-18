@@ -1919,10 +1919,11 @@ static void say_profile(const KestCounted *counted, const Entered *bodies,
                         uint32_t body_count) {
     fprintf(stderr,
             "%llu step(s), %llu call(s), %llu crossing(s) into the host, "
-            "%zu byte(s) of heap",
+            "%zu byte(s) of heap and %zu at most",
             (unsigned long long)counted->steps,
             (unsigned long long)counted->calls,
-            (unsigned long long)counted->crossings, counted->heap);
+            (unsigned long long)counted->crossings, counted->heap,
+            counted->most);
     if (counted->fuel_given > 0) {
         fprintf(stderr, ", %llu of %llu step(s) of budget spent",
                 (unsigned long long)(counted->fuel_given - counted->fuel_left),
@@ -2767,11 +2768,13 @@ static int run(const char *command, const char *executable, char **paths,
         if (was_counted) {
             fprintf(stdout,
                     ",\"profile\":{\"steps\":%llu,\"calls\":%llu,"
-                    "\"crossings\":%llu,\"heap\":%zu,\"fuelGiven\":%llu,"
+                    "\"crossings\":%llu,\"heap\":%zu,\"most\":%zu,"
+                    "\"fuelGiven\":%llu,"
                     "\"fuelLeft\":%llu,\"bodies\":[",
                     (unsigned long long)counted.steps,
                     (unsigned long long)counted.calls,
                     (unsigned long long)counted.crossings, counted.heap,
+                    counted.most,
                     (unsigned long long)counted.fuel_given,
                     (unsigned long long)counted.fuel_left);
             for (uint32_t which = 0; which < body_count; which++) {

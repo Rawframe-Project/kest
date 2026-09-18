@@ -734,47 +734,70 @@ machines over a quarter each answered what one machine answers for the whole \
 of it, and one was stopped from the thread that was not running it"
 
 # What a world costs when it is worked on rather than grown, which is the
-# question a persistent-world language has to answer and the one a garbage
-# collector is usually the answer to. `examples/churn.kest` is the same round
-# written three ways -- a new piece of text and a new run of numbers for every
-# thing, the same round written into what the thing already holds, and a name
-# built in a block of working memory and copied into what the thing holds --
-# and what is held here is that the last two settle and the first does not.
+# question a persistent-world language has to answer. `examples/churn.kest` is
+# one round written six ways over a world whose live set never changes: a new
+# piece of text and a new run of numbers for every thing; the same round
+# written into what the thing already holds; a name built in a block of working
+# memory and copied into what the thing holds; a run of things that each hold
+# text, replaced whole at a size that differs every round; half the world taken
+# out at once and made again; and identities going and coming back.
 #
-# The third is the one worth reading: it writes a new name every round, which
-# is what the first does and the second gives up on, and it settles because
-# what it built is gone when the block ends and what it kept is bytes in a
-# buffer the thing already had. See D966 and D967.
+# What is held here is that every one of them settles. Not that the first is
+# cheaper than the second -- it is not, and it never will be -- but that a
+# world with two hundred things in it costs what two hundred things cost
+# however long it is driven, which is what a program that abandons memory it
+# replaced cannot do. Before D996 the first of them needed more room the longer
+# it ran and ran out of sixty-four megabytes in ten thousand rounds.
 #
-# Said as a ceiling rather than as a count of bytes, because a ceiling is what a
-# host gives a machine and `--room` is where a program meets it: a shape that
-# settles runs in the same room however many rounds it is given, and a shape
-# that does not needs more. See D956.
-for asking in "reuse 100 512K runs" "reuse 400 512K runs" \
-        "keep 100 512K runs" "keep 400 512K runs" \
-        "replace 100 4M runs" "replace 400 4M refuses"; do
-    shape=${asking%% *}
-    rest_of=${asking#* }
-    turns=${rest_of%% *}
-    rest_of=${rest_of#* }
-    room=${rest_of%% *}
-    wanted=${rest_of#* }
-    if ./kest run --room "$room" examples/churn.kest -- "$turns" "$shape" \
-            >/dev/null 2>&1; then
-        said=runs
-    else
-        said=refuses
+# Read as the most the machine ever held at once rather than as what it is
+# holding at the end: what it is holding at the end is wherever the last walk
+# left it, and the most is the number a host has to make room for. Ten times
+# the rounds and a hundred times the rounds have to answer the same figure,
+# under a room tight enough that nothing can hide in it.
+memory_most() {
+    ./kest profile --room 8M examples/churn.kest -- "$2" "$1" 2>&1 >/dev/null |
+        sed -n '1s/.*heap and \([0-9]*\) at most.*/\1/p'
+}
+for shape in replace reuse keep turn nest burst; do
+    ten=$(memory_most "$shape" 2000)
+    hundred=$(memory_most "$shape" 20000)
+    if [ -z "$ten" ] || [ -z "$hundred" ]; then
+        complain "memory" "\`$shape\` would not run in eight megabytes at ten \
+or a hundred times the rounds"
+        continue
     fi
-    if [ "$said" != "$wanted" ]; then
-        complain "memory" "$turns rounds of \`$shape\` in $room $said, and \
-the study says it $wanted"
+    if [ "$ten" != "$hundred" ]; then
+        # A number rather than a fraction: two figures that differ at all are
+        # two figures, and what a reader wants is both of them.
+        grew=$((hundred - ten))
+        if [ "$grew" -lt 0 ]; then
+            grew=$((0 - grew))
+        fi
+        if [ $((grew * 20)) -gt "$ten" ]; then
+            complain "memory" "\`$shape\` held $ten bytes at most over two \
+thousand rounds and $hundred over twenty thousand"
+        fi
     fi
 done
-say "memory" "a round written into what a thing already holds runs four \
-hundred times in the room a hundred took, and so does one that builds a new \
-name every round in a block of working memory and copies it into what the \
-thing holds, and the same round written with a new piece of text and a new run \
-of numbers every time does not"
+say "memory" "six rounds over a world whose live set never changes -- text \
+replaced, runs replaced, a name built in working memory, a run of things that \
+each hold text, half the world taken out at once, and identities going and \
+coming back -- each hold the same memory at ten times the rounds and at a \
+hundred times"
+
+# And the same thing said as a ceiling, because a ceiling is what a host gives
+# a machine and `--room` is where a program meets it: a shape that settles runs
+# in the same room however many rounds it is given. Said of the one that used
+# to be the counter-example, in a room a tenth of the one it ran out of.
+for turns in 100 1000 10000; do
+    if ! ./kest run --room 4M examples/churn.kest -- "$turns" replace \
+            >/dev/null 2>&1; then
+        complain "memory" "$turns rounds of \`replace\` would not run in four \
+megabytes"
+    fi
+done
+say "memory" "the round that replaces what a thing holds runs ten thousand \
+times in four megabytes, where it used to run out of sixty-four"
 fi
 
 # Every word this language keeps, written where a name belongs. It has to be

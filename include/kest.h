@@ -20,7 +20,7 @@
 //
 // It goes up when a field changes what it means, is taken away, or is added
 // where a reader was told the list was everything. See D947.
-#define KEST_JSON_SCHEMA 2
+#define KEST_JSON_SCHEMA 3
 
 // What shape the doors below are in, which is a third thing again. A host is
 // compiled against this header and linked against a library built from some
@@ -1070,10 +1070,14 @@ typedef struct {
     // says nought for both.
     uint64_t fuel_given;
     uint64_t fuel_left;
-    // What the program's heap holds now. What the most it ever held was is a
-    // question about a frame rather than about a run, and `kest tick` answers
-    // that one.
+    // What the program's heap holds now, which goes down as well as up: a
+    // world that replaces a name every round holds what the world holds.
     size_t heap;
+    // And the most it ever held at once, which is the number that says a
+    // world has settled -- a run driven ten times as long that stops at the
+    // same figure is bounded by what it holds rather than by how long it has
+    // been running. See D996.
+    size_t most;
 } KestCounted;
 
 // Starts or stops counting. A machine that is not counting pays one test of a

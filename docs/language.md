@@ -1750,17 +1750,16 @@ room(xs, 1000)
 ```
 
 Asking for less than it holds asks for nothing, and it is the capacity rather
-than the length: `len` after one of these says what it said before. An array grows by
-doubling, and it grows where it stands when it is the last thing the heap
-handed out — which is what a loop filling one array is. Then the steps up cost
-nothing and what asking for room saves is the overshoot, since a thousand
-pushed without asking ends up with room for 1024. When something else was
-handed out in between, a growth takes a new block and copies, and the block it
-came from stays where it is until the heap is thrown away, because nothing is
-freed while a program runs (D012). An array big enough to have a block of its
-own is the other way round: the block is made bigger and the old one goes back
-to the host, so a big array holds itself rather than twice itself. `examples/embed.c` prints both numbers.
-There is no third spelling for asking, because two lines already say it:
+than the length: `len` after one of these says what it said before. An array
+grows by doubling, and it grows where it stands when the place it is in has
+the room for it — a run of a hundred and twenty-eight bytes sits in a place of
+two hundred and fifty-six, so the step up to two hundred and fifty-six costs
+nothing and moves nothing. What asking for room saves is the overshoot, since
+a thousand pushed without asking ends up with room for 1024. When it does not
+fit, a growth takes a new run and copies, and the run it came from is given
+back the next time the machine walks what it can still reach (D996).
+`examples/embed.c` prints both numbers. There is no third spelling for asking,
+because two lines already say it:
 
 ```kest
 let seen: [i32] = array(1000, 0)
@@ -3254,17 +3253,20 @@ its entities, its tiles and its events lends three blocks a frame rather than
 one. Every header it gives back is one the next frame lends out of, so what a
 host pays for is its widest frame, once: eight lends a frame for a hundred
 frames cost the heap what the first frame did, and the hundredth costs nothing.
-A host wanting that number for its own frame reads `kest_heap_used` on either
-side of one.
+A host wanting that number for its own frame reads `kest_heap_taken` on either
+side of one — what a call cost is a difference of two readings of what the
+machine has ever handed out, and `kest_heap_used` is what the program is
+holding now, which goes down as well as up.
 
 Once, that is, until the heap goes. The headers waiting to be used again are on
 it and so is the list of what is lent, so a reset takes both: the first frame of
 lending after one buys them again, and a handle from before it is not the
 machine's to give back. `kest_still_holds` says so and `kest_lend_ends` refuses
-it — which is not what a host is told about a piece of text kept across a reset,
-because text is a pointer into the heap and nothing else, and the next thing the
-machine makes goes where it was. A lend has a header the machine wrote and can
-be asked about; text has nowhere to keep the answer.
+it — which is not what a host is told about a piece of text kept across a
+reset, because text is a pointer into the heap and nothing else. A lend has a
+header the machine wrote and can be asked about; text has nowhere to keep the
+answer, so what a host is told about one is whether that memory is the
+machine's now and never what was written there.
 
 Which is why there is a second question. `kest_still_holds` is a yes about two
 places at once — the heap the program runs on, and the build the machine was
@@ -4380,9 +4382,14 @@ KestLimits allowed = {0, 0, 0};
 kest_allowed(runtime, &allowed);
 ```
 
-A host can ask how much a running program has allocated with `kest_heap_used`,
-which is a number without a scale until the ceiling beside it is readable.
-`kest_heap_wanted` is what the allocation that was refused was asking for, and
+A host can ask what a running program is holding with `kest_heap_used`, which
+is a number without a scale until the ceiling beside it is readable. It goes
+down as well as up: what a program makes and then replaces is given back, so
+this is where a world settles rather than a running total. `kest_heap_taken` is
+the running total — every byte the program has ever been handed, which only
+`kest_heap_reset` puts back — and `kest_heap_most` is the most it ever held at
+once, which is the figure a host has to make room for. `kest_heap_wanted` is
+what the allocation that was refused was asking for, and
 `kest_heap_refused_by` is which of the two refused it:
 
 ```c

@@ -430,9 +430,11 @@ static void give_back(KestGround *ground, Plot *plot, uint32_t place) {
     joined_free(ground, plot);
 }
 
-void *kest_ground_take_as(KestGround *ground, size_t bytes,
-                          KestGroundKind kind) {
-    void *at = kest_ground_take(ground, bytes);
+static void *room_in_a_plot(KestGround *ground, size_t bytes);
+
+void *kest_ground_take(KestGround *ground, size_t bytes,
+                       KestGroundKind kind) {
+    void *at = room_in_a_plot(ground, bytes);
     if (at != NULL) {
         Plot *plot = plot_holding(ground, at);
         say_kind(plot, place_of(plot, at), kind);
@@ -466,7 +468,7 @@ void *kest_ground_start(const KestGround *ground, const void *at) {
     return plot->data + (size_t)place * plot->stride;
 }
 
-void *kest_ground_take(KestGround *ground, size_t bytes) {
+static void *room_in_a_plot(KestGround *ground, size_t bytes) {
     if (ground == NULL || bytes == 0) {
         return NULL;
     }
@@ -733,12 +735,6 @@ size_t kest_ground_asked(const KestGround *ground) {
 
 size_t kest_ground_since(const KestGround *ground) {
     return ground == NULL ? 0 : ground->since;
-}
-
-void kest_ground_swept(KestGround *ground) {
-    if (ground != NULL) {
-        ground->since = 0;
-    }
 }
 
 void kest_ground_cap(KestGround *ground, size_t bytes) {

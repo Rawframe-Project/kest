@@ -36,6 +36,7 @@ another and is not named here is a check that fails.
 | D787 | D788 | the ten a hole alone provokes are eight faults and two a host makes |
 | D787 | D791 | the direction was already held, by D529, and D787 duplicated it |
 | D790 | D791 | the three lists only needed naming because of the duplicate |
+| D012 | D996 | what a program makes is given back when nothing can reach it |
 
 ---
 
@@ -31332,3 +31333,95 @@ platform answering a number says nothing; three answering it is the claim. The
 CI job that holds them writes a trace of what every example answered and what it
 printed on each, and diffs the three — so it is every program in the tree that
 agrees, not one. *Measured.*
+
+## D996. A heap a running program can be given pieces of back, and a walk that decides which. Supersedes D012
+
+**Decided.** Text, arrays and worlds stand on a heap of their own with places
+in it that can be had again, and the machine gives back every place nothing can
+reach. The arena under them stays, for what lasts as long as the machine does:
+its frames, the list of what is lent, the runs a world keeps beside its places.
+
+**What was wrong.** D012 said an array's storage comes from an arena that lives
+as long as the program and nothing reclaims it, and left what frees it undecided.
+Everything since was written under that: a world that replaces what it holds
+abandons the old memory forever. Two hundred things over ten thousand rounds is
+two hundred megabytes of names nothing can reach, and `examples/churn.kest` ran
+out of sixty-four megabytes at ten thousand rounds of the round anybody writes
+first. A world with two hundred things in it is not a world that needs two
+hundred megabytes, and a language for simulation whose ordinary assignment is
+unbounded in memory is not finished. *Measured.*
+
+**Why a walk and not a count.** A count on each value is paid by every program
+on every copy for the sake of the ones that churn, and this machine copies
+constantly: a struct is slots and a slot moves with a `memcpy`. It also cannot
+be kept where it would be needed. What a slot holds is not always the start of
+the thing it names — a piece of text cut out of another names a place inside it,
+and so does the address of an element — and a count could not have been kept on
+one of those. A walk finds the thing an inside place is inside of.
+
+**Why nothing moves.** Because the machine's slots carry no tags. The language
+is statically typed and an instruction knows what it is working on, so a walk
+over the slots cannot be told which of them hold addresses and reads every eight
+bytes as though it might be one. That is only safe where nothing is written
+through what was read: a number that happens to name a place keeps that place,
+which costs memory and cannot cost correctness. Moving would have needed a map
+of which slot is what at every point a walk can happen, which is a second
+description of the program to keep in step with the first.
+
+**What it is made of.** Places of a fixed ladder of widths — sixteen bytes up to
+a hundred and twenty-eight kilobytes, and a plot of its own past that — in plots
+an address masks to, with a bit a place for what is in use, a bit for what a
+walk has reached, and two for what kind of thing is there. The kind is what lets
+a walk read what it found: a pointer out of a slot is eight bytes that look like
+an address, and reading a tag out of the thing itself would read a piece of text
+as a handle the first time four bytes of somebody's name spelled one. A plot
+nothing is in goes back to the host.
+
+**What a walk reads.** The machine's own slots, loosely; the worlds and runs
+those name, by their layouts, so a run of numbers is stepped over rather than
+read element by element; the elements of an array, which say what they are in
+front of themselves so that a walk that met them without meeting the header can
+still read them; and what the host said it keeps. It runs when enough has been
+taken since the last one — what was still standing then, and never under a
+floor — and again where a take has failed, which is what makes a tight ceiling
+work: the room is there and something nothing can reach is holding it.
+
+**What a host has to do.** A handle in the host's own memory is not in that
+walk, because the machine cannot read the host's variables. There are two ways
+to be right about it and a host picks one: hand it back in, which is what
+`examples/engine.c` does with the world it drives, or say `kest_keeps`. Both
+hosts in this tree keep a world across calls that do not hand it back, and
+without this the world was memory nothing named the first time a call allocated
+enough to set off a walk — which is how this was found. ABI 4.
+
+**What it costs.** A place is as wide as the step above what was asked for, so
+the ladder is the fragmentation: about a fifth on text, and nothing on the
+values whose sizes are powers of two. `scratch { }` is unchanged in what it
+promises — a block opens a region, everything taken inside it is remembered
+against the block, and closing it gives all of it back at once, which is the
+same promise the arena's mark and rewind made against a heap that is not a
+stack.
+
+**What it is held to.** `examples/churn.kest` is one round written six ways over
+a world whose live set never changes — text replaced, runs replaced, a name
+built in working memory, a run of things that each hold text replaced whole at a
+size that differs every round, half the world taken out at once and made again,
+and identities going and coming back. Every one of them holds the same memory at
+two hundred rounds, at two thousand and at twenty thousand, byte for byte, in
+eight megabytes:
+
+| | 200 | 2000 | 20000 |
+| --- | --- | --- | --- |
+| `replace` | 1012720 | 1012720 | 1012720 |
+| `reuse` | 877408 | 877408 | 877408 |
+| `keep` | 877408 | 877408 | 877408 |
+| `turn` | 1012720 | 1012720 | 1012720 |
+| `nest` | 1215688 | 1215688 | 1215688 |
+| `burst` | 1080376 | 1215688 | 1215688 |
+
+The most the machine ever held at once, which is the figure a host makes room
+for; `kest_heap_most` is where a host reads it and `kest profile` prints it.
+`burst` is the one that moves, and it moves once, between the first horizon and
+the second: a world that loses half of itself every fourth round reaches its
+widest moment in the first few hundred rounds and not in the first two hundred.
+*Measured.*
