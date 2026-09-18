@@ -36267,3 +36267,27 @@ than from the build.
 **Runs:** GitHub Actions run 35371205585, all seven jobs; `sha256sum -c` on
 both archives downloaded from the release; the Linux archive unpacked from that
 download and run, saying `kest 1.0.0, abi 4, json 3, profile kest-det 1`.
+
+## A file nobody wrote, in the root of the tree
+
+The closeout's last find, and the gate found it the first time it was asked to
+look. A walk was added for a file whose name holds a space — no file here has
+one, and a name with a space in it is what an unquoted redirect leaves — and the
+run that added it complained about `extern fn` in the root of the tree.
+
+Two faults, one of them live. The file had been committed nine days earlier and
+nothing had looked at it since: 1774 bytes of a program written to hold every
+keyword, with no extension, so every sweep here, which is over `*.kest`, was
+blind to it. And the check that wrote it was still writing it, once per run:
+`check-fmt.sh` works out a path called `one`, and two hundred lines further down
+reads what a file may hold with `for one in holds:`, where the last of `holds`
+is `extern fn`. Every one of the hundred and sixty-two comment-placement
+variants was then written to a file of that name in whatever directory the gate
+was run from. The check passed throughout, because it wrote and read the same
+wrong path.
+
+The two names are `with_it` and `formatted` now, and the loop's is `phrase`.
+See D1003.
+
+**Runs:** `tools/check-fmt.sh` over every `.kest` in the tree, which says 162
+places as it did before and leaves nothing behind; the whole gate.

@@ -31651,3 +31651,48 @@ thing it caught. *Measured.*
 **What it is not.** Not a defect in the compiler: the address space a program
 needs moved by about a seventh and nothing a program can do changed. The ladder
 was reading one of two sentences and there were two.
+
+## D1003. A name that stood for two things wrote a file into the tree
+
+**Decided.** The gate names a file whose name holds a space, which is what an
+unquoted redirect and a rebound Python name both leave behind, and the check
+that was leaving one writes where it says it writes.
+
+**What went wrong.** `check-fmt.sh` puts a comment in every place a file offers
+— a hundred and sixty-two of them — and writes each variant to a path it works
+out once:
+
+    one = scratch + "/fmt-places-one.kest"
+
+Two hundred lines further down, the same block asks a run what a file may hold,
+so that the file it puts comments in can be held to using every one of them:
+
+    for one in holds:
+        wanted.update(one.split())
+
+`holds` is what the diagnostic lists, and the last of them is `extern fn`. From
+there `one` was a piece of a sentence rather than a path, and every one of the
+hundred and sixty-two variants was written to a file called `extern fn` in
+whatever directory the gate was run from — the root of this tree. The check
+still passed, because it wrote and read the same wrong path. On 2026-09-09 one
+of those files was committed, and it sat in the root of the tree for nine days:
+1774 bytes of a program nobody wrote, read by nothing and shipped in nothing.
+
+**Why nothing caught it.** Every sweep here is over `*.kest` and it had no
+extension. `check-tables.sh` holds a name in a check to standing for one thing,
+and this one did: both bindings are text, and what the rule reads is the kind.
+The `room` check holds every check to handing back the room it took, and this
+was written outside every room. And the walk that reads the tree for what a
+compiler made reads `$(find ...)`, where a name with a space in it is two words
+to a shell — so the walk that would have found it could not see it.
+
+**What the gate does now.** A second walk, a line at a time, that names any file
+in the tree whose name holds a space or a tab. No file here has one and none is
+meant to. It is guarded rather than holed, like the rest of what the gate says
+about itself: the guard plants a file called `extern fn` in a room beside the
+built thing D999's guard plants and confirms the walk names both.
+
+**What it is worth.** It was written to catch the file that was already there
+and it caught the check that was still writing one: the first run after it was
+added complained about a file the same run had just made. That is the thing a
+net is for, and this one found a live defect rather than a residue.

@@ -463,8 +463,8 @@ import subprocess
 import sys
 
 kest, base_path, scratch = sys.argv[1], sys.argv[2], sys.argv[3]
-one = scratch + "/fmt-places-one.kest"
-two = scratch + "/fmt-places-two.kest"
+with_it = scratch + "/fmt-places-one.kest"
+formatted = scratch + "/fmt-places-two.kest"
 
 
 def read(path):
@@ -500,17 +500,17 @@ was_answer = answer(base_path)
 
 
 def wrong(lines):
-    open(one, "w").write("\n".join(lines))
-    was_tokens, was = read(one)
+    open(with_it, "w").write("\n".join(lines))
+    was_tokens, was = read(with_it)
     if was_tokens is None:
         return "does not lex"
-    ran = subprocess.run([kest, "fmt", one], capture_output=True, text=True,
+    ran = subprocess.run([kest, "fmt", with_it], capture_output=True, text=True,
                          stdin=subprocess.DEVNULL)
     if ran.returncode != 0:
         why = ran.stderr.strip().splitlines()
         return "fmt refused: %s" % (why[0][:70] if why else "saying nothing")
-    open(two, "w").write(ran.stdout)
-    now_tokens, now = read(two)
+    open(formatted, "w").write(ran.stdout)
+    now_tokens, now = read(formatted)
     if now_tokens != was_tokens:
         return "the tokens changed"
     if len(now) != len(was):
@@ -522,8 +522,8 @@ def wrong(lines):
                        if before["belongs"] < len(was_tokens) else "the end",
                        now_tokens[after["above"]]
                        if after["above"] < len(now_tokens) else "the end"))
-    for what, path in (("with the comment in it", one),
-                       ("once formatted", two)):
+    for what, path in (("with the comment in it", with_it),
+                       ("once formatted", formatted)):
         said = answer(path)
         if said != was_answer:
             return ("%s it answers %r and says %r, where it answered %r and "
@@ -567,8 +567,8 @@ if not holds:
 
 words = set(re.findall(r"[A-Za-z_][A-Za-z0-9_]*", base_text))
 wanted = set(keywords)
-for one in holds:
-    wanted.update(one.split())
+for phrase in holds:
+    wanted.update(phrase.split())
 for keyword in sorted(wanted):
     if keyword not in words:
         print("the file a comment is put in every place of does not use `%s`"

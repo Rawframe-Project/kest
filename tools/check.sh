@@ -1951,7 +1951,40 @@ what_a_compiler_made() {
     fi
 }
 
+# And the other way a file arrives in a tree that nobody meant: a name with a
+# space in it, which is what an unquoted redirect leaves behind. `> $places`
+# with `places` unset writes a file called whatever the next two words were,
+# and a check that did it once left `extern fn` in the root of this tree for
+# nine days -- 1774 bytes of a program written to hold every keyword, committed,
+# shipped in nothing, read by nothing, and invisible to every sweep here
+# because the sweeps are over `*.kest` and it had no extension. The walk above
+# could not see it either: it reads `$(find ...)`, and a name with a space in
+# it is two words to a shell. So this one reads a line at a time.
+#
+# No file in this tree has a space in its name, and none is meant to.
+a_name_nobody_meant() {
+    found=""
+    while IFS= read -r file; do
+        here=${file#./}
+        case "$here" in
+        *" "*|*"	"*) found="$found
+    $here" ;;
+        esac
+    done <<INNER
+$(cd "$1" && find . -type f -not -path './build/*' -not -path './.git/*' |
+      sort)
+INNER
+    if [ -n "$found" ]; then
+        printf 'a file with a space in its name is in the tree, which is '
+        printf 'what an unquoted redirect leaves:%s\n' "$found"
+    fi
+}
+
 made_by_a_compiler=$(what_a_compiler_made .)
+nobody_meant=$(a_name_nobody_meant .)
+if [ -n "$nobody_meant" ]; then
+    complain "tree" "$nobody_meant"
+fi
 if [ -n "$made_by_a_compiler" ]; then
     complain "tree" "$made_by_a_compiler"
 else
@@ -1962,13 +1995,19 @@ else
     mkdir -p "$scratch"/tree/tools
     cp Makefile "$scratch"/tree/Makefile
     cp kest "$scratch"/tree/tools/left-behind
+    printf 'module places\n' > "$scratch"/tree/"extern fn"
     if ! what_a_compiler_made "$scratch"/tree |
             grep -q "something a compiler made is in the tree"; then
         complain "tree" "a room with a built thing in it was walked and \
 nothing was said about it"
+    elif ! a_name_nobody_meant "$scratch"/tree |
+            grep -q "a file with a space in its name is in the tree"; then
+        complain "tree" "a room with a file nobody meant in it was walked and \
+nothing was said about it"
     else
         say "tree" "nothing a compiler made is in the tree but what \
-\`make clean\` takes away, and a room with one in it is named"
+\`make clean\` takes away, no file in it has a name nobody meant, and a room \
+with one of each in it is named"
     fi
 fi
 
