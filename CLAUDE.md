@@ -114,6 +114,14 @@ bench/             Four shapes of work and what each costs, in this language
                    simulation is not a kernel, and a language quick at
                    multiplying and slow at any of those is quick at the wrong
                    half.
+                   `bench/micro.kest` is one function per thing the machine
+                   does, each taking how many rounds and answering a number so
+                   that nothing can be folded away, and `bench/families.sh`
+                   runs the four families through `bench/measure`: the micro
+                   bodies one at a time, the reference programs whole, the
+                   boundary through its own host, and what a world costs when
+                   it is worked on rather than grown. It says what it measured
+                   on before it says anything it measured.
 editors/           What an editor needs, and nothing that parses Kest. The
                    VS Code extension is a grammar, a language configuration,
                    snippets and a client that starts `kest lsp`; every

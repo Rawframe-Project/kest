@@ -1,0 +1,406 @@
+module bench.micro
+
+import std.io
+import std.text
+
+// One function per thing the machine does, so that what each costs is a
+// measurement rather than an inference from a program that does all of them.
+// `bench/families.sh` runs them through `bench/measure`, which times each on
+// its own and keeps every sample.
+//
+// Each takes how many rounds to run and answers a number, so that nothing can
+// be folded away: a body whose answer nobody reads is a body a compiler may
+// one day remove, and these are here to be run rather than to be optimized
+// into nothing. The answers are checked by `main`, which is also what makes
+// this a program the gate runs rather than a file of fragments.
+//
+// What is not here: a host call and a bulk lend, which need a host and are in
+// `bench/frame.c`.
+
+struct Small {
+    x: i32
+    y: i32
+}
+
+struct Wide {
+    a: f64
+    b: f64
+    c: f64
+    d: f64
+    e: i64
+    f: i64
+    g: i32
+    h: i32
+}
+
+struct Held {
+    name: text
+    at: i32
+}
+
+enum Shape {
+    Dot
+    Line(i32)
+    Box(i32, i32)
+}
+
+fn intMath(rounds: i32) -> i64 no.alloc no.host deterministic {
+    let sum: i64 = 0
+    for i in 0..rounds {
+        sum += i64(i * 3 + 1) - i64(i / 2) + i64(i % 7)
+    }
+    return sum
+}
+
+fn realMath(rounds: i32) -> f64 no.alloc no.host deterministic {
+    let sum: f64 = 0.0
+    for i in 0..rounds {
+        let f = f64(i)
+        sum += f * 1.5 - f / 3.0 + 0.25
+    }
+    return sum
+}
+
+fn realMath32(rounds: i32) -> f32 no.alloc no.host deterministic {
+    let sum: f32 = 0.0
+    for i in 0..rounds {
+        let f = f32(i)
+        sum += f * 1.5 - f / 3.0 + 0.25
+    }
+    return sum
+}
+
+// A branch that goes the same way almost every time, which is what a rule with
+// a rare case is.
+fn branchKnown(rounds: i32) -> i64 no.alloc no.host deterministic {
+    let sum: i64 = 0
+    for i in 0..rounds {
+        if i % 64 == 0 {
+            sum += 3
+        } else {
+            sum += 1
+        }
+    }
+    return sum
+}
+
+// And one that goes either way, which is what a rule over data is.
+fn branchUnknown(rounds: i32) -> i64 no.alloc no.host deterministic {
+    let sum: i64 = 0
+    for i in 0..rounds {
+        if (i * 2654435 + i / 3) % 3 == 0 {
+            sum += 3
+        } else {
+            sum += 1
+        }
+    }
+    return sum
+}
+
+fn leaf(value: i32) -> i32 no.alloc no.host deterministic {
+    return value * 2 + 1
+}
+
+fn callDirect(rounds: i32) -> i64 no.alloc no.host deterministic {
+    let sum: i64 = 0
+    for i in 0..rounds {
+        sum += i64(leaf(i))
+    }
+    return sum
+}
+
+fn callIndirect(rounds: i32) -> i64 no.alloc no.host deterministic {
+    let which: fn(i32) -> i32 no.alloc no.host deterministic = leaf
+    let sum: i64 = 0
+    for i in 0..rounds {
+        sum += i64(which(i))
+    }
+    return sum
+}
+
+// A two-field struct read out, changed and written back, which is what a value
+// type costs where it stands.
+fn aggregateSmall(rounds: i32) -> i64 no.alloc no.host deterministic {
+    let one = Small(1, 2)
+    let sum: i64 = 0
+    for i in 0..rounds {
+        let copy = one
+        copy.x += i
+        copy.y += copy.x
+        one = copy
+        sum += i64(one.y % 1024)
+    }
+    return sum
+}
+
+fn aggregateWide(rounds: i32) -> i64 no.alloc no.host deterministic {
+    let one = Wide(1.0, 2.0, 3.0, 4.0, 5, 6, 7, 8)
+    let sum: i64 = 0
+    for i in 0..rounds {
+        let copy = one
+        copy.a += 1.0
+        copy.e += i64(i)
+        copy.g += 1
+        one = copy
+        sum += one.e % 1024
+    }
+    return sum
+}
+
+// A run where it stands rather than a handle to one elsewhere.
+fn fixedRun(rounds: i32) -> i64 no.alloc no.host deterministic {
+    let held: [i32; 8] = [0, 1, 2, 3, 4, 5, 6, 7]
+    let sum: i64 = 0
+    for i in 0..rounds {
+        held[i % 8] = held[(i + 1) % 8] + 1
+        sum += i64(held[i % 8])
+    }
+    return sum
+}
+
+// The runs and the world these walk are built at the top of each rather than
+// handed in, so that every one of them is called the same way: one number, how
+// many rounds. Sixty-four elements built once against sixty-four read a
+// thousand times is a tenth of a per cent, and being able to time each on its
+// own is worth more than that.
+fn arrayWalk(rounds: i32) -> i64 no.host deterministic {
+    let items: [i32] = array(64, 1)
+    let sum: i64 = 0
+    for i in 0..rounds {
+        for one in items {
+            sum += i64(one)
+        }
+    }
+    return sum
+}
+
+fn arrayIndex(rounds: i32) -> i64 no.host deterministic {
+    let items: [i32] = array(64, 1)
+    let sum: i64 = 0
+    let many = len(items)
+    for i in 0..rounds {
+        for at in 0..many {
+            sum += i64(items[at])
+        }
+    }
+    return sum
+}
+
+fn arrayWrite(rounds: i32) -> i64 no.host deterministic {
+    let items: [i32] = array(64, 1)
+    let many = len(items)
+    let sum: i64 = 0
+    for i in 0..rounds {
+        for at in 0..many {
+            items[at] = items[at] + 1
+            sum += i64(items[at] % 8)
+        }
+    }
+    return sum
+}
+
+fn textLength(rounds: i32) -> i64 no.host deterministic {
+    let said = "a line of words with nothing much in it at all"
+    let sum: i64 = 0
+    for i in 0..rounds {
+        sum += i64(len(said))
+    }
+    return sum
+}
+
+fn textSearch(rounds: i32) -> i64 no.host deterministic {
+    let said = "a line of words with nothing much in it at all"
+    let sum: i64 = 0
+    for i in 0..rounds {
+        if text.contains(said, "needle") {
+            sum += 1
+        }
+    }
+    return sum
+}
+
+fn textMake(rounds: i32) -> i64 no.host deterministic {
+    let sum: i64 = 0
+    for i in 0..rounds {
+        let said = "round {i} of {rounds}"
+        sum += i64(len(said))
+    }
+    return sum
+}
+
+fn textSplit(rounds: i32) -> i64 no.host deterministic {
+    let said = "a line of words with nothing much in it at all"
+    let sum: i64 = 0
+    for i in 0..rounds {
+        sum += i64(len(text.split(said, " ")))
+    }
+    return sum
+}
+
+fn areaOf(shape: Shape) -> i32 no.alloc no.host deterministic {
+    return match shape {
+        Dot -> 1
+        Line(long) -> long
+        Box(wide, high) -> wide * high
+    }
+}
+
+fn enumMatch(rounds: i32) -> i64 no.alloc no.host deterministic {
+    let sum: i64 = 0
+    for i in 0..rounds {
+        let which = i % 3
+        let shape = if which == 0 -> Shape.Dot
+            else if which == 1 -> Shape.Line(i % 17)
+            else -> Shape.Box(i % 5, i % 7)
+        sum += i64(areaOf(shape))
+    }
+    return sum
+}
+
+fn maybe(value: i32) -> i32? no.alloc no.host deterministic {
+    if value % 4 == 0 {
+        return none
+    }
+    return value
+}
+
+fn optionals(rounds: i32) -> i64 no.alloc no.host deterministic {
+    let sum: i64 = 0
+    for i in 0..rounds {
+        if let one = maybe(i) {
+            sum += i64(one % 32)
+        } else {
+            sum += 1
+        }
+    }
+    return sum
+}
+
+fn storeWalk(rounds: i32) -> i64 no.host {
+    let world: store<Held> = store()
+    for i in 0..64 {
+        add(world, Held("held", i))
+    }
+    let sum: i64 = 0
+    for i in 0..rounds {
+        for who in world {
+            if let one = get(world, who) {
+                sum += i64(one.at)
+            }
+        }
+    }
+    return sum
+}
+
+fn storeWrite(rounds: i32) -> i64 {
+    let world: store<Held> = store()
+    for i in 0..64 {
+        add(world, Held("held", i))
+    }
+    let sum: i64 = 0
+    for i in 0..rounds {
+        for who in world {
+            if let one = get(world, who) {
+                set(world, who, Held(one.name, one.at + 1))
+                sum += i64(one.at % 16)
+            }
+        }
+    }
+    return sum
+}
+
+// What it costs to make something and let it go, which is the allocation this
+// language does most of.
+fn allocates(rounds: i32) -> i64 no.host deterministic {
+    let sum: i64 = 0
+    for i in 0..rounds {
+        let made: [i32] = array(8, i)
+        sum += i64(len(made))
+    }
+    return sum
+}
+
+// And the same thing in a block that gives it back at once rather than leaving
+// it for the walk.
+fn scratches(rounds: i32) -> i64 no.host deterministic {
+    let sum: i64 = 0
+    for i in 0..rounds {
+        scratch {
+            let made: [i32] = array(8, i)
+            sum += i64(len(made))
+        }
+    }
+    return sum
+}
+
+fn main() -> i32 {
+    let rounds = 1000
+    let said = "a line of words with nothing much in it at all"
+
+    if intMath(rounds) <= 0 {
+        return 1
+    }
+    if realMath(rounds) <= 0.0 {
+        return 2
+    }
+    if realMath32(rounds) <= 0.0 {
+        return 3
+    }
+    if branchKnown(rounds) != i64(rounds) + i64((rounds + 63) / 64) * 2 {
+        return 4
+    }
+    if branchUnknown(rounds) <= 0 {
+        return 5
+    }
+    if callDirect(rounds) != callIndirect(rounds) {
+        return 6
+    }
+    if aggregateSmall(rounds) < 0 {
+        return 7
+    }
+    if aggregateWide(rounds) < 0 {
+        return 8
+    }
+    if fixedRun(rounds) <= 0 {
+        return 9
+    }
+    if arrayWalk(4) != arrayIndex(4) {
+        return 10
+    }
+    if arrayWrite(4) < 0 {
+        return 11
+    }
+    if textLength(4) != i64(len(said)) * 4 {
+        return 12
+    }
+    if textSearch(4) != 0 {
+        return 13
+    }
+    if textMake(4) <= 0 {
+        return 14
+    }
+    if textSplit(4) <= 0 {
+        return 15
+    }
+    if enumMatch(rounds) <= 0 {
+        return 16
+    }
+    if optionals(rounds) <= 0 {
+        return 17
+    }
+    if storeWalk(4) <= 0 {
+        return 18
+    }
+    if storeWrite(4) < 0 {
+        return 19
+    }
+    if allocates(64) != 512 {
+        return 20
+    }
+    if scratches(64) != 512 {
+        return 21
+    }
+
+    io.print("micro {intMath(rounds)} {len(said)}")
+    return 0
+}

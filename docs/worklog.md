@@ -36426,3 +36426,38 @@ are for.
 **Runs:** `kest run bench/rules.kest` at 4000 actors over 200 rounds;
 `bench/measure` over it; the histogram from `kest-debug` under `KEST_DEEP=1`
 for all seven programs; `make fast`.
+
+## One function per thing the machine does
+
+`bench/micro.kest` is twenty-three bodies, one for each thing the machine does
+that the four families ask about, each taking how many rounds and answering a
+number so that nothing in it can be folded away. `bench/families.sh` runs them
+through `bench/measure` one at a time and then the rest of the families: the
+three reference programs whole, the boundary through its own host, and what a
+world costs when it is worked on rather than grown. It says what it measured on
+before it says anything it measured.
+
+On this machine, nanoseconds a round, the middle of twenty samples:
+
+    intMath          30.8    branchKnown      13.9    callDirect      26.0
+    realMath         24.2    branchUnknown    34.6    callIndirect    29.2
+    realMath32       26.9    enumMatch        64.0    optionals       40.9
+    aggregateSmall   41.9    aggregateWide    46.3    fixedRun        43.9
+    textLength       13.7    textSearch       78.7    textMake       304.6
+    textSplit       897.1    allocates       118.8    scratches      139.4
+
+and, per element rather than per round, where a round is sixty-four:
+
+    arrayWalk        15.2    arrayIndex       13.1    arrayWrite      34.4
+    storeWalk        30.8    storeWrite       55.0
+
+Four of those are worth writing down. A two-field struct read out, changed and
+written back costs more than a round of integer arithmetic — and eight fields
+cost only ten per cent more than two, so what is being paid is the shape of the
+copy rather than its width. An indirect call is twelve per cent dearer than a
+direct one and no more. Writing an element costs two and a half times reading
+one. And `scratch` is *dearer* than plain allocation for a block that makes one
+small array: 139 against 119. None of those is what somebody would guess.
+
+**Runs:** `ROUNDS=100000 SAMPLES=20 sh bench/families.sh`; `kest run
+bench/micro.kest` for its own checks; `make fast`; `tools/check-tables.sh`.
