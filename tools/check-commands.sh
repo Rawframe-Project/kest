@@ -2499,15 +2499,20 @@ if [ -n "$ticked" ]; then
 fi
 
 # And the two numbers apart from each other. What a machine is made of is paid
-# once and does not move with the work; what the heap holds is paid by the
-# frames and moves with every one of them. A run of three events and a run of
-# nine say so together: the same machine, a bigger heap. A machine that answers
+# once and does not move with the work; what the frames were handed is paid by
+# the frames and moves with every one of them. A run of three events and a run
+# of nine say so together: the same machine, more taken. A machine that answers
 # with the program's heap says the first number twice and neither of them is
 # what a host would put in its budget. See D576.
+#
+# Read as what was taken rather than as what is held: what is held settles,
+# because a program that makes a name a frame and lets it go holds what the
+# world holds however many frames it is driven. That is the whole of D996 and
+# it is what makes the held number the wrong one to ask this question with.
 of_three=$("$kest" tick "$ticking" 3 --json 2>&1 </dev/null |
-           sed -n 's/.*"machine":{"bytes":\([0-9]*\).*"heap":\([0-9]*\).*/\1 \2/p')
+           sed -n 's/.*"machine":{"bytes":\([0-9]*\).*"taken":\([0-9]*\).*/\1 \2/p')
 of_nine=$("$kest" tick "$ticking" 9 --json 2>&1 </dev/null |
-          sed -n 's/.*"machine":{"bytes":\([0-9]*\).*"heap":\([0-9]*\).*/\1 \2/p')
+          sed -n 's/.*"machine":{"bytes":\([0-9]*\).*"taken":\([0-9]*\).*/\1 \2/p')
 if [ -z "$of_three" ] || [ -z "$of_nine" ] ||
    [ "${of_three%% *}" != "${of_nine%% *}" ] ||
    [ "${of_three##* }" = "${of_nine##* }" ]; then
@@ -3294,7 +3299,7 @@ for asking in "past abcdefghij|9 bytes from 8 is outside text of 10 bytes" \
 done
 cut_heap() {
     "$kest" call --json "$cutting" "$1" abcdefghij 2>/dev/null </dev/null |
-        sed -n 's/.*"heap":\([0-9][0-9]*\).*/\1/p'
+        sed -n 's/.*"taken":\([0-9][0-9]*\).*/\1/p'
 }
 just_measured=$(cut_heap measured)
 whole_cut=$(cut_heap whole)
@@ -3492,15 +3497,18 @@ esac
 # And the one reach the proof decides outside that table, because `text` is a
 # conversion rather than a builtin -- it is not in the checker's list of
 # builtins either, so being outside is what it is and not where it is written.
-# What it costs is the bytes it was given and the nought after them, which is a
-# number rather than a direction: ten bytes gathered and then made into text is
-# eleven more than gathering them.
+# What it costs is a place wide enough for the bytes it was given and the
+# nought after them, which is a number rather than a direction: ten bytes
+# gathered and then made into text is one place of sixteen more than gathering
+# them. Sixteen rather than eleven because a place is as wide as the step above
+# what was asked for, which is what D996 traded for being able to give one
+# back.
 reach_gathered=$(reach_heap gathered)
 reach_converted=$(reach_heap converted)
-if [ "$((reach_converted - reach_gathered))" != "11" ]; then
+if [ "$((reach_converted - reach_gathered))" != "16" ]; then
     complain "call: making text out of ten bytes cost \
-$((reach_converted - reach_gathered)) over gathering them, where the bytes and \
-the nought after them are eleven"
+$((reach_converted - reach_gathered)) over gathering them, where a place wide \
+enough for the bytes and the nought after them is sixteen"
 fi
 
 # Text that begins or ends in the middle of a character, which is what a cut

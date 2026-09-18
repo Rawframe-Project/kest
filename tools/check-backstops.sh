@@ -2451,8 +2451,10 @@ fn main() -> i32 {
         # what it costs is a number rather than a direction. See D798.
         "what": "text out of bytes taking more than the bytes",
         "file": "src/vm.c",
-        "from": r"""            char *text = kest_arena_alloc(rt->heap, bytes->length + 1, 1);""",
-        "to": r"""            char *text = kest_arena_alloc(rt->heap, bytes->length + 9, 1);""",
+        "from": r"""            char *text =
+                take(rt, top + 1, bytes->length + 1, KEST_GROUND_PLAIN);""",
+        "to": r"""            char *text =
+                take(rt, top + 1, bytes->length + 9, KEST_GROUND_PLAIN);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -3086,8 +3088,8 @@ for file in "$@"; do""",
         # against. See D849.
         "what": "a driven run that will not say what the heap came to",
         "file": "src/main.c",
-        "from": r"""            fprintf(stdout, ",\"heap\":%zu,\"thrown\":%d", ticked.heap,""",
-        "to": r"""            fprintf(stdout, ",\"grew\":%zu,\"thrown\":%d", ticked.heap,""",
+        "from": r"""            fprintf(stdout, ",\"heap\":%zu,\"taken\":%zu,\"thrown\":%d",""",
+        "to": r"""            fprintf(stdout, ",\"grew\":%zu,\"taken\":%zu,\"thrown\":%d",""",
         "make": [],
         "tool": "tools/check-ceilings.sh",
         "arguments": [],
@@ -4491,8 +4493,10 @@ for file in "$@"; do""",
         # there is a measurement nobody can make.
         "what": "a call that says nothing about what it cost",
         "file": "src/main.c",
-        "from": r"""            fprintf(stdout, ",\"heap\":%zu", called_heap);""",
-        "to": r"""            (void)called_heap;""",
+        "from": r"""            fprintf(stdout, ",\"heap\":%zu,\"taken\":%zu", called_heap,
+                    called_took);""",
+        "to": r"""            (void)called_heap;
+            (void)called_took;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -4726,10 +4730,10 @@ for file in "$@"; do""",
         # the same one.
         "what": "a heap thrown away once more in the JSON than in the words",
         "file": "src/main.c",
-        "from": r"""            fprintf(stdout, ",\"heap\":%zu,\"thrown\":%d", ticked.heap,
-                    ticked.thrown);""",
-        "to": r"""            fprintf(stdout, ",\"heap\":%zu,\"thrown\":%d", ticked.heap,
-                    ticked.thrown + 1);""",
+        "from": r"""            fprintf(stdout, ",\"heap\":%zu,\"taken\":%zu,\"thrown\":%d",
+                    ticked.heap, ticked.taken, ticked.thrown);""",
+        "to": r"""            fprintf(stdout, ",\"heap\":%zu,\"taken\":%zu,\"thrown\":%d",
+                    ticked.heap, ticked.taken, ticked.thrown + 1);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -5618,8 +5622,8 @@ fn main() -> i32 {
         # so the one that runs reads the one that is read. See D914.
         "what": "a container's cost written down and not measured",
         "file": "docs/language.md",
-        "from": """| a table | 51 bytes an entity | 0 bytes an entity |""",
-        "to": """| a table | 50 bytes an entity | 0 bytes an entity |""",
+        "from": """| a table | 76 bytes an entity | 0 bytes an entity |""",
+        "to": """| a table | 75 bytes an entity | 0 bytes an entity |""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
@@ -5814,9 +5818,9 @@ anywhere, and it is why the gate holds""",
         "what": "room asked for in a store and not made",
         "file": "src/vm.c",
         "from": """                if (wanted > (int64_t)store->capacity &&
-                    !room_for(rt->heap, store, (uint32_t)wanted)) {""",
+                    !room_for(rt, reach, store, (uint32_t)wanted)) {""",
         "to": """                if (false && wanted > (int64_t)store->capacity &&
-                    !room_for(rt->heap, store, (uint32_t)wanted)) {""",
+                    !room_for(rt, reach, store, (uint32_t)wanted)) {""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
@@ -9054,12 +9058,12 @@ fn main() -> i32 {
         # reads the program's own words with a refusal wedged into them.
         "what": "a run that says a refusal into what the program wrote",
         "file": "src/main.c",
-        "from": """            fprintf(stdout, ",\\"heap\\":%zu,\\"thrown\\":%d", ticked.heap,
-                    ticked.thrown);
+        "from": """            fprintf(stdout, ",\\"heap\\":%zu,\\"taken\\":%zu,\\"thrown\\":%d",
+                    ticked.heap, ticked.taken, ticked.thrown);
         }
         fputs("}\\n", stdout);""",
-        "to": """            fprintf(stdout, ",\\"heap\\":%zu,\\"thrown\\":%d", ticked.heap,
-                    ticked.thrown);
+        "to": """            fprintf(stdout, ",\\"heap\\":%zu,\\"taken\\":%zu,\\"thrown\\":%d",
+                    ticked.heap, ticked.taken, ticked.thrown);
         }
         fputs("}\\n", stdout);
         kest_build_report(build, stderr, KEST_FORM_TEXT);""",
@@ -9115,7 +9119,7 @@ fn main() -> i32 {
         # every frame: every lend it ends is a lend it ended.
         "what": "a lend ended that says it was not one",
         "file": "src/vm.c",
-        "from": """    if (!kest_arena_holds(runtime->heap, lent.object) ||
+        "from": """    if (!ours(runtime, lent.object) ||
         !KEST_HANDLE_IS(lent.object, KEST_IS_ARRAY)) {
         kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0637", nowhere,
                        "this is not a lend this machine gave out");""",
@@ -9568,7 +9572,7 @@ memory""",
         # against: the pointer does not change when the heap under it goes.
         "what": "a machine that still has what it threw away",
         "file": "src/vm.c",
-        "from": "    if (kest_arena_holds(runtime->heap, kept.object)) {",
+        "from": "    if (ours(runtime, kept.object)) {",
         "to": "    if (true) {",
         "make": ["kest", "embed"],
         "host": "examples/embed",
@@ -9581,7 +9585,7 @@ memory""",
         # that address out.
         "what": "a host's own string taken as the program's text",
         "file": "src/vm.c",
-        "from": """        if (!kest_arena_holds(runtime->heap, frame[*at].text) &&
+        "from": """        if (!ours(runtime, frame[*at].text) &&
             !kest_arena_holds(runtime->module->arena, frame[*at].text)) {""",
         "to": """        if (false) {""",
         "make": ["kest", "embed"],
@@ -9629,7 +9633,7 @@ memory""",
         # are this hole; the first to say so is the one quoted.
         "what": "a handle another machine made",
         "file": "src/vm.c",
-        "from": "        if (!kest_arena_holds(runtime->heap, frame[*at].object)) {",
+        "from": "        if (!ours(runtime, frame[*at].object)) {",
         "to": "        if (false) {",
         "make": ["kest", "embed"],
         "host": "examples/embed",
@@ -11754,10 +11758,9 @@ static const Keyword KEYWORDS[] = {
         # it holds.
         "what": "a copy that reads one element past a block",
         "file": "src/vm.c",
-        "from": """                        memcpy(bytes, array->bytes,
-                               (size_t)array->length * layout->size);""",
-        "to": """                        memcpy(bytes, array->bytes,
-                               (size_t)(array->length + 1) * layout->size);""",
+        "from": """        memcpy(fresh, array->bytes, (size_t)array->length * layout->size);""",
+        "to": """        memcpy(fresh, array->bytes,
+               (size_t)(array->length + 1) * layout->size);""",
         "make": ["debug"],
         "binary": "kest-debug",
         "program": "growing.kest",
@@ -11788,9 +11791,9 @@ static const Keyword KEYWORDS[] = {
         "what": "a heap that ran out and was freed under the machine",
         "file": "src/vm.c",
         "from": """                if (store->used == store->capacity &&
-                    !grow_store(rt->heap, store)) {""",
+                    !grow_store(rt, top, store)) {""",
         "to": """                if (store->used == store->capacity &&
-                    !grow_store(rt->heap, store)) {
+                    !grow_store(rt, top, store)) {
                     kest_arena_free(rt->heap);""",
         "make": ["embed-debug"],
         "host": "examples/embed-debug",
@@ -12799,7 +12802,7 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "from": """    fail(vm, frame, instruction, "K0605",
          "the program has used %zu bytes and this asked for %zu more, which "
          "this machine has not got",
-         kest_heap_used(rt), kest_arena_refused(rt->heap));""",
+         kest_heap_used(rt), was_refused(rt));""",
         "to": """    (void)rt;
     fail(vm, frame, instruction, "K0605", "out of memory");""",
         "make": ["kest"],
@@ -12975,11 +12978,13 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         // Both of them, because a machine that never started is a machine
         // nobody can free: what it took is the machine's own since D574, and
         // the last door out is the one that has to put it back.
+        kest_ground_free(rt->ground);
         kest_arena_free(rt->heap);
         kest_arena_free(own);
         return NULL;
     }""",
         "to": """    if (unbound) {
+        kest_ground_free(rt->ground);
         kest_arena_free(rt->heap);
         kest_arena_free(own);
         atomic_fetch_add_explicit(rt->standing, 1u, memory_order_relaxed);
@@ -13364,11 +13369,16 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "what": "a lend that costs what it is lent",
         "file": "src/vm.c",
         "from": """    } else {
-        array = kest_arena_alloc(runtime->heap, sizeof(Array), 16);
+        under_the_ceiling(runtime);
+        array = kest_ground_take(runtime->ground, sizeof(Array),
+                                 KEST_GROUND_ARRAY);
     }""",
         "to": """    } else {
-        array = kest_arena_alloc(runtime->heap, sizeof(Array), 16);
-        (void)kest_arena_alloc(runtime->heap, (size_t)length * stride, 16);
+        under_the_ceiling(runtime);
+        array = kest_ground_take(runtime->ground, sizeof(Array),
+                                 KEST_GROUND_ARRAY);
+        (void)kest_ground_take(runtime->ground, (size_t)length * stride,
+                               KEST_GROUND_PLAIN);
     }""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
@@ -13438,10 +13448,9 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # what holds the list is that a run of it says those lines.
         "what": "a host's own rule the engine stopped showing",
         "file": "examples/embed.c",
-        "from": r"""    printf("and text kept across a heap being thrown away reads what the "
-           "machine made next: `%s`\n",
-           first_word[0].text);""",
-        "to": r"""    printf("and the text this host kept reads `%s`\n", first_word[0].text);""",
+        "from": r"""    printf("and text kept across a heap being thrown away is not this "
+           "machine's any more\n");""",
+        "to": r"""    printf("and the text this host kept is the text this host kept\n");""",
         "make": ["kest", "embed"],
         "tool": "tools/check-docs.sh",
         "arguments": ["docs/language.md", "docs/decisions.md"],
@@ -13491,7 +13500,7 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # stays rewritten for every machine the build starts.
         "what": "a lend of memory the machine handed out",
         "file": "src/vm.c",
-        "from": """    if (data != NULL && (kest_arena_holds(runtime->heap, data) ||
+        "from": """    if (data != NULL && (ours(runtime, data) ||
                          kest_arena_holds(runtime->module->arena, data))) {""",
         "to": """    if (false) {""",
         "make": ["kest", "embed"],

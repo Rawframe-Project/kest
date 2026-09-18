@@ -1491,7 +1491,11 @@ def what_a_tick_took(body):
     if ran.returncode != 0:
         return None
     said = json.loads(ran.stdout)
-    return None if said.get('errors') else said.get('heap')
+    # What it was handed rather than what it is holding at the end. A world
+    # that makes a name a frame and lets it go holds nothing at the end of it
+    # and paid for every one, and it is the paying that a frame budget is
+    # about. See D996.
+    return None if said.get('errors') else said.get('taken')
 
 
 # The room a container is told to make is the same in both runs, so what is

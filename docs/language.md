@@ -1768,14 +1768,17 @@ clear(seen)
 
 What each of the three containers costs a frame is a number rather than a
 sentence about doubling, and these are the numbers: what one more entity a step
-adds to the heap, measured by `check-costs.sh` over a tick and held there, so a
-reading of this table that the program disagrees with is a gate that fails.
+is handed, measured by `check-costs.sh` over a tick and held there, so a
+reading of this table that the program disagrees with is a gate that fails. It
+is what a step was handed and not what it is holding afterwards — a frame that
+makes a name and lets it go holds nothing at the end of it and paid for every
+one, and paying is what a frame budget is about.
 
 | a step that puts an entity into | told nothing | told how many |
 | --- | --- | --- |
-| a piece of text | 13 bytes an entity | — |
-| an array | 38 bytes an entity | 0 bytes an entity |
-| a table | 51 bytes an entity | 0 bytes an entity |
+| a piece of text | 32 bytes an entity | — |
+| an array | 51 bytes an entity | 0 bytes an entity |
+| a table | 76 bytes an entity | 0 bytes an entity |
 | a store | 102 bytes an entity | 0 bytes an entity |
 
 These are bytes, and a byte count is this machine's as much as the program's: a
@@ -3278,6 +3281,36 @@ that is neither, which is what a host's own string is and what anything from a
 heap that has gone becomes. A host keeping a value between frames asks that
 before it keeps one rather than asking afterwards, because afterwards the
 question is about memory that may already be somebody else's.
+
+### What a host keeps across a call
+
+What a program makes stands on memory the machine gives back when nothing can
+reach it, and what it walks to decide that is its own: the slots of the program
+that is running, and the worlds and runs those name. A handle in the host's own
+memory is not in that walk — the machine cannot read the host's variables — so
+a host that keeps one across a call that allocates is holding a pointer to
+memory the machine has given away.
+
+There are two ways to be right about this, and a host picks one:
+
+- hand it back in. A handle in the frame of the call is one the walk reads, so
+  a host that passes its world into every call it makes about that world needs
+  nothing else. This is what `examples/engine.c` does.
+- say so:
+
+```c
+kest_keeps(runtime, world);
+```
+
+  The machine then keeps it whatever the program can reach, until
+  `kest_lets_go` or `kest_heap_reset`. It is not reference counting and a host
+  does not have to balance it: one value said twice is kept once, and a heap
+  thrown away forgets every one of them. `kest_lets_go` answers whether the
+  machine was keeping it, so a host that let go twice is told rather than left
+  to guess.
+
+Both hosts in this tree keep a world in their own memory across calls that do
+not hand it back, and both say so. See D996.
 
 A lend is the fourth answer, `KEST_KEPT_LENT`, because it is two things at
 once: a header of the machine's, on the heap, in front of a block that is the

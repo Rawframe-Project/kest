@@ -1166,7 +1166,7 @@ bool kest_text(KestRuntime *runtime, const char *bytes, uint32_t length,
     // holds is named by the host's own memory and by nothing a walk can read.
     under_the_ceiling(runtime);
     char *held = kest_ground_take(runtime->ground, length + 1,
-                                     KEST_GROUND_PLAIN);
+                                  KEST_GROUND_PLAIN);
     if (held != NULL && !handed_over(runtime, held)) {
         held = NULL;
     }
@@ -1428,7 +1428,7 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     } else {
         under_the_ceiling(runtime);
         array = kest_ground_take(runtime->ground, sizeof(Array),
-                                    KEST_GROUND_ARRAY);
+                                 KEST_GROUND_ARRAY);
     }
     if (array == NULL) {
         no_room_to_lend(runtime);
@@ -2184,10 +2184,31 @@ static unsigned char *elements_grown(Vm *rt, KestValue *reach, Array *array,
     uint32_t hands = rt->hands;
     unsigned char *fresh = in_hand(rt, elements_for(rt, reach, layout, capacity));
     hands_off(rt, hands);
-    if (fresh != NULL && array->bytes != NULL && array->length > 0) {
+    if (fresh == NULL) {
+        return NULL;
+    }
+    if (array->bytes != NULL && array->length > 0) {
         memcpy(fresh, array->bytes, (size_t)array->length * layout->size);
     }
     return fresh;
+}
+
+// How many elements the place a run of them is in will hold, which is not how
+// many were asked for: a place is as wide as the step above what was asked
+// for, and a caller that fills it grows fewer times and copies less. What is
+// past the length is nought, because that is what the place was handed out as.
+static uint32_t all_it_holds(Vm *rt, const unsigned char *bytes,
+                             const KestLayout *layout, uint32_t asked) {
+    if (bytes == NULL || layout->size == 0) {
+        return asked;
+    }
+    size_t room = kest_ground_room(rt->ground, ((const Elems *)(const void *)bytes) - 1);
+    if (room <= sizeof(Elems) + 1) {
+        return asked;
+    }
+    size_t holds = (room - sizeof(Elems) - 1) / layout->size;
+    return holds > asked ? (holds > UINT32_MAX ? asked : (uint32_t)holds)
+                         : asked;
 }
 
 // Room for that many, which is what growing is and what being told how many
@@ -3401,6 +3422,10 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 unsigned char *was = array->bytes;
                 unsigned char *grown = elements_grown(
                     rt, value + layout->slots, array, layout, capacity);
+                if (grown != NULL) {
+                    capacity = all_it_holds(rt, grown, layout, capacity);
+                    (((Elems *)(void *)grown) - 1)->places = capacity;
+                }
                 if (grown == NULL) {
                     no_room_growing(vmp, frame, instruction, rt, "an array",
                                     array->length, layout->size, capacity);
@@ -5782,13 +5807,13 @@ size_t kest_heap_used(const KestRuntime *runtime) {
     // ground. A host that read one of them would be told a world of text
     // costs nothing.
     //
-    // What the ground is asked, rather than what is standing on it. The
-    // difference is the places it is holding and has not handed out, and that
-    // is memory the host has given up either way -- so it is the number a
-    // ceiling is held against and the number a host with a memory budget
-    // wants. A plot nothing is in goes back to the host, so this settles
-    // where a world settles. See D996.
-    return kest_arena_used(runtime->heap) + kest_ground_asked(runtime->ground);
+    // What is standing on the ground rather than what it asked the host for.
+    // The difference is the shape of the places and the ones standing empty,
+    // and neither of those is the program's -- the arena under it took blocks
+    // of sixty-four kilobytes and charged nobody for the block. A plot nothing
+    // is in goes back to the host, so this settles where a world settles.
+    // See D996.
+    return kest_arena_used(runtime->heap) + kest_ground_used(runtime->ground);
 }
 
 size_t kest_heap_taken(const KestRuntime *runtime) {

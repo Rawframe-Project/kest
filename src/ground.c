@@ -317,9 +317,15 @@ static Plot *plot_holding(const KestGround *ground, const void *at) {
     return plot;
 }
 
-static bool room_for(KestGround *ground, size_t bytes) {
-    if (ground->ceiling != 0 && ground->asked + bytes > ground->ceiling) {
-        ground->refused = bytes;
+// A ceiling is over what the program is holding and not over what this asked
+// the host for. The two differ by the shape of the places and by the places
+// that are standing empty, and neither of those is the program's: an arena
+// took blocks of sixty-four kilobytes and charged a ceiling for the bytes it
+// handed out of them, and a machine given sixty-four kilobytes could hold
+// sixty-four kilobytes. It still can.
+static bool room_for(KestGround *ground, size_t width) {
+    if (ground->ceiling != 0 && ground->used + width > ground->ceiling) {
+        ground->refused = width;
         ground->refused_by_ceiling = true;
         return false;
     }
@@ -327,9 +333,6 @@ static bool room_for(KestGround *ground, size_t bytes) {
 }
 
 static Plot *new_plot(KestGround *ground, size_t width_index, size_t bytes) {
-    if (!room_for(ground, bytes + sizeof(Plot))) {
-        return NULL;
-    }
     Plot *plot = calloc(1, sizeof(Plot));
     unsigned char *data = plot == NULL ? NULL : GROUND_ALLOC(PLOT, bytes);
     if (data == NULL) {
@@ -474,6 +477,9 @@ static void *room_in_a_plot(KestGround *ground, size_t bytes) {
     }
     if (bytes > WIDEST) {
         size_t want = (bytes + PLOT - 1) & ~(size_t)(PLOT - 1);
+        if (!room_for(ground, want)) {
+            return NULL;
+        }
         Plot *plot = new_plot(ground, WIDTH_COUNT, want);
         if (plot == NULL) {
             return NULL;
@@ -497,6 +503,12 @@ static void *room_in_a_plot(KestGround *ground, size_t bytes) {
     size_t which = 0;
     while (WIDTHS[which] < bytes) {
         which++;
+    }
+    // Asked before a place is looked for rather than only where a plot is
+    // made, because the place a full world has room for is one already
+    // standing empty in a plot the host has already given.
+    if (!room_for(ground, WIDTHS[which])) {
+        return NULL;
     }
     Plot *plot = ground->free_plots[which];
     while (plot != NULL && plot->taken == plot->places) {
@@ -577,6 +589,11 @@ void *kest_ground_grow(KestGround *ground, void *was, size_t had, size_t want) {
     // value that used to be there left behind.
     memset((unsigned char *)was + had, 0, want - had);
     return was;
+}
+
+size_t kest_ground_room(const KestGround *ground, const void *at) {
+    const Plot *plot = plot_holding(ground, at);
+    return plot == NULL ? 0 : plot->stride;
 }
 
 bool kest_ground_holds(const KestGround *ground, const void *at) {

@@ -6,6 +6,8 @@ examples/engine
 examples/engine-debug
 examples/least
 tools/inward
+tools/fuzz
+tools/fuzz-debug
 kest
 kest-debug
 kest-before
@@ -13,4 +15,4 @@ libkest.a
 *.o
 bench/*-cpp
 kest-colony-day.txt
-build/
+.jitted_scripts/

@@ -72,6 +72,12 @@ void *kest_ground_start(const KestGround *ground, const void *at);
 // what it did before: takes a new one and copies.
 void *kest_ground_grow(KestGround *ground, void *was, size_t had, size_t want);
 
+// How wide the place a thing is in is, which is what it may grow into without
+// moving. A run of bytes that asked for a hundred and thirty is in a place of
+// a hundred and ninety-two, and a caller that fills the place rather than what
+// it asked for is one that grows fewer times.
+size_t kest_ground_room(const KestGround *ground, const void *at);
+
 // Whether this handed out the address, which a machine asks of a pointer it
 // was handed from outside: reading one it never gave out is reading whatever
 // is at that address.

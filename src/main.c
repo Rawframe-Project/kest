@@ -892,6 +892,10 @@ typedef struct {
     int64_t single_gave;
     size_t peak;
     size_t heap;
+    // And every byte the run was ever handed, which is what a frame cost: a
+    // world that makes a name a frame and lets it go holds nothing at the end
+    // of it and paid for every one. See D996.
+    size_t taken;
     // How many times the heap was thrown away between events. Without it, a
     // run that allocated nothing and a run that threw everything away say the
     // same thing: nought bytes and none of them freed, which is true of the
@@ -2193,6 +2197,7 @@ static int run(const char *command, const char *executable, char **paths,
     // what it gave back. -1 until one is chosen.
     int32_t called = -1;
     size_t called_heap = 0;
+    size_t called_took = 0;
     int64_t exit_code = 0;
     // Whether the program answered, which is not the same as what it answered:
     // a `main` that gives nothing back is a shape this language has, and a
@@ -2367,6 +2372,7 @@ static int run(const char *command, const char *executable, char **paths,
                     // subtraction a host does on either side of a call, done
                     // here where there is one call and it started at nought.
                     called_heap = kest_heap_used(runtime);
+                    called_took = kest_heap_taken(runtime);
                     // What running found, sorted with what compiling did. A
                     // host reads this with `kest_report`; one command says
                     // everything it has to say at once, so it takes the set.
@@ -2400,9 +2406,12 @@ static int run(const char *command, const char *executable, char **paths,
             if (runtime != NULL) {
                 if (ticking) {
                     drive_events(runtime, build, count, given, reset, &ticked);
-                    // What the program allocated and nothing freed, which is
-                    // D012's cost with a number on it.
+                    // What the program is holding at the end of it, and what
+                    // it was ever handed on the way: the first settles where a
+                    // world settles and the second is what a frame cost. See
+                    // D996.
                     ticked.heap = kest_heap_used(runtime);
+                    ticked.taken = kest_heap_taken(runtime);
                     // And what the machine itself cost, which is a number a
                     // host pays once and a frame budget is measured against:
                     // the command line asks the program what it needs, so
@@ -2806,7 +2815,8 @@ static int run(const char *command, const char *executable, char **paths,
         // never started has nothing to say here and says nought, which is
         // what it allocated.
         if (called_it) {
-            fprintf(stdout, ",\"heap\":%zu", called_heap);
+            fprintf(stdout, ",\"heap\":%zu,\"taken\":%zu", called_heap,
+                    called_took);
         }
         if (ticked.ran) {
             if (ticked.bulk) {
@@ -2847,8 +2857,8 @@ static int run(const char *command, const char *executable, char **paths,
                     ",\"machine\":{\"bytes\":%zu,\"slots\":%u,"
                     "\"frames\":%u}",
                     ticked.machine, ticked.slots, ticked.frames);
-            fprintf(stdout, ",\"heap\":%zu,\"thrown\":%d", ticked.heap,
-                    ticked.thrown);
+            fprintf(stdout, ",\"heap\":%zu,\"taken\":%zu,\"thrown\":%d",
+                    ticked.heap, ticked.taken, ticked.thrown);
         }
         fputs("}\n", stdout);
     } else {
