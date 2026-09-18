@@ -1199,7 +1199,7 @@ static bool frames_of_lending(Engine *engine, Row *batch, int frames,
     // Read here rather than at the top of this host, because everything
     // before it has lent and given back and what is on the spare list is
     // whatever it left there. What this weighs is the frames, not the run.
-    size_t before = kest_heap_used(engine->runtime);
+    size_t before = kest_heap_taken(engine->runtime);
     size_t widest = 0;
     for (int frame = 0; frame < frames; frame++) {
         KestValue lent[8];
@@ -1221,11 +1221,11 @@ static bool frames_of_lending(Engine *engine, Row *batch, int frames,
         // Read after the first rather than before it, because the first is the
         // one that is allowed to cost something.
         if (frame == 0) {
-            widest = kest_heap_used(engine->runtime);
-        } else if (kest_heap_used(engine->runtime) != widest) {
+            widest = kest_heap_taken(engine->runtime);
+        } else if (kest_heap_taken(engine->runtime) != widest) {
             fprintf(stderr, "eight lends a frame grew the heap by %zu after "
                             "frame %d\n",
-                    kest_heap_used(engine->runtime) - widest, frame);
+                    kest_heap_taken(engine->runtime) - widest, frame);
             return false;
         }
     }
@@ -1298,13 +1298,13 @@ static bool lends_bytes(Engine *engine) {
     // header is an allocation, even though the block is the host's own.
     {
         static unsigned char plenty[40000];
-        size_t was_small = kest_heap_used(engine->runtime);
+        size_t was_small = kest_heap_taken(engine->runtime);
         KestValue small = kest_borrow(engine->runtime, letters, 4, "u8", 1);
-        size_t small_cost = kest_heap_used(engine->runtime) - was_small;
-        size_t was_big = kest_heap_used(engine->runtime);
+        size_t small_cost = kest_heap_taken(engine->runtime) - was_small;
+        size_t was_big = kest_heap_taken(engine->runtime);
         KestValue big =
             kest_borrow(engine->runtime, plenty, sizeof(plenty), "u8", 1);
-        size_t big_cost = kest_heap_used(engine->runtime) - was_big;
+        size_t big_cost = kest_heap_taken(engine->runtime) - was_big;
         if (small.object == NULL || big.object == NULL) {
             kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
             return false;
@@ -1323,10 +1323,10 @@ static bool lends_bytes(Engine *engine) {
         // And the one after those, which costs nothing at all: a header a
         // lend gave back is the header the next lend gets, so a host lending
         // every frame is a host that pays for one of these.
-        size_t was_again = kest_heap_used(engine->runtime);
+        size_t was_again = kest_heap_taken(engine->runtime);
         KestValue again =
             kest_borrow(engine->runtime, plenty, sizeof(plenty), "u8", 1);
-        size_t again_cost = kest_heap_used(engine->runtime) - was_again;
+        size_t again_cost = kest_heap_taken(engine->runtime) - was_again;
         if (again.object == NULL || again_cost != 0 ||
             !kest_lend_ends(engine->runtime, again)) {
             fprintf(stderr,
@@ -1362,7 +1362,7 @@ static bool lends_bytes(Engine *engine) {
     }
     printf("and refused four bytes at no address, and lent nought of them\n");
 
-    size_t before_text = kest_heap_used(engine->runtime);
+    size_t before_text = kest_heap_taken(engine->runtime);
     if (!kest_call(engine->runtime, engine->entry[READABLE], engine->frame, sizeof(engine->frame) / sizeof(engine->frame[0]))) {
         kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
         return false;
@@ -1370,7 +1370,7 @@ static bool lends_bytes(Engine *engine) {
     // A lend copies nothing; making text of one copies everything. This is
     // the one place that promise ends, and the number says so: the bytes are
     // the host's and the text is the program's.
-    size_t copied = kest_heap_used(engine->runtime) - before_text;
+    size_t copied = kest_heap_taken(engine->runtime) - before_text;
     printf("host lent %zu bytes and the program read %lld of them, "
            "at %zu bytes of heap\n",
            sizeof(letters), (long long)engine->frame[0].integer, copied);
@@ -1647,7 +1647,7 @@ static bool spends_the_heap(Engine *engine) {
         return false;
     }
     // And nothing on it, which is the one thing that moves this number the
-    // other way. `kest_heap_used` only goes up while a program runs, so a host
+    // other way. `kest_heap_used` is what a program is holding, so a host
     // watching a frame budget reads the difference between two of them — and
     // a reset that left anything behind would make the first difference after
     // it the leftovers plus the frame. Printed here since D630 and never held
@@ -1754,9 +1754,9 @@ static bool spends_the_heap(Engine *engine) {
         kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
         return false;
     }
-    size_t after_reset = kest_heap_used(engine->runtime);
+    size_t after_reset = kest_heap_taken(engine->runtime);
     KestValue fresh = kest_borrow(engine->runtime, four, 4, "u8", 1);
-    size_t fresh_cost = kest_heap_used(engine->runtime) - after_reset;
+    size_t fresh_cost = kest_heap_taken(engine->runtime) - after_reset;
     if (fresh.object == NULL || fresh_cost == 0) {
         fprintf(stderr,
                 "a lend after the heap went cost %zu bytes, so its header is "
@@ -1854,12 +1854,12 @@ static bool weighs_what_it_costs(Engine *engine) {
     const int32_t asked[2] = {READY, FILLING};
     for (int which = 0; which < 2; which++) {
         engine->frame[0].integer = 1000;
-        size_t spent = kest_heap_used(engine->runtime);
+        size_t spent = kest_heap_taken(engine->runtime);
         if (!kest_call(engine->runtime, engine->entry[asked[which]], engine->frame, sizeof(engine->frame) / sizeof(engine->frame[0]))) {
             kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
             return false;
         }
-        costs[which] = kest_heap_used(engine->runtime) - spent;
+        costs[which] = kest_heap_taken(engine->runtime) - spent;
         printf("a thousand pushed %s room: %lld held, %zu bytes\n",
                which == 0 ? "after asking for" : "without asking for",
                (long long)engine->frame[0].integer, costs[which]);
@@ -1878,12 +1878,12 @@ static bool weighs_what_it_costs(Engine *engine) {
     const int32_t ways[2] = {GLUED, JOINED};
     for (int which = 0; which < 2; which++) {
         engine->frame[0].integer = 600;
-        size_t spent = kest_heap_used(engine->runtime);
+        size_t spent = kest_heap_taken(engine->runtime);
         if (!kest_call(engine->runtime, engine->entry[ways[which]], engine->frame, sizeof(engine->frame) / sizeof(engine->frame[0]))) {
             kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
             return false;
         }
-        text_costs[which] = kest_heap_used(engine->runtime) - spent;
+        text_costs[which] = kest_heap_taken(engine->runtime) - spent;
         printf("six hundred bytes of text, %s: %lld long, %zu bytes\n",
                which == 0 ? "a piece at a time" : "gathered and paid for once",
                (long long)engine->frame[0].integer, text_costs[which]);
@@ -1905,12 +1905,12 @@ static bool weighs_what_it_costs(Engine *engine) {
         size_t cost[2];
         for (int size = 0; size < 2; size++) {
             engine->frame[0].integer = size == 0 ? 200 : 400;
-            size_t spent = kest_heap_used(engine->runtime);
+            size_t spent = kest_heap_taken(engine->runtime);
             if (!kest_call(engine->runtime, engine->entry[linear[which]], engine->frame, sizeof(engine->frame) / sizeof(engine->frame[0]))) {
                 kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
                 return false;
             }
-            cost[size] = kest_heap_used(engine->runtime) - spent;
+            cost[size] = kest_heap_taken(engine->runtime) - spent;
         }
         printf("`%s` over 200 and 400: %zu bytes and %zu\n", called[which],
                cost[0], cost[1]);
@@ -3070,6 +3070,15 @@ int main(int argc, char **argv) {
         return 1;
     }
     engine.world = engine.frame[0];
+    // Said once, because this host keeps the world in its own memory and does
+    // not hand it into every call it makes. The machine gives back what the
+    // program can no longer reach, and it cannot read this host's variables:
+    // without this the world would be memory nothing names the first time a
+    // call allocates enough to set off a walk. See D996.
+    if (!kest_keeps(engine.runtime, engine.world)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
 
     // What a frame costs, which is the heap on either side of it. The running
     // total is a number without a scale — every host that watches a frame
@@ -3078,12 +3087,12 @@ int main(int argc, char **argv) {
     for (int i = 0; i < 5; i++) {
         engine.frame[0] = engine.world;
         engine.frame[1].integer = i + 1;
-        size_t spent = kest_heap_used(engine.runtime);
+        size_t spent = kest_heap_taken(engine.runtime);
         if (!asks(&engine, SPAWN)) {
             return 1;
         }
         printf("frame %d: spawned, %lld alive, %zu bytes this frame\n", i,
-               (long long)engine.frame[0].integer, kest_heap_used(engine.runtime) - spent);
+               (long long)engine.frame[0].integer, kest_heap_taken(engine.runtime) - spent);
     }
 
     // And the same subtraction over a frame that promised nothing, which is
@@ -3098,13 +3107,13 @@ int main(int argc, char **argv) {
         if (i == 2) {
             decider.asks_the_program = false;
         }
-        size_t spent = kest_heap_used(engine.runtime);
+        size_t spent = kest_heap_taken(engine.runtime);
         if (!asks(&engine, STEP)) {
             return 1;
         }
         printf("frame %d: stepped, %lld alive, %zu bytes this frame, %s\n",
                i + 5, (long long)engine.frame[0].integer,
-               kest_heap_used(engine.runtime) - spent,
+               kest_heap_taken(engine.runtime) - spent,
                decider.asks_the_program ? "asking the program"
                                         : "deciding for itself");
     }
@@ -4414,7 +4423,7 @@ int main(int argc, char **argv) {
     // frame budget that grows for a program doing the same thing every time.
     // Ending one gives its header back to the next lend, so a thousand frames
     // of it cost what one does.
-    size_t held = kest_heap_used(engine.runtime);
+    size_t held = kest_heap_taken(engine.runtime);
     for (int frame = 0; frame < 1000; frame++) {
         KestValue each =
             kest_borrow(engine.runtime, rows, 2, "Row", sizeof(Row));
@@ -4423,9 +4432,9 @@ int main(int argc, char **argv) {
             return 1;
         }
     }
-    if (kest_heap_used(engine.runtime) != held) {
+    if (kest_heap_taken(engine.runtime) != held) {
         fprintf(stderr, "a thousand frames of lending grew the heap by %zu\n",
-                kest_heap_used(engine.runtime) - held);
+                kest_heap_taken(engine.runtime) - held);
         return 1;
     }
     if (!said_nothing(engine.runtime, "a thousand lends were taken back")) {
@@ -4532,7 +4541,7 @@ int main(int argc, char **argv) {
 
     KestValue name[2] = {{0}, {0}};
     kest_text(engine.runtime, "the engine", 10, name);
-    size_t paid = kest_heap_used(engine.runtime);
+    size_t paid = kest_heap_taken(engine.runtime);
     if (name[0].text == NULL || strcmp(name[0].text, "the engine") != 0 ||
         name[1].integer != 10) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
@@ -4572,7 +4581,7 @@ int main(int argc, char **argv) {
 
     KestValue again[2] = {{0}, {0}};
     kest_text(engine.runtime, "the engine", 10, again);
-    if (again[0].text == NULL || kest_heap_used(engine.runtime) == paid) {
+    if (again[0].text == NULL || kest_heap_taken(engine.runtime) == paid) {
         fprintf(stderr, "saying the same bytes twice cost nothing\n");
         return 1;
     }
@@ -4580,7 +4589,7 @@ int main(int argc, char **argv) {
         uint32_t wide = 0;
         kest_text_bytes(name, &wide);
         printf("host said %u bytes of text and paying twice cost %zu more\n",
-               wide, kest_heap_used(engine.runtime) - paid);
+               wide, kest_heap_taken(engine.runtime) - paid);
     }
 
     // And what a host must not hand over: bytes of its own, which the program
@@ -5560,7 +5569,7 @@ int main(int argc, char **argv) {
     // that runs out overnight. `onEvents` says `no.alloc`, so a thousand of
     // them have to leave the heap exactly where they found it — not nearly,
     // since what this is looking for is the byte a frame keeps.
-    size_t before = kest_heap_used(engine.runtime);
+    size_t before = kest_heap_taken(engine.runtime);
     for (int i = 0; i < 1000; i++) {
         engine.frame[0] = lent;
         if (!asks(&engine, ON_EVENTS)) {
@@ -5568,7 +5577,7 @@ int main(int argc, char **argv) {
             return 1;
         }
     }
-    size_t after = kest_heap_used(engine.runtime);
+    size_t after = kest_heap_taken(engine.runtime);
     if (after != before) {
         fprintf(stderr, "a thousand frames that promise nothing left %zu "
                         "bytes behind\n",
@@ -5765,6 +5774,10 @@ int main(int argc, char **argv) {
         return 1;
     }
     engine.world = engine.frame[0];
+    if (!kest_keeps(engine.runtime, engine.world)) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
     // And somebody in it, because what the probes below are about is a
     // reference into a store that has places: a store with none refuses every
     // reference by its index alone, which would make them pass without ever
@@ -6043,13 +6056,16 @@ int main(int argc, char **argv) {
         kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
         return 1;
     }
-    if (next_word[0].text != first_word[0].text) {
-        fprintf(stderr,
-                "the first thing on an emptied heap went somewhere else, so "
-                "this host has nothing to say about the text it kept\n");
-        return 1;
-    }
-    if (!kest_still_holds(engine.runtime, first_word[0]) ||
+    // Whether the first thing made on an emptied heap goes where the last
+    // thing on the old one was is the machine's to decide and not a thing a
+    // host may lean on: the memory a program stands on is given back to the
+    // host a piece at a time now, so the same address comes round again when
+    // it happens to and not because anything promised it. What is a rule is
+    // the line above -- a pointer the host kept is not the machine's once the
+    // heap has gone -- and this is the other half of the same rule: if it does
+    // come round again, what is written there is what the machine made next
+    // and not what the host put there. See D353 and D996.
+    if (next_word[0].text == first_word[0].text &&
         strcmp(first_word[0].text, "the second") != 0) {
         fprintf(stderr, "text kept across a reset reads `%s`\n",
                 first_word[0].text);
@@ -6058,9 +6074,8 @@ int main(int argc, char **argv) {
     if (!said_nothing(engine.runtime, "a heap was thrown away twice")) {
         return 1;
     }
-    printf("and text kept across a heap being thrown away reads what the "
-           "machine made next: `%s`\n",
-           first_word[0].text);
+    printf("and text kept across a heap being thrown away is not this "
+           "machine's any more\n");
 
     // And the same for a lend, which the paragraph above says has the same
     // shape and this host had never shown. It has one thing text has not: a

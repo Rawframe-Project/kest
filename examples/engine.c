@@ -381,6 +381,14 @@ static bool restore_into(KestRuntime *into, int32_t restore, int32_t round,
     if (made) {
         world[0] = asking[0];
         world[1] = asking[1];
+        // Said to the machine, because this host holds the world in its own
+        // memory between frames and the machine gives back what the program
+        // can no longer reach. A walk reads the program's slots and what a
+        // host says it keeps; it cannot read this host's variables. See D996.
+        if (!kest_keeps(into, world[0])) {
+            kest_report(into, stderr, KEST_FORM_TEXT);
+            return false;
+        }
     }
     for (size_t i = 0; i < 6; i++) {
         if (lent[i].object != NULL && !kest_lend_ends(into, lent[i])) {
@@ -520,6 +528,10 @@ int main(int argc, char **argv) {
     }
     engine.world[0] = asking[0];
     engine.world[1] = asking[1];
+    if (!kest_keeps(engine.runtime, engine.world[0])) {
+        kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
 
     float xs[BODIES];
     float ys[BODIES];

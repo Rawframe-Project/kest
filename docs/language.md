@@ -2912,7 +2912,7 @@ can, and prints what happened:
 
 ```
 and a handle to a lend that ended names whatever was lent next
-and text kept across a heap being thrown away reads what the machine made next
+and text kept across a heap being thrown away is not this machine's any more
 ```
 
 A host hands text over with `kest_text`, which copies it into the machine's
