@@ -9228,7 +9228,7 @@ fn main() -> i32 {
         "what": "a machine that says it is made of the program's heap",
         "file": "src/vm.c",
         "from": """    return runtime == NULL ? 0 : kest_arena_used(runtime->own);""",
-        "to": """    return runtime == NULL ? 0 : kest_arena_used(runtime->heap);""",
+        "to": """    return runtime == NULL ? 0 : kest_heap_used(runtime);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -12862,14 +12862,24 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # ceiling it set is a number it can raise, and this is a host raising it
         # forever on a machine that has nothing to give.
         "what": "a machine with nothing left that answers as a ceiling",
-        "file": "src/mem.c",
-        "from": """            arena->refused = taking;
-            arena->refused_by_ceiling = false;""",
-        "to": """            arena->refused = taking;
-            arena->refused_by_ceiling = true;""",
+        # The ground rather than the arena: a program's memory comes from
+        # there, so a host with nothing left refuses there. What the ladder
+        # sees is a rung refused with the command line's own code where it
+        # expected the library saying it had run out. See D996.
+        "file": "src/ground.c",
+        "from": """        ground->refused = bytes;
+        ground->refused_by_ceiling = false;
+        return NULL;
+    }
+    plot->what = IS_PLOT;""",
+        "to": """        ground->refused = bytes;
+        ground->refused_by_ceiling = true;
+        return NULL;
+    }
+    plot->what = IS_PLOT;""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
-        "caught": "was read as a host's own",
+        "caught": "which is not this compiler saying it has run out",
     },
     {
         # And the other way: a ceiling this machine kept, handed back as the
