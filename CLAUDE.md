@@ -105,7 +105,15 @@ bench/             Four shapes of work and what each costs, in this language
                    frame, one crossing a body, and the same arithmetic in C,
                    all three answering one checksum so the difference between
                    them is the boundary and nothing else. `make bench/frame`
-                   builds that host.
+                   builds that host. `bench/rules.kest` is the third and is
+                   mostly branches: what somebody carries, what they have been
+                   asked to do, what they may do again yet, and the rules that
+                   read all three -- a lookup, a flag test, a `match` over what
+                   a thing is, a timer that has not run down, and a whole
+                   struct read out of an array, changed and written back. A
+                   simulation is not a kernel, and a language quick at
+                   multiplying and slow at any of those is quick at the wrong
+                   half.
 editors/           What an editor needs, and nothing that parses Kest. The
                    VS Code extension is a grammar, a language configuration,
                    snippets and a client that starts `kest lsp`; every

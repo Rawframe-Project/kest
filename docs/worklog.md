@@ -36391,3 +36391,38 @@ boundary. See D1006.
 **Runs:** `make bench/frame`; the host at 20000 bodies over 50 frames;
 `kest run bench/frame.kest` for the program's own checks; `make fast`;
 `tools/check-fmt.sh`, `tools/check-tables.sh` and `tools/check-docs.sh`.
+
+## The third reference program, and what three of them agree about
+
+`bench/rules.kest` is application state rather than arithmetic or a world: four
+thousand actors, each with a bag of things, a run of cooldowns, a byte of
+flags, a task that is an enum carrying a number, and rules that read all of
+them and decide. Two hundred rounds of it is 175 million instructions and 626
+milliseconds.
+
+With it the three reference programs and the four old workloads say the same
+thing about where the time goes:
+
+    kernel      42.7 M instructions   61.9 % moving data
+    control     50.8 M                56.9 %
+    graph        5.3 M                54.4 %
+    words        8.9 M                60.1 %
+    agents     196.4 M                62.1 %
+    rules      174.6 M                57.1 %
+
+Seven programs of four shapes, and between fifty-four and sixty-two per cent of
+every instruction any of them runs moves a value rather than computing one.
+
+Two things about writing them are worth recording, and neither is a defect.
+A `match` arm is an expression, so a rule that wants to *do* something per case
+is written as a number read out of the match and an `if` chain on that; both
+`bench/agents.kest` and `bench/rules.kest` are written that way. And a struct
+is a value, so `one.hp += 1` inside a function that was handed one counts into
+a copy: `decide` answers with the actor and the caller writes it back. That
+caught `bench/agents.kest` once and `bench/rules.kest` once, in each case as a
+check that failed rather than as a wrong number, which is what the self-checks
+are for.
+
+**Runs:** `kest run bench/rules.kest` at 4000 actors over 200 rounds;
+`bench/measure` over it; the histogram from `kest-debug` under `KEST_DEEP=1`
+for all seven programs; `make fast`.

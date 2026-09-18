@@ -180,6 +180,43 @@ static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
     }
 }
 
+/* The rest of what `std.os` declares, because a machine refuses a program
+   whose externs are not all bound and a workload that reads its own scale
+   knobs imports it. What a host provides is what a program may do, so this one
+   provides a clock and nothing else: no arguments, no files. A workload run
+   here gets its own defaults, which is what a measurement wants anyway. */
+static void os_arg_count(KestValue *frame, KestRuntime *runtime,
+                         void *context) {
+    (void)runtime;
+    (void)context;
+    frame[0].integer = 0;
+}
+
+static void os_arg(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)context;
+    kest_text(runtime, "", 0, frame);
+    frame[2].integer = 0;
+}
+
+static void os_clock(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)runtime;
+    (void)context;
+    frame[0].integer = in_nanoseconds() / 1000;
+}
+
+static void os_file_read(KestValue *frame, KestRuntime *runtime,
+                         void *context) {
+    (void)context;
+    kest_text(runtime, "", 0, frame);
+    frame[2].integer = 0;
+}
+
+static void os_says_no(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)runtime;
+    (void)context;
+    frame[0].integer = 0;
+}
+
 static void how_to_run(void) {
     fprintf(stderr,
             "usage: measure <file.kest> [options]\n"
@@ -271,7 +308,13 @@ int main(int argc, char **argv) {
     KestHost *host = kest_host_new();
     if (host != NULL &&
         (!kest_host_bind(host, "Io.write", io_write, stderr) ||
-         !kest_host_bind(host, "Host.write", io_write, stderr))) {
+         !kest_host_bind(host, "Host.write", io_write, stderr) ||
+         !kest_host_bind(host, "Host.argCount", os_arg_count, NULL) ||
+         !kest_host_bind(host, "Host.arg", os_arg, NULL) ||
+         !kest_host_bind(host, "Host.clock", os_clock, NULL) ||
+         !kest_host_bind(host, "Host.fileRead", os_file_read, NULL) ||
+         !kest_host_bind(host, "Host.fileWrite", os_says_no, NULL) ||
+         !kest_host_bind(host, "Host.fileExists", os_says_no, NULL))) {
         fprintf(stderr, "measure: the host could not bind what it provides\n");
         free(build_took);
         return 2;
