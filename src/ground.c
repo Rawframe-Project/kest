@@ -17,10 +17,12 @@
 #endif
 
 // How far apart two places sit, which is what an address is masked to. Big
-// enough that the shape costs under two per cent of what it holds, small
-// enough that a program holding one piece of text does not ask the host for a
-// megabyte.
-#define PLOT 65536u
+// enough that the shape costs a small part of what it holds, and small enough
+// that a program which makes one piece of text and one run of numbers does not
+// reserve a plot of sixty-four kilobytes for each: every width this hands out
+// has a plot of its own, so the floor is paid once a width rather than once,
+// and a program that makes four kinds of thing pays it four times.
+#define PLOT 16384u
 #define PLOT_MASK (~(uintptr_t)(PLOT - 1))
 
 // The most places one plot can hold, which is what the bitmaps are sized for:
@@ -137,7 +139,6 @@ typedef struct KestGround {
     size_t index_capacity;
     size_t index_count;
     size_t used;
-    size_t asked;
     size_t since;
     size_t taken;
     size_t ceiling;
@@ -370,7 +371,6 @@ static Plot *new_plot(KestGround *ground, size_t width_index, size_t bytes) {
     }
     plot->next = ground->plots;
     ground->plots = plot;
-    ground->asked += bytes + sizeof(Plot);
     return plot;
 }
 
@@ -663,7 +663,6 @@ void kest_ground_sweep(KestGround *ground) {
                 }
             }
             forget_plot(ground, plot);
-            ground->asked -= plot->bytes + sizeof(Plot);
             GROUND_FREE(plot->data);
             free(plot);
         } else {
@@ -725,7 +724,6 @@ void kest_ground_close(KestGround *ground) {
                     *link = plot->next;
                 }
                 forget_plot(ground, plot);
-                ground->asked -= plot->bytes + sizeof(Plot);
                 GROUND_FREE(plot->data);
                 free(plot);
             }
@@ -744,10 +742,6 @@ size_t kest_ground_used(const KestGround *ground) {
 
 size_t kest_ground_taken(const KestGround *ground) {
     return ground == NULL ? 0 : ground->taken;
-}
-
-size_t kest_ground_asked(const KestGround *ground) {
-    return ground == NULL ? 0 : ground->asked;
 }
 
 size_t kest_ground_since(const KestGround *ground) {

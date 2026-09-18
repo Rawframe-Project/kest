@@ -121,11 +121,6 @@ uint32_t kest_ground_open_count(const KestGround *ground);
 // sweep gives places back, which is the whole of why this is here.
 size_t kest_ground_used(const KestGround *ground);
 
-// And what was asked of the host for it, which is the first number plus what
-// the shape of the places costs. A reader comparing the two sees what is being
-// paid for having places that can be had again.
-size_t kest_ground_asked(const KestGround *ground);
-
 // And every byte it has ever handed out, which a sweep does not take back:
 // what a call cost is a difference of two readings of this, where the number
 // above answers what is being held right now.

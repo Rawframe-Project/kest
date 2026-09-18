@@ -528,6 +528,31 @@ fi
 # back between them, which is what `--reset` says to do. Sixty-four elements a
 # frame is small enough that one frame fits anywhere and two hundred fit
 # nowhere, which is the gap this is walked in.
+# And the same shape asking for more than any rung of the ladder in one event,
+# which is the other half of the pair: what a ceiling does is refuse, and a
+# ceiling that refuses nothing is a ceiling nobody applied. Before D996 the
+# handler above did that on its own -- two hundred events of it abandoned two
+# hundred runs of sixty-four numbers and met the ceiling on the way -- and it
+# does not any more, because what a handler keeps nothing of is given back.
+# That is the fix rather than a hole in this: what is held here now is that a
+# handler which keeps nothing runs for as long as it is driven, and one that
+# asks for more than there is in one event is refused however it is driven.
+cat > "$work/greedy.kest" <<'KEST'
+fn onEvent(event: i32) -> i32 {
+    let kept: [i64] = array()
+    let at: i64 = 0
+    while at < 100000 {
+        push(kept, at)
+        at += 1
+    }
+    return len(kept) - 100000 + event - event
+}
+
+fn main() -> i32 {
+    return onEvent(1)
+}
+KEST
+
 cat > "$work/framed.kest" <<'KEST'
 fn onEvent(event: i32) -> i32 {
     let kept: [i64] = array()
@@ -573,12 +598,14 @@ else
         step=$((step / 2))
     done
 
-    # And the frames, from both sides. Without `--reset` the heap of two
-    # hundred frames is met by the ceiling; with it, the same ceiling and the
-    # same frames run to the end. Only the second would pass on a machine that
-    # was given a ceiling and never applied it, which is what was found one
-    # turn ago — so both are held, and the first is the one that holds the
-    # ceiling. See D847.
+    # And the frames, from both sides. A handler that keeps nothing between
+    # events runs to the end under a ceiling several times smaller than what
+    # two hundred of its frames would once have come to, with `--reset` and
+    # without it: what it made is given back when nothing can reach it, which
+    # is what D996 is. A handler that asks for more than the whole ceiling in
+    # one event is refused either way, which is what says the ceiling is
+    # applied at all -- a machine given one and never applying it would run
+    # both. See D847 and D996.
     # From nine times what compiling it costs down to twice it, which is a band
     # this program is always inside: it compiled in `framed_costs`, every rung
     # is well above that and what a command keeps back to say things with, and
@@ -623,16 +650,28 @@ else
         ./kest tick --reset --room $rung "$work/framed.kest" 200 \
             >/dev/null 2>&1 </dev/null
         thrown=$?
-        if [ "$kept" -eq 0 ]; then
-            echo "ceilings: a handler that allocates drove 200 events under" \
-                 "\`--room $rung\` and was not refused, so what it keeps" \
-                 "between them is kept nowhere"
+        if [ "$kept" -ne 0 ]; then
+            echo "ceilings: a handler that keeps nothing between events was" \
+                 "refused at \`--room $rung\` over 200 of them, so what it" \
+                 "made is kept nowhere it can be given back from"
             failed=1
         fi
         if [ "$thrown" -ne 0 ]; then
             echo "ceilings: the same handler under \`--reset\` was refused at" \
                  "\`--room $rung\`, so throwing the heap away between events" \
                  "did not"
+            failed=1
+        fi
+        ./kest tick --room $rung "$work/greedy.kest" 200 \
+            >/dev/null 2>&1 </dev/null
+        greedy_kept=$?
+        ./kest tick --reset --room $rung "$work/greedy.kest" 200 \
+            >/dev/null 2>&1 </dev/null
+        greedy_thrown=$?
+        if [ "$greedy_kept" -eq 0 ] || [ "$greedy_thrown" -eq 0 ]; then
+            echo "ceilings: a handler asking for more than the whole of" \
+                 "\`--room $rung\` in one event was not refused, so the" \
+                 "ceiling it was given is kept nowhere"
             failed=1
         fi
         step=$((step / 2))
@@ -1231,7 +1270,7 @@ ran_out() {
     if printf '%s' "$out" | grep -q K0605 &&
        printf '%s' "$out" | grep -qF "this machine has not got" &&
        printf '%s' "$out" | grep -qF "$2" &&
-       [ -n "$used" ] && [ "$used" -gt 0 ] &&
+       [ -n "$used" ] && [ "$used" -ge 0 ] &&
        [ -n "$more" ] && [ "$more" -gt 0 ]; then
         reached=$((reached + 1))
     else

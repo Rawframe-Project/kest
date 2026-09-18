@@ -5215,7 +5215,7 @@ here, is a check that fails.
 | `camera.kest` | `std.vec` and `std.math` where a camera follows something |
 | `chance.kest` | numbers that look random, and two runs from one seed |
 | `colony.kest` | a world kept and worked on a day at a time, which is a program rather than a rule |
-| `churn.kest` | the same round written to reuse what a thing holds and to replace it, which is what memory costs |
+| `churn.kest` | one round over a world whose live set never changes, written six ways, which is what memory costs |
 | `determinism.kest` | every rule the simulation profile promises, folded into one number |
 | `embed.kest` | the program the engine beside it runs, frame by frame |
 | `events.kest` | the host calling in, one crossing for a batch |
@@ -6162,8 +6162,9 @@ a function that gives nothing back has no `result`, and so has a call that was
 refused before it ran. Beside it is `needs`, in the shape `emit` uses, for the
 function that was called: `emit` answers about the three names a command line
 might call and this is the command that always knows exactly which one it is. `kest tick --json` puts the crossings, what they gave
-back, the peak between calls and what the heap holds at the end in the object,
-and a program that takes no events has neither key. A handler that gives
+back, the peak between calls, what the heap holds at the end and what the run
+was handed altogether in the object, and a program that takes no events has
+neither key. A handler that gives
 nothing has `gave` as null rather than nought, because nothing and nought are
 two answers:
 
@@ -6174,9 +6175,16 @@ two answers:
   "events": {"count": 1024, "lent": null},
   "machine": {"bytes": 296, "slots": 8, "frames": 1},
   "heap": 24,
+  "taken": 24,
   "thrown": 0
 }
 ```
+
+`heap` is what the program is holding when the last event is over and `taken`
+is every byte it was handed on the way: they are the same number for a run that
+keeps everything it makes and they are not for a run that replaces what it
+holds, which is what D996 is. A frame budget is sized by the second and a
+memory budget by the first. `kest call --json` says both as well.
 
 The words say the same six things the object does, `cost` included: what
 reading and compiling the program cost, what the machine is made of, and what

@@ -2458,7 +2458,7 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
-        "caught": "where the bytes and the nought after them are eleven",
+        "caught": "where a place wide enough for the bytes and the nought",
     },
     {
         # A builtin the proof says reaches nothing, reaching. Every promise
@@ -3189,7 +3189,7 @@ for file in "$@"; do""",
         "make": [],
         "tool": "tools/check-ceilings.sh",
         "arguments": [],
-        "caught": "so what it keeps between them is kept nowhere",
+        "caught": "in one event was not refused, so the",
     },
     {
         # The heap kept between frames rather than thrown away. `--reset` is
@@ -12810,21 +12810,24 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "caught": "out of memory a bit at a time and was told",
     },
     {
-        # An arena refused a block of its own by the host, saying nothing about
-        # what it had been asked for. The ceiling's refusal wrote that number
-        # down and the host's did not, so a program made in one go that ran the
-        # machine out said it had asked for nought more.
-        "what": "an arena refused a block that says nothing about what for",
-        "file": "src/mem.c",
-        "from": """            arena->refused = taking;
-            arena->refused_by_ceiling = false;
-            anybody_refused = true;
-            return NULL;
-        }""",
-        "to": """            arena->refused_by_ceiling = false;
-            anybody_refused = true;
-            return NULL;
-        }""",
+        # A plot refused by the host, saying nothing about what it had been
+        # asked for. The ceiling's refusal writes that number down and the
+        # host's did not, so a program made in one go that ran the machine out
+        # said it had asked for nought more. It was the arena that answered
+        # this until D996 moved what a program makes onto the ground.
+        "what": "a plot refused that says nothing about what for",
+        "file": "src/ground.c",
+        "from": """    if (data == NULL) {
+        free(plot);
+        ground->refused = bytes;
+        ground->refused_by_ceiling = false;
+        return NULL;
+    }""",
+        "to": """    if (data == NULL) {
+        free(plot);
+        ground->refused_by_ceiling = false;
+        return NULL;
+    }""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "out of memory in one go and was told",

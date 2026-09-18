@@ -755,14 +755,14 @@ of it, and one was stopped from the thread that was not running it"
 # the rounds and a hundred times the rounds have to answer the same figure,
 # under a room tight enough that nothing can hide in it.
 memory_most() {
-    ./kest profile --room 8M examples/churn.kest -- "$2" "$1" 2>&1 >/dev/null |
+    ./kest profile --room 2M examples/churn.kest -- "$2" "$1" 2>&1 >/dev/null |
         sed -n '1s/.*heap and \([0-9]*\) at most.*/\1/p'
 }
 for shape in replace reuse keep turn nest burst; do
     ten=$(memory_most "$shape" 2000)
     hundred=$(memory_most "$shape" 20000)
     if [ -z "$ten" ] || [ -z "$hundred" ]; then
-        complain "memory" "\`$shape\` would not run in eight megabytes at ten \
+        complain "memory" "\`$shape\` would not run in two megabytes at ten \
 or a hundred times the rounds"
         continue
     fi

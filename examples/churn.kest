@@ -352,7 +352,7 @@ fn main() -> i32 {
                 return 11
             }
         }
-        if doing_burst && i % 4 == 0 {
+        if doing_burst {
             if bursting(burst, i) <= 0 {
                 return 12
             }

@@ -31412,16 +31412,25 @@ eight megabytes:
 
 | | 200 | 2000 | 20000 |
 | --- | --- | --- | --- |
-| `replace` | 1012720 | 1012720 | 1012720 |
-| `reuse` | 877408 | 877408 | 877408 |
-| `keep` | 877408 | 877408 | 877408 |
-| `turn` | 1012720 | 1012720 | 1012720 |
-| `nest` | 1215688 | 1215688 | 1215688 |
-| `burst` | 1080376 | 1215688 | 1215688 |
+| `replace` | 675472 | 678368 | 678496 |
+| `reuse` | 343712 | 343712 | 343712 |
+| `keep` | 343648 | 343648 | 343648 |
+| `turn` | 504576 | 666784 | 666928 |
+| `nest` | 803664 | 803664 | 803664 |
+| `burst` | 667296 | 667296 | 667296 |
 
-The most the machine ever held at once, which is the figure a host makes room
-for; `kest_heap_most` is where a host reads it and `kest profile` prints it.
-`burst` is the one that moves, and it moves once, between the first horizon and
-the second: a world that loses half of itself every fourth round reaches its
-widest moment in the first few hundred rounds and not in the first two hundred.
-*Measured.*
+The most the machine ever held at once, in two megabytes, which is the figure a
+host makes room for: `kest_heap_most` is where a host reads it and
+`kest profile` prints it. Between ten times the rounds and a hundred times, the
+widest of them moves by two hundredths of one per cent and four of the six do
+not move at all. `turn` is the one that moves between the first horizon and the
+second, and it settles: a world whose identities go and come back reaches its
+widest moment in the first thousand rounds and not in the first two hundred.
+
+What it holds at the end of a run is a different number and a noisier one: it
+is wherever the last walk left it, and a machine with room to spare walks less
+often, so a run that ends just before a walk holds what a run that ends just
+after does not. The number above is the one that bounds a host, and the number
+that says the walk is not merely late is the run under a room too small to hide
+in: `replace` runs ten thousand rounds in four megabytes, where before this it
+ran out of sixty-four. *Measured.*
