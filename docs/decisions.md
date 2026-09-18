@@ -31434,3 +31434,100 @@ after does not. The number above is the one that bounds a host, and the number
 that says the walk is not merely late is the run under a room too small to hide
 in: `replace` runs ten thousand rounds in four megabytes, where before this it
 ran out of sixty-four. *Measured.*
+
+## D998. One version, four promises, and the bytecode is not one of them
+
+**Decided.** This is 1.0.0. `include/kest.h` is the one place it is written:
+the Makefile cuts it out of that line for the name of a release archive, and
+`check-docs.sh` holds every document that prints it to a run of
+`kest --version`. Four numbers go out — the version, `KEST_ABI_VERSION`,
+`KEST_JSON_SCHEMA` and the profile — and each of them now says what it promises
+for the whole of 1.x. The reference carries it under *What 1.x promises*.
+
+**Why four and not one.** They move for different reasons and a host asks four
+different questions. A compiler can gain a library module without any object a
+tool reads changing shape; an object can gain a name without anything a host
+links against moving; a host's doors can stay exactly where they are while an
+arithmetic rule is tightened, which is the one thing a replay cares about.
+Tying them together would mean every release breaking somebody for a reason
+that has nothing to do with them. *Argued.*
+
+**What is frozen.** The C ABI: a function keeps its arguments and what it
+answers, a struct keeps its fields and their order, an enum keeps its cases and
+their numbers. What may be added is a function at the end of the header and a
+case at the end of an enum, neither of which a host built against the older
+number can see. Anything more is 2.0. A program that checks under 1.x checks
+under every later 1.x, and a diagnostic keeps its code — the words of a message
+are not promised, because they are written for a reader and are improved.
+
+**What is not a boundary at all.** The bytecode. It is internal, it has no
+version, and it is not promised between two builds of this compiler — not
+between 1.0.0 and 1.0.1 and not between two builds of one commit. What ships is
+the source beside the runtime and a program is compiled by the compiler that
+runs it, so there is nothing for a format to be for. `kest emit` prints it for
+a reader and for this project's own checks; nothing reads it back. Saying so is
+the decision: a format nobody promised is a format somebody eventually depends
+on, and this says out loud that there is nothing there to depend on.
+
+**What a host keeps is the host's.** A `ref<T>` is a place and a stamp in one
+machine's world and means nothing in another, so a saved world carries the
+application's own identifiers and is remapped on the way back in. What the
+machine holds is the shape: a reload compares the layout marks and refuses a
+program whose shapes moved under a world that was saved from them. See D985.
+
+**What holds it.** `check-docs.sh` reads the four numbers out of a run and
+holds every document that prints one to them, and holds the name of the release
+archive to the version as well — the contradiction that made this necessary was
+a reference saying `abi 1, json 1` for months while the machine said four and
+three, with nothing anywhere to notice. *Measured.*
+
+## D997. Six boundaries somebody else's bytes arrive through, not one
+
+**Decided.** The fuzzer takes the name of a boundary as well as a seed and a
+count, and there are six: `source`, what a program is written in; `handles`,
+the handles a host hands over; `lends`, the life of a lend; `refs`, a reference
+into a world being changed underneath it; `text`, bytes handed over as text;
+and `migrate`, a program edited under a world that is already running. The gate
+runs eight seeds of four hundred over every one of them, which is nineteen
+thousand two hundred inputs in nine seconds.
+
+**Why the compiler was not enough.** D984 fuzzed the one boundary a fuzzer
+usually means, and it is the one this project is least likely to get wrong: a
+compiler reads bytes and refuses them, and everything it does is inside its own
+arena. The boundaries that carry real risk are the ones a *host* crosses, where
+memory belongs to somebody else and lifetime is an agreement rather than a
+rule. A handle is four bytes at the front of something and any four bytes can
+be those four; a lend is a header of the machine's in front of a block that is
+not; a reference is a number a host can write. None of them had ever been
+handed anything nobody meant. *Argued.*
+
+**What each holds.** `handles` puts random words, near misses of real handles,
+handles another machine made and pointers into the middle of things through
+every door that takes one, and holds that each answers rather than reads.
+`lends` builds sequences out of begun, read, ended, ended again, read after
+ending, nested over one block and the heap thrown away under all of it, and
+holds that a lend that is open reports the length the host gave it — the class
+of mistake being a descriptor that comes back to life. `refs` hands references
+that were never handed out, and real ones moved by a little so they reach the
+neighbouring place and the next stamp of the same one. `text` hands runs of
+whole and broken characters, including a nought in the middle, and holds that
+what the machine takes comes back byte for byte and as long, and that what it
+refuses still answers with an empty piece of text. `migrate` adds, removes,
+reorders, renames and retypes a field under a world that is running, and holds
+that the world still answers afterwards whether the candidate built or not, and
+that the other machine refuses a world that is not its own.
+
+**What it found.** In the language, nothing: a million two hundred thousand
+inputs over ten seeds of twenty thousand on each of the six, under the
+sanitisers, all clean. What it found on its first run was a misuse of
+`kest_text_bytes` in the harness itself — the door reads two slots, a pointer
+and a length, and it had been handed the address of one. That is worth writing
+down rather than quietly fixing: it is the one door here whose argument is a
+pointer to more slots than its type says, and the first thing that ever handed
+it something carelessly read past the end. The harness now hands it a pair,
+including lengths that have nothing to do with the bytes. *Measured.*
+
+**What is not here.** No corpus directory and nothing written down. A finding
+is a seed, a count and the name of a boundary, which fits in a sentence and
+runs again anywhere. No framework: six functions in one file, each calling the
+subsystem it is about.

@@ -71,7 +71,7 @@ takes about ten minutes on the machine this was written on.
 
 ## What is and is not there
 
-Version 0.1.0. Three states, and nothing is in the first that has not been run.
+Version 1.0.0. Three states, and nothing is in the first that has not been run.
 
 **Implemented.** Whole numbers and floats at every width with defined wrapping
 and narrowing; `text`; `bool`; structs; fixed runs; arrays; `store<T>` handing
@@ -109,9 +109,10 @@ is enough to stop a program that will not stop; it is **not** a claim that this
 is safe to run code you do not trust. What it *is* a claim about is written
 where a reader meets the ceilings, under *What a program may do* in the
 reference: a boundary for code the host wrote or trusts to be cooperative, and
-not a sandbox for code that is trying to get out. There is a fuzzer now and it
-has found nothing in 3200 inputs, which is evidence about the compiler and not a
-threat model.
+not a sandbox for code that is trying to get out. There is a fuzzer now, over
+the six boundaries somebody else's bytes arrive through, and it has found
+nothing in 1.2 million inputs — which is evidence about those six boundaries
+and not a threat model.
 
 **Not implemented, and not planned.** Live code replacement in a running
 machine: a host reloads by building again and starting a new machine, and moving
@@ -157,13 +158,20 @@ what was proved (D976), a formatter, a project manifest and four commands
 **What it is tested on.** Linux x86-64, Windows x86-64 and macOS arm64, all
 three built and run in CI, and held to writing the same bytes for every example
 — which is what makes the deterministic profile a claim rather than a hope. The
-whole gate runs on Linux; a fuzzer of 3200 inputs runs under the sanitisers; the
-thread sanitiser runs four machines of one build at once.
+whole gate runs on Linux; a fuzzer of 19200 inputs over six boundaries runs
+under the sanitisers, and a longer campaign of 1.2 million was run before the
+release; the thread sanitiser runs four machines of one build at once.
 
-**What is still v0.x about it.** The ABI is versioned and not frozen. The
-standard library is small. There is one machine, one target family and no
-optimiser worth the name. And nobody outside this project has written a program
-in it, which is the one thing a repository cannot do for itself.
+**What 1.0 does not mean.** The C ABI is frozen under the 1.x rule written in
+the reference: what a host compiled against `kest.h` sees does not change
+inside 1.x, and a door added at the end is not a change. The bytecode is
+internal and is not a compatibility boundary — what ships is the source beside
+the runtime, and a program is compiled by the compiler that runs it.
+
+What 1.0 is not a claim about: the standard library is small, there is one
+machine, one target family and no optimiser worth the name. And nobody outside
+this project has written a program in it, which is the one thing a repository
+cannot do for itself.
 
 ## Trying it in an hour
 

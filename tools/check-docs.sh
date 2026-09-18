@@ -1113,6 +1113,106 @@ for answered, asked, about in worked_out:
               % (answered, asked, about, said.get('folds'), said.get('asked')))
         failed = 1
 
+# The four numbers this project sends out, held to a run of the thing that
+# prints them. A version in prose is read by people, and people read the
+# sentence rather than the number: the reference said `abi 1, json 1` for
+# months while the machine said four and three, and nothing anywhere noticed
+# because nothing anywhere was asked. Asked of a run, which is the only thing
+# that knows. See D998.
+version_said = subprocess.run(['./kest', '--version'], capture_output=True,
+                              text=True, stdin=subprocess.DEVNULL,
+                              env=dict(os.environ, KEST_LIB='lib'))
+numbered = re.match(r'kest (\S+), abi (\d+), json (\d+), profile (\S+) (\d+)',
+                    version_said.stdout.strip())
+metadata = 0
+if numbered is None:
+    print("docs: `kest --version` said %r, which is not this being named and "
+          "numbered" % version_said.stdout.strip()[:80])
+    failed = 1
+else:
+    this_version, this_abi, this_schema = numbered.group(1, 2, 3)
+    this_profile, this_profiled = numbered.group(4, 5)
+    # And the header the run was built from, because a run reading its own
+    # constants back is not evidence that they are what anybody else compiles
+    # against.
+    the_header = open(os.path.join('include', 'kest.h')).read()
+    constants = [
+        ('KEST_VERSION_STRING', '"%s"' % this_version),
+        ('KEST_ABI_VERSION', this_abi),
+        ('KEST_JSON_SCHEMA', this_schema),
+        ('KEST_PROFILE_NAME', '"%s"' % this_profile),
+        ('KEST_PROFILE_VERSION', this_profiled),
+    ]
+    for constant_name, wanted_value in constants:
+        defined = re.search(r'#define %s (\S+)' % constant_name, the_header)
+        metadata += 1
+        if defined is None or defined.group(1) != wanted_value:
+            print("docs: the header says %s is %s and a run says %s"
+                  % (constant_name,
+                     defined.group(1) if defined else None, wanted_value))
+            failed = 1
+    # Every place a document prints the four together, and every place one
+    # prints the version on its own: the front page's sentence, a manifest a
+    # reader copies out, and the name of the archive a release is.
+    all_four = ('kest %s, abi %s, json %s, profile %s %s'
+                % (this_version, this_abi, this_schema, this_profile,
+                   this_profiled))
+    for document in ('README.md', os.path.join('docs', 'language.md')):
+        document_text = open(document).read()
+        for printed_line in re.findall(r'^kest \d+\.\d+\.\d+, abi .*$',
+                                       document_text, re.M):
+            metadata += 1
+            if printed_line != all_four:
+                print("docs: `%s` says `%s` and a run says `%s`"
+                      % (document, printed_line, all_four))
+                failed = 1
+        for printed_version in re.findall(r'^kest (\d+\.\d+\.\d+)$',
+                                          document_text, re.M):
+            metadata += 1
+            if printed_version != this_version:
+                print("docs: `%s` writes a manifest saying kest %s and a run "
+                      "says %s" % (document, printed_version, this_version))
+                failed = 1
+    front_page = re.search(r'^Version (.+?)\.\s', open('README.md').read(),
+                           re.M)
+    metadata += 1
+    if front_page is None or front_page.group(1) != this_version:
+        print("docs: the front page says version %s and a run says %s"
+              % (front_page.group(1) if front_page else None, this_version))
+        failed = 1
+    # The newest thing the changelog has to say is about the version this is.
+    # There is no `Unreleased` above it and there is not meant to be: a section
+    # with nothing under it is a section that says this is not what it says.
+    newest_section = re.search(r'^## (\S+)', open('CHANGELOG.md').read(), re.M)
+    metadata += 1
+    if newest_section is None or newest_section.group(1) != this_version:
+        print("docs: the changelog's newest section is `%s` and this is %s"
+              % (newest_section.group(1) if newest_section else None,
+                 this_version))
+        failed = 1
+    # And the archive a release is, which is a name built out of the version
+    # rather than a second copy of it -- held so that it stays that way.
+    release_run = subprocess.run(['make', '-n', 'release'],
+                                 capture_output=True, text=True,
+                                 stdin=subprocess.DEVNULL)
+    metadata += 1
+    if ('kest-%s-' % this_version) not in release_run.stdout:
+        print("docs: `make release` builds no archive named for %s"
+              % this_version)
+        failed = 1
+    # And what an editor is told this is, which is the one version written
+    # outside this tree's own documents.
+    extension_text = open(os.path.join('editors', 'vscode',
+                                       'package.json')).read()
+    extension_version = re.search(r'"version": "(\S+)"', extension_text)
+    metadata += 1
+    if (extension_version is None or
+            extension_version.group(1) != this_version):
+        print("docs: the editor extension says version %s and a run says %s"
+              % (extension_version.group(1) if extension_version else None,
+                 this_version))
+        failed = 1
+
 if not failed:
     print('every documented block parses: %u, is in the one form, and checks '
           'and compiles where it stands on its own: %u of %u, the other %u '
@@ -1132,10 +1232,12 @@ if not failed:
           'over, and every `make` a page tells somebody to run is one of the '
           '%u rules there are, and each of the %u number(s) it quotes from a '
           'run is what that run answers, and each of the %u section(s) '
-          'quoting one says whose number it is'
+          'quoting one says whose number it is, and the %u place(s) '
+          'that name what this is and what shape its doors, its '
+          'objects and its arithmetic are in all say what a run says'
           % (checked, made_code, standing, quoting, said_it, whole, fenced,
              messages, shown, typed, called, pointed, operators,
              len(places), len(taken), len(rules), len(worked_out),
-             len(whose_said)))
+             len(whose_said), metadata))
 sys.exit(failed)
 PY

@@ -6,10 +6,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define KEST_VERSION_MAJOR 0
-#define KEST_VERSION_MINOR 1
+// What this is, in the one place it is said. Everything else that names a
+// version reads it from here: the Makefile cuts it out of this line for the
+// name of a release archive, and `tools/check-docs.sh` holds every document
+// that prints it to what a run of `kest --version` says. A number written
+// twice is two numbers the day one of them moves. See D998.
+#define KEST_VERSION_MAJOR 1
+#define KEST_VERSION_MINOR 0
 #define KEST_VERSION_PATCH 0
-#define KEST_VERSION_STRING "0.1.0"
+#define KEST_VERSION_STRING "1.0.0"
 
 // What shape the JSON every command writes is in, which is a different thing
 // from the version above: a compiler that has moved on in ways no tool can see

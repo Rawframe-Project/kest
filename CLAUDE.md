@@ -832,10 +832,16 @@ tools/             Build and development scripts. `make check` runs all of
                    cutting the old one short.
                    `fuzz.c` is not a check and is not in the list above: it
                    is a program the gate runs, which makes inputs from a seed
-                   and hands them to the compiler. What it holds is that every
-                   one of them ends in a program or a refusal. A finding is a
-                   seed and a count, which fits in a sentence, so there is no
-                   corpus directory and nothing is written down. See D984.
+                   and hands them to one of the six boundaries somebody else's
+                   bytes arrive through -- what a program is written in, the
+                   handles a host hands over, the life of a lend, a reference
+                   into a world being changed underneath it, bytes handed over
+                   as text, and a program edited under a world that is already
+                   running. What it holds is that every one of them ends in an
+                   answer or a refusal. A finding is a seed, a count and the
+                   name of a boundary, which fits in a sentence, so there is no
+                   corpus directory and nothing is written down. See D984 and
+                   D997.
                    `check-lends.sh` holds what a host says when it lends: a
                    lend is an address, a count and a name, and a name that
                    means two types is a lend of whichever was found first
@@ -1061,9 +1067,10 @@ reload       the edits a reload has to have an answer for, each driven
              changed, and a program that will not build. Every one of them
              ends with a world -- the new program's or the one the host was
              holding -- and never half of either
-fuzzing      bytes the compiler was not written for, made from eight seeds
-             and handed to it, under the build that checks itself: every one
-             of them a program or a refusal
+fuzzing      bytes nothing here was written for, made from eight seeds and
+             handed to each of the six boundaries they arrive through, under
+             the build that checks itself: every one of them an answer or a
+             refusal
 room         every check handing back the room it took
 ```
 

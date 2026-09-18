@@ -4090,13 +4090,73 @@ keeping a replay or shipping a save writes down beside it. `kest --version`
 prints all four:
 
 ```
-kest 0.1.0, abi 1, json 1, profile kest-det 1
+kest 1.0.0, abi 4, json 3, profile kest-det 1
 ```
 
 The ABI number goes up when anything a host can see changes: arguments, what a
 function answers, a struct's fields or their order, an enum's cases or their
 numbers, or what any of them mean. It does not go up for something added at the
 end, which a host built against the older number does not know about. See D974.
+
+### What 1.x promises
+
+Four numbers, four promises, and they are not the same promise. This is the
+whole of what a program or a host may lean on between one 1.x and the next.
+See D998.
+
+**A program.** A program that checks under 1.x checks under every later 1.x.
+Syntax is added and not taken away; a keyword is added only where a program
+that used the word as a name would be ambiguous, which is the rule the language
+has had throughout. The type system gains types and rules that refuse less, not
+more. The standard library gains functions and modules; a function that is
+there keeps its name, what it takes and what it answers. A diagnostic keeps its
+code: `K0342` means what it meant, because a script that reads codes is a
+script that would otherwise break on a Tuesday. What a message *says* is not
+promised — the words are written for a reader and are improved.
+
+A program that does not check under a later 1.x is a defect in that 1.x, not a
+thing to migrate. 2.0 is what a change that refuses a program is for.
+
+**A host.** The C ABI is frozen: what `KEST_ABI_VERSION` says today is what a
+host compiled against this header sees for the whole of 1.x. A function keeps
+its arguments and what it answers; a struct keeps its fields and their order;
+an enum keeps its cases and their numbers. What may be added is a function at
+the end of the header and a case at the end of an enum — neither of which a
+host built against the older number can see, and neither of which can be read
+as something else. Anything more is 2.0 and a new ABI number. A host compares
+`KEST_ABI_VERSION` with `kest_abi_version()` before it crosses, and a host that
+finds them different stops: the two numbers being equal is the whole of what
+makes the doors below mean what the header says.
+
+**A tool.** The JSON a command writes has its own number, because a compiler
+can move without any object changing and an object can change without the
+compiler moving. `KEST_JSON_SCHEMA` goes up when a name changes what it means,
+goes away, or is added where a reader was told the list was everything — and
+not when a name is added beside the others. A tool reads the number first. A
+tool written for schema 3 reads schema 3 objects for the whole of 1.x.
+
+**A deterministic run.** `kest-det 1` is the profile `deterministic` is a
+promise about. Its number goes up only when what a program can *observe* about
+arithmetic changes: which operations are in it, how each rounds, what is
+refused. A compiler that answers every one of them the same way is the same
+profile however much else moved. A host keeping a replay or a save writes the
+profile down beside it, because a run under one profile and a run under another
+are two runs, and nothing else in these four numbers says so.
+
+**The bytecode is not a boundary.** It is internal, it has no version, and it
+is not promised between any two builds of this compiler — not between 1.0.0 and
+1.0.1, and not between two builds of the same commit on two machines. What
+ships is the source beside the runtime, and a program is compiled by the
+compiler that runs it. `kest emit` prints it for a reader and for this
+project's own checks; nothing reads it back.
+
+**Saved state is the host's.** What a world is saved as is what the host wrote
+down, and the shapes it was written from are held by the layout marks a reload
+compares — that is what refuses a save read back into a program whose shapes
+moved. What is *not* promised is that a reference is an identity: a `ref<T>` is
+a place and a stamp in one machine's world and means nothing in another, which
+is why a host that saves a world saves the application's own identifiers beside
+it and remaps on the way back in. See D985.
 
 ## A project
 
@@ -4119,7 +4179,7 @@ project demo
 entry src/main.kest
 source src
 tests tests
-kest 0.1.0
+kest 1.0.0
 profile kest-det 1
 ```
 

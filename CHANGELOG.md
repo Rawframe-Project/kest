@@ -7,15 +7,36 @@ about the change, not what was built — `docs/worklog.md` is that, and
 
 What each number means and when it moves is in D983.
 
-## Unreleased
+## 1.0.0 — 2026-09-18
 
-Everything below is since 0.1.0 and none of it has been released. The version
-number has not moved because nothing has been tagged; the ABI and schema
-numbers below have, because a host built against the header in 0.1.0 and linked
-against this library would be reading memory that means something else.
+The first version with a number that promises something. What 1.x promises is
+in the reference under *What 1.x promises*, and the short of it is four
+numbers: a program that checks under 1.x checks under every later 1.x, the C
+ABI is frozen, the JSON a tool reads has its own number, and the deterministic
+profile has a third. The bytecode is none of them — it is internal, it has no
+version, and what ships is the source beside the runtime.
 
-**Kest 0.1.0 → unreleased. ABI 1 → 3. JSON schema 1 → 2. Profile kest-det 1,
+**Kest 0.1.0 → 1.0.0. ABI 1 → 4. JSON schema 1 → 3. Profile kest-det 1,
 unchanged.**
+
+What this is: a statically typed language for the simulation half of a game,
+compiled by a C11 library with no dependency beyond libc and run on a bytecode
+machine a host embeds. One resolved semantic representation feeding one stack
+machine — the register backend was built, measured at 1.35x slower and removed.
+Persistent memory is a heap the machine gives back a piece at a time; text is
+UTF-8 with an O(1) byte length and a nought is a character; `scratch { }` is
+lexical working memory the checker refuses to let anything escape; `store<T>`
+hands out generation-checked `ref<T>`; the C ABI is typed handles with leases,
+fuel and cancellation; `kest-det 1` is answered byte for byte on Linux
+x86-64, Windows x86-64 and macOS arm64; a reload is transactional and leaves
+the old world running if the new one will not have it. The tooling is a
+formatter, a language server that is this compiler, a source debugger, a
+profiler and a structural cost report, with a VS Code extension over them.
+Packaged as an archive with a checksum, unpacked and run in CI.
+
+What it is not: a sandbox for code that is trying to get out. The boundary is
+for code the host wrote or trusts to be cooperative, under capabilities and
+budgets the host sets.
 
 ### A program may have to change
 
@@ -46,10 +67,25 @@ unchanged.**
 
 ### A host may have to change
 
-- **`KEST_ABI_VERSION` is 2 and `kest_abi_version()` reads it back.** Compare
+- **`KEST_ABI_VERSION` is 4 and `kest_abi_version()` reads it back.** Compare
   the two at startup: they differ when the header and the library are from two
   versions of this project. `examples/engine.c` does it in its first six lines.
   See D974.
+- **`kest_heap_used` goes down now.** What a program makes and then replaces is
+  given back, so what it answers is what the program is holding rather than a
+  running total. A host that read the difference between two of them to find
+  what a call cost reads `kest_heap_taken`, which is every byte the program has
+  ever been handed and only `kest_heap_reset` moves the other way.
+  `kest_heap_most` is the most it ever held at once, which is the figure a host
+  makes room for. This is the change ABI 4 is for. See D996.
+- **A host that keeps a handle across a call says so.** What a program makes
+  stands on memory the machine gives back when nothing can reach it, and what
+  it walks to decide that is the program's own slots and the worlds they name —
+  not the host's variables. A host either hands its handle back in with the
+  call, which `examples/engine.c` does with the world it drives, or says
+  `kest_keeps`. Without one of the two, a world a host holds and does not pass
+  in is memory nothing names. `kest_lets_go` is the other end of it. See
+  D996.
 - **Seventeen doors were added** and none was taken away: `kest_abi_version`
   and `kest_profile` for what shape things are in, `kest_build_capability` for
   what a program may do, `kest_count`, `kest_counted` and `kest_counted_entry`
@@ -64,10 +100,14 @@ unchanged.**
 
 ### A tool may have to change
 
-- **JSON schema 2.** Every function `kest check --json` writes now carries a
+- **JSON schema 3.** Every function `kest check --json` writes carries a
   `proved` object: what the promises' proof found about that body, and which
-  promise it keeps and does not make. A reader of schema 1 that was told the
-  list was everything has a field it does not know. See D976.
+  promise it keeps and does not make (D976). `kest tick --json` and
+  `kest call --json` carry `taken` beside `heap` — what the run was handed
+  against what it is holding at the end — and `tick` carries `allowed`, what
+  the machine was given to put on the heap. `kest profile --json` carries
+  `most`. A reader of schema 1 or 2 that was told the list was everything has
+  fields it does not know. See D996.
 
 ### New
 
