@@ -5047,7 +5047,7 @@ threw=$("$kest" tick "$scratch"/ticking/ticking.kest 3 --reset 2>&1 </dev/null)
 # away by nobody would say too: what is left on the heap is nought when it has
 # been thrown away and is not when it has not.
 kept_bytes=$(printf '%s\n' "$kept" |
-             sed -n 's/^heap *\([0-9][0-9]*\) bytes, none of it freed$/\1/p')
+             sed -n 's/^heap *\([0-9][0-9]*\) bytes, [0-9][0-9]* taken$/\1/p')
 threw_bytes=$(printf '%s\n' "$threw" |
               sed -n 's/^heap *\([0-9][0-9]*\) bytes, thrown away 3 times$/\1/p')
 if [ -z "$kept_bytes" ] || [ "$kept_bytes" -eq 0 ]; then

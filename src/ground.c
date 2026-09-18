@@ -1,7 +1,26 @@
 #include "ground.h"
 
+// For `KEST_CHECKED`, which is the one thing this file wants from the module
+// above it: whether this build is the one that checks its own work. Asking the
+// compiler again here would be two readings of one question that agree until
+// one of them moves. See D330.
+#include "mem.h"
+
 #include <stdlib.h>
 #include <string.h>
+
+// The sanitised build says when this stops agreeing with itself, and no other
+// build does: what it says it is holding against what its plots have given
+// away. They are the same number and nothing separates them -- a place is
+// handed out whole or not at all, so what is standing on the ground is the
+// width of every place in use and nothing besides. A ceiling is refused
+// against that number, so a number that has drifted is a program stopped early
+// or let past what a host allowed it, and nothing about the program's
+// behaviour would say so. It is a walk of the plots, which is what everything
+// here is written to avoid.
+#if KEST_CHECKED
+#include <stdio.h>
+#endif
 
 // The one place in this tree that asks the host for aligned memory. An address
 // says which place it is in by being masked, so the places have to sit at a
@@ -124,6 +143,10 @@ static KestGroundKind kind_of(const Plot *plot, uint32_t place) {
 }
 
 // Where in a plot a place is, so the two bitmaps and the address agree.
+#if KEST_CHECKED
+static void holds_together(const KestGround *ground, const char *after);
+#endif
+
 static uint32_t place_of(const Plot *plot, const void *at) {
     size_t away = (size_t)((const unsigned char *)at - plot->data);
     return (uint32_t)(away / plot->stride);
@@ -628,6 +651,37 @@ bool kest_ground_mark(KestGround *ground, const void *at) {
     return true;
 }
 
+#if KEST_CHECKED
+static void holds_together(const KestGround *ground, const char *after) {
+    size_t given = 0;
+    size_t places = 0;
+    for (const Plot *plot = ground->plots; plot != NULL; plot = plot->next) {
+        uint32_t in_use = 0;
+        for (uint32_t which = 0; which < plot->places; which++) {
+            if ((plot->used[which / 64] & ((uint64_t)1 << (which % 64))) != 0) {
+                in_use++;
+            }
+        }
+        if (in_use != plot->taken) {
+            fprintf(stderr,
+                    "kest: after %s a plot says %u of its places are in use "
+                    "and %u of them are\n",
+                    after, plot->taken, in_use);
+            abort();
+        }
+        given += (size_t)in_use * plot->stride;
+        places += in_use;
+    }
+    if (given != ground->used) {
+        fprintf(stderr,
+                "kest: after %s this ground says it is holding %zu of the %zu "
+                "its plots gave away, over %zu place(s)\n",
+                after, ground->used, given, places);
+        abort();
+    }
+}
+#endif
+
 void kest_ground_sweep(KestGround *ground) {
     if (ground == NULL || ground->block_count != 0) {
         return;
@@ -673,6 +727,9 @@ void kest_ground_sweep(KestGround *ground) {
         plot = next;
     }
     ground->since = 0;
+#if KEST_CHECKED
+    holds_together(ground, "a sweep");
+#endif
 }
 
 void kest_ground_empty(KestGround *ground) {
@@ -760,6 +817,9 @@ void kest_ground_close(KestGround *ground) {
         }
     }
     block->count = 0;
+#if KEST_CHECKED
+    holds_together(ground, "a block of working memory closing");
+#endif
 }
 
 uint32_t kest_ground_open_count(const KestGround *ground) {

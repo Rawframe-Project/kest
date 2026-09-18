@@ -3158,7 +3158,7 @@ for file in "$@"; do""",
         "make": [],
         "tool": "tools/check-ceilings.sh",
         "arguments": [],
-        "caught": "says nothing about what it took",
+        "caught": "more on the heap, which is",
     },
     {
         # What a run was about to say, thrown away because there was no room to
@@ -5852,7 +5852,7 @@ anywhere, and it is why the gate holds""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "putting a pair in a table and 26 into one told",
+        "caught": "into one told how many were coming",
     },
     {
         # What a tick cost the program, said as nought whatever it cost. It is
@@ -5863,12 +5863,12 @@ anywhere, and it is why the gate holds""",
         # See D908 and D909.
         "what": "what a tick cost the program said as nought",
         "file": "src/main.c",
-        "from": """                    ticked.heap = kest_heap_used(runtime);""",
-        "to": """                    ticked.heap = 0;""",
+        "from": """                    ticked.taken = kest_heap_taken(runtime);""",
+        "to": """                    ticked.taken = 0;""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "the reference says a piece of text costs 13 byte(s) an entity and a run says 0",
+        "caught": "a piece of text costs 32 byte(s) an entity and a run says 0",
     },
     {
         # A count of what the build that checks itself asked that says nought
@@ -7658,7 +7658,7 @@ _Static_assert(MAX_EXTERNS > 1024, "a program may ask for plenty of names");""",
         "to": "    if (fresh) {",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
-        "caught": "was spent in silence",
+        "caught": "was refused for room and still said what was wrong",
     },
     {
         # A machine that lets calls nest deeper than a host allowed. The
@@ -7993,22 +7993,16 @@ const char *kest_scalar_name(uint8_t kind) {""",
         # that missed by eight bytes and one that missed by a megabyte are the
         # same message otherwise, and they are not the same problem.
         "what": "a refusal that does not say what it refused",
-        "file": "src/mem.c",
-        "from": """    if (arena->ceiling != 0 &&
-        arena->handed + arena->also + taking > arena->ceiling) {
-        arena->refused = taking;
-        arena->refused_by_ceiling = true;
-        anybody_refused = true;
-        return NULL;
-    }
-    if (fresh) {""",
-        "to": """    if (arena->ceiling != 0 &&
-        arena->handed + arena->also + taking > arena->ceiling) {
-        arena->refused_by_ceiling = true;
-        anybody_refused = true;
-        return NULL;
-    }
-    if (fresh) {""",
+        "file": "src/ground.c",
+        "from": """    if (ground->ceiling != 0 && ground->used + width > ground->ceiling) {
+        ground->refused = width;
+        ground->refused_by_ceiling = true;
+        return false;
+    }""",
+        "to": """    if (ground->ceiling != 0 && ground->used + width > ground->ceiling) {
+        ground->refused_by_ceiling = true;
+        return false;
+    }""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "said it was reaching for",
@@ -8019,13 +8013,15 @@ const char *kest_scalar_name(uint8_t kind) {""",
         # ceiling costs nothing to ask about, and a ceiling is what reads it: a
         # number that has drifted is a program stopped early or let past what a
         # host allowed it, and neither says a word about where it came from.
-        "what": "a total of what was handed out that is not the sum of it",
-        "file": "src/mem.c",
-        "from": """    if (offset + want + KEPT_BACK <= block->capacity) {
-        block->used = offset + want + KEPT_BACK;
-        arena->handed += taking;""",
-        "to": """    if (offset + want + KEPT_BACK <= block->capacity) {
-        block->used = offset + want + KEPT_BACK;""",
+        "what": "a total of what is held that is not the sum of it",
+        "file": "src/ground.c",
+        "from": """    ground->used += plot->stride;
+    ground->since += plot->stride;
+    ground->taken += plot->stride;
+    unsigned char *at = plot->data + (size_t)place * plot->stride;""",
+        "to": """    ground->since += plot->stride;
+    ground->taken += plot->stride;
+    unsigned char *at = plot->data + (size_t)place * plot->stride;""",
         "make": ["debug"],
         "binary": "kest-debug",
         "program": "grew.kest",
@@ -8039,7 +8035,7 @@ fn main() -> i32 {
     return len(many) - 40000
 }
 """,
-        "caught": "its blocks gave away",
+        "caught": "its plots gave away",
     },
     {
         # An allocation that arrives holding what was there before. Everything
