@@ -146,12 +146,15 @@ language (D988), no networking, no graphics.
 shape the doors are in and `kest_abi_version()` reads the same number out of the
 library, so a host compares the two before it crosses and finds out before it
 reads memory that means something else. What moves it, and what moves the other
-three numbers beside it, is D983. It is not frozen — this is v0.x — but it is no
-longer a thing that changes without saying so.
+three numbers beside it, is D983, and what 1.x promises about it is in the
+reference: inside 1.x the doors a host compiled against do not change, and a
+door added at the end of the header is not a change.
 
 ## Where this is
 
-**v0.x**, and what that means concretely rather than as a grade.
+**v1.0.0**, and what that means concretely rather than as a grade: the four
+numbers are frozen under the rule in the reference, and what is below is what
+is behind them.
 
 **What is decided and finished.** One resolved representation the backend reads
 (D962) and the other backend built, measured and rejected by a predeclared rule
@@ -168,8 +171,9 @@ measured and not met (D987).
 (D977), a source debugger whose breakpoints cost a running machine nothing
 (D991), a profiler that counts and does not time (D979), a cost report that says
 what was proved (D976), a formatter, a project manifest and four commands
-(D982), a VS Code extension (D978), and one release archive with a checksum
-(D989).
+(D982), a VS Code extension (D978), and an archive with a checksum on each of
+the two platforms that have one, unpacked, run and built against in CI (D989,
+D1000).
 
 **What it is tested on.** Linux x86-64, Windows x86-64 and macOS arm64, all
 three built and run in CI, and held to writing the same bytes for every example

@@ -43,7 +43,7 @@ a run with a decision knows which is which.
 | --- | --- | --- |
 | the colony's steady state, at 200, 400 and 800 days | 2,370,304 bytes (D940) | 2,338,096 bytes, and still flat: a store keeps a bit a slot rather than a byte (D954) |
 | a frame step an entity | 127 ns (D926), 122 after D931 | 107 to 110 ns, `make time` on this machine, and the number D979 would not pay a third of |
-| what an array of text costs a frame, an entity | 25 bytes (D915) | 38, because a piece of text in one is sixteen bytes rather than eight (D964) |
+| what an array of text costs a frame, an entity | 25 bytes (D915) | 51, and read as what a frame was handed rather than what it still holds: a piece of text in one is sixteen bytes rather than eight (D964), and a step takes a place off a heap that gives places back, which is as wide as the step above what was asked for (D996) |
 | what a frame step runs, an entity | 57 instructions (D958) | 38, after D961 took the two commonest pairs of pushes and D962 gave every constant the same door |
 
 ## Phases
@@ -59,7 +59,10 @@ carries the mission itself; this is what the tree has to show for it.
     1  the semantics this ships           done: the reference is the
                                           normative one and says so, D994
     2  one resolved representation        done  D962
-    3  persistent memory, decided         done  D992, on the trial in D972
+    3  persistent memory, decided         done  D992, on the trial in
+                                          D972, and D996: the heap gives
+                                          places back, so a world replaced in
+                                          place settles instead of climbing
     4  text, bytes and buffer             done  D964, D971, D993
     5  temporary memory and scratch       done  D966, D972
     6  `store` and `ref` placed           done  D975
@@ -78,15 +81,32 @@ carries the mission itself; this is what the tree has to show for it.
     16 project and dependencies           done  D982
     17 tooling                            done  D976, D977, D979, D991
     18 the editor                         done  D978
-    19 packaging                          done  D986 (no amalgamation), D989
+    19 packaging                          done  D986 (no amalgamation),
+                                          D989, D1000: an archive on both
+                                          platforms, unpacked, run and built
+                                          against in CI
     20 platforms and CI                   done: linux, windows, macos
     21 the benchmark suite                done  D980
-    23 fuzz and sanitisers                done  D984
+    23 fuzz and sanitisers                done  D984, D997: six boundaries
+                                          rather than one
     24 validation cleanup                 done  D990
     25 documentation                      done  D994
-    26 versioning and release policy      done  D983
+    26 versioning and release policy      done  D983, D998: this is 1.0.0,
+                                          and what its four numbers promise
+                                          is in the reference
     27 the evaluation package             done: an hour's worth on the front
                                           page, and a release archive
+
+## What shipped, and what it rests on
+
+1.0.0 is tagged and published. What the closeout changed, in the order it was
+done: the heap became a thing a program can be given pieces of back (D996), the
+fuzzer grew from one boundary to the six somebody else's bytes arrive through
+(D997), the version became 1.0.0 with four numbers and a policy for each
+(D998), the gate learned to name what a compiler made and nobody meant to keep
+(D999), and both platforms got an archive that is unpacked, run and built
+against on every commit (D1000). Two defects the gate found on the way are
+D1001 and D1002, and the second is one a machine that is not this one found.
 
 ## What is left, and it is not engineering
 

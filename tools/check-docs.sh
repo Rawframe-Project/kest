@@ -1177,13 +1177,32 @@ else:
                 print("docs: `%s` writes a manifest saying kest %s and a run "
                       "says %s" % (document, printed_version, this_version))
                 failed = 1
-    front_page = re.search(r'^Version (.+?)\.\s', open('README.md').read(),
-                           re.M)
+    front_page_text = open('README.md').read()
+    front_page = re.search(r'^Version (.+?)\.\s', front_page_text, re.M)
     metadata += 1
     if front_page is None or front_page.group(1) != this_version:
         print("docs: the front page says version %s and a run says %s"
               % (front_page.group(1) if front_page else None, this_version))
         failed = 1
+    # And every other way the front page names a version, which is the way this
+    # went wrong: the sentence above said 1.0.0 on the day the section headed
+    # *Where this is* still said **v0.x** and the paragraph about the ABI still
+    # said it was not frozen. One place held and the others free is a front
+    # page that contradicts itself in the archive a release ships. A `v1.x` is
+    # the promise rather than the version and is what the reference calls it,
+    # so what is held is the number the promise is made about.
+    for named in re.findall(r'\bv(\d+)\.(x|\d+(?:\.\d+)?)\b',
+                            front_page_text):
+        metadata += 1
+        said = 'v%s.%s' % named
+        if named[1] == 'x':
+            right = named[0] == this_version.split('.')[0]
+        else:
+            right = said == 'v%s' % this_version
+        if not right:
+            print("docs: the front page says version %s and a run says %s"
+                  % (said, this_version))
+            failed = 1
     # The newest thing the changelog has to say is about the version this is.
     # There is no `Unreleased` above it and there is not meant to be: a section
     # with nothing under it is a section that says this is not what it says.
