@@ -31531,3 +31531,37 @@ including lengths that have nothing to do with the bytes. *Measured.*
 is a seed, a count and the name of a boundary, which fits in a sentence and
 runs again anywhere. No framework: six functions in one file, each calling the
 subsystem it is about.
+
+## D999. What a compiler made, in a tree that is meant to hold what somebody wrote
+
+**Decided.** The gate walks the tree and names anything whose first four bytes
+say a compiler made it — an executable, a library, an object — unless it is one
+of the names `make clean` takes away. The list is read from the Makefile rather
+than written again beside it, because two lists of the same names are one list
+the day somebody adds to the other.
+
+**Why it was needed.** This repository carried `tools/fuzz-debug`, a
+ten-megabyte sanitised executable, and two `.dascache` files from another
+language's compiler. Nobody put them there on purpose: they are what a
+`git add -A` sweeps up after a build, and nothing anywhere looked. A release
+archive built from a tree like that ships them. *Measured.*
+
+**What it reads.** The first four bytes, because that is what a built thing
+says about itself and a written one does not: `7f454c46` for an executable on
+this platform, `4d5a` for one on Windows, the four Mach-O orderings, and
+`213c6172` for a static library. Extensions as well, for the things that carry
+no magic — a cache, an import library, a debug database. Read with `od`, which
+is in the standard set, rather than by asking `file`, which is not on every
+machine this runs on.
+
+**What it found the day it was written.** The four comparators `bench/run.sh`
+builds. They are build outputs and nothing had ever taken them away, so
+`make clean` now does — which is the shape of this check working: it does not
+say a thing is wrong, it says a thing is unexplained, and the fix is to explain
+it in the one place explanations live.
+
+**What watches it.** The gate's own guard rather than a hole: a room with a
+built thing in it, walked, and the sentence it has to answer with looked for. A
+walk that found nothing and a walk that looked at nothing print the same
+nothing, and this is the one check here written inside the gate rather than
+beside it. *Measured.*

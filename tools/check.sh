@@ -1906,6 +1906,72 @@ every one of them an answer or a refusal, under a build that checks itself"
     fi
 fi
 
+# And what is in the tree that a compiler made. A repository carrying a built
+# thing is one where somebody's `git add -A` swept up what their last build
+# left: this one carried a ten-megabyte sanitised fuzzer and two caches of
+# another language's compiler, and nothing anywhere looked. What makes a built
+# thing tellable from a written one is its first bytes -- an executable, a
+# library and an object all say what they are in the first four.
+#
+# What a build may leave is the list `make clean` takes away, read from there
+# rather than written again here: two lists of the same names are one list the
+# day somebody adds to the other. Anything else with those first bytes is
+# something nobody meant to keep. See D999.
+what_a_compiler_made() {
+    allowed=$(sed -n '/^clean:/,/^$/p' "$1"/Makefile |
+              tr -d '\\' | tr ' \t' '\n\n' |
+              sed -n 's/^rm$//;s/^-rf$//;s/^-f$//;/^$/d;/^clean:$/d;p' |
+              tr '\n' ' ')
+    found=""
+    for file in $(cd "$1" && find . -type f \
+            -not -path './build/*' -not -path './.git/*' \
+            -not -name '*.d' | sort); do
+        here=${file#./}
+        case " $allowed " in
+        *" $here "*) continue ;;
+        esac
+        case "$here" in
+        *.o|*.a|*.obj|*.lib|*.pdb|*.exe|*.dll|*.so|*.dylib|*.dascache|core|core.*)
+            found="$found $here"
+            continue
+            ;;
+        esac
+        # The first four bytes, which is what a thing a compiler made says it
+        # is. Read with `od` rather than by asking `file`, which is not on
+        # every machine this runs on.
+        case "$(od -An -tx1 -N4 "$1/$here" 2>/dev/null | tr -d ' \n')" in
+        7f454c46|4d5a*|feedface|feedfacf|cffaedfe|cafebabe|213c6172)
+            found="$found $here"
+            ;;
+        esac
+    done
+    if [ -n "$found" ]; then
+        printf 'something a compiler made is in the tree and `make clean` '
+        printf 'does not take it away:%s\n' "$found"
+    fi
+}
+
+made_by_a_compiler=$(what_a_compiler_made .)
+if [ -n "$made_by_a_compiler" ]; then
+    complain "tree" "$made_by_a_compiler"
+else
+    # And the same walk over a room with a built thing in it, because a walk
+    # that found nothing and a walk that looked at nothing print the same
+    # nothing. This is the gate's own guard, which is what a check written
+    # here has instead of a hole. See D999.
+    mkdir -p "$scratch"/tree/tools
+    cp Makefile "$scratch"/tree/Makefile
+    cp kest "$scratch"/tree/tools/left-behind
+    if ! what_a_compiler_made "$scratch"/tree |
+            grep -q "something a compiler made is in the tree"; then
+        complain "tree" "a room with a built thing in it was walked and \
+nothing was said about it"
+    else
+        say "tree" "nothing a compiler made is in the tree but what \
+\`make clean\` takes away, and a room with one in it is named"
+    fi
+fi
+
 # And what the run leaves on the machine it ran on. Every check above works in
 # a room under this one, so what is still there now is what somebody made and
 # did not take away. The names are printed rather than counted: a check leaves

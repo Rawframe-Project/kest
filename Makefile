@@ -153,10 +153,16 @@ uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/lib/libkest.a
 	rm -rf $(DESTDIR)$(PREFIX)/lib/kest
 
+# Everything a build of this tree leaves behind, which is also the list the
+# gate reads to know what in the tree a compiler made on purpose. Two lists of
+# the same names would be one list the day somebody added to the other, so
+# there is one. The comparators `bench/run.sh` builds are here for that reason:
+# nothing took them away before, and nothing looked. See D999.
 clean:
 	rm -rf build kest kest-debug libkest.a examples/embed \
 	    examples/embed-debug examples/engine examples/engine-debug \
-	    examples/least tools/inward tools/fuzz tools/fuzz-debug
+	    examples/least tools/inward tools/fuzz tools/fuzz-debug \
+	    bench/control-cpp bench/graph-cpp bench/kernel-cpp bench/words-cpp
 
 .PHONY: debug least embed embed-debug engine engine-debug fast check time \
     fuzz release install uninstall clean
