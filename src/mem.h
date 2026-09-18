@@ -98,6 +98,12 @@ size_t kest_arena_askings(const KestArena *arena);
 
 size_t kest_arena_held(const KestArena *arena);
 
+// And how many it has ever handed out, which never goes down. What a stage or
+// a call cost is the difference between two readings of this, and the two
+// numbers above cannot answer that any more: a rewind takes bytes off them,
+// and so does a walk of what a running program can still reach. See D996.
+size_t kest_arena_taken(const KestArena *arena);
+
 // Counts bytes handed out by an arena that has since been freed as bytes this
 // one asked the host for. What it keeps true is that `kest_arena_used` means
 // the same thing it always meant, and that a ceiling refuses the same programs.

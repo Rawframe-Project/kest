@@ -72,6 +72,9 @@ struct KestArena {
     // allocation and walking the blocks to answer would make an arena slower
     // the longer a program runs.
     size_t handed;
+    // And every byte this has ever handed out, which a rewind does not take
+    // back: what something cost is a difference of two readings of it.
+    size_t taken;
     // And what was handed out on its behalf by an arena that has since been
     // given back: the tokens a file is read into live in one of those. A
     // ceiling is refused against both, because what a build asked the host for
@@ -431,6 +434,7 @@ void *kest_arena_alloc(KestArena *arena, size_t size, size_t align) {
     // is what a ceiling refuses.
     arena->head->used = offset + size + KEPT_BACK;
     arena->handed += taking;
+    arena->taken += taking;
     arena->allocations++;
     OPEN(result, size);
     arrives_as_nought(result, size, "an allocation");
@@ -463,6 +467,7 @@ void *kest_arena_extend(KestArena *arena, void *last, size_t was,
     if (offset + want + KEPT_BACK <= block->capacity) {
         block->used = offset + want + KEPT_BACK;
         arena->handed += taking;
+        arena->taken += taking;
         // What was the gap is now part of the thing, and the gap moves to the
         // end of it.
         OPEN(end, taking);
@@ -501,6 +506,7 @@ void *kest_arena_extend(KestArena *arena, void *last, size_t was,
         arena->high = bigger->data + bigger->capacity;
     }
     arena->handed += taking;
+    arena->taken += taking;
     POISON(bigger->data + want, KEPT_BACK);
     arrives_as_nought(bigger->data + was, want - was, "a block the host moved");
     // After what it was given is counted, and not before: a check of the two
@@ -535,6 +541,10 @@ size_t kest_arena_used(const KestArena *arena) {
 
 size_t kest_arena_askings(const KestArena *arena) {
     return arena->allocations;
+}
+
+size_t kest_arena_taken(const KestArena *arena) {
+    return arena->taken;
 }
 
 size_t kest_arena_held(const KestArena *arena) {
