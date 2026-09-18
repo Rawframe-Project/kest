@@ -1536,7 +1536,7 @@ static bool lends_bytes(Engine *engine) {
 // was given and is told so, and one that stays inside it because a store
 // hands back the room of what it drops. The first two say the message and
 // the third says there is nothing to say.
-static bool spends_the_heap(Engine *engine) {
+static bool spends_the_heap(Engine *engine, KestValue kept) {
     // And the other half of a budget, which is what happens when a program
     // spends it. Everything above stays inside a megabyte without trying;
     // this one asks for more, so that the message a host gets is one this
@@ -1670,6 +1670,17 @@ static bool spends_the_heap(Engine *engine) {
                 (int)kest_heap_refused_by(engine->runtime));
         return false;
     }
+    // And what a host kept on the heap that went. Asked here, while nothing
+    // has been made since, because that is the only moment the answer is the
+    // machine's rather than the allocator's: the first thing the machine makes
+    // goes where something was, and a pointer carries no stamp -- so a host
+    // that asks after making anything is asking whether that address is in use
+    // now. See D353 and D996.
+    if (kest_still_holds(engine->runtime, kept)) {
+        fprintf(stderr, "the machine still had text it had thrown away\n");
+        return false;
+    }
+    printf("and the name this host kept is gone with the heap it was on\n");
     printf("and the heap it has now holds %zu bytes\n",
            kest_heap_used(engine->runtime));
 
@@ -5751,18 +5762,13 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    if (!spends_the_heap(&engine)) {
+    // The name this host kept is handed in, because what happens to it is
+    // asked while the heap it was on has just gone and nothing has been made
+    // since. Nothing about the pointer changed; what changed is whose memory
+    // it is, which is the one thing a host cannot see for itself.
+    if (!spends_the_heap(&engine, name[0])) {
         return 1;
     }
-
-    // And after the heap that name was on was thrown away. Nothing about the
-    // pointer this host is holding changed; what changed is whose memory it
-    // is, which is the one thing a host cannot see for itself.
-    if (kest_still_holds(engine.runtime, name[0])) {
-        fprintf(stderr, "the machine still had text it had thrown away\n");
-        return 1;
-    }
-    printf("and the name this host kept is gone with the heap it was on\n");
 
     // Asked before anything else is made, because what that answers about is
     // the memory: the first thing the machine makes goes where the text was,
