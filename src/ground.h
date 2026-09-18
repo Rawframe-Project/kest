@@ -95,6 +95,13 @@ bool kest_ground_mark(KestGround *ground, const void *at);
 // can see, and the place is handed out again to whatever asks next.
 void kest_ground_sweep(KestGround *ground);
 
+// The same ground, emptied: every place given back, every plot handed to the
+// host, and nothing remembered about what it last refused. It is what a host
+// throwing the heap away asks for, and it keeps the ground rather than making
+// another because a machine that resets every frame would otherwise ask the
+// host for the shape of one every frame.
+void kest_ground_empty(KestGround *ground);
+
 // Forgets the marks without giving anything back, which is what a walk that
 // could not finish does: a sweep after a walk that stopped short would give
 // away memory something can still reach, so the walk that stopped short takes

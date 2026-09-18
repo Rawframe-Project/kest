@@ -680,10 +680,14 @@ fn main() -> i32 {
         # raised by a number about another heap, on a machine that has not
         # been refused anything. See D826.
         "what": "a thrown-away heap that still names a refusal",
-        "file": "src/mem.c",
-        "from": r"""    // A new heap has refused nobody.
-    arena->refused = 0;""",
-        "to": r"""    // A new heap has refused nobody.""",
+        "file": "src/ground.c",
+        "from": r"""    // A ground with nothing on it has refused nobody. A host raises a ceiling
+    // by what the last allocation asked for, and one raised by a number about
+    // a heap that has gone is raised for nothing. See D826.
+    ground->refused = 0;""",
+        "to": r"""    // A ground with nothing on it has refused nobody. A host raises a ceiling
+    // by what the last allocation asked for, and one raised by a number about
+    // a heap that has gone is raised for nothing. See D826.""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "still says",

@@ -631,7 +631,12 @@ else
         # run did, because what was spent was spent whether it finished or not.
         # See D849.
         spent=$(printf '%s' "$answered" | sed -n 's/.*"cost":\([0-9]*\).*/\1/p')
-        grew=$(printf '%s' "$answered" | sed -n 's/.*,"heap":\([0-9]*\).*/\1/p')
+        # The widest moment rather than what is left at the end of it. What is
+        # left at the end is wherever the last walk put it, and a machine with
+        # room to spare walks less often -- so a run that ends just before one
+        # holds what a run that ends just after does not. What a ceiling has to
+        # cover is the widest moment. See D996.
+        grew=$(printf '%s' "$answered" | sed -n 's/.*"peak":\([0-9]*\).*/\1/p')
         # The machine beside them, which is the third of the three: what it
         # cost to make and what it may spend saying what happens, weighed
         # together because a wall against the first is a wall against nothing.
@@ -647,19 +652,26 @@ else
                  "heap, which is $((spent + engine + grew))"
             failed=1
         fi
-        ./kest tick --reset --room $rung "$work/framed.kest" 200 \
-            >/dev/null 2>&1 </dev/null
-        thrown=$?
+        # And that `--reset` does what it says, which is now a thing to read
+        # rather than a thing to infer from a refusal: a handler that keeps
+        # nothing between events runs either way, so what tells the two apart
+        # is the machine saying how many times it threw the heap away. See
+        # D996.
+        threw=$(./kest tick --reset --json --room $rung "$work/framed.kest" \
+            200 2>/dev/null </dev/null |
+            sed -n 's/.*"thrown":\([0-9]*\).*/\1/p')
+        kept_it=$(printf '%s' "$answered" |
+            sed -n 's/.*"thrown":\([0-9]*\).*/\1/p')
+        if [ "$threw" != "200" ] || [ "$kept_it" != "0" ]; then
+            echo "ceilings: 200 events under \`--reset\` threw the heap away" \
+                 "$threw time(s) and 200 without it threw it $kept_it, so" \
+                 "throwing the heap away between events did not"
+            failed=1
+        fi
         if [ "$kept" -ne 0 ]; then
             echo "ceilings: a handler that keeps nothing between events was" \
                  "refused at \`--room $rung\` over 200 of them, so what it" \
                  "made is kept nowhere it can be given back from"
-            failed=1
-        fi
-        if [ "$thrown" -ne 0 ]; then
-            echo "ceilings: the same handler under \`--reset\` was refused at" \
-                 "\`--room $rung\`, so throwing the heap away between events" \
-                 "did not"
             failed=1
         fi
         ./kest tick --room $rung "$work/greedy.kest" 200 \

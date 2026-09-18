@@ -5985,9 +5985,10 @@ bool kest_heap_reset(KestRuntime *runtime) {
     kest_arena_reset(runtime->heap);
     // And everything standing on the ground with it, which is what a host
     // that throws the heap away is throwing away: `kest_still_holds` answers
-    // false for every one of them afterwards, the same as it always did.
-    kest_ground_free(runtime->ground);
-    runtime->ground = kest_ground_new();
+    // false for every one of them afterwards, the same as it always did. The
+    // same ground, emptied, for the reason the line above keeps the same
+    // arena.
+    kest_ground_empty(runtime->ground);
     runtime->walk_at = WALK_FLOOR;
     runtime->most = 0;
     runtime->held_count = 0;

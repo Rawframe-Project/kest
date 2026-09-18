@@ -675,6 +675,36 @@ void kest_ground_sweep(KestGround *ground) {
     ground->since = 0;
 }
 
+void kest_ground_empty(KestGround *ground) {
+    if (ground == NULL) {
+        return;
+    }
+    Plot *plot = ground->plots;
+    while (plot != NULL) {
+        Plot *next = plot->next;
+        forget_plot(ground, plot);
+        GROUND_FREE(plot->data);
+        free(plot);
+        plot = next;
+    }
+    ground->plots = NULL;
+    for (size_t which = 0; which < WIDTH_COUNT; which++) {
+        ground->free_plots[which] = NULL;
+    }
+    ground->used = 0;
+    ground->since = 0;
+    ground->taken = 0;
+    // A ground with nothing on it has refused nobody. A host raises a ceiling
+    // by what the last allocation asked for, and one raised by a number about
+    // a heap that has gone is raised for nothing. See D826.
+    ground->refused = 0;
+    ground->refused_by_ceiling = false;
+    for (uint32_t open = 0; open < ground->block_count; open++) {
+        ground->blocks[open].count = 0;
+    }
+    ground->block_count = 0;
+}
+
 void kest_ground_unmark(KestGround *ground) {
     if (ground == NULL) {
         return;
