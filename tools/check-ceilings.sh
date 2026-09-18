@@ -1401,6 +1401,21 @@ walk_the_ladder() {
     while [ $level -le 65536 ]; do
         out=$(ulimit -v $level 2>/dev/null;
               exec ./kest run "$program" 2>&1 </dev/null)
+        # A level the loader cannot map this binary in is not a level the
+        # program ran in, and it does not say `error` -- so a walk that read
+        # only for that word took the bottom of the ladder for the top of it
+        # and then walked no rungs at all. Which of the two happens at a given
+        # level depends on how big the binary is, so a compiler that grows by a
+        # few hundred kilobytes walks from one into the other: this is where it
+        # did, on a machine that was not this one. The walk down already knows
+        # these two sentences; this is the same knowledge at the other end.
+        # See D761 and D1002.
+        case "$out" in
+        *"loading shared libraries"*|*"TLS data structures"*)
+            level=$((level * 2))
+            continue
+            ;;
+        esac
         if [ -n "$out" ] && [ "${out#*error}" = "$out" ]; then
             runnable=$level
             break

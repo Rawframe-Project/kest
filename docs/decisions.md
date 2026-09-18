@@ -31623,3 +31623,31 @@ saying, by failing to fail, exactly what was wrong with it. *Measured.*
 **What else counts digits.** The diagnostic codes, which are `K0` and three:
 they are allocated by stage and stop at `K07xx`, so the fourth digit is the
 stage and there is no thousandth. Those are left alone.
+
+## D1002. The walk up a ladder knows what the walk down knows
+
+**Decided.** The walk that finds the top of a memory ladder skips a level the
+loader could not map this binary in, which is what the walk down it has done
+since D761.
+
+**What went wrong.** There are two ways the loader says a process will not
+start, and only one of them says `error`: below the level where a shared
+library can be mapped is a level where the first thread's own storage cannot be
+made, and that one says `cannot allocate TLS data structures`. The walk up read
+for the word `error` alone, so on a machine where the second came first it read
+the bottom of the ladder as the top — took the lowest level as the one the
+program runs in, walked down from there, met the bottom immediately and reported
+a ladder of no rungs. Every check built on that ladder then said something
+untrue about a program that was fine.
+
+**Why now.** D761 wrote down that which of the two a run meets depends on how
+big the binary is, and that a compiler growing by a few hundred bytes walks
+from one into the other. The compiler grew by a module. On the machine this was
+written on the first message still comes first and the ladder is unchanged; on
+the machine the gate runs on in CI, the second does. One check, two machines,
+two answers — which is the thing a gate exists to catch and, this time, the
+thing it caught. *Measured.*
+
+**What it is not.** Not a defect in the compiler: the address space a program
+needs moved by about a seventh and nothing a program can do changed. The ladder
+was reading one of two sentences and there were two.
