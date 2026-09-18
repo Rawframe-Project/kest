@@ -36291,3 +36291,38 @@ See D1003.
 
 **Runs:** `tools/check-fmt.sh` over every `.kest` in the tree, which says 162
 places as it did before and leaves nothing behind; the whole gate.
+
+## A clock that tells apart what one number adds up
+
+The first thing the post-v1 performance work needed was a measurement it could
+believe. `bench/run.sh` answers 112 ms for `bench/kernel.kest`, and that number
+is a process starting, a program compiling, a machine starting and a program
+running, added together by the shell's clock and reported as the best of five.
+
+`bench/measure.c` is a host with a monotonic clock in it that tells those four
+apart and keeps every sample. On this machine, for that same workload: 1.04 ms
+starting a process, 0.107 ms compiling, 0.033 ms starting a machine, and a call
+whose middle is 99.885 ms, whose ninety-fifth is 108.295, whose worst of twenty
+was 120.745, and whose typical distance from the middle is 1.245. Two tenths of
+one per cent of the 112 was the compiler.
+
+It also answered the mission's second question on the first day, from an
+instrument that was already here: the per-instruction histogram the build that
+checks itself keeps under `KEST_DEEP` (D870). Counts do not depend on the
+build, so those are the instructions the release build runs.
+
+    workload  instructions  moving data
+    kernel      42,661,186      61.9 %
+    control     50,800,316      56.9 %
+    graph        5,295,505      54.4 %
+    words        8,910,318      60.1 %
+
+Between fifty-four and sixty-two per cent of every instruction these four
+workloads run moves a value rather than computing one. `kernel` is the plainest
+of them: two million iterations, each running four `load.k`, four `load2` and
+two `store` to read a four-field struct out of an array, add two numbers to it
+and write the whole of it back. See D1004.
+
+**Runs:** `make bench/measure`; the harness over all four workloads; the
+histogram from `kest-debug` under `KEST_DEEP=1`; `make fast`;
+`tools/check-tables.sh` and `tools/check-docs.sh`.

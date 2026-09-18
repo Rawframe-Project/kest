@@ -118,6 +118,12 @@ time: kest tools/inward
 tools/inward: tools/inward.c libkest.a include/kest.h
 	$(CC) $(WARN) -O2 -Iinclude -o $@ tools/inward.c libkest.a -lm
 
+# What a program costs, told apart rather than added up: compiling, starting,
+# the first call and the call after that, with the tails and the worst rather
+# than the best of five. Not part of `check` either.
+bench/measure: bench/measure.c libkest.a include/kest.h
+	$(CC) $(WARN) -O2 -Iinclude -o $@ bench/measure.c libkest.a -lm
+
 # Where another project looks.
 install: kest libkest.a
 	mkdir -p $(DESTDIR)$(PREFIX)/bin
@@ -178,6 +184,7 @@ clean:
 	rm -rf build kest kest-debug libkest.a examples/embed \
 	    examples/embed-debug examples/engine examples/engine-debug \
 	    examples/least tools/inward tools/fuzz tools/fuzz-debug \
+	    bench/measure \
 	    bench/control-cpp bench/graph-cpp bench/kernel-cpp bench/words-cpp
 
 .PHONY: debug least embed embed-debug engine engine-debug fast check time \

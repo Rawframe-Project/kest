@@ -31696,3 +31696,43 @@ built thing D999's guard plants and confirms the walk names both.
 and it caught the check that was still writing one: the first run after it was
 added complained about a file the same run had just made. That is the thing a
 net is for, and this one found a live defect rather than a residue.
+
+## D1004. Telling apart what a number adds up, and keeping every sample
+
+**Decided.** `bench/measure.c` is a host with a monotonic clock in it. It
+compiles a program and times that, starts a machine and times that, calls the
+entry once and times that, and then calls it as many times as it is asked and
+keeps every sample. What it answers with is the middle, the ninety-fifth, the
+ninety-ninth, the worst, and how far a typical sample is from the middle.
+
+**What was wrong with the one number.** `bench/run.sh` times a whole process
+with the shell's clock and answers the best of five. That is the right shape
+for what it is for — two languages, each run the way somebody runs it — and it
+cannot answer the question optimizing asks. It cannot tell a compiler that got
+slower from a machine that did. Its resolution is the shell's. And the best of
+five is the one sample a game does not care about: what a frame budget is spent
+on is the worst one in a hundred, not the best one in five.
+
+Told apart on `bench/kernel.kest` the first time it ran: 1.04 ms of starting a
+process, 0.107 ms of compiling, 0.033 ms of starting a machine, and 99.885 ms
+of running — against the 112 ms `run.sh` prints for the whole of it. Two
+tenths of one per cent of that number was the compiler, and a reader of the one
+number cannot know that.
+
+**Every sample is kept.** Throwing away a slow one is deciding in advance what
+the machine is allowed to have been doing. What says how much of that there was
+is printed beside the middle: the median distance from the middle, which a
+handful of very slow samples cannot move, where an average and a standard
+deviation both can. The warm-up is a count said in advance and applied the same
+way every time rather than a rule about which samples looked wrong.
+
+**Why a monotonic clock here and not in `tools/inward.c`.** That one is an
+instrument the gate runs on every platform, and it is held to ISO C, which has
+no monotonic clock: it reads `clock()` and says so. This is a bench tool run by
+whoever is optimizing rather than by the gate, so it reads the real one —
+`QueryPerformanceCounter` on Windows, `clock_gettime(CLOCK_MONOTONIC)`
+elsewhere — and prints which it read beside the numbers. The one file in this
+tree that asks for POSIX by name, and it says why where it asks.
+
+**What it is not.** Not part of `make check`, for the reason nothing that
+measures a duration is: a duration is not a pass or a fail.

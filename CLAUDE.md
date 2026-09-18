@@ -79,6 +79,20 @@ bench/             Four shapes of work and what each costs, in this language
                    to claim. The comparators are found rather than built:
                    `bench/run.sh` leaves a row out when what would run it is
                    not there. See D980.
+                   `bench/measure.c` is the other half and the one to read
+                   when a number moved: `bench/run.sh` times a whole process
+                   with the shell's clock and answers the best of five, which is
+                   what comparing two languages wants and cannot say where a
+                   millisecond went. This one is a host with a monotonic clock
+                   in it. It tells apart what is usually added up — compiling,
+                   starting, the first call, and the call after that — and it
+                   keeps every sample rather than the best, so what it answers
+                   with is the middle, the tails, the worst and how spread out
+                   they were. Nothing is thrown away: a sample that was slow
+                   because something else was running is a sample of this
+                   machine, and the dispersion beside the middle is what says
+                   how much of that there was. `make bench/measure` builds it.
+                   See D1004.
 editors/           What an editor needs, and nothing that parses Kest. The
                    VS Code extension is a grammar, a language configuration,
                    snippets and a client that starts `kest lsp`; every
