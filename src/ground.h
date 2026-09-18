@@ -1,0 +1,148 @@
+#ifndef KEST_GROUND_H
+#define KEST_GROUND_H
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
+// What a running program's values stand on, and the one thing the arena under
+// them could not do: give a piece back without giving all of it back.
+//
+// An arena is the right shape for a compiler, where nothing outlives the
+// compilation, and the wrong shape for a world that is kept: a program that
+// writes a new name into a live thing every round abandons the old one, and an
+// arena abandons it forever. Two hundred things over ten thousand rounds is
+// two hundred megabytes of names nothing can reach, and a world with two
+// hundred things in it is not a world that needs two hundred megabytes. See
+// D996.
+//
+// So this is a heap with places in it that can be had again. What decides
+// which is a walk from what the machine can still reach — the machine's slots
+// and the worlds it holds — rather than a count kept on each value, because a
+// count on each value is a cost paid by every program on every copy for the
+// sake of the ones that churn, and because what a slot holds is not always the
+// start of the thing it names: a piece of text cut out of another names a
+// place inside it, and so does the address of an element. A walk finds the
+// thing an inside place is inside of; a count could not have been kept on one.
+typedef struct KestGround KestGround;
+
+// What a place holds, which a walk has to know before it reads it: a pointer
+// found in a slot is eight bytes that look like an address, and what is at
+// that address is whatever the machine put there. Guessing by reading a tag
+// out of the thing itself would read a piece of text as a handle the first
+// time four bytes of somebody's name spelled one.
+typedef enum {
+    // Bytes with nothing in them to follow: a piece of text, and the runs a
+    // world keeps beside its places.
+    KEST_GROUND_PLAIN,
+    // An `Array` header.
+    KEST_GROUND_ARRAY,
+    // The elements of one, which say what they are at the front of themselves
+    // so a walk that met them without meeting the header can still read them.
+    KEST_GROUND_ELEMS,
+    // A `Store` header.
+    KEST_GROUND_STORE,
+} KestGroundKind;
+
+KestGround *kest_ground_new(void);
+void kest_ground_free(KestGround *ground);
+
+// Room for one value, zeroed, or NULL when there is none. The alignment is the
+// alignment every place has, which is sixteen: the machine asks for eight and
+// for sixteen and nothing wider, so one alignment serves both and a place does
+// not have to say which it is.
+void *kest_ground_take(KestGround *ground, size_t bytes);
+void *kest_ground_take_as(KestGround *ground, size_t bytes,
+                          KestGroundKind kind);
+
+// What the place an address is in holds, and PLAIN for an address this did not
+// hand out — which is safe to read as nothing to follow, because it is.
+KestGroundKind kest_ground_kind(const KestGround *ground, const void *at);
+
+// The start of the thing an address is in, which is what a walk that met a
+// place inside one follows: a piece of text cut out of another names a place
+// inside it, and so does the address of an element. NULL for an address this
+// did not hand out.
+void *kest_ground_start(const KestGround *ground, const void *at);
+
+// Makes the last thing this handed out bigger where the place it is in has the
+// room, which is what a run of bytes growing one element at a time wants: a
+// place of two hundred and fifty-six bytes holds a hundred and twenty-eight
+// before it has to move. Answers where it is now, which is where it was when
+// the place had the room, and NULL when it did not — and then the caller does
+// what it did before: takes a new one and copies.
+void *kest_ground_grow(KestGround *ground, void *was, size_t had, size_t want);
+
+// Whether this handed out the address, which a machine asks of a pointer it
+// was handed from outside: reading one it never gave out is reading whatever
+// is at that address.
+bool kest_ground_holds(const KestGround *ground, const void *at);
+
+// Marks the thing that address is in, whether it is the start of it or a place
+// inside it, and answers whether it was not marked already. False for an
+// address this did not hand out, and false for one already marked — so a walk
+// that follows what it marks terminates on a ring without keeping a list of
+// where it has been.
+bool kest_ground_mark(KestGround *ground, const void *at);
+
+// Gives back every place nothing marked, and forgets the marks. What a place
+// held is not read again, so a value that was there is gone as far as anything
+// can see, and the place is handed out again to whatever asks next.
+void kest_ground_sweep(KestGround *ground);
+
+// Forgets the marks without giving anything back, which is what a walk that
+// could not finish does: a sweep after a walk that stopped short would give
+// away memory something can still reach, so the walk that stopped short takes
+// nothing and leaves the ground as it found it.
+void kest_ground_unmark(KestGround *ground);
+
+// A block of working memory, which is the other way a place is given back: a
+// `scratch { }` block opens one, everything the block takes is remembered
+// against it, and closing it gives all of it back at once. Nothing in the
+// block may outlive it — the checker refuses a block that grows what does, see
+// D972 — so this is the same promise the arena's mark and rewind made, kept
+// against a heap that is not a stack.
+//
+// Answers false when there is no room to remember what a block takes, which is
+// the one way opening one fails.
+bool kest_ground_open(KestGround *ground);
+void kest_ground_close(KestGround *ground);
+// How many are open, so a machine can put itself back if one is left open by a
+// run that stopped in the middle.
+uint32_t kest_ground_open_count(const KestGround *ground);
+
+// What is in places that are handed out, which is what a ceiling is held
+// against and what a host is told a program is holding. It goes down when a
+// sweep gives places back, which is the whole of why this is here.
+size_t kest_ground_used(const KestGround *ground);
+
+// And what was asked of the host for it, which is the first number plus what
+// the shape of the places costs. A reader comparing the two sees what is being
+// paid for having places that can be had again.
+size_t kest_ground_asked(const KestGround *ground);
+
+// And every byte it has ever handed out, which a sweep does not take back:
+// what a call cost is a difference of two readings of this, where the number
+// above answers what is being held right now.
+size_t kest_ground_taken(const KestGround *ground);
+
+// How much has been taken since the last sweep, which is what says when the
+// next one is worth doing.
+size_t kest_ground_since(const KestGround *ground);
+void kest_ground_swept(KestGround *ground);
+
+// The most this may ask the host for, over the places it holds. Nought is no
+// ceiling, which is what it has until somebody says otherwise. Past it a take
+// answers NULL, which is what every caller already handles.
+void kest_ground_cap(KestGround *ground, size_t bytes);
+
+// What the take this last refused was asking for, and nought when it has
+// refused nothing. Read beside the number above by whatever says what
+// happened, because a ceiling that stops a program says what it stopped it at.
+size_t kest_ground_refused(const KestGround *ground);
+
+// Whether the last refusal was the ceiling rather than the host, which are the
+// same number and not the same thing to do anything about.
+bool kest_ground_refused_by_ceiling(const KestGround *ground);
+
+#endif

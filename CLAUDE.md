@@ -897,6 +897,7 @@ Pipeline, in dependency order. Each module depends only on those above it:
 ```
 kest     the public API: what a host sees, and the host itself
 mem      arena allocator, growable buffers
+ground   the heap a running program stands on, and giving places back
 diag     diagnostics, source spans, how near two words are, JSON output
 lexer    source -> tokens
 ast      syntax tree node definitions
