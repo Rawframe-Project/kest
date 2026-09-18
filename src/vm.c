@@ -2197,7 +2197,7 @@ static unsigned char *elements_grown(Vm *rt, KestValue *reach, Array *array,
 // many were asked for: a place is as wide as the step above what was asked
 // for, and a caller that fills it grows fewer times and copies less. What is
 // past the length is nought, because that is what the place was handed out as.
-static uint32_t all_it_holds(Vm *rt, const unsigned char *bytes,
+static uint32_t all_it_holds(Vm *rt, unsigned char *bytes,
                              const KestLayout *layout, uint32_t asked) {
     if (bytes == NULL || layout->size == 0) {
         return asked;
@@ -2207,8 +2207,18 @@ static uint32_t all_it_holds(Vm *rt, const unsigned char *bytes,
         return asked;
     }
     size_t holds = (room - sizeof(Elems) - 1) / layout->size;
-    return holds > asked ? (holds > UINT32_MAX ? asked : (uint32_t)holds)
-                         : asked;
+    if (holds <= asked || holds > UINT32_MAX) {
+        return asked;
+    }
+    // Asked for through the door that grows one, because what is past what was
+    // asked for is not the caller's until it says so: the sanitised build has
+    // the rest of the place closed, and this is where it opens.
+    if (kest_ground_grow(rt->ground, ((Elems *)(void *)bytes) - 1,
+                         sizeof(Elems) + (size_t)asked * layout->size + 1,
+                         sizeof(Elems) + holds * layout->size + 1) == NULL) {
+        return asked;
+    }
+    return (uint32_t)holds;
 }
 
 // Room for that many, which is what growing is and what being told how many

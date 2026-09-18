@@ -7655,7 +7655,7 @@ _Static_assert(MAX_EXTERNS > 1024, "a program may ask for plenty of names");""",
         return false;
     }
     return true;""",
-        "to": "    (void)width;\n    return true;",
+        "to": "    (void)ground;\n    (void)width;\n    return true;",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "was spent in silence",
@@ -11799,7 +11799,12 @@ static const Keyword KEYWORDS[] = {
     return len(xs) - 40
 }
 """,
-        "caught": "use-after-poison",
+        # A crash of no particular kind rather than one by name: a value ends
+        # where it was asked to end and the sanitiser keeps one shadow byte for
+        # every eight, so a read running off a value whose end falls inside one
+        # of those lands half in memory it may read. It is still a crash and it
+        # is still this read. See D996.
+        "caught": "unknown-crash",
     },
     {
         # A heap that ran out, freed by the machine that is standing on it.

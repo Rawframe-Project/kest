@@ -606,8 +606,15 @@ int main(int argc, char **argv) {
             fprintf(stderr, "a query that makes text cost nothing\n");
             return 1;
         }
+        // Back to where it was, or under it. A mark used to be a place on an
+        // arena and a rewind put the heap back to exactly that place; what a
+        // rewind does now is the walk, and a walk gives back everything
+        // nothing can reach rather than everything since the mark. So a
+        // reading taken before the mark may itself have held what a walk would
+        // have taken, and the number after one is at most the number before.
+        // See D957 and D996.
         if (!kest_scratch_rewind(engine.runtime, mark) ||
-            kest_heap_used(engine.runtime) != before) {
+            kest_heap_used(engine.runtime) > before) {
             kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
             fprintf(stderr, "the heap did not go back to where it was\n");
             return 1;

@@ -9,6 +9,31 @@
 #include <stdlib.h>
 #include <string.h>
 
+// A place is one allocation as far as the host is concerned only when it is
+// the whole of a plot, so reading one element past the end of something in a
+// plot is memory this file owns and nothing anywhere says a word about it. The
+// sanitised build is told instead: a plot is poisoned when it is taken, a
+// place is opened to what was asked for and no further, and a place given back
+// is closed again. Off the end of a thing is the read this project has got
+// wrong before, and this is what makes it visible -- the arena beside this one
+// has said it since D786, and what a program makes moved off the arena.
+//
+// Opened to what was asked for and not a byte further, which is what makes a
+// read one element past the end of a value visible: a place is wider than the
+// value in it, and every byte of the difference is closed. The sanitiser keeps
+// one shadow byte for every eight, so a value that ends in the middle of one
+// leaves that step half open and a read running off it is reported as a crash
+// of no particular kind rather than by name -- which is still a crash, and
+// still the read this is here to find.
+#if KEST_CHECKED
+#include <sanitizer/asan_interface.h>
+#define POISON(at, bytes) __asan_poison_memory_region((at), (bytes))
+#define OPEN(at, bytes) __asan_unpoison_memory_region((at), (bytes))
+#else
+#define POISON(at, bytes) ((void)(at), (void)(bytes))
+#define OPEN(at, bytes) ((void)(at), (void)(bytes))
+#endif
+
 // The sanitised build says when this stops agreeing with itself, and no other
 // build does: what it says it is holding against what its plots have given
 // away. They are the same number and nothing separates them -- a place is
@@ -193,6 +218,7 @@ void kest_ground_free(KestGround *ground) {
     Plot *plot = ground->plots;
     while (plot != NULL) {
         Plot *next = plot->next;
+        OPEN(plot->data, plot->bytes);
         GROUND_FREE(plot->data);
         free(plot);
         plot = next;
@@ -369,6 +395,7 @@ static Plot *new_plot(KestGround *ground, size_t width_index, size_t bytes) {
     plot->width_index = (uint16_t)width_index;
     plot->bytes = bytes;
     plot->data = data;
+    POISON(data, bytes);
     if (width_index < WIDTH_COUNT) {
         plot->stride = WIDTHS[width_index];
         plot->places = (uint32_t)(bytes / plot->stride);
@@ -448,6 +475,7 @@ static void give_back(KestGround *ground, Plot *plot, uint32_t place) {
         return;
     }
     plot->used[place / 64] &= ~bit;
+    POISON(plot->data + (size_t)place * plot->stride, plot->stride);
     plot->taken--;
     ground->used -= plot->stride;
     if (place < plot->hint) {
@@ -516,6 +544,7 @@ static void *room_in_a_plot(KestGround *ground, size_t bytes) {
         ground->used += plot->stride;
         ground->since += plot->stride;
         ground->taken += plot->stride;
+        OPEN(plot->data, bytes);
         memset(plot->data, 0, bytes);
         if (!remember(ground, plot->data)) {
             give_back(ground, plot, 0);
@@ -585,7 +614,8 @@ static void *room_in_a_plot(KestGround *ground, size_t bytes) {
     ground->since += plot->stride;
     ground->taken += plot->stride;
     unsigned char *at = plot->data + (size_t)place * plot->stride;
-    memset(at, 0, plot->stride);
+    OPEN(at, bytes);
+    memset(at, 0, bytes);
     if (!remember(ground, at)) {
         give_back(ground, plot, place);
         return NULL;
@@ -610,6 +640,7 @@ void *kest_ground_grow(KestGround *ground, void *was, size_t had, size_t want) {
     // What a place holds past what was asked for is nought, because that is
     // what it was handed out as, and growing into it must not turn up what a
     // value that used to be there left behind.
+    OPEN((unsigned char *)was + had, want - had);
     memset((unsigned char *)was + had, 0, want - had);
     return was;
 }
@@ -717,6 +748,7 @@ void kest_ground_sweep(KestGround *ground) {
                 }
             }
             forget_plot(ground, plot);
+            OPEN(plot->data, plot->bytes);
             GROUND_FREE(plot->data);
             free(plot);
         } else {
@@ -740,6 +772,7 @@ void kest_ground_empty(KestGround *ground) {
     while (plot != NULL) {
         Plot *next = plot->next;
         forget_plot(ground, plot);
+        OPEN(plot->data, plot->bytes);
         GROUND_FREE(plot->data);
         free(plot);
         plot = next;
@@ -811,6 +844,7 @@ void kest_ground_close(KestGround *ground) {
                     *link = plot->next;
                 }
                 forget_plot(ground, plot);
+                OPEN(plot->data, plot->bytes);
                 GROUND_FREE(plot->data);
                 free(plot);
             }
