@@ -15315,6 +15315,99 @@ fn main() -> i32 {
         "arguments": ["docs/language.md", "docs/decisions.md"],
         "caught": "and there is no such file",
     },
+    {
+        # The four numbers this project sends out, one hole each. A version in
+        # prose was wrong for months because nothing asked; what makes the
+        # asking worth having is that each of these has been seen catching it.
+        # See D998.
+        #
+        # The library saying one number and the header another, which is the
+        # one a host cannot see for itself: it compiles against the header and
+        # links against whatever is there.
+        "what": "a library that says another number than its header",
+        "file": "src/kest.c",
+        "from": """    return KEST_ABI_VERSION;""",
+        "to": """    return KEST_ABI_VERSION + 5;""",
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "the header says KEST_ABI_VERSION is",
+    },
+    {
+        # The reference printing what a run of `--version` does not say, which
+        # is what it did: `abi 1, json 1` while the machine said four and
+        # three.
+        "what": "a reference that prints another number than a run",
+        "file": "docs/language.md",
+        "from": """kest 1.0.0, abi 4, json 3, profile kest-det 1""",
+        "to": """kest 1.0.0, abi 1, json 1, profile kest-det 1""",
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "abi 1, json 1, profile kest-det 1` and a run says",
+    },
+    {
+        # A manifest a reader copies out of the reference, naming a version
+        # this is not.
+        "what": "a manifest in the reference naming another version",
+        "file": "docs/language.md",
+        "from": """tests tests
+kest 1.0.0""",
+        "to": """tests tests
+kest 9.9.9""",
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "writes a manifest saying kest 9.9.9",
+    },
+    {
+        # The front page, which is the one document read by somebody who has
+        # read none of the others.
+        "what": "a front page naming another version",
+        "file": "README.md",
+        "from": """Version 1.0.0. Three states""",
+        "to": """Version 9.9.9. Three states""",
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "the front page says version 9.9.9",
+    },
+    {
+        # A changelog whose newest section is about something else, which is
+        # what an unreleased version looks like from outside.
+        "what": "a changelog whose newest section is not this version",
+        "file": "CHANGELOG.md",
+        "from": """## 1.0.0 — 2026-09-18""",
+        "to": """## Unreleased""",
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "the changelog's newest section is",
+    },
+    {
+        # The archive a release is, named out of a number of its own rather
+        # than read from the one place a version is written.
+        "what": "a release archive named out of its own number",
+        "file": "Makefile",
+        "from": """RELEASE := kest-$(KEST_VERSION)-$(shell uname -s | tr A-Z a-z)-$(shell uname -m)""",
+        "to": """RELEASE := kest-0.1.0-$(shell uname -s | tr A-Z a-z)-$(shell uname -m)""",
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "builds no archive named for",
+    },
+    {
+        # And the one version written outside this tree's own documents, which
+        # is what a marketplace shows and what an editor installs.
+        "what": "an editor extension naming another version",
+        "file": "editors/vscode/package.json",
+        "from": """  "version": "1.0.0",""",
+        "to": """  "version": "9.9.9",""",
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "the editor extension says version 9.9.9",
+    },
 ]
 
 failed = 0
