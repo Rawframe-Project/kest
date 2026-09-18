@@ -36461,3 +36461,42 @@ small array: 139 against 119. None of those is what somebody would guess.
 
 **Runs:** `ROUNDS=100000 SAMPLES=20 sh bench/families.sh`; `kest run
 bench/micro.kest` for its own checks; `make fast`; `tools/check-tables.sh`.
+
+## What the heap did, and the number that changes the plan
+
+`kest_telemetry` is a door and `kest_clock` is the other half of it. The first
+answers what the memory under a program did — places handed out, bytes asked
+for against the bytes the places they came from are worth, things that grew
+where they stood, walks and what they gave back, plots asked of the host and
+handed back, blocks opened, lends, and bytes copied because something outgrew
+its place. The second hands the machine the clock it times its own walks with,
+because the library is ISO C and there is no monotonic clock in one.
+
+Nothing is turned on to get any of it: every one is at an allocation, a walk or
+a lend, where D979's count per instruction was at every instruction. A second
+struct and a second door rather than more fields on `KestCounted`, because the
+fields of a struct are what the ABI number is about and 1.x does not move it.
+
+`bench/agents.kest`, ten calls of about six hundred milliseconds:
+
+    13,862,628 allocations asking 1,274,913,888 bytes, cut from 1,551,912,576
+     4,225,356 of them grew where they stood
+        90,757,668 bytes copied because something outgrew its place
+           103 walks gave back 1,528,876,064 bytes over 5,075 root slots
+        49,017 plots asked of the host, 47,860 handed back
+
+Two numbers out of that change what this mission does next. The ladder of
+widths costs **twenty-one per cent** — a hundred and thirty bytes asked for
+lives in a place of a hundred and ninety-two. And the collector: the walks took
+955 ms of the run, the middle call spent **79.9 ms of its 595 in them, thirteen
+per cent**, and **the longest single walk took 13.5 ms**. A frame at sixty
+hertz has 16.7 to spend. That is not a slow program; it is a missed frame.
+
+`bench/measure` reads the door on either side of every timed call and keeps the
+differences, so the distribution is the host's arithmetic and the library never
+learns what a percentile is. See D1007.
+
+**Runs:** `bench/measure bench/agents.kest`; `examples/embed` and
+`examples/engine`, which call both new doors and the refusals beside them;
+`tools/check-dead.sh`, `tools/check-header.sh`, `tools/check-docs.sh`,
+`tools/check-tables.sh`; `make fast`.

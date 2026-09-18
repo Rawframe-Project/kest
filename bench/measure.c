@@ -217,6 +217,11 @@ static void os_says_no(KestValue *frame, KestRuntime *runtime, void *context) {
     frame[0].integer = 0;
 }
 
+static uint64_t a_clock(void *context) {
+    (void)context;
+    return (uint64_t)in_nanoseconds();
+}
+
 static void how_to_run(void) {
     fprintf(stderr,
             "usage: measure <file.kest> [options]\n"
@@ -330,6 +335,9 @@ int main(int argc, char **argv) {
     if (room != 0) {
         kest_heap_allow(runtime, room);
     }
+    /* The clock the machine times its own walks with, which is this host's
+       because the library is ISO C and has no monotonic one. */
+    kest_clock(runtime, a_clock, NULL);
 
     int32_t entry = kest_entry(runtime, entry_name);
     if (entry < 0) {
@@ -377,7 +385,11 @@ int main(int argc, char **argv) {
     }
 
     long long *call_took = malloc(sizeof *call_took * (size_t)samples);
-    if (call_took == NULL) {
+    /* What the walks took inside each timed call, which is the number a frame
+       budget is spent by: a collection that takes twelve milliseconds is not
+       a slow program, it is a frame that was missed. */
+    long long *walk_took = malloc(sizeof *walk_took * (size_t)samples);
+    if (call_took == NULL || walk_took == NULL) {
         fprintf(stderr, "measure: no room to keep the samples\n");
         free(build_took);
         free(frame);
@@ -388,9 +400,14 @@ int main(int argc, char **argv) {
         for (uint32_t a = 0; a < arg_count; a++) {
             frame[a].integer = args[a];
         }
+        KestTelemetry was = {0};
+        kest_telemetry(runtime, &was);
         long long before = in_nanoseconds();
         bool went = kest_call(runtime, entry, frame, wide);
         call_took[i] = in_nanoseconds() - before;
+        KestTelemetry now = {0};
+        kest_telemetry(runtime, &now);
+        walk_took[i] = (long long)(now.walked - was.walked);
         if (!went) {
             kest_report(runtime, stderr, KEST_FORM_TEXT);
             free(build_took);
@@ -401,9 +418,12 @@ int main(int argc, char **argv) {
     }
     KestCounted counted = {0};
     kest_counted(runtime, &counted);
+    KestTelemetry heap = {0};
+    kest_telemetry(runtime, &heap);
 
     Spread building = spread_of(build_took, builds);
     Spread calling = spread_of(call_took, samples);
+    Spread walking = spread_of(walk_took, samples);
     size_t held = kest_heap_used(runtime);
     size_t taken = kest_heap_taken(runtime);
     size_t most = kest_heap_most(runtime);
@@ -430,6 +450,27 @@ int main(int argc, char **argv) {
            "most\n",
            (unsigned long long)held, (unsigned long long)taken,
            (unsigned long long)most);
+    printf("%llu allocation(s) asking %llu byte(s) and given %llu, %llu grown "
+           "where they stood, %llu byte(s) copied\n",
+           (unsigned long long)heap.allocations, (unsigned long long)heap.asked,
+           (unsigned long long)heap.given, (unsigned long long)heap.grown,
+           (unsigned long long)heap.copied);
+    printf("%llu walk(s) gave back %llu byte(s) over %llu root slot(s); "
+           "%llu plot(s) made and %llu handed back; %llu block(s)\n",
+           (unsigned long long)heap.sweeps, (unsigned long long)heap.reclaimed,
+           (unsigned long long)heap.roots,
+           (unsigned long long)heap.plots_made,
+           (unsigned long long)heap.plots_freed,
+           (unsigned long long)heap.blocks);
+    if (heap.walked > 0) {
+        printf("the walks took %.3f ms in all and the longest %.3f ms\n",
+               (double)heap.walked / 1e6, (double)heap.worst_walk / 1e6);
+        say_spread("walking", walking);
+        printf("%-14s %9.1f%% of the middle call\n", "which is",
+               calling.middle == 0
+                   ? 0.0
+                   : 100.0 * (double)walking.middle / (double)calling.middle);
+    }
 
     if (as_json) {
         printf("{\n");
@@ -467,6 +508,7 @@ int main(int argc, char **argv) {
 
     free(build_took);
     free(call_took);
+    free(walk_took);
     free(frame);
     kest_runtime_free(runtime);
     kest_build_free(build);

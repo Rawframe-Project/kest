@@ -4229,6 +4229,25 @@ far, and `kest_counted_entry` says how many times one function was entered, by
 the number `kest_entry` answered with. A machine nobody asked pays one test of
 a pointer that is nothing.
 
+And what the heap under the program did about all that, which is a second
+question with a second door: `kest_telemetry` fills a `KestTelemetry` with the
+places handed out, the bytes asked for against the bytes the places they were
+cut from are worth, the things that grew where they stood, the walks and what
+they gave back, the plots asked of the host and handed back, the blocks of
+working memory opened, the lends and what was in them, and the bytes copied
+because something outgrew its place. There is nothing to turn on: every one of
+those is at an allocation, a walk or a lend, and a program runs millions of
+instructions between any two of them.
+
+Two of its fields are nought until a host says otherwise. `kest_clock` gives a
+machine the clock it times its own walks with, and what that clock counts in is
+the host's to decide — this library is ISO C and there is no monotonic clock in
+it, so a duration comes from outside the way everything outside does. Nothing a
+program can write reaches it and nothing a program answers changes when it is
+set. A host that wants the distribution rather than the total reads the door on
+either side of each frame and keeps the differences, which is what
+`bench/measure.c` does.
+
 ## Stopping a program
 
 `kest debug` runs a program with breakpoints in it:

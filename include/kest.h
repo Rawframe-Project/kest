@@ -1085,6 +1085,69 @@ typedef struct {
     size_t most;
 } KestCounted;
 
+// What the memory under a program did, which is counted always rather than
+// only when somebody asked: every one of these is at an allocation, a walk, a
+// lend or a copy, and a program runs millions of instructions between any two
+// of them. `KestCounted` above is what the program did; this is what the heap
+// under it did about that. See D1007.
+//
+// It is a struct of its own and a door of its own rather than more fields on
+// `KestCounted`, because the fields of a struct a host has compiled against
+// are what `KEST_ABI_VERSION` is about and 1.x does not move that: what a
+// minor version may add is a door.
+typedef struct {
+    // Places handed out, bytes asked for, and what the places they were cut
+    // from are worth. The second against the third is what the ladder of
+    // widths costs -- a run of a hundred and thirty bytes is in a place of a
+    // hundred and ninety-two -- and it is the one number nothing else says.
+    uint64_t allocations;
+    uint64_t asked;
+    uint64_t given;
+    // Times something grew where it stood rather than moving and being
+    // copied, which is what a run filled one element at a time wants.
+    uint64_t grown;
+    // Walks that swept, and the bytes they gave back.
+    uint64_t sweeps;
+    uint64_t reclaimed;
+    // Plots asked of the host and handed back to it, which is the memory the
+    // host sees rather than the memory the program holds.
+    uint64_t plots_made;
+    uint64_t plots_freed;
+    // Blocks of working memory opened, which is every `scratch { }` entered.
+    uint64_t blocks;
+    // What the walks took and what the longest one took, in whatever unit the
+    // clock `kest_clock` was given counts in -- and nought for a machine that
+    // was given none, which is every machine until a host says otherwise.
+    // This library is ISO C and there is no monotonic clock in it, so the
+    // clock is the host's the way every other outside thing is. See D935.
+    uint64_t walked;
+    uint64_t worst_walk;
+    // Slots read loosely, added up over every walk: what a walk of the roots
+    // costs, which is the part of a collection a program controls by how deep
+    // it is standing.
+    uint64_t roots;
+    // Lends begun and elements in them.
+    uint64_t lends;
+    uint64_t lent_elements;
+    // Bytes copied because something outgrew the place it was in. A program
+    // that says how many there will be copies none of them.
+    uint64_t copied;
+} KestTelemetry;
+
+// Answers false for no machine and no room to write into, and true otherwise.
+// There is nothing to turn on: these are counted whether or not anybody asks.
+bool kest_telemetry(const KestRuntime *runtime, KestTelemetry *into);
+
+// The clock a machine times its own walks with. It is the host's because this
+// library is ISO C, which has no monotonic clock, and because a duration is
+// the one thing about a run that belongs to the machine it ran on rather than
+// to the program. What it counts in is the host's to decide and the host's to
+// read back: the machine adds them up and does not interpret them.
+//
+// Nothing in a program can reach it, and nothing about what a program answers
+// changes when it is set -- which is what keeps `deterministic` true.
+void kest_clock(KestRuntime *runtime, uint64_t (*now)(void *), void *context);
+
 // Starts or stops counting. A machine that is not counting pays one test of a
 // pointer that is nothing, and a machine that is asked twice keeps what it had
 // rather than starting again. Returns false when there was no room to count in,

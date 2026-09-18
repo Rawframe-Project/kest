@@ -177,6 +177,18 @@ static uint32_t place_of(const Plot *plot, const void *at) {
     return (uint32_t)(away / plot->stride);
 }
 
+typedef struct Counts {
+    uint64_t allocations;
+    uint64_t asked;
+    uint64_t given;
+    uint64_t grown;
+    uint64_t sweeps;
+    uint64_t reclaimed;
+    uint64_t plots_made;
+    uint64_t plots_freed;
+    uint64_t blocks;
+} Counts;
+
 typedef struct KestGround {
     Plot *plots;
     Plot *free_plots[WIDTH_COUNT];
@@ -202,6 +214,13 @@ typedef struct KestGround {
     } *blocks;
     uint32_t block_count;
     uint32_t block_room;
+    // What this has done, for a host that asked to be told. Counted always
+    // rather than only when somebody is asking, because every one of them is
+    // at an allocation, a sweep or a plot -- a program does millions of
+    // instructions between any two of those, and a counter there costs
+    // nothing measurable where one at the top of the dispatch loop cost a
+    // third of the machine. See D979 for that one and D1007 for these.
+    Counts counted;
 } KestGround;
 
 KestGround *kest_ground_new(void) {
@@ -385,6 +404,7 @@ static bool room_for(KestGround *ground, size_t width) {
 static Plot *new_plot(KestGround *ground, size_t width_index, size_t bytes) {
     Plot *plot = calloc(1, sizeof(Plot));
     unsigned char *data = plot == NULL ? NULL : GROUND_ALLOC(PLOT, bytes);
+    ground->counted.plots_made += data == NULL ? 0 : 1;
     if (data == NULL) {
         free(plot);
         ground->refused = bytes;
@@ -492,6 +512,9 @@ void *kest_ground_take(KestGround *ground, size_t bytes,
     if (at != NULL) {
         Plot *plot = plot_holding(ground, at);
         say_kind(plot, place_of(plot, at), kind);
+        ground->counted.allocations++;
+        ground->counted.asked += bytes;
+        ground->counted.given += plot->stride;
     }
     return at;
 }
@@ -642,6 +665,7 @@ void *kest_ground_grow(KestGround *ground, void *was, size_t had, size_t want) {
     // value that used to be there left behind.
     OPEN((unsigned char *)was + had, want - had);
     memset((unsigned char *)was + had, 0, want - had);
+    ground->counted.grown++;
     return was;
 }
 
@@ -717,6 +741,8 @@ void kest_ground_sweep(KestGround *ground) {
     if (ground == NULL || ground->block_count != 0) {
         return;
     }
+    size_t held = ground->used;
+    ground->counted.sweeps++;
     Plot **link = &ground->plots;
     Plot *plot = ground->plots;
     while (plot != NULL) {
@@ -751,6 +777,7 @@ void kest_ground_sweep(KestGround *ground) {
             OPEN(plot->data, plot->bytes);
             GROUND_FREE(plot->data);
             free(plot);
+            ground->counted.plots_freed++;
         } else {
             plot->hint = 0;
             joined_free(ground, plot);
@@ -758,6 +785,7 @@ void kest_ground_sweep(KestGround *ground) {
         }
         plot = next;
     }
+    ground->counted.reclaimed += held - ground->used;
     ground->since = 0;
 #if KEST_CHECKED
     holds_together(ground, "a sweep");
@@ -817,11 +845,14 @@ bool kest_ground_open(KestGround *ground) {
         }
         memset(grown + ground->block_room, 0,
                (size_t)(bigger - ground->block_room) * sizeof(struct Block));
+        /* Counted where the block is opened rather than here, which is only
+           the list growing. */
         ground->blocks = grown;
         ground->block_room = bigger;
     }
     ground->blocks[ground->block_count].count = 0;
     ground->block_count++;
+    ground->counted.blocks++;
     return true;
 }
 
@@ -884,4 +915,23 @@ size_t kest_ground_refused(const KestGround *ground) {
 
 bool kest_ground_refused_by_ceiling(const KestGround *ground) {
     return ground != NULL && ground->refused_by_ceiling;
+}
+
+void kest_ground_counted(const KestGround *ground, KestGroundCounts *into) {
+    if (into == NULL) {
+        return;
+    }
+    if (ground == NULL) {
+        memset(into, 0, sizeof *into);
+        return;
+    }
+    into->allocations = ground->counted.allocations;
+    into->asked = ground->counted.asked;
+    into->given = ground->counted.given;
+    into->grown = ground->counted.grown;
+    into->sweeps = ground->counted.sweeps;
+    into->reclaimed = ground->counted.reclaimed;
+    into->plots_made = ground->counted.plots_made;
+    into->plots_freed = ground->counted.plots_freed;
+    into->blocks = ground->counted.blocks;
 }

@@ -44,6 +44,33 @@ typedef enum {
     KEST_GROUND_STORE,
 } KestGroundKind;
 
+// What this has done since it was made, for a host or a tool that asked. Each
+// of them is at an allocation, a sweep or a plot rather than at an
+// instruction, so they are always counted: a program runs millions of
+// instructions between any two, where a counter at the top of the dispatch
+// loop cost a third of the machine (D979). See D1007.
+typedef struct {
+    // Places handed out, what was asked for, and what the places they came
+    // from are worth: `asked` against `given` is what the ladder of widths
+    // costs, which is the one number nothing else here says.
+    uint64_t allocations;
+    uint64_t asked;
+    uint64_t given;
+    // Times something grew where it stood rather than moving, which is what a
+    // run of bytes filled one element at a time wants.
+    uint64_t grown;
+    // Walks that swept, and what they gave back.
+    uint64_t sweeps;
+    uint64_t reclaimed;
+    // Plots asked of the host and handed back to it.
+    uint64_t plots_made;
+    uint64_t plots_freed;
+    // Blocks of working memory opened.
+    uint64_t blocks;
+} KestGroundCounts;
+
+void kest_ground_counted(const KestGround *ground, KestGroundCounts *into);
+
 KestGround *kest_ground_new(void);
 void kest_ground_free(KestGround *ground);
 

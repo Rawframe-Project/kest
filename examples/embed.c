@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <string.h>
 
 #include "kest.h"
@@ -141,6 +142,16 @@ static void io_write(KestValue *frame, KestRuntime *runtime, void *context) {
     if (bytes != NULL && length > 0) {
         fwrite(bytes, 1, length, (FILE *)context);
     }
+}
+
+// The clock a machine times its own walks with. It is a host's job because
+// the library is ISO C and there is no monotonic clock in it; what it counts
+// in is this host's to decide, and the machine only adds them up. `clock()` is
+// coarse and is what the standard has, which is the same trade
+// `tools/inward.c` makes and for the same reason.
+static uint64_t host_nanoseconds(void *context) {
+    (void)context;
+    return (uint64_t)clock() * (1000000000ULL / (uint64_t)CLOCKS_PER_SEC);
 }
 
 // What this host decides with, and the reason it is a thing rather than a
@@ -7063,6 +7074,31 @@ int main(int argc, char **argv) {
     // it happens to be, and a frame budget is sized by the worst of a run.
     printf("this machine held %zu bytes at most, and %zu of them now\n",
            kest_heap_most(engine.runtime), kest_heap_used(engine.runtime));
+
+    // And what the heap under it did to get there, which is the other half of
+    // the same question: what it holds is where it ended up, and this is the
+    // work. Nothing was turned on to get it -- every one of these is at an
+    // allocation, a walk or a lend, so they are counted whether or not
+    // anybody asks. See D1007.
+    KestTelemetry did = {0};
+    if (!kest_telemetry(engine.runtime, &did) ||
+        kest_telemetry(NULL, &did) || kest_telemetry(engine.runtime, NULL)) {
+        fprintf(stderr, "what the heap did was not answered for\n");
+        return 1;
+    }
+    if (did.allocations == 0 || did.asked == 0 || did.given < did.asked) {
+        fprintf(stderr, "a run that made things says it made none\n");
+        return 1;
+    }
+    printf("the heap handed out %llu place(s), asked for %llu byte(s) and "
+           "cut them from %llu\n",
+           (unsigned long long)did.allocations, (unsigned long long)did.asked,
+           (unsigned long long)did.given);
+    // The clock is this host's, and a machine that was given one says what
+    // its walks took. A machine given none says nought and runs the same
+    // program: nothing a program answers depends on this.
+    kest_clock(engine.runtime, host_nanoseconds, NULL);
+    kest_clock(NULL, host_nanoseconds, NULL);
 
     // And the other side of the answer: outside a call there is nothing
     // standing on the machine, so this is the free that happens. Nothing takes

@@ -31832,3 +31832,51 @@ body alone, which made it 2059067 against the other two at 2013350. Two
 programs that answer different checksums are two programs. The rule the
 benchmark now holds is the one the mission asks for: the fine path writes the
 body back through the frame it was given.
+
+## D1007. What the heap did, counted always, and a clock the host gives
+
+**Decided.** `kest_telemetry` answers what the memory under a program did:
+places handed out, bytes asked for against the bytes the places they were cut
+from are worth, things that grew where they stood, walks and what they gave
+back, plots asked of the host and handed back, blocks of working memory opened,
+lends and what was in them, and bytes copied because something outgrew its
+place. `kest_clock` gives a machine the clock it times its own walks with.
+
+**Why it is counted always.** D979 measured a count per instruction at a third
+of the machine and refused it, and that reasoning does not carry here: every
+one of these is at an allocation, a walk, a lend or a copy, and a program runs
+millions of instructions between any two of them. There is nothing to turn on
+and nothing to pay when nobody asks.
+
+**Why a second struct and a second door.** `KestCounted` is what a host has
+compiled against, and what `KEST_ABI_VERSION` is about is the fields of a
+struct and their order. 1.x does not move that number. What a minor version may
+add is a door, so this is a door.
+
+**Why the clock is the host's.** The library is ISO C and there is no monotonic
+clock in ISO C — D935 is that decision, and `src/main.c` carries the platform
+halves for the command line rather than the library carrying them for
+everybody. A duration is also the one thing about a run that belongs to the
+machine it ran on rather than to the program. So the machine is handed a
+function, adds up what it says, and does not interpret it. Nothing a program
+can write reaches it; nothing a program answers changes when it is set, which
+is what keeps `deterministic` true.
+
+A host that wants the distribution rather than the total reads the door on
+either side of each frame and keeps the differences. That is what
+`bench/measure.c` does, and it is how the collector's per-frame behaviour was
+measured without the library learning what a percentile is.
+
+**What it said the first time it ran.** `bench/agents.kest`, ten calls of about
+six hundred milliseconds each: 13.86 million allocations asking 1.275 GB and
+cut from 1.552 GB — so the ladder of widths costs twenty-one per cent — 4.2
+million of them grown where they stood, 90.8 MB copied, 103 walks giving back
+1.529 GB over 5075 root slots, 49017 plots asked of the host and 47860 handed
+back.
+
+And the number this was built to find: **the walks took 955 ms of the run, the
+middle call spent 79.9 ms of its 595 in them — thirteen per cent — and the
+longest single walk took 13.5 ms.** A frame at sixty hertz has 16.7 of them to
+spend, so a walk of that size is not a slow program: it is a frame that was
+missed. Measuring it was this decision's job; what to do about it is the next
+thing to be decided and is not decided here.

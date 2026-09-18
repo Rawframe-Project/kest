@@ -608,6 +608,22 @@ struct KestRuntime {
     uint64_t *entered;
     uint32_t entered_room;
     uint64_t crossings;
+    // What the memory under the program did, which a host reads through
+    // `kest_telemetry`. Each of these is at an allocation, a walk, a lend or a
+    // copy rather than at an instruction, so counting them always costs
+    // nothing a run can see. See D1007.
+    //
+    // The clock is the host's, because this library is ISO C and there is no
+    // monotonic clock in it (D935). A host that gives one gets what a walk
+    // took; a host that gives none gets nought there and everything else.
+    uint64_t (*clock)(void *);
+    void *clock_context;
+    uint64_t walked;
+    uint64_t worst_walk;
+    uint64_t roots;
+    uint64_t lends;
+    uint64_t lent_elements;
+    uint64_t copied;
     // How much had been said when this started, and how much of it has been
     // written out since. What failed to compile is not this machine's to
     // report and is not reported twice.
@@ -918,9 +934,12 @@ static void gather(Vm *rt, KestValue *reach) {
     if (rt->ground == NULL || kest_ground_open_count(rt->ground) != 0) {
         return;
     }
+    uint64_t began = rt->clock == NULL ? 0 : rt->clock(rt->clock_context);
     rt->walk_broke = false;
     rt->grey_count = 0;
-    follow_loosely(rt, rt->stack, the_edge(rt, reach));
+    KestValue *edge = the_edge(rt, reach);
+    rt->roots += (uint64_t)(edge - rt->stack);
+    follow_loosely(rt, rt->stack, edge);
     for (uint32_t i = 0; i < rt->hands; i++) {
         follow(rt, rt->in_hand[i]);
     }
@@ -950,6 +969,13 @@ static void gather(Vm *rt, KestValue *reach) {
     kest_ground_sweep(rt->ground);
     size_t standing = kest_ground_used(rt->ground);
     rt->walk_at = standing < WALK_FLOOR ? WALK_FLOOR : standing;
+    if (rt->clock != NULL) {
+        uint64_t took = rt->clock(rt->clock_context) - began;
+        rt->walked += took;
+        if (took > rt->worst_walk) {
+            rt->worst_walk = took;
+        }
+    }
 }
 
 // What this machine handed a host and nothing in the program names. A host
@@ -1464,6 +1490,8 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
     // The block is the host's. The header is ours, and it points at theirs.
     array->bytes = data;
     value.object = array;
+    runtime->lends++;
+    runtime->lent_elements += length;
     return value;
 }
 
@@ -2188,6 +2216,7 @@ static unsigned char *elements_grown(Vm *rt, KestValue *reach, Array *array,
         return NULL;
     }
     if (array->bytes != NULL && array->length > 0) {
+        rt->copied += (uint64_t)array->length * layout->size;
         memcpy(fresh, array->bytes, (size_t)array->length * layout->size);
     }
     return fresh;
@@ -2255,6 +2284,7 @@ static bool room_for(Vm *rt, KestValue *reach, Store *store,
         return false;
     }
     if (store->used > 0) {
+        rt->copied += (uint64_t)sizeof(KestValue) * store->used * store->stride;
         memcpy(elements, store->elements,
                sizeof(KestValue) * store->used * store->stride);
         memcpy(generations, store->generations,
@@ -7009,5 +7039,38 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
     if (returned > 0) {
         memcpy(frame, floor, sizeof(KestValue) * returned);
     }
+    return true;
+}
+
+void kest_clock(KestRuntime *runtime, uint64_t (*now)(void *), void *context) {
+    if (runtime == NULL) {
+        return;
+    }
+    runtime->clock = now;
+    runtime->clock_context = context;
+}
+
+bool kest_telemetry(const KestRuntime *runtime, KestTelemetry *into) {
+    if (runtime == NULL || into == NULL) {
+        return false;
+    }
+    memset(into, 0, sizeof *into);
+    KestGroundCounts ground = {0};
+    kest_ground_counted(runtime->ground, &ground);
+    into->allocations = ground.allocations;
+    into->asked = ground.asked;
+    into->given = ground.given;
+    into->grown = ground.grown;
+    into->sweeps = ground.sweeps;
+    into->reclaimed = ground.reclaimed;
+    into->plots_made = ground.plots_made;
+    into->plots_freed = ground.plots_freed;
+    into->blocks = ground.blocks;
+    into->walked = runtime->walked;
+    into->worst_walk = runtime->worst_walk;
+    into->roots = runtime->roots;
+    into->lends = runtime->lends;
+    into->lent_elements = runtime->lent_elements;
+    into->copied = runtime->copied;
     return true;
 }
