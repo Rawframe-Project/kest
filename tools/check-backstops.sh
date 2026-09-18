@@ -12876,23 +12876,15 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # machine underneath. A host told that raises nothing and gives up on a
         # program that was inside a number it chose.
         "what": "a ceiling kept that answers as the machine underneath",
-        "file": "src/mem.c",
-        "from": """    if (arena->ceiling != 0 &&
-        arena->handed + arena->also + taking > arena->ceiling) {
-        arena->refused = taking;
-        arena->refused_by_ceiling = true;
-        anybody_refused = true;
-        return NULL;
-    }
-    if (fresh) {""",
-        "to": """    if (arena->ceiling != 0 &&
-        arena->handed + arena->also + taking > arena->ceiling) {
-        arena->refused = taking;
-        arena->refused_by_ceiling = false;
-        anybody_refused = true;
-        return NULL;
-    }
-    if (fresh) {""",
+        # The ground rather than the arena, for the reason D996 gives: the
+        # ceiling a program meets is the one on what it holds.
+        "file": "src/ground.c",
+        "from": """        ground->refused = width;
+        ground->refused_by_ceiling = true;
+        return false;""",
+        "to": """        ground->refused = width;
+        ground->refused_by_ceiling = false;
+        return false;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "was blamed on the machine",
@@ -15130,7 +15122,13 @@ fn main() -> i32 {
         "to": r"""            refill(t, len(t.keys) + 1)""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
-        "caught": "which is not twice for twice the work",
+        # Not the doubling any more: a place is wider than what was asked for,
+        # so a run that grows by one pair at a time grows inside the place it
+        # is in and costs about what doubling costs. What it does change is
+        # what a table costs an entity, which goes *down* -- a run told exactly
+        # how many are coming overshoots by nothing -- and the reference says
+        # what a table costs. See D996.
+        "caught": "a table costs 76 byte(s) an entity and a run says 64",
     },
     {
         # A refusal that names a length nobody measured. A cut walks to the

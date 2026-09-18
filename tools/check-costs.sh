@@ -97,7 +97,11 @@ def cost_of(where, name, arguments):
         said = ran.stdout.strip() or ran.stderr.strip()
         print("costs: `%s` could not be asked: %s" % (name, said[:120]))
         return None
-    return json.loads(ran.stdout)['heap']
+    # What it was handed rather than what it is holding when it comes back.
+    # A call that makes a megabyte of text and lets it go holds what a call
+    # that made nothing holds, and what this is weighing is the making. See
+    # D996.
+    return json.loads(ran.stdout)['taken']
 
 
 for name, params in making:
