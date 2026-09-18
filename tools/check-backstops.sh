@@ -7655,7 +7655,7 @@ _Static_assert(MAX_EXTERNS > 1024, "a program may ask for plenty of names");""",
         return false;
     }
     return true;""",
-        "to": "    return true;",
+        "to": "    (void)width;\n    return true;",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "was spent in silence",
@@ -8069,16 +8069,17 @@ fn main() -> i32 {
         "make": ["debug"],
         "binary": "kest-debug",
         "program": "grew.kest",
-        "source": """module grew
-
-fn main() -> i32 {
-    let many: [i32] = array()
-    for i in 0..40000 {
-        push(many, i)
-    }
-    return len(many) - 40000
-}
-""",
+        # Big enough that compiling it takes several blocks, which is what
+        # this is about: a bound that never widens is right while there is one
+        # block and wrong the moment there are two. It used to be the heap
+        # that grew here, and what a program makes is not on an arena any
+        # more. See D996.
+        "source": ("module grew\n\n"
+                   + "".join("fn made%d(n: i32) -> i32 {\n    return n + %d\n}"
+                             "\n\n" % (which, which) for which in range(120))
+                   + "fn main() -> i32 {\n    let many: [i32] = array()\n"
+                     "    for i in 0..40000 {\n        push(many, i)\n    }\n"
+                     "    return len(many) - 40000 + made0(0)\n}\n"),
         "caught": "sits outside what the arena says",
     },
     {
@@ -9138,7 +9139,7 @@ fn main() -> i32 {
                        "this is not a lend this machine gave out");""",
         "to": """    kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0637", nowhere,
                    "this is not a lend this machine gave out");
-    if (!kest_arena_holds(runtime->heap, lent.object) ||
+    if (!ours(runtime, lent.object) ||
         !KEST_HANDLE_IS(lent.object, KEST_IS_ARRAY)) {""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
