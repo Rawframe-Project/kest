@@ -31600,3 +31600,26 @@ none is claimed.
 marketplace publication. Those are accounts and review queues rather than
 engineering, and an archive that unpacks and runs is the whole of what this
 repository can be held to. *Argued.*
+
+## D1001. A thousandth decision, and the check that would have stopped reading
+
+**Decided.** The pattern that finds a decision named in a comment reads three
+digits or more, where it read exactly three.
+
+**What it would have done.** This is the thousand-and-first decision. Every
+reference to one of the last two would have stopped being read the moment they
+were written — `D1000` is four digits and `\bD\d{3}\b` does not match it — and
+nothing anywhere would have said so. The check would have gone on printing how
+many references it held, holding one fewer every time a decision past the
+nine-hundred-and-ninety-ninth was named. A net that quietly stops catching is
+the thing this project writes holes for, and this one had no hole because
+nothing had ever been written past the number.
+
+**How it turned up.** A hole quoted `D999` as a number nobody had written, and
+D999 was written. Moving the hole to a number that is still unwritten meant
+picking a bigger one, and the bigger one was not caught — which is the check
+saying, by failing to fail, exactly what was wrong with it. *Measured.*
+
+**What else counts digits.** The diagnostic codes, which are `K0` and three:
+they are allocated by stage and stop at `K07xx`, so the fourth digit is the
+stage and there is no thousandth. Those are left alone.

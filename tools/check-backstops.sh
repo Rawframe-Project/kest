@@ -2577,11 +2577,11 @@ fn main() -> i32 {
         "from": r"""## The two documents nothing read""",
         "to": r"""## The two documents nothing read
 
-D999 says otherwise.""",
+D1729 says otherwise.""",
         "make": ["kest", "embed"],
         "tool": "tools/check-docs.sh",
         "arguments": ["docs/language.md", "docs/decisions.md"],
-        "caught": "names `D999` and no decision is written under it",
+        "caught": "and no decision is written under it",
     },
     {
         # A function a host is given that the document never names. A host

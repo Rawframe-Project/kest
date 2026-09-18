@@ -853,7 +853,11 @@ for path in sorted(glob.glob('src/*.c') + glob.glob('src/*.h')
                       if not where.endswith('check-backstops.sh')]
                    + ['docs/language.md', 'docs/decisions.md',
                       'docs/worklog.md', 'CLAUDE.md']):
-    for name in sorted(set(re.findall(r'\bD\d{3}\b', open(path).read()))):
+    # Three digits or more. It was three exactly until there were a thousand
+    # of them, at which point every reference to one would have stopped being
+    # read and nothing would have said so -- the check would have gone on
+    # printing how many it held and held one fewer every time. See D1001.
+    for name in sorted(set(re.findall(r'\bD\d{3,}\b', open(path).read()))):
         if name in WRITTEN_ABOUT:
             continue
         if name not in decided:
