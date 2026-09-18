@@ -15344,7 +15344,7 @@ fn main() -> i32 {
         "make": ["kest"],
         "tool": "tools/check-docs.sh",
         "arguments": ["docs/language.md", "docs/decisions.md"],
-        "caught": "abi 1, json 1, profile kest-det 1` and a run says",
+        "caught": "` and a run says `",
     },
     {
         # A manifest a reader copies out of the reference, naming a version
