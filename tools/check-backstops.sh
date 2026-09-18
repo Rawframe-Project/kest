@@ -7646,19 +7646,19 @@ _Static_assert(MAX_EXTERNS > 1024, "a program may ask for plenty of names");""",
         # allocator, so a program that walks past it is a frame budget that was
         # never a budget.
         "what": "a heap ceiling nothing is held to",
-        "file": "src/mem.c",
-        "from": '''    if (arena->ceiling != 0 &&
-        arena->handed + arena->also + taking > arena->ceiling) {
-        arena->refused = taking;
-        arena->refused_by_ceiling = true;
-        anybody_refused = true;
-        return NULL;
+        # The ground rather than the arena, because that is where a program's
+        # memory is and so where a ceiling on it is refused. See D996.
+        "file": "src/ground.c",
+        "from": """    if (ground->ceiling != 0 && ground->used + width > ground->ceiling) {
+        ground->refused = width;
+        ground->refused_by_ceiling = true;
+        return false;
     }
-    if (fresh) {''',
-        "to": "    if (fresh) {",
+    return true;""",
+        "to": "    return true;",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
-        "caught": "was refused for room and still said what was wrong",
+        "caught": "was spent in silence",
     },
     {
         # A machine that lets calls nest deeper than a host allowed. The
@@ -9650,7 +9650,12 @@ memory""",
         "to": "        if (false) {",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "without saying `K0636` and `did not come from this machine`",
+        # The guard this breaks is asked of every handle a host hands over, and
+        # the first thing to come through it is a handle kept across a heap
+        # being thrown away -- so that is what stops saying so first. It used
+        # to be the one from another machine, which is further down the same
+        # host. See D996.
+        "caught": "a handle from before the heap was thrown away was taken",
     },
     {
         # A word read as a number whatever it says. What a host hands over as
