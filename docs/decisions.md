@@ -32192,3 +32192,28 @@ afternoon — and what a host that writes the wrong byte gets is not a message,
 it is whatever running that instruction does. `kest_break_byte` is the machine
 saying which byte it is. It is additive, it hands out one number rather than
 the instruction set, and it is the tenth door a host writing a debugger uses.
+
+## D1013. Two ways of writing a body down are the same program, and the gate says so
+
+**Decided.** Every example runs twice on every run of the gate: once compiled
+the way it ships and once with `KEST_PLAIN` set, which turns off the fusions
+the lowering makes. Both have to answer the same number and write the same
+words. And one body is read for its instructions either way, because a
+differential test whose two sides are identical is a test comparing a thing
+with itself.
+
+**Why it is the whole of the test.** D1009 said every optimization is held by
+running the same program with it and without it and requiring the same answer,
+the same refusals and the same deterministic bytes. That is not a property of
+any one fusion; it is the property the lowering has to have, and it is cheap:
+the examples already run, and running them again with an environment variable
+set is seconds.
+
+What it cannot see is a program nobody wrote. That is what the fuzzer is for,
+and the boundary it already covers — a program edited under a world that is
+running — is the one nearest this.
+
+**Why an environment variable and not an option.** A command line option is
+public surface and this is not for anybody outside this project: it is how a
+transformation is held to being one. It is read once, in `src/lower.c`, where
+it is the only thing that decides whether the peepholes happen.

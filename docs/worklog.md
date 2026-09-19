@@ -36700,3 +36700,34 @@ on the run after it.
 **Runs:** `make check`, green; `tools/check-costs.sh` and
 `tools/check-tables.sh` on their own; the missed hole reproduced by hand in a
 copy made the way `check-backstops.sh` makes one.
+
+## The gate compiles everything twice
+
+`KEST_PLAIN` turns off the fusions the lowering makes. Since D1009 says every
+optimization is held by running the same program with it and without it, the
+gate now does exactly that: every example twice, both answering the same number
+and writing the same words, and one body read for its instructions so that a
+run where nothing differed would be caught as a test comparing a thing with
+itself.
+
+It is seconds, it holds the whole lowering rather than any one fusion, and it
+is what D1011 and D1012 were measured against before it existed. See D1013.
+
+**Runs:** `make check`, which now has an `optimized` section.
+
+## A walk that could not finish says so
+
+The engine host asked for a walk and then required the sweep count to have gone
+up by one. Under the gate's memory wall that is not always true: a walk with no
+room left to remember where it had got to takes nothing, by design, because
+giving memory back after a walk that has not seen everything gives away what
+the program can still reach.
+
+So `kest_collect` answers whether it walked *and gave anything back*, which is
+what the door already said it answered, and the host holds the two to agreeing:
+it swept if and only if it said it did. The hole that reported MISSED twice in
+three runs was this, and it was the host being too sure rather than the machine
+being wrong.
+
+**Runs:** `make check`, green; the hole reproduced by hand in a copy built the
+way `check-backstops.sh` builds one, before and after.

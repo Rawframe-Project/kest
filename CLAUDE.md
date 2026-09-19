@@ -1088,6 +1088,12 @@ layouts      what every shape takes on the stack against what it takes in
              than on the stack
 examples     every example run or resolved under both builds, answering the
              same under each, and a `main` that gives nothing
+optimized    every one of them again with the lowering's fusions turned off,
+             answering the same thing and writing the same words: what holds a
+             fusion to being one is that two ways of writing the same body
+             down are the same program. And one body read for its
+             instructions, because a differential test whose two sides are
+             identical is one comparing a thing with itself
 instruments  every Kest under `tools` resolved, run for its answer, saying
              over what work its number was taken, and told by a clock of the
              gate's own what to say about a machine that was somebody else's —

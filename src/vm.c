@@ -944,9 +944,9 @@ static KestValue *the_edge(Vm *rt, KestValue *reach) {
 // moved: a value stays where it was made, which is what lets a walk read a
 // slot it cannot be sure is an address and lets a program hold the address of
 // an element or of a piece of text cut out of another. See D996.
-static void gather(Vm *rt, KestValue *reach) {
+static bool gather(Vm *rt, KestValue *reach) {
     if (rt->ground == NULL || kest_ground_open_count(rt->ground) != 0) {
-        return;
+        return false;
     }
     uint64_t began = rt->clock == NULL ? 0 : rt->clock(rt->clock_context);
     rt->walk_broke = false;
@@ -976,9 +976,10 @@ static void gather(Vm *rt, KestValue *reach) {
     if (rt->walk_broke) {
         // A walk that could not remember where it had got to has not seen
         // everything, and a sweep after one of those gives away memory the
-        // program can still reach. So it takes nothing.
+        // program can still reach. So it takes nothing, and says it took
+        // nothing to whoever asked for it.
         kest_ground_unmark(rt->ground);
-        return;
+        return false;
     }
     uint64_t marked = rt->clock == NULL ? 0 : rt->clock(rt->clock_context);
     kest_ground_sweep(rt->ground);
@@ -994,6 +995,7 @@ static void gather(Vm *rt, KestValue *reach) {
             rt->worst_walk = took;
         }
     }
+    return true;
 }
 
 // What this machine handed a host and nothing in the program names. A host
@@ -7174,12 +7176,7 @@ bool kest_collect(KestRuntime *runtime) {
     if (!between_calls(runtime, "walked")) {
         return false;
     }
-    if (runtime->ground == NULL ||
-        kest_ground_open_count(runtime->ground) != 0) {
-        return false;
-    }
-    gather(runtime, NULL);
-    return true;
+    return gather(runtime, NULL);
 }
 
 uint8_t kest_break_byte(void) {

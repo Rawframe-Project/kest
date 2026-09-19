@@ -1134,6 +1134,55 @@ done
 
 say "examples" "$ran ran, $resolved resolved, and one that gives nothing back"
 
+# The same programs compiled the other way. `KEST_PLAIN` turns off the fusions
+# the lowering makes, so the same body comes out as more instructions doing the
+# same thing -- and what holds a fusion to being one is that the program
+# answers what it answered. It is the whole of the differential test a
+# transformation needs: not that the numbers look right, but that two ways of
+# writing the same body down are the same program.
+#
+# Both the answer and everything written, because a program that answers nought
+# either way and prints something else the second time is a program one of the
+# two got wrong. See D1009 and D1013.
+plainly=0
+for file in $sources; do
+    if ! grep -q '^fn main(' "$file"; then
+        continue
+    fi
+    fused_said=$(./kest run "$file" 2>&1 </dev/null)
+    fused_was=$?
+    plain_said=$(KEST_PLAIN=1 ./kest run "$file" 2>&1 </dev/null)
+    plain_was=$?
+    case "$fused_said" in
+    *"has no \`main\` to run"*) continue ;;
+    esac
+    if [ "$fused_was" -ne "$plain_was" ]; then
+        complain "optimized" "$file answers $fused_was fused and $plain_was \
+plainly"
+        continue
+    fi
+    if [ "$fused_said" != "$plain_said" ]; then
+        complain "optimized" "$file says something else when it is compiled \
+plainly"
+        continue
+    fi
+    plainly=$((plainly + 1))
+done
+# And one that is not a program at all, to see the two ways differ where they
+# are meant to: what `emit` prints is the instructions, and a body the lowering
+# fused is fewer of them. A differential test that could not tell the two
+# builds apart would be one comparing a thing with itself.
+fused_code=$(./kest emit bench/kernel.kest 2>/dev/null | grep -c '^ ')
+plain_code=$(KEST_PLAIN=1 ./kest emit bench/kernel.kest 2>/dev/null | grep -c '^ ')
+if [ "$fused_code" -ge "$plain_code" ]; then
+    complain "optimized" "the two ways of compiling a body write the same \
+number of instructions, so one of them is not happening"
+else
+    say "optimized" "$plainly program(s) answer the same thing and write the \
+same words compiled either way, and the one read for its instructions is \
+$fused_code fused against $plain_code plainly"
+fi
+
 # An instrument is checked, and then run for its answer rather than for its
 # number. `make check` does not read a duration — a duration is not a pass or a
 # fail, which is why `make time` is a target of its own — but what the one

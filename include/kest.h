@@ -1167,9 +1167,13 @@ uint8_t kest_break_byte(void);
 // host that wants to hold one across a call. Refused while a program is
 // running, with a diagnostic, the way throwing the heap away is.
 //
-// Answers whether it walked. A machine with a `scratch { }` block open does
-// not, because a block gives its own memory back and a walk in the middle of
-// one would be a walk over memory that is about to go anyway.
+// Answers whether it walked and gave anything back. A machine with a
+// `scratch { }` block open does not, because a block gives its own memory back
+// and a walk in the middle of one would be a walk over memory that is about to
+// go anyway. Neither does one with no room left to remember where a walk had
+// got to: a walk that could not finish has not seen everything, and giving
+// memory back after one of those would give away what the program can still
+// reach. Both answer false and leave the heap as they found it.
 //
 // It does not change what a program answers. A program cannot tell that this
 // happened, which is what keeps `deterministic` true.
