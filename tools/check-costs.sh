@@ -1762,6 +1762,20 @@ CALLING = """#include <stdio.h>
 #include <stdlib.h>
 #include "kest.h"
 
+/* The program above declares one name the host provides, because the
+   instrument it belongs to measures a hop out and back in as well as a call
+   in. This host is only ever asked for `inside` and `many`, so what it binds
+   answers with what it was handed: a program that declares a name nothing
+   provides is refused before it runs, and a check that read nothing would say
+   a crossing costs None. The answer goes back where the argument came from, so
+   a function that leaves the frame alone is one that answered with what it was
+   handed. */
+static void back(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)frame;
+    (void)runtime;
+    (void)context;
+}
+
 int main(int argc, char **argv) {
     if (argc != 6) {
         return 2;
@@ -1773,6 +1787,9 @@ int main(int argc, char **argv) {
         return 2;
     }
     KestHost *host = kest_host_new();
+    if (host != NULL) {
+        kest_host_bind(host, "back", back, NULL);
+    }
     KestRuntime *runtime = host == NULL ? NULL : kest_start(build, host, NULL);
     kest_host_free(host);
     if (runtime == NULL) {

@@ -55,9 +55,48 @@ static const char *const PROGRAM =
     "    return sum\n"
     "}\n"
     "\n"
+    "extern fn back(value: f64) -> f64\n"
+    "\n"
+    "fn hopping(count: i32) -> f64 {\n"
+    "    let sum: f64 = 0.0\n"
+    "    for i in 0..count {\n"
+    "        sum += back(f64(i % 64))\n"
+    "    }\n"
+    "    return sum\n"
+    "}\n"
+    "\n"
     "fn main() -> i32 {\n"
     "    return i32(many(1))\n"
     "}\n";
+
+/* The round trip, which is the third thing here and the one neither of the
+   other two is: the program calls out to this, and this calls back in. What a
+   host actually does at a boundary is both directions at once -- a callback a
+   program invokes, a query a rule asks of the world -- and neither direction
+   measured on its own says what that costs, because the second frame is
+   written while the first is still standing.
+ *
+ * The machine is handed back the same number it handed out, so what the loop
+ * puts in is what comes out and an instrument that stopped crossing would be
+ * caught by the sum at the end. See D1029. */
+typedef struct {
+    KestRuntime *runtime;
+    int32_t inside;
+    unsigned long long hops;
+} Reentry;
+
+static void back(KestValue *frame, KestRuntime *runtime, void *context) {
+    Reentry *again = context;
+    (void)runtime;
+    again->hops++;
+    KestValue within[2] = {{0}};
+    within[0].real = frame[0].real;
+    if (!kest_call(again->runtime, again->inside, within, 2)) {
+        frame[0].real = -1.0;
+        return;
+    }
+    frame[0].real = within[0].real;
+}
 
 /* The clock the command line hands a program, read the same way: what the
    standard has rather than what this machine has, so this host compiles where
@@ -93,7 +132,11 @@ int main(void) {
     if (build == NULL) {
         return 2;
     }
+    Reentry again = {NULL, -1, 0};
     KestHost *host = kest_host_new();
+    if (host != NULL) {
+        kest_host_bind(host, "back", back, &again);
+    }
     KestRuntime *runtime = host == NULL ? NULL : kest_start(build, host, NULL);
     kest_host_free(host);
     if (runtime == NULL) {
@@ -103,10 +146,14 @@ int main(void) {
 
     int32_t one = kest_entry(runtime, "inside");
     int32_t all = kest_entry(runtime, "many");
-    if (one < 0 || all < 0) {
-        fprintf(stderr, "the program this measures has no `inside` or `many`\n");
+    int32_t hop = kest_entry(runtime, "hopping");
+    if (one < 0 || all < 0 || hop < 0) {
+        fprintf(stderr, "the program this measures has no `inside`, `many` or "
+                        "`hopping`\n");
         return 2;
     }
+    again.runtime = runtime;
+    again.inside = one;
 
     /* A round of each before the clock, so what is measured is the steady
        state rather than the first call into anything. */
@@ -191,6 +238,43 @@ int main(void) {
            there, here, ROUNDS, CALLS, spread,
            spread <= 25 ? "" : " — the machine was somebody else's");
 
+    /* And the round trip, which is what a boundary is when a host is on both
+       sides of it. A round of these is a round of `many` with a crossing out
+       and a crossing back in at every hop, so it is read against `here` rather
+       than against `there`: what it costs over a call the program makes itself
+       is what going out and coming back costs. See D1029. */
+    long long round_trip = 0;
+    long long worst_trip = 0;
+    for (int round = 0; round < ROUNDS; round++) {
+        long long before = in_microseconds();
+        frame[0].integer = CALLS;
+        if (!kest_call(runtime, hop, frame, 2)) {
+            kest_report(runtime, stderr, KEST_FORM_TEXT);
+            return 3;
+        }
+        long long took = in_microseconds() - before;
+        sum += frame[0].real;
+        if (round == 0 || took < round_trip) {
+            round_trip = took;
+        }
+        if (took > worst_trip) {
+            worst_trip = took;
+        }
+    }
+    long long both_ways = round_trip * 1000 / CALLS;
+    long long spread_trip =
+        (worst_trip - round_trip) * 100 / (round_trip > 0 ? round_trip : 1);
+    if (again.hops != (unsigned long long)CALLS * ROUNDS) {
+        fprintf(stderr, "the round trip crossed %llu time(s) and not %llu\n",
+                again.hops, (unsigned long long)CALLS * ROUNDS);
+        return 1;
+    }
+    printf("%lld ns for a hop out to a host and back in against %lld ns for "
+           "one the program makes in a loop, best of %d over %d hops, spread "
+           "%lld%%%s\n",
+           both_ways, here, ROUNDS, CALLS, spread_trip,
+           spread_trip <= 25 ? "" : " — the machine was somebody else's");
+
     /* And what the work adds up to, which is a number and not a duration: an
        instrument that stops doing its work still prints a duration. Every call
        gives back what it was handed, so what the loops put in is what comes
@@ -199,7 +283,7 @@ int main(void) {
     for (int32_t i = 0; i < CALLS; i++) {
         each += (double)(i % 64);
     }
-    double wanted = each * (double)(ROUNDS * 2 + 2);
+    double wanted = each * (double)(ROUNDS * 3 + 2);
     kest_runtime_free(runtime);
     kest_build_free(build);
     if (sum != wanted) {
