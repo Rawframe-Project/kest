@@ -32,6 +32,7 @@
 #define _POSIX_C_SOURCE 200809L
 #endif
 
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -149,6 +150,60 @@ static Spread spread_of(long long *samples, long long count) {
     qsort(away, (size_t)count, sizeof *away, nearer);
     out.spread = at_share(away, count, 0.5);
     free(away);
+    return out;
+}
+
+/* Every collection pause, kept. What the machine adds up is a total and a
+   worst; a distribution needs each one, and the only place each one exists is
+   the moment it finishes. A run that cannot keep another keeps the ones it has
+   and says how many there were, because a measurement short of samples is
+   worth more than a run that stopped. See D1027. */
+typedef struct {
+    KestPause *kept;
+    long long count;
+    long long room;
+    long long lost;
+} Pauses;
+
+static void keep_the_pause(const KestPause *pause, void *context) {
+    Pauses *all = context;
+    if (all->count == all->room) {
+        long long more = all->room == 0 ? 256 : all->room * 2;
+        KestPause *grown = realloc(all->kept, sizeof *grown * (size_t)more);
+        if (grown == NULL) {
+            all->lost++;
+            return;
+        }
+        all->kept = grown;
+        all->room = more;
+    }
+    all->kept[all->count++] = *pause;
+}
+
+/* One field of every pause, in a run of its own, which is what `spread_of`
+   reads. */
+static long long *pauses_by(const Pauses *all, size_t away) {
+    long long *each = malloc(sizeof *each * (size_t)all->count);
+    if (each == NULL) {
+        return NULL;
+    }
+    for (long long i = 0; i < all->count; i++) {
+        const unsigned char *one = (const unsigned char *)&all->kept[i];
+        uint64_t value;
+        memcpy(&value, one + away, sizeof value);
+        each[i] = (long long)value;
+    }
+    return each;
+}
+
+static Spread spread_of_pauses(const Pauses *all, size_t away) {
+    long long *each = pauses_by(all, away);
+    if (each == NULL) {
+        Spread none = {0, 0, 0, 0, 0, 0, 0};
+        return none;
+    }
+    Spread out = spread_of(each, all->count);
+    free(each);
     return out;
 }
 
@@ -338,6 +393,8 @@ int main(int argc, char **argv) {
     /* The clock the machine times its own walks with, which is this host's
        because the library is ISO C and has no monotonic one. */
     kest_clock(runtime, a_clock, NULL);
+    Pauses pauses = {NULL, 0, 0, 0};
+    kest_collected(runtime, keep_the_pause, &pauses);
 
     int32_t entry = kest_entry(runtime, entry_name);
     if (entry < 0) {
@@ -467,11 +524,51 @@ int main(int argc, char **argv) {
                "-- and the longest %.3f ms\n",
                (double)heap.walked / 1e6, (double)heap.marking / 1e6,
                (double)heap.sweeping / 1e6, (double)heap.worst_walk / 1e6);
-        say_spread("walking", walking);
+        /* Two rows about the collector and they are not the same question.
+           `per call` is every walk a call did, added together, spread over the
+           calls -- what a frame pays the collector. `pausing` is one walk, and
+           is the number a frame budget is written against: a call that pauses
+           four times for a millisecond each and a call that pauses once for
+           four has the same first row and a different second. The report this
+           belongs to used to print only the first and call it a pause
+           distribution. See D1027. */
+        say_spread("per call", walking);
         printf("%-14s %9.1f%% of the middle call\n", "which is",
                calling.middle == 0
                    ? 0.0
                    : 100.0 * (double)walking.middle / (double)calling.middle);
+    }
+    if (pauses.count > 0) {
+        Spread pausing = spread_of_pauses(&pauses, offsetof(KestPause, took));
+        Spread marking =
+            spread_of_pauses(&pauses, offsetof(KestPause, marking));
+        Spread sweeping =
+            spread_of_pauses(&pauses, offsetof(KestPause, sweeping));
+        say_spread("pausing", pausing);
+        say_spread("  marking", marking);
+        say_spread("  sweeping", sweeping);
+        unsigned long long roots = 0;
+        unsigned long long reclaimed = 0;
+        for (long long i = 0; i < pauses.count; i++) {
+            roots += pauses.kept[i].roots;
+            reclaimed += pauses.kept[i].reclaimed;
+        }
+        const KestPause *last = &pauses.kept[pauses.count - 1];
+        printf("%lld pause(s) over %lld call(s), which is %.2f a call, "
+               "reading %llu root slot(s) and giving back %llu byte(s)\n",
+               pauses.count, samples,
+               (double)pauses.count / (double)(samples <= 0 ? 1 : samples),
+               roots, reclaimed);
+        printf("after the last one the heap held %llu byte(s) in %llu plot(s) "
+               "of %llu, with %llu byte(s) free in them\n",
+               (unsigned long long)last->live,
+               (unsigned long long)last->plots,
+               (unsigned long long)last->plot_bytes,
+               (unsigned long long)last->free_bytes);
+        if (pauses.lost > 0) {
+            printf("%lld pause(s) went unkept, which is a run that ran out of "
+                   "room to remember them\n", pauses.lost);
+        }
     }
 
     if (as_json) {
@@ -511,6 +608,7 @@ int main(int argc, char **argv) {
     free(build_took);
     free(call_took);
     free(walk_took);
+    free(pauses.kept);
     free(frame);
     kest_runtime_free(runtime);
     kest_build_free(build);

@@ -37129,3 +37129,44 @@ timing keeps. See D1026.
 `bench/agents.kest`, `bench/rules.kest`, `examples/inventory.kest`,
 `examples/boxes.kest` and `lib/std/text.kest`, nine readings each and the
 middle of them, with and without `KEST_NOOPT`; `make fast`; `make check`.
+
+## What one collection costs, and the number the report got wrong
+
+The post-v1 report printed `p50 81 ms, p95 85, p99 88` under a heading about
+collector pauses. Those were not pauses. They were what each *call* paid the
+collector altogether — the running total read on either side of a call and
+subtracted — and a call of `bench/agents.kest` walks eight or nine times. The
+reference told a host to measure it that way in so many words, and the
+instrument printed it under a name that made it look like something else.
+
+So a host is told what each walk cost at the moment it finishes:
+`kest_collected` and `KestPause`. It is the only way to get a distribution —
+a machine that kept every pause would be holding a list that grows with how
+long the program ran — and what a host wants from the samples is the host's
+question rather than this library's.
+
+What a pause actually is, over 502 of them from sixty calls of `agents`:
+p50 11.06 ms, p95 12.16, p99 14.66, max 15.91, of which marking is 8.49 at the
+middle and sweeping 2.78. Against `per call`, which is 81.34. Both rows are
+printed side by side now, with a comment saying why they are two questions.
+
+Which turns the conclusion around in both directions. The collector is fourteen
+per cent of a call of `agents` rather than the largest remaining cost — and a
+single pause is eleven milliseconds at the middle and sixteen at the worst,
+which is a whole frame at sixty hertz. The total was never the frightening
+number and the pause always was.
+
+And a fragmentation figure, which this shape of heap has and nothing had ever
+measured: a non-moving collector hands a plot back only when every place in it
+is free. After the last pause `agents` held 14.92 MB in 643 plots of 16.50 MB
+with 1.58 MB free in them; twenty calls earlier in the same run it was 1047
+plots of 23.12 MB with 8.45 MB free. Where in its cycle a program is asked
+matters more than the program does.
+
+Nothing here says the collector should become incremental, and D1027 says why
+the measurement that would justify one does not exist.
+
+**Runs:** `bench/measure` over `bench/agents.kest` at twenty and sixty calls and
+over `bench/rules.kest`; `examples/embed.c` holding the door to saying one thing
+per walk that swept and nothing for one that could not finish; `make fast`;
+`make check`.

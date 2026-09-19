@@ -1179,6 +1179,52 @@ uint8_t kest_break_byte(void);
 // happened, which is what keeps `deterministic` true.
 bool kest_collect(KestRuntime *runtime);
 
+// What one collection cost, handed to a host the moment it finishes.
+//
+// It is the only way to get a distribution rather than a total. A machine that
+// kept every pause would be holding a list that grows with how long the
+// program ran, and which percentiles are wanted, over what window, and whether
+// to keep the samples at all are the host's questions rather than this
+// library's. `KestCounted` says what every walk came to added up and what the
+// longest was; this says what each one was.
+//
+// Nothing in a program can reach it, and nothing about what a program answers
+// changes when it is set -- which is what keeps `deterministic` true, the same
+// as for `kest_clock`. See D1027.
+typedef struct {
+    // What the whole of it took and the two halves, in whatever unit the clock
+    // `kest_clock` was given counts in. Nought for a machine given no clock,
+    // and a host that wants a distribution gives one.
+    uint64_t took;
+    uint64_t marking;
+    uint64_t sweeping;
+    // Slots read loosely to find the roots, which is what a program controls
+    // by how deep it is standing when a walk happens.
+    uint64_t roots;
+    // Bytes given back by this walk, and bytes in places still handed out
+    // after it.
+    uint64_t reclaimed;
+    uint64_t live;
+    // The plots the heap is holding, what the host gave for them, and what of
+    // that is in places nothing is using. A plot goes back to the host only
+    // when every place in it is free, so the last of these is the memory this
+    // heap is holding and cannot hand back.
+    uint64_t plots;
+    uint64_t plot_bytes;
+    uint64_t free_bytes;
+} KestPause;
+
+// Told what each collection cost, at the end of each one that swept. NULL
+// turns it off, which is what every machine starts with. A walk that could not
+// finish says nothing, because it took nothing.
+//
+// It is called while the machine is stopped, which is what a pause is: a host
+// that does work in here is lengthening the pause it is being told about.
+// Keeping the numbers is what it is for.
+void kest_collected(KestRuntime *runtime,
+                    void (*told)(const KestPause *pause, void *context),
+                    void *context);
+
 // The clock a machine times its own walks with. It is the host's because this
 // library is ISO C, which has no monotonic clock, and because a duration is
 // the one thing about a run that belongs to the machine it ran on rather than

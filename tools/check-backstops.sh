@@ -5839,7 +5839,7 @@ anywhere, and it is why the gate holds""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "118162 as a tree, 154256 checked",
+        "caught": "118162 as a tree, 154352 checked",
     },
     {
         # And the section they are in saying whose machine they are. Bytes of

@@ -4292,9 +4292,27 @@ machine the clock it times its own walks with, and what that clock counts in is
 the host's to decide — this library is ISO C and there is no monotonic clock in
 it, so a duration comes from outside the way everything outside does. Nothing a
 program can write reaches it and nothing a program answers changes when it is
-set. A host that wants the distribution rather than the total reads the door on
-either side of each frame and keeps the differences, which is what
-`bench/measure.c` does.
+set.
+
+`kest_collected` is what a host asks for a distribution with, and it is a
+different question from the two numbers above. `walked` is every walk added up
+and `worst_walk` is the longest one; reading `walked` on either side of a frame
+answers what that frame paid the collector altogether, which is not what one
+pause was. A frame that stopped four times for a millisecond each and a frame
+that stopped once for four answer the same thing there and are not the same
+thing to a budget. So a host that wants pauses is told each one as it finishes:
+what it took, what marking and sweeping took of that, how many root slots it
+read, what it gave back, what is still held, and how much of the memory the
+host gave is in places nothing is using — which is the fragmentation a
+non-moving heap has, because a plot goes back to the host only when every place
+in it is free. It is called while the machine is stopped, so a host that does
+work in there is lengthening the pause it is being told about; keeping the
+numbers is what it is for.
+
+`bench/measure.c` does both and prints them as two rows, because printing one
+and calling it the other is a mistake this project made: `per call` is what
+each call paid the collector altogether and `pausing` is what one walk was.
+Over `bench/agents.kest` those are 81 milliseconds and 11.
 
 ## Stopping a program
 

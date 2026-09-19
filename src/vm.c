@@ -648,6 +648,10 @@ struct KestRuntime {
     // took; a host that gives none gets nought there and everything else.
     uint64_t (*clock)(void *);
     void *clock_context;
+    // And who is told what each walk cost, which is the distribution the
+    // numbers below cannot give: they are a total and a worst. See D1027.
+    void (*collected)(const KestPause *pause, void *context);
+    void *collected_context;
     uint64_t walked;
     uint64_t worst_walk;
     uint64_t marking;
@@ -973,6 +977,8 @@ static bool gather(Vm *rt, KestValue *reach) {
         return false;
     }
     uint64_t began = rt->clock == NULL ? 0 : rt->clock(rt->clock_context);
+    uint64_t roots_before = rt->roots;
+    size_t held_before = kest_ground_used(rt->ground);
     rt->walk_broke = false;
     rt->grey_count = 0;
     KestValue *edge = the_edge(rt, reach);
@@ -1009,8 +1015,8 @@ static bool gather(Vm *rt, KestValue *reach) {
     kest_ground_sweep(rt->ground);
     size_t standing = kest_ground_used(rt->ground);
     rt->walk_at = standing < WALK_FLOOR ? WALK_FLOOR : standing;
+    uint64_t ended = rt->clock == NULL ? 0 : rt->clock(rt->clock_context);
     if (rt->clock != NULL) {
-        uint64_t ended = rt->clock(rt->clock_context);
         uint64_t took = ended - began;
         rt->walked += took;
         rt->marking += marked - began;
@@ -1018,6 +1024,26 @@ static bool gather(Vm *rt, KestValue *reach) {
         if (took > rt->worst_walk) {
             rt->worst_walk = took;
         }
+    }
+    if (rt->collected != NULL) {
+        // Asked of the heap here rather than kept running, because a walk is
+        // where it is worth a walk of the plots: there are tens of them and
+        // millions of allocations. See D1027.
+        KestGroundPlots plots;
+        kest_ground_plots(rt->ground, &plots);
+        KestPause pause;
+        memset(&pause, 0, sizeof pause);
+        pause.took = rt->clock == NULL ? 0 : ended - began;
+        pause.marking = rt->clock == NULL ? 0 : marked - began;
+        pause.sweeping = rt->clock == NULL ? 0 : ended - marked;
+        pause.roots = rt->roots - roots_before;
+        pause.reclaimed =
+            held_before > standing ? (uint64_t)(held_before - standing) : 0;
+        pause.live = standing;
+        pause.plots = plots.plots;
+        pause.plot_bytes = plots.bytes;
+        pause.free_bytes = plots.free_bytes;
+        rt->collected(&pause, rt->collected_context);
     }
     return true;
 }
@@ -7279,6 +7305,16 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
         memcpy(frame, floor, sizeof(KestValue) * returned);
     }
     return true;
+}
+
+void kest_collected(KestRuntime *runtime,
+                    void (*told)(const KestPause *pause, void *context),
+                    void *context) {
+    if (runtime == NULL) {
+        return;
+    }
+    runtime->collected = told;
+    runtime->collected_context = context;
 }
 
 void kest_clock(KestRuntime *runtime, uint64_t (*now)(void *), void *context) {

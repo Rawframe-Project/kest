@@ -154,6 +154,21 @@ static uint64_t host_nanoseconds(void *context) {
     return (uint64_t)clock() * (1000000000ULL / (uint64_t)CLOCKS_PER_SEC);
 }
 
+// What a host does with being told what a walk cost. This one counts them and
+// keeps the last, which is the least a host can do with the door and enough to
+// hold it to what it says; a host with a frame budget keeps every one of them
+// and reads the middle and the tail off it, which is what `bench/measure` does.
+typedef struct {
+    unsigned long long count;
+    KestPause last;
+} PausesHeard;
+
+static void host_was_told_a_pause(const KestPause *pause, void *context) {
+    PausesHeard *heard = context;
+    heard->count++;
+    heard->last = *pause;
+}
+
 // What this host decides with, and the reason it is a thing rather than a
 // number: a name is bound once, so a host that wants to answer differently
 // later binds one function that decides and changes what it decides with.
@@ -7104,6 +7119,14 @@ int main(int argc, char **argv) {
     // program: nothing a program answers depends on this.
     kest_clock(engine.runtime, host_nanoseconds, NULL);
     kest_clock(NULL, host_nanoseconds, NULL);
+    // And who is told what each walk cost, which is the other half of that:
+    // the numbers above are a total and a worst, and a host with a frame to
+    // fit into wants each one. Asked of nothing too, which is the shape every
+    // door here is asked in.
+    PausesHeard pauses_heard;
+    memset(&pauses_heard, 0, sizeof pauses_heard);
+    kest_collected(engine.runtime, host_was_told_a_pause, &pauses_heard);
+    kest_collected(NULL, host_was_told_a_pause, &pauses_heard);
 
     // And a walk at a moment this host chose rather than at whatever
     // allocation would have set one off. A host with a frame to fit into asks
@@ -7111,6 +7134,7 @@ int main(int argc, char **argv) {
     // only place it is allowed, and asked of nothing to see it refuse.
     KestTelemetry before_walk = {0};
     kest_telemetry(engine.runtime, &before_walk);
+    unsigned long long heard_before = pauses_heard.count;
     bool walked = kest_collect(engine.runtime);
     KestTelemetry after_walk = {0};
     kest_telemetry(engine.runtime, &after_walk);
@@ -7126,6 +7150,24 @@ int main(int argc, char **argv) {
     }
     printf("and a walk this host asked for %s when it asked\n",
            walked ? "happened" : "said it could not");
+    // A walk that swept says so once, to this host, with what it cost. A walk
+    // that could not finish took nothing and says nothing, which is why the
+    // count is held against whether it swept rather than against whether it
+    // was asked for.
+    if (pauses_heard.count != heard_before + (walked ? 1u : 0u)) {
+        fprintf(stderr, "a walk that swept was not said to have\n");
+        return 1;
+    }
+    if (walked && pauses_heard.last.live > pauses_heard.last.plot_bytes) {
+        fprintf(stderr, "a walk says the heap holds more than it was given\n");
+        return 1;
+    }
+    printf("and this host was told what each of the %llu walk(s) cost, the "
+           "last of them holding %llu byte(s) in %llu plot(s) of %llu\n",
+           pauses_heard.count, (unsigned long long)pauses_heard.last.live,
+           (unsigned long long)pauses_heard.last.plots,
+           (unsigned long long)pauses_heard.last.plot_bytes);
+    kest_collected(engine.runtime, NULL, NULL);
 
     // And the other side of the answer: outside a call there is nothing
     // standing on the machine, so this is the free that happens. Nothing takes

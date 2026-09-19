@@ -71,6 +71,26 @@ typedef struct {
 
 void kest_ground_counted(const KestGround *ground, KestGroundCounts *into);
 
+// What the plots come to and how much of them is in places nothing is using.
+// A non-moving heap gives a plot back to the host only when every place in it
+// is free, so free places spread thinly over many plots are memory this is
+// holding and cannot hand back. That is the one fragmentation figure a heap of
+// this shape has, and it is asked for here rather than worked out from a plot
+// size written down somewhere, because a plot holding one wide thing is as
+// wide as that thing. See D1027.
+typedef struct {
+    uint64_t plots;
+    // What the host gave for them, and what is in places that are handed out.
+    uint64_t bytes;
+    uint64_t taken;
+    // Places altogether and places nobody is using, and what those come to.
+    uint64_t places;
+    uint64_t free_places;
+    uint64_t free_bytes;
+} KestGroundPlots;
+
+void kest_ground_plots(const KestGround *ground, KestGroundPlots *into);
+
 KestGround *kest_ground_new(void);
 void kest_ground_free(KestGround *ground);
 

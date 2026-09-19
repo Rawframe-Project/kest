@@ -223,6 +223,25 @@ typedef struct KestGround {
     Counts counted;
 } KestGround;
 
+void kest_ground_plots(const KestGround *ground, KestGroundPlots *into) {
+    if (into == NULL) {
+        return;
+    }
+    memset(into, 0, sizeof *into);
+    if (ground == NULL) {
+        return;
+    }
+    for (const Plot *plot = ground->plots; plot != NULL; plot = plot->next) {
+        into->plots++;
+        into->bytes += plot->bytes;
+        into->places += plot->places;
+        into->taken += plot->taken;
+        uint32_t free_places = plot->places - plot->taken;
+        into->free_places += free_places;
+        into->free_bytes += (uint64_t)free_places * (uint64_t)plot->stride;
+    }
+}
+
 KestGround *kest_ground_new(void) {
     KestGround *ground = calloc(1, sizeof(KestGround));
     return ground;

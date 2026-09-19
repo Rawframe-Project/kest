@@ -32943,3 +32943,73 @@ nought.
 goes to the error stream, where what a program said is not. They never move
 together and the audit that reopened this work found them confused, so the two
 are written in different places and said in different words.
+
+## D1027. What one collection costs, told as it happens
+
+**Decided.** A host can be told what every walk cost at the moment it finishes.
+`kest_collected` is the door and `KestPause` is what comes through it. It is the
+only way to get a distribution: a machine that kept every pause would be holding
+a list that grows with how long the program ran, and which percentiles are
+wanted, over what window, and whether to keep the samples at all are the host's
+questions rather than this library's.
+
+    took, marking, sweeping   what it was, and the two halves
+    roots                     slots read loosely to find what is reachable
+    reclaimed, live           what it gave back and what is still held
+    plots, plot_bytes         what the host gave for the heap
+    free_bytes                and what of that is in places nothing uses
+
+**What it corrects.** The post-v1 report printed `p50 81 ms, p95 85, p99 88`
+under a heading about collector pauses. Those are not pauses. They are what each
+*call* paid the collector altogether — `walked` read on either side of a call
+and subtracted — and a call of `bench/agents.kest` walks eight or nine times. A
+frame that stopped four times for a millisecond each and a frame that stopped
+once for four milliseconds answer the same there, and are not the same thing to
+anybody writing to a budget. The reference said to measure it that way, in so
+many words, and that sentence is corrected too.
+
+**What a pause actually is**, over 502 of them from sixty calls of
+`bench/agents.kest`, milliseconds:
+
+                      p50     p95     p99     max
+    per call        81.34   87.17   87.98   88.49    60 samples
+    pausing         11.06   12.16   14.66   15.91   502 samples
+      marking        8.49    9.34   11.02   11.88
+      sweeping       2.78    4.44    4.72    5.33
+
+Eight and a third walks a call, forty-nine root slots read a walk, and eight
+gigabytes given back over the sixty. And over `bench/rules.kest`, which churns
+far less: one walk and a tenth a call, `pausing` p50 2.99 and max 3.74.
+
+**So the collector is not what the report said it was, in either direction.** It
+is fourteen per cent of a call of `agents` rather than the largest remaining
+cost -- and a single pause is eleven milliseconds at the middle and sixteen at
+the worst, which is a whole frame at sixty hertz. The total was never the
+frightening number and the pause always was; the report had the frightening
+number and the wrong name on it.
+
+**Fragmentation, which this shape of heap has and nothing had measured.** A
+non-moving collector gives a plot back to the host only when every place in it
+is free, so free places spread thinly over many plots are memory the heap holds
+and cannot hand back. `kest_ground_plots` walks the plots and says what they
+come to and what of that is free; a walk is where that walk is worth doing,
+because there are hundreds of plots and tens of millions of allocations. After
+the last of the 502 pauses, `agents` held 14.92 MB in 643 plots of 16.50 MB with
+1.58 MB free in them -- nine and a half per cent. Twenty calls earlier in the
+same program it was 1047 plots of 23.12 MB with 8.45 MB free, which is
+thirty-seven: where in its cycle a program is asked matters more than the
+program does.
+
+**And the design stays.** Nothing here says the collector should become
+incremental. What a host with a frame budget has is `kest_collect` to move the
+walk to between frames, `no.alloc` to prove a hot phase cannot be interrupted at
+all, and now a distribution to size the budget against. An incremental collector
+would be a write barrier on every store in a machine whose whole speed argument
+is that a store is a store, and D1008 already measured what one lookup in the
+walk was worth. The measurement that would justify it does not exist yet and
+this is not it.
+
+**What it costs a host that never asks.** Two pointers on the machine and a
+comparison against NULL once a walk. A program runs millions of instructions
+between two walks, which is the same reason the counters beside it are always on
+(D1007, D979).
