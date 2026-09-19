@@ -36837,3 +36837,30 @@ written down: a workload within about twice native where the remaining gap is
 shown to be dispatch, measured rather than inferred. See D1017.
 
 **Runs:** `make time` and `tools/frame.kest` pinned, three times.
+
+## What three programs turned up about writing in this language
+
+The three reference programs were the first substantial ones written here for a
+reason other than showing a feature, and three things got in the way.
+
+A struct handed to a function is a copy, so `one.hp -= 1` counts into the copy
+while `push(one.bag, 1)` beside it works — half a function working and half
+quietly not. It happened three times. The reference now has the shape that is
+wrong, the shape that is right, and the sentence that this is the thing to
+expect to get wrong once. It did not get a diagnostic: telling a dead write from
+a live one needs liveness over slots, because `p.x += 1; return p.x` is the same
+two lines and correct, and a warning that fires on correct code is worse than
+the footgun.
+
+A `match` arm is an expression, so a rule that wants to do something per case is
+written as a number and an `if` chain. Twice, which is the bar for a
+language-design candidate, and it stays a candidate: a statement `match` is a
+second way to write the same word.
+
+And a host writing a debugger had to write down the byte of the instruction
+nothing compiles to, which moved twice in an afternoon. That one got a door.
+
+See D1018.
+
+**Runs:** `tools/check-docs.sh`, which holds every `kest` block in the reference
+to parsing and to being in the one form; `make fast`.

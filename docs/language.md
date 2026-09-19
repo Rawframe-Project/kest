@@ -1590,6 +1590,40 @@ them writes the shape, whichever copy of the struct it has. Nothing refuses that
 because a handle handed out is a handle written through, so a shape that keeps
 something in step says so where it is declared, and the library's own do.
 
+**The mistake this makes easiest.** A function handed a struct is handed a
+copy, so writing to a field of it writes into the copy:
+
+```kest
+struct Actor {
+    hp: i32
+    bag: [i32]
+}
+
+fn hurt(one: Actor) {
+    one.hp -= 1
+    push(one.bag, 1)
+}
+```
+
+`one.hp -= 1` changes nothing the caller will ever see. `push(one.bag, 1)` does
+— the array is a handle and there is one of it — so half of that function works
+and half of it quietly does not. Nothing refuses it, because both lines are
+exactly what they say.
+
+What to write instead is the function answering with the value:
+
+```kest
+fn hurt(one: Actor) -> Actor {
+    one.hp -= 1
+    return one
+}
+```
+
+and the caller writing it back. Three of the programs written to measure this
+language were caught by the first shape, each time by a check of their own that
+failed rather than by a wrong number, and it is the one thing a reader coming
+from a language where an object is a reference should expect to get wrong once.
+
 `ref<T>` is a handle into managed or host storage. It can go stale, because
 something else may delete the target, so reading through it is a lookup that
 can fail rather than a dereference. The failure cannot be ignored.

@@ -32386,3 +32386,41 @@ native and the remaining gap is shown to be dispatch — measured, not inferred 
 or a frame budget that the instrument above actually threatens. Neither exists.
 The condition is written here so that the next person to ask has a number to
 beat rather than an argument to have.
+
+## D1018. Three pieces of friction from writing three programs, and what each got
+
+Writing `bench/agents.kest`, `bench/frame.kest` and `bench/rules.kest` was the
+first time in this project that somebody wrote a substantial program in this
+language for a reason other than showing a feature. Three things got in the
+way. None of them becomes syntax.
+
+**A struct handed to a function is a copy, and writing to a field of it is
+silent.** Three times, in two of the three programs and in the `World` of the
+first: `one.hp -= 1` counts into a copy that goes away, while `push(one.bag, 1)`
+beside it works, because the array is a handle and there is one of it. Half a
+function works and half quietly does not, and nothing refuses either line
+because both are exactly what they say.
+
+What it got is a paragraph in the reference under *Values and references*, with
+the shape that is wrong, the shape that is right, and the sentence that this is
+the one thing to expect to get wrong once. What it did not get is a diagnostic,
+and the reason is worth writing down: telling a dead write from a live one needs
+liveness over slots — `p.x += 1; return p.x` is the same two lines and is
+correct — and a warning that fires on correct code is worse than the footgun.
+Each of the three was caught by a check the program made of itself, which is
+what those checks are for.
+
+**A `match` arm is an expression.** A rule that wants to *do* something per case
+is written as a number read out of the match and an `if` chain on that number;
+`bench/agents.kest` and `bench/rules.kest` are both written that way. That is
+the language working as designed — an arm gives a value and a block is not one
+— and the workaround is short. It is recorded here because it happened twice,
+which is the bar for a language-design candidate, and it is left as a candidate
+rather than acted on: a statement `match` is a second form of the same word,
+and this project's rule about a second way to write a thing is D179's.
+
+**A host writing a debugger had to write down a number.** The byte of the
+instruction nothing compiles to moved twice in an afternoon, and what a host
+that writes the wrong byte gets is not a message. That got `kest_break_byte`,
+which is the machine saying which byte it is: additive, one number rather than
+the instruction set, and the tenth door a debugger uses. See D1012.
