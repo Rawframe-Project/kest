@@ -2126,19 +2126,14 @@ fi
 cat > "$scratch"/moved.kest <<'MOVED'
 module moved
 
-struct Pair {
-    a: i32
-    b: i32
-}
-
 fn main() -> i32 {
-    let items: [Pair] = array(4, Pair(1, 2))
+    let a = 1
+    let b = 2
     let sum = 0
     for i in 0..1000 {
-        let one = items[i % 4]
-        one.a += 1
-        items[i % 4] = one
-        sum += one.a % 3
+        a += i % 3
+        b += a % 5
+        sum += a + b
     }
     return sum % 7
 }
