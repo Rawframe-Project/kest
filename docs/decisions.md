@@ -33685,6 +33685,22 @@ the heap between them. That is an IR pass over `ELEM` places and it is the
 opportunity D1025 was looking for in the wrong place. It is named in
 `docs/state.md` as open, with this measurement beside it.
 
+**And the evidence from the library, which section 12 asked for.** `std.table`
+keeps how many marks it holds in `marks: [i32]`, an array of one, and how many
+pairs it holds as `len(keys)` rather than as a number beside them. Neither is a
+style: a scalar field of a struct written by a function is written on that
+function's copy, so a table -- which is handed around and stays the same table
+-- cannot hold a count as a number. That is the model's cost, paid in the one
+library shape that has an identity, and it is 8 bytes and one heap block per
+table. The alternative is a struct that is a handle, which is the thing this
+decision declines, and the measurement above is why. Written down here rather
+than left in a comment, because it is the strongest evidence against the model
+that this tree has and it should be read beside the evidence for it.
+
+Nothing of it is reachable from outside any more: those fields are `own` since
+D1041, so the workaround is the module's business and not a shape a reader has
+to know about.
+
 **The reference was stale about references and is fixed here.** It said the stamp
 comes from the build, that a slot counts its own reuses in thirty-two bits
 beside a thirty-two bit index, and that four thousand million removals of one
