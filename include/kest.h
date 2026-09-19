@@ -1143,6 +1143,18 @@ typedef struct {
 // There is nothing to turn on: these are counted whether or not anybody asks.
 bool kest_telemetry(const KestRuntime *runtime, KestTelemetry *into);
 
+// The byte a host writes over an instruction to stop the machine there, which
+// is the instruction nothing compiles to. A host writing a debugger has to
+// know it and cannot work it out: the public header does not hand out the
+// instruction set and should not, because what a breakpoint is is the
+// machine's business. So the machine says which byte it is rather than the
+// host writing the number down -- which it did, twice, and the second time the
+// number had moved and the machine ran whatever that byte now means.
+//
+// Writing it anywhere but the first byte of an instruction is writing into the
+// middle of one, and nothing can check that for a host. See D991 and D1012.
+uint8_t kest_break_byte(void);
+
 // Walks now, at a moment the host chose, and gives back everything nothing can
 // reach. It is what a frame-budgeted host reaches for: a machine decides for
 // itself when a walk is worth doing, which is when it has been handed as much

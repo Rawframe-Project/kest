@@ -36628,3 +36628,42 @@ counts for all seven programs either way; `bench/measure` with `KEST_PLAIN` on
 and off, three rounds of fifteen samples; `make fast`; the new tree rule
 watched naming the two committed binaries in a worktree of the commit that had
 them.
+
+## An element read straight into the frame
+
+D1011 said fuse a dependency, not a push. This is the dependency: `one =
+world[at]` is an index that unpacks a struct onto the stack and a store that
+copies it off again, and the store cannot start until the index has finished
+because the value goes through memory between them. `world[at] = one` is the
+same the other way round.
+
+`index.to` reads the element into the frame where it is going and `elem.from`
+packs it out of the frame into the element. Both are peepholes on the pair the
+lowering already emits, and both are off under `KEST_PLAIN`.
+
+Pinned to one core, the least of six runs each, against a copy of the tree
+without it:
+
+    kernel   100.2 -> 85.2 ms   -15.0 %   instructions  -9.4 %
+    rules    619.5 -> 601.2      -3.0 %                 -1.1 %
+    graph     11.3 -> 10.9       -3.0 %                  0
+    words     42.1 -> 42.0       -0.3 %                 -0.4 %
+    agents   589.1 -> 595.2      +1.0 %                  0
+    control  121.8 -> 123.7      +1.6 %                  0
+
+The last two are noise and their instruction counts say so: neither writes the
+shape this fuses. The first is the shape this language is for.
+
+Which makes the pair of experiments the point. Nineteen per cent fewer
+instructions bought nothing when what they were was pushes; nine per cent
+bought fifteen when what they were was four slots written to the stack and read
+straight back. The measurement to trust is not the count.
+
+And the third time `examples/embed.c`'s written-down opcode number broke,
+`kest_break_byte` was added so it cannot break again: the machine says which
+byte a breakpoint is rather than a host writing the number down. See D1012.
+
+**Runs:** `make fast`; `bench/measure` pinned to one core, best of six, with
+and against a copy of the tree at 7fbb327; `KEST_DEEP=1` instruction counts for
+all seven programs; `tools/check-header.sh`, `tools/check-dead.sh`,
+`tools/check-docs.sh`, `tools/check-tables.sh`.

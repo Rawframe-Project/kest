@@ -3552,6 +3552,48 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top += layout->slots;
             break;
         }
+        // The two above, each with the move at the other end taken into it.
+        // `index` unpacks a struct onto the stack and the store that follows
+        // copies it off again; this writes it where it is going. See D1012.
+        case KEST_OP_INDEX_TO: {
+            uint16_t of_which = READ_U16();
+            uint16_t slot = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
+            int64_t index = (--top)->integer;
+            const Array *array = (--top)->object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
+            IN_ARRAY(index, array);
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, slot,
+                           slot + layout->slots)) {
+                return false;
+            }
+#endif
+            READ_INTO(mine + slot, layout,
+                      array->bytes + (size_t)index * array->stride);
+            break;
+        }
+        case KEST_OP_ELEM_FROM: {
+            uint16_t offset = READ_U16();
+            uint16_t of_which = READ_U16();
+            uint16_t slot = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
+            int64_t index = (--top)->integer;
+            Array *array = (--top)->object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
+            IN_ARRAY(index, array);
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, slot,
+                           slot + layout->slots)) {
+                return false;
+            }
+#endif
+            pack(array->bytes + (size_t)index * array->stride + offset, layout,
+                 mine + slot);
+            break;
+        }
         case KEST_OP_POP_LAST: {
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
@@ -7137,4 +7179,8 @@ bool kest_collect(KestRuntime *runtime) {
     }
     gather(runtime, NULL);
     return true;
+}
+
+uint8_t kest_break_byte(void) {
+    return (uint8_t)KEST_OP_STOP;
 }

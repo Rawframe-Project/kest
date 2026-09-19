@@ -4297,7 +4297,11 @@ machine's loop, because one measured a third of the machine. See D979 and D991.
 A stopped machine is not finished and is not broken: its frames, its stack and
 its heap are where they were, and what a `scratch { }` opened is still open.
 
-A host does all of this itself through nine doors. `kest_code_of` hands over the
+A host does all of this itself through ten doors. `kest_break_byte` is the byte
+to write, which is the instruction nothing compiles to: a host cannot work it
+out, because the public header does not hand out the instruction set and should
+not, so the machine says which byte it is rather than a host writing the number
+down and finding that it moved. `kest_code_of` hands over the
 bytes a body was compiled to, which is what a breakpoint is written into;
 `kest_came_from` says where in the source the instruction at a byte came from,
 which is what makes a breakpoint at a line a breakpoint at an instruction.

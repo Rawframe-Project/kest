@@ -967,7 +967,9 @@ static const Instruction INSTRUCTIONS[] = {
     {"hash.value", U16},   {"eq.value", U16},     {"ne.value", U16},
     {"text.from", NONE},
     {"new.store", U16_U16},  {"load.elem", U16_U16},
-    {"store.elem", U16_U16},    {"add", U16},          {"get", U16},
+    {"store.elem", U16_U16},
+    {"index.to", U16_U16},  {"elem.from", U16_U16_U16},
+    {"add", U16},          {"get", U16},
     {"set", U16},          {"remove", NONE},      {"count", NONE},
     {"seek.from", FIND},   {"seek.next", FIND_BACK},        {"store.ref", NONE},
     {"true", NONE},        {"false", NONE},       {"pop", NONE},
@@ -1455,6 +1457,8 @@ static bool op_allocates(uint8_t op) {
     // and the block is the one the array already has.
     case KEST_OP_LOAD_ELEM:
     case KEST_OP_STORE_ELEM:
+    case KEST_OP_INDEX_TO:
+    case KEST_OP_ELEM_FROM:
     case KEST_OP_LOAD_SLOTS:
     case KEST_OP_STORE_SLOTS:
     case KEST_OP_OFFSET_ADDR:

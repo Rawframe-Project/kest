@@ -133,6 +133,17 @@ typedef enum {
     // happens in between can move the block out from under it. See D931.
     KEST_OP_LOAD_ELEM,  // u16 offset, u16 layout; reads, leaves the place
     KEST_OP_STORE_ELEM, // u16 offset, u16 layout; writes, takes the place
+    // An element read straight into the frame, and one written straight out of
+    // it. `one = world[at]` is an index that unpacks a struct onto the stack
+    // and a store that copies it off again, and `world[at] = one` is the same
+    // the other way round -- four slots pushed and four popped for every four
+    // that had to move at all. These move them once.
+    //
+    // A dependency rather than a push, which is what D1011 says to fuse: the
+    // store reads exactly what the index just wrote, through memory, and
+    // neither instruction can start until the other has finished. See D1012.
+    KEST_OP_INDEX_TO,   // u16 layout, u16 slot; takes the place, writes slots
+    KEST_OP_ELEM_FROM,  // u16 offset, u16 layout, u16 slot; takes the place
     KEST_OP_ADD,        // u16 stride
     KEST_OP_GET,        // u16 stride, leaves an optional
     KEST_OP_SET,        // u16 stride

@@ -150,8 +150,39 @@ static void emit_load(Lower *lower, uint16_t slot, uint16_t size,
     }
 }
 
+static bool fusing(void);
+
+// Whether the last thing written was an index of a run whose element is this
+// many slots wide, and which layout it read. An index pushes a struct onto the
+// stack and the store after it copies it off again, and the store cannot begin
+// until the index has finished: that is the dependency D1011 says is worth
+// taking into one instruction. Three bytes, the same shape every other
+// peephole here reads.
+static bool index_before(const Lower *lower, uint16_t size, uint16_t *layout) {
+    if (lower->last_op != KEST_OP_INDEX || lower->last_at < lower->pointed_at ||
+        lower->last_at + 3 != lower->chunk->code_count) {
+        return false;
+    }
+    const uint8_t *at = lower->chunk->code + lower->last_at;
+    uint16_t which = (uint16_t)(at[1] | ((uint16_t)at[2] << 8));
+    if (which >= lower->module->layout_count ||
+        lower->module->layouts[which].slots != size) {
+        return false;
+    }
+    *layout = which;
+    return true;
+}
+
 static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
                        KestSpan origin) {
+    uint16_t layout = 0;
+    if (size != 1 && fusing() && index_before(lower, size, &layout)) {
+        take_back(lower);
+        emit(lower, KEST_OP_INDEX_TO, origin);
+        emit_u16(lower, layout, origin);
+        emit_u16(lower, slot, origin);
+        return;
+    }
     emit(lower, size == 1 ? KEST_OP_STORE : KEST_OP_STOREN, origin);
     emit_u16(lower, slot, origin);
     if (size != 1) {
@@ -512,11 +543,26 @@ static void write_place(Lower *lower, const KestIrOp *op) {
         emit_u16(lower, place->stride, op->span);
         emit_u16(lower, place->count, op->span);
         return;
-    case KEST_IR_PLACE_ELEM:
+    case KEST_IR_PLACE_ELEM: {
+        // And the same the other way round: a run of slots pushed and then
+        // packed into the element. The push and the pack are the same slots.
+        uint16_t from = 0;
+        if (fusing() && place->layout < lower->module->layout_count &&
+            load_before(lower, &from) ==
+                lower->module->layouts[place->layout].slots &&
+            lower->module->layouts[place->layout].slots > 1) {
+            take_back(lower);
+            emit(lower, KEST_OP_ELEM_FROM, op->span);
+            emit_u16(lower, place->offset, op->span);
+            emit_u16(lower, place->layout, op->span);
+            emit_u16(lower, from, op->span);
+            return;
+        }
         emit(lower, KEST_OP_STORE_ELEM, op->span);
         emit_u16(lower, place->offset, op->span);
         emit_u16(lower, place->layout, op->span);
         return;
+    }
     case KEST_IR_PLACE_AT:
     case KEST_IR_PLACE_HELD:
         break;

@@ -6994,14 +6994,13 @@ int main(int argc, char **argv) {
         // Over the first instruction of the body, which is the one place a
         // breakpoint is certainly at the start of an instruction without
         // walking anything.
-        // The instruction nothing compiles to, which is the last one there
-        // is. A host that writes a debugger reads the number out of a header
-        // of its own or out of `kest emit`; this one writes it down, because
-        // the public header does not hand out the instruction set and should
-        // not: what a breakpoint is is the machine's business and this is the
-        // one host in this tree that has to know it.
+        // The instruction nothing compiles to, asked of the machine rather
+        // than written down here. It was written down here, and twice the
+        // number moved when an instruction was added and this host wrote a
+        // byte that had come to mean something else -- which is not a message,
+        // it is whatever running that instruction does. See D1012.
         uint8_t was = code[0];
-        code[0] = 157;
+        code[0] = kest_break_byte();
         KestValue asking[4] = {{0}};
         asking[0].integer = 21;
         bool finished = kest_call(watched, doubled, asking, 4);

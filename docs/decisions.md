@@ -32146,3 +32146,49 @@ what Phase M's differential testing runs against.
 machine, and an afternoon — and one thing found on the way: `examples/embed.c`
 writes the number of the instruction nothing compiles to, which moved when two
 were added. It says so where it writes it, and it was right to.
+
+## D1012. An element read straight into the frame, which is fusing a dependency
+
+**Kept**, on the rule D1011 bought: fuse a dependency, not a push.
+
+`one = world[at]` is an index that unpacks a struct onto the stack and a store
+that copies it off again; `world[at] = one` is the same the other way round.
+Four slots pushed and four popped for four that had to move at all, and the
+store cannot begin until the index has finished — the value goes through memory
+between them. `index.to` reads the element into the frame where it is going,
+and `elem.from` packs it out of the frame into the element. Two instructions,
+both peepholes on the pair the lowering already emits, both off under
+`KEST_PLAIN`.
+
+**What it is worth.** Pinned to one core, the least of six runs each, against a
+copy of the tree without it:
+
+    kernel   100.2 -> 85.2 ms    -15.0 %      instructions -9.4 %
+    rules    619.5 -> 601.2      -3.0 %                    -1.1 %
+    graph     11.3 -> 10.9       -3.0 %                     0
+    words     42.1 -> 42.0       -0.3 %                    -0.4 %
+    agents   589.1 -> 595.2      +1.0 %                     0
+    control  121.8 -> 123.7      +1.6 %                     0
+
+The last two are noise: neither of them writes the shape this fuses, and the
+instruction counts say so. The first is the shape this language is for — a run
+of value structs walked and each one moved — and it is fifteen per cent.
+
+**And it is the other half of D1011's rule, measured.** Nine per cent fewer
+instructions bought fifteen per cent of the time. The fusion that was rejected
+bought nought per cent from nineteen. The difference is what the removed
+instructions were doing: pushes an out-of-order core runs for free, against
+four slots written to the stack and read straight back out of it.
+
+**What it does not change.** The bounds check is still made, at the same
+instruction, with the same refusal and the same span. The element is still
+unpacked and packed by the same two functions. What is gone is the copy between
+them.
+
+**And a footgun found on the way.** `examples/embed.c` writes a breakpoint by
+writing the byte of the instruction nothing compiles to, and it wrote the
+number down. That number moved when instructions were added — twice in one
+afternoon — and what a host that writes the wrong byte gets is not a message,
+it is whatever running that instruction does. `kest_break_byte` is the machine
+saying which byte it is. It is additive, it hands out one number rather than
+the instruction set, and it is the tenth door a host writing a debugger uses.
