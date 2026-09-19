@@ -22,14 +22,16 @@ reader who finds the same shape again should find the first one beside it.
 | F6 | a cancelled machine runs straight-line work | cancel is only seen at a jump or a call, and a body with neither runs to the end |
 | F7 | `u64` of a float above `INT64_MAX` saturates at 2^63 | `u64(1e19)` is 9223372036854775808, folded and at runtime |
 | F8 | `check` accepts what `emit` and `run` refuse | and the refusal is `K0405`, the compiler-fault code, for a mistake in the program. Both instantiation orders |
-| F9 | a reference from one world resolves in another | two independent builds of one file: a `ref<Thing>` made in the first read an unrelated object in the second and answered its value |
+| F9 | a reference from one world resolves in another | two independent builds of one file: a `ref<Thing>` made in the first read an unrelated object in the second and answered its value. The world id that fixed it was itself sixteen bits of a count and came round, which is F11 |
+| F11 | a world identity wraps into a live one | the 65,537th machine of a process was told it was the first, and the first was still standing: a reference made in a world holding 7, 8, 9 resolved in one holding 1000, 1001, 1002 and answered 1000. Fixed by taking the world out of a reference altogether (D1033); held by the gate's `identity` section, which reports 4,464 references handed out twice against the tree before it |
+| F12 | a world runs out of identity in half a second | one thing in and one thing out, live set of one, and `K0630` after 16,777,215 turns because the count was one machine's and twenty-four bits. `bench/agents.kest` had 20,394 rounds in it. The count is the process's and forty bits now (D1034) |
 
 ## Read from the source rather than run
 
 | | what |
 | --- | --- |
 | F10 | `no.alloc` is documented more broadly than what is measured: diagnostic and trap machinery allocate outside the program heap |
-| E3 | the library has no process-global mutable state; what is shared is the build's stamp counter, which two runtimes of one build write without synchronisation. That is what F9 rests on |
+| E3 | FIXED, and the sentence it was written under is no longer true. The library keeps one piece of process-global mutable state on purpose: the count a place is stamped from, an atomic that only goes up and is never handed out twice. It is what makes a reference say which machine, which store and which occupant in one number, and it replaced both the build's counter this entry was about and the count of worlds that replaced that. See D1033 and D1034 |
 | E4 | FIXED. Text is two slots — the bytes and how many — since D964: `len` is a read, a cut reaches nothing and `slice` came off the list of builtins that allocate, and a host reads bytes and a length through `kest_text_bytes` without measuring. The reusable buffer was already answered (D940). A nought inside is still refused, which is what D955 wrote down; what is new is that a cut does not end in one and the reference says so |
 | E5 | `live_from` scanned to the store's high-water mark. It reads a bit a slot and sixty-four at a time now (D954): four thousand walks of a store holding eight things out of two hundred thousand went from 0.22s to 0.02s |
 

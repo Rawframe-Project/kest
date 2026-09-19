@@ -37292,3 +37292,55 @@ than. See D1032.
 
 **Runs:** `KEST_DEEP=1` over the workloads for the split, the instrument built
 against the sanitised objects for the reentry count, `make fast`, `make check`.
+
+## The world in a reference came round, so there is no world in a reference
+
+Two cold reviewers read Kest from outside its decision history. The first thing
+they found is this, and it reproduced on the first try.
+
+A reference said which world it came from, in sixteen bits taken from a count
+of the machines a process had made. A count of sixteen bits comes round. The
+65,537th machine is told it is the first — and the first may still be standing.
+A host of seventy lines: a world holding 7, 8, 9 handed its first reference to
+a world holding 1000, 1001, 1002 that had been told it was the same world, and
+the second answered **1000**, with no refusal, while the first still answered 7.
+
+The `docs/state.md` F9 entry did not cover it. F9 was two *builds* handing out
+the same first reference, which is what the world id was added to fix. This was
+the world id itself running out.
+
+The second finding is the same representation from the other side. `rt->stamps`
+was one counter for a whole machine, spent by every `add`, and it stopped at
+16,777,215. A world holding exactly one thing — one in, one out — died in
+**0.536 seconds**. `bench/agents.kest` spends 823 stamps a round over twenty
+thousand agents, so a world of that shape had five minutes and forty seconds in
+it at sixty hertz.
+
+They are one representation and they got one answer: **take the world out**. A
+reference is forty bits of handout number and twenty-four of place, the number
+comes from one count for the whole process, and it is never handed out twice.
+That one number says everything the world said and everything the per-machine
+count said — another machine's reference, a freed machine's, another store's,
+and this store's own from before the place was given back are all a number this
+place was never stamped with. There is no identity to reuse, so there is nothing
+to wrap.
+
+It is *cheaper*: `resolve_ref` asks one question where it asked two, and `get`
+ran 2,251,728 times in `agents`. Instructions −1.40 % on `agents` and −1.08 % on
+`graph`. It costs four bytes a place, which is peak heap +1.0 % on `agents` and
++7.1 % on `graph`. A reference is still one slot and no shape in any program got
+wider.
+
+The gate has an `identity` section now: the three ways a reference must name
+nothing, asked of a host because two machines is what a host has and a program
+has one, and then the thing those rest on asked of seventy thousand machines —
+no two of them ever stamp a place alike. Against the tree before this, that host
+reports **4,464 references handed out twice**.
+
+See D1033 and D1034.
+
+**Runs:** the reproduction host against `da2bfc1` and against this;
+`bench/agents.kest`, `bench/graph.kest` and `bench/rules.kest` under `perf stat
+-r 4` for instructions and `kest profile` for the heap; the churn program at
+seventeen million turns; the ceiling lowered in a copy of the tree to watch
+`K0630`; `make fast`; `make check`.

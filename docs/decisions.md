@@ -38,6 +38,8 @@ another and is not named here is a check that fails.
 | D787 | D791 | the direction was already held, by D529, and D787 duplicated it |
 | D790 | D791 | the three lists only needed naming because of the duplicate |
 | D012 | D996 | what a program makes is given back when nothing can reach it |
+| D934 | D1033 | a handout number is the whole of the authority, and a count of worlds came round |
+| D936 | D1034 | the count that stamps places is the process's and is forty bits wide |
 
 ---
 
@@ -33332,3 +33334,129 @@ for a number nobody has asked a question of. *Validation work at the boundary*:
 D1029 measured it as the thing it is -- one handle-tag comparison per access in
 a release build -- rather than counting it, because a counter on it would cost
 more than it measures.
+
+## D1033. A reference is a handout number, and there is no world in it. Supersedes D934
+
+**Decided.** A reference is forty bits of handout number and twenty-four bits
+of place. The sixteen bits that said which world it came from are gone, and so
+is the world.
+
+**What was wrong with the world.** D934 put a world id in a reference because
+two machines from two builds of one file both handed out the same first
+reference and one of them read the other's object. The id came from a count of
+the machines a process had made, masked to sixteen bits:
+
+    rt->world = atomic_fetch_add(&worlds_so_far, 1) & REF_WORLD_MASK;
+
+A count of sixteen bits comes round. The 65,537th machine of a process is told
+it is the first, and the first may still be standing. Reproduced on `da2bfc1`
+with a host of seventy lines: a world holding 7, 8, 9 handed its first
+reference to a world holding 1000, 1001, 1002 that had been told it was the
+same world, and the second answered **1000**. No refusal. Both alive.
+
+The `docs/state.md` F9 entry does not cover this and never did: F9 was two
+*builds*, which the world id fixed. This is the world id itself running out.
+
+**What it is now.** One count for the whole process, sixty-four bits wide, never
+handed out twice, and a place is stamped with the next number when it is handed
+out. The check is one comparison:
+
+    store->serials[index] != serial  ->  this reference names nothing here
+
+That one number says everything the world said and everything the per-machine
+count said. **Another machine's reference, a freed machine's reference, another
+store's, and this store's own from before the place was given back are all a
+number this place was never stamped with.** There is no identity to reuse, so
+there is nothing to wrap.
+
+**Two live worlds can never validate one reference authority**, and the reason
+is that there is no authority to share: a handout number belongs to one place
+in one store for as long as that place holds what it was given.
+
+**What it costs, measured.** Fewer instructions, because `resolve_ref` asks one
+question rather than two and `get` ran 2,251,728 times in `bench/agents.kest`:
+
+    agents    5,969,009,341 -> 5,885,414,972 instructions   -1.40 %
+    graph       112,134,168 ->   110,929,840                -1.08 %
+    rules     5,292,452,693 -> 5,296,344,692                +0.07 %, noise
+
+And more memory, because a place's stamp went from four bytes to eight: peak
+heap +1.0 % on `agents` and +7.1 % on `bench/graph.kest`, which is ten thousand
+nodes in a store and is where a per-place array shows most. A reference is still
+one slot; no shape in any program got wider.
+
+**The counter is shared across threads and that is safe for `deterministic`.**
+A program cannot see a reference's number: there is no text for one (`K0324`)
+and no whole number of one (`K0327`). The value is the runtime's and crosses
+only to a host. That is the property this design rests on, and it is what would
+have to be broken before a shared count could change what a program answers.
+
+**What is still finite, and what happens at the end.** A million million places,
+counting the ones taken back. `bench/agents.kest` spends 823 of them a round
+over twenty thousand agents: 1.33 billion rounds, two hundred and fifty-three
+days at sixty hertz without stopping. Past it, `K0630` refuses the `add` at the
+line that asked, with a note saying a place is stamped once for every `add` and
+a number is never handed out twice. Never a silent reuse. See D1034 for the
+lifetime arithmetic and why this number and not another.
+
+**Held by** a section of the gate called `identity` and by the ceiling ladder.
+The gate asks a host the three ways a reference must name nothing, and then asks
+seventy thousand machines whether any two of them stamp a place alike. Against
+`da2bfc1` that host reports **4,464 references handed out twice**; against this,
+nought. A tenth of a second of work and two and a half seconds of making
+machines.
+
+## D1034. What a store's identity is spent on, and how long it lasts. Supersedes D936
+
+**Decided.** The count that stamps places is the process's and not the machine's,
+and it is forty bits rather than twenty-four.
+
+**What was wrong.** `rt->stamps` was one counter for a whole machine, spent by
+every `add` in every store of it, and it stopped at 16,777,215. A world holding
+exactly one thing -- one in, one out, for as long as it is asked -- ran out in
+**0.536 seconds** on this machine:
+
+    17,000,000 turns -> K0630, this machine has handed out 16777215 places in
+    stores, which is all it can tell apart
+
+The live set never grew. What ran out was not memory.
+
+`bench/agents.kest` spends 823 stamps a round over twenty thousand agents, so a
+world of that shape had 20,394 rounds in it: **five minutes and forty seconds at
+sixty hertz**. That is not a ceiling a persistent world meets by accident; it is
+one it meets on the way to lunch.
+
+**The arithmetic, said plainly.** What is per-place is the stamp a place carries.
+What is per-process is the count they come from. Nothing is per-machine any more
+and nothing is per-build. A stamp is spent by `add` and by nothing else: reading,
+writing, walking and removing spend none. A place given back does not give its
+stamp back, which is exactly what makes a reference made before it was given
+back name nothing afterwards -- so the count is a count of handouts and can only
+go up.
+
+**Why forty bits and not more.** A reference is one slot. Two slots would give
+sixty-four bits of count and four thousand million places, and would cost every
+shape holding a reference: `agents.Agent` is eleven slots with two optional
+references in it and would be thirteen, `graph.Node` is three and would be four.
+`agents` already spends nineteen per cent of its bytes moved on store payload.
+The twenty-four bits of place are the ceiling the reference already documents --
+16,777,215 places in one store, which at even twenty-four bytes an element is
+four hundred megabytes -- so they were left alone and the other forty went to
+the count.
+
+That is 1,099,511,627,775 handouts, which is **65,536 times** what a machine had
+before. The churn that died in half a second would need nine hours and
+forty-five minutes of doing nothing but `add`.
+
+**Why it is not unbounded, and what that means.** Nothing in sixty-four bits is.
+A number may be handed out again only when no reference carrying it can still
+exist, and nothing can know that: a host may hold one as a number for as long as
+it likes. So the count only goes up, and the end of it is a refusal rather than a
+reuse. The mission's rule is the right one -- if identity space is finite, fail
+before unsafe reuse -- and this fails, at a line, with a message saying what was
+spent.
+
+**What a reader should do about it.** Nothing, at 823 a round. A process that
+hands out a million places a second for a fortnight is the shape that meets it,
+and what it meets is a refusal it can see coming rather than a reference that
+names somebody else's object.

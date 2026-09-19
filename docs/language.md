@@ -1813,7 +1813,7 @@ one, and paying is what a frame budget is about.
 | a piece of text | 32 bytes an entity | — |
 | an array | 51 bytes an entity | 0 bytes an entity |
 | a table | 76 bytes an entity | 0 bytes an entity |
-| a store | 102 bytes an entity | 0 bytes an entity |
+| a store | 115 bytes an entity | 0 bytes an entity |
 
 These are bytes, and a byte count is this machine's as much as the program's: a
 handle is a machine word and a header is made of them, so the table above is
@@ -1826,9 +1826,10 @@ means read from outside it. Being told is worth everything: the room is made
 once, before the frame, and the frame pays for nothing. A store is the dearest
 because it grows four runs at once — what it holds, what each has counted, which
 are live and which are free — and a table is dearer than an array because it
-grows three. Which are live is a bit a slot rather than a byte, which is why the
-store is three bytes an entity cheaper than it was and why a walk of one reads
-sixty-four slots at a time.
+grows three. Which are live is a bit a slot rather than a byte, which is why a
+walk of one reads sixty-four slots at a time; what each place has been stamped
+with is eight bytes rather than four, which is why a store is thirteen bytes an
+entity dearer than it was, and D1033 is what those eight bytes bought.
 
 Not everything about a cost here is a number this project measures. `remove`
 from an array shifts what comes after it and `remove` from a store does not:
@@ -2658,7 +2659,7 @@ none of them is a wrap or a quiet truncation:
 | 65536 | names a program asks the host for |
 | 2147483647 | elements an array or a store holds, and bytes in text |
 | 16777215 | places in one store |
-| 16777215 | times a machine hands out a place, counting the ones taken back |
+| 1099511627775 | times a process hands out a place, counting the ones taken back |
 
 ```
 error[K0503]: this loop is 156012 bytes of code, and a loop reaches back 65535
