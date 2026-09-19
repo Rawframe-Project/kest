@@ -32026,3 +32026,34 @@ same program with it and without it and requiring the same answer, the same
 refusals, and the same deterministic bytes. That is the differential test, it is
 Phase M of this mission, and an optimization that cannot be turned off cannot
 be tested that way.
+
+## D1010. Which instruction followed which, and what that says to aim at
+
+**Decided.** The build that checks itself counts pairs as well as instructions,
+under the same `KEST_DEEP` it already counts instructions under, and prints
+them for whoever is reading to sort. What is worth one instruction is a pair
+that happens often, and which those are is a measurement rather than a guess.
+
+**What it says**, over the seven programs this project measures — the four
+workloads and the three reference programs — 478,952,082 instructions in all:
+
+    a load or a constant feeding a conditional jump      11.78 %
+    something made and then stored into a slot            8.84 %
+    the two instructions around a walk's step             5.81 %
+    an array and an index, then the index itself          2.69 %
+    a load straight into a store, which is a copy         1.94 %
+
+The first of those is one family with one shape: `load.k slot, const` pushes a
+slot and a constant and the conditional jump after it pops both. Five members
+of it — the false-branching integer comparisons — are 7.17 per cent on their
+own.
+
+**What it does not say.** A pair that happens often is not a pair worth
+fusing: the two have to be adjacent for a reason rather than by accident, and
+the fusion has to keep what D1009 says a transformation keeps. This is the
+measurement that says where to look, and the looking is the next thing.
+
+**Why it is in the checked build.** The same reason the instruction counts are
+(D979): a test at the top of the dispatch loop measured a third of the machine,
+and a third is nothing beside what a sanitiser already costs. Counts and pairs
+do not depend on the build, so these are the pairs the release build runs.

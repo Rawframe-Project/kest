@@ -589,6 +589,12 @@ struct KestRuntime {
     // it refused one carrying these before anybody had asked to read them.
     // Nought here is a machine that is not counting. See D870.
     uint64_t *ran_checked;
+    // And which instruction followed which, so that a pair worth one
+    // instruction can be told from a pair that never happens. Kept beside the
+    // counts above and under the same environment variable, in the build that
+    // checks itself. See D1010.
+    uint64_t *pairs_checked;
+    uint8_t last_checked;
     // And how many questions this build asked of its own compiler on the way:
     // every number an instruction carries is read by something that asks
     // whether it could be that number (D900 to D906), and this is how many
@@ -3083,6 +3089,12 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 #if KEST_CHECKED
         if (rt->ran_checked != NULL) {
             rt->ran_checked[*instruction]++;
+            if (rt->pairs_checked != NULL) {
+                rt->pairs_checked[(size_t)rt->last_checked *
+                                      (KEST_OP_RETURN + 1) +
+                                  *instruction]++;
+                rt->last_checked = *instruction;
+            }
         }
         // The compiler's count of the operand stack, held by the machine that
         // moves it. A body is given its named slots and this many above them,
@@ -5310,6 +5322,10 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     // program's. See D870.
     if (getenv("KEST_DEEP") != NULL) {
         rt->ran_checked = KEST_ARENA_ARRAY(own, uint64_t, KEST_OP_RETURN + 1);
+        rt->pairs_checked =
+            KEST_ARENA_ARRAY(own, uint64_t,
+                             ((size_t)KEST_OP_RETURN + 1) *
+                                 ((size_t)KEST_OP_RETURN + 1));
     }
 #endif
     if (rt->host_measured && reached + rt->host_slots > 0) {
@@ -5533,6 +5549,25 @@ bool kest_runtime_free(KestRuntime *runtime) {
             if (runtime->ran_checked[op] > 0) {
                 fprintf(stderr, "ran %s %llu\n", kest_op_name((uint8_t)op),
                         (unsigned long long)runtime->ran_checked[op]);
+            }
+        }
+        // And every pair that happened, so that whoever is reading this can
+        // sort them: what is worth one instruction is a pair that happens
+        // often, and which those are is a measurement rather than a guess.
+        for (uint32_t first = 0;
+             runtime->pairs_checked != NULL && first <= KEST_OP_RETURN;
+             first++) {
+            for (uint32_t then = 0; then <= KEST_OP_RETURN; then++) {
+                uint64_t many =
+                    runtime->pairs_checked[(size_t)first *
+                                               (KEST_OP_RETURN + 1) +
+                                           then];
+                if (many > 0) {
+                    fprintf(stderr, "pair %s %s %llu\n",
+                            kest_op_name((uint8_t)first),
+                            kest_op_name((uint8_t)then),
+                            (unsigned long long)many);
+                }
             }
         }
     }

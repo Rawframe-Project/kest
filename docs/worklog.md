@@ -36563,3 +36563,27 @@ held by running the same program with and without it.
 
 **Runs:** `tools/check-docs.sh`. Nothing was built for this one; it is what the
 next thing built is held to.
+
+## Which instruction followed which
+
+The instrument for it is four lines in the build that checks itself: a count
+per pair beside the count per instruction, under the same environment variable,
+printed for whoever is reading to sort.
+
+Over the seven programs, 478,952,082 instructions:
+
+    a load or a constant feeding a conditional jump      11.78 %
+    something made and then stored into a slot            8.84 %
+    the two instructions around a walk's step             5.81 %
+    an array and an index, then the index itself          2.69 %
+    a load straight into a store, which is a copy         1.94 %
+
+The first is one shape: `load.k slot, const` pushes a slot and a constant and
+the jump after it pops both. Its five false-branching integer members are 7.17
+per cent by themselves, and D868 already wrote down how this project does that
+kind of thing — the width of a narrowing stayed an operand rather than becoming
+six instructions, because what a dispatch costs is the branch and not the two
+bytes read after it. See D1010.
+
+**Runs:** `KEST_DEEP=1 kest-debug profile` over all seven programs; the numbers
+above are that output summed.
