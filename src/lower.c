@@ -1,5 +1,6 @@
 #include "lower.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 // A jump and a loop carry how far as two bytes, so this is how much code there
@@ -158,6 +159,28 @@ static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
     }
 }
 
+// Whether the fusions this file makes are made at all. There is one way to
+// turn them off and it is here rather than on the command line: what it is for
+// is compiling the same program twice and requiring the same answer, which is
+// how a transformation is held to being one that keeps a program's meaning.
+// D1009 says every optimization is held that way and D1011 is the first one
+// that was.
+//
+// A plainer program runs the same operations in the same order; what differs
+// is how many instructions they are written as. Nothing a reader sees changes
+// except `kest emit`, which prints what was emitted and is where the
+// difference is meant to show.
+//
+// Read once, because a compiler that asked the environment per body would be
+// one whose answer could change half way through a program.
+static bool fusing(void) {
+    static int decided = -1;
+    if (decided < 0) {
+        decided = getenv("KEST_PLAIN") == NULL ? 1 : 0;
+    }
+    return decided != 0;
+}
+
 // A run of values the chunk holds, and the instruction that reads it. A local
 // and then a constant is the commonest pair this machine runs — every `x + 1`,
 // every `i < n` against a written number — and it is one instruction with two
@@ -177,7 +200,8 @@ static void emit_constant(Lower *lower, uint16_t first, uint16_t count,
         return;
     }
     uint16_t slot = 0;
-    if (count == 1 && index <= UINT16_MAX && one_load_before(lower, &slot)) {
+    if (fusing() && count == 1 && index <= UINT16_MAX &&
+        one_load_before(lower, &slot)) {
         take_back(lower);
         emit(lower, KEST_OP_LOADK, origin);
         emit_u16(lower, slot, origin);
@@ -416,7 +440,7 @@ static void fill_in_branches(Lower *lower) {
 // than guessed at from the bytes.
 static uint8_t asks(Lower *lower, bool when_true) {
     uint8_t op = when_true ? KEST_OP_JUMP_TRUE : KEST_OP_JUMP_FALSE;
-    for (uint32_t round = 0; round < 2; round++) {
+    for (uint32_t round = 0; fusing() && round < 2; round++) {
         // Only while the branch is still a plain one: one that has already
         // taken a comparison into itself is not looking for another.
         if ((op != KEST_OP_JUMP_FALSE && op != KEST_OP_JUMP_TRUE) ||
@@ -616,7 +640,7 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
     }
     case KEST_IR_NARROW: {
         uint8_t does = KEST_OP_NARROW;
-        if (lower->last_at + 1 == lower->chunk->code_count &&
+        if (fusing() && lower->last_at + 1 == lower->chunk->code_count &&
             lower->last_at >= lower->pointed_at) {
             does = fused_with_narrow(lower->last_op);
             if (does != KEST_OP_NARROW) {

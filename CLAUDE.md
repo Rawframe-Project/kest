@@ -1115,8 +1115,12 @@ fuzzing      bytes nothing here was written for, made from eight seeds and
              the build that checks itself: every one of them an answer or a
              refusal
 tree         nothing a compiler made in the tree but what `make clean` takes
-             away, and no file with a space in its name, which is what an
-             unquoted redirect leaves and what every sweep here is blind to:
+             away, nothing `make clean` takes away that is committed — which
+             is the same list read the other way round, because a file the
+             walk is right to allow in a working tree is one nothing should
+             have put in the repository — and no file with a space in its
+             name, which is what an unquoted redirect leaves and what every
+             sweep here is blind to:
              the sweeps are over `*.kest` and a name with a space in it is two
              words to a shell. A room with one of each in it is named, because
              a walk that found nothing and a walk that looked at nothing print

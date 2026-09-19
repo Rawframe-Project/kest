@@ -14,5 +14,7 @@ kest-before
 libkest.a
 *.o
 bench/*-cpp
+bench/measure
+bench/frame
 kest-colony-day.txt
 .jitted_scripts/

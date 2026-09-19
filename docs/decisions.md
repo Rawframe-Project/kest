@@ -32057,3 +32057,92 @@ measurement that says where to look, and the looking is the next thing.
 (D979): a test at the top of the dispatch loop measured a third of the machine,
 and a third is nothing beside what a sanitiser already costs. Counts and pairs
 do not depend on the build, so these are the pairs the release build runs.
+
+## D1011. A fusion that removed one instruction in eleven and no time at all
+
+**Rejected**, and the production code for it removed. What is kept is the
+measurement, because the measurement is worth more than the change would have
+been.
+
+**What was built.** D1010 measured a load or a constant feeding a conditional
+jump at 11.78 per cent of every instruction the seven programs run, and its
+five false-branching integer members at 7.17 on their own. `load.k slot,
+const` pushes a local and a constant and the jump after it pops both. So: two
+instructions, `jump.cmp.i.k` and `jump.cmp.f.k`, each carrying the slot, the
+constant, which of the twelve comparisons it is, and how far to go — the
+comparison as an operand rather than twenty-four instructions, which is what
+D868 decided about the width of a narrowing.
+
+It worked. Dynamic instructions, before and after:
+
+    kernel    42,661,186 -> 34,661,186   -18.8 %
+    control   50,800,316 -> 45,923,673    -9.6 %
+    agents   196,440,843 -> 179,829,592   -8.5 %
+    rules    174,626,122 -> 162,116,458   -7.2 %
+    graph      5,295,505 ->   5,055,384   -4.5 %
+    words      8,910,318 ->   8,870,297   -0.4 %
+                                          -8.8 % over all of them
+
+**And it was not faster.** One binary, the fusion turned on and off by the
+control described below, three rounds of fifteen samples each:
+
+    kernel    +1.9 %   -4.3 %   -1.7 %
+    control   +1.4 %   +1.5 %   +2.0 %
+    graph    +23.6 %  +12.7 %   +2.5 %
+    words     -0.9 %   -0.4 %   +0.4 %
+    rules     +1.4 %   -3.7 %  -10.6 %
+
+`control` is consistently *slower* by about one and a half per cent. Everything
+else is noise around nothing. Eight million instructions came out of `kernel`
+and took no measurable time with them.
+
+**What that says, which is the whole value of the experiment.** On this
+machine, dynamic instruction count is not what a Kest program's time is made
+of. The instructions the fusion removed — two pushes of eight bytes each — are
+the cheapest thing the machine does, and an out-of-order core runs them
+alongside the dispatch of the next instruction. What the fused instruction
+added was an operand byte pair and a switch on the comparison kind, and that
+was worth about as much as what it saved.
+
+So the target is not the count. It is the instructions that do real work: an
+index with its bounds check, four floats unpacked out of a run and packed back,
+a store into a place, text that has to be scanned. D1006 said the same thing
+from the other end — one crossing a body costs almost the same as one crossing
+a whole frame, because what the machine does with what crossed is where the
+time is.
+
+**And the fusions that were already here are worth a fifth.** `KEST_PLAIN`
+turns off all three the lowering makes — a local and a constant as one
+instruction, a narrowing taken into the arithmetic before it, and a comparison
+taken into the branch that reads it. Without them:
+
+    kernel    58,721,590 instructions against 42,661,186   -27 %
+    rules    232,842,429            against 174,626,122   -25 %
+
+and in time, one binary, two rounds:
+
+    kernel    -20.1 %   -19.7 %
+    control   -16.6 %   -20.5 %
+    rules     -15.7 %   -12.6 %
+
+So fusion is not the thing that does not pay. What does not pay is fusing away
+*pushes*. The three that work all remove a value that was written to the stack
+and read straight back — a narrowing reading what the addition just pushed, a
+branch reading what the comparison just pushed — which is a dependency the
+machine has to carry through memory. The one that did not remove a dependency
+at all: two pushes standing beside each other, which an out-of-order core was
+already doing for free.
+
+That is the rule this experiment bought, and it is worth more than the two
+instructions would have been: **fuse a dependency, not a push.**
+
+**What is kept.** Nothing new in the machine. `KEST_PLAIN` is kept: read once,
+in `src/lower.c`, it turns off the fusions the lowering makes, which is how the
+same program is compiled twice and required to answer the same thing. That is
+the control the next experiment needs, the one this one was measured with, and
+what Phase M's differential testing runs against.
+
+**What it cost to find out.** Two opcodes, sixty lines of lowering, forty of
+machine, and an afternoon — and one thing found on the way: `examples/embed.c`
+writes the number of the instruction nothing compiles to, which moved when two
+were added. It says so where it writes it, and it was right to.

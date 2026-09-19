@@ -1980,8 +1980,41 @@ INNER
     fi
 }
 
+# And the third way something built gets into a tree: not left in it, but
+# committed to it. `make clean` takes `bench/measure` away, so the walk above
+# is right to allow it in a working tree -- and it was committed anyway, by a
+# `git add -A` after a build, and sat there for five commits. What the walk
+# above cannot see is which files are in the repository, so this asks.
+#
+# Nothing here needs git to work: a tree without it is a tree this says
+# nothing about, which is what a release archive is.
+what_was_committed() {
+    if ! command -v git >/dev/null 2>&1 ||
+        ! git -C "$1" rev-parse --git-dir >/dev/null 2>&1; then
+        return 0
+    fi
+    found=""
+    for name in $(sed -n '/^clean:/,/^$/p' "$1"/Makefile |
+                  tr -d '\\' | tr ' \t' '\n\n' |
+                  sed -n 's/^rm$//;s/^-rf$//;s/^-f$//;/^$/d;/^clean:$/d;p'); do
+        case "$name" in
+        *[*?[]*) continue ;;
+        esac
+        if git -C "$1" ls-files --error-unmatch "$name" >/dev/null 2>&1; then
+            found="$found $name"
+        fi
+    done
+    if [ -n "$found" ]; then
+        printf 'something `make clean` takes away is committed:%s\n' "$found"
+    fi
+}
+
 made_by_a_compiler=$(what_a_compiler_made .)
 nobody_meant=$(a_name_nobody_meant .)
+committed_and_built=$(what_was_committed .)
+if [ -n "$committed_and_built" ]; then
+    complain "tree" "$committed_and_built"
+fi
 if [ -n "$nobody_meant" ]; then
     complain "tree" "$nobody_meant"
 fi

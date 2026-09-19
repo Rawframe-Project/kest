@@ -36587,3 +36587,44 @@ bytes read after it. See D1010.
 
 **Runs:** `KEST_DEEP=1 kest-debug profile` over all seven programs; the numbers
 above are that output summed.
+
+## A fusion that removed one instruction in eleven and no time at all
+
+D1010 said a load or a constant feeding a conditional jump is 11.78 per cent of
+every instruction the seven programs run. So: two instructions carrying the
+slot, the constant, which comparison and how far — the comparison as an operand
+rather than twenty-four instructions, which is what D868 decided about a
+narrowing.
+
+It removed 8.8 per cent of all dynamic instructions: kernel by 18.8, control by
+9.6, agents by 8.5, rules by 7.2. And it made nothing faster. `control` was
+consistently one and a half per cent *slower*. Eight million instructions came
+out of `kernel` and took no measurable time with them.
+
+It is reverted, and the production code for it is gone. What is kept is the
+measurement and the control that made it possible: `KEST_PLAIN` turns off the
+fusions the lowering makes, so the same program can be compiled twice and
+required to answer the same thing.
+
+Turning off the three fusions that were already here says what fusion is
+actually worth: 27 per cent more instructions on `kernel`, 25 on `rules`, and
+between thirteen and twenty per cent more time. So the rule is not "fusion does
+not pay". It is **fuse a dependency, not a push**: the three that work all
+remove a value written to the stack and read straight back, and the one that
+did not removed two pushes standing beside each other, which the processor was
+already doing for nothing.
+
+Three other things came out of the afternoon. `examples/embed.c` writes down
+the number of the instruction nothing compiles to, and it moved when two were
+added — it says so where it writes it, and it was right to. `bench/measure` and
+`bench/frame`, both built things, had been committed by a `git add -A` after a
+build and sat there for five commits; they are untracked and ignored now. And
+the gate reads the `clean` list the other way round as well: a file `make
+clean` takes away that is committed is one nothing should have put in the
+repository. See D1011.
+
+**Runs:** the fusion built, measured and reverted; `KEST_DEEP=1` instruction
+counts for all seven programs either way; `bench/measure` with `KEST_PLAIN` on
+and off, three rounds of fifteen samples; `make fast`; the new tree rule
+watched naming the two committed binaries in a worktree of the commit that had
+them.
