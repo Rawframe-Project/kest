@@ -203,7 +203,8 @@ clean:
 	    examples/embed-debug examples/engine examples/engine-debug \
 	    examples/least tools/inward tools/fuzz tools/fuzz-debug \
 	    bench/measure bench/frame \
-	    bench/control-cpp bench/graph-cpp bench/kernel-cpp bench/words-cpp
+	    bench/control-cpp bench/graph-cpp bench/kernel-cpp bench/words-cpp \
+	    .jitted_scripts
 
 .PHONY: debug least embed embed-debug engine engine-debug fast check time \
     fuzz release install uninstall clean

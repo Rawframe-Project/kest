@@ -28,6 +28,7 @@ another and is not named here is a check that fails.
 | D685 | D686 | the two dearest weighed are held, not each kind's own dear end |
 | D647 | D649 | the ladder walks two programs, because their bands sit apart |
 | D648 | D649 | a band starts where the program's own cost ran out, and is steady |
+| D1016 | D1022 | the calibration with every comparator built rather than two of them written off |
 | D969 | D970 | Windows is built and run in CI, not written down as unverified |
 | D955 | D971 | a nought is a byte text may hold, and text is UTF-8 where it arrives |
 | D541 | D727 | an optional answers `== none`, which is not a comparison of two |
@@ -32558,3 +32559,63 @@ what happens in a release archive: an archive has no `.git` and never will.
 shipped that somebody has to keep in step with it; the tag is the thing itself
 and cannot go stale, because it is immutable and this mission is forbidden to
 move it. Building it costs two seconds.
+
+## D1022. The calibration finished, with the two comparators that were missing. Supersedes D1016
+
+**What was wrong with D1016.** It recorded Luau and daScript as "not on this
+machine and not packaged where it can reach them", and that was a limitation
+this project wrote down rather than one it had. The machine has a network, a
+package manager and root: Lua 5.4.8 was built from source in this very
+mission, and Luau and daScript build the same way. Recording an external
+blocker that was an hour of work is the shape of thing this project is meant
+to refuse, and the reading it produced was wrong as well as short.
+
+**What it took.** Luau 0.739 from `luau-lang/luau`, CMake, one target, builds
+clean. daScript from `GaijinEntertainment/daScript` at b7b1c88 needed
+`libgl1-mesa-dev`, `libxrandr-dev` and the rest of the X headers its bundled
+GLFW wants, and `-Wno-error=deprecated-declarations`, because one of its own
+modules uses `std::wstring_convert` and gcc 15 deprecates it — a warning that
+is fatal only because daScript builds with `-Werror`, and nothing that changes
+the code it generates.
+
+**The whole process**, `bench/run.sh`, best of seven, every row answering the
+same checksum, the middle of three rounds:
+
+    workload   kest    g++ -O2   Luau 0.739   Lua 5.4.8   daslang
+    kernel      84 ms     9 ms      72 ms       84 ms      145 ms
+    control    125        9         97          99         152
+    graph       16        5         21          21          —
+    words       46       13         27          38          —
+
+**And the same with each runtime's own start taken off**, because one of them
+is not like the others: starting and printing one line costs kest 1.55 ms,
+Lua 1.39, Luau 2.17 — and **daslang 79.26**, which is a hundred and forty-seven
+megabytes of binary being mapped before it reads a byte of the program.
+
+    workload   kest    g++ -O2   Luau   Lua    daslang
+    kernel      82 ms     9 ms    70 ms  82 ms   65 ms
+    control    123        9       95     97      73
+    graph       14        5       18     19       —
+    words       45       13       25     36       —
+
+**What that says, which is not what D1016 said.** Kest is behind Luau on three
+of the four shapes — a sixth on the numeric frame, a quarter on branches, four
+fifths on text — and ahead on the one with checked identity in it. Against
+daScript's interpreter it is a quarter behind on the frame and two thirds
+behind on branches. D1016 read "level on the numeric frame, ahead on checked
+identity, behind on branches and text" out of Lua alone, and Lua alone is the
+slowest of the three.
+
+**What it does not change.** D987's trigger for a generated-C backend is twice
+as slow as Daslang, and the worst of these is one and two thirds. D1017 closed
+the escalation on evidence that is untouched by this: the two experiments that
+removed dynamic instructions wholesale bought nothing, so the distance is not
+the dispatch, and a backend would have to keep every check that is the product.
+What this does change is the sentence about where Kest sits, which was
+generous, and the shape to look at next, which is still `control` and now for a
+better reason: every comparator is ahead of it there, and one of them by two
+thirds.
+
+**Rules kept.** Nothing was patched to be slower. Every row answers the same
+checksum as every other. Versions are pinned and written down. None of it goes
+on the front page.

@@ -36952,3 +36952,53 @@ what they hold, and because the pattern that finds them reads letters.
 
 **Runs:** `tools/check-kept.sh` on its own; `tools/check-tables.sh`, which
 holds it to being a check like the others; the whole gate.
+
+## The two comparators that were written off, built
+
+D1016 recorded Luau and daScript as not on this machine and not reachable. That
+was a limitation written down rather than one this project had: the machine has
+a network, a package manager and root, and Lua 5.4.8 had already been built from
+source in the same mission. Both build in an hour.
+
+Luau 0.739 is one CMake target and builds clean. daScript at b7b1c88 wanted the
+X headers its bundled GLFW uses and `-Wno-error=deprecated-declarations`,
+because one of its own modules uses `std::wstring_convert` and gcc 15
+deprecates it — fatal only because daScript builds with `-Werror`, and nothing
+that changes the code it generates.
+
+Whole process, best of seven, every row the same checksum:
+
+    workload   kest    g++ -O2   Luau 0.739   Lua 5.4.8   daslang
+    kernel      84 ms     9 ms      72 ms       84 ms      145 ms
+    control    125        9         97          99         152
+    graph       16        5         21          21          —
+    words       46       13         27          38          —
+
+And one of those four runtimes is not like the others: starting and printing
+one line costs kest 1.55 ms, Lua 1.39, Luau 2.17 and **daslang 79.26**, which
+is a hundred and forty-seven megabytes of binary being mapped. With each
+runtime's own start taken off, daScript is the fastest of them on both shapes
+it has, and Kest is behind Luau on three of four.
+
+So the sentence D1016 wrote about where this language sits was generous, and it
+was generous because it was read out of the slowest comparator alone. D1022 is
+the one that stands. What it does not change is the escalation: the trigger is
+twice as slow as Daslang and the worst of these is one and two thirds.
+
+**Runs:** Luau and daScript built from source; `bench/run.sh` with all four
+comparators, three rounds of best-of-seven; each runtime's start-and-print
+measured best of five rounds of ten.
+
+## And the comparator left something in the tree
+
+Running daScript in this tree writes `.jitted_scripts/module_cache/*.dascache`
+beside the program, and the gate refused on the next run: *something a compiler
+made is in the tree and `make clean` does not take it away*. Those are the same
+files D999 was written after — two of them were committed once, by a `git add
+-A` after a build, and nothing looked.
+
+`make clean` takes the directory away now, which is the list that check reads.
+The net caught it the first time it happened, which is what D999 built it for.
+
+**Runs:** the gate, refusing and then passing; `make clean` with a cache in the
+tree.
