@@ -32424,3 +32424,62 @@ instruction nothing compiles to moved twice in an afternoon, and what a host
 that writes the wrong byte gets is not a message. That got `kest_break_byte`,
 which is the machine saying which byte it is: additive, one number rather than
 the instruction set, and the tenth door a debugger uses. See D1012.
+
+## D1019. Linguist, rehearsed against upstream and not submitted
+
+**Decided.** Everything that can be done from here is done and verified against
+upstream's own tooling. No pull request was opened, no usage was fabricated, and
+the one thing left is not technical.
+
+**What upstream asks for**, read from `github-linguist/linguist` at ee4fb24
+rather than from memory: an entry in `languages.yml` with the `language_id`
+omitted; a grammar added with `script/add-grammar <url>`, under one of the
+licences they list; samples of real code in `samples/<Language>`, explicitly not
+hello-world; `script/update-ids` to generate the identifier; and a pull request
+linking to GitHub search results showing the extension in wide-spread use —
+**at least two hundred files across a reasonable spread of repositories** for an
+extension that occurs once per repository, two thousand otherwise.
+
+**The rehearsal.** Upstream cloned into a directory of its own outside this
+tree, the gem stack built — which needed `libgit2-dev` and
+`bundle config build.rugged --use-system-libraries`, because the vendored
+libgit2 does not build here — and then:
+
+    the entry inserted alphabetically              done
+    script/update-ids --check                      names Kest, the one
+                                                   language missing an ID
+    script/update-ids                              gives it 460510295
+    script/add-grammar <this repository>           registers the submodule,
+                                                   runs their grammar compiler
+                                                   over it in Docker, finds no
+                                                   problems, writes
+                                                   `source.kest` into
+                                                   grammars.yml, caches the
+                                                   MIT licence
+    test/test_language.rb                          52 runs, 9390 assertions,
+                                                   the same 2 failures and 1
+                                                   error as the untouched tree
+                                                   has, all three about a
+                                                   CodeMirror submodule a
+                                                   shallow clone has not got
+    test/test_samples.rb                           1676 runs, 0 failures
+    test/test_classifier.rb                        6 runs, 0 failures
+    a `.kest` file in samples/Kest                 classifies as Kest
+
+The identifier is written here as evidence that their tool produces one, and is
+deliberately **not** put in this tree's fragment: upstream says to omit it and
+it is theirs to give.
+
+**What is left, and it is the honest kind.** Kest is one public repository. The
+search evidence upstream asks for does not exist and will not until somebody
+outside this project writes Kest and puts it on GitHub. That is the same thing
+the front page says about adoption in its own words, and it is not a thing to
+manufacture: no repositories were made, no files were planted, and the pull
+request was not opened.
+
+**What this project keeps.** One grammar, in `editors/vscode`, which
+`check-tables.sh` holds to the lexer's own list of keywords — a word the lexer
+keeps that the grammar does not colour is a word that stops looking like a
+keyword the day it is added, and a word the grammar colours that the lexer has
+not got is a word coloured as one a program may not use. Upstream's grammar
+compiler has now read the same file and found nothing wrong with it.

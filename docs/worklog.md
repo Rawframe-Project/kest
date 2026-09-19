@@ -36864,3 +36864,34 @@ See D1018.
 
 **Runs:** `tools/check-docs.sh`, which holds every `kest` block in the reference
 to parsing and to being in the one form; `make fast`.
+
+## Linguist, rehearsed against upstream and not submitted
+
+Upstream's rules were read from `github-linguist/linguist` at ee4fb24 rather
+than remembered, upstream was cloned into a directory of its own outside this
+tree, and everything that can be done from here was done there:
+
+    script/update-ids --check     names Kest as the one missing an ID
+    script/update-ids             gives it one
+    script/add-grammar            registers the submodule, runs their grammar
+                                  compiler over this project's grammar in
+                                  Docker, finds nothing wrong, writes
+                                  `source.kest` into grammars.yml and caches
+                                  the MIT licence
+    test/test_language.rb         exactly as green with the entry as without
+    test/test_samples.rb          1676 runs, 0 failures
+    test/test_classifier.rb       6 runs, 0 failures
+    a `.kest` file                classifies as Kest
+
+Getting the gem stack to build needed `libgit2-dev` and
+`bundle config build.rugged --use-system-libraries`; the vendored libgit2 does
+not build here.
+
+What is left is the part nothing here can do: upstream requires the extension
+to be in wide-spread use on public GitHub, at least two hundred files across a
+spread of repositories, and Kest is one repository. No pull request was opened,
+nothing was planted to be counted, and the fragment in `editors/linguist` now
+says exactly what was rehearsed and what remains. See D1019.
+
+**Runs:** the rehearsal above, in `/var/tmp` and thrown away afterwards;
+`tools/check-tables.sh`, which holds the grammar's keywords to the lexer's.

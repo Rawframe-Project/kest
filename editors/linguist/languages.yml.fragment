@@ -3,11 +3,30 @@
 # the one this project maintains; there is no second grammar, because two
 # grammars are two answers about what a file looks like.
 #
-# `language_id` is allocated by Linguist and is left out here on purpose: it is
-# theirs to give. Everything else is this project's to say.
+# `language_id` is left out on purpose and upstream's own instructions say to
+# leave it out: `script/update-ids` generates it when the entry is added. It is
+# theirs to give and not this project's to write down.
+#
+# Rehearsed against upstream on 2026-09-19, at linguist ee4fb24, and everything
+# that can be done from here passed. See D1019:
+#
+#   this entry inserted in `lib/linguist/languages.yml`, alphabetically
+#   `script/update-ids --check` names Kest as the one missing an ID
+#   `script/update-ids` gives it one
+#   `script/add-grammar https://github.com/Rawframe-Project/kest` registers the
+#     submodule, runs upstream's grammar compiler over the grammar, finds no
+#     problems, and writes `source.kest` into `grammars.yml`
+#   `test/test_language.rb` is exactly as green with this entry as without it
+#   `test/test_samples.rb` and `test/test_classifier.rb` pass
+#   a `.kest` file in `samples/Kest` classifies as Kest
+#
+# What remains is not technical: upstream requires the extension to be in
+# wide-spread use on public GitHub, assessed by search, and Kest is one
+# repository. Nothing here fakes that and no pull request has been opened.
 #
 # Samples for the submission are the tree's own examples, which are real
-# programs that run rather than files written to be counted:
+# programs that run rather than files written to be counted. They are this
+# project's own work under the MIT licence the repository carries:
 #   examples/colony.kest    a world kept and worked on
 #   examples/ants.kest      a frame over an array of value structs
 #   examples/registry.kest  a store and references outside a game
