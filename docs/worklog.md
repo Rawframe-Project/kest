@@ -37170,3 +37170,100 @@ the measurement that would justify one does not exist.
 over `bench/rules.kest`; `examples/embed.c` holding the door to saying one thing
 per walk that swept and nothing for one that could not finish; `make fast`;
 `make check`.
+
+## Phase H, measured and closed, and the third of `rules` it turned up
+
+This phase was skipped in the original mission and the audit said so. `perf` is
+on this machine with hardware counters, so it was measured before anything was
+touched.
+
+The answer to the question Phase H asks is no. Two and a half to three and a
+third instructions a cycle, an L1 data miss rate under seven tenths of a per
+cent, branch misses under half a per cent, and 625,487 instruction-cache misses
+over two and a half billion cycles. That is not a machine waiting on memory and
+there is no layout rewrite to do. The one large figure is the front end at a
+quarter of the cycles, and it is the dispatch's own indirect branch rather than
+the instruction cache — which is D979 seen from the other side.
+
+What the same measurement found instead: **a third of `bench/rules.kest` is the
+element move path**. A layout is a flat list of pieces and unpacking one is a
+walk of that list — but a tagged union has no such list, so a value holding one
+is moved by walking its *type*, and at every scalar at the bottom of that walk
+it called `kest_scalar_of` across a file and built a layout of one piece to walk.
+`rules` is the workload with payload-carrying enums in its elements.
+
+Two small changes: `kest_scalar_of` into the header as a `static inline`, which
+is what D868 did to `kest_narrow_to` and for the same measured reason; and
+`move_scalar` moving a scalar directly rather than building a layout of one.
+`rules` runs **1.25 billion fewer instructions — 19.06 % — and 12.7 % fewer
+cycles**. Nothing else moved.
+
+A third change was tried and taken out: having `unpack` and `pack` call the new
+piece mover from inside their loops, so the switch was written once instead of
+three times. A third slower on `kernel`, a tenth on `control`. The loops are
+written out again with a sentence saying that is measured rather than preferred.
+
+And one thing about measuring. The first paired run said `agents` got 3.3 %
+slower. So the same source was built three times changing nothing but
+`-falign-functions`, and the three ran `agents` in 2,390, 2,401 and 2,505
+million cycles — **4.8 % between three builds of identical source**. A
+whole-binary comparison on this machine cannot see a difference smaller than
+that. What survives is the instruction count, and D1014's rule has a second half
+now. See D1028.
+
+**Runs:** `perf stat` over all six workloads for counters, `perf record` over
+five for where the cycles go, `perf stat -r 6` on three builds of one source at
+three alignments, `bench/measure` paired ten and twenty times; `make fast`;
+`make check`.
+
+## Phase J, Phase K, and the bounds checks that were never counted
+
+Three phases closed in one pass, because one profile answered all of them.
+
+**Phase J.** The boundary had timings and no accounting. `bench/frame` says
+what each way of doing one frame crossed now: the lend crosses fifty times and
+marshals nothing, the fine path crosses a million times and marshals seventy-two
+megabytes, both work over the same sixteen megabytes of the host's memory and
+both answer the same checksum. The seventy-two megabytes and the 999,950 extra
+crossings cost seventeen per cent — against an interpreted frame that is
+twenty-eight times the same arithmetic in C. The boundary is the smaller of the
+two by a long way.
+
+Which closes J2 and J3 on the accounting rather than on an argument: there is no
+redundant marshalling because there is no marshalling, and a lend is validated
+once at `kest_borrow` and never again — what is between a `load.at` and the
+memory in a release build is the handle's own tag, which is what makes reading a
+revoked lend a refusal.
+
+And J4, which needed a measurement nothing had: `tools/inward` measures a third
+thing now, the program calling out to a bound host function that calls back in.
+**57 ns for the round trip**, against 27 for a call in on its own and 19 for one
+the program makes itself. Entering the machine a second time while the first
+frame is still standing costs a frame and not a penalty.
+
+**Phase K.** Text is half a per cent of `agents` and a hundredth of `rules`. It
+is eighteen per cent of `words`, which is the workload written to exercise text,
+and all of that is `std.text`'s `append` copying a piece of text into a byte run
+one byte at a time: `text.in` ran 1,157,780 times and `push` 1,237,780. A bulk
+copy would turn two and a third million instructions into eighty thousand — and
+it needs a builtin, because a library written in this language has `push` and
+`fit` and nothing that moves a run. That is language surface for eighteen per
+cent of one workload of six, and a performance mission is not entitled to add a
+name to the language on that. It is measured, written down, and not done.
+
+Arrays are material and were already changed by D1028. Stores and references are
+seven per cent of one workload and nought in four, and `resolve_ref` is 0.68 per
+cent of `agents`' cycles. Nothing was added to the library.
+
+**And the bounds checks.** D1015 measured the ceiling on eliminating them at
+about nothing and left the count unasked. Three quarters of the twenty and a
+half million the six programs run are in the shape a loop-bound proof covers.
+The other quarter is `control`, where the arrays were built with `MANY` pushes
+and the loop runs to `MANY` — in range, and not provable without proving an
+array's length from the pushes that built it. Three quarters of nothing is
+still nothing. See D1029, D1030 and D1031.
+
+**Runs:** `bench/frame --bodies 20000 --frames 50`; `tools/inward`; the
+instruction histogram under `KEST_DEEP` over the six workloads, grouped by
+family and by element access; four loops read by hand; `make fast`;
+`make check`.

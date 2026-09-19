@@ -33013,3 +33013,278 @@ this is not it.
 comparison against NULL once a walk. A program runs millions of instructions
 between two walks, which is the same reason the counters beside it are always on
 (D1007, D979).
+
+## D1028. Phase H: what the machine is actually doing, and the one thing it said to change
+
+**Decided.** Phase H is measured and closed. The runtime's layout and cache
+behaviour is not a cost worth changing; what the same measurement found instead
+is the element move path, and that was changed and kept.
+
+**Measured before anything was touched**, `perf` on this machine, over the six
+workloads:
+
+    workload    IPC    L1-d miss   branch miss   front-end stalls
+    kernel     3.33      0.28 %        0.08 %            20.9 %
+    control    2.69      0.05 %        0.41 %
+    graph      2.04      0.66 %        0.05 %
+    words      2.84      0.51 %        0.35 %
+    agents     2.43      0.53 %        0.37 %            26.5 %
+    rules      2.77      0.59 %        0.32 %            23.9 %
+
+**Which closes the question.** Two and a half to three and a third instructions
+a cycle is not a machine waiting on memory. An L1 data miss rate under seven
+tenths of a per cent is not a locality problem, a branch miss rate under half a
+per cent is not a prediction problem, and 625,487 instruction-cache misses over
+two and a half billion cycles is not a decode problem. There is no layout
+rewrite to do, and the evidence that there is none is above rather than in an
+argument. The one large figure is the front end at a quarter of the cycles, and
+it is not the instruction cache: it is the dispatch's own indirect branch, which
+is what D979 already measured from the other side when a counter at the top of
+the loop cost a third of the machine.
+
+**Where the cycles go**, `perf record`, per cent of cycles:
+
+    kernel     run_body 67.1   unpack 17.5   pack 11.7
+    control    run_body 92.3   unpack  3.1   pack  2.6
+    words      run_body 47.6   pack    5.4   ground_take 4.1   sweep 4.0
+    agents     run_body 68.5   collector 14.2 (seven symbols)  ground_take 1.5
+    rules      run_body 61.2   move_scalar 8.8   unpack_typed 8.4
+               unpack 5.6   pack_typed 4.1   kest_scalar_of 4.0   pack 2.1
+
+Three things a reader should take from that. The collector at 14.2 % of `agents`
+is the same figure D1027 got from the pauses, by a different instrument.
+`kernel` spending 29 % in `pack` and `unpack` is the aggregate copy D1025 could
+not take, seen from the other side. And **a third of `rules` is the element move
+path** -- which is the finding.
+
+**Why `rules` and not the others.** A layout is a flat list of pieces and
+unpacking one is a walk of that list. A tagged union has no such list: which
+type a payload slot holds depends on the tag, so a value holding one anywhere is
+moved by walking its *type* instead -- recursing through members, reading the
+tag, and for every scalar at the bottom calling `kest_scalar_of` across a file
+and building a `KestLayout` of one piece to walk. `rules` is the workload with
+payload-carrying enums in its elements, so `rules` is where that shows.
+
+**What was changed, and it is two small things.** `kest_scalar_of` moved into
+the header as a `static inline`, which is what D868 did to `kest_narrow_to` for
+exactly this reason. And `move_scalar` stopped building a layout of one piece
+and walking it: the switch a piece is moved by is now a function of its own that
+`move_scalar` calls and the compiler folds in.
+
+**What it came to.** Instructions are the same count on any machine and the
+runs agree to a hundredth of a per cent:
+
+    rules     6,538,167,277 -> 5,292,018,009 instructions, -19.06 %
+                2,328 M    ->     2,021 M    cycles,       -12.7 %
+    kernel    1,072,359,166 -> 1,072,400,617 instructions, +0.004 %
+    agents    5,902,658,569 -> 5,928,040,477 instructions, +0.43 %, inside
+              the variance of either
+
+Wall clock, paired the way D1014 requires: `rules` 6.4 % faster over twenty
+pairs and 7.5 % over ten. Nothing else moved.
+
+**And a thing about measuring that had to be found out to read those numbers.**
+The first paired run said `agents` was 3.3 % slower, fifteen pairs of twenty.
+So the same source was built three times, changing nothing but
+`-falign-functions`, and run:
+
+    -falign-functions=16   2,390 M cycles
+    -falign-functions=64   2,401 M
+    the default            2,505 M
+
+**Four point eight per cent between three builds of identical source.** On this
+machine a whole-binary comparison of `agents` cannot see a difference smaller
+than that, and the `agents` figure above is inside it. What survives is the
+instruction count, which is the same everywhere, and D1014's rule now has a
+second half: a difference under ten per cent is measured paired *and* a
+difference between two builds is read from the instruction count, because the
+wall clock is measuring where the code landed as much as what it does.
+
+That is also why D1025's numbers are safe. `KEST_NOOPT` switches a pass off
+inside one binary, so both sides of that measurement are the same bytes in the
+same places.
+
+**What was tried and taken out.** The first version of this also had `unpack`
+and `pack` call the new piece mover from inside their loops, so the switch was
+written once rather than three times. It was a third slower on `kernel` and a
+tenth on `control`, whose elements are flat runs of numbers and whose whole cost
+is that loop. The loops are written out again, with a sentence saying it is
+measured rather than preferred.
+
+## D1029. Phase J: what the boundary costs, in crossings and in bytes
+
+**Decided.** The boundary had timings and no accounting. It has both now, and
+the two questions the mission asked about redundant work across it are closed on
+what the accounting says.
+
+**J1, what each way of doing one frame crossed.** Twenty thousand bodies, fifty
+frames, the same work and the same checksum three ways:
+
+    what      crossings    elements   host bytes   marshalled    p50
+    lend             50   1,000,000   16,000,000            0   1229 us
+    fine      1,000,000   1,000,000   16,000,000   72,000,000   1440 us
+    native            0   1,000,000   16,000,000            0     44 us
+
+`host bytes` is the host's own memory the frame worked on, and it is the same
+for all three because the work is. `marshalled` is what was copied at the
+boundary to make that happen: nought for the lend, where the run is read and
+written where it stands and what crosses is an address and a count, and nine
+slots a body for the fine path -- four fields and the wall in, four fields back.
+The host knows every one of those exactly, because the host is what writes the
+slots.
+
+**And what it is worth reading as.** Seventy-two megabytes marshalled and
+999,950 extra crossings cost 211 microseconds over fifty frames, which is
+seventeen per cent. The interpreted arithmetic under both is twenty-eight times
+the same arithmetic in C. The boundary is the smaller of the two things in that
+table by a long way, and a host told to cross less would be being told to
+optimize the seventeen per cent.
+
+**J2, redundant marshalling: there is none, and the measurement is the
+zero above.** The lend path copies nothing at the boundary. There is no
+marshalling to remove because there is no marshalling.
+
+**J3, repeated layout validation inside a validated lease: no.** A lend is
+validated once, at `kest_borrow`, where the type name it was lent under is
+looked up and the block's size is held against what the layout says an element
+is. After that an element read is `load.at` with a layout pointer: in a release
+build the only thing between the instruction and the memory is the handle's own
+tag, which is one comparison and is what makes reading a lend the host has taken
+back a refusal rather than a read of whatever is there. The layout index check
+beside it is `KEST_CHECKED` and compiles to nothing. Nothing is weakened and
+nothing was there to remove.
+
+**J4, the round trip.** `tools/inward` measured a call in from a host and a call
+the program makes itself; neither is what a boundary costs when a host is on
+both sides of it, which is what a callback and a query into the world are. So it
+measures a third thing now: the program calls out to a bound host function and
+that function calls back in.
+
+    57 ns   a hop out to a host and back in
+    27 ns   a call in from a host, on its own
+    19 ns   a call the program makes itself, in a loop
+
+Best of seven over a million hops, spread one per cent. The round trip is about
+what the two directions come to added together, which is the answer: entering
+the machine a second time while the first frame is still standing costs a frame
+and not a penalty.
+
+**What stays correct while it does.** The million hops are counted on the host's
+side and held against a million times the rounds, and every one of them hands
+back the number it was given, so the sum at the end is what says the crossings
+happened. Fuel, cancellation, the call and stack ceilings, the collector's roots
+and the lends are held by the gate rather than by this instrument -- a call back
+in that starts from nowhere, a lend the host took back and can still be read,
+calls that nest deeper than they may, and a machine that keeps the host it was
+started with are all holes in `check-backstops.sh` that have been seen catching
+something.
+
+## D1030. Phase K: what text, arrays and stores are worth, from this language's own profile
+
+**Decided.** Phase K is measured and closed. Nothing is optimized because Luau
+is quicker on `words`; what follows is what this machine says about its own
+work.
+
+**Whole-workload share, by instructions run.** Every instruction the seven
+programs run, put in the family it belongs to by name. A comparison hardly
+appears because the lowering fuses it into the branch under it (D1011, D1014),
+which is the right answer in the wrong column and is said here rather than left
+to be read as nothing:
+
+    workload   frame   go    math  array  store  text
+    kernel     47.1   29.0   12.2   11.8    0.0   0.0
+    control    51.0   16.2   22.6   10.3    0.0   0.0
+    graph      49.6   32.5   11.7    0.7    5.6   0.0
+    words      46.0   20.7    0.5   14.9    0.0  18.0
+    agents     58.1   21.6   11.7    1.1    6.9   0.5
+    rules      52.2   26.8   12.6    8.4    0.0   0.0
+
+And by where the cycles go, which D1028 measured with `perf`: the dispatch loop
+is 48 to 92 per cent of every one of them, the collector is 14 per cent of
+`agents` and 12 of `words`, and the element move path was a third of `rules`
+until D1028 changed it.
+
+**Text: not material, and closed.** Half a per cent of `agents` and a
+hundredth of `rules`, which are two of the three reference programs the
+optimizing is measured on. Nought in the third. The one workload where it is
+material is `words`, which is the workload written to exercise text, and there
+it is eighteen per cent.
+
+**Where those eighteen per cent are, exactly.** `text.in` ran 1,157,780 times
+and `push` 1,237,780, of 8,870,238 instructions. That is `std.text`'s `append`,
+which copies a piece of text into a byte run one byte at a time, called 79,980
+times by `join` and `fitting`. A bulk copy would turn two and a third million
+instructions into eighty thousand.
+
+**And it is written down and not done.** Doing it means a builtin that copies a
+whole piece of text into a `[u8]`, because a library written in this language
+has `push` and `fit` and nothing that moves a run. That is language surface, and
+the case for it is eighteen per cent of one workload of six -- forty-four
+milliseconds of the roughly one and a half seconds the seven come to. A
+performance mission is not entitled to add a name to the language on that, and
+the measurement is here for whoever decides on better grounds than speed. What
+the mission asked was whether text is a material hotspot in the reference
+workloads: it is not.
+
+**Arrays: material, and already changed.** Eight to fifteen per cent of
+instructions in four of the six, and the element access under that is what
+D1028 went at. `rules` runs nineteen per cent fewer instructions than it did.
+What is left of it in `kernel` is the aggregate copy D1025 could not take --
+`let one = world[at]` and `world[at] = one` over a struct array, 29 per cent of
+`kernel`'s cycles in `pack` and `unpack` -- which is a transformation about
+working on an element where it stands and is written down in D1025 as not begun.
+
+**Stores and references: not material, and closed.** Seven per cent of
+`agents`' instructions and six of `graph`'s, nought in the other four.
+`resolve_ref`, which is what a reference costs to follow, is 0.68 per cent of
+`agents`' cycles. D1008 already took the three lookups a walk made down to one.
+There is nothing here worth a change.
+
+**Nothing was added to the library.** No function, no builtin, no shape. The
+semantics the mission listed are the ones that were there: UTF-8, a nought that
+goes through, length in constant time, a cut that is a place inside what it was
+cut from, room that `clear` keeps, and a reference that is refused when the
+world moved under it.
+
+## D1031. How many bounds checks are provable, which completes D1015 rather than reopening it
+
+**Decided.** The question D1015 left was how many of the checks it measured
+could have been proved away. It is answered here as a bound over the seven
+programs, by a method a reader can check, and it does not change D1015: the
+ceiling on the whole optimization was measured at nothing and still is.
+
+**Every element read and write is bounds-checked**, in every build. What ran:
+
+    workload   element accesses   of all instructions
+    kernel            4,020,000          11.6 %
+    control           5,000,000          10.2 %
+    rules            11,112,210           7.0 %
+    agents              334,841           0.2 %
+    words                80,000           0.9 %
+    graph                28,060           0.6 %
+
+**The method, and what it cannot do.** The counts are the instruction
+histogram, which is exact and the same on any machine. The classification is
+four loops read by hand -- there are four sites in these programs that produce
+99.8 per cent of the accesses -- against the shape a loop-bound proof covers: an
+index that is the counter of a walk whose limit is the length of the array being
+indexed. It is exact for these programs and says nothing about programs in
+general, which is why it is a bound and not a rate.
+
+    kernel    for at in 0..len(world)     world[at]        provable
+    rules     for at in 0..len(one.cools) one.cools[at]    provable
+    rules     for i in 0..len(all.who)    all.who[i]       provable
+    control   for at in 0..MANY           state[at]        not provable
+
+**15.1 million of 20.5 million -- 74 per cent -- are in the provable shape.**
+The other 24 per cent are `control`, and they are the interesting ones: the
+arrays were built with `MANY` pushes and the loop runs to `MANY`, so every one
+of those reads is in range and a loop-bound proof cannot say so. It would have
+to prove the length of an array from the number of pushes that built it, which
+is a different and much larger analysis.
+
+**Which is the answer and it is D1015's.** Three quarters of the checks are
+provable by the analysis that was considered and not built, the ceiling on
+removing all of them was measured at about nothing, so the analysis would buy
+three quarters of nothing. The quarter it could not reach is the shape a person
+actually writes. Bounds-check elimination stays closed.
