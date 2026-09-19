@@ -1738,6 +1738,19 @@ tokens   what a token is and what it carries""",
         "caught": "instructions: 164 kinds and 165 names",
     },
     {
+        # Two copies of a licence, which is what a thing that is installed on
+        # its own needs: the packager wants one inside the extension and this
+        # project has one at the root. Two of them is two licences the day one
+        # is edited.
+        "what": "a licence the extension carries that is not the one at the root",
+        "file": "editors/vscode/LICENSE",
+        "from": "MIT License",
+        "to": "MIT Licence",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "caught": "is not the same bytes as the one at the root",
+    },
+    {
         # And the same for the tokens, which is the other list this rule was
         # written for: a name for a kind of token there is not, with the count
         # that would have stopped the build taken out from under it.
@@ -15542,7 +15555,11 @@ def put_out_of_order(hole):
         shutil.copytree("examples", os.path.join(work, "examples"),
                         copy_function=bring,
                         ignore=shutil.ignore_patterns("embed", "embed-debug"))
-        for what in ("Makefile", "CLAUDE.md", "README.md", "CHANGELOG.md"):
+        # LICENSE comes too: the extension carries a copy of it and
+        # `check-tables.sh` holds the two to being the same bytes, so a copy
+        # without the one at the root is a copy where that check cannot run.
+        for what in ("Makefile", "CLAUDE.md", "README.md", "CHANGELOG.md",
+                     "LICENSE"):
             bring(what, os.path.join(work, what))
         # The times come with these: an archive that looks newer than the
         # objects in it is one nothing rebuilds.

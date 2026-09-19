@@ -128,7 +128,14 @@ editors/           What an editor needs, and nothing that parses Kest. The
                    semantic answer comes from the compiler, because a second
                    parser in an editor is a second answer about what a file
                    means. `editors/linguist` is the metadata GitHub's language
-                   detection asks for, pointing at the same grammar. See D978.
+                   detection asks for, pointing at the same grammar. See D978
+                   and D1019, which is that metadata rehearsed against
+                   upstream's own tooling and deliberately not submitted.
+                   The extension carries a copy of the licence, because
+                   somebody installs a VSIX without this tree around it, and
+                   `check-tables.sh` holds the copy to being the same bytes as
+                   the one at the root: two copies of a licence is two
+                   licences the day one of them is edited.
 tools/             Build and development scripts. `make check` runs all of
                    them and everything else, and is what "it passes" means.
                    `fast.sh` is the other tier and is not one of them: it is

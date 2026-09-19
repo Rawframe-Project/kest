@@ -197,6 +197,18 @@ if held != printed_words:
               % ", ".join("`%s`" % w for w in only_printed))
     failed = 1
 
+# The licence the extension carries. A VSIX is a thing on its own -- somebody
+# installs it without the tree around it -- so the packager wants a licence
+# inside the extension directory, and the one this project has is at the root.
+# Two copies of a licence is two licences the day one of them is edited, so
+# they are held to being the same bytes.
+one_licence = open(os.path.join("LICENSE"), "rb").read()
+other_licence = open(os.path.join("editors", "vscode", "LICENSE"), "rb").read()
+if one_licence != other_licence:
+    print("licence: `editors/vscode/LICENSE` is not the same bytes as the "
+          "one at the root, and two copies of a licence is two licences")
+    failed = 1
+
 # And the same words again in the grammar an editor colours a file with, which
 # is the third list of them. A keyword the lexer holds that the grammar does not
 # is a word that stops looking like a keyword the day it is added; one the

@@ -4,7 +4,7 @@
   "description": "Kest language support: syntax, diagnostics, go to definition, references, rename, hover, completion and the one form. Everything semantic comes from `kest lsp`, which is the compiler itself.",
   "version": "1.0.0",
   "publisher": "rawframe",
-  "license": "SEE LICENSE IN LICENSE",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/Rawframe-Project/kest"
@@ -20,6 +20,13 @@
     "onLanguage:kest"
   ],
   "main": "./extension.js",
+  "files": [
+    "extension.js",
+    "language-configuration.json",
+    "syntaxes/kest.tmLanguage.json",
+    "snippets/kest.json",
+    "LICENSE"
+  ],
   "contributes": {
     "languages": [
       {

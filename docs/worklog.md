@@ -36895,3 +36895,30 @@ says exactly what was rehearsed and what remains. See D1019.
 
 **Runs:** the rehearsal above, in `/var/tmp` and thrown away afterwards;
 `tools/check-tables.sh`, which holds the grammar's keywords to the lexer's.
+
+## Three platforms with an archive each, two compilers, and a VSIX with nothing to say
+
+macOS arm64 had a build, a `make fast` and a conformance trace in CI and no
+archive. It has one now, asked the same three questions the other two are asked
+— the binary says what it is, a program it has never seen runs through it, and
+a host compiles against the header and the library in it. `make release` named
+it from `uname` without being told anything; what it could not do was write the
+checksum, because `sha256sum` is the GNU one and macOS has `shasum -a 256`. The
+Makefile asks which is there and says so when neither is.
+
+Every Linux build here was gcc, and `-Werror` is on in all of them, so a
+warning clang makes and gcc does not is a thing this tree is held to having
+none of and nobody was asking. There is a focused clang job now: the build and
+`make fast`, which is where a compiler disagreement shows.
+
+And `npx @vscode/vsce package` had two complaints, both real. It could not find
+a licence — a VSIX is installed without this tree around it — and it did not
+know which files belong. The extension carries its own copy of the licence now,
+held to being the same bytes as the one at the root by a check with a backstop
+behind it, and `package.json` says which four files are its own. It packages
+with nothing to say: eight files, six and a half kilobytes, in a copy of the
+directory outside the tree. Nothing was published. See D1020.
+
+**Runs:** `make release` on this machine; `npx @vscode/vsce package` three
+times, watching each warning go; `tools/check-tables.sh` with the new rule and
+the hole that breaks it; `make fast`.

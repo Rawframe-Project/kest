@@ -147,6 +147,15 @@ install: kest libkest.a
 # library, the header, the standard library and the source. See D989.
 RELEASE := kest-$(KEST_VERSION)-$(shell uname -s | tr A-Z a-z)-$(shell uname -m)
 
+# And what writes the checksum, which is not the same program everywhere:
+# `sha256sum` is the GNU one and is what Linux has, `shasum -a 256` is what
+# macOS has, and the two write the same two fields in the same order. Found by
+# asking rather than by naming a platform, so a machine with both gets the
+# first and a machine with neither says so when the release is made rather
+# than after it. See D1020.
+SHA256 := $(shell command -v sha256sum >/dev/null 2>&1 && echo sha256sum || \
+    (command -v shasum >/dev/null 2>&1 && echo "shasum -a 256"))
+
 # What ships. The sources go in beside the library because the runtime is
 # vendorable: a host that would rather build it than link it copies `src` and
 # `include` and has the whole of it. `VERSION` is written by asking the binary
@@ -172,7 +181,10 @@ release: kest libkest.a
 	@echo "the licence every file of it is under: LICENSE" \
 	    >> build/$(RELEASE)/VERSION
 	cd build && tar czf $(RELEASE).tar.gz $(RELEASE)
-	cd build && sha256sum $(RELEASE).tar.gz > $(RELEASE).tar.gz.sha256
+	@test -n "$(SHA256)" || \
+	    (echo "no sha256sum and no shasum: nothing here can write a \
+checksum" >&2; false)
+	cd build && $(SHA256) $(RELEASE).tar.gz > $(RELEASE).tar.gz.sha256
 	@echo "wrote build/$(RELEASE).tar.gz and its checksum"
 
 uninstall:

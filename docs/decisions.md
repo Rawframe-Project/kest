@@ -32483,3 +32483,40 @@ keeps that the grammar does not colour is a word that stops looking like a
 keyword the day it is added, and a word the grammar colours that the lexer has
 not got is a word coloured as one a program may not use. Upstream's grammar
 compiler has now read the same file and found nothing wrong with it.
+
+## D1020. Three platforms with an archive each, two compilers, and a VSIX that packages clean
+
+**Decided.** macOS arm64 gets the same archive the other two platforms have,
+Linux is built with clang as well as gcc, and the extension packages with no
+warnings.
+
+**The archive.** `make release` already named what it built from `uname`, so
+the macOS archive is `kest-1.0.0-darwin-arm64.tar.gz` without anything being
+told about a platform. What it could not do is write the checksum: `sha256sum`
+is the GNU one and macOS has `shasum -a 256`. The Makefile asks which is there
+rather than naming a platform, and says so when neither is — before the archive
+is made rather than after. The `macos` job now asks that archive the same three
+questions the other two are asked: the binary says what it is, a program it has
+never seen runs through it, and a host compiles against the header and the
+library that are in it.
+
+**The second compiler.** Every Linux build here was gcc. `-Werror` is on in all
+of them, so a warning clang makes and gcc does not is a thing this tree is held
+to having none of, and nobody was asking. A focused job — the build and
+`make fast` under clang — rather than a second copy of the gate: a compiler
+disagreement shows in the build, and the rest of the gate is the same source
+running the same way.
+
+**The extension.** `npx @vscode/vsce package` had two complaints and both were
+real. It could not find a licence, because a VSIX is installed without this
+tree around it and the licence is at the root; and it did not know which files
+belong, so it would have packaged whatever was in the directory. The extension
+carries its own copy of the licence now and `package.json` says which files are
+its own. Two copies of a licence is two licences the day one of them is edited,
+so `check-tables.sh` holds them to being the same bytes, and a backstop breaks
+one of them to watch it say so.
+
+It packages with no warnings and no errors, into eight files and six and a half
+kilobytes, in a copy of the directory outside the tree. Nothing was published:
+a marketplace listing is a review by somebody else and this mission does not
+open one.

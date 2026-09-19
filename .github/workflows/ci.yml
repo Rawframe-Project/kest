@@ -46,6 +46,52 @@ jobs:
         with:
           name: trace-macos-arm64
           path: macos-arm64.trace
+      # The same three questions the other two platforms' archives are asked:
+      # the binary says what it is, a program it has never seen runs through
+      # it, and a host compiles against the header and the library in it.
+      # `shasum -a 256` rather than `sha256sum`, which macOS has not got; the
+      # Makefile asks which is there. See D1020.
+      - name: an archive, unpacked and run
+        run: |
+          make release
+          cd build
+          shasum -a 256 -c kest-*.tar.gz.sha256
+          mkdir out && tar xzf kest-*.tar.gz -C out
+          cd out/kest-*
+          export KEST_LIB=lib/kest/
+          ./bin/kest --version
+          ./bin/kest run "$GITHUB_WORKSPACE/examples/math.kest"
+          printf '%s\n' '#include "kest.h"' '#include <stdio.h>' \
+              'int main(void) {' \
+              '    if (kest_abi_version() != KEST_ABI_VERSION) { return 1; }' \
+              '    printf("a host built against the archive says %s, abi %u\\n",' \
+              '           kest_version(), kest_abi_version());' \
+              '    return 0;' \
+              '}' > host.c
+          cc -std=c11 -Wall -Wextra -Werror -Iinclude -o host host.c \
+              lib/libkest.a -lm
+          ./host
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-macos-arm64
+          path: build/kest-*.tar.gz*
+
+  # The same tree through a different compiler. Everything else on Linux is
+  # gcc, and a warning one compiler makes and the other does not is a thing
+  # this tree is held to having none of: `-Werror` is on in every build here,
+  # so a clang that sees something gcc does not stops this job. Focused rather
+  # than a second copy of the gate -- the build and `make fast` are where a
+  # compiler disagreement shows, and the rest of the gate is the same source
+  # running the same way. See D1020.
+  clang:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: build and fast, under clang
+        run: |
+          clang --version
+          make -j CC=clang
+          make fast CC=clang
 
   threads:
     runs-on: ubuntu-latest
