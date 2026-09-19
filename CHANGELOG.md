@@ -51,6 +51,36 @@ went from four bytes to eight. The ceiling on places handed out is
 `1099511627775` rather than `16777215`, and `K0630` still says so at the line
 that asked.
 
+**A module is the whole of what a file calls itself.** `import a.math` beside
+`import b.math` used to be refused for the whole program, so `render.math` and
+`physics.math` could not coexist even when no file wanted both. They can now.
+What a file writes is still the last part — `math.twice` — and which module
+that means is expanded through that file's own imports. **What a program has to
+do:** nothing, unless it reads names out of a tool. A chunk is compiled under
+the whole module, so `emit`, the profiler, the debugger and `check --json` say
+`std.text.upper#text` where they said `text.upper#text`, and every declaration
+in the JSON carries a `module` beside its name. A file reaching two modules
+that end in one word is now what `K0328` refuses, pointing at that file's two
+import lines. See D1039.
+
+**A struct field may be the module's own.** Written `own name: type`, it can
+only be named from inside the module that declared the shape. `std.table`'s
+four fields are written that way, because two lines of ordinary Kest could
+leave them disagreeing. **What a program has to do:** if it read a table's
+`keys` or `values` directly, walk the pairs by their places instead —
+`table.keyAt(t, at)` and `table.valueAt(t, at)` for `at` under
+`table.count(t)`, which copy nothing and promise `no.alloc`. `table.keysOf` is
+unchanged. Nothing else in the library keeps a field. `own` is a word and not a
+keyword, so a field, a function or a name called `own` still works. See D1041.
+
+**A fault does not run `defer`.** This is not a change, it is the reference
+saying it where `defer` is introduced rather than leaving it to be found out.
+`defer` runs on every way out the program itself takes — off the end, `return`,
+`break`, `continue` — and a machine that divides by nought or reads past an
+array stops there. **What a host has to do:** close what it paired across a
+call when the call answers false, the same way it would for any other refusal.
+See D1040.
+
 **What changed for a host.** The version. The other three numbers — the C ABI,
 the JSON schema, and the deterministic profile — still read 4, 3 and 1, and
 will be settled to clean `0.0.x` numbers once the architecture this reset is
