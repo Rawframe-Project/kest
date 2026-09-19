@@ -37,31 +37,38 @@
 // they run out — four thousand million of them, after which a stamp handed out
 // again would make a reference from the first occupant read as the newest one,
 // which is the one thing a reference is for.
-// What a reference is made of. It was a thirty-two bit count and a thirty-two
-// bit place, and the count came from the build -- so two machines from two
-// builds of one file both handed out the same first reference, and one of them
-// read the other's world and answered with somebody else's object. A reference
-// now says which world it came from as well, and the count is the world's own.
+// What a reference is made of: which handout it is, and which place. Forty
+// bits and twenty-four.
 //
-// Sixteen, twenty-four and twenty-four: sixty-five thousand worlds alive at
-// once in one process, sixteen million places in a store, and sixteen million
-// times a place may be handed out again before the count is spent. None of
-// this is written down as an ABI: what a reference is made of is the runtime's
-// and is read only by the runtime. See D934.
-#define REF_WORLD_BITS 16
-#define REF_STAMP_BITS 24
+// It used to say which world it came from as well, in sixteen bits taken from
+// a count of the machines this process had made -- and a count of sixteen bits
+// comes round. The sixty-five thousand and thirty-seventh machine was told it
+// was the first, and a reference made in the first world, which was still
+// standing, resolved in the new one and answered its object. Two live worlds
+// accepting one authority. See D1033.
+//
+// So there is no world here any more. A handout number is taken from one count
+// for the whole process and is never handed out twice, which makes it say
+// everything the world said and everything the per-machine count said, in one
+// field: a reference carrying a number this store never wrote names nothing
+// here, whether it came from another machine, another store, or the same place
+// before it was given back.
+//
+// None of this is written down as an ABI: what a reference is made of is the
+// runtime's and is read only by the runtime, and a program cannot see the
+// number at all -- there is no text for a reference and no whole number of
+// one, which is what keeps a count shared across threads out of what a
+// `deterministic` program answers.
+#define REF_SERIAL_BITS 40
 #define REF_INDEX_BITS 24
-#define MOST_STAMPS 16777215u
+// The ceilings a program runs into. `check-ceilings.sh` lowers one of these in
+// a copy of this tree to watch the refusal happen, so they are their own
+// numbers rather than the masks below: a mask that moved with a lowered
+// ceiling took a reference apart wrongly and every one of them read as stale.
+#define MOST_STAMPS 1099511627775ull
 #define MOST_PLACES 16777215u
-#define MOST_WORLDS 65535u
-// And the same widths again as masks. They are the same numbers today and they
-// are not the same thing: the three above are ceilings a program runs into and
-// `check-ceilings.sh` lowers one of them in a copy of this tree to watch the
-// refusal happen. A mask that moved with a lowered ceiling took the generation
-// apart wrongly and every reference read as stale. See D934.
-#define REF_STAMP_MASK ((1u << REF_STAMP_BITS) - 1u)
+#define REF_SERIAL_MASK ((1ull << REF_SERIAL_BITS) - 1ull)
 #define REF_INDEX_MASK ((1u << REF_INDEX_BITS) - 1u)
-#define REF_WORLD_MASK ((1u << REF_WORLD_BITS) - 1u)
 
 #define KEST_IS_ARRAY 0x4b415252u
 #define KEST_IS_STORE 0x4b53544fu
@@ -513,7 +520,10 @@ static void pack(unsigned char *to, const KestLayout *layout,
 typedef struct {
     uint32_t what;
     KestValue *elements;
-    uint32_t *generations;
+    // What each place was stamped with the last time it was handed out, which
+    // is a number no other place in this process has ever been stamped with.
+    // See D1033.
+    uint64_t *serials;
     // Which slots are live, a bit each rather than a byte each. A walk of a
     // store is a walk of this, and what it costs is what it has to read: at a
     // byte a slot, a store that had held a million and holds eight read a
@@ -540,9 +550,6 @@ typedef struct {
     // layout up would be a search of the module for every one of them. See
     // D996.
     const KestLayout *holds;
-    // Which machine made it. A reference carries this, so one from another
-    // world names nothing here rather than naming whatever is at that place.
-    uint32_t world;
 } Store;
 
 // How many working-memory blocks one machine may have open at once. Nesting is
@@ -828,19 +835,10 @@ struct KestRuntime {
     // Every lend the host has not ended, so that ending one ends every handle
     // over that block: a host lending the same memory twice has two handles
     // and one block, and it is the block it takes back. See D283.
-    // What a place is stamped with when it is handed out, which is the
-    // build's: no two places in any two stores of any two machines from one
-    // build are ever stamped the same. A reference carries the stamp it was
-    // made with, so one handed to a store it did not come from names a place
-    // stamped by something else. See D314 and D316.
-    // How many places this machine has handed out. The count is this
-    // machine's: it was the build's, and two machines from one build wrote it
-    // from whatever threads they were on. See D936.
-    uint32_t stamps;
-    // Which world this machine is, among the ones alive in this process. It
-    // goes into every reference a store of its hands out, so a reference from
-    // another machine names nothing here. See D934.
-    uint32_t world;
+    // How many places this machine has handed out. It is a count and not an
+    // authority: what makes a reference this machine's is the handout number
+    // in it, which comes from the process rather than from here. See D1033.
+    uint64_t stamps;
     // The build's count of what is standing on it, which this machine is one
     // of until it is freed.
     atomic_uint *standing;
@@ -1063,7 +1061,7 @@ static void read_one(Vm *rt, void *start) {
     case KEST_GROUND_STORE: {
         Store *store = start;
         follow(rt, store->elements);
-        follow(rt, store->generations);
+        follow(rt, store->serials);
         follow(rt, store->live);
         follow(rt, store->free_slots);
         if (store->elements == NULL || store->live == NULL) {
@@ -2338,9 +2336,27 @@ static void what_it_needed(Vm *vm, const KestRuntime *rt, int32_t called) {
     kest_arena_rewind(rt->heap, before);
 }
 
-static int64_t pack_ref(uint32_t world, uint32_t generation, uint32_t index) {
-    return (int64_t)(((uint64_t)world << (REF_STAMP_BITS + REF_INDEX_BITS)) |
-                     ((uint64_t)generation << REF_INDEX_BITS) |
+// The next handout number, for the life of the process. Relaxed, because
+// nothing about two machines is ordered by this and each only wants a number
+// no other one will get. It starts at one so that nought is a number no place
+// is ever stamped with, which makes a reference read out of memory that was
+// never written name nothing.
+//
+// It is the one piece of mutable state this library keeps outside a machine,
+// and it is here rather than on the build because two machines of two builds
+// are two machines: a count on the build is what let a reference made in one
+// of them read an object in the other, which is D936, and a count masked to
+// sixteen bits is what let a reference made in one live world read an object
+// in another, which is D1033.
+static uint64_t next_handout(void) {
+    static atomic_ullong handed_out;
+    return atomic_fetch_add_explicit(&handed_out, 1ull,
+                                     memory_order_relaxed) +
+           1ull;
+}
+
+static int64_t pack_ref(uint64_t serial, uint32_t index) {
+    return (int64_t)(((serial & REF_SERIAL_MASK) << REF_INDEX_BITS) |
                      (uint64_t)index);
 }
 
@@ -2354,17 +2370,13 @@ static uint32_t ref_place(int64_t handle) {
 
 static KestValue *resolve_ref(Store *store, int64_t handle) {
     uint32_t index = ref_place(handle);
-    uint32_t generation =
-        (uint32_t)(((uint64_t)handle >> REF_INDEX_BITS) & REF_STAMP_MASK);
-    uint32_t world =
-        (uint32_t)(((uint64_t)handle >> (REF_STAMP_BITS + REF_INDEX_BITS)) &
-                   REF_WORLD_MASK);
-    // Which world it came from is asked first, because a reference from
-    // another one is a different kind of wrong from a reference to a place
-    // that has been handed out again -- and without it the two were the same
-    // question with the same answer.
-    if (world != store->world || index >= store->used ||
-        !is_live(store, index) || store->generations[index] != generation) {
+    uint64_t serial = ((uint64_t)handle >> REF_INDEX_BITS) & REF_SERIAL_MASK;
+    // One question rather than two. A handout number is the whole of the
+    // authority: another machine's reference, another store's, and this
+    // store's own from before the place was given back are all a number this
+    // place was never stamped with. See D1033.
+    if (index >= store->used || !is_live(store, index) ||
+        store->serials[index] != serial) {
         return NULL;
     }
     return store->elements + (size_t)index * store->stride;
@@ -2460,13 +2472,13 @@ static bool room_for(Vm *rt, KestValue *reach, Store *store,
         in_hand(rt, take(rt, reach,
                          sizeof(KestValue) * (size_t)capacity * store->stride,
                          KEST_GROUND_PLAIN));
-    uint32_t *generations =
+    uint64_t *serials =
         elements == NULL ? NULL
                          : in_hand(rt, take(rt, reach,
-                                            sizeof(uint32_t) * capacity,
+                                            sizeof(uint64_t) * capacity,
                                             KEST_GROUND_PLAIN));
     uint64_t *live =
-        generations == NULL
+        serials == NULL
             ? NULL
             : in_hand(rt, take(rt, reach, sizeof(uint64_t) * LIVE_WORDS(capacity),
                                KEST_GROUND_PLAIN));
@@ -2475,7 +2487,7 @@ static bool room_for(Vm *rt, KestValue *reach, Store *store,
                      : take(rt, reach, sizeof(uint32_t) * capacity,
                             KEST_GROUND_PLAIN);
     hands_off(rt, hands);
-    if (elements == NULL || generations == NULL || live == NULL ||
+    if (elements == NULL || serials == NULL || live == NULL ||
         free_slots == NULL) {
         return false;
     }
@@ -2483,8 +2495,7 @@ static bool room_for(Vm *rt, KestValue *reach, Store *store,
         rt->copied += (uint64_t)sizeof(KestValue) * store->used * store->stride;
         memcpy(elements, store->elements,
                sizeof(KestValue) * store->used * store->stride);
-        memcpy(generations, store->generations,
-               sizeof(uint32_t) * store->used);
+        memcpy(serials, store->serials, sizeof(uint64_t) * store->used);
         memcpy(live, store->live, sizeof(uint64_t) * LIVE_WORDS(store->used));
     }
     if (store->free_count > 0) {
@@ -2492,7 +2503,7 @@ static bool room_for(Vm *rt, KestValue *reach, Store *store,
                sizeof(uint32_t) * store->free_count);
     }
     store->elements = elements;
-    store->generations = generations;
+    store->serials = serials;
     store->live = live;
     store->free_slots = free_slots;
     store->capacity = capacity;
@@ -3984,7 +3995,6 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             store->what = KEST_IS_STORE;
-            store->world = rt->world;
             store->stride = READ_U16();
             {
                 uint16_t holds = READ_U16();
@@ -4055,25 +4065,34 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                     store->high = index + 1;
                 }
             }
-            // The next stamp there is. A slot handed out again gets a new one,
-            // so a reference made before it was given back names a stamp
-            // nothing carries any more; and a store that has never seen this
-            // stamp is a store this reference did not come from.
-            if (rt->stamps == MOST_STAMPS) {
+            // The next handout number there is, taken from the count for the
+            // whole process so that no two places anywhere are ever stamped
+            // the same. A place handed out again gets a new one, so a
+            // reference made before it was given back names a number nothing
+            // carries any more; a store that has never written this number is
+            // a store the reference did not come from; and a machine made
+            // after another one cannot be handed the first one's numbers,
+            // which is what a count of worlds could not promise. See D1033.
+            uint64_t handout = next_handout();
+            if (handout > MOST_STAMPS) {
                 fail(vmp, frame, instruction, "K0630",
-                     "this machine has handed out %u places in stores, which "
-                     "is all it can tell apart",
-                     MOST_STAMPS);
+                     "this process has handed out %llu places in stores, "
+                     "which is all it can tell apart",
+                     (unsigned long long)MOST_STAMPS);
+                kest_diags_suggest(vmp->diags,
+                                   "a place is stamped once for every `add`, "
+                                   "and a number is never handed out twice");
                 return false;
             }
-            store->generations[index] = ++rt->stamps;
+            rt->stamps++;
+            store->serials[index] = handout;
             mark_live(store, index, true);
             store->count++;
             MOVED(moved_payload, (uint64_t)stride * sizeof(KestValue));
             memcpy(store->elements + (size_t)index * stride, value,
                    sizeof(KestValue) * stride);
             (top++)->integer =
-                pack_ref(store->world, store->generations[index], index);
+                pack_ref(store->serials[index], index);
             break;
         }
         case KEST_OP_GET: {
@@ -4165,8 +4184,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint32_t index = (uint32_t)(--top)->integer;
             const Store *store = (--top)->object;
             HOLD(store, KEST_IS_STORE, "a store");
-            (top++)->integer =
-                pack_ref(store->world, store->generations[index], index);
+            (top++)->integer = pack_ref(store->serials[index], index);
             break;
         }
         case KEST_OP_COUNT: {
@@ -5756,17 +5774,6 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     // See D934 and D936.
     rt->stamps = 0;
     (void)stamped;
-    // And which world this is. One number for the life of the process, so two
-    // machines never hand out the same reference however they were built --
-    // the count above is the build's and two builds of one file both start it
-    // at nought, which is how a reference made in one world read an object in
-    // another and answered with its value. Relaxed: two threads starting a
-    // machine each want a number of their own and nothing else about them is
-    // ordered by this. See D934.
-    static atomic_uint worlds_so_far;
-    rt->world = (atomic_fetch_add_explicit(&worlds_so_far, 1u,
-                                           memory_order_relaxed) &
-                 REF_WORLD_MASK);
     // And what says this machine is standing on the build, counted where the
     // machines are rather than where the builds are: freeing the build while
     // one of these is up takes the program out from under it.
