@@ -97,6 +97,48 @@ carries the mission itself; this is what the tree has to show for it.
     27 the evaluation package             done: an hour's worth on the front
                                           page, and a release archive
 
+## The performance work after 1.0.0, and what is open
+
+A second mission ran after the tag and was reopened when its own completion
+turned out to be premature. What the tree has to show for it:
+
+    the movement baseline       D1023: nine byte counters, held to the
+                                instruction histogram by the gate
+    the optimizer layer         D1024: verify, optimize, verify, lower;
+                                `KEST_NOOPT` turns it off; `KEST_IRSAY` says
+                                what it found
+    copy propagation            D1025: 3.3 % of the bytes `agents` moves and
+                                4.3 % of `rules`, and three candidates closed
+                                on their counts
+    compiling, by stage         D1026: nine stages, `KEST_SPENT=1`
+    what a collection costs     D1027: `kest_collected`, and the pause
+                                distribution the report had been printing a
+                                per-call total in place of
+    the runtime, measured       D1028: no layout or cache problem, and a
+                                third of `rules` in the element move path,
+                                changed -- 19 % fewer instructions
+    the boundary                D1029: what each way of crossing a frame
+                                crossed, and the round trip out and back
+    text, arrays and stores     D1030: closed on this language's own profile
+    the bounds checks           D1031: three quarters provable, which is
+                                three quarters of the nothing D1015 measured
+    what the heap is asked for  D1032: by width and by kind, and the
+                                crossing nothing counted
+
+**Three things are open and named as open.** They are measured and not done,
+and each says why.
+
+- The aggregate copy. `let one = world[at]` … `world[at] = one` is 29 % of
+  `bench/kernel.kest`'s cycles and copy propagation cannot take it: the run
+  written is written again, which is what the program is doing. Taking it means
+  working on the element where it stands, which nothing has measured.
+- Bulk text append. Eighteen per cent of `bench/words.kest` is `std.text`'s
+  `append` copying a byte at a time. A bulk copy needs a builtin, which is
+  language surface, and D1030 says why that was not added on this evidence.
+- The dispatch loop. The largest cost in every workload — 48 to 92 per cent of
+  cycles — and a quarter of its own cycles are the front end on its indirect
+  branch. D979 measured from the other side what touching it costs.
+
 ## What shipped, and what it rests on
 
 1.0.0 is tagged and published. What the closeout changed, in the order it was
