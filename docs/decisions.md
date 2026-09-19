@@ -32348,3 +32348,41 @@ stands in for the small dynamic VM; Luau's native tier and Daslang's interpreter
 are the two rows missing, and they are missing because the machine has not got
 them rather than because nobody looked. That is the whole of the external
 limitation and it holds up nothing else.
+
+## D1017. The native escalation, closed on the evidence rather than left open
+
+**Decided.** No generated-C backend, and not a prototype either. D987 wrote the
+trigger down before 1.0 and it did not fire; nothing measured since has made it
+fire, and two of the things measured since argue against it.
+
+**The trigger, re-read.** D987's rule was a frame budget: ten thousand entities
+at sixty hertz. A frame step is 108 to 116 nanoseconds an entity on this
+machine, pinned, against 107 to 110 before any of this work — so the shape that
+instrument measures did not move, and it uses six and a half per cent of the
+budget either way. The rule was not close before and is not close now.
+
+**And the two arguments against.** D1011 removed one dynamic instruction in
+eleven and no time at all, and D1015 removed every bounds check in the machine
+for about nothing. Both say the same thing: the distance between this machine
+and native code is not made of instructions the machine runs, it is made of
+what each one has to do and what has to wait for what. A generated-C backend
+would have to keep every one of those — the bounds check, the generation check,
+the layout the host lays its own memory over, the accounting a budget is spent
+in — because those are the product rather than the implementation. What it
+would remove is the dispatch, and the dispatch is what the two experiments
+above say is not where the time is.
+
+**What the calibration says about it.** Nine times a C++ baseline on the
+numeric frame and three on the two with handles in them (D1016). A second
+backend is a second thing to keep in step with the first for ever — a second
+place for a fusion to be wrong, a second answer about what a program means,
+a second thing the fuzzer has to cover — and the bar this project would set for
+that is a broad, several-workload win large enough that the maintenance is
+obviously paid for. Nothing measured here suggests a whole-workload win of that
+size is waiting behind the dispatch loop.
+
+**What would reopen it.** A workload where the machine is within about twice
+native and the remaining gap is shown to be dispatch — measured, not inferred —
+or a frame budget that the instrument above actually threatens. Neither exists.
+The condition is written here so that the next person to ask has a number to
+beat rather than an argument to have.

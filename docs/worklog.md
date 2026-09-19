@@ -36816,3 +36816,24 @@ has not got them. See D1016.
 **Runs:** `make clean && make` timed; `bench/run.sh` with `KEST_CPP` and
 `KEST_LUAU` set, the comparators built here with g++ 15.2.0 and Lua 5.4.8 built
 from source.
+
+## The native escalation, closed with a number to beat
+
+D987 wrote the trigger down before 1.0 and it did not fire. It still does not:
+a frame step is 108 to 116 nanoseconds an entity pinned to a core, against 107
+to 110 before any of this work, and ten thousand entities at sixty hertz use
+six and a half per cent of the budget either way.
+
+The two rejected experiments are the argument. D1011 removed one dynamic
+instruction in eleven and no time; D1015 removed every bounds check in the
+machine for about nothing. What a generated-C backend removes is the dispatch,
+and both of those say the dispatch is not where the time is — what is left is
+what each instruction has to do and what has to wait for what, and a backend
+would have to keep all of it, because the bounds check and the generation check
+and the layout a host lays its memory over are the product.
+
+So it is closed rather than left open, with the condition that would reopen it
+written down: a workload within about twice native where the remaining gap is
+shown to be dispatch, measured rather than inferred. See D1017.
+
+**Runs:** `make time` and `tools/frame.kest` pinned, three times.
