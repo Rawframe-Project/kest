@@ -609,9 +609,9 @@ for one in options:
 # makes is not a number written in a program. Neither is how deep the calls go,
 # which is a host's to choose and is in `kest.h`; it is named here so that a
 # value nobody taught this reader stops it rather than being passed over.
-# The stamps a machine hands out are the one of these not written `MAX_`, and
-# the one a program runs into rather than is compiled against: a store filled
-# and emptied four thousand million times. It is in the table because the
+# The stamps a process hands out are the one of these not written `MAX_`, and
+# the one a program runs into rather than is compiled against: a million
+# million places handed out, counting the ones taken back. It is in the table because the
 # table's own sentence names `K0630`, which is what it says. See D523.
 SPELLED = {'UINT16_MAX': 65535, 'INT32_MAX': 2147483647,
            '0xffffffffu': 4294967295, '16777215u': 16777215}
@@ -624,10 +624,14 @@ for path in ('src/compile.c', 'src/check.c', 'src/types.c', 'src/vm.c',
             open(path).read()):
         if name in A_HOSTS_OWN:
             continue
+        # A number may be written with the width it is kept at on the end of
+        # it, and `1099511627775ull` is the same ceiling as `1099511627775`.
+        # What is held is the number; how wide the compiler keeps it is C's.
+        plain = value.rstrip('uUlL')
         if value in SPELLED:
             enforced.add(SPELLED[value])
-        elif value.isdigit():
-            enforced.add(int(value))
+        elif plain.isdigit():
+            enforced.add(int(plain))
         else:
             print("limits: `%s` is %s and this does not know what that is"
                   % (name, value))

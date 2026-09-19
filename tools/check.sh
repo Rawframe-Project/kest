@@ -376,6 +376,247 @@ to the end"
 fi
 rm -f "$asking" "$asking.c" "$asking.kest"
 
+# The three ways a reference must name nothing, asked of a host because two
+# machines is what a host has and a program has one. What holds them is that a
+# handout number is taken from one count for the whole process and is never
+# handed out twice: another machine's reference, a machine that has been freed,
+# and this store's own place from before it was given back are all a number
+# this place was never stamped with. See D1033 for what a count of
+# worlds could not promise.
+identity="$scratch"/check-identity
+cat > "$identity.kest" <<'EOF'
+struct Thing {
+    value: i32
+}
+
+fn build(base: i32) -> store<Thing> no.host {
+    let world: store<Thing> = store()
+    for i in 0..3 {
+        add(world, Thing(base + i))
+    }
+    return world
+}
+
+fn first(world: store<Thing>) -> ref<Thing>? no.alloc no.host {
+    for who in world {
+        return who
+    }
+    return none
+}
+
+fn read(world: store<Thing>, who: ref<Thing>) -> i32 no.alloc no.host {
+    if let one = get(world, who) {
+        return one.value
+    }
+    return -1
+}
+
+fn drop(world: store<Thing>, who: ref<Thing>) no.alloc no.host {
+    remove(world, who)
+}
+
+fn again(world: store<Thing>, value: i32) -> ref<Thing> no.host {
+    return add(world, Thing(value))
+}
+EOF
+cat > "$identity.c" <<'EOF'
+#include <stdio.h>
+#include <stdlib.h>
+#include "kest.h"
+
+static int nearer(const void *left, const void *right) {
+    int64_t a = *(const int64_t *)left;
+    int64_t b = *(const int64_t *)right;
+    return a < b ? -1 : a > b ? 1 : 0;
+}
+
+static int call(KestRuntime *rt, const char *name, KestValue *frame,
+                uint32_t slots) {
+    int32_t which = kest_entry(rt, name);
+    return which >= 0 && kest_call(rt, which, frame, slots);
+}
+
+/* A machine holding three things, the store kept so it can be handed back, and
+   the first reference read out as the number it is. */
+static KestRuntime *a_world(KestBuild *build, KestValue *store, int64_t *first,
+                            int32_t base) {
+    KestHost *host = kest_host_new();
+    KestRuntime *rt = host == NULL ? NULL : kest_start(build, host, NULL);
+    kest_host_free(host);
+    if (rt == NULL) {
+        return NULL;
+    }
+    KestValue frame[2] = {{0}};
+    frame[0].integer = base;
+    if (!call(rt, "build", frame, 2)) {
+        return NULL;
+    }
+    *store = frame[0];
+    kest_keeps(rt, *store);
+    KestValue asking[2] = {{0}};
+    asking[0] = *store;
+    if (!call(rt, "first", asking, 2) || asking[1].integer == 0) {
+        return NULL;
+    }
+    *first = asking[0].integer;
+    return rt;
+}
+
+static int32_t read_through(KestRuntime *rt, KestValue store, int64_t who) {
+    KestValue frame[3] = {{0}};
+    frame[0] = store;
+    frame[1].integer = who;
+    if (!call(rt, "read", frame, 3)) {
+        return -99;
+    }
+    return (int32_t)frame[0].integer;
+}
+
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        return 2;
+    }
+    KestBuild *build = kest_build(argv[1], "lib/", stderr, KEST_FORM_TEXT, 0);
+    if (build == NULL) {
+        return 2;
+    }
+    KestValue mine = {0};
+    int64_t ours = 0;
+    KestRuntime *rt = a_world(build, &mine, &ours, 7);
+    if (rt == NULL) {
+        return 2;
+    }
+    printf("own %d\n", read_through(rt, mine, ours));
+
+    /* One beside it, which is another machine and must refuse. */
+    KestValue theirs = {0};
+    int64_t another = 0;
+    KestRuntime *beside = a_world(build, &theirs, &another, 1000);
+    if (beside == NULL) {
+        return 2;
+    }
+    printf("other %d\n", read_through(beside, theirs, ours));
+
+    /* A machine that is gone, whose reference must not come back to life in
+       one made after it. Freed first, so the new machine is the only one
+       standing when it is asked. */
+    KestValue gone_store = {0};
+    int64_t gone_ref = 0;
+    KestRuntime *gone = a_world(build, &gone_store, &gone_ref, 2000);
+    if (gone == NULL || !kest_runtime_free(gone)) {
+        return 2;
+    }
+    KestValue after_store = {0};
+    int64_t after_ref = 0;
+    KestRuntime *after = a_world(build, &after_store, &after_ref, 3000);
+    if (after == NULL) {
+        return 2;
+    }
+    printf("freed %d\n", read_through(after, after_store, gone_ref));
+
+    /* And a place given back and handed out again, which is the same place and
+       not the same thing. */
+    KestValue frame[3] = {{0}};
+    frame[0] = mine;
+    frame[1].integer = ours;
+    if (!call(rt, "drop", frame, 3)) {
+        return 2;
+    }
+    KestValue making[3] = {{0}};
+    making[0] = mine;
+    making[1].integer = 55;
+    if (!call(rt, "again", making, 3)) {
+        return 2;
+    }
+    printf("stale %d live %d\n", read_through(rt, mine, ours),
+           read_through(rt, mine, making[0].integer));
+
+    /* And the thing the four above rest on, asked of enough machines to see it
+       fail if it could: no two of them ever stamp a place with the same
+       number. A world used to be sixteen bits of a count of the machines this
+       process had made, so the 65,537th was handed the first one's numbers
+       again -- and this is that said as the property rather than as the place
+       it broke, so it holds whatever the representation becomes. Each machine
+       is made, asked for its first reference and freed. A tenth of a second.
+       See D1033. */
+    long many = 70000;
+    int64_t *seen = malloc(sizeof *seen * (size_t)many);
+    if (seen == NULL) {
+        return 2;
+    }
+    for (long i = 0; i < many; i++) {
+        KestValue spun_store = {0};
+        KestRuntime *spun = a_world(build, &spun_store, &seen[i], 1);
+        if (spun == NULL || !kest_runtime_free(spun)) {
+            return 2;
+        }
+    }
+    qsort(seen, (size_t)many, sizeof *seen, nearer);
+    long twice = 0;
+    for (long i = 1; i < many; i++) {
+        if (seen[i] == seen[i - 1]) {
+            twice++;
+        }
+    }
+    printf("over %ld machine(s) %ld reference(s) were handed out twice\n",
+           many, twice);
+    free(seen);
+
+    kest_runtime_free(after);
+    kest_runtime_free(beside);
+    kest_runtime_free(rt);
+    kest_build_free(build);
+    return 0;
+}
+EOF
+if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$identity" "$identity.c" \
+        libkest.a -lm 2>"$scratch"/check-why; then
+    complain "identity" "the host that asks what a reference names does not build"
+    sed 's/^/    /' "$scratch"/check-why | head -3
+elif ! said=$("$identity" "$identity.kest" 2>&1); then
+    complain "identity" "the host that asks what a reference names did not run"
+    printf '%s\n' "$said" | sed 's/^/    /' | head -4
+else
+    identity_wrong=""
+    case "$said" in
+    *"own 7"*) ;;
+    *) identity_wrong="a machine does not read its own reference" ;;
+    esac
+    case "$said" in
+    *"other -1"*) ;;
+    *) identity_wrong="another machine's reference resolved here" ;;
+    esac
+    case "$said" in
+    *"freed -1"*) ;;
+    *) identity_wrong="a freed machine's reference came back to life" ;;
+    esac
+    case "$said" in
+    *"stale -1 live 55"*) ;;
+    *) identity_wrong="a place handed out again answers what was there before" ;;
+    esac
+    case "$said" in
+    *"were handed out twice"*) ;;
+    *) identity_wrong="the machines were not asked whether any two of them \
+stamp a place alike" ;;
+    esac
+    case "$said" in
+    *" 0 reference(s) were handed out twice"*) ;;
+    *) identity_wrong="two machines stamped a place with the same number, \
+which is one reference naming two things" ;;
+    esac
+    if [ -n "$identity_wrong" ]; then
+        complain "identity" "$identity_wrong"
+        printf '%s\n' "$said" | sed 's/^/    /' | head -4
+    else
+        say "identity" "a reference names nothing in another machine, nothing \
+in a machine made after the one it came from was freed, and nothing at a place \
+that has been handed out again -- and no two of $(printf '%s' "$said" | sed -n \
+'s/^over \([0-9]*\) machine.*/\1/p') machines stamp a place alike, which is \
+more than the count of worlds used to be able to tell apart"
+    fi
+fi
+rm -f "$identity" "$identity.c" "$identity.kest"
+
 # A promise that defers something which allocates. What counts against
 # `no.alloc` is what the deferred call does and not the `defer`, which is a
 # thing the contract has always held and nothing has ever asked: every `defer`

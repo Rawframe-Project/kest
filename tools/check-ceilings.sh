@@ -90,7 +90,8 @@ builds() {
 # reference from the first occupant read as the newest one. Lowered here for
 # the same reason the other is: nobody is adding four thousand million things
 # to a store to watch it.
-lower src/vm.c '#define MOST_STAMPS 16777215u' '#define MOST_STAMPS 1000u'
+lower src/vm.c '#define MOST_STAMPS 1099511627775ull' \
+    '#define MOST_STAMPS 1000ull'
 
 # And how many names a program may ask a host for. An extern is named in the
 # instruction that calls it in two bytes, so the one past the last is called as
@@ -310,7 +311,7 @@ PROBES = [
 # for a program to have. Both are met further down this file, in a tree with the
 # ceiling lowered.
 LOWERED = ("elements an array or a store holds",
-           "times a machine hands out a place, counting the ones taken back",
+           "times a process hands out a place, counting the ones taken back",
            "places in one store",
            "names a program asks the host for")
 
@@ -335,7 +336,7 @@ for number, what in rows:
 DEFINED = [
     ("elements an array or a store holds", "src/vm.c", "MAX_COUNTED",
      {"INT32_MAX": "2147483647"}),
-    ("times a machine hands out a place, counting the ones taken back",
+    ("times a process hands out a place, counting the ones taken back",
      "src/vm.c", "MOST_STAMPS", {}),
     ("places in one store", "src/vm.c", "MOST_PLACES", {}),
     ("names a program asks the host for", "src/compile.c", "MAX_EXTERNS", {}),
@@ -350,9 +351,9 @@ for phrase, path, define, written_as in DEFINED:
         failed = 1
         continue
     value = written_as.get(found.group(1), found.group(1))
-    # Written with the `u` a C constant carries, which the table does not.
-    if value.endswith("u"):
-        value = value[:-1]
+    # Written with the width a C constant carries, which the table does not:
+    # `16777215u` and `1099511627775ull` are the numbers beside them.
+    value = value.rstrip("uUlL")
     if value != number[0]:
         print("limits: the table says %s %s and `%s` is %s"
               % (number[0], phrase.strip(), define, value))
@@ -813,7 +814,7 @@ fn main() -> i32 {
 }
 KEST
 
-for one in "stamping:this machine has handed out 1000 places in stores" \
+for one in "stamping:this process has handed out 1000 places in stores" \
            "counting:this array holds 100" \
            "holding:this store holds 100" \
            "joining:this text would hold 128"; do

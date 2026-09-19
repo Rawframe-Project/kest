@@ -4834,11 +4834,10 @@ for file in "$@"; do""",
         # whatever the other store happens to keep there.
         "what": "a reference read in whatever store it is handed to",
         "file": "src/vm.c",
-        "from": r"""    if (world != store->world || index >= store->used ||
-        !is_live(store, index) || store->generations[index] != generation) {""",
-        "to": r"""    (void)generation;
-    if (world != store->world || index >= store->used ||
-        !is_live(store, index)) {""",
+        "from": r"""    if (index >= store->used || !is_live(store, index) ||
+        store->serials[index] != serial) {""",
+        "to": r"""    (void)serial;
+    if (index >= store->used || !is_live(store, index)) {""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -5872,7 +5871,7 @@ anywhere, and it is why the gate holds""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "made with room and 102 to one told afterwards",
+        "caught": "made with room and 115 to one told afterwards",
     },
     {
         # Room asked for and not made. A program that knows how many are coming
@@ -9973,14 +9972,14 @@ fn main() -> i32 {
         # build are two worlds of one program, and a host running both holds
         # references from each: if each counts from one, the first place of one
         # world is stamped like the first place of the other, and a reference
-        # from over there names whoever is standing here.
+        # from over there names whoever is standing here. What keeps them apart
+        # is that the count is the process's, so a machine counting on its own
+        # is this put out of order. See D1033.
         "what": "two machines that stamp their places alike",
         "file": "src/vm.c",
-        "from": """    rt->world = (atomic_fetch_add_explicit(&worlds_so_far, 1u,
-                                           memory_order_relaxed) &
-                 REF_WORLD_MASK);""",
-        "to": """    (void)worlds_so_far;
-    rt->world = 0;""",
+        "from": "            uint64_t handout = next_handout();",
+        "to": """            uint64_t handout = rt->stamps + 1;
+            (void)next_handout;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "from another machine named something here",
@@ -9993,8 +9992,8 @@ fn main() -> i32 {
         # hands the stamps out and not the store.
         "what": "two stores that stamp their places alike",
         "file": "src/vm.c",
-        "from": "            store->generations[index] = ++rt->stamps;",
-        "to": "            store->generations[index] = index + 1;",
+        "from": "            store->serials[index] = handout;",
+        "to": "            store->serials[index] = index + 1;",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "from another store named something here",
@@ -10007,16 +10006,15 @@ fn main() -> i32 {
         # is exactly the shape that finds out.
         "what": "a reference followed whatever it names",
         "file": "src/vm.c",
-        "from": """    if (world != store->world || index >= store->used ||
-        !is_live(store, index) || store->generations[index] != generation) {
+        "from": """    if (index >= store->used || !is_live(store, index) ||
+        store->serials[index] != serial) {
         return NULL;
     }""",
         "to": """    (void)is_live;
     if (index >= store->used) {
         return NULL;
     }
-    (void)generation;
-    (void)world;""",
+    (void)serial;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "to something dropped still named it",

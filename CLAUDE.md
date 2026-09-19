@@ -1086,6 +1086,15 @@ What the gate does itself, beside the checks in `tools` that it asks:
 build        both builds, every host, and the fuzzer the gate runs
 asking       a host asking what came back before anything came back, and
              every copy of one body walked to the end
+identity     the three ways a reference must name nothing, asked of a host
+             because two machines is what a host has and a program has one:
+             another machine's, one from a machine that has been freed, and
+             one to a place that has been handed out again. And the thing
+             those rest on, asked of seventy thousand machines: no two of them
+             ever stamp a place with the same number. A world used to be
+             sixteen bits of a count of the machines a process had made, so
+             the 65,537th was handed the first one's numbers again while the
+             first was still standing
 returns      files written on the spot: line endings, noughts inside text,
              and a promise around a `defer`
 budget       a loop that never ends stopping, a thousand turns costing a
