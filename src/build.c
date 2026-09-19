@@ -63,6 +63,25 @@ bool kest_build_check(KestBuild *build) {
     return build->diags.error_count == 0;
 }
 
+// What the optimizer found in one body, for whoever is writing a pass. It
+// goes to the error stream because what a program wrote is the program's
+// answer, the same rule the profile's own numbers follow. See D1024.
+static void say_what_the_optimizer_found(const KestIrBody *body,
+                                         const KestIrFound *found) {
+    if (found->slot_copies == 0 && found->reloads == 0 &&
+        found->materialized == 0) {
+        return;
+    }
+    fprintf(stderr,
+            "ir %s ops %u copies %u/%u took %u reloads %u/%u slots %u "
+            "dead %u/%u made %u/%u\n",
+            body->symbol == NULL ? "(no name)" : body->symbol, found->ops,
+            found->hot_copies, found->slot_copies, found->copies_taken,
+            found->hot_reloads,
+            found->reloads, found->reloaded_slots, found->hot_dead,
+            found->dead_writes, found->hot_materialized, found->materialized);
+}
+
 bool kest_build_emit(KestBuild *build) {
     if (build->compiled) {
         return true;
@@ -96,6 +115,20 @@ bool kest_build_emit(KestBuild *build) {
         return false;
     }
     kest_ir_program_init(&ir, bodies, kest_lower_body, writes);
+    // What the optimizer found, said per body, when somebody asks. It is a
+    // development question and not a command: what it prints is a count of
+    // shapes in the resolved form of a program, which is of no use to anybody
+    // who is not writing a pass. Read once so a compiler cannot change its
+    // mind half way through. See D1024.
+    {
+        static int asked = -1;
+        if (asked < 0) {
+            asked = getenv("KEST_IRSAY") != NULL ? 1 : 0;
+        }
+        if (asked) {
+            ir.say_found = say_what_the_optimizer_found;
+        }
+    }
     bool compiled =
         kest_compile(build->program, &build->units, &build->module, &ir);
     kest_arena_free(bodies);

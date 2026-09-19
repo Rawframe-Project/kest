@@ -220,6 +220,13 @@ typedef enum {
     // value and of a `match` each leave one behind them, and from here on it
     // is one value whichever arm ran. Nothing is emitted for it.
     KEST_IR_MEET,
+    // An operation that was here and is not. The optimizer takes a movement
+    // away by writing this over it rather than by closing the gap: a body is
+    // a flat list and a branch names what it lands on, so shifting everything
+    // down would renumber every target, every value and every argument for
+    // the sake of two operations. Nothing is emitted for it, and what it was
+    // is left beside it for whoever reads a body back. See D1025.
+    KEST_IR_NOTHING,
 
     KEST_IR_OP_COUNT
 } KestIrKind;
@@ -323,11 +330,54 @@ typedef struct {
     bool no_host;
     bool deterministic;
     bool returns_value;
+    // The widest run of slots the optimizer took a copy of. The compiler works
+    // out how deep the stack goes from what the body means, and a copy taken
+    // away is a push and a pop the reckoning still counts; the lowering carries
+    // this into the chunk beside what its own fusions saved, for the reason
+    // D1012 put that there. Nought for a body nothing was taken out of.
+    uint16_t took_slots;
 } KestIrBody;
 
 // What a backend is, from here: something handed one body at a time. It
 // answers false when it cannot go on, which stops the walk.
 typedef bool (*KestIrWritten)(void *backend, const KestIrBody *body);
+
+// What the optimizer found in one body and what it did about it. Counting
+// before changing is the rule this project works by: the first thing the
+// optimizer did was say what there was to do, so that the pass which gets
+// written is the one the numbers asked for rather than the one on a list.
+//
+// Static counts, because the IR carries no profile. What a count is worth
+// depends on where it is, so these are printed per body and the hot ones are
+// read by name. See D1024.
+typedef struct {
+    uint32_t bodies;
+    uint32_t ops;
+    // A place read straight into another place, both of them runs of slots in
+    // the frame: `b = a` and every argument written into a name.
+    uint32_t slot_copies;
+    // A slot read again with nothing written to it in between and no branch
+    // landing between the two reads. This is what a redundant load is.
+    uint32_t reloads;
+    uint32_t reloaded_slots;
+    // A slot written and written again with nothing reading it in between.
+    uint32_t dead_writes;
+    // A value built out of pieces and put straight into a place, which is an
+    // aggregate materialized on the way to where it was going.
+    uint32_t materialized;
+    // The same four again, counted only where they are inside a loop. A shape
+    // found once in a body that runs once is worth nothing however many of
+    // them there are; the same shape between a backward branch and what it
+    // lands on is worth as many times as the loop goes round. Which of the
+    // two a count is about is the whole of the decision, so both are kept.
+    uint32_t hot_copies;
+    uint32_t hot_reloads;
+    uint32_t hot_dead;
+    uint32_t hot_materialized;
+    // And what was done about it, which is not the same number: a shape that
+    // is there is not always one that can be taken away.
+    uint32_t copies_taken;
+} KestIrFound;
 
 typedef struct {
     KestArena *arena;
@@ -341,7 +391,23 @@ typedef struct {
     void *backend;
     KestIrBody body;
     bool out_of_memory;
+    // What the optimizer found over the whole program, and somewhere to say
+    // it per body for whoever is reading. The second is nothing in a normal
+    // build: it is set by the command line when it is asked.
+    KestIrFound found;
+    void (*say_found)(const KestIrBody *body, const KestIrFound *found);
 } KestIrProgram;
+
+// Whether a switch that turns a transformation off is set. `decided` is where
+// the answer is kept and starts below nought: the environment is read once
+// and not again, because a compiler that asked it per body would be one whose
+// answer could change half way through a program.
+//
+// There is one of these rather than one per transformation because two would
+// be one walk written twice. It is here because this is the module that says
+// what a transformation is; `KEST_PLAIN` holds the lowering's fusions and
+// `KEST_NOOPT` holds this module's own pass, and D1009 is why either exists.
+bool kest_ir_asked_off(const char *name, int *decided);
 
 // Making one, and the one body at a time that goes through it. Every part of a
 // body is arena memory and none of it is freed on its own; what frees all of it
@@ -393,5 +459,7 @@ const char *kest_ir_escapes(const KestIrBody *body, KestArena *arena,
 // that says the builder and the backends agree about the shape of the thing
 // between them, and it is asked of every body in the build that checks itself.
 const char *kest_ir_verify(const KestIrBody *body);
+
+
 
 #endif

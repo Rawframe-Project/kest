@@ -253,10 +253,7 @@ static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
 // one whose answer could change half way through a program.
 static bool fusing(void) {
     static int decided = -1;
-    if (decided < 0) {
-        decided = getenv("KEST_PLAIN") == NULL ? 1 : 0;
-    }
-    return decided != 0;
+    return !kest_ir_asked_off("KEST_PLAIN", &decided);
 }
 
 // A run of values the chunk holds, and the instruction that reads it. A local
@@ -684,6 +681,7 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
     // an instruction here.
     case KEST_IR_MAKE:
     case KEST_IR_MEET:
+    case KEST_IR_NOTHING:
         return;
     case KEST_IR_PART:
         // The front of a run is the run with what is above it dropped, which
@@ -1095,6 +1093,13 @@ bool kest_lower_body(void *reading, const KestIrBody *body) {
         return false;
     }
     KestChunk *into = lower->module->functions[lower->next++];
+    // What the optimizer took out before this read the body, which the
+    // compiler's reckoning of how deep the stack goes still counts. It sits
+    // beside what this file's own fusions save and is held the same way. See
+    // D1012 and D1025.
+    if (body->took_slots > into->fused_slots) {
+        into->fused_slots = body->took_slots;
+    }
     // What the body called its slots, carried through so a stopped machine can
     // say `hungry` rather than `slot 4`. The IR has kept them since D962
     // because the escape pass wanted them; this is the second reader. See
