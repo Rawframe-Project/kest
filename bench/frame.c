@@ -273,6 +273,29 @@ int main(int argc, char **argv) {
     }
     say("native", took, frames, answered);
 
+    /* What each of the two crossed, which the timings above cannot say: a
+       boundary is a count of crossings and a count of bytes, and two ways of
+       doing one frame's work differ in both. The host knows all of it exactly
+       because the host is what writes the slots. See D1029.
+
+       `bytes crossing` is the host's own memory the frame worked on, which is
+       the same for both because the work is the same. `bytes marshalled` is
+       what was copied at the boundary to make that happen: nought for the
+       lend, where the run is read and written where it stands and what crosses
+       is an address and a count, and nine slots a body for the fine path --
+       four fields and the wall in, four fields back. */
+    unsigned long long bodies = (unsigned long long)many *
+                                (unsigned long long)frames;
+    unsigned long long crossing = bodies * (unsigned long long)sizeof(Body);
+    printf("what crossed: %s\n",
+           "crossings, elements, bytes of the host's memory, bytes marshalled");
+    printf("%-8s %11lld %11llu %14llu %14llu\n", "lend", frames, bodies,
+           crossing, 0ULL);
+    printf("%-8s %11llu %11llu %14llu %14llu\n", "fine", bodies, bodies,
+           crossing, bodies * 9ULL * sizeof(KestValue));
+    printf("%-8s %11d %11llu %14llu %14llu\n", "native", 0, bodies, crossing,
+           0ULL);
+
     free(world);
     free(took);
     kest_runtime_free(runtime);
