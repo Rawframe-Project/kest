@@ -36500,3 +36500,44 @@ learns what a percentile is. See D1007.
 `examples/engine`, which call both new doors and the refusals beside them;
 `tools/check-dead.sh`, `tools/check-header.sh`, `tools/check-docs.sh`,
 `tools/check-tables.sh`; `make fast`.
+
+## What a collection costs, and who decides when one happens
+
+The telemetry's first reading said the collector takes thirteen per cent of a
+call on `bench/agents.kest` and that the longest single walk is 12.7 ms against
+a sixty-hertz frame's 16.7. So the collector went to the front of the queue,
+ahead of the optimizer.
+
+Three things came out of looking at it.
+
+**Marking is three quarters of it**, and it is bounded by what the program can
+still reach. A walk asks three questions about every address it follows — mark
+it, where does the thing it is in start, what kind is it — and each was a hash
+of the same address and a probe of the same table. `kest_ground_reached` asks
+all three in one lookup. That is worth one per cent, 646 ms to 638, and it is
+kept because it is less code rather than because of the number. What it proves
+is where the time is: reading twenty-three megabytes of live objects in the
+order they happened to be made.
+
+**A more patient trigger was measured and refused as a default.** Walking when
+twice as much has been handed out: walks 73 → 38, collector 646 → 391 ms, the
+middle call 82.8 → 57.1 — and the longest walk 12.7 → **15.4**, with churn's
+plateau up half again from 803440 bytes to 1198448. Forty per cent off the
+collector, fifty per cent onto the footprint, and the one number a frame cares
+about got worse. A constant cannot choose that for everybody.
+
+**So the change is who decides.** `kest_collect` walks now, at a moment the
+host chose, refused while a program is running. The machine's rule is about how
+much has been handed out and it has no idea where a frame ends; a host does.
+
+And the question that needed no change: a hot phase promising `no.alloc` cannot
+be interrupted by a walk, because a walk happens inside an allocation and there
+is none. Fifty frames of `bench/frame.kest` over a lent run: one allocation,
+for the first lend's header, and no walks. `bench/frame.c` prints it beside the
+timings so it stays true. See D1008.
+
+**Runs:** `bench/measure bench/agents.kest` before and after; the trigger
+experiment in a copy of the tree, thrown away afterwards; `bench/frame`;
+`examples/embed`, which asks for a walk and is refused when it asks of nothing;
+`make fast`; `tools/check-header.sh`, `tools/check-dead.sh`,
+`tools/check-docs.sh`, `tools/check-tables.sh`.

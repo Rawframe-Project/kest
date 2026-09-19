@@ -530,21 +530,6 @@ KestGroundKind kest_ground_kind(const KestGround *ground, const void *at) {
     return kind_of(plot, place_of(plot, at));
 }
 
-void *kest_ground_start(const KestGround *ground, const void *at) {
-    if (ground == NULL) {
-        return NULL;
-    }
-    const Plot *plot = plot_holding(ground, at);
-    if (plot == NULL) {
-        return NULL;
-    }
-    uint32_t place = place_of(plot, at);
-    if ((plot->used[place / 64] & ((uint64_t)1 << (place % 64))) == 0) {
-        return NULL;
-    }
-    return plot->data + (size_t)place * plot->stride;
-}
-
 static void *room_in_a_plot(KestGround *ground, size_t bytes) {
     if (ground == NULL || bytes == 0) {
         return NULL;
@@ -686,7 +671,14 @@ bool kest_ground_holds(const KestGround *ground, const void *at) {
     return (plot->used[place / 64] & ((uint64_t)1 << (place % 64))) != 0;
 }
 
-bool kest_ground_mark(KestGround *ground, const void *at) {
+bool kest_ground_reached(KestGround *ground, const void *at, void **start,
+                         KestGroundKind *kind) {
+    if (start != NULL) {
+        *start = NULL;
+    }
+    if (kind != NULL) {
+        *kind = KEST_GROUND_PLAIN;
+    }
     if (ground == NULL) {
         return false;
     }
@@ -703,6 +695,12 @@ bool kest_ground_mark(KestGround *ground, const void *at) {
         return false;
     }
     plot->marks[place / 64] |= bit;
+    if (start != NULL) {
+        *start = plot->data + (size_t)place * plot->stride;
+    }
+    if (kind != NULL) {
+        *kind = kind_of(plot, place);
+    }
     return true;
 }
 

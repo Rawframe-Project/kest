@@ -620,6 +620,8 @@ struct KestRuntime {
     void *clock_context;
     uint64_t walked;
     uint64_t worst_walk;
+    uint64_t marking;
+    uint64_t sweeping;
     uint64_t roots;
     uint64_t lends;
     uint64_t lent_elements;
@@ -863,11 +865,17 @@ static bool later(Vm *rt, void *at) {
 }
 
 static void follow(Vm *rt, const void *at) {
-    if (!kest_ground_mark(rt->ground, at)) {
+    // One lookup rather than three. Marking is three quarters of what a
+    // collection costs and this is what marking is: for every address a walk
+    // follows, whether it is on this heap, where the thing it is in starts,
+    // and what kind of thing that is -- which were three hashes of the same
+    // address and three probes of the same table. See D1008.
+    void *start = NULL;
+    KestGroundKind kind = KEST_GROUND_PLAIN;
+    if (!kest_ground_reached(rt->ground, at, &start, &kind)) {
         return;
     }
-    void *start = kest_ground_start(rt->ground, at);
-    if (start == NULL || kest_ground_kind(rt->ground, at) == KEST_GROUND_PLAIN) {
+    if (start == NULL || kind == KEST_GROUND_PLAIN) {
         return;
     }
     later(rt, start);
@@ -966,12 +974,16 @@ static void gather(Vm *rt, KestValue *reach) {
         kest_ground_unmark(rt->ground);
         return;
     }
+    uint64_t marked = rt->clock == NULL ? 0 : rt->clock(rt->clock_context);
     kest_ground_sweep(rt->ground);
     size_t standing = kest_ground_used(rt->ground);
     rt->walk_at = standing < WALK_FLOOR ? WALK_FLOOR : standing;
     if (rt->clock != NULL) {
-        uint64_t took = rt->clock(rt->clock_context) - began;
+        uint64_t ended = rt->clock(rt->clock_context);
+        uint64_t took = ended - began;
         rt->walked += took;
+        rt->marking += marked - began;
+        rt->sweeping += ended - marked;
         if (took > rt->worst_walk) {
             rt->worst_walk = took;
         }
@@ -7068,9 +7080,26 @@ bool kest_telemetry(const KestRuntime *runtime, KestTelemetry *into) {
     into->blocks = ground.blocks;
     into->walked = runtime->walked;
     into->worst_walk = runtime->worst_walk;
+    into->marking = runtime->marking;
+    into->sweeping = runtime->sweeping;
     into->roots = runtime->roots;
     into->lends = runtime->lends;
     into->lent_elements = runtime->lent_elements;
     into->copied = runtime->copied;
+    return true;
+}
+
+bool kest_collect(KestRuntime *runtime) {
+    if (runtime == NULL) {
+        return false;
+    }
+    if (!between_calls(runtime, "walked")) {
+        return false;
+    }
+    if (runtime->ground == NULL ||
+        kest_ground_open_count(runtime->ground) != 0) {
+        return false;
+    }
+    gather(runtime, NULL);
     return true;
 }

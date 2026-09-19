@@ -31880,3 +31880,55 @@ longest single walk took 13.5 ms.** A frame at sixty hertz has 16.7 of them to
 spend, so a walk of that size is not a slow program: it is a frame that was
 missed. Measuring it was this decision's job; what to do about it is the next
 thing to be decided and is not decided here.
+
+## D1008. What a collection costs, and a walk the host asks for
+
+**Measured first.** `bench/agents.kest`, a world of twenty thousand agents with
+twenty-three megabytes live, six calls of about six hundred milliseconds:
+
+    73 walks, 646 ms in all -- 488 marking, 159 sweeping
+    the middle call spent 82.8 ms of its 630 in them, thirteen per cent
+    the longest single walk took 12.7 ms
+
+A frame at sixty hertz has 16.7 milliseconds. A twelve-millisecond
+stop-the-world walk is not a slow program; it is a missed frame. Marking is
+three quarters of it, and marking is bounded by what the program can still
+reach rather than by anything this project can shorten by being clever.
+
+**One lookup rather than three, which is worth one per cent.** A walk asks
+three things about every address it follows — mark it, where does the thing it
+is in start, what kind is it — and each was a hash of the same address and a
+probe of the same table of plots. `kest_ground_reached` does all three in one
+lookup. It took 646 ms to 638: one per cent, and it is kept because it is
+*less* code rather than more, not because of the number. What that measurement
+says is where the time actually goes: not in finding the plot, but in reading
+twenty-three megabytes of live objects in whatever order they were made.
+
+**A trigger twice as patient, measured and refused as a default.** The machine
+walks when it has been handed as much as it is holding. Doubling that, in a
+copy of the tree:
+
+    walks           73 -> 38
+    walk time      646 -> 391 ms      marking 488 -> 238
+    per call      82.8 -> 57.1 ms
+    the longest   12.7 -> 15.4 ms
+    churn's most held at once   803440 -> 1198448 bytes, half as much again
+
+Forty per cent off the collector, fifty per cent onto the footprint, and the
+one number a frame cares about got *worse*. A constant in the machine cannot
+choose between those for everybody, and the flat plateau is a thing this
+project says out loud. So the default does not move.
+
+**What moves instead is who decides.** `kest_collect` walks now, at a moment
+the host chose, and is refused while a program is running. A host with a frame
+budget calls it between frames, which is where a walk belongs: the machine's
+own rule is about how much has been handed out, and it has no idea where the
+frame boundary is. It is a door rather than a number, which is what 1.x may
+add.
+
+**And the question that needed no change at all.** Can a hot phase that
+promises `no.alloc` be interrupted by a walk? No, and it is shown rather than
+argued: a walk happens inside an allocation, `no.alloc` proves there is none,
+and fifty frames of `bench/frame.kest` over a lent run report one allocation —
+the first lend's header — and no walks. `bench/frame.c` prints that beside the
+timings so it stays true.

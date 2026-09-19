@@ -4239,6 +4239,20 @@ because something outgrew its place. There is nothing to turn on: every one of
 those is at an allocation, a walk or a lend, and a program runs millions of
 instructions between any two of them.
 
+`kest_collect` is the other side of that: it walks now, at a moment the host
+chose, and gives back everything nothing can reach. A machine decides for
+itself when a walk is worth doing — when it has been handed as much as it is
+holding — and that moment is wherever the program happened to be. A host with a
+frame to fit into calls this between frames and moves the walk to between
+frames. It is refused while a program is running, the same way throwing the
+heap away is, because inside a call the host's own C locals are not something
+the machine can read.
+
+A hot phase that promises `no.alloc` cannot be interrupted by a walk at all: a
+walk happens inside an allocation and there is none. Fifty frames of
+`bench/frame.kest` driven over a lent run answer that with one allocation, for
+the first lend's header, and no walks.
+
 Two of its fields are nought until a host says otherwise. `kest_clock` gives a
 machine the clock it times its own walks with, and what that clock counts in is
 the host's to decide — this library is ISO C and there is no monotonic clock in

@@ -85,12 +85,6 @@ void *kest_ground_take(KestGround *ground, size_t bytes,
 // hand out — which is safe to read as nothing to follow, because it is.
 KestGroundKind kest_ground_kind(const KestGround *ground, const void *at);
 
-// The start of the thing an address is in, which is what a walk that met a
-// place inside one follows: a piece of text cut out of another names a place
-// inside it, and so does the address of an element. NULL for an address this
-// did not hand out.
-void *kest_ground_start(const KestGround *ground, const void *at);
-
 // Makes the last thing this handed out bigger where the place it is in has the
 // room, which is what a run of bytes growing one element at a time wants: a
 // place of two hundred and fifty-six bytes holds a hundred and twenty-eight
@@ -110,12 +104,17 @@ size_t kest_ground_room(const KestGround *ground, const void *at);
 // is at that address.
 bool kest_ground_holds(const KestGround *ground, const void *at);
 
-// Marks the thing that address is in, whether it is the start of it or a place
-// inside it, and answers whether it was not marked already. False for an
-// address this did not hand out, and false for one already marked — so a walk
-// that follows what it marks terminates on a ring without keeping a list of
-// where it has been.
-bool kest_ground_mark(KestGround *ground, const void *at);
+// Marks the thing an address is in, whether it is the start of it or a place
+// inside it, and says where that thing starts and what kind it is. Answers
+// whether it was not marked already: false for an address this did not hand
+// out, and false for one already marked — so a walk that follows what it marks
+// terminates on a ring without keeping a list of where it has been.
+//
+// One lookup rather than three. A walk asks all three of those about every
+// address it follows, and each of them was a hash of the same address and a
+// probe of the same table. See D1008.
+bool kest_ground_reached(KestGround *ground, const void *at, void **start,
+                         KestGroundKind *kind);
 
 // Gives back every place nothing marked, and forgets the marks. What a place
 // held is not read again, so a value that was there is gone as far as anything

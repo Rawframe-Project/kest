@@ -1122,6 +1122,11 @@ typedef struct {
     // clock is the host's the way every other outside thing is. See D935.
     uint64_t walked;
     uint64_t worst_walk;
+    // And the two halves of that, because they are bounded by different
+    // things: marking is bounded by what the program can still reach and
+    // sweeping by how much memory there is to look through.
+    uint64_t marking;
+    uint64_t sweeping;
     // Slots read loosely, added up over every walk: what a walk of the roots
     // costs, which is the part of a collection a program controls by how deep
     // it is standing.
@@ -1137,6 +1142,26 @@ typedef struct {
 // Answers false for no machine and no room to write into, and true otherwise.
 // There is nothing to turn on: these are counted whether or not anybody asks.
 bool kest_telemetry(const KestRuntime *runtime, KestTelemetry *into);
+
+// Walks now, at a moment the host chose, and gives back everything nothing can
+// reach. It is what a frame-budgeted host reaches for: a machine decides for
+// itself when a walk is worth doing, which is when it has been handed as much
+// as it is holding, and that moment is wherever the program happened to be.
+// A host that calls this between frames moves the walk to between frames.
+//
+// Between calls only. Inside one, the host's own C locals are not something
+// this machine can read, so a walk started there could give away what the host
+// is holding and nothing else could say so -- `kest_keeps` is the door for a
+// host that wants to hold one across a call. Refused while a program is
+// running, with a diagnostic, the way throwing the heap away is.
+//
+// Answers whether it walked. A machine with a `scratch { }` block open does
+// not, because a block gives its own memory back and a walk in the middle of
+// one would be a walk over memory that is about to go anyway.
+//
+// It does not change what a program answers. A program cannot tell that this
+// happened, which is what keeps `deterministic` true.
+bool kest_collect(KestRuntime *runtime);
 
 // The clock a machine times its own walks with. It is the host's because this
 // library is ISO C, which has no monotonic clock, and because a duration is

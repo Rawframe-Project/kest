@@ -463,8 +463,10 @@ int main(int argc, char **argv) {
            (unsigned long long)heap.plots_freed,
            (unsigned long long)heap.blocks);
     if (heap.walked > 0) {
-        printf("the walks took %.3f ms in all and the longest %.3f ms\n",
-               (double)heap.walked / 1e6, (double)heap.worst_walk / 1e6);
+        printf("the walks took %.3f ms in all -- %.3f marking, %.3f sweeping "
+               "-- and the longest %.3f ms\n",
+               (double)heap.walked / 1e6, (double)heap.marking / 1e6,
+               (double)heap.sweeping / 1e6, (double)heap.worst_walk / 1e6);
         say_spread("walking", walking);
         printf("%-14s %9.1f%% of the middle call\n", "which is",
                calling.middle == 0

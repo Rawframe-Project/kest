@@ -7100,6 +7100,24 @@ int main(int argc, char **argv) {
     kest_clock(engine.runtime, host_nanoseconds, NULL);
     kest_clock(NULL, host_nanoseconds, NULL);
 
+    // And a walk at a moment this host chose rather than at whatever
+    // allocation would have set one off. A host with a frame to fit into asks
+    // for it between frames; here it is asked for between calls, which is the
+    // only place it is allowed, and asked of nothing to see it refuse.
+    KestTelemetry before_walk = {0};
+    kest_telemetry(engine.runtime, &before_walk);
+    if (!kest_collect(engine.runtime) || kest_collect(NULL)) {
+        fprintf(stderr, "a walk this host asked for did not happen\n");
+        return 1;
+    }
+    KestTelemetry after_walk = {0};
+    kest_telemetry(engine.runtime, &after_walk);
+    if (after_walk.sweeps != before_walk.sweeps + 1) {
+        fprintf(stderr, "a walk this host asked for swept nothing\n");
+        return 1;
+    }
+    printf("and a walk this host asked for happened when it asked\n");
+
     // And the other side of the answer: outside a call there is nothing
     // standing on the machine, so this is the free that happens. Nothing takes
     // a machine away by force — a host that asked from inside a call and never

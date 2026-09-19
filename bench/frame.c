@@ -176,6 +176,8 @@ int main(int argc, char **argv) {
        is an address and a count rather than the bodies. */
     double answered = 0.0;
     fill(world, many);
+    KestTelemetry before_frames = {0};
+    kest_telemetry(runtime, &before_frames);
     for (long long f = 0; f < frames; f++) {
         long long before = in_nanoseconds();
         KestValue lent =
@@ -193,6 +195,21 @@ int main(int argc, char **argv) {
         answered = slots[0].real;
     }
     say("lend", took, frames, answered);
+
+    /* And the question a frame budget actually asks: did anything happen in
+       there that the program did not ask for? The hot phase promises
+       `no.alloc`, a walk happens only inside an allocation, and so a frame of
+       this shape cannot be interrupted by one. That is a thing to read in the
+       source and a thing to show: over every frame above, this is what the
+       heap under it did. */
+    KestTelemetry after = {0};
+    kest_telemetry(runtime, &after);
+    printf("over those %lld frame(s): %llu allocation(s), %llu walk(s), "
+           "%llu byte(s) copied, %llu lend(s)\n",
+           frames, (unsigned long long)(after.allocations - before_frames.allocations),
+           (unsigned long long)(after.sweeps - before_frames.sweeps),
+           (unsigned long long)(after.copied - before_frames.copied),
+           (unsigned long long)(after.lends - before_frames.lends));
 
     /* One crossing a body, over the same data, so that what a crossing costs
        is a number rather than an argument. */
