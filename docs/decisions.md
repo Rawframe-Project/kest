@@ -32304,3 +32304,47 @@ nobody wrote, on every run, answering the same thing either way.
 
 It is four lines in the fuzzer and a loop in the gate, and it is the test that
 would have caught the two fusions kept here if either had been wrong.
+
+## D1016. What the optimizing cost, and where this language sits
+
+**What it cost.** Against 53a0771, which is what 1.0.0 shipped, on this
+machine:
+
+    build from clean        1.93 s  ->  1.94 s
+    make fast               0.55    ->  0.66
+    kest, stripped        501968 B  ->  506072      +0.8 %
+    libkest.a             753214    ->  760938      +1.0 %
+    src, with headers      45105 lines -> 45683     +1.3 %
+    tools                  34300    ->  34435
+    compiling kernel.kest   1.33 ms ->  1.31        unchanged
+    compiling colony.kest   2.80    ->  2.82        unchanged
+    kest --version          1.04    ->  1.04        unchanged
+
+Six instructions were added and two taken away again; nothing about the
+compiler got slower and the binary grew by four kilobytes. That is the budget
+this work was allowed and it is most of the way unspent.
+
+**Where this language sits**, which is machine-local evidence and stays here.
+`bench/run.sh`, best of five, whole process, every row answering the same
+checksum:
+
+    workload   kest    g++ 15.2.0 -O2   Lua 5.4.8
+    kernel      86 ms        9 ms          84 ms
+    control    130           9             99
+    graph       16           5             21
+    words       48          13             38
+
+Against the same C++ at 1.0.0 the first two were twelve to fifteen times; the
+first is nine now. Against Lua 5.4 this is level on the numeric frame, ahead on
+the one with checked identity in it, and behind on branches and on text.
+
+No comparison here is a claim and none of it goes on the front page. What it is
+for is knowing which of the four shapes is the one to look at next, and the
+answer is `control` — branches and calls, where both comparators are ahead.
+
+**What could not be calibrated.** Luau and daScript are not on this machine and
+are not packaged where it can reach them. Lua 5.4.8 was built from source and
+stands in for the small dynamic VM; Luau's native tier and Daslang's interpreter
+are the two rows missing, and they are missing because the machine has not got
+them rather than because nobody looked. That is the whole of the external
+limitation and it holds up nothing else.

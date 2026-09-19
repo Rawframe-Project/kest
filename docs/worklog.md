@@ -36786,3 +36786,33 @@ was wrong, which the second end of the output said immediately.
 
 **Runs:** `make check`; the hole reproduced by hand in a copy built the way
 `check-backstops.sh` builds one.
+
+## What it cost, and where this language sits
+
+The budget, against what 1.0.0 shipped: the stripped compiler grew by four
+kilobytes, the library by eight, the source by five hundred and seventy-eight
+lines, and nothing about compiling got slower — `kernel.kest` still compiles in
+1.31 milliseconds and the process still starts in 1.04. Six instructions were
+added and two taken away again.
+
+And the calibration, which is machine-local and stays out of the front page.
+Best of five, whole process, every row answering the same checksum:
+
+    workload   kest    g++ 15.2.0 -O2   Lua 5.4.8
+    kernel      86 ms        9 ms          84 ms
+    control    130           9             99
+    graph       16           5             21
+    words       48          13             38
+
+`kernel` was twelve to fifteen times the C++ at 1.0.0 and is nine now. Against
+Lua 5.4 this is level on the numeric frame, ahead on the one with checked
+identity, behind on branches and on text — so `control` is the shape to look at
+next, because both comparators are ahead there.
+
+Luau and daScript are not on this machine. Lua was built from source to stand
+in for the small dynamic VM; the other two rows are missing because the machine
+has not got them. See D1016.
+
+**Runs:** `make clean && make` timed; `bench/run.sh` with `KEST_CPP` and
+`KEST_LUAU` set, the comparators built here with g++ 15.2.0 and Lua 5.4.8 built
+from source.
