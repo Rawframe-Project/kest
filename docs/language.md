@@ -834,10 +834,10 @@ let total = 0
 io.print("{total}")
 ```
 
-`defer f(x)` runs `f(x)` when the block it is in ends, however it ends: off the
-end, through a `return`, through a `break` or a `continue`. Several of them run
-in the reverse of the order they were written, because what was taken last is
-given back first:
+`defer f(x)` runs `f(x)` when the block it is in ends, however the program ends
+it: off the end, through a `return`, through a `break` or a `continue`. Several
+of them run in the reverse of the order they were written, because what was
+taken last is given back first:
 
 ```kest
 fn measured(a: f64, b: f64) -> i32 {
@@ -860,6 +860,18 @@ A block is where it runs, so what it names is still there: a `defer` written
 inside an `if` runs at the end of that `if`, and a `return` from inside runs
 every block's on the way out, innermost first. There is no way to write one
 that reads a name which has gone.
+
+**A fault is not an end, and this is not `finally`.** A machine that divides by
+nought or reads past an array stops there: `kest_call` answers false, the host
+is told what happened, and no `defer` runs. The reason is that a deferred call
+can fault too, and running them during a fault needs a rule for a fault inside
+a fault — which is the exception machinery this language does not have. What
+the machine owns goes with the machine, so nothing of the program's leaks: the
+heap is thrown away with it and a `scratch { }` block open at a fault goes with
+it. What can be left unbalanced is a host's own state, taken through an
+`extern` and given back through a deferred one — the `Host.write("[")` above
+would leave its bracket open. A host closes what it paired when a call answers
+false, the same way it would for any other refusal. See D1040.
 
 What it is given is what its names hold where the block ends, not where the
 `defer` is written: nothing is copied and put aside, because a copy per `defer`

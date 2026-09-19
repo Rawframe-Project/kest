@@ -657,7 +657,64 @@ case "$said" in
 esac
 rm -f "$deferred"
 
-say "returns" "line endings, noughts inside text, and a promise around a \`defer\`"
+# And the other half of what `defer` is, which the reference now says in full:
+# it runs on every way out the program itself takes, and a fault is not one of
+# those. The ways out a program takes are written down as a program that runs
+# and answers nought — `examples/borrow.kest` covers fallthrough, `return`,
+# `break`, `continue` and the reverse order of several in one block — and the
+# two that cannot be, because a program that faults cannot be an example, are
+# here. See D1040.
+# One body reaches both of them: the array holds a nought at nought, so an
+# index inside it divides by nought and an index outside it is refused before
+# the division is reached.
+for at in 0 4; do
+    faulting="$scratch"/faulting.kest
+    case "$at" in
+    0) want="K0601" ;;
+    *) want="K0604" ;;
+    esac
+    cat > "$faulting" <<EOF
+module faulting
+
+import std.io
+
+fn takes(xs: [i32], which: i32) -> i32 {
+    defer io.print("the deferred call ran")
+    io.print("the block was entered")
+    return 10 / xs[which]
+}
+
+fn main() -> i32 {
+    let xs = array(1, 0)
+    return takes(xs, $at)
+}
+EOF
+    said=$(./kest run "$faulting" 2>&1 </dev/null)
+    faulting_wrong=""
+    case "$said" in
+    *"the block was entered"*) ;;
+    *) faulting_wrong="the block holding the \`defer\` was never entered" ;;
+    esac
+    case "$said" in
+    *"$want"*) ;;
+    *) faulting_wrong="a program that has to fault did not say $want" ;;
+    esac
+    case "$said" in
+    *"the deferred call ran"*)
+        faulting_wrong="a \`defer\` ran after a fault, which is unwinding by \
+another name"
+        ;;
+    esac
+    if [ -n "$faulting_wrong" ]; then
+        complain "returns" "$faulting_wrong"
+        printf '%s\n' "$said" | sed 's/^/    /' | head -4
+    fi
+    rm -f "$faulting"
+done
+
+say "returns" "line endings, noughts inside text, a promise around a \`defer\`, \
+and the two ways out of a block a program does not take: a \`defer\` runs on \
+neither"
 
 # What a budget is, asked of both builds. A program that would not stop has to
 # stop; a program that would has to be given the number of steps it takes and

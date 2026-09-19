@@ -37491,3 +37491,45 @@ D1039.
 **Runs:** the reproduction and the mission's `render.math`/`physics.math`
 example; `perf stat -r 3` and `check --json` for what it costs; the reading
 checks; `make fast`; `make check`.
+
+## What `defer` is, said in full
+
+Two reports from outside: that `x = 1; defer f(x); x = 2` makes the deferred
+call see `2`, and that runtime faults do not run deferred cleanup. Both
+reproduce. They are not the same kind of finding.
+
+The first is documented and deliberate. The reference has said it in these
+words all along — *what it is given is what its names hold where the block
+ends, not where the `defer` is written: nothing is copied and put aside,
+because a copy per `defer` is memory nobody asked for* — and names
+`examples/borrow.kest`, which runs it. Stale.
+
+The second is real, and the whole matrix was measured rather than reasoned
+about: fallthrough, `return`, `break` and `continue` all run them, in the
+reverse of the order written; an arithmetic trap and a bounds trap do not.
+
+A fault is not an exit. It is the machine stopping because it met something it
+could not make sense of, and running more of the program in those frames needs
+a rule for a fault *during* unwinding — which is the exception machinery this
+language does not have and is not going to grow. What the machine owns goes
+with the machine: the heap is thrown away with it and a `scratch { }` block
+open at a fault goes with it. What can be left unbalanced is a host's own
+state, taken through an `extern` and given back through a deferred one — the
+reference's own `Host.write("[")` leaves its bracket open — and the host is
+told, because a call that faults answers false.
+
+So `defer` is not `finally` and not RAII, and the reference says that in the
+paragraph where `defer` is introduced rather than in a note somewhere else.
+The matrix is held rather than written down. The five ways out a program takes
+were already an example that runs and answers nought --
+`examples/borrow.kest` covers fallthrough, `return`, `break`, `continue` and
+the reverse order of several in one block -- and the two a program does not
+take could not be, because a program that faults is not an example that answers
+nought. Those are a probe in the gate now: one body, an array holding a nought
+at nought, and an index that is inside it or outside it, so the same two lines
+reach a division by nought and a bounds refusal. Each has to say it entered the
+block, say the refusal, and not say the deferred call ran. See D1040.
+
+**Runs:** the capture probe and an exit probe covering fallthrough, return,
+break, continue and ordering; two fault probes; a fault inside a `scratch { }`
+block; the new `returns` probe; `make fast`; `make check`.

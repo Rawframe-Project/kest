@@ -1079,7 +1079,10 @@ identity     the three ways a reference must name nothing, asked of a host
              the 65,537th was handed the first one's numbers again while the
              first was still standing
 returns      files written on the spot: line endings, noughts inside text,
-             and a promise around a `defer`
+             a promise around a `defer`, and the two ways out of a block a
+             program does not take -- an arithmetic trap and a bounds trap --
+             on neither of which a `defer` runs. The ways out a program does
+             take are an example that answers nought
 budget       a loop that never ends stopping, a thousand turns costing a
              thousand steps and not nine hundred and ninety-nine, and work
              an instruction does that is not a step being charged for

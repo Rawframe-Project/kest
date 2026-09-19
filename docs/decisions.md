@@ -33766,3 +33766,71 @@ program anyone has written in this language, has that shape. A mechanism with no
 evidence behind it is surface this project does not buy. When that case turns
 up, `as` is what it gets, and it is small: the alias a file writes is already
 the only thing lookup keys on.
+
+## D1040. What `defer` is, said in full: an exit matrix, and a fault is not an exit
+
+**Decided.** `defer` runs at the end of a block, however the block ends *by the
+program's own doing*. A runtime fault is not one of those, and the reference now
+says so where a reader meets `defer` rather than leaving it to be found out.
+
+**What was asked.** A reading from outside reported two things: that
+`x = 1; defer f(x); x = 2` makes the deferred call see `2`, and that runtime
+faults do not run deferred cleanup.
+
+**The first is documented and deliberate: STALE.** The reference has said it in
+these words all along -- *what it is given is what its names hold where the
+block ends, not where the `defer` is written: nothing is copied and put aside,
+because a copy per `defer` is memory nobody asked for and this language does not
+spend that quietly* -- and names `examples/borrow.kest`, which writes it down as
+a program that runs. Reproduced and found already answered.
+
+**The second is real, and here is the whole matrix**, measured rather than
+reasoned about:
+
+    fallthrough              runs
+    return                   runs
+    break                    runs, that turn's, before leaving
+    continue                 runs, that turn's, before the next
+    several in one block     reverse of the order written
+    arithmetic trap          does not run
+    bounds or reference trap does not run
+
+**And what that means, which is the decision.** A fault is not an exit. It is
+the machine stopping because it met something it could not make sense of, and
+what happens then is that `kest_call` answers false and the host is told what
+happened. The frames are still there to be read by a debugger; they are not
+unwound by running more of the program in them.
+
+**Why not run them.** A deferred call can itself fault. Running defers during a
+fault needs a policy for a fault *during* unwinding, and a policy for what a
+second fault says about the first, and somewhere to put both -- which is the
+exception machinery this language does not have and is not going to grow. The
+alternative to that machinery is not "defers sometimes run": it is saying
+plainly that they do not.
+
+**And what is actually at risk, which is less than it sounds.** Everything the
+machine owns goes with the machine. The heap is thrown away when the machine is
+freed; a `scratch { }` block open at a fault is the machine's and goes with it,
+and `kest_ground_open_count` is what puts a machine back that was stopped inside
+one. What a fault can leave unbalanced is **host state a program took through an
+extern and would have given back through a deferred extern call** -- the
+reference's own `Host.write("[")` and `defer Host.write("]")` is exactly that
+shape, and on a fault the bracket stays open.
+
+That is the honest cost, it is the host's to handle, and the host is told: a
+call that faults answers false and `kest_report` says what happened. A host that
+pairs something across a call closes it when the call answers false, the same
+way it would if the call had answered an error.
+
+**So `defer` is not `finally` and not RAII**, and the reference says that in the
+paragraph where `defer` is introduced rather than in a note somewhere else.
+What it is for is the shape it is good at: giving back, next to the taking, on
+every path the program itself takes.
+
+**And the matrix is held rather than written down.** The five rows a program
+takes are `examples/borrow.kest`, which runs and answers nought. The two it
+does not take are a probe in the gate's `returns` section, because a program
+that faults is not an example that answers nought: one body, an array holding a
+nought at nought, and an index inside it or outside it, so the same two lines
+reach both traps. Each run has to say it entered the block, say the refusal, and
+not say the deferred call ran.
