@@ -1148,6 +1148,12 @@ fuzzing      bytes nothing here was written for, made from eight seeds and
              that has to be the same either way. Thousands of programs nobody
              wrote is where a miscompilation hides, rather than in the
              thirty-seven somebody did
+moved        what the machine says it moved in bytes held to what it ran: for
+             the instructions whose width is fixed, the counters and the
+             histogram beside them have to agree exactly, over a program
+             written on the spot so the arithmetic is one line. A counter
+             added at a new movement and forgotten at an old one is what it
+             catches
 tree         nothing a compiler made in the tree but what `make clean` takes
              away, nothing `make clean` takes away that is committed — which
              is the same list read the other way round, because a file the

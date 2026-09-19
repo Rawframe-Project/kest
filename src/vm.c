@@ -589,6 +589,30 @@ struct KestRuntime {
     // it refused one carrying these before anybody had asked to read them.
     // Nought here is a machine that is not counting. See D870.
     uint64_t *ran_checked;
+    // What the machine moved, in bytes, counted where it moves it. The
+    // instruction histogram beside this says how many times something ran;
+    // what a run of it moved depends on its operands and on a layout, so it
+    // is counted rather than worked out from the name. Same build, same
+    // reason: a counter at every movement in a release machine is what D979
+    // measured at a third of it, and a third is nothing beside a sanitiser.
+    //
+    // Each of these is bytes that were actually copied from somewhere to
+    // somewhere. Nothing counts a pointer being moved, a stack pointer being
+    // stepped, or a length being read. See D1023.
+    uint64_t moved_loaded;
+    uint64_t moved_stored;
+    uint64_t moved_held;
+    uint64_t moved_unpacked;
+    uint64_t moved_packed;
+    uint64_t moved_shifted;
+    uint64_t moved_payload;
+    // There is no counter for what a call moves, because a call moves
+    // nothing: the callee's frame starts where its arguments already are and
+    // what it answers is left where the caller reads it. Neither `call` nor
+    // `return` copies a slot, and a counter of nought would read as a
+    // measurement rather than as a property of the machine.
+    uint64_t moved_text;
+    uint64_t moved_shuffled;
     // And which instruction followed which, so that a pair worth one
     // instruction can be told from a pair that never happens. Kept beside the
     // counts above and under the same environment variable, in the build that
@@ -1841,6 +1865,7 @@ static bool values_equal(const KestType *type, const KestValue *a,
 #define READ_INTO(where, layout, from)                                         \
     do {                                                                       \
         TagRead told = {NULL, 0, false};                                       \
+        MOVED(moved_unpacked, (layout)->size);                                 \
         unpack((where), (layout), (from), &told);                              \
         if (told.wrong) {                                                      \
             fail(vmp, frame, instruction, "K0651",                             \
@@ -3079,6 +3104,19 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         SPEND_WORK(read);                                                      \
     } while (0)
 
+// Bytes moved, counted in the build that counts instructions and nowhere
+// else. See D1023.
+#if KEST_CHECKED
+#define MOVED(what, bytes)                                                     \
+    do {                                                                       \
+        rt->what += (uint64_t)(bytes);                                         \
+    } while (0)
+#else
+#define MOVED(what, bytes)                                                     \
+    do {                                                                       \
+    } while (0)
+#endif
+
 #define BINARY_I(field, expression)                                            \
     do {                                                                       \
         KestValue right = *--top;                                              \
@@ -3152,6 +3190,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
 #endif
+            MOVED(moved_held, sizeof(KestValue));
             *top++ = constants[which];
             break;
         }
@@ -3164,6 +3203,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
 #endif
+            MOVED(moved_held, (uint64_t)count * sizeof(KestValue));
             memcpy(top, &constants[first], sizeof(KestValue) * count);
             top += count;
             break;
@@ -3180,6 +3220,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
 #endif
+            MOVED(moved_held, (uint64_t)stride * sizeof(KestValue));
             memcpy(top,
                    &constants[first + (size_t)index * stride],
                    sizeof(KestValue) * stride);
@@ -3193,6 +3234,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
 #endif
+            MOVED(moved_loaded, sizeof(KestValue));
             *top++ = mine[slot];
             break;
         }
@@ -3209,6 +3251,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
 #endif
+            MOVED(moved_loaded, 2 * sizeof(KestValue));
             *top++ = mine[first];
             *top++ = mine[second];
             break;
@@ -3222,6 +3265,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
 #endif
+            MOVED(moved_loaded, sizeof(KestValue));
+            MOVED(moved_held, sizeof(KestValue));
             *top++ = mine[slot];
             *top++ = constants[which];
             break;
@@ -3233,6 +3278,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
 #endif
+            MOVED(moved_stored, sizeof(KestValue));
             mine[slot] = *--top;
             break;
         }
@@ -3249,6 +3295,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // three slots — a struct of a few fields, or the fields of one
             // loaded one after another — and a call that decides how to copy
             // anything costs more than moving three of them. See D871.
+            MOVED(moved_loaded, (uint64_t)count * sizeof(KestValue));
             for (uint16_t i = 0; i < count; i++) {
                 top[i] = mine[slot + i];
             }
@@ -3268,6 +3315,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             for (uint16_t i = 0; i < count; i++) {
                 mine[slot + i] = top[i];
             }
+            MOVED(moved_stored, (uint64_t)count * sizeof(KestValue));
             break;
         }
         case KEST_OP_FIELD: {
@@ -3275,6 +3323,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t size = READ_U16();
             uint16_t total = READ_U16();
             KestValue *value = top - total;
+            MOVED(moved_shuffled, (uint64_t)size * sizeof(KestValue));
             memmove(value, value + offset, sizeof(KestValue) * size);
             top = value + size;
             break;
@@ -3317,6 +3366,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 
             top -= (size_t)count * layout->slots;
             for (uint16_t i = 0; i < count; i++) {
+                MOVED(moved_packed, layout->size);
                 pack(bytes + (size_t)i * layout->size, layout,
                      top + (size_t)i * layout->slots);
             }
@@ -3382,6 +3432,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             if (!nothing) {
                 for (int64_t i = 0; i < count; i++) {
+                    MOVED(moved_packed, layout->size);
                     pack(bytes + (size_t)i * layout->size, layout, fill);
                 }
             }
@@ -3509,6 +3560,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 array->bytes = grown;
                 array->capacity = capacity;
             }
+            MOVED(moved_packed, layout->size);
             pack(array->bytes + (size_t)array->length * layout->size, layout,
                  value);
             array->length++;
@@ -3535,9 +3587,11 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 (top++)->integer = 0;
                 break;
             }
+            MOVED(moved_packed, layout->size);
             pack(array->bytes + (size_t)array->length * layout->size, layout,
                  value);
             array->length++;
+            MOVED(moved_held, sizeof(KestValue));
             (top++)->integer = 1;
             break;
         }
@@ -3592,6 +3646,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
 #endif
+            MOVED(moved_packed, layout->size);
             pack(array->bytes + (size_t)index * array->stride + offset, layout,
                  mine + slot);
             break;
@@ -3640,6 +3695,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top += layout->slots;
             // What is after it keeps its order, which is the whole difference
             // between this and a store: a position here means something.
+            MOVED(moved_shifted, (uint64_t)(array->length - index - 1) *
+                                     array->stride);
             memmove(at, at + array->stride,
                     (size_t)(array->length - index - 1) * array->stride);
             array->length--;
@@ -3677,6 +3734,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
 #endif
+            MOVED(moved_loaded, (uint64_t)stride * sizeof(KestValue));
             memcpy(top, mine + base + (size_t)index * stride,
                    sizeof(KestValue) * stride);
             top += stride;
@@ -3696,6 +3754,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
 #endif
+            MOVED(moved_stored, (uint64_t)stride * sizeof(KestValue));
             memcpy(mine + base + (size_t)index * stride, value,
                    sizeof(KestValue) * stride);
             break;
@@ -3751,6 +3810,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             Array *array = (--top)->object;
             HOLD(array, KEST_IS_ARRAY, "an array");
             IN_ARRAY(index, array);
+            MOVED(moved_packed, layout->size);
             pack(array->bytes + (size_t)index * array->stride + offset, layout,
                  value);
             break;
@@ -3858,6 +3918,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             store->generations[index] = ++rt->stamps;
             mark_live(store, index, true);
             store->count++;
+            MOVED(moved_payload, (uint64_t)stride * sizeof(KestValue));
             memcpy(store->elements + (size_t)index * stride, value,
                    sizeof(KestValue) * stride);
             (top++)->integer =
@@ -3876,6 +3937,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 }
                 (top++)->integer = 0;
             } else {
+                MOVED(moved_payload, (uint64_t)stride * sizeof(KestValue));
                 memcpy(top, at, sizeof(KestValue) * stride);
                 top += stride;
                 (top++)->integer = 1;
@@ -3891,6 +3953,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             HOLD(store, KEST_IS_STORE, "a store");
             KestValue *at = resolve_ref(store, handle);
             if (at != NULL) {
+                MOVED(moved_payload, (uint64_t)stride * sizeof(KestValue));
                 memcpy(at, value, sizeof(KestValue) * stride);
             }
             (top++)->integer = at != NULL;
@@ -4015,6 +4078,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                                    written);
                 return false;
             }
+            MOVED(moved_text, (uint64_t)written + 1);
             memcpy(text, buffer, (size_t)written + 1);
             top--;
             TEXT_ON(text, written);
@@ -4051,6 +4115,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             size_t used = 0;
             for (uint16_t i = 0; i < count; i++) {
                 Said piece = said(top + i * 2);
+                MOVED(moved_text, piece.length);
                 memcpy(text + used, piece.bytes, piece.length);
                 used += piece.length;
             }
@@ -4082,6 +4147,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                      "byte %u begins no character, and text is UTF-8", bad);
                 return false;
             }
+            MOVED(moved_text, bytes->length);
             memcpy(text, bytes->bytes, bytes->length);
             text[bytes->length] = '\0';
             TEXT_ON(text, bytes->length);
@@ -4272,6 +4338,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             (top++)->integer = 1;
             break;
         case KEST_OP_FALSE:
+            MOVED(moved_held, sizeof(KestValue));
             (top++)->integer = 0;
             break;
         case KEST_OP_POP:
@@ -4285,6 +4352,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // rolled by one rather than reversed.
             uint16_t count = READ_U16();
             KestValue tag = top[-1];
+            MOVED(moved_shuffled, (uint64_t)count * sizeof(KestValue));
             memmove(top - count + 1, top - count,
                     sizeof(KestValue) * (size_t)(count - 1));
             top[-count] = tag;
@@ -4459,6 +4527,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
 #endif
+            MOVED(moved_stored, sizeof(KestValue));
             mine[slot].integer = kest_narrow_to(
                 kind, (int64_t)((uint64_t)left.integer +
                                 (uint64_t)right.integer));
@@ -4474,6 +4543,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
 #endif
+            MOVED(moved_stored, sizeof(KestValue));
             mine[slot].integer = kest_narrow_to(
                 kind, (int64_t)((uint64_t)left.integer -
                                 (uint64_t)right.integer));
@@ -4488,6 +4558,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
 #endif
+            MOVED(moved_stored, sizeof(KestValue));
             mine[slot].real = left.real + right.real;
             break;
         }
@@ -4500,6 +4571,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
 #endif
+            MOVED(moved_stored, sizeof(KestValue));
             mine[slot].real = left.real - right.real;
             break;
         }
@@ -5646,6 +5718,23 @@ bool kest_runtime_free(KestRuntime *runtime) {
         // sort it. See D870.
         fprintf(stderr, "guards %llu\n",
                 (unsigned long long)runtime->guarded);
+        // And the bytes it moved, beside the instructions it ran. Each of
+        // these is memory copied from somewhere to somewhere; a stack pointer
+        // stepped or a length read is not movement and is not here. See
+        // D1023.
+        fprintf(stderr,
+                "moved loaded %llu stored %llu held %llu unpacked %llu "
+                "packed %llu shifted %llu payload %llu text %llu "
+                "shuffled %llu\n",
+                (unsigned long long)runtime->moved_loaded,
+                (unsigned long long)runtime->moved_stored,
+                (unsigned long long)runtime->moved_held,
+                (unsigned long long)runtime->moved_unpacked,
+                (unsigned long long)runtime->moved_packed,
+                (unsigned long long)runtime->moved_shifted,
+                (unsigned long long)runtime->moved_payload,
+                (unsigned long long)runtime->moved_text,
+                (unsigned long long)runtime->moved_shuffled);
         for (uint32_t op = 0; runtime->ran_checked != NULL &&
                               op <= KEST_OP_RETURN;
              op++) {

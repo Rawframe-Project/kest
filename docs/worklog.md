@@ -37002,3 +37002,39 @@ The net caught it the first time it happened, which is what D999 built it for.
 
 **Runs:** the gate, refusing and then passing; `make clean` with a cache in the
 tree.
+
+## What the machine moves, in bytes
+
+The audit found that the only movement this project could measure was
+`copied` — a run outgrowing its place — and that is not what the optimizing is
+about. D1012 removed an aggregate round-trip and nothing could say how many
+bytes went with it.
+
+So the build that counts instructions counts bytes now, in nine buckets, under
+the same environment variable: loaded, stored, held, unpacked, packed, shifted,
+payload, text, shuffled. Each is memory copied from somewhere to somewhere;
+a stack pointer stepped or a length read is in none of them. There is no bucket
+for what a call moves, because a call moves nothing — the callee's frame starts
+where its arguments already are.
+
+Checked by hand before it was believed, on a thousand-round program with an
+eight-byte `Pair`: 8000 unpacked, 8032 packed, 56024 loaded, 16032 stored,
+32056 held — every one exactly what the instruction counts and the layout
+widths predict. The gate holds those five identities now.
+
+The baseline, bytes moved:
+
+    kernel         420,568,168    loaded 46 %, stored 8 %
+    control        354,320,903    loaded 56 %, stored 9 %
+    graph           44,385,937    loaded 43 %, stored 32 %
+    words           56,667,443    loaded 58 %, stored 23 %
+    agents       2,019,556,604    loaded 41 %, stored 22 %, payload 19 %
+    rules        1,479,761,721    loaded 45 %, stored 19 %
+
+Between half and four fifths of every byte these programs move is a frame slot
+going onto the operand stack and coming back off it. That is what copy
+propagation and redundant move elimination are for, and it is where the
+reopened Phase F starts. See D1023.
+
+**Runs:** `KEST_DEEP=1 kest-debug` over the seven programs; the five identities
+checked by hand and then written into the gate as `moved`; `make fast`.

@@ -32619,3 +32619,65 @@ thirds.
 **Rules kept.** Nothing was patched to be slower. Every row answers the same
 checksum as every other. Versions are pinned and written down. None of it goes
 on the front page.
+
+## D1023. What the machine moves, in bytes, counted where it moves it
+
+**Decided.** The build that counts instructions counts bytes as well, in nine
+buckets, printed under the same `KEST_DEEP` and read by the same tools. It is
+what the audit found missing: the only movement this project could measure was
+`copied`, which counts a run outgrowing its place and nothing else, and that is
+not what the optimizing is about.
+
+**The buckets, and what each is exactly.** Every one of them is memory copied
+from somewhere to somewhere. A stack pointer stepped, a length read, a handle
+moved or a plot asked for is not movement and is in none of them.
+
+    loaded     frame slots read onto the operand stack
+    stored     the operand stack written into frame slots
+    held       values the chunk holds, read onto the stack
+    unpacked   packed element bytes read out into slots
+    packed     slots written into packed element bytes
+    shifted    element bytes moved within a run, which `remove` does
+    payload    a store's places, moved in or out as slot runs
+    text       bytes of text copied
+    shuffled   the stack rearranged in place, which a field read does
+
+There is no bucket for what a call moves, because **a call moves nothing**: the
+callee's frame starts where its arguments already are and what it answers is
+left where the caller reads it. Neither `call` nor `return` copies a slot. A
+counter of nought there would read as a measurement rather than as a property
+of the machine, so there is none and this sentence is the record of it.
+
+**Measured, not derived.** A width is an operand or a layout for half the
+instructions that move anything, so a count and a name cannot give the bytes.
+The counters sit at the movement: one edit inside `READ_INTO` covers every
+unpack, six at the packs, and the rest at the instructions that copy slots.
+
+**Held to the histogram.** For the instructions whose width is fixed — `load`,
+`load2`, `load.k`, `store`, the four that write their answer into a slot,
+`const`, `true`, `false` — the bytes and the counts have to agree exactly, and
+the gate holds them over a program written on the spot. Checked by hand first
+on that same program: 1000 `index.to` of an eight-byte `Pair` is 8000 unpacked;
+1000 `elem.from` and a fill of four is 8032 packed; 3001 `load2` and 1001
+`load.k` is 56024 loaded; 2000 `add.i.narrow.to` and four stores is 16032
+stored; 3006 `const` and 1001 `load.k` is 32056 held. Every one exact.
+
+**What it says about the seven programs**, bytes moved, on this machine:
+
+    workload   instructions        bytes      loaded   stored     other
+    kernel       34,631,126    420,568,168    46 %      8 %   held 16, unpacked 15, packed 15
+    control      48,800,116    354,320,903    56 %      9 %   held 29
+    graph         4,815,445     44,385,937    43 %     32 %   payload 14
+    words         8,870,238     56,667,443    58 %     23 %   text 5
+    agents      190,130,447  2,019,556,604    41 %     22 %   held 15, payload 19
+    rules       162,823,633  1,479,761,721    45 %     19 %   held 23, unpacked 8
+
+**And that is the target.** `loaded` plus `stored` is between half and four
+fifths of every byte these programs move, and it is frame slots going onto the
+operand stack and coming back off it. That is exactly what copy propagation and
+redundant move elimination are for, and it is the first thing the reopened
+Phase F goes at. The baseline above is what it will be measured against.
+
+**What it costs.** Nothing in a release build: the counters and the macro are
+`#if KEST_CHECKED`, the same as the histogram they sit beside, for the reason
+D979 gives.

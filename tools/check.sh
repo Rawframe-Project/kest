@@ -2116,6 +2116,88 @@ with one of each in it is named"
     fi
 fi
 
+# What the machine says it moved, held to what it ran. The counters in the
+# build that counts instructions say bytes; the histogram beside them says how
+# many times each instruction ran; and for the instructions whose width is
+# fixed the two have to agree exactly. A counter added at a new movement and
+# forgotten at an old one is what this catches, and a program written here
+# rather than taken from the tree so that the arithmetic is one line. See
+# D1023.
+cat > "$scratch"/moved.kest <<'MOVED'
+module moved
+
+struct Pair {
+    a: i32
+    b: i32
+}
+
+fn main() -> i32 {
+    let items: [Pair] = array(4, Pair(1, 2))
+    let sum = 0
+    for i in 0..1000 {
+        let one = items[i % 4]
+        one.a += 1
+        items[i % 4] = one
+        sum += one.a % 3
+    }
+    return sum % 7
+}
+MOVED
+moved_said=$(KEST_DEEP=1 ./kest-debug run "$scratch"/moved.kest 2>&1 >/dev/null)
+if ! printf '%s' "$moved_said" | grep -q '^moved '; then
+    complain "moved" "the build that counts instructions said nothing about \
+what it moved"
+else
+    moved_wrong=$(printf '%s\n' "$moved_said" | python3 -c '
+import sys
+
+ran = {}
+moved = {}
+for line in sys.stdin:
+    words = line.split()
+    if words and words[0] == "ran":
+        ran[words[1]] = int(words[2])
+    if words and words[0] == "moved":
+        moved = {words[at]: int(words[at + 1])
+                 for at in range(1, len(words), 2)}
+# The ones whose width is an operand or a layout cannot be worked out from a
+# count, so a program that runs one of them is a program this cannot check.
+wide = ("load.n", "store.n", "load.slots", "store.slots", "const.run",
+        "const.at", "field", "rotate", "push", "fit", "array", "make.array",
+        "pop.last", "take", "get", "set", "add", "concat", "text.in")
+for name in wide:
+    if ran.get(name):
+        print("the program written for this runs `%s`, whose width is not a "
+              "count" % name)
+        break
+else:
+    slots = 8
+    want = (slots * ran.get("load", 0) + 2 * slots * ran.get("load2", 0)
+            + slots * ran.get("load.k", 0))
+    if moved.get("loaded") != want:
+        print("it loaded %s byte(s) and ran the instructions for %s"
+              % (moved.get("loaded"), want))
+    want = slots * (ran.get("store", 0) + ran.get("add.i.narrow.to", 0)
+                    + ran.get("sub.i.narrow.to", 0) + ran.get("add.f.to", 0)
+                    + ran.get("sub.f.to", 0))
+    if moved.get("stored") != want:
+        print("it stored %s byte(s) and ran the instructions for %s"
+              % (moved.get("stored"), want))
+    want = slots * (ran.get("const", 0) + ran.get("true", 0)
+                    + ran.get("false", 0) + ran.get("load.k", 0))
+    if moved.get("held") != want:
+        print("it held out %s byte(s) and ran the instructions for %s"
+              % (moved.get("held"), want))
+')
+    if [ -n "$moved_wrong" ]; then
+        complain "moved" "$moved_wrong"
+    else
+        say "moved" "what the machine says it moved is what the \
+instructions it ran move: every byte loaded, stored and held out of the chunk \
+is accounted for by a count and a width"
+    fi
+fi
+
 # And what the run leaves on the machine it ran on. Every check above works in
 # a room under this one, so what is still there now is what somebody made and
 # did not take away. The names are printed rather than counted: a check leaves
