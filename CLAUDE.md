@@ -892,6 +892,23 @@ tools/             Build and development scripts. `make check` runs all of
                    name of a boundary, which fits in a sentence, so there is no
                    corpus directory and nothing is written down. See D984 and
                    D997.
+                   `check-kept.sh` holds what 1.x promised against the version
+                   that promised it. The tag is the oracle and it is
+                   immutable: the tree at `v1.0.0` is built beside this one,
+                   every program it shipped is run by both and has to answer
+                   the same thing, every one of them has to still be in the
+                   one form, four refusals of different kinds have to keep
+                   their codes, every door the header declared has to be
+                   declared the same way, and the deterministic corpus has to
+                   answer the same bytes. Never the bytecode, which is not a
+                   compatibility surface and has no version. Its hole is the
+                   one that asks for history: a backstop runs a check in a
+                   copy of the tree made by copying files, and there is none
+                   in one, so that hole and no other is run with `GIT_DIR`
+                   pointing at the tree it was copied from. What the check
+                   does where there is no history at all is say so and hold
+                   nothing, which is what it does in a release archive. See
+                   D1021.
                    `check-lends.sh` holds what a host says when it lends: a
                    lend is an address, a count and a name, and a name that
                    means two types is a lend of whichever was found first

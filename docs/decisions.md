@@ -32520,3 +32520,41 @@ It packages with no warnings and no errors, into eight files and six and a half
 kilobytes, in a copy of the directory outside the tree. Nothing was published:
 a marketplace listing is a review by somebody else and this mission does not
 open one.
+
+## D1021. What 1.x promised, held against the version that promised it
+
+**Decided.** `tools/check-kept.sh` builds the tree at `v1.0.0` beside this one
+and asks the four things the reference promises, on every run of the gate:
+
+    every program the tag shipped, run by both, answering the same thing
+    every one of them still in the one form the formatter has
+    four refusals of different kinds keeping their codes
+    every door the header declared, declared the same way
+    the deterministic corpus answering the same bytes
+
+Never the bytecode. It is not a compatibility surface, it has no version, and
+comparing it would be comparing the one thing D983 says is internal.
+
+**What it said the first time it ran.** Forty programs answer what they
+answered, four refusals keep their codes, all ninety-two doors the 1.0.0 header
+declared are declared the same way among the ninety-six there are now — the
+four new ones are `kest_telemetry`, `kest_clock`, `kest_collect` and
+`kest_break_byte`, which is a minor version adding doors and is what 1.x allows
+— and the conformance corpus is byte for byte what it was.
+
+**Its hole is the one that asks for history.** A backstop puts a check out of
+order in a copy of the tree, and the copy is made by copying files: there is no
+history in one. This check reads history, so its hole — and no other — is run
+with `GIT_DIR` pointing at the tree the copy was made from. What it breaks is a
+door renamed in a way that still compiles: `kest_heap_used` takes a
+`*machine` rather than a `*runtime`, the tree builds, and the promise is broken
+anyway, which is exactly the shape this check is for and the only one that can
+see it.
+
+Where there is no history at all the check says so and holds nothing, which is
+what happens in a release archive: an archive has no `.git` and never will.
+
+**Why the tag and not a corpus of its own.** A corpus is a copy of what the tag
+shipped that somebody has to keep in step with it; the tag is the thing itself
+and cannot go stale, because it is immutable and this mission is forbidden to
+move it. Building it costs two seconds.

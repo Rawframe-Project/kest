@@ -171,7 +171,7 @@ def what_a_session_is_taking(session):
     return taking, these
 
 
-def what_it_took(args, hole, cwd=None):
+def what_it_took(args, hole, cwd=None, history=False):
     """Run what a hole is about, and say what it took as well as what it said.
 
     `subprocess.run` answers what a run said and not what it cost, because
@@ -188,7 +188,10 @@ def what_it_took(args, hole, cwd=None):
         started = time.monotonic()
         # In a session of its own, so that what a hole starts can be counted
         # and stopped as one thing rather than as whatever is left behind.
-        running = subprocess.Popen(args, cwd=cwd, env=inside_the_walls(),
+        walls = inside_the_walls()
+        if history:
+            walls["GIT_DIR"] = os.path.abspath(".git")
+        running = subprocess.Popen(args, cwd=cwd, env=walls,
                                    stdin=subprocess.DEVNULL,
                                    stdout=said, stderr=wrote,
                                    start_new_session=True)
@@ -1736,6 +1739,25 @@ tokens   what a token is and what it carries""",
         "make": [],
         "tool": "tools/check-tables.sh",
         "caught": "instructions: 164 kinds and 165 names",
+    },
+    {
+        # A door that is declared differently than the version that promised
+        # not to change it. The 1.x promise is that a host compiled against
+        # the header the tag shipped finds every door spelled the way it was
+        # spelled, and the only check here that can say so is the one that
+        # builds the tag. A parameter renamed still compiles, which is what
+        # makes it the right break: the tree is fine and the promise is not.
+        #
+        # It asks for history, because a copy of a tree is a tree with none
+        # and this check reads the tag. See D1021.
+        "what": "a door spelled differently than the version that shipped it",
+        "file": "include/kest.h",
+        "from": "size_t kest_heap_used(const KestRuntime *runtime);",
+        "to": "size_t kest_heap_used(const KestRuntime *machine);",
+        "make": ["kest"],
+        "tool": "tools/check-kept.sh",
+        "history": True,
+        "caught": "is declared differently than it was",
     },
     {
         # Two copies of a licence, which is what a thing that is installed on
@@ -15657,8 +15679,14 @@ def put_out_of_order(hole):
         # needs longer than this is one nobody would wait for either.
         try:
             if "tool" in hole:
+                # A check that reads this project's own history gets to: the
+                # copy is made by copying files and has none, and pointing
+                # `GIT_DIR` at the tree this was copied from is the whole of
+                # what it needs. Only where a hole asks, because every other
+                # check here is about the copy and nothing else. See D1021.
                 ran = what_it_took([os.path.join(work, hole["tool"])]
-                                   + hole.get("arguments", []), hole, cwd=work)
+                                   + hole.get("arguments", []), hole, cwd=work,
+                                   history=hole.get("history", False))
             elif "host" in hole:
                 # The other host, which is the only thing here that lays its
                 # own memory over what the compiler says a type is.

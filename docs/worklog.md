@@ -36922,3 +36922,33 @@ directory outside the tree. Nothing was published. See D1020.
 **Runs:** `make release` on this machine; `npx @vscode/vsce package` three
 times, watching each warning go; `tools/check-tables.sh` with the new rule and
 the hole that breaks it; `make fast`.
+
+## What 1.x promised, held against the version that promised it
+
+The reference says four things about 1.x: a program that checks under it checks
+under every later one, a diagnostic keeps its code, the C ABI does not change,
+and a deterministic program answers the same bytes. `tools/check-kept.sh` asks
+all four of the tree as it is, with the tag on the other side of the question —
+it builds `v1.0.0` beside this tree and compares.
+
+First run: forty programs the tag shipped answer what they answered and are
+still in the one form, four refusals of different kinds keep their codes, all
+ninety-two doors the 1.0.0 header declared are declared the same way among the
+ninety-six there are now, and the conformance corpus is byte for byte what it
+was. The four new doors are `kest_telemetry`, `kest_clock`, `kest_collect` and
+`kest_break_byte` — a minor version adding doors, which is what 1.x allows.
+
+Its hole is the one that asks for history. A backstop runs a check in a copy of
+the tree made by copying files and there is no history in one, so that hole and
+no other is run with `GIT_DIR` pointing at the tree the copy was made from.
+What it breaks is a door renamed in a way that still compiles — `kest_heap_used`
+taking a `*machine` rather than a `*runtime` — so the tree builds and the
+promise is broken anyway, which is the shape only this check can see. Where
+there is no history at all it says so and holds nothing, which is what happens
+in a release archive. See D1021.
+
+The name has no version number in it because the checks here are named after
+what they hold, and because the pattern that finds them reads letters.
+
+**Runs:** `tools/check-kept.sh` on its own; `tools/check-tables.sh`, which
+holds it to being a check like the others; the whole gate.
