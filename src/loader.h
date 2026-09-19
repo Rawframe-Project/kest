@@ -23,6 +23,11 @@ typedef struct {
     // names no module. Those are legal and their names live under nothing,
     // which is what a program written on the spot to be run once does.
     const char *alias;
+    // And the whole of it: `a.math` where the alias is `math`. Two modules
+    // may share a last part and cannot share this, so this is what says which
+    // of two `math` a name came from. `""` for a file that names no module,
+    // the same as the alias. See D1039.
+    const char *module;
     // Whether this file is the library's. `std` is the one name a program
     // cannot use, and which side of that a file is on decides where it is read
     // from — so it is decided here, once, rather than by reading the module
@@ -33,6 +38,11 @@ typedef struct {
     // Filled in after the imports have been followed, so it holds what was
     // written even when one of them could not be read.
     const char **imports;
+    // And the whole module name each of those was written as, in step with
+    // them. An alias says what a file may write in front of a name and this
+    // says which module that alias meant, which is the difference between a
+    // program that may hold two `math` and one that may not. See D1039.
+    const char **import_paths;
     uint32_t import_count;
     // And which of them a name in this file was reached through, marked where
     // the reach is decided. An import nothing reaches is a module read,

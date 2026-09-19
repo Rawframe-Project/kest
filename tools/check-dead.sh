@@ -229,31 +229,29 @@ def said_of(path):
     return json.loads(ran.stdout)
 
 
-def functions_of(path):
-    said = said_of(path)
-    return None if said is None else said.get('functions', [])
-
-
-modules = {os.path.basename(path)[: -len('.kest')]: path
-           for path in sorted(glob.glob('lib/std/*.kest'))}
+library = sorted(glob.glob('lib/std/*.kest'))
 
 # What the library declares, read out of the compiler rather than out of the
 # text: a parameter list has commas inside it — `fn(T, T) -> bool` is one
 # parameter — and a reader that splits on commas is a reader that miscounts.
+#
+# A declaration is this file's own where it stands under the module the file
+# says it is in. A module is the whole of what a file calls itself, so the
+# first piece of a name is `std` for everything in the library and the name
+# alone can no longer say which file wrote it. See D1039.
 declares = {}
 anywhere = set()
 for path in sorted(glob.glob('examples/*.kest') + glob.glob('tools/*.kest')
-                   + list(modules.values())):
-    said = functions_of(path)
+                   + library):
+    said = said_of(path)
     if said is None:
         failed = 1
         continue
-    for one in said:
+    for one in said.get('functions', []):
         key = (one['name'], tuple(one['parameters']))
         if one['named']:
             anywhere.add(key)
-        module = one['name'].split('.')[0]
-        if modules.get(module) == path:
+        if path in library and one['module'] == said['module']:
             declares[key] = path
 
 for key, path in sorted(declares.items()):
@@ -278,7 +276,7 @@ def bare(name):
 declared_names = {}
 named_names = set()
 for path in sorted(glob.glob('examples/*.kest') + glob.glob('tools/*.kest')
-                   + list(modules.values())):
+                   + library):
     said = said_of(path)
     if said is None:
         failed = 1
@@ -288,7 +286,7 @@ for path in sorted(glob.glob('examples/*.kest') + glob.glob('tools/*.kest')
             name = bare(one['name'])
             if one['named']:
                 named_names.add(name)
-            if modules.get(name.split('.')[0]) == path:
+            if path in library and one['module'] == said['module']:
                 declared_names[name] = (path, what)
 
 for name, (path, what) in sorted(declared_names.items()):

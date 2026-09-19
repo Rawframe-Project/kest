@@ -400,8 +400,7 @@ own = set()
 for what in ("types", "functions", "constants"):
     for one in everything.get(what, []):
         if one.get("file") == sys.argv[1]:
-            own.add(one["name"].split(".")[0] if "." in one["name"]
-                    else None)
+            own.add(one.get("module"))
 if own and own != {everything.get("module")}:
     print("module: says %r and what it declares is under %s"
           % (everything.get("module"), sorted(str(one) for one in own)))
@@ -411,15 +410,14 @@ if own and own != {everything.get("module")}:
 # and how many of those a host provides, and the object says every one of
 # them under its own name. Two readings of one import, and the summary is
 # the one nothing could check.
-root = ""
-for what in ("types", "functions", "constants"):
-    for one in everything.get(what, []):
-        if one.get("file") == sys.argv[1] and "." in one["name"]:
-            root = one["name"].split(".")[0]
+# Which module each is in is written beside it, because a name lives under the
+# whole of its module and what comes after may hold dots of its own: splitting
+# at a dot would invent `std.io.Io`. See D1039.
+root = everything.get("module") or ""
 holds = {}
 for what in ("types", "functions", "constants"):
     for one in everything.get(what, []):
-        module = one["name"].split(".")[0] if "." in one["name"] else ""
+        module = one.get("module") or ""
         if module in ("", root):
             continue
         has = holds.setdefault(module, {"types": 0, "functions": 0,
@@ -1041,14 +1039,14 @@ fn main() -> i32 {
 EOF
 crossed=$("$kest" check "$crossing/away.kest" 2>&1 </dev/null)
 case "$crossed" in
-*K0301*"\`near.Held\` is in this program"*"does not import"*) ;;
+*K0301*"\`away.near.Held\` is in this program"*"does not import"*) ;;
 *)
     complain "a type one import away was not named"
     printf '%s\n' "$crossed" | sed 's/^/    /' | head -4
     ;;
 esac
 case "$crossed" in
-*K0306*"\`near.held\` is in this program"*"does not import"*) ;;
+*K0306*"\`away.near.held\` is in this program"*"does not import"*) ;;
 *)
     complain "a name one import away was not named"
     printf '%s\n' "$crossed" | sed 's/^/    /' | head -4
@@ -2944,11 +2942,11 @@ fn main() -> i32 {
 }
 KEST
 of_a_vec=$("$kest" check "$scratch"/oneslot/vec.kest --json 2>/dev/null </dev/null |
-           sed -n 's/.*"name":"Vec3","kind":"struct","slots":\([0-9]*\).*/\1/p')
+           sed -n 's/.*"name":"Vec3".*"kind":"struct","slots":\([0-9]*\).*/\1/p')
 laid_out=$("$kest" emit "$scratch"/oneslot/vec.kest 2>/dev/null </dev/null |
            sed -n 's/^fn scaled#Vec3,f32  \([0-9]*\) parameter slots.*/\1/p')
 if [ -z "$of_a_vec" ] || [ -z "$laid_out" ]; then
-    complain "emit: what a `Vec3` takes is not a number either the types or \
+    complain "emit: what a \`Vec3\` takes is not a number either the types or \
 the compiler said"
 elif [ "$laid_out" -ne "$((of_a_vec + 1))" ]; then
     complain "emit: a \`Vec3\` is $of_a_vec slots and a function taking one \
@@ -4538,7 +4536,7 @@ fn main() -> i32 {
 KEST
 shared=$("$kest" check "$scratch"/refused/twice/main.kest 2>&1 </dev/null)
 case "$shared" in
-*"K0328"*"both put their names under"*) ;;
+*"K0328"*"reaches two modules called"*) ;;
 *)
     complain "check: two modules under one name said \
 \`$(printf '%s' "$shared" | head -1)\`"

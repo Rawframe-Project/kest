@@ -152,8 +152,8 @@ int main(int argc, char **argv) {
         return 2;
     }
 
-    int32_t stepping = kest_entry(runtime, "frame.step");
-    int32_t once = kest_entry(runtime, "frame.one");
+    int32_t stepping = kest_entry(runtime, "bench.frame.step");
+    int32_t once = kest_entry(runtime, "bench.frame.one");
     if (stepping < 0 || once < 0) {
         fprintf(stderr, "frame: this program has no `step` or `one`\n");
         kest_report(runtime, stderr, KEST_FORM_TEXT);
@@ -181,7 +181,7 @@ int main(int argc, char **argv) {
     for (long long f = 0; f < frames; f++) {
         long long before = in_nanoseconds();
         KestValue lent =
-            kest_borrow(runtime, world, many, "frame.Body", sizeof *world);
+            kest_borrow(runtime, world, many, "bench.frame.Body", sizeof *world);
         KestValue slots[3] = {{0}};
         slots[0] = lent;
         slots[1].real = (double)WALL;

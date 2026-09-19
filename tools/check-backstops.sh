@@ -2263,10 +2263,10 @@ yield""",
         "file": "src/types.c",
         "from": """        fputs("{\\"name\\":", out);
         kest_json_text(type->name, out);
-        fprintf(out, ",\\"kind\\":\\"%s\\"",""",
+        write_module(program, type->name, out);""",
         "to": """        fputs("{\\"shape\\":", out);
         kest_json_text(type->name, out);
-        fprintf(out, ",\\"kind\\":\\"%s\\"",""",
+        write_module(program, type->name, out);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -2937,8 +2937,8 @@ for file in "$@"; do""",
         # runs. See D532.
         "what": "the last file named, taken for the first",
         "file": "src/compile.c",
-        "from": r"""        module->alias = units->items[0].alias;""",
-        "to": r"""        module->alias = units->items[units->count - 1].alias;""",
+        "from": r"""        module->alias = units->items[0].module;""",
+        "to": r"""        module->alias = units->items[units->count - 1].module;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -3308,7 +3308,7 @@ for file in "$@"; do""",
         "what": "a listing there was no room to work out, written anyway",
         "file": "src/main.c",
         "from": r"""                if (!kest_program_dump(build->program, build->arena,
-                                       build->units.items[0].alias, stdout)) {
+                                       build->units.items[0].module, stdout)) {
                     kest_diags_starve(&build->diags);
                 }""",
         "to": r"""                (void)kest_program_dump(build->program, build->arena,
@@ -4358,9 +4358,9 @@ for file in "$@"; do""",
         "what": "what a program holds written where the errors go",
         "file": "src/main.c",
         "from": r"""                if (!kest_program_dump(build->program, build->arena,
-                                       build->units.items[0].alias, stdout)) {""",
+                                       build->units.items[0].module, stdout)) {""",
         "to": r"""                if (!kest_program_dump(build->program, build->arena,
-                                       build->units.items[0].alias, stderr)) {""",
+                                       build->units.items[0].module, stderr)) {""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -4696,12 +4696,14 @@ for file in "$@"; do""",
         "file": "src/types.c",
         "from": r"""        fputs("{\"name\":", out);
         kest_json_text(symbol->name, out);
+        write_module(program, symbol->name, out);
         fputs(",\"parameters\":[", out);""",
         "to": r"""        fputs("{\"name\":", out);
         kest_json_text(strrchr(symbol->name, '.') != NULL
                            ? strrchr(symbol->name, '.') + 1
                            : symbol->name,
                        out);
+        write_module(program, symbol->name, out);
         fputs(",\"parameters\":[", out);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
@@ -5812,12 +5814,12 @@ anywhere, and it is why the gate holds""",
         # read them every one of them was wrong. See D920.
         "what": "what compiling costs written down and not measured",
         "file": "docs/language.md",
-        "from": """118161 as a tree""",
-        "to": """118162 as a tree""",
+        "from": """118305 as a tree""",
+        "to": """118306 as a tree""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "118162 as a tree, 154352 checked",
+        "caught": "118306 as a tree, 154720 checked",
     },
     {
         # And the section they are in saying whose machine they are. Bytes of
@@ -6882,8 +6884,8 @@ fn main() -> i32 {
         "what": "a library function the host that can weigh it stopped asking "
                 "about",
         "file": "examples/embed.c",
-        "from": """{"text.repeat", "text.join"}""",
-        "to": """{"text.repeat", "text.joined"}""",
+        "from": """{"std.text.repeat", "std.text.join"}""",
+        "to": """{"std.text.repeat", "std.text.joined"}""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "cannot be asked from here and",
@@ -9788,8 +9790,8 @@ fn main() -> i32 {
     return 0
 }
 """,
-        "caught": "K0633]: `io.print#text` calls into the host 4 slots and 2 "
-                   "frames in, where `io.write#text` was measured",
+        "caught": "K0633]: `std.io.print#text` calls into the host 4 slots "
+                   "and 2 frames in, where `std.io.write#text` was measured",
     },
     {
         # A copy of a generic that carries no promise where the generic made
@@ -13272,13 +13274,10 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # under a name nobody could have typed.
         "what": "a qualified name put under the module it was typed at",
         "file": "src/build.c",
-        "from": """    if (strchr(name, '.') != NULL) {
-        return name;
-    }""",
-        "to": """    size_t written = strlen(alias);
-    if (strncmp(name, alias, written) == 0 && name[written] == '.') {
-        return name;
-    }""",
+        "from": """    const char *dot = strchr(name, '.');
+    if (dot != NULL) {""",
+        "to": """    const char *dot = strchr(name, '.');
+    if (dot != NULL && name[0] == '\\0') {""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/world.kest"],
@@ -13734,10 +13733,10 @@ fn main() -> i32 {
         # type` about a shape they have already declared.
         "what": "a type one import away, and nothing said about it",
         "file": "src/types.c",
-        "from": """            !kest_needs_import(program, whole, strlen(whole))) {
+        "from": """        if (dot == NULL || !kest_needs_import(program, whole, strlen(whole))) {
             continue;
         }""",
-        "to": """            kest_needs_import(program, whole, strlen(whole))) {
+        "to": """        if (dot == NULL || kest_needs_import(program, whole, strlen(whole))) {
             continue;
         }""",
         "make": ["kest"],

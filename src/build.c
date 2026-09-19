@@ -509,7 +509,42 @@ const char *kest_build_name(KestBuild *build, const char *name) {
     // file that imports `shapes` is a function of this program, and putting
     // the root module in front of it made a name nobody could have typed and
     // then said that name back. See D341.
-    if (strchr(name, '.') != NULL) {
+    //
+    // And written the way the file writes it, which is a module's last part:
+    // somebody typing `math.min` against a program that imports `std.math`
+    // means `std.math.min`, because that is the line they read. Expanded
+    // through the root file's own imports, which is the same question the
+    // checker asks of every name in that file. See D1039.
+    const char *dot = strchr(name, '.');
+    if (dot != NULL) {
+        size_t head = (size_t)(dot - name);
+        const KestUnitInfo *root =
+            build->units.count > 0 ? &build->units.items[0] : NULL;
+        // The root file's own last part first: `math.gcd` against a file that
+        // calls itself `examples.math` is `examples.math.gcd`.
+        if (root != NULL && kest_word_same(root->alias, name, head)) {
+            size_t room = strlen(alias) + strlen(dot) + 1;
+            char *own = kest_arena_alloc(build->arena, room, 1);
+            if (own == NULL) {
+                return name;
+            }
+            snprintf(own, room, "%s%s", alias, dot);
+            return own;
+        }
+        for (uint32_t i = 0; root != NULL && i < root->import_count; i++) {
+            const char *whole = root->import_paths[i];
+            if (!kest_word_same(root->imports[i], name, head) ||
+                whole == NULL || whole[0] == '\0') {
+                continue;
+            }
+            size_t room = strlen(whole) + strlen(dot) + 1;
+            char *under = kest_arena_alloc(build->arena, room, 1);
+            if (under == NULL) {
+                return name;
+            }
+            snprintf(under, room, "%s%s", whole, dot);
+            return under;
+        }
         return name;
     }
     size_t room = strlen(alias) + strlen(name) + 2;

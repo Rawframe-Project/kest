@@ -1943,7 +1943,7 @@ static bool weighs_what_it_costs(Engine *engine) {
     // gathered, and about four times as much when everything is copied every
     // time round, so anything under three says which of the two it is.
     const int32_t linear[2] = {REPEATED, JOINED_PIECES};
-    const char *called[2] = {"text.repeat", "text.join"};
+    const char *called[2] = {"std.text.repeat", "std.text.join"};
     for (int which = 0; which < 2; which++) {
         size_t cost[2];
         for (int size = 0; size < 2; size++) {
@@ -3819,7 +3819,7 @@ int main(int argc, char **argv) {
                 break;
             }
             defined++;
-            if (strncmp(what, "embed.pick#", 11) == 0) {
+            if (strncmp(what, "examples.embed.pick#", 20) == 0) {
                 picks++;
             }
             if (kest_entry(engine.runtime, what) != at) {
@@ -3908,7 +3908,7 @@ int main(int argc, char **argv) {
                 fprintf(stderr, "`%s` is written `%s`\n", what, wrote);
                 return 1;
             }
-            if (strcmp(wrote, "embed.pick") == 0) {
+            if (strcmp(wrote, "examples.embed.pick") == 0) {
                 written++;
             }
         }
@@ -5024,7 +5024,7 @@ int main(int argc, char **argv) {
         if (!said_that(engine.runtime, "K0610", "more than one `Twin`")) {
             return 1;
         }
-        KestValue whole = kest_borrow(engine.runtime, twins, 2, "embed.Twin",
+        KestValue whole = kest_borrow(engine.runtime, twins, 2, "examples.embed.Twin",
                                       sizeof(twins[0]));
         if (whole.object == NULL) {
             fprintf(stderr, "a lend under the whole name was refused\n");

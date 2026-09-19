@@ -42,6 +42,7 @@ another and is not named here is a check that fails.
 | D936 | D1034 | the count that stamps places is the process's and is forty bits wide |
 | D998 | D1035 | 1.0.0 was withdrawn a day after it was published, and this is 0.0.1 |
 | D1021 | D1036 | the tag gate is retired, and a migration record takes its place |
+| D185 | D1039 | a name lives under the whole of its module, so two modules may end in one word |
 
 ---
 
@@ -33690,3 +33691,78 @@ slot would bring the count round. None of that has been true since D934 and less
 of it since D1033. It now says what a reference is: forty bits of handout number
 beside twenty-four of place, taken from one count for the whole process, never
 handed out twice.
+
+## D1039. A name lives under the whole of its module. Supersedes D185
+
+**Decided.** A declaration is registered under the whole of what its file calls
+itself -- `a.math.twice`, not `math.twice` -- and a file's `math.` is expanded
+through that file's own imports. Two modules ending in the same word are two
+modules, and a program may hold both.
+
+**What was wrong.** `import a.math` beside `import b.math` was refused with
+`K0328`, *two modules in this program both put their names under `math`*, and
+the refusal was about the **program**: `import a.math` on its own compiled
+perfectly well with `b/math.kest` sitting unread in the tree. So a program could
+not hold `render.math` and `physics.math`, even with no file wanting both --
+which is the vendoring case, and a reader from outside reproduced it.
+
+**Why it was that way, and what it said.** D185 keyed the table by a module's
+last part, and `src/types.c` carried the alternative and its price in a comment:
+*keying the table by the whole of a module's name is what would make this a
+question about one file, and that is a change to every lookup in this compiler.*
+That was true and it is what was done.
+
+**How it works now.**
+
+    registration   `qualified()` builds `a.math.twice` from the whole module
+    own names      a file writing `twice` inside `a.math` looks up
+                   `a.math.twice`, which is the prefix it already used
+    somebody       a file writing `math.twice` has `math` expanded through its
+    else's         own import list to `a.math`, and nowhere else
+    overloads      the same three forms, because a name with several
+                   functions under it is looked up the same way
+    refusal        `K0328` is about a file that reaches two modules ending in
+                   one word, and points at that file's two import lines
+
+The expansion is one function, `under_import`, and it is the whole of the
+mechanism: what a file writes is the last part, and which module that means is
+that file's question. A program holding both is not ambiguous anywhere, because
+no file can see both without saying so.
+
+**What it cost, and none of it is runtime.** Names are a compile-time thing; a
+running machine calls by index. `bench/agents.kest` runs 6,043,806,526
+instructions against 6,043,806,526 -- the same program -- and compiling it costs
+406,026 bytes against 404,970, which is **0.26 per cent** for names that are
+longer.
+
+**What it changed that a reader sees**, and this is the honest cost:
+
+    a chunk         `std.text.upper#text`, not `text.upper#text`
+    a listing       `std.text  25 functions`, and `fn std.text.number(...)`
+    a host          `kest_borrow(..., "bench.frame.Body", ...)`, and
+                    `kest_entry` still lets the root module be left off
+    `--json`        `"module"` is the whole of it
+
+A chunk symbol had to carry it: two modules' `twice` over the same types would
+otherwise want one chunk, which is the very case this enables.
+
+**And the JSON says which module each declaration is in.** Not at a dot --
+`std.io.Io.write` is a capability's function inside `std.io`, and a tool
+splitting the name would invent a module that is not there. `check --json`
+writes `module` beside every name now, which is one documented field and the
+only honest answer once a name can hold more dots than its module does.
+
+**How a listing finds where a module ends.** Not at a dot. `std.io.Io.write` is
+a capability's function inside `std.io`, so splitting at the last dot would
+invent a module called `std.io.Io`. The answer is the longest module this
+program actually holds that the name begins with, asked of the program rather
+than guessed.
+
+**What was evaluated and not built: `import a.math as thing`.** It is the
+obvious companion and it is not here, because nothing needs it yet. The refusal
+tells a reader to rename one of the two, which works for every case except one
+file needing two modules it does not own -- and no program in this tree, or any
+program anyone has written in this language, has that shape. A mechanism with no
+evidence behind it is surface this project does not buy. When that case turns
+up, `as` is what it gets, and it is small: the alias a file writes is already
+the only thing lookup keys on.

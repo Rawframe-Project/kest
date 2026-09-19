@@ -4104,10 +4104,12 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
     compiler.module = module;
     compiler.units = units;
     compiler.ir = ir;
-    // The file that was named is the first one, and what it calls itself is
-    // what a host has to be able to leave off.
+    // The file that was named is the first one, and the whole of what it calls
+    // itself is what a host has to be able to leave off: a name lives under
+    // `a.math` and a host writes `twice`. The last part alone was enough while
+    // that was where a name lived; it is not now. See D1039.
     if (units->count > 0) {
-        module->alias = units->items[0].alias;
+        module->alias = units->items[0].module;
     }
 
     // Every function in every file is registered before any body is emitted,

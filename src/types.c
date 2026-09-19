@@ -98,15 +98,15 @@ static const char *span_string(KestProgram *program, KestSpan span) {
 // The name a declaration lives under: `world.Npc` for a struct `Npc` in module
 // `game.world`, and `Npc` in a file that declares no module.
 static const char *qualified(KestProgram *program, KestSpan span) {
-    if (program->alias[0] == '\0') {
+    if (program->module[0] == '\0') {
         return span_string(program, span);
     }
-    size_t room = strlen(program->alias) + span.length + 2;
+    size_t room = strlen(program->module) + span.length + 2;
     char *name = kest_arena_alloc(program->arena, room, 1);
     if (name == NULL) {
         return NULL;
     }
-    snprintf(name, room, "%s.%.*s", program->alias, (int)span.length,
+    snprintf(name, room, "%s.%.*s", program->module, (int)span.length,
              kest_span_text(program->source, span));
     return name;
 }
@@ -115,6 +115,7 @@ void kest_program_in(KestProgram *program, const KestUnitInfo *unit) {
     program->unit = unit;
     program->source = &unit->source;
     program->alias = unit->alias;
+    program->module = unit->module;
 }
 
 // Tries the current file's own module first, then the name as written, which
@@ -125,7 +126,7 @@ void kest_program_in(KestProgram *program, const KestUnitInfo *unit) {
 // a struct with a long name was unknown in the file that declared it.
 static const char *under_alias(KestProgram *program, const char *name,
                                size_t length, char *stack, size_t room) {
-    size_t needed = strlen(program->alias) + length + 2;
+    size_t needed = strlen(program->module) + length + 2;
     char *out = stack;
     if (needed > room) {
         out = kest_arena_alloc(program->arena, needed, 1);
@@ -134,7 +135,55 @@ static const char *under_alias(KestProgram *program, const char *name,
             return NULL;
         }
     }
-    snprintf(out, room, "%s.%.*s", program->alias, (int)length, name);
+    snprintf(out, room, "%s.%.*s", program->module, (int)length, name);
+    return out;
+}
+
+// A name written with somebody else's module in front of it, under the whole
+// of what that module calls itself: `math.twice` in a file that imported
+// `a.math` is `a.math.twice`. NULL where the first part is not an alias this
+// file may write, which is every name that is not qualified at all.
+//
+// This is where two modules under one last part stop being one module. What a
+// file writes is the last part, and which module that means is the file's own
+// question -- so `render.math` and `physics.math` are two names here and one
+// name to each of the files that import them. See D1039.
+static const char *under_import(KestProgram *program, const char *name,
+                                size_t length, char *stack, size_t room) {
+    if (program->unit == NULL) {
+        return NULL;
+    }
+    size_t head = 0;
+    while (head < length && name[head] != '.') {
+        head++;
+    }
+    if (head == length) {
+        return NULL;
+    }
+    const char *whole = NULL;
+    if (kest_word_same(program->alias, name, head)) {
+        whole = program->module;
+    }
+    for (uint32_t i = 0; whole == NULL && i < program->unit->import_count;
+         i++) {
+        if (kest_word_same(program->unit->imports[i], name, head)) {
+            whole = program->unit->import_paths[i];
+        }
+    }
+    if (whole == NULL || whole[0] == '\0') {
+        return NULL;
+    }
+    size_t rest = length - head - 1;
+    size_t needed = strlen(whole) + rest + 2;
+    char *out = stack;
+    if (needed > room) {
+        out = kest_arena_alloc(program->arena, needed, 1);
+        room = needed;
+        if (out == NULL) {
+            return NULL;
+        }
+    }
+    snprintf(out, room, "%s.%.*s", whole, (int)rest, name + head + 1);
     return out;
 }
 
@@ -142,12 +191,24 @@ KestType *kest_lookup_type(KestProgram *program, const char *name,
                            size_t length) {
     // Looking one up is naming it. Registering one does not come through
     // here, so what this marks is a name somebody wrote.
-    if (program->alias[0] != '\0') {
+    if (program->module[0] != '\0') {
         char stack[256];
         const char *joined =
             under_alias(program, name, length, stack, sizeof(stack));
         if (joined != NULL) {
             KestType *type = kest_find_type(program, joined, strlen(joined));
+            if (type != NULL) {
+                type->named = true;
+                return type;
+            }
+        }
+    }
+    {
+        char stack[256];
+        const char *whole =
+            under_import(program, name, length, stack, sizeof(stack));
+        if (whole != NULL) {
+            KestType *type = kest_find_type(program, whole, strlen(whole));
             if (type != NULL) {
                 type->named = true;
                 return type;
@@ -163,13 +224,25 @@ KestType *kest_lookup_type(KestProgram *program, const char *name,
 
 KestSymbol *kest_lookup_global(KestProgram *program, const char *name,
                                size_t length) {
-    if (program->alias[0] != '\0') {
+    if (program->module[0] != '\0') {
         char stack[256];
         const char *joined =
             under_alias(program, name, length, stack, sizeof(stack));
         if (joined != NULL) {
             KestSymbol *symbol =
                 kest_find_global(program, joined, strlen(joined));
+            if (symbol != NULL) {
+                return symbol;
+            }
+        }
+    }
+    {
+        char stack[256];
+        const char *whole =
+            under_import(program, name, length, stack, sizeof(stack));
+        if (whole != NULL) {
+            KestSymbol *symbol =
+                kest_find_global(program, whole, strlen(whole));
             if (symbol != NULL) {
                 return symbol;
             }
@@ -252,6 +325,39 @@ bool kest_file_reaches(KestProgram *program, const char *alias,
 // A module is not a thing in the program: it is what the names under it have
 // in common. So a name is a module this file can reach when something is
 // declared under it and the file imported it.
+// Which module a file means by the word it writes in front of a name: `io` is
+// `std.io` in a file that imported it, and its own module where the word is
+// the file's own. NULL where the word is not one this file may write, which is
+// what makes a name out of reach out of reach. See D1039.
+const char *kest_module_for(KestProgram *program, const char *alias,
+                            size_t length) {
+    if (program->module[0] != '\0' &&
+        kest_word_same(program->alias, alias, length)) {
+        return program->module;
+    }
+    if (program->unit == NULL) {
+        return NULL;
+    }
+    for (uint32_t i = 0; i < program->unit->import_count; i++) {
+        if (kest_word_same(program->unit->imports[i], alias, length)) {
+            return program->unit->import_paths[i];
+        }
+    }
+    return NULL;
+}
+
+// Whether a registered name lives under a module a file wrote the word for.
+// The word is expanded first, because a name lives under the whole of its
+// module and what a file writes is the last part of it. See D1039.
+static bool under_module_of(KestProgram *program, const char *whole,
+                                 const char *name, size_t length) {
+    const char *module = kest_module_for(program, name, length);
+    if (module == NULL || module[0] == '\0') {
+        return kest_under_module(whole, name, length);
+    }
+    return kest_under_module(whole, module, strlen(module));
+}
+
 bool kest_under_module(const char *whole, const char *name, size_t length) {
     return strlen(whole) > length + 1 && whole[length] == '.' &&
            memcmp(whole, name, length) == 0;
@@ -266,7 +372,7 @@ const KestSymbol *kest_first_under(KestProgram *program, const char *name,
     const KestSymbol *any = NULL;
     for (uint32_t i = 0; i < program->global_count; i++) {
         const KestSymbol *symbol = &program->globals[i];
-        if (!kest_under_module(symbol->name, name, length) ||
+        if (!under_module_of(program, symbol->name, name, length) ||
             kest_needs_import(program, symbol->name,
                               strlen(symbol->name))) {
             continue;
@@ -290,7 +396,7 @@ bool kest_module_named(KestProgram *program, const char *name,
                        size_t length) {
     for (uint32_t i = 0; i < program->global_count; i++) {
         const char *whole = program->globals[i].name;
-        if (kest_under_module(whole, name, length) &&
+        if (under_module_of(program, whole, name, length) &&
             !kest_needs_import(program, whole, strlen(whole))) {
             return true;
         }
@@ -298,7 +404,7 @@ bool kest_module_named(KestProgram *program, const char *name,
     // A module may declare nothing but types, and a type is not a global.
     for (uint32_t i = 0; i < program->type_count; i++) {
         const char *whole = program->types[i]->name;
-        if (whole != NULL && kest_under_module(whole, name, length) &&
+        if (whole != NULL && under_module_of(program, whole, name, length) &&
             !kest_needs_import(program, whole, strlen(whole))) {
             return true;
         }
@@ -328,7 +434,67 @@ bool kest_needs_import(KestProgram *program, const char *name, size_t length) {
         return false;
     }
 
+    // In reach where the module it lives under is this file's own or one this
+    // file imported. Asked of the whole module rather than of the word before
+    // the first dot, because a name lives under the whole of its module and
+    // `std.io.print` begins with `std`, which is nobody's module. A name a
+    // file wrote itself -- `io.print` -- is matched by its last part, which is
+    // what `kest_file_reaches` answers. See D1039.
+    for (uint32_t i = 0; program->unit != NULL &&
+                         i <= program->unit->import_count;
+         i++) {
+        const char *module = i == 0 ? program->module
+                                    : program->unit->import_paths[i - 1];
+        if (module == NULL || module[0] == '\0') {
+            continue;
+        }
+        size_t reach = strlen(module);
+        if (length > reach + 1 && name[reach] == '.' &&
+            memcmp(name, module, reach) == 0) {
+            return false;
+        }
+    }
     return !kest_file_reaches(program, name, (size_t)(dot - name));
+}
+
+// Whether this program holds a name written this way under a module this file
+// has not imported: `text.chars` where `std.text.chars` is registered and
+// nothing here asked for `std.text`. What a file writes is a module's last
+// part, so that is what is matched, and the rest of the written name after it.
+//
+// It is the question `kest_needs_import` cannot answer once the lookups have
+// failed: they expand through this file's imports and a module this file did
+// not import is exactly the one they cannot see. Without it a reader writing
+// `text.chars` with no import was told `text` is a type. See D1039.
+bool kest_out_of_reach(KestProgram *program, const char *name, size_t length) {
+    const char *dot = memchr(name, '.', length);
+    if (dot == NULL) {
+        return false;
+    }
+    size_t head = (size_t)(dot - name);
+    size_t rest = length - head - 1;
+    for (uint32_t i = 0; program->files != NULL && i < program->files->count;
+         i++) {
+        const char *module = program->files->items[i].module;
+        const char *alias = program->files->items[i].alias;
+        if (module == NULL || module[0] == '\0' ||
+            !kest_word_same(alias, name, head)) {
+            continue;
+        }
+        size_t reach = strlen(module);
+        size_t room = reach + rest + 2;
+        char *whole = kest_arena_alloc(program->arena, room, 1);
+        if (whole == NULL) {
+            return false;
+        }
+        snprintf(whole, room, "%s.%.*s", module, (int)rest, dot + 1);
+        if ((kest_find_global(program, whole, reach + rest + 1) != NULL ||
+             kest_find_type(program, whole, reach + rest + 1) != NULL) &&
+            kest_needs_import(program, whole, reach + rest + 1)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 KestType *kest_find_type(KestProgram *program, const char *name,
@@ -1439,6 +1605,34 @@ const char *kest_type_written(const KestType *type) {
 
 // The closest declared type name, or NULL when nothing is close enough to be
 // worth putting in front of a reader. A wrong suggestion costs more than none.
+// The way a file writes a registered name: the last part of its module and
+// then the name, `vec.Vec2` for `std.vec.Vec2`. It is what a suggestion has to
+// answer with and what a written name has to be compared against, because a
+// name lives under the whole of its module and nobody types the whole of it.
+// The name itself where it is under no module. See D1039.
+const char *kest_written_as(KestProgram *program, const char *whole) {
+    const char *dot = strrchr(whole, '.');
+    if (dot == NULL) {
+        return whole;
+    }
+    const char *from = whole;
+    for (const char *at = whole; at < dot; at++) {
+        if (*at == '.') {
+            from = at + 1;
+        }
+    }
+    if (from == whole) {
+        return whole;
+    }
+    size_t room = strlen(from) + 1;
+    char *written = kest_arena_alloc(program->arena, room, 1);
+    if (written == NULL) {
+        return whole;
+    }
+    memcpy(written, from, room);
+    return written;
+}
+
 static const char *nearest_type(KestProgram *program, const char *name,
                                      size_t length) {
     // Every one or two character name is one edit from every other, so a
@@ -1466,7 +1660,8 @@ static const char *nearest_type(KestProgram *program, const char *name,
         // what is compared is the part that was written the same way (D198).
         const char *dot = strrchr(candidate, '.');
         const char *tail = dot == NULL ? candidate : dot + 1;
-        const char *against = written_plain ? tail : candidate;
+        const char *written = kest_written_as(program, candidate);
+        const char *against = written_plain ? tail : written;
         uint32_t distance =
             kest_word_distance(name, length, against, strlen(against), limit);
         if (distance >= best_distance) {
@@ -1476,7 +1671,7 @@ static const char *nearest_type(KestProgram *program, const char *name,
         // Reachable by the last piece alone means this file declared it, and
         // that is how it is written back.
         best = kest_lookup_type(program, tail, strlen(tail)) != NULL ? tail
-                                                                    : candidate;
+                                                                    : written;
     }
     return best;
 }
@@ -1739,7 +1934,8 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
         const char *example = NULL;
         for (uint32_t i = 0; i < program->type_count; i++) {
             const char *whole = program->types[i]->name;
-            if (whole != NULL && kest_under_module(whole, name, length) &&
+            if (whole != NULL &&
+                under_module_of(program, whole, name, length) &&
                 !kest_needs_import(program, whole, strlen(whole))) {
                 example = whole;
                 break;
@@ -1774,10 +1970,16 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
         if (whole == NULL) {
             continue;
         }
-        // The module ends at the first dot, which is what says where to look.
-        const char *dot = strchr(whole, '.');
-        if (dot == NULL || !kest_word_same(dot + 1, name, length) ||
-            !kest_needs_import(program, whole, strlen(whole))) {
+        // Where the module ends is wherever this name begins, because a name
+        // lives under the whole of its module. See D1039.
+        size_t reach = strlen(whole);
+        const char *dot = reach > length + 1 &&
+                                  whole[reach - length - 1] == '.' &&
+                                  kest_word_same(whole + reach - length, name,
+                                                 length)
+                              ? whole + reach - length - 1
+                              : NULL;
+        if (dot == NULL || !kest_needs_import(program, whole, strlen(whole))) {
             continue;
         }
         kest_diags_suggest(program->diags,
@@ -1975,6 +2177,7 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
     const KestUnitInfo *was_unit = program->unit;
     const KestSource *was_source = program->source;
     const char *was_alias = program->alias;
+    const char *was_module = program->module;
     kest_program_in(program, (KestUnitInfo *)shape->unit);
 
     const char **names =
@@ -2023,6 +2226,7 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
     program->unit = was_unit;
     program->source = was_source;
     program->alias = was_alias;
+    program->module = was_module;
 
     measure(program, made);
     return made;
@@ -2507,8 +2711,46 @@ static bool index_room(KestProgram *program) {
     return true;
 }
 
+static uint32_t under_one_name(KestProgram *program, const char *name,
+                               size_t length, KestSymbol **found,
+                               uint32_t room);
+
+// Every function under one name, where the name may be written the way a file
+// writes it. The three forms are the ones `kest_lookup_global` tries and for
+// the same reason: a name lives under the whole of its module and a file
+// writes the last part. See D1039.
 uint32_t kest_overloads(KestProgram *program, const char *name, size_t length,
                         KestSymbol **found, uint32_t room) {
+    if (program->module[0] != '\0') {
+        char stack[256];
+        const char *joined =
+            under_alias(program, name, length, stack, sizeof(stack));
+        if (joined != NULL) {
+            uint32_t count =
+                under_one_name(program, joined, strlen(joined), found, room);
+            if (count > 0) {
+                return count;
+            }
+        }
+    }
+    {
+        char stack[256];
+        const char *whole =
+            under_import(program, name, length, stack, sizeof(stack));
+        if (whole != NULL) {
+            uint32_t count =
+                under_one_name(program, whole, strlen(whole), found, room);
+            if (count > 0) {
+                return count;
+            }
+        }
+    }
+    return under_one_name(program, name, length, found, room);
+}
+
+static uint32_t under_one_name(KestProgram *program, const char *name,
+                               size_t length, KestSymbol **found,
+                               uint32_t room) {
     uint32_t count = 0;
     if (program->by_name_slots == 0) {
         return 0;
@@ -3793,6 +4035,53 @@ bool kest_type_equal(const KestType *a, const KestType *b) {
 // Where a file says what it calls itself, for pointing at the line. Whether it
 // is the library's is not worked out here: the loader decided that when it
 // decided where to read the file from.
+// Whether any one file imports both of these, which is the only way a `math.`
+// written in a file could mean either of them. A program holding two modules
+// under one last part is fine; a file reaching two of them is not, and the
+// file is where the fix goes. See D1039.
+static const KestUnitInfo *one_file_reaches_both(const KestUnits *units,
+                                                const KestUnitInfo *first,
+                                                const KestUnitInfo *second) {
+    for (uint32_t u = 0; u < units->count; u++) {
+        const KestUnitInfo *file = &units->items[u];
+        bool saw_first = strcmp(file->module, first->module) == 0;
+        bool saw_second = strcmp(file->module, second->module) == 0;
+        for (uint32_t k = 0; k < file->import_count; k++) {
+            if (strcmp(file->import_paths[k], first->module) == 0) {
+                saw_first = true;
+            }
+            if (strcmp(file->import_paths[k], second->module) == 0) {
+                saw_second = true;
+            }
+        }
+        if (saw_first && saw_second) {
+            return file;
+        }
+    }
+    return NULL;
+}
+
+// Where a file wrote the import that named this module, so a refusal about a
+// file can point at the line the reader has to change rather than at a module
+// declaration somewhere else. The module's own line where the file is the
+// module itself.
+static KestSpan where_imported(const KestUnitInfo *file,
+                               const KestUnitInfo *named) {
+    for (uint32_t i = 0; i < file->unit.count; i++) {
+        const KestDecl *decl = file->unit.items[i];
+        if (decl->kind != KEST_DECL_IMPORT && decl->kind != KEST_DECL_MODULE) {
+            continue;
+        }
+        const char *written = kest_span_text(&file->source, decl->name);
+        if (decl->name.length == strlen(named->module) &&
+            strncmp(written, named->module, decl->name.length) == 0) {
+            return decl->name;
+        }
+    }
+    KestSpan nowhere = {0, 0};
+    return nowhere;
+}
+
 static KestSpan module_span(const KestUnitInfo *unit) {
     KestSpan span = {0, 1};
     for (uint32_t d = 0; d < unit->unit.count; d++) {
@@ -3813,6 +4102,7 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
     program->diags = diags;
     program->index_names = index_names;
     program->alias = "";
+    program->module = "";
     program->files = units;
     *out = program;
 
@@ -3841,6 +4131,17 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
             if (strcmp(units->items[i].alias, units->items[j].alias) != 0) {
                 continue;
             }
+            // Two modules under one last part are two modules, and a program
+            // may hold both: a name lives under the whole of what its module
+            // calls itself, so `render.math` and `physics.math` are two names
+            // here. What cannot happen is one *file* writing `math.` and
+            // meaning either, so this is a refusal about a file rather than
+            // about the program. See D1039.
+            const KestUnitInfo *reaching = one_file_reaches_both(
+                units, &units->items[i], &units->items[j]);
+            if (reaching == NULL) {
+                continue;
+            }
             // The one that can be changed is the one to point at. A `std`
             // module is the library's and is not the reader's to rename, so
             // when one of the two is that, the other one is where the message
@@ -3852,22 +4153,30 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
                 first = second;
                 second = held;
             }
-            kest_diags_in(diags, &first->source);
+            // The refusal is about the file that reaches both, because that
+            // is the only place `math.` could mean either -- and it is the
+            // file whose lines a reader can change. Two modules under one
+            // last part are fine everywhere else. See D1039.
+            KestSpan at_first = where_imported(reaching, first);
+            KestSpan at_second = where_imported(reaching, second);
+            kest_diags_in(diags, &reaching->source);
             kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0328",
-                           module_span(first),
-                           "two modules in this program both put their names "
-                           "under `%s`",
+                           at_first.length > 0 ? at_first
+                                               : module_span(first),
+                           "this file reaches two modules called `%s`",
                            first->alias);
             kest_diags_suggest(diags,
                                second->from_library
                                    ? "the other one is the library's and is "
                                      "not yours to rename, so this is the one "
                                      "to call something else"
-                                   : "a name is looked for under the last "
-                                     "part of what a module calls itself, so "
-                                     "one of them has to be called something "
-                                     "else");
-            kest_diags_note(diags, &second->source, module_span(second),
+                                   : "a name written `%s.` here would be "
+                                     "either of them, so one of the two has "
+                                     "to be called something else",
+                               first->alias);
+            kest_diags_note(diags, &reaching->source,
+                            at_second.length > 0 ? at_second
+                                                 : module_span(second),
                             "the other one");
         }
     }
@@ -3910,9 +4219,37 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
 // The module a name lives in, which is what is in front of the first dot.
 // `io.Io.write` is `io`'s, the same as `io.print`: what a host calls it is the
 // rest of the name and not another module.
-static size_t module_of(const char *name) {
-    const char *dot = strchr(name, '.');
+// Which module a registered name is under. A name lives under the whole of
+// what its module calls itself, and what comes after may hold dots of its own:
+// `std.io.Io.write` is a capability's function in `std.io`. So the answer is
+// the longest module this program holds that the name begins with, asked of
+// the program rather than guessed from a dot. Everything before the last dot
+// where nothing matches, which is what a name from no module of this program
+// can be given. See D1039.
+static size_t module_of_in(const KestUnits *files, const char *name) {
+    size_t best = 0;
+    for (uint32_t i = 0; files != NULL && i < files->count; i++) {
+        const char *module = files->items[i].module;
+        if (module == NULL || module[0] == '\0') {
+            continue;
+        }
+        size_t length = strlen(module);
+        if (length > best && strncmp(name, module, length) == 0 &&
+            name[length] == '.') {
+            best = length;
+        }
+    }
+    if (best > 0) {
+        return best;
+    }
+    const char *dot = strrchr(name, '.');
     return dot == NULL ? strlen(name) : (size_t)(dot - name);
+}
+
+static const KestUnits *dumping_files;
+
+static size_t module_of(const char *name) {
+    return module_of_in(dumping_files, name);
 }
 
 static bool same_module(const char *name, const char *module, size_t length) {
@@ -3954,6 +4291,11 @@ static Held *held_of(Held *held, uint32_t *count, const char *name) {
 
 bool kest_program_dump(const KestProgram *program, KestArena *arena,
                        const char *root, FILE *out) {
+    // Which modules this program holds, so a name can be split where its
+    // module ends rather than at a dot. Set for the length of the walk below
+    // and put back, because what `module_of` answers is about one program.
+    const KestUnits *was_dumping = dumping_files;
+    dumping_files = program->files;
     size_t root_length = root == NULL ? 0 : strlen(root);
     uint32_t elsewhere = 0;
     uint32_t said = 0;
@@ -4099,6 +4441,7 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
     if (said == 0 && elsewhere == 0) {
         fputs("this file declares nothing\n", out);
     }
+    dumping_files = was_dumping;
     return true;
 }
 
@@ -4233,6 +4576,29 @@ void kest_program_costs(const KestProgram *program, FILE *out) {
     }
 }
 
+// Which module a declaration is in, written beside its name. A name lives
+// under the whole of its module and what comes after may hold dots of its own,
+// so a tool splitting the name at a dot would invent modules -- `std.io.Io` is
+// a capability inside `std.io`. It is written rather than derivable. See
+// D1039.
+static void write_module(const KestProgram *program, const char *name,
+                         FILE *out) {
+    size_t length = module_of_in(program->files, name);
+    fputs(",\"module\":", out);
+    if (length == 0 || length == strlen(name)) {
+        fputs("null", out);
+        return;
+    }
+    char held[256];
+    if (length + 1 > sizeof(held)) {
+        fputs("null", out);
+        return;
+    }
+    memcpy(held, name, length);
+    held[length] = '\0';
+    kest_json_text(held, out);
+}
+
 void kest_program_dump_json(const KestProgram *program, KestArena *arena,
                             FILE *out) {
     fputs("\"types\":[", out);
@@ -4255,6 +4621,7 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
         first = false;
         fputs("{\"name\":", out);
         kest_json_text(type->name, out);
+        write_module(program, type->name, out);
         fprintf(out, ",\"kind\":\"%s\"",
                 type->tag == KEST_T_ENUM
                     ? "enum"
@@ -4327,6 +4694,7 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
         first = false;
         fputs("{\"name\":", out);
         kest_json_text(symbol->name, out);
+        write_module(program, symbol->name, out);
         fputs(",\"parameters\":[", out);
         for (uint32_t p = 0; p < symbol->type->param_count; p++) {
             fputs(p == 0 ? "" : ",", out);
@@ -4429,6 +4797,7 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
         first = false;
         fputs("{\"name\":", out);
         kest_json_text(symbol->name, out);
+        write_module(program, symbol->name, out);
         fputs(",\"type\":", out);
         kest_json_text(kest_type_name(arena, symbol->type), out);
         fprintf(out, ",\"named\":%s", symbol->named ? "true" : "false");

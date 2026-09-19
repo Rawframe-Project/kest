@@ -137,7 +137,7 @@ for name, params in making:
 # One that cannot be asked from here is not one that goes unasked: the host
 # that lends arrays asks it, and this holds the two lists to each other.
 for name in left_to_the_host:
-    if ('"text.%s"' % name) not in host:
+    if ('"std.text.%s"' % name) not in host:
         print("costs: `%s` cannot be asked from here and `%s` does not ask it"
               % (name, HOST))
         failed = 1

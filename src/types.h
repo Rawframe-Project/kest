@@ -229,10 +229,14 @@ typedef struct {
     // rather than about any one step of it. See D673.
     bool fold_never;
     // The file being worked on, and the name its declarations live under.
-    // Every name is registered qualified; inside its own module the prefix
-    // may be left off, which is the only thing the alias is for.
+    // Every name is registered under the whole of what the file calls itself,
+    // `a.math.twice`, because two modules may share a last part and cannot
+    // share the whole; inside its own module the prefix may be left off, and
+    // `alias` is the last part a reader writes in front of a name from
+    // somewhere else. See D1039.
     const KestSource *source;
     const char *alias;
+    const char *module;
     const KestUnitInfo *unit;
     KestDiags *diags;
 
@@ -386,6 +390,12 @@ KestSymbol *kest_symbol_at(KestProgram *program, const KestSource *source,
 // to cross. A name found in the file's own module crosses nothing, and so
 // does a host receiver, which is a name with a dot in it and not a module.
 bool kest_needs_import(KestProgram *program, const char *name, size_t length);
+// Whether this program holds a name written this way under a module this file
+// has not imported. See D1039.
+bool kest_out_of_reach(KestProgram *program, const char *name, size_t length);
+// The way a file writes a registered name: the last part of its module and
+// then the name. See D1039.
+const char *kest_written_as(KestProgram *program, const char *whole);
 
 // And which import a name was reached through, marked where the reach is
 // decided rather than where it is offered: the suggestion machine asks whether
@@ -416,6 +426,10 @@ bool kest_file_reaches(KestProgram *program, const char *alias, size_t length);
 //
 // Whether a registered name is one of the names under this module.
 bool kest_under_module(const char *whole, const char *name, size_t length);
+// Which module a file means by a word it writes in front of a name, or NULL
+// for a word this file may not write.
+const char *kest_module_for(KestProgram *program, const char *alias,
+                            size_t length);
 
 // Whether this file can reach a module of this name, which is so when
 // something reachable is declared under it.

@@ -364,9 +364,16 @@ error[K0703]: `mism/helper.kest` calls itself `mism.helpers`
                        `module mism.helper`
 ```
 
-Its names live under the last part of what it calls itself, so a file that imports
-it writes `render.draw` and `render.Sprite`, and the file itself may write
-`draw` and `Sprite`. A body may give one of those names to something of its own:
+Its names live under the whole of what it calls itself, and a file that imports
+it writes the last part: a module `game.render` holds `game.render.draw`, the
+file that imports it writes `render.draw` and `render.Sprite`, and the file
+itself may write `draw` and `Sprite`. Which module a `render.` means is the
+importing file's own question, so **two modules may end in the same word** --
+`render.math` and `physics.math` are two modules and a program may hold both.
+What is refused is one *file* reaching two of them, because there `math.` would
+be either, and the refusal points at that file's two import lines. See D1039.
+
+A body may give one of those names to something of its own:
 a `let` or a parameter called `draw` is what `draw` means from there on, which is
 refused between two locals — at any point in a body one name means one thing —
 and allowed here, because a body's names are its own. Nothing is out of reach
@@ -5683,17 +5690,24 @@ tooling and for models repairing their own output, which is this:
 
 `module` is the name this file puts its own declarations under, which `check`
 says and the others do not: a file that says `module examples.math` declares
-`math.factorial`, so neither the line it wrote nor the path it is at is the word
-in front of its names. It is null for a file that names no module, whose
-declarations are under nothing. A tool that has this object and a name in the
-file has where that name is declared, which is what it is for.
+`examples.math.factorial`, and a file that imports it writes `math.factorial`.
+It is null for a file that names no module, whose declarations are under
+nothing. A tool that has this object and a name in the file has where that name
+is declared, which is what it is for.
+
+Every declaration says its `module` too, beside its name. A name lives under
+the whole of what its module calls itself and what comes after may hold dots of
+its own — `std.io.Io.write` is a capability's function inside `std.io` — so a
+tool splitting a name at a dot would invent modules that are not there. It is
+written rather than left to be worked out, and it is null for a declaration
+under no module. See D1039.
 
 Beside the diagnostics is what the run cost the compiler: `cost` is how many
 bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 502 lines:
-47956 bytes as tokens, 118161 as a tree, 154352 checked and 181673 compiled.
+47956 bytes as tokens, 118305 as a tree, 154720 checked and 182121 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
 
@@ -5710,7 +5724,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 17323 bytes, against the 181673 it costs to compile.
+file and 17323 bytes, against the 182121 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.
@@ -6020,6 +6034,7 @@ has to provide marked as one, and a line for each module it imported.
   "types": [
     {
       "name": "doc.Point",
+      "module": "doc",
       "kind": "struct",
       "slots": 2,
       "bytes": 8,
@@ -6036,6 +6051,7 @@ has to provide marked as one, and a line for each module it imported.
   "functions": [
     {
       "name": "doc.hurt",
+      "module": "doc",
       "parameters": ["doc.Point", "i32"],
       "gives": "i32",
       "noAlloc": false,

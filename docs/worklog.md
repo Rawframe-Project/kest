@@ -37444,3 +37444,50 @@ See D1038.
 rewritten in place, same answer, under `perf stat -r 4` and `KEST_DEEP`; the
 `agents` access pattern written both ways as two entries of one program under
 `bench/measure`; `make fast`; `make check`.
+
+## Two modules may end in the same word
+
+A cold reading reproduced `import a.math` beside `import b.math` being refused,
+and the refusal was worse than reported: it was about the **program**, not the
+file. `import a.math` on its own compiled fine with `b/math.kest` sitting unread
+in the tree, so a program could not hold `render.math` and `physics.math` even
+with no file wanting both — which is exactly the vendoring case.
+
+`src/types.c` already carried the alternative and its price, from D185: *keying
+the table by the whole of a module's name is what would make this a question
+about one file, and that is a change to every lookup in this compiler.* True,
+and it is what was done.
+
+A declaration is registered under the whole of what its file calls itself now,
+`a.math.twice`, and a file writing `math.twice` has `math` expanded through that
+file's own imports and nowhere else. The expansion is one function. What a file
+writes is the last part; which module that means is that file's question; so a
+program holding both is ambiguous nowhere, because no file can see both without
+saying so. `K0328` is about a file that reaches two modules ending in one word,
+and it points at that file's two import lines rather than at two module
+declarations somewhere else.
+
+The mission's own example now runs: `render.math` and `physics.math`, reached by
+two different files, in one program.
+
+None of the cost is runtime — names are a compile-time thing and a machine calls
+by index. `bench/agents.kest` runs the same instruction count and compiles for
+0.26 per cent more bytes. What a reader sees did change: a chunk is
+`std.text.upper#text`, a listing says `std.text  25 functions`, a host writes
+`bench.frame.Body`, and `--json` says the whole module. A chunk symbol had to
+carry it, because two modules' `twice` over the same types would otherwise want
+one chunk — which is the case this enables.
+
+One thing that needed care: a listing must not split a name at a dot.
+`std.io.Io.write` is a capability's function inside `std.io`, and splitting at
+the last dot invents a module called `std.io.Io`. It asks the program which
+modules it holds and takes the longest that the name begins with.
+
+`import a.math as thing` was evaluated and is not here. The refusal tells a
+reader to rename one of the two, which covers everything except one file needing
+two modules it does not own — and no program anywhere has that shape yet. See
+D1039.
+
+**Runs:** the reproduction and the mission's `render.math`/`physics.math`
+example; `perf stat -r 3` and `check --json` for what it costs; the reading
+checks; `make fast`; `make check`.

@@ -588,13 +588,16 @@ static const char *nearest_name(Checker *checker, const char *name,
         // the name has no dot in it, and the whole of it when it has.
         const char *dot = strrchr(whole, '.');
         const char *tail = dot == NULL ? whole : dot + 1;
-        const char *against = written_plain ? tail : whole;
+        // Compared against the way a file writes it, because that is what was
+        // written: `io.print` and not `std.io.print`. See D1039.
+        const char *as_written = kest_written_as(checker->program, whole);
+        const char *against = written_plain ? tail : as_written;
         // Reachable by the last piece alone means this file declared it, and
         // that is how it is written back.
         const char *written =
             kest_lookup_global(checker->program, tail, strlen(tail)) != NULL
                 ? tail
-                : whole;
+                : as_written;
         offer(&found, written,
               kest_word_distance(name, length, against, strlen(against),
                                  limit));
@@ -615,9 +618,18 @@ static const char *nearest_name(Checker *checker, const char *name,
             if (dot == NULL) {
                 continue;
             }
+            // The word a file writes, which is the last part of the module
+            // and not the whole of it: a name lives under `std.io` and what
+            // goes in front of `print` is `io`. See D1039.
+            const char *from = whole;
+            for (const char *at = whole; at < dot; at++) {
+                if (*at == '.') {
+                    from = at + 1;
+                }
+            }
             const char *module = kest_arena_strndup(checker->program->arena,
-                                                    whole,
-                                                    (size_t)(dot - whole));
+                                                    from,
+                                                    (size_t)(dot - from));
             // A name written into the arena, so when there is no room there
             // is no name. A suggestion is the one thing a compiler with
             // nothing left can do without, so this one is left out rather
@@ -706,7 +718,16 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
     // A type where a value is wanted: a shape named rather than built. Saying
     // the types at the call is the other half of the same mistake, and the
     // parser says that one where it is written.
+    //
+    // Except where the word in front is a module this file did not import:
+    // `text.chars` with no `import std.text` is a missing import and not the
+    // builtin `text` named where a value goes, and saying the second sends a
+    // reader to fix a line that is right. See D1039.
     KestType *named = kest_lookup_type(checker->program, name, length);
+    if (named != NULL && !is_error(named) &&
+        kest_out_of_reach(checker->program, name, length)) {
+        named = NULL;
+    }
     if (named != NULL && !is_error(named)) {
         report(checker, expr->span, "K0344",
                "`%.*s` is a type, and this wants a value", (int)length, name);
@@ -784,12 +805,21 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
     for (uint32_t i = 0; i < checker->program->global_count; i++) {
         const KestSymbol *symbol = &checker->program->globals[i];
         const char *whole = symbol->name;
-        // The first dot, which is where the module ends: a name registered
-        // under one may have another dot in it — `math.Math.floor` is a
-        // crossing the file declares — and what a reader would write for that
-        // is `math.Math.floor`, not `floor`. See D732.
-        const char *dot = strchr(whole, '.');
-        if (dot == NULL || !kest_word_same(dot + 1, name, length) ||
+        // Where the module ends is wherever this name begins, which is the
+        // only split that answers the question being asked: a name lives under
+        // the whole of its module and what comes after may hold dots of its
+        // own — `std.math.Math.floor` is a crossing the file declares, and
+        // what a reader would write for that is `math.Math.floor` rather than
+        // `floor`. So the tail is matched and the head is whatever is left.
+        // See D732 and D1039.
+        size_t reach = strlen(whole);
+        const char *dot = reach > length + 1 &&
+                                  whole[reach - length - 1] == '.' &&
+                                  kest_word_same(whole + reach - length, name,
+                                                 length)
+                              ? whole + reach - length - 1
+                              : NULL;
+        if (dot == NULL ||
             !kest_needs_import(checker->program, whole, strlen(whole))) {
             continue;
         }
@@ -832,7 +862,8 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
 // expression ever begins with one.
 static void report_unimported(Checker *checker, KestSpan name) {
     const char *text = span_text(checker, name);
-    if (!kest_needs_import(checker->program, text, name.length)) {
+    if (!kest_needs_import(checker->program, text, name.length) &&
+        !kest_out_of_reach(checker->program, text, name.length)) {
         // Reached, and this is where every name from another module is asked
         // about: what says an import is worth its place is a name written
         // through it. See D725.
@@ -1681,7 +1712,7 @@ static uint32_t find_callable(Checker *checker, const KestExpr *expr,
 
     const char *text = span_text(checker, callee->span);
     size_t length = callee->span.length;
-    const char *alias = checker->program->alias;
+    const char *alias = checker->program->module;
     if (alias[0] != '\0') {
         char joined[256];
         int written = snprintf(joined, sizeof(joined), "%s.%.*s", alias,
@@ -2336,10 +2367,10 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
 static void note_the_other(Checker *checker, KestSpan where) {
     const char *name = span_text(checker, where);
     char joined[256];
-    int written = checker->program->alias[0] == '\0'
+    int written = checker->program->module[0] == '\0'
                       ? 0
                       : snprintf(joined, sizeof(joined), "%s.%.*s",
-                                 checker->program->alias, (int)where.length,
+                                 checker->program->module, (int)where.length,
                                  name);
     const KestSymbol *other =
         kest_lookup_global(checker->program, name, where.length);
@@ -2549,6 +2580,15 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
             report_unimported(checker, whole);
             expr->call.callee->type = host->type;
             callee = host->type;
+        } else if (kest_out_of_reach(checker->program,
+                                     span_text(checker, whole),
+                                     whole.length)) {
+            // A name this program holds under a module this file did not ask
+            // for. Said before the halves are looked at on their own, because
+            // `text.chars` with no import is a missing line and not the
+            // builtin `text` named where a value goes. See D1039.
+            report_unimported(checker, whole);
+            return error_type(checker);
         }
     }
     if (callee == NULL) {
@@ -2581,10 +2621,10 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
             // Under the module the file names, where its own declarations
             // live, and under nothing for a file that names none.
             char joined[256];
-            int written = checker->program->alias[0] == '\0'
+            int written = checker->program->module[0] == '\0'
                               ? 0
                               : snprintf(joined, sizeof(joined), "%s.%.*s",
-                                         checker->program->alias,
+                                         checker->program->module,
                                          (int)where.length, name);
             const KestSymbol *shadowed =
                 kest_lookup_global(checker->program, name, where.length);
@@ -2756,15 +2796,33 @@ static const char *nearest_under(Checker *checker, const char *module,
                 ? checker->program->globals[i].name
                 : checker->program->types[i - checker->program->global_count]
                       ->name;
-        if (whole == NULL || !kest_under_module(whole, module, module_length)) {
+        // Under the module the word means rather than under the word: a name
+        // lives under the whole of its module. See D1039.
+        const char *under = kest_module_for(checker->program, module,
+                                            module_length);
+        size_t under_length = under == NULL ? module_length : strlen(under);
+        if (under == NULL) {
+            under = module;
+        }
+        if (whole == NULL || !kest_under_module(whole, under, under_length)) {
             continue;
         }
-        const char *member = whole + module_length + 1;
+        const char *member = whole + under_length + 1;
         uint32_t distance = kest_word_distance(name, length, member,
                                                strlen(member), limit);
         if (distance < nearest_so_far) {
             nearest_so_far = distance;
-            best = whole;
+            // Written the way the reader writes it, which is the word they
+            // put in front and not the whole module: a file that imported
+            // `std.io` writes `io.print`. See D1039.
+            size_t room = module_length + strlen(member) + 2;
+            char *written = kest_arena_alloc(checker->program->arena, room, 1);
+            if (written == NULL) {
+                return whole;
+            }
+            snprintf(written, room, "%.*s.%s", (int)module_length, module,
+                     member);
+            best = written;
         }
     }
     return best;

@@ -432,6 +432,7 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
     }
     memset(info, 0, sizeof(*info));
     info->alias = "";
+    info->module = "";
 
     const char *owned = kest_arena_strndup(arena, path, strlen(path));
     if (owned == NULL ||
@@ -496,6 +497,11 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
                 arena,
                 kest_span_text(&units->items[self].source, module->name),
                 module->name.length);
+            const char *whole = kest_arena_strndup(
+                arena,
+                kest_span_text(&units->items[self].source, module->name),
+                module->name.length);
+            units->items[self].module = whole == NULL ? "" : whole;
             units->items[self].from_library = is_library(
                 kest_span_text(&units->items[self].source, module->name),
                 module->name.length);
@@ -590,16 +596,23 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
         }
     }
     loaded->imports = KEST_ARENA_ARRAY(arena, const char *, imports + 1);
+    loaded->import_paths = KEST_ARENA_ARRAY(arena, const char *, imports + 1);
     loaded->import_reached = KEST_ARENA_ARRAY(arena, bool, imports + 1);
-    if (loaded->imports == NULL || loaded->import_reached == NULL) {
+    if (loaded->imports == NULL || loaded->import_paths == NULL ||
+        loaded->import_reached == NULL) {
         return false;
     }
     for (uint32_t i = 0; i < loaded->unit.count; i++) {
         const KestDecl *decl = loaded->unit.items[i];
         if (decl->kind == KEST_DECL_IMPORT) {
-            loaded->imports[loaded->import_count++] = last_segment(
-                arena, kest_span_text(&loaded->source, decl->name),
-                decl->name.length);
+            const char *written =
+                kest_span_text(&loaded->source, decl->name);
+            const char *whole =
+                kest_arena_strndup(arena, written, decl->name.length);
+            loaded->import_paths[loaded->import_count] =
+                whole == NULL ? "" : whole;
+            loaded->imports[loaded->import_count++] =
+                last_segment(arena, written, decl->name.length);
         }
     }
     return true;

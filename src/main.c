@@ -2276,7 +2276,7 @@ static int run(const char *command, const char *executable, char **paths,
                 // is a run that ran out, said where every other one is said.
                 // See D845.
                 if (!kest_program_dump(build->program, build->arena,
-                                       build->units.items[0].alias, stdout)) {
+                                       build->units.items[0].module, stdout)) {
                     kest_diags_starve(&build->diags);
                 }
             }
@@ -2785,10 +2785,11 @@ static int run(const char *command, const char *executable, char **paths,
         if (checking) {
             // Read from the file rather than from the module: `check` does not
             // compile, so the module this build would make has no name yet,
-            // and the name is the file's own — the last piece of what its
-            // `module` line says.
+            // and the name is the file's own — the whole of what its `module`
+            // line says, which is what every name in it lives under. See
+            // D1039.
             const char *alias = build->units.count > 0
-                                    ? build->units.items[0].alias
+                                    ? build->units.items[0].module
                                     : NULL;
             fputs(",\"module\":", stdout);
             if (alias == NULL || alias[0] == '\0') {
