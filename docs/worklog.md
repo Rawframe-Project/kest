@@ -36667,3 +36667,36 @@ byte a breakpoint is rather than a host writing the number down. See D1012.
 and against a copy of the tree at 7fbb327; `KEST_DEEP=1` instruction counts for
 all seven programs; `tools/check-header.sh`, `tools/check-dead.sh`,
 `tools/check-docs.sh`, `tools/check-tables.sh`.
+
+## What the room asked for is, once the lowering has been at it
+
+The element fusion made the gate refuse, and the refusal was right. The
+compiler works out how deep the operand stack goes from what a body means; the
+lowering then takes the widest element move off the stack altogether, and the
+reckoning does not know that. So `frame.stepFrame` asked for two slots no run
+of it ever used, and `check-costs.sh` holds every body to asking for exactly
+what its deepest run reached.
+
+Reducing what the compiler asks for would be wrong — the deepest moment may be
+somewhere else entirely, and a body given too little overruns. So what is
+recorded is the slack: `KestChunk.fused_slots` is how much the lowering took
+off, the build that checks itself prints it beside what was asked and what was
+reached, and a body is held to asking for no more than its deepest run used
+plus that. Nought for a body nothing was fused in, which is nearly all of them.
+
+Two figures in the reference moved with it, as a number that moves on purpose
+does: a frame step an entity is forty-five instructions now rather than
+forty-six, and twenty-five of them move a value rather than twenty-six. The
+backstop that holds that paragraph moved with them. And `check-backstops.sh`
+brings `bench` into the copy a hole runs in, because the documents name the
+workloads now and a check that cannot find what the documents name fails for
+its own reasons and says nothing about the hole.
+
+One hole reported MISSED on the way and was reproduced by hand, in a copy built
+exactly the way the gate builds one: it is caught, twice, and the run that said
+otherwise was the one with three other things on the machine. The gate is green
+on the run after it.
+
+**Runs:** `make check`, green; `tools/check-costs.sh` and
+`tools/check-tables.sh` on their own; the missed hole reproduced by hand in a
+copy made the way `check-backstops.sh` makes one.

@@ -5000,18 +5000,20 @@ than guessed at: the build that checks itself counts every instruction it runs,
 and `KEST_DEEP=1` makes it say so. Run at two step counts and two entity
 counts and take the difference of the differences — a world is built once
 however many rounds there are, and a round has a loop of its own however many
-entities are in it — and a frame step an entity is **forty-six instructions**,
-of which eight are `load.k`, five are `load`, four are `load2`, four are
-`load.n`, four are `store` and one is `store.n` — twenty-six of the forty-six,
+entities are in it — and a frame step an entity is **forty-five instructions**,
+of which eight are `load.k`, five are `load`, four are `load2`, three are
+`load.n`, four are `store` and one is `store.n` — twenty-five of the forty-five,
 near enough three in five, move a value onto the stack or off it. The
 arithmetic is six: two `mul.f32`, two `add.f32`, one `add.i.narrow` and one
 `sub.i.narrow`. That is what a stack machine is, and it is where the next thing
 to be gone after was found: it was fifty-seven instructions before `load.k` and
 `load2` took the two commonest pairs of pushes and made each of them one
-instruction, and what that bought is in D961.
+instruction, and what that bought is in D961. It was forty-six until an element
+read out of a run went straight into the frame rather than through the stack,
+which is D1012.
 
 Counting them is not free, and what it costs is the other number this build
-says: over those forty-six instructions it asks its own compiler **fifty-two
+says: over those forty-five instructions it asks its own compiler **fifty-two
 questions** about what it is about to do — whose slots these are, whose
 constants, whether what a frame holds is the shape the chunk was declared with.
 That is the machine holding itself to what it was handed rather than trusting

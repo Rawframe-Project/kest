@@ -414,6 +414,15 @@ typedef struct {
     // How deep the operand stack gets. The compiler knows it exactly, so the
     // machine checks for room once per call instead of once per push.
     uint16_t stack_needed;
+    // And by how much the number above may now be more than enough. The
+    // compiler works out how deep the stack goes from what the body means;
+    // the lowering then takes the widest element move off the stack
+    // altogether (D1012), which the compiler's reckoning does not know about.
+    // Reducing the number above by this would be wrong -- the deepest moment
+    // may be somewhere else entirely -- so what is recorded is the slack, and
+    // `check-costs.sh` holds a body to asking for no more than its deepest
+    // run used plus this. Nought for a body nothing was fused in.
+    uint16_t fused_slots;
     // Whether anything in this program ever names this function as a value.
     // A call through a value enters one of these and nothing else, so it is
     // what a walk that meets one has to look at — and a program that names

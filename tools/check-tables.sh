@@ -1861,6 +1861,13 @@ LEFT_OUT = {
     ("KestChunk", "next_instruction"): "where the next opcode goes while a "
                                        "body is being written, which is "
                                        "nothing once one is",
+    ("KestChunk", "fused_slots"): "how much of the room this body asks for "
+                                  "the lowering took off the stack after the "
+                                  "compiler had reckoned it, which is a thing "
+                                  "about how the same program was written "
+                                  "down rather than about what it means: two "
+                                  "builds that differ only in it run the same "
+                                  "program (D1012)",
     ("KestLayout", "by_the_type"): "whether what a host writes into this has "
                                    "to be read by its type, which is worked "
                                    "out from the type the mark already folds "

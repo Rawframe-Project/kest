@@ -5569,8 +5569,9 @@ bool kest_runtime_free(KestRuntime *runtime) {
         for (uint32_t i = 0; i < runtime->module->count; i++) {
             const KestChunk *one = runtime->module->functions[i];
             if (one != NULL && one->went > 0) {
-                fprintf(stderr, "deep %s asked %u went %u\n", one->name,
-                        one->stack_needed, one->went);
+                fprintf(stderr, "deep %s asked %u went %u fused %u\n",
+                        one->name, one->stack_needed, one->went,
+                        one->fused_slots);
             }
         }
     }

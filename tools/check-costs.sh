@@ -228,9 +228,16 @@ for deep_path in (sorted(glob.glob(os.path.join('examples', '*.kest')))
         if not deep_line.startswith('deep '):
             continue
         deep_words = deep_line.split(' ')
-        deep_room = int(deep_words[-3])
-        deep_went = int(deep_words[-1])
-        deep_name = ' '.join(deep_words[1:-4])
+        deep_room = int(deep_words[-5])
+        deep_went = int(deep_words[-3])
+        # And how much of the room asked for the lowering took off the stack
+        # after the compiler had reckoned it: an element read straight into
+        # the frame never goes through the stack, and the reckoning does not
+        # know that. Reducing what is asked for would be wrong, because the
+        # deepest moment may be elsewhere, so a body is held to asking for no
+        # more than its deepest run used plus this. See D1012.
+        deep_fused = int(deep_words[-1])
+        deep_name = ' '.join(deep_words[1:-6])
         asked_for += 1
         reached += deep_room
         # The furthest any run of this body went, rather than the furthest one
@@ -241,12 +248,13 @@ for deep_path in (sorted(glob.glob(os.path.join('examples', '*.kest')))
         # everything else it does as one, so the example that prints a price
         # never goes as deep as the one that prints a whole number.
         went[deep_name] = (deep_room,
-                           max(deep_went, went.get(deep_name, (0, 0))[1]),
-                           deep_path)
+                           max(deep_went, went.get(deep_name, (0, 0, 0))[1]),
+                           deep_path, deep_fused)
 for deep_name in sorted(went):
-    deep_room, deep_went, deep_path = went[deep_name]
-    if deep_room > deep_went:
-        loose.append((deep_room - deep_went, deep_name, deep_path))
+    deep_room, deep_went, deep_path, deep_fused = went[deep_name]
+    if deep_room > deep_went + deep_fused:
+        loose.append((deep_room - deep_went - deep_fused, deep_name,
+                      deep_path))
 for deep_slack, deep_name, deep_path in sorted(loose, reverse=True)[:4]:
     print("costs: `%s` asks for %u slot(s) no run of it ever used, and the "
           "deepest was %s" % (deep_name, deep_slack, deep_path))

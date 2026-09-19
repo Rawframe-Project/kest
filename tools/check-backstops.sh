@@ -1735,7 +1735,7 @@ tokens   what a token is and what it carries""",
                  r"""    {"stop", NONE}, {"stop.none", NONE},"""],
         "make": [],
         "tool": "tools/check-tables.sh",
-        "caught": "instructions: 158 kinds and 159 names",
+        "caught": "instructions: 160 kinds and 161 names",
     },
     {
         # And the same for the tokens, which is the other list this rule was
@@ -5651,12 +5651,12 @@ fn main() -> i32 {
         # number. See D915.
         "what": "a frame step's instructions written down and not measured",
         "file": "docs/language.md",
-        "from": """**forty-six instructions**""",
-        "to": """**forty-five instructions**""",
+        "from": """**forty-five instructions**""",
+        "to": """**forty-four instructions**""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "a frame step an entity is 45 instruction(s)",
+        "caught": "a frame step an entity is 44 instruction(s)",
     },
     {
         # And the other half of that paragraph: what the build that checks
@@ -15528,8 +15528,13 @@ def put_out_of_order(hole):
 
         # `editors` comes too, because `check-tables.sh` reads the grammar in
         # it and a check that cannot find what it reads says nothing about the
-        # hole it was given. See D978.
-        for what in ("src", "include", "lib", "tools", "docs", "editors"):
+        # hole it was given. See D978. And `bench`, for the same reason from
+        # the other side: `check-docs.sh` holds every file this tree's
+        # documents name to being there, and the documents name the workloads
+        # the optimizing is measured on. A copy without them is a copy where
+        # that check fails for its own reasons and says nothing about the hole.
+        for what in ("src", "include", "lib", "tools", "docs", "editors",
+                     "bench"):
             shutil.copytree(what, os.path.join(work, what),
                             copy_function=bring)
         # The two hosts are making into this one, so they are made rather than

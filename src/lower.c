@@ -181,6 +181,9 @@ static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
         emit(lower, KEST_OP_INDEX_TO, origin);
         emit_u16(lower, layout, origin);
         emit_u16(lower, slot, origin);
+        if (size > lower->chunk->fused_slots) {
+            lower->chunk->fused_slots = size;
+        }
         return;
     }
     emit(lower, size == 1 ? KEST_OP_STORE : KEST_OP_STOREN, origin);
@@ -556,6 +559,10 @@ static void write_place(Lower *lower, const KestIrOp *op) {
             emit_u16(lower, place->offset, op->span);
             emit_u16(lower, place->layout, op->span);
             emit_u16(lower, from, op->span);
+            uint16_t wide = lower->module->layouts[place->layout].slots;
+            if (wide > lower->chunk->fused_slots) {
+                lower->chunk->fused_slots = wide;
+            }
             return;
         }
         emit(lower, KEST_OP_STORE_ELEM, op->span);
