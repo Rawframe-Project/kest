@@ -31932,3 +31932,97 @@ argued: a walk happens inside an allocation, `no.alloc` proves there is none,
 and fifty frames of `bench/frame.kest` over a lent run report one allocation —
 the first lend's header — and no walks. `bench/frame.c` prints that beside the
 timings so it stays true.
+
+## D1009. What an optimizer may not change, decided before one is written
+
+**Why now.** An optimizer that keeps a program's answer can still change what
+the program *is*: what it spends, where it stops, what a debugger shows, what a
+profile says. This language has resource controls and tools that read all four,
+so which of them an optimization may move has to be a rule rather than a
+judgement made pass by pass. This says which, from what the reference already
+promises and what the gate already holds.
+
+**A step is a bound, and the two things a step counts are not.** The reference
+says a step is a jump that goes back or a call, plus work an instruction does
+by weight, and that a budget on them bounds every program that would not stop.
+That is what a step is *for*, and it is what an optimizer may not break: a
+program that would not stop must still be stopped. What it is not is a count
+anybody may hold a program to. But the two halves of the definition are
+observable through `kest_fuel_set` and through what `profile` prints, so:
+
+- An optimization may reduce the work an instruction is charged for **only by
+  doing less of that work**. Folding two text joins into one is allowed and the
+  charge follows the bytes actually copied; charging fewer bytes than were
+  copied is not.
+- An optimization that removes a jump that goes back — unrolling, fusing two
+  loops — **charges the steps the rounds would have charged**. Otherwise a
+  program that would not stop is not stopped, which is the one thing a budget
+  is for.
+- Inlining a call **charges the call's step**. A body that is now straight-line
+  is still a body that was entered.
+
+`tools/check.sh`'s budget section holds the first of those today: a thousand
+turns is a thousand steps and not nine hundred and ninety-nine.
+
+**Where a program stops is preserved.** A refusal — a bounds check, a division
+by nought, a stale reference, a heap that ran out — happens at the operation
+that asked for it and reports the span it was written at. An optimization may
+not move a refusal earlier or later than an operation that must happen before
+it. Hoisting a failing operation out of a loop it would never have been reached
+in is the shape this forbids: it is allowed only when the operation cannot
+fail, which for a bounds check means the index is proved in range and for
+arithmetic means the operands are proved not to trap.
+
+**Call depth is the same rule.** A program that recurses too deep is refused at
+the call that crossed the line. Inlining does not change how deep a program
+goes, because a body that was inlined was going to be entered anyway, and the
+charge above keeps the count honest.
+
+**Stack-slot high-water is not a promise.** It is a measurement of one machine
+running one program and the reference says so where it prints it. An optimizer
+that needs fewer temporaries is allowed to need fewer temporaries, and
+`kest_needs` answers what this compiler asks for now rather than what it asked
+for last year. What is held is that what the compiler asks for is at least what
+the machine uses, which `KEST_CHECKED` checks on every instruction (D811, D812).
+
+**The instruction histogram is diagnostic data and not an API.** It is in the
+build that checks itself, behind an environment variable, printed to the error
+stream. Nothing may be held to it and nothing is.
+
+**Error spans survive every transformation.** Every IR operation carries the
+span it came from and a transformation carries it along; where two operations
+become one, the one that survives keeps the span of the one a reader would
+point at, which is the operation that could fail. A diagnostic that points at
+the wrong line is a defect whatever it was optimized into.
+
+**The debugger reads the code the machine runs.** A breakpoint is written into
+the bytecode and taken out again (D991), so it is a breakpoint in the optimized
+code. A line that no longer exists in the code cannot be stopped at, and the
+honest answer for a body whose optimization removed a line is to say so rather
+than to stop somewhere near it. Until an optimization removes a line, this
+costs nothing; when one does, the tool says what it did.
+
+**Collection timing is not observable to a program, and may not become so.** A
+program cannot read a clock without a host binding one, cannot ask when a walk
+happened, and cannot see a walk in anything it answers. `kest_clock` and
+`kest_telemetry` are the host's doors and nothing in the language reaches them.
+No optimization may make a program's answer depend on whether a walk happened.
+
+**The three promises attach after optimization, not before.** `no.alloc`,
+`no.host` and `deterministic` are proved over what the machine will actually
+run: the proof reads the emitted chunk, and the emitted chunk is what the
+optimizer produced. An optimization that introduced an allocation into a body
+that promised none would be caught by the proof rather than by a reviewer, and
+that is the order it has to stay in.
+
+**Reload, signatures and layouts are the front end's.** What a function takes
+and answers, what a struct's fields are and where, and what a world's places
+hold are decided before any of this and are the same whatever the optimizer
+does. A reload compares those, so a reload's answer may not depend on how
+something was compiled.
+
+**And the one that covers the rest.** Every optimization is held by running the
+same program with it and without it and requiring the same answer, the same
+refusals, and the same deterministic bytes. That is the differential test, it is
+Phase M of this mission, and an optimization that cannot be turned off cannot
+be tested that way.

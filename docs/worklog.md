@@ -36541,3 +36541,25 @@ experiment in a copy of the tree, thrown away afterwards; `bench/frame`;
 `examples/embed`, which asks for a walk and is refused when it asks of nothing;
 `make fast`; `tools/check-header.sh`, `tools/check-dead.sh`,
 `tools/check-docs.sh`, `tools/check-tables.sh`.
+
+## What an optimizer may not change, written before one was
+
+D1009, and it is a decision rather than a pass. An optimizer that keeps a
+program's answer can still change what the program is: what it spends, where it
+stops, what the debugger shows, what a profile says. This language has resource
+controls and tools that read all four, so which of them may move is a rule.
+
+The short of it: a step is a bound rather than a count anybody may hold a
+program to, but an optimization that removes a jump that goes back charges the
+steps the rounds would have charged, and one that inlines a call charges the
+call's step — otherwise a program that would not stop is not stopped, and that
+is the whole of what a budget is for. A refusal happens where it was going to
+happen: hoisting an operation that can fail out of a loop it would never have
+been reached in is the shape this forbids, and it is allowed exactly when the
+operation is proved not to fail. Spans survive every transformation. The three
+promises are proved over what the optimizer produced rather than over what it
+was given, which is the order they are already in. And every optimization is
+held by running the same program with and without it.
+
+**Runs:** `tools/check-docs.sh`. Nothing was built for this one; it is what the
+next thing built is held to.
