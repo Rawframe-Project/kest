@@ -285,6 +285,11 @@ struct KestStmt {
 typedef struct {
     KestSpan name;
     KestTypeRef *type;
+    // The `own` in front of a struct field, and nothing wide for a field
+    // written without one or for a parameter, which cannot take it. The span
+    // rather than a flag because the formatter leads a field from where it
+    // begins, and where a marked one begins is the word. See D1041.
+    KestSpan own;
 } KestField;
 
 // One case of an enum: its name and what it carries, by position.

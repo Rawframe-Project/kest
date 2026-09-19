@@ -72,10 +72,10 @@ fn main() -> i32 {
     }
 
     // The keys in an order of this program's own. What is inside a table is
-    // the table's: `t.keys` is walked where a frame wants the names and
-    // nothing else, and sorting it would move a key away from its value and
-    // leave the table answering with somebody else's. A copy is what a program
-    // sorts. See D693.
+    // the table's, and is now the table's to reach: sorting `t.keys` would
+    // move a key away from its value and leave the table answering with
+    // somebody else's, so nothing outside `std.table` can name it. A copy is
+    // what a program sorts. See D693 and D1041.
     let names = table.keysOf(stock)
     sort.by(names, sort.ascending)
     if len(names) != 3 || names[0] != "lamp" || names[2] != "sword" {
@@ -172,12 +172,13 @@ fn main() -> i32 {
         return 18
     }
 
-    // The pairs are walked over the two arrays, which are packed and in step.
+    // The pairs are walked by their places, which are nought up to the count.
     // What order they are in is what putting them in and taking them out left,
     // which is an order and not one to lean on.
     let counted = 0
     for i in 0..table.count(counts) {
-        if table.orElse(counts, counts.keys[i], 0) != counts.values[i] {
+        if table.orElse(counts, table.keyAt(counts, i), 0) !=
+                table.valueAt(counts, i) {
             return 19
         }
         counted += 1
@@ -291,19 +292,19 @@ fn main() -> i32 {
     let places: table.Table<f32, text> = table.empty()
     table.set(places, 1.5, "half past one")
     table.set(places, math.sqrt(0.0 - 1.0), "nowhere")
-    if table.count(places) != 1 || len(places.keys) != 1 {
+    if table.count(places) != 1 {
         return 27
     }
-    for k in places.keys {
-        if !table.has(places, k) {
+    for at in 0..table.count(places) {
+        if !table.has(places, table.keyAt(places, at)) {
             return 28
         }
     }
 
-    // And the two arrays in step, which is what makes walking them instead of
-    // asking worth anything: the value beside a key is that key's.
-    for at, name in stock.keys {
-        if stock.values[at].name != name {
+    // And the pairs in step, which is what makes walking them instead of
+    // asking worth anything: the value at a place is that place's key's.
+    for at in 0..table.count(stock) {
+        if table.valueAt(stock, at).name != table.keyAt(stock, at) {
             return 29
         }
     }

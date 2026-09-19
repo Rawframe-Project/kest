@@ -51,6 +51,10 @@ typedef struct {
     // eight bytes whatever it holds, and a `f32` is four. The two layouts are
     // for two places, and D016 says which is which.
     uint16_t byte_offset;
+    // Written `own`, so only the module that declared the shape may name it.
+    // Nothing of it reaches the machine: a member is laid out where it was
+    // laid out and a host reads what it read. See D1041.
+    bool own;
 } KestMember;
 
 // One case of an enum: what it carries, by position, and where each piece

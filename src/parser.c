@@ -2089,10 +2089,22 @@ static KestDecl *parse_declaration(Parser *parser) {
         skip_newlines(parser);
         while (!check(parser, KEST_TOK_RBRACE) && !check(parser, KEST_TOK_EOF)) {
             uint32_t was = parser->position;
+            // A word rather than a keyword, for the reason `scratch` is one:
+            // a field is a name and a colon, so `own keys: [K]` is a shape no
+            // field could have had, and a field may still be called `own`.
+            // See D1041.
+            KestSpan own = {0};
+            if (is_word(parser, 0, "own") &&
+                peek_at(parser, 1).kind == KEST_TOK_IDENT &&
+                peek_at(parser, 2).kind == KEST_TOK_COLON) {
+                own = current_span(parser);
+                advance(parser);
+            }
             KestField *field = parse_field(parser);
             if (field == NULL) {
                 recover_from(parser, was);
             } else {
+                field->own = own;
                 list_push(parser, &fields, field);
                 end_statement(parser);
             }

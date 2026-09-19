@@ -1064,8 +1064,14 @@ static void print_decl(Printer *printer, const KestDecl *decl,
                 printer->previous_line =
                     line_of(printer, ended.offset + ended.length);
             }
-            lead(printer, field->name.offset);
+            // A marked field begins at the word and not at the name, and
+            // the comments above it lead from where it begins.
+            lead(printer, field->own.length != 0 ? field->own.offset
+                                                 : field->name.offset);
             indent(printer);
+            if (field->own.length != 0) {
+                put(printer, "own ");
+            }
             print_span(printer, field->name);
             put(printer, ": ");
             print_type(printer, field->type);

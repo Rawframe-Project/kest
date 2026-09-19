@@ -12,10 +12,14 @@ module std.table
 // budget wants and what a chain of pointers is not.
 //
 // A struct is a value (D006), so a table handed to a function is a copy of
-// the three handles rather than of what they hold. Everything that changes is
+// the four handles rather than of what they hold. Everything that changes is
 // therefore behind one of them: `slots` is emptied and refilled rather than
 // replaced, and how many pairs there are is `len(keys)` rather than a number
 // beside it. A field written here would be written on the copy.
+//
+// All four are written `own`, so the handles are this module's and nothing
+// outside can be handed one. That is what makes the invariants above hold
+// against a program rather than merely against a careful one. See D1041.
 
 // The pairs are walked over `keys` and `values`, which are packed and in step:
 // `values[i]` is what `keys[i]` is set to, and there are `count(t)` of both.
@@ -33,18 +37,20 @@ const EMPTY: i32 = 0
 const TAKEN: i32 = -1
 
 // What it holds, held in step: the pair at a place is `keys[i]` beside
-// `values[i]`, and `slots` says where a key's place is. A shape that holds more
-// than one handle holds them in step with each other, and a program that writes
-// one of them writes the shape — there is no refusal for it, because a handle
-// handed out is a handle written through. See D694.
+// `values[i]`, and `slots` says where a key's place is. Every one of them is
+// this module's own, because a handle handed out is a handle written through
+// and two lines of ordinary Kest used to be enough to leave the four of them
+// disagreeing — `pop(t.keys)` never wrote a field, it read one and changed
+// what it named. What reaches them from outside is what is declared below.
+// See D694 and D1041.
 struct Table<K, V> {
-    keys: [K]
-    values: [V]
-    slots: [i32]
+    own keys: [K]
+    own values: [V]
+    own slots: [i32]
     // How many of the slots are marks. It is an array of one rather than a
     // number, for the same reason everything else here is behind a handle: a
     // number written in a function would be written on that function's copy.
-    marks: [i32]
+    own marks: [i32]
 }
 
 // What a table starts as. `table.empty()` rather than `table.table()`, which
@@ -61,19 +67,38 @@ fn count<K, V>(t: Table<K, V>) -> i32 no.alloc no.host deterministic {
     return len(t.keys)
 }
 
-// The keys, copied. Walking `t.keys` is walking the table's own memory, which
-// costs nothing and is what a frame does; changing it is something else. The
+// The keys, copied, for a program that wants them in an order of its own. The
 // pair at a place is `keys[i]` and `values[i]`, and a sort that moves one and
 // not the other leaves a table that answers about a key with another key's
-// value — measured, and no refusal anywhere, because a handle handed out is a
-// handle written through. So a program that wants them in an order of its own
-// asks for a copy and sorts that. See D693.
+// value -- measured, and once no refusal anywhere, because a handle handed out
+// is a handle written through. Now the arrays are this module's own and
+// nothing outside can be handed one, so what a program sorts is this copy
+// because it is the only thing there is to sort. Walking the pairs where they
+// are is `keyAt` and `valueAt`, which copy nothing. See D693 and D1041.
 fn keysOf<K, V>(t: Table<K, V>) -> [K] no.host deterministic {
     let out: [K] = array()
     for key in t.keys {
         push(out, key)
     }
     return out
+}
+
+// The pair at a place, which is where a program walks what a table holds. The
+// places are nought up to `count(t)` and they are the order the pairs went in,
+// except where something was taken out and the last pair moved into the hole
+// — so it is an order, and not one to rely on. Asking past the last of them is
+// reading past the end of an array and says so, the way an array does.
+//
+// These are what `find` answers for: it gives the place a key is kept at, and
+// nothing outside this module can read the arrays it is a place in. A program
+// that wants the pairs walks them here rather than reaching in, which is what
+// D1041 is about.
+fn keyAt<K, V>(t: Table<K, V>, at: i32) -> K no.alloc no.host deterministic {
+    return t.keys[at]
+}
+
+fn valueAt<K, V>(t: Table<K, V>, at: i32) -> V no.alloc no.host deterministic {
+    return t.values[at]
 }
 
 // Which slot a key is kept in, or nothing. Everything that looks for a key

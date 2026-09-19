@@ -37533,3 +37533,51 @@ block, say the refusal, and not say the deferred call ran. See D1040.
 **Runs:** the capture probe and an exit probe covering fallthrough, return,
 break, continue and ordering; two fault probes; a fault inside a `scratch { }`
 block; the new `returns` probe; `make fast`; `make check`.
+
+## A field a module keeps to itself
+
+Two lines of ordinary Kest broke a table from outside:
+
+    let by: table.Table<text, i32> = table.empty()
+    table.set(by, "a", 1)
+    table.set(by, "b", 2)
+    let gone = pop(by.keys)
+
+`keys` is a pair shorter than `values`, `slots` still says where the second key
+went, and `table.get(by, "b")` reads past the end -- with the refusal at
+`lib/std/table.kest`. `table.count` answers `len(keys)`, so the thing that
+would have noticed agreed with it instead.
+
+No arrangement of `std.table` fixes that. A struct is a value, so everything
+that changes has to be behind a handle (D1038), every handle is a field, and
+every field was reachable by anything that imported the module. D693 looked at
+this in 2024 and concluded that a library in this language cannot keep an
+invariant. That conclusion is what changed.
+
+`own` in front of a struct field means the module that declared the shape is
+the only thing that may name it. Reading is what is refused, not writing,
+because reading is the whole of it: `pop(by.keys)` never writes the field, it
+reads it and changes what it names through the handle it got. D693 saw that
+and took it as a reason the field-level answer could not work; it is a reason
+the field-level answer has to refuse reads.
+
+It costs no keyword. A field is a name and a colon, so `own keys: [K]` is a
+word, a name and a colon -- a shape no field could have had -- and `own: i32`
+is still a field called `own`. The language does this twice already, for
+`flags` and for `scratch`, and `src/parser.c` says why at the second one.
+
+Nothing of it reaches the machine. A member is laid out where it was laid out,
+a host reads the bytes it read, the instruction count of `bench/agents.kest`
+is what it was. It is one flag on a member and one refusal in the checker.
+
+What it cost the tree is the migration record. `examples/inventory.kest` and
+`examples/determinism.kest` walked a table's pairs as `t.keys[i]` beside
+`t.values[i]`. `table.keyAt(t, at)` and `table.valueAt(t, at)` replace that
+exactly -- the pair at a place, under `count(t)`, promising `no.alloc no.host
+deterministic` -- and they also make `find` useful, which until now answered a
+packed position nothing outside could read.
+
+See D1041.
+
+**Runs:** the reproduction before and after; the refusal for a read, for a
+write and for building the shape outside; `make fast`; `make check`.

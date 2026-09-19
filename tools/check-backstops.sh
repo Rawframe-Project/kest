@@ -3885,11 +3885,11 @@ for file in "$@"; do""",
         "caught": "a file with no module line said `",
     },
     {
-        # Two modules under one name, allowed. Where a module's names go is the
-        # program's rather than the file's, so two of them ending in the same
-        # word share a namespace and a file importing one finds the other's
-        # names without asking — which is what happened while this was a
-        # question about one file rather than about the program.
+        # A file reaching two modules whose names end in one word, allowed.
+        # There `math.` would be either of them, and a reader who wrote it
+        # would get whichever the walk happened to find. Two such modules in
+        # one program are two modules and are fine; one file seeing both is
+        # not. See D1039.
         "what": "two modules that put their names in one place, allowed",
         "file": "src/types.c",
         "from": r"""            if (strcmp(units->items[i].alias, units->items[j].alias) != 0) {
@@ -3908,6 +3908,42 @@ for file in "$@"; do""",
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
         "caught": "two modules under one name said `",
+    },
+    {
+        # A field its module keeps to itself, reachable from outside it. The
+        # question this answers is about the file the expression is written
+        # in, so a rule that always says yes is a rule that refuses nothing --
+        # and what is left is a library whose invariants hold against a
+        # careful program and not against a program. See D1041.
+        "what": "a field its module keeps to itself, reached from anywhere",
+        "file": "src/check.c",
+        "from": """static bool reaches_own(const Checker *checker, const KestType *type) {
+    return type->unit != NULL &&
+           strcmp(checker->program->module, type->unit->module) == 0;
+}""",
+        "to": """static bool reaches_own(const Checker *checker, const KestType *type) {
+    (void)checker;
+    (void)type;
+    return true;
+}""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a field its module keeps to itself said `",
+    },
+    {
+        # And the half of that rule a reader meets second: a shape holding one
+        # of those fields, built outside the module that declared it. Building
+        # one is naming every field it has, so a check that only watched the
+        # dot would hand the outside a shape it could then be given back.
+        "what": "a shape built outside the module whose fields it keeps",
+        "file": "src/check.c",
+        "from": """        if (type->members[i].own && !reaches_own(checker, type)) {""",
+        "to": """        if (false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a field its module keeps to itself said `",
     },
     {
         # The tables of refusals read under names they no longer have. Every
@@ -5817,12 +5853,12 @@ anywhere, and it is why the gate holds""",
         # read them every one of them was wrong. See D920.
         "what": "what compiling costs written down and not measured",
         "file": "docs/language.md",
-        "from": """118305 as a tree""",
+        "from": """118617 as a tree""",
         "to": """118306 as a tree""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "118306 as a tree, 154720 checked",
+        "caught": "118306 as a tree, 155032 checked",
     },
     {
         # And the section they are in saying whose machine they are. Bytes of
@@ -6276,8 +6312,8 @@ import std.math
 fn main() -> i32 {
     let t: table.Table<f32, i32> = table.empty()
     table.set(t, math.sqrt(0.0 - 1.0), 1)
-    for k in t.keys {
-        if !table.has(t, k) {
+    for at in 0..table.count(t) {
+        if !table.has(t, table.keyAt(t, at)) {
             io.print("a table counts a pair nothing can find")
             return 1
         }
@@ -9008,10 +9044,12 @@ fn main() -> i32 {
         # with a reader and not with the machine.
         "what": "a field at one byte in the words and another in the object",
         "file": "src/types.c",
-        "from": r"""            fprintf(out, ",\"slot\":%u,\"byte\":%u}",
-                    type->members[m].offset, type->members[m].byte_offset);""",
-        "to": r"""            fprintf(out, ",\"slot\":%u,\"byte\":%u}",
-                    type->members[m].offset, type->members[m].offset);""",
+        "from": r"""            fprintf(out, ",\"slot\":%u,\"byte\":%u,\"own\":%s}",
+                    type->members[m].offset, type->members[m].byte_offset,
+                    type->members[m].own ? "true" : "false");""",
+        "to": r"""            fprintf(out, ",\"slot\":%u,\"byte\":%u,\"own\":%s}",
+                    type->members[m].offset, type->members[m].offset,
+                    type->members[m].own ? "true" : "false");""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/embed.kest"],
@@ -10124,12 +10162,44 @@ fn main() -> i32 {
         # which is a name somebody is shown as one they may not use.
         "what": "a word coloured as a keyword that is not one",
         "file": "editors/vscode/syntaxes/kest.tmLanguage.json",
-        "from": "|flags|scratch)",
-        "to": "|flags|scratch|yield)",
+        "from": "|flags|scratch|own)",
+        "to": "|flags|scratch|own|yield)",
         "make": [],
         "tool": "tools/check-tables.sh",
         "arguments": [],
         "caught": "is not a word this language keeps",
+    },
+    {
+        # A word this language keeps that the language server does not offer.
+        # Four lists say what the words are -- the lexer, the reference, the
+        # grammar an editor colours with, and this one -- and the fourth was
+        # held by nothing until a fifth word was added and nobody noticed it
+        # was missing from it. See D1041.
+        "what": "a word an editor is never offered",
+        "file": "src/lsp.c",
+        "from": """        "own",
+""",
+        "to": "",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "the language server does not offer it",
+    },
+    {
+        # And the other way round: a word offered that a program may write
+        # wherever it likes, which is an editor teaching a reader that a name
+        # they own is the language's.
+        "what": "a word offered that this language does not keep",
+        "file": "src/lsp.c",
+        "from": """        "own",
+""",
+        "to": """        "own",
+        "yield",
+""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "and it is not a word this language keeps",
     },
     {
         # An editor answered by a reader of this compiler rather than by this

@@ -123,7 +123,7 @@
         },
         {
           "name": "keyword.declaration.kest",
-          "match": "\\b(const|enum|extern|fn|import|let|module|struct|flags|scratch)\\b"
+          "match": "\\b(const|enum|extern|fn|import|let|module|struct|flags|scratch|own)\\b"
         },
         {
           "name": "constant.language.kest",

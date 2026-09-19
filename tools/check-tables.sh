@@ -209,6 +209,14 @@ if one_licence != other_licence:
           "one at the root, and two copies of a licence is two licences")
     failed = 1
 
+# And a fourth list: the words the language server offers a reader who has
+# typed nothing. It had `flags` and `scratch` in it and nothing held it, so a
+# word added to the language was a word an editor stopped offering until
+# somebody noticed. See D1041.
+server_words = set(some("the words the language server offers", sorted(
+    spelled(table('src/lsp.c',
+                  r'const char \*const WORDS\[\] = \{(.*?)\n    \};')))))
+
 # And the same words again in the grammar an editor colours a file with, which
 # is the third list of them. A keyword the lexer holds that the grammar does not
 # is a word that stops looking like a keyword the day it is added; one the
@@ -224,11 +232,12 @@ with open("editors/vscode/syntaxes/kest.tmLanguage.json") as reading:
         found = re.search(r"\\b\(([a-z|.\\]+)\)\\b", rule["match"])
         if found:
             coloured.update(found.group(1).replace("\\", "").split("|"))
-# `flags` and `scratch` are words rather than keywords -- a program may use
-# either as a name where a declaration does not begin -- and both are coloured,
-# because a reader meeting one at the start of a line is meeting a declaration.
-# Everything else in the grammar has to be a word the lexer keeps.
-words = set(held) | {"flags", "scratch"}
+# `flags`, `scratch` and `own` are words rather than keywords -- a program may
+# use any of them as a name where a declaration does not begin -- and all three
+# are coloured, because a reader meeting one at the start of a line or in front
+# of a field is meeting a declaration. Everything else in the grammar has to be
+# a word the lexer keeps.
+words = set(held) | {"flags", "scratch", "own"}
 if some("the words the grammar colours", sorted(coloured)) and coloured != words:
     for word in sorted(words - coloured):
         print("keywords: the lexer holds `%s` and the grammar does not colour "
@@ -238,6 +247,14 @@ if some("the words the grammar colours", sorted(coloured)) and coloured != words
         print("keywords: the grammar colours `%s` and it is not a word this "
               "language keeps" % word)
         failed = 1
+for word in sorted(words - server_words):
+    print("keywords: `%s` is a word this language keeps and the language "
+          "server does not offer it" % word)
+    failed = 1
+for word in sorted(server_words - words):
+    print("keywords: the language server offers `%s` and it is not a word "
+          "this language keeps" % word)
+    failed = 1
 
 # What a check writes into its own scratch and then never looks at. A program
 # built and not run is a probe that says nothing, and what it looks like from

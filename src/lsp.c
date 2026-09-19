@@ -909,6 +909,7 @@ static void completion(Server *server, const Json *id) {
         "extern", "false", "fn",       "for",    "if",    "import",
         "in",    "let",    "match",    "module", "none",  "return",
         "struct", "true",  "while",    "scratch", "flags",
+        "own",
     };
     for (size_t i = 0; i < sizeof(WORDS) / sizeof(WORDS[0]); i++) {
         say(&out, first ? "" : ",");

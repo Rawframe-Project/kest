@@ -43,6 +43,7 @@ another and is not named here is a check that fails.
 | D998 | D1035 | 1.0.0 was withdrawn a day after it was published, and this is 0.0.1 |
 | D1021 | D1036 | the tag gate is retired, and a migration record takes its place |
 | D185 | D1039 | a name lives under the whole of its module, so two modules may end in one word |
+| D693 | D1041 | a field its module keeps to itself, so a library keeps an invariant |
 
 ---
 
@@ -33834,3 +33835,68 @@ that faults is not an example that answers nought: one body, an array holding a
 nought at nought, and an index inside it or outside it, so the same two lines
 reach both traps. Each run has to say it entered the block, say the refusal, and
 not say the deferred call ran.
+
+## D1041. A field a module keeps to itself, written `own`. Supersedes D693
+
+**Decided.** A struct field may be written `own name: type`. A field written
+that way can only be named -- read, written, or passed to a struct being built
+-- from inside the module that declared the shape. `std.table.Table`'s four
+fields are written that way, and `keyAt` and `valueAt` are the door that
+replaces reaching in.
+
+**What was reproduced.** Two lines of ordinary Kest broke a table:
+
+    let by: table.Table<text, i32> = table.empty()
+    table.set(by, "a", 1)
+    table.set(by, "b", 2)
+    let gone = pop(by.keys)
+
+`keys` is one pair shorter than `values` and `slots` still says where the
+second key was, so `table.get(by, "b")` reads past the end of `keys` and the
+refusal is at `lib/std/table.kest`. `table.count` answers `len(keys)` and
+therefore agreed with the corruption rather than noticing it.
+
+**Why the library could not fix it.** `Table` is three arrays and a count held
+in a fourth, and it has to be: a struct is a value, so a scalar field written
+by a function is written on that function's copy (D1038). Everything that
+changes is behind a handle, every handle is a field, and every field was
+reachable by anything that imported the module. There is no arrangement of
+`std.table` that keeps its invariants while its representation is four public
+handles.
+
+**Why reading is what is refused.** `pop(by.keys)` never writes the field. It
+reads it, and changes what it names through the handle it was given. A field
+that can be read is a field that can be written, so protecting the write would
+protect nothing.
+
+**Why this is a word and not a keyword.** CLAUDE.md's rule is that the cost of
+a keyword is paid by every program that wanted the name. A field is a name and
+a colon, so `own keys: [K]` -- a word, a name and a colon -- is a shape no
+field could ever have had, and `own: i32` is still a field called `own`. The
+language already does this twice, for `flags` where a declaration begins and
+for `scratch` before a brace, and `src/parser.c` says why at the second one.
+So the mechanism costs nothing a program might have wanted.
+
+**Why a field and not an opaque shape.** They are the same surface -- one word
+in one grammar position and one refusal -- and the field is the more useful of
+the two, because a shape whose every field is `own` is an opaque shape and a
+shape with one is not. `std.table` wanted all four; `std.vec` wants none.
+
+**What it is not.** It is not a class, it is not private-to-an-instance, and
+there is nothing to go with it: no `public`, because everything else already
+is, and no friend, because a module is the unit and a module is one thing. It
+is not a host rule either -- a host reading a lend reads the bytes it always
+read, because nothing of this reaches the machine. A member is laid out where
+it was laid out and `KEST_CHECKED` counts what it counted.
+
+**What it cost the tree, which is the migration record.** `examples/inventory.kest`
+and `examples/determinism.kest` walked a table's pairs as `t.keys[i]` beside
+`t.values[i]`, which is the reach-in this refuses. `keyAt(t, at)` and
+`valueAt(t, at)` replace it exactly: the pair at a place, under `count(t)`,
+promising `no.alloc no.host deterministic`. They also make `find` useful,
+which answered a packed position that nothing outside could then read.
+
+**What was evaluated and not built.** A read-only view of an array, so that
+`t.keys` could still be walked and not changed. It is a second kind of array in
+the type system, a second thing every builtin has to have an opinion about, and
+what it buys over `keyAt` is one call a turn.

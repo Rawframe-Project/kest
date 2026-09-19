@@ -234,8 +234,9 @@ fn keyed() -> u64 {
             table.remove(t, i)
         }
     }
-    for at, key in t.keys {
-        mark = hash.join(mark, u64(key * 65537 + t.values[at]))
+    for at in 0..table.count(t) {
+        let key = table.keyAt(t, at)
+        mark = hash.join(mark, u64(key * 65537 + table.valueAt(t, at)))
     }
     return mark
 }

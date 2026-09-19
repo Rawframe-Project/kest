@@ -1031,9 +1031,48 @@ static void note_written(Checker *checker, const KestExpr *expr, uint32_t want,
     }
 }
 
+// Whether a field its module keeps to itself is this file's to name. A module
+// is the whole of what a file calls itself, so the question is whether the
+// shape was declared in the module being checked. A file that names no module
+// declares under nothing, and nothing else in a program is under nothing with
+// it. See D1041.
+static bool reaches_own(const Checker *checker, const KestType *type) {
+    return type->unit != NULL &&
+           strcmp(checker->program->module, type->unit->module) == 0;
+}
+
+// A field the module that declared it keeps to itself. Reading is what is
+// refused rather than writing, because reading is the whole of it: `pop(t.keys)`
+// reads the field and changes what it names through the handle it was given,
+// so a field that can be read is a field that can be written. See D1041.
+static void refuse_own(Checker *checker, KestSpan where, const KestType *type,
+                       const KestMember *member) {
+    report(checker, where, "K0365", "`%s` is `%s`'s own", member->name,
+           type->unit->module);
+    kest_diags_note(checker->program->diags, type->declared_in, member->span,
+                    "written `own` here");
+    suggest(checker, "what reaches it is what `%s` declares",
+            type->unit->module);
+}
+
 static KestType *check_construction(Checker *checker, KestExpr *expr,
                                     KestType *type) {
     expr->call.callee->type = type;
+
+    // A shape holding one of those is built where it is declared: every field
+    // is named by position, so building one anywhere else is naming them all.
+    for (uint32_t i = 0; i < type->member_count; i++) {
+        if (type->members[i].own && !reaches_own(checker, type)) {
+            report(checker, expr->call.callee->span, "K0365",
+                   "`%s` holds `%s`, which is `%s`'s own", type->name,
+                   type->members[i].name, type->unit->module);
+            kest_diags_note(checker->program->diags, type->declared_in,
+                            type->members[i].span, "written `own` here");
+            suggest(checker, "what makes one is what `%s` declares",
+                    type->unit->module);
+            return error_type(checker);
+        }
+    }
 
     if (expr->call.arg_count != type->member_count) {
         report(checker, expr->span, "K0309",
@@ -2972,12 +3011,28 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
     if (object->tag == KEST_T_STRUCT) {
         for (uint32_t i = 0; i < object->member_count; i++) {
             if (kest_word_same(object->members[i].name, name, length)) {
+                if (object->members[i].own && !reaches_own(checker, object)) {
+                    refuse_own(checker, expr->field.name, object,
+                               &object->members[i]);
+                    return error_type(checker);
+                }
                 return object->members[i].type;
             }
         }
         report(checker, expr->field.name, "K0307", "`%s` has no field `%.*s`",
                type_name(checker, object), (int)length, name);
         const char *nearest = kest_nearest_member(object, name, length);
+        // One this file cannot name is not one to suggest: a reader told to
+        // write it would be refused for writing it.
+        if (nearest != NULL && !reaches_own(checker, object)) {
+            for (uint32_t i = 0; i < object->member_count; i++) {
+                if (object->members[i].own &&
+                    strcmp(object->members[i].name, nearest) == 0) {
+                    nearest = NULL;
+                    break;
+                }
+            }
+        }
         if (nearest != NULL) {
             suggest(checker, "did you mean `%s`?", nearest);
         } else {

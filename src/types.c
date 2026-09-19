@@ -2216,6 +2216,7 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
     for (uint32_t f = 0; f < fields; f++) {
         members[f].name = span_string(program, decl->record.fields[f]->name);
         members[f].span = decl->record.fields[f]->name;
+        members[f].own = decl->record.fields[f]->own.length != 0;
         members[f].type =
             kest_resolve_type_ref(program, decl->record.fields[f]->type);
     }
@@ -2977,6 +2978,11 @@ static bool declare_structs(KestProgram *program, const KestUnit *unit) {
         type->name = name;
         type->span = decl->name;
         type->declared_in = program->source;
+        // Which file declared it, which is where the module a field marked
+        // `own` belongs to comes from. It used to be set for generic shapes
+        // alone, because a copy is made from where the shape was written and
+        // nothing else asked. See D1041.
+        type->unit = program->unit;
 
         // A generic struct is not a type but the shape of one. `Pair<i32>` is
         // a type; `Pair` on its own has no size and is never measured.
@@ -2995,7 +3001,6 @@ static bool declare_structs(KestProgram *program, const KestUnit *unit) {
                 }
             }
             type->decl = decl;
-            type->unit = program->unit;
         }
     }
     return true;
@@ -3076,6 +3081,7 @@ static bool resolve_struct_fields(KestProgram *program, const KestUnit *unit) {
             members[used].name = field_name;
             members[used].type = kest_resolve_type_ref(program, field->type);
             members[used].span = field->name;
+            members[used].own = field->own.length != 0;
             used++;
         }
 
@@ -4673,8 +4679,9 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
             kest_json_text(type->members[m].name, out);
             fputs(",\"type\":", out);
             kest_json_text(kest_type_name(arena, type->members[m].type), out);
-            fprintf(out, ",\"slot\":%u,\"byte\":%u}",
-                    type->members[m].offset, type->members[m].byte_offset);
+            fprintf(out, ",\"slot\":%u,\"byte\":%u,\"own\":%s}",
+                    type->members[m].offset, type->members[m].byte_offset,
+                    type->members[m].own ? "true" : "false");
         }
         fputs("]}", out);
     }

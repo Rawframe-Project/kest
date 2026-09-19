@@ -4543,6 +4543,46 @@ case "$shared" in
     ;;
 esac
 
+# A field the module that declared it keeps to itself, reached from outside it.
+# Both halves of the refusal are here because they are one rule seen from two
+# sides: naming the field, and building the shape that holds it, which is
+# naming every field it has. It takes two files, which is why it is asked here
+# rather than in the table above. See D1041.
+mkdir "$scratch"/refused/kept
+cat > "$scratch"/refused/kept/hold.kest <<'KEST'
+module hold
+
+struct Box {
+    own inside: [i32]
+}
+
+fn make() -> Box {
+    let inside: [i32] = array()
+    push(inside, 1)
+    return Box(inside)
+}
+KEST
+cat > "$scratch"/refused/kept/main.kest <<'KEST'
+module main
+
+import hold
+
+fn main() -> i32 {
+    let box = hold.make()
+    let held = len(box.inside)
+    let other = hold.Box(array())
+    return held + len(other.inside)
+}
+KEST
+kept=$("$kest" check "$scratch"/refused/kept/main.kest 2>&1 </dev/null)
+case "$kept" in
+*"K0365"*"\`inside\` is \`hold\`'s own"*"K0365"*"holds \`inside\`, which is \`hold\`'s own"*) ;;
+*)
+    complain "check: a field its module keeps to itself said \
+\`$(printf '%s' "$kept" | head -1)\`"
+    ;;
+esac
+
 # A value written where a statement belongs is a `return` with the word left
 # off, and the function is told exactly that. What the arms are measured
 # against is then what the function gives back rather than nothing, so `none`

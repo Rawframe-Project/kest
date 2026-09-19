@@ -711,12 +711,14 @@ that rounds to nothing is written without a sign in front of it.
 What is there: `std.io` says something, `std.math` names the host's arithmetic
 and writes what can be built out of it, `std.text` cuts and builds text,
 `std.sort` is told what comes first — `sort.by(items, sort.ascending)` —
-`std.table` is a hash table, made by `table.empty()`, whose pairs are walked over its `keys` and
-`values`, which are packed and in step — walking them costs nothing and changing
-them is changing the table: a sort that moves a key and not the value beside it
-leaves a table that answers about one key with another key's value, and nothing
-refuses it, because a handle handed out is a handle written through.
-`table.keysOf` gives a copy for a program that wants an order of its own. `std.vec` is two and three components of
+`std.table` is a hash table, made by `table.empty()`, whose pairs are walked by
+their places: `table.keyAt(t, at)` and `table.valueAt(t, at)` for `at` under
+`table.count(t)`, which copy nothing. What it holds them in is four arrays that
+are its own, so nothing outside can be handed one — a sort that moved a key and
+not the value beside it would leave a table answering about one key with
+another key's value, and that used to be two lines of ordinary Kest away.
+`table.keysOf` gives the keys copied, for a program that wants an order of its
+own. `std.vec` is two and three components of
 `f32`, and `std.random` gives numbers that look random out of a state the
 program holds.
 
@@ -1421,6 +1423,11 @@ that does not is `K0212` rather than a file that holds something a file cannot
 hold — the width is what a host sees, so it is written rather than counted off
 the names.
 
+`scratch` is not one: it opens a block of working memory in front of a brace
+and is a name everywhere else. Nor is `own`, which marks a struct field in
+front of a name and a colon — `own keys: [K]` — and is a name everywhere else,
+so `own: i32` is still a field called `own`.
+
 `type` is not one either, and is a name like any other. A word kept back for a
 feature nobody has designed is a promise, and `flags` is how this language
 takes a word back when it needs one: where a declaration begins it declares,
@@ -1620,9 +1627,38 @@ What a struct holds is a value in the same way, except a handle: an array field
 is a handle to what it names, and a struct copied field by field copies the
 handle and not what is behind it. A shape that holds more than one of them holds
 them in step — `keys[i]` beside `values[i]` — and a program that writes one of
-them writes the shape, whichever copy of the struct it has. Nothing refuses that,
-because a handle handed out is a handle written through, so a shape that keeps
-something in step says so where it is declared, and the library's own do.
+them writes the shape, whichever copy of the struct it has: a handle handed out
+is a handle written through.
+
+**A field may be the module's own.** Written `own`, it can only be named from
+inside the module that declared the shape — read, written, or given to the
+shape being built — so nothing outside can be handed the handle in the first
+place:
+
+```kest
+struct Table<K, V> {
+    own keys: [K]
+    own values: [V]
+}
+```
+
+Reading is what is refused and not writing, because reading is the whole of it:
+`pop(t.keys)` never writes the field, it reads it and changes what it names
+through the handle it got. A shape whose every field is `own` is one only its
+own module can build, which is what an opaque type is without a second word for
+it. `own` is a word and not a keyword, so a field called `own` still works, and
+none of it reaches the machine: a field is laid out where it was laid out and a
+host reads the bytes it read.
+
+```
+error[K0365]: `keys` is `std.table`'s own
+   |
+10 |     let gone = pop(by.keys)
+   |                       ^^^^ what reaches it is what `std.table` declares
+```
+
+A shape that keeps something in step and does not keep its fields says so where
+it is declared.
 
 **The mistake this makes easiest.** A function handed a struct is handed a
 copy, so writing to a field of it writes into the copy:
@@ -5729,12 +5765,16 @@ tool splitting a name at a dot would invent modules that are not there. It is
 written rather than left to be worked out, and it is null for a declaration
 under no module. See D1039.
 
+Every field of a struct says whether it is `own`, which is whether the module
+that declared the shape is the only thing that may name it. A tool that shows a
+shape shows what a file writing it would be allowed to write. See D1041.
+
 Beside the diagnostics is what the run cost the compiler: `cost` is how many
 bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 502 lines:
-47956 bytes as tokens, 118305 as a tree, 154720 checked and 182121 compiled.
+47956 bytes as tokens, 118617 as a tree, 155032 checked and 182433 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
 
@@ -5751,7 +5791,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 17323 bytes, against the 182121 it costs to compile.
+file and 17323 bytes, against the 182433 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.
@@ -6070,8 +6110,8 @@ has to provide marked as one, and a line for each module it imported.
       "line": 3,
       "column": 8,
       "fields": [
-        {"name": "x", "type": "i32", "slot": 0, "byte": 0},
-        {"name": "y", "type": "i32", "slot": 1, "byte": 4}
+        {"name": "x", "type": "i32", "slot": 0, "byte": 0, "own": false},
+        {"name": "y", "type": "i32", "slot": 1, "byte": 4, "own": false}
       ]
     }
   ],
