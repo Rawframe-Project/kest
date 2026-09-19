@@ -37095,3 +37095,37 @@ workloads and the library; `KEST_DEEP=1 kest-debug` for the bytes, with and
 without `KEST_NOOPT`; `bench/measure` paired ten times on `agents` and `rules`
 for the time and on `rules` for what compiling cost; the fuzzer's source
 boundary at eight seeds, folded both ways.
+
+## What compiling takes, by stage, in time
+
+The by-stage accounting this project had was memory. D6 asked for time, and the
+audit found the two had been confused for each other. So a build can be given a
+clock now — the caller's, for the reason `kest_clock` is the host's — and
+`KEST_SPENT=1` asks the command line for it. A build nobody asked about is
+given none and weighs nothing: every reading goes through one door that answers
+nought when there is no clock.
+
+Nine stages, and one number beside them that is a share rather than a stage:
+what the copies of generic functions took, which cannot be a row of its own
+without being counted twice.
+
+Three programs, three different answers. `kernel` is forty lines and two thirds
+of compiling it is finding and reading files. `agents` spends forty per cent
+reading and fifty-six on its bodies. And `inventory` makes fifty-two copies of
+generic functions, and *proving the cost promises is a third of compiling it* —
+more than reading, more than writing. Nothing had ever looked at that number.
+
+The question the mission asked — does optimizing change compile latency — is
+answered no: 0.4 % of `kernel`, 1.5 % of `agents`, 0.6 % of `inventory`, and a
+tenth of a per cent of any of them with the pass turned off.
+
+And the instrument caught itself. The first reading said optimizing was eight
+per cent of compiling `agents`, which was not the pass: it was the counting
+D1024 does, walking every body once per operation for a number only `KEST_IRSAY`
+ever reads. It happens when somebody asked now, which is the same rule the
+timing keeps. See D1026.
+
+**Runs:** `KEST_SPENT=1 kest build` over `bench/kernel.kest`,
+`bench/agents.kest`, `bench/rules.kest`, `examples/inventory.kest`,
+`examples/boxes.kest` and `lib/std/text.kest`, nine readings each and the
+middle of them, with and without `KEST_NOOPT`; `make fast`; `make check`.

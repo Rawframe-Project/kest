@@ -4285,7 +4285,10 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
     }
 
     // Each copy of a generic function, written from the same body with its
-    // type names bound. Nothing about it is a special case except that.
+    // type names bound. Nothing about it is a special case except that -- and
+    // the clock around it, which is what says what the rule costs in time
+    // rather than in bytes. See D778 and D1026.
+    uint64_t copying = kest_ir_ticked(ir->now, ir->now_context);
     for (uint32_t i = 0; i < program->instance_count; i++) {
         const KestInstance *instance = &program->instances[i];
         if (instance->symbol == NULL) {
@@ -4318,6 +4321,7 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
             return false;
         }
     }
+    ir->copies += kest_ir_ticked(ir->now, ir->now_context) - copying;
 
     // Every element type a signature mentions gets a layout, whether or not a
     // body ever reached one. What a host can be handed is what the program

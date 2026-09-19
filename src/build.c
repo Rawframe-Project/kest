@@ -33,6 +33,19 @@ KestBuild *kest_build_open(const char *library, char **paths, int count,
     return build;
 }
 
+void kest_build_clock(KestBuild *build, uint64_t (*now)(void *), void *context,
+                      uint64_t reading) {
+    if (build != NULL) {
+        build->now = now;
+        build->now_context = context;
+        build->spent.reading = reading;
+    }
+}
+
+const KestSpent *kest_build_spent(const KestBuild *build) {
+    return &build->spent;
+}
+
 void kest_build_index_names(KestBuild *build, bool keep) {
     if (build != NULL) {
         build->index_names = keep;
@@ -43,6 +56,7 @@ bool kest_build_check(KestBuild *build) {
     if (build->diags.error_count > 0 || build->units.count == 0) {
         return false;
     }
+    uint64_t at = kest_ir_ticked(build->now, build->now_context);
     if (!kest_check(build->arena, &build->diags, &build->units,
                     build->index_names,
                     &build->program)) {
@@ -55,11 +69,17 @@ bool kest_build_check(KestBuild *build) {
         }
         return false;
     }
+    build->spent.naming += kest_ir_ticked(build->now, build->now_context) - at;
+    at = kest_ir_ticked(build->now, build->now_context);
     kest_check_bodies(build->program, &build->units);
+    build->spent.bodies += kest_ir_ticked(build->now, build->now_context) - at;
     if (build->diags.error_count > 0) {
         return false;
     }
+    at = kest_ir_ticked(build->now, build->now_context);
     kest_check_contracts(build->program, &build->units);
+    build->spent.promises +=
+        kest_ir_ticked(build->now, build->now_context) - at;
     return build->diags.error_count == 0;
 }
 
@@ -115,6 +135,8 @@ bool kest_build_emit(KestBuild *build) {
         return false;
     }
     kest_ir_program_init(&ir, bodies, kest_lower_body, writes);
+    ir.now = build->now;
+    ir.now_context = build->now_context;
     // What the optimizer found, said per body, when somebody asks. It is a
     // development question and not a command: what it prints is a count of
     // shapes in the resolved form of a program, which is of no use to anybody
@@ -129,8 +151,20 @@ bool kest_build_emit(KestBuild *build) {
             ir.say_found = say_what_the_optimizer_found;
         }
     }
+    uint64_t at = kest_ir_ticked(build->now, build->now_context);
     bool compiled =
         kest_compile(build->program, &build->units, &build->module, &ir);
+    uint64_t compiling = kest_ir_ticked(build->now, build->now_context) - at;
+    // What the three stages inside a body took, taken off what compiling took:
+    // what is left is the walk of the checked tree that wrote the resolved
+    // form. Taken off rather than timed on its own, because the walk and the
+    // three are interleaved a body at a time.
+    build->spent.verifying += ir.verifying;
+    build->spent.optimizing += ir.optimizing;
+    build->spent.lowering += ir.lowering;
+    build->spent.copies += ir.copies;
+    uint64_t inside = ir.verifying + ir.optimizing + ir.lowering;
+    build->spent.writing += compiling > inside ? compiling - inside : 0;
     kest_arena_free(bodies);
     if (!compiled || build->module.out_of_room) {
         kest_diags_starve(&build->diags);
@@ -139,7 +173,10 @@ bool kest_build_emit(KestBuild *build) {
     // emitted. If the two disagree the tree walk missed something, and finding
     // that out here beats finding it out in a frame (D058).
     if (build->diags.error_count == 0) {
+        at = kest_ir_ticked(build->now, build->now_context);
         kest_module_prove(&build->module, build->arena, &build->diags);
+        build->spent.finishing +=
+            kest_ir_ticked(build->now, build->now_context) - at;
     }
     build->compiled = build->diags.error_count == 0;
     // And the trees, which nothing reads once every copy has been compiled and

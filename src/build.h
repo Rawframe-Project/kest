@@ -8,6 +8,42 @@
 #include "lower.h"
 #include "vm.h"
 
+// What each stage of compiling took, in whatever unit the clock a build was
+// given counts in. Nought everywhere for a build that was given no clock,
+// which is every build nobody asked about.
+//
+// What compiling cost in memory is a different question with different doors
+// -- `kest_build_cost` and `kest_build_held` -- and the two never move
+// together. Everything here is time.
+typedef struct {
+    // Every file the program names, found, read and parsed. Timed by whoever
+    // opened the build, because the reading is what that call is and there is
+    // nowhere to keep a clock before it.
+    uint64_t reading;
+    // Declarations, types, and what every name means.
+    uint64_t naming;
+    // Every function body checked against them.
+    uint64_t bodies;
+    // The cost promises proved.
+    uint64_t promises;
+    // The checked tree walked and written down as the resolved form, which is
+    // what compiling is once the three stages below it are taken off.
+    uint64_t writing;
+    // Of all four of those, the share that went on copies of generic
+    // functions: retyped, bound, and written out one per set of types they
+    // were called with. It is a share rather than a stage of its own, because
+    // a copy is a body and goes through what a body goes through. See D778.
+    uint64_t copies;
+    // The resolved form held to what a backend may read.
+    uint64_t verifying;
+    // The pass over it.
+    uint64_t optimizing;
+    // The resolved form written as bytecode.
+    uint64_t lowering;
+    // What was emitted, proved against what was declared.
+    uint64_t finishing;
+} KestSpent;
+
 // A compiled program and everything it was compiled from. One arena holds all
 // of it, so freeing the build frees the lot.
 struct KestBuild {
@@ -32,6 +68,11 @@ struct KestBuild {
     // The one walk of the whole program, worked out when somebody first asks
     // and handed to everybody who asks after, machines included. See D607.
     KestWalk walked;
+    // The clock, or NULL for a build nobody is weighing, and what each stage
+    // took by it.
+    uint64_t (*now)(void *);
+    void *now_context;
+    KestSpent spent;
 };
 
 // The stages, so the command line can stop between them and a host does not
@@ -59,6 +100,19 @@ const char *kest_build_name(KestBuild *build, const char *name);
 // Asks the next check to keep the index an editor reads. Nothing else wants
 // it and it is a third again of what a finished build holds, so it is off.
 void kest_build_index_names(KestBuild *build, bool keep);
+// The clock this build times its own stages with, and how long opening it
+// took, which the caller timed because there was nowhere to keep a clock while
+// it happened. The clock is the caller's for the reason `kest_clock` is the
+// host's: this library is ISO C, which has no monotonic clock, and a duration
+// belongs to the machine that ran rather than to the program.
+//
+// Given between opening a build and checking it. A build never given one
+// weighs nothing and is not slowed by asking: every reading is through one
+// door that answers nought for no clock. See D1026.
+void kest_build_clock(KestBuild *build, uint64_t (*now)(void *), void *context,
+                      uint64_t reading);
+// What each stage took, by that clock. Nought everywhere when there was none.
+const KestSpent *kest_build_spent(const KestBuild *build);
 bool kest_build_check(KestBuild *build);
 bool kest_build_emit(KestBuild *build);
 

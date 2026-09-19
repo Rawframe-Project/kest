@@ -169,9 +169,19 @@ bool kest_ir_body_end(KestIrProgram *program) {
     // Verified, optimized, verified again, and only then handed over. What
     // goes into the optimizer is a body the verifier accepted and what comes
     // out has to be one too, which is the whole of what the shape is for: a
-    // pass that breaks a body is found here rather than in the machine. See
-    // D1024.
+    // pass that breaks a body is found here rather than in the machine.
+    //
+    // The second verification is the backend's own, at the top of
+    // `kest_lower_body`, and is left there rather than repeated here: what a
+    // body that is not one needs is a diagnostic naming where it was
+    // declared, and the backend is what has the diagnostics. A backend is
+    // entitled to refuse what it is handed, and this is the one that does.
+    // See D1024.
+    uint64_t at = kest_ir_ticked(program->now, program->now_context);
     if (!program->out_of_memory && kest_ir_verify(&program->body) == NULL) {
+        program->verifying +=
+            kest_ir_ticked(program->now, program->now_context) - at;
+        at = kest_ir_ticked(program->now, program->now_context);
         KestIrFound found;
         memset(&found, 0, sizeof found);
         if (!optimize(program, &program->body, &found)) {
@@ -193,10 +203,15 @@ bool kest_ir_body_end(KestIrProgram *program) {
                 program->say_found(&program->body, &found);
             }
         }
+        program->optimizing +=
+            kest_ir_ticked(program->now, program->now_context) - at;
     }
+    at = kest_ir_ticked(program->now, program->now_context);
     bool went = program->out_of_memory
                     ? false
                     : program->written(program->backend, &program->body);
+    program->lowering +=
+        kest_ir_ticked(program->now, program->now_context) - at;
     kest_arena_rewind(program->arena, program->before);
     memset(&program->body, 0, sizeof program->body);
     return went;
@@ -606,6 +621,10 @@ const char *kest_ir_escapes(const KestIrBody *body, KestArena *arena,
         }
     }
     return NULL;
+}
+
+uint64_t kest_ir_ticked(uint64_t (*now)(void *), void *context) {
+    return now == NULL ? 0 : now(context);
 }
 
 bool kest_ir_asked_off(const char *name, int *decided) {
@@ -1055,11 +1074,13 @@ static bool take_the_copy(KestIrProgram *program, KestIrBody *body,
 // Between two verifications, which is what the shape of this is for: what
 // goes in is a body the verifier accepted and what comes out has to be one
 // too. See D1024.
-static bool optimize(KestIrProgram *program, KestIrBody *body,
-                     KestIrFound *found) {
-    if (found == NULL) {
-        return true;
-    }
+// What there is to do in one body, which is a walk of it per operation for
+// three of the four shapes. It happens when somebody asked and not otherwise:
+// a compile nobody is reading the counts from should not pay for them, and
+// what a release build does is the pass and nothing else. It was eight per
+// cent of compiling `agents` before this sentence was true.
+static bool count_what_there_is(KestIrProgram *program, const KestIrBody *body,
+                                KestIrFound *found) {
     bool *inside = looped(program->arena, body);
     if (inside == NULL) {
         return false;
@@ -1117,6 +1138,18 @@ static bool optimize(KestIrProgram *program, KestIrBody *body,
             break;
         }
     }
+    return true;
+}
+
+// Reads one body, counts what is there when somebody asked, and changes what
+// it has been told to change. Answers false only when it ran out of room; a
+// body it cannot improve is one it leaves alone.
+static bool optimize(KestIrProgram *program, KestIrBody *body,
+                     KestIrFound *found) {
+    if (found != NULL && program->say_found != NULL &&
+        !count_what_there_is(program, body, found)) {
+        return false;
+    }
     // There is one way to turn the pass off and it is here rather than on the
     // command line, for the reason `KEST_PLAIN` is: compiling the same
     // program twice and requiring the same answer of both is how a
@@ -1140,7 +1173,7 @@ static bool optimize(KestIrProgram *program, KestIrBody *body,
             body->places[body->ops[i + 1].place].kind != KEST_IR_PLACE_SLOT) {
             continue;
         }
-        if (take_the_copy(program, body, i)) {
+        if (take_the_copy(program, body, i) && found != NULL) {
             found->copies_taken++;
         }
         if (program->out_of_memory) {

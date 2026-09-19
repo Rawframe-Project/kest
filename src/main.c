@@ -619,7 +619,12 @@ static void engine_name(KestValue *frame, KestRuntime *runtime, void *context) {
 // because a build that will not build is read by whoever ports it and a clock
 // that goes backwards is read by nobody until a frame time comes out negative.
 // See D970.
-static int64_t host_microseconds(void) {
+// The same reading in nanoseconds, which is what this is and what
+// `host_microseconds` is a thousandth of. Two of them because what a program
+// is handed is microseconds and what weighing a compile wants is finer: a
+// stage of compiling a small program is tens of microseconds, and a number
+// that could only be told in whole ones would be told in threes and fours.
+static int64_t host_nanoseconds(void) {
 #if defined(_WIN32)
     // The counter is a count of ticks and the frequency is fixed while the
     // system is running, so it is asked for once. Seconds and remainder are
@@ -635,14 +640,44 @@ static int64_t host_microseconds(void) {
     }
     int64_t ticks = (int64_t)now;
     int64_t rate = (int64_t)per_second;
-    return ticks / rate * 1000000 + ticks % rate * 1000000 / rate;
+    return ticks / rate * 1000000000 + ticks % rate * 1000000000 / rate;
 #else
     struct timespec at;
     if (clock_gettime(CLOCK_MONOTONIC, &at) == 0) {
-        return (int64_t)at.tv_sec * 1000000 + at.tv_nsec / 1000;
+        return (int64_t)at.tv_sec * 1000000000 + at.tv_nsec;
     }
     return 0;
 #endif
+}
+
+static int64_t host_microseconds(void) { return host_nanoseconds() / 1000; }
+
+// The same clock again in the shape a build asks for. A build is weighed only
+// when somebody asked, and what asks is the environment rather than an option,
+// because what it answers is a number about this compiler rather than about
+// the program somebody named. See D1026.
+static uint64_t compiling_now(void *context) {
+    (void)context;
+    return (uint64_t)host_nanoseconds();
+}
+
+// What each stage of compiling took, in nanoseconds, where `copies` is a share
+// of the four before it rather than a stage of its own.
+static void say_what_compiling_took(const KestSpent *spent) {
+    fprintf(stderr,
+            "spent reading %llu naming %llu bodies %llu promises %llu "
+            "writing %llu verifying %llu optimizing %llu lowering %llu "
+            "finishing %llu of-which-copies %llu\n",
+            (unsigned long long)spent->reading,
+            (unsigned long long)spent->naming,
+            (unsigned long long)spent->bodies,
+            (unsigned long long)spent->promises,
+            (unsigned long long)spent->writing,
+            (unsigned long long)spent->verifying,
+            (unsigned long long)spent->optimizing,
+            (unsigned long long)spent->lowering,
+            (unsigned long long)spent->finishing,
+            (unsigned long long)spent->copies);
 }
 
 static void host_clock(KestValue *frame, KestRuntime *runtime, void *context) {
@@ -2150,12 +2185,23 @@ static int look_over(const char *executable, const char *where, bool json) {
 static int run(const char *command, const char *executable, char **paths,
                int path_count, bool json, int32_t count, const int32_t *given,
                bool reset, size_t room, uint64_t fuel, bool costing) {
+    // Asked once, because a compiler that asked the environment twice could
+    // give two answers about one run.
+    static int weighing = -1;
+    if (weighing < 0) {
+        weighing = getenv("KEST_SPENT") == NULL ? 0 : 1;
+    }
+    int64_t opened = weighing ? host_nanoseconds() : 0;
     KestBuild *build = kest_build_open(kest_library_path(NULL, executable),
                                        paths,
                                        strcmp(command, "call") == 0
                                            ? 1
                                            : path_count,
                                        room);
+    if (build != NULL && weighing) {
+        kest_build_clock(build, compiling_now, NULL,
+                         (uint64_t)(host_nanoseconds() - opened));
+    }
     if (build == NULL) {
         // Before there is anywhere to write a diagnostic down, which is what
         // this door is for: the words are the ones every other refusal is
@@ -2891,6 +2937,9 @@ static int run(const char *command, const char *executable, char **paths,
         }
     }
 
+    if (weighing) {
+        say_what_compiling_took(kest_build_spent(build));
+    }
     int status = build->diags.error_count > 0 || failed_to_choose
                      ? 1
                      : (int)(exit_code & 0xff);

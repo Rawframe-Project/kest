@@ -32852,3 +32852,94 @@ working on the element where it stands rather than on a copy of it, which is a
 different transformation about a different thing, and nothing here has measured
 it. It is not closed and it is not begun, and the record of where this work
 stands says so in those words rather than calling it future work.
+
+## D1026. What compiling takes, by stage, in time rather than in bytes
+
+**Decided.** A build can be given a clock, and what each stage of compiling
+took by it is kept beside what each stage cost in bytes. `KEST_SPENT=1` is what
+asks for it at the command line; a build nobody asked about is given no clock
+and weighs nothing.
+
+    reading      every file the program names, found, read and parsed
+    naming       declarations, types, and what every name means
+    bodies       every function body checked against them
+    promises     the cost promises proved
+    writing      the checked tree walked into the resolved form
+    verifying    that form held to what a backend may read
+    optimizing   the pass over it
+    lowering     the resolved form written as bytecode
+    finishing    what was emitted, proved against what was declared
+
+And one number that is a share of the four in the middle rather than a stage:
+**of which, copies** — the generic functions retyped, bound and written out one
+per set of types they were called with. A copy is a body and goes through what a
+body goes through, so it cannot be a row of its own without being double
+counted, and pretending otherwise would be the easiest lie here to tell.
+
+**The clock is the caller's.** It is the rule `kest_clock` already keeps and for
+the same reason: this library is ISO C and ISO C has no monotonic clock. The
+command line hands over `CLOCK_MONOTONIC`, in nanoseconds rather than the
+microseconds a program is handed, because a stage of a small compile is tens of
+microseconds and a number that could only be told in whole ones would be told in
+threes and fours. Every reading goes through one door that answers nought when
+there is no clock, so a build nobody is weighing pays for nothing and no stage
+has to be written as nought minus nought.
+
+**Where the reading is timed.** By whoever opened the build, and handed in when
+the clock is: there is nowhere to keep a clock while the files are being read,
+because the build being opened is the reading.
+
+**What it says**, the middle of nine readings each, on this machine:
+
+    stage           kernel          agents        inventory
+    reading      172.3  64 %    647.6  40 %     866.9  17 %
+    naming         8.2   3 %     58.5   4 %     109.2   2 %
+    bodies        26.0  10 %    262.6  16 %     758.4  15 %
+    promises       7.0   3 %    139.1   8 %    1712.2  34 %
+    writing       42.1  15 %    332.4  20 %    1175.4  24 %
+    verifying      1.6   1 %     19.1   1 %      29.9   1 %
+    optimizing     1.2   0 %     24.3   2 %      28.7   1 %
+    lowering       9.9   4 %    109.6   7 %     215.7   4 %
+    finishing      2.7   1 %     40.1   3 %     114.0   2 %
+    all of it    271.0         1633.1          5010.2          microseconds
+    of which,
+    copies         0.0           0.0           762.9  15 %
+
+Three shapes, and each says something different. **A small program is its
+imports**: two thirds of compiling `kernel` is finding and reading files, and
+`kernel` is forty lines. **A larger one is its bodies**: `agents` spends forty
+per cent reading and fifty-six on checking bodies, writing them down and
+lowering them. **And a program that uses generics is its promises**: `inventory`
+makes fifty-two copies, and proving the cost promises is a third of compiling
+it -- more than reading, more than writing. That is the largest single thing
+this project has ever measured about its own compiler, and nothing had ever
+looked.
+
+**Does optimizing change compile latency? No.** It is 0.4 % of compiling
+`kernel`, 1.5 % of `agents` and 0.6 % of `inventory`, and with `KEST_NOOPT` set
+those become 1.4 and 3.4 microseconds -- a tenth of a per cent. Which agrees
+with the paired measurement in D1025, where the difference with the pass off
+could not be told from nothing over ten pairs.
+
+**What counting costs, and why it is not paid for.** The first way this was
+written counted what there was to do in every body of every compile, which is a
+walk of the body per operation for three of the four shapes D1024 names. That
+was eight per cent of compiling `agents` for a number only `KEST_IRSAY` reads.
+The counting now happens when somebody asked and not otherwise, which is the
+same rule this timing keeps, and it is what made the figures above honest about
+the pass rather than about the instrument.
+
+**What it costs a build that never asks.** Ninety-six bytes: ten counters and
+the clock, on the build itself, which is one allocation out of the eight
+hundred and seventy-two the library's own compile asks for. Checking
+`lib/std/text.kest` went from 154256 bytes to 154352 and compiling it from
+181577 to 181673, which is where the reference says those numbers and where
+`check-costs.sh` caught this the first time it was run. No clock is read and no
+subtraction is done, because every reading goes through a door that answers
+nought.
+
+**It is separate from the memory accounting on purpose.** `cost`, `held` and
+`holds` are bytes and are in the JSON, where a tool reads them; this is time and
+goes to the error stream, where what a program said is not. They never move
+together and the audit that reopened this work found them confused, so the two
+are written in different places and said in different words.

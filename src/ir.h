@@ -396,7 +396,29 @@ typedef struct {
     // build: it is set by the command line when it is asked.
     KestIrFound found;
     void (*say_found)(const KestIrBody *body, const KestIrFound *found);
+    // The clock the build was given, or NULL, and what the stages that happen
+    // inside one body come to by it. They are added up here because this is
+    // where they happen, and read by whoever owns the build. `copies` is
+    // written by the compiler rather than here: it is the share of all four
+    // that went on copies of generic functions. See D1026.
+    uint64_t (*now)(void *);
+    void *now_context;
+    uint64_t verifying;
+    uint64_t optimizing;
+    uint64_t lowering;
+    uint64_t copies;
 } KestIrProgram;
+
+// A reading of a clock that may not be there, and nought when it is not.
+// Nought at both ends of a stage is what makes it cost nothing to weigh a
+// compile nobody asked about.
+//
+// It is here for the reason `kest_ir_asked_off` is here: one door rather than
+// one per module, and this is the module every stage below the build can see.
+// The clock itself belongs to whoever called, the same rule `kest_clock` keeps
+// and for the same reason -- this library is ISO C and ISO C has no monotonic
+// clock. See D1026.
+uint64_t kest_ir_ticked(uint64_t (*now)(void *), void *context);
 
 // Whether a switch that turns a transformation off is set. `decided` is where
 // the answer is kept and starts below nought: the environment is read once
