@@ -15689,9 +15689,15 @@ def put_out_of_order(hole):
         # that begins with a summary says neither. An afternoon went on a hole
         # that turned out to be a check quietly passing, which the status would
         # have said in the first line. See D863.
+        # Both ends of what it said. A host writes a great deal before it
+        # complains, and two hundred characters of the beginning is two
+        # hundred characters of it working -- which is the half a reader does
+        # not need. What it was doing when it stopped is at the other end.
+        said_it = answered.strip()
         return ["MISSED: %s" % hole["what"],
-                "    came back %d and nothing said %s; it said %r"
-                % (ran.returncode, hole["caught"], answered.strip()[:200])], True
+                "    came back %d and nothing said %s; it began %r"
+                % (ran.returncode, hole["caught"], said_it[:160]),
+                "    and it ended %r" % said_it[-240:]], True
     finally:
         shutil.rmtree(work, ignore_errors=True)
 

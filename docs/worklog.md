@@ -36764,3 +36764,25 @@ the day the addition got shorter still.
 **Runs:** `make fast`; ten paired differences on kernel and five on each of the
 other five programs, pinned to one core; `tools/check-costs.sh`,
 `tools/check-tables.sh`, `tools/check-docs.sh`.
+
+## A hole that depended on what was at an address
+
+A backstop reported MISSED three times in five runs and was caught every time
+it was reproduced by hand. The hole breaks the guard that asks whose a handle
+is, and the engine host then hands the machine one from before the heap was
+thrown away. With the guard gone the machine reads whatever is at that address
+— and what is there decides what happens next. Sometimes the call comes back
+and takes the handle; sometimes it refuses for a reason that is not the right
+one. Both are the same fault, and the host said a different sentence for each,
+so whichever one the hole quoted was wrong half the time.
+
+It says one sentence for both now. The hole is unchanged.
+
+Two things made it findable. A missed hole prints both ends of what the run
+said rather than the first two hundred characters, because a host writes a
+great deal before it complains and the beginning of that is the half nobody
+needs. And the first guess — that the walk the host asked for had not swept —
+was wrong, which the second end of the output said immediately.
+
+**Runs:** `make check`; the hole reproduced by hand in a copy built the way
+`check-backstops.sh` builds one.

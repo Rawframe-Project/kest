@@ -1943,6 +1943,27 @@ $(printf '%s' "$said" | head -3)" ;;
             esac
         done
     done
+    # And the same seeds compiled the other way. What the source boundary
+    # folds is what every one of those programs answered, so two runs that
+    # fold to the same number are two runs where the lowering's fusions
+    # changed nothing a program can see -- over thousands of programs nobody
+    # wrote, which is where a miscompilation would hide rather than in the
+    # thirty-seven somebody did. See D1015.
+    fuzzer=./tools/fuzz-debug
+    fuzz_one="$scratch"/fuzz-fused.kest
+    fuzz_two="$scratch"/fuzz-plain.kest
+    folded_fused=""
+    folded_plain=""
+    for seed in 1 2 3 4 5 6 7 8; do
+        folded_fused="$folded_fused$("$fuzzer" "$seed" 400 "$fuzz_one" \
+            source 2>/dev/null | sed -n 's|.*folds to ||p')"
+        folded_plain="$folded_plain$(KEST_PLAIN=1 "$fuzzer" "$seed" 400 \
+            "$fuzz_two" source 2>/dev/null | sed -n 's|.*folds to ||p')"
+    done
+    if [ -z "$folded_fused" ] || [ "$folded_fused" != "$folded_plain" ]; then
+        complain "fuzzing" "programs nobody wrote answer something else when \
+the lowering's fusions are turned off"
+    fi
     if [ -n "$fuzz_wrong" ]; then
         complain "fuzzing" "bytes this compiler was not written for stopped \
 it: $fuzz_wrong"
@@ -1951,7 +1972,8 @@ it: $fuzz_wrong"
 boundaries -- what a program is written in, the handles a host hands over, the \
 life of a lend, a reference into a world being changed underneath it, bytes \
 handed over as text, and a program edited under a world that is running -- \
-every one of them an answer or a refusal, under a build that checks itself"
+every one of them an answer or a refusal, under a build that checks itself, \
+and the source ones answer the same folded over compiled the other way"
     fi
 fi
 

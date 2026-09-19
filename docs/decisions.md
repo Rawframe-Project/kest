@@ -32266,3 +32266,41 @@ enough occurrences. D1011's failed fusion removed pushes that were *independent*
 of each other, where two instructions run alongside one another; this removes
 one that could not. Both are about what the processor can overlap, which is the
 thing an instruction count cannot see.
+
+## D1015. A bounds check costs nothing, and programs nobody wrote are the differential
+
+**Two things measured, one of them a pass over an optimization that was not
+built.**
+
+**The bounds check.** Every read of an element checks that the index is in the
+array, and the obvious next optimization was to prove it away where an index is
+a loop variable over the array's own length. Before building the proof, the
+ceiling: every bounds check in the machine removed outright, which is the most
+such a proof could ever be worth. Ten paired differences each, pinned to one
+core, the middle of them:
+
+    kernel   about -0.3 %
+    control  about  0.0 %
+    rules    about +3 %, which is noise around nothing
+
+So the whole of it is worth nothing measurable, and a proof that a loop
+variable stays in range — which is a real analysis with real ways to be wrong —
+would buy that nothing. **Bounds-check elimination is closed on the evidence
+and not built.**
+
+What that says about the product is worth more than the optimization would have
+been: the safety this language checks at every element read costs about nothing
+on a modern processor, because the check is a comparison against a length that
+is already in cache and a branch that is always predicted the same way. Safety
+here is not a trade.
+
+**The differential.** D1013 runs every example twice, compiled with the
+lowering's fusions and without, and requires the same answer. Thirty-seven
+programs somebody wrote is not where a miscompilation hides. So the fuzzer's
+source boundary folds what every generated program answered into one number —
+the refusal, or the value `main` gave back — and the gate runs the eight seeds
+both ways and requires the same fold. Twelve thousand eight hundred programs
+nobody wrote, on every run, answering the same thing either way.
+
+It is four lines in the fuzzer and a loop in the gate, and it is the test that
+would have caught the two fusions kept here if either had been wrong.

@@ -1835,13 +1835,19 @@ static bool spends_the_heap(Engine *engine, KestValue kept) {
         return false;
     }
     engine->frame[0] = lent;
-    if (kest_call(engine->runtime, engine->entry[HEAVIEST], engine->frame,
-                  sizeof(engine->frame) / sizeof(engine->frame[0]))) {
+    // Two ways this goes wrong and one sentence for both. A machine that
+    // stopped asking whose a handle is reads whatever is at that address, and
+    // what is there decides whether the call comes back at all: sometimes it
+    // succeeds and takes the handle, sometimes it refuses for a reason that is
+    // not the right one. Both are the same fault to a reader and to whatever
+    // is holding this host to catching it, so both say so.
+    bool took = kest_call(engine->runtime, engine->entry[HEAVIEST],
+                          engine->frame,
+                          sizeof(engine->frame) / sizeof(engine->frame[0]));
+    if (took || !said_that(engine->runtime, "K0636",
+                           "did not come from this machine")) {
         fprintf(stderr,
                 "a handle from before the heap was thrown away was taken\n");
-        return false;
-    }
-    if (!said_that(engine->runtime, "K0636", "did not come from this machine")) {
         return false;
     }
     printf("and refused an array it lent before the heap was thrown away\n");

@@ -88,6 +88,13 @@ static const char *const SEEDS[] = {
 static int fuzz_source(uint64_t seed, unsigned long many, const char *where) {
     unsigned long refused = 0;
     unsigned long compiled = 0;
+    // What every one of them answered, folded into one number. What it is for
+    // is the other half of the differential test: the same seeds compiled the
+    // other way -- with the lowering's fusions turned off -- have to fold to
+    // the same number, and a fusion that changed what a program answers is a
+    // fusion that changed the program. Thousands of programs nobody wrote is
+    // exactly where a miscompilation hides. See D1013 and D1015.
+    uint64_t folded = 1469598103934665603ull;
     for (unsigned long round = 0; round < many; round++) {
         uint64_t state = seed + round;
         static char program[1 << 17];
@@ -179,6 +186,7 @@ static int fuzz_source(uint64_t seed, unsigned long many, const char *where) {
         KestBuild *build = kest_build(where, NULL, NULL, KEST_FORM_TEXT, 0);
         if (build == NULL) {
             refused++;
+            folded = (folded ^ 1u) * 1099511628211ull;
             continue;
         }
         // A budget and a ceiling, because a program made out of pieces may be
@@ -188,22 +196,28 @@ static int fuzz_source(uint64_t seed, unsigned long many, const char *where) {
         KestRuntime *runtime = kest_start(build, NULL, &bounded);
         if (runtime == NULL) {
             refused++;
+            folded = (folded ^ 2u) * 1099511628211ull;
         } else {
             compiled++;
             int32_t at = kest_entry(runtime, "main");
+            uint64_t said = 3;
             if (at >= 0) {
                 KestValue frame[8] = {{0}};
-                kest_call(runtime, at, frame,
-                          sizeof(frame) / sizeof(frame[0]));
+                bool ran = kest_call(runtime, at, frame,
+                                     sizeof(frame) / sizeof(frame[0]));
+                said = ran ? (uint64_t)frame[0].integer * 2 + 1 : 0;
             }
+            folded = (folded ^ said) * 1099511628211ull;
             kest_runtime_free(runtime);
         }
         kest_build_free(build);
     }
     remove(where);
     printf("fuzz: %lu source input(s) from seed %llu: %lu refused, %lu "
-           "compiled, and none of them stopped this\n",
-           many, (unsigned long long)seed, refused, compiled);
+           "compiled, none of them stopped this, and what they answered "
+           "folds to %llu\n",
+           many, (unsigned long long)seed, refused, compiled,
+           (unsigned long long)folded);
     return 0;
 }
 

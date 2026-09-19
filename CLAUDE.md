@@ -1119,7 +1119,11 @@ reload       the edits a reload has to have an answer for, each driven
 fuzzing      bytes nothing here was written for, made from eight seeds and
              handed to each of the six boundaries they arrive through, under
              the build that checks itself: every one of them an answer or a
-             refusal
+             refusal — and the source ones again with the lowering's fusions
+             turned off, folding what every program answered into one number
+             that has to be the same either way. Thousands of programs nobody
+             wrote is where a miscompilation hides, rather than in the
+             thirty-seven somebody did
 tree         nothing a compiler made in the tree but what `make clean` takes
              away, nothing `make clean` takes away that is committed — which
              is the same list read the other way round, because a file the
