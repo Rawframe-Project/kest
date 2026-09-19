@@ -4445,6 +4445,64 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top[-1].integer = kest_narrow_to(READ_U16(), top[-1].integer);
             break;
 
+        // The same four with the store they were feeding taken in. What goes
+        // is the push and the pop between them, which is a dependency through
+        // memory rather than two instructions standing beside each other.
+        // See D1014.
+        case KEST_OP_ADD_I_NARROW_TO: {
+            uint16_t kind = READ_U16();
+            uint16_t slot = READ_U16();
+            KestValue right = *--top;
+            KestValue left = *--top;
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, slot, slot + 1u)) {
+                return false;
+            }
+#endif
+            mine[slot].integer = kest_narrow_to(
+                kind, (int64_t)((uint64_t)left.integer +
+                                (uint64_t)right.integer));
+            break;
+        }
+        case KEST_OP_SUB_I_NARROW_TO: {
+            uint16_t kind = READ_U16();
+            uint16_t slot = READ_U16();
+            KestValue right = *--top;
+            KestValue left = *--top;
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, slot, slot + 1u)) {
+                return false;
+            }
+#endif
+            mine[slot].integer = kest_narrow_to(
+                kind, (int64_t)((uint64_t)left.integer -
+                                (uint64_t)right.integer));
+            break;
+        }
+        case KEST_OP_ADD_F_TO: {
+            uint16_t slot = READ_U16();
+            KestValue right = *--top;
+            KestValue left = *--top;
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, slot, slot + 1u)) {
+                return false;
+            }
+#endif
+            mine[slot].real = left.real + right.real;
+            break;
+        }
+        case KEST_OP_SUB_F_TO: {
+            uint16_t slot = READ_U16();
+            KestValue right = *--top;
+            KestValue left = *--top;
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, slot, slot + 1u)) {
+                return false;
+            }
+#endif
+            mine[slot].real = left.real - right.real;
+            break;
+        }
         case KEST_OP_ADD_F:
             BINARY_I(real, left.real + right.real);
             break;

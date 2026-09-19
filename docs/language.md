@@ -5000,20 +5000,21 @@ than guessed at: the build that checks itself counts every instruction it runs,
 and `KEST_DEEP=1` makes it say so. Run at two step counts and two entity
 counts and take the difference of the differences — a world is built once
 however many rounds there are, and a round has a loop of its own however many
-entities are in it — and a frame step an entity is **forty-five instructions**,
+entities are in it — and a frame step an entity is **forty-four instructions**,
 of which eight are `load.k`, five are `load`, four are `load2`, three are
-`load.n`, four are `store` and one is `store.n` — twenty-five of the forty-five,
+`load.n`, three are `store` and one is `store.n` — twenty-four of the forty-four,
 near enough three in five, move a value onto the stack or off it. The
-arithmetic is six: two `mul.f32`, two `add.f32`, one `add.i.narrow` and one
+arithmetic is six: two `mul.f32`, two `add.f32`, one `add.i.narrow.to` and one
 `sub.i.narrow`. That is what a stack machine is, and it is where the next thing
 to be gone after was found: it was fifty-seven instructions before `load.k` and
 `load2` took the two commonest pairs of pushes and made each of them one
 instruction, and what that bought is in D961. It was forty-six until an element
-read out of a run went straight into the frame rather than through the stack,
-which is D1012.
+read out of a run went straight into the frame rather than through the stack
+(D1012), and forty-five until an addition wrote its answer where it was going
+(D1014).
 
 Counting them is not free, and what it costs is the other number this build
-says: over those forty-five instructions it asks its own compiler **fifty-two
+says: over those forty-four instructions it asks its own compiler **fifty-two
 questions** about what it is about to do — whose slots these are, whose
 constants, whether what a frame holds is the shape the chunk was declared with.
 That is the machine holding itself to what it was handed rather than trusting
@@ -5034,8 +5035,8 @@ is the crossing.
 19 ns for a call and 25 ns for a crossing, which is 6 ns more, best of 7 over 1000000 calls, spread 3%
 ```
 
-Counted rather than timed, a turn of that loop is **ten instructions** when
-it calls a function of the program and **eight** when it crosses out. The dearer
+Counted rather than timed, a turn of that loop is **nine instructions** when
+it calls a function of the program and **seven** when it crosses out. The dearer
 one runs two fewer: a crossing out is one instruction that does a great deal,
 and a call is `call`, the frame written between them, and the callee's own
 `load` and `return`. It is the clearest case on this page of a duration and a
@@ -5054,9 +5055,9 @@ check and the optional it comes back in.
 10 ns for a hop of the loop, 12 ns with an index read and 31 ns with a read through a reference, which is 19 ns more, best of 7 over 200000 reads, spread 14%
 ```
 
-Counted the same way, a hop of that loop is **six instructions**, an index
-read is **seven** and a read through a reference is **twelve** — one more than
-the hop for the index and six more for the reference. The seven are what a
+Counted the same way, a hop of that loop is **five instructions**, an index
+read is **six** and a read through a reference is **eleven** — one more than
+the hop for the index and six more for the reference. The six are what a
 reference is: the place it names, the stamp held against the one in the store,
 and the optional the answer comes back in, which is a branch whether or not it
 is nothing.
@@ -5082,7 +5083,7 @@ one `kest_call`.
 
 This is the one of the four the machine cannot count about itself. What it can
 say is what it did: a crossing in runs **two instructions** of the program and
-**three** of its questions, against **ten** and **twelve** for a turn of that
+**three** of its questions, against **nine** and **twelve** for a turn of that
 loop. Fifteen nanoseconds for two instructions and eighteen for eleven — which
 means almost all of what a crossing in costs is outside anything the machine
 counts. It is the frame the host writes, the arguments weighed on the way in and

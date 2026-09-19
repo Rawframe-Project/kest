@@ -173,6 +173,39 @@ static bool index_before(const Lower *lower, uint16_t size, uint16_t *layout) {
     return true;
 }
 
+// The arithmetic the store just after it is taking the answer of, when that
+// arithmetic is the instruction before. Four of them: the two that carry a
+// width and the two that do not, which is what the pair counts say the
+// programs here run. The width is read back out of the bytes so that the
+// fused instruction carries it too. See D1014.
+static uint8_t arithmetic_before(const Lower *lower, uint16_t *kind) {
+    if (lower->last_at < lower->pointed_at) {
+        return 0;
+    }
+    uint32_t wide = lower->chunk->code_count - lower->last_at;
+    const uint8_t *at = lower->chunk->code + lower->last_at;
+    if (wide == 1) {
+        if (lower->last_op == KEST_OP_ADD_F) {
+            return KEST_OP_ADD_F_TO;
+        }
+        if (lower->last_op == KEST_OP_SUB_F) {
+            return KEST_OP_SUB_F_TO;
+        }
+        return 0;
+    }
+    if (wide != 3) {
+        return 0;
+    }
+    *kind = (uint16_t)(at[1] | ((uint16_t)at[2] << 8));
+    if (lower->last_op == KEST_OP_ADD_I_NARROW) {
+        return KEST_OP_ADD_I_NARROW_TO;
+    }
+    if (lower->last_op == KEST_OP_SUB_I_NARROW) {
+        return KEST_OP_SUB_I_NARROW_TO;
+    }
+    return 0;
+}
+
 static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
                        KestSpan origin) {
     uint16_t layout = 0;
@@ -184,6 +217,17 @@ static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
         if (size > lower->chunk->fused_slots) {
             lower->chunk->fused_slots = size;
         }
+        return;
+    }
+    uint16_t kind = 0;
+    uint8_t made = size != 1 || !fusing() ? 0 : arithmetic_before(lower, &kind);
+    if (made != 0) {
+        take_back(lower);
+        emit(lower, made, origin);
+        if (made == KEST_OP_ADD_I_NARROW_TO || made == KEST_OP_SUB_I_NARROW_TO) {
+            emit_u16(lower, kind, origin);
+        }
+        emit_u16(lower, slot, origin);
         return;
     }
     emit(lower, size == 1 ? KEST_OP_STORE : KEST_OP_STOREN, origin);

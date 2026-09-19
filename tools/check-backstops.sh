@@ -1735,7 +1735,7 @@ tokens   what a token is and what it carries""",
                  r"""    {"stop", NONE}, {"stop.none", NONE},"""],
         "make": [],
         "tool": "tools/check-tables.sh",
-        "caught": "instructions: 160 kinds and 161 names",
+        "caught": "instructions: 164 kinds and 165 names",
     },
     {
         # And the same for the tokens, which is the other list this rule was
@@ -5651,12 +5651,12 @@ fn main() -> i32 {
         # number. See D915.
         "what": "a frame step's instructions written down and not measured",
         "file": "docs/language.md",
-        "from": """**forty-five instructions**""",
-        "to": """**forty-four instructions**""",
+        "from": """**forty-four instructions**""",
+        "to": """**forty-three instructions**""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "a frame step an entity is 44 instruction(s)",
+        "caught": "a frame step an entity is 43 instruction(s)",
     },
     {
         # And the other half of that paragraph: what the build that checks
@@ -5713,7 +5713,7 @@ anywhere, and it is why the gate holds""",
         # is the one a reader would most like to be able to trust. See D917.
         "what": "what a crossing runs written down and not measured",
         "file": "docs/language.md",
-        "from": """**ten instructions**""",
+        "from": """**nine instructions**""",
         "to": """**twelve instructions**""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",
@@ -5726,7 +5726,7 @@ anywhere, and it is why the gate holds""",
         # what those come to is seven instructions over a bare hop. See D917.
         "what": "what a reference read runs written down and not measured",
         "file": "docs/language.md",
-        "from": """a read through a reference is **twelve**""",
+        "from": """a read through a reference is **eleven**""",
         "to": """a read through a reference is **thirteen**""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",

@@ -32217,3 +32217,52 @@ running — is the one nearest this.
 public surface and this is not for anybody outside this project: it is how a
 transformation is held to being one. It is read once, in `src/lower.c`, where
 it is the only thing that decides whether the peepholes happen.
+
+## D1014. Arithmetic that writes where the answer is going, and a better way to measure
+
+**Kept**, and it nearly was not: the first two measurements of it said it was
+worth nothing, and they were wrong.
+
+`sum += one.x` is an addition that pushes and a store that pops what it just
+pushed. Four of those pairs are most of what the seven programs run after the
+element move: `add.i.narrow`, `sub.i.narrow`, `add.f` and `sub.f`, each
+followed by a `store`. `add.i.narrow.to` and the other three write the answer
+into the slot instead. Four instructions rather than one carrying the
+arithmetic as an operand, because the one that read its kind out of an operand
+is the one that bought nothing (D1011).
+
+    kernel   38,661,186 -> 34,631,126   -10.4 %
+    graph     5,295,505 ->  4,815,445    -9.1 %
+    rules   172,788,303 -> 162,823,633   -5.8 %
+    control  50,800,316 -> 48,800,116    -3.9 %
+    agents  196,420,843 -> 190,130,447   -3.2 %
+
+and in time, the middle of paired differences:
+
+    kernel   -7.3 %    graph  -6.0 %    words   -2.9 %
+    control  -2.8 %    agents -1.0 %    rules   -0.8 %
+
+**How it was nearly thrown away.** Measured the way D1012 was — the least of
+four runs of each binary, one after the other — it said `+0.4 %` on kernel,
+then `-6.7 %` on the next attempt, then `+1.9 %` and `-2.0 %` on two workloads
+that disagreed with themselves. On a machine with anything else running, the
+least of four is still a sample of what that machine was doing.
+
+What works is pairing: run one, then the other, take the difference, and do
+that ten times. Ten paired differences on kernel, sorted: -9.31, -8.90, -8.53,
+-8.33, -7.30, -7.20, -6.40, -6.32, -6.26, -6.16. Every one negative, the middle
+two about seven per cent. That is a measurement; the first two were not.
+
+The rule from here: **a difference smaller than about ten per cent is measured
+paired and reported as the middle of the differences, never as one number
+against another.** D1012's fifteen per cent was large enough to survive the
+worse method; this was not, and the next one may be smaller still.
+
+**And what it says about what to fuse.** D1011 said fuse a dependency, not a
+push, and this sharpens it. The dependency here — a push and the pop straight
+after it — is one slot, and the processor forwards it; what makes this pay is
+not the memory traffic but the dispatch and the two stack pointer moves, over
+enough occurrences. D1011's failed fusion removed pushes that were *independent*
+of each other, where two instructions run alongside one another; this removes
+one that could not. Both are about what the processor can overlap, which is the
+thing an instruction count cannot see.

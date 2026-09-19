@@ -969,6 +969,8 @@ static const Instruction INSTRUCTIONS[] = {
     {"new.store", U16_U16},  {"load.elem", U16_U16},
     {"store.elem", U16_U16},
     {"index.to", U16_U16},  {"elem.from", U16_U16_U16},
+    {"add.i.narrow.to", U16_U16}, {"sub.i.narrow.to", U16_U16},
+    {"add.f.to", U16},      {"sub.f.to", U16},
     {"add", U16},          {"get", U16},
     {"set", U16},          {"remove", NONE},      {"count", NONE},
     {"seek.from", FIND},   {"seek.next", FIND_BACK},        {"store.ref", NONE},
@@ -1459,6 +1461,10 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_STORE_ELEM:
     case KEST_OP_INDEX_TO:
     case KEST_OP_ELEM_FROM:
+    case KEST_OP_ADD_I_NARROW_TO:
+    case KEST_OP_SUB_I_NARROW_TO:
+    case KEST_OP_ADD_F_TO:
+    case KEST_OP_SUB_F_TO:
     case KEST_OP_LOAD_SLOTS:
     case KEST_OP_STORE_SLOTS:
     case KEST_OP_OFFSET_ADDR:

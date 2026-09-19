@@ -144,6 +144,17 @@ typedef enum {
     // neither instruction can start until the other has finished. See D1012.
     KEST_OP_INDEX_TO,   // u16 layout, u16 slot; takes the place, writes slots
     KEST_OP_ELEM_FROM,  // u16 offset, u16 layout, u16 slot; takes the place
+    // Arithmetic that writes where the answer is going. `sum += one.x` is an
+    // addition that pushes and a store that pops what it pushed: the same
+    // dependency through memory D1012 took out of an element move, and the
+    // commonest pair the seven programs run after that one. Four of them
+    // rather than one with the arithmetic as an operand, because the one that
+    // read its kind out of an operand is the one that bought nothing (D1011).
+    // See D1014.
+    KEST_OP_ADD_I_NARROW_TO, // u16 scalar kind, u16 slot
+    KEST_OP_SUB_I_NARROW_TO, // u16 scalar kind, u16 slot
+    KEST_OP_ADD_F_TO,        // u16 slot
+    KEST_OP_SUB_F_TO,        // u16 slot
     KEST_OP_ADD,        // u16 stride
     KEST_OP_GET,        // u16 stride, leaves an optional
     KEST_OP_SET,        // u16 stride

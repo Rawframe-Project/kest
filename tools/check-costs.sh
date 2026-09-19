@@ -938,7 +938,12 @@ if apart_loads != 0 or not runs:
 ADDING = one_program(
     "    let total = 0\n    let n: i32 = 3\n    total += n\n    return total")
 apart = cuts_apart(ADDING, 'add.i')
-together = cuts_together(ADDING, 'add.i.narrow')
+# `add.i.narrow` and `add.i.narrow.to` are both the one instruction this is
+# about: the second is the first with the store after it taken in as well
+# (D1014), and a check that counted only the first would be a check that
+# stopped counting the day the addition got shorter still.
+together = (cuts_together(ADDING, 'add.i.narrow') +
+            cuts_together(ADDING, 'add.i.narrow.to'))
 if apart != 0 or together != 1:
     print("costs: an `i32` `+` and the cut behind it are one instruction and "
           "not two: %s pair(s) left apart and %s together" % (apart, together))

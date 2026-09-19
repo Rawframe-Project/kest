@@ -36731,3 +36731,36 @@ being wrong.
 
 **Runs:** `make check`, green; the hole reproduced by hand in a copy built the
 way `check-backstops.sh` builds one, before and after.
+
+## Arithmetic that writes where the answer is going, and a measurement that was wrong twice
+
+`sum += one.x` was an addition that pushes and a store that pops what it just
+pushed. `add.i.narrow.to`, `sub.i.narrow.to`, `add.f.to` and `sub.f.to` write
+the answer into the slot. Four instructions rather than one carrying the
+arithmetic as an operand, because the one that read its kind out of an operand
+is the one that bought nothing.
+
+Instructions down between three and ten per cent across the seven programs, and
+time down between one and seven — kernel seven, graph six, control and words
+three, agents and rules one.
+
+The part worth writing down is that it was nearly thrown away. Measured the way
+D1012 was — the least of four runs of one binary, then of the other — it said
+`+0.4 %`, then `-6.7 %`, then two workloads that disagreed with themselves. On a
+machine with anything else running, the least of four is a sample of what that
+machine was doing.
+
+Pairing fixes it: run one, then the other, take the difference, ten times, and
+read the middle. Ten differences on kernel, sorted: -9.31, -8.90, -8.53, -8.33,
+-7.30, -7.20, -6.40, -6.32, -6.26, -6.16. Every one negative. From here a
+difference under about ten per cent is measured that way or not claimed. See
+D1014.
+
+Four figures in the reference moved with it, and the two backstops that hold
+them. `check-costs.sh` counts `add.i.narrow.to` as the fused addition too,
+because a check that counted only the older form would have stopped counting
+the day the addition got shorter still.
+
+**Runs:** `make fast`; ten paired differences on kernel and five on each of the
+other five programs, pinned to one core; `tools/check-costs.sh`,
+`tools/check-tables.sh`, `tools/check-docs.sh`.
