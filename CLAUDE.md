@@ -1112,12 +1112,15 @@ layouts      what every shape takes on the stack against what it takes in
              than on the stack
 examples     every example run or resolved under both builds, answering the
              same under each, and a `main` that gives nothing
-optimized    every one of them again with the lowering's fusions turned off,
-             answering the same thing and writing the same words: what holds a
-             fusion to being one is that two ways of writing the same body
-             down are the same program. And one body read for its
-             instructions, because a differential test whose two sides are
-             identical is one comparing a thing with itself
+optimized    every one of them again with the lowering's fusions turned off
+             and again with the IR optimizer turned off, answering the same
+             thing and writing the same words all three ways: what holds a
+             transformation to being one is that two ways of writing the same
+             body down are the same program. And two bodies read for their
+             instructions, one for each switch, because a differential test
+             whose two sides are identical is one comparing a thing with
+             itself, and a program the optimizer does not fire on says
+             nothing about whether it fires
 instruments  every Kest under `tools` resolved, run for its answer, saying
              over what work its number was taken, and told by a clock of the
              gate's own what to say about a machine that was somebody else's —
@@ -1144,8 +1147,9 @@ fuzzing      bytes nothing here was written for, made from eight seeds and
              handed to each of the six boundaries they arrive through, under
              the build that checks itself: every one of them an answer or a
              refusal — and the source ones again with the lowering's fusions
-             turned off, folding what every program answered into one number
-             that has to be the same either way. Thousands of programs nobody
+             turned off and again with the IR optimizer turned off, folding
+             what every program answered into one number that has to be the
+             same all three ways. Thousands of programs nobody
              wrote is where a miscompilation hides, rather than in the
              thirty-seven somebody did
 moved        what the machine says it moved in bytes held to what it ran: for

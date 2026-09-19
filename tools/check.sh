@@ -1153,6 +1153,13 @@ for file in $sources; do
     fused_was=$?
     plain_said=$(KEST_PLAIN=1 ./kest run "$file" 2>&1 </dev/null)
     plain_was=$?
+    # And the same again with the optimizer turned off, which is the other
+    # half of the same test: `KEST_PLAIN` holds the lowering's fusions and
+    # `KEST_NOOPT` holds what the optimizer does to a body before the lowering
+    # reads it. A pass that changes what a program answers is a pass that is
+    # wrong, whatever it saved. See D1025.
+    bare_said=$(KEST_NOOPT=1 ./kest run "$file" 2>&1 </dev/null)
+    bare_was=$?
     case "$fused_said" in
     *"has no \`main\` to run"*) continue ;;
     esac
@@ -1166,6 +1173,16 @@ plainly"
 plainly"
         continue
     fi
+    if [ "$fused_was" -ne "$bare_was" ]; then
+        complain "optimized" "$file answers $fused_was optimized and \
+$bare_was with the optimizer off"
+        continue
+    fi
+    if [ "$fused_said" != "$bare_said" ]; then
+        complain "optimized" "$file says something else with the optimizer \
+turned off"
+        continue
+    fi
     plainly=$((plainly + 1))
 done
 # And one that is not a program at all, to see the two ways differ where they
@@ -1174,13 +1191,23 @@ done
 # builds apart would be one comparing a thing with itself.
 fused_code=$(./kest emit bench/kernel.kest 2>/dev/null | grep -c '^ ')
 plain_code=$(KEST_PLAIN=1 ./kest emit bench/kernel.kest 2>/dev/null | grep -c '^ ')
+# The optimizer is read the same way and on another program, because the
+# kernel has no copy in it to take: what a pass does not fire on says nothing
+# about whether it fires.
+kept_code=$(./kest emit bench/agents.kest 2>/dev/null | grep -c '^ ')
+bare_code=$(KEST_NOOPT=1 ./kest emit bench/agents.kest 2>/dev/null | grep -c '^ ')
+if [ "$kept_code" -ge "$bare_code" ]; then
+    complain "optimized" "a body compiled with the optimizer and without it \
+writes the same number of instructions, so the optimizer is not happening"
+fi
 if [ "$fused_code" -ge "$plain_code" ]; then
     complain "optimized" "the two ways of compiling a body write the same \
 number of instructions, so one of them is not happening"
 else
     say "optimized" "$plainly program(s) answer the same thing and write the \
-same words compiled either way, and the one read for its instructions is \
-$fused_code fused against $plain_code plainly"
+same words compiled either way, and the two read for their instructions are \
+$fused_code fused against $plain_code plainly and $kept_code optimized \
+against $bare_code not"
 fi
 
 # An instrument is checked, and then run for its answer rather than for its
@@ -1953,17 +1980,30 @@ $(printf '%s' "$said" | head -3)" ;;
     fuzzer=./tools/fuzz-debug
     fuzz_one="$scratch"/fuzz-fused.kest
     fuzz_two="$scratch"/fuzz-plain.kest
+    fuzz_three="$scratch"/fuzz-bare.kest
     folded_fused=""
     folded_plain=""
+    folded_bare=""
     for seed in 1 2 3 4 5 6 7 8; do
         folded_fused="$folded_fused$("$fuzzer" "$seed" 400 "$fuzz_one" \
             source 2>/dev/null | sed -n 's|.*folds to ||p')"
         folded_plain="$folded_plain$(KEST_PLAIN=1 "$fuzzer" "$seed" 400 \
             "$fuzz_two" source 2>/dev/null | sed -n 's|.*folds to ||p')"
+        folded_bare="$folded_bare$(KEST_NOOPT=1 "$fuzzer" "$seed" 400 \
+            "$fuzz_three" source 2>/dev/null | sed -n 's|.*folds to ||p')"
     done
     if [ -z "$folded_fused" ] || [ "$folded_fused" != "$folded_plain" ]; then
         complain "fuzzing" "programs nobody wrote answer something else when \
 the lowering's fusions are turned off"
+    fi
+    # And the optimizer read the same way. A pass that reads a whole body and
+    # decides a slot is written once is a pass whose mistake is a program
+    # nobody wrote rather than one of the thirty-seven somebody did: the first
+    # thing this one did was take `let at = from` out of `text.trim`. See
+    # D1025.
+    if [ -z "$folded_fused" ] || [ "$folded_fused" != "$folded_bare" ]; then
+        complain "fuzzing" "programs nobody wrote answer something else when \
+the optimizer is turned off"
     fi
     if [ -n "$fuzz_wrong" ]; then
         complain "fuzzing" "bytes this compiler was not written for stopped \
