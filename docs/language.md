@@ -1634,14 +1634,16 @@ added later — a slot map without the second number would answer with whoever
 moved in. Writing through it and removing through it say no for the same
 reason, and `examples/quests.kest` checks all three.
 
-The stamp comes from the build and not from the store or the machine, so no two
-slots in any two stores of any two machines made from one program are ever
-stamped the same. A reference therefore says which store it
-came from without carrying one: handed to another store of the same shape, it
-names a slot stamped by something else and reads nothing. What runs out is how
-many slots a machine has handed out altogether — a store of one, emptied and
-filled four thousand million times — and running out is a message rather than a
-stamp handed out twice.
+The stamp comes from the process, and no two places in any two stores of any
+two machines of it are ever stamped the same. A reference therefore says which
+store it came from without carrying one: handed to another store of the same
+shape, it names a place stamped by something else and reads nothing. The same
+one number answers three questions at once — another machine's reference,
+a reference from a machine that has been freed, and this store's own from
+before the place was given back are all a number this place was never stamped
+with. What runs out is how many places the process has handed out altogether,
+which is 1099511627775, and running out is a message rather than a stamp handed
+out twice.
 
 A walk over a store steps over its dead slots, so what it costs is how far the
 store has ever reached rather than how much is in it — with one exception: a
@@ -1650,14 +1652,13 @@ a walk would step over is dead. What each slot has counted is kept, so filling
 it again hands back the same slots with new counts and every reference from
 before is as stale as it was.
 
-A slot counts how many times it has been taken back, in thirty-two bits beside
-a thirty-two bit index, which is what makes a reference one value. Four
-thousand million removals of one slot and the count would come round to where
-it started, and a reference from the first occupant would read as the newest
-one. A slot that has used all of its counts is not handed out again: what that
-costs is one slot in a store that has been removed from four thousand million
-times, and what it buys is that stale stays stale for as long as the program
-runs.
+A reference is one value: forty bits of handout number beside twenty-four bits
+of place. The number is never handed out twice, so it cannot come round onto a
+place that is still live — which is what the number before it did, in sixteen
+bits of a count of machines, and what D1033 is about. What that costs is a
+ceiling on handouts rather than a ceiling on any one place: a program that has
+spent all of them is refused at the `add` that asked, with a message saying so,
+and stale stays stale for as long as the process runs.
 
 This split is why `Vec3` returned from a helper costs nothing: see D006.
 
@@ -1679,6 +1680,18 @@ stays the same table — or is a number that a program carries.
 A `let` of a struct is a copy and writing its fields is how a changed one is
 made, so nothing is said about that: `let moved = p` and then `moved.x = 0.0`
 is the idiom rather than the mistake.
+
+**An element of an array is a place**, so `world[at].x = 1.0` and
+`world[at].x += world[at].dx` write where the element is rather than into a
+copy. An element of a store is not: it is reached through `get`, which answers
+`T?` because a reference can be stale, and put back with `set`. That asymmetry
+is deliberate and it is measured. Reading a whole element into a local, changing
+it and writing it back is the *faster* of the two shapes wherever more than one
+field is touched — 65.4 ms against 83.6 ms over twenty thousand elements and
+fifty rounds, changing four fields of seven, because each `world[at].field`
+resolves the element again and pays its own bounds check while a copy amortises
+one move over every field. So the store's missing place form would buy nothing
+on the shape that wants it. See D1038.
 
 ## References
 

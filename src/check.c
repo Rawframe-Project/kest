@@ -4199,9 +4199,17 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
                            "`%.*s` is a value here, so this is discarded",
                            (int)handed->span.length,
                            span_text(checker, handed->span));
+            // What not to say here: *hold what changes behind a handle*.
+            // That was the suggestion and it taught the thing this project
+            // was asked about from outside -- a struct is a value and a
+            // handle inside one is not, so moving the field behind a handle
+            // turns a write the caller cannot see into a write the caller
+            // cannot see coming. Giving the changed one back is the answer,
+            // and a caller that wants the change is a caller that takes it.
+            // See D1038.
             kest_diags_suggest(checker->program->diags,
-                               "give the changed one back, or hold what "
-                               "changes behind a handle: `[T]`, `store<T>`");
+                               "answer with the changed one and let the "
+                               "caller take it: `fn f(one: T) -> T`");
         }
         if (writes_only_a_copy(checker, stmt->assign.target, &root,
                                &is_index)) {

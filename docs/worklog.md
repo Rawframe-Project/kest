@@ -37390,3 +37390,57 @@ See D1035, D1036 and D1037.
 **Runs:** `gh release view` for the download counts and `gh repo view` for the
 forks; `git merge-base --is-ancestor` for the history; `make fast`;
 `make check`.
+
+## The mutation model stays, and the 29 % was not what it looked like
+
+Two cold readings called the value and shared-handle model a major footgun, with
+a function that writes `one.hp` and pushes to `one.bag` and has one of the two
+seen by its caller. It reproduces. Then the whole of the behaviour was mapped
+rather than argued about — nine shapes, and every one of them obeys one
+sentence: a struct is a value, `[T]` and `store<T>` are handles, and a handle
+inside a value is still a handle.
+
+Would we choose that today with nobody depending on it? Yes. Deep value
+semantics would copy an array on every struct copy; an `inout` parameter would
+add a second way to pass a thing so that one shape of function can be written
+without a `return`. What was actually wrong is one line: `K0346` said *hold what
+changes behind a handle: `[T]`, `store<T>`*, which tells a reader to turn a write
+the caller cannot see into a write the caller cannot see coming — and which
+contradicts the reference three paragraphs below it. It says *answer with the
+changed one and let the caller take it* now.
+
+The other half of the finding is the 29 % of `bench/kernel.kest` the 1.1 campaign
+measured in copy-out, mutate, write-back and recorded as a shape the optimizer
+could not take. Two things turned out to be true that nobody had checked.
+
+**An array element is already a place.** `world[at].x += world[at].dx` compiles
+and runs, and did all along.
+
+**And it is 2.15 times slower.** The copy form runs 2,000,000 `index.to` and
+2,000,000 `elem.from`; the place form runs 12,029,960 `elem.addr` and 12,049,960
+`load.at`, because every `world[at].field` resolves the element again. Measured
+again on the shape that motivated the question — read most of an element, change
+four of seven fields, put it back — the whole-element form is 65.4 ms against
+83.6, two entries of one program so the comparison is inside one binary.
+
+So the store's missing place form, which the language refuses with `K0315`,
+would make the workload that wants it slower. It is not built and the
+measurement is why.
+
+What is real in the 29 % is six element addressings a body a round where one
+would do, inside a body that promises `no.alloc`. That is an IR pass over `ELEM`
+places, and it is named in `docs/state.md` as open with this measurement beside
+it.
+
+And the reference was stale about what a reference is — the stamp from the
+build, a slot counting its own reuses in thirty-two bits beside a thirty-two bit
+index, four thousand million removals bringing the count round. None of that had
+been true since D934 and less of it since D1033. Fixed here, which is what the
+truth audit is for.
+
+See D1038.
+
+**Runs:** the footgun and the nine-shape map on `b73b487`; `bench/kernel.kest`
+rewritten in place, same answer, under `perf stat -r 4` and `KEST_DEEP`; the
+`agents` access pattern written both ways as two entries of one program under
+`bench/measure`; `make fast`; `make check`.

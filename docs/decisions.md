@@ -33577,3 +33577,116 @@ instruction names, the token names, the keywords and the builtins.
 rewrite it. A number a check writes is a number nobody read; a number a check
 refuses is a number somebody has to look at. That is the same reason the
 reference's figures are held rather than generated.
+
+## D1038. The value and handle model stays, and the measurement that settled it
+
+**Decided.** A struct is a value, `[T]` and `store<T>` are handles, and a handle
+inside a value is still a handle. Nothing about that changes. What changes is one
+diagnostic that had been recommending the opposite of what the reference says,
+and three paragraphs of the reference that described a reference this project no
+longer has.
+
+**What was asked.** Two independent readings from outside called the value and
+shared-handle model a major footgun, with this program:
+
+```kest
+fn hurt(one: Actor) -> bool {
+    one.hp -= 1
+    push(one.bag, 1)
+    return one.hp > 0
+}
+```
+
+It reproduces: the caller sees `hp` unchanged and `bag` changed. Half the
+function works and half of it quietly does not.
+
+**The whole of the behaviour, mapped** rather than argued about:
+
+    struct parameter, scalar field written         not seen, K0346 warns
+    struct parameter, nested struct field written  not seen, K0346 warns
+    struct parameter, array field pushed           SEEN, nothing warns
+    array parameter, pushed                        seen, by design
+    fixed run parameter, element written           not seen
+    struct assigned to a name, field written       not seen
+    struct assigned to a name, array pushed        SEEN
+    struct read out of an array, field written     not seen
+    struct out of a store by `get`, field written  not seen
+
+The rule is one sentence and every row obeys it. Nothing is inconsistent; what is
+true is that a reader coming from a language where an object is a reference gets
+it wrong once, which the reference has said in those words -- *with this exact
+example* -- since before either reading.
+
+**Would we choose it today, with no installed user base?** Yes. The alternative
+that removes the footgun is deep value semantics, where copying a struct copies
+the arrays inside it, and that makes every struct copy in a frame loop
+unbounded. The other alternatives -- an `inout` parameter, a mutable borrow --
+add a second way to pass a thing so that one shape of function can be written
+without a `return`. This language has one way to do a thing, and *give the
+changed one back* is it.
+
+**What was actually wrong: the warning taught the footgun.** `K0346` said
+
+    give the changed one back, or hold what changes behind a handle:
+    `[T]`, `store<T>`
+
+which tells a reader to turn a write the caller cannot see into a write the
+caller cannot see *coming*. It now says
+
+    answer with the changed one and let the caller take it: `fn f(one: T) -> T`
+
+which is what the reference says three paragraphs further down. One of the two
+had to move and it was not the reference.
+
+**And the 29 %, which is the other half of this finding.** The 1.1 campaign
+measured `let one = world[at]; ... ; world[at] = one` at 29 per cent of
+`bench/kernel.kest`'s cycles and recorded it as a shape the optimizer could not
+take because the program is semantically copying out. That was read as a
+semantic prison. It is not one.
+
+**An element of an array is already a place.** `world[at].x = 10.0`,
+`world[at].x += world[at].dx` and `deep[0].body.x = 20.0` all compile and run,
+and did before this decision. The copy-out shape is a spelling, not a
+limitation.
+
+**And it is the faster spelling.** `bench/kernel.kest` written both ways, same
+answer, same machine:
+
+    form        instructions     cycles     unpacked     packed
+    copy       1,072,483,975   334.2 M    64,320,000  64,640,000
+    in place   2,303,425,271   766.3 M   128,399,680  32,719,680
+
+The place form is **2.15 times slower**. The histogram says why: the copy form
+runs 2,000,000 `index.to` and 2,000,000 `elem.from`, one 32-byte move in and one
+out, with the field arithmetic done in slots. The place form runs 12,029,960
+`elem.addr` and 12,049,960 `load.at` -- six element addressings a body a round
+against two -- because every `world[at].field` resolves the element again and
+pays its own bounds check.
+
+**Measured again on the shape that motivated the question.** `bench/agents.kest`
+reads most of an element, changes four fields of seven and puts it back. Written
+both ways over an array, two entries of one program so the comparison is inside
+one binary and immune to what D1028 found about code layout:
+
+    whole element   65.4 ms
+    field at a time 83.6 ms
+
+Twenty-eight per cent slower. So a store place form -- `world[who].hp = hp`,
+which the language refuses today with `K0315` -- would make the workload that
+wants it *slower*, and would cost new instructions, a new fault for a stale
+reference written through, and a second way to reach a store. **It is not built,
+and this is the measurement rather than an opinion.**
+
+**What is real in the 29 %, and it is not the semantics.** Six `elem.addr` where
+one would do, inside a body that promises `no.alloc` and therefore cannot move
+the heap between them. That is an IR pass over `ELEM` places and it is the
+opportunity D1025 was looking for in the wrong place. It is named in
+`docs/state.md` as open, with this measurement beside it.
+
+**The reference was stale about references and is fixed here.** It said the stamp
+comes from the build, that a slot counts its own reuses in thirty-two bits
+beside a thirty-two bit index, and that four thousand million removals of one
+slot would bring the count round. None of that has been true since D934 and less
+of it since D1033. It now says what a reference is: forty bits of handout number
+beside twenty-four of place, taken from one count for the whole process, never
+handed out twice.

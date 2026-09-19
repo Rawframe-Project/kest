@@ -130,10 +130,13 @@ turned out to be premature. What the tree has to show for it:
 **Three things are open and named as open.** They are measured and not done,
 and each says why.
 
-- The aggregate copy. `let one = world[at]` … `world[at] = one` is 29 % of
-  `bench/kernel.kest`'s cycles and copy propagation cannot take it: the run
-  written is written again, which is what the program is doing. Taking it means
-  working on the element where it stands, which nothing has measured.
+- The aggregate copy, and it is not what it was thought to be. `let one =
+  world[at]` … `world[at] = one` is 29 % of `bench/kernel.kest`'s cycles, and
+  writing the same program in place is **2.15 times slower** — the copy form is
+  the faster of the two spellings the language already has, not a prison (D1038).
+  What is real is the six `elem.addr` a body a round where one would do, inside a
+  body that promises `no.alloc` and so cannot move the heap between them. That is
+  an IR pass over `ELEM` places and nothing has built it.
 - Bulk text append. Eighteen per cent of `bench/words.kest` is `std.text`'s
   `append` copying a byte at a time. A bulk copy needs a builtin, which is
   language surface, and D1030 says why that was not added on this evidence.
