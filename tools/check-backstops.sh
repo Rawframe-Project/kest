@@ -1602,7 +1602,10 @@ tokens   what a token is and what it carries""",
         "what": "a guard the gate makes that the documents do not say it does",
         "file": "CLAUDE.md",
         "from": r"""returns      files written on the spot: line endings, noughts inside text,
-             and a promise around a `defer`
+             a promise around a `defer`, and the two ways out of a block a
+             program does not take -- an arithmetic trap and a bounds trap --
+             on neither of which a `defer` runs. The ways out a program does
+             take are an example that answers nought
 """,
         "to": "",
         "make": [],

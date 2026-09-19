@@ -405,17 +405,32 @@ error[K0310]: `len` counts an array, a store or text, found `i32`
    |    ^^^ this file calls something else by that name
 ```
 
-Where a name came from is written at every use of it. Two modules whose names
-end the same way would put their names under the same one, and that is refused
-for the whole program rather than mixed. The table those names go in is the
-program's — `math.min` is one entry however many modules end in `math` — so
-two of them in one program share a namespace, and a file importing one would
-find the other's names without asking for them. A program may not hold a
-`math.kest` of its own beside `std.math`; what would make that a question about
-one file is a table keyed by the whole of a module's name, which is a change to
-every lookup in the compiler and is not made. When one of the two is the
-library's, the message points at the other one, because `std` is the one name a
-program cannot use and the library is not the reader's to rename.
+Where a name came from is written at every use of it. The table those names go
+in is keyed by the whole of a module's name — `a.math.min` and `b.math.min` are
+two entries — so two modules ending in the same word are two modules and a
+program may hold both. A program may have a `math.kest` of its own beside
+`std.math`, and `render.math`, `physics.math` and `vendor.math` may all be in
+one program at once.
+
+What `math.` means is the question of the file that writes it, and it is
+answered by that file's own imports and nothing else. So a file reaching two
+modules that end in one word is what is refused, because there `math.` would be
+either of them:
+
+```
+error[K0328]: this file reaches two modules called `math`
+   |
+ 4 | import b.math
+   |        ^^^^^^ a name written `math.` here would be either of them, so one of the two has to be called something else
+   |
+ 3 | import a.math
+   |        ^^^^^^ the other one
+```
+
+and the answer is to rename one of them, which no other file in the program has
+to hear about. When one of the two is the library's, the other is the one to
+rename, because `std` is the one name a program cannot use and the library is
+not the reader's to rename.
 
 There are no methods. A function takes what it works on like anything else, so
 `len(t)` and `text.upper(t)` are how those are written, and `t.upper()` is told

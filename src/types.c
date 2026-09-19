@@ -4113,16 +4113,12 @@ bool kest_check(KestArena *arena, KestDiags *diags, const KestUnits *units,
         return false;
     }
 
-    // Names live under the last part of a module's name, and the table those
-    // names go in is the program's: `math.min` is one entry however many
-    // modules end in `math`. So two of them in one program share a namespace,
-    // and a file importing one of them would find the other's names without
-    // asking for them — which is what happened while this was a question
-    // about one file rather than about the program (D185).
-    //
-    // Refused, then, wherever they are and whoever reads them. Keying the
-    // table by the whole of a module's name is what would make this a question
-    // about one file, and that is a change to every lookup in this compiler.
+    // A name lives under the whole of its module, so `a.math.min` and
+    // `b.math.min` are two entries and a program may hold both. What cannot
+    // happen is one *file* writing `math.` and meaning either of them, which
+    // is what the walk below looks for: two modules a file imports whose last
+    // parts are the same. Under D185 this was refused for the whole program,
+    // because the table was keyed by the last part alone. See D1039.
     for (uint32_t i = 0; i < units->count; i++) {
         if (units->items[i].alias[0] == '\0') {
             continue;
