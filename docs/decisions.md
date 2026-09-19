@@ -32681,3 +32681,174 @@ Phase F goes at. The baseline above is what it will be measured against.
 **What it costs.** Nothing in a release build: the counters and the macro are
 `#if KEST_CHECKED`, the same as the histogram they sit beside, for the reason
 D979 gives.
+
+## D1024. The optimizer layer, and counting before changing
+
+**Decided.** There is a pass over the resolved form of a body between the two
+verifications, and the first thing it did was count rather than change.
+
+    kest_ir_body_end:
+        verify  ->  optimize  ->  verify  ->  lower
+
+What goes in is a body the verifier accepted and what comes out has to be one
+too. It is turned off by `KEST_NOOPT`, which is there for the reason
+`KEST_PLAIN` is: compiling the same program twice and requiring the same answer
+of both is how a transformation is held to being one that keeps a program's
+meaning. D1009 says every optimization is held that way.
+
+**Counting first, because a pass written off a list is a pass nobody measured.**
+The audit that reopened this work found Phase F substituted by lowering work,
+and the thing that made that possible was a candidate list with no numbers
+beside it. So the layer says what there is to do before it does any of it, and
+`KEST_IRSAY=1` prints it per body:
+
+    ir agents.lives#agents.World,i32 ops 149 copies 3/4 took 0 reloads 3/3 \
+        slots 3 dead 0/0 made 0/0
+
+Four shapes, each counted twice — once for the body and once for the operations
+inside a loop, which is a backward branch and what it lands on. A shape found
+once in a body that runs once is worth nothing however many there are of it;
+the same shape inside a loop is worth as many times as the loop goes round.
+Which of the two a count is about is the whole of the decision.
+
+    copies    a run of slots read straight into another run: `b = a`
+    reloads   the same slots read again with nothing written to them
+    dead      a run written and written again with nothing reading it
+    made      a value built out of pieces and put straight into a place
+
+**What the seven workloads and the library say.** The counts are static and the
+hot ones are the left-hand number:
+
+    reloads   hot everywhere: 10/10 in control.main, 15/15 in graph.main,
+              4/13 in rules.decide, 6/9 in agents.post, 3/3 in kernel.step
+    copies    hot in six bodies: 5/5 in agents.rebuild and graph.main,
+              3/4 in agents.lives and rules.worth, 2/3 in the two
+              micro aggregates
+    dead      nought. Not one, in any body of any of them, hot or cold
+    made      three sites in seven programs: two in graph.main, one in
+              agents.fill
+
+**An operation taken away is written over, not cut out.** A body is a flat list
+and a branch names what it lands on, so closing the gap would renumber every
+target, every value and every argument for the sake of two operations.
+`KEST_IR_NOTHING` is what a movement becomes when it goes; the lowering emits
+nothing for it and what it was is left beside it for whoever reads a body back.
+
+**What it costs to count.** It is a walk of the body per operation for three of
+the four shapes, which is quadratic in a body's length and is what a compiler
+can afford at the sizes bodies are: the largest in this tree is 290 operations.
+What that came to is measured in D1025, together with the one pass that was
+written.
+
+## D1025. Copy propagation, kept; and three candidates closed on their counts
+
+**Decided.** One of the four shapes D1024 counted is a pass. The other three
+are closed, each on the number beside it, and this is the record of why.
+
+**What the pass does.** A run of slots read straight into another run, where
+the run written is written that once in the whole body and the run read is not
+written again after the copy: every read of the one is pointed back at the
+other, and the two operations that moved it become `KEST_IR_NOTHING`.
+
+    let n = count        ->   nothing
+    ... n ...                 ... count ...
+
+**It asks about the whole body rather than about what follows.** What follows
+in the list is not what follows in the run: a body is a flat list and a branch
+lands where it likes. Written once and not written again is true on every path
+or on none, so no path has to be walked. The first way this was written walked
+forwards until it met a branch and stopped there, and what it took away was
+`let at = from` in `text.trim`, whose reads are all inside the loop underneath
+it. That is the shape of mistake this kind of pass makes.
+
+**Two things it will not touch, each for a reason.**
+
+A run that can hold what the machine keeps. A slot holding a handle is a root
+while the frame stands, and a write taken away is a root taken away. The copies
+the counts found inside a loop are struct and number copies, so the restriction
+costs nothing that was measured and buys not having to reason about the walk.
+
+A run any operation names itself rather than through a place. Six do: a walk's
+step carries the slot it counts in and the slot it counts to, a seek carries
+the store and the index, a byte read out of text carries the text and the
+index, and a block of working memory carries the slot its mark is kept in.
+Nothing about a place says so. A copy taken from under one of these is a loop
+that never ends, which is what the first way this was written cost on
+`table.slotOf` in the determinism corpus. The list is written out in full with
+nothing falling through to a default, because an operation added to this
+language and forgotten there is a miscompilation and not a warning.
+
+**Held to keeping a program's meaning.** Every example and every reference
+program answers the same thing and writes the same words with `KEST_NOOPT` set
+and unset, and the gate does that beside what it already did for `KEST_PLAIN`.
+And three thousand two hundred programs nobody wrote, made from eight seeds at
+the source boundary, fold to the same number either way. See D1015 for why that
+is the test that matters.
+
+**What it took off the machine, exactly.** Bytes moved, counted by D1023's
+counters, which are the same number on any machine:
+
+    workload    bytes moved     taken off    of the whole
+    agents    2,019,556,604    66,560,000        3.30 %
+    rules     1,479,761,721    63,523,456        4.29 %
+    micro         1,605,667        48,000        2.99 %
+    graph        44,385,937        51,200        0.12 %
+    kernel      420,568,168             0             -
+    control     354,320,903             0             -
+    words        56,667,443             0             -
+
+All of it is `loaded` and `stored`, half each, which is what a copy is.
+
+**And what it came to in time**, measured paired the way D1014 requires -- run
+one, run the other, take the difference, ten times, report the middle:
+
+    agents    13.86 ms off 582.42, which is 2.38 % faster, and every one of
+              the ten pairs the same sign
+    rules     17.82 ms off 605.20, which is 2.94 % faster, eight of the ten
+              pairs the same sign
+
+Two figures a reader should be told about. The first pass at this was taken on
+a machine with a run of `examples/colony.kest` left spinning on it from a
+build that had been stopped, and it said `agents` gained nothing at all --
+five pairs one way and five the other. The second, with that killed, is the
+table above. What the paired protocol is for is exactly the machine this was
+measured on, which has other people's work on it and always will; what it is
+not proof against is a busy core of one's own making. The second thing: an
+earlier ten pairs on `rules`, taken while that process was still running, said
+2.64 %, which is the same answer. The protocol held and the first reading of
+`agents` was still wrong, so both are written here.
+
+**What it costs to compile.** Paired the same way, over `rules`, which is the
+largest program here: the middle of ten differences is 0.0065 ms *off* 1.405,
+with six of the ten one way and four the other. There is no compile-time cost
+this can measure. Reading a body twice to decide about a copy is a walk over
+two hundred and ninety operations at the most, and compiling is milliseconds.
+
+**The three that are closed.**
+
+*Redundant move elimination.* The most numerous shape by far and the one this
+was expected to be about, and it cannot be done here. A value in this form is
+read by exactly one operation, and the machine under it is a stack with no
+instruction that duplicates. Keeping the first read alive to serve the second
+means either a register, which this machine has not got, or a duplicate
+instruction, which would move the same eight bytes the second `load` moves. It
+is not a saving, it is the same saving spelled differently. What the lowering
+does instead is fuse two reads into one instruction -- `load2` and `load.k`,
+D961 -- which is where this belongs and where it already is.
+
+*Dead write elimination.* Nought. Not one dead write in any body of the seven
+workloads or of the library, hot or cold. The compiler does not emit them, and
+a pass for a shape that is never there is a pass that can only cost.
+
+*Temporary materialization.* Three sites in seven programs: two in `graph.main`
+and one in `agents.fill`. Under one part in a thousand of anything, and the
+counting says so before the writing starts, which is what D1024 is for.
+
+*And the aggregate copy it was hoped would be here.* `let copy = one; copy.x +=
+i; one = copy` is the shape `micro.aggregateSmall` and `kernel.step` are built
+out of, and it is not a copy this pass can take: the run written is written
+again, which is the whole of what the program is doing. Taking it would mean
+working on the element where it stands rather than on a copy of it, which is a
+different transformation about a different thing, and nothing here has measured
+it. It is not closed and it is not begun, and the record of where this work
+stands says so in those words rather than calling it future work.

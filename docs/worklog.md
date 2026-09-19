@@ -37038,3 +37038,60 @@ reopened Phase F starts. See D1023.
 
 **Runs:** `KEST_DEEP=1 kest-debug` over the seven programs; the five identities
 checked by hand and then written into the gate as `moved`; `make fast`.
+
+## The optimizer layer, and the one pass the counting asked for
+
+The audit that reopened this work found Phase F substituted by lowering work,
+and what made that possible was a candidate list with no numbers beside it. So
+the layer was built to count before it changed anything, and what it printed is
+what decided which pass got written.
+
+It sits between the two verifications in `kest_ir_body_end` — verify, optimize,
+verify, lower — and `KEST_NOOPT` turns it off, for the reason `KEST_PLAIN`
+turns off the lowering's fusions. `KEST_IRSAY=1` says what it found per body:
+four shapes, each counted twice, once for the body and once for the operations
+inside a loop.
+
+What the seven workloads and the library said: reloads everywhere and hot,
+copies hot in six bodies, and *nothing at all* for dead writes — not one in any
+body — and three sites in seven programs for materialization. So three of the
+four F3 candidates were closed on their counts before a line of transformation
+was written, and the fourth, copy propagation, was the one built.
+
+The most numerous shape is the one that cannot be done here, which is worth
+saying plainly: a value in this form is read by exactly one operation and the
+machine under it is a stack with no duplicate instruction, so keeping the first
+read alive for the second means moving the same eight bytes under another name.
+What the lowering does instead is fuse two reads into one instruction, which is
+`load2` and `load.k` and was done in D961.
+
+Copy propagation asks about the whole body rather than about what follows: a
+body is a flat list and a branch lands where it likes, so *written once and not
+written again* is true on every path or on none. The first way it was written
+walked forwards until it met a branch and stopped there, and took `let at =
+from` out of `text.trim`, whose reads are all inside the loop underneath it —
+an example that ran and never came back. The second thing it cost was the six
+operations that name a frame slot themselves rather than through a place: a
+walk's step, the two seeks, a byte read out of text, and the two ends of a
+working-memory block. `table.slotOf` spun forever until that list existed, and
+the list is written out in full with nothing falling through to a default.
+
+What it took off the machine, exactly, in bytes moved: 3.30 % of `agents`,
+4.29 % of `rules`, 2.99 % of `micro`, 0.12 % of `graph`, and nought of
+`kernel`, `control` and `words`. In time, paired the way D1014 requires:
+`agents` 2.38 % faster with all ten pairs the same sign and `rules` 2.94 %
+with eight of ten, and no compile-time cost this can measure. The first ten
+pairs said `agents` gained nothing, and what they were measuring was a run of
+`examples/colony.kest` left spinning by a build that had been stopped. Both
+readings are in D1025, because a protocol that survived a busy machine and
+still gave a wrong answer once is worth writing down.
+
+Held to keeping a program's meaning by the gate, which now runs every example
+three ways rather than two, and by three thousand two hundred programs nobody
+wrote folding to the same number with the optimizer off. See D1024 and D1025.
+
+**Runs:** `make fast`; `make check`; `KEST_IRSAY=1 kest build` over the seven
+workloads and the library; `KEST_DEEP=1 kest-debug` for the bytes, with and
+without `KEST_NOOPT`; `bench/measure` paired ten times on `agents` and `rules`
+for the time and on `rules` for what compiling cost; the fuzzer's source
+boundary at eight seeds, folded both ways.
