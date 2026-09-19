@@ -187,6 +187,15 @@ typedef struct Counts {
     uint64_t plots_made;
     uint64_t plots_freed;
     uint64_t blocks;
+    // The same allocations again, split two ways: by what the place holds and
+    // by which of the widths it was cut from. A total says how much a program
+    // asks for and neither of these does; what they say is what it asks for --
+    // a program that is all short pieces of text and one that is all wide runs
+    // have the same total and nothing else in common. Counted here rather than
+    // worked out from the plots, because a plot says what is in it now and
+    // this is what was ever handed out. See D1032.
+    uint64_t by_kind[4];
+    uint64_t by_width[WIDTH_COUNT + 1];
 } Counts;
 
 typedef struct KestGround {
@@ -222,6 +231,31 @@ typedef struct KestGround {
     // third of the machine. See D979 for that one and D1007 for these.
     Counts counted;
 } KestGround;
+
+uint32_t kest_ground_widths(const KestGround *ground, uint32_t *widths,
+                            uint64_t *taken, uint32_t many, uint64_t *kinds) {
+    if (ground == NULL) {
+        return 0;
+    }
+    if (kinds != NULL) {
+        for (uint32_t i = 0; i < 4; i++) {
+            kinds[i] = ground->counted.by_kind[i];
+        }
+    }
+    uint32_t said = 0;
+    for (uint32_t i = 0; i <= WIDTH_COUNT && said < many; i++) {
+        if (widths != NULL) {
+            // The last of them is every place wider than the ladder, each of
+            // which got a plot of its own, and there is no one width to say.
+            widths[said] = i < WIDTH_COUNT ? WIDTHS[i] : 0;
+        }
+        if (taken != NULL) {
+            taken[said] = ground->counted.by_width[i];
+        }
+        said++;
+    }
+    return said;
+}
 
 void kest_ground_plots(const KestGround *ground, KestGroundPlots *into) {
     if (into == NULL) {
@@ -534,6 +568,10 @@ void *kest_ground_take(KestGround *ground, size_t bytes,
         ground->counted.allocations++;
         ground->counted.asked += bytes;
         ground->counted.given += plot->stride;
+        ground->counted.by_kind[(unsigned)kind & 3u]++;
+        ground->counted.by_width[plot->width_index >= WIDTH_COUNT
+                                     ? WIDTH_COUNT
+                                     : plot->width_index]++;
     }
     return at;
 }

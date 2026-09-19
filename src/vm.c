@@ -777,6 +777,8 @@ struct KestRuntime {
     void *collected_context;
     uint64_t walked;
     uint64_t worst_walk;
+    // Calls in from a host that arrived while one was already running.
+    uint64_t reentered;
     uint64_t marking;
     uint64_t sweeping;
     uint64_t roots;
@@ -5865,8 +5867,28 @@ bool kest_runtime_free(KestRuntime *runtime) {
         // the machine holds them, because an order chosen here would be a
         // second thing to keep in step with the list. Whoever reads this can
         // sort it. See D870.
-        fprintf(stderr, "guards %llu\n",
-                (unsigned long long)runtime->guarded);
+        fprintf(stderr, "guards %llu reentered %llu\n",
+                (unsigned long long)runtime->guarded,
+                (unsigned long long)runtime->reentered);
+        // What the heap handed out, split by the width it was cut from and by
+        // what the place holds, which a total cannot say. See D1032.
+        {
+            uint32_t widths[32];
+            uint64_t taken[32];
+            uint64_t kinds[4];
+            uint32_t rungs = kest_ground_widths(runtime->ground, widths, taken,
+                                                32, kinds);
+            fprintf(stderr,
+                    "took plain %llu array %llu elems %llu store %llu\n",
+                    (unsigned long long)kinds[0], (unsigned long long)kinds[1],
+                    (unsigned long long)kinds[2], (unsigned long long)kinds[3]);
+            for (uint32_t rung = 0; rung < rungs; rung++) {
+                if (taken[rung] > 0) {
+                    fprintf(stderr, "width %u %llu\n", widths[rung],
+                            (unsigned long long)taken[rung]);
+                }
+            }
+        }
         // And the bytes it moved, beside the instructions it ran. Each of
         // these is memory copied from somewhere to somewhere; a stack pointer
         // stepped or a length read is not movement and is not here. See
@@ -7294,6 +7316,17 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
     if (runtime == NULL) {
         return false;
     }
+#if KEST_CHECKED
+    // A call in that arrives while one is already running, which is what a
+    // host does when a bound function calls back into the program. It is the
+    // one thing at this boundary nothing counted: the crossings the machine
+    // keeps are the ones going out. Counted where the rest of what a run did
+    // is counted, and for the reason D979 gives -- a release build pays for
+    // nothing nobody reads. See D1032.
+    if (runtime->running_top != NULL) {
+        runtime->reentered++;
+    }
+#endif
     KestSpan nowhere = {0, 0};
     if (entry < 0 || (uint32_t)entry >= runtime->module->count) {
         kest_diags_in(runtime->diags, NULL);

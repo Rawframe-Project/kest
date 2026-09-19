@@ -37267,3 +37267,28 @@ still nothing. See D1029, D1030 and D1031.
 instruction histogram under `KEST_DEEP` over the six workloads, grouped by
 family and by element access; four loops read by hand; `make fast`;
 `make check`.
+
+## What a program asks the heap for, and the crossing nothing counted
+
+The final audit read the original mission's instrumentation list top to bottom
+and found two things in it that were never built. D3 wanted allocations by size
+class and by kind; D5 wanted reentry events. Both are counted now.
+
+A total says how much a program asks the heap for and not what it asks for.
+`bench/words.kest` takes 160,022 plain places, 60 array headers and 660 runs of
+elements, and its widths are the ladder doubling under `text.join`: sixty of
+every width from 192 bytes up, which is one array growing twenty times over
+twenty rounds. That is a sentence nothing could have said before.
+
+And the crossing nothing counted: the machine counts crossings going out, and a
+call in is the host's to count — except the one that arrives while a call is
+already running, which is what a bound function calling back in is. `inward`
+crossing back in a million times over seven rounds says `reentered 7000000`.
+
+Two things in that list are named rather than counted and the reason is
+written down: text allocations on their own need a tag on every allocation, and
+boundary validation is one handle-tag comparison that a counter would cost more
+than. See D1032.
+
+**Runs:** `KEST_DEEP=1` over the workloads for the split, the instrument built
+against the sanitised objects for the reentry count, `make fast`, `make check`.

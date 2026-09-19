@@ -33288,3 +33288,47 @@ provable by the analysis that was considered and not built, the ceiling on
 removing all of them was measured at about nothing, so the analysis would buy
 three quarters of nothing. The quarter it could not reach is the shape a person
 actually writes. Bounds-check elimination stays closed.
+
+## D1032. What a program asks the heap for, and the crossing nothing counted
+
+**Decided.** Two counts the mission asked for and nothing had: every allocation
+split by what it holds and by the width it was cut from, and calls in from a
+host that arrive while one is already running.
+
+**Why a total was not enough.** `allocations`, `asked` and `given` say how much
+a program asks the heap for. They do not say *what* it asks for, and a program
+that is all short pieces of text and one that is all wide runs have the same
+total and nothing else in common. `bench/words.kest` takes 160,022 plain places,
+60 array headers and 660 runs of elements, and its widths are the ladder
+doubling under `text.join` as it grows a byte run:
+
+    width 16      120,002
+    width 32       40,120
+    width 48           20
+    width 96 .. 24576  60 each
+
+Sixty of every width from 192 upwards is one array growing twenty times over
+twenty rounds, which is a sentence nothing could have said before.
+
+**Counted at the allocation rather than worked out from the plots**, because a
+plot says what is in it now and this is what was ever handed out. It is two
+increments beside the three that were already there, which is the rule this
+module already keeps: every one of its counts is at an allocation, a sweep or a
+plot rather than at an instruction, so they are always on.
+
+**The crossing that was not counted.** The machine counts crossings going out.
+A call in from a host is the host's to count -- except for the one that arrives
+while a call is already running, which is what a bound function calling back
+into the program is, and which nothing on either side was counting. It is one
+comparison in `kest_call`, in the build that checks itself, for the reason D979
+gives. `tools/inward` crossing back in a million times over seven rounds reports
+`reentered 7000000`, which is what says the counter is the thing it is named.
+
+**Which closes D3 and D5 of the mission's instrumentation list**, with two
+things named rather than counted. *Allocations of text on their own*: a piece of
+text and the runs a world keeps beside its places are both `PLAIN` to the heap,
+and telling them apart means a tag on every allocation, paid by every program
+for a number nobody has asked a question of. *Validation work at the boundary*:
+D1029 measured it as the thing it is -- one handle-tag comparison per access in
+a release build -- rather than counting it, because a counter on it would cost
+more than it measures.

@@ -91,6 +91,21 @@ typedef struct {
 
 void kest_ground_plots(const KestGround *ground, KestGroundPlots *into);
 
+// Every allocation this has ever handed out, split by the width it was cut
+// from and by what the place holds. `widths` gets the width in bytes and
+// `taken` how many came from it, in the ladder's own order, with a last entry
+// of nought for the places wider than the ladder -- each of those got a plot
+// of its own and there is no one width to say. `kinds` gets four counts in the
+// order of `KestGroundKind`. Any of the three may be NULL. Answers how many
+// rungs it wrote.
+//
+// A total says how much a program asks for and this says what it asks for,
+// which is a different question: a program that is all short pieces of text
+// and one that is all wide runs have the same total and nothing else in
+// common. See D1032.
+uint32_t kest_ground_widths(const KestGround *ground, uint32_t *widths,
+                            uint64_t *taken, uint32_t many, uint64_t *kinds);
+
 KestGround *kest_ground_new(void);
 void kest_ground_free(KestGround *ground);
 
