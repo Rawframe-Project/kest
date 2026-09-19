@@ -125,18 +125,138 @@ static uint16_t unpack_typed(KestValue *out, const KestType *type,
 static uint16_t pack_typed(unsigned char *to, const KestType *type,
                            const KestValue *from);
 
+// One scalar, read out of memory into slots and written back. It is the same
+// switch `unpack` and `pack` run over a piece, factored out so that all three
+// say it once -- and so that a scalar moved on its own does not have to build
+// a layout of one piece and walk it. Building one was nine per cent of
+// `bench/rules.kest`, whose elements carry tagged unions and so are moved by
+// their type rather than by a flat list of pieces. See D1028.
+static inline void read_piece(KestValue *out, uint8_t kind,
+                       const unsigned char *at) {
+    switch (kind) {
+    case KEST_L_TEXT: {
+        memcpy(&out[0], at, 8);
+        uint64_t many;
+        memcpy(&many, at + 8, 8);
+        out[1].integer = (int64_t)many;
+        break;
+    }
+    case KEST_L_I8: {
+        int8_t v;
+        memcpy(&v, at, 1);
+        out[0].integer = v;
+        break;
+    }
+    case KEST_L_I16: {
+        int16_t v;
+        memcpy(&v, at, 2);
+        out[0].integer = v;
+        break;
+    }
+    case KEST_L_I32: {
+        int32_t v;
+        memcpy(&v, at, 4);
+        out[0].integer = v;
+        break;
+    }
+    // The byte an optional keeps after its value is one byte, read the way any
+    // other byte is. Its kind is what it is for and not what it is, and what
+    // it is is this. See D714. A truth is the third of them, and the same
+    // byte. See D839.
+    case KEST_L_U8:
+    case KEST_L_BOOL:
+    case KEST_L_HELD: {
+        uint8_t v;
+        memcpy(&v, at, 1);
+        out[0].integer = v;
+        break;
+    }
+    case KEST_L_U16: {
+        uint16_t v;
+        memcpy(&v, at, 2);
+        out[0].integer = v;
+        break;
+    }
+    case KEST_L_U32: {
+        uint32_t v;
+        memcpy(&v, at, 4);
+        out[0].integer = v;
+        break;
+    }
+    case KEST_L_F32: {
+        float v;
+        memcpy(&v, at, 4);
+        out[0].real = v;
+        break;
+    }
+    case KEST_L_F64: {
+        double v;
+        memcpy(&v, at, 8);
+        out[0].real = v;
+        break;
+    }
+    default:
+        memcpy(&out[0], at, 8);
+        break;
+    }
+}
+
+static inline void write_piece(unsigned char *at, uint8_t kind,
+                        const KestValue *from) {
+    switch (kind) {
+    case KEST_L_TEXT: {
+        memcpy(at, &from[0], 8);
+        uint64_t many = (uint64_t)from[1].integer;
+        memcpy(at + 8, &many, 8);
+        break;
+    }
+    case KEST_L_I8:
+    case KEST_L_U8:
+    case KEST_L_BOOL:
+    case KEST_L_HELD: {
+        uint8_t v = (uint8_t)from[0].integer;
+        memcpy(at, &v, 1);
+        break;
+    }
+    case KEST_L_I16:
+    case KEST_L_U16: {
+        uint16_t v = (uint16_t)from[0].integer;
+        memcpy(at, &v, 2);
+        break;
+    }
+    case KEST_L_I32:
+    case KEST_L_U32: {
+        uint32_t v = (uint32_t)from[0].integer;
+        memcpy(at, &v, 4);
+        break;
+    }
+    case KEST_L_F32: {
+        float v = (float)from[0].real;
+        memcpy(at, &v, 4);
+        break;
+    }
+    case KEST_L_F64: {
+        double v = from[0].real;
+        memcpy(at, &v, 8);
+        break;
+    }
+    default:
+        memcpy(at, &from[0], 8);
+        break;
+    }
+}
+
 static uint16_t move_scalar(KestValue *out, const KestType *type,
                             const unsigned char *from, bool reading,
                             unsigned char *to) {
-    KestPiece piece = {0, kest_scalar_of(type), NULL};
+    // Nothing here is a tag: a scalar moved on its own is one piece of a
+    // width, and what a tag is is the piece that says which.
+    uint8_t kind = kest_scalar_of(type);
     uint16_t wide = type != NULL && type->tag == KEST_T_TEXT ? 2 : 1;
-    KestLayout one = {&piece, 1, wide, 0, 0, NULL, false, false};
     if (reading) {
-        // Nothing here is a tag: a scalar moved on its own is one piece of a
-        // width, and what a tag is is the piece that says which.
-        unpack(out, &one, from, NULL);
+        read_piece(out, kind, from);
     } else {
-        pack(to, &one, out);
+        write_piece(to, kind, out);
     }
     return wide;
 }
@@ -257,6 +377,12 @@ static void unpack(KestValue *out, const KestLayout *layout,
     }
     // A piece is not a slot: a piece of text is one piece and two slots, so
     // the walk over the pieces counts the slots as it goes. See D964.
+    //
+    // The switch is written out here rather than handed to `read_piece`, and
+    // that is measured rather than preferred: a walk that called it was a
+    // third slower on `bench/kernel.kest` and a tenth on `bench/control.kest`,
+    // whose elements are flat runs of numbers and whose whole cost is this
+    // loop. See D1028.
     uint16_t put = 0;
     for (uint16_t i = 0; i < layout->count; i++, put++) {
         const unsigned char *at = from + layout->pieces[i].offset;
@@ -288,10 +414,6 @@ static void unpack(KestValue *out, const KestLayout *layout,
             break;
         }
         case KEST_L_U8:
-        // The byte an optional keeps after its value is one byte, read the way
-        // any other byte is. Its kind is what it is for and not what it is,
-        // and what it is is this. See D714. A truth is the third of them, and
-        // the same byte. See D839.
         case KEST_L_BOOL:
         case KEST_L_HELD: {
             uint8_t v;
@@ -336,6 +458,7 @@ static void pack(unsigned char *to, const KestLayout *layout,
         pack_typed(to, layout->type, from);
         return;
     }
+    // Written out for the reason the one above is. See D1028.
     uint16_t took = 0;
     for (uint16_t i = 0; i < layout->count; i++, took++) {
         unsigned char *at = to + layout->pieces[i].offset;

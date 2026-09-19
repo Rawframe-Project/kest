@@ -6236,7 +6236,7 @@ fn main() -> i32 {
         # of pieces the day a set says only its width, and a host may lend
         # either under the other's name. See D897.
         "what": "a set of named bits laid out as the byte it sits over",
-        "file": "src/types.c",
+        "file": "src/types.h",
         "from": """        case 8:
             return KEST_L_FLAGS8;""",
         "to": """        case 8:
@@ -11674,7 +11674,7 @@ static const Keyword KEYWORDS[] = {
         # told to read a pointer out of it, and a store and a place in one are
         # two of the same eight bytes with nothing to tell them apart.
         "what": "a place in a store laid out as a handle",
-        "file": "src/types.c",
+        "file": "src/types.h",
         "from": """    case KEST_T_REF:
         return KEST_L_REF;""",
         "to": """    case KEST_T_REF:
@@ -14447,10 +14447,6 @@ bool kest_needs_of(""",
         "what": "a byte read out of a lend as though it were signed",
         "file": "src/vm.c",
         "from": r"""        case KEST_L_U8:
-        // The byte an optional keeps after its value is one byte, read the way
-        // any other byte is. Its kind is what it is for and not what it is,
-        // and what it is is this. See D714. A truth is the third of them, and
-        // the same byte. See D839.
         case KEST_L_BOOL:
         case KEST_L_HELD: {
             uint8_t v;

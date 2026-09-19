@@ -1153,56 +1153,6 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
     return 1;
 }
 
-uint8_t kest_scalar_of(const KestType *type) {
-    switch (type->tag) {
-    case KEST_T_BOOL:
-        return KEST_L_BOOL;
-    case KEST_T_FLOAT:
-        return type->width == 32 ? KEST_L_F32 : KEST_L_F64;
-    case KEST_T_INT:
-        switch (type->width) {
-        case 8:
-            return type->is_signed ? KEST_L_I8 : KEST_L_U8;
-        case 16:
-            return type->is_signed ? KEST_L_I16 : KEST_L_U16;
-        case 32:
-            return type->is_signed ? KEST_L_I32 : KEST_L_U32;
-        default:
-            return type->is_signed ? KEST_L_I64 : KEST_L_U64;
-        }
-    // A place in a store, which is a number rather than a machine word: the
-    // slot it names and how many times that slot has been handed out, packed
-    // into one. A host reads it through `integer`, and until it said so it was
-    // one kind with the handles it is handed beside. See D715.
-    case KEST_T_REF:
-        return KEST_L_REF;
-    // Bytes rather than a handle, which is the difference a host reading a
-    // frame cannot make out of a width. See D896.
-    case KEST_T_TEXT:
-        return KEST_L_TEXT;
-    // Which function of the program this is, which is a number: the machine
-    // calls through it by reading `integer`, and a layout that said `word`
-    // was telling a host to read that number as a pointer. See D897.
-    case KEST_T_FN:
-        return KEST_L_FN;
-    // A set of named bits, at the width it was declared over: what it holds is
-    // the bits it has names for, and a byte is a byte. See D897.
-    case KEST_T_FLAGS:
-        switch (type->width) {
-        case 8:
-            return KEST_L_FLAGS8;
-        case 16:
-            return KEST_L_FLAGS16;
-        case 32:
-            return KEST_L_FLAGS32;
-        default:
-            return KEST_L_FLAGS64;
-        }
-    default:
-        return KEST_L_WORD;
-    }
-}
-
 // The number standing for a value, over the same parts that decide whether
 // two of them are equal. Anything else would let two equal values differ.
 uint64_t kest_hash_value(const KestType *type, const KestValue *slots) {

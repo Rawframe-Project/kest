@@ -534,7 +534,61 @@ bool kest_type_equal(const KestType *a, const KestType *b);
 // answers nought for a number that is not one.
 // What one value of this type is where memory is shared, which is also the
 // width its arithmetic is cut to.
-uint8_t kest_scalar_of(const KestType *type);
+// Which of the kinds a layout can hold this type is read through. Written
+// here rather than in the file beside the rest of the type questions, and for
+// the reason D868 moved `kest_narrow_to`: the machine runs one of these for
+// every scalar of every element it packs or unpacks, and a call across a file
+// for a switch was four per cent of `bench/rules.kest`. See D1028.
+static inline uint8_t kest_scalar_of(const KestType *type) {
+    switch (type->tag) {
+    case KEST_T_BOOL:
+        return KEST_L_BOOL;
+    case KEST_T_FLOAT:
+        return type->width == 32 ? KEST_L_F32 : KEST_L_F64;
+    case KEST_T_INT:
+        switch (type->width) {
+        case 8:
+            return type->is_signed ? KEST_L_I8 : KEST_L_U8;
+        case 16:
+            return type->is_signed ? KEST_L_I16 : KEST_L_U16;
+        case 32:
+            return type->is_signed ? KEST_L_I32 : KEST_L_U32;
+        default:
+            return type->is_signed ? KEST_L_I64 : KEST_L_U64;
+        }
+    // A place in a store, which is a number rather than a machine word: the
+    // slot it names and how many times that slot has been handed out, packed
+    // into one. A host reads it through `integer`, and until it said so it was
+    // one kind with the handles it is handed beside. See D715.
+    case KEST_T_REF:
+        return KEST_L_REF;
+    // Bytes rather than a handle, which is the difference a host reading a
+    // frame cannot make out of a width. See D896.
+    case KEST_T_TEXT:
+        return KEST_L_TEXT;
+    // Which function of the program this is, which is a number: the machine
+    // calls through it by reading `integer`, and a layout that said `word`
+    // was telling a host to read that number as a pointer. See D897.
+    case KEST_T_FN:
+        return KEST_L_FN;
+    // A set of named bits, at the width it was declared over: what it holds is
+    // the bits it has names for, and a byte is a byte. See D897.
+    case KEST_T_FLAGS:
+        switch (type->width) {
+        case 8:
+            return KEST_L_FLAGS8;
+        case 16:
+            return KEST_L_FLAGS16;
+        case 32:
+            return KEST_L_FLAGS32;
+        default:
+            return KEST_L_FLAGS64;
+        }
+    default:
+        return KEST_L_WORD;
+    }
+}
+
 
 // And the one round of a mixer a number is hashed with, which is the machine's
 // and the folder's alike: a constant that hashes a number is worked out where it
