@@ -212,12 +212,7 @@ jobs:
   linux-full:
     runs-on: ubuntu-latest
     steps:
-      # The whole history, because one of the checks builds the tree at
-      # `v1.0.0` and compares: a shallow checkout has no tag to build, and
-      # what that check does then is say so and hold nothing. See D1021.
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - name: the whole gate
         run: mkdir -p /home/runner/kest-tmp && TMPDIR=/home/runner/kest-tmp make check
 

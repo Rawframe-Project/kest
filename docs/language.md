@@ -4125,7 +4125,7 @@ keeping a replay or shipping a save writes down beside it. `kest --version`
 prints all four:
 
 ```
-kest 1.0.0, abi 4, json 3, profile kest-det 1
+kest 0.0.1, abi 4, json 3, profile kest-det 1
 ```
 
 The ABI number goes up when anything a host can see changes: arguments, what a
@@ -4133,11 +4133,36 @@ function answers, a struct's fields or their order, an enum's cases or their
 numbers, or what any of them mean. It does not go up for something added at the
 end, which a host built against the older number does not know about. See D974.
 
-### What 1.x promises
+### What 0.0.x promises, which is nothing
 
-Four numbers, four promises, and they are not the same promise. This is the
-whole of what a program or a host may lean on between one 1.x and the next.
-See D998.
+**Nothing is frozen.** This is `0.0.1`, and a `0.0.x` promises no program, no
+host and no tool anything between one of them and the next. Semantics may
+change, syntax may change, the C ABI may change, the shape of the JSON may
+change, what `deterministic` covers may change, and what a reference is made of
+may change — one of those changed on the way to this sentence, and D1033 is
+why.
+
+Kest said `1.0.0` on 2026-09-18 and withdrew it a day later. Nobody outside this
+project had written a program in it, two independent readings from outside found
+foundational things still worth changing, and a stability promise made before
+anyone had leaned on it is a promise that costs its maker nothing and its future
+readers everything. The release and the tag are gone; the history is not, and
+D1035 says what was withdrawn and on what evidence.
+
+What replaces the promise while this is `0.0.x`: every break is a decision that
+says what it supersedes and why the old thing was worse, and `CHANGELOG.md`
+says what a reader with a program has to do about it. That is a record rather
+than a guarantee, and it is the honest thing to offer before there is anyone to
+guarantee it to.
+
+**The four numbers are still four numbers**, and what each is *about* has not
+changed — they are the version, the C ABI, the shape of the JSON, and the
+deterministic profile, and D974 and D983 say which moves for what. What has
+changed is that none of them is a promise yet.
+
+The rest of this section is what those four promises **will** mean when this
+project offers them again, kept here because it is the design and not an
+aspiration. Read it as what stability would say, not as what `0.0.1` says.
 
 **A program.** A program that checks under 1.x checks under every later 1.x.
 Syntax is added and not taken away; a keyword is added only where a program
@@ -4214,7 +4239,7 @@ project demo
 entry src/main.kest
 source src
 tests tests
-kest 1.0.0
+kest 0.0.1
 profile kest-det 1
 ```
 

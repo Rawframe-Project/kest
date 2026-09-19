@@ -2125,7 +2125,6 @@ fi
 
 say "nothing" "a document with nothing in it, and two checks handed no files"
 
-ask "kept" tools/check-kept.sh
 ask "lends" tools/check-lends.sh
 ask "documentation" tools/check-docs.sh docs/language.md \
     docs/decisions.md CHANGELOG.md

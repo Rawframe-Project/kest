@@ -916,7 +916,33 @@ for name in provided:
 # in a paragraph about where imports resolve from is not a file and was never
 # meant to be one. `CLAUDE.md` is held to the same thing by `check-tables.sh`,
 # which is where the layout of this tree is written down.
+#
+# A superseded decision is read for everything else and not for this. The
+# decisions file is append-only, so a decision that took a file away leaves an
+# earlier one naming it for ever, and holding that earlier one to the tree
+# would mean either editing history or keeping a file nothing uses: D1021
+# named the check D1036 deleted. What says a decision is no longer what this
+# project does is the list at the top of the file, which is already held both
+# ways, so the two rules meet without a second list. See D1036.
 OURS = ('src/', 'tools/', 'docs/', 'examples/', 'lib/', 'include/')
+
+
+def out_of_date(path, name):
+    """Whether a name is inside a decision the superseding list has replaced."""
+    if not path.endswith('decisions.md'):
+        return False
+    text = open(path).read()
+    at = text.find('`%s`' % name)
+    while at >= 0:
+        heading = text.rfind('\n## D', 0, at)
+        number = re.match(r'\n## (D\d+)\.', text[heading:heading + 12])
+        if (heading < 0 or number is None or
+                number.group(1) not in {was for was, _ in replaced}):
+            return False
+        at = text.find('`%s`' % name, at + 1)
+    return True
+
+
 pointed = 0
 for path in sys.argv[1:]:
     for name in sorted(set(re.findall(
@@ -924,7 +950,7 @@ for path in sys.argv[1:]:
         if not name.startswith(OURS):
             continue
         pointed += 1
-        if not os.path.exists(name):
+        if not os.path.exists(name) and not out_of_date(path, name):
             print("%s: names `%s` and there is no such file" % (path, name))
             failed = 1
 some("the files of this tree the documents name", pointed)
@@ -1183,6 +1209,20 @@ else:
     if front_page is None or front_page.group(1) != this_version:
         print("docs: the front page says version %s and a run says %s"
               % (front_page.group(1) if front_page else None, this_version))
+        failed = 1
+    # And the count of doors it quotes. A number written on a front page and
+    # compared against nothing is a number that drifts: this one said 88 while
+    # the header declared 97, through two missions that each added one. What it
+    # is counted against is the header rather than a second list. See D1037.
+    doors = len(set(re.findall(
+        r'^[A-Za-z_][A-Za-z0-9_ *]*\**\s*\b(kest_[a-z_0-9]+)\s*\(',
+        open('include/kest.h').read(), re.M)))
+    said_doors = re.search(r'a C embedding API of (\d+) doors', front_page_text)
+    metadata += 1
+    if said_doors is None or int(said_doors.group(1)) != doors:
+        print("docs: the front page says the C API is %s doors and the header "
+              "declares %u"
+              % (said_doors.group(1) if said_doors else None, doors))
         failed = 1
     # And every other way the front page names a version, which is the way this
     # went wrong: the sentence above said 1.0.0 on the day the section headed

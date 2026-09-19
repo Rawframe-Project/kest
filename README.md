@@ -87,7 +87,8 @@ takes about ten minutes on the machine this was written on.
 
 ## What is and is not there
 
-Version 1.0.0. Three states, and nothing is in the first that has not been run.
+Version 0.0.1. Unstable on purpose: this said `1.0.0` for a day and withdrew
+it. Three states, and nothing is in the first that has not been run.
 
 **Implemented.** Whole numbers and floats at every width with defined wrapping
 and narrowing; `text`; `bool`; structs; fixed runs; arrays; `store<T>` handing
@@ -100,7 +101,7 @@ which the compiler proves nothing escapes from; a bytecode VM of 158
 instructions, one of which nothing compiles to and a debugger writes; diagnostics with stable codes,
 spans, notes, suggested fixes and `--json`, all of a file's mistakes in one
 pass, with the shape of every object a command writes versioned; one canonical
-source form and a formatter that holds it; a C embedding API of 88 doors
+source form and a formatter that holds it; a C embedding API of 97 doors
 covering compile, start, call, layout introspection with field names, lent
 memory, a frame's working memory marked and put back, per-machine limits, what
 a program may do, what a run did, and stopping a machine and asking it where it
@@ -152,9 +153,16 @@ door added at the end of the header is not a change.
 
 ## Where this is
 
-**v1.0.0**, and what that means concretely rather than as a grade: the four
-numbers are frozen under the rule in the reference, and what is below is what
-is behind them.
+**v0.0.1**, and unstable on purpose. Kest published `1.0.0` on 2026-09-18 and
+withdrew it a day later: nobody outside this project had written a program in
+it, two independent readings from outside found foundational things still worth
+changing, and one of them reproduced on the first try — a reference could name
+somebody else's object once a process had made sixty-five thousand machines.
+Nothing here is frozen while this is `0.0.x`. The history is intact and
+`CHANGELOG.md` says what was withdrawn and on what evidence.
+
+What is below is what is behind the number, which is the part that did not
+change when the number did.
 
 **What is decided and finished.** One resolved representation the backend reads
 (D962) and the other backend built, measured and rejected by a predeclared rule

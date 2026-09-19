@@ -37344,3 +37344,49 @@ See D1033 and D1034.
 -r 4` for instructions and `kest profile` for the heap; the churn program at
 seventeen million turns; the ceiling lowered in a copy of the tree to watch
 `K0630`; `make fast`; `make check`.
+
+## 1.0.0 is withdrawn, and this is 0.0.1
+
+It was published on 2026-09-18 and this is 2026-09-19. In between, two
+independent readings from outside the project's decision history looked at Kest
+as a language somebody might embed, and found foundational things still worth
+changing. The first reproduced on the first try and is the entry above.
+
+A stability promise is a promise about what will not be corrected. Making one
+the day before finding out the foundation needs correcting is not a promise; it
+is a cost paid by everyone who reads the repository afterwards and by every
+decision that has to route around it.
+
+The evidence that nobody was leaning on it, which is what made withdrawing the
+honest move rather than the convenient one: each of the four release assets had
+been downloaded exactly once — this project's own CI unpacking the archive it
+had just built — and the repository had no forks and one star.
+
+So: the GitHub release and the `v1.0.0` tag are gone, no commit is rewritten,
+and `53a0771` is still an ancestor of `main` and still builds. The `1.0.0`
+section of the changelog stays under a heading that says it was withdrawn. The
+reference's *What 1.x promises* is now *What 0.0.x promises, which is nothing*,
+with the four paragraphs about what stability will mean kept underneath as the
+design rather than as an offer.
+
+And the check that held the old promise is retired with it. `check-kept.sh`
+built the tree at the tag and compared; with the tag gone it would have said so
+and held nothing, which reads green and means nothing. What replaces the
+criterion is not *every 1.0 behaviour remains forever* but *every intentional
+behaviour of the current architecture is tested, and every breaking redesign has
+an explicit migration record* — the rest of the gate, and the superseding list
+the decisions already keep. One hole went with it, and the only piece of
+backstop machinery that pointed `GIT_DIR` at the tree a copy came from, which
+existed for that hole alone.
+
+Two smaller truths fixed on the way. A superseded decision may now name a file
+that has since been deleted — the decisions file is append-only, so holding
+D1021 to a check D1036 removed would mean editing history or keeping a file
+nothing uses. And the front page said the C API was 88 doors while the header
+declared 97; the number is counted out of the header now, every run.
+
+See D1035, D1036 and D1037.
+
+**Runs:** `gh release view` for the download counts and `gh repo view` for the
+forks; `git merge-base --is-ancestor` for the history; `make fast`;
+`make check`.

@@ -40,6 +40,8 @@ another and is not named here is a check that fails.
 | D012 | D996 | what a program makes is given back when nothing can reach it |
 | D934 | D1033 | a handout number is the whole of the authority, and a count of worlds came round |
 | D936 | D1034 | the count that stamps places is the process's and is forty bits wide |
+| D998 | D1035 | 1.0.0 was withdrawn a day after it was published, and this is 0.0.1 |
+| D1021 | D1036 | the tag gate is retired, and a migration record takes its place |
 
 ---
 
@@ -33460,3 +33462,118 @@ spent.
 hands out a million places a second for a fortnight is the shape that meets it,
 and what it meets is a refusal it can see coming rather than a reference that
 names somebody else's object.
+
+## D1035. The 1.0.0 release is withdrawn, and this is 0.0.1
+
+**Decided.** The GitHub release and the `v1.0.0` tag are gone. The history is
+not. The development version is `0.0.1` and nothing about this project is frozen
+while it stays there.
+
+**Why.** `1.0.0` was published on 2026-09-18 and this is 2026-09-19. In between,
+two independent readings from outside the project's decision history looked at
+Kest as a language somebody might embed, and found foundational things still
+worth changing. The first of them reproduced on the first try and is D1033: a
+reference could name somebody else's object once a process had made
+sixty-five thousand machines, silently, with the first world still standing.
+
+A stability promise is a promise about what will not be corrected. Making one
+the day before finding out the foundation needs correcting is not a promise, it
+is a cost — paid by everyone who reads the repository afterwards and by every
+future decision that has to route around it.
+
+**The evidence that nobody was relying on it**, which is what made withdrawing
+the honest move rather than the convenient one. Each of the four release assets
+had been downloaded exactly once, which is this project's own `package` job in
+CI unpacking the archive it had just built. The repository had no forks and one
+star. The release was twenty-four hours old. There is no external program
+written in Kest, which the front page and the 1.1 report both say already.
+
+**What is kept.** Everything. No commit is rewritten, nothing is squashed, and
+`53a0771858a4d0b7770d0c48a15fdce4325e9292` -- the tree `1.0.0` shipped -- is
+still an ancestor of `main` and still builds. The `1.0.0` section of
+`CHANGELOG.md` stays where it is, under a heading that says it was withdrawn.
+The decisions that made it stay as they are. A project that deletes the evidence
+that it was once wrong is a project whose record is worth nothing.
+
+**What went instead.** The release, the tag, and the claim. The reference's
+*What 1.x promises* is now *What 0.0.x promises, which is nothing*, and the four
+paragraphs that say what stability will mean are kept underneath it as the
+design rather than as an offer.
+
+**What replaces the promise.** While this is `0.0.x`: every break is a decision
+that says what it supersedes and why the old thing was worse, and `CHANGELOG.md`
+says what a reader with a program has to do about it. That is a record and not a
+guarantee, and it is the honest thing to have before there is anybody to
+guarantee it to. It is also what replaces `check-kept.sh`, which held every
+behaviour of `1.0.0` forever against a tag that no longer exists. See D1036.
+
+**The other three numbers have not moved.** The C ABI is still 4, the JSON
+schema still 3 and the profile still `kest-det 1`. They were made under the old
+policy and are no longer compatibility constraints, but changing them now would
+be renumbering in the middle of an architecture correction. They are settled
+once the correction has stopped moving, in one pass, and the likely end is 1, 1
+and 1.
+
+## D1036. The tag gate is retired, and what takes its place. Supersedes D1021
+
+**Decided.** The check that held the tag is gone, and with it the hole that
+asked for history and the full-history checkout CI did for its sake.
+
+**What it was.** D1021 built the tree at `v1.0.0` beside this one and held four
+sentences: every program `1.0.0` shipped answers the same thing, every one of
+them is still in the one form, four refusals keep their codes, and every door
+the header declared is declared the same way. It was the right check for the
+promise it held.
+
+**Why it goes.** The promise is withdrawn (D1035) and the tag it read is
+deleted. A check that resolves a tag that is not there says so and holds
+nothing, and a gate section that passes by finding nothing is worse than no
+section: it reads green and means nothing. Keeping the tag alive so the check
+keeps working would be keeping a stability claim for the convenience of the
+thing that checks it.
+
+**What the criterion is now.** Not *every 1.0 behaviour remains forever*, but:
+
+> every intentional behaviour of the current architecture is tested, and every
+> breaking redesign has an explicit migration record.
+
+The first half is the rest of the gate and always was -- thirty-seven examples
+run and compared three ways, the refusal corpus, the deterministic corpus, the
+one form, the header standing on its own, and now `identity`. The second half is
+`docs/decisions.md` saying what a break supersedes and why the old thing was
+worse, and `CHANGELOG.md` saying what a reader with a program has to do about
+it. `check-docs.sh` already holds the first of those two: a decision that says
+it supersedes something and is not in the list at the top of that file is a
+check that fails.
+
+**The old tree is still there and still comparable.** `53a0771858a4d0b7770d0c48a15fdce4325e9292`
+is an ancestor of `main` and builds. Nothing stops a future check from reading
+it; what is gone is the requirement that a deleted tag exist so that old CI
+logic stays convenient.
+
+**What it cost the gate.** One check of the eleven, one hole of the eight
+hundred and fifty-four, and the only piece of machinery in the backstops that
+pointed `GIT_DIR` at the tree a copy came from -- which existed for that one
+hole and is gone with it.
+
+## D1037. A count on the front page is counted, not written down
+
+**Decided.** The number of doors the README quotes is read out of the header
+every time the documentation check runs.
+
+**Why.** It said 88 while the header declared 97. It had been right once. Two
+missions each added doors — the collector's pause callback (D1027) among them —
+and nothing anywhere compared the sentence with the thing it was about. An
+outside reader counted the header and found the front page wrong, which is the
+cheapest kind of wrong to find and the worst kind to have: the front page is the
+one document written for somebody who has read nothing else.
+
+**How.** One regular expression over `include/kest.h` against the one sentence
+in `README.md` that quotes a count. The header is the source of the number and
+there is no second list, which is the rule this project already keeps for the
+instruction names, the token names, the keywords and the builtins.
+
+**What it does not do.** It does not count the doors *for* the sentence and
+rewrite it. A number a check writes is a number nobody read; a number a check
+refuses is a number somebody has to look at. That is the same reason the
+reference's figures are held rather than generated.

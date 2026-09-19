@@ -171,7 +171,7 @@ def what_a_session_is_taking(session):
     return taking, these
 
 
-def what_it_took(args, hole, cwd=None, history=False):
+def what_it_took(args, hole, cwd=None):
     """Run what a hole is about, and say what it took as well as what it said.
 
     `subprocess.run` answers what a run said and not what it cost, because
@@ -189,8 +189,6 @@ def what_it_took(args, hole, cwd=None, history=False):
         # In a session of its own, so that what a hole starts can be counted
         # and stopped as one thing rather than as whatever is left behind.
         walls = inside_the_walls()
-        if history:
-            walls["GIT_DIR"] = os.path.abspath(".git")
         running = subprocess.Popen(args, cwd=cwd, env=walls,
                                    stdin=subprocess.DEVNULL,
                                    stdout=said, stderr=wrote,
@@ -1739,25 +1737,6 @@ tokens   what a token is and what it carries""",
         "make": [],
         "tool": "tools/check-tables.sh",
         "caught": "instructions: 164 kinds and 165 names",
-    },
-    {
-        # A door that is declared differently than the version that promised
-        # not to change it. The 1.x promise is that a host compiled against
-        # the header the tag shipped finds every door spelled the way it was
-        # spelled, and the only check here that can say so is the one that
-        # builds the tag. A parameter renamed still compiles, which is what
-        # makes it the right break: the tree is fine and the promise is not.
-        #
-        # It asks for history, because a copy of a tree is a tree with none
-        # and this check reads the tag. See D1021.
-        "what": "a door spelled differently than the version that shipped it",
-        "file": "include/kest.h",
-        "from": "size_t kest_heap_used(const KestRuntime *runtime);",
-        "to": "size_t kest_heap_used(const KestRuntime *machine);",
-        "make": ["kest"],
-        "tool": "tools/check-kept.sh",
-        "history": True,
-        "caught": "is declared differently than it was",
     },
     {
         # Two copies of a licence, which is what a thing that is installed on
@@ -15370,8 +15349,8 @@ fn main() -> i32 {
         # three.
         "what": "a reference that prints another number than a run",
         "file": "docs/language.md",
-        "from": """kest 1.0.0, abi 4, json 3, profile kest-det 1""",
-        "to": """kest 1.0.0, abi 1, json 1, profile kest-det 1""",
+        "from": """kest 0.0.1, abi 4, json 3, profile kest-det 1""",
+        "to": """kest 0.0.1, abi 1, json 1, profile kest-det 1""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",
         "arguments": ["docs/language.md", "docs/decisions.md"],
@@ -15383,7 +15362,7 @@ fn main() -> i32 {
         "what": "a manifest in the reference naming another version",
         "file": "docs/language.md",
         "from": """tests tests
-kest 1.0.0""",
+kest 0.0.1""",
         "to": """tests tests
 kest 9.9.9""",
         "make": ["kest"],
@@ -15396,8 +15375,8 @@ kest 9.9.9""",
         # read none of the others.
         "what": "a front page naming another version",
         "file": "README.md",
-        "from": """Version 1.0.0. Three states""",
-        "to": """Version 9.9.9. Three states""",
+        "from": """Version 0.0.1. Unstable""",
+        "to": """Version 9.9.9. Unstable""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",
         "arguments": ["docs/language.md", "docs/decisions.md"],
@@ -15408,7 +15387,7 @@ kest 9.9.9""",
         # what an unreleased version looks like from outside.
         "what": "a changelog whose newest section is not this version",
         "file": "CHANGELOG.md",
-        "from": """## 1.0.0 — 2026-09-18""",
+        "from": """## 0.0.1 — 2026-09-19""",
         "to": """## Unreleased""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",
@@ -15428,11 +15407,25 @@ kest 9.9.9""",
         "caught": "builds no archive named for",
     },
     {
+        # A count on the front page that nothing counts. It said 88 while the
+        # header declared 97, through two missions that each added a door, and
+        # what found it was a reader from outside rather than anything here.
+        # See D1037.
+        "what": "a front page counting the doors for itself",
+        "file": "README.md",
+        "from": """a C embedding API of 97 doors""",
+        "to": """a C embedding API of 88 doors""",
+        "make": ["kest"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md"],
+        "caught": "the front page says the C API is 88 doors",
+    },
+    {
         # And the one version written outside this tree's own documents, which
         # is what a marketplace shows and what an editor installs.
         "what": "an editor extension naming another version",
         "file": "editors/vscode/package.json",
-        "from": """  "version": "1.0.0",""",
+        "from": """  "version": "0.0.1",""",
         "to": """  "version": "9.9.9",""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",
@@ -15675,14 +15668,8 @@ def put_out_of_order(hole):
         # needs longer than this is one nobody would wait for either.
         try:
             if "tool" in hole:
-                # A check that reads this project's own history gets to: the
-                # copy is made by copying files and has none, and pointing
-                # `GIT_DIR` at the tree this was copied from is the whole of
-                # what it needs. Only where a hole asks, because every other
-                # check here is about the copy and nothing else. See D1021.
                 ran = what_it_took([os.path.join(work, hole["tool"])]
-                                   + hole.get("arguments", []), hole, cwd=work,
-                                   history=hole.get("history", False))
+                                   + hole.get("arguments", []), hole, cwd=work)
             elif "host" in hole:
                 # The other host, which is the only thing here that lays its
                 # own memory over what the compiler says a type is.
