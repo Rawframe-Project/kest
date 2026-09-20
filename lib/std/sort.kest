@@ -30,10 +30,10 @@ fn by<T>(items: [T], before: fn(T, T) -> bool no.alloc no.host) no.alloc no.host
 // checked as that type — so `sort.by(words, sort.ascending)` works for text
 // and for every number, and a shape with no order of its own is refused in the
 // copy that was asked for rather than by a rule written here.
-fn ascending<T>(a: T, b: T) -> bool no.alloc no.host deterministic {
+fn ascending<T: orders>(a: T, b: T) -> bool no.alloc no.host deterministic {
     return a < b
 }
 
-fn descending<T>(a: T, b: T) -> bool no.alloc no.host deterministic {
+fn descending<T: orders>(a: T, b: T) -> bool no.alloc no.host deterministic {
     return b < a
 }

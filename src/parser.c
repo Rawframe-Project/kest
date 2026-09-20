@@ -1912,33 +1912,73 @@ static KestDecl *new_decl(Parser *parser, KestDeclKind kind, KestSpan span) {
 
 // `fn sort<T>` and `struct Pair<A, B>` ask for the same thing, so they are
 // read the same way. A name here stands for one type per copy.
+// `T: compares hashes`, read after a parameter's name. Words rather than
+// keywords, the way `flags` and `scratch` and `own` are: they stand here and
+// are names everywhere else, so a program that called something `orders` keeps
+// it.
+static uint8_t parse_wants(Parser *parser) {
+    if (!match(parser, KEST_TOK_COLON)) {
+        return 0;
+    }
+    uint8_t wants = 0;
+    for (;;) {
+        bool took = false;
+        for (uint32_t at = 0; at < KEST_CAPABILITY_COUNT && !took; at++) {
+            if (!is_word(parser, 0, kest_capability(at)->word)) {
+                continue;
+            }
+            KestSpan where = current_span(parser);
+            advance(parser);
+            if ((wants & kest_capability(at)->bit) != 0) {
+                error_at(parser, where, "K0217", "`%s` is written twice",
+                         kest_capability(at)->word);
+            }
+            wants |= (uint8_t)kest_capability(at)->bit;
+            took = true;
+        }
+        if (!took) {
+            break;
+        }
+    }
+    if (wants == 0) {
+        char list[128];
+        kest_capability_list(list, sizeof(list));
+        error_at(parser, current_span(parser), "K0217",
+                 "expected what this type has to be able to do, found %s",
+                 kest_token_name(peek_at(parser, 0).kind));
+        suggest(parser, "there are %u: %s", KEST_CAPABILITY_COUNT, list);
+    }
+    return wants;
+}
+
 static bool parse_type_params(Parser *parser, KestDecl *decl) {
     if (!match(parser, KEST_TOK_LT)) {
         return true;
     }
     List names = {0};
     do {
-        KestSpan *held = KEST_ARENA_NEW(parser->arena, KestSpan);
+        KestTypeParam *held = KEST_ARENA_NEW(parser->arena, KestTypeParam);
         if (held == NULL) {
             parser->out_of_memory = true;
             return false;
         }
-        *held = current_span(parser);
+        held->name = current_span(parser);
         if (!expect(parser, KEST_TOK_IDENT)) {
             return false;
         }
+        held->wants = parse_wants(parser);
         list_push(parser, &names, held);
     } while (match(parser, KEST_TOK_COMMA));
     close_generic(parser);
 
-    decl->type_params = KEST_ARENA_ARRAY(parser->arena, KestSpan,
+    decl->type_params = KEST_ARENA_ARRAY(parser->arena, KestTypeParam,
                                          names.count == 0 ? 1 : names.count);
     if (decl->type_params == NULL) {
         parser->out_of_memory = true;
         return false;
     }
     for (uint32_t i = 0; i < names.count; i++) {
-        decl->type_params[i] = *(KestSpan *)names.items[i];
+        decl->type_params[i] = *(KestTypeParam *)names.items[i];
     }
     decl->type_param_count = names.count;
     return true;

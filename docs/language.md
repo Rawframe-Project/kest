@@ -2438,11 +2438,53 @@ written the way any other call is. A function passed as an argument is settled
 after the others, so `sort(words, ascending)` picks the `ascending` that
 matches what `words` made `T`.
 
+**What a name may be asked to do is written, and there are two of them.** A
+body that compares two of what it was given, or puts one in order, says so on
+the name:
+
+```kest
+fn firstAt<T: compares>(items: [T], want: T) -> i32 no.alloc {
+    for at, one in items {
+        if one == want {
+            return at
+        }
+    }
+    return -1
+}
+```
+
+`compares` is `==` and `!=`, and `orders` is `<`, `>`, `<=` and `>=`. There is
+no third. `hash` stands for exactly what compares, so a word for it would be a
+second spelling of the first, and everything else — arithmetic, a field, an
+index — is not a thing a type name may be asked to do at all: a body that adds
+two of what it was given is a body written for numbers and declared for
+anything.
+
+These are written for the same reason `no.alloc` is written. A generic's body
+is checked once, where it stands, against exactly what the declaration says its
+names can do — so a generic nothing has called yet is still a body that has
+been read — and a call that asks for a copy is refused where the type has not
+got what was asked for:
+
+```
+error[K0366]: `sort.ascending` wants a `T` that orders, and `Card` does not
+   |
+13 |     sort.by(cards, sort.ascending)
+   |                    ^^^^^^^^^^^^^^ there are as many orders as fields, so write the one you mean: `fn(Card, Card) -> bool`, handed to what sorts
+```
+
+with a note at the `T: orders` that asked. And a requirement nothing in the
+body uses is a warning, the way an import nothing writes through is: it refuses
+types that would have worked.
+
+`compares` and `orders` are words rather than keywords. They stand after a
+colon in a list of type names and are names everywhere else.
+
 One that takes types may be handed over as well as called, and which copy it is
 comes from where it is going:
 
 ```kest
-fn ascending<T>(a: T, b: T) -> bool no.alloc {
+fn ascending<T: orders>(a: T, b: T) -> bool no.alloc {
     return a < b
 }
 
@@ -5769,12 +5811,18 @@ Every field of a struct says whether it is `own`, which is whether the module
 that declared the shape is the only thing that may name it. A tool that shows a
 shape shows what a file writing it would be allowed to write. See D1041.
 
+Every function says its `typeParameters`, each a name and the `wants` beside
+it: `[{"name": "K", "wants": ["compares"]}, {"name": "V", "wants": []}]` for
+`std.table.set`, and an empty list for a function that takes no types. What a
+generic asks of what it is given is part of what it is, so a tool is handed it
+rather than left to find out at a call. See D1043.
+
 Beside the diagnostics is what the run cost the compiler: `cost` is how many
 bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 502 lines:
-47956 bytes as tokens, 118617 as a tree, 155032 checked and 182433 compiled.
+47956 bytes as tokens, 118617 as a tree, 155800 checked and 183201 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
 
@@ -5791,7 +5839,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 17323 bytes, against the 182433 it costs to compile.
+file and 17323 bytes, against the 183201 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.
@@ -5979,7 +6027,7 @@ where it is written, and the compiler works out every constant, so what `emit`
 says is what `check` said and more. `asked` beside them is how many times the
 folder was asked and there was nothing to work out — a field of a local, a name that is not a constant. The compiler asks
 of anything that might be one, because asking is how it finds out, and the two
-numbers together say how much of that finding out answered: 97 of 329 for
+numbers together say how much of that finding out answered: 97 of 335 for
 `examples/numbers.kest`.
 
 Each file also carries a `mark`, and the object has one for the program: a
@@ -6119,6 +6167,7 @@ has to provide marked as one, and a line for each module it imported.
     {
       "name": "doc.hurt",
       "module": "doc",
+      "typeParameters": [],
       "parameters": ["doc.Point", "i32"],
       "gives": "i32",
       "noAlloc": false,

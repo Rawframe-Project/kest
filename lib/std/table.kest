@@ -105,7 +105,7 @@ fn valueAt<K, V>(t: Table<K, V>, at: i32) -> V no.alloc no.host deterministic {
 // looks here: `find` wants the pair, `remove` wants the slot, and a second
 // probe written for the second of those would be a second place to get the
 // walk past a mark wrong.
-fn slotOf<K, V>(t: Table<K, V>, key: K) -> i32? no.alloc no.host deterministic {
+fn slotOf<K: compares, V>(t: Table<K, V>, key: K) -> i32? no.alloc no.host deterministic {
     let room = len(t.slots)
     let at = i32(hash(key) % u64(room))
     for step in 0..room {
@@ -126,7 +126,7 @@ fn slotOf<K, V>(t: Table<K, V>, key: K) -> i32? no.alloc no.host deterministic {
 
 // Where a key is, or nothing. Reads only what is already there, so a lookup
 // costs no allocation whatever the table holds.
-fn find<K, V>(t: Table<K, V>, key: K) -> i32? no.alloc no.host deterministic {
+fn find<K: compares, V>(t: Table<K, V>, key: K) -> i32? no.alloc no.host deterministic {
     if let slot = slotOf(t, key) {
         return t.slots[slot] - 1
     }
@@ -138,7 +138,7 @@ fn find<K, V>(t: Table<K, V>, key: K) -> i32? no.alloc no.host deterministic {
 // one name, one meaning. It took a `fallback: V` beside the key until D879 —
 // which made a program build a value to throw away, and made a miss read as a
 // hit whose value happened to be that one. The default is `orElse` beside it.
-fn get<K, V>(t: Table<K, V>, key: K) -> V? no.alloc no.host deterministic {
+fn get<K: compares, V>(t: Table<K, V>, key: K) -> V? no.alloc no.host deterministic {
     if let at = find(t, key) {
         return t.values[at]
     }
@@ -149,21 +149,21 @@ fn get<K, V>(t: Table<K, V>, key: K) -> V? no.alloc no.host deterministic {
 // not a second way to ask the first: one asks what is there, and this one says
 // what to use when there is nothing. A program that means "nought when nobody
 // has counted it" says it here rather than at every place it looks.
-fn orElse<K, V>(t: Table<K, V>, key: K, fallback: V) -> V no.alloc no.host deterministic {
+fn orElse<K: compares, V>(t: Table<K, V>, key: K, fallback: V) -> V no.alloc no.host deterministic {
     if let found = get(t, key) {
         return found
     }
     return fallback
 }
 
-fn has<K, V>(t: Table<K, V>, key: K) -> bool no.alloc no.host deterministic {
+fn has<K: compares, V>(t: Table<K, V>, key: K) -> bool no.alloc no.host deterministic {
     return find(t, key) != none
 }
 
 // Puts a position in the first slot that will hold it, walking past whatever
 // is already there. Nothing is compared: this is only used where the key is
 // known to be new.
-fn place<K, V>(t: Table<K, V>, key: K, where: i32) no.alloc no.host deterministic {
+fn place<K: compares, V>(t: Table<K, V>, key: K, where: i32) no.alloc no.host deterministic {
     let room = len(t.slots)
     let at = i32(hash(key) % u64(room))
     for step in 0..room {
@@ -190,7 +190,7 @@ fn place<K, V>(t: Table<K, V>, key: K, where: i32) no.alloc no.host deterministi
 // saved half until D912 — the slots were made once and the keys and the values
 // still doubled on the way up — which is what `room` is for. Measured by
 // `check-costs.sh`, which prints both. See D910 and D912.
-fn refill<K, V>(t: Table<K, V>, howMany: i32) no.host deterministic {
+fn refill<K: compares, V>(t: Table<K, V>, howMany: i32) no.host deterministic {
     // How many pairs, rather than how many places: a table keeps twice as many
     // slots as pairs so that a probe ends, and a program calling this knows
     // what it is about to put in and not how this finds it again. See D914.
@@ -225,7 +225,7 @@ fn refill<K, V>(t: Table<K, V>, howMany: i32) no.host deterministic {
 // holding almost nothing. Twice the room is for the pairs; the same room again
 // is for the marks, and which of the two is asked is which of them is
 // crowding it.
-fn set<K, V>(t: Table<K, V>, key: K, value: V) no.host deterministic {
+fn set<K: compares, V>(t: Table<K, V>, key: K, value: V) no.host deterministic {
     // A key has to be one key, which is what `hash` and `==` are asked for. A
     // value that is not equal to itself -- a float that is not a number, or a
     // shape holding one -- is a different key every time it is handed over, so
@@ -260,7 +260,7 @@ fn set<K, V>(t: Table<K, V>, key: K, value: V) no.host deterministic {
 // them, which is what a hash is for. Walking every slot to find two of them is
 // the whole table for one pair, and a table is walked when it is refilled and
 // not when something is taken out of it.
-fn remove<K, V>(t: Table<K, V>, key: K) -> bool no.alloc no.host deterministic {
+fn remove<K: compares, V>(t: Table<K, V>, key: K) -> bool no.alloc no.host deterministic {
     if let here = slotOf(t, key) {
         let at = t.slots[here] - 1
         let last = len(t.keys) - 1

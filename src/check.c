@@ -76,6 +76,12 @@ typedef struct {
     // it, so the line to point at is theirs.
     KestSpan asking;
     const KestSource *asking_source;
+    // Set while a generic's own body is being checked, with its type names
+    // standing for themselves. What is being asked there is whether the body
+    // is right for every type the declaration allows, rather than for one:
+    // a copy is not made, and an operation on a type name is held to what the
+    // declaration says that name can do. See D1043.
+    bool in_shape;
 } Checker;
 
 static KestType *check_expr(Checker *checker, KestExpr *expr,
@@ -660,6 +666,98 @@ static const char *nearest_name(Checker *checker, const char *name,
     return found.best;
 }
 
+static bool has_equality(const KestProgram *program, const KestType *type,
+                         const KestType **without);
+
+// Whether a type has an order, which is the second of the two things a generic
+// may ask of what it is given. Numbers have one and text has one, by its
+// bytes; a struct has as many as it has fields and so has none of its own,
+// which is what `sort.by` takes a function for.
+static bool has_order(const KestProgram *program, const KestType *type) {
+    if (type == NULL) {
+        return false;
+    }
+    if (type->tag == KEST_T_PARAM) {
+        return kest_wants((KestProgram *)program, type, KEST_WANTS_ORDERS);
+    }
+    return is_numeric(type) || type->tag == KEST_T_TEXT;
+}
+
+// What a copy was asked for with, held to what the generic says it needs. The
+// body was checked against those words where it was written, so this is the
+// other half of the same contract and the place a reader meets it: the line
+// that asked, rather than a line inside somebody else's library. See D1043.
+static bool wants_met(Checker *checker, const KestType *callee,
+                      KestSpan named, KestType **bindings,
+                      uint32_t generics, KestSpan where) {
+    if (callee->type_param_wants == NULL) {
+        return true;
+    }
+    bool met = true;
+    for (uint32_t g = 0; g < generics; g++) {
+        uint8_t wants = callee->type_param_wants[g];
+        for (uint32_t at = 0; at < KEST_CAPABILITY_COUNT; at++) {
+            if ((wants & kest_capability(at)->bit) == 0) {
+                continue;
+            }
+            const KestType *without = NULL;
+            bool has = kest_capability(at)->bit == KEST_WANTS_COMPARES
+                           ? has_equality(checker->program, bindings[g],
+                                          &without)
+                           : has_order(checker->program, bindings[g]);
+            if (has || is_error(bindings[g])) {
+                continue;
+            }
+            met = false;
+            report(checker, where, "K0366",
+                   "`%.*s` wants a `%s` that %s, and `%s` does not",
+                   (int)named.length, span_text(checker, named),
+                   callee->type_param_names[g], kest_capability(at)->word,
+                   type_name(checker, bindings[g]));
+            if (without != NULL && without != bindings[g]) {
+                suggest(checker, "`%s` carries a `%s`, which does not compare",
+                        type_name(checker, bindings[g]),
+                        type_name(checker, without));
+            } else if (kest_capability(at)->bit == KEST_WANTS_ORDERS) {
+                suggest(checker,
+                        "there are as many orders as fields, so write the one "
+                        "you mean: `fn(%s, %s) -> bool`, handed to what sorts",
+                        type_name(checker, bindings[g]),
+                        type_name(checker, bindings[g]));
+            }
+            if (callee->decl != NULL && callee->unit != NULL) {
+                kest_diags_note(checker->program->diags,
+                                &callee->unit->source,
+                                callee->decl->type_params[g].name,
+                                "`%s` is written here",
+                                kest_capability(at)->word);
+            }
+        }
+    }
+    return met;
+}
+
+// A type name bound to a type name. Which one is meant is the one bound where
+// the call is written, and what came out of an argument may be another: a copy
+// of a generic shape is found by its name, so `Box<K, V>` is one copy in a
+// module and the `K` inside it belongs to whichever generic asked for it
+// first. That one said what its own `K` can do, and this one says what this
+// one's can. See D1043.
+static void settle_names(KestProgram *program, KestType **bindings,
+                         uint32_t count) {
+    for (uint32_t g = 0; g < count; g++) {
+        if (bindings[g] == NULL || bindings[g]->tag != KEST_T_PARAM ||
+            bindings[g]->name == NULL) {
+            continue;
+        }
+        KestType *here = kest_bound_type(program, bindings[g]->name,
+                                         strlen(bindings[g]->name));
+        if (here != NULL && here->tag == KEST_T_PARAM) {
+            bindings[g] = here;
+        }
+    }
+}
+
 static KestType *copy_for_shape(Checker *checker, const KestType *callee,
                                 const KestType *expected, KestSpan where);
 static bool literal_fits(Checker *checker, const KestExpr *expr,
@@ -1133,9 +1231,20 @@ static bool could_take(const KestType *given, const KestType *declared) {
 // Whether two values of this type are one question with one answer, and if
 // not, what it was that is not. An enum is its case and what that case
 // carries, so it compares exactly when everything it carries does.
-static bool has_equality(const KestType *type, const KestType **without) {
+static bool has_equality(const KestProgram *program, const KestType *type,
+                         const KestType **without) {
     if (type == NULL) {
         return false;
+    }
+    // A name standing for itself while its generic's body is checked. What it
+    // can do is what the declaration said it can, and nothing is inferred from
+    // the types somebody might hand it: a body that compares two of them has
+    // to say so, or it is a body that is right for some copies and not for
+    // others. Asked here rather than in the walk below, because that walk is
+    // held to the machine's own lists and the machine never meets one of
+    // these: a type name is gone before anything runs. See D1043.
+    if (type->tag == KEST_T_PARAM) {
+        return kest_wants((KestProgram *)program, type, KEST_WANTS_COMPARES);
     }
     switch (type->tag) {
     case KEST_T_ERROR:
@@ -1148,7 +1257,8 @@ static bool has_equality(const KestType *type, const KestType **without) {
     case KEST_T_ENUM:
         for (uint32_t c = 0; c < type->case_count; c++) {
             for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
-                if (!has_equality(type->cases[c].payload[p], without)) {
+                if (!has_equality(program, type->cases[c].payload[p],
+                                  without)) {
                     return false;
                 }
             }
@@ -1161,7 +1271,7 @@ static bool has_equality(const KestType *type, const KestType **without) {
     // wrong answer to the question somebody asked. See D874.
     case KEST_T_STRUCT:
         for (uint32_t m = 0; m < type->member_count; m++) {
-            if (!has_equality(type->members[m].type, without)) {
+            if (!has_equality(program, type->members[m].type, without)) {
                 return false;
             }
         }
@@ -1170,7 +1280,7 @@ static bool has_equality(const KestType *type, const KestType **without) {
     // three: `[T; N]` is N of them in a row inside whatever holds it, not a
     // handle to N of them elsewhere. `[T]` is the handle and is below.
     case KEST_T_FIXED:
-        return has_equality(type->element, without);
+        return has_equality(program, type->element, without);
     // Written out rather than left to a `default`, for the reason its twin in
     // `kest_type_has_text` gives: a tag added to the language would otherwise
     // land on this side without anybody deciding it should. An optional is the
@@ -1641,7 +1751,7 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
             KestType *of = check_expr(checker, expr->call.args[i], NULL);
             const KestType *without = NULL;
             if (i == 0 && checked > 0 && !is_error(of) &&
-                !has_equality(of, &without)) {
+                !has_equality(checker->program, of, &without)) {
                 report(checker, expr->call.args[i]->span, "K0310",
                        "`hash` stands for what compares, and `%s` does not",
                        type_name(checker, of));
@@ -2065,6 +2175,15 @@ static KestType *copy_for_shape(Checker *checker, const KestType *callee,
         return NULL;
     }
 
+    settle_names(program, bindings, generics);
+    // A copy taken from the shape a value is going into rather than from what
+    // was passed, and held to the same contract: what the generic says it
+    // needs is needed however the copy was asked for. What comes back is a
+    // type that is wrong rather than nothing, because nothing here reads as
+    // "there is no copy of this shape" and the caller says so as well.
+    if (!wants_met(checker, callee, where, bindings, generics, where)) {
+        return error_type(checker);
+    }
     KestInstance *instance = kest_instance_of(program, callee->decl,
                                               callee->unit, names, bindings,
                                               generics);
@@ -2364,6 +2483,14 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
         return error_type(checker);
     }
 
+    settle_names(program, bindings, generics);
+    // What the generic said it needs of what it is given, asked here, where
+    // the reader wrote the call. A body checked against those words is a body
+    // that works for every type that has them; this is the other half.
+    if (!wants_met(checker, callee, expr->call.callee->span, bindings, generics,
+                   expr->span)) {
+        return error_type(checker);
+    }
     KestInstance *instance = kest_instance_of(program, callee->decl,
                                               callee->unit, names, bindings,
                                               generics);
@@ -3220,9 +3347,18 @@ static bool is_comparison(KestTokenKind op) {
 
 // Numbers have an order and so does text, by its bytes, and only the
 // comparisons use text's.
-static bool applies(const KestType *type, KestTokenKind op) {
+static bool applies(const KestProgram *program, const KestType *type,
+                    KestTokenKind op) {
     if (type == NULL) {
         return false;
+    }
+    // And a type name that says it orders, which is the one thing a generic
+    // can say about what it is handed. Only the comparisons: arithmetic on a
+    // type name is a body written for numbers and declared for anything.
+    // See D1043.
+    if (type->tag == KEST_T_PARAM) {
+        return is_comparison(op) &&
+               kest_wants((KestProgram *)program, type, KEST_WANTS_ORDERS);
     }
     return is_numeric(type) ||
            (is_comparison(op) && type->tag == KEST_T_TEXT);
@@ -3335,7 +3471,7 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
         // arrays are equal when they hold the same things and comparing the
         // handles answers a different question. See D874.
         const KestType *without = NULL;
-        if (!is_error(left) && !has_equality(left, &without)) {
+        if (!is_error(left) && !has_equality(checker->program, left, &without)) {
             report(checker, expr->span, "K0314",
                    "`%s` does not apply to `%s`",
                    kest_token_bare(op, spelling, sizeof(spelling)),
@@ -3400,7 +3536,7 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
         return error_type(checker);
     }
     // Text has an order, by its bytes, and only the comparisons use it.
-    bool orderable = applies(left, op);
+    bool orderable = applies(checker->program, left, op);
     if (!is_error(left) && !orderable) {
         report(checker, expr->span, "K0314", "`%s` does not apply to `%s`",
                kest_token_bare(op, spelling, sizeof(spelling)),
@@ -3411,7 +3547,7 @@ static KestType *check_binary(Checker *checker, KestExpr *expr,
         // of them comes first is a choice, and there are as many orders as
         // fields. So this does not offer a default — it says the choice is
         // there and what shape the answer takes. See D875.
-        bool told = left != NULL && applies(left->element, op) &&
+        bool told = left != NULL && applies(checker->program, left->element, op) &&
                     say_if_let(checker, left, NULL);
         if (told) {
             // An optional said the one thing there is to say about one.
@@ -4771,9 +4907,48 @@ static bool check_unit(KestProgram *program, KestUnit *unit) {
         if (symbol == NULL || symbol->type->tag != KEST_T_FN) {
             continue;
         }
-        // A generic function has no body until a call says what its type
-        // names are. Each copy is checked where it is made.
+        // A generic's body is checked here too, once, with each type name
+        // standing for a value that can do what the declaration says it can
+        // and nothing else. Until D1043 this was skipped entirely and a body
+        // was first read when something copied it -- so a generic calling a
+        // name that is not there, or reading a field of a type parameter,
+        // checked clean and shipped. Each copy is still checked where it is
+        // made, because that is where the types are known.
         if (symbol->type->type_param_count > 0) {
+            if (symbol->type->type_param_stands == NULL) {
+                continue;
+            }
+            kest_bind_types(program, symbol->type->type_param_names,
+                            symbol->type->type_param_stands,
+                            symbol->type->type_param_count);
+            checker.in_shape = true;
+            bool ok = check_function(program, &checker, decl, symbol->type);
+            checker.in_shape = false;
+            kest_unbind_types(program);
+            if (!ok) {
+                return false;
+            }
+            // And a requirement the body never asked for, which refuses types
+            // that would have worked and is how a written contract drifts
+            // away from the body it is about. The same rule as an import
+            // nothing writes through. See D1043.
+            for (uint32_t g = 0; g < symbol->type->type_param_count; g++) {
+                const KestType *stands = symbol->type->type_param_stands[g];
+                uint8_t spare = (uint8_t)(stands->wants & ~stands->took);
+                for (uint32_t at = 0; at < KEST_CAPABILITY_COUNT; at++) {
+                    if ((spare & kest_capability(at)->bit) == 0) {
+                        continue;
+                    }
+                    kest_diags_add(program->diags, KEST_SEVERITY_WARNING,
+                                   "K0513", decl->type_params[g].name,
+                                   "nothing in this body %s a `%s`",
+                                   kest_capability(at)->word,
+                                   stands->name);
+                    kest_diags_suggest(program->diags,
+                                       "take it out: what a generic says it "
+                                       "needs is what it may be handed");
+                }
+            }
             continue;
         }
 

@@ -33961,3 +33961,87 @@ enum a `match` could exhaust would be a second spelling of a question the
 language already answers, which is the surface rule in section 36 of this
 reset. `none` compares and `if let` binds; there is nothing a two-armed `match`
 would add.
+
+## D1043. What a generic asks of a type is written, and its body is checked where it stands
+
+**Decided.** A type name a generic takes may be written `T: compares` or
+`T: orders`, which is what the body may ask of it. The body is checked once,
+where the generic is declared, against exactly that; a call that asks for a
+copy is refused where the type has not got it; and a requirement nothing in the
+body uses is a warning. There are two capabilities and there is no way to
+declare a third.
+
+**What was reproduced.** Two things, and the second is the worse one.
+
+*The contract was invisible.* `fn std.table.set(Table<K, V>, K, V)` is what the
+compiler printed, what `--json` said and what an editor showed. Nothing in it
+said `K` has to compare, and a reader found out at their own call, from a
+refusal about `==` inside a file they did not write.
+
+*And a generic body was not read at all until something copied it.* On
+`a20c63f`:
+
+    fn never<T>(x: T) -> i32 no.alloc {
+        return x.nope + notAFunction(x)
+    }
+
+checked clean. There is no name called `notAFunction` anywhere and `x.nope` is
+a field of nothing. So a library could ship a generic that cannot work for any
+type, and the first person to call it found out.
+
+**Why written rather than inferred.** This language already has contracts the
+author writes and the compiler proves: `no.alloc`, `no.host`, `deterministic`.
+The compiler could work out what a body reaches, and does -- and the promise is
+still written, because what a caller is held to is the declaration and not
+whatever the body happens to do this week. A requirement inferred from the body
+narrows the public contract silently the day somebody adds a line. The same
+argument applies here, so the same answer does.
+
+And the inferred form has to refuse the same things anyway. A type name whose
+capabilities are worked out from the body still cannot be added to, indexed, or
+have a field read, because there is no way to say what those would mean -- so
+the restriction is not the cost of writing it down. The only difference is who
+says it.
+
+**Why two, and why no way to add a third.** Read out of all 32 generics in this
+tree: `==` in the table, `<` in sort's two, and `hash` in the table. Nothing
+reads a field of a type parameter, nothing does arithmetic on one, and nothing
+indexes one. `hash` stands for exactly what compares -- the reference has said
+so since D542 -- so a third word for it would be a second spelling of the
+first. What is left is two, and both are things the language itself provides
+for a value laid out flat. A way to declare a capability of one's own is a trait
+system, which section 36's rule refuses for a language nothing in has needed
+one.
+
+**What is refused now that was not.** A generic body that uses a type name for
+anything but moving it, comparing it where it says `compares`, ordering it
+where it says `orders`, and handing it to another generic that asks for no
+more. Arithmetic on a type name, a field of one and an index into one are all
+refused where they are written rather than at whoever copies the body. Nothing
+in this tree did any of them.
+
+**The migration, which is the whole of it.** Eleven declarations in the
+library -- nine in `std.table` and two in `std.sort` -- and one in
+`examples/boxes.kest`. Every one was a word added to a line. No call anywhere
+changed.
+
+**What it cost to build.** Three things had to be true that were not:
+
+A type name is one type by its name. A copy of a generic shape is found by the
+name it was made with, so `Table<K, V>` asked for by nine generics in one
+module is one copy and the `K` inside it belongs to whichever asked first. Two
+stand-ins of one name are one type now, and what a name may do is read through
+what is bound where the question is asked rather than off the type.
+
+A type name bound to a type name settles to the one bound here. `set` calling
+`slotOf` binds `slotOf`'s `K` to whatever came out of the argument, which may
+be the `K` inside a shared copy of a shape. The one that is meant is the one
+bound at the call.
+
+And a type name is not a kind the machine ever meets, so it is answered before
+the walk that is held to the machine's own lists rather than inside it.
+
+**What a reader sees.** `kest check` prints
+`fn std.table.set<K: compares, V>(...)`, `--json` carries a `typeParameters`
+list with a `wants` array per name, and the formatter writes the words back in
+the order the language lists them rather than the order they were typed.

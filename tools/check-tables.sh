@@ -235,8 +235,10 @@ with open("editors/vscode/syntaxes/kest.tmLanguage.json") as reading:
 # `flags`, `scratch` and `own` are words rather than keywords -- a program may
 # use any of them as a name where a declaration does not begin -- and all three
 # are coloured, because a reader meeting one at the start of a line or in front
-# of a field is meeting a declaration. Everything else in the grammar has to be
-# a word the lexer keeps.
+# of a field is meeting a declaration. `compares` and `orders` are words too
+# and are deliberately not here: they stand after a colon inside a list of type
+# names and nowhere else, so colouring them would colour somebody's function.
+# Everything else in the grammar has to be a word the lexer keeps.
 words = set(held) | {"flags", "scratch", "own"}
 if some("the words the grammar colours", sorted(coloured)) and coloured != words:
     for word in sorted(words - coloured):

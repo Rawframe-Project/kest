@@ -951,7 +951,23 @@ static void print_type_params(Printer *printer, const KestDecl *decl) {
     put_char(printer, '<');
     for (uint32_t i = 0; i < decl->type_param_count; i++) {
         put(printer, i > 0 ? ", " : "");
-        print_span(printer, decl->type_params[i]);
+        print_span(printer, decl->type_params[i].name);
+        // What it has to be able to do, in the order this file writes them in
+        // rather than the order they were typed: one form of a file, and a
+        // list whose order is a reader's choice is a list two files disagree
+        // about. See D1043.
+        uint8_t wants = decl->type_params[i].wants;
+        if (wants == 0) {
+            continue;
+        }
+        put(printer, ":");
+        for (uint32_t at = 0; at < KEST_CAPABILITY_COUNT; at++) {
+            if ((wants & kest_capability(at)->bit) == 0) {
+                continue;
+            }
+            put_char(printer, ' ');
+            put(printer, kest_capability(at)->word);
+        }
     }
     put_char(printer, '>');
 }

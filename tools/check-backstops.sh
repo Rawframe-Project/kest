@@ -2105,14 +2105,16 @@ yield""",
     case KEST_T_ENUM:
         for (uint32_t c = 0; c < type->case_count; c++) {
             for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
-                if (!has_equality(type->cases[c].payload[p], without)) {""",
+                if (!has_equality(program, type->cases[c].payload[p],
+                                  without)) {""",
         "to": r"""    case KEST_T_FLAGS:
         *without = type;
         return false;
     case KEST_T_ENUM:
         for (uint32_t c = 0; c < type->case_count; c++) {
             for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
-                if (!has_equality(type->cases[c].payload[p], without)) {""",
+                if (!has_equality(program, type->cases[c].payload[p],
+                                  without)) {""",
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "arguments": [],
@@ -4736,14 +4738,14 @@ for file in "$@"; do""",
         "from": r"""        fputs("{\"name\":", out);
         kest_json_text(symbol->name, out);
         write_module(program, symbol->name, out);
-        fputs(",\"parameters\":[", out);""",
+        // The type names it takes, each with what it has to be able to do.""",
         "to": r"""        fputs("{\"name\":", out);
         kest_json_text(strrchr(symbol->name, '.') != NULL
                            ? strrchr(symbol->name, '.') + 1
                            : symbol->name,
                        out);
         write_module(program, symbol->name, out);
-        fputs(",\"parameters\":[", out);""",
+        // The type names it takes, each with what it has to be able to do.""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -5457,7 +5459,7 @@ fn main() -> i32 {
         "file": "src/check.c",
         "from": """    case KEST_T_STRUCT:
         for (uint32_t m = 0; m < type->member_count; m++) {
-            if (!has_equality(type->members[m].type, without)) {
+            if (!has_equality(program, type->members[m].type, without)) {
                 return false;
             }
         }
@@ -5858,7 +5860,7 @@ anywhere, and it is why the gate holds""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "118306 as a tree, 155032 checked",
+        "caught": "118306 as a tree, 155800 checked",
     },
     {
         # And the section they are in saying whose machine they are. Bytes of
@@ -6496,7 +6498,7 @@ fn main() -> i32 {
         # people and people read the sentence. See D886.
         "what": "a number the reference quotes that a run no longer says",
         "file": "docs/language.md",
-        "from": """numbers together say how much of that finding out answered: 97 of 329 for""",
+        "from": """numbers together say how much of that finding out answered: 97 of 335 for""",
         "to": """numbers together say how much of that finding out answered: 97 of 330 for""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",

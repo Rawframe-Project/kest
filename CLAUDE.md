@@ -1318,10 +1318,15 @@ tool.
 A word is a keyword only when a program that used it as a name would be
 ambiguous where it stands. Everything else is a word: `flags` declares a type
 where a declaration begins and is a name everywhere else, `scratch` opens a
-block only in front of a brace, and `own` marks a field only in front of a name
-and a colon -- so a field called `own` still works. The cost of a keyword is
-paid by every program that wanted the name, and it is paid every day, so it is
-worth being sure.
+block only in front of a brace, `own` marks a field only in front of a name
+and a colon -- so a field called `own` still works -- and `compares` and
+`orders` say what a generic asks of a type name, only after a colon inside
+`<>`. The first three are coloured by the editor grammar and offered by the
+language server, because a reader meeting one where a declaration begins is
+meeting a declaration; the last two are neither, because a reader meeting
+`compares` at the start of a line is meeting somebody's function. The cost of a
+keyword is paid by every program that wanted the name, and it is paid every
+day, so it is worth being sure.
 
 No word is kept back for a feature that does not exist. "Reserved for later" is
 a promise, and a language that makes one it is not keeping takes a name from

@@ -1,5 +1,38 @@
 #include "ast.h"
 
+#include <stdio.h>
+
+// What a generic may ask of a type it is given. Two, and each is a thing this
+// language itself provides for a value laid out flat: two of them are equal or
+// they are not, and some of them have an order. There is no third for `hash`,
+// because `hash` stands for what compares and applies exactly where `==` does
+// -- a word for it would be a second spelling of the first. Nothing here is a
+// thing a program declares for a type of its own. See D1043.
+static const KestCapabilityName CAPABILITIES[KEST_CAPABILITY_COUNT] = {
+    {"compares", KEST_WANTS_COMPARES},
+    {"orders", KEST_WANTS_ORDERS},
+};
+
+const KestCapabilityName *kest_capability(uint32_t at) {
+    return at < KEST_CAPABILITY_COUNT ? &CAPABILITIES[at] : &CAPABILITIES[0];
+}
+
+void kest_capability_list(char *out, size_t room) {
+    size_t written = 0;
+    for (uint32_t at = 0; at < KEST_CAPABILITY_COUNT && written + 1 < room;
+         at++) {
+        const char *between = at == 0                        ? ""
+                              : at + 1 == KEST_CAPABILITY_COUNT ? " and "
+                                                                : ", ";
+        int said = snprintf(out + written, room - written, "%s`%s`", between,
+                            CAPABILITIES[at].word);
+        if (said < 0) {
+            break;
+        }
+        written += (size_t)said;
+    }
+}
+
 static void indent(FILE *out, int depth) {
     fprintf(out, "%*s", depth * 2, "");
 }
@@ -333,7 +366,7 @@ static void print_type_params(const KestDecl *decl, const KestSource *source,
                               FILE *out) {
     for (uint32_t i = 0; i < decl->type_param_count; i++) {
         fputs(i == 0 ? " <" : " ", out);
-        print_span(source, decl->type_params[i], out);
+        print_span(source, decl->type_params[i].name, out);
         if (i + 1 == decl->type_param_count) {
             fputc('>', out);
         }

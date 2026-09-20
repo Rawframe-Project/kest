@@ -301,7 +301,11 @@ for line in text.splitlines():
                                       under.group(2)).rstrip()))
     called = re.match(r"(?:extern )?fn ([^(]+)\((.*)$", line)
     if called:
-        printed.add(called.group(1))
+        # The names a generic takes are part of the signature and are not part
+        # of the name: `set<K: compares, V>` is `set`, and the JSON says what
+        # it takes under `typeParameters` rather than inside the name. A tool
+        # looking a name up has to find it. See D1043.
+        printed.add(re.sub(r"<.*>$", "", called.group(1)))
         # And what it takes and gives back, kept whole rather than split
         # on the commas: a copy of a shape over two types is written
         # `Pair<i32, text>`, and a list read by splitting is one that
@@ -3792,6 +3796,9 @@ K0314|fn main() -> i32 {\n    let a = "x" - "y"\n    return len(a)\n}|does not a
 K0317|fn main() -> i32 {\n    let t = 0\n    for i, j in 0..3 {\n        t += i\n    }\n    return t\n}|no positions to walk by
 K0321|fn main() -> i32 {\n    let t = 0\n    for i in 0..3 {\n        i = 1\n    }\n    return t\n}|is the loop's own
 K0331|fn main() -> i32 {\n    let a = 1\n    return match a {\n        else -> 0\n    }\n}|chooses between the cases
+K0217|fn f<T: nope>(a: T) -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return f(1)\n}|what this type has to be able to do
+K0217|fn f<T: compares compares>(a: T, b: T) -> bool {\n    return a == b\n}\n\nfn main() -> i32 {\n    if f(1, 1) {\n        return 0\n    }\n    return 1\n}|`compares` is written twice
+K0366|struct Bag {\n    xs: [i32]\n}\n\nfn same<T: compares>(a: T, b: T) -> bool no.alloc {\n    return a == b\n}\n\nfn main() -> i32 {\n    let b = Bag(array())\n    if same(b, b) {\n        return 1\n    }\n    return 0\n}|wants a `T` that compares
 K0331|fn main() -> i32 {\n    let a = 1\n    return match a {\n        else -> 0\n    }\n}|there is no list of cases to exhaust here
 K0331|fn held(n: i32) -> i32? {\n    return none\n}\n\nfn main() -> i32 {\n    return match held(1) {\n        else -> 0\n    }\n}|take what it holds out with `if let`
 K0332|enum Door {\n    Shut\n    Open(i32)\n}\n\nfn main() -> i32 {\n    let d = Door.Shut\n    return match d {\n        else -> 0\n        else -> 1\n    }\n}|two `else` arms
@@ -4209,6 +4216,7 @@ K0504|emit|const N: i32 = M + 1\nconst M: i32 = N + 1\n\nfn main() -> i32 {\n   
 K0508|check|const N: i32 = 1\n\nfn main() -> i32 {\n    return 0\n}|nothing in this program reads
 K0509|check|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    return 0\n}|nothing in this program names
 K0511|check|import std.sort\n\nfn main() -> i32 {\n    return 0\n}|nothing in this file writes
+K0513|check|fn spare<T: orders>(a: T) -> i32 no.alloc {\n    return 1\n}\n\nfn main() -> i32 {\n    return spare(1) - 1\n}|nothing in this body orders
 K0512|check|fn first(n: i32) -> i32 {\n    return n\n}\n\nfn main() -> i32 {\n    let spare = 5\n    return first(1)\n}|nothing in this body reads
 K0512|check|fn held(n: i32) -> i32? no.alloc {\n    return n\n}\n\nfn main() -> i32 {\n    if let there = held(1) {\n        return 1\n    }\n    return 0\n}|ask whether it holds anything instead
 K0512|check|fn main() -> i32 {\n    let xs: [i32] = array()\n    push(xs, 7)\n    let total = 0\n    for at, one in xs {\n        total += one\n    }\n    return total\n}|binds no position

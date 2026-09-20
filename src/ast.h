@@ -309,6 +309,41 @@ typedef enum {
     KEST_DECL_FN,
 } KestDeclKind;
 
+// What a generic may ask of a type it is given. Written as a word after the
+// parameter, proved against the body where the generic is declared, and
+// required of the type at every call that makes a copy. A struct is a value
+// laid out flat, so what a struct can do is what its fields can do, and none
+// of these is a thing a program declares for a type of its own: they are the
+// three the language itself provides. See D1043.
+typedef enum {
+    KEST_WANTS_COMPARES = 1u << 0,
+    KEST_WANTS_ORDERS = 1u << 1,
+} KestCapability;
+
+// The word each is written as, in one place: the parser reads them here, the
+// formatter writes them back from here, and what a message lists is made from
+// here. Three lists of one thing is three lists the day one of them changes.
+typedef struct {
+    const char *word;
+    KestCapability bit;
+} KestCapabilityName;
+
+// A type name a declaration takes, beside what it has to be able to do. The
+// two together rather than two arrays, because a declaration is eight bytes
+// wider for every pointer in it and a tree is half of what compiling costs.
+typedef struct {
+    KestSpan name;
+    uint8_t wants;
+} KestTypeParam;
+
+#define KEST_CAPABILITY_COUNT 2u
+// One of them by its place in the list, which is how everything that walks
+// them reads them: a door rather than an array, so the list is this file's and
+// nothing else can be holding a pointer into it.
+const KestCapabilityName *kest_capability(uint32_t at);
+// Them written out for a message: "`compares`, `orders` and `hashes`".
+void kest_capability_list(char *out, size_t room);
+
 typedef struct {
     KestDeclKind kind;
     // Beside the kind, because two four byte numbers together are eight bytes
@@ -320,7 +355,11 @@ typedef struct {
     KestSpan name;
     // `fn sort<T>(...)` and `struct Pair<A, B>`. A copy is made per set of
     // types it is used with, so a name here stands for one type per copy.
-    KestSpan *type_params;
+    // Each carries what it has to be able to do, written after a colon:
+    // `fn set<K: compares, V>`. A generic's body is checked against those
+    // where it is written, and a copy is refused where the type it was asked
+    // for has not got them. See D1043.
+    KestTypeParam *type_params;
     union {
         struct {
             KestTypeRef *type;

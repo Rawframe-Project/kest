@@ -75,7 +75,7 @@ fn howManyBoxes<T>(boxed: [Box<T>]) -> i32 no.alloc {
     return len(boxed)
 }
 
-fn ascending<T>(a: T, b: T) -> bool no.alloc {
+fn ascending<T: orders>(a: T, b: T) -> bool no.alloc {
     return a < b
 }
 

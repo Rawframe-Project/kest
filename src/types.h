@@ -106,6 +106,14 @@ struct KestType {
     // to compile until a call says what they stand for, so where it was
     // written is kept: a call makes the copy from there.
     const char **type_param_names;
+    // And what each of them has to be able to do, one mask a parameter in the
+    // same order, out of what the declaration wrote. See D1043.
+    const uint8_t *type_param_wants;
+    // And the type each name stands for while the generic's own body is
+    // checked, which is a type that can do what the parameter says and
+    // nothing else. The signature was resolved against these, so the body has
+    // to be checked against the same ones. See D1043.
+    KestType **type_param_stands;
     const KestDecl *decl;
     const KestUnitInfo *unit;
     // A copy of a generic struct: which shape it came from and what it was
@@ -139,6 +147,14 @@ struct KestType {
     uint16_t byte_align;
     // INT and FLOAT.
     uint8_t width;
+    // PARAM only: what the generic this one stands in for says it can do,
+    // which is what the body is checked against. See D1043.
+    uint8_t wants;
+    // And what the body actually asked of it, so a generic saying it needs
+    // something it never uses is told: a requirement nothing uses refuses
+    // types that would have worked, and it is the way a written contract
+    // drifts away from the body it is about. See D1043.
+    uint8_t took;
     bool is_signed;
     // Set while the size is being worked out, so a struct that contains
     // itself is caught rather than followed forever.
@@ -473,6 +489,15 @@ bool kest_unify(const KestType *declared, const KestType *given,
 
 // Binds the type names a generic declaration or instance brought into scope.
 // Anything resolved while they are bound sees them and nothing else does.
+// Whether a type name may be asked to do this, and a note that the body did
+// ask. What is read is what is bound where the question is asked rather than
+// what is on the type: two generics in one module share a copy of a shape, and
+// the name inside it belongs to whichever of them asked for it first. One door
+// rather than a question and a mark beside it, because a question asked
+// without the mark is a requirement that reads as one nothing uses.
+// See D1043.
+bool kest_wants(KestProgram *program, const KestType *type,
+                KestCapability bit);
 void kest_bind_types(KestProgram *program, const char **names,
                      KestType **types, uint32_t count);
 void kest_unbind_types(KestProgram *program);

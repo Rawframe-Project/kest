@@ -2995,7 +2995,7 @@ static bool declare_structs(KestProgram *program, const KestUnit *unit) {
             }
             for (uint32_t g = 0; g < decl->type_param_count; g++) {
                 type->type_param_names[g] =
-                    span_string(program, decl->type_params[g]);
+                    span_string(program, decl->type_params[g].name);
                 if (type->type_param_names[g] == NULL) {
                     return false;
                 }
@@ -3714,6 +3714,36 @@ bool kest_unify(const KestType *declared, const KestType *given,
 
 // Binds the names a generic declaration brought into scope. Anything resolved
 // while they are bound sees them; nothing else does.
+// What a type name stands for where it is written. A copy of a generic struct
+// is found by its name, and `Box<K, V>` asked for by two generics in one
+// module is one copy -- so the `K` inside it is whichever of them asked first,
+// and what that one said about `K` is not what this one says. The name is what
+// is meant; which name is bound here is the question. See D1043.
+static KestType *stands_here(const KestProgram *program,
+                             const KestType *type) {
+    if (type == NULL || type->tag != KEST_T_PARAM || type->name == NULL) {
+        return NULL;
+    }
+    for (uint32_t i = 0; i < program->bound_count; i++) {
+        if (program->bound_types[i] != NULL &&
+            program->bound_types[i]->tag == KEST_T_PARAM &&
+            strcmp(program->bound_names[i], type->name) == 0) {
+            return program->bound_types[i];
+        }
+    }
+    return (KestType *)type;
+}
+
+bool kest_wants(KestProgram *program, const KestType *type,
+                KestCapability bit) {
+    KestType *stands = stands_here(program, type);
+    if (stands == NULL || (stands->wants & bit) == 0) {
+        return false;
+    }
+    stands->took |= (uint8_t)bit;
+    return true;
+}
+
 void kest_bind_types(KestProgram *program, const char **names,
                      KestType **types, uint32_t count) {
     if (count > program->bound_capacity) {
@@ -3818,7 +3848,7 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
             return false;
         }
         for (uint32_t g = 0; g < generics; g++) {
-            names[g] = span_string(program, decl->type_params[g]);
+            names[g] = span_string(program, decl->type_params[g].name);
             stands[g] = new_type(program, KEST_T_PARAM);
             if (names[g] == NULL || stands[g] == NULL) {
                 return false;
@@ -3827,18 +3857,23 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
             stands[g]->slots = 1;
             stands[g]->byte_size = 8;
             stands[g]->byte_align = 8;
+            stands[g]->wants = decl->type_params[g].wants;
         }
         kest_bind_types(program, names, stands, generics);
         type->type_param_count = generics;
         if (generics > 0) {
             type->type_param_names =
                 KEST_ARENA_ARRAY(program->arena, const char *, generics);
-            if (type->type_param_names == NULL) {
+            uint8_t *wants = KEST_ARENA_ARRAY(program->arena, uint8_t, generics);
+            if (type->type_param_names == NULL || wants == NULL) {
                 return false;
             }
             for (uint32_t g = 0; g < generics; g++) {
                 type->type_param_names[g] = names[g];
+                wants[g] = stands[g]->wants;
             }
+            type->type_param_wants = wants;
+            type->type_param_stands = stands;
             type->decl = decl;
             type->unit = program->unit;
         }
@@ -4025,6 +4060,16 @@ bool kest_type_equal(const KestType *a, const KestType *b) {
     // added to the language has to be thought about here, where the wrong
     // answer is a program refused for nothing. See D546.
     case KEST_T_ERROR:
+    // A name standing for itself, which is what a type parameter is while the
+    // generic it belongs to is being checked. Two of them are one type when
+    // they are the same name: a shape copied with a parameter as its argument
+    // is cached under the name it was made with, so `Table<K, V>` asked for
+    // twice in one module is one copy and the `K` in it is the `K` of
+    // whichever asked first. Without this a body was told that `K` is not `K`.
+    // See D1043.
+    case KEST_T_PARAM:
+        return a->name != NULL && b->name != NULL &&
+               strcmp(a->name, b->name) == 0;
     case KEST_T_VOID:
     case KEST_T_BOOL:
     case KEST_T_TEXT:
@@ -4032,7 +4077,6 @@ bool kest_type_equal(const KestType *a, const KestType *b) {
     case KEST_T_FLAGS:
     case KEST_T_STRUCT:
     case KEST_T_MODULE:
-    case KEST_T_PARAM:
         return false;
     }
     return false;
@@ -4399,8 +4443,32 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
         // to know something to tell apart. `--json` says the same thing with
         // a field, because a tool cannot read a word at the front.
         said++;
-        fprintf(out, "%sfn %s(", type->is_foreign ? "extern " : "",
+        fprintf(out, "%sfn %s", type->is_foreign ? "extern " : "",
                 symbol->name);
+        // The names it takes and what each has to be able to do, written the
+        // way the file writes them. A generic's requirements are part of what
+        // it is -- `set` wants a key that compares and hashes -- so a reader
+        // handed the signature is handed them. See D1043.
+        for (uint32_t g = 0; g < type->type_param_count; g++) {
+            fputs(g == 0 ? "<" : ", ", out);
+            fputs(type->type_param_names[g], out);
+            uint8_t wants = type->type_param_wants == NULL
+                                ? 0
+                                : type->type_param_wants[g];
+            if (wants == 0) {
+                continue;
+            }
+            fputs(":", out);
+            for (uint32_t at = 0; at < KEST_CAPABILITY_COUNT; at++) {
+                if ((wants & kest_capability(at)->bit) != 0) {
+                    fprintf(out, " %s", kest_capability(at)->word);
+                }
+            }
+        }
+        if (type->type_param_count > 0) {
+            fputs(">", out);
+        }
+        fputs("(", out);
         for (uint32_t p = 0; p < type->param_count; p++) {
             fprintf(out, "%s%s", p > 0 ? ", " : "",
                     kest_type_name(arena, type->params[p]));
@@ -4698,7 +4766,30 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
         fputs("{\"name\":", out);
         kest_json_text(symbol->name, out);
         write_module(program, symbol->name, out);
-        fputs(",\"parameters\":[", out);
+        // The type names it takes, each with what it has to be able to do.
+        // A generic's requirements are part of what it is, so a tool reading
+        // this is handed them rather than left to find out at a call. Empty
+        // for a function that takes no types. See D1043.
+        fputs(",\"typeParameters\":[", out);
+        for (uint32_t g = 0; g < symbol->type->type_param_count; g++) {
+            fputs(g == 0 ? "{\"name\":" : ",{\"name\":", out);
+            kest_json_text(symbol->type->type_param_names[g], out);
+            fputs(",\"wants\":[", out);
+            uint8_t wants = symbol->type->type_param_wants == NULL
+                                ? 0
+                                : symbol->type->type_param_wants[g];
+            bool said = false;
+            for (uint32_t at = 0; at < KEST_CAPABILITY_COUNT; at++) {
+                if ((wants & kest_capability(at)->bit) == 0) {
+                    continue;
+                }
+                fputs(said ? "," : "", out);
+                said = true;
+                kest_json_text(kest_capability(at)->word, out);
+            }
+            fputs("]}", out);
+        }
+        fputs("],\"parameters\":[", out);
         for (uint32_t p = 0; p < symbol->type->param_count; p++) {
             fputs(p == 0 ? "" : ",", out);
             kest_json_text(kest_type_name(arena, symbol->type->params[p]), out);

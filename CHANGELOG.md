@@ -81,6 +81,19 @@ array stops there. **What a host has to do:** close what it paired across a
 call when the call answers false, the same way it would for any other refusal.
 See D1040.
 
+**A generic says what it asks of a type.** `fn firstAt<T: compares>(...)` and
+`fn ascending<T: orders>(...)`: two words, written after a colon in the list of
+type names, and there is no third. The body is checked once where it is
+written, against exactly what the declaration says -- until now a generic body
+was not read at all until something copied it, so one that could not work for
+any type checked clean. **What a program has to do:** put the word on any
+generic of its own whose body compares or orders what it was given. The
+compiler says which and where. A body that does arithmetic on a type name,
+reads a field of one or indexes one is now refused where it is written; nothing
+in this tree did any of those. `kest check` prints the type names in a
+signature and `--json` carries a `typeParameters` list beside `parameters`.
+`compares` and `orders` are words and not keywords. See D1043.
+
 **What changed for a host.** The version. The other three numbers — the C ABI,
 the JSON schema, and the deterministic profile — still read 4, 3 and 1, and
 will be settled to clean `0.0.x` numbers once the architecture this reset is

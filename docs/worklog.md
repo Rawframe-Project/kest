@@ -37611,3 +37611,57 @@ See D1042.
 
 **Runs:** the state machine, the two refusals, the table of refusals with a row
 for each wording, two holes; `make fast`; `make check`.
+
+## What a generic asks of a type, written down
+
+Two things were wrong with generics, and the second is the worse one.
+
+`fn std.table.set(Table<K, V>, K, V)` is what the compiler printed, what
+`--json` said and what an editor showed. Nothing in it says `K` has to compare,
+so a reader found that out at their own call, from a refusal about `==` inside
+a file they did not write.
+
+And a generic body was not read at all until something copied it:
+
+    fn never<T>(x: T) -> i32 no.alloc {
+        return x.nope + notAFunction(x)
+    }
+
+checked clean. There is no name called `notAFunction` anywhere and `x.nope` is
+a field of nothing.
+
+A type name may now be written `T: compares` or `T: orders`, which is the whole
+of what a body may ask of it. There are two because there are two: read out of
+all 32 generics in this tree, what they use is `==`, `<` and `hash` -- and
+`hash` stands for exactly what compares, so a third word would be a second
+spelling of the first. Nothing here reads a field of a type name, does
+arithmetic on one, or indexes one, and all three are refused.
+
+Written rather than inferred, for the reason `no.alloc` is written: what a
+caller is held to is the declaration. A requirement worked out from the body
+narrows the public contract silently the day somebody adds a line. And the
+inferred form has to refuse the same things anyway, so the restriction is not
+the cost of writing it down -- only who says it is.
+
+The body is now checked once where it stands, with each name standing for a
+value that can do what the declaration says and nothing else. A call that asks
+for a copy is refused where the type has not got it, at the line that asked,
+with a note at the `T: orders` that wanted it. And a requirement nothing in the
+body uses is a warning, the way an import nothing writes through is.
+
+Three things had to be true that were not. A copy of a generic shape is found
+by its name, so `Table<K, V>` asked for by nine generics in one module is one
+copy and the `K` in it belongs to whichever asked first -- two stand-ins of one
+name are one type now, and what a name may do is read through what is bound
+where the question is asked. A type name bound to a type name settles to the
+one bound at the call. And a type name is answered before the walk that is held
+to the machine's own lists, because the machine never meets one.
+
+The migration is eleven declarations in the library and one in an example, each
+a word added to a line. No call changed.
+
+See D1043.
+
+**Runs:** the two reproductions; the refusal for a body that asks more than it
+says, for a call whose type has not got it, and for a requirement nothing uses;
+the whole library and every example; `make fast`; `make check`.
