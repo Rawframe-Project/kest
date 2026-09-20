@@ -132,22 +132,27 @@ turned out to be premature. What the tree has to show for it:
     what the heap is asked for  D1032: by width and by kind, and the
                                 crossing nothing counted
 
-**Three things are open and named as open.** They are measured and not done,
-and each says why.
+**Two things are open and named as open.** They are measured and not done, and
+each says why.
 
-- The aggregate copy, and it is not what it was thought to be. `let one =
-  world[at]` … `world[at] = one` is 29 % of `bench/kernel.kest`'s cycles, and
-  writing the same program in place is **2.15 times slower** — the copy form is
-  the faster of the two spellings the language already has, not a prison (D1038).
-  What is real is the six `elem.addr` a body a round where one would do, inside a
-  body that promises `no.alloc` and so cannot move the heap between them. That is
-  an IR pass over `ELEM` places and nothing has built it.
 - Bulk text append. Eighteen per cent of `bench/words.kest` is `std.text`'s
   `append` copying a byte at a time. A bulk copy needs a builtin, which is
   language surface, and D1030 says why that was not added on this evidence.
 - The dispatch loop. The largest cost in every workload — 48 to 92 per cent of
   cycles — and a quarter of its own cycles are the front end on its indirect
   branch. D979 measured from the other side what touching it costs.
+
+**And the aggregate copy is closed.** `let one = world[at]` … `world[at] = one`
+is 29 % of `bench/kernel.kest`'s cycles and writing the same program in place
+is **2.15 times slower**, so the copy form is the faster of the two spellings
+the language already has rather than a prison (D1038). The six `elem.addr` a
+body that D1038 named as the real opportunity were measured and are not one:
+holding the address saves a bounds check and a multiply and no instructions at
+all, against a gap of thirty-six million. What the gap is, is that reading the
+element once into slots makes every field operation after it a slot operation.
+What was real beside it is fixed: reading a field of an element cost two
+dispatches and is one now, which is 16.9 % of the place form's instructions and
+nothing at all to the benchmarks, none of which is written that way (D1044).
 
 ## What shipped, and what it rests on
 

@@ -37665,6 +37665,55 @@ See D1043.
 **Runs:** the two reproductions; the refusal for a body that asks more than it
 says, for a call whose type has not got it, and for a requirement nothing uses;
 the whole library and every example; `make fast`; `make check`.
+
+## The address hoist, measured and not built
+
+D1038 closed the mutation-model question and left one thing named as open: six
+`elem.addr` a body a round where one would do, inside a body that promises
+`no.alloc` and so cannot move the heap between them. It is not where the gap
+is, and the histogram says so.
+
+`bench/kernel.kest` written both ways, two million bodies, under the build that
+counts:
+
+    place form                          copy form
+    elem.addr   12,029,960              index.to     2,000,000
+    load.at     12,049,960              elem.from    2,000,000
+    load2       16,060,122              load2        8,040,202
+    const        8,090,071              load.k       8,060,101
+    load.elem    4,000,000              add.f.to     4,020,000
+    store.elem   4,009,960
+    70,600,000 in all                   34,631,126 in all
+
+Six `elem.addr` becoming one is one `elem.addr` and five reads of a held
+address: the same count of instructions, with a bounds check and a multiply
+saved, against a gap of thirty-six million. What the gap is, is that reading the
+element once into slots makes every field operation after it a slot operation --
+the copy form's arithmetic is `add.f.to` on a slot and its comparisons are
+`load.k`, which is a slot and a constant in one. The place form pushes the array
+and the index again for every touch.
+
+What was real beside it: reading a field of an element cost two dispatches and
+an address round trip. The machine already had `load.elem`, which reads a field
+of an element from the array and the index in one and leaves them where they
+are, because a write is coming to them. `elem.at` is the one that takes them
+away. A peephole in the lowering, beside `load2`, `load.k`, `index.to`,
+`elem.from` and `add.f.to`, and `KEST_PLAIN` turns it off with the rest.
+
+    place form   70,600,000 -> 58,661,006 instructions   -16.9 %
+    paired runs, ten of them, middle                     -16.3 %
+    agents, rules, graph, kernel as written               0.00 %
+
+Nothing in the benchmarks changes, because none of them reads a field of an
+element that way. Eleven of the examples do.
+
+So the copy form stays the faster spelling and the language has it, and the
+place form is what to write when one field is touched. See D1044.
+
+**Runs:** the two forms of the kernel under `KEST_DEEP`; ten paired runs of the
+place form against the binary before this; every benchmark and every example
+counted before and after; `make fast`; `make check`.
+
 ## A name the arena had no room for, compared anyway
 
 `tools/check-ceilings.sh` refuses one allocation at a time and walks what the

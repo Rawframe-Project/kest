@@ -1739,7 +1739,7 @@ tokens   what a token is and what it carries""",
                  r"""    {"stop", NONE}, {"stop.none", NONE},"""],
         "make": [],
         "tool": "tools/check-tables.sh",
-        "caught": "instructions: 164 kinds and 165 names",
+        "caught": "instructions: 165 kinds and 166 names",
     },
     {
         # Two copies of a licence, which is what a thing that is installed on

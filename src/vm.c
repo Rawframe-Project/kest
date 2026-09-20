@@ -3884,6 +3884,24 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             (top++)->object = array->bytes + (size_t)index * array->stride;
             break;
         }
+        // One of an array at a byte into it, with the array and the index
+        // taken away: what `elem.addr` and the `load.at` after it did in two.
+        // Reading a field of an element is what a frame does most, and it was
+        // the one read of a place that cost two dispatches. See D1044.
+        case KEST_OP_ELEM_AT: {
+            uint16_t offset = READ_U16();
+            uint16_t of_which = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
+            int64_t index = (--top)->integer;
+            Array *array = (--top)->object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
+            IN_ARRAY(index, array);
+            READ_INTO(top, layout,
+                      array->bytes + (size_t)index * array->stride + offset);
+            top += layout->slots;
+            break;
+        }
         case KEST_OP_LOAD_SLOTS: {
             uint16_t base = READ_U16();
             uint16_t stride = READ_U16();

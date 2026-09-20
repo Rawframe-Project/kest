@@ -64,6 +64,11 @@ typedef enum {
     // be written to. The address lives for one statement, during which
     // nothing can move what it points at.
     KEST_OP_ELEM_ADDR,  // u16 layout
+    // One of an array, at a byte into it: the array and the index taken away
+    // and the piece pushed. `elem.addr` and the `load.at` after it, which is
+    // what reading a field of an element was written as and what a frame
+    // reads most. See D1044.
+    KEST_OP_ELEM_AT,  // u16 offset, u16 layout
     // That many of something, laid out where it stands. The index is worked
     // out while running, so these take a base and a stride rather than the
     // single slot `load` and `store` take.

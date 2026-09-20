@@ -5259,11 +5259,13 @@ check and the optional it comes back in.
 ```
 
 Counted the same way, a hop of that loop is **five instructions**, an index
-read is **six** and a read through a reference is **eleven** — one more than
-the hop for the index and six more for the reference. The six are what a
+read is **five** and a read through a reference is **eleven** — **nought** more
+than the hop for the index and six more for the reference. The six are what a
 reference is: the place it names, the stamp held against the one in the store,
 and the optional the answer comes back in, which is a branch whether or not it
-is nothing.
+is nothing. The index read costs nothing over the hop because reading a field
+of an element is one instruction; it was two until D1044, and the nanoseconds
+in the paragraph above were taken before that.
 
 The first of those three is what the other two are measured against, and it is
 the one worth reading first: a hop of a `for` is ten nanoseconds here, so a read
@@ -5309,7 +5311,8 @@ and worth little where it crosses once. A reference an entity is nineteen
 nanoseconds more than an index, against the same hundred and seventeen, which is
 about a sixth: a world of entities that can be removed costs about a sixth of a
 frame more than a run of entities that cannot, and that is what the safety is
-worth. The index read itself is two. And the two calls a frame step makes are
+worth. The index read itself was two when those nanoseconds were taken, and is
+one instruction fewer now. And the two calls a frame step makes are
 five of its hundred and seventeen — a twentieth, for the shape the language is
 written in rather than one body with everything in it.
 

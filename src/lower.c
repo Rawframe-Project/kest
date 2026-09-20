@@ -173,6 +173,16 @@ static bool index_before(const Lower *lower, uint16_t size, uint16_t *layout) {
     return true;
 }
 
+// Whether the last thing written was the address of one of an array. A read of
+// a field through that address is the same read the machine can do from the
+// array and the index, in one instruction and one bounds check rather than
+// two dispatches and an address round trip. See D1044.
+static bool elem_addr_before(const Lower *lower) {
+    return lower->last_op == KEST_OP_ELEM_ADDR &&
+           lower->last_at >= lower->pointed_at &&
+           lower->last_at + 3 == lower->chunk->code_count;
+}
+
 // The arithmetic the store just after it is taking the answer of, when that
 // arithmetic is the instruction before. Four of them: the two that carry a
 // width and the two that do not, which is what the pair counts say the
@@ -565,6 +575,13 @@ static void read_place(Lower *lower, const KestIrOp *op) {
         emit_u16(lower, place->layout, op->span);
         return;
     case KEST_IR_PLACE_AT:
+        if (fusing() && elem_addr_before(lower)) {
+            take_back(lower);
+            emit(lower, KEST_OP_ELEM_AT, op->span);
+            emit_u16(lower, place->offset, op->span);
+            emit_u16(lower, place->layout, op->span);
+            return;
+        }
         emit(lower, KEST_OP_LOAD_AT, op->span);
         emit_u16(lower, place->offset, op->span);
         emit_u16(lower, place->layout, op->span);

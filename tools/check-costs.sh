@@ -1398,7 +1398,11 @@ def as_written(said):
 # number held here is a figure on both sides; this sentence is prose, and prose
 # spells a number. A word this has no figure for is a sentence nobody can hold,
 # which is what answering nothing rather than nought is for.
-FIGURES = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
+# `nought` is here because a difference may be nought: an index read costs the
+# same as a hop of the loop it is in since D1044, and a sentence that says so
+# has to be a sentence this can read.
+FIGURES = {"nought": 0,
+           "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
            "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11,
            "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15,
            "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19,
@@ -1710,8 +1714,8 @@ if crossed_says is not None and have_checked:
 reading_says = re.search(as_written(
     r'a hop of that loop is \*\*([a-z-]+) instructions\*\*, an index read is'
     r' \*\*([a-z-]+)\*\* and a read through a reference is \*\*([a-z-]+)\*\*'
-    r' — ([a-z-]+) more than the hop for the index and ([a-z-]+) more for the'
-    r' reference'), REFERENCE)
+    r' — \*\*([a-z-]+)\*\* more than the hop for the index and ([a-z-]+) more'
+    r' for the reference'), REFERENCE)
 some("the reference's paragraph about what a read runs", reading_says)
 if reading_says is not None and have_checked:
     ran_hop = what_a_step_of(READ_OF.replace(

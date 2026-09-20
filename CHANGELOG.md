@@ -94,6 +94,13 @@ in this tree did any of those. `kest check` prints the type names in a
 signature and `--json` carries a `typeParameters` list beside `parameters`.
 `compares` and `orders` are words and not keywords. See D1043.
 
+**Reading a field of an array element is one instruction.** `elem.at` replaces
+`elem.addr` and the `load.at` after it, which is 16.9 % of the instructions of
+a program written to touch elements in place and nothing at all to one written
+to read an element into a local and write it back. **What a program has to
+do:** nothing. The hoist `docs/state.md` named as open is measured and not
+built, because the measurement says it is not where the gap is. See D1044.
+
 **What changed for a host.** The version. The other three numbers — the C ABI,
 the JSON schema, and the deterministic profile — still read 4, 3 and 1, and
 will be settled to clean `0.0.x` numbers once the architecture this reset is

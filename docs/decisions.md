@@ -34055,3 +34055,65 @@ refused `no.alloc` than there are functions without it.
 `fn std.table.set<K: compares, V>(...)`, `--json` carries a `typeParameters`
 list with a `wants` array per name, and the formatter writes the words back in
 the order the language lists them rather than the order they were typed.
+
+## D1044. The hoist D1038 named is not the win; the pair that was, is one instruction now
+
+**Decided.** Reading a field of an array element is one instruction, `elem.at`,
+rather than `elem.addr` and the `load.at` after it. Seventeen per cent of the
+instructions of the place form, measured. The address hoist D1038 named as the
+opportunity is **measured and not built**, because the measurement says it is
+not where the gap is.
+
+**What was open.** D1038 closed the mutation-model question and left one thing
+named in `docs/state.md`: *six `elem.addr` a body a round where one would do,
+inside a body that promises `no.alloc` and therefore cannot move the heap
+between them. That is an IR pass over `ELEM` places and it is where the
+opportunity actually is.*
+
+**What the histogram says, which settles it.** `bench/kernel.kest` written both
+ways, two million bodies, under the build that counts:
+
+    place form                          copy form
+    elem.addr   12,029,960              index.to     2,000,000
+    load.at     12,049,960              elem.from    2,000,000
+    load2       16,060,122              load2        8,040,202
+    const        8,090,071              load.k       8,060,101
+    load.elem    4,000,000              add.f.to     4,020,000
+    store.elem   4,009,960
+    ------------------------            ------------------------
+    70,600,000 in all                   34,631,126 in all
+
+**The hoist would have bought nothing.** Six `elem.addr` becoming one is one
+`elem.addr` and five reads of a held address -- the same count of instructions,
+with a bounds check and a multiply saved. It cannot close a gap of thirty-six
+million.
+
+**What the gap actually is.** Reading the element once into slots makes every
+field operation after it a *slot* operation: the copy form's arithmetic is
+`add.f.to` on a slot and its comparisons are `load.k`, which is a slot and a
+constant in one. The place form pushes the array and the index again for every
+touch -- eight `load2` a body against four -- and does its arithmetic on the
+stack. That is the two-to-one, and it is not addressed by holding an address.
+
+**What was real, and is fixed.** Reading a field of an element cost two
+dispatches and an address round trip: `elem.addr` pushed
+`bytes + index * stride` and `load.at` read a layout at an offset from it. The
+machine already had `load.elem`, which reads a field of an element from the
+array and the index in one -- it does not take them off the stack, because a
+write is coming to them. `elem.at` is the one that does. It is a peephole in
+the lowering, beside `load2`, `load.k`, `index.to`, `elem.from` and
+`add.f.to`, and `KEST_PLAIN` turns it off with the rest of them.
+
+    place form   70,600,000 -> 58,661,006 instructions   -16.9 %
+    paired runs, ten of them, middle                     -16.3 %
+    agents, rules, graph, kernel as written               0.00 %
+
+The benchmarks as written do not change at all, because none of them reads a
+field of an element that way. Eleven of the examples do.
+
+**So the copy form stays the faster spelling**, and the language has it. What
+the place form is good at is one field: `world[at].x = 1.0` is three
+instructions and a copy of the whole element is not. That is the shape of the
+rule, and section 23.1's carried-forward cost is answered: the 29 % is not a
+semantic prison and it is not an address that wants holding, it is the price of
+touching an element six times instead of once.
