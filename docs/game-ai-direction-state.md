@@ -6,10 +6,10 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       the commit this file arrived in
+    CURRENT SHA:       96285c5 (D1086, D1087)
     PHASE:             A — baseline, and the clean-check curve
     LAST FAST GATE:    green
-    LAST FULL GATE:    green at e458ee2; running again for this work
+    LAST FULL GATE:    green at 96285c5
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.
                        Every number below was taken on it.
@@ -87,14 +87,36 @@ dotted name is out of reach by walking every file. Both are tables now.
 A clean check of a hundred thousand lines is 282 ms against the 250 ms the
 compiler direction asks for, and the curve is linear.
 
+## D1088 — a million lines
+
+`compose` and `kest_instance_of` were two more lists walked to find what was
+already in them. With tables:
+
+| lines | at e458ee2 | after D1088 |
+| --- | --- | --- |
+| 12,567 | 45 ms | 27 ms |
+| 37,587 | 289 ms | 83 ms |
+| 112,647 | 2,157 ms | 288 ms |
+| 1,000,857 | — | 4,910 ms, 456 MB |
+
+At a million lines the split is 2.0 s reading and parsing 66 MB of source,
+1.3 s naming, 1.1 s bodies, 0.4 s promises. No walk the size of the program
+is left. What remains there is parallel reading and less copying, and neither
+is where the product's daily loop is: that is a hundred thousand lines at
+288 ms against a 250 ms target.
+
 ## Open, in priority order
 
-1. Measure a million lines with the same generator, and decide whether the
-   remaining distance to the targets is algorithm or constant factor.
-2. Attribute what is left of a clean check at 100k: loading/lexing/parsing, the
-   checker itself, and `kest check`'s own listing, which is output rather than
-   verification. A check that only answers "is this valid" should not pay for a
-   full declaration listing; decide what `check` prints by default.
+1. **The runtime, which is the owner's first goal and has not been measured
+   yet.** Profile a game-shaped workload — `examples/slice` and the engine —
+   and attribute the cost: dispatch, value movement, bounds and addressing,
+   aggregate copying, host crossing, allocation, collector, library. Find the
+   ceiling before touching the VM.
+2. Comparators, once our own numbers are understood: Luau in its best
+   realistic gameplay mode, Daslang interpreter and AOT named separately.
+3. What `kest check` prints by default: the declaration listing is output
+   rather than verification and costs as much as checking at scale. An agent
+   asking "is this valid" should not pay for it.
 3. Measure the edit loop the way an agent drives it: edit → check → diagnostic,
    including process start, on the 100k corpus. Only then decide whether
    persistence or incrementality is worth its correctness cost.

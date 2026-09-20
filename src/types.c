@@ -1836,6 +1836,56 @@ static const char *type_names(KestArena *arena, const KestType *type) {
 KestType *kest_resolve_type_ref(KestProgram *program,
                                 const KestTypeRef *ref);
 
+// What a composed type is made of, as a number: the kind, what it holds and
+// how many. The element is compared by address rather than by shape, which is
+// what the walk this replaced did -- a composed type is interned here, so two
+// of the same shape are one address. See D1088.
+static uint32_t shape_hash(KestTypeTag tag, const KestType *element,
+                           uint32_t count) {
+    uint64_t mixed = (uint64_t)tag * 1099511628211u;
+    mixed ^= (uint64_t)(uintptr_t)element * 2654435761u;
+    mixed ^= (uint64_t)count * 40503u;
+    return (uint32_t)(mixed ^ (mixed >> 32));
+}
+
+static uint32_t composed_slot(const KestProgram *program, KestTypeTag tag,
+                              const KestType *element, uint32_t count) {
+    uint32_t mask = program->composed_by_shape_slots - 1;
+    uint32_t slot = shape_hash(tag, element, count) & mask;
+    while (program->composed_by_shape[slot] != 0) {
+        const KestType *already =
+            program->composed[program->composed_by_shape[slot] - 1u];
+        if (already->tag == tag && already->element == element &&
+            already->count == count) {
+            return slot;
+        }
+        slot = (slot + 1u) & mask;
+    }
+    return slot;
+}
+
+static bool composed_room(KestProgram *program) {
+    if (program->composed_by_shape_slots >= (program->composed_count + 1) * 2) {
+        return true;
+    }
+    uint32_t slots = program->composed_by_shape_slots == 0
+                         ? 64
+                         : program->composed_by_shape_slots * 2;
+    uint32_t *made = KEST_ARENA_ARRAY(program->arena, uint32_t, slots);
+    if (made == NULL) {
+        return false;
+    }
+    program->composed_by_shape = made;
+    program->composed_by_shape_slots = slots;
+    for (uint32_t i = 0; i < program->composed_count; i++) {
+        const KestType *one = program->composed[i];
+        uint32_t slot =
+            composed_slot(program, one->tag, one->element, one->count);
+        program->composed_by_shape[slot] = i + 1u;
+    }
+    return true;
+}
+
 static KestType *compose(KestProgram *program, KestTypeTag tag,
                          KestType *element, uint32_t count) {
     // What it is made of is all it is, so one already made of the same thing
@@ -1843,12 +1893,12 @@ static KestType *compose(KestProgram *program, KestTypeTag tag,
     // `kest_type_equal` is assignability and would answer yes for a
     // `fn() no.alloc` where a `fn()` was wanted, which is the right answer to
     // a different question. See D780.
-    for (uint32_t i = 0; i < program->composed_count; i++) {
-        KestType *already = program->composed[i];
-        if (already->tag == tag && already->element == element &&
-            already->count == count) {
-            return already;
-        }
+    if (!composed_room(program)) {
+        return NULL;
+    }
+    uint32_t slot = composed_slot(program, tag, element, count);
+    if (program->composed_by_shape[slot] != 0) {
+        return program->composed[program->composed_by_shape[slot] - 1u];
     }
     if (program->composed_count == program->composed_capacity) {
         void *moved = grow(program->arena, program->composed,
@@ -1866,6 +1916,10 @@ static KestType *compose(KestProgram *program, KestTypeTag tag,
     program->composed[program->composed_count++] = type;
     type->element = element;
     type->count = count;
+    // Put in where the lookup above looked, which is where it will be looked
+    // for again.
+    program->composed_by_shape[composed_slot(program, tag, element, count)] =
+        program->composed_count;
     // A reference and an array are one handle. An optional carries a tag
     // beside whatever it holds, which is what lets a lookup that finds
     // nothing cost no allocation.
@@ -4063,24 +4117,108 @@ void kest_unbind_types(KestProgram *program) {
     program->bound_count = 0;
 }
 
+// What a copy is of and what it was given, as a number. A type is read for its
+// kind, its width and its name rather than for its address, because two types
+// that are the same are not always one object -- so two sets that are equal
+// land on one slot and are compared there the way they always were. See D1088.
+static uint32_t binding_hash(const KestType *type) {
+    if (type == NULL) {
+        return 2166136261u;
+    }
+    uint32_t hash = 2166136261u ^ (uint32_t)type->tag;
+    hash = hash * 16777619u + type->width;
+    hash = hash * 16777619u + (type->is_signed ? 1u : 0u);
+    hash = hash * 16777619u + type->count;
+    if (type->name != NULL) {
+        hash = hash * 16777619u + kest_name_hash(type->name, strlen(type->name));
+    }
+    // One step into what it holds, which is what tells `[i32]` from `[text]`.
+    // Not all the way down: a hash is a bucket and the comparison below is
+    // what decides.
+    if (type->element != NULL) {
+        hash = hash * 16777619u + (uint32_t)type->element->tag;
+        hash = hash * 16777619u + type->element->width;
+        if (type->element->name != NULL) {
+            hash = hash * 16777619u +
+                   kest_name_hash(type->element->name,
+                                  strlen(type->element->name));
+        }
+    }
+    return hash;
+}
+
+static uint32_t use_hash(const KestDecl *decl, KestType **bindings,
+                         uint32_t count) {
+    uint64_t mixed = (uint64_t)(uintptr_t)decl * 1099511628211u;
+    mixed ^= (uint64_t)count * 2654435761u;
+    for (uint32_t i = 0; i < count; i++) {
+        mixed = mixed * 31u + binding_hash(bindings[i]);
+    }
+    return (uint32_t)(mixed ^ (mixed >> 32));
+}
+
+static bool same_use(const KestInstance *held, const KestDecl *decl,
+                     KestType **bindings, uint32_t count) {
+    if (held->decl != decl || held->count != count) {
+        return false;
+    }
+    for (uint32_t b = 0; b < count; b++) {
+        if (!kest_type_equal(held->bindings[b], bindings[b]) ||
+            !kest_type_equal(bindings[b], held->bindings[b])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static uint32_t use_slot(const KestProgram *program, const KestDecl *decl,
+                         KestType **bindings, uint32_t count) {
+    uint32_t mask = program->instances_by_use_slots - 1;
+    uint32_t slot = use_hash(decl, bindings, count) & mask;
+    while (program->instances_by_use[slot] != 0) {
+        const KestInstance *held =
+            &program->instances[program->instances_by_use[slot] - 1u];
+        if (same_use(held, decl, bindings, count)) {
+            return slot;
+        }
+        slot = (slot + 1u) & mask;
+    }
+    return slot;
+}
+
+static bool use_room(KestProgram *program) {
+    if (program->instances_by_use_slots >= (program->instance_count + 1) * 2) {
+        return true;
+    }
+    uint32_t slots = program->instances_by_use_slots == 0
+                         ? 64
+                         : program->instances_by_use_slots * 2;
+    uint32_t *made = KEST_ARENA_ARRAY(program->arena, uint32_t, slots);
+    if (made == NULL) {
+        return false;
+    }
+    program->instances_by_use = made;
+    program->instances_by_use_slots = slots;
+    for (uint32_t i = 0; i < program->instance_count; i++) {
+        const KestInstance *one = &program->instances[i];
+        uint32_t slot =
+            use_slot(program, one->decl, one->bindings, one->count);
+        program->instances_by_use[slot] = i + 1u;
+    }
+    return true;
+}
+
 // One copy per set of types. Asking twice for the same set gives the one that
 // is already there, so a call in a loop compiles one body.
 KestInstance *kest_instance_of(KestProgram *program, const KestDecl *decl,
                                const KestUnitInfo *unit, const char **names,
                                KestType **bindings, uint32_t count) {
-    for (uint32_t i = 0; i < program->instance_count; i++) {
-        KestInstance *held = &program->instances[i];
-        if (held->decl != decl || held->count != count) {
-            continue;
-        }
-        bool same = true;
-        for (uint32_t b = 0; b < count && same; b++) {
-            same = kest_type_equal(held->bindings[b], bindings[b]) &&
-                   kest_type_equal(bindings[b], held->bindings[b]);
-        }
-        if (same) {
-            return held;
-        }
+    if (!use_room(program)) {
+        return NULL;
+    }
+    uint32_t slot = use_slot(program, decl, bindings, count);
+    if (program->instances_by_use[slot] != 0) {
+        return &program->instances[program->instances_by_use[slot] - 1u];
     }
     if (program->instance_count == program->instance_capacity) {
         uint32_t capacity = program->instance_capacity == 0
@@ -4114,6 +4252,11 @@ KestInstance *kest_instance_of(KestProgram *program, const KestDecl *decl,
         made->names[i] = names[i];
         made->bindings[i] = bindings[i];
     }
+    // Put in where the lookup above looked, now that the copy holds the types
+    // it was given: the slot is found again rather than kept, because the
+    // table may have been made bigger in between.
+    program->instances_by_use[use_slot(program, decl, made->bindings, count)] =
+        program->instance_count;
     return made;
 }
 

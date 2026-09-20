@@ -292,6 +292,13 @@ typedef struct {
     KestType **composed;
     uint32_t composed_count;
     uint32_t composed_capacity;
+    // And where each of them is, by what it is made of. One already made of
+    // the same thing is the same type, and the walk that found it was the
+    // list of every composed type in the program for every `[Thing]` any body
+    // writes: at a million lines that was a twelfth of a clean check. Slots
+    // hold one more than the place they name. See D1088.
+    uint32_t *composed_by_shape;
+    uint32_t composed_by_shape_slots;
 
     KestSymbol *globals;
     uint32_t global_count;
@@ -338,6 +345,15 @@ typedef struct {
     KestInstance *instances;
     uint32_t instance_count;
     uint32_t instance_capacity;
+    // And where each copy is, by the declaration it is of and the types it
+    // was given. The walk that found one compared every copy in the program
+    // against the types in hand, and comparing two types is a walk of its
+    // own: at a million lines, with one copy of a generic per module, that
+    // was a seventh of a clean check. What a slot holds is one more than the
+    // copy it names, and what lands on one slot is compared the way it always
+    // was. See D1088.
+    uint32_t *instances_by_use;
+    uint32_t instances_by_use_slots;
     // Where every name was written and what it named. Filled by the checker,
     // read by whatever asks about a place in a file. See D977.
     KestUse *uses;

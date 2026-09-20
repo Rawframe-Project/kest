@@ -36594,10 +36594,11 @@ for a clean check of a hundred thousand lines in under 250 ms; this is 282 ms
 at a hundred and twelve thousand, on the machine described in
 `docs/game-ai-direction-state.md`.
 
-**What it cost.** The four tables are arena memory the compiler did not hold
-before: checking the standard library went from 173,144 bytes to 174,472, and
-compiling it from 203,464 to 204,793 — a little over a thousand bytes, which
-the reference quotes and `check-costs.sh` holds. Two of them are the length of
+**What it cost.** The tables are arena memory the compiler did not hold
+before: checking the standard library went from 173,144 bytes to 174,760, and
+compiling it from 203,464 to 205,071 — about sixteen hundred bytes over the
+four here and the two in D1088, which the reference quotes and
+`check-costs.sh` holds. Two of them are the length of
 the program's own lists and one is the length of the file list; none of them is
 kept between runs, because nothing is kept between runs.
 
@@ -36606,3 +36607,47 @@ incremental. Two rounds of removing repeated work took the same corpus from
 2.2 seconds to 282 milliseconds, which is what the mission's own decision tree
 asks for before any of that is considered: *fix the clean algorithm first, then
 measure what is left.*
+
+## D1088. Two lists that were walked to find what was already in them
+
+*measured*, on a gameplay-shaped project of a million lines.
+
+D1087 left a clean check linear to a hundred thousand lines. A million said
+otherwise: 7.9 seconds, where nine times the lines should have cost nine times
+the 282 ms. Two more of the same shape, and both of them lists a lookup walked
+to find something it had already made:
+
+- `compose` made `[Thing]`, `Thing?` and `ref<Thing>` unique by walking every
+  composed type in the program — a twelfth of the run at this scale, and the
+  list grows with the program.
+- `kest_instance_of` found the copy of a generic for a set of types by walking
+  every copy and comparing types, which is a walk of its own inside a walk. A
+  seventh of the run.
+
+**Decided.** Both get a table. A composed type is keyed on what it is made of —
+the kind, the address of what it holds and how many — which is exactly what the
+walk compared, because a composed type is interned here and two of the same
+shape are one address. A copy of a generic is keyed on the declaration and a
+number read off the types it was given: kind, width, name and one step into
+what each holds. A hash is a bucket rather than an answer, so two sets that
+land on one slot are still compared the way they always were, with
+`kest_type_equal` both ways.
+
+| lines | D1087 | this |
+| --- | --- | --- |
+| 112,647 | 282 ms | 288 ms |
+| 1,000,857 | 7,885 ms | 4,910 ms |
+
+**Where the remaining time is.** At a million lines the split is 2.0 s reading,
+lexing and parsing 66 MB of source, 1.3 s resolving names, 1.1 s checking
+bodies and 0.4 s proving promises, in 456 MB. Nothing in the profile is a walk
+the size of the program any more: the largest single thing is the C library's
+copying, under the arena. What is left to win at that scale is parallel
+reading and less copying, and the compiler direction says to reduce work before
+reaching for threads — which is what these four decisions did.
+
+**What this is worth.** The product's daily loop is a hundred thousand lines,
+not a million: 288 ms, against the 250 ms the direction asks for. A million
+lines is 4.9 s against 2 s, and it is a shape nobody has yet — the largest
+gameplay codebases in this class are in the hundreds of thousands. It is
+measured, it is written down, and it is not where the next hour goes.

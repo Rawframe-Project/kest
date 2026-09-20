@@ -39336,3 +39336,24 @@ See D1087.
 
 **Runs:** `make check`, and `tools/make-project.py` for the corpus the numbers
 were taken on.
+
+## Two lists that were walked to find what was already in them
+
+A million lines took 7.9 seconds where the hundred-thousand-line curve said
+2.5. Two more walks, both of them a list searched for something already in it:
+`compose`, which makes `[Thing]` unique by walking every composed type, and
+`kest_instance_of`, which finds the copy of a generic for a set of types by
+walking every copy and comparing types as it goes.
+
+Both are tables now. A composed type is keyed on what it is made of, which is
+what the walk compared; a copy of a generic is keyed on its declaration and a
+number read off the types it was given, with the comparison kept for whatever
+lands on one slot.
+
+4.9 s at a million lines, 288 ms at a hundred thousand. The split at a million
+is 2.0 s reading and parsing 66 MB, 1.3 s naming, 1.1 s bodies, 0.4 s
+promises, in 456 MB — no walk the size of the program left in it.
+
+See D1088.
+
+**Runs:** `make check`, and `tools/make-project.py` for the corpus.
