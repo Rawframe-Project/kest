@@ -1,0 +1,189 @@
+module src.main
+
+import std.io
+import std.random
+import std.table
+import src.rules
+import src.save
+import src.trouble
+import src.ui.say
+import src.world
+
+// A vertical slice, which is one program exercising the things this language
+// is for at the same time rather than one at a time. Section 35 of the
+// foundation reset asks for it and says not to pad it: what is here is here
+// because something else here needs it.
+//
+// A colony that outlives every frame, holding references at each other. Rules
+// over it that promise `no.alloc` and take what they apply as a value. An
+// inventory per colonist and one for the colony, counted from the colonists
+// rather than kept in step. Colonists joining and leaving every round, which
+// is churn the collector has to survive. A save written as text and read back
+// into a world that is not the one it came from. An answer that carries its
+// reason. Text a person reads, with characters a file may not hold. And two
+// modules whose names end in one word.
+//
+// It answers with which of its checks failed, the way every example here does.
+// See D1062, D1063 and D1064, each of which it found.
+
+const ROUNDS: i32 = 24
+const PEOPLE: i32 = 40
+
+fn hungry(one: world.Colonist) -> bool no.alloc no.host deterministic {
+    return table.orElse(one.carrying, "food", 0) < 2
+}
+
+// The colony as somebody would read it, which is where the text half of this
+// lives: a key looked up in a catalogue and pushed into a column that is bytes
+// wide rather than characters wide, because text is its bytes.
+fn report(colony: world.Colony, lines: [say.Line]) -> text {
+    let doing = "resting"
+    let many = 0
+    for who in colony.people {
+        if let one = get(colony.people, who) {
+            many += 1
+            if one.doing == world.Doing.Working {
+                doing = "working"
+            }
+        }
+    }
+    return "{many} {say.column(say.of(lines, doing), 12)}"
+}
+
+fn main() -> i32 {
+    let lines = say.catalogue()
+    let colony = world.begin()
+    let source = random.from(7)
+
+    // Every colonist carries something from the start, because the hot phase
+    // writes where a key already is and answers for one that is not there.
+    for i in 0..PEOPLE {
+        let who = world.join(colony, "colonist")
+        if let one = get(colony.people, who) {
+            table.set(one.carrying, "food", 3)
+            set(colony.people, who, one)
+        }
+    }
+    if world.living(colony) != PEOPLE {
+        return 1
+    }
+
+    // References at each other, made after everybody is there so that some of
+    // them point at somebody who leaves.
+    let everybody: [ref<world.Colonist>] = array()
+    for who in colony.people {
+        push(everybody, who)
+    }
+    for i in 0..len(everybody) {
+        if let one = get(colony.people, everybody[i]) {
+            one.following = everybody[(i + 1) % len(everybody)]
+            set(colony.people, everybody[i], one)
+        }
+    }
+
+    // The rounds. Each is the hot phase over the whole colony, then the churn
+    // outside it: somebody leaves and somebody joins, which is what makes the
+    // references above point at nothing and the heap grow.
+    let moved = 0
+    let born = PEOPLE
+    let gone = 0
+    for round in 0..ROUNDS {
+        // The colony comes back rather than being changed where it stands: it
+        // is a struct and so a value, and `tick` is a field of it. The store
+        // and the table in it are handles and did not need handing back,
+        // which is the half of this that is easy to get wrong.
+        colony = rules.round(colony, hungry)
+        moved += colony.moved
+        source = random.next(source)
+        if random.chance(source, 30) && world.living(colony) > 4 {
+            if let going = random.one(source, everybody) {
+                if world.leave(colony, going) {
+                    gone += 1
+                }
+            }
+        }
+        let joined = world.join(colony, "newcomer")
+        born += 1
+        if let one = get(colony.people, joined) {
+            table.set(one.carrying, "food", 1)
+            set(colony.people, joined, one)
+        }
+        push(everybody, joined)
+    }
+
+    if colony.tick != ROUNDS {
+        return 2
+    }
+    if born <= PEOPLE || gone == 0 {
+        return 3
+    }
+    if moved <= 0 {
+        return 15
+    }
+
+    // A reference to somebody who left reads as nothing rather than as whoever
+    // took their place, which is the whole of what a checked identity is for.
+    let dangling = 0
+    for one in everybody {
+        if get(colony.people, one) == none {
+            dangling += 1
+        }
+    }
+    if dangling != gone {
+        return 4
+    }
+
+    // What the colony holds, counted from the colonists. A colonist who left
+    // took what they were carrying with them.
+    let held = world.counted(colony)
+    if table.orElse(held, "food", 0) <= 0 {
+        return 5
+    }
+    if table.count(held) != 1 {
+        return 6
+    }
+
+    // Written down and read back into a world that is not the one it came
+    // from. What crosses is what the program wrote.
+    let written = save.written(colony)
+    if len(written) != world.living(colony) {
+        return 7
+    }
+    let back = save.read(written)
+    if trouble.wentWrong(back) {
+        return 8
+    }
+    let rebuilt = trouble.orElse(back, world.begin())
+    if world.living(rebuilt) != world.living(colony) {
+        return 9
+    }
+    if table.orElse(world.counted(rebuilt), "food", 0) !=
+            table.orElse(held, "food", 0) {
+        return 10
+    }
+
+    // And a save this program did not write, which is a reason rather than an
+    // empty world.
+    let wrong: [text] = array()
+    push(wrong, "not a save")
+    if !trouble.wentWrong(save.read(wrong)) {
+        return 11
+    }
+
+    // The text half. `Çalışıyor` is nine characters and thirteen bytes, and a
+    // column is bytes, so this is what a column of it comes to rather than
+    // what somebody hoped.
+    let said = say.of(lines, "working")
+    if len(said) != 13 {
+        return 12
+    }
+    if len(say.column(said, 12)) != 13 {
+        return 13
+    }
+    if say.of(lines, "nobody") != "nobody" {
+        return 14
+    }
+
+    io.print(report(colony, lines))
+    return 0
+}

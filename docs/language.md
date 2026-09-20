@@ -5860,6 +5860,8 @@ here, is a check that fails.
 | `rows.kest` | a struct holding a run of structs, which is what a host lends |
 | `scan.kest` | the same line `parse` reads, read without reaching the heap |
 | `shapes.kest` | one body, one copy per set of types it is called with |
+| `slice/src/main.kest` | a colony, its rules, its save and its words at once: one project rather than one shape |
+| `slice/tests/rounds.kest` | what `kest test` runs, which is a program that answers nought |
 | `state.kest` | a thing that is one of several, and a `match` that leaves none out |
 | `tree.kest` | an enum whose case holds the type it belongs to |
 | `words.kest` | text as its bytes, with no character type anywhere |

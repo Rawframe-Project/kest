@@ -1,0 +1,79 @@
+module src.rules
+
+import std.table
+import src.world
+
+// The hot phase. Every frame runs this over every colonist and it promises
+// `no.alloc`, so the collector cannot interrupt it and the promise is what
+// says so rather than a comment. What it costs is what it does: no piece of
+// text is made here, no table grows, and the tables it reads were given their
+// room before the frame began.
+//
+// Whether a colonist is hungry is a rule the caller hands in, because what
+// counts as hungry is the game's and not this module's. A function value
+// carries its promises in its type, so a rule that allocated could not be
+// passed here at all -- which is the whole reason the promise is part of the
+// type. See D1051.
+fn hungry(one: world.Colonist) -> bool no.alloc no.host deterministic {
+    return table.orElse(one.carrying, "food", 0) < 2
+}
+
+fn tired(one: world.Colonist) -> bool no.alloc no.host deterministic {
+    return one.since > 8
+}
+
+fn decide(one: world.Colonist, asking: fn(world.Colonist) -> bool no.alloc no.host deterministic) -> world.Doing no.alloc no.host deterministic {
+    if asking(one) {
+        return world.Doing.Hungry
+    }
+    return match one.doing {
+        Resting ->
+            if one.since > 3 -> world.Doing.Working else -> world.Doing.Resting
+        Working ->
+            if one.since > 6 -> world.Doing.Resting else -> world.Doing.Working
+        Hungry -> world.Doing.Working
+    }
+}
+
+// One round over the colony, in the room it is standing in. Reading a colonist
+// out, changing it and writing it back is the spelling this language is
+// quickest at (D1038), and every table here was given its room by `refill`
+// before the round began.
+fn round(colony: world.Colony, asking: fn(world.Colonist) -> bool no.alloc no.host deterministic) -> world.Colony no.alloc no.host deterministic {
+    let moved = 0
+    let missed = 0
+    for who in colony.people {
+        if let one = get(colony.people, who) {
+            let next = decide(one, asking)
+            if next == one.doing {
+                one.since += 1
+            } else {
+                one.doing = next
+                one.since = 0
+                moved += 1
+            }
+            // What working makes and what being hungry spends, both written
+            // where the key already is. `set` may grow and so is not a thing a
+            // promise can hold; `fit` is `set` with the growth taken out and
+            // answers false for a key that is not there, which is what the
+            // colony's first round is for. See D1063.
+            let food = table.orElse(one.carrying, "food", 0)
+            if next == world.Doing.Working {
+                missed += if table.fit(one.carrying, "food", food + 1) -> 0
+                    else -> 1
+            } else if next == world.Doing.Hungry {
+                let left = if food > 0 -> food - 1 else -> 0
+                missed += if table.fit(one.carrying, "food", left) -> 0
+                    else -> 1
+            }
+            set(colony.people, who, one)
+        }
+    }
+    colony.tick += 1
+    // What the round could not write, which is a count rather than a refusal:
+    // a key that is not there yet is put there before the next frame, outside
+    // the promise. A frame that silently did nothing would be a frame nobody
+    // could see.
+    colony.moved = moved - missed
+    return colony
+}

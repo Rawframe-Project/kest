@@ -1515,7 +1515,26 @@ if ! ./kest check lib/std/*.kest >"$scratch"/check-why 2>&1; then
     grep -m 4 -E '^(error|warning)' "$scratch"/check-why | sed 's/^/    /'
 fi
 
-say "project" "\`lib/std\` reads as one project rather than as files"
+# And a project the way somebody has one: a `kest.project`, sources under it,
+# tests beside them, and the commands a reader is told to type. `examples/slice`
+# is section 35's vertical slice -- one program exercising a long-lived world,
+# churning references, an inventory, rules under a promise, a save read back,
+# two modules whose names end in one word, and text a person reads. Running its
+# files one at a time is what the sweeps above do; this is the other question,
+# which is whether the project is a project. See D1066.
+tree=$(pwd)
+if ! (cd "$tree"/examples/slice && "$tree"/kest build) >"$scratch"/check-why 2>&1; then
+    complain "project" "\`kest build\` does not work in examples/slice"
+    sed 's/^/    /' "$scratch"/check-why | head -6
+fi
+if ! (cd "$tree"/examples/slice && "$tree"/kest test tests/rounds.kest) \
+        >"$scratch"/check-why 2>&1; then
+    complain "project" "\`kest test\` does not work in examples/slice"
+    sed 's/^/    /' "$scratch"/check-why | head -6
+fi
+
+say "project" "\`lib/std\` reads as one project rather than as files, and \
+\`examples/slice\` builds and tests as the project it is"
 
 # The two layouts, put beside each other. D016 says a value on the stack is a
 # run of eight-byte slots and the same value in memory is what a C compiler

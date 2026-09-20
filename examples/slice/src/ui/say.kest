@@ -1,0 +1,39 @@
+module src.ui.say
+
+import std.text
+
+// What a person reads. One module per language would be one module per
+// language; this is the shape a catalogue has and the boundary D1056 draws:
+// the bytes are this language's and what a language does with characters is
+// not. The French line carries a non-breaking space and the Turkish one has
+// characters ASCII casing is wrong about, both on purpose.
+struct Line {
+    key: text
+    said: text
+}
+
+fn catalogue() -> [Line] {
+    let lines: [Line] = array()
+    push(lines, Line("hungry", "Aç"))
+    push(lines, Line("resting", "Dinleniyor"))
+    push(lines, Line("working", "Çalışıyor"))
+    push(lines, Line("gone", "\u{ab}Kayıp\u{a0}?\u{bb}"))
+    return lines
+}
+
+fn of(lines: [Line], key: text) -> text no.alloc {
+    for line in lines {
+        if line.key == key {
+            return line.said
+        }
+    }
+    return key
+}
+
+// A column in a report, which is bytes wide rather than characters wide and
+// says so where the width is asked for. `Çalışıyor` is nine characters and
+// thirteen bytes, so a column of these does not line up and nothing here
+// pretends otherwise.
+fn column(said: text, width: i32) -> text no.host deterministic {
+    return text.left(said, width)
+}

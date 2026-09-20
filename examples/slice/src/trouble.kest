@@ -1,0 +1,27 @@
+module src.trouble
+
+// What a call that can fail gives back when the reason matters. `T?` is the
+// shape for a question whose only answer is that there is none; this is the
+// one for a question whose answer is why. The reference says which to write
+// and this is the half of the slice that writes the second one.
+enum Answer<T> {
+    Held(T)
+    Trouble(text)
+}
+
+// The value, or the one given here. A caller that has a fallback does not want
+// a `match` around every call, and a caller that wants the reason writes the
+// `match` and gets it.
+fn orElse<T>(answer: Answer<T>, fallback: T) -> T no.alloc no.host {
+    return match answer {
+        Held(value) -> value
+        Trouble(why) -> fallback
+    }
+}
+
+fn wentWrong<T>(answer: Answer<T>) -> bool no.alloc no.host deterministic {
+    return match answer {
+        Held(value) -> false
+        Trouble(why) -> true
+    }
+}

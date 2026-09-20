@@ -1,0 +1,47 @@
+module tests.rounds
+
+import std.table
+import src.rules
+import src.world
+
+// What `kest test` runs. A test here is a program that answers nought, which
+// is what every example in this tree is, so there is no framework and nothing
+// to learn: the thing that says a test failed is the number it answered.
+fn steady(one: world.Colonist) -> bool no.alloc no.host deterministic {
+    return false
+}
+
+fn main() -> i32 {
+    let colony = world.begin()
+    let who = world.join(colony, "one")
+    if let it = get(colony.people, who) {
+        table.set(it.carrying, "food", 0)
+        set(colony.people, who, it)
+    }
+
+    // A colonist nobody calls hungry rests, then works, and the round says
+    // so by answering how many changed.
+    colony = rules.round(colony, steady)
+    if colony.tick != 1 {
+        return 1
+    }
+
+    let turned = 0
+    for round in 0..8 {
+        colony = rules.round(colony, steady)
+        turned += colony.moved
+    }
+    if turned < 1 {
+        return 2
+    }
+
+    // And the food it made while working, written where the key already was.
+    if let it = get(colony.people, who) {
+        if table.orElse(it.carrying, "food", 0) < 1 {
+            return 3
+        }
+    } else {
+        return 4
+    }
+    return 0
+}

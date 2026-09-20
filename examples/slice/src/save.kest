@@ -1,0 +1,57 @@
+module src.save
+
+import std.table
+import std.text
+import src.data.say
+import src.trouble
+import src.world
+
+// What a host writes down and reads back. A world is not a format: what
+// crosses a save is what the program wrote, which is why this is a module of
+// the program and not a door in the language.
+//
+// One line per colonist, and the pieces are numbers because a number reads
+// back as itself and a name does not have to. `data.say` writes the line and
+// reads it, which is the other `say` in this program: one is for a person and
+// one is for a file, and they have the same last word because they are the
+// same question asked about two readers.
+fn written(colony: world.Colony) -> [text] no.host deterministic {
+    let lines: [text] = array()
+    for who in colony.people {
+        if let one = get(colony.people, who) {
+            let kind = match one.doing {
+                Resting -> 0
+                Working -> 1
+                Hungry -> 2
+            }
+            push(
+                lines,
+                say.line(table.orElse(one.carrying, "food", 0), kind, one.since)
+            )
+        }
+    }
+    return lines
+}
+
+// And back. A line that is not three numbers is a save this program did not
+// write, which is a reason rather than nothing: a host reading somebody else's
+// file wants to know that rather than a colony of nought people.
+fn read(lines: [text]) -> trouble.Answer<world.Colony> {
+    let colony = world.begin()
+    for line in lines {
+        let pieces = say.read(line)
+        if len(pieces) != 3 {
+            return trouble.Answer.Trouble("a line of a save is three numbers")
+        }
+        let who = world.join(colony, "saved")
+        if let one = get(colony.people, who) {
+            table.set(one.carrying, "food", pieces[0])
+            one.doing = if pieces[1] == 1 -> world.Doing.Working
+                else -> if pieces[1] == 2 -> world.Doing.Hungry
+                else -> world.Doing.Resting
+            one.since = pieces[2]
+            set(colony.people, who, one)
+        }
+    }
+    return trouble.Answer.Held(colony)
+}

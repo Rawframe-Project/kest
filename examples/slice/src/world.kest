@@ -1,0 +1,87 @@
+module src.world
+
+import std.table
+
+// A colony that outlives every frame. What makes it a world rather than an
+// array is the identity: a colonist names the one it is following, and the one
+// it is following may be gone -- which is the thing a reference is checked for
+// and an index is not.
+enum Doing {
+    Resting
+    Working
+    Hungry
+}
+
+struct Colonist {
+    name: text
+    // Nested state a frame writes: what it is doing, how long it has been
+    // doing it, and what it is carrying. The carrying is a table of its own,
+    // so a colonist holds a thing that holds handles and both live as long as
+    // the colony does.
+    doing: Doing
+    since: i32
+    carrying: table.Table<text, i32>
+    // Who it is following, or nothing. A reference into the same store the
+    // colonist is in, which is the cycle a walk has to survive.
+    following: ref<Colonist>?
+}
+
+// A colony is a struct, so it is a value: the store and the table in it are
+// handles and writing through one writes the thing, and `tick` beside them is
+// this frame's own copy. A round therefore hands the colony back rather than
+// changing the caller's -- which is what `K0346` says to do and what the
+// reference says not to work around by putting the counters behind a handle
+// too. `moved` is here for the same reason: a round has two things to say and
+// one of them is the colony. See D1065.
+struct Colony {
+    people: store<Colonist>
+    // The same things counted the other way round: what the colony holds in
+    // all, rebuilt from the colonists each round rather than kept in step by
+    // hand, because two counts kept in step by hand are two counts.
+    total: table.Table<text, i32>
+    tick: i32
+    moved: i32
+}
+
+fn begin() -> Colony {
+    let people: store<Colonist> = store()
+    let total: table.Table<text, i32> = table.empty()
+    return Colony(people, total, 0, 0)
+}
+
+// Answers the reference rather than the colony, because the store is a handle
+// and putting somebody in it is not a write to the colony at all.
+fn join(colony: Colony, name: text) -> ref<Colonist> {
+    let carrying: table.Table<text, i32> = table.empty()
+    return add(colony.people, Colonist(name, Doing.Resting, 0, carrying, none))
+}
+
+fn leave(colony: Colony, who: ref<Colonist>) -> bool no.host deterministic {
+    return remove(colony.people, who)
+}
+
+// What the colony holds, counted from the colonists rather than kept beside
+// them. A colonist that has gone takes what it was carrying with it, which is
+// the thing a count kept in step by hand gets wrong the first time somebody
+// dies holding something.
+fn counted(colony: Colony) -> table.Table<text, i32> no.host deterministic {
+    let total: table.Table<text, i32> = table.empty()
+    for who in colony.people {
+        if let one = get(colony.people, who) {
+            for at in 0..table.count(one.carrying) {
+                let good = table.keyAt(one.carrying, at)
+                let many = table.valueAt(one.carrying, at)
+                table.set(total, good, table.orElse(total, good, 0) + many)
+            }
+        }
+    }
+    return total
+}
+
+fn living(colony: Colony) -> i32 no.alloc no.host deterministic {
+    let many = 0
+    for who in colony.people {
+        many += 1
+    }
+    return many
+}

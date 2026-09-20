@@ -38537,3 +38537,42 @@ See D1065.
 
 **Runs:** the new corpus row watched catching the silence; every `.kest` in the
 tree swept for a warning it did not have before; `make check`.
+
+## One project that does several things at once
+
+Section 35 asks for a project-owned vertical slice — a long-lived world,
+churning references, nested state, an inventory, rules, save and rebuild,
+module-name collisions, host services, error values, function values,
+localized text, host-owned frame arrays, hot reload, collector pressure, a
+`no.alloc` phase, sharding — exercised together rather than one at a time, and
+says not to pad it.
+
+Every one of those was already here, one at a time, in thirty-eight examples
+that are one shape each. A list of shapes is not an architecture.
+
+`examples/slice` is a project doing twelve of them at once: a colony whose
+colonists hold a table each and a reference at each other and who join and
+leave every round; rules promising `no.alloc no.host deterministic` that take
+the rule they apply as a value; a save written as text and read back into a
+world that is not the one it came from; an answer carrying its reason; two
+modules whose names end in `say`, one for a person and one for a file; text
+with characters a source file may not hold. It has a `kest.project`, sources,
+a test, and the gate builds and tests it as a project rather than reading its
+files one at a time.
+
+It found four defects before it ran, and none of the thirty-eight could have:
+an enum another module declared could be matched and not made (D1062); a table
+could not be written to inside a promise (D1063); `deterministic` was not
+written into the name of a function type (D1064); and a write to a struct
+parameter was discarded quietly whenever the function answered anything
+(D1065). Each is one interaction between two things the language already had.
+
+The four it does not exercise are the host's, and the slice says so rather than
+leaving a reader to count: `examples/engine.c` drives frames, lends memory,
+saves and reloads; `bench/frame.c` is the boundary three ways; the gate's
+`threads` and `races` sections run four machines of one build at once.
+
+See D1066.
+
+**Runs:** the slice run from the tree and built and tested as a project; every
+file of it swept for a warning; `make check`.

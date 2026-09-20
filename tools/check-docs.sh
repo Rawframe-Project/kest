@@ -962,7 +962,7 @@ reference = 'docs/language.md'
 where = re.search(r'## Where each rule is run(.*?)\n## ',
                   open(reference).read(), re.S)
 listed = set() if where is None else set(
-    re.findall(r'\| `([a-z]+\.kest)`', where.group(1)))
+    re.findall(r'\| `([a-z/]+\.kest)`', where.group(1)))
 if where is None:
     print("%s: nothing here says where each rule is run" % reference)
     failed = 1
@@ -973,13 +973,22 @@ if where is None:
 # of its own to run. Read by looking rather than by where the file is: this
 # looked in `examples` and not under it, so a program added a directory down
 # was one the table did not have to name. See D538.
+#
+# Named by where it is under `examples` rather than by the last piece of its
+# path, because a project is a directory and a project's files are called what
+# a project calls them: `slice/src/main.kest` and `slice/tests/rounds.kest` are
+# both programs, and one of them shares a name with `examples/world.kest`,
+# which is a module. A table keyed by the last piece said the module had no
+# `main` and had never been asked about the two programs. A file at the top
+# keeps the name it had, which is the whole of the table as it stands.
 here = set()
 modules = set()
 for path in sorted(glob.glob('examples/**/*.kest', recursive=True)):
+    under = os.path.relpath(path, 'examples')
     if re.search(r'^fn main\(', open(path).read(), re.M):
-        here.add(os.path.basename(path))
+        here.add(under)
     else:
-        modules.add(os.path.basename(path))
+        modules.add(under)
 for name in sorted(here - listed):
     print("%s: `%s` is an example and the reference does not say what it runs"
           % (reference, name))

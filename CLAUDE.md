@@ -1117,7 +1117,11 @@ promises     every function that can keep a promise saying so: all of the
              what the compiler refuses
 warnings     every file holding its tongue about itself
 modules      every file where its `module` line says it is
-project      `lib/std` read as one project rather than as files
+project      `lib/std` read as one project rather than as files, and
+             `examples/slice` built and tested as the project it is: a
+             `kest.project`, sources under it, tests beside them, and the
+             two commands a reader is told to type. The sweeps read every
+             file on its own; this is the other question
 layouts      what every shape takes on the stack against what it takes in
              memory, what it would take packed, and nothing wider in memory
              than on the stack

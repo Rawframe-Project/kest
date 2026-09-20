@@ -35374,3 +35374,57 @@ and the other direction was silence about the ordinary case.
 store, a table and three counters, and whose round answers how many colonists
 changed what they were doing. Twenty-four rounds ran and `colony.tick` was
 nought.
+
+## D1066. One project that does several things at once
+
+*argued*, and what it is worth is the four defects it found before it ran.
+
+Section 35 of the foundation reset asks for a project-owned vertical slice
+exercising enough of: a long-lived world, high-churn references and stores,
+nested mutable state, an inventory or table, rules, save and rebuild,
+module-name collisions, host services, error values, callbacks and function
+values, localization-shaped text, host-owned frame arrays, hot reload,
+collector pressure, a `no.alloc` hot phase, and multi-runtime host sharding.
+Not padded: the goal is architecture interaction.
+
+**Every one of those was already exercised here, one at a time.** There are
+thirty-eight examples and each is one shape: `colony.kest` is a world,
+`inventory.kest` is a table, `words.kest` is text, `frame.kest` is a `no.alloc`
+step, `engine.c` is a host with a reload, `churn.kest` is collector pressure,
+the gate's `threads` and `races` sections are sharding. A list of shapes is not
+an architecture, and the difference is the whole point of the section.
+
+**`examples/slice` is one project doing twelve of them together.** A colony
+whose colonists hold a table each and a reference at each other, joining and
+leaving every round; rules that promise `no.alloc no.host deterministic` and
+take the rule they apply as a function value; a save written as text and read
+back into a world that is not the one it came from; an answer that carries its
+reason; two modules whose names end in `say`, one for a person and one for a
+file; text with characters a source file may not hold; and a `kest.project`
+with sources, tests, and the two commands a reader is told to type. The gate
+builds and tests it as a project rather than reading its files one at a time,
+because reading files one at a time never asks whether they are a project.
+
+**The four it found, none of which any of the thirty-eight could.**
+
+- An enum another module declared could be matched and could not be made
+  (D1062). Every enum in this tree was declared and used in one file.
+- A table could not be written to inside a promise (D1063). Every `no.alloc`
+  body in this tree that touched a table only read it.
+- `deterministic` was not written into the name of a function type (D1064). No
+  function value in this tree carried it.
+- A write to a struct parameter was discarded quietly whenever the function
+  answered anything (D1065). No body in this tree kept a world in a struct
+  *and* answered something other than the world.
+
+Each is one interaction between two things this language already had. That is
+what a slice is for and it is why one is worth what it costs.
+
+**What it does not exercise, and where those are.** The four that are the
+host's: host services, host-owned frame arrays, hot reload and multi-runtime
+sharding. `examples/engine.c` drives a world through frames, lends memory a
+frame at a time, saves it and reloads under it; `bench/frame.c` is the boundary
+crossed three ways; the gate's `threads` and `races` sections run four machines
+of one build at once. Adding a fourth host to this tree to say the same things
+in a different program would be gate surface for no finding, and the slice says
+which side of the line it is on rather than leaving a reader to count.
