@@ -34041,6 +34041,16 @@ bound at the call.
 And a type name is not a kind the machine ever meets, so it is answered before
 the walk that is held to the machine's own lists rather than inside it.
 
+**And a copy asked for with a type name is not a copy.** Checking `set`'s body
+copies `slotOf` with `K` bound to `set`'s own `K`, and nothing can be compiled
+for a name that stands for itself: the body such a copy would be made from is
+the one being checked where it is written. So no instance is made -- an
+instance is a thing the compiler is going to emit -- and what the caller gets
+is the callee's own signature with the names put through. Without this, every
+call inside a generic left an uncompilable copy in the list and the promise
+proof judged each of them twice, which the gate saw as one more function
+refused `no.alloc` than there are functions without it.
+
 **What a reader sees.** `kest check` prints
 `fn std.table.set<K: compares, V>(...)`, `--json` carries a `typeParameters`
 list with a `wants` array per name, and the formatter writes the words back in

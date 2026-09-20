@@ -737,6 +737,34 @@ static bool wants_met(Checker *checker, const KestType *callee,
     return met;
 }
 
+// A copy asked for with a type name in it, which is not a copy. Nothing can be
+// compiled for a name that stands for itself, and the body such a copy would
+// be made from is the one being checked where it is written. What the caller
+// needs is the callee's own signature with the names put through, so that is
+// what it gets -- and no instance is made, because an instance is a thing the
+// compiler is going to emit. Without this, checking a generic's body left one
+// uncompilable copy per call in the list, and the promise proof judged each of
+// them twice. See D1043.
+static KestType *shape_of_call(Checker *checker, const KestType *callee,
+                               const char **names, KestType **bindings,
+                               uint32_t generics) {
+    bool abstract = false;
+    for (uint32_t g = 0; g < generics && !abstract; g++) {
+        abstract = kest_mentions_name(bindings[g]);
+    }
+    if (!abstract) {
+        return NULL;
+    }
+    KestType *shape = kest_substitute(checker->program, (KestType *)callee,
+                                      names, bindings, generics);
+    if (shape == NULL) {
+        checker->out_of_memory = true;
+        return error_type(checker);
+    }
+    shape->type_param_count = 0;
+    return shape;
+}
+
 // A type name bound to a type name. Which one is meant is the one bound where
 // the call is written, and what came out of an argument may be another: a copy
 // of a generic shape is found by its name, so `Box<K, V>` is one copy in a
@@ -2184,6 +2212,10 @@ static KestType *copy_for_shape(Checker *checker, const KestType *callee,
     if (!wants_met(checker, callee, where, bindings, generics, where)) {
         return error_type(checker);
     }
+    KestType *shape = shape_of_call(checker, callee, names, bindings, generics);
+    if (shape != NULL) {
+        return shape;
+    }
     KestInstance *instance = kest_instance_of(program, callee->decl,
                                               callee->unit, names, bindings,
                                               generics);
@@ -2490,6 +2522,11 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
     if (!wants_met(checker, callee, expr->call.callee->span, bindings, generics,
                    expr->span)) {
         return error_type(checker);
+    }
+    KestType *shape = shape_of_call(checker, callee, names, bindings, generics);
+    if (shape != NULL) {
+        expr->call.callee->type = shape;
+        return check_arguments(checker, expr, shape);
     }
     KestInstance *instance = kest_instance_of(program, callee->decl,
                                               callee->unit, names, bindings,
