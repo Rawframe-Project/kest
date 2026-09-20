@@ -1121,6 +1121,11 @@ sharing      the one thing two machines of one build do share, held the
              into. The host writes the byte through the first and calls the
              second, which stops in a body no debugger was pointed at, and
              the byte going back gives both of them the program back
+stopped      a machine stopped at a breakpoint is in the middle of a
+             call, which is what the doors that guard the heap did not
+             know: an array live in the frame under the stop, all five of
+             them asked and refused, and the machine carrying on and
+             reading what it was holding
 memory       a world worked on rather than grown: the same round written to
              reuse what a thing holds running in the room it started in, and
              the same round written to replace it needing more

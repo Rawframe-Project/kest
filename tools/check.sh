@@ -1382,6 +1382,126 @@ pointed at, and the byte going back gave both of them the program back"
 fi
 rm -f "$sharing" "$sharing".c "$sharing".kest
 
+# And what a machine that is stopped is: in the middle of a call. Nothing of
+# the host's is on its stack, so every door that guards the heap by asking
+# whether the program is running heard no, and a walk asked for there read to
+# where the slots had got to when the host last called in -- the bottom of the
+# stack -- reached nothing, and gave the frames' memory back. The host below
+# stops a machine with an array under the stop, asks for all five of those
+# doors, and then lets it carry on and add the array up. See D1078.
+stopped="$scratch"/stopped
+cat > "$stopped".kest <<'KEST'
+module stopping
+
+fn inner(n: i32) -> i32 no.alloc {
+    return n + 1
+}
+
+// Something on the heap in the frame under the stop, which is what the walk
+// used to give back: the breakpoint goes in `inner`, so `said` is live and
+// reachable from nowhere but a frame.
+fn work(n: i32) -> i32 {
+    let said: [i32] = array()
+    for i in 0..64 {
+        push(said, i)
+    }
+    let got = inner(n)
+    let sum = 0
+    for i in 0..len(said) {
+        sum += said[i]
+    }
+    return got + sum
+}
+KEST
+cat > "$stopped".c <<'EOF'
+#include <stdio.h>
+#include "kest.h"
+
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        return 2;
+    }
+    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT, 0);
+    if (build == NULL) {
+        return 2;
+    }
+    KestRuntime *runtime = kest_start(build, NULL, NULL);
+    if (runtime == NULL) {
+        kest_build_report(build, stderr, KEST_FORM_TEXT);
+        return 3;
+    }
+    int32_t work = kest_entry(runtime, "work");
+    int32_t inner = kest_entry(runtime, "inner");
+    uint32_t many = 0;
+    uint8_t *code = kest_code_of(runtime, inner, &many);
+    if (work < 0 || code == NULL || many == 0) {
+        fprintf(stderr, "there is nothing to put a breakpoint in\n");
+        return 4;
+    }
+    uint8_t was = code[0];
+    code[0] = kest_break_byte();
+    KestValue frame[4] = {{0}};
+    frame[0].integer = 1;
+    if (kest_call(runtime, work, frame, 4) || kest_stopped(runtime) < 0 ||
+        kest_frames_deep(runtime) != 2) {
+        fprintf(stderr, "a machine did not stop under a frame\n");
+        return 5;
+    }
+    size_t holding = kest_heap_used(runtime);
+    if (holding == 0) {
+        fprintf(stderr, "there is no heap under the stop to take away\n");
+        return 6;
+    }
+    // Every door that would take it: a walk, the heap thrown away, the two
+    // halves of a mark, and the ceiling moved under a program standing on it.
+    if (kest_collect(runtime) || kest_heap_reset(runtime) ||
+        kest_scratch_mark(runtime) != 0 || kest_scratch_rewind(runtime, 1) ||
+        kest_heap_allow(runtime, 4096)) {
+        fprintf(stderr, "a stopped machine let the heap under it be taken "
+                        "away\n");
+        return 7;
+    }
+    if (kest_heap_used(runtime) != holding) {
+        fprintf(stderr, "a stopped machine held %zu bytes and then %zu\n",
+                holding, kest_heap_used(runtime));
+        return 8;
+    }
+    code[0] = was;
+    if (!kest_resume(runtime, frame, 4) || frame[0].integer != 2018) {
+        kest_report(runtime, stderr, KEST_FORM_TEXT);
+        fprintf(stderr, "a machine that carried on answered %lld\n",
+                (long long)frame[0].integer);
+        return 9;
+    }
+    printf("a stopped machine kept the %zu bytes under it through five doors "
+           "that would have taken them, and answered %lld\n",
+           holding, (long long)frame[0].integer);
+    if (!kest_runtime_free(runtime) || !kest_build_free(build)) {
+        fprintf(stderr, "what was stopped could not be given back\n");
+        return 10;
+    }
+    return 0;
+}
+EOF
+if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$stopped" "$stopped".c \
+        libkest.a -lm 2>"$scratch"/check-why; then
+    complain "stopped" "the host that asks a stopped machine for its heap \
+does not build"
+    sed 's/^/    /' "$scratch"/check-why | head -3
+elif ! said=$("$stopped" "$stopped".kest 2>&1); then
+    complain "stopped" "a machine stopped at a breakpoint: $said"
+elif [ "${said#*through five doors}" = "$said" ]; then
+    complain "stopped" "a stopped machine did not keep what its frames are \
+standing on"
+    printf '%s\n' "$said" | sed 's/^/    /' | head -3
+else
+    say "stopped" "a machine stopped at a breakpoint is in the middle of a \
+call: the five doors that would take the heap its frames are standing on, or \
+move the ceiling over it, refuse -- and it carries on and reads what it was \
+holding"
+fi
+rm -f "$stopped" "$stopped".c "$stopped".kest
+
 # What a world costs when it is worked on rather than grown, which is the
 # question a persistent-world language has to answer. `examples/churn.kest` is
 # one round written six ways over a world whose live set never changes: a new

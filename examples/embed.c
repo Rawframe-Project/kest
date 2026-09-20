@@ -7056,6 +7056,46 @@ int main(int argc, char **argv) {
             fprintf(stderr, "a stopped machine cannot say what it holds\n");
             return 1;
         }
+        // What a host may not do to a stopped machine, which is everything
+        // that would take the heap out from under it or move the ceiling on
+        // it. A stop is in the middle
+        // of a call: nothing of this host's is on the machine's stack, so
+        // every door that asks whether the program is running used to hear no
+        // and a walk here gave the frames' memory back. Asked here because a
+        // host writing a debugger is a host between two stops with time on its
+        // hands, which is exactly when a frame loop does its housekeeping.
+        // See D1078.
+        FILE *told = tmpfile();
+        if (told == NULL) {
+            fprintf(stderr, "this host has nowhere to read a report back\n");
+            return 1;
+        }
+        if (kest_collect(watched) || kest_heap_reset(watched) ||
+            kest_scratch_mark(watched) != 0 ||
+            kest_scratch_rewind(watched, 1) ||
+            kest_heap_allow(watched, 4096)) {
+            fprintf(stderr,
+                    "a stopped machine let the heap its frames are standing "
+                    "on be taken away\n");
+            return 1;
+        }
+        kest_report(watched, told, KEST_FORM_TEXT);
+        rewind(told);
+        char what[512];
+        int32_t told_off = 0;
+        while (fgets(what, sizeof(what), told) != NULL) {
+            if (strstr(what, "K0613") != NULL) {
+                told_off++;
+            }
+        }
+        fclose(told);
+        if (told_off != 5) {
+            fprintf(stderr,
+                    "a host asked five things of a stopped machine it may not "
+                    "have and was told about %d\n",
+                    told_off);
+            return 1;
+        }
         // Put back, and let go: the instruction the byte was written over runs
         // first, so the program is the program again.
         code[0] = was;

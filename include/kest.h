@@ -1173,6 +1173,11 @@ uint8_t kest_break_byte(void);
 // host that wants to hold one across a call. Refused while a program is
 // running, with a diagnostic, the way throwing the heap away is.
 //
+// And refused for a machine a debugger stopped, which is between calls to
+// look at and in the middle of one in fact: its frames are standing on the
+// heap, and a walk there once reached nothing at all and gave that memory
+// back. See D1078.
+//
 // Answers whether it walked and gave anything back. A machine with a
 // `scratch { }` block open does not, because a block gives its own memory back
 // and a walk in the middle of one would be a walk over memory that is about to
@@ -1318,6 +1323,13 @@ void kest_allowed(const KestRuntime *runtime, KestLimits *limits);
 // and its heap are where they were, what a `scratch { }` opened is still open,
 // and nothing has been said into the report. `kest_call` answers false for one,
 // so a host asks this to tell a stop from a refusal. See D991.
+//
+// And it is in the middle of a call, which is the half of that a host has to
+// act on: the frames are standing on the heap, so the five doors that would
+// take that heap away or move the ceiling over it -- `kest_collect`,
+// `kest_heap_reset`, `kest_scratch_mark`, `kest_scratch_rewind` and
+// `kest_heap_allow` -- refuse here the way they refuse inside a call. Freeing
+// the machine is the one way out that is not `kest_resume`. See D1078.
 int64_t kest_stopped(const KestRuntime *runtime);
 
 // Which body it stopped in, by the number `kest_entry` answers with, or -1.
@@ -1488,17 +1500,22 @@ bool kest_cancelled(const KestRuntime *runtime);
 // heap back has taken the world's memory out from under it. Mark round a query
 // and not round a step that keeps something.
 //
-// This language will have a `scratch { }` of its own, where the compiler proves
-// that nothing escapes; that needs lifetime facts it does not have yet. Until
-// then this is the host's to get right, and it is written down rather than
-// implied. See D957.
+// A program says the same thing in `scratch { }`, where the compiler proves
+// nothing made inside the block outlives it and a host proves nothing here:
+// what a program writes is checked and what a host writes is written down. See
+// D957, D966 and D972.
+//
+// Nought for no machine, for a machine whose program is running, and for one a
+// debugger stopped -- a stop is the middle of a call, and a mark taken there is
+// a place the frames under it are standing above. See D1078.
 uint32_t kest_scratch_mark(KestRuntime *runtime);
 
 // And back to it: everything the program made since is gone and the heap is
 // where it was. True when it was put back. False, with why in `kest_report`,
 // for a mark this machine did not hand out, one that has already been used,
-// one from before a reset, and for a rewind while the program is running or
-// with anything lent.
+// one from before a reset, for a rewind while the program is running or while
+// a debugger has the machine stopped in the middle of a call, and for one with
+// anything lent.
 //
 // A mark under one that is still open takes the ones above it with it, which is
 // what makes nesting mean anything.
@@ -1512,7 +1529,9 @@ bool kest_scratch_rewind(KestRuntime *runtime, uint32_t mark);
 //
 // Between calls, and not inside one. A bound function that asks for this from
 // inside the call it was called from is asking for what the program is
-// standing on, and is refused: `kest_report` says so.
+// standing on, and is refused: `kest_report` says so. So is a host asking it
+// of a machine a debugger stopped, which is the middle of a call with nothing
+// of the host's on the machine's stack to show it. See D1078.
 //
 // That is the only false. It was once a new heap and a free of the old one,
 // which the host could be out of memory for; it is the same heap emptied now,
@@ -1533,6 +1552,11 @@ bool kest_heap_reset(KestRuntime *runtime);
 // the program is holding is on the heap and a ceiling moved under it is a
 // promise changed after it was made. Between calls is where it belongs, which
 // is where `kest_heap_reset` belongs for the same reason. See D850.
+//
+// And false for a machine a debugger stopped, which is the middle of a call by
+// the same reading: nothing is taken away by this door, but the call the
+// machine is in the middle of would carry on into a wall it never had. See
+// D1078.
 bool kest_heap_allow(KestRuntime *runtime, size_t bytes);
 
 // What the host provides, bound by the name the program declares:

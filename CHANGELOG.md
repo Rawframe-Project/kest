@@ -270,6 +270,17 @@ standing on. This is written beside `kest_code_of` and in *Who owns a machine*
 rather than fixed, because the fix is a copy of the program per machine, paid
 for by every host that never debugs anything. See D1077.
 
+**A machine stopped at a breakpoint is in the middle of a call.** Everything
+that guards the heap asked whether a function the host bound was on the stack,
+and a stop is not a crossing out — so a stopped machine looked idle, and a walk
+asked for there read to the bottom of the stack, saw no roots, and gave the
+stopped frames' memory back. **What a host has to do:** nothing it was not
+already told to do. `kest_collect`, `kest_heap_reset`, `kest_scratch_mark`,
+`kest_scratch_rewind` and `kest_heap_allow` refuse for a stopped machine with
+`K0613`, the way they refuse inside a call. Look at it, let it carry on with `kest_resume`, or free
+it — freeing a stopped machine is still allowed, because it is the only way out
+for a host that has given up on one. See D1078.
+
 **A run of bytes takes a whole piece of text.** `push(out, piece)` and
 `fit(out, piece)` put the piece on the end in one move where a program used to
 write a loop, because text is its bytes and a `[u8]` is the same bytes. Every

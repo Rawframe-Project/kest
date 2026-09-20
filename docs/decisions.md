@@ -36019,3 +36019,75 @@ is read-only. One was wrong and is fixed (D1071), one is right, and this one is
 wrong and stays wrong on purpose. A sentence that is nearly true is worse than
 one with an exception written into it, because the exception is the part a
 reader needs.
+
+## D1078. A machine stopped at a breakpoint is in the middle of a call
+
+*reproduced*, `heap-use-after-free` under the address sanitiser, in a host of
+forty lines.
+
+D1077 asked what two machines of one build share. This asks the question the
+other way: what a machine *is* while a debugger has it stopped. The reference
+said the comfortable half — "a stopped machine is not finished and is not
+broken: its frames, its stack and its heap are where they were" — and nothing
+at all about what a host may do to it.
+
+Everything that guards the heap asks one question, written in D073 when there
+were two states to tell apart: is a function the host bound on the stack. That
+is what `running_top` is, and a stop sets it to NULL, because a stop is not a
+crossing out. So a stopped machine answers *no*, and five doors open:
+`kest_collect`, `kest_heap_reset`, `kest_scratch_mark`, `kest_scratch_rewind`
+and `kest_heap_allow`.
+
+The walk is the one that bites. What a walk reads the machine's slots to is
+where they had got to when the host last called in, and for a stopped machine
+that is the bottom of the stack — so the walk sees no roots at all, marks
+nothing, and sweeps everything the stopped frames are holding. Forty lines: a
+body makes an array of sixty-four numbers, calls a body with a breakpoint on
+its first instruction, and adds the array up afterwards. Stopped, the machine
+holds 1024 bytes; a `kest_collect` answered true and left it holding nought;
+the byte went back, the machine carried on and read the elements anyway.
+
+```
+stopped: yes, at 0, 2 frames deep
+heap before: 1024
+collect answered: yes
+heap after: 0
+resumed: yes, answered 2018
+```
+
+The release build answers 2018 and is right by luck — nothing had been handed
+out again yet. The sanitised build says `heap-use-after-free`, READ of size 4 in
+`run_body`, freed in `kest_ground_sweep` under `kest_collect`.
+
+**Decided.** A stop is in the middle of a call, and every door that says
+*between calls* says it here. `between_calls` asks the second question now —
+whether a debugger has this machine stopped — and refuses with `K0613` and a
+line that says what to do instead: let it carry on with `kest_resume`, or free
+the machine.
+
+`kest_heap_allow` is the fifth, and it is here for its own reason rather than
+for this one: a ceiling is a number and this door takes nothing away. But what
+its own documentation says is that a ceiling moved while the program is holding
+the heap is a promise changed after it was made, and a stopped machine is
+holding it — the call it is in the middle of would carry on into a wall it
+never had. A door that refuses inside a call for a reason refuses at a stop for
+that same reason, or the reason was not the reason.
+
+**What was not done.** The walk could have been taught to read to the top the
+stop recorded, which is kept in the frame, and then a collect at a breakpoint
+would be correct rather than refused. It is not worth it: a host that stops a
+machine is a host looking at it, and a walk is not looking. The rule a host
+already knows — do this between calls — is one rule, and this is the case that
+was quietly outside it rather than a new rule to learn.
+
+**What a host may still do to a stopped machine**: look at it, with the ten
+doors D991 gave it; let it carry on; and free it. Freeing is deliberately still
+allowed, because it is the only way out for a host that has given up on a
+machine, and what it frees is the frames as well.
+
+**What this is really about.** A state added late — D991 put stopping in — was
+added to the machine and not to the questions the machine answers about itself.
+Every guard in this library that asks *is the program running* was written when
+the answer had two halves. The stop is a third, and it reads as the wrong one of
+the two. That is the shape to look for elsewhere: not a wrong answer, a question
+with a case missing.

@@ -5970,6 +5970,14 @@ static bool is_running(const KestRuntime *runtime) {
     return runtime != NULL && runtime->running_top != NULL;
 }
 
+// And whether a debugger has it stopped, which is the middle of a call with
+// nothing of the host's on the machine's stack to show it. The question above
+// answers no for one of these, and what the frames are standing on is the heap
+// all the same. See D1078.
+static bool is_stopped(const KestRuntime *runtime) {
+    return runtime != NULL && runtime->stopped_at != NULL;
+}
+
 bool kest_runtime_free(KestRuntime *runtime) {
     if (runtime == NULL) {
         // Nothing to free is not a refusal: what a host asked for is that
@@ -6458,6 +6466,23 @@ bool kest_heap_allow(KestRuntime *runtime, size_t bytes) {
                            "is on it");
         return false;
     }
+    // And a machine stopped at a breakpoint, for the reason above said at a
+    // stop: the program is standing on what it was promised, and a ceiling
+    // moved while it stands there is a promise changed after it was made.
+    // Nothing is taken away by this door -- a ceiling is a number -- so what it
+    // would cost is the resumed call meeting a wall the call it is in the
+    // middle of never had. See D1078.
+    if (is_stopped(runtime)) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0613", nowhere,
+                       "how much heap this machine may have cannot be said "
+                       "while it is stopped at a breakpoint");
+        kest_diags_suggest(runtime->diags,
+                           "the program is standing on what it was promised; "
+                           "say it after `kest_resume`");
+        return false;
+    }
     // Kept as well as told to the arena, because a heap thrown away is capped
     // again with this number and a reset that went back to the old one would
     // be a ceiling that moves when nobody moved it.
@@ -6467,20 +6492,41 @@ bool kest_heap_allow(KestRuntime *runtime, size_t bytes) {
 }
 
 // What a host may not do to the heap while the program is standing on it, said
-// once for the three doors that say it: what it is holding is on it.
+// once for the four doors that say it: what it is holding is on it.
 static bool between_calls(KestRuntime *runtime, const char *doing) {
-    if (!is_running(runtime)) {
-        return true;
+    if (is_running(runtime)) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0613", nowhere,
+                       "the heap cannot be %s while the program is running",
+                       doing);
+        kest_diags_suggest(runtime->diags,
+                           "what it is holding is on it; do this between "
+                           "calls rather than inside one");
+        return false;
     }
-    KestSpan nowhere = {0, 0};
-    kest_diags_in(runtime->diags, NULL);
-    kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0613", nowhere,
-                   "the heap cannot be %s while the program is running",
-                   doing);
-    kest_diags_suggest(runtime->diags,
-                       "what it is holding is on it; do this between calls "
-                       "rather than inside one");
-    return false;
+    // And a machine a debugger stopped, which is neither of the two states
+    // this door knew about. Nothing of the host's is on the stack, so the
+    // question above answers no, and the program's frames are standing on the
+    // heap all the same: a walk of a stopped machine reaches nothing, because
+    // what it reads to is where the slots had got to when the host last called
+    // in and that is the bottom of the stack. It gave the frames' memory back
+    // and the machine read it on the way out of the breakpoint. A stop is in
+    // the middle of a call, so every door that says between calls says it
+    // here. See D1078.
+    if (is_stopped(runtime)) {
+        KestSpan nowhere = {0, 0};
+        kest_diags_in(runtime->diags, NULL);
+        kest_diags_add(runtime->diags, KEST_SEVERITY_ERROR, "K0613", nowhere,
+                       "the heap cannot be %s while this machine is stopped "
+                       "at a breakpoint",
+                       doing);
+        kest_diags_suggest(runtime->diags,
+                           "its frames are standing on it; let it carry on "
+                           "with `kest_resume`, or free the machine");
+        return false;
+    }
+    return true;
 }
 
 uint32_t kest_scratch_mark(KestRuntime *runtime) {

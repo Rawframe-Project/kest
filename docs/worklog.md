@@ -38976,3 +38976,43 @@ says the header has to change.
 See D1077.
 
 **Runs:** `make check`, section `sharing`.
+
+## A machine stopped at a breakpoint is in the middle of a call
+
+D1077 asked what two machines of one build share. This is the same question
+turned round: what a machine *is* while a debugger has it stopped. The
+reference said the comfortable half — its frames, its stack and its heap are
+where they were — and nothing about what a host may do to it.
+
+Everything that guards the heap asks whether a function the host bound is on
+the stack, which is what `running_top` is, and a stop sets that to NULL because
+a stop is not a crossing out. So a stopped machine answered *no* and four doors
+opened. The walk is the one that bites: what it reads the slots to is where
+they had got to when the host last called in, which for a stopped machine is
+the bottom of the stack, so it saw no roots, marked nothing, and swept
+everything the stopped frames held. Forty lines: an array of sixty-four
+numbers, a breakpoint one frame down, 1024 bytes held, a `kest_collect` that
+answered true and left nought, and a machine that carried on and read the
+elements anyway. `heap-use-after-free` under the address sanitiser.
+
+A stop is in the middle of a call, and every door that says *between calls*
+says it here now: `kest_collect`, `kest_heap_reset`, `kest_scratch_mark` and
+`kest_scratch_rewind` refuse with `K0613` and say to let the machine carry on
+or to free it. `kest_heap_allow` is the fifth, for its own reason: a ceiling
+takes nothing away, but its own documentation says one moved while the program
+is holding the heap is a promise changed after it was made, and the resumed
+call would carry on into a wall it never had. Freeing a stopped machine is still allowed, because it is the
+only way out for a host that has given up on one.
+
+The shape to look for elsewhere is not a wrong answer but a question with a
+case missing: a state added late, and every guard still asking the question
+that had two halves.
+
+See D1078.
+
+**Runs:** `make check`, section `stopped`, and `examples/embed` asks all four
+doors of a stopped machine and counts the four refusals. A hole in
+`check-backstops.sh` takes the new guard out and embed catches it.
+
+**Next:** the fresh cold review of section 42, which is somebody outside this
+project's to start.

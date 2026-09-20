@@ -437,6 +437,28 @@ fn main() -> i32 {
         "caught": "the program ran it under a promise",
     },
     {
+        # A machine a debugger stopped, asked to give its heap back. A stop is
+        # in the middle of a call and looks like nothing at all to the door
+        # that guards the heap: what that door asks is whether a function the
+        # host bound is on the stack, and while a machine is stopped nothing
+        # of the host's is. A walk there reads to where the slots had got to
+        # when the host last called in, which is the bottom of the stack, so it
+        # reaches nothing and gives the stopped frames' memory back --
+        # `heap-use-after-free` on the way out of the breakpoint. See D1078.
+        "what": "a stopped machine that lets the heap under it be taken away",
+        "file": "src/vm.c",
+        "from": r"""static bool is_stopped(const KestRuntime *runtime) {
+    return runtime != NULL && runtime->stopped_at != NULL;
+}""",
+        "to": r"""static bool is_stopped(const KestRuntime *runtime) {
+    (void)runtime;
+    return false;
+}""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a stopped machine let the heap",
+    },
+    {
         # A refusal that sends a reader to a door there is no way in through.
         # What a message names is a claim about where the answer is, and a
         # name out of `src` is a name a host looks for in the public header
@@ -13110,13 +13132,9 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "what": "a heap thrown away from inside a call",
         "file": "src/vm.c",
         "from": """static bool between_calls(KestRuntime *runtime, const char *doing) {
-    if (!is_running(runtime)) {
-        return true;
-    }""",
+    if (is_running(runtime)) {""",
         "to": """static bool between_calls(KestRuntime *runtime, const char *doing) {
-    if (true) {
-        return true;
-    }""",
+    if (false) {""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "thrown away while the program was running",

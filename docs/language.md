@@ -4718,6 +4718,18 @@ machine's loop, because one measured a third of the machine. See D979 and D991.
 A stopped machine is not finished and is not broken: its frames, its stack and
 its heap are where they were, and what a `scratch { }` opened is still open.
 
+And it is **in the middle of a call**, which is the half of that a host has to
+act on. Nothing of the host's is on the machine's stack while it is stopped, so
+a machine that is stopped looks idle to anything that asks whether the program
+is running — and it is standing on its heap all the same. The five doors that
+would take that heap away, or move the ceiling over it, refuse here the way
+they refuse inside a call: `kest_collect`, `kest_heap_reset`,
+`kest_scratch_mark`, `kest_scratch_rewind` and `kest_heap_allow`. A walk asked for at a breakpoint used to reach nothing
+at all, because what it reads to is where the slots had got to when the host
+last called in, and it gave the stopped frames' memory back; the machine read
+it again on the way out of the breakpoint. What a host may do to a stopped
+machine is look at it, let it carry on, and free it. See D1078.
+
 A host does all of this itself through ten doors. `kest_break_byte` is the byte
 to write, which is the instruction nothing compiles to: a host cannot work it
 out, because the public header does not hand out the instruction set and should
