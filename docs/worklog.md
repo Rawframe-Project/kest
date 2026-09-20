@@ -37665,3 +37665,26 @@ See D1043.
 **Runs:** the two reproductions; the refusal for a body that asks more than it
 says, for a call whose type has not got it, and for a requirement nothing uses;
 the whole library and every example; `make fast`; `make check`.
+## A name the arena had no room for, compared anyway
+
+`tools/check-ceilings.sh` refuses one allocation at a time and walks what the
+compiler does about it. With the instruction counts moved by `elem.at`, the
+numbering moved with them, and refusal 4638 of 9057 in
+`kest check examples/inventory.kest` landed somewhere nothing had landed
+before: a read of five bytes past the end of a one-byte global, under the
+sanitised build.
+
+`span_string` answers with an empty name when the arena has nothing left, and
+says so -- the comment above it says the build stops before one is compared
+with anything. It was compared with something. `declare_functions` asks whether
+two parameters of one function share a name, and it asked with a `memcmp` of
+as many bytes as the *span* is long rather than as many as the name it was
+handed.
+
+It asks through `kest_word_same` now, which is the door that measures the name
+it was given: an empty name is no bytes long and matches nothing. The bug was
+there before any of this and nothing had refused the allocation that reached
+it.
+
+**Runs:** `KEST_REFUSE_AT=4638 ./kest-debug check examples/inventory.kest`
+before and after; the whole ceilings check; `make check`.

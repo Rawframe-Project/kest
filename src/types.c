@@ -3893,9 +3893,16 @@ static bool declare_functions(KestProgram *program, const KestUnit *unit) {
             const char *param_name = span_string(program, param->name);
             for (uint32_t seen = 0; seen < p; seen++) {
                 const KestField *earlier = decl->function.params[seen];
-                if (earlier->name.length == param->name.length &&
-                    memcmp(kest_span_text(program->source, earlier->name),
-                           param_name, param->name.length) == 0) {
+                // Through the one door that measures the name it was given
+                // rather than trusting the span beside it. A name the arena
+                // had no room for comes back empty, and comparing that many
+                // bytes of an empty name reads past the end of it -- which a
+                // run that refused the allocation under this found, and which
+                // was there before anything asked. See D510.
+                if (kest_word_same(param_name,
+                                   kest_span_text(program->source,
+                                                  earlier->name),
+                                   earlier->name.length)) {
                     kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0305",
                                    param->name,
                                    "parameter `%s` is declared twice",
