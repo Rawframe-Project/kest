@@ -260,6 +260,16 @@ machines from any thread, which the reference always said it could. A start
 that *fails* still writes the build's report, and that is the one thing to do
 from one thread. See D1071.
 
+**A debugger writes the build, and the reference says so now.** A breakpoint is
+the instruction that was there, written over, which is what makes one cost a
+running machine nothing — and the bytes are the *build's*, so every machine
+started from that build reads them. Two machines of one build, a breakpoint
+written into the first, and the second reads the breakpoint byte where it read
+the instruction. **What a host has to do:** debug a build no other machine is
+standing on. This is written beside `kest_code_of` and in *Who owns a machine*
+rather than fixed, because the fix is a copy of the program per machine, paid
+for by every host that never debugs anything. See D1077.
+
 **A run of bytes takes a whole piece of text.** `push(out, piece)` and
 `fit(out, piece)` put the piece on the end in one move where a program used to
 write a loop, because text is its bytes and a `[u8]` is the same bytes. Every

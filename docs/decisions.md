@@ -35969,3 +35969,53 @@ asking the same question of the answer: *a tag is a number that is its case's
 place* — what else in this language is a number that is a place in a list? One
 thing, and it had the same hole. A finding is worth re-reading for the shape of
 itself.
+
+## D1077. A debugger writes the build, and that is said rather than fixed
+
+*measured*, with a host of twenty lines that starts two machines from one build
+and writes a breakpoint into one.
+
+D1071 asked what the reference's sentence about a build being read-only is
+worth and found one thing writing it. There is a second, and it was designed
+in: a breakpoint **is** the instruction that was there, written over, which is
+what makes one cost a running machine nothing (D991). The bytes it writes over
+are `runtime->module->functions[entry]->code`, and `module` is a pointer to the
+build's. Two machines of one build read the same bytes:
+
+```
+the two machines read the same code: yes
+after writing a breakpoint into the first, the second reads 166 where it read 0
+```
+
+So a host that debugs one machine while another runs on another thread has
+given the second machine an instruction it never compiled. Not a race about
+memory — a race about what a program *is*.
+
+**It is said rather than fixed.** The alternative is a copy of the code per
+machine, which is the program again for every machine a host starts, and it
+would be paid by every host that never debugs anything — which is all of them
+in a frame budget. What D991 bought by writing the byte in place is that a
+breakpoint costs a running machine nothing at all, and that is the right trade
+for a language that runs inside a frame.
+
+So the rule is written where a host reads it: beside `kest_code_of`, beside
+`kest_start` — which said in as many words that nothing writes to the program
+once it is compiled — and in *Who owns a machine*. Debug a build no other
+machine is standing on. It sits next to the other exception the same section
+already makes: a start that fails writes the build's report, and two of those
+on two threads are two threads writing one report.
+
+And a sentence in a header is worth what holds it, so `make check` holds this
+one. The `sharing` section starts two machines of one build, writes the
+breakpoint byte through the first, calls the second and watches it stop in a
+body no debugger was ever pointed at, then puts the byte back and has both of
+them answer. Every other thing said about two machines of one build is that
+they do not see each other; this is the one that says what they share, and if a
+machine ever gets a program of its own it is what says the header has to
+change.
+
+**What this is really about.** Three sentences in this project claimed a build
+is read-only. One was wrong and is fixed (D1071), one is right, and this one is
+wrong and stays wrong on purpose. A sentence that is nearly true is worse than
+one with an exception written into it, because the exception is the part a
+reader needs.

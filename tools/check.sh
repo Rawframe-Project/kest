@@ -1270,6 +1270,118 @@ fi
 rm -f "$races" "$races".c "$races".kest "$scratch"/watching \
     "$scratch"/watching.c
 
+# What two machines of one build share, said the other way round. Everything
+# above holds that they do not see each other; this holds the one thing they
+# do, because the reference now says it rather than leaving a host to find it
+# out: the program is the build's, so a breakpoint written for one machine is
+# an instruction every machine of that build runs into. Written in place is
+# what makes a breakpoint cost a machine nobody is debugging nothing at all
+# (D991), and the price is this. The host writes the byte through the first
+# machine and calls the second, which stops in a body no debugger was ever
+# pointed at. See D1077.
+sharing="$scratch"/sharing
+cat > "$sharing".kest <<'KEST'
+module sharing
+
+fn work(n: i32) -> i32 no.alloc no.host deterministic {
+    let sum = 0
+    for i in 0..n {
+        sum += i % 7
+    }
+    return sum
+}
+KEST
+cat > "$sharing".c <<'EOF'
+#include <stdio.h>
+#include "kest.h"
+
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        return 2;
+    }
+    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT, 0);
+    if (build == NULL) {
+        return 2;
+    }
+    KestRuntime *first = kest_start(build, NULL, NULL);
+    KestRuntime *second = kest_start(build, NULL, NULL);
+    if (first == NULL || second == NULL) {
+        kest_build_report(build, stderr, KEST_FORM_TEXT);
+        return 3;
+    }
+    int32_t here = kest_entry(first, "work");
+    int32_t there = kest_entry(second, "work");
+    uint32_t many = 0;
+    uint32_t also = 0;
+    uint8_t *ours = kest_code_of(first, here, &many);
+    uint8_t *theirs = kest_code_of(second, there, &also);
+    if (ours == NULL || theirs == NULL || many == 0 || many != also) {
+        fprintf(stderr, "a machine would not say what it is running\n");
+        return 4;
+    }
+    // The header says every machine of one build reads the same bytes. If this
+    // ever stops being true the sentence beside `kest_code_of` and `kest_start`
+    // is the thing to change, and so is what a debugger costs.
+    if (ours != theirs) {
+        fprintf(stderr, "two machines of one build read two programs\n");
+        return 5;
+    }
+    uint8_t was = ours[0];
+    ours[0] = kest_break_byte();
+    if (theirs[0] != kest_break_byte()) {
+        fprintf(stderr, "a byte written into one program was not in the "
+                        "other\n");
+        return 6;
+    }
+    KestValue frame[4] = {{0}};
+    frame[0].integer = 100;
+    if (kest_call(second, there, frame, 4) || kest_stopped(second) < 0) {
+        fprintf(stderr, "a breakpoint written into one machine did not stop "
+                        "the other\n");
+        return 7;
+    }
+    printf("a breakpoint written for one machine stopped another at %lld\n",
+           (long long)kest_stopped(second));
+    // And the byte going back is the program going back, for both of them.
+    ours[0] = was;
+    if (!kest_resume(second, frame, 4)) {
+        kest_report(second, stderr, KEST_FORM_TEXT);
+        return 8;
+    }
+    int64_t answered = frame[0].integer;
+    KestValue mine[4] = {{0}};
+    mine[0].integer = 100;
+    if (!kest_call(first, here, mine, 4) || mine[0].integer != answered) {
+        fprintf(stderr, "the byte going back did not give the program back\n");
+        return 9;
+    }
+    printf("the byte went back and both answered %lld\n", (long long)answered);
+    if (!kest_runtime_free(first) || !kest_runtime_free(second) ||
+        !kest_build_free(build)) {
+        fprintf(stderr, "what two machines held could not be given back\n");
+        return 10;
+    }
+    return 0;
+}
+EOF
+if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$sharing" "$sharing".c \
+        libkest.a -lm 2>"$scratch"/check-why; then
+    complain "sharing" "the host that debugs one machine of two does not build"
+    sed 's/^/    /' "$scratch"/check-why | head -3
+elif ! said=$("$sharing" "$sharing".kest 2>&1); then
+    complain "sharing" "a breakpoint written into one machine of a build: \
+$said"
+elif [ "${said#*stopped another}" = "$said" ]; then
+    complain "sharing" "a breakpoint written for one machine did not reach \
+the other, which is what the reference says it does"
+    printf '%s\n' "$said" | sed 's/^/    /' | head -3
+else
+    say "sharing" "two machines of one build read one program: a breakpoint \
+written through the first stopped the second in a body no debugger was \
+pointed at, and the byte going back gave both of them the program back"
+fi
+rm -f "$sharing" "$sharing".c "$sharing".kest
+
 # What a world costs when it is worked on rather than grown, which is the
 # question a persistent-world language has to answer. `examples/churn.kest` is
 # one round written six ways over a world whose live set never changes: a new

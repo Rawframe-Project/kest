@@ -1336,6 +1336,13 @@ bool kest_resume(KestRuntime *runtime, KestValue *frame, uint32_t room);
 // The bytes a body was compiled to, and how many, so a debugger can write a
 // breakpoint over one and put it back. Nothing else should write here: this is
 // the program the machine is running.
+//
+// And it is the *build's* program, not this machine's. Every machine started
+// from one build reads the same bytes, so a breakpoint written for one is an
+// instruction every one of them runs into. That is what makes a breakpoint
+// cost a running machine nothing, and it is the one thing that writes a build
+// after it was built: debug a build no other machine is standing on. See
+// D1077.
 uint8_t *kest_code_of(KestRuntime *runtime, int32_t entry, uint32_t *count);
 
 // Where in the source the instruction at this offset came from, or -1. One per
@@ -1745,9 +1752,15 @@ uint32_t kest_build_layout(const KestBuild *build, const char *name,
 // `limits` may be NULL. Free it with `kest_runtime_free`.
 //
 // A build makes as many machines as a host wants. Each has its own stack,
-// heap and diagnostics, and what they share is the compiled program, which
-// nothing writes to once it is compiled. What one says is not what another
-// reports.
+// heap and diagnostics, and what they share is the compiled program. What one
+// says is not what another reports.
+//
+// Two things write a build after it is built and both are exceptions a host
+// has to know: a start that fails writes the build's report, and a debugger
+// writes the program itself — a breakpoint is an instruction written over, and
+// it is written over for every machine of that build at once. So fail-to-start
+// from one thread, and debug a build no other machine is standing on. See
+// `kest_code_of`, D1071 and D1077.
 KestRuntime *kest_start(KestBuild *build, const KestHost *host,
                         const KestLimits *limits);
 

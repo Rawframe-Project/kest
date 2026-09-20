@@ -38945,3 +38945,34 @@ See D1076.
 mark — a bit in the middle, at the end, taken away, renamed — all five
 different; the engine driven through both new reload edits, with the fold and
 with it taken back out; `make check`.
+
+## A debugger writes the build, and two machines read it
+
+D1071 asked what *a build is read-only once it is built* is worth and found one
+thing writing it. There is a second and it was designed in: a breakpoint is the
+instruction that was there, written over, which is what makes one cost a
+running machine nothing. The bytes are the build's, not the machine's, so two
+machines of one build read the same ones — a host of twenty lines shows it, and
+the second machine reads the breakpoint byte where it read the instruction.
+
+A host that debugs one machine while another runs on another thread has given
+the second an instruction it never compiled. Not a race about memory, a race
+about what a program is.
+
+The fix is a copy of the code per machine, which is the program again for every
+machine a host starts, paid by every host that never debugs anything — and what
+writing the byte in place bought is that a breakpoint costs a running machine
+nothing. So the sharing stays and the sentences change: beside `kest_code_of`,
+beside `kest_start`, which said *nothing writes to it once it is compiled*, and
+in *Who owns a machine*. Debug a build no other machine is standing on.
+
+A sentence in a header is worth what holds it, so the gate holds this one.
+`make check` has a `sharing` section now: two machines of one build, the same
+bytes, a breakpoint written through the first, the second stopping in a body no
+debugger was pointed at, and the byte going back giving both of them the
+program back. If a machine ever gets a program of its own, that section is what
+says the header has to change.
+
+See D1077.
+
+**Runs:** `make check`, section `sharing`.

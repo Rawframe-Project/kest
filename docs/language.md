@@ -5492,6 +5492,16 @@ Two starts failing on two threads at once are two threads writing one report.
 So: start and free from any thread, and handle a `NULL` from `kest_start` on
 one. A host that binds what the program asks for never meets it.
 
+**A debugger is the other exception, and it writes the program itself.** A
+breakpoint is the instruction that was there, written over: that is what makes
+one cost a machine nobody is debugging nothing at all, and it is a write to the
+build's own program. Every machine started from that build reads the same
+bytes, so a breakpoint set for one is an instruction every one of them runs
+into — `make check` writes one through one machine and watches a second stop in
+a body no debugger was pointed at. The alternative is a copy of the program per
+machine, paid for by every host that never debugs anything, so this is said
+rather than fixed: debug a build no other machine is standing on. See D1077.
+
 A machine is one thread's while it runs. Its heap, its stack, its stamps, its
 world and its report are its own, so two machines of one build may run at once
 on two threads and neither can see what the other is doing. That is what makes

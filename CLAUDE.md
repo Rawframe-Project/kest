@@ -1115,6 +1115,12 @@ races        the same thing watched rather than argued about: four machines
              freed on the thread that made them. Its host opens POSIX
              threads rather than C11 ones, because this compiler's thread
              sanitiser does not know `thrd_create`
+sharing      the one thing two machines of one build do share, held the
+             other way round: the program is the build's, so a breakpoint
+             written through one machine is an instruction another runs
+             into. The host writes the byte through the first and calls the
+             second, which stops in a body no debugger was pointed at, and
+             the byte going back gives both of them the program back
 memory       a world worked on rather than grown: the same round written to
              reuse what a thing holds running in the room it started in, and
              the same round written to replace it needing more
