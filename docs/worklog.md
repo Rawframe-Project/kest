@@ -38415,3 +38415,37 @@ See D1060.
 **Runs:** each finding reproduced with a program before it was written down; the
 new check watched catching `slice` put back into the reference; the corpus on
 this platform, and the cross-platform trace on four.
+
+## What this is, said in the words it is true in
+
+Section 34 gives the product position and lists what not to imply. Four of the
+five were already refused somewhere: the sandbox claim is disclaimed in three
+documents, and nothing anywhere says this replaces a systems language or is an
+engine. The fifth was the first line of the front page and of `CLAUDE.md`,
+which said this is a language for "games, simulations, real-time systems, and
+engine embedding". There is a collector and its pause is 0.68 milliseconds for
+every megabyte still reachable, which is on the reference's own page. That is
+not a hard real time language, and the phrase was in the sentence a reader
+believes first and checks last.
+
+The first line says what it is now, and a paragraph under it says where it sits
+— beside Daslang, Luau, Lua, AngelScript and Quirrel — and what it is not, in
+those words. `bench/run.sh` finds three of that set and AngelScript and Quirrel
+are not there; each needs a C++ host this project would be building rather than
+finding, and neither could be run here to see it was built right, so the front
+page says so as a gap.
+
+**And two more front-page counts that had drifted**, which is section 21's
+finding running into this one. It said the machine has 158 instructions and it
+has 165, and that `examples/` is thirty-six programs when it is thirty-eight.
+The doors were held to the header since D1037 and these two were not — the same
+mistake in three places, one of them caught. The instruction count is held to
+the table in `value.c` now, in the same sentence the doors are held in, so a
+fourth number to hold is a row rather than a block. The example count is gone:
+the reference lists every one of them in a table already held to the directory,
+and a number beside a held list is a second place to be wrong.
+
+See D1061.
+
+**Runs:** both rows of the front-page count check watched catching a stale
+number put back; `make check`.

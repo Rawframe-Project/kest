@@ -1,7 +1,26 @@
 # Kest
 
-A programming language for games, simulations, real-time systems, and engine
-embedding. Bytecode VM, C11, no dependencies.
+A small statically typed language for the gameplay and simulation half of a
+game, run by a bytecode machine a native engine embeds. C11, no dependency
+beyond libc.
+
+What it has that its neighbours have not is contracts the compiler proves
+rather than conventions a reader keeps: whether a body reaches the heap,
+whether it calls the host, and whether it answers the same on every machine.
+Identity is a `ref<T>` the machine checks rather than an index somebody
+remembers, and every ceiling a host sets is refused in words at the line that
+crossed it.
+
+**Where it sits, and what it is not.** It is a guest language, next to
+Daslang, Luau, Lua, AngelScript and Quirrel. It is not a systems language and
+replaces no C++, Rust or Zig: the engine stays the engine and this runs inside
+it. It is not an engine, it is not for hard real time — there is a collector,
+its pause is measured and written down, and a pause is a pause — it is not a
+scientific-computing ecosystem, and it is not a sandbox for code that is
+trying to get out. `bench/run.sh` compares it against whichever of C++,
+Luau or Daslang is on the machine and leaves out the rows it cannot run;
+AngelScript and Quirrel are in the set above and are not in the bench, which
+is an evidence gap rather than a result. See D980 and D1061.
 
 ```
 make
@@ -63,7 +82,9 @@ what `kest check` says about it cannot differ.
 The reference is [the language document](docs/language.md) and reads front to
 back:
 what a program is made of, then values, then promises, then the boundary a host
-crosses. `examples/` is thirty-six programs that run, each checking itself.
+crosses. `examples/` is the programs that run, each checking itself and
+answering with which of its checks failed; the reference says what each of them
+is for, and that table is held to the directory.
 
 ## Installing
 
@@ -97,7 +118,7 @@ optionals; functions as values; one body written for many types, a copy
 compiled per set; `defer`; `match`; `for` and `while`; the `no.alloc`,
 `no.host` and `deterministic` promises, proved by the compiler rather than
 trusted; a `scratch { }` block whose working memory goes back where it was, and
-which the compiler proves nothing escapes from; a bytecode VM of 158
+which the compiler proves nothing escapes from; a bytecode VM of 165
 instructions, one of which nothing compiles to and a debugger writes; diagnostics with stable codes,
 spans, notes, suggested fixes and `--json`, all of a file's mistakes in one
 pass, with the shape of every object a command writes versioned; one canonical

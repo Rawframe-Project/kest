@@ -15607,7 +15607,7 @@ kest 9.9.9""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",
         "arguments": ["docs/language.md", "docs/decisions.md"],
-        "caught": "the front page says the C API is 88 doors",
+        "caught": "the front page says 88 doors",
     },
     {
         # And the one version written outside this tree's own documents, which

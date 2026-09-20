@@ -35168,3 +35168,54 @@ it is that a normative sentence with no check behind it is a sentence that goes
 stale in silence, and both of the two findings here are exactly that. One of
 them now has a check. The other — what an `extern` declaring `deterministic`
 means — is held by the corpus, which is the only thing that can hold it.
+
+## D1061. What this is, said in the words it is true in
+
+*argued*.
+
+Section 34 of the foundation reset gives a hypothesis about what this is — a
+small statically typed gameplay and simulation guest language embedded in a
+native engine, with unusually explicit host, allocation, determinism, identity
+and resource contracts — names the languages it sits beside, and lists what not
+to imply: that it replaces C++, Rust or Zig, that it is a full engine, that it
+is for hard real time, that it is a scientific-computing ecosystem, or that it
+is an adversarial sandbox.
+
+**Four of the five were already refused somewhere and the fifth was claimed on
+the front page.** The sandbox claim is disclaimed in three documents (D981).
+Nothing anywhere says it replaces a systems language or is an engine. But the
+first line of the front page, and the first line of `CLAUDE.md`, said this is a
+language for "games, simulations, **real-time systems**, and engine embedding",
+and that is the one thing on the list it cannot be. There is a collector. Its
+pause is 0.68 milliseconds for every megabyte still reachable and that number
+is on the reference's own page. A language with a stop-the-world mark and sweep
+is not a hard real time language, and putting the phrase in the first sentence
+is the kind of claim a reader checks last and believes first.
+
+So the first line says what it is: a small statically typed language for the
+gameplay and simulation half of a game, run by a bytecode machine a native
+engine embeds. What follows it is what it has that its neighbours have not,
+which is the contracts, and then a paragraph that says where it sits and what
+it is not — in those words, because a thing a project does not claim is worth
+as much as one it does and costs nothing to write.
+
+**The comparison set, and the part of it that is not there.** Section 34 names
+Daslang, Luau, Lua, AngelScript and Quirrel. `bench/run.sh` finds three of
+those — C++ beside them as a floor, and Luau or Lua and Daslang if they are on
+the machine — and leaves a row out rather than building a comparator, which is
+D980's rule. AngelScript and Quirrel are not there. Each needs a C++ host to
+embed it, which is a comparator this project would be building rather than
+finding, and neither can be run here to see that it was built right. That is
+written on the front page as an evidence gap rather than left for a reader to
+notice the set is short.
+
+**And two more counts that had drifted**, which is section 21's finding
+continuing into this one. The front page said the machine has 158 instructions
+and it has 165, and it said `examples/` is thirty-six programs when it is
+thirty-eight. The doors were held to the header by D1037 and these two were
+not, which is the same mistake in three places. The instruction count is held
+to the table in `value.c` now, in the same sentence the doors are held in, so a
+fourth number is a row rather than a block; and the example count is gone,
+because the reference already lists every one of them in a table
+`check-docs.sh` holds to the directory, and a number beside a list that is
+already held is a second place to be wrong.

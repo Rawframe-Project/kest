@@ -1210,20 +1210,35 @@ else:
         print("docs: the front page says version %s and a run says %s"
               % (front_page.group(1) if front_page else None, this_version))
         failed = 1
-    # And the count of doors it quotes. A number written on a front page and
-    # compared against nothing is a number that drifts: this one said 88 while
-    # the header declared 97, through two missions that each added one. What it
-    # is counted against is the header rather than a second list. See D1037.
+    # The counts it quotes about this tree. A number written on a front page
+    # and compared against nothing is a number that drifts: the doors said 88
+    # while the header declared 97, through two missions that each added one,
+    # and the instructions said 158 while the machine had 165, through every
+    # mission that added one of those. Each is counted here against the file
+    # that decides it rather than against a second list, and both are said in
+    # one sentence so that a third number to hold is a row. See D1037 and
+    # D1061.
     doors = len(set(re.findall(
         r'^[A-Za-z_][A-Za-z0-9_ *]*\**\s*\b(kest_[a-z_0-9]+)\s*\(',
         open('include/kest.h').read(), re.M)))
-    said_doors = re.search(r'a C embedding API of (\d+) doors', front_page_text)
-    metadata += 1
-    if said_doors is None or int(said_doors.group(1)) != doors:
-        print("docs: the front page says the C API is %s doors and the header "
-              "declares %u"
-              % (said_doors.group(1) if said_doors else None, doors))
-        failed = 1
+    machine = re.search(r'INSTRUCTIONS\[\] = \{(.*?)\n\};',
+                        open(os.path.join('src', 'value.c')).read(), re.S)
+    opcodes = len(re.findall(r'\{"(?:[^"\\]|\\.)*",\s*\w+\}',
+                             machine.group(1) if machine else ''))
+    for what, pattern, counted in (
+            ('doors', r'a C embedding API of (\d+) doors', doors),
+            ('instructions', r'a bytecode VM of (\d+)\s*\n?\s*instructions',
+             opcodes)):
+        metadata += 1
+        if counted == 0:
+            print("docs: nothing to count the front page's %s against" % what)
+            failed = 1
+            continue
+        quoted = re.search(pattern, front_page_text)
+        if quoted is None or int(quoted.group(1)) != counted:
+            print("docs: the front page says %s %s and this tree has %u"
+                  % (quoted.group(1) if quoted else None, what, counted))
+            failed = 1
     # And every other way the front page names a version, which is the way this
     # went wrong: the sentence above said 1.0.0 on the day the section headed
     # *Where this is* still said **v0.x** and the paragraph about the ABI still

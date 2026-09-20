@@ -1,8 +1,10 @@
 # Kest
 
-Kest is a programming language for games, simulations, real-time systems, and
-engine embedding. It is implemented as a bytecode virtual machine in C11 with
-zero dependencies.
+Kest is a small statically typed language for the gameplay and simulation half
+of a game, run by a bytecode virtual machine a native engine embeds. It is
+written in C11 with no dependency beyond libc. It is a guest language beside
+Daslang, Luau, Lua, AngelScript and Quirrel, and it is not a systems language,
+not an engine, not for hard real time, and not a sandbox. See D1061.
 
 Three goals, in priority order when they conflict:
 
