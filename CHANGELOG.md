@@ -200,6 +200,13 @@ a body that was not written `no.alloc` because `slice` was believed to allocate
 can be. The sentence is held to the proof's own table by a check now. See
 D1060.
 
+**An enum another module declared can be made.** It could be taken and matched
+and not written down: `npc.Mood.Calm` was `` `npc` has nothing called `Mood` ``,
+suggesting what had been written. **What a program has to do:** nothing — the
+spelling that works now is the one that was already written, and a world split
+across files can keep a thing's states in the module the thing is in. See
+D1062.
+
 **A table can be written to inside a promise.** `table.fit(t, key, value)` is
 `table.set` with the growth taken out, the way `fit` is `push` with the growth
 taken out: it writes where the key already is, answers `false` where it is not,
