@@ -37971,3 +37971,39 @@ See D1049.
 
 **Runs:** the repository above, before and after; a module under two sources; a
 module under none; `make fast`; `make check`.
+
+## Sixty-seven milliseconds, and no artifact
+
+Section 19 says the bytecode is internal and intentionally unstable, keep that
+freedom unless evidence says otherwise, and measure larger-project
+compile and start. Measured, on generated projects of one shape:
+
+| modules | files | source | compiled in |
+| --- | --- | --- | --- |
+| 60 | 63 | 32 KB | 4.3 ms |
+| 200 | 203 | 69 KB | 17.8 ms |
+| 600 | 603 | 174 KB | 94 ms |
+| 600 flat | 603 | 165 KB | 67 ms |
+
+`kest emit`, which is the whole of reading, checking and compiling, under
+`perf stat -r 5`. The first three chain — module six hundred imports module
+five hundred and ninety-nine, all the way down — and the fourth does not; the
+chain is worth about forty per cent and the rest is the size. Eight megabytes
+at the peak. A hundred and sixty-five kilobytes is ten times what anybody has
+written in this language.
+
+So there is nothing a cache would buy that is worth a format, and none of the
+six things section 19 asks about wants one. The interesting one is closed-source
+content: the source is the artifact, and a studio that must not ship readable
+Kest packs it the way it packs its other content. The bytecode is not an answer,
+because making it one means freezing an instruction set — and `elem.at`, which
+landed a few commits ago and is worth 16.9 per cent of a program's
+instructions, would have been a format break.
+
+What a cache would have to be if the number ever changed is written down in
+D1050, so that whoever needs it does not invent a format instead.
+
+See D1050.
+
+**Runs:** four generated projects; `perf stat -r 5` on each; peak memory;
+`kest check --json` for what each cost.

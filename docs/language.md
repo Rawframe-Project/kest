@@ -4446,7 +4446,21 @@ name lives under the whole of its module.
 
 `kest build` compiles and says nothing when it compiles. There is no artifact:
 the bytecode is not a format anything else reads and is not stable, and what
-ships is the source beside the runtime. `kest test` runs each program named and
+ships is the source beside the runtime.
+
+**What that costs, measured.** Six hundred modules in six hundred and three
+files — a hundred and sixty-five kilobytes of Kest, ten times what anybody has
+written in it — compile in **67 milliseconds** and 8 megabytes, and a hundred
+and seventy-four kilobytes written as a six-hundred-deep chain of imports
+compile in 94. Making a machine from a build that is already compiled is
+another 0.05 milliseconds, and a host that starts many machines from one build
+pays the compiling once. So startup compilation is not a thing a game has to
+plan around, and there is nothing a cache would buy that is worth a format.
+
+What that costs a studio is that the source is the artifact: a game that must
+not ship readable Kest packs it the way it packs its other content. The
+bytecode is not an answer to that — it is unstable and unversioned on purpose,
+and it would have to stop being both to become one. `kest test` runs each program named and
 reads what it answered — a test here is a program that checks itself and answers
 with which check failed, which is what every example in this tree is, so there
 is no framework and no discovery. `kest doctor` is what somebody runs when

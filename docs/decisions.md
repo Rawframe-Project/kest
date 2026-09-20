@@ -34492,3 +34492,64 @@ rather than resolved, so there is no order to depend on.
 
 **And no registry**, which section 18 forbids building without users. There are
 none.
+
+## D1050. There is no artifact, and 67 milliseconds is why
+
+**Decided.** The bytecode stays internal, unstable and unversioned, and what
+ships is the source beside the runtime. No cache, no opaque blob, no
+build-time embedding in the language. The evidence is that compiling a project
+ten times the size of anything written in Kest takes less than a tenth of a
+second.
+
+**Measured.** Generated projects of one shape at three sizes, plus a flat one,
+each a module per file with a struct, two functions and an import of
+`std.text`:
+
+| modules | files | source | compiled in |
+| --- | --- | --- | --- |
+| 60 | 63 | 32 KB | 4.3 ms |
+| 200 | 203 | 69 KB | 17.8 ms |
+| 600 | 603 | 174 KB | 94 ms |
+| 600 flat | 603 | 165 KB | 67 ms |
+
+`perf stat -r 5`, `kest emit`, which is the whole of reading, checking and
+compiling. The first three chain — each module imports the one before it, six
+hundred deep — and the fourth does not; the chain is worth about forty per cent
+and the rest is the size. Peak memory for the largest is **8 megabytes**.
+Making a machine from a build is another 0.05 ms, and a host that starts many
+machines from one build pays the compiling once.
+
+**So none of the six things section 19 asks about wants an artifact.**
+
+*Startup compilation* — 67 ms for ten times the largest program anybody has
+written. A game loads assets for longer than that.
+
+*Closed-source game content* — the source is the artifact, and a studio that
+must not ship readable Kest packs it the way it packs its other content. The
+bytecode is not an answer: it is unstable and unversioned on purpose, and
+making it an answer means freezing an instruction set that D1047 has just shown
+is where the wins are. Fusing `elem.addr` and `load.at` into one instruction
+was worth 16.9 per cent of a program's instructions and would have been a
+format break.
+
+*Patch distribution* — files are text. `kest_build_read_mark` says whether one
+file's bytes moved and `kest_build_mark` says whether the program's did, so a
+host that wants to ship a difference has the numbers to decide with.
+
+*Source embedding* — a host that wants the source inside its binary puts it
+there: `kest_build` takes a path, and a host with bytes rather than a path
+writes them somewhere it can name. That is a host's packaging and not a
+language's.
+
+*Mod packaging* — a mod is a source root, which D1049 made true: a `source`
+line pointing at wherever the mod was unpacked, and the compiler refuses a
+module that two of them hold.
+
+*Engine build pipeline* — `kest build` compiles and says nothing, `kest check`
+is the gate, and there is nothing to copy into a package afterwards.
+
+**What a cache would have to be, if the number ever changed.** Hash-keyed on
+`kest_build_code_mark` and on the compiler's own identity, thrown away rather
+than migrated, and readable by exactly the build that wrote it. Written down so
+that whoever needs it does not invent a format instead. It is not needed at 67
+milliseconds and section 19 says not to stabilise the bytecode casually.
