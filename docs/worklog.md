@@ -38690,3 +38690,34 @@ See D1069.
 
 **Runs:** `kest --version` and every document that quotes it; the release
 archive built and named; `make check`.
+
+## What a call costs in the workload that is mostly calls
+
+Matrix row 31 is control performance, left to be remeasured at the end, and
+D1016 named `control` as the one of the four to look at next. D1067 says it is
+still the worst at about twenty times a `g++ -O2` baseline on the work.
+
+The obvious thing to try is inlining, so it was tried: `decide` written out by
+hand inside the loop, the same arithmetic and the same answer, a million calls
+gone. Paired and repeated ten times with the middle reported, because the
+difference is under D1014's ten per cent: 123.66 ms called against 113.44
+inlined, which is 8.3 per cent, and the step count halves from 2,005,242 to
+1,005,242.
+
+So a million calls are half of what that workload is charged for and eight per
+cent of its time — about ten nanoseconds each for four arguments — and that is
+the most an inliner could buy on the workload most made of calls. What the
+twenty times is made of is what D1067 said: every instruction does a bounds
+check, a generation check, an accounted step and a read through a layout a host
+can lay its own memory over. There is no single mechanism to take away, and an
+inliner would cost a rule for when to inline, a chunk that grows, a second
+answer for the promise's two proofs to disagree about, and a debugger that has
+to say whose line a frame is on.
+
+The two workloads that moved this year moved because something specific was
+found. `control` has no such thing in it.
+
+See D1070.
+
+**Runs:** `bench/measure` on both, ten paired rounds, middle reported; the
+step counts from the profiler; `make check`.

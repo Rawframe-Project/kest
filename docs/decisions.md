@@ -35618,3 +35618,55 @@ while the optimizer is D1024's four transformations. `docs/state.md` said *this
 is 1.0.0* and *1.0.0 is tagged and published*. All of it is what section 41
 means by dead 1.x assumptions, and none of it was load-bearing: it was the
 sentences nobody re-reads.
+
+## D1070. What a call costs in the workload that is mostly calls
+
+*measured*, paired and repeated ten times with the middle reported, which is
+what D1014 asks for a difference this size.
+
+Matrix row 31 of the foundation reset is control performance, measured in 1.1
+and left to be remeasured at the end. D1016 named `control` as the one of the
+four workloads to look at next, because both comparators were ahead of it.
+D1067 remeasured all four on the work rather than on the whole process and
+`control` is still the worst: about twenty times a `g++ -O2` baseline.
+
+**What it is made of.** A million turns, each of which reads two array
+elements, works out two remainders, calls a function of four `i32` arguments
+that is a chain of comparisons, writes two array elements back and adds one
+number. About fifty instructions in this machine against a handful of native
+ones, because the C++ inlines the chain and folds it into the loop.
+
+**So the obvious thing to try is inlining, and it was tried.** `decide` written
+out by hand inside the loop — the same arithmetic, the same answer, a million
+calls gone:
+
+    bench/control.kest           called    inlined
+    the call, middle of 10     123.66 ms  113.44 ms   -8.3 %
+    steps                      2,005,242  1,005,242
+
+A million calls are half the steps this workload is charged for and eight per
+cent of its time, which is about ten nanoseconds each for four arguments. That
+is what an inliner would buy at most, on the workload most made of calls, and
+it is not what the twenty times is made of.
+
+**What the twenty times is made of** is the thing D1067 said: every instruction
+in this machine does a bounds check, a generation check, an accounted step and
+a read through a layout a host can lay its own memory over, and a native
+backend that kept all four would keep the cost. D1047 weighed dispatch against
+what it dispatches at about one to one. There is no single mechanism here to
+take away.
+
+**And what an inliner would cost**, which is why eight per cent does not pay
+for it: a rule for when to inline, a body that grows and a chunk that grows
+with it, a second answer about what a program means for the promise's two
+proofs to disagree about, and a debugger that has to say which line a frame is
+on when the frame is somebody else's body. This project has one backend and one
+answer about what a program means, and that is the thing it is buying with the
+twenty times.
+
+**Where this leaves the row.** Measured, understood, and nothing to do. The two
+workloads that moved this year moved because something specific was found —
+reading a field of an element cost two dispatches and is one (D1044), and
+building text a byte at a time was eighty per cent of the instructions (D1068).
+`control` has no such thing in it. It is the interpreter, doing what an
+interpreter does.
