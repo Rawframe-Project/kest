@@ -206,8 +206,12 @@ cannot do for itself.
 
 ## Trying it in an hour
 
-Everything below runs from a clean checkout on Linux or Windows, and nothing
-needs anything but a C compiler.
+Everything below runs from a clean checkout, and nothing needs anything but a C
+compiler. The lines are written for Linux and macOS; on Windows the build is
+`tools\build.bat` from a Developer Command Prompt — there is no `make` there and
+no second build system either, just the same file list written the one way MSVC
+can be told it — and the rest run the same with `build\win\kest.exe` in place
+of `kest`. The gate itself is Linux's: `make check` is a shell script.
 
 1. `make && make fast` — the build and the loop, about a quarter of a second.
 2. `kest new game && cd game && kest build && kest run` — a project from

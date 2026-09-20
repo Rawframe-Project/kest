@@ -174,6 +174,12 @@ gate: the trace, the step counts, the collector's walks and the heap high-water
 table are the same on both ISAs. What each costs there is measured on every
 push and is in the run's artifacts rather than in a document. See D1058.
 
+**The Windows build says which shell it needs.** `tools\build.bat` wants `cl`
+and `lib`, which are on the path only inside a Developer Command Prompt, and
+said nothing about it — a reader without one saw `'cl' is not recognized` once
+per file. **What a reader has to do:** nothing, and the front page no longer
+tells a Windows reader to run `make`. See D1059.
+
 **What changed for a host.** The version. The other three numbers — the C ABI,
 the JSON schema, and the deterministic profile — still read 4, 3 and 1, and
 will be settled to clean `0.0.x` numbers once the architecture this reset is

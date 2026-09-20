@@ -35040,3 +35040,46 @@ being taken on faith.
 it had been measuring none of the micro family since D1039 and it printed the
 machine's name out of an x86 line in `/proc/cpuinfo`, so the first arm64 run
 said `cpu` and nothing after it. See D1057.
+
+## D1059. The Windows build says which shell it needs
+
+*argued*, and what it rests on is that the report it answers is not on record.
+
+Section 32 of the foundation reset asks for a cold reviewer's local MSVC
+build-status issue to be reproduced: fixed if it is real in a supported
+configuration, and the distinction documented if it is environment-specific.
+The report itself says no more than that — there is no error text, no command
+and no configuration anywhere in the mission documents or in this tree. So it
+cannot be reproduced from what is written down, and saying it was would be
+worse than saying it was not.
+
+**What is on record is the other side.** `tools/build.bat` runs on every push,
+under MSVC at `/W4` with every warning refused and collected rather than
+stopped at, and builds the library, the command line and both example hosts. It
+then runs every example and writes a trace that is diffed byte for byte against
+the ones Linux x86-64, Linux arm64 and macOS arm64 write. A build that was
+broken in a supported configuration would be a red CI run, and it is not.
+
+**And there are two ways a local build says it is broken when it is not.** The
+first is `cl` and `lib`, which are on the path only inside a Developer Command
+Prompt or after `vcvarsall.bat`. Without one, what a reader sees is
+`'cl' is not recognized` repeated once per file in `src`, which reads like a
+build that cannot compile this project. `build.bat` says which shell it needs,
+once, before it compiles anything, and says the other thing separately: a `cl`
+with no `lib` beside it is an install without the build tools in it.
+
+The second is the front page. *Trying it in an hour* said everything below it
+runs from a clean checkout **on Linux or Windows** and then its first line was
+`make && make fast`. There is no `make` in a Developer Command Prompt. A reader
+who followed it on Windows met a shell error on step one, which is exactly the
+shape of "the build does not work". The page names `tools\build.bat` there now,
+and says which of the steps are Linux's — the gate is a shell script and does
+not run there, and that is a thing to say rather than to let somebody find.
+
+**What was not done.** No warning was weakened, globally or otherwise. `/W4`
+stands, C4456 is still off for the two hosts and on for the library for the
+reason D973 gives, and nothing was added to the supported list.
+
+**What is still open.** If the reviewer's report turns up with an error in it,
+this is the entry a later one is written against. An answer about somebody
+else's environment, written without it, is a guess, and this one says so.

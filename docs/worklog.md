@@ -38343,3 +38343,30 @@ See D1058.
 
 **Runs:** the four families on both runners at ten samples and twenty thousand
 rounds; the conformance trace on four platforms, diffed; `make check`.
+
+## The MSVC finding, answered as far as the record allows
+
+Section 32 asks for a cold reviewer's local MSVC build-status issue to be
+reproduced. The report is not on record — no error text, no command, no
+configuration, in the mission documents or in this tree — so it cannot be, and
+claiming otherwise would be worse than saying so.
+
+What is on record is the other side: the MSVC build runs on every push at `/W4`
+with every warning refused, builds the library, the command line and both
+hosts, runs every example, and writes a trace diffed against three other
+platforms. Two ways a local build says it is broken when it is not were found
+and fixed. `tools/build.bat` needs `cl` and `lib`, which are on the path only
+inside a Developer Command Prompt; without one a reader saw
+`'cl' is not recognized` once per file in `src`, which reads like a project that
+will not compile. It says which shell it needs now, before it compiles
+anything. And the front page said everything under *Trying it in an hour* runs
+from a clean checkout on Linux **or Windows** and then made its first line
+`make && make fast`, which there is no `make` for. It names `tools\build.bat`
+there now and says which of the steps are Linux's.
+
+No warning was weakened.
+
+See D1059.
+
+**Runs:** the Windows job on every push, building and running every example and
+agreeing with three other platforms byte for byte.

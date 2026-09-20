@@ -5,6 +5,22 @@ rem can be told them. A port that needed a build system would be a port that
 rem changed the project; this one is a list of files. See D970.
 setlocal enabledelayedexpansion
 
+rem `cl` and `lib` are on the path only inside a Developer Command Prompt, or
+rem after `vcvarsall.bat` has been run in an ordinary one. Without that, what a
+rem reader sees is `'cl' is not recognized` for every file in `src`, which
+rem reads like a build that is broken rather than a shell that has not been set
+rem up. Said once, here, before anything is compiled. See D1059.
+where cl >nul 2>&1 || (
+    echo this needs the MSVC command line. Open a Developer Command Prompt for
+    echo VS, or run vcvarsall.bat x64 in this one, and try again.
+    exit /b 1
+)
+where lib >nul 2>&1 || (
+    echo cl is here and lib is not, which is a compiler without the build
+    echo tools beside it. Install the Desktop development with C++ workload.
+    exit /b 1
+)
+
 if "%~1"=="" ( set "OUT=build\win" ) else ( set "OUT=%~1" )
 if not exist "%OUT%" mkdir "%OUT%"
 if exist "%OUT%\said.txt" del "%OUT%\said.txt"
