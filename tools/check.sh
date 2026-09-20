@@ -2516,6 +2516,8 @@ for edit in \
     "a field renamed|s/^    vx: f32$/    dx: f32/|refused" \
     "a type changed to one that does not fit|s/^    x: f32$/    x: f64/|refused" \
     "a signature changed|s/^fn round(w: World, from: i32)/fn round(w: World, from: i32, more: i32)/|refused" \
+    "a case put in the middle of an enum|s/^    Drifting$/    Drifting\n    Resting/;s/^                Drifting -> 0$/                Drifting -> 0\n                Resting -> 2/|refused" \
+    "a case added at the end of an enum|s/^    Chasing$/    Chasing\n    Resting/;s/^                Chasing -> 1$/                Chasing -> 1\n                Resting -> 2/|refused" \
     "a program that will not build|s/^struct Body {/struct Body {{/|refused"; do
     what=${edit%%|*}
     rest_of=${edit#*|}

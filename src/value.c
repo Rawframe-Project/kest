@@ -2159,6 +2159,24 @@ uint64_t kest_layout_mark(const KestLayout *layout) {
         // somebody renamed is a field a save format has to be told about, and
         // a number that stayed the same would be the host told nothing.
         fold_text(&mark, layout->pieces[p].name);
+        // And which cases a tag can name, in the order they are numbered. A
+        // tag is a number and the number is the case's place, so a case put in
+        // the middle of an enum renumbers every case after it: a world saved
+        // before it reads back with each of those meaning the one below. The
+        // size does not move, the pieces do not move and nothing else here
+        // moved either, so until this was folded the mark said nothing had
+        // changed. See D1072.
+        if (layout->pieces[p].kind != KEST_L_TAG) {
+            continue;
+        }
+        for (int32_t tag = 0;; tag++) {
+            const char *named = kest_case_of(layout, p, tag, NULL, NULL);
+            if (named == NULL) {
+                fold_number(&mark, (uint64_t)tag, 2);
+                break;
+            }
+            fold_text(&mark, named);
+        }
     }
     return mark;
 }

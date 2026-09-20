@@ -38758,3 +38758,37 @@ See D1071.
 
 **Runs:** the races host with four machines started and freed on four threads,
 under the thread sanitiser, before and after; `examples/embed`; `make check`.
+
+## A tag is its case's place, and the mark did not say so
+
+A layout's mark is the number a host keeps beside the bytes it saved: the same
+number means the same shape and nothing to migrate. It carried the size, the
+alignment, how many slots, whether anything in it is a tag, and every piece's
+offset, kind and name. A tag is one piece of one kind at one offset with one
+name whatever the enum's cases are, so a case put in the middle of an enum gave
+the identical mark.
+
+And a tag is a number that is its case's place. A world saved under `Calm,
+Wary` writes 1 for `Wary`; read back under `Calm, Angry, Wary` the 1 is
+`Angry`. Every case after the inserted one means the case below it, nothing
+about the shape moved, and the host was told nothing. That is the exact failure
+a layout mark exists to prevent, in the one place a save outlives the build
+that wrote it.
+
+The mark folds the case names now, in the order they are numbered, through
+`kest_case_of` — the door a host reads a tag through — so it is taken over
+exactly what a host can see.
+
+What found it was asking what the gate's sentence says rather than what its
+check does, which is the fourth finding of that shape this week. `reload`'s
+sentence is *the edits a reload has to have an answer for* and its seven edits
+were all struct fields and signatures, because `examples/engine.kest` had no
+enum in it. It has one now, `Body` carries it, the save writes it as the number
+it is, and two of the nine edits are a case put in the middle and a case added
+at the end.
+
+See D1072.
+
+**Runs:** the engine host driven through both enum edits, with the fold and
+with it taken back out; the layout mark printed for five versions of one
+program; `make check`.

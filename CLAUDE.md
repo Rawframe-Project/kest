@@ -1173,9 +1173,13 @@ nothing      a document with nothing in it, and checks handed no files
 reload       the edits a reload has to have an answer for, each driven
              through the host that does the whole protocol: a body changed, a
              field added, taken away, renamed, a type changed, a signature
-             changed, and a program that will not build. Every one of them
-             ends with a world -- the new program's or the one the host was
-             holding -- and never half of either
+             changed, a case put in the middle of an enum, a case added at
+             the end of one, and a program that will not build. Every one of
+             them ends with a world -- the new program's or the one the host
+             was holding -- and never half of either. The two about a case
+             are the ones the layout's mark said nothing about until D1072:
+             a tag is its case's place, so a case in the middle renumbers
+             every case after it and nothing else moves
 fuzzing      bytes nothing here was written for, made from eight seeds and
              handed to each of the six boundaries they arrive through, under
              the build that checks itself: every one of them an answer or a

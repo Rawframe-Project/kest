@@ -217,6 +217,14 @@ answers something else now warns, and the fix is the one the message already
 names — hand the changed one back. Nothing in this tree was leaning on the
 silence. See D1065.
 
+**A layout's mark carries the enum cases.** A tag is a number that is its
+case's place, so a case put in the middle of an enum renumbers every case after
+it while the size, the alignment and every piece stay where they were — and the
+mark said nothing had changed. **What a host has to do:** nothing, and one
+thing it no longer has to worry about. A host holding a save from before this
+sees a different number for the same shape and refuses a reload it would have
+accepted, which is the safe direction. See D1072.
+
 **Starting a machine writes nothing of the build's.** It took the machine's
 report out of the build's arena, which is a bump pointer: two hosts starting
 machines on two threads were reading and writing it at once, and the thread

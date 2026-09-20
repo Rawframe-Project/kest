@@ -35726,3 +35726,47 @@ the sentence it was for. `bench/families.sh` had a table with `would not run`
 in every row (D1057); the conformance corpus folded none of the four host doors
 inside the profile (D1060); this watched four machines run and none start. Each
 was found by asking what the sentence says rather than what the check does.
+
+## D1072. A tag is its case's place, so the mark carries the case list
+
+*measured*, with a host that reloads a program whose enum gained a case.
+
+A layout's mark is the number a host keeps beside the bytes it saved:
+*after a reload, the same number means the same shape and nothing to migrate.*
+`examples/engine.c` is the host that does the whole protocol, and it refuses a
+reload whose `Body` mark moved.
+
+**The mark did not carry which cases a tag can name.** It carried the size, the
+alignment, how many slots, whether anything in it is a tag, and for every piece
+its offset, its kind and its name. A tag is one piece of one kind at one offset
+with one name, and all four of those are the same whatever the enum's cases
+are. So a case put in the middle of an enum gave the identical mark:
+
+    m1  Calm, Wary           mark 1525947044660076995
+    m2  Calm, Angry, Wary    mark 1525947044660076995
+
+**And a tag is a number that is its case's place.** A world saved under `Calm,
+Wary` writes `1` for `Wary`. Read back under `Calm, Angry, Wary`, the `1` is
+`Angry`. Every case after the one that was inserted means the case below it,
+the size did not move, no field moved, and the host was told nothing. That is
+the exact failure a layout mark exists to prevent, in the one place a save
+outlives the build that wrote it.
+
+**So the mark folds the case names, in the order they are numbered.** A case
+added, taken away, renamed or reordered moves it; a program whose enums did not
+change keeps the number it had. It is folded through `kest_case_of`, which is
+the door a host reads a tag through, so the mark is taken over exactly what a
+host can see.
+
+**What found it.** Asking what the gate's sentence says rather than what its
+check does — which is the fourth finding of that shape this week. `reload`'s
+sentence is *the edits a reload has to have an answer for*, and its seven edits
+were all about struct fields and signatures because `examples/engine.kest` had
+no enum in it. It has one now, `Body` carries it, the save writes it as the
+number it is, and two of the nine edits are a case put in the middle and a case
+added at the end.
+
+**What it cost a program.** Nothing. A mark is a number a host keeps and
+compares, and no program can see one. A host holding a save from before this
+sees a different number for the same shape and refuses a reload it would have
+accepted — which is the safe direction and is what a `0.0.x` is for.

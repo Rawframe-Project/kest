@@ -8848,8 +8848,10 @@ fn main() -> i32 {
         # host that says nothing used to get, and half a megabyte of it.
         "what": "a machine handed a walk of nothing",
         "file": "src/build.c",
-        "from": "        kest_runtime_new(&build->module, host, said, limits, walk_it(build));",
-        "to": "        kest_runtime_new(&build->module, host, said, limits, &(KestWalk){0});",
+        "from": """    KestRuntime *runtime = kest_runtime_new(own, &build->module, host, said,
+                                            limits, walk_it(build));""",
+        "to": """    KestRuntime *runtime = kest_runtime_new(own, &build->module, host, said,
+                                            limits, &(KestWalk){0});""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "a host that said nothing was given",
@@ -13215,13 +13217,11 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         // the last door out is the one that has to put it back.
         kest_ground_free(rt->ground);
         kest_arena_free(rt->heap);
-        kest_arena_free(own);
         return NULL;
     }""",
         "to": """    if (unbound) {
         kest_ground_free(rt->ground);
         kest_arena_free(rt->heap);
-        kest_arena_free(own);
         atomic_fetch_add_explicit(rt->standing, 1u, memory_order_relaxed);
         return NULL;
     }""",

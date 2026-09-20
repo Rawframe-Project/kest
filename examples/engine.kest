@@ -15,12 +15,24 @@ module examples.engine
 // to say which body another one chases: a reference is a world, a stamp and a
 // place in the machine that made it, and the machine somebody starts tomorrow
 // has none of the three.
+// What a body is doing, which is in here because a tag is a number and the
+// number is the case's place: a case put in the middle of this renumbers every
+// case after it, and a world saved before that reads back with each of those
+// meaning the one below. It is a shape moving, so the layout's mark has to
+// move with it, and a reload that does not refuse is a world quietly wrong.
+// See D1072.
+enum Doing {
+    Drifting
+    Chasing
+}
+
 struct Body {
     id: i32
     x: f32
     y: f32
     vx: f32
     vy: f32
+    doing: Doing
     chases: ref<Body>?
 }
 
@@ -37,7 +49,10 @@ fn begin(many: i32) -> World {
     let made: [ref<Body>] = array()
     for i in 0..many {
         let at = f32(i)
-        push(made, add(bodies, Body(i, at, 0.0 - at, 1.0, 0.5, none)))
+        push(
+            made,
+            add(bodies, Body(i, at, 0.0 - at, 1.0, 0.5, Doing.Drifting, none))
+        )
     }
     // A ring: each chases the next, and the last chases the first. Nothing
     // counts references and nothing is told when one goes, so two values may
@@ -98,7 +113,7 @@ fn place(w: World, xs: [f32], ys: [f32]) -> i32 no.alloc no.host {
 // A save is numbers, written into memory the host owns. Which body another one
 // chases is written as that body's own number and never as the bits of a
 // reference.
-fn save(w: World, ids: [i32], xs: [f32], ys: [f32], vxs: [f32], vys: [f32], chases: [i32]) -> i32 no.alloc no.host {
+fn save(w: World, ids: [i32], xs: [f32], ys: [f32], vxs: [f32], vys: [f32], chases: [i32], doings: [i32]) -> i32 no.alloc no.host {
     let at = 0
     for r in w.bodies {
         if at >= len(ids) {
@@ -110,6 +125,10 @@ fn save(w: World, ids: [i32], xs: [f32], ys: [f32], vxs: [f32], vys: [f32], chas
             ys[at] = one.y
             vxs[at] = one.vx
             vys[at] = one.vy
+            doings[at] = match one.doing {
+                Drifting -> 0
+                Chasing -> 1
+            }
             chases[at] = 0 - 1
             if let after = one.chases {
                 if let ahead = get(w.bodies, after) {
@@ -126,13 +145,24 @@ fn save(w: World, ids: [i32], xs: [f32], ys: [f32], vxs: [f32], vys: [f32], chas
 // seen the one they came from. The references are made here: a number that
 // stood for a body is looked up among the ones this call has just made, which
 // is what remapping is and is the whole of what a save can promise.
-fn restore(ids: [i32], xs: [f32], ys: [f32], vxs: [f32], vys: [f32], chases: [i32]) -> World {
+fn restore(ids: [i32], xs: [f32], ys: [f32], vxs: [f32], vys: [f32], chases: [i32], doings: [i32]) -> World {
     let bodies: store<Body> = store(len(ids))
     let made: [ref<Body>] = array()
     for i in 0..len(ids) {
         push(
             made,
-            add(bodies, Body(ids[i], xs[i], ys[i], vxs[i], vys[i], none))
+            add(
+                bodies,
+                Body(
+                    ids[i],
+                    xs[i],
+                    ys[i],
+                    vxs[i],
+                    vys[i],
+                    if doings[i] == 1 -> Doing.Chasing else -> Doing.Drifting,
+                    none
+                )
+            )
         )
     }
     for i in 0..len(chases) {

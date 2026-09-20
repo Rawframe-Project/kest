@@ -4507,7 +4507,12 @@ project's own checks; nothing reads it back.
 **Saved state is the host's.** What a world is saved as is what the host wrote
 down, and the shapes it was written from are held by the layout marks a reload
 compares — that is what refuses a save read back into a program whose shapes
-moved. What is *not* promised is that a reference is an identity: a `ref<T>` is
+moved. A mark carries the size, the alignment, and every piece's place, kind
+and name, **and for a tag which cases it can name and in what order**: a tag is
+a number that is its case's place, so a case put in the middle of an enum
+renumbers every case after it while nothing else about the shape moves at all.
+That last part was not in the mark until D1072, and a world saved before such
+an edit read back with each of those cases meaning the one below it. What is *not* promised is that a reference is an identity: a `ref<T>` is
 a place and a stamp in one machine's world and means nothing in another, which
 is why a host that saves a world saves the application's own identifiers beside
 it and remaps on the way back in. See D985.

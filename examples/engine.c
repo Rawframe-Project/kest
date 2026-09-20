@@ -50,6 +50,10 @@ typedef struct {
     float vxs[BODIES];
     float vys[BODIES];
     int32_t chases[BODIES];
+    // What each body was doing, which is an enum in the program and a number
+    // here: a tag is its case's place, so a host writing one down is writing a
+    // number whose meaning is the case list it was written under. See D1072.
+    int32_t doings[BODIES];
     uint64_t shaped;
     int32_t count;
 } Saved;
@@ -315,13 +319,15 @@ static bool save_the_world(Engine *engine, Saved *saved) {
     }
     saved->shaped = kest_layout_mark(shape);
 
-    KestValue lent[6];
-    void *blocks[6] = {saved->ids, saved->xs,  saved->ys,
-                       saved->vxs, saved->vys, saved->chases};
-    const char *of[6] = {"i32", "f32", "f32", "f32", "f32", "i32"};
-    size_t wide[6] = {sizeof(int32_t), sizeof(float), sizeof(float),
-                      sizeof(float), sizeof(float), sizeof(int32_t)};
-    for (size_t i = 0; i < 6; i++) {
+    KestValue lent[7];
+    void *blocks[7] = {saved->ids,  saved->xs,     saved->ys,
+                       saved->vxs,  saved->vys,    saved->chases,
+                       saved->doings};
+    const char *of[7] = {"i32", "f32", "f32", "f32", "f32", "i32", "i32"};
+    size_t wide[7] = {sizeof(int32_t), sizeof(float), sizeof(float),
+                      sizeof(float),   sizeof(float), sizeof(int32_t),
+                      sizeof(int32_t)};
+    for (size_t i = 0; i < 7; i++) {
         lent[i] = kest_borrow(engine->runtime, blocks[i], BODIES, of[i],
                               wide[i]);
     }
@@ -329,7 +335,7 @@ static bool save_the_world(Engine *engine, Saved *saved) {
     asking[0] = engine->world[0];
     asking[1] = engine->world[1];
     bool wrote = true;
-    for (size_t i = 0; i < 6; i++) {
+    for (size_t i = 0; i < 7; i++) {
         if (lent[i].object == NULL) {
             wrote = false;
         }
@@ -337,7 +343,7 @@ static bool save_the_world(Engine *engine, Saved *saved) {
     }
     wrote = wrote && kest_call(engine->runtime, engine->save, asking, 16);
     saved->count = wrote ? (int32_t)asking[0].integer : 0;
-    for (size_t i = 0; i < 6; i++) {
+    for (size_t i = 0; i < 7; i++) {
         if (lent[i].object != NULL && !kest_lend_ends(engine->runtime,
                                                       lent[i])) {
             wrote = false;
@@ -358,15 +364,17 @@ static bool save_the_world(Engine *engine, Saved *saved) {
 // true, and a host that cannot make the new world keeps the one it has.
 static bool restore_into(KestRuntime *into, int32_t restore, int32_t round,
                          const Saved *saved, KestValue world[2]) {
-    KestValue lent[6];
-    const void *blocks[6] = {saved->ids, saved->xs,  saved->ys,
-                             saved->vxs, saved->vys, saved->chases};
-    const char *of[6] = {"i32", "f32", "f32", "f32", "f32", "i32"};
-    size_t wide[6] = {sizeof(int32_t), sizeof(float), sizeof(float),
-                      sizeof(float), sizeof(float), sizeof(int32_t)};
+    KestValue lent[7];
+    const void *blocks[7] = {saved->ids,  saved->xs,     saved->ys,
+                             saved->vxs,  saved->vys,    saved->chases,
+                             saved->doings};
+    const char *of[7] = {"i32", "f32", "f32", "f32", "f32", "i32", "i32"};
+    size_t wide[7] = {sizeof(int32_t), sizeof(float), sizeof(float),
+                      sizeof(float),   sizeof(float), sizeof(int32_t),
+                      sizeof(int32_t)};
     KestValue asking[16] = {{0}};
     bool made = true;
-    for (size_t i = 0; i < 6; i++) {
+    for (size_t i = 0; i < 7; i++) {
         // The block is this host's and the program only reads it, so the cast
         // is this host saying so: a lend is an address and a count, and it is
         // the host that knows which way the memory goes.
@@ -390,7 +398,7 @@ static bool restore_into(KestRuntime *into, int32_t restore, int32_t round,
             return false;
         }
     }
-    for (size_t i = 0; i < 6; i++) {
+    for (size_t i = 0; i < 7; i++) {
         if (lent[i].object != NULL && !kest_lend_ends(into, lent[i])) {
             made = false;
         }
