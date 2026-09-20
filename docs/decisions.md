@@ -35770,3 +35770,54 @@ added at the end.
 compares, and no program can see one. A host holding a save from before this
 sees a different number for the same shape and refuses a reload it would have
 accepted — which is the safe direction and is what a `0.0.x` is for.
+
+## D1073. An `if let` does not make what it binds
+
+*argued*, and the program that shows it is `examples/churn.kest`.
+
+A `scratch { }` block gives its memory back when it ends, and what it made may
+not reach anything that outlives it. That is proved rather than asked for
+(D966): the IR is walked, every value is marked as made in the block or not,
+and a call handed something the block made *and* something older that could
+keep it is refused, because what a called body does with what it is given
+cannot be followed.
+
+**The walk had `if let` on the wrong side of that line.** The list of
+operations that *pass a value through* rather than making one — a load, a part
+of a struct, a case's payload, a meet of two arms, a read out of a store —
+did not have the branch that an `if let` compiles to. That branch reads an
+optional and leaves what it held, which is exactly what `part` beside it does.
+So every name an `if let` bound inside a block was read as something the block
+had made.
+
+**What that refused.** This:
+
+```kest
+for r in world {
+    scratch {
+        if let one = get(world, r) {
+            seen += table.orElse(counts, one.name, 0)
+        }
+    }
+}
+```
+
+`one.name` came out of the world and the block made nothing at all. A frame
+that walks a world inside a block of working memory and looks each thing up in
+a table is the shape a persistent-world language is for, and it could not be
+written. The same code without the block compiles; the same code with the key
+read from an array instead of through `get` compiles; the same code with a
+literal key compiles. Only the `if let` made the difference, which is why
+nothing found it: every `scratch` in this tree binds outside the block or uses
+what it binds without handing it anywhere.
+
+**What still refuses.** Everything that should. Text made inside the block and
+bound by an `if let` is still what the block made: pushing it into an older
+array, putting it in a table, or handing it to a lookup are all refused. The
+fix takes away a belief the walk had no reason for; it does not take away
+anything the walk knew.
+
+**What found it.** Writing a program that combines two things the tree has and
+never combines — the same method that found D1062 through D1065, and the fifth
+finding of the week from asking what a sentence says rather than what a check
+does.

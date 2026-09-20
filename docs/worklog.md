@@ -38792,3 +38792,34 @@ See D1072.
 **Runs:** the engine host driven through both enum edits, with the fold and
 with it taken back out; the layout mark printed for five versions of one
 program; `make check`.
+
+## An `if let` was read as making what it binds
+
+A `scratch { }` block proves that what it made does not reach anything that
+outlives it: the IR is walked, every value is marked as made in the block or
+not, and a call handed something the block made and something older that could
+keep it is refused.
+
+The list of operations that pass a value through rather than making one — a
+load, a part of a struct, a case's payload, a meet of two arms, a read out of a
+store — did not have the branch an `if let` compiles to. That branch reads an
+optional and leaves what it held, which is what `part` beside it does. So every
+name an `if let` bound inside a block was read as something the block had made,
+and a frame that walks a world inside a block and looks each thing up in a
+table was refused for handing the world's own text to a lookup.
+
+The same code without the block compiles. The same code with the key read from
+an array instead of through `get` compiles. The same code with a literal key
+compiles. Only the `if let` made the difference, which is why nothing found it:
+every `scratch` in this tree binds outside the block or uses what it binds
+without handing it anywhere.
+
+Everything that should still refuses — text made inside the block and bound by
+an `if let` cannot be pushed into an older array, put in a table, or handed to
+a lookup. `examples/churn.kest` has the frame that could not be written, and it
+is refused with the fix taken back out.
+
+See D1073.
+
+**Runs:** `examples/churn.kest` with the fix and without; nine narrowing
+programs to find which of the parts mattered; `make check`.

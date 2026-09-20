@@ -391,6 +391,14 @@ static bool passes_through(uint16_t kind) {
     case KEST_IR_TAKE:
     case KEST_IR_STORE_GET:
     case KEST_IR_STORE_REF:
+    // `if let` in the form that leaves what the optional held: the branch
+    // reads one value and leaves part of it, which is what `part` and `meet`
+    // beside it do. It was not here, so every name an `if let` bound inside a
+    // block was read as something the block made — and handing one to a call
+    // that also takes something older is refused. A frame that walks a world
+    // inside a `scratch { }` block and looks each thing up in a table is that
+    // shape, and it could not be written. See D1073.
+    case KEST_IR_ASK:
         return true;
     default:
         return false;

@@ -1,6 +1,7 @@
 module examples.churn
 
 import std.io
+import std.table
 import std.os
 import std.text
 
@@ -211,6 +212,26 @@ fn keeping(world: store<Thing>, round: i32) -> i32 {
     return touched
 }
 
+// A frame that walks a world inside a block of working memory and looks each
+// thing up in a table it was handed. The name it looks with came out of the
+// world and is not the block's, so nothing here hands the block's own memory
+// to anything — and this was refused until D1073, because an `if let` binding
+// was read as making what it bound. Every frame in a persistent-world language
+// that keeps a count per thing is this shape, and it could not be written.
+fn counting(world: store<Thing>, counts: table.Table<text, i32>) -> i32 {
+    let seen = 0
+    for r in world {
+        scratch {
+            if let one = get(world, r) {
+                let line = "{one.id}"
+                seen += len(line)
+                seen += table.orElse(counts, one.name, 0)
+            }
+        }
+    }
+    return seen
+}
+
 // Identities deleted and made again, which is what a world does between the
 // rounds that only change things: the store hands the places back out, so what
 // this costs is work rather than growth, and the ring is mended as it goes.
@@ -365,6 +386,15 @@ fn main() -> i32 {
                 return 4
             }
         }
+    }
+
+    // And the frame that walks a world inside a block and looks each thing up
+    // in a table. What it answers is not the point; that it compiles is, and
+    // it did not until D1073.
+    let counts: table.Table<text, i32> = table.empty()
+    table.set(counts, "thing 1", 7)
+    if counting(kept, counts) <= 0 {
+        return 13
     }
 
     // The ring is still a ring in both, after everything that was done to them.

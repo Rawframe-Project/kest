@@ -1743,7 +1743,7 @@ tokens   what a token is and what it carries""",
                  r"""    {"stop", NONE}, {"stop.none", NONE},"""],
         "make": [],
         "tool": "tools/check-tables.sh",
-        "caught": "instructions: 165 kinds and 166 names",
+        "caught": "instructions: 167 kinds and 168 names",
     },
     {
         # Two copies of a licence, which is what a thing that is installed on
@@ -2837,7 +2837,7 @@ fn main() -> i32 {
         "file": "docs/language.md",
         "from": r"""| `words.kest` | text as its bytes, with no character type anywhere |""",
         "to": r"""| `words.kest` | text as its bytes, with no character type anywhere |
-| `twin.kest` | a second type of one name |""",
+| `twins/twin.kest` | a second type of one name |""",
         "make": [],
         "tool": "tools/check-docs.sh",
         "arguments": ["docs/language.md"],

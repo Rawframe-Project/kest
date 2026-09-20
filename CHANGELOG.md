@@ -217,6 +217,14 @@ answers something else now warns, and the fix is the one the message already
 names — hand the changed one back. Nothing in this tree was leaning on the
 silence. See D1065.
 
+**An `if let` inside a `scratch { }` block no longer makes what it binds.** A
+frame that walks a world inside a block of working memory and looks each thing
+up in a table was refused for handing the world's own text to a lookup, because
+the branch an `if let` compiles to was not among the operations the escape walk
+reads as passing a value through. **What a program has to do:** nothing, and
+one shape that could not be written can be. Everything that should still
+refuses. See D1073.
+
 **A layout's mark carries the enum cases.** A tag is a number that is its
 case's place, so a case put in the middle of an enum renumbers every case after
 it while the size, the alignment and every piece stay where they were — and the
