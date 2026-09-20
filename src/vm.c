@@ -628,6 +628,10 @@ struct KestRuntime {
     // less often for the same fraction of its size -- and never below a floor,
     // so a program holding almost nothing does not walk on every allocation.
     size_t walk_at;
+    // How many times what it is holding may be handed out before that is
+    // worth a walk. One by default, which is the shortest pause; a host that
+    // is not budgeting a frame says otherwise. See D1045.
+    uint32_t walk_after;
     // The most this machine was ever holding at once, which is what says a
     // world has settled where the number above says only what it holds now.
     size_t most;
@@ -1137,7 +1141,8 @@ static bool gather(Vm *rt, KestValue *reach) {
     uint64_t marked = rt->clock == NULL ? 0 : rt->clock(rt->clock_context);
     kest_ground_sweep(rt->ground);
     size_t standing = kest_ground_used(rt->ground);
-    rt->walk_at = standing < WALK_FLOOR ? WALK_FLOOR : standing;
+    size_t want = standing * (rt->walk_after == 0 ? 1 : rt->walk_after);
+    rt->walk_at = want < WALK_FLOOR ? WALK_FLOOR : want;
     uint64_t ended = rt->clock == NULL ? 0 : rt->clock(rt->clock_context);
     if (rt->clock != NULL) {
         uint64_t took = ended - began;
@@ -5733,6 +5738,7 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
     rt->heap = kest_arena_new();
     rt->ground = kest_ground_new();
     rt->walk_at = WALK_FLOOR;
+    rt->walk_after = 1;
     rt->heap_bytes = limits == NULL ? 0 : limits->heap_bytes;
     if (rt->heap != NULL) {
         kest_arena_cap(rt->heap, rt->heap_bytes);
@@ -7541,6 +7547,16 @@ bool kest_collect(KestRuntime *runtime) {
         return false;
     }
     return gather(runtime, NULL);
+}
+
+void kest_collect_after(KestRuntime *runtime, uint32_t times) {
+    if (runtime == NULL) {
+        return;
+    }
+    // Nought and one are the same thing: a walk after being handed what it
+    // holds. It takes effect at the next sweep, because what it multiplies is
+    // what that sweep leaves standing. See D1045.
+    runtime->walk_after = times == 0 ? 1 : times;
 }
 
 uint8_t kest_break_byte(void) {

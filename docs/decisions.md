@@ -34117,3 +34117,84 @@ instructions and a copy of the whole element is not. That is the shape of the
 rule, and section 23.1's carried-forward cost is answered: the 29 % is not a
 semantic prison and it is not an address that wants holding, it is the price of
 touching an element six times instead of once.
+
+## D1045. What a pause costs, measured, and the one number a host turns
+
+**Decided.** A pause is **0.68 milliseconds for every megabyte still
+reachable** and nothing else moves it. The trigger is a host's to set, with
+`kest_collect_after`, and the default stays one — the shortest pause there is
+to have. There is no incremental marking and there is not going to be one, and
+the reason is architectural rather than a matter of effort.
+
+**What was asked.** Section 22 of this reset: report count, p50, p95, p99, max,
+mark, sweep, roots, live bytes, reclaimed, fragmentation and high-water on the
+final architecture, and investigate root cost, live-set cost, threshold policy,
+scheduling, frequency, fragmentation and incremental marking. Two readings from
+outside reported pauses near a 60 Hz frame budget on large persistent worlds.
+
+**Reproduced, and it is linear.** `bench/agents.kest` — entities holding text,
+a nested run each and references at each other — from five thousand to forty
+thousand, under `bench/measure`:
+
+| entities | reachable | walks | pause p50 | p95 | p99 | max | marking | sweeping | free in plots |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 5,000 | 3.9 MB | 78 | 2.6 | 3.7 | 3.9 | 4.7 | 2.0 | 0.6 | 25 % |
+| 10,000 | 7.7 MB | 79 | 5.2 | 6.9 | 7.8 | 8.0 | 4.4 | 1.4 | 15 % |
+| 20,000 | 15.4 MB | 80 | 10.8 | 13.1 | 14.5 | 15.4 | 9.1 | 2.4 | 10 % |
+| 40,000 | 30.8 MB | 81 | 21.0 | 26.9 | 27.4 | 31.2 | 17.9 | 4.8 | 9 % |
+
+Milliseconds. Marking is 0.58 ms a megabyte and sweeping 0.16. **Roots cost
+nothing**: four thousand slots at every size. **The walk count does not move**,
+because the trigger is proportional. **Fragmentation falls** as the world grows
+and is under a tenth at the sizes that matter.
+
+So an 11 millisecond pause on a world of twenty thousand is exactly what the
+reviewers found, and it is not a defect in the walk: it is what marking fifteen
+megabytes of pointer-chased live data costs, at 1.7 GB a second.
+
+**The threshold, measured.** Walking after being handed *n* times what is held,
+over `bench/agents.kest`:
+
+| n | walks | collector share of a call | pause p50 | held at most |
+| --- | --- | --- | --- | --- |
+| 1 | 95 | 15.7 % | 16.0 ms | 37 MB |
+| 2 | 49 | 10.2 % | 19.1 ms | 58 MB |
+| 3 | 32 | 6.8 % | 23.5 ms | 77 MB |
+| 4 | 25 | 7.0 % | 28.6 ms | 97 MB |
+
+A real trade with two ends and no right answer for everybody: a host budgeting
+a frame wants the shortest pause and pays for it in throughput; a host baking a
+level or running a server wants the opposite. So it is one number a host sets,
+defaulting to the frame answer, rather than a constant this project picks for
+both of them. Past three it buys nothing and costs memory.
+
+**Why there is no incremental marking.** Marking in slices needs a barrier on
+every write that could store an address, so that a thing marked black and then
+pointed at something white is greyed again. This machine cannot tell which
+writes those are: its slots carry no tags, it is statically typed and an
+instruction knows what it is working on but a *walk* does not, and a struct
+moves with a `memcpy`. A barrier would therefore have to fire on every slot
+write in the language, paid by every program for the sake of the ones with
+large persistent worlds. That is the same argument D996 made against reference
+counting and it has the same answer.
+
+Tagging the slots would change it, and tagging the slots is the design D996
+measured and refused: it needs a map of which slot is what at every point a
+walk can happen, which is a second description of the program to keep in step
+with the first.
+
+**So what a frame budget has instead**, and all of it already exists: a body
+that promises `no.alloc` cannot be interrupted by a walk at all, because a walk
+happens inside an allocation and there is none — fifty frames of
+`bench/frame.kest` over a lent run are one allocation and no walks. A
+`scratch { }` block gives its own memory back without a walk. `kest_collect`
+moves the walk to a moment the host chose. And the number above lets a host
+size the world it can afford: a sixtieth of a second is about twenty-four
+megabytes of reachable heap.
+
+**What the surface cost.** One door, `kest_collect_after`, one number, and no
+new concept: it multiplies the threshold that was already there. The reference
+now has a section saying what the collector is, what it walks from, when it
+walks, what a pause costs and why there is no incremental marking — which
+section 21 asked for, and which the front page contradicted by saying there was
+no collector at all.

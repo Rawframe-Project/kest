@@ -101,6 +101,15 @@ to read an element into a local and write it back. **What a program has to
 do:** nothing. The hoist `docs/state.md` named as open is measured and not
 built, because the measurement says it is not where the gap is. See D1044.
 
+**A host says when the machine walks on its own.** `kest_collect_after` sets
+how many times what is held may be handed out before that is worth a walk. One
+by default, which is what it always did and the shortest pause there is to
+have; three takes the collector from 15.7 % of a call to 6.8 % for a pause half
+again as long and twice the memory held at most. **What a host has to do:**
+nothing. A pause is 0.68 milliseconds for every megabyte still reachable, which
+is in the reference now, beside what the collector is and why there is no
+incremental marking. See D1045.
+
 **What changed for a host.** The version. The other three numbers — the C ABI,
 the JSON schema, and the deterministic profile — still read 4, 3 and 1, and
 will be settled to clean `0.0.x` numbers once the architecture this reset is

@@ -15517,7 +15517,7 @@ kest 9.9.9""",
         # See D1037.
         "what": "a front page counting the doors for itself",
         "file": "README.md",
-        "from": """a C embedding API of 97 doors""",
+        "from": """a C embedding API of 98 doors""",
         "to": """a C embedding API of 88 doors""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",

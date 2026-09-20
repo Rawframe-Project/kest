@@ -287,6 +287,8 @@ static void how_to_run(void) {
             "  --builds <n>       times to compile, 5 by default\n"
             "  --library <dir>    where the standard library is, `lib/`\n"
             "  --room <bytes>     a heap ceiling, none by default\n"
+            "  --walk-after <n>   walk after n times what is held, 1 by "
+            "default\n"
             "  --json             say it again as JSON\n");
 }
 
@@ -298,6 +300,7 @@ int main(int argc, char **argv) {
     long long warmup = 20;
     long long builds = 5;
     size_t room = 0;
+    uint32_t walk_after = 0;
     bool as_json = false;
     int32_t args[8];
     uint32_t arg_count = 0;
@@ -324,6 +327,8 @@ int main(int argc, char **argv) {
             library = argv[++i];
         } else if (strcmp(one, "--room") == 0 && has_next) {
             room = (size_t)strtoull(argv[++i], NULL, 10);
+        } else if (strcmp(one, "--walk-after") == 0 && has_next) {
+            walk_after = (uint32_t)strtoul(argv[++i], NULL, 10);
         } else if (strcmp(one, "--json") == 0) {
             as_json = true;
         } else if (one[0] == '-') {
@@ -389,6 +394,9 @@ int main(int argc, char **argv) {
     }
     if (room != 0) {
         kest_heap_allow(runtime, room);
+    }
+    if (walk_after != 0) {
+        kest_collect_after(runtime, walk_after);
     }
     /* The clock the machine times its own walks with, which is this host's
        because the library is ISO C and has no monotonic one. */

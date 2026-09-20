@@ -1179,6 +1179,23 @@ uint8_t kest_break_byte(void);
 // happened, which is what keeps `deterministic` true.
 bool kest_collect(KestRuntime *runtime);
 
+// When the machine decides a walk is worth doing on its own: after it has been
+// handed this many times what it was holding when it last swept. One by
+// default, which is the shortest pause there is to have and what a host with a
+// frame to fit into wants.
+//
+// A host that is not budgeting a frame wants a bigger number, and what it buys
+// is measured: over `bench/agents.kest`, three takes the collector from 15.7 %
+// of a call to 6.8 % of one, for a pause half again as long and twice the
+// memory held at most. A walk cannot be made shorter than what it has to mark
+// -- 0.68 milliseconds for every megabyte still reachable, measured over
+// worlds from five thousand to forty thousand entities -- so this is the one
+// number there is to turn. Nought and one mean the same thing. See D1045.
+//
+// It does not change what a program answers, for the same reason `kest_collect`
+// does not.
+void kest_collect_after(KestRuntime *runtime, uint32_t times);
+
 // What one collection cost, handed to a host the moment it finishes.
 //
 // It is the only way to get a distribution rather than a total. A machine that

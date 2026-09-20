@@ -101,7 +101,7 @@ which the compiler proves nothing escapes from; a bytecode VM of 158
 instructions, one of which nothing compiles to and a debugger writes; diagnostics with stable codes,
 spans, notes, suggested fixes and `--json`, all of a file's mistakes in one
 pass, with the shape of every object a command writes versioned; one canonical
-source form and a formatter that holds it; a C embedding API of 97 doors
+source form and a formatter that holds it; a C embedding API of 98 doors
 covering compile, start, call, layout introspection with field names, lent
 memory, a frame's working memory marked and put back, per-machine limits, what
 a program may do, what a run did, and stopping a machine and asking it where it
@@ -167,9 +167,11 @@ change when the number did.
 **What is decided and finished.** One resolved representation the backend reads
 (D962) and the other backend built, measured and rejected by a predeclared rule
 (D963). Text that carries its own length and is UTF-8 where it arrives (D964,
-D971). A persistent memory story with a trial behind it: flat to the byte across
-a hundredfold, and no collector (D992). `scratch { }` with what it will not let
-out proved over the bodies (D966, D972). `store` and `ref` placed, with a
+D971). A persistent memory story with a trial behind it: a non-moving
+mark-and-sweep heap that gives every place nothing can reach back, whose pause
+is 0.68 milliseconds for every megabyte still reachable and whose trigger a
+host sets (D996, D1045). `scratch { }` with what it will not let out proved
+over the bodies (D966, D972). `store` and `ref` placed, with a
 rollover policy that refuses rather than wraps (D975). Four version numbers and
 what moves each (D974, D983). A capability boundary that is the receiver of an
 extern, and one honest trust claim (D981). VM-only, with the AOT trigger

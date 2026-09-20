@@ -7128,6 +7128,16 @@ int main(int argc, char **argv) {
     kest_collected(engine.runtime, host_was_told_a_pause, &pauses_heard);
     kest_collected(NULL, host_was_told_a_pause, &pauses_heard);
 
+    // And when the machine decides a walk is worth doing on its own, which is
+    // the one number there is to turn: a host budgeting a frame leaves it at
+    // one and gets the shortest pause, and a host that is not raises it and
+    // gets fewer of them for more memory held. Asked of nothing too, and with
+    // nought, which means the same as one. See D1045.
+    kest_collect_after(engine.runtime, 2);
+    kest_collect_after(engine.runtime, 0);
+    kest_collect_after(NULL, 3);
+    kest_collect_after(engine.runtime, 1);
+
     // And a walk at a moment this host chose rather than at whatever
     // allocation would have set one off. A host with a frame to fit into asks
     // for it between frames; here it is asked for between calls, which is the

@@ -37737,3 +37737,58 @@ it.
 
 **Runs:** `KEST_REFUSE_AT=4638 ./kest-debug check examples/inventory.kest`
 before and after; the whole ceilings check; `make check`.
+
+## What a pause costs, and the front page that said there was none
+
+The front page said *a persistent memory story with a trial behind it: flat to
+the byte across a hundredfold, and no collector*. There has been a collector
+since D996 -- non-moving mark and sweep, which is the thing that made
+`examples/churn.kest` stop running out of memory -- and the page had not caught
+up. That is the shape of stale that costs a reader most: it is the first thing
+anybody reads and it was wrong about the most important thing in it.
+
+Two readings from outside reported pauses near a 60 Hz frame budget on large
+persistent worlds. Reproduced, and it is linear in what is still reachable:
+
+| entities | reachable | walks | pause p50 | p95 | p99 | max | marking | sweeping |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 5,000 | 3.9 MB | 78 | 2.6 | 3.7 | 3.9 | 4.7 | 2.0 | 0.6 |
+| 10,000 | 7.7 MB | 79 | 5.2 | 6.9 | 7.8 | 8.0 | 4.4 | 1.4 |
+| 20,000 | 15.4 MB | 80 | 10.8 | 13.1 | 14.5 | 15.4 | 9.1 | 2.4 |
+| 40,000 | 30.8 MB | 81 | 21.0 | 26.9 | 27.4 | 31.2 | 17.9 | 4.8 |
+
+**0.68 milliseconds for every megabyte still reachable.** Roots are four
+thousand slots at every size and cost nothing; the walk count does not move,
+because the trigger is proportional; fragmentation falls as the world grows and
+is under a tenth at the sizes that matter. So the eleven milliseconds are not a
+defect in the walk -- they are what marking fifteen megabytes of pointer-chased
+live data costs, at 1.7 gigabytes a second.
+
+The threshold is a real trade and it was a constant. Walking after being handed
+*n* times what is held:
+
+| n | walks | collector share of a call | pause p50 | held at most |
+| --- | --- | --- | --- | --- |
+| 1 | 95 | 15.7 % | 16.0 ms | 37 MB |
+| 2 | 49 | 10.2 % | 19.1 ms | 58 MB |
+| 3 | 32 | 6.8 % | 23.5 ms | 77 MB |
+| 4 | 25 | 7.0 % | 28.6 ms | 97 MB |
+
+Two ends and no right answer for everybody, so it is a host's to set:
+`kest_collect_after`, defaulting to one, which is the frame answer.
+
+And there is no incremental marking, for a reason rather than for want of
+effort. Marking in slices needs a barrier on every write that could store an
+address, and this machine cannot tell which writes those are -- its slots carry
+no tags and a struct moves with a `memcpy`. A barrier would fire on every slot
+write in the language, paid by every program for the sake of the ones with
+large worlds, which is the argument D996 already made against a count. What a
+frame budget has instead is `no.alloc`, which cannot be interrupted by a walk
+at all because a walk happens inside an allocation and there is none;
+`scratch { }`; `kest_collect` between frames; and the number above to size a
+world by.
+
+See D1045.
+
+**Runs:** `bench/measure` over four world sizes and four thresholds; the walk
+this host asks for and the one it does not; `make fast`; `make check`.
