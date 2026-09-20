@@ -5607,6 +5607,24 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // had got to, so `kest_resume` picks both up and carries on. Nothing
         // is unwound and nothing is said -- a stop is not a refusal. See D991.
         case KEST_OP_STOP: {
+            // Unless the run this is in is one the host made from inside a
+            // call of its own. A stop keeps the frames where they are so that
+            // `kest_resume` can carry on, and there is nothing to carry on
+            // into here: what this run is standing under is a C frame of the
+            // host's, and by the time a host could ask, that function has
+            // returned. So it is a refusal, said where it happened, rather
+            // than a stop that leaves the call the host is in the middle of
+            // answering a number that is nothing. See D1079.
+            if (rt->running_top != NULL) {
+                fail(vmp, frame, instruction, "K0708",
+                     "this machine cannot stop in a call the host made back "
+                     "in");
+                kest_diags_suggest(rt->diags,
+                                   "take the breakpoint out of what a bound "
+                                   "function calls, or write one in the call "
+                                   "the host makes from outside");
+                return false;
+            }
             frame->ip = instruction;
             frame->stopped_top = top;
             rt->stopped_at = instruction;
@@ -5718,6 +5736,14 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                     uint16_t *returned) {
     uint32_t held = rt->kept_count;
+    // Where this run's frames begin and what the machine was holding for the
+    // length of one instruction. A run that ends in a refusal comes back from
+    // the middle of a body, so neither goes back on its own -- and a run a
+    // host made from inside a call of its own has a run under it that carries
+    // on afterwards. Frames left over from a run that failed are frames the
+    // one underneath then returns through. See D1079.
+    uint32_t began = rt->running_frames;
+    uint32_t hands = rt->hands;
     rt->stopped_at = NULL;
     bool went = run_body(rt, entry, arg_slots, returned);
     // A machine a debugger stopped is not a machine that finished: what a
@@ -5725,6 +5751,10 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     // not got to the end of it. See D991.
     if (rt->stopped_at != NULL) {
         return went;
+    }
+    if (!went) {
+        rt->frame_count = began;
+        rt->hands = hands;
     }
     while (rt->kept_count > held) {
         rt->kept_count--;

@@ -459,6 +459,42 @@ fn main() -> i32 {
         "caught": "a stopped machine let the heap",
     },
     {
+        # A run the host made from inside a call of its own, ending in a
+        # refusal and leaving its frames behind. The run underneath then
+        # returns through them: `weighed` asks the host what something is
+        # worth and doubles what it gets, and what it answered was a number
+        # out of a frame belonging to a run that had already failed. No
+        # refusal, no diagnostic -- a wrong answer. See D1079.
+        "what": "a call made from inside a call that leaves its frames",
+        "file": "src/vm.c",
+        "from": r"""    if (!went) {
+        rt->frame_count = began;
+        rt->hands = hands;
+    }""",
+        "to": r"""    if (false) {
+        rt->frame_count = began;
+        rt->hands = hands;
+    }""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a call with a run of the host's inside it answered",
+    },
+    {
+        # And the other way one of those runs can end without returning: a
+        # breakpoint in it. A stop keeps the frames so a resume can carry on,
+        # and there is nothing to carry on into -- the C function the run is
+        # standing under has returned by the time a host could ask. See D1079.
+        "what": "a machine that stops in a call the host made back in",
+        "file": "src/vm.c",
+        "from": r"""            if (rt->running_top != NULL) {
+                fail(vmp, frame, instruction, "K0708",""",
+        "to": r"""            if (false) {
+                fail(vmp, frame, instruction, "K0708",""",
+        "make": ["kest", "embed"],
+        "host": "examples/embed",
+        "caught": "a machine stopped in a call this host made",
+    },
+    {
         # A refusal that sends a reader to a door there is no way in through.
         # What a message names is a claim about where the answer is, and a
         # name out of `src` is a name a host looks for in the public header

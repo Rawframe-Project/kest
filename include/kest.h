@@ -763,6 +763,14 @@ KestKept kest_kept_where(const KestRuntime *runtime, KestValue kept);
 // No frame is a frame of no slots, and is what to pass for a function that
 // takes nothing and gives nothing back. Anything else is refused rather than
 // run on whatever the stack was left holding.
+//
+// A bound function may call this, which is a run of the machine standing under
+// a C frame of the host's own. It ends like any other run: the frames it made
+// go with it whether it returned or was refused, and the call it was made from
+// carries on and answers what it would have answered. What it cannot do is
+// stop -- a breakpoint in a run made this way is `K0708`, because there is
+// nothing for a resume to carry on into once the bound function has returned.
+// See D1032 and D1079.
 bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
                uint32_t slots);
 
@@ -1323,6 +1331,10 @@ void kest_allowed(const KestRuntime *runtime, KestLimits *limits);
 // and its heap are where they were, what a `scratch { }` opened is still open,
 // and nothing has been said into the report. `kest_call` answers false for one,
 // so a host asks this to tell a stop from a refusal. See D991.
+//
+// A machine only stops in a call a host made from outside: a breakpoint in a
+// run a bound function called back in is `K0708`, and that run ends as a
+// refusal. See D1079.
 //
 // And it is in the middle of a call, which is the half of that a host has to
 // act on: the frames are standing on the heap, so the five doors that would

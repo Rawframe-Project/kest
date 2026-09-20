@@ -322,6 +322,48 @@ static void engine_weigh(KestValue *frame, KestRuntime *runtime,
                         : (double)(float)0.5;
 }
 
+// A call this host makes from inside a call of its own, which is a run of the
+// machine standing under a C frame of this host's. What is asked here is that
+// it ends like a run: the frames it made go when it does, whether it returned
+// or was refused, and the call it was made from carries on and answers what it
+// would have answered. A run that ended in a refusal used to leave its frames
+// behind, and the call underneath returned through them. See D1079 and D1032.
+static int weighing_how;
+static int weighing_went;
+static int weighing_stopped;
+
+static void weigh_from_inside(KestValue *frame, KestRuntime *runtime,
+                              void *context) {
+    (void)context;
+    if (weighing_how != 0) {
+        // Ten calls deep and then arithmetic that cannot be done, which is the
+        // deepest refusal this program has.
+        int32_t deepest = kest_entry(runtime, "tickWorld");
+        uint8_t *code = NULL;
+        uint8_t was = 0;
+        uint32_t many = 0;
+        if (weighing_how == 2) {
+            // And the other way a run ends without returning: a breakpoint in
+            // it. There is nothing for a resume to carry on into here -- this
+            // function is what the run is standing under, and by the time a
+            // host could ask, it has returned -- so the machine refuses to
+            // stop at all.
+            code = kest_code_of(runtime, deepest, &many);
+            if (code != NULL) {
+                was = code[0];
+                code[0] = kest_break_byte();
+            }
+        }
+        KestValue sharing[2] = {{0}};
+        weighing_went = kest_call(runtime, deepest, sharing, 2) ? 1 : 0;
+        weighing_stopped = kest_stopped(runtime) >= 0 ? 1 : 0;
+        if (weighing_how == 2 && code != NULL) {
+            code[0] = was;
+        }
+    }
+    frame[0].real = (double)(float)21.0;
+}
+
 static void engine_decide(KestValue *frame, KestRuntime *runtime,
                           void *context) {
     Decider *decider = context;
@@ -7115,6 +7157,85 @@ int main(int argc, char **argv) {
                (long long)asking[0].integer);
         if (!kest_runtime_free(watched) || !kest_build_free(stopping)) {
             fprintf(stderr, "what was stopped could not be given back\n");
+            return 1;
+        }
+    }
+
+    // And a run this host makes from inside a call of its own, ending the two
+    // ways that are not returning. `weighed` asks the host what something is
+    // worth and doubles the answer, so what the host does while it is in there
+    // is something the program reads the result of: a call back in that
+    // divides by nothing ten frames down, and one with a breakpoint written
+    // into it. Both have to leave `weighed` answering 42. See D1079.
+    {
+        KestBuild *inward = kest_build(path, NULL, stderr, KEST_FORM_TEXT, 0);
+        if (inward == NULL) {
+            fprintf(stderr, "the program would not build a third time\n");
+            return 1;
+        }
+        KestHost *from_inside = kest_host_new();
+        if (from_inside == NULL ||
+            !kest_host_bind(from_inside, "Io.write", io_write, stdout) ||
+            !kest_host_bind(from_inside, "Engine.decide", engine_decide,
+                            &decider) ||
+            !kest_host_bind(from_inside, "Engine.name", engine_name,
+                            &decider) ||
+            !kest_host_bind(from_inside, "Engine.rank", engine_rank,
+                            &decider) ||
+            !kest_host_bind(from_inside, "Engine.hurt", engine_hurt, NULL) ||
+            !kest_host_bind(from_inside, "Engine.blame", engine_blame,
+                            &blaming) ||
+            !kest_host_bind(from_inside, "Engine.weigh", weigh_from_inside,
+                            NULL) ||
+            !kest_host_bind(from_inside, "Engine.who", engine_who, &decider)) {
+            fprintf(stderr, "the host that calls back in could not be bound\n");
+            return 1;
+        }
+        KestRuntime *asking_in = kest_start(inward, from_inside, NULL);
+        kest_host_free(from_inside);
+        if (asking_in == NULL) {
+            kest_build_report(inward, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        int32_t weighed = kest_entry(asking_in, "weighed");
+        if (weighed < 0) {
+            fprintf(stderr, "there is nothing to ask what something weighs\n");
+            return 1;
+        }
+        for (weighing_how = 0; weighing_how < 3; weighing_how++) {
+            weighing_went = 0;
+            weighing_stopped = 0;
+            KestValue worth[2] = {{0}};
+            bool answered = kest_call(asking_in, weighed, worth, 2);
+            if (weighing_how != 0 && weighing_went) {
+                fprintf(stderr, "a call made from inside a call ran on "
+                                "through %s\n",
+                        weighing_how == 1 ? "arithmetic that cannot be done"
+                                          : "a breakpoint");
+                return 1;
+            }
+            if (weighing_how == 2 &&
+                (weighing_stopped ||
+                 !said_that(asking_in, "K0708",
+                            "cannot stop in a call the host made back in"))) {
+                fprintf(stderr, "a machine stopped in a call this host made "
+                                "from inside one of its own\n");
+                return 1;
+            }
+            if (!answered || worth[0].integer != 42) {
+                kest_report(asking_in, stderr, KEST_FORM_TEXT);
+                fprintf(stderr,
+                        "a call with a run of the host's inside it answered "
+                        "%lld\n",
+                        (long long)worth[0].integer);
+                return 1;
+            }
+        }
+        printf("a call the host made from inside one of its own left the call "
+               "it was made from answering 42, refused ten frames down and "
+               "with a breakpoint in it\n");
+        if (!kest_runtime_free(asking_in) || !kest_build_free(inward)) {
+            fprintf(stderr, "what called back in could not be given back\n");
             return 1;
         }
     }

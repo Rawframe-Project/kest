@@ -39016,3 +39016,43 @@ doors of a stopped machine and counts the four refusals. A hole in
 
 **Next:** the fresh cold review of section 42, which is somebody outside this
 project's to start.
+
+## A call the host makes from inside a call is a run, and it has to end like one
+
+A bound function may call back into the machine, which D1032 counted and the
+reference has described for as long as there have been hosts. What nothing
+asked is how one of those runs ends when it does not return.
+
+A program that asks the host what something is worth and doubles the answer.
+The host's bound function calls back in, the call it makes divides by nothing
+ten frames down, and the program answers 230 where 107 is right — no refusal,
+nothing in the report about the outer call, `kest_call` answering true. What
+said where to look was that a call back in refused for its *width* leaves the
+outer call answering correctly: that refusal is raised before a frame is
+pushed, so it is the frames.
+
+A run entered from a host call starts its frames at the depth the crossing
+recorded, and a run that ends in a refusal comes back from the middle of a body
+without unwinding them. Nothing saw it for as long as this project has existed,
+because a call from outside starts its frames at the bottom and writes over
+them. A run made from inside a call has a run under it that carries on, and
+that one returns through the frames of a run that is over.
+
+A run gives back what it took however it ends: `execute` keeps the depth the
+run began at and what was in hand for the length of an instruction, and puts
+both back when the run did not work.
+
+And a stop is refused in one of those runs, `K0708`: a breakpoint keeps the
+frames so a resume can carry on, and there is nothing to carry on into once the
+bound function has returned. The reference already said the debugger does not
+do it; the machine says it now, to every host.
+
+See D1079.
+
+**Runs:** `examples/embed` asks what something weighs three times — plainly,
+with a call back in that divides by nothing, and with one that has a breakpoint
+in it — and the answer is 42 every time. Two holes in `check-backstops.sh` take
+each half of it out again.
+
+**Next:** the fresh cold review of section 42, which is somebody outside this
+project's to start.

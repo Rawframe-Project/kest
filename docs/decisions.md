@@ -36091,3 +36091,58 @@ Every guard in this library that asks *is the program running* was written when
 the answer had two halves. The stop is a third, and it reads as the wrong one of
 the two. That is the shape to look for elsewhere: not a wrong answer, a question
 with a case missing.
+
+## D1079. A call the host makes from inside a call is a run, and it has to end like one
+
+*reproduced*, a wrong answer with no refusal, in a host of sixty lines.
+
+A bound function may call back into the machine — D1032 counted those crossings
+and the reference has described them since. What nothing asked is how one of
+those runs *ends* when it does not return.
+
+A program that asks the host what something is worth and then does arithmetic
+with the answer:
+
+```kest
+fn weighed() -> i32 {
+    return i32(Engine.weigh() * 2.0)
+}
+```
+
+The host's `Engine.weigh` calls back in, the call it makes divides by nothing
+ten frames down, and `weighed` answers **230** where it should answer 107. No
+refusal, nothing in the report about the outer call, `kest_call` answers true. A
+call back in refused for its *width* — a refusal raised before any frame is
+pushed — leaves the outer call answering correctly, which is what said where to
+look: it is the frames.
+
+A run entered from a host call starts its frames at the depth the crossing
+recorded, and a run that ends in a refusal comes back from the middle of a
+body without unwinding them. Nothing noticed for the length of this project,
+because a top-level call sets that depth to nought on the way in: the frames a
+failed run left behind were overwritten by the next call from outside. A run
+made *from inside* a call has a run under it that carries on afterwards, and
+that one returns through the frames of a run that is over.
+
+**Decided.** A run gives back what it took, however it ends. `execute` keeps
+the depth the run began at and the count of what was in hand for the length of
+an instruction, and puts both back when the run did not work. Two lines, and
+the reason they are in `execute` rather than in `run_body` is that `execute` is
+what a call in is: one per crossing, and the only place that knows a run has
+ended.
+
+**And a stop is refused in one of those runs.** A breakpoint keeps the frames
+where they are so that `kest_resume` can carry on, and there is nothing to
+carry on into here — what the run is standing under is a C frame of the host's,
+and by the time a host could ask, that function has returned. So the machine
+says `K0708` where the breakpoint is, with the way in under it, and the run
+ends as a refusal. The reference already said the debugger does not stop inside
+a call the host makes back in; the machine says it now, to every host, rather
+than leaving it to the one tool that knew.
+
+**What this is really about.** Two ways out of a run were written for the run
+that has nothing under it. Every crossing in this library is counted, measured
+and held to something — and what was never asked is what the machine looks like
+the moment *after* one of them goes wrong with another one underneath it. The
+question to ask of a boundary is not only what crosses it but what is left when
+something on the far side does not come back.

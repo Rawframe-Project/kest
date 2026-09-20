@@ -4724,10 +4724,11 @@ a machine that is stopped looks idle to anything that asks whether the program
 is running — and it is standing on its heap all the same. The five doors that
 would take that heap away, or move the ceiling over it, refuse here the way
 they refuse inside a call: `kest_collect`, `kest_heap_reset`,
-`kest_scratch_mark`, `kest_scratch_rewind` and `kest_heap_allow`. A walk asked for at a breakpoint used to reach nothing
-at all, because what it reads to is where the slots had got to when the host
-last called in, and it gave the stopped frames' memory back; the machine read
-it again on the way out of the breakpoint. What a host may do to a stopped
+`kest_scratch_mark`, `kest_scratch_rewind` and `kest_heap_allow`. A walk asked
+for at a breakpoint used to reach nothing at all, because what it reads to is
+where the slots had got to when the host last called in, and it gave the
+stopped frames' memory back; the machine read it again on the way out of the
+breakpoint. What a host may do to a stopped
 machine is look at it, let it carry on, and free it. See D1078.
 
 A host does all of this itself through ten doors. `kest_break_byte` is the byte
@@ -4747,7 +4748,22 @@ a host tells a stop from a refusal by asking rather than by reading the report.
 holds, what each slot is and what the body called it.
 
 What it does not do: show a frame of the host, which is not a frame of this
-machine; or stop inside a call the host makes back in.
+machine; or stop inside a call the host makes back in — and that second one is
+the machine's answer rather than this tool's manners. A breakpoint keeps the
+frames where they are so a resume can carry on, and a run the host made from
+inside a call of its own is standing under a C frame of the host's that has
+returned by the time anybody could ask. So the machine says `K0708` where the
+breakpoint is, with the way in under it, and the run ends as a refusal. See
+D1079.
+
+A run made that way gives back what it took however it ends, which is the other
+half of the same sentence. A call back in that is refused — by arithmetic that
+cannot be done, by a bounds check, by anything — takes its frames with it, and
+the call it was made from carries on and answers what it would have answered.
+It did not: a refused run left its frames behind and the call underneath
+returned through them, answering a number that was nothing. Nothing saw it for
+as long as this project has existed, because a call from outside starts its
+frames at the bottom and wrote over them. See D1079.
 
 ## An editor
 

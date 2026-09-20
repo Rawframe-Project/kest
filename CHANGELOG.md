@@ -281,6 +281,16 @@ already told to do. `kest_collect`, `kest_heap_reset`, `kest_scratch_mark`,
 it — freeing a stopped machine is still allowed, because it is the only way out
 for a host that has given up on one. See D1078.
 
+**A call the host makes from inside a call ends like a run.** A bound function
+may call back into the machine. One of those runs that ended in a refusal left
+its frames behind, and the call it was made from returned through them and
+answered a number that was nothing — no refusal, nothing in the report. The
+frames go with the run now, however it ends. **What a host has to do:** nothing,
+and one thing it can stop working around. A breakpoint in a run made that way
+is refused with `K0708` rather than stopping the machine, because there is
+nothing for `kest_resume` to carry on into once the bound function has returned.
+See D1079.
+
 **A run of bytes takes a whole piece of text.** `push(out, piece)` and
 `fit(out, piece)` put the piece on the end in one move where a program used to
 write a loop, because text is its bytes and a `[u8]` is the same bytes. Every
