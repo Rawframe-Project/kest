@@ -35821,3 +35821,54 @@ anything the walk knew.
 never combines — the same method that found D1062 through D1065, and the fifth
 finding of the week from asking what a sentence says rather than what a check
 does.
+
+## D1074. Three nets, repaired, and one that had nothing left to catch
+
+*argued*, and each of the three was read by running it.
+
+D1071 moved a machine's report out of the build's arena and into the machine's
+own. Three holes are about the memory a machine is made of, and the change
+moved what each of them catches.
+
+**One had nothing left to catch, and is gone.** `diags->arena = own;` stood in
+`kest_runtime_new` to move a machine's words out of the build's arena at the
+moment the machine started: before that line they were the build's, because a
+machine that never starts is a machine nobody can ask, and D574 and D617 wrote
+that down. The report is made in the machine's own arena from the first byte
+now, so the line moved nothing and breaking it broke nothing — the hole ran,
+the tree built, and the host said everything it says. The line is gone and the
+hole with it, which is the rule: a hole goes when what it is about goes.
+
+A machine that never starts still gives its words to the build, because
+`kest_diags_absorb` copies them into the build's arena and the machine's goes
+back. That is what makes taking the line out safe rather than convenient.
+
+**One is caught earlier than it was.** A machine given twice the stack it asked
+for is now refused by the host's sentence about what a machine costs against a
+walk of the whole program, before it reaches the sentence about slots. Both are
+the host noticing a machine bigger than it should be; the hole names the
+earlier one.
+
+**And one moved from the ladder to the weighing.** The starved refusal wearing
+an ordinary code used to be caught by a rung refusing at an earlier stage than
+the rung above it. The weighing catches it first: it knows a program ran out of
+room by the code it refused with, so a starved refusal called `K0605` is a
+weighing with nothing to weigh, and it says `0 program(s) ran out of room being
+read` four times before the ladder says anything.
+
+**And one sentence that nothing can be made to say any more.** The ladder's
+band ordering — a rung refusing at an earlier stage than the rung above it —
+was said by the starved-code break and is not any more. Two ways of making one
+were tried and each is caught earlier by a check about the thing itself: a
+starved refusal wearing an ordinary code is a weighing with nothing to weigh,
+and the machine's own out-of-memory wearing the reader's code is *a machine
+with nothing left was read as a host's own ceiling*. The bands are held by what
+raises them rather than by their order on the way down, so the order is a
+reading with nothing left to read. It is written down beside the reason the way
+the refusals nothing can be made to ask for are, and it stays: the day a fourth
+band is added it is the sentence that says the ladder stopped making sense.
+
+**Why this is written down rather than done quietly.** A hole repointed is a
+hole whose sentence has changed, and a hole deleted is a net that is not there
+any more. Both are things a reader of this project has to be able to check, and
+the count in `CLAUDE.md` is eight hundred and seventy-seven.

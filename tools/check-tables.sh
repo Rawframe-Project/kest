@@ -1561,6 +1561,20 @@ NOT_SAID = (("check-lends.sh", "the host that lends by name does not build"),
             ("check-header.sh", "the library is not built"),
             ("check-header.sh", "the host the header describes did not run"),
             ("check-ceilings.sh", "ceilings: the tree does not build"),
+            # A rung wearing a band from further up the ladder. Two ways of
+            # making one were tried and each was caught earlier by a check
+            # about the thing itself: a starved refusal wearing an ordinary
+            # code is a weighing with nothing to weigh, and the machine's own
+            # out-of-memory wearing the reader's code is `a machine with
+            # nothing left was read as a host's own ceiling`. The bands are
+            # held by what raises them rather than by their order on the way
+            # down, so the order is a reading with nothing left to read. It
+            # stays because the day a fourth band is added it is the sentence
+            # that says the ladder stopped making sense. See D648 and D1074.
+            ("check-ceilings.sh",
+             "ceilings: with ${level}K a rung refused with $said below one "
+             "that refused with $before, so an earlier stage held on further "
+             "down the ladder than a later one"),
             # The last thing that check asks, after every part of what it needs
             # has been asked about on its own: a program of two files that
             # works. Every way it can fail to work is a way one of those parts

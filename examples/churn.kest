@@ -392,9 +392,15 @@ fn main() -> i32 {
     // in a table. What it answers is not the point; that it compiles is, and
     // it did not until D1073.
     let counts: table.Table<text, i32> = table.empty()
-    table.set(counts, "thing 1", 7)
+    for i in 0..THINGS {
+        table.set(counts, "thing {i} at 0", i + 1)
+    }
+    table.remove(counts, "thing 0 at 0")
     if counting(kept, counts) <= 0 {
         return 13
+    }
+    if table.orElse(counts, "nobody", 0 - 1) != 0 - 1 {
+        return 14
     }
 
     // The ring is still a ring in both, after everything that was done to them.

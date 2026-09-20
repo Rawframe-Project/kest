@@ -38823,3 +38823,34 @@ See D1073.
 
 **Runs:** `examples/churn.kest` with the fix and without; nine narrowing
 programs to find which of the parts mattered; `make check`.
+
+## Three nets, after the machine's report moved
+
+D1071 moved a machine's report out of the build's arena. Three holes are about
+the memory a machine is made of and the change moved what each catches.
+
+One had nothing left to catch: `diags->arena = own;` moved a machine's words out
+of the build's arena at the moment it started, and the report is made in the
+machine's own arena from the first byte now. Breaking the line broke nothing.
+The line is gone and the hole with it, which is the rule — a hole goes when
+what it is about goes. A machine that never starts still gives its words to the
+build, because `absorb` copies them there.
+
+One is caught earlier: a machine given twice the stack it asked for is refused
+by the host's sentence about what a machine costs against a walk of the whole
+program before it reaches the one about slots.
+
+One moved from the ladder to the weighing: a starved refusal wearing an
+ordinary code is a weighing with nothing to weigh, and it says so four times
+before the ladder says anything.
+
+And two sentences that had drifted from what they describe: the gate said
+`seven edits` where the reload now drives nine, and `std.table.slotOf`'s copy
+for a table of numbers was asking for two slots no run of it used, because the
+frame added to `examples/churn.kest` was the only thing that had ever made one
+and it never probed past a full slot.
+
+See D1074.
+
+**Runs:** each of the three holes applied by hand and the check run under it;
+`make check`.

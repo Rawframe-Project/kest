@@ -2545,7 +2545,7 @@ done
 if [ -n "$reload_wrong" ]; then
     complain "reload" "an edit a reload has to have an answer for: $reload_wrong"
 else
-    say "reload" "seven edits a reload has to have an answer for, each ending \
+    say "reload" "nine edits a reload has to have an answer for, each ending \
 with a world: the new program's where the shape did not move, and the one the \
 host was holding where it did"
 fi

@@ -1229,7 +1229,7 @@ lines being right is one thing and the files arriving is another.
 The self-checking here is large and it is not free. Measured on the machine this
 was written on: `make fast` is a quarter of a second, `make check` is about ten
 minutes, and six and a half of those are the backstops — eight hundred and
-seventy-eight holes, each of which copies the tree, builds it and runs a check.
+seventy-seven holes, each of which copies the tree, builds it and runs a check.
 Both numbers are this machine's; what is the same anywhere is that the gate is
 mostly the holes.
 

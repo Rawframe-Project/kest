@@ -8399,20 +8399,6 @@ fn main() -> i32 {
         "caught": "what a program imports is most of what building it costs",
     },
     {
-        # Words a machine was never asked for, kept somewhere they outlive it.
-        # What a host has been told is the host's and goes back; what it was
-        # not told is the machine's and goes with it. A machine that wrote them
-        # where the build keeps things would hand every machine ever started to
-        # whoever asked the build afterwards.
-        "what": "words a machine was never asked for, kept past it",
-        "file": "src/vm.c",
-        "from": r"""    diags->arena = own;""",
-        "to": r"""    (void)own;""",
-        "make": ["kest", "embed"],
-        "host": "examples/embed",
-        "caught": "said nothing about filling an array",
-    },
-    {
         # A report for a tool that leaves out where it happened. What a form
         # for a person draws, a form for a tool names — and one that names
         # neither hands a tool a sentence and no way to put it anywhere. What
@@ -9394,7 +9380,12 @@ fn main() -> i32 {
         "to": """    rt->stack = KEST_ARENA_ARRAY(own, KestValue, rt->stack_slots * 2);""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "more slots is",
+        # Caught by the sentence about what a machine costs rather than by the
+        # one about slots, and caught earlier: a machine that took twice the
+        # stack it asked for is dearer than a walk of the whole program, which
+        # that host refuses before it reaches the slots. Both are the host
+        # noticing a machine bigger than it should be. See D1074.
+        "caught": "and a walk of the program is",
     },
     {
         # What a build cost, answered by something that is not the arena it was
@@ -12595,7 +12586,12 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "to": """#define KEST_STARVED_CODE "K0605\"""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
-        "caught": "below one that refused with",
+        # Caught by the weighing rather than by the ladder's ordering, and
+        # caught earlier: the weighing knows a program ran out of room by the
+        # code it refused with, so a starved refusal wearing an ordinary code
+        # is a weighing that finds nothing to weigh. It says so four times
+        # before the ladder says anything. See D1074.
+        "caught": "0 program(s) ran out of room being read",
     },
     {
         # A second ladder that is the first one walked again. Two programs are

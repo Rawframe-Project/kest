@@ -5947,12 +5947,15 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
     // counts one up is beside what counts it down and a machine that was never
     // made was never counted.
     atomic_fetch_add_explicit(rt->standing, 1u, memory_order_relaxed);
-    // And from here what this machine says is written in its own room rather
-    // than in the build's. Everything above this line is said by a machine
-    // that never started, which is a machine nobody can ask: those words are
-    // the build's, because the build is what a host has then. See D574 and
-    // D617.
-    diags->arena = own;
+    // What this machine says has been written in its own room since it was
+    // asked for: `kest_start` makes the arena and the report together, because
+    // the report is the first thing in it (D1071). What used to stand here was
+    // a line moving the report out of the build's arena at this point, which
+    // is what D574 and D617 needed when a machine's words began life in the
+    // build's. There is nothing to move now — and a machine that never starts
+    // still gives its words to the build, because `kest_diags_absorb` copies
+    // them there and the arena goes back. See D1074.
+    //
     // And what it keeps of what nobody asks for. A machine does not end, so
     // this is the one list in this project with a ceiling. See D618.
     diags->most = KEST_MOST_UNREAD;
