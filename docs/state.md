@@ -33,6 +33,7 @@ reader who finds the same shape again should find the first one beside it.
 | F18 | the front page said there was no collector | there has been a non-moving mark-and-sweep heap since D996, and the page still said *flat to the byte across a hundredfold, and no collector*. The reference now has a section saying what the collector is, what it walks from, when it walks, what a pause costs and why there is no incremental marking (D1045) |
 | F19 | the front page said the C API was 97 doors and the header had 98 | and nothing counted either. The family of every door is a table in `check-tables.sh` now, the reference says the six counts and how many the smallest host calls, and both are read off the header and off `examples/least.c` rather than remembered (D1046) |
 | F20 | an enum could not take types and a struct could | so *the thing or why not* could not be written once: an API lost the reason, took an array to push reasons into, or declared four lines per value type, and a generic function could not answer one at all. `enum Answer<T>` goes through the same door a generic struct does now (D1048) |
+| F21 | a project's `source` lines did nothing | they were read, printed by `kest doctor` and `--json`, and looked at by no other line of the compiler — so multiple source roots, which is how a dependency is written here, did not resolve. The loader finds the project above the first file and resolves every import under the sources now, refusing a module under two of them (D1049) |
 
 ## Read from the source rather than run
 

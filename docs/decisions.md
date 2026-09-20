@@ -34416,3 +34416,79 @@ different reasons. A function that answers `T?` and had more to say threw it
 away; one that answers an enum where there is one reason made a reader write an
 arm for nothing. It is in the reference beside the enum, where somebody meets
 it.
+
+## D1049. A project's sources are where its modules are, and now they are
+
+**Decided.** Inside a project, an import is looked for under every `source`
+line the manifest names, in the order they are written, and nowhere else. Which
+project a file is in is where the file is: `kest.project` in its directory or
+in one above it. A module under two sources is refused; a module under none
+says which ones were looked under. There is still no registry and nothing is
+downloaded.
+
+**What was reproduced.** A repository of the shape section 18 asks for -- three
+source roots, two teams' directories, two vendored third-party modules whose
+names end in the same word, and a module in one root importing a module in
+another:
+
+    project big
+    entry src/main.kest
+    source src
+    source vendor
+    source teams
+
+and `kest run` in it answered `K0701` — *cannot read* the path an import under
+`src` would be at, with *an import resolves from where the file that wrote it
+is* under the line. `ai.plan` was under `teams`, which is a `source` line. **The `source`
+lines did nothing.** `src/project.c` read them, `kest doctor` and `--json`
+printed them, and no other line of this compiler ever looked at one. The
+reference said *a dependency is another `source` line pointing at wherever
+somebody put it*, and that was not true of anything.
+
+**What it is now.** The loader finds the project above the first file it is
+given and resolves every non-`std` import under the sources. A file's own root
+-- what it calls itself taken off where it is -- is what resolves an import for
+a file on its own, and inside a project it is one of the sources or the project
+is written wrongly. Uniform for every file of the project, which is the point:
+two files of one program must not disagree about what `import a.b` means.
+
+**Why the loader finds the project rather than being told.** A host embedding
+one file of a project has to resolve what the command line resolves, or a
+program means one thing when it is run and another when it is embedded. Told
+would mean a new door on `include/kest.h` and a host that forgot it; found
+means the answer is a fact about where the program is. It is a bounded walk --
+thirty-two directories -- and `project` moved above `loader` in the pipeline to
+allow it, which it always could have: it depends on `mem` and nothing else.
+
+**Why two sources holding one module is refused.** That is what a vendored copy
+is most likely to be, and taking whichever was looked in first is the silent
+half of the bug D1039 fixed loudly. Two modules whose names merely *end* in the
+same word are fine and always were since D1039: `render.math` and
+`physics.math` sit in two vendored directories of the tested repository and
+both resolve.
+
+**What section 18 asked, answered.**
+
+*Exact revision pinning* — a `source` line is a directory. Pinning is the
+version control the directory is in, which is where a game studio already keeps
+it, and this project does not build a second one.
+
+*Transitive roots* — there are none. A project's sources are its own; a
+dependency's own manifest is not read, because a dependency here is source in a
+directory rather than a package with a graph behind it. What that costs is that
+a vendored library's dependencies have to be vendored too, and what it buys is
+that there is one list and a reader can see it.
+
+*Duplicate module handling* — refused, above.
+
+*Vendoring* — a directory and a `source` line, which is what the tested
+repository does with two of them.
+
+*Project manifests* — `name value` lines, unchanged.
+
+*Reproducible source resolution* — the sources are ordered and the answer does
+not depend on which file asked. Two sources holding one module is refused
+rather than resolved, so there is no order to depend on.
+
+**And no registry**, which section 18 forbids building without users. There are
+none.

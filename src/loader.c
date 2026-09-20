@@ -1,6 +1,9 @@
 #include "loader.h"
 
 #include <limits.h>
+
+#include "project.h"
+
 #ifndef KEST_LIB_DIR
 #define KEST_LIB_DIR "/usr/local/lib/kest/"
 #endif
@@ -350,6 +353,96 @@ static bool is_library(const char *dotted, size_t length) {
     return length >= 4 && memcmp(dotted, "std.", 4) == 0;
 }
 
+// The roots a project says its modules are under, and where the manifest that
+// said so is. A file's own root -- worked out from what it calls itself and
+// where it is -- is the first place an import is looked for, and these are the
+// rest. See D1049.
+typedef struct {
+    const char *sources[KEST_MOST_SOURCES];
+    uint32_t count;
+    const char *where;
+} Roots;
+
+// The project above a file, if there is one: `kest.project` in the directory
+// the file is in, or in one above it. Every file of a project has to resolve
+// an import the same way, so which roots there are is a fact about where the
+// program is rather than about who asked for it -- and a host embedding one
+// file of a project then resolves what the command line resolves. Bounded,
+// because a walk up a path is a walk with a machine at the end of it.
+static void roots_above(KestArena *arena, const char *path, Roots *roots) {
+    roots->count = 0;
+    roots->where = NULL;
+    if (path == NULL) {
+        return;
+    }
+    const char *at = directory_of(arena, path);
+    if (at == NULL) {
+        return;
+    }
+    for (uint32_t up = 0; up < 32; up++) {
+        const char *why = NULL;
+        KestProject *project = kest_project_read(arena, at, &why);
+        if (project != NULL) {
+            for (uint32_t i = 0; i < project->source_count; i++) {
+                roots->sources[roots->count++] = project->sources[i];
+            }
+            roots->where = at[0] == '\0' ? "./" : at;
+            return;
+        }
+        // The directory above this one, which is this one with its last piece
+        // taken off. `src/` becomes the empty path, which is where the command
+        // was run; the empty path has nothing above it without going somewhere
+        // nobody named, so that is the top.
+        if (at[0] == '\0') {
+            return;
+        }
+        size_t length = strlen(at);
+        while (length > 0 && at[length - 1] == '/') {
+            length--;
+        }
+        while (length > 0 && at[length - 1] != '/') {
+            length--;
+        }
+        const char *up_one = length == 0 ? "" : kest_arena_strndup(arena, at,
+                                                                   length);
+        if (up_one == NULL || strcmp(up_one, at) == 0) {
+            return;
+        }
+        at = up_one;
+    }
+}
+
+// A root a manifest names, put under the directory the manifest is in: a
+// `source` line is written from where somebody stands to read it, which is
+// beside the project and not beside whoever ran the command.
+static const char *beneath(KestArena *arena, const char *where,
+                           const char *source) {
+    if (where == NULL) {
+        return source;
+    }
+    size_t room = strlen(where) + strlen(source) + 3;
+    char *joined = kest_arena_alloc(arena, room, 1);
+    if (joined == NULL) {
+        return source;
+    }
+    size_t used = (size_t)snprintf(joined, room, "%s%s", where, source);
+    if (used > 0 && joined[used - 1] != '/') {
+        snprintf(joined + used, room - used, "/");
+    }
+    return joined;
+}
+
+// Whether a file is there to be read, which is what says an import resolved
+// under this root and not another.
+static bool a_file_is_at(const char *path) {
+    FILE *file = fopen(path, "rb");
+    if (file == NULL) {
+        return false;
+    }
+    fclose(file);
+    return true;
+}
+
 // The one place a file that could not be read is refused, whether a command
 // named it or an import asked for it. What a reader is pointed at is the
 // import when there is one and nothing when the path came from a command line,
@@ -364,7 +457,8 @@ static void refuse_to_read(KestDiags *diags, const char *path, KestSpan blame,
 }
 
 static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
-                     const char *library, const char *given, KestUnits *units,
+                     const char *library, const Roots *roots,
+                     const char *given, KestUnits *units,
                      KestSpan blame, const KestSource *blamed_in, bool follow,
                      bool from_library, const char **root_out) {
     // One spelling per file, whether it was named on a command line or worked
@@ -405,6 +499,30 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
                                    "which is `%.*s`",
                                    slash == NULL ? 1 : (int)(slash - path),
                                    slash == NULL ? "." : path);
+            } else if (roots != NULL && roots->count > 0) {
+                // A project says where its modules are, so what a reader
+                // needs is the list that was looked under rather than the one
+                // path that happened to be tried first. See D1049.
+                char under[512];
+                size_t written = 0;
+                for (uint32_t r = 0; r < roots->count && written + 1 < sizeof
+                                                             under; r++) {
+                    int said = snprintf(under + written,
+                                        sizeof under - written, "%s`%s`",
+                                        r == 0 ? "" : ", ",
+                                        roots->sources[r]);
+                    if (said < 0) {
+                        break;
+                    }
+                    written += (size_t)said;
+                }
+                kest_diags_suggest(diags,
+                                   "an import resolves from where the file "
+                                   "that wrote it is, which is `%.*s`, and "
+                                   "then from what this project says its "
+                                   "sources are: %s",
+                                   slash == NULL ? 1 : (int)(slash - path),
+                                   slash == NULL ? "." : path, under);
             } else if (slash == NULL) {
                 kest_diags_suggest(diags,
                                    "an import resolves from where the file "
@@ -579,9 +697,52 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
         if (next == NULL) {
             return false;
         }
-        if (!load_one(arena, diags, root, library, next, units, decl->name,
-                      &units->items[self].source, follow, library_import,
-                      NULL)) {
+        // And where a project says its modules are, which is the whole answer
+        // when there is one: every file of a project has to resolve an import
+        // the same way, and a file's own directory is one of the sources or
+        // the project is written wrongly. A module found under two of them is
+        // two modules of one name -- which is the thing a vendored copy is
+        // most likely to be -- so it is refused rather than taken from
+        // whichever was looked in first. See D1049.
+        if (!library_import && roots != NULL && roots->count > 0) {
+            const char *found = NULL;
+            const char *twice = NULL;
+            for (uint32_t r = 0; r < roots->count; r++) {
+                const char *under = path_of_import(
+                    arena, beneath(arena, roots->where, roots->sources[r]),
+                    name, decl->name.length);
+                if (under == NULL || !a_file_is_at(under)) {
+                    continue;
+                }
+                if (found == NULL) {
+                    found = under;
+                } else if (twice == NULL) {
+                    twice = under;
+                }
+            }
+            if (twice != NULL) {
+                kest_diags_in(diags, &units->items[self].source);
+                kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0707", decl->name,
+                               "`%.*s` is under two of this project's sources",
+                               (int)decl->name.length, name);
+                kest_diags_suggest(diags,
+                                   "`%s` and `%s` are two modules of one "
+                                   "name, and which one this is cannot be "
+                                   "worked out from the line",
+                                   found, twice);
+                return true;
+            }
+            // Nothing under any of them is nothing, and what is refused is
+            // the path the file's own root would have given: it is the one a
+            // reader recognises, and the suggestion beside it says what was
+            // looked under.
+            if (found != NULL) {
+                next = found;
+            }
+        }
+        if (!load_one(arena, diags, root, library, roots, next, units,
+                      decl->name, &units->items[self].source, follow,
+                      library_import, NULL)) {
             return false;
         }
     }
@@ -629,11 +790,13 @@ bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
         return false;
     }
     const char *root = directory_of(arena, paths[0]);
+    Roots roots;
+    roots_above(arena, paths[0], &roots);
     KestSpan nowhere = {0, 0};
     for (int i = 0; i < count; i++) {
         // The first file settles the root; the rest are read against it.
-        if (!load_one(arena, diags, root, library, paths[i], units, nowhere,
-                      NULL, true, false, i == 0 ? &root : NULL)) {
+        if (!load_one(arena, diags, root, library, &roots, paths[i], units,
+                      nowhere, NULL, true, false, i == 0 ? &root : NULL)) {
             return false;
         }
     }
@@ -743,6 +906,7 @@ bool kest_read_source(KestArena *arena, KestDiags *diags, const char *path,
 bool kest_read_unit(KestArena *arena, KestDiags *diags, const char *path,
                      KestUnits *units) {
     KestSpan nowhere = {0, 0};
-    return load_one(arena, diags, "", "", path, units, nowhere, NULL, false,
+    return load_one(arena, diags, "", "", NULL, path, units, nowhere, NULL,
+                    false,
                     false, NULL);
 }

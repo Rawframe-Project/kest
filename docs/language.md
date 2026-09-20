@@ -4416,6 +4416,34 @@ somebody put it: there is no registry, nothing is downloaded and nothing is
 locked. A name the compiler does not know is refused rather than skipped,
 because a misspelt line reads exactly like one that is not there.
 
+**Where an import is looked for.** A file on its own resolves `import a.b` from
+its own root — what it calls itself, taken off where it is, so a file that says
+`module game.npc` and sits two directories down has the root above those two. **Inside a project the sources are
+the whole answer**: every `source` line is looked under, in the order they are
+written, and a file's own directory is one of them or the project is written
+wrongly. That is what makes every file of a project resolve an import the same
+way, and what makes a `source` line a dependency rather than a comment.
+
+Which project a file is in is where the file is: `kest.project` in its
+directory or in one above it. A host embedding one file of a project therefore
+resolves what the command line resolves.
+
+A module under **two** of the sources is refused. Two directories holding a
+module of one name is what a vendored copy is most likely to be, and which of
+them an import means cannot be worked out from the line:
+
+```
+error[K0707]: `physics.math` is under two of this project's sources
+   |
+ 3 | import physics.math
+   |        ^^^^^^^^^^^^ `./vendor/physics/math.kest` and `./teams/physics/math.kest` are two modules of one name, and which one this is cannot be worked out from the line
+```
+
+and a module under none of them says which ones were looked under. Two modules
+whose names end in the same word are fine and always were — `render.math` and
+`physics.math` live in two vendored directories in the same program — because a
+name lives under the whole of its module.
+
 `kest build` compiles and says nothing when it compiles. There is no artifact:
 the bytecode is not a format anything else reads and is not stable, and what
 ships is the source beside the runtime. `kest test` runs each program named and
@@ -5929,7 +5957,7 @@ bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 502 lines:
-47956 bytes as tokens, 118617 as a tree, 155800 checked and 183201 compiled.
+47956 bytes as tokens, 118617 as a tree, 155816 checked and 183217 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
 
@@ -5946,7 +5974,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 17323 bytes, against the 183201 it costs to compile.
+file and 17323 bytes, against the 183217 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.

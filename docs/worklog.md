@@ -37924,3 +37924,50 @@ See D1048.
 carrying nothing; one nested in a generic struct; one as a table's value; a
 generic function answering one; equality, text and exhaustiveness;
 `examples/boxes.kest`; `make fast`; `make check`.
+
+## A `source` line did nothing
+
+Section 18 asks for a serious repository shape: multiple teams, internal
+libraries, vendored third-party source, multiple source roots. Written:
+
+    project big
+    entry src/main.kest
+    source src
+    source vendor
+    source teams
+
+with `game.rules` under `src`, `ai.plan` under `teams`, and `physics.math` and
+`render.math` vendored. `kest run` could not read any of them across a root.
+
+`src/project.c` read the `source` lines, `kest doctor` and `--json` printed
+them, and **no other line of this compiler ever looked at one**. The reference
+said *a dependency is another `source` line pointing at wherever somebody put
+it*, and that was true of nothing.
+
+The loader finds the project above the first file it is given -- `kest.project`
+in its directory or in one above, thirty-two levels at most -- and resolves
+every non-`std` import under the sources, in the order written. It finds the
+project rather than being told, because a host embedding one file of a project
+has to resolve what the command line resolves or a program means one thing run
+and another embedded. `project` moved above `loader` in the pipeline to allow
+it, which it always could have: it depends on `mem` and nothing else.
+
+Inside a project the sources are the whole answer rather than a fallback. Every
+file of a program has to agree about what `import a.b` means, and a file's own
+directory is one of the sources or the project is written wrongly.
+
+A module under two sources is refused: that is what a vendored copy is most
+likely to be, and taking whichever was looked in first is the silent half of
+the bug D1039 fixed loudly. Two modules whose names merely end in the same word
+are fine and have been since D1039 — the tested repository vendors
+`physics.math` and `render.math` and both resolve.
+
+Pinning is the version control the directory is in. There are no transitive
+roots: a dependency's own manifest is not read, which costs a vendored
+library's dependencies being vendored too and buys one list a reader can see.
+And no registry, which section 18 forbids building without users.
+
+See D1049.
+
+**Runs:** the repository above, before and after; a module under two sources; a
+module under none; `make fast`; `make check`.

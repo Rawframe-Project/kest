@@ -958,8 +958,8 @@ diag     diagnostics, source spans, how near two words are, JSON output
 lexer    source -> tokens
 ast      syntax tree node definitions
 parser   tokens -> ast
-loader   follows imports and parses every file reachable
 project  what a manifest of `name value` lines says a project is
+loader   follows imports and parses every file reachable
 types    type representation, declarations, name lookup
 check    function bodies against those declarations
 contract proves the `no.alloc` promises

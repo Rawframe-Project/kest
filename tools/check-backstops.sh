@@ -592,7 +592,11 @@ fn main() -> i32 {
         "make": ["kest", "debug"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
-        "caught": "`--room 2000` said",
+        # Which of the three rungs says it is whichever the compiler's own
+        # memory lands on, and that moves when the compiler does. What is
+        # caught is a rung saying the machine ran out where a ceiling should
+        # have been carried back, not a particular one.
+        "caught": "said `error[K0639]: there was not enough memory to finish",
     },
     {
         # And the same answer written the other way. A run that ran out is
@@ -5860,7 +5864,7 @@ anywhere, and it is why the gate holds""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "118306 as a tree, 155800 checked",
+        "caught": "118306 as a tree, 155816 checked",
     },
     {
         # And the section they are in saying whose machine they are. Bytes of
@@ -10216,6 +10220,34 @@ fn main() -> i32 {
         "tool": "tools/check-tables.sh",
         "arguments": [],
         "caught": "the language server does not offer it",
+    },
+    {
+        # A module under two of a project's sources, taken from whichever was
+        # looked in first. A `source` line is where a dependency comes from
+        # here, and two of them holding one module is what a vendored copy is
+        # most likely to be: which one an import means cannot be worked out
+        # from the line. See D1049.
+        "what": "two of a project's sources holding one module, taken anyway",
+        "file": "src/loader.c",
+        "from": """            if (twice != NULL) {""",
+        "to": """            if (false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a module under two of a project's sources said",
+    },
+    {
+        # And a module under none of them, told the one path the file's own
+        # directory would have given. A project says where its modules are, so
+        # what a reader needs is the list that was looked under.
+        "what": "a module under none of a project's sources, told about one",
+        "file": "src/loader.c",
+        "from": """            } else if (roots != NULL && roots->count > 0) {""",
+        "to": """            } else if (false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a module under none of a project's sources said",
     },
     {
         # A door of the public header that nothing says what it is for. A

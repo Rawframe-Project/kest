@@ -4593,6 +4593,61 @@ case "$kept" in
     ;;
 esac
 
+# A project with more than one place its modules come from, which is what a
+# `source` line says and what a dependency is here. Two of them holding a
+# module of one name is the thing a vendored copy is most likely to be, and
+# which one an import means cannot be worked out from the line -- so it is
+# refused rather than taken from whichever was looked in first. It takes a
+# manifest and three files, which is why it is here rather than in the table
+# above. See D1049.
+mkdir -p "$scratch"/refused/roots/one/pack "$scratch"/refused/roots/two/pack
+cat > "$scratch"/refused/roots/kest.project <<'KEST'
+project roots
+entry one/main.kest
+source one
+source two
+KEST
+cat > "$scratch"/refused/roots/one/main.kest <<'KEST'
+module main
+
+import pack.thing
+
+fn main() -> i32 {
+    return thing.n() - 1
+}
+KEST
+cat > "$scratch"/refused/roots/one/pack/thing.kest <<'KEST'
+module pack.thing
+
+fn n() -> i32 no.alloc no.host {
+    return 1
+}
+KEST
+cp "$scratch"/refused/roots/one/pack/thing.kest \
+   "$scratch"/refused/roots/two/pack/thing.kest
+twice=$("$kest" check "$scratch"/refused/roots/one/main.kest 2>&1 </dev/null)
+case "$twice" in
+*"K0707"*"under two of this project's sources"*) ;;
+*)
+    complain "check: a module under two of a project's sources said \
+\`$(printf '%s' "$twice" | head -1)\`"
+    ;;
+esac
+
+# And the other half: a module under none of them. What a reader needs is the
+# list that was looked under, because a project says where its modules are and
+# the one path that happened to be tried first says nothing about the rest.
+rm -rf "$scratch"/refused/roots/two/pack "$scratch"/refused/roots/one/pack
+nowhere_under=$("$kest" check "$scratch"/refused/roots/one/main.kest 2>&1 \
+    </dev/null)
+case "$nowhere_under" in
+*"K0701"*"what this project says its sources are"*"\`one\`, \`two\`"*) ;;
+*)
+    complain "check: a module under none of a project's sources said \
+\`$(printf '%s' "$nowhere_under" | tail -1)\`"
+    ;;
+esac
+
 # A value written where a statement belongs is a `return` with the word left
 # off, and the function is told exactly that. What the arms are measured
 # against is then what the function gives back rather than nothing, so `none`

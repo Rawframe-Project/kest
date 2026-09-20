@@ -116,6 +116,15 @@ nothing. Nothing is added to the library — there is no `std.result` — and th
 reference says which of `T?`, `bool` and an enum a fallible function should
 answer with. See D1048.
 
+**A project's `source` lines are where its modules are looked for.** They were
+read and printed and nothing else, so multiple source roots — which is how a
+dependency is written here — did not resolve. **What a program has to do:**
+nothing, unless it has a project whose files sit outside every `source` line,
+which was never resolvable across roots anyway. A module under two sources is
+now `K0707` rather than whichever was looked in first. Which project a file is
+in is where the file is, so a host embedding one file of a project resolves
+what the command line resolves. See D1049.
+
 **What changed for a host.** The version. The other three numbers — the C ABI,
 the JSON schema, and the deterministic profile — still read 4, 3 and 1, and
 will be settled to clean `0.0.x` numbers once the architecture this reset is
