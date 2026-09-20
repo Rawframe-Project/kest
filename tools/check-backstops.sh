@@ -15596,6 +15596,26 @@ kest 9.9.9""",
         "caught": "builds no archive named for",
     },
     {
+        # A promise is part of a function's type, so the name that type is
+        # written under has to carry it. `deterministic` was not written into
+        # one: what stood here was `room += 14`, a number grown after the
+        # memory it described had been handed out, and no word at all. So a
+        # message telling a reader to write the promise into the shape showed
+        # them the shape without it, and `--json` handed a tool the same.
+        # Found by a slice whose hot phase took a rule as a value. See D1064.
+        "what": "a promise left out of the name of a shape that carries it",
+        "file": "src/types.c",
+        "from": """        if (type->deterministic) {
+            snprintf(written + used, room - used, " deterministic");
+        }""",
+        "to": """        if (type->deterministic) {
+            used += 0;
+        }""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "a shape promising `deterministic` is named",
+    },
+    {
         # A count on the front page that nothing counts. It said 88 while the
         # header declared 97, through two missions that each added a door, and
         # what found it was a reader from outside rather than anything here.

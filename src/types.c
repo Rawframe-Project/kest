@@ -2557,8 +2557,8 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
             type->result == NULL || type->result->tag == KEST_T_VOID
                 ? NULL
                 : kest_type_name(arena, type->result);
-        size_t room =
-            strlen("fn()") + strlen(" no.alloc") + strlen(" no.host") + 1;
+        size_t room = strlen("fn()") + strlen(" no.alloc") +
+                      strlen(" no.host") + strlen(" deterministic") + 1;
         for (uint32_t i = 0; i < type->param_count; i++) {
             room += strlen(kest_type_name(arena, type->params[i])) + 2;
         }
@@ -2579,14 +2579,22 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
             used += (size_t)snprintf(written + used, room - used, " -> %s",
                                      result);
         }
+        // All three, in the order the library writes them. The third was
+        // added to the language by D942 and to this by nobody: what stood here
+        // was `room += 14`, which grew a number after the memory it described
+        // had been handed out and wrote no word at all. So a shape that
+        // promised `deterministic` was named as one that did not — in a
+        // message telling a reader to write the promise into the shape, in
+        // what `check` prints, and in the name a copy of a generic is compiled
+        // under. See D1064.
         if (type->no_alloc) {
             used += (size_t)snprintf(written + used, room - used, " no.alloc");
         }
-        if (type->deterministic) {
-            room += 14;
-        }
         if (type->no_host) {
-            snprintf(written + used, room - used, " no.host");
+            used += (size_t)snprintf(written + used, room - used, " no.host");
+        }
+        if (type->deterministic) {
+            snprintf(written + used, room - used, " deterministic");
         }
         return written;
     }

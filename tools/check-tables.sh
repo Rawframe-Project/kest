@@ -865,6 +865,31 @@ try:
     said_back = subprocess.run(['./kest', 'check', probe], capture_output=True,
                           text=True, stdin=subprocess.DEVNULL)
     said = said_back.stdout + said_back.stderr
+
+    # And every promise is written into the name of a shape that carries it,
+    # asked in the same room and for the same reason: a run is what says what a
+    # run does. A promise is part of a function's type, so a value that
+    # promises one is a different type from one that does not -- and the name
+    # that type is written under is what `check` prints, what `--json` hands a
+    # tool, what a message telling a reader to write the promise into the shape
+    # shows them, and what a copy of a generic is compiled under.
+    # `deterministic` was in none of them: what stood where the word should
+    # have been written was a number grown after the memory it described had
+    # been handed out. See D1064.
+    shaped = os.path.join(work, 'shape.kest')
+    for word in promise_words:
+        open(shaped, 'w').write(
+            "fn takes(f: fn(i32) -> i32 %s) -> i32 %s {\n"
+            "    return f(1)\n}\n" % (word, word))
+        shown = subprocess.run(['./kest', 'check', shaped],
+                               capture_output=True, text=True,
+                               stdin=subprocess.DEVNULL)
+        carried = re.search(r'\(fn\(i32\) -> i32([^)]*)\)', shown.stdout)
+        if carried is None or carried.group(1).strip() != word:
+            print("promises: a shape promising `%s` is named `%s`"
+                  % (word,
+                     carried.group(1).strip() if carried else shown.stdout))
+            failed = 1
 finally:
     shutil.rmtree(work, ignore_errors=True)
 

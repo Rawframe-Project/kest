@@ -35292,3 +35292,41 @@ pattern a program writes for itself.
 name this library already uses for exactly this meaning, no new keyword and no
 change to anything that was there. What it buys is that a table can be read
 *and written* inside the promise the language is for.
+
+## D1064. A promise is part of a type, so the name of the type carries it
+
+*argued*, and it was found by writing a hot phase that takes its rule as a
+value.
+
+A function's promises are part of its type: a value that promises `no.alloc`
+may go where one promising nothing is wanted and not the other way round. So
+the name a function type is written under has to carry them, and that name is
+what `kest check` prints, what `--json` hands a tool, what the message telling
+a reader to *write the promise into the shape* shows them, and what a copy of a
+generic is compiled under.
+
+`deterministic` was in none of them. What stood in `kest_type_name` where the
+word should have been written was
+
+    if (type->deterministic) {
+        room += 14;
+    }
+
+— a number grown after the memory it described had been handed out, and no word
+at all. D942 added the promise to the language and to the parser, the header,
+the chunk, the mark and the proof, and this is the one place it did not reach.
+So `fn(i32) -> i32 no.alloc no.host deterministic` was named
+`fn(i32) -> i32 no.alloc no.host`, and a reader told to write the promise into
+the shape was shown a shape without it.
+
+**What it was not.** Not a wrong answer: the promise itself is proved from the
+type and not from its name, and two functions differing only in a parameter's
+`deterministic` still fold to different signatures. What was wrong is
+everything a person or a tool reads.
+
+**What holds it now.** A probe in `check-tables.sh` that writes a shape
+carrying each promise the parser knows — read from the parser's own table, so a
+fourth promise is asked about without anybody remembering to — and requires the
+name to carry it. It is a new hole beside it, which this project's rule says
+not to add for a defect a program can show; this is not one. A program cannot
+see what its own types are named.

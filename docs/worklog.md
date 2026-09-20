@@ -38483,10 +38483,10 @@ See D1062.
 it caught; the three-module program the slice is being built out of; `make
 check`.
 
-## A table a frame can write to
+## A table a frame can write to, and a promise a type's name left out
 
-Found by section 35's slice, whose hot phase keeps a count per colonist in a
-table.
+Both found by the same thing: section 35's slice, whose hot phase keeps a count
+per colonist in a table and takes the rule it applies as a function value.
 
 **`table.set` may grow, so a frame that touched a table could not promise
 `no.alloc`.** Not because it allocates — because the one door into a table
@@ -38499,6 +38499,18 @@ is not, and reaches nothing. It cannot be written outside `std.table` because
 the four fields are `own`. `examples/inventory.kest` has a `no.alloc` body that
 raises prices through it and answers for the name that is not in stock.
 
-See D1063.
+**And `deterministic` was not written into the name of a function type.** A
+promise is part of a type, so the name that type is written under has to carry
+it — and that name is what `check` prints, what `--json` hands a tool, what the
+message telling a reader to *write the promise into the shape* shows them, and
+what a copy of a generic is compiled under. What stood in `kest_type_name` was
+`room += 14`: a number grown after the memory it described had been handed out,
+and no word at all. D942 put the promise in the parser, the header, the chunk,
+the mark and the proof and missed this one place. A probe in `check-tables.sh`
+writes a shape carrying each promise the parser knows and requires the name to
+carry it, so a fourth promise is asked about without anybody remembering to.
 
-**Runs:** `examples/inventory.kest`; `make check`.
+See D1063 and D1064.
+
+**Runs:** `examples/inventory.kest`; the promise-shape probe watched catching
+the word taken back out; `make check`.

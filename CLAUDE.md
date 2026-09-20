@@ -549,7 +549,9 @@ tools/             Build and development scripts. `make check` runs all of
                    formatter that drops the promise on a function, about a
                    keyword table written where a check cannot read it, about a
                    suggestion reworded so the list in it cannot be read, about
-                   a promise the parser stopped reading, about a run of
+                   a promise the parser stopped reading, about a promise
+                   left out of the name of a shape that carries it, about a
+                   run of
                    comments one shorter than the comments there are, about a
                    comment in an empty block that goes quietly, about a chain
                    that leaves an operator with nothing after it, about a chain
@@ -1210,7 +1212,7 @@ lines being right is one thing and the files arriving is another.
 The self-checking here is large and it is not free. Measured on the machine this
 was written on: `make fast` is a quarter of a second, `make check` is about ten
 minutes, and six and a half of those are the backstops — eight hundred and
-forty-seven holes, each of which copies the tree, builds it and runs a check.
+seventy-eight holes, each of which copies the tree, builds it and runs a check.
 Both numbers are this machine's; what is the same anywhere is that the gate is
 mostly the holes.
 

@@ -207,6 +207,16 @@ and reaches nothing. **What a program has to do:** nothing, but a frame that
 kept a count per thing outside a table because `set` may grow can keep it in
 one now and still promise `no.alloc`. See D1063.
 
+**An enum another module declared can be made.** It could be taken and matched
+and not written down: `npc.Mood.Calm` was `` `npc` has nothing called `Mood` ``.
+**What a program has to do:** nothing — the spelling that works now is the one
+that was already written. See D1062.
+
+**A function type's name carries `deterministic`.** It carried the other two.
+**What a tool has to do:** nothing, but `check --json`'s `parameters` and the
+shape a `K0402` message tells a reader to write were missing the word, so a
+tool that compared shapes as text was comparing the wrong ones. See D1064.
+
 **What changed for a host.** The version, and the profile. The C ABI and the
 JSON schema still read 4 and 3, the profile reads 2, and all three will be
 settled to clean `0.0.x` numbers once the architecture this reset is correcting
