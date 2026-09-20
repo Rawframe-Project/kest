@@ -2393,6 +2393,79 @@ static KestType *copy_wanted(Checker *checker, KestExpr *expr, KestType *shape,
     return kest_struct_of(program, shape, bindings, generics);
 }
 
+// Which copy of an enum shape a case is building. What it is built with says
+// as much as it can -- `Answer.Held(5)` is an `Answer<i32>` -- and where a case
+// carries nothing of the shape's own names, the copy comes from where the value
+// is going, which is the same rule `array()` and `store()` already keep.
+// See D1048.
+static KestType *copy_of_case(Checker *checker, KestExpr *expr,
+                              KestType *shape, KestSpan case_name,
+                              const KestType *expected) {
+    KestProgram *program = checker->program;
+    if (expected != NULL && expected->tag == KEST_T_ENUM &&
+        expected->decl == shape->decl && expected->type_param_count == 0) {
+        return (KestType *)expected;
+    }
+    const KestVariantType *one = NULL;
+    for (uint32_t c = 0; c < shape->case_count; c++) {
+        if (kest_word_same(shape->cases[c].name,
+                           span_text(checker, case_name), case_name.length)) {
+            one = &shape->cases[c];
+            break;
+        }
+    }
+    if (one == NULL) {
+        // Not a case of this shape, which is what `check_case` says and says
+        // better: it knows the ones there are.
+        return shape;
+    }
+
+    KestDiags *diags = program->diags;
+    kest_diags_mute(diags, true);
+    KestType *given[16];
+    uint32_t count = expr == NULL ? 0
+                     : expr->call.arg_count < 16 ? expr->call.arg_count : 16;
+    for (uint32_t i = 0; i < count; i++) {
+        given[i] = check_expr(checker, expr->call.args[i], NULL);
+    }
+    kest_diags_mute(diags, false);
+
+    uint32_t generics = shape->type_param_count;
+    const char **names = KEST_ARENA_ARRAY(program->arena, const char *,
+                                          generics == 0 ? 1 : generics);
+    KestType **bindings = KEST_ARENA_ARRAY(program->arena, KestType *,
+                                           generics == 0 ? 1 : generics);
+    if (names == NULL || bindings == NULL) {
+        checker->out_of_memory = true;
+        return NULL;
+    }
+    for (uint32_t g = 0; g < generics; g++) {
+        names[g] = shape->type_param_names[g];
+        bindings[g] = NULL;
+    }
+    for (uint32_t i = 0; i < count && i < one->payload_count; i++) {
+        kest_unify(one->payload[i], given[i], names, bindings, generics);
+    }
+    // And what the case carries nothing of, from where the value is going.
+    if (expected != NULL && expected->tag == KEST_T_ENUM &&
+        expected->decl == shape->decl &&
+        expected->type_arg_count == generics) {
+        for (uint32_t g = 0; g < generics; g++) {
+            if (bindings[g] == NULL) {
+                bindings[g] = expected->type_args[g];
+            }
+        }
+    }
+    for (uint32_t g = 0; g < generics; g++) {
+        if (bindings[g] == NULL) {
+            cannot_be_told(checker, expr == NULL ? case_name : expr->span,
+                           names[g], "what this is built with");
+            return NULL;
+        }
+    }
+    return kest_struct_of(program, shape, bindings, generics);
+}
+
 // A call to a generic function makes the copy it needs. What each type name
 // stands for is worked out from what was passed, and the copy is checked and
 // compiled as if it had been written out. See D040.
@@ -2620,6 +2693,13 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
                                             owner.length);
         if (choice != NULL && choice->tag == KEST_T_ENUM) {
             report_unimported(checker, owner);
+            if (choice->type_param_count > 0) {
+                choice = copy_of_case(checker, expr, choice,
+                                      expr->call.callee->field.name, expected);
+                if (choice == NULL) {
+                    return error_type(checker);
+                }
+            }
             return check_case(checker, expr, choice,
                               expr->call.callee->field.name);
         }
@@ -3111,6 +3191,16 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
         }
         if (choice != NULL && choice->tag == KEST_T_ENUM) {
             report_unimported(checker, owner);
+            // A case of a shape carrying nothing: which copy it is comes from
+            // where the value is going, because the case itself says nothing
+            // about the names. See D1048.
+            if (choice->type_param_count > 0) {
+                choice = copy_of_case(checker, NULL, choice, expr->field.name,
+                                      expected);
+                if (choice == NULL) {
+                    return error_type(checker);
+                }
+            }
             expr->field.object->type = choice;
             const KestVariantType *variant =
                 find_case(checker, choice, expr->field.name);

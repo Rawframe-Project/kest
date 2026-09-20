@@ -20,6 +20,41 @@ struct Pair<A, B> {
     second: B
 }
 
+// An enum takes types the same way, and this is the shape a fallible answer
+// has: the thing, or why not. `T?` says whether there is one and this says
+// what happened, which is the whole difference between them. A case that
+// carries none of the names -- `Trouble` here -- says nothing about which
+// copy it is, so which copy comes from where the value is going. See D1048.
+enum Answer<T> {
+    Held(T)
+    Trouble(text)
+}
+
+fn halved(n: i32) -> Answer<i32> no.alloc no.host {
+    if n % 2 != 0 {
+        return Answer.Trouble("odd")
+    }
+    return Answer.Held(n / 2)
+}
+
+// And the same shape over another type, which is another copy: what a case
+// carries is this copy's and what it is called is the shape's.
+fn firstWord(words: [text]) -> Answer<text> no.alloc no.host {
+    for one in words {
+        return Answer.Held(one)
+    }
+    return Answer.Trouble("none")
+}
+
+// A body that takes types and gives one back, which is where the two halves
+// of this meet: the copy of the enum is made from the copy of the function.
+fn orElse<T>(answer: Answer<T>, instead: T) -> T no.alloc no.host {
+    return match answer {
+        Held(one) -> one
+        Trouble(why) -> instead
+    }
+}
+
 // A function that takes types and gives back a copy of a shape that takes
 // them. Which copy comes from what was passed, at the call and nowhere else.
 fn wrapped<T>(a: T) -> Box<T> {
@@ -173,6 +208,38 @@ fn main() -> i32 {
     let smaller: fn(i32, i32) -> bool no.alloc = ascending
     if smaller(2, 1) {
         return 11
+    }
+
+    // An answer that is the thing or why not, over two types and through a
+    // body that takes one.
+    if orElse(halved(8), 0 - 1) != 4 {
+        return 40
+    }
+    if orElse(halved(7), 0 - 1) != 0 - 1 {
+        return 41
+    }
+    let said: [text] = array()
+    push(said, "alpha")
+    if orElse(firstWord(said), "none") != "alpha" {
+        return 42
+    }
+    if orElse(firstWord(words), "none") != "none" {
+        return 43
+    }
+    // Two of one copy are equal when they are the same case carrying the
+    // same thing, the way any other value laid out flat is.
+    if halved(8) != halved(8) || halved(8) == halved(7) {
+        return 44
+    }
+    match halved(6) {
+        Held(one) {
+            if one != 3 {
+                return 45
+            }
+        }
+        Trouble(why) {
+            return 46
+        }
     }
 
     io.print("one body, and a copy for every set of types it was called with")

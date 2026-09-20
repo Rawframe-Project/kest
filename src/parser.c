@@ -2168,7 +2168,13 @@ static KestDecl *parse_declaration(Parser *parser) {
             return NULL;
         }
         decl->name = current_span(parser);
-        if (!expect(parser, KEST_TOK_IDENT) ||
+        if (!expect(parser, KEST_TOK_IDENT)) {
+            return NULL;
+        }
+        // An enum takes types the way a struct does, and for the same reason:
+        // `Answer<T>` is one shape written once, and the language already has
+        // the other half of it in `T?`. See D1048.
+        if (!parse_type_params(parser, decl) ||
             !expect(parser, KEST_TOK_LBRACE)) {
             return NULL;
         }

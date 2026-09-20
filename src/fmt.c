@@ -1122,6 +1122,7 @@ static void print_decl(Printer *printer, const KestDecl *decl,
     case KEST_DECL_ENUM:
         put(printer, "enum ");
         print_span(printer, decl->name);
+        print_type_params(printer, decl);
         put(printer, " {\n");
         printer->depth++;
         printer->previous_line = 0;

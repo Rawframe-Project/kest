@@ -2143,7 +2143,7 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
     }
 
     const char *name = written;
-    made = new_type(program, KEST_T_STRUCT);
+    made = new_type(program, shape->tag);
     if (name == NULL || made == NULL || !register_type(program, made)) {
         return error_type(program);
     }
@@ -2207,21 +2207,60 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
     }
     kest_bind_types(program, names, bound, count);
 
-    uint32_t fields = decl->record.field_count;
-    KestMember *members =
-        KEST_ARENA_ARRAY(program->arena, KestMember, fields == 0 ? 1 : fields);
-    if (members == NULL) {
-        return error_type(program);
+    if (shape->tag == KEST_T_ENUM) {
+        // What each case carries, with the names it was written with standing
+        // for what this copy was asked for. A case's name and how many things
+        // it carries are the shape's; what they are is this copy's. The walk
+        // that refuses two cases of one name ran when the shape was resolved,
+        // so it is not run again here. See D1048.
+        uint32_t how_many = decl->choice.case_count;
+        KestVariantType *cases = KEST_ARENA_ARRAY(program->arena,
+                                                  KestVariantType,
+                                                  how_many == 0 ? 1 : how_many);
+        if (cases == NULL) {
+            return error_type(program);
+        }
+        for (uint32_t c = 0; c < how_many && c < shape->case_count; c++) {
+            const KestVariant *written_case = decl->choice.cases[c];
+            uint32_t held = shape->cases[c].payload_count;
+            cases[c].name = shape->cases[c].name;
+            cases[c].span = shape->cases[c].span;
+            cases[c].payload_count = held;
+            cases[c].payload = KEST_ARENA_ARRAY(program->arena, KestType *,
+                                                held == 0 ? 1 : held);
+            cases[c].offsets = KEST_ARENA_ARRAY(program->arena, uint16_t,
+                                                held == 0 ? 1 : held);
+            cases[c].byte_offsets = KEST_ARENA_ARRAY(program->arena, uint16_t,
+                                                     held == 0 ? 1 : held);
+            if (cases[c].payload == NULL || cases[c].offsets == NULL ||
+                cases[c].byte_offsets == NULL) {
+                return error_type(program);
+            }
+            for (uint32_t p = 0; p < held; p++) {
+                cases[c].payload[p] =
+                    kest_resolve_type_ref(program, written_case->payload[p]);
+            }
+        }
+        made->cases = cases;
+        made->case_count = shape->case_count;
+    } else {
+        uint32_t fields = decl->record.field_count;
+        KestMember *members = KEST_ARENA_ARRAY(program->arena, KestMember,
+                                               fields == 0 ? 1 : fields);
+        if (members == NULL) {
+            return error_type(program);
+        }
+        for (uint32_t f = 0; f < fields; f++) {
+            members[f].name = span_string(program,
+                                          decl->record.fields[f]->name);
+            members[f].span = decl->record.fields[f]->name;
+            members[f].own = decl->record.fields[f]->own.length != 0;
+            members[f].type =
+                kest_resolve_type_ref(program, decl->record.fields[f]->type);
+        }
+        made->members = members;
+        made->member_count = fields;
     }
-    for (uint32_t f = 0; f < fields; f++) {
-        members[f].name = span_string(program, decl->record.fields[f]->name);
-        members[f].span = decl->record.fields[f]->name;
-        members[f].own = decl->record.fields[f]->own.length != 0;
-        members[f].type =
-            kest_resolve_type_ref(program, decl->record.fields[f]->type);
-    }
-    made->members = members;
-    made->member_count = fields;
 
     kest_bind_types(program, was_names, was_types, was_count);
     program->unit = was_unit;
@@ -3325,6 +3364,29 @@ static bool declare_cased(KestProgram *program, const KestUnit *unit,
         type->name = name;
         type->span = decl->name;
         type->declared_in = program->source;
+        type->unit = program->unit;
+
+        // An enum that takes types is not a type but the shape of one, the
+        // same as a struct that does: `Answer<i32>` is a type and `Answer` on
+        // its own has no size and is never measured. A `flags` set takes none
+        // -- it is a width and a list of bits -- and the parser never reads
+        // any for one. See D1048.
+        if (decl->type_param_count > 0) {
+            type->type_param_count = decl->type_param_count;
+            type->type_param_names = KEST_ARENA_ARRAY(
+                program->arena, const char *, decl->type_param_count);
+            if (type->type_param_names == NULL) {
+                return false;
+            }
+            for (uint32_t g = 0; g < decl->type_param_count; g++) {
+                type->type_param_names[g] =
+                    span_string(program, decl->type_params[g].name);
+                if (type->type_param_names[g] == NULL) {
+                    return false;
+                }
+            }
+            type->decl = decl;
+        }
     }
     return true;
 }
@@ -3448,6 +3510,31 @@ static bool resolve_enum_cases(KestProgram *program, const KestUnit *unit) {
             continue;
         }
 
+        // A shape's cases are resolved with its names standing for
+        // themselves, the same way a struct's fields are: what a case carries
+        // is a `T` until a copy says what `T` is. It is never measured; a copy
+        // is. See D1048.
+        uint32_t generics = type->type_param_count;
+        const char **stand_names = KEST_ARENA_ARRAY(program->arena,
+                                                    const char *, generics);
+        KestType **stands =
+            KEST_ARENA_ARRAY(program->arena, KestType *, generics);
+        if (stand_names == NULL || stands == NULL) {
+            return false;
+        }
+        for (uint32_t g = 0; g < generics; g++) {
+            stand_names[g] = type->type_param_names[g];
+            stands[g] = new_type(program, KEST_T_PARAM);
+            if (stands[g] == NULL) {
+                return false;
+            }
+            stands[g]->name = stand_names[g];
+            stands[g]->slots = 1;
+            stands[g]->byte_size = 8;
+            stands[g]->byte_align = 8;
+        }
+        kest_bind_types(program, stand_names, stands, generics);
+
         uint32_t count = decl->choice.case_count;
         KestVariantType *cases = KEST_ARENA_ARRAY(program->arena,
                                                   KestVariantType,
@@ -3502,6 +3589,7 @@ static bool resolve_enum_cases(KestProgram *program, const KestUnit *unit) {
         }
         type->cases = cases;
         type->case_count = used;
+        kest_unbind_types(program);
     }
     return true;
 }
@@ -3591,7 +3679,12 @@ KestType *kest_substitute(KestProgram *program, KestType *type,
             type->no_alloc, type->no_host,
             type->deterministic);
     }
-    case KEST_T_STRUCT: {
+    // A copy of a shape, made again with what its types turned out to be. An
+    // enum that takes types is a shape like a struct that does, so the two go
+    // through the same door; one that takes none has no `shape` and is itself.
+    // See D546 and D1048.
+    case KEST_T_STRUCT:
+    case KEST_T_ENUM: {
         if (type->shape == NULL) {
             return type;
         }
@@ -3607,19 +3700,18 @@ KestType *kest_substitute(KestProgram *program, KestType *type,
         }
         return kest_struct_of(program, type->shape, args, used);
     }
-    // Everything left stands for itself: a primitive, an enum, a set of bits
-    // and a type name already bound are what they were, and a type this is
-    // asked about with nothing to put in it is too. Written out for the reason
-    // the three beside it are — a composed tag added to the language would
-    // come back unsubstituted, which is a copy of a generic made with the
-    // name still in it. See D546.
+    // Everything left stands for itself: a primitive, a set of bits and a type
+    // name already bound are what they were, and a type this is asked about
+    // with nothing to put in it is too. Written out for the reason the three
+    // beside it are — a composed tag added to the language would come back
+    // unsubstituted, which is a copy of a generic made with the name still in
+    // it. See D546.
     case KEST_T_ERROR:
     case KEST_T_VOID:
     case KEST_T_BOOL:
     case KEST_T_INT:
     case KEST_T_FLOAT:
     case KEST_T_TEXT:
-    case KEST_T_ENUM:
     case KEST_T_FLAGS:
     case KEST_T_MODULE:
     case KEST_T_PARAM:
@@ -3652,7 +3744,10 @@ bool kest_unify(const KestType *declared, const KestType *given,
     if (declared->tag != given->tag) {
         return true;
     }
-    if (declared->tag == KEST_T_STRUCT) {
+    // A copy of a shape against a copy of the same shape: what each was made
+    // with, one at a time. An enum that takes types is a shape like a struct
+    // that does. See D1048.
+    if (declared->tag == KEST_T_STRUCT || declared->tag == KEST_T_ENUM) {
         if (declared->shape == NULL || declared->shape != given->shape) {
             return true;
         }

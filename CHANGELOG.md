@@ -110,6 +110,12 @@ nothing. A pause is 0.68 milliseconds for every megabyte still reachable, which
 is in the reference now, beside what the collector is and why there is no
 incremental marking. See D1045.
 
+**An enum takes types.** `enum Answer<T> { Held(T) Trouble(text) }`, through
+the same door a generic struct goes through. **What a program has to do:**
+nothing. Nothing is added to the library — there is no `std.result` — and the
+reference says which of `T?`, `bool` and an enum a fallible function should
+answer with. See D1048.
+
 **What changed for a host.** The version. The other three numbers — the C ABI,
 the JSON schema, and the deterministic profile — still read 4, 3 and 1, and
 will be settled to clean `0.0.x` numbers once the architecture this reset is

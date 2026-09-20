@@ -34346,3 +34346,73 @@ about a bytecode machine's dispatch, and the ratio it measures — a dispatch
 costing about what it dispatches — is the strongest argument *for* a native
 backend that this project has, not against one. What it is weighed against is
 in D1017 and is re-asked at the end of this reset.
+
+## D1048. An enum takes types, and that is the whole error-value mechanism
+
+**Decided.** An enum may take types the way a struct already could:
+`enum Answer<T> { Held(T) Trouble(text) }`. Nothing is added to the library --
+there is no `std.result` and there will not be one -- and the reference says
+which of `T?`, `bool` and an enum a fallible API should answer with. No
+exceptions.
+
+**What was asked.** Section 17 of this reset: exercise save/load, file read,
+parsing, a host service failure and a network-shaped error, and determine
+whether `T?`, `bool` and custom enums compose cleanly enough. If yes, a
+canonical convention. If no, the smallest first-class error-value mechanism.
+
+**What was found.** They compose. A save that may not be there, a parse that
+may not mean anything and a host door that may say no are all written with
+`T?` for *nothing there*, a bespoke enum for *this is what happened*, and
+`match` to make the caller answer every case. None of the five needs anything
+the language did not have.
+
+What the language did not have was the ability to write that shape **once**:
+
+    enum Answer<T> {
+        Held(T)
+        Trouble(text)
+    }
+
+was `error[K0201]: expected `{`, found `<``. A struct could take types and an
+enum could not, and nothing said why. So every API that wanted to answer *the
+thing or why not* either lost the reason, pushed reasons into an array the
+caller passed in, or declared a four-line enum of its own per value type -- and
+a *generic* function could not answer one at all, because the type it would
+answer with cannot be written.
+
+**Why this is not a `Result<T, E>` clone.** Nothing is added to the library and
+no type is blessed. What is removed is a restriction with no reason behind it:
+the language already has one generic sum type built in -- `T?` is *one thing or
+nothing* -- and having that and refusing to let a program write *one thing or a
+reason* is the arbitrary part. A program that wants `Answer` writes four lines
+of its own; a program that wants three different ones writes three.
+
+**What it cost to build.** The same door as a generic struct, everywhere:
+`parse_type_params` after the enum's name, type parameters on the shape,
+cases resolved with the names standing for themselves, `kest_struct_of`
+branching on the shape's tag to copy cases instead of fields, `kest_substitute`
+and `kest_unify` treating a copy of an enum shape as what they already treat a
+copy of a struct shape as, and the formatter writing the names back. One thing
+is new: a case that carries none of the shape's names -- `Trouble` above --
+says nothing about which copy it is, so which copy comes from where the value
+is going, which is the rule `array()` and `store()` already keep.
+
+**One thing in the gate moved and is written down here.** The ceilings walk
+asked the tree to hold one program that meets `K0638` before `K0639` and one
+the other way round, and `examples/boxes.kest` was the only one of the first
+kind -- it met it by costing 157063 bytes to compile. Twenty lines of generic
+enum made it dearer and it moved to the other count. Which ceiling a program
+meets first is a fact about how dear that program happens to be, not about the
+language, so the walk no longer asks for one of each: what it holds is that
+something was weighed at all, and `K0638` itself is held where a host asks for
+four thousand million slots of stack on purpose. That check had already been
+lowered from two of each to one for the same reason.
+
+**The convention, which is section 17's other half.** Three shapes and the
+difference is what a caller can do about it: `T?` where there is nothing more
+to say than that there is nothing; `bool` where the answer is whether it worked
+and nobody branches on why; an enum where the caller decides differently for
+different reasons. A function that answers `T?` and had more to say threw it
+away; one that answers an enum where there is one reason made a reader write an
+arm for nothing. It is in the reference beside the enum, where somebody meets
+it.

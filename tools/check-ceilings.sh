@@ -1925,16 +1925,23 @@ if [ -n "$halved" ] && [ "$halved" != "$allocating" ]; then
     failed=1
 fi
 # And a weighing of nothing weighs nothing: a filter that stops matching leaves
-# a check that reads no programs and says the two numbers agree. One of each is
-# what that guards against; it asked for two until the tree grew a directory of
-# workloads and a program moved from one of these counts to another, which is a
-# count of what is in the tree rather than a thing about the language. What is
-# held is the shape -- that neither of them is nought -- for the reason the
-# rules in `CLAUDE.md` say. See D990.
-if [ $read_ran_out -lt 1 ] || [ $wanted_a_machine -lt 1 ]; then
-    echo "ceilings: $read_ran_out program(s) ran out of room being read and" \
-         "$wanted_a_machine could not be given a machine, which is not enough" \
-         "to hold what compiling costs against what it costs in rungs"
+# a check that reads no programs and says the numbers agree. What guards
+# against that is that something was weighed at all.
+#
+# It asked for one of each kind until `examples/boxes.kest` -- the only program
+# in the tree that ever met `K0638` before `K0639`, and it met it by costing
+# 157063 bytes to compile -- gained twenty lines and moved to the other count.
+# It had asked for two of each before that, and moved to one for the same
+# reason. Which kind of ceiling a program meets first is a fact about how dear
+# that program happens to be to compile, and holding the tree to having one of
+# each is holding it to a shape nobody chose. The message itself is held where
+# it is made on purpose: a host asking for four thousand million slots of stack
+# is above, and it is refused with `K0638` every time this runs. See D990 and
+# D1048.
+if [ $read_ran_out -lt 1 ]; then
+    echo "ceilings: $read_ran_out program(s) ran out of room being read," \
+         "which is not enough to hold what compiling costs against what it" \
+         "costs in rungs"
     failed=1
 fi
 # And the program this check writes for itself, which is there for the range:

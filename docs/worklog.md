@@ -37876,3 +37876,51 @@ See D1047.
 **Runs:** `perf stat` and `perf annotate` over `control`; six benchmarks
 counted plainly and fused; five paired cycle runs each on three of them;
 branch misses on four.
+
+## The thing, or why not, written once
+
+Section 17 asks whether `T?`, `bool` and custom enums compose cleanly enough
+for save/load, a file read, a parse, a host service failure and a
+network-shaped error. They do: all five are written with `T?` for *nothing
+there*, a bespoke enum for *this is what happened*, and `match` to make the
+caller answer every case.
+
+What the language did not have was a way to write that shape once.
+
+    enum Answer<T> {
+        Held(T)
+        Trouble(text)
+    }
+
+was `error[K0201]: expected `{`, found `<``. A struct could take types and an
+enum could not, and nothing anywhere said why. So an API that wanted to answer
+*the thing or why not* lost the reason, took an array to push reasons into, or
+declared four lines of its own per value type -- and a generic function could
+not answer one at all, because the type it would answer with cannot be written.
+
+It can now, through the same door a generic struct goes through:
+`parse_type_params` after the name, type parameters on the shape, cases
+resolved with the names standing for themselves, the copy machinery branching
+on the shape's tag, and `kest_substitute` and `kest_unify` treating a copy of
+an enum shape as what they already treat a copy of a struct shape as. One thing
+is new: a case that carries none of the shape's names says nothing about which
+copy it is, so which copy comes from where the value is going -- which is the
+rule `array()` and `store()` already keep.
+
+Nothing is added to the library. There is no `std.result` and there will not be
+one: what was wrong was a restriction with no reason behind it, not a missing
+type. The language already has one generic sum type built in — `T?` is *one
+thing or nothing* — and having that while refusing to let a program write *one
+thing or a reason* is the arbitrary part.
+
+The convention is written beside the enum in the reference, which is section
+17's other half: `T?` where there is nothing more to say than that there is
+nothing, `bool` where nobody branches on why, an enum where the caller decides
+differently for different reasons.
+
+See D1048.
+
+**Runs:** the five API shapes; an enum over one type and over two; a case
+carrying nothing; one nested in a generic struct; one as a table's value; a
+generic function answering one; equality, text and exhaustiveness;
+`examples/boxes.kest`; `make fast`; `make check`.

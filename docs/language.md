@@ -2138,6 +2138,24 @@ Every arm is the same kind. Mixing `->` arms with block arms is refused, so
 whether a match is a value is written in the arms rather than worked out from
 where it appears.
 
+**What a function says when it cannot do what it was asked.** There is no
+exception here and there is no built-in `Result`. There are three shapes and
+the difference between them is what a caller can do about it:
+
+- `T?` when there is nothing more to say than that there is nothing. `find`,
+  `get`, `os.read` and `text.number` all answer that way.
+- `bool` when the answer is whether it worked and the caller does not branch on
+  why. `room` answers that way.
+- An enum when the caller decides differently for different reasons. It may
+  take types — `enum Answer<T> { Held(T) Trouble(text) }` — so a program writes
+  the shape once and a `match` makes the caller answer every case.
+
+A function that chooses the first and has more to say is a function that threw
+something away; one that chooses the third where there is one reason has made
+a reader write an arm for nothing. What none of them does is stop the program:
+a machine stops only where it met something it could not make sense of, and
+that is a fault rather than a value.
+
 Two values of an enum are equal when they are the same case carrying the same
 things, so `door == Door.Locked(7)` asks what it looks like it asks. An enum
 whose cases carry something that does not compare does not compare either, and
@@ -2533,6 +2551,22 @@ struct Table<K, V> {
 
 let ages: Table<text, i32> = table()
 ```
+
+And an enum:
+
+```kest
+enum Answer<T> {
+    Held(T)
+    Trouble(text)
+}
+```
+
+which is the shape an answer that can fail has, and the reason there is no
+built-in one: `T?` says whether there is a thing and this says what happened
+instead, and which of the two an API wants is the API's to decide. A case that
+carries none of the names — `Trouble` here — says nothing about which copy it
+is, so which copy comes from where the value is going, the way `array()` and
+`store()` already work. `examples/boxes.kest` runs both.
 
 A copy is made the first time a set of types is written, and found again after
 that. Which copy is being built comes from what it is built with, so
