@@ -39177,3 +39177,108 @@ same to the project it just made, and a hole stops the manifest being read.
 
 **Next:** the fresh cold review of section 42, which is somebody outside this
 project's to start.
+
+## What a sort and a table promise, over inputs nobody chose
+
+Every example runs the library on a run somebody wrote out. What none of them
+asked is whether what the library promises holds for inputs nobody chose, which
+is the question a sort and a hash table are easiest to be wrong about: a run
+already in order, one exactly backwards, a length of nought, a spread short
+enough that most of the numbers are equal, a removal of the pair that is about
+to be moved into its own hole.
+
+`examples/ordering.kest` asks both and asks them against each other. Seven
+lengths to 257 over four spreads, sorted up, down and again when already
+sorted, with what went in counted into a table and what came out held to being
+the same numbers and the same many of each. Then eight tables filled with keys
+nothing repeats, emptied by thirds in an order of their own, and read back —
+gone keys gone, kept keys holding what they were set to, what it walks by place
+being what it answers for by key, and `compact` giving back the same table and
+taking what goes in afterwards.
+
+The numbers come from a seed written down, so a failure is one anybody can have
+again, and the gate runs it under both builds like every other example, which
+puts the whole of it under the sanitisers.
+
+Three deliberate breakages before it was written down: a `by` that stops one
+short of the end (caught, 3), a removal that leaves the slot empty rather than
+marked as taken (caught, 16), and a removal that writes the moved pair's place
+one past where it went (caught, 11).
+
+See D1083.
+
+**Runs:** `make check`'s `examples` section, under both builds.
+
+**Next:** the fresh cold review of section 42, which is somebody outside this
+project's to start.
+
+## What this language writes, this library reads back
+
+The example written for what a sort and a table promise found this on its first
+run, before it was written down: a number written into text by this language
+and handed to this language's own reader came back as nothing.
+
+`text.real` refused `1e3`, with a rule beside it saying a program that means
+that can say it another way. True of a program writing a number down; not true
+of a program handed the text by this language, which writes the shortest
+spelling that reads back as the same number — and for anything small or large
+that spelling has an exponent in it. A program that saved a number and read its
+own file back got nothing, for exactly the numbers a simulation has most of.
+
+`text.real` takes an exponent now, and the three words a hole writes for what it
+cannot spell plainly: `inf`, `-inf` and `nan`. The digits are gathered as a
+whole number and scaled once by where the point really is, which is one
+rounding rather than one per digit. `.5`, `+1.5`, a space in front and a second
+point are still nothing, and so are digits that overflow an `f32`: what this
+reads is what this language writes.
+
+And the other half: `text.fixed` wrote `0.00` for a value that is not a number,
+because `nan` passes both magnitude tests and `i64(nan + 0.5)` is nought. A
+file with `0.00` where the program had a value that is not a number is a nought
+somebody adds up one day. It is written `nan` now, the way a hole writes it and
+the way the too-big case already wrote `inf`.
+
+See D1084.
+
+**Runs:** `examples/ordering.kest`, which round-trips four thousand numbers and
+the three words. A reader with no exponent in it answers 31; a `fixed` that
+rounds what is not a number answers 40.
+
+**Next:** the fresh cold review of section 42, which is somebody outside this
+project's to start.
+
+## The brackets a program means, and the lines a block holds
+
+The line written for D1084 was one of the shapes the formatter got wrong, and
+the gate said so in the formatter's own words: `lib/std/text.kest` is not
+formatted, *because what `fmt` writes has to be the same program and what it
+wrote is not itself in the one form, which is a fault in the formatter*.
+
+A giving `if` and a giving `match` end where the expression holding them ends,
+so the arm takes whatever follows: `(if c -> a else -> b) - 2` without its
+brackets is an `else` arm of `b - 2`. The printer bracketed an operand only
+when it was a binary operator of lower precedence, and an `if` has no
+precedence to compare — so it printed a different program, and where the
+difference was stable under a second formatting it said nothing at all.
+`(if c -> xs else -> ys)[0]` came out indexing the other array. Four shapes:
+an operand of a binary operator, the operand of a unary one, the object of an
+index or a field, and the callee of a call.
+
+Fixing that made the formatter print a bracketed `match` over lines, which the
+lexer refused: the count of brackets that says a line break carries a statement
+on was never put aside at a brace, though the field beside it has said since it
+was written that *braces do not count: a block holds statements*. So a `match`
+written over lines could not be an argument, or be bracketed, or be anywhere
+inside brackets. A brace puts the count aside now and the brace that closes it
+puts it back.
+
+Neither half stands alone, which is why they are one decision.
+
+See D1085.
+
+**Runs:** `examples/ordering.kest` has all four shapes and answers with them,
+`tools/check-fmt.sh`'s own program has them where it holds what a formatted
+file answers to what it answered, and two holes take each half out again.
+
+**Next:** the fresh cold review of section 42, which is somebody outside this
+project's to start.

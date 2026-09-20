@@ -1,0 +1,357 @@
+module examples.ordering
+
+import std.io
+import std.random
+import std.sort
+import std.table
+import std.text
+
+// What a sort and a table promise, asked over inputs nobody chose. The
+// examples that use these use them on a run somebody wrote down; this is the
+// other question, which is whether what they promise holds for a hundred runs
+// nobody did. Two structures checked against each other: the count of what
+// went into a sort is a table, and what a table holds after things are taken
+// out of it is read back in an order a sort gives.
+
+// How many of each number a run holds. A sort must not change this: the same
+// numbers, the same many of each.
+fn counted(xs: [i32]) -> table.Table<i32, i32> {
+    let seen: table.Table<i32, i32> = table.empty()
+    for x in xs {
+        table.set(seen, x, table.orElse(seen, x, 0) + 1)
+    }
+    return seen
+}
+
+// Whether two counts say the same thing, which is what a permutation is.
+fn same(a: table.Table<i32, i32>, b: table.Table<i32, i32>) -> bool no.alloc {
+    if table.count(a) != table.count(b) {
+        return false
+    }
+    for i in 0..table.count(a) {
+        let key = table.keyAt(a, i)
+        if table.orElse(b, key, -1) != table.valueAt(a, i) {
+            return false
+        }
+    }
+    return true
+}
+
+fn rises(xs: [i32]) -> bool no.alloc no.host deterministic {
+    for i in 1..len(xs) {
+        if xs[i] < xs[i - 1] {
+            return false
+        }
+    }
+    return true
+}
+
+fn falls(xs: [i32]) -> bool no.alloc no.host deterministic {
+    for i in 1..len(xs) {
+        if xs[i] > xs[i - 1] {
+            return false
+        }
+    }
+    return true
+}
+
+// A run of `many` numbers under `spread`, so that a short spread means many
+// equal numbers and a wide one means few.
+fn made(source: random.Source, many: i32, spread: i32) -> [i32] {
+    let xs: [i32] = array()
+    let held = source
+    for i in 0..many {
+        held = random.next(held)
+        push(xs, random.below(held, spread))
+    }
+    return xs
+}
+
+// Every length and every spread, sorted both ways and checked against the
+// count of what went in.
+fn sorting() -> i32 {
+    let lengths: [i32] = array()
+    push(lengths, 0)
+    push(lengths, 1)
+    push(lengths, 2)
+    push(lengths, 3)
+    push(lengths, 7)
+    push(lengths, 64)
+    push(lengths, 257)
+    let source = random.from(20260920)
+    for many in lengths {
+        for spread in 1..5 {
+            source = random.next(source)
+            let xs = made(source, many, spread * spread * 4)
+            let was = counted(xs)
+            sort.by(xs, sort.ascending)
+            if !rises(xs) {
+                return 1
+            }
+            if !same(was, counted(xs)) {
+                return 2
+            }
+            sort.by(xs, sort.descending)
+            if !falls(xs) {
+                return 3
+            }
+            if !same(was, counted(xs)) {
+                return 4
+            }
+            // And the one a sort is easiest to be wrong about: a run that is
+            // already in order, and one that is exactly backwards.
+            sort.by(xs, sort.ascending)
+            sort.by(xs, sort.ascending)
+            if !rises(xs) || !same(was, counted(xs)) {
+                return 5
+            }
+        }
+    }
+    return 0
+}
+
+// What a table says about itself while things go in and come out of it: every
+// key it was given and not taken out is there with what it was set to, every
+// key taken out is gone, and how many it says it holds is how many that is.
+fn tabling() -> i32 {
+    let source = random.from(74)
+    for round in 0..8 {
+        let t: table.Table<i32, i32> = table.empty()
+        // Keys nothing repeats, so that what was taken out is gone rather
+        // than possibly put back by a second copy of itself.
+        let keys: [i32] = array()
+        let many = 40 + round * 37
+        for i in 0..many {
+            push(keys, i * 7 + 3)
+        }
+        source = random.shuffle(source, keys)
+        for key in keys {
+            table.set(t, key, key * 3 + 1)
+        }
+        if table.count(t) != many {
+            return 10
+        }
+        // Taken out in an order of their own, which is where the hole a
+        // removal leaves has to be walked over rather than stopped at.
+        let gone: [i32] = array()
+        let kept: [i32] = array()
+        for i in 0..len(keys) {
+            if i % 3 == 0 {
+                if !table.remove(t, keys[i]) {
+                    return 11
+                }
+                push(gone, keys[i])
+            } else {
+                push(kept, keys[i])
+            }
+        }
+        if table.count(t) != len(kept) {
+            return 12
+        }
+        for key in gone {
+            if table.has(t, key) {
+                return 13
+            }
+            if table.get(t, key) != none {
+                return 14
+            }
+            if table.remove(t, key) {
+                return 15
+            }
+        }
+        for key in kept {
+            if !table.has(t, key) {
+                return 16
+            }
+            if table.orElse(t, key, -1) != key * 3 + 1 {
+                return 17
+            }
+        }
+        // And what it walks is what it holds: every pair read by its place is
+        // one the table answers for by its key, and there are as many of them
+        // as it says.
+        let walked = 0
+        for i in 0..table.count(t) {
+            if table.orElse(t, table.keyAt(t, i), -1) != table.valueAt(t, i) {
+                return 18
+            }
+            walked += 1
+        }
+        if walked != len(kept) {
+            return 19
+        }
+        // The cold path that gives the room back, which must give back the
+        // same table.
+        let smaller = table.compact(t)
+        if table.count(smaller) != len(kept) {
+            return 20
+        }
+        for key in kept {
+            if table.orElse(smaller, key, -1) != key * 3 + 1 {
+                return 21
+            }
+        }
+        for key in gone {
+            if table.has(smaller, key) {
+                return 22
+            }
+        }
+        // And filled again afterwards, because a table that has been emptied
+        // by a third and compacted is one somebody keeps using.
+        for key in gone {
+            table.set(smaller, key, key * 5)
+        }
+        if table.count(smaller) != many {
+            return 23
+        }
+        for key in gone {
+            if table.orElse(smaller, key, -1) != key * 5 {
+                return 24
+            }
+        }
+        for key in kept {
+            if table.orElse(smaller, key, -1) != key * 3 + 1 {
+                return 25
+            }
+        }
+    }
+    return 0
+}
+
+// And what a number written into text and read back has to be: the number
+// that went in. A hole in a string writes the shortest spelling that reads
+// back as the same number, and what reads it back is `text.real` -- which
+// could not read a spelling with an exponent in it until D1084, so a program
+// that saved a small number and read its own file got nothing.
+fn numbering() -> i32 {
+    let source = random.from(31337)
+    for round in 0..2000 {
+        source = random.next(source)
+        let top = random.below(source, 2000000) - 1000000
+        source = random.next(source)
+        let bottom = random.below(source, 1000) + 1
+        source = random.next(source)
+        // A spread of sizes, so that the spellings with an exponent in them
+        // are asked for as well as the plain ones.
+        let scale = random.below(source, 30) - 15
+        let v = f32(top) / f32(bottom)
+        let moved = 0
+        while moved < scale {
+            v = v * 10.0
+            moved += 1
+        }
+        while moved > scale {
+            v = v / 10.0
+            moved -= 1
+        }
+        if let read = text.real("{v}") {
+            if read != v {
+                return 30
+            }
+        } else {
+            return 31
+        }
+        source = random.next(source)
+        let n = random.below(source, 2000000000) - 1000000000
+        if let read = text.number("{n}") {
+            if read != n {
+                return 32
+            }
+        } else {
+            return 33
+        }
+    }
+    // The three a hole writes for what it cannot spell plainly, which a save
+    // file holds like any other line.
+    let nought: f32 = 0.0
+    let one: f32 = 1.0
+    let endless = one / nought
+    let notANumber = nought / nought
+    if let back = text.real("{endless}") {
+        if back != endless {
+            return 34
+        }
+    } else {
+        return 35
+    }
+    if let back = text.real("{0.0 - endless}") {
+        if back != 0.0 - endless {
+            return 36
+        }
+    } else {
+        return 37
+    }
+    if let back = text.real("{notANumber}") {
+        // Not a number is equal to nothing, including itself, so what is
+        // asked of it is that it came back as one.
+        if back == back {
+            return 38
+        }
+    } else {
+        return 39
+    }
+    // And what `fixed` writes for it, which used to be `0.00`.
+    if text.fixed(notANumber, 2) != "{notANumber}" {
+        return 40
+    }
+    if text.fixed(endless, 2) != "{endless}" {
+        return 41
+    }
+    // What is not a spelling this language writes is still nothing.
+    if text.real(".5") != none ||
+            text.real("+1.5") != none ||
+            text.real("1e") != none ||
+            text.real("1e5x") != none ||
+            text.real("1e40") != none {
+        return 42
+    }
+    return 0
+}
+
+enum Door {
+    Shut
+    Open(i32)
+}
+
+// A giving `if` and a giving `match` written where something follows them.
+// The arm takes as much as it can, so the brackets are part of what the
+// program means: without them `(if c -> a else -> b) - 2` is an `else` arm of
+// `b - 2`. And a block inside brackets is still a block, so the arms of that
+// `match` are lines. Both of those were wrong at once -- a formatter that
+// dropped the brackets and a lexer that ran the arms together. See D1085.
+fn chosen(d: Door, c: bool) -> i32 {
+    let xs: [i32] = array()
+    push(xs, 7)
+    let ys: [i32] = array()
+    push(ys, 9)
+    let picked = (if c -> xs else -> ys)[0]
+    let less = (if c -> 3 else -> 4) - 2
+    let wide = (match d {
+        Shut -> 1
+        Open(w) -> w
+    }) - 1
+    return picked + less + wide
+}
+
+fn main() -> i32 {
+    let wrong = sorting()
+    if wrong != 0 {
+        return wrong
+    }
+    wrong = tabling()
+    if wrong != 0 {
+        return wrong
+    }
+    wrong = numbering()
+    if wrong != 0 {
+        return wrong
+    }
+    if chosen(Door.Open(5), true) != 12 {
+        return 50
+    }
+    if chosen(Door.Shut, false) != 11 {
+        return 51
+    }
+    io.print("seven lengths sorted four ways over four spreads, eight tables filled, emptied by thirds and compacted, and four thousand numbers written and read back")
+    return 0
+}

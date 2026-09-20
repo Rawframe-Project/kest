@@ -428,10 +428,24 @@ static void print_items(Printer *printer, KestExpr **items, uint32_t count,
 
 // A bracket goes back only where taking it away would change what binds to
 // what, which is why the tree is what decides and not what was written.
+// What an `if` or a `match` that gives a value does to whatever comes after
+// it: the arm takes as much as it can, so `(if c -> a else -> b) - 2` without
+// its brackets is an `else` arm of `b - 2` and a different program. Those have
+// no precedence to compare against -- they end where the expression holding
+// them ends -- so one written where something follows is always bracketed.
+// Printing one without was a formatter that wrote a different program and said
+// nothing about it. See D1085.
+static bool takes_what_follows(const KestExpr *expr) {
+    return expr != NULL &&
+           (expr->kind == KEST_EXPR_IF || expr->kind == KEST_EXPR_MATCH);
+}
+
 static void print_operand(Printer *printer, const KestExpr *expr, int limit) {
     bool needs =
-        expr != NULL && expr->kind == KEST_EXPR_BINARY &&
-        precedence_of(expr->binary.op) < limit;
+        expr != NULL &&
+        ((expr->kind == KEST_EXPR_BINARY &&
+          precedence_of(expr->binary.op) < limit) ||
+         takes_what_follows(expr));
     if (needs) {
         put_char(printer, '(');
     }
@@ -588,19 +602,19 @@ static void print_expr(Printer *printer, const KestExpr *expr, int outer) {
     }
     case KEST_EXPR_CALL: {
         bool broken = !fits(printer, expr, expr->call.arg_count);
-        print_expr(printer, expr->call.callee, 6);
+        print_operand(printer, expr->call.callee, 6);
         put_char(printer, '(');
         print_items(printer, expr->call.args, expr->call.arg_count, broken);
         put_char(printer, ')');
         break;
     }
     case KEST_EXPR_FIELD:
-        print_expr(printer, expr->field.object, 6);
+        print_operand(printer, expr->field.object, 6);
         put_char(printer, '.');
         print_span(printer, expr->field.name);
         break;
     case KEST_EXPR_INDEX:
-        print_expr(printer, expr->index.object, 6);
+        print_operand(printer, expr->index.object, 6);
         put_char(printer, '[');
         print_expr(printer, expr->index.index, 0);
         put_char(printer, ']');

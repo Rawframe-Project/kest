@@ -316,6 +316,32 @@ its tests are and has none there is refused with `K0649` rather than passed.
 **What a project has to do:** nothing, unless it relied on `kest test` with
 nothing named doing nothing. See D1082.
 
+**`text.real` reads what this language writes.** A hole in a string writes the
+shortest spelling that reads back as the same number, which for anything small
+or large has an exponent in it — and `text.real` refused those, so a program
+that saved a number and read its own file back got nothing. It takes an
+exponent now, and `inf`, `-inf` and `nan`, which are what a hole writes for the
+values it cannot spell plainly. `.5`, `+1.5`, a space in front, a second point
+and digits that overflow an `f32` are still nothing. **What a program has to
+do:** nothing, and one thing it can stop working around. And `text.fixed` writes
+`nan` where it wrote `0.00` for a value that is not a number. See D1084.
+
+**A `match` written over lines can be an argument.** A line break inside `(`
+or `[` carries a statement on, and that was true inside a block written there
+too — so `math.clamp(match d {` followed by its arms on lines of their own was
+refused at the second arm. A brace puts the bracket count aside now, which is
+what a block is. **What a program has to do:** nothing; a shape that was
+refused is written. See D1085.
+
+**`kest fmt` keeps the brackets a program means.** A giving `if` or `match`
+ends where the expression holding it ends, so `(if c -> a else -> b) - 2`
+without its brackets is an `else` arm of `b - 2`. The formatter dropped them
+for an operand, an index or field object, and a callee — writing a different
+program. **What a program has to do:** nothing, and one thing to stop worrying
+about; a file already formatted by an older `kest fmt` is unchanged unless it
+held one of those shapes, in which case the old formatter had already rewritten
+it and the diff is the brackets coming back. See D1085.
+
 **A run of bytes takes a whole piece of text.** `push(out, piece)` and
 `fit(out, piece)` put the piece on the end in one move where a program used to
 write a loop, because text is its bytes and a `[u8]` is the same bytes. Every

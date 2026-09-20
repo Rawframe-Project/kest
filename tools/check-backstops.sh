@@ -578,6 +578,55 @@ void kest_cancel(KestRuntime *runtime) {
         "caught": "own tests do not run",
     },
     {
+        # A giving `if` or `match` printed without the brackets it was written
+        # with. The arm takes as much as it can, so `(if c -> a else -> b) - 2`
+        # without them is an `else` arm of `b - 2` -- a formatter that writes a
+        # different program and says nothing about it. See D1085.
+        "what": "a formatter that drops brackets a program means",
+        "file": "src/fmt.c",
+        "from": r"""static bool takes_what_follows(const KestExpr *expr) {
+    return expr != NULL &&
+           (expr->kind == KEST_EXPR_IF || expr->kind == KEST_EXPR_MATCH);
+}""",
+        "to": r"""static bool takes_what_follows(const KestExpr *expr) {
+    (void)expr;
+    return false;
+}""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/ordering.kest"],
+        "caught": "not in the one form",
+    },
+    {
+        # A block inside brackets whose lines run together. The count of
+        # brackets is what says a line break carries on rather than ends a
+        # statement, and a brace holds that count aside because a block holds
+        # statements -- so `f(match d {` followed by arms on lines of their own
+        # was refused at the second arm. See D1085.
+        "what": "a block inside brackets whose lines run together",
+        "file": "src/lexer.c",
+        "from": r"""        if (tokens[used].kind == KEST_TOK_LBRACE) {""",
+        "to": r"""        if (false) {""",
+        "make": ["kest"],
+        "program": "blocks.kest",
+        "source": """import std.math
+
+enum Door {
+    Shut
+    Open(i32)
+}
+
+fn main() -> i32 {
+    let d = Door.Open(3)
+    let held = math.clamp(match d {
+        Shut -> 1
+        Open(w) -> w
+    }, 0, 5)
+    return held - 3
+}""",
+        "caught": "expected end of line",
+    },
+    {
         # A refusal that sends a reader to a door there is no way in through.
         # What a message names is a claim about where the answer is, and a
         # name out of `src` is a name a host looks for in the public header
@@ -6000,12 +6049,12 @@ anywhere, and it is why the gate holds""",
         # read them every one of them was wrong. See D920.
         "what": "what compiling costs written down and not measured",
         "file": "docs/language.md",
-        "from": """117913 as a tree""",
-        "to": """117602 as a tree""",
+        "from": """136241 as a tree""",
+        "to": """136000 as a tree""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "117602 as a tree, 154736 checked",
+        "caught": "136000 as a tree, 173144 checked",
     },
     {
         # And the section they are in saying whose machine they are. Bytes of
@@ -11352,7 +11401,7 @@ fn main() -> i32 {
         "what": "a field written without what it is a field of",
         "file": "src/fmt.c",
         "from": r"""    case KEST_EXPR_FIELD:
-        print_expr(printer, expr->field.object, 6);
+        print_operand(printer, expr->field.object, 6);
         put_char(printer, '.');
         print_span(printer, expr->field.name);
         break;""",
@@ -12881,11 +12930,9 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # is where the work is, which is the only thing these numbers are for.
         "what": "a count of the work started over at a stage",
         "file": "src/compile.c",
-        "from": """    Compiler compiler = {0};
-    compiler.program = program;""",
-        "to": """    Compiler compiler = {0};
-    program->folds = 0;
-    compiler.program = program;""",
+        "from": """    return !compiler.out_of_memory && !ir->out_of_memory;""",
+        "to": """    program->folds = 0;
+    return !compiler.out_of_memory && !ir->out_of_memory;""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "a stage does what the one before it did and then more",

@@ -407,6 +407,25 @@ fn nearest(steps: [i32], want: i32) -> i32? {
     return none
 }
 
+// An `if` and a `match` that give a value, written where something follows
+// them. The arm takes as much as it can, so the brackets are part of what the
+// program means: without them `(if c -> a else -> b) - 2` is an `else` arm of
+// `b - 2`. A formatter that drops them writes a different program. See D1085.
+fn chosen(p: Point, q: Point, d: Door, c: bool) -> i32 {
+    let xs: [i32] = array()
+    push(xs, 7)
+    let ys: [i32] = array()
+    push(ys, 9)
+    let picked = (if c -> xs else -> ys)[0]
+    let held = (if c -> p else -> q).x
+    let less = (if c -> 3 else -> 4) - 2
+    let wide = (match d {
+        Shut -> 1
+        Open(w) -> w
+    }) - 1
+    return picked + held + less + wide
+}
+
 fn walk(p: Point, times: i32) -> i32 {
     let total = 0
     let open = true

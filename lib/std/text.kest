@@ -42,22 +42,66 @@ fn number(digits: text) -> i32? no.alloc no.host deterministic {
 }
 
 // The number with a point in it that a piece of text spells, or nothing when
-// it spells something else. `12`, `-0.5` and `3.` are numbers; `1e3`, `.5` and
-// `1.2.3` are not, because a program that means those can say them another way
-// and a rule with one shape is a rule a reader keeps.
+// it spells something else. What this reads is what this language writes:
+// `12`, `-0.5` and `3.` are numbers, and so are `1.2216752e-06`, `1e+20`,
+// `inf`, `-inf` and `nan`, because those are what a hole in a string writes
+// for the numbers it cannot spell plainly. A program that writes a number into
+// text and reads it back gets the number it had; it did not, and `1e3` was
+// refused with a rule saying a program that means that can say it another way
+// -- which is not true of a program handed the text by this language. `.5`,
+// `+1.5`, a space in front and a second point are still nothing, because
+// nothing here writes those. See D1084.
 //
 // Worked out a digit at a time in `f64` and narrowed once, which is the same
 // two roundings every other number in this module goes through.
 fn real(digits: text) -> f32? no.alloc no.host deterministic {
+    // The three words, read back as what they spell rather than as text that
+    // is not a number. A save written by this language is read by this
+    // library, and what a hole wrote is what comes back.
+    if digits == "nan" {
+        let nought: f32 = 0.0
+        return nought / nought
+    }
+    if digits == "inf" || digits == "-inf" {
+        let nought: f32 = 0.0
+        let one: f32 = 1.0
+        let endless = one / nought
+        return if digits == "inf" -> endless else -> 0.0 - endless
+    }
     let negative = false
     let seen = 0
     let whole: f64 = 0.0
-    let part: f64 = 0.0
-    let scale: f64 = 1.0
     let after = false
+    // How many digits came after the point and what the exponent says, which
+    // are the same thing said twice: the value is the digits as a whole number
+    // scaled by ten that many times. Scaling once at the end rather than a
+    // digit at a time is one rounding instead of as many as there are digits.
+    let afterCount = 0
+    let inExponent = false
+    let exponentAt = 0
+    let exponent = 0
+    let exponentNegative = false
+    let exponentSeen = 0
     for i, byte in digits {
         if i == 0 && byte == '-' {
             negative = true
+            continue
+        }
+        if inExponent {
+            if i == exponentAt && (byte == '-' || byte == '+') {
+                exponentNegative = byte == '-'
+                continue
+            }
+            if byte < '0' || byte > '9' {
+                return none
+            }
+            // Held where it cannot run off the end of what a number holds: an
+            // exponent past this is infinity or nought either way, and both of
+            // those are answered below.
+            if exponent < 100000 {
+                exponent = exponent * 10 + (i32(byte) - i32('0'))
+            }
+            exponentSeen += 1
             continue
         }
         if byte == '.' {
@@ -69,22 +113,49 @@ fn real(digits: text) -> f32? no.alloc no.host deterministic {
             after = true
             continue
         }
+        if byte == 'e' || byte == 'E' {
+            // An exponent with nothing in front of it is not a number either.
+            if seen == 0 {
+                return none
+            }
+            inExponent = true
+            exponentAt = i + 1
+            continue
+        }
         if byte < '0' || byte > '9' {
             return none
         }
-        let digit = f64(i32(byte) - i32('0'))
+        whole = whole * 10.0 + f64(i32(byte) - i32('0'))
         if after {
-            scale = scale / 10.0
-            part = part + digit * scale
-        } else {
-            whole = whole * 10.0 + digit
+            afterCount += 1
         }
         seen += 1
     }
-    if seen == 0 {
+    if seen == 0 || inExponent && exponentSeen == 0 {
         return none
     }
-    let value = whole + part
+    // Where the point really is: what the exponent says, less the digits that
+    // came after the point.
+    let power = (if exponentNegative -> 0 - exponent else -> exponent) -
+        afterCount
+    // Beyond these the answer is the same as at them, and a loop that went
+    // further would be a loop a frame pays for.
+    if power > 400 {
+        power = 400
+    }
+    if power < -400 {
+        power = -400
+    }
+    let value = whole
+    let moved = 0
+    while moved < power {
+        value = value * 10.0
+        moved += 1
+    }
+    while moved > power {
+        value = value / 10.0
+        moved -= 1
+    }
     let narrowed = f32(if negative -> 0.0 - value else -> value)
     // More than an `f32` holds narrows to infinity, which is not the number
     // the text spelled. `math.isNumber` is that question written down, and
@@ -110,6 +181,16 @@ fn real(digits: text) -> f32? no.alloc no.host deterministic {
 // to nothing is written without a sign in front of it: `-0.0` is a number this
 // language has and not a thing anybody wants in a file.
 fn fixed(value: f32, places: i32) -> text no.host deterministic {
+    // What is not a number is not a number of places. It went through the
+    // rounding below and came out `0.00`, which is a nought somebody adds up
+    // one day; it is written the way a hole writes it, the same as a number
+    // too big to count in whole parts. A value is not a number exactly when it
+    // is not equal to itself, which is what this language says about that
+    // value and the one question this module can ask without importing
+    // another. See D1084.
+    if value != value {
+        return "{value}"
+    }
     let want = places
     if want < 0 {
         want = 0

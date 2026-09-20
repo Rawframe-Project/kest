@@ -704,7 +704,11 @@ same line. A hole in a string writes the shortest spelling that reads back as
 the same number, which is the other question and the one a log asks. Reads back
 by whom is the point of it: the spelling is chosen by reading it back, so what
 a host gets out of those digits with the reader it already has is the number
-the program had. Half goes
+the program had — and so is what a *program* gets, because `text.real` reads
+every spelling a hole writes, including the ones with an exponent in them and
+the three words for what it cannot spell plainly. `.5`, `+1.5`, a space in
+front and a second point are not numbers, because nothing here writes those.
+See D1084. Half goes
 away from nought, places outside nought to nine are held to that, and a number
 that rounds to nothing is written without a sign in front of it.
 
@@ -5971,6 +5975,7 @@ here, is a check that fails.
 | `math.kest` | a loop, a chain of `if`, and a function that answers with text |
 | `numbers.kest` | what a number does at the end of its range, at every width |
 | `parse.kest` | reading a line of fields out of the standard library |
+| `ordering.kest` | what a sort, a table and a number written into text promise, over inputs nobody chose |
 | `registry.kest` | the same store and reference asked of assets naming what they are built from, which is not a game |
 | `physics.kest` | helpers that take and return vectors, called from a hot path |
 | `pieces.kest` | text built a piece at a time, which is built as bytes |
@@ -6258,8 +6263,8 @@ Beside the diagnostics is what the run cost the compiler: `cost` is how many
 bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
-each stage of reading a file costs. For `lib/std/text.kest`, which is 496 lines:
-47956 bytes as tokens, 117913 as a tree, 154736 checked and 182081 compiled.
+each stage of reading a file costs. For `lib/std/text.kest`, which is 577 lines:
+55860 bytes as tokens, 136241 as a tree, 173144 checked and 203464 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
 
@@ -6276,7 +6281,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 17347 bytes, against the 182081 it costs to compile.
+file and 20701 bytes, against the 203464 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.

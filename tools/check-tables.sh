@@ -2457,6 +2457,13 @@ SAME_SHAPE = {
     frozenset(("math_ceil", "math_cos", "math_floor", "math_sin",
                "math_sqrt")):
         "and five that take one, the same way",
+    frozenset(("is_numeric", "takes_what_follows")):
+        "two questions about what kind of expression something is, each a "
+        "list of the kinds it is true of: one is the kinds a number can be "
+        "written as and the other is the two that take whatever follows them "
+        "into an arm. Written the same because the question is the same "
+        "shape; they are not one question, and a walk that answered both "
+        "would be a walk asked what it was being asked",
     frozenset(("fault",)):
         "the two halves of this compiler saying the same news in the same "
         "words: what the checker allowed and the stage after it cannot do is "

@@ -36290,3 +36290,178 @@ for the same reason (D970).
 **What was not done.** Walking down into directories under the tests one. A
 project with tests in trees is a project with a structure this has no opinion
 about, and the line says where they are rather than where to start looking.
+
+## D1083. What a sort and a table promise, over inputs nobody chose
+
+*decided*, and three deliberate breakages caught by it before it was written
+down.
+
+Every example in this tree runs the library on a run somebody wrote out: the
+words in `words.kest`, the stock in `inventory.kest`, the world in
+`colony.kest`. That answers what the library does on those, and the question it
+does not answer is whether what the library *promises* holds for inputs nobody
+chose — which is the question a sort and a hash table are easiest to be wrong
+about, because the shapes that break them are the ones nobody thinks to write
+down: a run already in order, one exactly backwards, a length of nought or one,
+a spread short enough that most of the numbers are equal, a removal of the pair
+that is about to be moved into its own hole.
+
+**Decided.** `examples/ordering.kest` asks both, and asks them against each
+other. Seven lengths from nought to 257, four spreads, sorted up, sorted down,
+and sorted again when already sorted; what went in is counted into a table, and
+what comes out has to be the same numbers, the same many of each. Then eight
+tables filled with keys nothing repeats, emptied by thirds in an order of their
+own, and read back: every key taken out is gone and answers `none` and refuses
+a second removal, every key kept holds what it was set to, what the table walks
+by place is what it answers for by key, and `compact` gives back the same table
+and takes what goes in afterwards.
+
+Numbers nobody chose, from a seed written down: `std.random` is a value the
+program holds, so the run is the same run every time and a failure is a failure
+anybody can have again. That is why this can be an example rather than a fuzzer
+— the gate runs it under both builds like every other, which puts the whole of
+it under the sanitisers.
+
+**Seen catching something.** A `by` that stops one short of the end: caught,
+answering 3. A removal that leaves the slot empty rather than marked as taken:
+caught, answering 16 — a key that had been taken out was found again. A removal
+that writes the moved pair's place one past where it went: caught, answering 11
+— the next removal of that key said there was nothing to remove.
+
+**What it is not.** Not a proof, and not a fuzzer: seven lengths and four
+spreads are what fit in an example that runs in a gate, and a shape nobody
+thought of is still a shape nobody thought of. What it is, is the part of that
+gap that costs nothing to close.
+
+## D1084. What this language writes, this library reads back
+
+*reproduced* by the example written one section above this one, on its first
+run: a number written into text by this language and handed to this language's
+own reader came back as nothing.
+
+`text.real` took `12`, `-0.5` and `3.` and refused `1e3`, with a rule written
+beside it: *a program that means those can say them another way, and a rule
+with one shape is a rule a reader keeps.* That is true of a program writing a
+number down. It is not true of a program handed the text by this language: a
+hole in a string writes the shortest spelling that reads back as the same
+number, and for anything small or large enough that spelling has an exponent in
+it. `"{v}"` for 1.2216752e-06 writes `1.2216752e-06`, and `text.real` of that
+was `none`.
+
+So a program that wrote a number into a save file and read its own file back
+got nothing, for exactly the numbers a simulation has most of: small ones. Four
+thousand floats from a seed found it in the first hundred.
+
+**Decided.** What this language writes, this library reads back. `text.real`
+takes an exponent — `e` or `E`, an optional sign, digits — and the three words
+a hole writes for the values it cannot spell plainly: `inf`, `-inf` and `nan`.
+The rule that kept `.5`, `+1.5`, a space in front and a second point out is
+unchanged and is now the sharper rule it was meant to be: *what this language
+writes is what this reads*, rather than *what somebody might mean*.
+
+The digits are gathered as a whole number and scaled once at the end by where
+the point really is — the exponent less the digits after the point — which is
+one rounding rather than one per digit, and the `f32` that comes out of it is
+the one the spelling was chosen to give back. An exponent past ±400 is
+infinity or nought either way, so it is held there rather than walked to.
+Digits that overflow an `f32` are still nothing, which is D378's rule and the
+other half of reading back what was written: `1e40` is not a number this can
+give.
+
+**And the other half of the same sentence.** `text.fixed(value, places)` wrote
+`0.00` for a value that is not a number. It went through the rounding like any
+other number: `nan * 100` is `nan`, the two magnitude tests are both false for
+it, and `i64(nan + 0.5)` is nought. A file with `0.00` in it where the program
+had a value that is not a number is a nought somebody adds up one day. It is
+written the way a hole writes it now, `nan`, which is what the too-big case
+already did with `inf`. A value is not a number exactly when it is not equal to
+itself, which is the one question this module can ask without importing another
+— `std.math` declares seven `extern`s, and importing it here would require all
+seven of every host of every program that reads a number out of text.
+
+**Held by** `examples/ordering.kest`: four thousand numbers written and read
+back, the three words round-tripped, `fixed` held to writing what a hole
+writes for both of them, and the spellings this language does not write held to
+being nothing. A reader with no exponent in it answers 31; a `fixed` that
+rounds a value that is not a number answers 40.
+
+**What this is really about.** The rule beside `real` was written from the
+point of view of somebody typing a number into a file by hand. Every other
+reader of that function is a program reading what this language wrote, and
+nobody had put the two halves of the round trip next to each other. The example
+that did it is eleven lines.
+
+## D1085. The brackets a program means, and the lines a block holds
+
+*reproduced* twice over, by the gate's own formatter check on a line D1084 had
+just been written in.
+
+`text.real` needed the sign of an exponent applied to the digits after the
+point, which is written
+
+```kest
+let power = (if exponentNegative -> 0 - exponent else -> exponent) -
+    afterCount
+```
+
+and the gate said `lib/std/text.kest` is not formatted, *because what `fmt`
+writes has to be the same program and what it wrote is not itself in the one
+form, which is a fault in the formatter*. Its own guard, saying so about
+itself.
+
+**The formatter dropped brackets the program means.** A giving `if` and a
+giving `match` end where the expression holding them ends, so the arm takes
+whatever follows: `(if c -> a else -> b) - 2` without its brackets is an `else`
+arm of `b - 2`. The printer bracketed an operand only when it was a binary
+operator of lower precedence — an `if` has no precedence to compare — so it
+printed a different program and, where the difference happened to be stable
+under a second formatting, said nothing at all. Four shapes, all of them
+wrong: an operand of a binary operator, the operand of a unary one, the object
+of an index or a field, and the callee of a call. `(if c -> xs else -> ys)[0]`
+came out as `if c -> xs else -> ys[0]`, which indexes the other array.
+
+An `if` or a `match` that gives a value is bracketed wherever it is an operand
+or an object now — always, rather than by a rule about what follows, because
+what follows is the enclosing expression's business and the brackets cost a
+reader nothing where they are not needed.
+
+**And a block inside brackets had its lines run together.** The lexer counts
+brackets because a line break inside `(` or `[` carries a statement on rather
+than ending it; the field beside that count has said since it was written that
+*braces do not count: a block holds statements*, and nothing did it. So
+
+```kest
+let held = math.clamp(match d {
+    Shut -> 1
+    Open(w) -> w
+}, 0, 5)
+```
+
+was refused at the second arm — `expected end of line, found identifier` — and
+a `match` written over lines could not be an argument, or be bracketed, or be
+anywhere inside brackets at all. A brace puts the bracket count aside now and
+the brace that closes it puts the count back, which is the rule as written.
+
+The two are one finding: fixing the formatter made it print a bracketed
+`match` over lines, which is exactly what the lexer refused, so neither half
+stands alone.
+
+**What it holds them with.** `examples/ordering.kest` has all four shapes and
+answers with them, so a formatter that drops a bracket writes a file that is
+not in the one form and a lexer that runs the lines together writes one that
+does not parse. `tools/check-fmt.sh`'s own program has them too, which is the
+check that formats a file and holds what it answers to what it answered — the
+strongest of the three, because it reads the meaning rather than the shape.
+
+**What it cost.** The bracket count put aside at a brace is kept on the stack
+of the loop that reads the tokens, as many deep as there are braces. A brace
+inside brackets is a brace inside an expression and 128 expressions one inside
+another is the most this language parses, so a file with more of them than
+there is room for here is a file already refused for its depth.
+
+**What this is really about.** A formatter is the one tool that rewrites what
+somebody wrote, so the one thing it may never do is change what it means — and
+it did, for four shapes, until a line written for another decision happened to
+be one of them. The lexer's field said what the rule was and the code did half
+of it; a comment describing behaviour that is not happening is the shape D1081
+swept for, found here in a sentence rather than in a field.

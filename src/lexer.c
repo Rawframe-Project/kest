@@ -1151,6 +1151,10 @@ static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
     KestToken *tokens = NULL;
     uint32_t used = 0;
     uint32_t capacity = 0;
+    // What the bracket count was where each unclosed brace opened, innermost
+    // last, and how many of those there are.
+    uint32_t held[160];
+    uint32_t braces = 0;
 
     while (true) {
         if (used == capacity) {
@@ -1212,6 +1216,31 @@ static KestToken *lex_from(KestArena *arena, KestLexer *lexer, uint32_t end,
             break;
         }
         tokens[used] = kest_lexer_next(lexer);
+        // A block holds statements, so a line inside one ends where it is
+        // written even when the block is inside brackets: what the count of
+        // brackets is for is a line break inside `(` and `[`, and a brace puts
+        // that count aside until the brace that closes it. The field beside
+        // the count has said so since it was written and nothing did it, so
+        // `f(match d {` ran the arms together and the parser refused the
+        // second one. See D1085.
+        //
+        // A brace inside brackets is a brace inside an expression, and 128
+        // expressions one inside another is the most this language parses, so
+        // a file with more of these than there is room for here is a file
+        // already refused for its depth.
+        if (tokens[used].kind == KEST_TOK_LBRACE) {
+            if (braces < (uint32_t)(sizeof held / sizeof held[0])) {
+                held[braces] = lexer->bracket_depth;
+            }
+            braces++;
+            lexer->bracket_depth = 0;
+        } else if (tokens[used].kind == KEST_TOK_RBRACE && braces > 0) {
+            braces--;
+            lexer->bracket_depth =
+                braces < (uint32_t)(sizeof held / sizeof held[0])
+                    ? held[braces]
+                    : 0;
+        }
         if (tokens[used++].kind == KEST_TOK_EOF) {
             break;
         }
