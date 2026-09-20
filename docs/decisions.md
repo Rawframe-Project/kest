@@ -35928,3 +35928,44 @@ written.
 instruments and the four workloads compile unchanged, and the one thing that
 had to move was a `main` in the slice's test that could promise `no.host` and
 did not.
+
+## D1076. A bit is its place in the list, and the mark carries those too
+
+*measured*, the same way D1072 was and immediately after it.
+
+D1072 put an enum's case names into a layout's mark, because a tag is a number
+that is its case's place and a case put in the middle renumbers every case
+after it. A set of named bits is the same sentence with a shift in it: a bit is
+one shifted by its place in the list, so `State { Moving, Hurt }` has `Hurt` at
+2 and `State { Moving, Resting, Hurt }` has it at 4.
+
+**And the mark said nothing.** A flags field is one piece of one kind —
+`KEST_L_FLAGS8` and the three wider ones say the width and that it is a set of
+named bits — at one offset with one name, and all of those are the same
+whatever the bits are called or how many there are. So a world saved under two
+bits and read back under three has every bit above the inserted one meaning the
+one below it, silently, and the host was told the shape had not moved. It is
+the same failure D1072 fixed, in the other kind whose meaning is its
+declaration order, and this project had just been through it.
+
+**What makes it worse than the tag.** A host can read a tag: `kest_case_of`
+answers which case a number names. There is no door onto a set's bit names at
+all — a host doing schema work over a flags field has the mark and nothing
+else, so the mark being wrong is the whole of what it can know.
+
+**The fix is D1072's.** The bit names are folded in, in the order they are
+declared, and the walk that finds the type at a piece is one function asked
+which kind it is looking for rather than two walks that would count the pieces
+differently. A bit added, taken away, renamed or reordered moves the mark; a
+program whose sets did not change keeps the number it had.
+
+`examples/engine.kest`'s `Body` carries a set of named bits now as well as an
+enum, the save writes it as the number it is, and two more of the eleven reload
+edits are a bit put in the middle and a bit added at the end.
+
+**What it says about the method.** D1072 was found by asking what the `reload`
+section's sentence says rather than what its check does. This one was found by
+asking the same question of the answer: *a tag is a number that is its case's
+place* — what else in this language is a number that is a place in a list? One
+thing, and it had the same hole. A finding is worth re-reading for the shape of
+itself.

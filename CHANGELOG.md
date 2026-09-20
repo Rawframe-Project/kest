@@ -235,6 +235,14 @@ reads as passing a value through. **What a program has to do:** nothing, and
 one shape that could not be written can be. Everything that should still
 refuses. See D1073.
 
+**A layout's mark carries a set of named bits too.** A bit is one shifted by
+its place in the list, so a bit put in the middle of a `flags` doubles every
+bit after it while the width, the size and every piece stay where they were —
+and the mark said nothing. **What a host has to do:** nothing, and a save from
+before this is refused rather than read back with every bit meaning the one
+below. There is no door onto a set's bit names, so the mark is the whole of
+what a host doing schema work can know about one. See D1076.
+
 **A layout's mark carries the enum cases.** A tag is a number that is its
 case's place, so a case put in the middle of an enum renumbers every case after
 it while the size, the alignment and every piece stay where they were — and the

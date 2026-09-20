@@ -2518,6 +2518,8 @@ for edit in \
     "a signature changed|s/^fn round(w: World, from: i32)/fn round(w: World, from: i32, more: i32)/|refused" \
     "a case put in the middle of an enum|s/^    Drifting$/    Drifting\n    Resting/;s/^                Drifting -> 0$/                Drifting -> 0\n                Resting -> 2/|refused" \
     "a case added at the end of an enum|s/^    Chasing$/    Chasing\n    Resting/;s/^                Chasing -> 1$/                Chasing -> 1\n                Resting -> 2/|refused" \
+    "a bit put in the middle of a set|s/^    Seen$/    Seen\n    Rested/|refused" \
+    "a bit added at the end of a set|s/^    Hit$/    Hit\n    Rested/|refused" \
     "a program that will not build|s/^struct Body {/struct Body {{/|refused"; do
     what=${edit%%|*}
     rest_of=${edit#*|}
@@ -2545,7 +2547,7 @@ done
 if [ -n "$reload_wrong" ]; then
     complain "reload" "an edit a reload has to have an answer for: $reload_wrong"
 else
-    say "reload" "nine edits a reload has to have an answer for, each ending \
+    say "reload" "eleven edits a reload has to have an answer for, each ending \
 with a world: the new program's where the shape did not move, and the one the \
 host was holding where it did"
 fi

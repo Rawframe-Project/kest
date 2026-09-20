@@ -38915,3 +38915,33 @@ refusal corpus has the shape.
 **Runs:** the deferred-growth program under both builds against the compiler
 before the fix and after; `break` and `continue` out of a block with a growing
 defer; a `no.alloc` defer leaving a block, which runs; `make check`.
+
+## And a bit is its place in the list
+
+D1072 put an enum's case names into a layout's mark. A set of named bits is the
+same sentence with a shift in it — a bit is one shifted by its place, so a bit
+put in the middle doubles every bit after it — and the mark said nothing about
+those either. A flags field is one piece of one kind at one offset with one
+name whatever its bits are called, so a world saved under two bits and read
+back under three had every bit above the insertion meaning the one below.
+
+Worse than the tag, because a host can read a tag: `kest_case_of` says which
+case a number names, and there is no door onto a set's bit names at all. A host
+doing schema work over a flags field has the mark and nothing else.
+
+The fix is D1072's: the bit names folded in, in declaration order, through one
+walk asked which kind it is looking for rather than two that would count the
+pieces differently. `examples/engine.kest`'s `Body` carries a set of named bits
+now as well as an enum, and two more of the eleven reload edits are a bit put
+in the middle and a bit added at the end.
+
+It was found by re-reading the last finding for the shape of itself: *a tag is
+a number that is its case's place* — what else in this language is a number
+that is a place in a list?
+
+See D1076.
+
+**Runs:** five versions of one program through a host that prints the layout
+mark — a bit in the middle, at the end, taken away, renamed — all five
+different; the engine driven through both new reload edits, with the fold and
+with it taken back out; `make check`.

@@ -302,11 +302,13 @@ typedef struct {
 
 // A number that moves when this shape does: its size, what it is aligned to,
 // whether anything in it is a tag, for every piece where it sits, what is
-// there and what the program calls it, and for a tag which cases it can name
-// and in what order. That last one was not in it until D1072, and a tag is a
-// number that is its case's place: a case put in the middle of an enum
-// renumbers every case after it while the size, the alignment and every piece
-// stay exactly where they were.
+// there and what the program calls it, for a tag which cases it can name and in
+// what order, and for a set of named bits which bits it has and in what order.
+// Those two were not in it until D1072 and D1076, and both are a number that
+// is a place in a list: a case put in the middle of an enum renumbers every
+// case after it, a bit put in the middle of a set doubles every bit after it,
+// and in both the size, the alignment and every piece stay exactly where they
+// were.
 //
 // It is what a host doing schema work keeps beside the bytes it saved. After a
 // reload, the same number means the same shape and nothing to migrate; a

@@ -584,15 +584,30 @@ static bool lay_out_cases(KestModule *module, const KestType *type) {
 // its pieces were laid out: the same walk `describe` makes, counting instead of
 // writing. A value that is an enum has its tag at piece nought and one inside a
 // shape has it wherever the fields in front of it end. See D709.
+// And the same walk for a set of named bits, which is the other kind whose
+// meaning is its declaration order: a bit's value is one shifted by its place
+// in the list, so a bit put in the middle doubles every bit after it. Both are
+// walked by the one function, because a walk that knew about one and stepped
+// over the other would count the pieces differently depending on what it was
+// looking for. See D1076.
+static const KestType *named_at(const KestType *type, uint16_t want,
+                                uint16_t *at, uint8_t looking);
+
 static const KestType *enum_at(const KestType *type, uint16_t want,
                                uint16_t *at) {
+    return named_at(type, want, at, (uint8_t)KEST_T_ENUM);
+}
+
+static const KestType *named_at(const KestType *type, uint16_t want,
+                                uint16_t *at, uint8_t looking) {
     if (type == NULL) {
         *at = (uint16_t)(*at + 1);
         return NULL;
     }
     if (type->tag == KEST_T_STRUCT) {
         for (uint32_t i = 0; i < type->member_count; i++) {
-            const KestType *found = enum_at(type->members[i].type, want, at);
+            const KestType *found =
+                named_at(type->members[i].type, want, at, looking);
             if (found != NULL) {
                 return found;
             }
@@ -601,7 +616,7 @@ static const KestType *enum_at(const KestType *type, uint16_t want,
     }
     if (type->tag == KEST_T_FIXED) {
         for (uint32_t i = 0; i < type->count; i++) {
-            const KestType *found = enum_at(type->element, want, at);
+            const KestType *found = named_at(type->element, want, at, looking);
             if (found != NULL) {
                 return found;
             }
@@ -609,7 +624,7 @@ static const KestType *enum_at(const KestType *type, uint16_t want,
         return NULL;
     }
     if (type->tag == KEST_T_OPTIONAL) {
-        const KestType *found = enum_at(type->element, want, at);
+        const KestType *found = named_at(type->element, want, at, looking);
         if (found != NULL) {
             return found;
         }
@@ -619,7 +634,12 @@ static const KestType *enum_at(const KestType *type, uint16_t want,
     if (type->tag == KEST_T_ENUM) {
         bool here = *at == want;
         *at = (uint16_t)(*at + (type->slots == 0 ? 1 : type->slots));
-        return here ? type : NULL;
+        return here && looking == (uint8_t)KEST_T_ENUM ? type : NULL;
+    }
+    if (type->tag == KEST_T_FLAGS) {
+        bool here = *at == want;
+        *at = (uint16_t)(*at + 1);
+        return here && looking == (uint8_t)KEST_T_FLAGS ? type : NULL;
     }
     *at = (uint16_t)(*at + 1);
     return NULL;
@@ -2166,17 +2186,37 @@ uint64_t kest_layout_mark(const KestLayout *layout) {
         // size does not move, the pieces do not move and nothing else here
         // moved either, so until this was folded the mark said nothing had
         // changed. See D1072.
-        if (layout->pieces[p].kind != KEST_L_TAG) {
+        if (layout->pieces[p].kind == KEST_L_TAG) {
+            for (int32_t tag = 0;; tag++) {
+                const char *named = kest_case_of(layout, p, tag, NULL, NULL);
+                if (named == NULL) {
+                    fold_number(&mark, (uint64_t)tag, 2);
+                    break;
+                }
+                fold_text(&mark, named);
+            }
             continue;
         }
-        for (int32_t tag = 0;; tag++) {
-            const char *named = kest_case_of(layout, p, tag, NULL, NULL);
-            if (named == NULL) {
-                fold_number(&mark, (uint64_t)tag, 2);
-                break;
-            }
-            fold_text(&mark, named);
+        // And which bits a set of named ones has, in the order they are
+        // declared. A bit is one shifted by its place in the list, so a bit
+        // put in the middle doubles every bit after it -- and the width, the
+        // size, the alignment and every piece stay exactly where they were,
+        // which is the same shape of silence a case put in the middle of an
+        // enum was until D1072. See D1076.
+        if (layout->pieces[p].kind < KEST_L_FLAGS8 ||
+            layout->pieces[p].kind > KEST_L_FLAGS64) {
+            continue;
         }
+        uint16_t walked = 0;
+        const KestType *set =
+            named_at(layout->type, p, &walked, (uint8_t)KEST_T_FLAGS);
+        if (set == NULL) {
+            continue;
+        }
+        for (uint32_t bit = 0; bit < set->case_count; bit++) {
+            fold_text(&mark, set->cases[bit].name);
+        }
+        fold_number(&mark, set->case_count, 2);
     }
     return mark;
 }
