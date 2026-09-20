@@ -5330,7 +5330,13 @@ callee that promises nothing might grow what it was given, the growth would be
 the block's, and the block gives it back. `table.orElse`, `table.fit`,
 `text.fitting` and `get` all promise `no.alloc`, so a frame that walks a world
 inside a block and looks each thing up is written exactly as it would be
-outside one; `table.set` and `text.append` may grow and are refused. See D1075.
+outside one; `table.set` and `text.append` may grow and are refused.
+
+A `defer` is the same question asked at a different moment. What a program
+defers runs on the way out, and on a `return`, a `break` or a `continue` that
+leaves a block it runs *before* the block's memory goes back — so a deferred
+call that may grow something older than the block is refused where it is
+written, and one that promises `no.alloc` is not. See D1075.
 
 A
 value the block made is refused where it would outlive the block: given back

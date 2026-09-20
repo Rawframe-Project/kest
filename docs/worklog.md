@@ -38893,3 +38893,25 @@ See D1075.
 **Runs:** the fourteen-line program under the release and sanitised builds,
 before and after; the frame shape that has to keep compiling; every example,
 the library, the instruments and the four workloads; `make check`.
+
+## And the same question asked of a `defer`
+
+What a program defers runs on the way out, and on a `return`, a `break` or a
+`continue` that leaves a `scratch { }` block it runs **before** the block's
+memory goes back: `run_deferred` comes before `close_regions` at every one of
+those, so that what a deferred call sees is what the function decided.
+
+So a deferred call that may grow something older than the block grows it in the
+block's memory, and the block takes it away. Tested against the compiler before
+D1075: a function that defers a push and returns from inside a block answers
+`1 72 32` in a release build and `use-after-poison` under the sanitisers, the
+same as the direct call did. The rule D1075 wrote covers it, because the
+deferred call is emitted where the block is still open — and a deferred call
+that promises `no.alloc` is still written exactly as it was.
+
+Three ways out of a block and a `defer` on each were driven through it, and the
+refusal corpus has the shape.
+
+**Runs:** the deferred-growth program under both builds against the compiler
+before the fix and after; `break` and `continue` out of a block with a growing
+defer; a `no.alloc` defer leaving a block, which runs; `make check`.

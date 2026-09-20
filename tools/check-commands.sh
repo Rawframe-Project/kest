@@ -5706,7 +5706,8 @@ for leaving in \
     "grows something that outlives the block|struct One {\n    id: i32\n}\n\nfn added() -> i32 {\n    let world: store<One> = store(1)\n    scratch {\n        let made = add(world, One(1))\n        if get(world, made) == none {\n            return 1\n        }\n    }\n    return 0\n}\n" \
     "grows something that outlives the block|fn roomed() -> i32 {\n    let out: [i32] = array()\n    scratch {\n        room(out, 64)\n    }\n    return len(out)\n}\n" \
     "hands something that outlives the block to a call that may grow it|fn bigger(xs: [i32]) {\n    push(xs, 1)\n}\n\nfn called() -> i32 {\n    let out: [i32] = array()\n    scratch {\n        bigger(out)\n    }\n    return len(out)\n}\n" \
-    "hands something that outlives the block to a call that may grow it|fn bigger(xs: [i32]) {\n    push(xs, 1)\n}\n\nfn valued() -> i32 {\n    let out: [i32] = array()\n    let doing: fn([i32]) = bigger\n    scratch {\n        doing(out)\n    }\n    return len(out)\n}\n"; do
+    "hands something that outlives the block to a call that may grow it|fn bigger(xs: [i32]) {\n    push(xs, 1)\n}\n\nfn valued() -> i32 {\n    let out: [i32] = array()\n    let doing: fn([i32]) = bigger\n    scratch {\n        doing(out)\n    }\n    return len(out)\n}\n" \
+    "hands something that outlives the block to a call that may grow it|fn bigger(xs: [i32]) {\n    push(xs, 1)\n}\n\nfn deferred(out: [i32]) -> i32 {\n    defer bigger(out)\n    scratch {\n        return len(out)\n    }\n}\n"; do
     wanted_out=${leaving%%|*}
     written_out=${leaving#*|}
     # shellcheck disable=SC2059
