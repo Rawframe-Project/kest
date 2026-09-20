@@ -11,7 +11,7 @@ fn steady(one: world.Colonist) -> bool no.alloc no.host deterministic {
     return false
 }
 
-fn main() -> i32 {
+fn main() -> i32 no.host deterministic {
     let colony = world.begin()
     let who = world.join(colony, "one")
     if let it = get(colony.people, who) {

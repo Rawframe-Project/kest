@@ -217,6 +217,16 @@ answers something else now warns, and the fix is the one the message already
 names — hand the changed one back. Nothing in this tree was leaning on the
 silence. See D1065.
 
+**A `scratch { }` block may not grow what outlives it through a call either.**
+Growing something older than the block was refused where it was written and not
+one call away, so a block could grow an array, give the memory back, and leave
+a program reading elements that are not there — a silent use-after-free.
+**What a program has to do:** a call inside a block that is handed something
+that can grow now has to promise `no.alloc`, which everything in the standard
+library that a frame calls inside a block already does. A call that may grow
+what it was handed does the growing outside the block, which is what the block
+is for. See D1075.
+
 **An `if let` inside a `scratch { }` block no longer makes what it binds.** A
 frame that walks a world inside a block of working memory and looks each thing
 up in a table was refused for handing the world's own text to a lookup, because

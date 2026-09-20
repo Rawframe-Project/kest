@@ -1305,12 +1305,27 @@ static bool reads_only_fields(Compiler *compiler, const KestBlock *block,
             }
             break;
         case KEST_STMT_BLOCK:
+        // A block of working memory is a block: what is written inside one is
+        // written. It fell into a `default` here, so a body that named the
+        // thing being walked inside a `scratch { }` was read as naming
+        // nothing and the loop bound its element by address. Written out with
+        // no `default` now, the way every list here that has to be complete
+        // is, so a statement added to the language stops the build rather
+        // than going quietly missing from two walks. See D1075.
+        case KEST_STMT_SCRATCH:
             if (!reads_only_fields(compiler, &stmt->block, name, length,
                                  fields_are_fine)) {
                 return false;
             }
             break;
-        default:
+        case KEST_STMT_DEFER:
+            if (!expr_reads_only_fields(compiler, stmt->value, name, length,
+                                        fields_are_fine)) {
+                return false;
+            }
+            break;
+        case KEST_STMT_BREAK:
+        case KEST_STMT_CONTINUE:
             break;
         }
     }
@@ -1479,11 +1494,18 @@ static bool writes_no_arrays(Compiler *compiler, const KestBlock *block) {
             }
             break;
         case KEST_STMT_BLOCK:
+        case KEST_STMT_SCRATCH:
             if (!writes_no_arrays(compiler, &stmt->block)) {
                 return false;
             }
             break;
-        default:
+        case KEST_STMT_DEFER:
+            if (!expr_writes_no_arrays(compiler, stmt->value)) {
+                return false;
+            }
+            break;
+        case KEST_STMT_BREAK:
+        case KEST_STMT_CONTINUE:
             break;
         }
     }
@@ -2210,7 +2232,13 @@ static void compile_value_call(Compiler *compiler, const KestExpr *expr) {
     // the machine has no other way to know: which function it enters is a
     // number, and a number a host wrote may name one of another shape.
     // See D835.
-    ir_carries(compiler, at, through, coming_back, 0);
+    //
+    // And whether what it enters promises to reach no heap, which is what
+    // says a call inside a working-memory block cannot grow what it was
+    // handed. A promise is part of a function's type, so reading it off the
+    // shape here is reading it off the type. See D1075.
+    ir_carries(compiler, at, through, coming_back,
+               shape != NULL && shape->no_alloc ? 1 : 0);
 }
 
 static void compile_call(Compiler *compiler, const KestExpr *expr) {
@@ -2387,7 +2415,11 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
         uint32_t at = ir_emit(compiler, KEST_IR_CALL, callee->type,
                               (uint16_t)expr->call.arg_count, expr->type,
                               result_slots, expr->span);
-        ir_carries(compiler, at, (uint16_t)index, argument_slots, 0);
+        // And whether it promises to reach no heap, which is what says a
+        // call inside a working-memory block cannot grow what it was handed.
+        // See D1075.
+        ir_carries(compiler, at, (uint16_t)index, argument_slots,
+                   callee->type != NULL && callee->type->no_alloc ? 1 : 0);
         return;
     }
 

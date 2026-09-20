@@ -405,6 +405,33 @@ static bool passes_through(uint16_t kind) {
     }
 }
 
+// Whether a call handed a value of this type could make it bigger: an array or
+// a store, or a shape holding one anywhere inside it. Text cannot grow -- a
+// piece of text is its bytes and how many, and a call is handed a copy of both
+// -- and neither can a number. See D1075.
+static bool can_grow(const KestType *type, uint32_t depth) {
+    if (type == NULL || depth > 8) {
+        return type != NULL;
+    }
+    switch (type->tag) {
+    case KEST_T_ARRAY:
+    case KEST_T_STORE:
+        return true;
+    case KEST_T_STRUCT:
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            if (can_grow(type->members[i].type, depth + 1)) {
+                return true;
+            }
+        }
+        return false;
+    case KEST_T_OPTIONAL:
+    case KEST_T_FIXED:
+        return can_grow(type->element, depth + 1);
+    default:
+        return false;
+    }
+}
+
 // Whether something can be written into a value of this type that holds what
 // the machine keeps. A run of bytes cannot: copying a piece of text into one
 // copies the bytes, and what the block made is gone with the block. A run of
@@ -612,6 +639,28 @@ const char *kest_ir_escapes(const KestIrBody *body, KestArena *arena,
         // instead. A crossing into the host is not one of these: see D966.
         case KEST_IR_CALL:
         case KEST_IR_CALL_VALUE: {
+            // A call inside a block, handed something older than the block
+            // that can grow, and promising nothing about the heap. What it
+            // grew would be grown in the block's memory and given back when
+            // the block ends, which is the same thing D972 refuses when the
+            // growth is written here -- and a call is the one shape that
+            // cannot be followed, so it is refused rather than followed. A
+            // callee that promises `no.alloc` cannot grow anything, which is
+            // what leaves a lookup inside a block a thing a program may still
+            // write. See D1075.
+            if (open > 0 && op->imm[2] == 0) {
+                for (uint16_t a = 0; a < op->arg_count; a++) {
+                    KestIrRef ref = body->args[op->first_arg + a];
+                    if (ref >= body->value_count || made[ref]) {
+                        continue;
+                    }
+                    if (can_grow(body->values[ref].type, 0)) {
+                        return "this hands something that outlives the block "
+                               "to a call that may grow it, and what a block "
+                               "grows it gives back";
+                    }
+                }
+            }
             bool any = false;
             for (uint16_t a = 0; a < op->arg_count; a++) {
                 any = any || value_kept(made, body, op, a);

@@ -35872,3 +35872,59 @@ band is added it is the sentence that says the ladder stopped making sense.
 hole whose sentence has changed, and a hole deleted is a net that is not there
 any more. Both are things a reader of this project has to be able to check, and
 the count in `CLAUDE.md` is eight hundred and seventy-seven.
+
+## D1075. A block may not grow what outlives it, through a call either
+
+*measured*, with a program of fourteen lines and the sanitised build.
+
+A `scratch { }` block marks the heap and puts it back when it ends, and
+**nothing made inside may be kept** — which D966 proves by walking the IR and
+D972 sharpened: a world that got bigger inside a block is longer-lived state
+the block wrote, so growing one is refused where it is written.
+
+**It was refused where it was written and nowhere else.** Fourteen lines: a
+function that pushes sixty-four numbers onto the array it is handed, a `main`
+that makes an array of eight, opens a block, calls that function inside it, and
+reads element forty afterwards.
+
+`push(xs, i)` written inside the block is `K0507`. The same push one call away
+is not: the walk refuses a call handed *what the block made*, and `xs` is older
+than the block, so nothing looked at it. The array grew in the block's memory,
+the block gave that memory back, and the release build read the elements
+afterwards and answered. The sanitised build says what it is:
+`use-after-poison`, reading a value out of a block the arena has taken back.
+
+This is a silent use-after-free reachable from ordinary Kest, it has been there
+since blocks could hold calls, and nothing found it because every `scratch` in
+this tree calls something that promises `no.alloc`.
+
+**The rule, and why it is this one.** A call inside a block, handed something
+older than the block that can grow, is refused unless the callee promises
+`no.alloc`. A promise is part of a function's type, so the shape a call goes
+through carries it and a call through a value is asked the same question. What
+can grow is an array or a store, or a shape holding one anywhere inside it;
+text cannot, because a piece of text is its bytes and how many and a call is
+handed a copy of both.
+
+That is narrow enough to leave the frame shape alone: `table.orElse`,
+`table.fit`, `text.fitting` and `get` all promise `no.alloc`, so a body that
+walks a world inside a block and looks each thing up is written exactly as it
+was. It refuses `table.set`, `text.append` and anything else that may grow —
+which is the truth about them, and the fix is to do the growing outside the
+block, which is what the block is for.
+
+**And the second half of the same walk, which was blind for another reason.**
+`reads_only_fields` and `writes_no_arrays` decide whether a `for` may bind its
+element by address instead of copying it, and both switched over statement
+kinds with a `default`. A `scratch { }` block fell into it, so a body that
+named the array inside one was read as naming nothing: the loop bound by
+address, and a call inside the block that grew the array left the address
+pointing into memory that had moved. Both switches are written out in full now
+with no `default`, which is what this project's own rule says a list that has
+to be complete does — and it is the rule that would have stopped this being
+written.
+
+**What it cost.** Nothing in this tree: every example, the library, the
+instruments and the four workloads compile unchanged, and the one thing that
+had to move was a `main` in the slice's test that could promise `no.host` and
+did not.

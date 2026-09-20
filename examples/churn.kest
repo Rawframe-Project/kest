@@ -213,7 +213,10 @@ fn keeping(world: store<Thing>, round: i32) -> i32 {
 }
 
 // A frame that walks a world inside a block of working memory and looks each
-// thing up in a table it was handed. The name it looks with came out of the
+// thing up in a table it was handed. Everything it calls promises `no.alloc`,
+// which is what says none of them can grow what they were handed: a call that
+// promised nothing would be refused here, because what it grew would be grown
+// in the block's memory and given back when the block ends. See D1075. The name it looks with came out of the
 // world and is not the block's, so nothing here hands the block's own memory
 // to anything — and this was refused until D1073, because an `if let` binding
 // was read as making what it bound. Every frame in a persistent-world language

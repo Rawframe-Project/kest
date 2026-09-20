@@ -5322,7 +5322,17 @@ Entering it marks the heap and leaving it puts the heap back, so the block costs
 the same every time round the loop rather than every time round the loop costing
 the last one.
 
-**Nothing made inside may be kept.** That is proved rather than asked for. A
+**Nothing made inside may be kept, and nothing older may be grown.** Both are
+proved rather than asked for. Growing something that outlives the block is
+refused where it is written, and a call inside a block that is handed something
+older than the block that can grow is refused unless it promises `no.alloc` — a
+callee that promises nothing might grow what it was given, the growth would be
+the block's, and the block gives it back. `table.orElse`, `table.fit`,
+`text.fitting` and `get` all promise `no.alloc`, so a frame that walks a world
+inside a block and looks each thing up is written exactly as it would be
+outside one; `table.set` and `text.append` may grow and are refused. See D1075.
+
+A
 value the block made is refused where it would outlive the block: given back
 from the function, written into a name declared outside it, put into an array or
 a store that is not the block's own, or handed to a call beside something older
