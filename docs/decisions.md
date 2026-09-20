@@ -35219,3 +35219,40 @@ fourth number is a row rather than a block; and the example count is gone,
 because the reference already lists every one of them in a table
 `check-docs.sh` holds to the directory, and a number beside a list that is
 already held is a second place to be wrong.
+
+## D1062. An enum another module declared can be made, not only matched
+
+*argued*, and the program that shows it is `examples/game.kest`.
+
+A struct crosses out of the file it is in. So does a constant (D665), a
+function, and a generic of either. An enum crossed halfway: a program could be
+handed one and `match` it, and could not write one down. `npc.Mood.Calm` was
+`` `npc` has nothing called `Mood` `` — with a suggestion that said `npc.Mood`,
+which is what had been written.
+
+**What it was.** The checker reads `a.b.c` outwards, and the branch that knows
+a case is named after its enum asked whether the name in front of the case was
+a `KEST_EXPR_NAME`. For a file's own enum it is: `Mood.Calm` is one name and one
+case. For anybody else's it is `npc.Mood`, which is a field over a name, so the
+branch was skipped, the inner `npc.Mood` was checked as a value, and a type is
+not one. The same was true of a case that carries something, which is a call
+whose callee is one name deeper again.
+
+**What it is now.** Both branches ask whether the thing in front of the case
+*names a type* rather than whether it is one word — bare for a file's own and
+with the module in front for anybody else's, which is exactly how the reference
+says a name from another module is written and how `kest_lookup_type` already
+read one. Two conditions, one predicate, and flags came with it because a named
+bit goes through the same branch.
+
+**Why nothing caught it.** Every enum in this tree was declared and used in one
+file. `examples/state.kest` and `examples/tree.kest` are the enum examples and
+both are one module; `examples/game.kest` is the cross-module example and had a
+struct and two constants in the module beside it and no enum. A program in more
+than one file puts a thing's states in the module the thing is in, so this was
+every such program — and this tree had none, which is the shape of gap a
+vertical slice is for. Section 35 asked for one and it found this in its third
+file.
+
+**What it cost.** Nothing anybody has to do. The spelling that works now is the
+spelling that was already written down; what changed is that it is read.

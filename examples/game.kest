@@ -39,6 +39,34 @@ fn main() -> i32 {
         return 3
     }
 
+    // A case of an enum the module beside this one declared, made here and
+    // matched here. Making one is the half that did not work: a program could
+    // be handed a `Mood` and read it and could not write one down. See D1062.
+    if npc.mood(guard) != npc.Mood.Calm {
+        return 4
+    }
+    if npc.mood(hit) != npc.Mood.Calm {
+        return 5
+    }
+    let weak = npc.hurt(guard, npc.FULL - 1)
+    if npc.mood(weak) != npc.Mood.Wary {
+        return 6
+    }
+    // And one that carries something, which is the other half: the case is
+    // called rather than named, and the name in front of it is still a type.
+    let over = npc.Mood.Fleeing(2)
+    let said = match over {
+        Calm -> 0
+        Wary -> 1
+        Fleeing(from) -> from
+    }
+    if said != 2 {
+        return 7
+    }
+    if npc.mood(npc.hurt(guard, npc.FULL)) != npc.Mood.Fleeing(0) {
+        return 8
+    }
+
     io.print("{hit.name} is at {hit.health}, and the module said so")
     return 0
 }

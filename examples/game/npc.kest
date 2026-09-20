@@ -23,3 +23,25 @@ fn hurt(npc: Npc, amount: i32) -> Npc no.alloc {
 fn alive(npc: Npc) -> bool no.alloc {
     return npc.health > 0
 }
+
+// And an enum, which is the one kind of declaration that crossed out of a file
+// halfway. A program could take one of these and `match` it and could not make
+// one: the name in front of the case was read as a value where it stands for a
+// type, so `npc.Mood.Calm` was `npc` having nothing called `Mood`. A world
+// written in more than one file puts its states in the module the thing is in,
+// so this was every such program. See D1062.
+enum Mood {
+    Calm
+    Wary
+    Fleeing(i32)
+}
+
+fn mood(npc: Npc) -> Mood no.alloc {
+    if npc.health <= 0 {
+        return Mood.Fleeing(0)
+    }
+    if npc.health < FULL / 2 {
+        return Mood.Wary
+    }
+    return Mood.Calm
+}

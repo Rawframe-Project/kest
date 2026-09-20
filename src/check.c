@@ -2636,6 +2636,20 @@ static KestType *check_generic(Checker *checker, KestExpr *expr,
     return check_arguments(checker, expr, instance->type);
 }
 
+// `Doing` or `world.Doing`: a name for a type, written the way a file writes
+// one — bare for its own and with the module in front for anybody else's.
+// Either way it is one span, and `kest_lookup_type` reads either. A case of an
+// enum another module declared could be matched and could not be made until
+// this said so: the name in front of the case was read as a value, and a type
+// is not one. See D1062.
+static bool names_a_type(const KestExpr *expr) {
+    if (expr->kind == KEST_EXPR_NAME) {
+        return true;
+    }
+    return expr->kind == KEST_EXPR_FIELD &&
+           expr->field.object->kind == KEST_EXPR_NAME;
+}
+
 // What else this file calls by a name, said beside a refusal about the other
 // one. The note is the same sentence a body that gives a name away is told
 // (D730), because it is the same situation one step out: two things answer to
@@ -2684,9 +2698,11 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
     }
 
     // A case of an enum is built by naming it after its enum, which is one
-    // name with a dot in it like everything else that has one.
+    // name with a dot in it like everything else that has one — and an enum
+    // another module declared is named with the module in front, which is two
+    // dots and the same one name. See D1062.
     if (expr->call.callee->kind == KEST_EXPR_FIELD &&
-        expr->call.callee->field.object->kind == KEST_EXPR_NAME) {
+        names_a_type(expr->call.callee->field.object)) {
         KestSpan owner = expr->call.callee->field.object->span;
         KestType *choice = kest_lookup_type(checker->program,
                                             span_text(checker, owner),
@@ -3175,7 +3191,7 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
 
     // A case that carries nothing is written without brackets, so it looks
     // like a field of the enum and is the enum.
-    if (expr->field.object->kind == KEST_EXPR_NAME) {
+    if (names_a_type(expr->field.object)) {
         KestSpan owner = expr->field.object->span;
         KestType *choice = kest_lookup_type(checker->program,
                                             span_text(checker, owner),

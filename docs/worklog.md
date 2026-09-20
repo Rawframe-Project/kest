@@ -38449,3 +38449,36 @@ See D1061.
 
 **Runs:** both rows of the front-page count check watched catching a stale
 number put back; `make check`.
+
+## An enum another module declared could not be made
+
+Section 35 asks for a vertical slice — one project exercising a long-lived
+world, churning references, nested state, an inventory, rules, save and
+rebuild, module-name collisions, host services, error values, function values,
+localized text, hot reload, collector pressure and a `no.alloc` phase, together
+rather than one at a time. Its third file found a hole in the language.
+
+A struct crosses out of the file it is in, and so does a constant and a
+function. An enum crossed halfway: a program could be handed one and `match`
+it, and could not write one down. `npc.Mood.Calm` was `` `npc` has nothing
+called `Mood` ``, suggesting `npc.Mood`, which was what had been written. The
+branch that knows a case is named after its enum asked whether what was in
+front of it was one word; for another module's enum it is two, and the inner
+`npc.Mood` was then checked as a value. A case carrying something was the same
+one name deeper.
+
+Both ask whether the thing in front names a type now, which is one predicate
+and is what `kest_lookup_type` already read. Flags came with it, through the
+same branch.
+
+Nothing caught it because every enum in this tree was declared and used in one
+file: the two enum examples are single modules and the cross-module example had
+a struct and two constants beside it and no enum. `examples/game/npc.kest` has
+one now, made and matched from the file beside it, both the plain case and the
+one that carries.
+
+See D1062.
+
+**Runs:** `examples/game.kest` under the fix and with the fix reverted, to see
+it caught; the three-module program the slice is being built out of; `make
+check`.
