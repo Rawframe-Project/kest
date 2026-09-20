@@ -7090,6 +7090,14 @@ int main(int argc, char **argv) {
         uint16_t slots = 0;
         uint8_t kind = 0;
         const char *called = kest_frame_name(watched, 0, 0, &slots, &kind);
+        // And whether that slot holds where the value is rather than the
+        // value. `n` is a number a caller handed over, so it holds what it is
+        // called; what does not is an element a `for` bound by address, which
+        // `examples/engine.c` stops inside. See D1081.
+        if (kest_frame_at_address(watched, 0, 0)) {
+            fprintf(stderr, "a number handed in was said to be an address\n");
+            return 1;
+        }
         KestValue held_here = {0};
         if (called == NULL || strcmp(called, "n") != 0 ||
             kest_frame_wide(watched, 0) == 0 ||

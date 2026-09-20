@@ -514,6 +514,70 @@ fn main() -> i32 {
         "caught": "check: K0316 said",
     },
     {
+        # A slot that holds where the value is rather than the value, with
+        # nothing saying so. A `for` binds its element by address where the
+        # body never writes it, which is a copy a turn saved -- and what a
+        # debugger showed for one was the address as a decimal number, which
+        # reads as a `Body` with a hundred thousand million in it. See D1081.
+        "what": "a slot holding an address, said to hold the value",
+        "file": "src/compile.c",
+        "from": r"""            if (!compiler->ir->out_of_memory) {
+                compiler->body->names[held->name_at].by_address = true;
+            }""",
+        "to": r"""            if (false) {
+                compiler->body->names[held->name_at].by_address = true;
+            }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "holds where a value is",
+    },
+    {
+        # State this project writes and never reads, which is either something
+        # somebody meant to use or a leftover that reads like one. Five of the
+        # six the first sweep found were leftovers and the sixth was the
+        # compiler knowing a slot holds an address with no way to say so. The
+        # hole is the shape itself: a field written once and read nowhere.
+        # See D1081.
+        "what": "a field written and never read",
+        "file": "src/vm.c",
+        "from": r"""void kest_cancel(KestRuntime *runtime) {
+    if (runtime == NULL) {
+        return;
+    }""",
+        "to": r"""struct Leftover {
+    int never_read;
+};
+
+void kest_cancel(KestRuntime *runtime) {
+    struct Leftover leftover;
+    leftover.never_read = 0;
+    (void)leftover;
+    if (runtime == NULL) {
+        return;
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-tables.sh",
+        "caught": "read nowhere",
+    },
+    {
+        # A manifest line read and never asked for. The `tests` line says where
+        # the programs that check a project are, and `kest test` inside one ran
+        # nothing and said so as though that were a pass -- the field was
+        # written by the reader of the manifest and nobody ever looked at it.
+        # See D1082.
+        "what": "a project's own tests not run when none is named",
+        "file": "src/main.c",
+        "from": r"""            if (here != NULL && here->tests[0] != '\0') {
+                found_count = tests_under(here->tests, &found);""",
+        "to": r"""            if (false) {
+                found_count = tests_under(here->tests, &found);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "own tests do not run",
+    },
+    {
         # A refusal that sends a reader to a door there is no way in through.
         # What a message names is a claim about where the answer is, and a
         # name out of `src` is a name a host looks for in the public header
@@ -10352,8 +10416,8 @@ fn main() -> i32 {
         # release and a half while the header had 88.
         "what": "the reference counting the doors for itself",
         "file": "docs/language.md",
-        "from": r"""The C API is 98 doors in 6 families: 39 for running""",
-        "to": r"""The C API is 98 doors in 6 families: 38 for running""",
+        "from": r"""The C API is 99 doors in 6 families: 39 for running""",
+        "to": r"""The C API is 99 doors in 6 families: 38 for running""",
         "make": [],
         "tool": "tools/check-tables.sh",
         "arguments": [],
@@ -15691,7 +15755,7 @@ kest 9.9.9""",
         # See D1037.
         "what": "a front page counting the doors for itself",
         "file": "README.md",
-        "from": """a C embedding API of 98 doors""",
+        "from": """a C embedding API of 99 doors""",
         "to": """a C embedding API of 88 doors""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",

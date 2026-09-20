@@ -1140,8 +1140,12 @@ modules      every file where its `module` line says it is
 project      `lib/std` read as one project rather than as files, and
              `examples/slice` built and tested as the project it is: a
              `kest.project`, sources under it, tests beside them, and the
-             two commands a reader is told to type. The sweeps read every
-             file on its own; this is the other question
+             two commands a reader is told to type -- named and not named,
+             because the manifest says where the tests are and `kest test`
+             inside a project runs them. And a project that says where its
+             tests are and has none there, which is refused rather than
+             passed. The sweeps read every file on its own; this is the
+             other question
 layouts      what every shape takes on the stack against what it takes in
              memory, what it would take packed, and nothing wider in memory
              than on the stack

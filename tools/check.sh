@@ -1891,9 +1891,53 @@ if ! (cd "$tree"/examples/slice && "$tree"/kest test tests/rounds.kest) \
     complain "project" "\`kest test\` does not work in examples/slice"
     sed 's/^/    /' "$scratch"/check-why | head -6
 fi
+# And without naming one, which is what the manifest's `tests` line is for: a
+# project is a thing to be inside rather than a thing to name at every command.
+# The line was read and nothing asked for it until D1082, so `kest test` in a
+# project ran nothing and said so as though that were a pass.
+if ! (cd "$tree"/examples/slice && "$tree"/kest test) \
+        >"$scratch"/check-why 2>&1; then
+    complain "project" "\`kest test\` with nothing named does not run what \
+the project says its tests are"
+    sed 's/^/    /' "$scratch"/check-why | head -6
+elif ! grep -q "rounds.kest" "$scratch"/check-why; then
+    complain "project" "\`kest test\` with nothing named ran something other \
+than what the project says its tests are"
+    sed 's/^/    /' "$scratch"/check-why | head -6
+fi
+# And a project that says where its tests are and has none there, which is a
+# project saying something that is not so: a run of no tests that answers
+# nought is a gate that passes for having done nothing.
+empty_project="$scratch"/empty
+mkdir -p "$empty_project"/src "$empty_project"/tests
+cat > "$empty_project"/kest.project <<'PROJECT'
+project empty
+entry src/main.kest
+source src
+tests tests
+PROJECT
+cat > "$empty_project"/src/main.kest <<'KEST'
+module empty
+
+fn main() -> i32 {
+    return 0
+}
+KEST
+if (cd "$empty_project" && "$tree"/kest test) >"$scratch"/check-why 2>&1; then
+    complain "project" "a project with no program where it says its tests are \
+answered as though its tests had passed"
+    sed 's/^/    /' "$scratch"/check-why | head -4
+elif ! grep -q "K0649" "$scratch"/check-why; then
+    complain "project" "a project with no program where it says its tests are \
+was refused without saying which refusal it was"
+    sed 's/^/    /' "$scratch"/check-why | head -4
+fi
+rm -rf "$empty_project"
 
 say "project" "\`lib/std\` reads as one project rather than as files, and \
-\`examples/slice\` builds and tests as the project it is"
+\`examples/slice\` builds and tests as the project it is -- named and not \
+named, with a project that says where its tests are and has none there \
+refused rather than passed"
 
 # The two layouts, put beside each other. D016 says a value on the stack is a
 # run of eight-byte slots and the same value in memory is what a C compiler

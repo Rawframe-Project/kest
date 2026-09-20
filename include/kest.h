@@ -1414,6 +1414,21 @@ bool kest_frame_slot(const KestRuntime *runtime, uint32_t deep, uint16_t slot,
 const char *kest_frame_name(const KestRuntime *runtime, uint32_t deep,
                             uint16_t slot, uint16_t *slots, uint8_t *kind);
 
+// Whether that slot holds *where* the value is rather than the value. A `for`
+// binds its element by address when the body never writes the name it bound,
+// which is a copy a turn saved and nothing a program can tell (D866) -- but a
+// host reading slots is reading the machine's own working, and a pointer read
+// as a number is a number nobody can do anything with. True for one of those,
+// false for a slot that holds what it is called and for one with no name.
+//
+// What to do with one: the address is where the element is, laid out the way
+// `kest_build_layout` says that type is, so a host reads it through
+// `kest_frame_slot` and then reads the memory as the layout. `kest debug`
+// writes `at 0x...` for one rather than printing the address as though it
+// were the value, which is what it did. See D1081.
+bool kest_frame_at_address(const KestRuntime *runtime, uint32_t deep,
+                           uint16_t slot);
+
 // How many slots a frame has, which is how far a host walks looking for names.
 uint16_t kest_frame_wide(const KestRuntime *runtime, uint32_t deep);
 

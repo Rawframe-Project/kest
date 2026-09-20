@@ -5357,6 +5357,29 @@ if [ -z "$wrong" ]; then
     esac
 fi
 if [ -z "$wrong" ]; then
+    # And without naming one, which is what the manifest's `tests` line says:
+    # a project is a thing to be inside. The line was read and nothing asked
+    # for it until D1082, so this ran nothing and said so as a pass.
+    case "$(cd "$scratch"/projects/demo && "$here/$kest" test 2>&1)" in
+    *"tests/adding.kest"*"1 of 1 passed"*) ;;
+    *) wrong="a project's own tests do not run when none is named" ;;
+    esac
+fi
+if [ -z "$wrong" ]; then
+    # And a project that says where its tests are and has none there, which is
+    # a project saying something that is not so.
+    mv "$scratch"/projects/demo/tests/adding.kest \
+        "$scratch"/projects/demo/adding.kest.kept
+    said_it=$(cd "$scratch"/projects/demo && "$here/$kest" test 2>&1) &&
+        said_it="$said_it and came back nought"
+    case "$said_it" in
+    *"K0649"*"no program there"*) ;;
+    *) wrong="a project with no program where its tests are said nothing" ;;
+    esac
+    mv "$scratch"/projects/demo/adding.kest.kept \
+        "$scratch"/projects/demo/tests/adding.kest
+fi
+if [ -z "$wrong" ]; then
     # And a test that fails, which is what a runner is for.
     printf 'fn main() -> i32 {\n    return 7\n}\n' \
         > "$scratch"/projects/demo/tests/failing.kest
@@ -5530,6 +5553,54 @@ if [ -n "$debug_wrong" ]; then
     complain "debug: a machine stopped and asked about: $debug_wrong"
     sed 's/^/    /' "$scratch"/stopping/said | head -8
 fi
+
+# And a slot that holds where the value is rather than the value, which a `for`
+# binds its element as where the body never writes it: a copy a turn saved and
+# nothing a program can tell. What a debugger printed for one was the address
+# as a decimal number, which reads as a `Body` with 94381350649872 in it. See
+# D1081.
+cat > "$scratch"/stopping/walking.kest <<'KEST'
+struct Body {
+    x: i32
+    y: i32
+}
+
+fn total(bodies: [Body]) -> i32 {
+    let sum = 0
+    for b in bodies {
+        sum += b.x
+    }
+    return sum
+}
+
+fn main() -> i32 {
+    let bodies: [Body] = array()
+    push(bodies, Body(2, 3))
+    push(bodies, Body(4, 5))
+    if total(bodies) != 6 {
+        return 1
+    }
+    return 0
+}
+KEST
+cat > "$scratch"/stopping/walking-asking <<'STOPPING'
+break 9
+run
+locals
+continue
+continue
+quit
+STOPPING
+"$kest" debug "$scratch"/stopping/walking.kest \
+    <"$scratch"/stopping/walking-asking >"$scratch"/stopping/walking-said 2>&1
+case "$(cat "$scratch"/stopping/walking-said)" in
+*"b "*"at 0x"*) ;;
+*)
+    complain "debug: a slot that holds where a value is was shown as though \
+it held the value"
+    sed 's/^/    /' "$scratch"/stopping/walking-said | head -8
+    ;;
+esac
 
 # The language server, driven the way an editor drives it: opened, asked what a
 # name is, asked where it was declared, asked what else names it, asked what the

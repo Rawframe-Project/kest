@@ -36207,3 +36207,86 @@ something has to be worth the line it makes somebody write. This one was worth
 nothing: it refused a body that cannot fall out of its loop, and the fix a
 programmer reached for was to write code the machine can never run — which is
 the thing the rule was supposed to prevent.
+
+## D1081. State this project writes and never reads
+
+*swept*, and six found: five leftovers and one door that had never opened.
+
+A field written every time and read nowhere is one of two things, and this
+project had not asked which of them it had. The sweep is four lines of Python
+over `src`, `include`, the examples and the tools: take every name reached
+through a `.` or a `->`, and say which of them never appears anywhere but on
+the left of an assignment.
+
+**The one that mattered.** `KestIrName.by_address` — the compiler writing down
+that a slot holds *where* a value is rather than the value. A `for` binds its
+element by address when the body never writes the name it bound (D866), which
+is a copy a turn saved and nothing a program can tell. A host reading a stopped
+machine is not a program: what it is handed is the machine's own working, and
+`kest_frame_name` said `b` was a word of kind `WORD` holding 94381350649872.
+`kest debug` printed that number where the body says `Body`.
+
+Two things were wrong at once. The name is written down as the local is
+declared and the by-address decision is made after, so the flag was always
+false where it was read; and nothing carried it into the chunk, so even a true
+one would have stopped there. Both fixed: the `for` writes it into the name it
+already made, `KestNamed` carries it, and `kest_frame_at_address` is the door.
+`kest debug` writes `at 0x...` for one, and a host reads the memory through it
+as the layout of that type — which is what it could always have done and had no
+way to know it should.
+
+**The five leftovers.** `Vm.stopped_for_fuel`, set by the refusal that says a
+budget is spent and read by nothing — the report already says `K0659`.
+`Compiler.place_is_apart`, which recorded whether the last place came back held
+apart, where the branch that asks already knows. `Compiler.failed`, a second
+copy of *something was reported* that the diagnostics hold. `Checker.in_shape`,
+from before a generic's body was held to its declaration by binding its type
+names. `Debugger.standing_on`, from before every breakpoint came out at once
+around a step. Each was a sentence in a comment describing behaviour that was
+happening somewhere else, which is worse than no comment: a reader trusts it.
+
+**Held by a check.** `check-tables.sh` says which names this project reaches a
+value through and never reads, and there are none. Comments and text come out
+first, because a name in either is a mention rather than a use, and a read is
+any reaching that is not the left of an assignment. A hole puts a written-never-
+read field back and the check says so.
+
+**What this is really about.** Dead state is not clutter. Five of these six
+were nothing, and the sixth was the compiler knowing something a host needed
+and had no way to ask for — the question *what writes this and what reads it*
+is the same question as *is anybody being told*.
+
+## D1082. A project's tests are what `kest test` runs
+
+*reproduced*, by typing the two commands the reference tells a reader to type.
+
+`kest new` writes a manifest that says, in its own comment: *Where the programs
+that check this project are. `kest test` runs each of them and reads what it
+answered.* The manifest reader read the line into `KestProject.tests`. Nothing
+ever asked for it. `kest test` inside a project, with no file named, said *no
+programs were named, so nothing ran* and answered nought — a gate passing for
+having done nothing, in the one shape a reader reaches for first.
+
+Found by D1081's sweep: `tests` was the sixth write-only field, and the other
+five were leftovers. This one was a feature.
+
+**Decided.** `kest test` with nothing named, inside a project, runs every
+`.kest` directly under what the `tests` line points at, in the order their
+names sort. It is the same rule `check`, `build` and `run` already keep with
+`entry` (D982): a project is a thing to be inside rather than a thing to name
+at every command.
+
+A project that says where its tests are and has none there is refused with
+`K0649` rather than passed, because a run of no tests that answers nought is
+the failure mode this was in.
+
+**What it cost.** The one thing in this compiler that asks the platform what is
+in a directory, beside the one that asks it to make one for `kest new`. Both
+are in `main.c` and neither is in the library: a host embedding Kest has no
+directory to read. POSIX `opendir` and, on Windows, `_findfirst` from the C
+library's own header — the same shape as `mkdir` and `_mkdir` beside it, and
+for the same reason (D970).
+
+**What was not done.** Walking down into directories under the tests one. A
+project with tests in trees is a project with a structure this has no opinion
+about, and the line says where they are rather than where to start looking.

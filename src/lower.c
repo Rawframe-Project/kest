@@ -1142,7 +1142,8 @@ bool kest_lower_body(void *reading, const KestIrBody *body) {
         kest_chunk_names(lower->module, into, one->name, one->slot,
                          one->slots,
                          one->type == NULL ? (uint8_t)KEST_L_WORD
-                                           : kest_scalar_of(one->type));
+                                           : kest_scalar_of(one->type),
+                         one->by_address);
     }
     return lower_body(lower, body, into);
 }

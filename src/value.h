@@ -348,12 +348,17 @@ typedef enum {
 } KestConstClass;
 
 // One name a body gave a slot. `kind` is what a layout piece is, so a
-// debugger reads the slot as what it holds rather than as bits.
+// debugger reads the slot as what it holds rather than as bits -- and
+// `at_address` is whether the slot holds where the value is rather than the
+// value, which a `for` that binds its element by address does. Without it a
+// host reads a pointer as a number and has no way to know. See D866 and
+// D1081.
 typedef struct {
     const char *name;
     uint16_t slot;
     uint16_t slots;
     uint8_t kind;
+    bool at_address;
 } KestNamed;
 
 typedef struct {
@@ -665,13 +670,16 @@ void kest_chunk_take_back(KestChunk *chunk, uint32_t to);
 // when there is no room: a name a debugger cannot show is not worth refusing a
 // compile over. See D991.
 bool kest_chunk_names(KestModule *module, KestChunk *chunk, const char *name,
-                      uint16_t slot, uint16_t slots, uint8_t kind);
+                      uint16_t slot, uint16_t slots, uint8_t kind,
+                      bool at_address);
 
 // What this body called the slot, or NULL. The last name written for a slot is
 // the one answered, because a body that reuses a slot after a scope ends gave
 // it a second name and the second is the one in scope where the code is now.
+// `at_address` may be NULL for a reader that does not care.
 const char *kest_chunk_named(const KestChunk *chunk, uint16_t slot,
-                             uint16_t *slots, uint8_t *kind);
+                             uint16_t *slots, uint8_t *kind,
+                             bool *at_address);
 
 bool kest_chunk_emit(KestModule *module, KestChunk *chunk, uint8_t byte,
                      uint32_t origin);

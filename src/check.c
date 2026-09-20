@@ -76,12 +76,6 @@ typedef struct {
     // it, so the line to point at is theirs.
     KestSpan asking;
     const KestSource *asking_source;
-    // Set while a generic's own body is being checked, with its type names
-    // standing for themselves. What is being asked there is whether the body
-    // is right for every type the declaration allows, rather than for one:
-    // a copy is not made, and an operation on a type name is held to what the
-    // declaration says that name can do. See D1043.
-    bool in_shape;
 } Checker;
 
 static KestType *check_expr(Checker *checker, KestExpr *expr,
@@ -5237,9 +5231,12 @@ static bool check_unit(KestProgram *program, KestUnit *unit) {
             kest_bind_types(program, symbol->type->type_param_names,
                             symbol->type->type_param_stands,
                             symbol->type->type_param_count);
-            checker.in_shape = true;
+            // A generic's own body, checked with its type names standing
+            // for themselves: what is asked there is whether the body is
+            // right for every type the declaration allows rather than for
+            // one, which is what `kest_bind_types` above puts in place. See
+            // D1043.
             bool ok = check_function(program, &checker, decl, symbol->type);
-            checker.in_shape = false;
             kest_unbind_types(program);
             if (!ok) {
                 return false;

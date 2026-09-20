@@ -45,7 +45,10 @@ typedef struct {
     // its name this way when the body only ever reads fields of it, so
     // reading one field of a wide struct does not copy the rest. See D052.
     bool is_address;
-    const KestType *points_at;
+    // Where the name this body wrote down for it is, so that a thing known
+    // after the name was written -- whether the slot holds an address -- can
+    // be written into it rather than lost. See D1081.
+    uint32_t name_at;
     // The name is a value the chunk holds rather than a place in the frame: a
     // `let` worked out where it was written whose name the body never assigns
     // to. The frame neither builds it nor keeps it, and every reading of the
@@ -131,17 +134,15 @@ typedef struct {
 
     // A reported problem does not stop the walk: D008 wants one run to report
     // the whole file. Only running out of memory stops it, because after that
-    // nothing further is true.
-    bool failed;
+    // nothing further is true, and that is what this says.
     bool out_of_memory;
 
     // Whether a place in an array is wanted as what it is made of rather than
-    // as an address, and whether the last one asked for came back that way. A
-    // statement that writes through a place and evaluates something in between
-    // asks for the first; everything else takes the address, which is a slot
-    // fewer and is safe where nothing runs in between. See D931.
+    // as an address. A statement that writes through a place and evaluates
+    // something in between asks for this; everything else takes the address,
+    // which is a slot fewer and is safe where nothing runs in between. See
+    // D931.
     bool place_apart;
-    bool place_is_apart;
 } Compiler;
 
 static void refuse(Compiler *compiler, KestSpan span, const char *code,
@@ -151,7 +152,6 @@ static void refuse(Compiler *compiler, KestSpan span, const char *code,
     kest_diags_addv(compiler->program->diags, KEST_SEVERITY_ERROR, code, span,
                     format, args);
     va_end(args);
-    compiler->failed = true;
 }
 
 // What the checker allowed and this cannot emit. Reaching one of these means
@@ -162,7 +162,6 @@ static void refuse(Compiler *compiler, KestSpan span, const char *code,
 // stopped.
 static void fault(Compiler *compiler, KestSpan span, const char *what) {
     kest_diags_disagree(compiler->program->diags, span, "%s", what);
-    compiler->failed = true;
 }
 
 static void stack_push(Compiler *compiler, uint16_t count) {
@@ -436,7 +435,7 @@ static void hold_local(Compiler *compiler, KestSpan span, const KestType *type,
 // that a walk over a body can say which name a slot belongs to without going
 // back to the file. Nothing lowering does reads them; what reads them is
 // anything asking a body about itself.
-static void remember_name(Compiler *compiler, const Local *local) {
+static uint32_t remember_name(Compiler *compiler, const Local *local) {
     KestIrName name = {0};
     name.name = local->name;
     name.type = local->type != NULL ? local->type : local->holds;
@@ -444,10 +443,11 @@ static void remember_name(Compiler *compiler, const Local *local) {
     name.slots = local->size;
     name.by_address = local->is_address;
     name.span = local->span;
-    kest_ir_name_add(compiler->ir, compiler->body, &name);
+    uint32_t at = kest_ir_name_add(compiler->ir, compiler->body, &name);
     if (compiler->ir->out_of_memory) {
         compiler->out_of_memory = true;
     }
+    return at;
 }
 
 static uint16_t declare_local(Compiler *compiler, KestSpan span,
@@ -477,7 +477,7 @@ static uint16_t declare_local(Compiler *compiler, KestSpan span,
         compiler->slot_high_water = compiler->next_slot;
     }
     local->span = span;
-    remember_name(compiler, local);
+    local->name_at = remember_name(compiler, local);
     return local->slot;
 }
 
@@ -1601,7 +1601,6 @@ static bool compile_address(Compiler *compiler, const KestExpr *expr,
         // address out at that moment, so anything the program does in between
         // -- growing that very array, most of all -- cannot leave this holding
         // a block nothing will read again. See D931.
-        compiler->place_is_apart = true;
         *offset = 0;
         return true;
     }
@@ -3403,7 +3402,6 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             compiler->place_apart = true;
             bool made = compile_address(compiler, target, &offset);
             compiler->place_apart = false;
-            compiler->place_is_apart = false;
             if (!made) {
                 fault(compiler, target->span,
                       "this assigns to something that is not a place");
@@ -3900,7 +3898,14 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         if (by_address) {
             Local *held = &compiler->locals[compiler->local_count - 1];
             held->is_address = true;
-            held->points_at = bound;
+            // The name was written down as the local was declared, which is
+            // before this was known. A slot that holds where the element is
+            // says so to whatever asks the body about itself -- and what asks
+            // is a host reading a stopped machine, which would otherwise be
+            // handed an address as though it were a `Body`. See D1081.
+            if (!compiler->ir->out_of_memory) {
+                compiler->body->names[held->name_at].by_address = true;
+            }
         }
         stack_pop(compiler, by_address ? 1 : stride);
         store_slots(compiler, element_slot, by_address ? 1 : stride,
@@ -4158,7 +4163,6 @@ static bool close_body(Compiler *compiler, const KestBlock *block,
     if (!went) {
         compiler->out_of_memory = compiler->out_of_memory ||
                                   compiler->ir->out_of_memory;
-        compiler->failed = true;
     }
     return went;
 }

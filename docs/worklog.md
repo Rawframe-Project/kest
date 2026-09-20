@@ -39122,3 +39122,58 @@ reload since D985 — the header had never said so.
 
 **Next:** the fresh cold review of section 42, which is somebody outside this
 project's to start.
+
+## State this project writes and never reads, and the one that mattered
+
+A field written every time and read nowhere is either something somebody meant
+to use or a leftover that reads like one, and nothing here had ever asked which
+it had. Four lines of Python over `src`, `include`, the examples and the tools:
+every name reached through a `.` or a `->`, and which of them never appears
+anywhere but on the left of an assignment. Six.
+
+Five were leftovers — a flag saying a budget was spent that the report already
+says, a note of whether the last place came back held apart that the branch
+asking already knows, a second copy of *something was reported*, a flag from
+before a generic's body was held to its declaration, and one from before every
+breakpoint came out at once around a step. Each had a comment describing
+behaviour happening somewhere else, which is worse than no comment.
+
+The sixth was the compiler writing down that a slot holds *where* a value is
+rather than the value. A `for` binds its element by address when the body never
+writes the name (D866), and a host reading a stopped machine was handed a
+pointer as a number: `kest debug` printed `b   slot 6   94381350649872` where
+the body says `Body`. Two things were wrong at once — the name is written down
+as the local is declared and the decision is made after it, so the flag was
+always false where it was read, and nothing carried it into the chunk anyway.
+`kest_frame_at_address` is the door now, `kest debug` writes `at 0x...`, and a
+host reads the memory through it as that type's layout.
+
+See D1081.
+
+**Runs:** `check-tables.sh` says none is left, `check-commands.sh` drives the
+debugger into a loop over structs and reads `at 0x` back, and two holes put a
+written-never-read field back and take the by-address flag out again.
+
+## A project's tests are what `kest test` runs
+
+The sixth write-only field was not a leftover. `kest new` writes a manifest
+saying *`kest test` runs each of them* about the `tests` line; the reader read
+the line; nothing asked for it. `kest test` inside a project with no file named
+said *no programs were named, so nothing ran* and answered nought — a gate
+passing for having done nothing, in the shape a reader reaches for first.
+
+It runs them now, in the order their names sort, the same way `check`, `build`
+and `run` already work on `entry`. A project that says where its tests are and
+has none there is refused with `K0649` rather than passed. The cost is the one
+place in this compiler that asks the platform what is in a directory, beside
+the one that asks it to make one: `opendir` and, on Windows, `_findfirst` from
+the C library's own header.
+
+See D1082.
+
+**Runs:** `make check`'s `project` section runs `examples/slice` both ways and
+refuses a project whose tests directory is empty, `check-commands.sh` does the
+same to the project it just made, and a hole stops the manifest being read.
+
+**Next:** the fresh cold review of section 42, which is somebody outside this
+project's to start.

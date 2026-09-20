@@ -694,9 +694,6 @@ struct KestRuntime {
     // handler: `atomic_int` is only lock-free in practice and the standard
     // does not promise a handler may touch it. See D929.
     atomic_int cancel_asked;
-    // Why the last run stopped, for the two reasons that are not a mistake in
-    // the program. Read by nothing but the refusal itself.
-    bool stopped_for_fuel;
     // And what a bound function said when it could not do what it was asked.
     // NULL when the last crossing worked, which is every crossing that does
     // not call `kest_native_failed`. See D937.
@@ -3112,7 +3109,6 @@ static bool stopped_here(Vm *vmp, KestRuntime *rt, Frame *frame,
     kest_diags_suggest(rt->diags,
                        "give it more with `kest_fuel_set` and call again: "
                        "what it built is still there");
-    rt->stopped_for_fuel = true;
     return false;
 }
 
@@ -5897,7 +5893,6 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
     rt->fuel_bounded = rt->fuel_given != KEST_FUEL_UNLIMITED;
     rt->fuel_left = rt->fuel_bounded ? rt->fuel_given : UINT64_MAX;
     atomic_init(&rt->cancel_asked, 0);
-    rt->stopped_for_fuel = false;
     if (rt->stack == NULL || rt->frames == NULL || rt->natives == NULL ||
         rt->contexts == NULL || rt->said_extern == NULL ||
         rt->said_copy == NULL || rt->said_layout == NULL || rt->heap == NULL) {
@@ -6156,7 +6151,6 @@ void kest_fuel_set(KestRuntime *runtime, uint64_t instructions) {
     // flag, so a machine given fuel with the flag still set would run one
     // instruction and stop again saying somebody had asked it to.
     atomic_store_explicit(&runtime->cancel_asked, 0, memory_order_relaxed);
-    runtime->stopped_for_fuel = false;
 }
 
 void kest_fuel_spend(KestRuntime *runtime, uint64_t work) {
@@ -6324,6 +6318,19 @@ int64_t kest_came_from(const KestRuntime *runtime, int32_t entry,
     return (int64_t)kest_chunk_origin(runtime->module->functions[entry], at);
 }
 
+bool kest_frame_at_address(const KestRuntime *runtime, uint32_t deep,
+                           uint16_t slot) {
+    if (runtime == NULL || deep >= runtime->frame_count) {
+        return false;
+    }
+    bool at_address = false;
+    if (kest_chunk_named(runtime->frames[deep].chunk, slot, NULL, NULL,
+                         &at_address) == NULL) {
+        return false;
+    }
+    return at_address;
+}
+
 uint32_t kest_frames_deep(const KestRuntime *runtime) {
     return runtime == NULL ? 0 : runtime->frame_count;
 }
@@ -6367,7 +6374,8 @@ const char *kest_frame_name(const KestRuntime *runtime, uint32_t deep,
     if (runtime == NULL || deep >= runtime->frame_count) {
         return NULL;
     }
-    return kest_chunk_named(runtime->frames[deep].chunk, slot, slots, kind);
+    return kest_chunk_named(runtime->frames[deep].chunk, slot, slots, kind,
+                            NULL);
 }
 
 uint16_t kest_frame_wide(const KestRuntime *runtime, uint32_t deep) {

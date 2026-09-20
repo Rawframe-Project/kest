@@ -300,6 +300,22 @@ to write a `return` after the loop that nothing could reach. It does not now.
 The `return` nothing can reach still compiles; it is a line that can come out.
 See D1080.
 
+**A host can ask whether a slot holds where a value is.** A `for` binds its
+element by address when the body never writes the name it bound, which is a
+copy a turn saved and nothing a program can tell — but a host reading a stopped
+machine was handed a pointer as a number, and `kest debug` printed it as though
+it were the value. `kest_frame_at_address` is the door, and the debugger writes
+`at 0x...` for one. **What a host has to do:** nothing, and one thing it can do
+now — read the memory through it as that type's layout. See D1081.
+
+**`kest test` runs what the project says its tests are.** The manifest's `tests`
+line was read and nothing asked for it, so `kest test` inside a project with no
+file named ran nothing and answered nought. It now runs every `.kest` directly
+under that line, in the order their names sort, and a project that says where
+its tests are and has none there is refused with `K0649` rather than passed.
+**What a project has to do:** nothing, unless it relied on `kest test` with
+nothing named doing nothing. See D1082.
+
 **A run of bytes takes a whole piece of text.** `push(out, piece)` and
 `fit(out, piece)` put the piece on the end in one move where a program used to
 write a loop, because text is its bytes and a `[u8]` is the same bytes. Every

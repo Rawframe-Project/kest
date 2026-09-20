@@ -839,7 +839,8 @@ uint32_t kest_chunk_origin(const KestChunk *chunk, uint32_t offset) {
 }
 
 bool kest_chunk_names(KestModule *module, KestChunk *chunk, const char *name,
-                      uint16_t slot, uint16_t slots, uint8_t kind) {
+                      uint16_t slot, uint16_t slots, uint8_t kind,
+                      bool at_address) {
     if (chunk == NULL || name == NULL) {
         return false;
     }
@@ -868,11 +869,13 @@ bool kest_chunk_names(KestModule *module, KestChunk *chunk, const char *name,
     one->slot = slot;
     one->slots = slots;
     one->kind = kind;
+    one->at_address = at_address;
     return true;
 }
 
 const char *kest_chunk_named(const KestChunk *chunk, uint16_t slot,
-                             uint16_t *slots, uint8_t *kind) {
+                             uint16_t *slots, uint8_t *kind,
+                             bool *at_address) {
     if (chunk == NULL) {
         return NULL;
     }
@@ -889,6 +892,9 @@ const char *kest_chunk_named(const KestChunk *chunk, uint16_t slot,
         }
         if (kind != NULL) {
             *kind = one->kind;
+        }
+        if (at_address != NULL) {
+            *at_address = one->at_address;
         }
         return one->name;
     }

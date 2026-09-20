@@ -248,6 +248,7 @@ FAMILY = {
  "kest_resume":"stopping","kest_code_of":"stopping","kest_came_from":"stopping",
  "kest_frames_deep":"stopping","kest_frame_in":"stopping","kest_frame_ip":"stopping",
  "kest_frame_slot":"stopping","kest_frame_name":"stopping","kest_frame_wide":"stopping",
+ "kest_frame_at_address":"stopping",
  # reading: what a program and a build are made of, for a tool.
  "kest_version":"reading","kest_abi_version":"reading","kest_profile":"reading",
  "kest_checked":"reading",
@@ -2456,6 +2457,13 @@ SAME_SHAPE = {
     frozenset(("math_ceil", "math_cos", "math_floor", "math_sin",
                "math_sqrt")):
         "and five that take one, the same way",
+    frozenset(("fault",)):
+        "the two halves of this compiler saying the same news in the same "
+        "words: what the checker allowed and the stage after it cannot do is "
+        "this project's mistake rather than the program's, and it is said "
+        "from `compile.c` and from `lower.c` because either of them can be "
+        "the half that is wrong. One line each, and the line is the door "
+        "`kest_diags_disagree` is",
     frozenset(("kest_heap_used", "kest_heap_taken")):
         "what a program is holding and what it has ever been handed, each the "
         "sum of the same question asked of the two places a running program's "
@@ -2623,6 +2631,46 @@ for span_path in SPAN_BY_HAND:
               "not" % span_path)
         failed = 1
 
+# What this project writes and never reads. A field written and read nowhere is
+# one of two things and both are worth stopping for: something somebody meant
+# to use and did not -- `by_address` was the compiler knowing that a slot holds
+# where a value is, written down every time and never carried to the host that
+# needed it (D1081) -- or a leftover from a design that changed, which reads to
+# the next person as state that means something. Five of the six this first
+# found were leftovers and the sixth was a door that had never opened.
+#
+# Comments and text come out first, because a name in either is a mention
+# rather than a use, and a read is any reaching that is not the left of an
+# assignment: a comparison, an argument, `++`, the address of it.
+def reaching(text):
+    text = re.sub(r"/\*.*?\*/", " ", text, flags=re.S)
+    text = re.sub(r"//[^\n]*", " ", text)
+    return re.sub(r'"(?:[^"\\\n]|\\.)*"', '""', text)
+
+
+reached = "".join(reaching(open(where).read()) for where in sorted(
+    glob.glob(os.path.join("src", "*.c")) +
+    glob.glob(os.path.join("src", "*.h")) +
+    glob.glob(os.path.join("include", "*.h")) +
+    glob.glob(os.path.join("examples", "*.c")) +
+    glob.glob(os.path.join("tools", "*.c")) +
+    glob.glob(os.path.join("bench", "*.c"))))
+fields = some("the fields this project reaches through",
+              sorted(set(re.findall(r"(?:->|\.)\s*([A-Za-z_]\w{2,})\b",
+                                    reached))))
+read_as_well = 0
+for field in fields:
+    reaches = list(re.finditer(r"(?:->|\.)\s*" + re.escape(field) + r"\b",
+                               reached))
+    if any(not re.match(r"\s*=[^=]", reached[one.end():one.end() + 4])
+           for one in reaches):
+        read_as_well += 1
+        continue
+    print("fields: `%s` is written %u time(s) and read nowhere, which is "
+          "either something somebody meant to use or a leftover that reads "
+          "like one" % (field, len(reaches)))
+    failed = 1
+
 some("the bodies of `src`", body_places)
 for body_text, body_where in sorted(body_places.items()):
     if len(body_where) < 2 or body_text in SAME_BODY:
@@ -2755,7 +2803,9 @@ if not failed:
           "well, with %u group(s) of one shape and a reason beside each, and "
           "%u door(s) a host asks about room through, each that answers with "
           "one beside it that bounds, and %u door(s) named in what this "
-          "compiler says, every one of them one a host can call"
+          "compiler says, every one of them one a host can call, and %u "
+          "name(s) this project reaches a value through are read as well as "
+          "written"
           % (len(ops), len(toks), len(held), len(checked), len(writable),
              len(reasons), len(promise_names), len(listed),
              len(tools), pythons, shells, guards, len(reading),
@@ -2765,7 +2815,7 @@ if not failed:
              len(HELD), halves // 2,
              len(in_widths), len(ANSWERS), len(SPAN_BY_HAND),
              len(WORD_BY_HAND), bodies, shapes, len(SAME_SHAPE),
-             len(doors) * 2, len(sent_to)))
+             len(doors) * 2, len(sent_to), read_as_well))
 
 sys.exit(failed)
 PY

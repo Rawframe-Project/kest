@@ -4255,8 +4255,8 @@ than something written wrongly — that is where a host walks `kest_frame_gives`
 and lays the slots out itself, which it may do for a struct too when the way
 the language writes one is not the way it wants.
 
-The C API is 98 doors in 6 families: 39 for running a program, 18 for reading
-what one is made of, 14 for watching what it cost, 12 for stopping one, 10 for
+The C API is 99 doors in 6 families: 39 for running a program, 18 for reading
+what one is made of, 14 for watching what it cost, 13 for stopping one, 10 for
 its memory and 5 for steering it while it runs. A host that compiles, binds,
 sizes and calls needs 22 of them, which is what `examples/least.c` is; the rest
 are there for hosts that want more, and every one of them is called by one of
@@ -4567,8 +4567,12 @@ kest 0.0.1
 profile kest-det 2
 ```
 
-`entry` is what `check`, `build` and `run` work on when no file is named, so
-being inside a project means not naming one. `source` says where this project's
+`entry` is what `check`, `build` and `run` work on when no file is named, and
+`tests` is what `kest test` runs when none is named: every `.kest` directly
+under it, in the order their names sort. Being inside a project means not
+naming one. A project that says where its tests are and has none there is
+refused rather than passed, because a run of no tests that answers nought is a
+gate passing for having done nothing. See D1082. `source` says where this project's
 modules are, and a **dependency is another `source` line** pointing at wherever
 somebody put it: there is no registry, nothing is downloaded and nothing is
 locked. A name the compiler does not know is refused rather than skipped,
@@ -4768,7 +4772,12 @@ a host tells a stop from a refusal by asking rather than by reading the report.
 `kest_resume` carries on. `kest_frames_deep`, `kest_frame_in` and
 `kest_frame_ip` are the frames, innermost last, which is a stack trace; and
 `kest_frame_wide`, `kest_frame_slot` and `kest_frame_name` are what a frame
-holds, what each slot is and what the body called it.
+holds, what each slot is and what the body called it. `kest_frame_at_address`
+is the one thing a name does not say on its own: a `for` binds its element by
+address where the body never writes it, and a slot that holds where a value is
+read as though it held the value is an address printed as a number. The
+debugger writes `at 0x...` for one, and a host reads the memory through it as
+the layout of that type. See D1081.
 
 What it does not do: show a frame of the host, which is not a frame of this
 machine; or stop inside a call the host makes back in — and that second one is

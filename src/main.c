@@ -9,13 +9,18 @@
 #endif
 
 #if defined(_WIN32)
-// And one more, for making a directory. There is no way in ISO C to make one
-// and `kest new` has to; the library has no such need and does not have this.
-// Through the header rather than declared here, because it is the C library's
-// rather than the platform's and how it is linked is the library's business.
+// And two more: making a directory, which `kest new` has to, and reading what
+// is in one, which `kest test` has to -- a project says where its tests are
+// and not which they are. There is no way in ISO C to do either. The library
+// has no such need and has neither of them; this is the command line, which is
+// where this compiler meets the platform. Through the headers rather than
+// declared here, because both are the C library's rather than the platform's
+// and how they are linked is the library's business.
 #include <direct.h>
+#include <io.h>
 #define KEST_MAKE_DIRECTORY(path) _mkdir(path)
 #else
+#include <dirent.h>
 #include <sys/stat.h>
 #define KEST_MAKE_DIRECTORY(path) mkdir((path), 0755)
 #endif
@@ -2952,6 +2957,76 @@ static int run(const char *command, const char *executable, char **paths,
 // program that checks itself and answers with which check failed, which is
 // what every example here is: there is no framework, and a number is a place
 // in a file. See D982.
+// Two names, the way a name sorts: what a directory hands back is in whatever
+// order it kept, and what a run of tests says has to be the same every time.
+static int by_name(const void *left, const void *right) {
+    return strcmp(*(const char *const *)left, *(const char *const *)right);
+}
+
+// Every `.kest` directly under a directory, in that order. This is the one
+// place this compiler asks what is in a directory, and `kest test` is what
+// asks: a project says where its tests are and not which they are. Answers how
+// many, with the paths in `into` for the caller to free, and nought for a
+// directory that is not there or has none -- which the caller tells apart,
+// because the second is a project saying something that is not so. See D1082.
+static uint32_t tests_under(const char *where, char ***into) {
+    *into = NULL;
+    char **found = NULL;
+    uint32_t count = 0;
+    uint32_t room = 0;
+#if defined(_WIN32)
+    char pattern[1024];
+    snprintf(pattern, sizeof(pattern), "%s\\*.kest", where);
+    struct _finddata_t entry;
+    intptr_t walking = _findfirst(pattern, &entry);
+    if (walking == -1) {
+        return 0;
+    }
+    do {
+        const char *name = entry.name;
+#else
+    DIR *walking = opendir(where);
+    if (walking == NULL) {
+        return 0;
+    }
+    for (const struct dirent *entry = readdir(walking); entry != NULL;
+         entry = readdir(walking)) {
+        const char *name = entry->d_name;
+        size_t length = strlen(name);
+        if (length < 6 || strcmp(name + length - 5, ".kest") != 0) {
+            continue;
+        }
+#endif
+        if (count == room) {
+            uint32_t bigger = room == 0 ? 8 : room * 2;
+            char **grown = realloc(found, (size_t)bigger * sizeof(char *));
+            if (grown == NULL) {
+                break;
+            }
+            found = grown;
+            room = bigger;
+        }
+        size_t wide = strlen(where) + strlen(name) + 2;
+        char *path = malloc(wide);
+        if (path == NULL) {
+            break;
+        }
+        snprintf(path, wide, "%s/%s", where, name);
+        found[count++] = path;
+#if defined(_WIN32)
+    } while (_findnext(walking, &entry) == 0);
+    _findclose(walking);
+#else
+    }
+    closedir(walking);
+#endif
+    if (count > 1) {
+        qsort(found, count, sizeof(char *), by_name);
+    }
+    *into = found;
+    return count;
+}
+
 static int run_tests(const char *executable, char **paths, int path_count,
                      bool json, size_t room, uint64_t fuel) {
     int failed = 0;
@@ -3189,7 +3264,48 @@ int main(int argc, char **argv) {
     }
 
     if (strcmp(argv[1], "test") == 0) {
-        int status = run_tests(argv[0], paths, path_count, json, room, fuel);
+        // Without a file, what the project says its tests are. A project is a
+        // thing to be inside rather than a thing to name at every command, the
+        // same way `kest build` works on the entry, and the manifest has said
+        // since D982 that `kest test` runs the programs under this line. It
+        // did not: the line was read and nothing asked for it. See D1082.
+        char **found = NULL;
+        uint32_t found_count = 0;
+        int status = 0;
+        if (path_count == 0) {
+            KestArena *asking = kest_arena_new();
+            const char *why = NULL;
+            KestProject *here =
+                asking == NULL ? NULL : kest_project_read(asking, "", &why);
+            if (here != NULL && here->tests[0] != '\0') {
+                found_count = tests_under(here->tests, &found);
+                if (found_count == 0) {
+                    // A project that says where its tests are and has none
+                    // there is a project saying something that is not so, and
+                    // a run of no tests that answers nought is a gate that
+                    // passes for having done nothing.
+                    status = refused_at_the_words(
+                        json, "K0649",
+                        "this project says its tests are in `%s`, and there "
+                        "is no program there",
+                        here->tests);
+                }
+            }
+            if (asking != NULL) {
+                kest_arena_free(asking);
+            }
+        }
+        if (status == 0) {
+            status = found_count > 0
+                         ? run_tests(argv[0], found, (int)found_count, json,
+                                     room, fuel)
+                         : run_tests(argv[0], paths, path_count, json, room,
+                                     fuel);
+        }
+        for (uint32_t i = 0; i < found_count; i++) {
+            free(found[i]);
+        }
+        free(found);
         free(paths);
         free(given);
         return status;

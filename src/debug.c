@@ -36,9 +36,6 @@ struct Debugger {
     FILE *out;
     Written written[MOST_BREAKPOINTS];
     uint32_t count;
-    // The one a person asked for that the machine is standing on, which has
-    // to come out for the machine to move and go back in afterwards.
-    int32_t standing_on;
     bool running;
     bool over;
 };
@@ -448,7 +445,15 @@ static void say_locals(Debugger *held, const char *only) {
             continue;
         }
         fprintf(held->out, "  %-20s slot %u  ", name, slot);
-        say_value(held, value, kind);
+        // A slot that holds where the value is rather than the value, which a
+        // `for` does for an element the body never writes (D866). Saying the
+        // number as though it were the value is saying an address is a
+        // `Body`. See D1081.
+        if (kest_frame_at_address(held->runtime, deep - 1, slot)) {
+            fprintf(held->out, "at %p", value.object);
+        } else {
+            say_value(held, value, kind);
+        }
         if (slots > 1) {
             fprintf(held->out, "  (and %u slot(s) more)", slots - 1);
         }
@@ -534,7 +539,6 @@ int kest_debug_serve(KestBuild *build, KestRuntime *runtime, const char *entry,
     held.build = build;
     held.runtime = runtime;
     held.out = out;
-    held.standing_on = -1;
 
     int32_t start = kest_entry(runtime, entry);
     if (start < 0) {
