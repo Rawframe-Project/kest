@@ -38045,3 +38045,63 @@ See D1051.
 
 **Runs:** the five shapes as programs that answer nought; `sort.byWith` over
 two points in `examples/shapes.kest`; `make fast`; `make check`.
+
+## The sort was quadratic, and a table never gave its room back
+
+Section 27 asks for the sort to be benchmarked over tiny, nearly sorted,
+random, reverse, duplicate-heavy and larger inputs, and for spike-then-shrink
+measured on the table. Both were done and both said the same thing: the default
+is right for the small case and wrong for the one nobody plans for.
+
+**The sort.** Five shapes at five sizes, in instructions the machine ran:
+
+| | 16 | 64 | 256 | 1024 | 4096 |
+| --- | --- | --- | --- | --- | --- |
+| sorted | 411 | 1,563 | 6,171 | 24,603 | 98,331 |
+| nearly sorted | 959 | 2,495 | 20,543 | 60,991 | 159,295 |
+| duplicate-heavy | 1,703 | 24,587 | 383,963 | 6,106,907 | 97,565,723 |
+| random | 2,811 | 32,358 | 520,212 | 7,956,847 | 128,229,091 |
+| reverse | 4,031 | 63,623 | 1,016,231 | 16,254,503 | 260,053,031 |
+
+Four thousand numbers out of order is two hundred and sixty million
+instructions — most of a second — for a sort a game might do to draw a scene.
+
+It sorts with gaps now: the same insertion walk over Knuth's `3h+1` sequence,
+in place, allocating nothing, recursing nowhere. Recursion matters here because
+a recursive sort would make every program's call depth depend on the length of
+what it sorts, and `kest_needs` is what a host sizes a machine from. The worst
+case is 247 times cheaper and the best is 3.7 times dearer; in milliseconds
+that is about six hundred down to two and a half, against a quarter of one up
+to one and a half.
+
+An adaptive version — insertion with a bail-out to gaps once the swaps pass
+four times the length — was measured and not built: it buys a millisecond on
+one shape and costs a counter, a flag, and a sort that is stable on some data
+and not on others.
+
+And `byWith` is the same walk written out rather than sharing `by`'s.
+`by(items, before)` could have been `byWith(items, before, callIt)` over a
+two-line adapter, which is what a language with closures would write, and it
+costs 15 per cent of every `sort.by` in every program because every comparison
+then goes through a call whose body is not known. Fourteen lines twice is
+cheaper, and that is what having no closures costs in the one place the library
+offers both forms.
+
+**The table.** A hundred thousand pairs in, ninety-nine thousand out:
+
+    at a hundred thousand pairs           3,244,192 bytes
+    after taking out all but a thousand   3,244,192 bytes
+
+After a walk that table holds 2,121,728 bytes more than one freshly built with
+the same thousand pairs. It does not shrink by itself and should not: a table
+that gave room back on removal would make a frame's cost depend on what that
+frame took out. `table.compact(t)` is the cold path, and it answers a new table
+because a table is a value and replacing a field of it replaces the copy's
+handle — `by = table.compact(by)`, the way `source = random.next(source)` is
+written. Compacted, it holds 8,192 bytes more than a fresh one.
+
+See D1052.
+
+**Runs:** twenty-five sort measurements over five shapes and five sizes, three
+sorts compared; the table's high-water under a host that reads the heap at four
+points; `examples/inventory.kest` for `compact`; `make fast`; `make check`.

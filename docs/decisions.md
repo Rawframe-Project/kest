@@ -34615,3 +34615,95 @@ from existing.
 **What would change this.** A program somebody wrote where the context-beside
 form is genuinely worse -- not longer, worse: wrong, or unwritable. There is
 none in this tree and none was found writing the five above.
+
+## D1052. The sort is gapped, and a table gives its room back when it is asked
+
+**Decided.** `std.sort` sorts with gaps -- Shell's, over Knuth's `3h+1`
+sequence -- rather than by plain insertion. `std.table` gains `compact`, which
+answers a new table holding what this one holds, on a cold path, when a program
+asks. Neither shrinks anything by itself.
+
+**The sort, measured.** Five shapes at five sizes, counted under the build that
+counts, in instructions the machine ran:
+
+| | 16 | 64 | 256 | 1024 | 4096 |
+| --- | --- | --- | --- | --- | --- |
+| sorted | 411 | 1,563 | 6,171 | 24,603 | 98,331 |
+| nearly sorted | 959 | 2,495 | 20,543 | 60,991 | 159,295 |
+| duplicate-heavy | 1,703 | 24,587 | 383,963 | 6,106,907 | **97,565,723** |
+| random | 2,811 | 32,358 | 520,212 | 7,956,847 | **128,229,091** |
+| reverse | 4,031 | 63,623 | 1,016,231 | 16,254,503 | **260,053,031** |
+
+Quadratic on three of the five. Four thousand numbers out of order is two
+hundred and sixty million instructions -- most of a second -- for a sort a
+game might do to draw a scene. Section 27 says that if plausible use hits
+pathological O(n²), change the default or separate a small-sort path clearly.
+Sorting a thousand entities by distance is plausible use.
+
+**What it is now.** The same insertion walk over a descending run of gaps:
+`1, 4, 13, 40, ...` while `h < n/3`, then back down by `(h-1)/3`. In place,
+allocating nothing, recursing nowhere -- which matters here, because a
+recursive sort would make every program's call depth depend on the length of
+what it sorts, and `kest_needs` answers what a host has to give a machine.
+Measured the same way:
+
+| | 256 | 1024 | 4096 | against insertion |
+| --- | --- | --- | --- | --- |
+| sorted | 22,720 | 110,765 | 535,162 | 5.4× worse |
+| nearly sorted | 28,092 | 133,269 | 582,242 | 3.7× worse |
+| duplicate-heavy | 41,224 | 169,433 | 661,800 | **147× better** |
+| random | 79,155 | 455,745 | 2,158,778 | **59× better** |
+| reverse | 51,928 | 242,943 | 1,054,618 | **247× better** |
+
+**That trade is the right way round for a frame.** The worst case goes from
+about six hundred milliseconds to about two and a half; the best goes from a
+quarter of a millisecond to one and a half. Nothing here drops a frame and the
+thing that did, does not.
+
+**And an adaptive one was measured and not built.** Insertion first, with a
+bail-out to gaps once the swaps pass four times the length: it keeps the
+nearly-sorted case at 225,281 rather than 582,242 and costs 1.4 to 2× on the
+shapes that bail. Both ends stay under three milliseconds either way, so the
+extra mechanism -- a counter, a flag, and a sort that is stable on some data
+and not on others -- buys a millisecond on one shape and is not built.
+
+**`byWith` is written out rather than sharing the walk.** `by(items, before)`
+could have been `byWith(items, before, callIt)` over a two-line adapter, which
+is what a language with closures would write. Measured: every comparison then
+goes through a call whose body is not known, and it costs **15 per cent** of
+every `sort.by` in every program. Fourteen lines written twice is the cheaper
+of the two, and it is what having no closures costs in the one place the
+library offers both forms (D1051).
+
+**The table's high-water, measured.** A hundred thousand pairs in, ninety-nine
+thousand out:
+
+    at a hundred thousand pairs   3,244,192 bytes
+    after taking out all but a thousand   3,244,192 bytes
+
+Nothing is given back, because nothing here frees anything and making the
+arrays smaller would make new ones and leave the old where they are. After a
+walk, that table holds **2,121,728 bytes more** than a table freshly built with
+the same thousand pairs.
+
+**Why it does not shrink by itself.** A table that gave room back on removal
+would make a frame's cost depend on what that frame took out, and the thing
+this language sells is a frame whose cost a host can bound. Section 27 says the
+same: prefer an explicit cold-path operation where retained memory is material.
+
+**And one thing in the gate moved.** The promise probe writes `no.alloc` on
+every library function and requires the number refused to equal the number
+written without it. `compact` is the first function in this library that
+reaches the heap only through something else -- `empty`, `refill` and `set` --
+so with the promise written on all four, nothing was wrong with any of them and
+the count came out one short. The probe propagates now: it takes the promise
+off whatever was refused and asks again, until asking again finds nobody, which
+is the same walk the contract proof does from the inside.
+
+**`table.compact(t)` is that operation**, and it answers a new table rather
+than making this one smaller -- a table is a value and replacing a field of it
+replaces the copy's handle, which is why everything in it is behind one. The
+caller writes `by = table.compact(by)`, the way `source = random.next(source)`
+is written. Measured, the compacted table holds **8,192 bytes** more than a
+fresh one rather than 2,121,728. What it costs is both tables at once for as
+long as the call takes, and the old one goes at the next walk.

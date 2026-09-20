@@ -34,6 +34,7 @@ reader who finds the same shape again should find the first one beside it.
 | F19 | the front page said the C API was 97 doors and the header had 98 | and nothing counted either. The family of every door is a table in `check-tables.sh` now, the reference says the six counts and how many the smallest host calls, and both are read off the header and off `examples/least.c` rather than remembered (D1046) |
 | F20 | an enum could not take types and a struct could | so *the thing or why not* could not be written once: an API lost the reason, took an array to push reasons into, or declared four lines per value type, and a generic function could not answer one at all. `enum Answer<T>` goes through the same door a generic struct does now (D1048) |
 | F21 | a project's `source` lines did nothing | they were read, printed by `kest doctor` and `--json`, and looked at by no other line of the compiler — so multiple source roots, which is how a dependency is written here, did not resolve. The loader finds the project above the first file and resolves every import under the sources now, refusing a module under two of them (D1049) |
+| F22 | `sort.by` was quadratic, and a table never gave its room back | four thousand numbers out of order cost 260 million instructions, most of a second, and a hundred thousand pairs taken down to a thousand kept every byte. The sort is gapped now — 247× cheaper on the worst shape and 3.7× dearer on the best — and `table.compact` is the cold path that gives the room back (D1052) |
 
 ## Read from the source rather than run
 

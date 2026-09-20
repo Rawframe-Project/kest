@@ -711,6 +711,22 @@ that rounds to nothing is written without a sign in front of it.
 What is there: `std.io` says something, `std.math` names the host's arithmetic
 and writes what can be built out of it, `std.text` cuts and builds text,
 `std.sort` is told what comes first — `sort.by(items, sort.ascending)` —
+`std.sort` sorts with gaps rather than by plain insertion — in place, allocating
+nothing, recursing nowhere — because plain insertion is quadratic and four
+thousand numbers out of order cost two hundred and sixty million instructions,
+which is most of a second. It is 3.7 times dearer on a run that is already
+nearly in order and 247 times cheaper on one that is reversed, and neither end
+of that is a dropped frame. See D1052.
+
+A table keeps room for what it has held: taking ninety-nine thousand pairs out
+of a hundred thousand gives nothing back, because a table that shrank on every
+removal would make a frame's cost depend on what that frame took out.
+`table.compact(t)` is the cold path that gives it back, and it answers a new
+table — `by = table.compact(by)` — because a table is a value and replacing a
+field of it replaces the copy's handle. A table that held a hundred thousand
+and now holds a thousand keeps 2,121,728 bytes a fresh one does not; compacted,
+it keeps 8,192.
+
 `std.table` is a hash table, made by `table.empty()`, whose pairs are walked by
 their places: `table.keyAt(t, at)` and `table.valueAt(t, at)` for `at` under
 `table.count(t)`, which copy nothing. What it holds them in is four arrays that
@@ -6201,7 +6217,7 @@ where it is written, and the compiler works out every constant, so what `emit`
 says is what `check` said and more. `asked` beside them is how many times the
 folder was asked and there was nothing to work out — a field of a local, a name that is not a constant. The compiler asks
 of anything that might be one, because asking is how it finds out, and the two
-numbers together say how much of that finding out answered: 97 of 341 for
+numbers together say how much of that finding out answered: 97 of 346 for
 `examples/numbers.kest`.
 
 Each file also carries a `mark`, and the object has one for the program: a

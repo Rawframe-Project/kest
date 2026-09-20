@@ -216,6 +216,30 @@ fn refill<K: compares, V>(t: Table<K, V>, howMany: i32) no.host deterministic {
     }
 }
 
+// What a table has held it keeps room for: nothing here frees anything, and
+// making the arrays smaller would make new ones and leave the old where they
+// are. That is the right default -- a table that shrank on every removal
+// would make a frame's cost depend on what that frame took out -- and it is
+// wrong for a world that spikes. A hundred thousand pairs taken down to a
+// thousand still holds 3,244,192 bytes, which is what a hundred thousand
+// need.
+//
+// So this is the cold path, and it answers a new table rather than making
+// this one smaller: a table is a value and replacing a field of it replaces
+// the copy's handle, which is the reason everything here is behind one. The
+// caller writes `by = table.compact(by)`, the way `source =
+// random.next(source)` is written. What it costs is both tables at once for
+// as long as the call takes, and the old one is gone at the next walk.
+// See D1052.
+fn compact<K: compares, V>(t: Table<K, V>) -> Table<K, V> no.host deterministic {
+    let out: Table<K, V> = empty()
+    refill(out, count(t))
+    for at in 0..count(t) {
+        set(out, keyAt(t, at), valueAt(t, at))
+    }
+    return out
+}
+
 // Setting a key that is there writes over it, so a key appears once.
 //
 // A table is refilled while more than half of it is spoken for, because

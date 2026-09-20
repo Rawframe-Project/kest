@@ -309,6 +309,32 @@ fn main() -> i32 {
         }
     }
 
+    // A world that spiked and came back down. A table keeps room for what it
+    // has held, because a table that shrank on every removal would make a
+    // frame's cost depend on what that frame took out -- so giving the room
+    // back is a thing a program asks for, on a cold path, and what it gets is
+    // a new table rather than a smaller one.
+    let spike: table.Table<i32, i32> = table.empty()
+    for i in 0..2000 {
+        table.set(spike, i, i * 2)
+    }
+    for i in 20..2000 {
+        table.remove(spike, i)
+    }
+    if table.count(spike) != 20 {
+        return 30
+    }
+    spike = table.compact(spike)
+    if table.count(spike) != 20 {
+        return 31
+    }
+    for at in 0..table.count(spike) {
+        if table.orElse(spike, table.keyAt(spike, at), 0 - 1) !=
+                table.valueAt(spike, at) {
+            return 32
+        }
+    }
+
     io.print("{table.count(stock)} kinds carried, worth {total(stock, carried)}")
     return 0
 }

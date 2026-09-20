@@ -1193,9 +1193,37 @@ for promise in no.alloc no.host deterministic; do
     for one in "$promised"/std/*.kest; do
         sed -i "/$promise/! s/^\(fn [^{]*\) {\$/\1 $promise {/" "$one"
     done
-    refused=$(KEST_LIB="$promised" ./kest check "$promised"/std/*.kest 2>&1 \
-        </dev/null | grep -c "^error\[K040[12]\].*promises \`$promise\`" \
-        || true)
+    # Until it stops finding any. A body that reaches the heap only through
+    # something else is not refused while that something else promises too, so
+    # one pass answers about the ones that reach it themselves and says
+    # nothing about the ones above them. `table.compact` was the first of
+    # those in this library: it allocates by calling `empty`, `refill` and
+    # `set`, and with the promise written on all four nothing was wrong with
+    # any of them. So the promise comes off whatever was refused and the
+    # question is asked again, until asking it again finds nobody -- which is
+    # the same propagation the contract proof does, done from outside.
+    # See D1052.
+    refused=0
+    while true; do
+        said=$(KEST_LIB="$promised" ./kest check "$promised"/std/*.kest 2>&1 \
+            </dev/null | grep "^error\[K040[12]\].*promises \`$promise\`" \
+            || true)
+        found=$(printf '%s' "$said" | grep -c . || true)
+        if [ "$found" -eq 0 ]; then
+            break
+        fi
+        refused=$((refused + found))
+        printf '%s\n' "$said" |
+            sed -n 's/.*`\([A-Za-z0-9_.]*\)` promises.*/\1/p' |
+            sed 's/.*\.//' | sort -u > "$scratch"/refused-names
+        while read -r one; do
+            [ -n "$one" ] || continue
+            sed -i "s/^\(fn $one\b[^{]*\) $promise \(.*\)\$/\1 \2/" \
+                "$promised"/std/*.kest
+            sed -i "s/^\(fn $one\b[^{]*\) $promise {\$/\1 {/" \
+                "$promised"/std/*.kest
+        done < "$scratch"/refused-names
+    done
     without=$(cat lib/std/*.kest | grep '^fn ' | grep -vc "$promise" || true)
     keeps=$(cat lib/std/*.kest | grep '^fn ' | grep -c "$promise" || true)
     if [ "$refused" -ne "$without" ]; then

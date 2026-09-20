@@ -131,6 +131,14 @@ and what sorting by distance from a point needed. **What a program has to do:**
 nothing; `sort.by` is unchanged. There are still no closures, and D1051 says
 what the five callback shapes are instead.
 
+**`sort.by` sorts with gaps, and `std.table` gains `compact`.** Plain insertion
+was quadratic: four thousand numbers out of order cost two hundred and sixty
+million instructions, and cost a million now. **What a program has to do:**
+nothing, unless it relied on the sort being stable, which nothing said it was —
+equal elements may come back in another order. A table still keeps room for
+what it has held, and `by = table.compact(by)` is the cold path that gives it
+back. See D1052.
+
 **What changed for a host.** The version. The other three numbers — the C ABI,
 the JSON schema, and the deterministic profile — still read 4, 3 and 1, and
 will be settled to clean `0.0.x` numbers once the architecture this reset is
