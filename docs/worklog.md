@@ -38250,3 +38250,25 @@ See D1056.
 Persian, French, Japanese, Turkish and a combining mark through
 `examples/locale.kest`; `'\u{41}'` and `'\u{a0}'` as byte literals; the escape
 tables held against a run and against the reference; `make check`.
+
+## The micro family had measured nothing since D1039
+
+`bench/families.sh` runs four families of workload through `bench/measure`, and
+the first of them is `bench/micro.kest` — one function per thing the machine
+does, twenty-three of them, each called by name. D1039 made a chunk compile
+under the whole module name, so `micro.intMath` became `bench.micro.intMath`
+and the twenty-three names written beside the loop stopped naming anything.
+
+What that looked like was a table with twenty-three rows saying `would not run`
+and a family below it with numbers in it, which is a table. Nothing said the
+instrument had come away from the thing it measures: `bench` is not part of
+`make check` — a duration is not a pass or a fail — so nothing was holding it.
+
+The module name is read out of the file now, the way every other list here is
+read from the source rather than written beside it. And a family that measured
+none of itself refuses: one body that will not run is a row saying so, and all
+of them is an instrument that is not measuring, which is not a slow machine and
+should not print like one.
+
+**Runs:** `bench/families.sh` at ten samples, all twenty-three bodies timed; the
+same with the module name broken on purpose, to see the refusal.

@@ -40,7 +40,14 @@ if [ -r /proc/cpuinfo ]; then
     echo "cpu $(sed -n 's/^model name[ \t]*: //p' /proc/cpuinfo | head -1)"
 fi
 echo "$(uname -srm)"
-"$measure" bench/micro.kest --entry micro.intMath --arg 1 --samples 1 \
+# What the micro module is called is read out of the file rather than written
+# here. A chunk is compiled under the whole module name since D1039, so a name
+# written down beside this went stale the day that changed: every one of the
+# twenty-three bodies below printed `would not run` and the family said
+# nothing about why.
+micro=$(sed -n 's/^module *//p' bench/micro.kest | head -1)
+
+"$measure" bench/micro.kest --entry "$micro.intMath" --arg 1 --samples 1 \
     --warmup 0 --builds 1 2>/dev/null | sed -n '2p'
 echo "$rounds round(s) an entry, $samples sample(s), every sample kept"
 echo
@@ -49,10 +56,13 @@ echo
 # which is the number to compare against the one beside it rather than against
 # another machine.
 echo "micro                   p50 ms    p95 ms    p99 ms    max ms    ns/round"
+missing=0
+bodies=0
 for one in intMath realMath realMath32 branchKnown branchUnknown callDirect \
     callIndirect aggregateSmall aggregateWide fixedRun arrayWalk arrayIndex \
     arrayWrite textLength textSearch textMake textSplit enumMatch optionals \
     storeWalk storeWrite allocates scratches; do
+    bodies=$((bodies + 1))
     # The ones that make something every round are given fewer rounds, because
     # a hundred thousand of them is a heap rather than a measurement.
     many=$rounds
@@ -64,11 +74,12 @@ for one in intMath realMath realMath32 branchKnown branchUnknown callDirect \
         many=$((rounds / 100))
         ;;
     esac
-    said=$("$measure" bench/micro.kest --entry "micro.$one" --arg "$many" \
+    said=$("$measure" bench/micro.kest --entry "$micro.$one" --arg "$many" \
         --samples "$samples" --warmup 5 --builds 1 2>/dev/null |
         sed -n 's/^calling *//p')
     if [ -z "$said" ]; then
         echo "$(printf '%-20s' "$one")  would not run"
+        missing=$((missing + 1))
         continue
     fi
     p50=$(echo "$said" | awk '{print $1}')
@@ -80,6 +91,14 @@ for one in intMath realMath realMath32 branchKnown branchUnknown callDirect \
 done
 echo "a round of arrayWalk, arrayIndex, arrayWrite, storeWalk and storeWrite is"
 echo "sixty-four elements; every other round is one."
+# A family that measured none of itself is not a slow family, it is an
+# instrument that has come away from what it measures. One body that will not
+# run is a row saying so; all of them is a refusal, because a table of nothing
+# reads like a table.
+if [ "$missing" -eq "$bodies" ]; then
+    echo "bench/families.sh: none of the $bodies micro bodies ran" >&2
+    exit 1
+fi
 echo
 
 # The three reference programs, whole, at the scale they are written for.
