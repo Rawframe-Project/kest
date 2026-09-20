@@ -6502,7 +6502,7 @@ fn main() -> i32 {
         # people and people read the sentence. See D886.
         "what": "a number the reference quotes that a run no longer says",
         "file": "docs/language.md",
-        "from": """numbers together say how much of that finding out answered: 97 of 335 for""",
+        "from": """numbers together say how much of that finding out answered: 97 of 341 for""",
         "to": """numbers together say how much of that finding out answered: 97 of 330 for""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",

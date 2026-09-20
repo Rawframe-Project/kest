@@ -34553,3 +34553,65 @@ is the gate, and there is nothing to copy into a package afterwards.
 than migrated, and readable by exactly the build that wrote it. Written down so
 that whoever needs it does not invent a format instead. It is not needed at 67
 milliseconds and section 19 says not to stabilise the bytecode casually.
+
+## D1051. No closures, and the five shapes that say why not
+
+**Decided.** This language has no closures and is not getting any. What a
+closure would have captured is written beside the function instead, and
+`std.sort` gains `byWith` so that the library lets you.
+
+**What was asked.** Section 16: write realistic callback examples -- events,
+local predicates, sorting, scheduling, gameplay and UI callbacks -- and if
+closures are worth adding, design capture mode, lifetime, heap or stack
+representation, GC roots, `scratch`, `no.alloc`, reload, the host boundary and
+determinism. If named functions are the better trade for Kest, keep closures
+out with evidence. No feature by checklist.
+
+**The five, written.**
+
+*Sorting by a field* is a named comparator: `sort.by(items, byPrice)`.
+
+*Choosing one while running* is a function value out of a branch:
+`fn column(which: i32) -> fn(Item, Item) -> bool` answering one of three named
+comparators. A person clicking a column header is served by that and nothing
+is captured.
+
+*A local predicate over something the caller chose* is the context beside the
+function. `fn countIf<T, C>(items: [T], with: C, keep: fn(T, C) -> bool)` is
+generic over what the context is, so it takes a number, a struct, anything --
+and the call reads `countIf(items, Band(10, 100), within)`, where what a
+closure would have hidden is the second argument.
+
+*Events* are a batch and a `match`, which is the shape the host boundary is
+already built for: a host hands over a run of them and the program walks it.
+
+*Scheduling and UI callbacks* are a struct holding what to run and what it
+needs: `struct Later { what: fn(Item, i32) -> i32, at: i32, with: i32 }`. That
+is a closure written out, and every part of it is a thing a reader can see.
+
+**What was missing, and is the one thing that changed.** `sort.by` took a
+comparator and nothing beside it, so sorting by distance from a point -- the
+commonest sort a simulation does -- meant building an array of pairs and
+sorting that: an allocation and a copy for want of one parameter.
+`sort.byWith(npcs, player, nearer)` is that parameter. If the answer to capture
+is *put the context beside the function*, the library has to let you, and it
+did not.
+
+**What closures would have cost**, which is section 16's own list and every
+item on it is a real decision: capture by value or by reference; how long a
+captured thing lives when the closure outlives the frame; where the environment
+goes, which on this heap means a walk has to follow it and a `no.alloc` body
+cannot make one; what happens when a closure captures something out of a
+`scratch { }` block, which is exactly what the checker refuses to let escape
+today; what a reload does with a value that has no name to match; what a host
+is handed when a program answers with one, when `kest_frame_gives` has no shape
+for it; and whether two runs make the same one.
+
+Nine questions for a convenience whose absence costs one parameter, in a
+language for the simulation half of a game where a frame budget is the point.
+Named functions and a context beside them keep every one of those questions
+from existing.
+
+**What would change this.** A program somebody wrote where the context-beside
+form is genuinely worse -- not longer, worse: wrong, or unwritable. There is
+none in this tree and none was found writing the five above.

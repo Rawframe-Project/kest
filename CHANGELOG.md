@@ -125,6 +125,12 @@ now `K0707` rather than whichever was looked in first. Which project a file is
 in is where the file is, so a host embedding one file of a project resolves
 what the command line resolves. See D1049.
 
+**`std.sort` gains `byWith`.** `sort.byWith(npcs, player, nearer)` sorts with
+something beside what it compares, which is what a closure would have captured
+and what sorting by distance from a point needed. **What a program has to do:**
+nothing; `sort.by` is unchanged. There are still no closures, and D1051 says
+what the five callback shapes are instead.
+
 **What changed for a host.** The version. The other three numbers — the C ABI,
 the JSON schema, and the deterministic profile — still read 4, 3 and 1, and
 will be settled to clean `0.0.x` numbers once the architecture this reset is

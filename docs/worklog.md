@@ -38007,3 +38007,41 @@ See D1050.
 
 **Runs:** four generated projects; `perf stat -r 5` on each; peak memory;
 `kest check --json` for what each cost.
+
+## No closures, and the five shapes that say why not
+
+Section 16 asks for realistic callback examples -- events, local predicates,
+sorting, scheduling, gameplay and UI callbacks -- and for closures to be kept
+out with evidence if named functions are the better trade. Written, all five:
+
+Sorting by a field is a named comparator. Choosing one while running is a
+function value out of a branch, which is what a person clicking a column header
+is served by. A predicate over something the caller chose is the context beside
+the function -- `countIf(items, Band(10, 100), within)`, generic over what the
+context is. Events are a batch and a `match`, which is the shape the host
+boundary is already built for. Scheduling and UI callbacks are a struct holding
+what to run and what it needs, which is a closure written out with every part
+of it visible.
+
+One thing was missing and it was in the library rather than the language.
+`sort.by` took a comparator and nothing beside it, so sorting by distance from
+a point -- the commonest sort a simulation does -- meant building an array of
+pairs and sorting that: an allocation and a copy for want of one parameter.
+`sort.byWith(npcs, player, nearer)` is that parameter. If the answer to capture
+is *put the context beside the function*, the library has to let you.
+
+What closures would have cost is section 16's own list, and every item is a
+real decision: capture by value or by reference; how long a captured thing
+lives when the closure outlives the frame; where the environment goes, which on
+this heap means a walk has to follow it and a `no.alloc` body cannot make one;
+what happens when one captures out of a `scratch { }` block, which is exactly
+what the checker refuses to let escape; what a reload does with a value that
+has no name to match; what a host is handed when a program answers with one;
+and whether two runs make the same one.
+
+Nine questions for a convenience whose absence costs a parameter.
+
+See D1051.
+
+**Runs:** the five shapes as programs that answer nought; `sort.byWith` over
+two points in `examples/shapes.kest`; `make fast`; `make check`.

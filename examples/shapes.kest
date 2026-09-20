@@ -46,6 +46,14 @@ fn far(v: vec.Vec2) -> bool no.alloc {
     return v.x > 1.0
 }
 
+// What a closure would have captured, written beside the function instead.
+// This language has none and does not want any (D1051): what a predicate needs
+// is a parameter, so a reader sees it, the promise can still be proved, and
+// there is nothing on the heap whose lifetime anybody has to think about.
+fn nearerTo(a: vec.Vec2, b: vec.Vec2, from: vec.Vec2) -> bool no.alloc no.host {
+    return vec.distanceSquared(a, from) < vec.distanceSquared(b, from)
+}
+
 // What is wanted is a function of this shape and no promise. A body that
 // promises is one of those: a promise is something a caller may rely on and
 // never something it has to have, so handing one where none was asked for is
@@ -119,6 +127,18 @@ fn main() -> i32 {
     sort.by(words, sort.ascending)
     if words[0] != "cook" {
         return 9
+    }
+
+    // And the same sort told something beside what it compares, which is where
+    // a closure would have been: nearest to a point the caller picked, without
+    // building an array of pairs to sort instead.
+    sort.byWith(points, vec.Vec2(9.0, 9.0), nearerTo)
+    if points[0].x != 2.0 {
+        return 16
+    }
+    sort.byWith(points, vec.Vec2(0.0, 0.0), nearerTo)
+    if points[0].x != 0.5 {
+        return 17
     }
 
     // A name bound to a function is that function, which is what lets a cost

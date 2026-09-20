@@ -2406,6 +2406,31 @@ not the other way round. That is what keeps a cost contract provable through a
 call whose body is not known: the promise is read off the type rather than off
 the body.
 
+**There are no closures, and what one would have captured is written beside
+the function.** A predicate that needs a threshold takes the threshold; a
+helper that takes a predicate takes what the predicate needs, which may be any
+type:
+
+```kest
+fn countIf<T, C>(items: [T], with: C, keep: fn(T, C) -> bool no.alloc) -> i32 no.alloc {
+    let seen = 0
+    for one in items {
+        if keep(one, with) {
+            seen += 1
+        }
+    }
+    return seen
+}
+```
+
+and `sort.byWith(npcs, player, nearer)` is that in the library. What to run
+later is a struct holding the function and what it needs, which is a closure
+written out. The cost of not having them is a parameter; the cost of having
+them is a capture mode, a lifetime, an environment on the heap that a walk has
+to follow and a `no.alloc` body cannot make, a rule for capturing out of a
+`scratch { }` block, a value with no name for a reload to match, and a shape
+the host boundary has none of. See D1051.
+
 A function value is reached the way any other value is. Handed to a function,
 named by a `let`, held in a field, in an array, in a store — and called from
 wherever it is:
@@ -6176,7 +6201,7 @@ where it is written, and the compiler works out every constant, so what `emit`
 says is what `check` said and more. `asked` beside them is how many times the
 folder was asked and there was nothing to work out — a field of a local, a name that is not a constant. The compiler asks
 of anything that might be one, because asking is how it finds out, and the two
-numbers together say how much of that finding out answered: 97 of 335 for
+numbers together say how much of that finding out answered: 97 of 341 for
 `examples/numbers.kest`.
 
 Each file also carries a `mark`, and the object has one for the program: a

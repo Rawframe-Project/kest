@@ -26,6 +26,26 @@ fn by<T>(items: [T], before: fn(T, T) -> bool no.alloc no.host) no.alloc no.host
     }
 }
 
+// And the same sort told something beside what it compares: `byWith(npcs,
+// player, nearer)` where `nearer` reads the player's position out of what it
+// was handed. This language has no closures and does not want any (D1051), so
+// what a predicate would have captured is written beside it, where a reader
+// sees it and where the promise can still be proved. Without this, sorting by
+// a distance from a point meant building an array of pairs and sorting that,
+// which is an allocation and a copy for what is the commonest sort a
+// simulation does. See D1051.
+fn byWith<T, C>(items: [T], with: C, before: fn(T, T, C) -> bool no.alloc no.host) no.alloc no.host {
+    for i in 1..len(items) {
+        let j = i
+        while j > 0 && before(items[j], items[j - 1], with) {
+            let held = items[j]
+            items[j] = items[j - 1]
+            items[j - 1] = held
+            j -= 1
+        }
+    }
+}
+
 // The usual order for anything that has one. A copy per type it is asked for,
 // checked as that type — so `sort.by(words, sort.ascending)` works for text
 // and for every number, and a shape with no order of its own is refused in the
