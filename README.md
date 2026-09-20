@@ -185,10 +185,11 @@ what was proved (D976), a formatter, a project manifest and four commands
 the two platforms that have one, unpacked, run and built against in CI (D989,
 D1000).
 
-**What it is tested on.** Linux x86-64, Windows x86-64 and macOS arm64, all
-three built and run in CI, and held to writing the same bytes for every example
-— which is what makes the deterministic profile a claim rather than a hope. The
-whole gate runs on Linux; a fuzzer of 19200 inputs over six boundaries runs
+**What it is tested on.** Linux x86-64, Linux arm64, Windows x86-64 and macOS
+arm64, all four built and run in CI, and held to writing the same bytes for
+every example — which is what makes the deterministic profile a claim rather
+than a hope, and what says it is not an x86 claim. The whole gate runs on
+Linux x86-64, and the four families of workload run on both instruction sets; a fuzzer of 19200 inputs over six boundaries runs
 under the sanitisers, and a longer campaign of 1.2 million was run before the
 release; the thread sanitiser runs four machines of one build at once.
 

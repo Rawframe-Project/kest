@@ -34987,3 +34987,56 @@ framework was added. The inspection's finding is not that the harness is too
 big — it is that the part of the tree with no gate over it is the part that
 broke, which is the same sentence this project has been written around from the
 beginning and had one exception left.
+
+## D1058. The other instruction set, on hardware
+
+*measured*, on two GitHub-hosted runners, and the numbers are in the run's
+artifacts rather than here: `families-linux-x86-64` and `families-linux-arm64`.
+
+Section 31 of the foundation reset says C11 with no JIT and a small binary is a
+deployment advantage and not performance proof, and asks for ARM to be tested
+if practical — p50/p95/p99, startup and compile, memory, the collector, control
+and the host boundary — and for an evidence gap to be recorded rather than a
+claim if it is not.
+
+It is practical. `ubuntu-24.04-arm` builds this on every push, runs the fast
+tier and the fuzzer, writes a conformance trace, and runs the four families of
+workload at the settings the x86-64 job now runs them at, so the two are one
+harness rather than two measurements.
+
+**What does not move, which is the half that is a claim.** The conformance
+trace is the same bytes on both — every example, what it answered and what it
+wrote — and the `agree` job diffs them, so a fourth platform that disagreed
+would be a red build. The step counts are the same: 9,506,554 for `agents` and
+10,781,005 for `rules`, on both. The collector does the same work: 111 walks
+for `agents` and 13 for `rules`, on both. And the heap high-water table — six
+shapes of pressure at three sizes each — is identical byte for byte. None of
+those is a duration and none of them depends on the machine.
+
+**What moves, and what it is worth.** The arm64 runner is faster on all
+twenty-eight rows: p50 ratios from 0.42 to 0.99, median 0.68. That is not a
+statement about ARM against x86. These are two hosted machines and not one
+machine two ways, and the x86 runner was a different CPU between two runs an
+hour apart — an EPYC 7763 and then an EPYC 9V74 — which is what a hosted runner
+is and is why the absolute ratio is worth nothing.
+
+**What the shape is worth is the finding.** The C baseline in `bench/frame`,
+which is the same arithmetic written in C beside the program that crosses the
+boundary, moved by 0.92. The interpreter moved by 0.67. The bytecode machine
+gains *more* from the other instruction set than plain C does, and the three
+rows nearest 1.0 are `scratches`, `allocates` and that C baseline — the arena
+and memory, which is where two machines should differ least. If dispatch, or
+the value representation, or the way an element is read leaned on something
+x86 gives cheaply, one row would stand out on the other side. None does.
+
+**What is still a gap, said as a gap.** Neither machine is low-end and neither
+is Android. A Neoverse-N2 server core is not a phone and not a handheld, and
+nothing here has been run on one. What section 31 asks for beyond this — slower
+ARM hardware, Android arm64 — has not been done and is not claimed. What has
+been settled is that this is not an x86 language, which is the thing that was
+being taken on faith.
+
+**And what it cost to find out.** The families script had to be repaired first:
+it had been measuring none of the micro family since D1039 and it printed the
+machine's name out of an x86 line in `/proc/cpuinfo`, so the first arm64 run
+said `cpu` and nothing after it. See D1057.

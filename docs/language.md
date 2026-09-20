@@ -5158,8 +5158,22 @@ than implied. This is that list and where each one is.
 
 ## What this has been run on
 
-x86-64 Linux, GCC 15.2. That is the whole list, and nothing else is claimed:
-this project does not call a thing that was never run a thing that works.
+Four platforms, two instruction sets and three compilers, every one of them
+built and run on every push, and every one held to writing the same bytes for
+every example in the tree:
+
+| Platform | Built by | What runs there |
+| --- | --- | --- |
+| Linux x86-64 | GCC, and again under clang | the whole gate, the fuzzer, and the four families of workload |
+| Linux arm64 | GCC | the fast tier, the fuzzer, and the four families of workload |
+| macOS arm64 | clang | the fast tier, and the archive unpacked and run in a room of its own |
+| Windows x86-64 | MSVC | every example, and the archive unpacked and run in a room of its own |
+
+Nothing else is claimed: this project does not call a thing that was never run a
+thing that works. What each of them writes for every example goes into one file
+and the four are diffed against each other, so a platform added that does not
+agree is a build that fails rather than a paragraph that is out of date. See
+D970 and D1058.
 
 The library is C11 and libc and nothing else — `check-header.sh` compiles the
 public header to the standard with nothing beyond it — so it should build
@@ -5174,8 +5188,8 @@ where they are:
 | a clock | `CLOCK_MONOTONIC`, then `timespec_get`, then `clock` | `host_microseconds` in `src/main.c`, which is the command line rather than the library |
 | widths | `%zu` for a `size_t` and `%llu` for a `uint64_t` | every message, held by the compiler reading the format against what is handed to it |
 
-Windows is **unverified**. Nothing here has been built or run there and the
-table above is what a port would read first, not a list of what would be wrong.
+None of those four is where a port would go wrong, because all four are run.
+The table is what a fifth would read first, not a list of what would be wrong.
 
 ## What a piece of text is
 
@@ -5694,15 +5708,16 @@ nought, a thing that is not a number, what order a walk goes in, how text
 hashes, a seeded stream and a table walked — and folds the answers into one
 number. Nine parts, and each is printed so a platform that disagrees says which.
 
-**Tested on three platforms**, and this is what makes the profile a claim rather
-than a hope: Linux x86-64 with GCC, Windows x86-64 with MSVC and macOS arm64
-with clang all build in CI, run every example, and are held to writing the same
-bytes — the same conformance number and the same output for every program in
-the tree. The job that does it diffs the three traces and is the thing that
-fails if a platform is added and does not agree. See D970.
+**Tested on four platforms**, and this is what makes the profile a claim rather
+than a hope: Linux x86-64 with GCC, Linux arm64 with GCC, Windows x86-64 with
+MSVC and macOS arm64 with clang all build in CI, run every example, and are
+held to writing the same bytes — the same conformance number and the same
+output for every program in the tree. The job that does it diffs the traces and
+is the thing that fails if a platform is added and does not agree. See D970 and
+D1058.
 
-One platform answering `2470919380724047420` says nothing on its own; three
-answering it is the promise.
+One platform answering `2470919380724047420` says nothing on its own; four
+answering it, on two instruction sets, is the promise.
 
 ## What is the same everywhere
 

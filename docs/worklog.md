@@ -38312,3 +38312,34 @@ See D1057.
 **Runs:** the four families at full scale and at `QUICKLY=1`; the gate's new
 `benches` section; the same with the module name broken on purpose, to see the
 refusal; `make check`.
+
+## What this costs on the other instruction set
+
+Section 31 asks for ARM if practical, and for an evidence gap to be written down
+rather than a claim if not. It is practical: `ubuntu-24.04-arm` builds this on
+every push, runs the fast tier and the fuzzer, writes a conformance trace, and
+runs the four families of workload at the settings the x86-64 job runs them at,
+so the two are one harness rather than two measurements.
+
+What does not move is the half that is a claim. The trace is the same bytes on
+both and the `agree` job diffs them. The step counts are the same. The collector
+does the same 111 walks for `agents` and the same 13 for `rules`. The heap
+high-water table — six shapes at three sizes — is identical byte for byte.
+
+What moves is worth less than it looks: the arm64 runner is faster on all
+twenty-eight rows, median ratio 0.68, and these are two hosted machines rather
+than one machine two ways. The x86 runner was a different CPU between two runs
+an hour apart. What is worth something is the shape: the C baseline in
+`bench/frame` moved by 0.92 and the interpreter by 0.67, so the bytecode machine
+gains more from the other instruction set than the same arithmetic in C does,
+and the three rows nearest 1.0 are the arena and that baseline. Nothing stands
+out on the other side, which is what would show if dispatch or the value
+representation leaned on something x86 gives cheaply.
+
+Neither machine is low-end and neither is Android. That is written down as a gap
+rather than argued around.
+
+See D1058.
+
+**Runs:** the four families on both runners at ten samples and twenty thousand
+rounds; the conformance trace on four platforms, diffed; `make check`.

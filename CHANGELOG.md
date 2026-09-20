@@ -165,6 +165,15 @@ already under: `'\u{41}'` is `A` and `'\u{a0}'` is two bytes and is refused.
 The reference now says what this language owns about Unicode and what a host
 owns. See D1056.
 
+**A fourth platform, and it is a second instruction set.** Linux arm64 builds
+and runs on every push beside Linux x86-64, Windows x86-64 and macOS arm64, and
+all four are held to writing the same bytes for every example. **What a program
+has to do:** nothing. What it means is that the deterministic profile is no
+longer three platforms with one instruction set between the two that run the
+gate: the trace, the step counts, the collector's walks and the heap high-water
+table are the same on both ISAs. What each costs there is measured on every
+push and is in the run's artifacts rather than in a document. See D1058.
+
 **What changed for a host.** The version. The other three numbers — the C ABI,
 the JSON schema, and the deterministic profile — still read 4, 3 and 1, and
 will be settled to clean `0.0.x` numbers once the architecture this reset is
