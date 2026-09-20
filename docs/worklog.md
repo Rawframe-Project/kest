@@ -39282,3 +39282,57 @@ file answers to what it answered, and two holes take each half out again.
 
 **Next:** the fresh cold review of section 42, which is somebody outside this
 project's to start.
+
+## Three walks that were the program's own size
+
+The next direction is game-first and AI-native, and the first thing it wants is
+a check loop an agent can run a thousand times. So the first question was what
+a clean check costs as a project grows: a generated corpus of a thousand
+modules, a struct and three functions each, 35,000 lines.
+
+Ten times the modules cost thirty-eight times the time — 16 ms at a hundred
+modules, 609 ms at a thousand. `perf` put 45 per cent of it in
+`kest_find_type`, which walked every type in the program for every type a body
+names. The comment beside the list said a file declares few enough types that a
+walk beats a table, and that stopped being true when a program became every
+file it imports.
+
+Two more of the same shape: `kest_symbol_at` walked every global to find the
+declaration at a span, which the contract prover asks once per function; and
+the listing `check` prints walked every file to split a name at its module, and
+every module line already written to find a name's own. The second pair is
+output rather than verification, and was a fifth of the run each.
+
+All four are tables now, built the way D327 built the globals' name index.
+100 ms at a thousand modules instead of 609, and the curve is linear. The
+checked build walks the two new indexes after every declaration and says which
+name is missing if one is.
+
+See D1086.
+
+**Runs:** `make check`, and the corpus under `/tmp/uni/scale` which the state
+file describes. A hole makes the type table drop everything but its first name
+and the build that checks itself catches it.
+
+## A corpus with bodies in it, and two more walks the size of the program
+
+D1086's corpus was a thousand thin modules. The honest question is what a
+game-shaped project costs, so `tools/make-project.py` writes one: leaf systems
+with a struct, an enum, a state machine, a frame rule and contracts, grouped
+twenty at a time under a module that drives them, under a top that drives the
+groups — the shape a game has, rather than one file importing a thousand
+modules.
+
+At 112,647 lines it took 2,157 ms, and two more walks the size of the program
+were why. The contract prover found the function a call reaches by walking
+every function in the graph, three times over, because a promise is proved once
+for each of the three. And asking whether a dotted name comes from a module
+this file did not import walked every file, for every such name in every body.
+
+Both are tables now, and the hash they use is one function rather than two.
+282 ms at 112k lines, and three times the lines is three times the time.
+
+See D1087.
+
+**Runs:** `make check`, and `tools/make-project.py` for the corpus the numbers
+were taken on.

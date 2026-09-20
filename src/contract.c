@@ -70,6 +70,13 @@ typedef struct {
     // promise on one that nothing instantiates proved rather than assumed.
     // See D939.
     bool a_template;
+    // Where each function is, by the name the checker gave it. The walk that
+    // found one was the graph's own size for every call in it: a project of
+    // nine thousand functions spent two fifths of a clean check inside it,
+    // and three times over, because a promise is proved once for each of the
+    // three. Slots hold one more than the place they name. See D1087.
+    uint32_t *by_name;
+    uint32_t by_name_slots;
 } Graph;
 
 
@@ -153,11 +160,53 @@ static const char *shape_written(Graph *graph, KestSpan span) {
     return copy;
 }
 
-static int32_t find_exact(Graph *graph, const char *text, size_t length) {
+// Every function put in once, after the nodes are made and their names are
+// known. The first one under a name is the one a lookup answers with, which is
+// what the walk this replaced did. Answers false only for no room, and a graph
+// with no table walks itself the way it always did. See D1087.
+static bool graph_index(Graph *graph, KestArena *arena) {
+    uint32_t slots = 64;
+    while (slots < (graph->count + 1) * 2) {
+        slots *= 2;
+    }
+    graph->by_name = KEST_ARENA_ARRAY(arena, uint32_t, slots);
+    if (graph->by_name == NULL) {
+        graph->by_name_slots = 0;
+        return false;
+    }
+    graph->by_name_slots = slots;
+    uint32_t mask = slots - 1;
     for (uint32_t i = 0; i < graph->count; i++) {
-        if (kest_word_same(graph->functions[i].name, text, length)) {
-            return (int32_t)i;
+        const char *name = graph->functions[i].name;
+        if (name == NULL) {
+            continue;
         }
+        uint32_t slot = kest_name_hash(name, strlen(name)) & mask;
+        while (graph->by_name[slot] != 0) {
+            slot = (slot + 1u) & mask;
+        }
+        graph->by_name[slot] = i + 1u;
+    }
+    return true;
+}
+
+static int32_t find_exact(Graph *graph, const char *text, size_t length) {
+    if (graph->by_name_slots == 0) {
+        for (uint32_t i = 0; i < graph->count; i++) {
+            if (kest_word_same(graph->functions[i].name, text, length)) {
+                return (int32_t)i;
+            }
+        }
+        return -1;
+    }
+    uint32_t mask = graph->by_name_slots - 1;
+    uint32_t slot = kest_name_hash(text, length) & mask;
+    while (graph->by_name[slot] != 0) {
+        uint32_t at = graph->by_name[slot] - 1u;
+        if (kest_word_same(graph->functions[at].name, text, length)) {
+            return (int32_t)at;
+        }
+        slot = (slot + 1u) & mask;
     }
     return -1;
 }
@@ -608,6 +657,13 @@ static bool prove_promise(KestProgram *program, const KestUnits *units,
                 break;
             }
         }
+    }
+
+    // Every node is made and named by here, which is where the table can be
+    // built: a name is what a call is looked up by, and nothing is added
+    // after. See D1087.
+    if (!graph_index(&graph, program->arena)) {
+        return false;
     }
 
     for (uint32_t i = 0; i < graph.count; i++) {

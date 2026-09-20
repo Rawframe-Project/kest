@@ -41,6 +41,7 @@ table and the tree and holds them to each other.
 | `README.md` | The front page: what this is, how to build it, what runs. It is the one document written for somebody who has not read the others, so it says what the language does and points at the three below rather than repeating them. Held by `check-docs.sh` to naming files that are there, because a front page nothing reads is a front page nothing catches: this one said structs did not run yet for the length of the tree having them. |
 | `docs/state.md` | Where this is and what is known to be wrong: the defects reproduced against this tree, with the evidence named, and which phase of the work is open. Short, current, and the one read for what to do next. |
 | `CHANGELOG.md` | What changed between one version and the next, for somebody who has a program written against the last one. It is not the worklog: the worklog is what was built and this is what a reader has to do about it. Newest first, one section a version, and a version with nothing a reader has to do about it says so. See D983. |
+| `docs/game-ai-direction-state.md` | Where the game-first / AI-native work is: the mission's start SHA, the reference machine, the baseline numbers, what has been measured, what is open in priority order, and what has been rejected. The documents it serves are in `/home/kest/mission/direction/`; their goals are binding and their proposed mechanisms are not. It is the operational position, not a diary: reasoning goes in `docs/decisions.md`. |
 | `docs/worklog.md` | What was built, in order. Newest last. An entry is a heading, what was done and what it turned up, and a `**Runs:**` line saying what was run to believe it, which `check-docs.sh` holds. It is a record and not a queue: entries used to end with a `**Next:**` line that the next turn was given as its work, which made the last thing written the source of what happens next, and scope that comes from the last thing written is scope nobody chose. Those lines are left where they are and nothing reads them. What to do next comes from whoever is directing the work. |
 
 ## Layout
@@ -153,6 +154,17 @@ tools/             Build and development scripts. `make check` runs all of
                    what `make fast` runs while a change is being written, in a
                    tenth of a second, and everything in it `make check` does
                    again.
+                   `make-project.py` writes a gameplay-shaped project of a
+                   wanted size, the same way every time: leaf systems with
+                   structs, enums, state machines and contracts, grouped
+                   twenty at a time under a module that drives them, under a
+                   top that drives the groups. It is how a compiler
+                   measurement is taken at 10k, 100k and a million lines
+                   without writing a game first, and what it writes has
+                   bodies in it, because a corpus of empty functions measures
+                   the parser and nothing else. Not part of `make check`: it
+                   writes a project somewhere and says nothing about this
+                   one. See D1086 and D1087.
                    `frame.kest` is the one measurement, run by `make time`.
                    What it prints is a number, what it was taken over, and
                    whether to believe it, and the gate holds the second and

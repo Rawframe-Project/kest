@@ -36465,3 +36465,144 @@ it did, for four shapes, until a line written for another decision happened to
 be one of them. The lexer's field said what the rule was and the code did half
 of it; a comment describing behaviour that is not happening is the shape D1081
 swept for, found here in a sentence rather than in a field.
+
+## D1086. Three walks that were the program's own size
+
+*measured*, on a generated corpus of a thousand modules, with `perf` and with
+the compiler's own stage timing.
+
+The next direction for this language is a game-first, AI-native one, and the
+first thing it asks for is a verification loop fast enough that an agent can
+run it a thousand times. So the first question is what a clean check costs as a
+project grows. A corpus of a thousand modules — a struct and three functions
+each over a shared base module, 35,000 lines — answered:
+
+| modules | clean check |
+| --- | --- |
+| 100 | 16 ms |
+| 200 | 26 ms |
+| 400 | 78 ms |
+| 800 | 285 ms |
+| 1000 | 609 ms |
+
+Ten times the modules, thirty-eight times the time. `perf` put 45 per cent of
+it inside `kest_find_type`, which walked **every type in the program** for
+every type any body names, comparing names as it went. The comment beside the
+list said a file declares few enough types that a walk beats a table — which
+was true when a program was a file and stopped being true when a program became
+every file it imports.
+
+The same shape twice more:
+
+- `kest_symbol_at` walked **every global** to find the declaration written at a
+  span. The contract prover asks it once per function, so proving promises was
+  the program's size again. A twentieth of the check at this scale.
+- The listing `check` prints walked **every file** to decide where a name's
+  module ends (`module_of_in`), and then walked **every module line it had
+  already written** to find the one a name belongs to (`held_of`). Two
+  quadratics in what is only the output: at a thousand modules they were a
+  fifth of the run each.
+
+**Decided.** All four are tables, built the way the globals' name index was
+built in D327 — open addressing, slots holding one more than the place they
+name, nothing ever taken out, and the first name put in is the one a lookup
+answers with, so the "first declared wins" behaviour the walks had is kept.
+
+- types by name, on `KestProgram`, filled where a type is registered. The name
+  is passed to `register_type` rather than written on afterwards, because a
+  type in the list under no name is a type the index cannot find.
+- globals by place — the file and the offset a declaration was written at —
+  which is what every walk over declarations was looking one up by.
+- the modules of a program, prepared once per listing, used both to split a
+  name where its module ends and to find the line a module already has.
+
+**What it bought.**
+
+| modules | before | after |
+| --- | --- | --- |
+| 100 | 16 ms | 10 ms |
+| 400 | 78 ms | 35 ms |
+| 800 | 285 ms | 78 ms |
+| 1000 | 609 ms | 104 ms |
+
+The curve is linear now. What is left at a thousand modules is a third
+loading, lexing and parsing, a third checking, and a third the listing — the
+last of which is output rather than verification, and is the next thing to
+look at.
+
+**Held by the build that checks itself.** A table that misses a name is a name
+the program has and cannot find; a table holding what the list does not is a
+place nobody looks at. The checked build already walked the globals' index
+after every declaration to say so, and it walks these two as well now: every
+declaration is found where it was written, and every named type is found by
+its name. A hole that makes the type table drop everything but the first name
+is caught there, with the name it could not find.
+
+**What was not done.** Nothing was cached between runs, nothing was made
+persistent, and no work was reused across edits. The mission's documents
+propose all three; the measurement said the clean algorithm was the problem, so
+the clean algorithm is what was fixed. What persistence is worth can only be
+asked once the clean cost is honest, and it is a question about a corpus ten
+times this size.
+
+## D1087. Two more walks the size of the program, and a corpus to find them with
+
+*measured*, on a gameplay-shaped project of 112,647 lines written by
+`tools/make-project.py`.
+
+D1086 made a clean check linear in a corpus of a thousand thin modules. The
+corpus was thin on purpose — a struct and three functions each — so the next
+question was what a *game-shaped* project costs: leaf systems with a struct, an
+enum, a state machine, a frame rule, contracts and calls across modules,
+grouped twenty at a time under a module that drives them, under a top that
+drives the groups. That shape is what `tools/make-project.py` writes, the same
+way every time, at whatever size is asked for.
+
+At 112k lines it took **2,157 ms**, and the curve was still bent: three times
+the lines cost seven times the time. Two more walks the size of the program:
+
+- `find_exact` in the contract prover walked **every function in the graph**
+  for every call in it — and three times over, because a promise is proved once
+  for `no.alloc`, once for `no.host` and once for `deterministic`. 42 per cent
+  of the run.
+- `kest_out_of_reach` walked **every file** of the program for every dotted
+  name in every body, asking which module the name could have come from. A
+  quarter of the run.
+
+**Decided.** Both are tables, built the way D1086 built the others: the
+contract graph gets one keyed on the name the checker gave each function, made
+after the nodes are named and before the bodies are walked; the program gets
+one keyed on the alias a file writes a name through, made on the first question
+that needs it. Two files may share an alias — `a.math` and `b.math` both answer
+to `math` (D1039) — so a run of slots holds all of them and the lookup walks
+the run, which is the same answer the walk gave in the same order.
+
+One hash for all of them: `kest_name_hash`, which the program's three indexes
+and the contract graph's now share. It was written twice before the check that
+holds one body to being written once said so.
+
+**What it bought**, on the gameplay-shaped corpus:
+
+| lines | before D1086 | after D1086 | after this |
+| --- | --- | --- | --- |
+| 12,567 | 45 ms | 29 ms | 27 ms |
+| 37,587 | 289 ms | 106 ms | 83 ms |
+| 112,647 | 2,157 ms | 522 ms | **282 ms** |
+
+Three times the lines is now three times the time. The compiler direction asks
+for a clean check of a hundred thousand lines in under 250 ms; this is 282 ms
+at a hundred and twelve thousand, on the machine described in
+`docs/game-ai-direction-state.md`.
+
+**What it cost.** The four tables are arena memory the compiler did not hold
+before: checking the standard library went from 173,144 bytes to 174,472, and
+compiling it from 203,464 to 204,793 — a little over a thousand bytes, which
+the reference quotes and `check-costs.sh` holds. Two of them are the length of
+the program's own lists and one is the length of the file list; none of them is
+kept between runs, because nothing is kept between runs.
+
+**What was not done.** Still nothing cached, nothing persistent, nothing
+incremental. Two rounds of removing repeated work took the same corpus from
+2.2 seconds to 282 milliseconds, which is what the mission's own decision tree
+asks for before any of that is considered: *fix the clean algorithm first, then
+measure what is left.*

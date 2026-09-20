@@ -260,7 +260,49 @@ static KestType *new_type(KestProgram *program, KestTypeTag tag) {
     return type;
 }
 
-static bool register_type(KestProgram *program, KestType *type) {
+static uint32_t name_hash(const char *name, size_t length);
+
+// Where a type's name says it goes. Nothing is ever taken out, so a run of
+// full slots is a run of names that landed on the same one and it ends at the
+// first empty slot -- and what was put there first is what a lookup answers
+// with, which is what the walk this replaced did. See D1086.
+static void type_index_put(KestProgram *program, uint32_t at) {
+    const char *name = program->types[at]->name;
+    if (name == NULL || program->types_by_name_slots == 0) {
+        return;
+    }
+    uint32_t mask = program->types_by_name_slots - 1;
+    uint32_t slot = name_hash(name, strlen(name)) & mask;
+    while (program->types_by_name[slot] != 0) {
+        slot = (slot + 1u) & mask;
+    }
+    program->types_by_name[slot] = at + 1u;
+}
+
+// Room for one more, which is a table twice as big when it is half full.
+static bool type_index_room(KestProgram *program) {
+    if (program->types_by_name_slots >= (program->type_count + 1) * 2) {
+        return true;
+    }
+    uint32_t slots = program->types_by_name_slots == 0
+                         ? 64
+                         : program->types_by_name_slots * 2;
+    uint32_t *made = KEST_ARENA_ARRAY(program->arena, uint32_t, slots);
+    if (made == NULL) {
+        return false;
+    }
+    program->types_by_name = made;
+    program->types_by_name_slots = slots;
+    for (uint32_t i = 0; i < program->type_count; i++) {
+        type_index_put(program, i);
+    }
+    return true;
+}
+
+// The name is given here rather than written on afterwards, because a type in
+// the list under no name is a type the index cannot find. See D1086.
+static bool register_type(KestProgram *program, KestType *type,
+                          const char *name) {
     if (program->type_count == program->type_capacity) {
         void *moved = grow(program->arena, program->types, program->type_count,
                            &program->type_capacity, sizeof(KestType *));
@@ -269,7 +311,12 @@ static bool register_type(KestProgram *program, KestType *type) {
         }
         program->types = moved;
     }
+    type->name = name;
     program->types[program->type_count++] = type;
+    if (!type_index_room(program)) {
+        return false;
+    }
+    type_index_put(program, program->type_count - 1);
     return true;
 }
 
@@ -466,17 +513,69 @@ bool kest_needs_import(KestProgram *program, const char *name, size_t length) {
 // failed: they expand through this file's imports and a module this file did
 // not import is exactly the one they cannot see. Without it a reader writing
 // `text.chars` with no import was told `text` is a type. See D1039.
+// The files of this program in a table, by the alias their names are written
+// through. Built once, on the first question that needs it. See D1087.
+static bool alias_index(KestProgram *program) {
+    if (program->files_by_alias_slots > 0 || program->files == NULL ||
+        program->files->count == 0) {
+        return program->files_by_alias_slots > 0;
+    }
+    uint32_t slots = 64;
+    while (slots < (program->files->count + 1) * 2) {
+        slots *= 2;
+    }
+    uint32_t *made = KEST_ARENA_ARRAY(program->arena, uint32_t, slots);
+    if (made == NULL) {
+        return false;
+    }
+    program->files_by_alias = made;
+    program->files_by_alias_slots = slots;
+    uint32_t mask = slots - 1;
+    for (uint32_t i = 0; i < program->files->count; i++) {
+        const char *alias = program->files->items[i].alias;
+        if (alias == NULL || alias[0] == '\0') {
+            continue;
+        }
+        uint32_t slot = name_hash(alias, strlen(alias)) & mask;
+        while (program->files_by_alias[slot] != 0) {
+            slot = (slot + 1u) & mask;
+        }
+        program->files_by_alias[slot] = i + 1u;
+    }
+    return true;
+}
+
 bool kest_out_of_reach(KestProgram *program, const char *name, size_t length) {
     const char *dot = memchr(name, '.', length);
-    if (dot == NULL) {
+    if (dot == NULL || program->files == NULL) {
         return false;
     }
     size_t head = (size_t)(dot - name);
     size_t rest = length - head - 1;
-    for (uint32_t i = 0; program->files != NULL && i < program->files->count;
-         i++) {
-        const char *module = program->files->items[i].module;
-        const char *alias = program->files->items[i].alias;
+    // Which files could answer this: the ones whose alias is the head of the
+    // name. Through the table where there is one, and every file where there
+    // is not -- two files may share an alias, so what answers is a run of
+    // slots rather than one. See D1087.
+    bool tabled = alias_index(program);
+    uint32_t mask = tabled ? program->files_by_alias_slots - 1 : 0;
+    uint32_t slot = tabled ? (name_hash(name, head) & mask) : 0;
+    uint32_t next = 0;
+    while (true) {
+        uint32_t which;
+        if (tabled) {
+            if (program->files_by_alias[slot] == 0) {
+                return false;
+            }
+            which = program->files_by_alias[slot] - 1u;
+            slot = (slot + 1u) & mask;
+        } else {
+            if (next >= program->files->count) {
+                return false;
+            }
+            which = next++;
+        }
+        const char *module = program->files->items[which].module;
+        const char *alias = program->files->items[which].alias;
         if (module == NULL || module[0] == '\0' ||
             !kest_word_same(alias, name, head)) {
             continue;
@@ -494,18 +593,23 @@ bool kest_out_of_reach(KestProgram *program, const char *name, size_t length) {
             return true;
         }
     }
-    return false;
 }
 
 KestType *kest_find_type(KestProgram *program, const char *name,
                          size_t length) {
-    for (uint32_t i = 0; i < program->type_count; i++) {
-        const char *candidate = program->types[i]->name;
-        // A composed type has no name of its own; `kest_type_name` builds one
-        // on demand and nothing looks it up by that.
-        if (candidate != NULL && kest_word_same(candidate, name, length)) {
-            return program->types[i];
+    // A composed type has no name of its own and is not in here; `kest_type_name`
+    // builds one on demand and nothing looks it up by that.
+    if (program->types_by_name_slots == 0) {
+        return NULL;
+    }
+    uint32_t mask = program->types_by_name_slots - 1;
+    uint32_t slot = name_hash(name, length) & mask;
+    while (program->types_by_name[slot] != 0) {
+        KestType *one = program->types[program->types_by_name[slot] - 1u];
+        if (kest_word_same(one->name, name, length)) {
+            return one;
         }
+        slot = (slot + 1u) & mask;
     }
     return NULL;
 }
@@ -531,10 +635,9 @@ static bool add_primitive(KestProgram *program, const char *name,
     type->byte_align = type->byte_size == 0 ? 1
                        : tag == KEST_T_TEXT ? 8
                                             : type->byte_size;
-    type->name = name;
     type->width = width;
     type->is_signed = is_signed;
-    return register_type(program, type);
+    return register_type(program, type, name);
 }
 
 static bool add_primitives(KestProgram *program) {
@@ -2152,10 +2255,9 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
 
     const char *name = written;
     made = new_type(program, shape->tag);
-    if (name == NULL || made == NULL || !register_type(program, made)) {
+    if (name == NULL || made == NULL || !register_type(program, made, name)) {
         return error_type(program);
     }
-    made->name = name;
     made->span = shape->span;
     made->declared_in = shape->declared_in;
     // A copy exists because something asked for it, and asking for it is
@@ -2653,13 +2755,17 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
 // A name to a slot, one byte at a time. Every name here is a name somebody
 // wrote, so what this has to be is spread over short words that differ in a
 // letter or two — not the fastest one there is.
-static uint32_t name_hash(const char *name, size_t length) {
+uint32_t kest_name_hash(const char *name, size_t length) {
     uint32_t hash = 2166136261u;
     for (size_t i = 0; i < length; i++) {
         hash ^= (unsigned char)name[i];
         hash *= 16777619u;
     }
     return hash;
+}
+
+static uint32_t name_hash(const char *name, size_t length) {
+    return kest_name_hash(name, length);
 }
 
 // Whether the index still says what the list says. It is a shortcut, and a
@@ -2713,6 +2819,36 @@ static void index_agrees(const KestProgram *program, const char *after) {
     // keeps that for nothing. A rebuild puts every name in again, which is
     // where it can be lost, and losing it is a message pointing at the wrong
     // line rather than a program that behaves differently.
+    // And the two indexes beside it, for the same reason: what is in a table
+    // and not in the list it indexes is a place nobody looks at. Every
+    // declaration is found where it was written, and every named type is
+    // found by its name -- the first one declared under it, which is what the
+    // walk they replaced answered with. See D1086.
+    for (uint32_t at = 0; at < program->global_count; at++) {
+        const KestSymbol *one = &program->globals[at];
+        const KestSymbol *found =
+            kest_symbol_at((KestProgram *)program, one->source, one->span);
+        if (found == NULL) {
+            fprintf(stderr,
+                    "kest: after %s the declaration of `%s` is not where it "
+                    "was written\n",
+                    after, one->name);
+            abort();
+        }
+    }
+    for (uint32_t at = 0; at < program->type_count; at++) {
+        const char *named = program->types[at]->name;
+        if (named == NULL) {
+            continue;
+        }
+        const KestType *first =
+            kest_find_type((KestProgram *)program, named, strlen(named));
+        if (first == NULL) {
+            fprintf(stderr, "kest: after %s the type `%s` is not in the index\n",
+                    after, named);
+            abort();
+        }
+    }
     for (uint32_t at = 0; at < program->global_count; at++) {
         const char *name = program->globals[at].name;
         const KestSymbol *first =
@@ -2742,6 +2878,46 @@ static void index_put(KestProgram *program, uint32_t at) {
         slot = (slot + 1) & mask;
     }
     program->by_name[slot] = at + 1;
+}
+
+// The same for where a declaration is written. A place is a file and an
+// offset in it, and the two together are one name for one declaration. See
+// D1086.
+static uint32_t place_hash(const KestSource *source, uint32_t offset) {
+    uint64_t mixed = (uint64_t)(uintptr_t)source * 1099511628211u;
+    mixed ^= (uint64_t)offset * 2654435761u;
+    return (uint32_t)(mixed ^ (mixed >> 32));
+}
+
+static void place_put(KestProgram *program, uint32_t at) {
+    if (program->by_place_slots == 0) {
+        return;
+    }
+    const KestSymbol *one = &program->globals[at];
+    uint32_t mask = program->by_place_slots - 1;
+    uint32_t slot = place_hash(one->source, one->span.offset) & mask;
+    while (program->by_place[slot] != 0) {
+        slot = (slot + 1u) & mask;
+    }
+    program->by_place[slot] = at + 1u;
+}
+
+static bool place_room(KestProgram *program) {
+    if (program->by_place_slots >= (program->global_count + 1) * 2) {
+        return true;
+    }
+    uint32_t slots =
+        program->by_place_slots == 0 ? 64 : program->by_place_slots * 2;
+    uint32_t *made = KEST_ARENA_ARRAY(program->arena, uint32_t, slots);
+    if (made == NULL) {
+        return false;
+    }
+    program->by_place = made;
+    program->by_place_slots = slots;
+    for (uint32_t i = 0; i < program->global_count; i++) {
+        place_put(program, i);
+    }
+    return true;
 }
 
 // Room for one more, which is a table twice as big when it is half full: a
@@ -2869,11 +3045,17 @@ const KestUse *kest_program_uses(const KestProgram *program, uint32_t *count) {
 
 KestSymbol *kest_symbol_at(KestProgram *program, const KestSource *source,
                            KestSpan span) {
-    for (uint32_t i = 0; i < program->global_count; i++) {
-        if (program->globals[i].source == source &&
-            program->globals[i].span.offset == span.offset) {
-            return &program->globals[i];
+    if (program->by_place_slots == 0) {
+        return NULL;
+    }
+    uint32_t mask = program->by_place_slots - 1;
+    uint32_t slot = place_hash(source, span.offset) & mask;
+    while (program->by_place[slot] != 0) {
+        KestSymbol *one = &program->globals[program->by_place[slot] - 1u];
+        if (one->source == source && one->span.offset == span.offset) {
+            return one;
         }
+        slot = (slot + 1u) & mask;
     }
     return NULL;
 }
@@ -2989,7 +3171,7 @@ static bool add_global_value(KestProgram *program, const char *name,
     // Before the list grows rather than after, because what this rebuilds is
     // read out of the list as it is: a place is put in it below, and it is put
     // in the index there too.
-    if (!index_room(program)) {
+    if (!index_room(program) || !place_room(program)) {
         return false;
     }
 
@@ -3002,6 +3184,7 @@ static bool add_global_value(KestProgram *program, const char *name,
     symbol->value = value;
     symbol->decl = decl;
     index_put(program, program->global_count - 1);
+    place_put(program, program->global_count - 1);
     index_agrees(program, "a declaration");
     return true;
 }
@@ -3027,10 +3210,9 @@ static bool declare_structs(KestProgram *program, const KestUnit *unit) {
             continue;
         }
         KestType *type = new_type(program, KEST_T_STRUCT);
-        if (type == NULL || !register_type(program, type)) {
+        if (type == NULL || !register_type(program, type, name)) {
             return false;
         }
-        type->name = name;
         type->span = decl->name;
         type->declared_in = program->source;
         // Which file declared it, which is where the module a field marked
@@ -3151,7 +3333,8 @@ static bool resolve_struct_fields(KestProgram *program, const KestUnit *unit) {
 // Structs and enums are measured together because either may hold the other,
 // and both are broken by a `ref`, which is one word whatever it points at.
 static const char *span_string(KestProgram *program, KestSpan span);
-static bool register_type(KestProgram *program, KestType *type);
+static bool register_type(KestProgram *program, KestType *type,
+                          const char *name);
 static KestType *new_type(KestProgram *program, KestTypeTag tag);
 static KestType *error_type(KestProgram *program);
 
@@ -3374,10 +3557,9 @@ static bool declare_cased(KestProgram *program, const KestUnit *unit,
             continue;
         }
         KestType *type = new_type(program, tag);
-        if (type == NULL || !register_type(program, type)) {
+        if (type == NULL || !register_type(program, type, name)) {
             return false;
         }
-        type->name = name;
         type->span = decl->name;
         type->declared_in = program->source;
         type->unit = program->unit;
@@ -4412,7 +4594,118 @@ static size_t module_of_in(const KestUnits *files, const char *name) {
 
 static const KestUnits *dumping_files;
 
+// The modules a program is made of, in a table, so that splitting a name where
+// its module ends is a lookup rather than a walk of every file. A listing of a
+// thousand modules spent a fifth of a `check` inside that walk, and the walk
+// that gathered what each module holds spent as much again. Both are keyed on
+// the same table here. See D1086.
+typedef struct {
+    // One more than the place in `names`, so nought is an empty slot.
+    uint32_t *slots;
+    uint32_t slot_count;
+    const char **names;
+    size_t *lengths;
+    // What each module's line in a listing is, filled while the listing is
+    // walked. -1 until it has one.
+    int32_t *held_at;
+    uint32_t count;
+} Modules;
+
+static const Modules *dumping_modules;
+
+static uint32_t module_slot(const Modules *modules, const char *name,
+                            size_t length) {
+    uint32_t mask = modules->slot_count - 1;
+    uint32_t slot = name_hash(name, length) & mask;
+    while (modules->slots[slot] != 0) {
+        uint32_t at = modules->slots[slot] - 1u;
+        if (modules->lengths[at] == length &&
+            memcmp(modules->names[at], name, length) == 0) {
+            return slot;
+        }
+        slot = (slot + 1u) & mask;
+    }
+    return slot;
+}
+
+// Every module named by a file, put in once. Answers false only for no room,
+// and a listing with no table walks the files the way it always did.
+static bool modules_prepare(KestArena *arena, const KestUnits *files,
+                            Modules *modules) {
+    modules->slots = NULL;
+    modules->slot_count = 0;
+    modules->names = NULL;
+    modules->lengths = NULL;
+    modules->held_at = NULL;
+    modules->count = 0;
+    uint32_t many = files == NULL ? 0 : files->count;
+    if (many == 0) {
+        return true;
+    }
+    uint32_t slots = 64;
+    while (slots < (many + 1) * 2) {
+        slots *= 2;
+    }
+    modules->slots = KEST_ARENA_ARRAY(arena, uint32_t, slots);
+    modules->names = KEST_ARENA_ARRAY(arena, const char *, many);
+    modules->lengths = KEST_ARENA_ARRAY(arena, size_t, many);
+    modules->held_at = KEST_ARENA_ARRAY(arena, int32_t, many);
+    if (modules->slots == NULL || modules->names == NULL ||
+        modules->lengths == NULL || modules->held_at == NULL) {
+        modules->slots = NULL;
+        modules->slot_count = 0;
+        return false;
+    }
+    modules->slot_count = slots;
+    for (uint32_t i = 0; i < many; i++) {
+        const char *module = files->items[i].module;
+        if (module == NULL || module[0] == '\0') {
+            continue;
+        }
+        size_t length = strlen(module);
+        uint32_t slot = module_slot(modules, module, length);
+        if (modules->slots[slot] != 0) {
+            continue;
+        }
+        modules->names[modules->count] = module;
+        modules->lengths[modules->count] = length;
+        modules->held_at[modules->count] = -1;
+        modules->slots[slot] = ++modules->count;
+    }
+    return true;
+}
+
+// Where a name's module ends: the longest dotted prefix of it that is a module
+// this program has. A name holds few dots, so this is a lookup or two rather
+// than a walk of every file.
+static size_t module_of_prepared(const Modules *modules, const char *name) {
+    if (modules == NULL || modules->slot_count == 0) {
+        return 0;
+    }
+    const char *dot = name + strlen(name);
+    while (dot > name) {
+        dot--;
+        if (*dot != '.') {
+            continue;
+        }
+        size_t length = (size_t)(dot - name);
+        uint32_t slot = module_slot(modules, name, length);
+        if (modules->slots[slot] != 0) {
+            return length;
+        }
+    }
+    return 0;
+}
+
 static size_t module_of(const char *name) {
+    if (dumping_modules != NULL && dumping_modules->slot_count > 0) {
+        size_t length = module_of_prepared(dumping_modules, name);
+        if (length > 0) {
+            return length;
+        }
+        const char *dot = strrchr(name, '.');
+        return dot == NULL ? strlen(name) : (size_t)(dot - name);
+    }
     return module_of_in(dumping_files, name);
 }
 
@@ -4438,10 +4731,26 @@ typedef struct {
 
 static Held *held_of(Held *held, uint32_t *count, const char *name) {
     size_t length = module_of(name);
-    for (uint32_t i = 0; i < *count; i++) {
-        if (held[i].length == length &&
-            memcmp(held[i].name, name, length) == 0) {
-            return &held[i];
+    // Which line of the listing this module already has, asked of the table
+    // the modules are in rather than by walking the lines written so far.
+    // That walk was the listing's own length for every name in it.
+    if (dumping_modules != NULL && dumping_modules->slot_count > 0 &&
+        length > 0) {
+        uint32_t slot = module_slot(dumping_modules, name, length);
+        if (dumping_modules->slots[slot] != 0) {
+            uint32_t which = dumping_modules->slots[slot] - 1u;
+            int32_t at = dumping_modules->held_at[which];
+            if (at >= 0) {
+                return &held[at];
+            }
+            dumping_modules->held_at[which] = (int32_t)*count;
+        }
+    } else {
+        for (uint32_t i = 0; i < *count; i++) {
+            if (held[i].length == length &&
+                memcmp(held[i].name, name, length) == 0) {
+                return &held[i];
+            }
         }
     }
     Held *one = &held[(*count)++];
@@ -4459,7 +4768,12 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
     // module ends rather than at a dot. Set for the length of the walk below
     // and put back, because what `module_of` answers is about one program.
     const KestUnits *was_dumping = dumping_files;
+    const Modules *were_modules = dumping_modules;
     dumping_files = program->files;
+    Modules modules;
+    dumping_modules = modules_prepare(arena, program->files, &modules)
+                          ? &modules
+                          : NULL;
     size_t root_length = root == NULL ? 0 : strlen(root);
     uint32_t elsewhere = 0;
     uint32_t said = 0;
@@ -4630,6 +4944,7 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
         fputs("this file declares nothing\n", out);
     }
     dumping_files = was_dumping;
+    dumping_modules = were_modules;
     return true;
 }
 
@@ -4771,7 +5086,18 @@ void kest_program_costs(const KestProgram *program, FILE *out) {
 // D1039.
 static void write_module(const KestProgram *program, const char *name,
                          FILE *out) {
-    size_t length = module_of_in(program->files, name);
+    // The same table the printed listing uses where there is one, and the walk
+    // of every file where there is not. See D1086.
+    size_t length = 0;
+    if (dumping_modules != NULL && dumping_modules->slot_count > 0) {
+        length = module_of_prepared(dumping_modules, name);
+        if (length == 0) {
+            const char *dot = strrchr(name, '.');
+            length = dot == NULL ? strlen(name) : (size_t)(dot - name);
+        }
+    } else {
+        length = module_of_in(program->files, name);
+    }
     fputs(",\"module\":", out);
     if (length == 0 || length == strlen(name)) {
         fputs("null", out);
@@ -4789,6 +5115,11 @@ static void write_module(const KestProgram *program, const char *name,
 
 void kest_program_dump_json(const KestProgram *program, KestArena *arena,
                             FILE *out) {
+    const Modules *were_modules = dumping_modules;
+    Modules modules;
+    dumping_modules = modules_prepare(arena, program->files, &modules)
+                          ? &modules
+                          : NULL;
     fputs("\"types\":[", out);
     bool first = true;
     for (uint32_t i = 0; i < program->type_count; i++) {
@@ -5026,4 +5357,5 @@ void kest_program_dump_json(const KestProgram *program, KestArena *arena,
     // it is made of wants both numbers from the same run. See D754.
     fprintf(out, ",\"typesMade\":%u,\"typeBytes\":%zu", program->types_made,
             sizeof(KestType));
+    dumping_modules = were_modules;
 }

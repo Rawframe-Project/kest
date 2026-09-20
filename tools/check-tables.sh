@@ -2457,6 +2457,13 @@ SAME_SHAPE = {
     frozenset(("math_ceil", "math_cos", "math_floor", "math_sin",
                "math_sqrt")):
         "and five that take one, the same way",
+    frozenset(("place_room", "type_index_room")):
+        "two of the three name indexes asking for room the same way: a table "
+        "twice as big when it is half full, and every name put in again. They "
+        "index different things -- where a declaration was written, and what "
+        "a type is called -- and the third is written the same way beside "
+        "them under the name `index_room`, which is the globals' own. Three "
+        "tables, one rule for growing them. See D1086",
     frozenset(("is_numeric", "takes_what_follows")):
         "two questions about what kind of expression something is, each a "
         "list of the kinds it is true of: one is the kinds a number can be "

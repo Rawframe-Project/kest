@@ -495,6 +495,35 @@ fn main() -> i32 {
         "caught": "a machine stopped in a call this host made",
     },
     {
+        # A name index that does not hold every name. The types of a program
+        # are found by name through a table now, because the walk that found
+        # one was the program's own size for every type any body mentions --
+        # 45 per cent of a clean check of a thousand modules. A table that
+        # misses a name is a type the program has and cannot find, and the
+        # build that checks itself says so where it is put in. See D1086.
+        "what": "a name index that does not hold every name",
+        "file": "src/types.c",
+        "from": r"""    if (name == NULL || program->types_by_name_slots == 0) {
+        return;
+    }""",
+        "to": r"""    if (name == NULL || program->types_by_name_slots == 0 || at > 0) {
+        return;
+    }""",
+        "make": ["debug"],
+        "binary": "kest-debug",
+        "program": "indexing.kest",
+        "source": """struct Point {
+    x: i32
+    y: i32
+}
+
+fn main() -> i32 {
+    let p = Point(1, 2)
+    return p.x + p.y - 3
+}""",
+        "caught": "is not in the index",
+    },
+    {
         # A loop with a way out of it, read as one the program does not come
         # back from. A body ending in `while true` ends only when nothing
         # breaks out of the loop; a walk that finds no `break` anywhere says
@@ -6054,7 +6083,7 @@ anywhere, and it is why the gate holds""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "136000 as a tree, 173144 checked",
+        "caught": "136000 as a tree, 174472 checked",
     },
     {
         # And the section they are in saying whose machine they are. Bytes of

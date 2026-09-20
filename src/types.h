@@ -269,11 +269,18 @@ typedef struct {
     const KestUnitInfo *unit;
     KestDiags *diags;
 
-    // Primitives and structs, in declaration order. A file declares few enough
-    // types that a scan beats a hash table.
+    // Primitives and structs, in declaration order.
     KestType **types;
     uint32_t type_count;
     uint32_t type_capacity;
+    // And where each of them is, by name, for the reason the globals below
+    // have one. A program holds every file's types rather than one file's, so
+    // the walk that found a type by name was the program's own size for every
+    // type any body names: a thousand modules of three functions each spent
+    // 45 per cent of a clean check inside it. Slots hold one more than the
+    // place they name, so nought is an empty slot. See D1086.
+    uint32_t *types_by_name;
+    uint32_t types_by_name_slots;
 
     // And the ones nothing declared: `[text]`, `Item?`, `ref<Npc>`. A composed
     // type is what it is made of and nothing else, so two written in two
@@ -296,6 +303,24 @@ typedef struct {
     // an empty slot. See D327.
     uint32_t *by_name;
     uint32_t by_name_slots;
+    // And where each of them was written, which is how everything that walks
+    // declarations finds the symbol the checker made for one. That walk was
+    // the list again for every declaration -- the contract prover alone spent
+    // a twentieth of a clean check in it at a thousand modules. Keyed on the
+    // file and the offset, because a span is unique in a file and a file is
+    // unique in a program. Slots hold one more than the place they name. See
+    // D1086.
+    uint32_t *by_place;
+    uint32_t by_place_slots;
+    // And the files of this program by the alias a name is written through.
+    // Asking whether `alias.name` is a name some module has and this file did
+    // not import walked every file, for every dotted name in every body: a
+    // project of eighteen hundred modules spent a quarter of a clean check
+    // there. Two files may share an alias, so a run of slots holds all of
+    // them and a lookup walks the run. Slots hold one more than the file they
+    // name. See D1087.
+    uint32_t *files_by_alias;
+    uint32_t files_by_alias_slots;
 
     // What the type names in scope stand for right now. Only a generic
     // signature or a generic body is resolved with any of these set. As many
@@ -422,6 +447,12 @@ bool kest_needs_import(KestProgram *program, const char *name, size_t length);
 // Whether this program holds a name written this way under a module this file
 // has not imported. See D1039.
 bool kest_out_of_reach(KestProgram *program, const char *name, size_t length);
+
+// What a name hashes to, for the tables that find one. Here rather than in
+// each of them because one hash written twice is two the day either moves:
+// the program's own indexes and the contract graph's both find a function by
+// the name the checker gave it. See D1087.
+uint32_t kest_name_hash(const char *name, size_t length);
 // The way a file writes a registered name: the last part of its module and
 // then the name. See D1039.
 const char *kest_written_as(KestProgram *program, const char *whole);
