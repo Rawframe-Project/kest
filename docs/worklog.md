@@ -38170,3 +38170,31 @@ See D1053 and D1054.
 **Runs:** two sharded workloads at four widths, five runs each, before and
 after; the gate's `identity` section over seventy thousand machines; `races`
 under the thread sanitiser; the two-machine determinism probe; `make check`.
+
+## A field of one of a run, standing where an optional is wanted
+
+D809 taught this compiler that one of a run is read at the width of what the
+run holds rather than at the width of the expression, because the checker has
+already widened the expression to the optional it is about to become and the
+tag goes on afterwards. The same is true of a field of one of a run and was
+never done: `items[at].price` answering `i32?` read two slots out of an `Item`
+that holds one number there, took the next item's `id` along with the price,
+and then had the tag put on top of the pair.
+
+Nothing here ran into it. Every lookup in this tree gives back the struct and
+reads the field afterwards, or reads a field of a struct in a local, and
+neither takes the path that reads from an address. What found it was a program
+written for something else entirely, about text, whose catalogue lookup
+happened to be the one shape missing.
+
+The compiler caught itself rather than emitting it: `K0505` is exactly the
+complaint that the count of the stack and the width of a value disagree, and it
+said so twice. What it could not do is say it before somebody wrote the
+program, so `examples/lookup.kest` — which is the example about a lookup that
+finds nothing — has the shape in it now, with the bug named beside it.
+
+See D1055.
+
+**Runs:** `examples/lookup.kest` under the fix and reverted, to see it caught;
+every example under both builds and with the fusions and the optimizer off;
+`make check`.

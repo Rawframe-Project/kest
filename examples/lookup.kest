@@ -57,6 +57,19 @@ fn priceOf(items: [Item], id: i32) -> i32 {
     return 0
 }
 
+// The same question answered without copying the item out first: a field of
+// one of a run, standing where an optional is wanted. What the run holds has
+// no tag in it, so the field is read at its own width and the tag goes on
+// afterwards -- reading it at the width of the optional it is about to become
+// took the field and the slot after it. It is the mistake D809 found in one
+// of a run, in the other place a value is read from an address. See D1055.
+fn priceAt(items: [Item], at: i32) -> i32? no.alloc {
+    if at < 0 || at >= len(items) {
+        return none
+    }
+    return items[at].price
+}
+
 fn main() -> i32 {
     let stock = [Item(1, 250), Item(7, 90), Item(9, 1200)]
 
@@ -132,6 +145,21 @@ fn main() -> i32 {
     let tiers: [i32; 4] = [0, 90, 250, 1200]
     if tiers[2] != TIERS[2] || tiers[tier] != TIERS[tier] {
         return 14
+    }
+
+    // A field of one of a run, widened to an optional where it is given back.
+    // The slot after `price` is the next item's `id`, so reading it two slots
+    // wide answered with a number that was right and a tag that was whatever
+    // stood beside it. See D1055.
+    if let price = priceAt(stock, 1) {
+        if price != 90 {
+            return 15
+        }
+    } else {
+        return 16
+    }
+    if priceAt(stock, 3) != none {
+        return 17
     }
 
     io.print("found what was there, and said nothing about what was not")

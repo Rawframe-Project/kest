@@ -34830,3 +34830,31 @@ altogether would have kept the rule that `hash` applies exactly where `==`
 does. It would also have taken away a table keyed by an entity, which is a
 thing a simulation wants, and the rule survives anyway: the hash is still of
 the value, it is just of the part of the value that is the program's.
+
+## D1055. A field of one of a run is read at its own width
+
+*argued*, and the program that shows it is `examples/lookup.kest`.
+
+D809 wrote down that one of a run is read at the width of what the run holds
+and not at the width of the expression: a value standing where an optional is
+wanted is widened by the checker, `expr->type` is the optional from then on,
+and the tag is put on afterwards by `compile_expr`. Reading the element at the
+optional's width took the element and the slot after it out of an array that
+has no tag in it.
+
+The same is true of a field, and it was not done. `items[at].price` standing
+where an `i32?` is wanted read two slots out of a struct that holds one — the
+price, and whatever `Item` holds after it, which is the next item's `id`. Then
+`compile_expr` put the tag on top of that, and the expression left three slots
+where the type says two. The compiler caught itself: `K0505` says the count of
+the stack and the width of a value disagree, which is what it is for.
+
+So the answer is D809's, in the other place a value is read from an address:
+the member's type and the member's width, and the tag afterwards. Two paths
+read a field — one out of slots, one from an address — and it was the address
+one, which is the path a struct in an array takes.
+
+**What found it.** A program written for something else: a catalogue of
+localized lines, looked up by key and answering `text?`. Every example in this
+tree returns a struct from a lookup, or a field out of a struct in a local, and
+neither is this shape. See D1056 for what the program was for.

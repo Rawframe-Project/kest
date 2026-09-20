@@ -2565,19 +2565,6 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             load_slots(compiler, slot, size, expr->type, expr->span);
             break;
         }
-        // A field of something that has an address is read from that address.
-        // Otherwise the whole value would be unpacked out of the host's bytes
-        // to keep one piece of it, which is what a frame reads most.
-        uint16_t offset = 0;
-        if (can_address(compiler, expr) &&
-            compile_address(compiler, expr, &offset)) {
-            stack_pop(compiler, 1);
-            stack_push(compiler, value_slots(expr->type));
-            load_at(compiler, offset, expr->type, expr->span);
-            break;
-        }
-        // The struct is not in a slot, so it has to be built on the stack and
-        // the member kept out of it.
         const KestMember *member =
             find_member(expr->field.object->type,
                         span_text(compiler, expr->field.name),
@@ -2587,6 +2574,26 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
                   "this reads a field the type does not have");
             break;
         }
+        // A field of something that has an address is read from that address.
+        // Otherwise the whole value would be unpacked out of the host's bytes
+        // to keep one piece of it, which is what a frame reads most.
+        //
+        // What comes off is the member, which is what the struct holds and
+        // not what the expression is: a value standing where an optional is
+        // wanted is widened by the checker, and read at the width of the
+        // widened type this took the member and the bytes after it out of a
+        // struct that has no tag in it. The tag goes on afterwards, the same
+        // as it does after a call and after one of a run. See D809 and D1055.
+        uint16_t offset = 0;
+        if (can_address(compiler, expr) &&
+            compile_address(compiler, expr, &offset)) {
+            stack_pop(compiler, 1);
+            stack_push(compiler, value_slots(member->type));
+            load_at(compiler, offset, member->type, expr->span);
+            break;
+        }
+        // The struct is not in a slot, so it has to be built on the stack and
+        // the member kept out of it.
         uint16_t total = value_slots(expr->field.object->type);
         uint16_t kept = value_slots(member->type);
         compile_expr(compiler, expr->field.object);
