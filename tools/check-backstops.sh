@@ -6550,6 +6550,36 @@ fn main() -> i32 {
         "caught": "K0207 said `error[K0207]: this hole is empty`",
     },
     {
+        # A `match` on something that is not an enum, told what it is not and
+        # not what to write. Somebody who reaches this reached it by guessing
+        # that `match` is a `switch`, which is the one guess a reader coming
+        # from anywhere else makes here. See D1042.
+        "what": "a `match` on what has no cases, told nothing about what to write",
+        "file": "src/check.c",
+        "from": """            if (!say_if_let(checker, subjects[i], NULL)) {""",
+        "to": """            if (false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0331 said `error[K0331]: `match` chooses between the "
+                  "cases of an enum, found `i32``",
+    },
+    {
+        # And the half of that a reader is likeliest to meet: a `match` on an
+        # optional, which holds one thing or nothing and has `if let` rather
+        # than two arms. Told the general thing, it reads as though there were
+        # no way to ask at all. See D1042.
+        "what": "a `match` on an optional, told what anything else is told",
+        "file": "src/check.c",
+        "from": """            if (!say_if_let(checker, subjects[i], NULL)) {""",
+        "to": """            if (true) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "K0331 said `error[K0331]: `match` chooses between the "
+                  "cases of an enum, found `i32?``",
+    },
+    {
         # A value standing where an optional of an optional is wanted. The
         # conversion happens once, so what comes back is that the types differ
         # -- which reads as though there were no conversion at all, to the one

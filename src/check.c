@@ -3573,6 +3573,15 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
             report(checker, choose->subjects[i]->span, "K0331",
                    "`match` chooses between the cases of an enum, found `%s`",
                    type_name(checker, subjects[i]));
+            // And what to write instead, which is knowable here: an optional
+            // holds one thing or nothing and `if let` is how it comes out;
+            // anything else has no list of cases to exhaust, which is what
+            // `if` is for and what the reference says. Somebody who reaches
+            // this reached it by guessing that `match` is a `switch`.
+            if (!say_if_let(checker, subjects[i], NULL)) {
+                suggest(checker, "there is no list of cases to exhaust here: "
+                                 "`if` asks about a value");
+            }
             subjects[i] = error_type(checker);
         }
         if (is_error(subjects[i])) {

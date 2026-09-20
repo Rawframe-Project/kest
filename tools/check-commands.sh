@@ -3792,6 +3792,8 @@ K0314|fn main() -> i32 {\n    let a = "x" - "y"\n    return len(a)\n}|does not a
 K0317|fn main() -> i32 {\n    let t = 0\n    for i, j in 0..3 {\n        t += i\n    }\n    return t\n}|no positions to walk by
 K0321|fn main() -> i32 {\n    let t = 0\n    for i in 0..3 {\n        i = 1\n    }\n    return t\n}|is the loop's own
 K0331|fn main() -> i32 {\n    let a = 1\n    return match a {\n        else -> 0\n    }\n}|chooses between the cases
+K0331|fn main() -> i32 {\n    let a = 1\n    return match a {\n        else -> 0\n    }\n}|there is no list of cases to exhaust here
+K0331|fn held(n: i32) -> i32? {\n    return none\n}\n\nfn main() -> i32 {\n    return match held(1) {\n        else -> 0\n    }\n}|take what it holds out with `if let`
 K0332|enum Door {\n    Shut\n    Open(i32)\n}\n\nfn main() -> i32 {\n    let d = Door.Shut\n    return match d {\n        else -> 0\n        else -> 1\n    }\n}|two `else` arms
 K0334|fn main() -> i32 {\n    let a = if true -> 1\n    return a\n}|needs an `else`
 K0335|fn main() -> i32 {\n    let a = array()\n    return len(a)\n}|has no type here

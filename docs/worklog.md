@@ -37581,3 +37581,33 @@ See D1041.
 
 **Runs:** the reproduction before and after; the refusal for a read, for a
 write and for building the shape outside; `make fast`; `make check`.
+
+## The `match` criticism, reproduced and false
+
+One reading from outside said practical block or statement `match` was missing.
+Another ran the compiler and found it there. Settled by writing the program the
+criticism is about: an enemy with four states, stepped by a block-form `match`
+used as a statement, with side effects in the arms, a binding per case, a
+`return` out of one, a case carrying two things, exhaustiveness, and a
+value-form `match` beside it for the name. It compiles and runs and answers
+what it should. False.
+
+What the verification did find is the refusal beside it. A reader who guesses
+that `match` is a `switch` writes
+
+    return match n {
+        else -> 0
+    }
+
+and is told `match` chooses between the cases of an enum and nothing else. That
+is what is wrong and not what to write, and what to write is knowable: an
+optional holds one thing or nothing and `if let` is how it comes out, and
+anything else has no list of cases at all, which is what `if` is for. Both are
+said now, and the optional one is the one that matters --
+`match table.get(t, k)` is what somebody writes first who has met a language
+where an optional is an enum with two cases.
+
+See D1042.
+
+**Runs:** the state machine, the two refusals, the table of refusals with a row
+for each wording, two holes; `make fast`; `make check`.

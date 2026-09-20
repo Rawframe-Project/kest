@@ -33916,3 +33916,48 @@ which answered a packed position that nothing outside could then read.
 `t.keys` could still be walked and not changed. It is a second kind of array in
 the type system, a second thing every builtin has to have an opinion about, and
 what it buys over `keyAt` is one call a turn.
+
+## D1042. The `match` criticism is false, and the refusal beside it says what to write
+
+**Decided.** Block-form `match` works, has worked, and is what the reference
+shows. The criticism that practical statement `match` is missing is **FALSE**,
+reproduced against the current head with a gameplay state machine. What the
+verification did find is smaller and real: the refusal a reader meets when they
+guess that `match` is a `switch` said what was wrong and not what to write.
+
+**What was reproduced.** An enemy with four states, written the way a gameplay
+author writes one: a block-form `match` as a statement, with side effects in
+the arms, a binding per case used inside the block, a `return` from one arm, a
+case carrying two things, exhaustiveness checked, and a value-form `match`
+beside it for the name.
+
+    match one.state {
+        Idle { if sawPlayer { one.state = State.Chasing(0) } }
+        Chasing(turns) { ... }
+        Attacking(turns, reach) { ... }
+        Dead { return one }
+    }
+
+It compiles, it runs, and it answers what it should. Nothing about `match` is
+missing. What is deliberately absent is arms for values -- `1 ->`, `true ->`,
+`"x" ->` -- because what a `match` exhausts is the cases of an enum and a
+number has too many, which the reference has always said.
+
+**What was wrong.** A reader who writes the `switch` they meant gets
+
+    error[K0331]: `match` chooses between the cases of an enum, found `i32`
+
+and is left where they were. The rule in CLAUDE.md is that where a fix is
+knowable, it is suggested, and here it is knowable twice over: an optional
+holds one thing or nothing and `if let` is how it comes out, and anything else
+has no list of cases at all and is what `if` is for. Both are said now. The
+optional half matters more than it looks -- `match table.get(t, k)` is the
+first thing somebody writes who has met a language where an optional is an enum
+with two cases.
+
+**Why `T?` is not an enum with two cases here.** It is one word and a flag
+beside a value, laid out flat, and `if let` reads the flag once. Making it an
+enum a `match` could exhaust would be a second spelling of a question the
+language already answers, which is the surface rule in section 36 of this
+reset. `none` compares and `if let` binds; there is nothing a two-armed `match`
+would add.
