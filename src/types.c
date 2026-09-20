@@ -1328,8 +1328,16 @@ uint64_t kest_hash_value(const KestType *type, const KestValue *slots) {
     // The same whole number `==` compares, mixed the way every other whole
     // number here is: `hash` applies to exactly what `==` applies to, so a
     // reference that compares is a reference that hashes. See D923.
+    // By the place alone. What is above the place is the number the process
+    // handed out, which is one count shared by every machine of a process: a
+    // hash of the whole word answers differently on the second machine of a
+    // run, and `deterministic` says the same program answers the same thing.
+    // Two references to one place that are not the same reference hash alike
+    // and compare unequal, which is what a hash is allowed to do and what
+    // every table here already handles. See D1054.
     case KEST_T_REF:
-        return kest_mix((uint64_t)slots[0].integer);
+        return kest_mix((uint64_t)slots[0].integer &
+                        ((1ull << KEST_REF_PLACE_BITS) - 1ull));
     case KEST_T_TEXT:
         // Through the one fold this compiler has, which is what a file is
         // marked with and what a program's `hash` over text answers. See D663.

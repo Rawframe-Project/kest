@@ -139,6 +139,20 @@ equal elements may come back in another order. A table still keeps room for
 what it has held, and `by = table.compact(by)` is the cold path that gives it
 back. See D1052.
 
+**A reference hashes by the place it names.** It hashed the whole reference,
+and the number above the place is one the whole process hands out — so a
+function declared `deterministic` answered two different things on two machines
+of one process. **What a program has to do:** nothing, unless it wrote a hash
+of a reference down and compared it with one from another run, which was never
+a number it could rely on. See D1054.
+
+**Machines that share a process no longer share a write.** Every `add` to a
+store wrote one word that every thread of the process writes; a machine claims
+a thousand of them at a time now. **What a host has to do:** nothing. Sharding
+a world across eight threads went from 2.5 times to 4.9, and a program that
+never makes a second machine got 37 to 47 per cent faster at making places. See
+D1053.
+
 **What changed for a host.** The version. The other three numbers — the C ABI,
 the JSON schema, and the deterministic profile — still read 4, 3 and 1, and
 will be settled to clean `0.0.x` numbers once the architecture this reset is

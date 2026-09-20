@@ -34707,3 +34707,126 @@ caller writes `by = table.compact(by)`, the way `source = random.next(source)`
 is written. Measured, the compacted table holds **8,192 bytes** more than a
 fresh one rather than 2,121,728. What it costs is both tables at once for as
 long as the call takes, and the old one goes at the next walk.
+
+## D1053. The one thing two machines share, claimed a thousand at a time
+
+**Decided.** A machine claims a block of a thousand and twenty-four handout
+numbers with one write to the count the process shares, and hands them out to
+itself after that. And the gate watches threads now: a `races` section that
+runs four machines of one build at once under a build compiled with the thread
+sanitiser.
+
+**What was asked.** Section 29: validate the host-sharded model -- one build,
+several runtimes, host worker threads, isolated worlds, a deterministic merge
+-- and measure scaling, runtime memory, shared-build behaviour, coordination
+cost, TSan, and that the new reference design stays correct under it.
+
+**What was found.** The model is correct and the gate already held it: four
+machines over a quarter of a world each answer what one machine answers for
+the whole of it. What nobody had measured was what it costs.
+
+| machines | a world and work on it | almost nothing but `add` |
+| --- | --- | --- |
+| 1 | 137.0 ms | 81.4 ms |
+| 2 | 114.3 | 103.0 |
+| 4 | 69.8 | 81.6 |
+| 8 | 54.0 | 80.9 |
+
+Middle of five each. **A workload that mostly makes places in a world did not
+scale at all** -- eight threads were no faster than one, and two were slower --
+and the whole of that is one `atomic_fetch_add` per `add`, on one machine word
+that every thread of the process writes.
+
+**What it is now.** One write buys a thousand and twenty-four numbers:
+
+| machines | a world and work on it | almost nothing but `add` |
+| --- | --- | --- |
+| 1 | 72.8 ms | 51.3 ms |
+| 2 | 36.9 | 25.7 |
+| 4 | 19.2 | 17.5 |
+| 8 | 14.7 | 14.9 |
+
+Scaling goes from 2.5× to 4.9× on eight threads of a twelve-core machine
+shared with other work, and **one thread gets 37 to 47 per cent faster**,
+which is what the contended write was costing a program that never made a
+second machine at all.
+
+**What it costs.** The numbers a machine claims and does not use are never
+handed out again. A machine that makes one place wastes a thousand and
+twenty-three, and the ceiling is 1,099,511,627,775: a process would have to
+make a thousand million machines before that mattered. The invariant D1033
+bought is untouched -- no two places in any two stores of any two machines of
+a process are ever stamped alike -- because a block belongs to one machine and
+no other machine is inside it. The gate's `identity` section asks seventy
+thousand machines and still gets nought handed out twice.
+
+**And the sanitiser that was missing.** This tree ran two of the three and not
+the one about threads, which is the only kind of bug the sharded model can
+have. `races` builds the library with `-fsanitize=thread` -- a third set of
+objects, because the memory sanitisers cannot share a binary with it -- and
+runs four machines at once, each with a store, text, references and removals
+of its own. Clean.
+
+Its host opens POSIX threads rather than the C11 ones the probe beside it
+uses, because **this compiler's thread sanitiser does not know
+`thrd_create`**: a C11 thread with an empty body dies under it before any of
+this library is reached, on gcc 15.2 and glibc 2.43. What is being watched is
+the library, not which door a host opened a thread with.
+
+**And one thing in the gate's own shape.** The two `memory` sections were
+inside the `else` of the `threads` chain -- a `fi` seventy lines further down
+than it reads -- so a gate whose thread probe failed skipped them without
+saying so. They are their own sections again.
+
+## D1054. A reference is hashed by its place, because the rest of it is the process's
+
+**Decided.** `hash` of a `ref<T>` is a hash of the place it names and not of
+the number the process handed out. It was both, and that made a function
+declared `deterministic` answer two different things on two machines of one
+build in one process.
+
+**What was reproduced.** On the tree before this, a host that starts a machine,
+calls, frees it, and does the whole thing again:
+
+    fn mark() -> u64 no.host deterministic {
+        let world: store<Thing> = store()
+        let one = add(world, Thing(1))
+        return hash(one)
+    }
+
+    8454022277790218766
+    17863641284464345065
+
+The same program. The same build. Two machines of one process. The compiler
+accepted `deterministic` on it.
+
+**What the reference promises, in as many words.** *`hash` is FNV-1a from a
+fixed start, with no seed taken from the run, so the same value hashes to the
+same number in every run on every machine.* And: *does the same program on the
+same machine do the same thing twice? Yes.* Neither was true of a reference.
+
+**What it was.** D1033 made a reference forty bits of a number the whole
+process hands out beside twenty-four bits of a place, and the comment above
+those constants says why it is safe: *a program cannot see the number at all --
+there is no text for a reference and no whole number of one, which is what
+keeps a count shared across threads out of what a `deterministic` program
+answers.* It missed `hash`. A hash of a reference is a whole number of one.
+
+**What it is now.** The low bits. Two references to one place that are not the
+same reference -- one made before the place was given back, one after -- hash
+alike and compare unequal, which is what a hash is allowed to do and what every
+table in this tree already handles. A place is handed out by the store in an
+order the program decides, so two machines running the same program name the
+same places and answer the same hash.
+
+**What it cost.** A reference hashes through the walk that knows what a value
+is made of rather than through the instruction that hashes a whole number, so
+`hash(ref)` is one dispatch into a function instead of one instruction. That is
+the price of the promise, it is paid only by a program that hashes references,
+and a table keyed by one is the reason to.
+
+**And the alternative that was not taken.** Refusing `hash` on a reference
+altogether would have kept the rule that `hash` applies exactly where `==`
+does. It would also have taken away a table keyed by an entity, which is a
+thing a simulation wants, and the rule survives anyway: the hash is still of
+the value, it is just of the part of the value that is the program's.

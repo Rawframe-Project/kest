@@ -20,6 +20,11 @@ SRC := $(filter-out src/main.c,$(wildcard src/*.c))
 
 RELEASE_OBJ := $(SRC:src/%.c=build/release/%.o)
 DEBUG_OBJ := $(SRC:src/%.c=build/debug/%.o)
+# And a third, built to watch threads rather than memory. The two sanitisers
+# cannot be in one binary, and what this one is for is the only thing about
+# this library that is about threads at all: two machines of one build, which
+# share the build and one count in the process and nothing else. See D1053.
+RACES_OBJ := $(SRC:src/%.c=build/races/%.o)
 
 # The language is a library first: `kest` is one host of it, and the example
 # beside it is another.
@@ -49,7 +54,10 @@ kest-debug: build/debug/main.o $(DEBUG_OBJ)
 build/debug/%.o: src/%.c | build/debug
 	$(CC) $(WARN) -O0 -g -fsanitize=address,undefined -Iinclude -DKEST_LIB_DIR='"$(PREFIX)/lib/kest/"' -MMD -MP -c -o $@ $<
 
-build/release build/debug:
+build/races/%.o: src/%.c | build/races
+	$(CC) $(WARN) -O1 -g -fsanitize=thread -Iinclude -DKEST_LIB_DIR='"$(PREFIX)/lib/kest/"' -MMD -MP -c -o $@ $<
+
+build/release build/debug build/races:
 	mkdir -p $@
 
 # A host that is not this command line. It is compiled to an object of its own
@@ -89,6 +97,7 @@ examples/least: build/release/least.o libkest.a
 	$(CC) -o $@ $^
 
 debug: kest-debug
+races: $(RACES_OBJ)
 least: examples/least
 embed: examples/embed
 embed-debug: examples/embed-debug

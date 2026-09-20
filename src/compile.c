@@ -1944,9 +1944,15 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
     if (kest_word_same("hash", name, length)) {
         const KestType *of =
             expr->call.arg_count > 0 ? expr->call.args[0]->type : NULL;
+        // A reference goes the same way, though it is one slot: what it is
+        // made of is a place and the number the process handed out, and only
+        // the place may be hashed -- so the walk that knows what a value is
+        // made of does it rather than the instruction that hashes a whole
+        // number. See D1054.
         bool whole = of != NULL && (of->tag == KEST_T_ENUM ||
                                     of->tag == KEST_T_STRUCT ||
-                                    of->tag == KEST_T_FIXED);
+                                    of->tag == KEST_T_FIXED ||
+                                    of->tag == KEST_T_REF);
         stack_pop(compiler, value_slots(of));
         stack_push(compiler, 1);
         uint32_t at =

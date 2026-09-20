@@ -10035,7 +10035,7 @@ fn main() -> i32 {
         # is this put out of order. See D1033.
         "what": "two machines that stamp their places alike",
         "file": "src/vm.c",
-        "from": "            uint64_t handout = next_handout();",
+        "from": "            uint64_t handout = next_handout(rt);",
         "to": """            uint64_t handout = rt->stamps + 1;
             (void)next_handout;""",
         "make": ["kest", "embed"],

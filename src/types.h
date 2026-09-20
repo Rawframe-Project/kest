@@ -4,6 +4,15 @@
 #include "kest.h"
 #include "loader.h"
 
+// What a reference is made of, in the one place two layers both read it: the
+// low bits are the place in the store and everything above them is the number
+// the process handed out. The runtime builds one; the type layer hashes one,
+// and hashes the place alone -- the handed-out number is one count shared by
+// every machine of a process, so a program that could see it would answer
+// differently on the second machine of a run and `deterministic` would be a
+// word. See D1033 and D1054.
+#define KEST_REF_PLACE_BITS 24
+
 typedef enum {
     // Stands in where a type could not be resolved. It compares equal to
     // everything, so one bad annotation reports once instead of at every use.

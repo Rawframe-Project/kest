@@ -1030,6 +1030,173 @@ else
     say "threads" "two machines of one build ran at once, a world in four \
 machines over a quarter each answered what one machine answers for the whole \
 of it, and one was stopped from the thread that was not running it"
+fi
+
+# And the same thing watched rather than argued about. Everything above says
+# two machines of one build do not see each other; this is the sanitiser that
+# would say so if they did. It is the one this tree did not run -- the other
+# two watch memory and cannot be in the same binary as this one -- and what it
+# watches is the only shared thing there is: a build every machine reads and
+# one count in the process that stamps a place.
+#
+# The host here uses POSIX threads rather than the C11 ones the probe above
+# uses, because this compiler's thread sanitiser does not know
+# `thrd_create`: a C11 thread that does nothing at all dies under it on the
+# machine this was written on, before any of this library is reached. What is
+# being watched is the library and not which door a host opened a thread
+# with. See D1053.
+races="$scratch"/races
+cat > "$races".kest <<'KEST'
+module racing
+
+struct Thing {
+    name: text
+    n: i32
+}
+
+// A world of its own in every machine, with a store, text, references into it
+// and things taken out again -- which is every part of this library a walk of
+// what can still be reached has to follow, done at once on four threads.
+fn part(from: i32, upto: i32) -> i32 {
+    let world: store<Thing> = store()
+    let held: [ref<Thing>] = array()
+    let sum = 0
+    for i in from..upto {
+        let one = add(world, Thing("thing {i}", i))
+        push(held, one)
+        if i % 3 == 0 {
+            remove(world, one)
+        }
+    }
+    for r in held {
+        if let one = get(world, r) {
+            sum += one.n % 7
+        }
+    }
+    return sum
+}
+
+fn main() -> i32 {
+    return part(0, 10)
+}
+KEST
+cat > "$races".c <<'EOF'
+#include <stdio.h>
+#include <pthread.h>
+
+#include "kest.h"
+
+typedef struct {
+    KestRuntime *runtime;
+    int64_t from;
+    int64_t upto;
+    int64_t answered;
+    int ran;
+} Worker;
+
+static void *turning(void *given) {
+    Worker *worker = given;
+    KestValue frame[4] = {{0}};
+    frame[0].integer = worker->from;
+    frame[1].integer = worker->upto;
+    worker->ran = kest_call(worker->runtime,
+                            kest_entry(worker->runtime, "part"), frame, 4)
+                      ? 1
+                      : 0;
+    worker->answered = frame[0].integer;
+    return NULL;
+}
+
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        return 2;
+    }
+    KestBuild *build = kest_build(argv[1], NULL, stderr, KEST_FORM_TEXT, 0);
+    if (build == NULL) {
+        return 2;
+    }
+    enum { MANY = 4, EACH = 2000 };
+    Worker shard[MANY];
+    pthread_t running[MANY];
+    for (int i = 0; i < MANY; i++) {
+        shard[i].runtime = kest_start(build, NULL, NULL);
+        shard[i].from = (int64_t)i * EACH;
+        shard[i].upto = (int64_t)(i + 1) * EACH;
+        shard[i].answered = 0;
+        shard[i].ran = 0;
+        if (shard[i].runtime == NULL) {
+            kest_build_report(build, stderr, KEST_FORM_TEXT);
+            return 2;
+        }
+    }
+    for (int i = 0; i < MANY; i++) {
+        if (pthread_create(&running[i], NULL, turning, &shard[i]) != 0) {
+            return 3;
+        }
+    }
+    int64_t merged = 0;
+    for (int i = 0; i < MANY; i++) {
+        pthread_join(running[i], NULL);
+        if (!shard[i].ran) {
+            kest_report(shard[i].runtime, stderr, KEST_FORM_TEXT);
+            return 4;
+        }
+        merged += shard[i].answered;
+    }
+    Worker whole = {kest_start(build, NULL, NULL), 0, MANY * EACH, 0, 0};
+    if (whole.runtime == NULL) {
+        return 2;
+    }
+    turning(&whole);
+    if (!whole.ran || merged != whole.answered) {
+        fprintf(stderr, "four machines answered %lld and one answered %lld\n",
+                (long long)merged, (long long)whole.answered);
+        return 5;
+    }
+    printf("four machines each with a world of its own answered %lld, which "
+           "is what one machine answers for the whole of it\n",
+           (long long)merged);
+    for (int i = 0; i < MANY; i++) {
+        if (!kest_runtime_free(shard[i].runtime)) {
+            return 6;
+        }
+    }
+    kest_runtime_free(whole.runtime);
+    kest_build_free(build);
+    return 0;
+}
+EOF
+printf 'int main(void) { return 0; }\n' > "$scratch"/watching.c
+if ! cc -fsanitize=thread -o "$scratch"/watching "$scratch"/watching.c \
+        2>/dev/null; then
+    say "races" "this compiler cannot watch threads, so two machines of one \
+build were not watched"
+elif ! make -s races >"$scratch"/check-why 2>&1; then
+    complain "races" "the library does not build under the thread sanitiser"
+    sed 's/^/    /' "$scratch"/check-why | head -3
+elif ! cc -std=c11 -Wall -Wextra -Werror -O1 -g -fsanitize=thread \
+        -Iinclude -o "$races" "$races".c build/races/*.o -lm -lpthread \
+        2>"$scratch"/check-why; then
+    complain "races" "the host that watches two machines does not build"
+    sed 's/^/    /' "$scratch"/check-why | head -3
+else
+    said=$(TSAN_OPTIONS=halt_on_error=1 "$races" "$races".kest 2>&1)
+    if [ "${said#*ThreadSanitizer}" != "$said" ]; then
+        complain "races" "the thread sanitiser saw two machines of one build \
+reach the same memory"
+        printf '%s\n' "$said" | sed 's/^/    /' | head -6
+    elif [ "${said#*four machines each with a world}" = "$said" ]; then
+        complain "races" "four machines of one build did not answer what one \
+answers for the whole of it"
+        printf '%s\n' "$said" | sed 's/^/    /' | head -4
+    else
+        say "races" "four machines of one build, each with a world of its \
+own, ran at once under a build that watches threads, and answered what one \
+machine answers for the whole of it"
+    fi
+fi
+rm -f "$races" "$races".c "$races".kest "$scratch"/watching \
+    "$scratch"/watching.c
 
 # What a world costs when it is worked on rather than grown, which is the
 # question a persistent-world language has to answer. `examples/churn.kest` is
@@ -1096,7 +1263,6 @@ megabytes"
 done
 say "memory" "the round that replaces what a thing holds runs ten thousand \
 times in four megabytes, where it used to run out of sixty-four"
-fi
 
 # Every word this language keeps, written where a name belongs. It has to be
 # refused there — the parse wants a name and a keyword is not one — and what

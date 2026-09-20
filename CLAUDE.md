@@ -1090,6 +1090,14 @@ threads      two machines of one build running at once on two threads, a
              world split across four of them answering what one machine
              answers for the whole of it, and one stopped from the thread
              that is not running it
+races        the same thing watched rather than argued about: four machines
+             of one build, each with a world, a store, text and references
+             of its own, under a build that watches threads. The one
+             sanitiser the other two cannot share a binary with, and what it
+             watches is the only shared thing there is -- a build every
+             machine reads and one count in the process. Its host opens
+             POSIX threads rather than C11 ones, because this compiler's
+             thread sanitiser does not know `thrd_create`
 memory       a world worked on rather than grown: the same round written to
              reuse what a thing holds running in the room it started in, and
              the same round written to replace it needing more

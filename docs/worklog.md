@@ -38105,3 +38105,68 @@ See D1052.
 **Runs:** twenty-five sort measurements over five shapes and five sizes, three
 sorts compared; the table's high-water under a host that reads the heap at four
 points; `examples/inventory.kest` for `compact`; `make fast`; `make check`.
+
+## The one thing two machines share, and the one thing a program could see of it
+
+Section 29 asks the host-sharded model to be validated and measured: scaling,
+runtime memory, shared-build behaviour, coordination cost, TSan, and the new
+reference design under all of it. The model was already right and the gate
+already held it. Two things came out of measuring it.
+
+**It did not scale.** Middle of five, a world split across machines on threads:
+
+| machines | a world and work on it | almost nothing but `add` |
+| --- | --- | --- |
+| 1 | 137.0 ms | 81.4 ms |
+| 2 | 114.3 | 103.0 |
+| 4 | 69.8 | 81.6 |
+| 8 | 54.0 | 80.9 |
+
+A workload that mostly makes places in a world ran no faster on eight threads
+than on one, and slower on two. The whole of that is one `atomic_fetch_add`
+per `add`, on one machine word every thread of the process writes. A machine
+claims a thousand and twenty-four numbers with one write now:
+
+| machines | a world and work on it | almost nothing but `add` |
+| --- | --- | --- |
+| 1 | 72.8 ms | 51.3 ms |
+| 2 | 36.9 | 25.7 |
+| 4 | 19.2 | 17.5 |
+| 8 | 14.7 | 14.9 |
+
+Eight threads went from 2.5× to 4.9×, and **one thread got 37 to 47 per cent
+faster** — which is what the contended write was costing a program that never
+made a second machine at all. What it costs is the numbers a machine claims
+and does not use, out of a ceiling of 1,099,511,627,775.
+
+**And a `deterministic` function answered two things.** The comment above the
+reference constants says a program cannot see the handed-out number: no text
+for a reference and no whole number of one. It missed `hash`, which is a whole
+number of one. A host that starts a machine, calls, frees it and does it all
+again:
+
+    8454022277790218766
+    17863641284464345065
+
+the same program, the same build, two machines of one process, and `mark`
+declared `deterministic`. A reference hashes by its place now. Two references
+to one place that are not the same reference hash alike and compare unequal,
+which is what a hash is allowed to do.
+
+**And the sanitiser that was missing.** This tree ran the two that watch memory
+and not the one that watches threads — the only kind of bug the sharded model
+can have. `races` builds the library a third time with `-fsanitize=thread` and
+runs four machines at once, each with a store, text, references and removals.
+Clean. Its host opens POSIX threads rather than C11 ones, because this
+compiler's thread sanitiser does not know `thrd_create`: a C11 thread with an
+empty body dies under it before any of this library is reached.
+
+The two `memory` sections turned out to be inside the `else` of the `threads`
+chain, so a gate whose thread probe failed skipped them without saying so.
+They are their own sections again.
+
+See D1053 and D1054.
+
+**Runs:** two sharded workloads at four widths, five runs each, before and
+after; the gate's `identity` section over seventy thousand machines; `races`
+under the thread sanitiser; the two-machine determinism probe; `make check`.

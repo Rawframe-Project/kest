@@ -5668,7 +5668,13 @@ functions promises `no.host`.
 
 **Does the same program on the same machine do the same thing twice?** Yes.
 Nothing here reads a clock, an address or an environment unless the program asks
-a host for it, and nothing about a run is seeded from one.
+a host for it, and nothing about a run is seeded from one. A reference is the
+one value with something in it that is not the program's — the number the
+process hands out, which depends on how many places every machine of that
+process has made — and a program cannot reach it: there is no text of a
+reference, no whole number of one, and `hash` is of the place it names. That
+last one was not true until D1054, and a `deterministic` function that hashed
+a reference answered differently on the second machine of a run.
 
 **Is a simulation bitwise identical on two different platforms?** For everything
 above, yes. For four things, no, and they are all host doors: `Math.sin`,

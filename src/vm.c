@@ -60,7 +60,9 @@
 // one, which is what keeps a count shared across threads out of what a
 // `deterministic` program answers.
 #define REF_SERIAL_BITS 40
-#define REF_INDEX_BITS 24
+// Read from `types.h`, because the type layer hashes a reference by its place
+// and has to take one apart the same way this does. See D1054.
+#define REF_INDEX_BITS KEST_REF_PLACE_BITS
 // The ceilings a program runs into. `check-ceilings.sh` lowers one of these in
 // a copy of this tree to watch the refusal happen, so they are their own
 // numbers rather than the masks below: a mask that moved with a lowered
@@ -627,6 +629,11 @@ struct KestRuntime {
     // still standing after the last walk, so a world that is bigger walks
     // less often for the same fraction of its size -- and never below a floor,
     // so a program holding almost nothing does not walk on every allocation.
+    // The block of handout numbers this machine has claimed and how far into
+    // it it has got. One write to the count the process shares buys a
+    // thousand of them. See D1053.
+    uint64_t handout_next;
+    uint64_t handout_upto;
     size_t walk_at;
     // How many times what it is holding may be handed out before that is
     // worth a walk. One by default, which is the shortest pause; a host that
@@ -2353,11 +2360,30 @@ static void what_it_needed(Vm *vm, const KestRuntime *rt, int32_t called) {
 // of them read an object in the other, which is D936, and a count masked to
 // sixteen bits is what let a reference made in one live world read an object
 // in another, which is D1033.
-static uint64_t next_handout(void) {
+// A block at a time, because the one shared thing in this library is the one
+// thing that stops it scaling. A machine that does almost nothing but make
+// places in a world ran no faster on eight threads than on one, and the whole
+// of that was every `add` in the process writing one machine word; a workload
+// that makes a world and then works on it scaled 2.5 times on eight. So a
+// machine claims a thousand and twenty-four numbers with one write and hands
+// them out to itself after that. The numbers a machine claims and does not
+// use are never handed out again, which costs nothing: the ceiling is a
+// million million and a process would have to make a million million machines
+// to feel it. See D1053.
+#define HANDOUT_BLOCK 1024ull
+
+static uint64_t claim_handouts(void) {
     static atomic_ullong handed_out;
-    return atomic_fetch_add_explicit(&handed_out, 1ull,
-                                     memory_order_relaxed) +
-           1ull;
+    return atomic_fetch_add_explicit(&handed_out, HANDOUT_BLOCK,
+                                     memory_order_relaxed);
+}
+
+static uint64_t next_handout(Vm *rt) {
+    if (rt->handout_next >= rt->handout_upto) {
+        rt->handout_next = claim_handouts();
+        rt->handout_upto = rt->handout_next + HANDOUT_BLOCK;
+    }
+    return ++rt->handout_next;
 }
 
 static int64_t pack_ref(uint64_t serial, uint32_t index) {
@@ -4096,7 +4122,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // a store the reference did not come from; and a machine made
             // after another one cannot be handed the first one's numbers,
             // which is what a count of worlds could not promise. See D1033.
-            uint64_t handout = next_handout();
+            uint64_t handout = next_handout(rt);
             if (handout > MOST_STAMPS) {
                 fail(vmp, frame, instruction, "K0630",
                      "this process has handed out %llu places in stores, "

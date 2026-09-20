@@ -801,7 +801,12 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         emit(lower, KEST_OP_NOT, span);
         return;
     case KEST_IR_HASH:
-        if (is_a_run(op->type)) {
+        // A reference is one slot and goes through the walk that knows what a
+        // value is made of, because only part of it may be hashed: the place
+        // is the program's and the number above it is the process's. See
+        // D1054.
+        if (is_a_run(op->type) ||
+            (op->type != NULL && op->type->tag == KEST_T_REF)) {
             emit(lower, KEST_OP_HASH_VALUE, span);
             emit_u16(lower, op->imm[0], span);
             return;
