@@ -38370,3 +38370,48 @@ See D1059.
 
 **Runs:** the Windows job on every push, building and running every example and
 agreeing with three other platforms byte for byte.
+
+## The documentation truth audit
+
+Section 21 asks for the reference to be audited against what the compiler does:
+the collector, the three promises, the hard-coded counts, and whether current
+truth requires archaeology. Four of the six were already true. The collector is
+documented in full — kind, moving behaviour, roots, triggers, host control,
+pause cost with numbers, `no.alloc` interaction, and why there is no incremental
+marking. `no.host` is exact. The counts are generated and held. The stale "no
+collector" went with D996.
+
+**Two were wrong, and both since the day they were written.**
+
+`no.alloc` states its guarantee correctly and then lists the wrong builtins. The
+sentence a reader writes a `no.alloc` body against named `slice`, which has not
+reached the heap since D964, and did not name `room`, which does. Three lines
+reproduce each. What let it drift is that it was prose beside a table with
+nothing holding the two together; `check-tables.sh` holds them now, and was
+watched catching `slice` put back.
+
+`deterministic` said the opposite of what it does, twice: that the bodies which
+can promise it are exactly the ones which can promise `no.host`, and that the
+profile "excludes `sqrt`, which would have been fine". An `extern` may declare
+itself inside the profile — the proof reads a foreign function's own word for
+`deterministic` the way it does for `no.alloc` — and `std.math` declares
+`Math.sqrt`, `Math.floor` and `Math.ceil` that way and the other seven not,
+because IEEE 754 requires a square root to be correctly rounded and a floor and
+a ceiling to be exact and requires nothing of a sine. `math.sqrt` promises
+`deterministic` and is not `no.host`. That has been true since D942 shipped and
+D942's own prose says it is not.
+
+**And the hole behind it.** Four host doors are inside the profile and
+`examples/determinism.kest` folded none of them, so the one part of the promise
+that rests on a host's word rather than a proof was the one part nothing tested.
+A host binding an approximate square root would have passed the trace on four
+platforms. The corpus has a tenth part now and the profile is `kest-det 2`: the
+reference's own rule is that the number moves when which operations are in the
+profile changes, and what changed is that three of them are documented as being
+in it.
+
+See D1060.
+
+**Runs:** each finding reproduced with a program before it was written down; the
+new check watched catching `slice` put back into the reference; the corpus on
+this platform, and the cross-platform trace on four.

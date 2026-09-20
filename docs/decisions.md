@@ -35083,3 +35083,88 @@ reason D973 gives, and nothing was added to the supported list.
 **What is still open.** If the reviewer's report turns up with an error in it,
 this is the entry a later one is written against. An answer about somebody
 else's environment, written without it, is a guess, and this one says so.
+
+## D1060. The documentation truth audit, and the two things it found
+
+*argued*, and each finding was reproduced against this tree with a program
+before it was written down.
+
+Section 21 of the foundation reset asks for the reference to be audited against
+what the compiler does after the redesign: the collector, `no.alloc`,
+`no.host`, `deterministic`, the hard-coded counts, and whether current truth
+requires archaeology. Four of the six were already true. Two were not, and both
+had been wrong since the day they were written.
+
+**The collector is fully documented and was the one everybody knew about.** The
+reference says what kind it is (non-moving mark and sweep), that nothing moves
+and why, what it walks from, when it walks by itself and how a host moves that,
+what a pause costs with the numbers beside it, that a `no.alloc` body cannot be
+interrupted by one at all, and that there is no incremental marking and why
+there will not be. D996 made that true and the front page's stale "no collector"
+went with it.
+
+**`no.host` is exact.** A body that promises it calls nothing the host
+provides; the only way out of a program is a call to an `extern`; a foreign
+function reaches the host whatever else it declares. That is what the proof
+does — for `no.host` an extern is outside, unconditionally — and it is what the
+reference says.
+
+**`no.alloc` states the guarantee correctly and then lists the wrong builtins.**
+The sentence a reader writes a `no.alloc` body against named `slice`, which has
+not reached the heap since D964 made a cut a place inside what it was cut from
+and how many bytes of it, and it did not name `room`, which does. Both
+reproduce in three lines: a `no.alloc` body calling `slice` compiles and one
+calling `room` is refused. The list is `add`, `array()`, `push`, `room`,
+`store()` and `text` from bytes, and `check-tables.sh` now holds that sentence
+to the table the proof reads, which is the thing that was missing. Every other
+list of its kind here is held to the source; this one was prose beside a table
+and drifted the way prose beside a table does.
+
+**`deterministic` said the opposite of what it does, twice.** The reference
+said that the bodies which can promise `deterministic` are exactly the ones
+which can promise `no.host`, and that the two "will part company the day a host
+can declare a door inside the profile". They parted company on the day
+`deterministic` shipped. D942's own code has
+
+    function->allocates = function->is_extern && (about == 1 || !function->promises);
+
+— for `no.host` an extern is always outside, and for `deterministic` an extern
+is outside *unless it promises*. So an `extern` may declare itself inside the
+profile, and `std.math` does: `Math.sqrt`, `Math.floor` and `Math.ceil` are
+declared `deterministic` and `Math.sin`, `Math.cos`, `Math.pow`, `Math.atan2`,
+`Math.tan`, `Math.asin` and `Math.acos` are not, because IEEE 754 requires a
+square root to be correctly rounded and a floor and a ceiling to be exact, and
+requires nothing at all of a sine. `math.sqrt` promises `deterministic` and is
+not `no.host`. The reference also said the profile "excludes `sqrt`, which would
+have been fine". It does not exclude it. It never did.
+
+**And the hole that left.** Four host doors are inside the profile —
+`sqrt`, `floor`, `ceil`, and the `round` built out of `floor` — and
+`examples/determinism.kest`, which is the run that says a platform keeps the
+profile, folded none of them. So the one part of the promise that rests on a
+host's word rather than on a proof was also the one part nothing tested. A host
+binding a fast approximate square root would have passed the conformance trace
+on four platforms and broken every `deterministic` body that took a distance.
+The corpus has a tenth part now: both widths of `sqrt`, `floor` and `ceil` over
+negatives, whole numbers and a non-square, and `round` in both directions.
+
+**The profile version goes up, and the reference's own rule is why.** It says
+the number moves when *which operations are in it* changes. What changes here is
+not an answer — nothing a program computes is different — but what the profile
+is documented to cover, and a host that read the old wording could have bound an
+approximate `sqrt` and believed it was conforming. Under the new wording it is
+not. So `kest-det 1` becomes `kest-det 2`, and the corpus answers
+`12017043739776717972` where it answered `2470919380724047420`.
+
+**The hard-coded counts.** The front page's public-door count is generated from
+the header and held by a hole that has been seen catching it, and every other
+figure in the reference is held to a run by `check-docs.sh` and
+`check-costs.sh`. That part of section 21 was already done.
+
+**Where the archaeology was.** D941 and D942 are append-only and say the wrong
+thing about their own code; this entry is where a reader is sent instead, and
+the reference no longer repeats them. The lesson is not about those two entries:
+it is that a normative sentence with no check behind it is a sentence that goes
+stale in silence, and both of the two findings here are exactly that. One of
+them now has a check. The other — what an `extern` declaring `deterministic`
+means — is held by the corpus, which is the only thing that can hold it.

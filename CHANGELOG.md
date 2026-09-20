@@ -180,10 +180,30 @@ said nothing about it — a reader without one saw `'cl' is not recognized` once
 per file. **What a reader has to do:** nothing, and the front page no longer
 tells a Windows reader to run `make`. See D1059.
 
-**What changed for a host.** The version. The other three numbers — the C ABI,
-the JSON schema, and the deterministic profile — still read 4, 3 and 1, and
-will be settled to clean `0.0.x` numbers once the architecture this reset is
-correcting has stopped moving. See D1035.
+**The profile is `kest-det 2`, and four host doors are documented as being
+inside it.** `Math.sqrt`, `Math.floor` and `Math.ceil` have been declared
+`deterministic` since the promise shipped — an `extern` may declare itself
+inside the profile, the same way it declares `no.alloc` — and the reference
+said the opposite twice: that only a `no.host` body can promise
+`deterministic`, and that the profile excludes `sqrt`. **What a program has to
+do:** nothing; nothing a program computes changed. **What a host has to do:**
+bind those three to something that keeps IEEE 754 — a correctly rounded square
+root, an exact floor and ceiling — and write `kest-det 2` beside a replay or a
+save rather than `kest-det 1`. `examples/determinism.kest` folds all four now,
+where it folded none of them, and answers `12017043739776717972`. See D1060.
+
+**What `no.alloc` says reaches the heap is right now.** The reference listed
+`slice`, which has not reached the heap since a cut became a place inside what
+it was cut from, and did not list `room`, which does. **What a program has to
+do:** nothing — the compiler was always right and the sentence was wrong — but
+a body that was not written `no.alloc` because `slice` was believed to allocate
+can be. The sentence is held to the proof's own table by a check now. See
+D1060.
+
+**What changed for a host.** The version, and the profile. The C ABI and the
+JSON schema still read 4 and 3, the profile reads 2, and all three will be
+settled to clean `0.0.x` numbers once the architecture this reset is correcting
+has stopped moving. See D1035 and D1060.
 
 ## 1.0.0 — 2026-09-18 (withdrawn 2026-09-19)
 

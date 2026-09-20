@@ -2724,8 +2724,10 @@ error[K0401]: this allocates, and `chain.stepFrame` promises `no.alloc`
 followed by a note per hop, from the promise down to the line that breaks it.
 
 What reaches the heap is a run that can grow, text with a hole in it, and the
-builtins that grow or copy: `array()`, `store()`, `push`, `add`, `slice`, and
-`text` from bytes. Each says which of those it was. A run of a written length
+builtins that grow or copy: `add`, `array()`, `push`, `room`, `store()`, and
+`text` from bytes. Each says which of those it was. `slice` and `rest` are not
+among them and have not been since D964 made a cut a place inside what it was
+cut from and how many bytes of it. A run of a written length
 does not: it is laid out where it stands, so `[f32; 3]` built inside a promise
 is the struct's own bytes. Structs, optionals and calls do not either. A
 foreign function is judged by what it declares, because its body is not here to
@@ -2788,11 +2790,22 @@ error[K0401]: this reaches outside the simulation profile, and `drifts` promises
 
 That is the same refusal `no.host` gives about the same line, said in the words
 of the promise that was made. The two are not one promise: `no.host` is about
-where control goes and `deterministic` is about what comes back, and a host that
-declares a door inside the profile will make a body that reaches it one and not
-the other. Until there is a way to declare that, every `no.host` body can
-promise `deterministic` and no other body can — which is what the compiler
-proves, so the promise is never wider than the profile. See D941 and D942.
+where control goes and `deterministic` is about what comes back.
+
+**An `extern` may declare itself inside the profile, and that is how they part
+company.** A foreign body is not here to be read, so what it declares is the
+only thing there is to go on — which is already how `no.alloc` works on one. An
+`extern` that writes `deterministic` may be called by a body that promises it;
+one that does not, may not. `std.math` declares `Math.sqrt`, `Math.floor` and
+`Math.ceil` that way and `Math.sin`, `Math.cos`, `Math.pow` and `Math.atan2`
+not, because IEEE 754 requires a square root to be correctly rounded and a
+floor and a ceiling to be exact, and requires nothing at all of a sine. So
+`math.sqrt` is `deterministic` and is not `no.host`, and a body that reaches it
+is the same.
+
+That is the one place the promise rests on somebody's word rather than on a
+proof, and it rests on it in the same direction `no.alloc` does. What a host
+owes is under *What is the same everywhere*. See D941, D942 and D1060.
 
 The three are written after one signature in any order — `no.alloc no.host
 deterministic` is how the library writes them — and each is written once. Each
@@ -4366,7 +4379,7 @@ keeping a replay or shipping a save writes down beside it. `kest --version`
 prints all four:
 
 ```
-kest 0.0.1, abi 4, json 3, profile kest-det 1
+kest 0.0.1, abi 4, json 3, profile kest-det 2
 ```
 
 The ABI number goes up when anything a host can see changes: arguments, what a
@@ -4436,7 +4449,7 @@ goes away, or is added where a reader was told the list was everything — and
 not when a name is added beside the others. A tool reads the number first. A
 tool written for schema 3 reads schema 3 objects for the whole of 1.x.
 
-**A deterministic run.** `kest-det 1` is the profile `deterministic` is a
+**A deterministic run.** `kest-det 2` is the profile `deterministic` is a
 promise about. Its number goes up only when what a program can *observe* about
 arithmetic changes: which operations are in it, how each rounds, what is
 refused. A compiler that answers every one of them the same way is the same
@@ -4481,7 +4494,7 @@ entry src/main.kest
 source src
 tests tests
 kest 0.0.1
-profile kest-det 1
+profile kest-det 2
 ```
 
 `entry` is what `check`, `build` and `run` work on when no file is named, so
@@ -5716,7 +5729,7 @@ output for every program in the tree. The job that does it diffs the traces and
 is the thing that fails if a platform is added and does not agree. See D970 and
 D1058.
 
-One platform answering `2470919380724047420` says nothing on its own; four
+One platform answering `12017043739776717972` says nothing on its own; four
 answering it, on two instruction sets, is the promise.
 
 ## What is the same everywhere
@@ -5755,16 +5768,26 @@ rounded — and neither do `Math.floor` and `Math.ceil`.
 **The profile that rejects what does not qualify is written down and is a
 promise.** A step that has to be reproducible across machines writes
 `deterministic`, and the compiler refuses the program if the body can reach
-outside the profile above. Today that reach is a host door and nothing else:
-every operation in this language whose answer could differ between platforms is
-behind one. So the bodies that can promise `deterministic` are exactly the ones
-that can promise `no.host`, and the two are written separately because they say
-different things and will part company the day a host can declare a door inside
-the profile.
+outside the profile above. Every operation in this language whose answer could
+differ between platforms is behind a host door, so that reach is a host door and
+nothing else.
 
-It is stricter than it needs to be, which is the right way round: it also
-excludes `sqrt`, which would have been fine. A program that wants it writes its
-own over arithmetic that is inside the profile.
+**Four host doors are inside it, and they are declared so.** An `extern` may
+write `deterministic`, which is a declaration and not a proof — a foreign body
+is not here to be read, the same way it is not for `no.alloc`. `std.math`
+declares `Math.sqrt`, `Math.floor` and `Math.ceil` that way and builds `round`
+out of `floor`; the other seven it declares are outside. So a `deterministic`
+body may take a square root, and `math.sqrt` is itself `deterministic` without
+being `no.host`. That is the difference between the two promises, standing up in
+the library rather than waiting for a day to come.
+
+**What a host owes for those four**, because nothing here can prove it: bind
+them to something that keeps IEEE 754. A square root has to be the correctly
+rounded one, and a floor and a ceiling have to be exact and have to be right
+about negatives and about whole numbers. A host that binds a fast approximate
+square root has not broken this compiler and has left the profile, and
+`examples/determinism.kest` is what says so — it folds all four and the number
+it answers is the number the profile says. See D1060.
 
 ## Where each rule is run
 

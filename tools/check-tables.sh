@@ -609,6 +609,30 @@ if promised != checked:
               % ", ".join("`%s`" % w for w in extra))
     failed = 1
 
+# Which builtins reach the heap, said by the proof and said by the reference.
+# The reference is the normative document and that sentence is what a reader
+# writes a `no.alloc` body against, so it is the one list here that a program
+# is written from rather than a list about the tree. It said `slice`, which has
+# not reached the heap since D964 made a cut a place inside what it was cut
+# from, and it did not say `room`, which does. Nothing held the two to each
+# other. `text` is in the sentence and not in the table because it is a
+# conversion rather than a builtin, and the proof asks about it beside the
+# table. See D1060.
+grows = some("the builtins the proof says reach the heap",
+             set(re.findall(
+                 r'\{"([a-z]+)", "',
+                 table('src/contract.c',
+                       r'\} REACHES\[\] = \{(.*?)\n            \};'))))
+said_to_grow = some("the builtins the reference says reach the heap",
+                    set(re.findall(
+                        r'`([a-z]+)(?:\(\))?`',
+                        table('docs/language.md',
+                              r'What reaches the heap is (.*?)\. Each says'))))
+if said_to_grow != grows | {"text"}:
+    print("builtins: the proof says %s reaches the heap and the reference says %s"
+          % (sorted(grows | {"text"}), sorted(said_to_grow)))
+    failed = 1
+
 # The pipeline in `CLAUDE.md` is the map of the tree a reader is given, and it
 # said what nothing in the tree said back: a module `str` that does not exist,
 # no `kest` at all, and `diag` above the `mem` its own header includes. It is

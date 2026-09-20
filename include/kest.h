@@ -49,7 +49,7 @@
 // replay or ships a save reads this and writes it down beside them, because a
 // run under one profile and a run under another are two runs. See D974.
 #define KEST_PROFILE_NAME "kest-det"
-#define KEST_PROFILE_VERSION 1
+#define KEST_PROFILE_VERSION 2
 
 // Every function declared here is called by one of the two hosts written
 // against it, so there is somewhere to look for each: `src/main.c` is a

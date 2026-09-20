@@ -2,6 +2,7 @@ module examples.determinism
 
 import std.io
 import std.hash
+import std.math
 import std.random
 import std.table
 
@@ -16,9 +17,11 @@ import std.table
 // which.
 //
 // What it does not cover is what the profile does not promise: `Math.sin`,
-// `cos`, `pow` and `atan2` are the host's and are outside it. See D941.
+// `cos`, `pow` and `atan2` are the host's and are outside it. What it does
+// cover, since D1060, is the four that are inside it and are also the host's:
+// `sqrt`, `floor`, `ceil` and the `round` built out of `floor`. See D941.
 
-const ANSWER: u64 = 2470919380724047420
+const ANSWER: u64 = 12017043739776717972
 
 struct Piece {
     name: text
@@ -241,12 +244,53 @@ fn keyed() -> u64 {
     return mark
 }
 
+// The four host doors that are inside the profile. IEEE 754 requires a square
+// root to be correctly rounded and floor and ceil to be exact, and requires
+// nothing at all of a sine -- which is why `std.math` declares these four
+// `deterministic` and the other seven not. That declaration is the host's word
+// rather than something this compiler can prove, so it is the one part of the
+// profile a platform can break without breaking anything else, and the promise
+// on this very function is the proof that the four are inside: a body that
+// promises `deterministic` may call them and may not call the others.
+//
+// Negatives are where a floor written as a truncation stops being a floor, and
+// a square root through `f64` and back is where the claim that two roundings
+// are one rounding is either true or not. See D1060.
+fn rounded() -> u64 no.alloc deterministic {
+    let mark = hash.start
+
+    let two = math.sqrt(2.0)
+    mark = hash.join(mark, u64(u64(two * 1000000000000000.0)))
+    let four = math.sqrt(4.0)
+    mark = hash.join(mark, u64(u64(four * 1000000000000000.0)))
+    // The same root asked for in the width a frame works in, which goes out
+    // through the wide door and is narrowed coming back.
+    let narrow: f32 = 2.0
+    let rooted = math.sqrt(narrow)
+    mark = hash.join(mark, u64(u32(rooted * 100000000.0)))
+
+    let below = 0.0 - 1.5
+    mark = hash.join(mark, u64(u64(0.0 - math.floor(below))))
+    mark = hash.join(mark, u64(u64(0.0 - math.ceil(below))))
+    mark = hash.join(mark, u64(u64(math.floor(1.5))))
+    mark = hash.join(mark, u64(u64(math.ceil(1.5))))
+    // A whole number is its own floor and its own ceiling, which is the case
+    // an implementation that rounds away from nought gets wrong.
+    mark = hash.join(mark, u64(u64(math.floor(3.0))))
+    mark = hash.join(mark, u64(u64(math.ceil(3.0))))
+
+    mark = hash.join(mark, u64(u64(math.round(2.5))))
+    mark = hash.join(mark, u64(u64(0.0 - math.round(0.0 - 2.5))))
+    return mark
+}
+
 fn main() -> i32 {
     let parts: [Piece] = array()
     push(parts, Piece("wrapping", wrapping()))
     push(parts, Piece("narrowing", narrowing()))
     push(parts, Piece("crossings", crossings()))
     push(parts, Piece("rounding", rounding()))
+    push(parts, Piece("rounded", rounded()))
     push(parts, Piece("edges", edges()))
     push(parts, Piece("ordering", ordering()))
     push(parts, Piece("hashing", hashing()))
