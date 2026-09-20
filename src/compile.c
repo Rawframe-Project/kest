@@ -1812,6 +1812,23 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
 
 }
 
+// Whether what is being put on a run is a whole piece of text rather than one
+// of what the run holds. It is a run of bytes taking a piece of text and
+// nothing else: a run of *text* taking a piece of text is one element going
+// on the end the ordinary way, and asking only whether what was handed over
+// was text made `push(words, "alpha")` on a `[text]` copy the bytes of the
+// piece into the run of handles. See D1068.
+static bool appends_text(const KestExpr *expr) {
+    if (expr->call.arg_count != 2 || expr->call.args[1]->type == NULL ||
+        expr->call.args[1]->type->tag != KEST_T_TEXT) {
+        return false;
+    }
+    const KestType *array = expr->call.args[0]->type;
+    return array != NULL && array->tag == KEST_T_ARRAY &&
+           array->element != NULL && array->element->tag == KEST_T_INT &&
+           array->element->width == 8 && !array->element->is_signed;
+}
+
 // The arguments are already on the stack in the order they were written, so
 // each of these is one instruction over them.
 static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
@@ -1967,6 +1984,17 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         const KestType *array =
             expr->call.arg_count > 0 ? expr->call.args[0]->type : NULL;
         const KestType *element = array == NULL ? NULL : array->element;
+        // A whole piece of text onto a run of bytes is one move rather than
+        // the loop a program would write. Which it is comes from what was
+        // handed over, because the checker has already said the two are the
+        // only shapes there are. See D1068.
+        if (appends_text(expr)) {
+            stack_pop(compiler, 3);
+            uint32_t whole = ir_emit(compiler, KEST_IR_APPEND_TEXT, array, 2,
+                                     NULL, 0, expr->span);
+            ir_carries(compiler, whole, layout_of(compiler, element), 0, 0);
+            return true;
+        }
         stack_pop(compiler, (uint16_t)(1 + value_slots(element)));
         uint32_t at = ir_emit(compiler, KEST_IR_APPEND, array, 2, NULL, 0,
                               expr->span);
@@ -1978,6 +2006,14 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         const KestType *array =
             expr->call.arg_count > 0 ? expr->call.args[0]->type : NULL;
         const KestType *element = array == NULL ? NULL : array->element;
+        if (appends_text(expr)) {
+            stack_pop(compiler, 3);
+            stack_push(compiler, 1);
+            uint32_t whole = ir_emit(compiler, KEST_IR_FIT_TEXT, array, 2,
+                                     expr->type, 1, expr->span);
+            ir_carries(compiler, whole, layout_of(compiler, element), 0, 0);
+            return true;
+        }
         stack_pop(compiler, (uint16_t)(1 + value_slots(element)));
         stack_push(compiler, 1);
         uint32_t at = ir_emit(compiler, KEST_IR_FIT, array, 2, expr->type, 1,

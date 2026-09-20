@@ -217,6 +217,19 @@ answers something else now warns, and the fix is the one the message already
 names — hand the changed one back. Nothing in this tree was leaning on the
 silence. See D1065.
 
+**A run of bytes takes a whole piece of text.** `push(out, piece)` and
+`fit(out, piece)` put the piece on the end in one move where a program used to
+write a loop, because text is its bytes and a `[u8]` is the same bytes. Every
+other kind of run still takes one of what it holds. **What a program has to
+do:** nothing, but a loop of `push(out, byte)` can become one `push`, and
+`std.text.append` and `std.text.join` are that much quicker without being
+called differently — `bench/words.kest` runs 76 per cent fewer instructions and
+takes 54 per cent less time. **One behaviour changed:** `std.text.fitting` is
+all or nothing now. It used to write what fitted and answer `false`; it now
+leaves the buffer as it was, because a piece half written is a piece nobody can
+take back. A caller that relied on the partial write asks `room(out)` first,
+which is what the old note already told it to do. See D1068.
+
 **A table can be written to inside a promise.** `table.fit(t, key, value)` is
 `table.set` with the growth taken out, the way `fit` is `push` with the growth
 taken out: it writes where the key already is, answers `false` where it is not,

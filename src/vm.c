@@ -3788,6 +3788,95 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             (top++)->integer = 1;
             break;
         }
+        // A whole piece of text onto a run of bytes. Text is its bytes
+        // (D021), so this is the loop a program had to write taken into one
+        // move: the same growth `push` does, once for the whole piece rather
+        // than once a byte, and a `memcpy`. Building text a byte at a time was
+        // eighty per cent of the instructions `bench/words.kest` ran. See
+        // D1068.
+        case KEST_OP_PUSH_TEXT: {
+            uint16_t of_which = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
+            Said piece = TEXT_OFF();
+            Array *array = (--top)->object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
+            if (array->borrowed) {
+                fail(vmp, frame, instruction, "K0608",
+                     "this array is the host's, so it cannot grow");
+                return false;
+            }
+            if ((uint64_t)array->length + piece.length > (uint64_t)MAX_COUNTED) {
+                fail(vmp, frame, instruction, "K0630",
+                     "this array holds %d, which is all `len` can count",
+                     MAX_COUNTED);
+                return false;
+            }
+            uint32_t wanted = array->length + piece.length;
+            if (wanted > array->capacity) {
+                uint32_t capacity = array->capacity == 0 ? 8 : array->capacity;
+                while (capacity < wanted) {
+                    capacity *= 2;
+                }
+                // What is still live while this may walk: the array and the
+                // piece, both of which are above where the stack now ends.
+                unsigned char *was = array->bytes;
+                unsigned char *grown =
+                    elements_grown(rt, top + 3, array, layout, capacity);
+                if (grown == NULL) {
+                    no_room_growing(vmp, frame, instruction, rt, "an array",
+                                    array->length, layout->size, capacity);
+                    return false;
+                }
+                capacity = all_it_holds(rt, grown, layout, capacity);
+                (((Elems *)(void *)grown) - 1)->places = capacity;
+                if (grown != was) {
+                    SPEND_WORK((uint64_t)array->length);
+                }
+                array->bytes = grown;
+                array->capacity = capacity;
+            }
+            SPEND_WORK(piece.length);
+            MOVED(moved_packed, piece.length);
+            if (piece.length > 0) {
+                memcpy(array->bytes + array->length, piece.bytes,
+                       piece.length);
+            }
+            array->length = wanted;
+            break;
+        }
+        // The same with the growth taken out, which is what a body under a
+        // promise can do: all of it fits or none of it goes in, because a
+        // piece half written is a piece nobody can take back. See D940.
+        case KEST_OP_FIT_TEXT: {
+            uint16_t of_which = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
+            (void)layout;
+            Said piece = TEXT_OFF();
+            Array *array = (--top)->object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
+            if (array->borrowed) {
+                fail(vmp, frame, instruction, "K0608",
+                     "this array is the host's, so it cannot grow");
+                return false;
+            }
+            if ((uint64_t)array->length + piece.length > (uint64_t)array->capacity ||
+                (uint64_t)array->length + piece.length > (uint64_t)MAX_COUNTED) {
+                (top++)->integer = 0;
+                break;
+            }
+            SPEND_WORK(piece.length);
+            MOVED(moved_packed, piece.length);
+            if (piece.length > 0) {
+                memcpy(array->bytes + array->length, piece.bytes,
+                       piece.length);
+            }
+            array->length += piece.length;
+            MOVED(moved_held, sizeof(KestValue));
+            (top++)->integer = 1;
+            break;
+        }
         case KEST_OP_INDEX: {
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");

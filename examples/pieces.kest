@@ -94,6 +94,38 @@ fn main() -> i32 {
         return 9
     }
 
+    // A run of bytes takes a whole piece of text, because text is its bytes
+    // and the two are the same bytes. Every other kind of run takes one of
+    // what it holds: a run of text given a piece of text takes that piece as
+    // one element, which is the thing a bulk copy must not do. See D1068.
+    let built: [u8] = array()
+    push(built, "one")
+    push(built, ' ')
+    push(built, "two")
+    if text(built) != "one two" {
+        return 10
+    }
+    let held: [text] = array()
+    push(held, "one two")
+    if len(held) != 1 || held[0] != text(built) {
+        return 11
+    }
+
+    // And the same with the growth taken out, which is all or nothing: the
+    // piece fits or the run is left as it was. A `no.alloc` body can fill a
+    // buffer it was given room for and cannot half fill one.
+    let room3: [u8] = array()
+    room(room3, 3)
+    if !fit(room3, "ab") {
+        return 12
+    }
+    if fit(room3, "cd") || len(room3) != 2 {
+        return 13
+    }
+    if !fit(room3, "c") || text(room3) != "abc" {
+        return 14
+    }
+
     io.print(table(rows, 5))
     return 0
 }

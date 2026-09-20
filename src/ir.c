@@ -74,6 +74,10 @@ static const struct {
                                       KEST_IR_EFFECT_WRITES |
                                       KEST_IR_EFFECT_MOVES},
     [KEST_IR_FIT] = {"fit", KEST_IR_EFFECT_WRITES},
+    [KEST_IR_APPEND_TEXT] = {"append.text", KEST_IR_EFFECT_ALLOCATES |
+                                                KEST_IR_EFFECT_WRITES |
+                                                KEST_IR_EFFECT_MOVES},
+    [KEST_IR_FIT_TEXT] = {"fit.text", KEST_IR_EFFECT_WRITES},
     [KEST_IR_ROOM] = {"room", KEST_IR_EFFECT_ALLOCATES |
                                   KEST_IR_EFFECT_WRITES |
                                   KEST_IR_EFFECT_MOVES},
@@ -447,6 +451,7 @@ static bool value_kept(const bool *made, const KestIrBody *body,
 static bool grows_the_heap(KestIrKind kind) {
     switch (kind) {
     case KEST_IR_APPEND:
+    case KEST_IR_APPEND_TEXT:
     case KEST_IR_ROOM:
     case KEST_IR_STORE_ADD:
         return true;
@@ -559,6 +564,8 @@ const char *kest_ir_escapes(const KestIrBody *body, KestArena *arena,
         // own array may hold the block's own text, and nothing else may.
         case KEST_IR_APPEND:
         case KEST_IR_FIT:
+        case KEST_IR_APPEND_TEXT:
+        case KEST_IR_FIT_TEXT:
         case KEST_IR_ROOM:
         case KEST_IR_STORE_ADD:
         case KEST_IR_STORE_SET: {
@@ -899,6 +906,8 @@ static bool names_slots(const KestIrOp *op, uint16_t wide[2]) {
     case KEST_IR_LEN:
     case KEST_IR_APPEND:
     case KEST_IR_FIT:
+    case KEST_IR_APPEND_TEXT:
+    case KEST_IR_FIT_TEXT:
     case KEST_IR_ROOM:
     case KEST_IR_POP_LAST:
     case KEST_IR_TAKE:

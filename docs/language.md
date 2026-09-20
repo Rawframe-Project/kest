@@ -1414,7 +1414,8 @@ A nought goes through: it is a character, and text counts it like any other.
 room, answers `false` where there is not, and never reaches the heap. That is
 what makes filling a buffer something a `no.alloc` body can do, and `push`
 never can — a `push` may double the block, and a promise cannot be kept by
-hoping it does not.
+hoping it does not. A run of bytes given a whole piece of text answers whether
+the piece fitted and writes all of it or none.
 
 ```kest
 fn gather(into: [i32], many: i32) -> i32 no.alloc {
@@ -1437,15 +1438,24 @@ promise it reached no heap.
 
 Text built a piece at a time is built as bytes. `text(bytes)` makes one piece
 out of a `[u8]`, and it is the only way to make text from something that is
-not a string with a hole in it:
+not a string with a hole in it. **A run of bytes takes a whole piece of text**,
+because text is its bytes and the two are the same bytes: `push(out, piece)`
+puts the piece on the end in one move, where every other kind of run takes one
+of what it holds. `fit(out, piece)` is the same with the growth taken out, and
+it is all or nothing — the piece fits or the run is left as it was, because a
+piece half written is a piece nobody can take back:
 
 ```kest
 let out: [u8] = array()
-for byte in subject {
-    push(out, byte)
-}
+push(out, "hello, ")
+push(out, subject)
 return text(out)
 ```
+
+A byte at a time still works and is what to write when the bytes are being
+looked at rather than copied. What the bulk form is worth is the loop it takes
+the place of: building text a byte at a time was eighty per cent of the
+instructions `bench/words.kest` ran and more than half its time. See D1068.
 
 A walk over text is a walk over what the name held when the walk began: the
 handle is taken and the length measured once, before the first turn, so a body
@@ -6138,8 +6148,8 @@ Beside the diagnostics is what the run cost the compiler: `cost` is how many
 bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
-each stage of reading a file costs. For `lib/std/text.kest`, which is 502 lines:
-47956 bytes as tokens, 118617 as a tree, 155824 checked and 183233 compiled.
+each stage of reading a file costs. For `lib/std/text.kest`, which is 496 lines:
+47956 bytes as tokens, 117913 as a tree, 154736 checked and 182081 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
 
@@ -6156,7 +6166,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 17323 bytes, against the 183233 it costs to compile.
+file and 17347 bytes, against the 182081 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.

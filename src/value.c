@@ -951,6 +951,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"load2", U16_U16},    {"load.k", U16_U16},
     {"field", U16_U16_U16},
     {"array", U16_U16},    {"make.array", U16},   {"push", U16},         {"fit", U16},
+    {"push.text", U16},    {"fit.text", U16},
     {"room", U16},
     {"index", U16},        {"pop.last", U16},     {"take", U16},
     {"clear", NONE},       {"elem.addr", U16},    {"elem.at", U16_U16},
@@ -1426,6 +1427,7 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_ARRAY:
     case KEST_OP_MAKE_ARRAY:
     case KEST_OP_PUSH:
+    case KEST_OP_PUSH_TEXT:
     case KEST_OP_ROOM:
     case KEST_OP_ADD:
     case KEST_OP_NEW_STORE:
@@ -1454,6 +1456,7 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_TAKE:
     case KEST_OP_CLEAR:
     case KEST_OP_FIT:
+    case KEST_OP_FIT_TEXT:
     case KEST_OP_ELEM_ADDR:
     case KEST_OP_ELEM_AT:
     // Neither of these reaches the heap: one reads a place and one writes it,

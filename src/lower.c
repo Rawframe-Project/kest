@@ -877,6 +877,17 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         emit(lower, KEST_OP_FIT, span);
         emit_u16(lower, op->imm[0], span);
         return;
+    // A whole piece of text onto a run of bytes. No layout goes with it: the
+    // element is a byte and the stride is one, which is the whole reason this
+    // can be one move instead of a loop. See D1068.
+    case KEST_IR_APPEND_TEXT:
+        emit(lower, KEST_OP_PUSH_TEXT, span);
+        emit_u16(lower, op->imm[0], span);
+        return;
+    case KEST_IR_FIT_TEXT:
+        emit(lower, KEST_OP_FIT_TEXT, span);
+        emit_u16(lower, op->imm[0], span);
+        return;
     case KEST_IR_ROOM:
         emit(lower, KEST_OP_ROOM, span);
         emit_u16(lower, op->imm[0], span);

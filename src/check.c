@@ -1434,6 +1434,14 @@ static KestType *check_store_argument(Checker *checker, KestExpr *expr,
     return store;
 }
 
+// A run of bytes, which is the one array a piece of text goes on the end of
+// whole. See D1068.
+static bool bytes_run(const KestType *array) {
+    return array != NULL && array->tag == KEST_T_ARRAY &&
+           array->element != NULL && array->element->tag == KEST_T_INT &&
+           array->element->width == 8 && !array->element->is_signed;
+}
+
 static void check_ref_argument(Checker *checker, KestExpr *expr, uint32_t at,
                                const KestType *store) {
     KestType *wanted = kest_ref_of(checker->program, store->element);
@@ -1548,8 +1556,16 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
             check_expr(checker, expr->call.args[1], NULL);
             return builtin(checker, "void");
         }
+        // Text is its bytes (D021), so a run of bytes and a piece of text are
+        // the same bytes: `push(out, "ab")` puts the piece on the end whole,
+        // and that is the one thing the machine can do in a move where a
+        // program has to write a loop. Every other element takes one of
+        // itself. See D1068.
         KestType *value =
             check_expr(checker, expr->call.args[1], array->element);
+        if (bytes_run(array) && value != NULL && value->tag == KEST_T_TEXT) {
+            return builtin(checker, "void");
+        }
         if (!kest_type_equal(value, array->element)) {
             expected_but(checker, expr->call.args[1]->span, array->element,
                          value, "this value");
@@ -1580,6 +1596,9 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
         }
         KestType *value =
             check_expr(checker, expr->call.args[1], array->element);
+        if (bytes_run(array) && value != NULL && value->tag == KEST_T_TEXT) {
+            return builtin(checker, "bool");
+        }
         if (!kest_type_equal(value, array->element)) {
             expected_but(checker, expr->call.args[1]->span, array->element,
                          value, "this value");

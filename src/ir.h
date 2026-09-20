@@ -176,6 +176,8 @@ typedef enum {
     KEST_IR_LEN,
     KEST_IR_APPEND,
     KEST_IR_FIT,
+    KEST_IR_APPEND_TEXT,
+    KEST_IR_FIT_TEXT,
     KEST_IR_ROOM,
     KEST_IR_POP_LAST,
     KEST_IR_TAKE,

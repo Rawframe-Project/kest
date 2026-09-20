@@ -35494,3 +35494,66 @@ a host can lay its own memory over, and those are what this language is.
 bounded one *if evidence justifies the question*. The evidence says the
 question is further from justified than the published numbers suggested, which
 is the opposite of what a prototype would be for.
+
+## D1068. A run of bytes takes a whole piece of text
+
+*measured*, on the machine this was written on, paired and repeated.
+
+Matrix row 33 of the foundation reset is bulk text append, measured in 1.1 at
+eighteen per cent of `bench/words.kest` and left open because a bulk copy needs
+a builtin and D1030 would not add language surface on that evidence. D1067
+remeasured the four workloads on the work rather than on the whole process, and
+that changed what row 33 is worth.
+
+**What the eighteen per cent turned out to be.** Measured with the instrument
+that keeps its samples: `words` spends 68.4 milliseconds in its call, of which
+the per-byte loop is more than half. Taking the loop out — the same calls, none
+of the per-byte work — took it to 40.5 milliseconds, and the step count from
+1,430,273 to 286,563. Eighty per cent of the instructions that workload runs
+were `std.text.append` putting one byte on a run at a time.
+
+**And it is the nearest workload to native.** D1067 measured `words` at 4.9
+times a `g++ -O2` baseline on the work, against 20 to 28 for the other three.
+So the one place where a change could move a whole workload toward native was
+not the dispatch loop at all: it was a library function writing a loop where
+the machine could do a move.
+
+**So `push` and `fit` take a whole piece of text, for a run of bytes.** Text is
+its bytes (D021) and a `[u8]` is the same bytes, so the piece goes on the end
+whole. Every other kind of run takes one of what it holds, and a run of *text*
+given a piece of text still takes one element — which is the case the first
+attempt got wrong, compiling `push(words, "alpha")` on a `[text]` into a copy
+of the piece's bytes into the run of handles. The checker allows the bulk form
+for a run of bytes and for nothing else, and the compiler asks the same
+question rather than only whether what was handed over was text.
+
+`fit(out, piece)` is all or nothing: the piece fits or the run is left as it
+was. `std.text.fitting` used to go a byte at a time and leave what fitted,
+which is what a loop can do and a move cannot — and all or nothing is what a
+caller wanted anyway, since a piece half written is a piece nobody can take
+back.
+
+**What it cost and what it bought**, paired and repeated on one machine:
+
+    bench/words.kest          before      after
+    the call, middle of 11   68.4 ms    31.8 ms     -54 %
+    steps                  1,430,273   342,233      -76 %
+    heap asked for           391,648   227,936      -42 %
+    against g++ -O2, work       4.9x      3.2x
+
+The four workloads' work ratios are now 20.7, 19.8, 8.4 and 3.2 where they were
+22.8, 28.2, 13.1 and 4.9 — the first three moved with the machine's noise and
+the fourth moved because of this.
+
+**The surface, which is what section 36 asks about.** No new name: `push` and
+`fit` already mean *put this on the end*, and a piece of text on a run of bytes
+is that. Two instructions, `push.text` and `fit.text`, which is what makes it a
+move rather than a loop — and both are on the machine's list of what reaches
+the heap, so the promise's second proof knows them. The library is two lines
+shorter than it was.
+
+**What it does not do.** A run of anything else still takes one element at a
+time, and appending one run to another is not a thing this language has. That
+would be a rule rather than this case, and there is no measurement asking for
+it: what was measured is text, and text is the one run whose elements a program
+almost never wants one at a time.

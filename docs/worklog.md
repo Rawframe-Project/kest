@@ -38616,3 +38616,40 @@ See D1067.
 **Runs:** all four workloads at two sizes each, best of nine, against
 `g++ 15.2.0 -O2`, every row answering the same checksum; `graph` fused and
 plain through `bench/measure`.
+
+## Bulk text append, which turned out to be the nearest thing to native
+
+Matrix row 33 is bulk text append, measured in 1.1 at eighteen per cent of
+`bench/words.kest` and left open because a bulk copy needs a builtin and D1030
+would not add surface on that evidence. D1067's remeasurement on the work
+rather than the process changed what the row is worth twice over.
+
+The eighteen per cent is more than half. Taking the per-byte loop out — the
+same calls, none of the per-byte work — took `words`' call from 68.4 to 40.5
+milliseconds and its step count from 1,430,273 to 286,563: eighty per cent of
+the instructions that workload runs were one byte going on a run at a time.
+And `words` is the nearest workload to native, at 4.9 times a `g++ -O2`
+baseline on the work against 20 to 28 for the other three. So the one place a
+change could move a whole workload toward native was a library function writing
+a loop where the machine could do a move.
+
+`push` and `fit` take a whole piece of text for a run of bytes now. Text is its
+bytes and a `[u8]` is the same bytes, so the piece goes on the end whole. Every
+other kind of run still takes one of what it holds — which is the case the
+first attempt got wrong, compiling `push(words, "alpha")` on a `[text]` into a
+copy of the piece's bytes into the run of handles, and the answer is that the
+compiler asks the same question the checker does rather than only whether what
+was handed over was text.
+
+Paired and repeated on one machine: the call 68.4 → 31.8 ms, the steps
+1,430,273 → 342,233, the heap asked for 391,648 → 227,936 bytes, and against
+`g++ -O2` on the work 4.9 → 3.2 times.
+
+`std.text.fitting` is all or nothing now rather than leaving what fitted, which
+is what a move can do and a loop cannot, and is what a caller wanted anyway.
+
+See D1068.
+
+**Runs:** `bench/measure` at eleven samples before and after; the four
+workloads at two sizes each, three times before and four after, middle
+reported; every `.kest` in the tree swept for a warning; `make check`.

@@ -401,24 +401,18 @@ fn bytes(subject: text) -> [u8] no.host deterministic {
 }
 
 fn append(out: [u8], piece: text) no.host deterministic {
-    for byte in piece {
-        push(out, byte)
-    }
+    push(out, piece)
 }
 
 // The same, into a buffer that was given room, which is what a frame writing a
 // line every tick wants: `push` may double the block and so can never be inside
-// a promise to reach no heap, and this cannot. It answers whether the whole
-// piece fitted, and a piece that did not fit is a buffer that holds what fitted
-// before it -- so a caller that wants all or nothing asks `room(out)` first.
-// See D940.
+// a promise to reach no heap, and this cannot. It answers whether the piece
+// fitted, and a piece that did not is a buffer that has not changed at all --
+// all of it goes in or none of it does, because a piece half written is a
+// piece nobody can take back. It used to go in a byte at a time and leave what
+// fitted, which is what a loop can do and a move cannot. See D940 and D1068.
 fn fitting(out: [u8], piece: text) -> bool no.alloc no.host deterministic {
-    for byte in piece {
-        if !fit(out, byte) {
-            return false
-        }
-    }
-    return true
+    return fit(out, piece)
 }
 
 // And a whole number written into one the same way, most significant digit

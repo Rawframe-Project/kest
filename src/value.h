@@ -49,6 +49,13 @@ typedef enum {
     // which is what lets a body fill a buffer it was given room for without
     // reaching the heap. See D940.
     KEST_OP_FIT,
+    // The same two given a whole piece of text rather than one byte. Text is
+    // its bytes (D021), so a run of bytes and a piece of text are the same
+    // bytes and the piece goes on the end whole. What that is worth is the
+    // loop it takes the place of: building text a byte at a time was eighty
+    // per cent of the instructions `bench/words.kest` runs. See D1068.
+    KEST_OP_PUSH_TEXT,
+    KEST_OP_FIT_TEXT,
     // Room for that many without changing what is in it or how many there
     // are. `array(n, v)` makes a new one with room and `clear` empties it,
     // which is what a program does when it knows how many are coming -- and

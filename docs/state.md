@@ -146,12 +146,16 @@ turned out to be premature. What the tree has to show for it:
     what the heap is asked for  D1032: by width and by kind, and the
                                 crossing nothing counted
 
-**Two things are open and named as open.** They are measured and not done, and
-each says why.
+**One thing is open and named as open.** It is measured and not done, and it
+says why. The other was bulk text append and it is done.
 
-- Bulk text append. Eighteen per cent of `bench/words.kest` is `std.text`'s
-  `append` copying a byte at a time. A bulk copy needs a builtin, which is
-  language surface, and D1030 says why that was not added on this evidence.
+- Bulk text append is **closed**. It was eighteen per cent of
+  `bench/words.kest` measured on the whole process and is more than half of it
+  measured on the work: eighty per cent of the instructions that workload ran
+  were one byte going on a run at a time. `push` and `fit` take a whole piece
+  of text for a run of bytes now, which is no new name and two instructions,
+  and `words` went from 4.9 to 3.2 times a `g++ -O2` baseline on the work
+  (D1068).
 - The dispatch loop, and what is left of it is smaller than it was written
   down as. The 48 to 92 per cent was the share of cycles *inside* the
   interpreter's loop, which is everything a program does and says nothing about
