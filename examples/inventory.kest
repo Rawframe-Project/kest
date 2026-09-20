@@ -48,6 +48,25 @@ fn total(stock: table.Table<text, Item>, names: [text]) -> i32 no.alloc {
     return sum
 }
 
+// What a frame does to a table it is standing in: write where the key already
+// is, and answer for the one that is not there rather than growing. `set` may
+// refill, so a body that called it could not promise this at all -- which is
+// the whole reason `fit` is here and is the same sentence `fit` on an array
+// is. See D1063.
+fn marked(stock: table.Table<text, Item>, names: [text], by: i32) -> i32 no.alloc {
+    let missed = 0
+    for i in 0..len(names) {
+        if let one = table.get(stock, names[i]) {
+            if !table.fit(stock, names[i], Item(one.name, one.price + by)) {
+                missed += 1
+            }
+        } else {
+            missed += 1
+        }
+    }
+    return missed
+}
+
 fn main() -> i32 {
     let stock: table.Table<text, Item> = table.empty()
     table.set(stock, "sword", Item("sword", 1200))
@@ -333,6 +352,27 @@ fn main() -> i32 {
                 table.valueAt(spike, at) {
             return 32
         }
+    }
+
+    // Written in the room the table is already standing in, which is what a
+    // frame does. The name that is not in stock is answered for rather than
+    // put in, and nothing here reaches the heap.
+    let raised: [text] = array()
+    push(raised, "sword")
+    push(raised, "rope")
+    push(raised, "anvil")
+    let was = table.orElse(stock, "rope", Item("", 0)).price
+    if marked(stock, raised, 5) != 1 {
+        return 33
+    }
+    if table.orElse(stock, "rope", Item("", 0)).price != was + 5 {
+        return 34
+    }
+    if table.orElse(stock, "sword", Item("", 0)).price != 1205 {
+        return 35
+    }
+    if table.has(stock, "anvil") {
+        return 36
     }
 
     io.print("{table.count(stock)} kinds carried, worth {total(stock, carried)}")

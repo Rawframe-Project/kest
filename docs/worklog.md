@@ -38482,3 +38482,23 @@ See D1062.
 **Runs:** `examples/game.kest` under the fix and with the fix reverted, to see
 it caught; the three-module program the slice is being built out of; `make
 check`.
+
+## A table a frame can write to
+
+Found by section 35's slice, whose hot phase keeps a count per colonist in a
+table.
+
+**`table.set` may grow, so a frame that touched a table could not promise
+`no.alloc`.** Not because it allocates — because the one door into a table
+might, and a promise cannot be kept by hoping a branch is not taken. The
+refusal named `push(t.keys, key)` in the library from a body three modules
+away, which is the diagnostic doing its job and the library not having the
+function. `table.fit` is `set` with the growth taken out, the same sentence
+`fit` is to `push`: it writes where the key already is, answers false where it
+is not, and reaches nothing. It cannot be written outside `std.table` because
+the four fields are `own`. `examples/inventory.kest` has a `no.alloc` body that
+raises prices through it and answers for the name that is not in stock.
+
+See D1063.
+
+**Runs:** `examples/inventory.kest`; `make check`.

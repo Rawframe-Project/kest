@@ -276,6 +276,29 @@ fn set<K: compares, V>(t: Table<K, V>, key: K, value: V) no.host deterministic {
     place(t, key, len(t.keys) - 1)
 }
 
+// `set` with the growth taken out, which is what `fit` is to `push`: it writes
+// where the key already is, answers false where it is not, and never reaches
+// the heap. Without it a table cannot be written to inside a promise at all --
+// `set` may grow, and a promise cannot be kept by hoping it does not -- so a
+// frame keeping a count per thing had to keep it somewhere that was not a
+// table. A program that means "this key is already here" says so here, and one
+// that does not know calls `refill` before the frame and `set` inside it and
+// keeps neither promise.
+//
+// A value that is not equal to itself is refused the way `set` refuses one,
+// because a key that cannot be found again is a key this cannot write to
+// either. See D940 and D1063.
+fn fit<K: compares, V>(t: Table<K, V>, key: K, value: V) -> bool no.alloc no.host deterministic {
+    if key != key {
+        return false
+    }
+    if let at = find(t, key) {
+        t.values[at] = value
+        return true
+    }
+    return false
+}
+
 // The one taken out leaves a mark rather than a hole, because a hole would
 // end a probe that has to carry on past it. The last pair moves into its
 // place so the two arrays stay packed.

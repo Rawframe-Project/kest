@@ -35256,3 +35256,39 @@ file.
 
 **What it cost.** Nothing anybody has to do. The spelling that works now is the
 spelling that was already written down; what changed is that it is read.
+
+## D1063. `table.fit` is `set` with the growth taken out
+
+*argued*, and the program that wanted it is section 35's vertical slice.
+
+`fit(xs, value)` is `push` with the growth taken out: it writes where there is
+room, answers false where there is not, and never reaches the heap. That is
+what makes filling an array something a `no.alloc` body can do (D940). A table
+had no such thing. `table.set` may grow — it refills when the slots are
+crowded — so it cannot promise `no.alloc`, and a promise cannot be kept by
+hoping a branch is not taken.
+
+What that cost is the thing the promise is for. A frame that keeps a count per
+entity keeps it in a table, and the moment it does, the frame cannot promise
+`no.alloc`: not because it allocates, but because the one door into a table
+might. The slice's hot phase is exactly that shape and the refusal named
+`push(t.keys, key)` in the library from a body three modules away.
+
+**So there is a `fit` for a table**, and it is the same sentence as the one for
+an array: it writes where the key already is, answers false where it is not,
+and reaches nothing. A program that means "this key is already here" says so;
+one that does not know calls `refill` before the frame and `set` inside it and
+keeps neither promise. A key that is not equal to itself is refused the way
+`set` refuses one, because a key that cannot be found again cannot be written
+to either (D893).
+
+**Why it could not be written outside the library.** The four fields of a table
+are `own` since D1041, so nothing outside `std.table` can reach the values
+array. That is the right side of the trade — two lines of ordinary Kest could
+leave them disagreeing — and it is what makes this one function rather than a
+pattern a program writes for itself.
+
+**What it costs in surface**, which is what section 36 asks. One function, a
+name this library already uses for exactly this meaning, no new keyword and no
+change to anything that was there. What it buys is that a table can be read
+*and written* inside the promise the language is for.

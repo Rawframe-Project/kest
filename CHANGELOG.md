@@ -200,6 +200,13 @@ a body that was not written `no.alloc` because `slice` was believed to allocate
 can be. The sentence is held to the proof's own table by a check now. See
 D1060.
 
+**A table can be written to inside a promise.** `table.fit(t, key, value)` is
+`table.set` with the growth taken out, the way `fit` is `push` with the growth
+taken out: it writes where the key already is, answers `false` where it is not,
+and reaches nothing. **What a program has to do:** nothing, but a frame that
+kept a count per thing outside a table because `set` may grow can keep it in
+one now and still promise `no.alloc`. See D1063.
+
 **What changed for a host.** The version, and the profile. The C ABI and the
 JSON schema still read 4 and 3, the profile reads 2, and all three will be
 settled to clean `0.0.x` numbers once the architecture this reset is correcting

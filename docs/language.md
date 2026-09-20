@@ -734,7 +734,17 @@ are its own, so nothing outside can be handed one — a sort that moved a key an
 not the value beside it would leave a table answering about one key with
 another key's value, and that used to be two lines of ordinary Kest away.
 `table.keysOf` gives the keys copied, for a program that wants an order of its
-own. `std.vec` is two and three components of
+own.
+
+`table.set` may grow, so it is not a thing a promise can hold, and
+`table.fit(t, key, value)` is `set` with the growth taken out the way `fit` is
+`push` with the growth taken out: it writes where the key already is, answers
+`false` where it is not, and reaches nothing. That is what lets a frame keeping
+a count per thing promise `no.alloc` and still keep the count in a table. A
+program that does not know whether a key is there calls `table.refill` before
+the frame and `table.set` inside it, and keeps neither promise. See D1063.
+
+`std.vec` is two and three components of
 `f32`, and `std.random` gives numbers that look random out of a state the
 program holds.
 
