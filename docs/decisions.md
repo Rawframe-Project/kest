@@ -34198,3 +34198,80 @@ now has a section saying what the collector is, what it walks from, when it
 walks, what a pause costs and why there is no incremental marking — which
 section 21 asked for, and which the front page contradicted by saying there was
 no collector at all.
+
+## D1046. The whole public header, classified, and the six families it is in
+
+**Decided.** The C API is **98 doors in six families**, and which family a door
+is in is written down in `tools/check-tables.sh` and held: a door added without
+one is refused. Nothing is taken away. There is no seventh family, no door that
+is research instrumentation left in by accident, and no pair of doors answering
+one question -- each of those was looked for and the looking is below.
+
+**What was asked.** Section 20 of this reset: audit the whole public header
+because the performance campaign added doors and none is sacred merely for
+being in `include/kest.h` now. Classify every one; ask whether it should be
+public to every embedding host, whether it should be tooling instead, whether
+two answer one question, whether research instrumentation leaked in, whether
+callbacks can be unified, and whether the header teaches a coherent host model.
+
+**The classification.**
+
+| family | doors | what it is |
+| --- | --- | --- |
+| `running` | 39 | compile a program, bind what it asks for, size a machine, call it, hand values across |
+| `reading` | 18 | what a program and a build are made of, for a tool |
+| `watching` | 14 | what something cost, which no program can tell was asked |
+| `stopping` | 12 | a debugger written by somebody else |
+| `memory` | 10 | what a machine holds and whose it is |
+| `steering` | 5 | what a host does to one while it runs |
+
+**Should every door be public to every embedding host?** No, and there is a
+number: **a host that compiles, binds, sizes and calls needs 22 of them**, which
+is `examples/least.c` and a hundred and seventy lines. The reference says so
+where a host writer meets it, and the check counts the host rather than trusting
+the sentence.
+
+**Should any of it be tooling rather than public?** Every one of the 98 is
+called by one of the three hosts in this tree, which `check-dead.sh` has held
+since D949 -- so none is surface nothing has ever used. The `stopping` twelve
+are what `kest debug` is written on and they are public because a host writing
+its own debugger needs exactly them; the `reading` eighteen are what the
+language server and the profiler are written on, for the same reason. A tool is
+a host here.
+
+**Do two of them answer one question?** The pairs that look like it, each
+examined:
+
+`kest_heap_used`, `kest_heap_taken` and `kest_heap_most` are three questions: a
+call that made a megabyte and let it go answers the same as one that made
+nothing on the first and differs on the second, and the third is what says a
+program has settled. `kest_telemetry` is none of the three -- it is what the
+heap did about all of it, at a granularity a host reads once a frame rather than
+once a call.
+
+`kest_counted` and `kest_collected` are a total and a distribution, which the
+header says: a frame that stopped four times for a millisecond and one that
+stopped once for four are the same number and not the same thing to a budget.
+
+`kest_needs`, `kest_bound`, and the `_of` and `_from` of each are a least and a
+most, of the whole program and of one name, and the way back in for a host
+called back from inside one of its own doors. Six doors and six questions; a
+host that calls one function uses two of them.
+
+**Did research instrumentation leak in?** The doors the 1.1 campaign added are
+`kest_telemetry`, `kest_collected`, `kest_clock`, `kest_counted_entry` and
+`kest_runtime_cost`. Each is in `watching`, each is asked by a host in this tree
+for something a host would want -- a frame budget, a pause distribution, a
+profile -- and none of them is reachable from a program or changes what one
+answers. The one that would have been research is a per-instruction count, and
+D979 measured it at a third of the machine and did not add it.
+
+**Can the callbacks be unified?** There is one callback, `kest_collected`.
+`kest_clock` hands over a clock and `kest_count` turns counting on; making one
+door of the three would be one door that means three things.
+
+**Does the header teach a coherent host model?** The evidence that it does is
+that a host can be written with 22 of the 98 and the reference points at the
+one that is; the evidence it might not was that the front page said the API was
+97 doors when the header had 98 and said there was no collector when there is
+one. Both are held by a check now rather than by somebody remembering.

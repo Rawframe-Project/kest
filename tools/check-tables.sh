@@ -197,6 +197,138 @@ if held != printed_words:
               % ", ".join("`%s`" % w for w in only_printed))
     failed = 1
 
+# What each door of the public header is for, which is the one classification
+# of it there is. A header of a hundred doors teaches a host model or it is a
+# list, and what says which is whether every door is in a family somebody chose
+# -- so a door added without one is refused here rather than read as belonging
+# wherever it happens to sit. Six families and no seventh: nothing here is
+# research instrumentation that leaked into a permanent API, and nothing
+# answers a question another door already answers. See D1046.
+#
+# `running` is what a host that compiles a program, binds what it asks for,
+# sizes a machine and calls it needs. `steering` is what it does to one while
+# it runs. `memory` is what a machine holds and whose it is. `watching` is what
+# something cost, which no program can tell was asked. `stopping` is a debugger
+# written by somebody else. `reading` is what a program and a build are made
+# of, for a tool.
+FAMILY = {
+ # running: what a host that compiles a program, binds what it asks for, sizes
+ # a machine and calls it needs.
+ "kest_build":"running","kest_build_free":"running","kest_build_report":"running",
+ "kest_build_extern":"running","kest_build_capability":"running",
+ "kest_extern_takes":"running","kest_extern_layout":"running","kest_extern_gives":"running",
+ "kest_host_new":"running","kest_host_free":"running","kest_host_bind":"running",
+ "kest_host_find":"running","kest_start":"running","kest_runtime_free":"running",
+ "kest_entry":"running","kest_call":"running","kest_report":"running",
+ "kest_needs":"running","kest_bound":"running","kest_needs_of":"running",
+ "kest_bound_of":"running","kest_needs_from":"running","kest_bound_from":"running",
+ "kest_allowed":"running",
+ "kest_frame_takes":"running","kest_frame_at":"running","kest_frame_layout":"running",
+ "kest_frame_gives":"running","kest_frame_fills":"running","kest_frame_reads":"running",
+ "kest_frame_slots":"running","kest_takes_text":"running","kest_gave_text":"running",
+ "kest_text":"running","kest_text_bytes":"running","kest_borrow":"running",
+ "kest_lend_ends":"running","kest_array_length":"running","kest_native_failed":"running",
+ # steering: what a host does to a machine while it runs.
+ "kest_fuel_set":"steering","kest_fuel_spend":"steering","kest_fuel_left":"steering",
+ "kest_cancel":"steering","kest_cancelled":"steering",
+ # memory: what a machine holds, and whose it is.
+ "kest_heap_allow":"memory","kest_heap_reset":"memory",
+ "kest_scratch_mark":"memory","kest_scratch_rewind":"memory",
+ "kest_collect":"memory","kest_collect_after":"memory",
+ "kest_keeps":"memory","kest_lets_go":"memory","kest_still_holds":"memory",
+ "kest_kept_where":"memory",
+ # watching: what it cost, which no program can tell was asked.
+ "kest_heap_used":"watching","kest_heap_taken":"watching","kest_heap_most":"watching",
+ "kest_heap_wanted":"watching","kest_heap_refused_by":"watching",
+ "kest_telemetry":"watching","kest_collected":"watching","kest_clock":"watching",
+ "kest_count":"watching","kest_counted":"watching","kest_counted_entry":"watching",
+ "kest_build_cost":"watching","kest_build_held":"watching","kest_runtime_cost":"watching",
+ # stopping: a debugger written by somebody else.
+ "kest_break_byte":"stopping","kest_stopped":"stopping","kest_stopped_in":"stopping",
+ "kest_resume":"stopping","kest_code_of":"stopping","kest_came_from":"stopping",
+ "kest_frames_deep":"stopping","kest_frame_in":"stopping","kest_frame_ip":"stopping",
+ "kest_frame_slot":"stopping","kest_frame_name":"stopping","kest_frame_wide":"stopping",
+ # reading: what a program and a build are made of, for a tool.
+ "kest_version":"reading","kest_abi_version":"reading","kest_profile":"reading",
+ "kest_checked":"reading",
+ "kest_build_read":"reading","kest_build_read_bytes":"reading","kest_build_read_mark":"reading",
+ "kest_build_mark":"reading","kest_build_code_mark":"reading","kest_build_source":"reading",
+ "kest_entry_of":"reading","kest_entry_name":"reading","kest_entry_wrote":"reading",
+ "kest_entry_promises":"reading",
+ "kest_slot_of":"reading","kest_layout_mark":"reading","kest_case_of":"reading",
+ "kest_build_layout":"reading",
+}
+
+the_families = {"running", "steering", "memory", "watching", "stopping",
+                "reading"}
+the_doors = some("the doors the public header declares", sorted(set(re.findall(
+    r'\b(kest_[a-z_0-9]+)\s*\(',
+    re.sub(r'//[^\n]*', '', open(os.path.join("include", "kest.h")).read())))))
+for door in sorted(set(the_doors) - set(FAMILY)):
+    print("header: `%s` is a door and this says nothing about what it is for"
+          % door)
+    failed = 1
+for door in sorted(set(FAMILY) - set(the_doors)):
+    print("header: this says what `%s` is for and the header has no such door"
+          % door)
+    failed = 1
+for door, family in sorted(FAMILY.items()):
+    if family not in the_families:
+        print("header: `%s` is written down as `%s`, which is not one of the "
+              "families" % (door, family))
+        failed = 1
+# Counted over the ones this says something about, because a door it says
+# nothing about was complained of above and a check that then falls over is a
+# check that stops every rule under it from being asked.
+counted_doors = {name: 0 for name in the_families}
+for door in the_doors:
+    if door in FAMILY and FAMILY[door] in counted_doors:
+        counted_doors[FAMILY[door]] += 1
+# And the smallest host there is, which is the answer to whether every door
+# has to be public to every embedding host: it does not, and this is how many
+# are. Counted rather than written down, because a host gains a door the day
+# somebody adds one to it.
+smallest = some("the doors the smallest host calls", sorted(
+    set(re.findall(r'\b(kest_[a-z_0-9]+)\s*\(',
+                   re.sub(r'//[^\n]*', '',
+                          open(os.path.join("examples",
+                                            "least.c")).read()))) &
+    set(the_doors)))
+# Read off a copy with every run of spaces made one, because a sentence in the
+# reference is wrapped where the line ran out and a pattern that cared would be
+# a pattern that breaks when somebody reflows a paragraph.
+reference_flat = re.sub(r'\s+', ' ',
+                        open(os.path.join("docs", "language.md")).read())
+
+
+def flatly(pattern):
+    found = re.search(pattern, reference_flat)
+    if found is None:
+        print("docs/language.md: nothing here matches /%s/" % pattern)
+        raise SystemExit(1)
+    return found.group(1)
+
+
+families_said = flatly(r'The C API is ([^.]*?)\. A host that compiles')
+wanted_said = ("%u doors in %u families: %u for running a program, %u for "
+               "reading what one is made of, %u for watching what it cost, "
+               "%u for stopping one, %u for its memory and %u for steering it "
+               "while it runs"
+               % (len(the_doors), len(the_families), counted_doors["running"],
+                  counted_doors["reading"], counted_doors["watching"],
+                  counted_doors["stopping"], counted_doors["memory"],
+                  counted_doors["steering"]))
+if families_said != wanted_said:
+    print("header: the reference says the C API is `%s` and it is `%s`"
+          % (families_said, wanted_said))
+    failed = 1
+least_said = flatly(r'A host that compiles, binds, sizes and calls needs '
+                    r'(\d+) of them')
+if int(least_said) != len(smallest):
+    print("header: the reference says the smallest host needs %s door(s) and "
+          "it calls %u" % (least_said, len(smallest)))
+    failed = 1
+
 # The licence the extension carries. A VSIX is a thing on its own -- somebody
 # installs it without the tree around it -- so the packager wants a licence
 # inside the extension directory, and the one this project has is at the root.

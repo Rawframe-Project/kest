@@ -10218,6 +10218,58 @@ fn main() -> i32 {
         "caught": "the language server does not offer it",
     },
     {
+        # A door of the public header that nothing says what it is for. A
+        # header of a hundred doors teaches a host model or it is a list, and
+        # what says which is whether somebody chose a family for every one of
+        # them. See D1046.
+        "what": "a door nobody said what it is for",
+        "file": "tools/check-tables.sh",
+        "from": r""" "kest_version":"reading","kest_abi_version":"reading",""",
+        "to": r""" "kest_abi_version":"reading",""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "is a door and this says nothing about what it is for",
+    },
+    {
+        # And a door written down as something that is not one of the
+        # families, which is how a seventh gets in: not by anybody deciding
+        # there should be one, but by a word typed where six were meant.
+        "what": "a seventh family, arrived at by typing",
+        "file": "tools/check-tables.sh",
+        "from": r""" "kest_cancel":"steering",""",
+        "to": r""" "kest_cancel":"research",""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "which is not one of the families",
+    },
+    {
+        # The count of doors the reference gives, which is the number a reader
+        # sizes the whole boundary by. It was 97 on the front page for a
+        # release and a half while the header had 88.
+        "what": "the reference counting the doors for itself",
+        "file": "docs/language.md",
+        "from": r"""The C API is 98 doors in 6 families: 39 for running""",
+        "to": r"""The C API is 98 doors in 6 families: 38 for running""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "the reference says the C API is",
+    },
+    {
+        # And how many of them the smallest host there is calls, which is the
+        # answer to whether every door has to be public to every host.
+        "what": "the smallest host counted by the reference rather than read",
+        "file": "docs/language.md",
+        "from": r"""sizes and calls needs 22 of them""",
+        "to": r"""sizes and calls needs 21 of them""",
+        "make": [],
+        "tool": "tools/check-tables.sh",
+        "arguments": [],
+        "caught": "the reference says the smallest host needs",
+    },
+    {
         # And the other way round: a word offered that a program may write
         # wherever it likes, which is an editor teaching a reader that a name
         # they own is the language's.

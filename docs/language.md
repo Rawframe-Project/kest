@@ -4073,6 +4073,13 @@ than something written wrongly — that is where a host walks `kest_frame_gives`
 and lays the slots out itself, which it may do for a struct too when the way
 the language writes one is not the way it wants.
 
+The C API is 98 doors in 6 families: 39 for running a program, 18 for reading
+what one is made of, 14 for watching what it cost, 12 for stopping one, 10 for
+its memory and 5 for steering it while it runs. A host that compiles, binds,
+sizes and calls needs 22 of them, which is what `examples/least.c` is; the rest
+are there for hosts that want more, and every one of them is called by one of
+the three hosts in this tree. See D1046.
+
 A program that asks the host for nothing needs no host: `kest_start` takes NULL
 there, and what a host writer writes is a build, a call and what came back.
 

@@ -37792,3 +37792,42 @@ See D1045.
 
 **Runs:** `bench/measure` over four world sizes and four thresholds; the walk
 this host asks for and the one it does not; `make fast`; `make check`.
+
+## The whole public header, classified
+
+Section 20 of the reset says the audit is mandatory and that no door is sacred
+merely for being in `include/kest.h` now. Ninety-eight of them, read one at a
+time, and what came out is a classification rather than a cull.
+
+    running    39   compile, bind, size, call, hand values across
+    reading    18   what a program and a build are made of, for a tool
+    watching   14   what something cost
+    stopping   12   a debugger written by somebody else
+    memory     10   what a machine holds and whose it is
+    steering    5   what a host does to one while it runs
+
+Nothing is taken away, and the reason is that the questions the section asks
+all answer. Every one of the 98 is called by a host in this tree, which
+`check-dead.sh` has held since D949, so none of it is surface nothing has used.
+The pairs that look redundant are not: three heap readouts that a call which
+made a megabyte and let it go answers differently; a total and a distribution
+of collector pauses; a least and a most of the whole program, of one name, and
+of the way back in. The doors the performance campaign added are all in
+`watching`, all asked by a host for something a host wants, and the one that
+would have been research -- a count per instruction -- was measured at a third
+of the machine by D979 and not added.
+
+What was wrong was two numbers on the front page: the API was 97 doors when the
+header had 98, and the persistent memory story still said *no collector*. Both
+are a check's now rather than somebody's memory, and so is the classification:
+the family of each door is a table in `check-tables.sh`, and a door added
+without one is refused.
+
+And the answer to *should this be public to every embedding host*, which is the
+section's first question, is a number: **22**. That is what `examples/least.c`
+calls, counted from the host rather than written down.
+
+See D1046.
+
+**Runs:** the classification against the header; the smallest host counted; the
+reference's two numbers held; four holes; `make check`.
