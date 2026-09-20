@@ -35428,3 +35428,69 @@ crossed three ways; the gate's `threads` and `races` sections run four machines
 of one build at once. Adding a fourth host to this tree to say the same things
 in a different program would be gate surface for no finding, and the slice says
 which side of the line it is on rather than leaving a reader to count.
+
+## D1067. The native question, re-asked on the work rather than on the process
+
+*measured*, on the machine this was written on, with both sizes of each
+workload so that what is compared is the work and not the startup.
+
+Section 26 of the foundation reset says the valid conclusion from before was
+that the predeclared trigger did not justify a native backend *at that time*,
+that "VM peepholes did not help, therefore native code could not help" is not a
+valid one, and that the question is to be re-asked after the architecture
+correction, the IR optimizer, the movement remeasurement, the dispatch
+remeasurement and the host and collector separation. All five are done: D1024,
+D1025, D1026, D1028, D1032, D1044, D1047 and D1053.
+
+**And re-asking it found that the numbers it would have been asked against are
+diluted.** `bench/run.sh` times a whole process with the shell's clock, which
+is what comparing two languages wants and is what D980 says it is. A whole
+process is the work and everything that has to happen first, and for a short
+workload that is most of it: this command line spends about nine milliseconds
+reading the library and making a machine before a workload begins. So the ratio
+of two rows is not the ratio of two pieces of work, and on the shortest
+workload here it is out by more than three times.
+
+Measured both ways, each workload at its own size and at eight times it, best
+of nine, so that the difference between the two sizes is the work alone:
+
+    workload   whole process   the work alone
+    kernel          8.9x            22.8x
+    control        13.4x            28.2x
+    graph           3.9x            13.1x
+    words           4.3x             4.9x
+
+Against `g++ 15.2.0 -O2`, every row answering the same checksum. `bench/run.sh`
+says what a row holds before any of the workload runs now, so the correction is
+on the page rather than in somebody's head.
+
+**What that does to D1017's reopening condition.** It was: *a workload where
+the machine is within about twice native and the remaining gap is shown to be
+dispatch — measured, not inferred.* Read against whole processes, `graph` at
+3.9 times looked like the near one. Read against the work it is thirteen times.
+The nearest on the work is `words` at 4.9 times, and what that gap is made of
+is known and is not dispatch: eighteen per cent of it is `std.text`'s `append`
+copying a byte at a time, which D1030 measured and decided against a builtin
+for.
+
+**And the dispatch half, measured in the same binary.** Turning the lowering's
+fusions off raises `graph` from 11.55 to 13.51 milliseconds — seventeen per
+cent for the dispatches the fusions remove, which agrees with D1047's sixteen
+to thirty-one per cent for a quarter to two fifths fewer. D1047 also weighed a
+dispatch against what it dispatches and found about one to one. So removing
+*every* dispatch — which is the most a generated-C backend could take away
+while keeping the bounds check, the generation check, the host's layout and the
+budget accounting, all of which are the product — is at most about two times.
+Against a gap of five to twenty-eight, it is not the gap anywhere.
+
+**So it stays closed, and the condition is now written against the right
+number.** A workload where the machine is within about twice native *on the
+work*, with the remaining gap shown to be dispatch. Nothing here is near it,
+and the reason is not the dispatch loop: it is that every instruction does a
+bounds check, a generation check, an accounted step and a read through a layout
+a host can lay its own memory over, and those are what this language is.
+
+**What was not done, and why.** No generated-C prototype. Section 26 allows a
+bounded one *if evidence justifies the question*. The evidence says the
+question is further from justified than the published numbers suggested, which
+is the opposite of what a prototype would be for.

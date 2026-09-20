@@ -38576,3 +38576,43 @@ See D1066.
 
 **Runs:** the slice run from the tree and built and tested as a project; every
 file of it swept for a warning; `make check`.
+
+## The native question, re-asked on the work rather than on the process
+
+Section 26 asks for native and AOT to be re-evaluated now the architecture is
+corrected, the optimizer is there, and movement, dispatch, the host and the
+collector have all been remeasured. Re-asking it found that the numbers it
+would have been asked against are diluted.
+
+`bench/run.sh` times a whole process, which is what comparing two languages
+wants and what D980 says it is. A whole process is the work and everything
+before it, and this command line spends about nine milliseconds reading the
+library and making a machine. Measured at each workload's own size and at eight
+times it, so that the difference between the two is the work alone:
+
+    workload   whole process   the work alone
+    kernel          8.9x            22.8x
+    control        13.4x            28.2x
+    graph           3.9x            13.1x
+    words           4.3x             4.9x
+
+D1017's reopening condition was a workload within about twice native whose
+remaining gap is shown to be dispatch. Read against whole processes, `graph` at
+3.9 looked like the near one; read against the work it is thirteen. The nearest
+is `words` at 4.9 and what that gap is made of is known and is not dispatch.
+
+And the dispatch half, in the same binary: turning the fusions off raises
+`graph` from 11.55 ms to 13.51, which is seventeen per cent and agrees with
+D1047. A dispatch weighs about one to one against what it dispatches, so
+removing every one of them is at most about two times against a gap of five to
+twenty-eight.
+
+It stays closed, and the condition is written against the right number now.
+`bench/run.sh` says what a row holds before the workload starts, so the
+correction is on the page.
+
+See D1067.
+
+**Runs:** all four workloads at two sizes each, best of nine, against
+`g++ 15.2.0 -O2`, every row answering the same checksum; `graph` fused and
+plain through `bench/measure`.

@@ -48,6 +48,33 @@ run_it() {
     printf '%-10s %-10s %6s ms  %s\n' "$name" "$1" "$fastest" "$answer"
 }
 
+# What every row below includes before any of the work is done. A whole process
+# is the work and everything that has to happen first, and for a short workload
+# that is most of it: reading and compiling the library and the program, making
+# a machine, and the shell's own two forks to take the time. Measured here with
+# a program that does nothing, so a reader can take it off both sides rather
+# than read a ratio of startups as a ratio of languages.
+#
+# What it is worth knowing: the ratio of the work is larger than the ratio of
+# the processes on every workload here, by 1.1 to 3.4 times on the machine this
+# was written on. See D1067.
+nothing=$(mktemp -d)
+trap 'rm -rf "$nothing"' EXIT
+cat > "$nothing"/nothing.kest <<'KEST'
+module nothing
+
+fn main() -> i32 {
+    return 0
+}
+KEST
+before=$(run_it "nothing" "$kest" run "$nothing"/nothing.kest |
+    awk '{ print $3 }')
+echo "every \`$kest\` row below holds $before ms of reading the library and \
+making a machine before any of the workload runs, measured by running a \
+program that does nothing. The ratio of the work is larger than the ratio of \
+the rows, and this is how much larger."
+echo
+
 printf '%-10s %-10s %9s  %s\n' "workload" "ran by" "best of $best" "answered"
 for one in kernel control graph words; do
     if [ ! -f "bench/$one.kest" ]; then

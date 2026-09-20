@@ -80,7 +80,12 @@ bench/             Four shapes of work and what each costs, in this language
                    language sits, which is a thing to know rather than a thing
                    to claim. The comparators are found rather than built:
                    `bench/run.sh` leaves a row out when what would run it is
-                   not there. See D980.
+                   not there. It says what a row holds before any of the
+                   workload runs — this command line reading the library and
+                   making a machine — because a whole process is the work and
+                   everything before it, and the ratio of two rows is not the
+                   ratio of two pieces of work: on the shortest workload here
+                   it is out by more than three times. See D980 and D1067.
                    `bench/measure.c` is the other half and the one to read
                    when a number moved: `bench/run.sh` times a whole process
                    with the shell's clock and answers the best of five, which is
