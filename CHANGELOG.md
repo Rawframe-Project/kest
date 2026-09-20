@@ -207,6 +207,16 @@ spelling that works now is the one that was already written, and a world split
 across files can keep a thing's states in the module the thing is in. See
 D1062.
 
+**A write to a handed copy is warned about whatever the function answers.**
+`K0346` says a struct parameter is a value and a field written on it is
+discarded; it was turned off for every function that answers anything, which is
+right about `fn stepped(p: Player, dt: f32) -> Player` and wrong about a body
+that keeps a world in a struct and answers how many things moved. **What a
+program has to do:** a body that writes a field of a struct parameter and
+answers something else now warns, and the fix is the one the message already
+names — hand the changed one back. Nothing in this tree was leaning on the
+silence. See D1065.
+
 **A table can be written to inside a promise.** `table.fit(t, key, value)` is
 `table.set` with the growth taken out, the way `fit` is `push` with the growth
 taken out: it writes where the key already is, answers `false` where it is not,

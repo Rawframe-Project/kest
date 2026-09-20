@@ -35330,3 +35330,47 @@ fourth promise is asked about without anybody remembering to — and requires th
 name to carry it. It is a new hole beside it, which this project's rule says
 not to add for a defect a program can show; this is not one. A program cannot
 see what its own types are named.
+
+## D1065. A write to a handed copy is lost whatever the function answers
+
+*argued*, and the program that shows it is in the refusal corpus.
+
+A struct is a value (D006), so a function that writes a field of one it was
+handed writes its own copy. `K0346` says so and tells a reader the shape that
+works: *answer with the changed one and let the caller take it,*
+`fn f(one: T) -> T`.
+
+**It was turned off for every function that answers anything.** The first line
+of the reading was
+
+    if (checker->result != NULL && checker->result->tag != KEST_T_VOID) {
+        return false;
+    }
+
+— which is right about the shape it was written for and wrong about every
+other. `fn stepped(p: Player, dt: f32) -> Player` uses its parameter as a place
+to work and gives it back, and warning about that would be wrong. But a body
+that keeps a world in a struct, writes `world.tick += 1` and answers *how many
+things moved* loses the write and was told nothing at all.
+
+That is not a corner. It is what a world looks like: a struct holding a store,
+a table and a few counters. The handles inside it work — a store is a handle
+and writing through one is writing the thing — and the plain fields beside them
+silently do not. A program gets half of what it wrote.
+
+**What says a function can hand it back** is the type it answers with. The
+shape the suggestion names is `fn f(one: T) -> T`; an optional of `T` is the
+same shape with a way to say no. Those two are what is allowed, and everything
+else warns. Every `.kest` file in this tree still says nothing about itself,
+which is what the gate holds, so nothing here was leaning on the silence.
+
+**What it does not catch**, said so that nobody reads more into it than is
+there: a function that answers a different type holding the parameter — a
+`struct Both { p: Player }` — is given back and will warn anyway. It is a
+warning rather than a refusal, the fix is the one the message already names,
+and the other direction was silence about the ordinary case.
+
+**Where it came from.** Section 35's slice, whose colony is a struct holding a
+store, a table and three counters, and whose round answers how many colonists
+changed what they were doing. Twenty-four rounds ran and `colony.tick` was
+nought.

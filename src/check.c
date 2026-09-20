@@ -358,14 +358,29 @@ static bool writes_only_a_copy(Checker *checker, const KestExpr *target,
 
 // Whether this writes a field of a value the caller handed over, in a function
 // that has no way to hand it back. A struct is a value (D006), so the write is
-// on this frame's copy: a function that gives something back is using its
-// parameter as a place to work, and one that gives nothing back is writing
-// where nobody will look.
-static bool writes_a_handed_copy(Checker *checker, const KestExpr *target,
-                                 const KestExpr **root) {
-    if (checker->result != NULL && checker->result->tag != KEST_T_VOID) {
+// on this frame's copy: a function using its parameter as a place to work
+// gives it back, and one that does not is writing where nobody will look.
+//
+// What says it can hand it back is the type it answers with. Any answer at all
+// used to say it, which turned this off for every function that answers
+// anything: a body that kept a world in a struct and wrote `world.tick += 1`
+// while answering how many things moved lost the write and was told nothing.
+// The shape the suggestion names is `fn f(one: T) -> T`, and an optional of
+// `T` is the same shape with a way to say no, so those two are what is
+// allowed. See D1065.
+static bool answers_with(const KestType *result, const KestType *given) {
+    if (result == NULL || given == NULL) {
         return false;
     }
+    if (kest_type_equal(result, given)) {
+        return true;
+    }
+    return result->tag == KEST_T_OPTIONAL &&
+           kest_type_equal(result->element, given);
+}
+
+static bool writes_a_handed_copy(Checker *checker, const KestExpr *target,
+                                 const KestExpr **root) {
     const KestExpr *step = target;
     bool through_a_field = false;
     while (step->kind == KEST_EXPR_FIELD || step->kind == KEST_EXPR_INDEX) {
@@ -383,8 +398,11 @@ static bool writes_a_handed_copy(Checker *checker, const KestExpr *target,
     Local *local =
         find_local(checker, span_text(checker, step->span), step->span.length);
     *root = step;
-    return local != NULL && local->is_parameter && local->type != NULL &&
-           local->type->tag == KEST_T_STRUCT;
+    if (local == NULL || !local->is_parameter || local->type == NULL ||
+        local->type->tag != KEST_T_STRUCT) {
+        return false;
+    }
+    return !answers_with(checker->result, local->type);
 }
 
 // An optional is a place a value can go, not a hint about the value itself,

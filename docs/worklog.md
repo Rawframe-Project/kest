@@ -38514,3 +38514,26 @@ See D1063 and D1064.
 
 **Runs:** `examples/inventory.kest`; the promise-shape probe watched catching
 the word taken back out; `make check`.
+
+## A write to a handed copy, lost quietly whenever the function answered
+
+A struct is a value, so writing a field of one a function was handed writes its
+own copy. `K0346` says so and names the shape that works. It was turned off for
+every function that answers anything — right about `fn stepped(p: Player, dt:
+f32) -> Player`, which uses its parameter as a place to work and gives it back,
+and wrong about everything else.
+
+A world is a struct holding a store, a table and a few counters. The handles in
+it work, because a store is a handle. The counters beside them silently do not,
+and a body that answers how many things moved gets no warning about either.
+Section 35's slice ran twenty-four rounds with `colony.tick` at nought.
+
+What says a function can hand it back is the type it answers with: the shape
+the suggestion names, or an optional of it. Everything else warns now. Every
+file in this tree still says nothing about itself, so nothing here was leaning
+on the silence, and the refusal corpus has the shape that was quiet.
+
+See D1065.
+
+**Runs:** the new corpus row watched catching the silence; every `.kest` in the
+tree swept for a warning it did not have before; `make check`.

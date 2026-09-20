@@ -1811,6 +1811,23 @@ A `let` of a struct is a copy and writing its fields is how a changed one is
 made, so nothing is said about that: `let moved = p` and then `moved.x = 0.0`
 is the idiom rather than the mistake.
 
+**A parameter is a copy too**, and a function that writes a field of one is
+writing where nobody will look unless it hands the changed one back. That is a
+warning rather than a refusal, because the shape that works is one line away:
+
+```
+warning[K0346]: `w` is a value here, so this is discarded
+      answer with the changed one and let the caller take it: `fn f(one: T) -> T`
+```
+
+It is not said of a body that answers with the parameter's own type, or with an
+optional of it, because that body is using it as a place to work and giving it
+back — which is what `fn stepped(p: Player, dt: f32) -> Player` does. Anything
+else is a lost write, whatever else the function answers. A world kept in a
+struct is the case that matters: the store and the table in it are handles and
+writing through one is writing the thing, and the counters beside them are not.
+See D1065.
+
 **An element of an array is a place**, so `world[at].x = 1.0` and
 `world[at].x += world[at].dx` write where the element is rather than into a
 copy. An element of a store is not: it is reached through `get`, which answers
