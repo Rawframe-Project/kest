@@ -34858,3 +34858,66 @@ one, which is the path a struct in an array takes.
 localized lines, looked up by key and answering `text?`. Every example in this
 tree returns a struct from a lookup, or a field out of a struct in a local, and
 neither is this shape. See D1056 for what the program was for.
+
+## D1056. What this language owns about Unicode, and what a host owns
+
+*argued*, and the program that draws the line is `examples/locale.kest`.
+
+Section 28 of the foundation reset asks where text stops being this language's
+business. The rule it gives is: do not turn core into ICU, and decide
+explicitly. So:
+
+**Core owns UTF-8 and nothing above it.** A file is UTF-8 and is held to it
+while it is read (`K0107`); bytes arriving at run time are held to it where
+they arrive (D971); `len` is bytes and `text.chars` is characters; `charWidth`,
+`charBytes` and `charBack` step forwards and backwards over characters, and the
+walk back lands where the walk forwards started; `find`, `split`, `starts`,
+`ends` and `==` are byte comparisons, which is right for UTF-8 because no
+character's bytes appear inside another's; ordering is byte order, which is a
+total order and is what a store and a sort need; and casing is ASCII and says
+so in as many words.
+
+**A host owns everything a language decides.** Which characters go together on
+a screen — a grapheme cluster — and how much room they take. Normalization:
+`e` with an acute after it and `é` are two pieces of text here, and a host that
+wants them to be one says so. Collation: `äpfel` sorts after `zebra` by bytes
+and before `apfel` in a German dictionary, and which of those a program wants
+is not something the bytes say. Locale casing: the capital of `ı` is `I` in
+Turkish and the capital of `i` is `İ`, and an ASCII table that did either would
+be wrong for the other. Bidirectional text, shaping, and display width.
+
+None of that is a gap. Every one of them needs a table that changes with the
+Unicode version, and a language that shipped one would be shipping a table its
+programs could not replace. What core owes them is a foundation that does not
+get in the way: valid UTF-8, a byte count, a character count, and a walk.
+
+**What the boundary turned out to be missing.** A character a program has to
+emit and cannot write down. The lexer refuses fourteen ranges of character in
+the source because they are in a file without being on the screen (`K0108`):
+spaces that are not the space, marks with no width, marks saying which way to
+read. That rule is right — a file that looks like one thing and is another is
+where a reader and this compiler part company — and it left no way at all to
+put one of those characters into a piece of text. A zero-width non-joiner is
+part of the spelling of a Persian verb. A non-breaking space is what French
+typography puts in front of a question mark. Neither could be written.
+
+**So there is a ninth escape: `\u{...}`.** One to six hexadecimal digits, up to
+`U+10FFFF`, refusing the surrogate halves, written out as the UTF-8 it is. It
+is the one escape that stands for a character rather than for a byte, and in a
+byte written on its own it is held to the rule every byte literal is held to:
+`'\u{41}'` is `A` and `'\u{a0}'` is two bytes and is refused, which is the same
+answer `'ı'` gets.
+
+**What it costs.** It is a surface, and section 36 asks what pays for it. What
+pays for it is that without it this language cannot spell a Persian word, and
+the alternative — `text([0xE2u8, 0x80u8, 0x8Cu8])` — is hand-written UTF-8 in a
+program, which is the one thing core is supposed to own. The list of escapes is
+still one list in one place; what changed is that one of them reads a number
+after it, so everything that walks written text asks `kest_escape_width` rather
+than stepping over one character. A walk that did not ask read `"\u{645}"` as a
+piece of text with a hole in it holding the number 1605, and said nothing.
+
+**What stayed the same.** A byte literal holds one byte, and it now reads its
+escape through `kest_literal_text` rather than through a second list beside the
+lexer's — which is how `\u{41}` is one byte there without anybody adding it to
+a switch.

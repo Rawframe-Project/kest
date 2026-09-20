@@ -38198,3 +38198,55 @@ See D1055.
 **Runs:** `examples/lookup.kest` under the fix and reverted, to see it caught;
 every example under both builds and with the fusions and the optimizer off;
 `make check`.
+
+## Where text stops being this language's business
+
+Section 28 of the foundation reset asks for the Unicode boundary to be decided
+explicitly rather than drifted into: core may own validated UTF-8, byte length,
+safe navigation and universally correct small operations; a host may own
+grapheme clusters, normalization, collation, locale casing, bidirectional text,
+shaping and display width. Most of the line was already where it belongs and
+was written down in nobody's words: `K0107` holds a file to UTF-8, D971 holds
+bytes arriving at run time to it, `std.text` has `chars`, `charAt`, `charWidth`
+and `charBack`, and `upper` has a comment saying it is ASCII and why. What was
+missing was the sentence that says which side of the line each of those is on,
+and a program that stands on both sides of it. `examples/locale.kest` is that
+program: a catalogue of localized lines, five languages, and a check for every
+claim.
+
+**And writing that program found a hole in the line.** The lexer refuses
+fourteen ranges of character in the source, because they are in a file without
+being on the screen — a mark with no width, a space that is not the space, a
+mark saying which way to read. That rule is right and it left no way to put one
+of those characters into a piece of text at all. A zero-width non-joiner is part
+of the spelling of a Persian verb; a non-breaking space is what French puts in
+front of a question mark. The only way to write either was
+`text([0xE2u8, 0x80u8, 0x8Cu8])`, which is hand-written UTF-8 in a program, in a
+language whose whole claim here is that it owns UTF-8 so a program does not have
+to.
+
+So there is a ninth escape. `\u{...}` is one to six hexadecimal digits, up to
+`U+10FFFF`, refusing the surrogate halves, written out as the UTF-8 it is. It is
+the one escape that stands for a character rather than for a byte, and a byte
+literal takes it under the rule every byte literal is under: `'\u{41}'` is `A`
+and `'\u{a0}'` is two bytes and is refused, which is what `'ı'` gets. Reading it
+there goes through `kest_literal_text` now instead of a second switch beside the
+lexer's, so the byte literal and the string are one list again.
+
+**What it turned up.** Everything that walks written text stepped over an escape
+by adding one, and `\u{645}` is a backslash, a `u`, and then a brace. The
+parser's two walks over a string read that brace as the start of a hole, so
+`"\u{645}"` was a piece of text with the number 1605 interpolated into it and
+nothing said a word. They ask `kest_escape_width` now. The same walk in
+`kest_comments` was already right, because it counts braces and `\u{...}`
+balances.
+
+Writing the catalogue also found a compiler fault, which is the commit before
+this one.
+
+See D1056.
+
+**Runs:** the five refusals `K0110` can say, each through the refusal corpus;
+Persian, French, Japanese, Turkish and a combining mark through
+`examples/locale.kest`; `'\u{41}'` and `'\u{a0}'` as byte literals; the escape
+tables held against a run and against the reference; `make check`.

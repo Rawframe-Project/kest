@@ -1,0 +1,155 @@
+module examples.locale
+
+import std.io
+import std.text
+
+// What a localized program runs into, and where this language stops. Core
+// owns UTF-8: that a file is one, that bytes arriving are one, how long a
+// piece of text is in bytes and in characters, how to step forwards and
+// backwards over it, and how to write any character down. It does not own
+// what a language does with characters — which of them go together on screen,
+// which order they sort in, and which letter is the capital of which. Those
+// are a host's, and this program is the line between the two with a program
+// on either side of it. See D1056.
+
+struct Line {
+    key: text
+    said: text
+}
+
+fn saying(lines: [Line], key: text) -> text? no.alloc {
+    for line in lines {
+        if line.key == key {
+            return line.said
+        }
+    }
+    return none
+}
+
+// A catalogue is looked up by its key and the keys are bytes, so this is a
+// byte comparison and it is right: two pieces of UTF-8 are the same text when
+// they are the same bytes. What it is not is a search that knows `e` and `é`
+// are the same letter to somebody looking for a word, which is the host's
+// question and not this one.
+fn catalogue() -> [Line] {
+    let lines: [Line] = array()
+    push(lines, Line("greeting.en", "Hello"))
+    // Persian. The mark between the two halves of the word is a zero-width
+    // non-joiner: it is part of the spelling and it is invisible, so the file
+    // may not hold one — `K0108` refuses it where it is written — and it is
+    // written by its number instead. Without an escape for that this language
+    // could not spell a Persian verb.
+    push(
+        lines,
+        Line("greeting.fa", "\u{645}\u{6cc}\u{200c}\u{631}\u{648}\u{645}")
+    )
+    // French. The space in front of the question mark is a non-breaking one,
+    // which is what French typography asks for and is also invisible in a
+    // file.
+    push(lines, Line("greeting.fr", "\u{ab}Bonjour\u{a0}?\u{bb}"))
+    push(lines, Line("greeting.ja", "こんにちは"))
+    push(lines, Line("greeting.tr", "ışık"))
+    return lines
+}
+
+fn main() -> i32 {
+    let lines = catalogue()
+
+    if saying(lines, "greeting.de") != none {
+        return 1
+    }
+
+    // A character is not a byte, and both counts are the program's to ask
+    // for. Six characters of Persian in thirteen bytes, five of Japanese in
+    // fifteen.
+    if let fa = saying(lines, "greeting.fa") {
+        if len(fa) != 13 || text.chars(fa) != 6 {
+            return 2
+        }
+        // The mark is one character of the six, three bytes wide, and the
+        // walk forwards and the walk back agree about where it begins.
+        if text.charWidth(rest(fa, 4)) != 3 || text.charBack(fa, 7) != 4 {
+            return 3
+        }
+    } else {
+        return 4
+    }
+
+    if let ja = saying(lines, "greeting.ja") {
+        if len(ja) != 15 || text.chars(ja) != 5 {
+            return 5
+        }
+        // A column is measured in bytes, because text is its bytes. Padding
+        // this to ten leaves it alone: it is already fifteen bytes wide and
+        // five characters wide and neither is how much room it takes on a
+        // screen, which depends on the font and is nobody's business here.
+        if len(text.left(ja, 10)) != 15 {
+            return 6
+        }
+    } else {
+        return 7
+    }
+
+    // The non-breaking space is not the space, which is the whole reason for
+    // it: splitting on an ordinary space leaves the question mark attached to
+    // the word it belongs with.
+    if let fr = saying(lines, "greeting.fr") {
+        let words = text.split(fr, " ")
+        if len(words) != 1 {
+            return 8
+        }
+        if !text.contains(fr, "\u{a0}") {
+            return 9
+        }
+    } else {
+        return 10
+    }
+
+    // Casing here is ASCII and says so. `ışık` upper-cases to `ışıK`: the `k`
+    // is ASCII and the rest is not, and the capital of a dotless `ı` is `I`
+    // in Turkish and `I` of a different letter in English. Which of those it
+    // is depends on the language the text is in, which this language is not
+    // told and does not guess.
+    if let tr = saying(lines, "greeting.tr") {
+        if text.upper(tr) != "ışıK" {
+            return 11
+        }
+        if text.upper("ascii") != "ASCII" {
+            return 12
+        }
+    } else {
+        return 13
+    }
+
+    // A combining mark is a character of its own. `e` and the acute above it
+    // are two characters and one thing on a screen, and the same letter
+    // written the other way is one character. Neither counting nor comparing
+    // says they are the same word: normalization is a host's.
+    let apart = "e\u{301}"
+    let together = "\u{e9}"
+    if text.chars(apart) != 2 || text.chars(together) != 1 {
+        return 14
+    }
+    if apart == together {
+        return 15
+    }
+
+    // Order is byte order. That is a total order over every piece of text,
+    // which is what a store and a sort need, and it is not a dictionary's:
+    // `äpfel` sorts after `zebra` because its first byte is 195.
+    if !("apfel" < "zebra") || !("zebra" < "äpfel") {
+        return 16
+    }
+
+    // Where bytes become text is where they are held to being UTF-8. The
+    // halves of a character are bytes until the last one arrives.
+    let built: [u8] = array()
+    push(built, 200)
+    push(built, 159)
+    if len(built) != 2 {
+        return 17
+    }
+
+    io.print("{text.join(["en", "fa", "fr", "ja", "tr"], " ")}: {len(lines)} lines")
+    return 0
+}

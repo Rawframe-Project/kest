@@ -45,21 +45,31 @@ static const char *const TOKEN_NAMES[] = {
 // What an escape is written as and what it stands for. One list: what a piece
 // of text may hold, what a byte written on its own may hold, what either turns
 // into, and the message that names them are all read from here. A `default`
-// beside a few cases is how a ninth would arrive without anybody deciding what
+// beside a few cases is how a tenth would arrive without anybody deciding what
 // it means.
-static const struct {
+typedef struct {
     char written;
     char means;
-} ESCAPES[] = {
-    {'n', '\n'}, {'t', '\t'},   {'r', '\r'}, {'\\', '\\'},
-    {'"', '"'}, {'{', '{'}, {'}', '}'}, {'0', '\0'},
+    bool reads;
+} Escape;
+
+// One of them stands for a character rather than for a byte, and reads the
+// character's number after it. It is here because the file may not hold the
+// character itself: a mark with no width is refused by `K0108` where it is
+// written, and text that has to carry one -- a zero-width non-joiner between
+// the parts of a Persian word, a non-breaking space in front of a French
+// question mark -- has nowhere else to be written. See D1056.
+static const Escape ESCAPES[] = {
+    {'n', '\n', false},  {'t', '\t', false}, {'r', '\r', false},
+    {'\\', '\\', false}, {'"', '"', false},  {'{', '{', false},
+    {'}', '}', false},   {'0', '\0', false}, {'u', 0, true},
 };
 
-// What it stands for, or NULL for a character that is not one of them.
-static const char *escape_means(char written) {
+// The one written this way, or NULL for a character that is not an escape.
+static const Escape *escape_named(char written) {
     for (size_t i = 0; i < sizeof(ESCAPES) / sizeof(ESCAPES[0]); i++) {
         if (ESCAPES[i].written == written) {
-            return &ESCAPES[i].means;
+            return &ESCAPES[i];
         }
     }
     return NULL;
@@ -68,7 +78,7 @@ static const char *escape_means(char written) {
 // The list a reader is given when they write one that is not there, built
 // from the same table rather than written out beside it.
 static const char *escapes_written(KestArena *arena) {
-    size_t room = sizeof(ESCAPES) / sizeof(ESCAPES[0]) * 4 + 1;
+    size_t room = sizeof(ESCAPES) / sizeof(ESCAPES[0]) * 9 + 1;
     char *out = kest_arena_alloc(arena, room, 1);
     if (out == NULL) {
         return "";
@@ -80,9 +90,116 @@ static const char *escapes_written(KestArena *arena) {
         }
         out[used++] = '\\';
         out[used++] = ESCAPES[i].written;
+        if (ESCAPES[i].reads) {
+            memcpy(out + used, "{...}", 5);
+            used += 5;
+        }
     }
     out[used] = '\0';
     return out;
+}
+
+typedef enum {
+    NUMBER_READ,
+    NUMBER_NO_BRACE,
+    NUMBER_NO_DIGITS,
+    NUMBER_TOO_LONG,
+    NUMBER_NOT_CLOSED,
+    NUMBER_NOT_A_CHARACTER,
+} NumberRead;
+
+// At most six, because the last character there is is `U+10FFFF`.
+#define NUMBER_DIGITS 6u
+
+// What the digit is worth, or sixteen for a character that is not one.
+static uint32_t hex_digit(char c) {
+    if (c >= '0' && c <= '9') {
+        return (uint32_t)(c - '0');
+    }
+    if (c >= 'a' && c <= 'f') {
+        return (uint32_t)(c - 'a') + 10u;
+    }
+    if (c >= 'A' && c <= 'F') {
+        return (uint32_t)(c - 'A') + 10u;
+    }
+    return 16u;
+}
+
+// What is written after a `\u`, read from the brace that has to follow it.
+// Answers how many characters that took and which character is written there,
+// or why what is written there is not one. The lexer and the reader of a
+// literal walk it with this one function, so they cannot disagree about where
+// an escape ends.
+static NumberRead character_number(const char *text, uint32_t length,
+                                   uint32_t at, uint32_t *width,
+                                   uint32_t *code) {
+    *width = 0;
+    *code = 0;
+    if (at >= length || text[at] != '{') {
+        return NUMBER_NO_BRACE;
+    }
+
+    uint32_t digits = 0;
+    uint32_t value = 0;
+    uint32_t i = at + 1;
+    for (; i < length; i++) {
+        uint32_t digit = hex_digit(text[i]);
+        if (digit > 15u) {
+            break;
+        }
+        if (digits < NUMBER_DIGITS) {
+            value = (value << 4) | digit;
+        }
+        digits++;
+    }
+
+    if (i >= length || text[i] != '}') {
+        return digits == 0 ? NUMBER_NO_DIGITS : NUMBER_NOT_CLOSED;
+    }
+    // How far it reaches is answered even when what is written in it is
+    // refused, so that everything else walking this text steps over the whole
+    // escape rather than finding a hole where the brace is and saying
+    // something about that instead.
+    *width = i + 1 - at;
+    if (digits == 0) {
+        return NUMBER_NO_DIGITS;
+    }
+    if (digits > NUMBER_DIGITS) {
+        return NUMBER_TOO_LONG;
+    }
+    if (value > 0x10ffff || (value >= 0xd800 && value <= 0xdfff)) {
+        *code = value;
+        return NUMBER_NOT_A_CHARACTER;
+    }
+
+    *code = value;
+    return NUMBER_READ;
+}
+
+// The character written out as the bytes it is, and how many there are. The
+// one encoder there is, the way `decoded` below is the one decoder: a
+// character this writes is a character that reads back. See D971.
+static uint32_t utf8_written(uint32_t code, char *out) {
+    if (code < 0x80) {
+        out[0] = (char)code;
+        return 1;
+    }
+    if (code < 0x800) {
+        out[0] = (char)(0xc0u | (code >> 6));
+        out[1] = (char)(0x80u | (code & 0x3fu));
+        return 2;
+    }
+    if (code < 0x10000) {
+        out[0] = (char)(0xe0u | (code >> 12));
+        out[1] = (char)(0x80u | ((code >> 6) & 0x3fu));
+        out[2] = (char)(0x80u | (code & 0x3fu));
+        return 3;
+    }
+    out[0] = (char)(0xf0u | (code >> 18));
+    out[1] = (char)(0x80u | ((code >> 12) & 0x3fu));
+    out[2] = (char)(0x80u | ((code >> 6) & 0x3fu));
+    out[3] = (char)(0x80u | (code & 0x3fu));
+    return 4;
 }
 
 // The bytes a written piece of text stands for, and how many there are. The
@@ -108,11 +225,27 @@ const char *kest_literal_text(KestArena *arena, const KestSource *source,
             continue;
         }
         i++;
-        const char *stands_for = escape_means(raw[i]);
+        const Escape *escape = escape_named(raw[i]);
         // One that is not an escape was refused where it was read, and what
         // is written here is what somebody wrote: a message about it says so
         // and this is not the place to say it twice.
-        text[used++] = stands_for == NULL ? raw[i] : *stands_for;
+        if (escape == NULL) {
+            text[used++] = raw[i];
+            continue;
+        }
+        if (!escape->reads) {
+            text[used++] = escape->means;
+            continue;
+        }
+        uint32_t width = 0;
+        uint32_t code = 0;
+        if (character_number(raw, (uint32_t)length, (uint32_t)(i + 1), &width,
+                             &code) == NUMBER_READ) {
+            used += utf8_written(code, text + used);
+        } else {
+            text[used++] = raw[i];
+        }
+        i += width;
     }
     // Still ended with a nought, for a host that reads the bytes as a C
     // string where it knows there is none inside. What says how long it is is
@@ -122,6 +255,20 @@ const char *kest_literal_text(KestArena *arena, const KestSource *source,
         *length_out = used;
     }
     return text;
+}
+
+uint32_t kest_escape_width(const KestSource *source, uint32_t at) {
+    const Escape *escape = at + 1 < source->length
+                               ? escape_named(source->text[at + 1])
+                               : NULL;
+    if (escape == NULL || !escape->reads) {
+        return 2;
+    }
+    uint32_t width = 0;
+    uint32_t code = 0;
+    character_number(source->text, (uint32_t)source->length, at + 2, &width,
+                     &code);
+    return 2 + width;
 }
 
 double kest_literal_real(const KestSource *source, KestSpan span) {
@@ -279,6 +426,55 @@ static bool is_ident_part(char c) {
 static KestSpan span_from(uint32_t start, uint32_t end) {
     KestSpan span = {start, end - start};
     return span;
+}
+
+// A character written by its number, read from the backslash it begins at.
+// Answers how far it reaches, which is the two characters of `\u` when what
+// follows them is not a number, so that the rest of the text is still walked.
+static uint32_t scan_character_escape(KestLexer *lexer, uint32_t at) {
+    uint32_t width = 0;
+    uint32_t code = 0;
+    NumberRead read = character_number(lexer->source->text,
+                                       (uint32_t)lexer->source->length, at + 2,
+                                       &width, &code);
+    KestSpan span = span_from(at, at + 2);
+    switch (read) {
+    case NUMBER_READ:
+        return 2 + width;
+    case NUMBER_NO_BRACE:
+        kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0110", span,
+                       "`\\u` is written without a character after it");
+        kest_diags_suggest(lexer->diags,
+                           "the number goes in braces: `\\u{200c}`");
+        break;
+    case NUMBER_NO_DIGITS:
+        kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0110", span,
+                       "the braces after `\\u` hold no number");
+        kest_diags_suggest(lexer->diags,
+                           "a character's number is written in hexadecimal: "
+                           "`\\u{200c}`");
+        break;
+    case NUMBER_TOO_LONG:
+        kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0110", span,
+                       "a character's number is at most %u digits",
+                       NUMBER_DIGITS);
+        kest_diags_suggest(lexer->diags,
+                           "the last character there is is `\\u{10ffff}`");
+        break;
+    case NUMBER_NOT_CLOSED:
+        kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0110", span,
+                       "the braces after `\\u` are not closed");
+        kest_diags_suggest(lexer->diags, "add a closing `}`");
+        break;
+    case NUMBER_NOT_A_CHARACTER:
+        kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0110", span,
+                       "`U+%04X` is not a character", code);
+        kest_diags_suggest(lexer->diags,
+                           "characters run up to `U+10FFFF`, and `U+D800` to "
+                           "`U+DFFF` are not among them");
+        break;
+    }
+    return 2 + width;
 }
 
 static KestToken make(KestLexer *lexer, KestTokenKind kind, uint32_t start) {
@@ -464,14 +660,19 @@ static KestToken scan_string(KestLexer *lexer, uint32_t start) {
         }
         if (c == '\\') {
             char escape = at(lexer, 1);
-            if (escape == '\0' || escape_means(escape) == NULL) {
+            const Escape *known = escape == '\0' ? NULL : escape_named(escape);
+            if (known == NULL) {
                 kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0103",
                                span_from(lexer->offset, lexer->offset + 2),
                                "unknown escape sequence `\\%c`", escape);
                 kest_diags_suggest(lexer->diags, "known escapes are %s",
                                    escapes_written(lexer->diags->arena));
+                lexer->offset += 2;
+                continue;
             }
-            lexer->offset += 2;
+            lexer->offset += known->reads
+                                 ? scan_character_escape(lexer, lexer->offset)
+                                 : 2;
             continue;
         }
         // A byte that ends a line on another machine, written inside text as
@@ -572,7 +773,8 @@ static KestToken kest_lexer_next(KestLexer *lexer) {
                     // The same escapes text has, said the same way: a byte
                     // written on its own and a byte written in a piece of
                     // text are one spelling, and one spelling is one list.
-                    if (escape_means(at(lexer, 1)) == NULL) {
+                    const Escape *known = escape_named(at(lexer, 1));
+                    if (known == NULL) {
                         kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR,
                                        "K0103",
                                        span_from(lexer->offset,
@@ -584,7 +786,11 @@ static KestToken kest_lexer_next(KestLexer *lexer) {
                                            escapes_written(
                                                lexer->diags->arena));
                     }
-                    lexer->offset++;
+                    lexer->offset += known != NULL && known->reads
+                                         ? scan_character_escape(lexer,
+                                                                 lexer->offset)
+                                               - 1
+                                         : 1;
                 } else if (at(lexer, 0) == '\r') {
                     kest_diags_add(lexer->diags, KEST_SEVERITY_ERROR, "K0109",
                                    span_from(lexer->offset, lexer->offset + 1),

@@ -5864,7 +5864,7 @@ anywhere, and it is why the gate holds""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "118306 as a tree, 155816 checked",
+        "caught": "118306 as a tree, 155824 checked",
     },
     {
         # And the section they are in saying whose machine they are. Bytes of
@@ -12327,10 +12327,11 @@ fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc no.host deterministic 
         # is the only one a program can feel.
         "what": "an escape nothing names",
         "file": "src/lexer.c",
-        # Added to the one table everything reads, which is where a ninth
+        # Added to the one table everything reads, which is where a tenth
         # would really arrive.
-        "from": """    {'"', '"'}, {'{', '{'}, {'}', '}'}, {'0', '\\0'},""",
-        "to": """    {'"', '"'}, {'{', '{'}, {'}', '}'}, {'0', '\\0'}, {'e', 'e'},""",
+        "from": """    {'}', '}', false},   {'0', '\\0', false}, {'u', 0, true},""",
+        "to": """    {'}', '}', false},   {'0', '\\0', false}, {'u', 0, true},
+    {'e', 'e', false},""",
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "caught": "escapes: a run takes",

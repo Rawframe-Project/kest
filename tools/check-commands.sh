@@ -3750,6 +3750,11 @@ K0102|fn main() -> i32 {\n    let a = 1 $ 2\n    return a\n}|unexpected characte
 K0104|fn main() -> i32 {\n    let a = 0x\n    return a\n}|literal has no digits
 K0107|fn main() -> i32 {\n    let s = "\0377"\n    return len(s)\n}|starts no character
 K0108|fn main() -> i32 {\n    let s = "\0357\0273\0277hi"\n    return len(s)\n}|a mark with no width
+K0110|fn main() -> i32 {\n    let s = "\\u"\n    return len(s)\n}|written without a character after it
+K0110|fn main() -> i32 {\n    let s = "\\u{}"\n    return len(s)\n}|hold no number
+K0110|fn main() -> i32 {\n    let s = "\\u{1234567}"\n    return len(s)\n}|at most 6 digits
+K0110|fn main() -> i32 {\n    let s = "\\u{41"\n    return len(s)\n}|are not closed
+K0110|fn main() -> i32 {\n    let s = "\\u{d800}"\n    return len(s)\n}|is not a character
 K0201|fn main() -> i32 \n    return 0\n}|expected
 K0201|struct P {\n    break: i32\n}\n\nfn main() -> i32 {\n    return 0\n}|expected identifier, found `break`
 K0202|what\n|expected a declaration

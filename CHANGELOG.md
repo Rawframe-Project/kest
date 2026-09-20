@@ -153,6 +153,18 @@ a world across eight threads went from 2.5 times to 4.9, and a program that
 never makes a second machine got 37 to 47 per cent faster at making places. See
 D1053.
 
+**Text can spell a character a file may not hold.** `\u{...}` is a ninth
+escape: one to six hexadecimal digits, up to `U+10FFFF`, refusing the surrogate
+halves, written out as the UTF-8 it is. The lexer refuses the invisible
+characters in a source file — a mark with no width, a space that is not the
+space, a mark saying which way to read — and that left a Persian verb, which is
+spelled with a zero-width non-joiner, unwritable. **What a program has to do:**
+nothing, unless it built one of those characters out of bytes by hand, which it
+can now write down. A byte literal takes it under the rule byte literals are
+already under: `'\u{41}'` is `A` and `'\u{a0}'` is two bytes and is refused.
+The reference now says what this language owns about Unicode and what a host
+owns. See D1056.
+
 **What changed for a host.** The version. The other three numbers — the C ABI,
 the JSON schema, and the deterministic profile — still read 4, 3 and 1, and
 will be settled to clean `0.0.x` numbers once the architecture this reset is

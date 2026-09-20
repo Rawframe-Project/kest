@@ -4128,22 +4128,23 @@ static int64_t byte_of(Checker *checker, KestSpan span) {
     uint32_t held = length - 2;
 
     if (inside[0] == '\\') {
-        if (held != 2) {
+        // What the escape stands for is read the one way it is read anywhere,
+        // rather than by a second list beside the lexer's: `\u{41}` is a
+        // character that happens to be one byte, and a list of its own here
+        // would be a list that did not know about it.
+        KestSpan content = {span.offset + 1, held};
+        size_t bytes = 0;
+        const char *stands_for =
+            kest_literal_text(checker->program->diags->arena,
+                              checker->program->source, content, &bytes);
+        if (bytes != 1) {
             report(checker, span, "K0344", "a byte literal holds one byte");
+            kest_diags_suggest(checker->program->diags,
+                               "text is its bytes and there is no character "
+                               "type");
             return -1;
         }
-        switch (inside[1]) {
-        case 'n':
-            return '\n';
-        case 't':
-            return '\t';
-        case 'r':
-            return '\r';
-        case '0':
-            return 0;
-        default:
-            return (unsigned char)inside[1];
-        }
+        return (unsigned char)stands_for[0];
     }
     if (held != 1) {
         report(checker, span, "K0344",

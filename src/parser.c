@@ -788,7 +788,7 @@ static KestExpr *parse_string(Parser *parser, KestSpan span) {
     bool interpolated = false;
     for (uint32_t i = start; i < end; i++) {
         if (parser->source->text[i] == '\\') {
-            i++;
+            i += kest_escape_width(parser->source, i) - 1;
         } else if (parser->source->text[i] == '{') {
             interpolated = true;
             break;
@@ -802,7 +802,7 @@ static KestExpr *parse_string(Parser *parser, KestSpan span) {
     uint32_t chunk = start;
     for (uint32_t i = start; i < end; i++) {
         if (parser->source->text[i] == '\\') {
-            i++;
+            i += kest_escape_width(parser->source, i) - 1;
             continue;
         }
         if (parser->source->text[i] != '{') {

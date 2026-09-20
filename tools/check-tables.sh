@@ -808,21 +808,29 @@ if enforced != printed_numbers:
 # and the answer says whether it is one — because reading the set out of the
 # source is reading the same list a second time rather than a different one.
 #
-# Asked of a byte written on its own rather than of a piece of text, because
-# that is where all of them are legal: a nought is an escape and text is the
-# one place it may not go, since text ends at its first one.
+# Asked of a byte written on its own, because that is where all of them are
+# legal: a byte written in a string and a byte written on its own are one
+# spelling. Two spellings are tried for each, because one of them stands for a
+# character rather than for a byte and carries the character's number after it,
+# and a character that is one byte is a byte literal like any other. Asking
+# only the short way would leave that one out of what a run takes while the
+# message still named it.
 accepted = set()
 work = tempfile.mkdtemp()
 try:
     probe = os.path.join(work, 'escape.kest')
     for code in range(0x21, 0x7f):
         one = chr(code)
-        open(probe, 'w').write(
-            "fn main() -> i32 {\n    let b = '\\%s'\n    return 0\n}\n" % one)
-        ran = subprocess.run(['./kest', 'check', probe], capture_output=True,
-                             text=True, stdin=subprocess.DEVNULL)
-        if ran.returncode == 0:
-            accepted.add(one)
+        for written in ("\\%s" % one, "\\%s{41}" % one):
+            open(probe, 'w').write(
+                "fn main() -> i32 {\n    let b = '%s'\n    return 0\n}\n"
+                % written)
+            ran = subprocess.run(['./kest', 'check', probe],
+                                 capture_output=True, text=True,
+                                 stdin=subprocess.DEVNULL)
+            if ran.returncode == 0:
+                accepted.add(one)
+                break
     # And what it says about one it does not know, which is where a reader is
     # told what the set is. Which character that is comes from the answer
     # above, so this asks about one the compiler really does not know.
@@ -839,7 +847,7 @@ finally:
 names_back = some("the escapes a run names", set(re.findall(
     r'\\(\S)', said.partition('known escapes are')[2])))
 printed_escapes = some("the escapes the reference prints", set(re.findall(
-    r'`\\(.)`',
+    r'`\\(.)(?:\{\.\.\.\})?`',
     table('docs/language.md', r'The escapes are\n(.*?)\n\n'))))
 if accepted != names_back:
     print("escapes: a run takes %s and names %s"

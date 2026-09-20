@@ -1132,13 +1132,47 @@ in the library that cuts. `examples/words.kest` walks both ways.
 
 `'a'` is one byte written the way it reads, and its type is `u8`. It is not a
 character: `'ı'` is two bytes and is refused, and so is `'ab'`. The escapes are
-the ones a string has — `\n`, `\t`, `\r`, `\\`, `\"`, `\{`, `\}`, `\0` — so a byte
-written in a string and a byte written on its own are one spelling.
+the ones a string has — `\n`, `\t`, `\r`, `\\`, `\"`, `\{`, `\}`, `\0`, `\u{...}` — so a byte
+written in a string and a byte written on its own are one spelling. The last of
+them stands for a character rather than for a byte, so it is a byte literal
+only when the character is one: `'\u{41}'` is `A` and `'\u{a0}'` is two bytes and
+is refused, which is the answer `'ı'` gets.
 
 All of them are allowed inside text, `\0` with the rest. Text carries how many
 bytes it is rather than ending at the first nought, so a nought in the middle
 of a piece of text is a character in the middle of a piece of text and `len`
 counts it. `'\0'` on its own is a `u8` of nought and is the same byte. See D971.
+
+`\u{...}` is a character written by its number: one to six hexadecimal digits,
+up to `U+10FFFF`, written out as the UTF-8 it is. It is there because a file
+may not hold every character a program has to emit. A mark with no width, a
+space that is not the space and a mark saying which way to read are refused
+where they are written — a file that looks like one thing and is another is
+where a reader and this compiler part company — and some of them are part of
+how a language is spelled. The mark between the halves of a Persian verb is
+one; the space French typography puts in front of a question mark is another.
+
+```kest
+import std.io
+
+fn main() -> i32 {
+    // A zero-width non-joiner, which is part of the word and is invisible.
+    let verb = "\u{645}\u{6cc}\u{200c}\u{631}\u{648}\u{645}"
+    io.print("{len(verb)} bytes")
+    return 0
+}
+```
+
+```text
+13 bytes
+```
+
+A number that is not a character is refused:
+
+```
+error[K0110]: `U+D800` is not a character
+      characters run up to `U+10FFFF`, and `U+D800` to `U+DFFF` are not among them
+```
 
 One of them is not allowed as itself. A carriage return inside text, written
 as the byte rather than as `\r`, is refused:
@@ -5175,6 +5209,25 @@ piece and how many bytes of it, so the byte after it belongs to what it was cut
 from. A host reading text hands the bytes and the length to whatever it is
 calling rather than treating what it was given as a C string.
 
+**What this language owns about Unicode, and what a host owns.** Core owns
+UTF-8 and nothing above it: that a file is one and that bytes arriving are one,
+how many bytes a piece of text is and how many characters, stepping forwards
+and backwards over characters, comparing and searching by bytes — which is
+right for UTF-8, because no character's bytes appear inside another's — byte
+order, which is a total order and is what a store and a sort need, and casing
+that is ASCII and says so.
+
+A host owns everything a language decides. Which characters go together on a
+screen and how much room they take. Normalization: `e` with an acute after it
+and `é` are two pieces of text here. Collation: `äpfel` sorts after `zebra` by
+bytes and before `apfel` in a German dictionary, and the bytes do not say which
+a program wants. Locale casing: the capital of `ı` is `I` in Turkish and the
+capital of `i` is `İ`, and one ASCII table cannot be right for both. And
+bidirectional text, shaping and display width. Each of those needs a table that
+changes with the Unicode version, and a language that shipped one would be
+shipping a table its programs could not replace. `examples/locale.kest` is the
+line with a program on both sides of it. See D1056.
+
 **What a host reads it through** is `kest_text_bytes`, which answers the bytes
 and how many there are and costs nothing: it reads the second slot. A host that
 reads the `text` member itself gets the same bytes and has to know whether the
@@ -5728,6 +5781,7 @@ here, is a check that fails.
 | `inventory.kest` | a container written in Kest rather than built into the language |
 | `least.kest` | one extern and one call, for the smallest host there is |
 | `lines.kest` | a program that reads, and a host that has to provide the reading |
+| `locale.kest` | where text stops being this language's business and starts being a host's |
 | `lookup.kest` | a lookup that finds nothing, which is a value and not a crash |
 | `math.kest` | a loop, a chain of `if`, and a function that answers with text |
 | `numbers.kest` | what a number does at the end of its range, at every width |
@@ -6018,7 +6072,7 @@ bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 502 lines:
-47956 bytes as tokens, 118617 as a tree, 155816 checked and 183217 compiled.
+47956 bytes as tokens, 118617 as a tree, 155824 checked and 183233 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
 
@@ -6035,7 +6089,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 17323 bytes, against the 183217 it costs to compile.
+file and 17323 bytes, against the 183233 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.

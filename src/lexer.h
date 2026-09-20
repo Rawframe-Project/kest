@@ -129,6 +129,15 @@ bool kest_utf8_whole(const char *bytes, uint32_t length, uint32_t *bad);
 const char *kest_literal_text(KestArena *arena, const KestSource *source,
                               KestSpan span, size_t *length);
 
+// How far the escape written at this offset reaches, counted from the
+// backslash it begins at. Two for every one that stands for a byte, and more
+// for `\u{...}`, which carries a character's number after it. Anything that
+// walks written text looking for what it is made of asks here rather than
+// stepping over one character: the brace after a `\u` is not a hole, and the
+// walk that read it as one made `"\u{645}"` a piece of text with the number
+// 1605 written into it. See D1056.
+uint32_t kest_escape_width(const KestSource *source, uint32_t at);
+
 // What a number literal is worth, as a double. An `f32` is narrowed by
 // whatever wanted it, because the narrowing is about the type and not about
 // the spelling.
