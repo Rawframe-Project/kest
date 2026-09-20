@@ -38272,3 +38272,43 @@ should not print like one.
 
 **Runs:** `bench/families.sh` at ten samples, all twenty-three bodies timed; the
 same with the module name broken on purpose, to see the refusal.
+
+## The harness, inspected, and the one thing outside it
+
+Section 33 asks for the repository's own machinery to be looked at: giant shell
+harnesses, duplicated metadata, hand-parsed tables, failure localization, edit
+fan-out, truth scattered across sources. Refactor only where the replacement is
+measurably simpler, and no validation framework larger than Kest.
+
+It is not larger. `src` is 46,968 lines; `tools` is 35,611, and 15,390 of those
+are the 866 hole records in `check-backstops.sh`, which are data. The harness
+proper is 20,216 lines. Nothing was split: the five scripts over two thousand
+lines are one subject each, each runs on its own in seconds, and every one of
+the 581 things they say when something is wrong has been watched being said.
+
+Edit fan-out was measured on two changes made the same week: a new escape
+touched twelve files and a compiler fix touched four. Every one of the twelve is
+an obligation written down somewhere in this project, and none is the same fact
+twice.
+
+**The finding is `bench`, which has no gate over it.** The micro family had
+been calling twenty-three bodies by names D1039 changed, printing `would not
+run` for every one of them under a heading, with three families of real numbers
+underneath — which reads like a table. `bench` is outside `make check` because a
+duration is not a pass or a fail. That is true and the conclusion was wrong: a
+row that is a number is a pass or a fail. There is a `benches` section now, five
+seconds, four families at the smallest scale that fills them, reading rows and
+not durations.
+
+Two more things the instrument was measuring and nobody was reading: what a
+program costs to compile, to start and on its first call, and what the collector
+did — how many walks and the pause distribution. They are printed beside each
+reference program now. And the line saying which machine a number came from read
+`model name` out of `/proc/cpuinfo`, which is an x86 line: on aarch64 it printed
+`cpu` and nothing, which is a measurement that does not say whose it is.
+
+See D1057.
+
+**Runs:** the four families at full scale and at `QUICKLY=1`; the gate's new
+`benches` section; the same with the module name broken on purpose, to see the
+refusal; `make check`.

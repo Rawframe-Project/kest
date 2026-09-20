@@ -34921,3 +34921,69 @@ piece of text with a hole in it holding the number 1605, and said nothing.
 escape through `kest_literal_text` rather than through a second list beside the
 lexer's — which is how `\u{41}` is one byte there without anybody adding it to
 a switch.
+
+## D1057. What is outside the gate is where the rot is
+
+*argued*, and the evidence is that it had already happened.
+
+Section 33 of the foundation reset asks for the harness to be inspected: giant
+shell scripts, duplicated metadata, hand-parsed tables, failure localization,
+edit fan-out, and truth scattered across sources. Refactor only where the
+replacement is measurably simpler, and no validation framework larger than
+Kest.
+
+**The sizes.** `src` is 46,968 lines. `tools` is 35,611, of which
+`check-backstops.sh` is 15,995 — and 15,390 of those are the 866 hole records,
+which are data and not a framework. The harness proper is 20,216 lines against
+a language of 46,968 and a library and examples of 9,590. It is not larger than
+Kest and it is not close.
+
+**The five big scripts stay.** `check-commands.sh` is 5,966 lines,
+`check.sh` 2,744, `check-tables.sh` 2,708, `check-costs.sh` 2,425,
+`check-ceilings.sh` 2,123. Section 33 says not to split a file because it is
+large, and there is nothing to gain here: each is one subject, each runs on its
+own in seconds, and a complaint from any of them names the file and the thing.
+`check-tables.sh` already holds every one of them to nine properties a check
+has to have, and to saying nothing a hole has not been seen making it say —
+581 sentences, every one watched.
+
+**Failure localization and edit fan-out, measured rather than argued.** Two
+changes were made the week this was written. A new escape touched twelve files:
+four source, one example, three checks, four documents. A compiler fix touched
+four. Every one of those twelve is a distinct obligation this project has
+written down — the reference is normative, a refusal has to be asked for by
+something, a hole that quotes moved code has to be repointed — and none of them
+is the same fact written twice.
+
+**And the one place truth was scattered, which was not in the gate at all.**
+`bench/families.sh` calls twenty-three micro bodies by name. D1039 made a chunk
+compile under the whole module name, `micro.intMath` became
+`bench.micro.intMath`, and every one of the twenty-three stopped naming
+anything. What that printed was twenty-three rows saying `would not run` under
+a heading, with three families of real numbers below them — which reads like a
+table. Nothing said a word, for an unknown length of time, because `bench` is
+not part of `make check`: a duration is not a pass or a fail.
+
+That reason is right and the conclusion drawn from it was wrong. A duration is
+not a pass or a fail; **a row that is a number is**. So the module name is read
+out of the file now, the way every other list here is read from the source; a
+family that measured none of itself refuses; and `make check` has a `benches`
+section that runs all four families at the smallest scale that still fills
+every row — five seconds, no durations read, no claim about speed. What it
+holds is that the instrument is still attached to the thing it measures.
+
+**What else was thrown away and is not now.** `bench/measure` already reported
+what a program cost to compile, what it cost to start, what the first call of
+all cost, and what the collector did — how many walks and the pause
+distribution. The families script kept the call time and dropped the rest, so
+four questions about a program that has to run in a frame budget were being
+measured and printed by nobody. They are printed. And the line saying which
+machine it was measured on read `model name` out of `/proc/cpuinfo`, which is
+an x86 line: on aarch64 it said `cpu` and nothing after it, which is a
+measurement that does not say whose it is. It asks `lscpu` first.
+
+**What was not done.** Nothing was split, nothing was rewritten, and no
+framework was added. The inspection's finding is not that the harness is too
+big — it is that the part of the tree with no gate over it is the part that
+broke, which is the same sentence this project has been written around from the
+beginning and had one exception left.

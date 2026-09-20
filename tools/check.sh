@@ -54,7 +54,7 @@ if ! make >/dev/null 2>"$scratch"/check-why; then
     exit 1
 fi
 if ! make debug embed embed-debug engine engine-debug least tools/inward \
-        tools/fuzz-debug \
+        tools/fuzz-debug bench/measure bench/frame \
         >/dev/null \
         2>"$scratch"/check-why; then
     complain "build" "the sanitised build does not build"
@@ -65,7 +65,7 @@ fi
 # cannot start, is every check below this reporting its own confusing failure —
 # a probe that passes when a command fails would pass for the wrong reason, and
 # `make` saying nothing is not the same as there being something to run.
-for built in ./kest ./kest-debug ./examples/embed ./examples/embed-debug ./examples/engine ./examples/engine-debug ./examples/least ./tools/inward; do
+for built in ./kest ./kest-debug ./examples/embed ./examples/embed-debug ./examples/engine ./examples/engine-debug ./examples/least ./tools/inward ./bench/measure ./bench/frame; do
     if [ ! -x "$built" ]; then
         complain "build" "$built was built and is not there"
         exit 1
@@ -1931,6 +1931,29 @@ what it measured over"
 fi
 
 say "instruments" "$(printf '%s\n' "$instruments" | grep -c .) resolved, run, saying what it measured over, and told what to say about a machine that was somebody else's, and a host of this gate's own measuring the crossing the other way"
+
+# The four families of workload, at the smallest scale that still fills every
+# row. Nothing here is a duration and nothing here is about speed: what it
+# holds is that the instrument is still attached to the thing it measures. It
+# was not. `bench/families.sh` calls twenty-three micro bodies by name, and
+# D1039 made a chunk compile under the whole module name, so every one of them
+# printed `would not run` under a heading and a family with numbers in it --
+# which reads like a table. `bench` is not in the gate because a duration is
+# not a pass or a fail, and that is the reason nothing said a word. A row that
+# is a number is a pass or a fail. See D1057.
+if ! QUICKLY=1 sh bench/families.sh >"$scratch"/families 2>&1; then
+    complain "benches" "the four families would not run"
+    sed 's/^/    /' "$scratch"/families | tail -6
+elif grep -q "would not run" "$scratch"/families; then
+    complain "benches" "a row of a family is not a number"
+    grep -n "would not run" "$scratch"/families | sed 's/^/    /' | head -6
+else
+    families=$(grep -c "^[a-z][A-Za-z]*  *[0-9]" "$scratch"/families)
+    say "benches" "the four families of workload run at the smallest scale \
+that fills them, and $families row(s) of them are a number rather than a \
+reason: an instrument that has come away from what it measures prints a table \
+and it is not a duration that says so"
+fi
 
 # The smallest host runs on the program it was written for, and refuses a
 # program that asks for a name it has not got rather than binding whatever it

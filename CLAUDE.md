@@ -121,7 +121,11 @@ bench/             Four shapes of work and what each costs, in this language
                    bodies one at a time, the reference programs whole, the
                    boundary through its own host, and what a world costs when
                    it is worked on rather than grown. It says what it measured
-                   on before it says anything it measured.
+                   on before it says anything it measured, and what a body is
+                   called is read out of the file it is in rather than written
+                   beside the loop. `QUICKLY=1` is the smallest scale that
+                   still fills every row, which is what `make check` runs it
+                   at: the gate reads rows rather than durations.
 editors/           What an editor needs, and nothing that parses Kest. The
                    VS Code extension is a grammar, a language configuration,
                    snippets and a client that starts `kest lsp`; every
@@ -1129,6 +1133,15 @@ instruments  every Kest under `tools` resolved, run for its answer, saying
              gate's own what to say about a machine that was somebody else's —
              and the host under `tools` that measures the crossing the other
              way, built, run, and read for the same shape
+benches      the four families of workload under `bench`, run at the smallest
+             scale that still fills every row. Not a duration and not about
+             speed: what it holds is that the instrument is still attached to
+             what it measures. `bench` is outside the gate because a duration
+             is not a pass or a fail, and that is why the micro family called
+             twenty-three bodies by names D1039 had changed and printed
+             `would not run` under a heading for an unknown length of time
+             with nothing saying a word. A row that is a number is a pass or
+             a fail. See D1057
 least        the smallest host running its own program and one that asks for
              nothing, reading back an answer that is not a number and one the
              language has no text of its own for, refusing one that asks for a
