@@ -5455,6 +5455,20 @@ from it afterwards; the one field of a build a machine writes is the count of
 how many are standing on it, which is an atomic, so machines may be started and
 freed from any thread.
 
+That was written before anything asked it. A start took the machine's report
+out of the build's arena — one bump pointer, read and written by every thread
+that started a machine — and the thread sanitiser said so the first time the
+gate ran four starts at once. The report is the machine's own memory now, and
+what a start that works writes on a build is the count and nothing else. See
+D1071.
+
+**A start that fails is the exception, and it is a host's to serialise.** A
+machine that never started has nowhere to say why, so what it said goes to the
+build for `kest_build_report` to answer with — which is a write to the build.
+Two starts failing on two threads at once are two threads writing one report.
+So: start and free from any thread, and handle a `NULL` from `kest_start` on
+one. A host that binds what the program asks for never meets it.
+
 A machine is one thread's while it runs. Its heap, its stack, its stamps, its
 world and its report are its own, so two machines of one build may run at once
 on two threads and neither can see what the other is doing. That is what makes

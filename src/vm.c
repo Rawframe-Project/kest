@@ -5738,12 +5738,13 @@ static bool execute(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 // because one thing in it is: what the next place handed out in a store is
 // stamped with belongs to the build, so two machines made from it are two
 // worlds of one program rather than two programs counting from one.
-KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
-                              KestDiags *diags, const KestLimits *limits,
+KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
+                              const KestHost *host, KestDiags *diags,
+                              const KestLimits *limits,
                               const KestWalk *walked) {
-    // The machine's own arena, taken before the machine is: everything below
-    // that is this machine's rather than the program's comes out of it.
-    KestArena *own = kest_arena_new();
+    // The machine's own arena, made by whoever asked for the machine: the
+    // report is in it and the report is written before there is a machine to
+    // hold it, so the two cannot be made in that order here. See D1071.
     if (own == NULL) {
         kest_diags_starve(diags);
         return NULL;
@@ -5753,8 +5754,8 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
         // No room for the machine itself, which is before there is anywhere to
         // write what happened: K0638 below is a host asking for more than
         // there is, and this is the host that asked for nothing and still
-        // could not have it.
-        kest_arena_free(own);
+        // could not have it. The arena is the caller's and is given back
+        // there.
         kest_diags_starve(diags);
         return NULL;
     }
@@ -5900,7 +5901,6 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
                            "machine has to be able to take");
         kest_ground_free(rt->ground);
         kest_arena_free(rt->heap);
-        kest_arena_free(own);
         return NULL;
     }
     rt->limit = rt->stack + rt->stack_slots;
@@ -5941,7 +5941,6 @@ KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
         // the last door out is the one that has to put it back.
         kest_ground_free(rt->ground);
         kest_arena_free(rt->heap);
-        kest_arena_free(own);
         return NULL;
     }
     // Counted here rather than where machines are asked for, so that what

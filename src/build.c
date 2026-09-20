@@ -838,26 +838,41 @@ KestRuntime *kest_start(KestBuild *build, const KestHost *host,
     if (build == NULL || !build->compiled) {
         return NULL;
     }
-    // A machine says what it said. Two machines from one build share the arena
-    // the strings live in and nothing else, because one reporting the other's
-    // failure as its own is worse than either of them saying nothing.
-    KestDiags *said = KEST_ARENA_NEW(build->arena, KestDiags);
+    // A machine says what it said, out of its own memory. It used to come out
+    // of the build's arena, which is a bump pointer: two machines started on
+    // two threads read and wrote it at once, and the thread sanitiser says so
+    // the moment anything asks. The reference says a host may start a machine
+    // from any thread, so the report is the machine's from here. See D1071.
+    KestArena *own = kest_arena_new();
+    if (own == NULL) {
+        kest_diags_starve(&build->diags);
+        return NULL;
+    }
+    KestDiags *said = KEST_ARENA_NEW(own, KestDiags);
     if (said == NULL) {
         // Nowhere to put what this machine would have said, which is the one
         // refusal that cannot be written down. The build is told the one thing
         // that can be recorded without room to record it.
+        kest_arena_free(own);
         kest_diags_starve(&build->diags);
         return NULL;
     }
-    kest_diags_init(said, build->arena);
-    KestRuntime *runtime =
-        kest_runtime_new(&build->module, host, said, limits, walk_it(build));
+    kest_diags_init(said, own);
+    KestRuntime *runtime = kest_runtime_new(own, &build->module, host, said,
+                                            limits, walk_it(build));
     if (runtime == NULL) {
         // A machine that never started has nothing to be asked, so what it
         // said on the way out is given to the build: that is what a host has
         // when there is no machine, and a refusal nobody can read is a refusal
-        // that did not happen.
+        // that did not happen. `absorb` copies the words into the build's own
+        // arena, so the machine's goes back here.
+        //
+        // This is the one write to a build a start makes, and it is the one a
+        // host may not make from two threads at once. A start that works
+        // touches nothing of the build's but the count of how many machines
+        // are standing on it, which is an atomic. See D1071.
         kest_diags_absorb(&build->diags, said);
+        kest_arena_free(own);
     }
     return runtime;
 }

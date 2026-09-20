@@ -17,8 +17,14 @@ KestDiags *kest_runtime_said(KestRuntime *runtime);
 // once and every machine is handed: a machine sizes itself from it and holds
 // every call into the host against it, and it is the same answer for every
 // machine a build starts. See D607.
-KestRuntime *kest_runtime_new(KestModule *stamped, const KestHost *host,
-                              KestDiags *diags, const KestLimits *limits,
+// The arena is the machine's and is handed in rather than taken here, because
+// the machine's report has to live in it and the report exists before the
+// machine does. Taking it from the build's arena instead is one bump pointer
+// written by every thread that starts a machine, which is what the reference
+// says a host may do. See D1071.
+KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
+                              const KestHost *host, KestDiags *diags,
+                              const KestLimits *limits,
                               const KestWalk *walked);
 bool kest_runtime_free(KestRuntime *runtime);
 

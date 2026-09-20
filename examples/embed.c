@@ -2817,24 +2817,29 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // What that machine cost the build, against the walk it was handed rather
-    // than made. A machine is the arena it is made of and one place on the
-    // build for what it says; the walk of the whole program is neither, and a
-    // host that makes a machine a frame used to do it every frame in room it
-    // took and gave back. Held as two numbers because the one that matters is
-    // which is bigger. See D607.
+    // What that machine cost the build, which is nothing at all. A machine is
+    // the arena it is made of and everything in it, including what it says:
+    // the report was one place on the build's arena until D1071, and one place
+    // is one bump pointer that every thread starting a machine reads and
+    // writes. The reference says a host may start a machine from any thread,
+    // so what a start writes on a build is the count of how many are standing
+    // on it and nothing else — and that is an atomic.
+    //
+    // Held as nothing rather than as less than a walk, which is what D607
+    // asked for: less than a walk is satisfied by one byte, and one byte is a
+    // race. The walk is still here because a machine has to be cheaper than
+    // one, and now it is cheaper by all of it.
     size_t machine_on_build = kest_build_cost(build) - build_before_machine;
-    if (one_walk == 0 || machine_on_build == 0 ||
-        machine_on_build >= one_walk ||
+    if (one_walk == 0 || machine_on_build != 0 ||
         kest_runtime_cost(engine.runtime) >= one_walk) {
         fprintf(stderr, "a machine is %zu bytes and cost the build %zu, and a "
                         "walk of the program is %zu\n",
                 kest_runtime_cost(engine.runtime), machine_on_build, one_walk);
         return 1;
     }
-    printf("a machine is %zu bytes and cost this build %zu more, against the "
-           "%zu of the walk it was handed\n",
-           kest_runtime_cost(engine.runtime), machine_on_build, one_walk);
+    printf("a machine is %zu bytes and cost this build nothing at all, against "
+           "the %zu of the walk it was handed\n",
+           kest_runtime_cost(engine.runtime), one_walk);
 
     // A second machine from the same build, which is what an engine has when
     // it runs two worlds side by side. They share the program they were

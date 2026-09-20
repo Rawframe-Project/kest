@@ -1107,6 +1107,39 @@ static void *turning(void *given) {
     return NULL;
 }
 
+// The other half of the sentence the reference makes: *machines may be started
+// and freed from any thread*. The four above are started and freed on the
+// thread that made them, which says nothing about that, so this one starts its
+// own, runs it and frees it, all on a thread of its own and all at the same
+// time as three others doing the same on one build. What is shared is the
+// build's count of how many machines are standing on it -- an atomic, added to
+// with `relaxed` and taken from with `release`, read by `kest_build_free` with
+// `acquire` (D952) -- and this is the run that watches it. See D1071.
+typedef struct {
+    KestBuild *build;
+    int64_t rounds;
+    int64_t answered;
+    int ran;
+} Alone;
+
+static void *its_own(void *given) {
+    Alone *one = given;
+    KestRuntime *runtime = kest_start(one->build, NULL, NULL);
+    if (runtime == NULL) {
+        one->ran = 0;
+        return NULL;
+    }
+    KestValue frame[4] = {{0}};
+    frame[0].integer = 0;
+    frame[1].integer = one->rounds;
+    one->ran = kest_call(runtime, kest_entry(runtime, "part"), frame, 4) ? 1 : 0;
+    one->answered = frame[0].integer;
+    if (!kest_runtime_free(runtime)) {
+        one->ran = 0;
+    }
+    return NULL;
+}
+
 int main(int argc, char **argv) {
     if (argc < 2) {
         return 2;
@@ -1162,6 +1195,38 @@ int main(int argc, char **argv) {
         }
     }
     kest_runtime_free(whole.runtime);
+
+    // And four machines started, run and freed on four threads at once, which
+    // is the sentence about starting and freeing from any thread rather than
+    // about running on one.
+    Alone alone[MANY];
+    pthread_t apart[MANY];
+    for (int i = 0; i < MANY; i++) {
+        alone[i].build = build;
+        alone[i].rounds = EACH;
+        alone[i].answered = 0;
+        alone[i].ran = 0;
+    }
+    for (int i = 0; i < MANY; i++) {
+        if (pthread_create(&apart[i], NULL, its_own, &alone[i]) != 0) {
+            fprintf(stderr, "a thread would not start\n");
+            return 2;
+        }
+    }
+    for (int i = 0; i < MANY; i++) {
+        pthread_join(apart[i], NULL);
+    }
+    for (int i = 0; i < MANY; i++) {
+        if (!alone[i].ran || alone[i].answered != alone[0].answered) {
+            fprintf(stderr,
+                    "a machine started on its own thread answered %lld and the "
+                    "first answered %lld\n",
+                    (long long)alone[i].answered, (long long)alone[0].answered);
+            return 2;
+        }
+    }
+    printf("four machines each started, run and freed on a thread of its own\n");
+
     kest_build_free(build);
     return 0;
 }
@@ -1189,10 +1254,17 @@ reach the same memory"
         complain "races" "four machines of one build did not answer what one \
 answers for the whole of it"
         printf '%s\n' "$said" | sed 's/^/    /' | head -4
+    elif [ "${said#*started, run and freed on a thread of its own}" = "$said" ];
+    then
+        complain "races" "a machine started and freed on its own thread did \
+not answer what the others did"
+        printf '%s\n' "$said" | sed 's/^/    /' | head -4
     else
         say "races" "four machines of one build, each with a world of its \
 own, ran at once under a build that watches threads, and answered what one \
-machine answers for the whole of it"
+machine answers for the whole of it — and four more were started, run and \
+freed on four threads at once, which is the other half of what the reference \
+says a host may do"
     fi
 fi
 rm -f "$races" "$races".c "$races".kest "$scratch"/watching \

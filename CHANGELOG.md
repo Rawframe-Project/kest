@@ -217,6 +217,15 @@ answers something else now warns, and the fix is the one the message already
 names — hand the changed one back. Nothing in this tree was leaning on the
 silence. See D1065.
 
+**Starting a machine writes nothing of the build's.** It took the machine's
+report out of the build's arena, which is a bump pointer: two hosts starting
+machines on two threads were reading and writing it at once, and the thread
+sanitiser says so the first time anything asks. **What a host has to do:**
+nothing, and one thing it could not do before it can now — start and free
+machines from any thread, which the reference always said it could. A start
+that *fails* still writes the build's report, and that is the one thing to do
+from one thread. See D1071.
+
 **A run of bytes takes a whole piece of text.** `push(out, piece)` and
 `fit(out, piece)` put the piece on the end in one move where a program used to
 write a loop, because text is its bytes and a `[u8]` is the same bytes. Every

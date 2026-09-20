@@ -35670,3 +35670,59 @@ reading a field of an element cost two dispatches and is one (D1044), and
 building text a byte at a time was eighty per cent of the instructions (D1068).
 `control` has no such thing in it. It is the interpreter, doing what an
 interpreter does.
+
+## D1071. Starting a machine writes nothing of the build's
+
+*measured*, by the thread sanitiser, the first time anything asked.
+
+The reference has said since D952 that a build is read-only once it is built,
+that the one field of it a machine writes is the atomic count of how many are
+standing on it, and therefore that **machines may be started and freed from any
+thread**. The gate's `races` section runs four machines of one build at once
+under the thread sanitiser and has done since D1053.
+
+**It never asked the question the sentence is about.** All four machines are
+started on the thread that made them, before any thread is created, and freed
+after they are joined. What that watches is four machines *running*, which is
+the other half. So the sentence about starting and freeing had nothing behind
+it, and adding four more machines each started, run and freed on a thread of
+its own found a data race on the first run:
+
+    WARNING: ThreadSanitizer: data race
+      Read of size 8 by thread T6:
+        #0 kest_arena_alloc src/mem.c
+        #1 kest_start src/build.c
+
+**What it was.** `kest_start` took the machine's `KestDiags` out of the
+**build's** arena. An arena is a bump pointer; two starts on two threads read
+and write it, and what comes of that is two machines given the same memory or
+an arena with a pointer nobody wrote. The comment above it said the sharing out
+loud — *two machines from one build share the arena the strings live in* — and
+read as a note about reporting rather than as the one mutable thing a start
+touched.
+
+**What it is now.** The machine's arena is made by `kest_start` and the report
+is the first thing in it, so a machine is the arena it is made of and
+everything in it. `kest_runtime_new` takes the arena rather than making one,
+because the report exists before the machine does and the two cannot be made in
+that order otherwise. A start that works writes the count and nothing else.
+
+**And the exception, said where a host reads it.** A machine that never started
+has nowhere of its own to say why, so what it said is copied into the build for
+`kest_build_report` to answer with. That is a write to the build, and two
+starts failing on two threads at once are two threads writing one report. The
+reference says so: start and free from any thread, and handle a `NULL` from
+`kest_start` on one. A host that binds what the program asks for never meets
+it.
+
+**What holds it.** `examples/embed.c` held a machine to costing the build *less
+than a walk of the program*, which D607 asked for and which one byte satisfies
+— and one byte is a race. It holds it to costing the build **nothing at all**
+now, which is a number that cannot be nearly right.
+
+**The shape of the finding, which is the third of its kind this week.** The
+gate had a section about the right subject that asked a different question than
+the sentence it was for. `bench/families.sh` had a table with `would not run`
+in every row (D1057); the conformance corpus folded none of the four host doors
+inside the profile (D1060); this watched four machines run and none start. Each
+was found by asking what the sentence says rather than what the check does.

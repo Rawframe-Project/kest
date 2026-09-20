@@ -38721,3 +38721,40 @@ See D1070.
 
 **Runs:** `bench/measure` on both, ten paired rounds, middle reported; the
 step counts from the profiler; `make check`.
+
+## Starting a machine wrote the build, and four threads said so
+
+The reference has said since D952 that a build is read-only once it is built
+and that machines may therefore be started and freed from any thread. The
+gate's `races` section runs four machines of one build at once under the thread
+sanitiser — and starts all four on the thread that made them, before any thread
+exists, and frees them after joining. What it watches is four machines
+*running*. The sentence about starting and freeing had nothing behind it.
+
+Four more machines, each started, run and freed on a thread of its own, found a
+data race on the first run: `kest_start` took the machine's report out of the
+**build's** arena, which is a bump pointer two threads were reading and writing
+at once. The comment above it said the sharing out loud and read as a note
+about reporting rather than as the one mutable thing a start touched.
+
+The machine's arena is made by `kest_start` now and the report is the first
+thing in it, so a machine is the arena it is made of and everything in it.
+`kest_runtime_new` takes the arena rather than making one, because the report
+exists before the machine does. A start that works writes the build's count of
+how many machines are standing on it and nothing else.
+
+A start that *fails* still copies what it said into the build, because a
+machine that never started has nowhere of its own — and the reference says that
+is the one thing a host may not do from two threads at once.
+
+`examples/embed.c` held a machine to costing the build less than a walk of the
+program, which one byte satisfies, and one byte is a race. It holds it to
+costing the build nothing at all now.
+
+That is the third finding this week of one shape: a check about the right
+subject asking a different question than the sentence it was for.
+
+See D1071.
+
+**Runs:** the races host with four machines started and freed on four threads,
+under the thread sanitiser, before and after; `examples/embed`; `make check`.
