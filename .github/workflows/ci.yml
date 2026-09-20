@@ -31,6 +31,52 @@ jobs:
         with:
           name: trace-linux-x86-64
           path: linux-x86-64.trace
+      # The same instrument at the same settings as the arm64 runner below.
+      # What is worth comparing between two machines is not a duration -- a
+      # hosted runner is somebody else's machine and says so -- but which of
+      # the four families moved and by how much against the others on the same
+      # box.
+      - name: what the four families cost here
+        run: |
+          make bench/measure bench/frame
+          SAMPLES=10 ROUNDS=20000 sh bench/families.sh \
+            | tee linux-x86-64.families
+      - uses: actions/upload-artifact@v4
+        with:
+          name: families-linux-x86-64
+          path: linux-x86-64.families
+
+  # ARM, on hardware rather than under emulation. C11 and no JIT is a
+  # deployment claim and not a performance one, and the only thing that settles
+  # what this language costs on another instruction set is running it there.
+  # What this job is for is both halves: that a trace taken here is the same
+  # bytes as the one taken on x86-64 -- which the `agree` job holds -- and what
+  # the four families cost, which nothing here can be argued into.
+  linux-arm64:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: build
+        run: make -j
+      - name: fast
+        run: make fast
+      - name: bytes it was not written for
+        run: make fuzz
+      - name: conformance trace
+        run: sh tools/conformance.sh ./kest linux-arm64.trace
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trace-linux-arm64
+          path: linux-arm64.trace
+      - name: what the four families cost here
+        run: |
+          make bench/measure bench/frame
+          SAMPLES=10 ROUNDS=20000 sh bench/families.sh \
+            | tee linux-arm64.families
+      - uses: actions/upload-artifact@v4
+        with:
+          name: families-linux-arm64
+          path: linux-arm64.families
 
   macos:
     runs-on: macos-latest
@@ -282,7 +328,7 @@ jobs:
           path: build/kest-*-windows-x86_64.zip*
 
   agree:
-    needs: [linux, windows, macos]
+    needs: [linux, linux-arm64, windows, macos]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -293,3 +339,5 @@ jobs:
             && echo "linux and windows said the same thing"
           diff -u linux-x86-64.trace macos-arm64.trace \
             && echo "linux and macos said the same thing"
+          diff -u linux-x86-64.trace linux-arm64.trace \
+            && echo "the two instruction sets said the same thing"
