@@ -34275,3 +34275,74 @@ that a host can be written with 22 of the 98 and the reference points at the
 one that is; the evidence it might not was that the front page said the API was
 97 doors when the header had 98 and said there was no collector when there is
 one. Both are held by a check now rather than by somebody remembering.
+
+## D1047. What a dispatch costs against what it dispatches, and why the loop stays ISO C
+
+**Decided.** A bytecode dispatch costs about as much as the operation it
+dispatches. The mechanism for that is superinstructions chosen on a
+measurement, which this tree already has and which are worth **16 to 31 per
+cent of cycles** as they stand. Threaded dispatch is **not taken**, and the
+number is 1 to 4 per cent. Native and AOT stay where D1017 left them.
+
+**What was written down and was not a measurement.** *The dispatch loop is the
+largest cost in every workload — 48 to 92 per cent of cycles.* That is the
+share of cycles inside `run_body`, which is the interpreter's whole loop and
+therefore everything the program does: on `bench/control.kest` it reads 89 per
+cent, and a number that says the program spends its time running is not a
+number about dispatch.
+
+**What a dispatch costs, measured the way section 6 asks for it**: one binary,
+one toggle, `KEST_PLAIN` off and on, which is the fusions the lowering makes.
+
+| | dispatches plainly | fused | fewer | cycles |
+| --- | --- | --- | --- | --- |
+| `control` | 70,554,203 | 48,800,116 | 30.8 % | −21.0 % |
+| `kernel` | 58,721,590 | 34,631,126 | 41.0 % | −31.1 % |
+| `agents` | 249,997,820 | 185,970,447 | 25.6 % | −15.7 % |
+| `rules` | 228,872,213 | 158,853,417 | 30.6 % | |
+| `graph` | 6,603,257 | 4,809,045 | 27.2 % | |
+| `words` | 9,110,560 | 8,870,238 | 2.6 % | |
+
+Five paired runs each, middle taken. **Removing a quarter to two fifths of the
+dispatches buys between a sixth and a third of the cycles**, so a dispatch and
+the work it dispatches cost about the same. That is the ratio to carry, and it
+is what says a superinstruction is worth having: each one takes a whole
+dispatch out of a hot body, and the family is already worth more than any other
+single thing this project has done to the machine.
+
+`words` is the exception and says why the rule holds: it spends its time inside
+`std.text`, a byte at a time, where there is nothing to fuse.
+
+**Why threaded dispatch is not taken.** What it wins is the indirect branch's
+mispredictions and the bounds test and jump-table indirection in front of it.
+The mispredictions are measured:
+
+| | misses a dispatch | of all cycles |
+| --- | --- | --- |
+| `control` | 2.26 % | ~4.0 % |
+| `agents` | 2.35 % | ~3.1 % |
+| `rules` | 2.67 % | ~3.8 % |
+| `kernel` | 0.61 % | ~1.2 % |
+
+One to four per cent, and a workload that runs the same few opcodes over and
+over predicts well. What it costs is `&&label`, which is a GNU extension and
+not ISO C11 — so the hottest loop in the library would be written twice, once
+for compilers that have it and once for compilers that do not, and the two
+would have to be held to answering alike for ever. This library is ISO C11 with
+nothing under it but libc, and one to four per cent does not buy a fork in the
+one loop everything runs through. Written down here so that the next reader
+does not have to measure it again to find out.
+
+**And the opcode shape.** The dispatch reads a byte, bounds-tests it, looks it
+up in a table of offsets and jumps. What is left to take out of that without
+leaving ISO C is the bounds test, and it is there because a chunk a host handed
+over is bytes somebody else wrote — the machine is held to refusing an opcode
+it has not got rather than to trusting one.
+
+**What this does not conclude.** That native code could not help. D1017's
+trigger was not met and section 26 of this reset says the invalid step is
+*peepholes did not help, therefore native could not*. The evidence here is
+about a bytecode machine's dispatch, and the ratio it measures — a dispatch
+costing about what it dispatches — is the strongest argument *for* a native
+backend that this project has, not against one. What it is weighed against is
+in D1017 and is re-asked at the end of this reset.

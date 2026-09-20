@@ -140,9 +140,15 @@ each says why.
 - Bulk text append. Eighteen per cent of `bench/words.kest` is `std.text`'s
   `append` copying a byte at a time. A bulk copy needs a builtin, which is
   language surface, and D1030 says why that was not added on this evidence.
-- The dispatch loop. The largest cost in every workload — 48 to 92 per cent of
-  cycles — and a quarter of its own cycles are the front end on its indirect
-  branch. D979 measured from the other side what touching it costs.
+- The dispatch loop, and what is left of it is smaller than it was written
+  down as. The 48 to 92 per cent was the share of cycles *inside* the
+  interpreter's loop, which is everything a program does and says nothing about
+  dispatch. What a dispatch costs against what it dispatches is about one to
+  one, measured by turning the fusions off in the same binary: a quarter to two
+  fifths fewer dispatches buys 16 to 31 per cent of cycles. Mispredicting the
+  indirect branch costs 1 to 4 per cent, which is what threaded dispatch could
+  win and what a GNU extension in the hottest loop of an ISO C11 library would
+  cost. See D1047.
 
 **And the aggregate copy is closed.** `let one = world[at]` … `world[at] = one`
 is 29 % of `bench/kernel.kest`'s cycles and writing the same program in place

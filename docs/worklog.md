@@ -37831,3 +37831,48 @@ See D1046.
 
 **Runs:** the classification against the header; the smallest host counted; the
 reference's two numbers held; four holes; `make check`.
+
+## What a dispatch costs against what it dispatches
+
+`docs/state.md` said the dispatch loop was the largest cost in every workload,
+48 to 92 per cent of cycles. That is the share of cycles inside `run_body`,
+which is the interpreter's whole loop and therefore everything the program
+does — 89 per cent on `bench/control.kest` — and a number that says a program
+spends its time running is not a number about dispatch.
+
+Measured the way section 6 asks for it, one binary and one toggle:
+
+| | dispatches plainly | fused | fewer | cycles |
+| --- | --- | --- | --- | --- |
+| `control` | 70,554,203 | 48,800,116 | 30.8 % | −21.0 % |
+| `kernel` | 58,721,590 | 34,631,126 | 41.0 % | −31.1 % |
+| `agents` | 249,997,820 | 185,970,447 | 25.6 % | −15.7 % |
+| `rules` | 228,872,213 | 158,853,417 | 30.6 % | |
+| `graph` | 6,603,257 | 4,809,045 | 27.2 % | |
+| `words` | 9,110,560 | 8,870,238 | 2.6 % | |
+
+Five paired runs each, middle taken. Taking a quarter to two fifths of the
+dispatches away buys a sixth to a third of the cycles, so **a dispatch costs
+about what it dispatches**. `words` is the exception and says why: it spends
+its time inside `std.text` a byte at a time, where there is nothing to fuse.
+
+That is the ratio to carry, and it is what makes a superinstruction worth
+having: each one takes a whole dispatch out of a hot body. The family is
+already worth more than anything else this project has done to the machine.
+
+Threaded dispatch is not taken and the number is why. What it wins is the
+indirect branch's mispredictions, and they are 2.3 % of dispatches on
+`control`, 2.4 % on `agents`, 2.7 % on `rules` and 0.6 % on `kernel` — one to
+four per cent of cycles. What it costs is `&&label`, a GNU extension, so the
+hottest loop in an ISO C11 library would be written twice and the two held to
+answering alike for ever.
+
+None of this says native code could not help. The ratio is the strongest
+argument *for* a native backend this project has; what it is weighed against is
+D1017, and section 26 asks it again at the end.
+
+See D1047.
+
+**Runs:** `perf stat` and `perf annotate` over `control`; six benchmarks
+counted plainly and fused; five paired cycle runs each on three of them;
+branch misses on four.
