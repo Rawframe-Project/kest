@@ -112,9 +112,10 @@ carries the mission itself; this is what the tree has to show for it.
                                           rather than one
     24 validation cleanup                 done  D990
     25 documentation                      done  D994
-    26 versioning and release policy      done  D983, D998: this is 1.0.0,
-                                          and what its four numbers promise
-                                          is in the reference
+    26 versioning and release policy      done  D983, D998: four numbers and
+                                          a rule for each. The version was
+                                          1.0.0 for a day and is 0.0.1
+                                          (D1035)
     27 the evaluation package             done: an hour's worth on the front
                                           page, and a release archive
 
@@ -178,10 +179,11 @@ What was real beside it is fixed: reading a field of an element cost two
 dispatches and is one now, which is 16.9 % of the place form's instructions and
 nothing at all to the benchmarks, none of which is written that way (D1044).
 
-## What shipped, and what it rests on
+## What the closeout shipped, and what it rests on
 
-1.0.0 is tagged and published. What the closeout changed, in the order it was
-done: the heap became a thing a program can be given pieces of back (D996), the
+1.0.0 was tagged and published on 2026-09-18 and withdrawn on 2026-09-19
+(D1035). The tag and the release are gone and the history is not. What the
+closeout changed, in the order it was done: the heap became a thing a program can be given pieces of back (D996), the
 fuzzer grew from one boundary to the six somebody else's bytes arrive through
 (D997), the version became 1.0.0 with four numbers and a policy for each
 (D998), the gate learned to name what a compiler made and nobody meant to keep

@@ -4416,7 +4416,7 @@ keeping a replay or shipping a save writes down beside it. `kest --version`
 prints all four:
 
 ```
-kest 0.0.1, abi 4, json 3, profile kest-det 2
+kest 0.0.1, abi 4, json 4, profile kest-det 2
 ```
 
 The ABI number goes up when anything a host can see changes: arguments, what a
@@ -4482,9 +4482,12 @@ makes the doors below mean what the header says.
 **A tool.** The JSON a command writes has its own number, because a compiler
 can move without any object changing and an object can change without the
 compiler moving. `KEST_JSON_SCHEMA` goes up when a name changes what it means,
-goes away, or is added where a reader was told the list was everything — and
-not when a name is added beside the others. A tool reads the number first. A
-tool written for schema 3 reads schema 3 objects for the whole of 1.x.
+goes away, or is added where a reader was told the list was everything, or
+means something else than it did — and not when a name is added beside the
+others. A name whose value means something else is a name that went away to the
+tool that matched it, which is what moved this number to 4: a declaration is
+written under its whole module now. See D1069. A tool reads the number first. A
+tool written for schema 4 reads schema 4 objects for the whole of 1.x.
 
 **A deterministic run.** `kest-det 2` is the profile `deterministic` is a
 promise about. Its number goes up only when what a program can *observe* about

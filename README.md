@@ -168,9 +168,11 @@ language (D988), no networking, no graphics.
 shape the doors are in and `kest_abi_version()` reads the same number out of the
 library, so a host compares the two before it crosses and finds out before it
 reads memory that means something else. What moves it, and what moves the other
-three numbers beside it, is D983, and what 1.x promises about it is in the
-reference: inside 1.x the doors a host compiled against do not change, and a
-door added at the end of the header is not a change.
+three numbers beside it, is D983 and D974. Nothing about them is frozen while
+this is `0.0.x` — what the reference keeps under *What 0.0.x promises, which is
+nothing* is the design a stability promise would be made of rather than the
+promise: that the doors a host compiled against would not change, and that a
+door added at the end of the header would not be a change.
 
 ## Where this is
 
@@ -214,16 +216,20 @@ Linux x86-64, and the four families of workload run on both instruction sets; a 
 under the sanitisers, and a longer campaign of 1.2 million was run before the
 release; the thread sanitiser runs four machines of one build at once.
 
-**What 1.0 does not mean.** The C ABI is frozen under the 1.x rule written in
-the reference: what a host compiled against `kest.h` sees does not change
-inside 1.x, and a door added at the end is not a change. The bytecode is
-internal and is not a compatibility boundary — what ships is the source beside
-the runtime, and a program is compiled by the compiler that runs it.
+**What 0.0.1 does not mean.** Nothing is frozen. The C ABI has a number and a
+rule for when it moves and no promise that it will not; the same is true of the
+JSON a tool reads and of the deterministic profile. Every break is a decision
+that says what it supersedes and why the old thing was worse, and `CHANGELOG.md`
+says what a reader with a program has to do about it. That is a record, not a
+guarantee. The bytecode is internal and is not a compatibility boundary at all
+— what ships is the source beside the runtime, and a program is compiled by the
+compiler that runs it.
 
-What 1.0 is not a claim about: the standard library is small, there is one
-machine, one target family and no optimiser worth the name. And nobody outside
-this project has written a program in it, which is the one thing a repository
-cannot do for itself.
+What it is not a claim about: the standard library is small, there is one
+machine, and the optimizer is one layer of four transformations rather than
+anything a compiler writer would call an optimizer. And nobody outside this
+project has written a program in it, which is the one thing a repository cannot
+do for itself.
 
 ## Trying it in an hour
 

@@ -25,7 +25,7 @@
 //
 // It goes up when a field changes what it means, is taken away, or is added
 // where a reader was told the list was everything. See D947.
-#define KEST_JSON_SCHEMA 3
+#define KEST_JSON_SCHEMA 4
 
 // What shape the doors below are in, which is a third thing again. A host is
 // compiled against this header and linked against a library built from some

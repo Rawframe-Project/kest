@@ -15538,7 +15538,7 @@ fn main() -> i32 {
         # three.
         "what": "a reference that prints another number than a run",
         "file": "docs/language.md",
-        "from": """kest 0.0.1, abi 4, json 3, profile kest-det 2""",
+        "from": """kest 0.0.1, abi 4, json 4, profile kest-det 2""",
         "to": """kest 0.0.1, abi 1, json 1, profile kest-det 1""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",

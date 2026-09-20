@@ -35557,3 +35557,64 @@ time, and appending one run to another is not a thing this language has. That
 would be a rule rather than this case, and there is no measurement asking for
 it: what was measured is text, and text is the one run whose elements a program
 almost never wants one at a time.
+
+## D1069. The four numbers, settled. Supersedes D1035's guess at the end
+
+*argued*.
+
+Section 41 of the foundation reset asks for the version constants and the
+ABI, schema and profile numbers to be settled in one pass near the end, with
+the CLI output, the archive names, the editor metadata, the front page, the
+reference, the changelog, `docs/state`, the release tooling and the old 1.x
+wording brought with them. D1035 wrote the numbers down as unsettled and
+guessed the end: *the likely end is 1, 1 and 1.*
+
+**It is 4, 4 and 2, and the reason is that the rules already say so.** D974
+says what moves each number and D983 says it again. Renumbering downward is not
+settling a number, it is ignoring the rule that gives it a meaning.
+
+- **The C ABI stays 4.** Everything added to `include/kest.h` since the tree
+  `1.0.0` shipped is additive: a hundred and seventy-one lines at the end and
+  four version constants changed, with nothing taken away, nothing reordered
+  and no struct or enum edited in the middle. D974's rule is that the number
+  goes up when anything a host can see changes and not for a door added at the
+  end. Nothing a host can see changed, so nothing moves. Resetting it to 1
+  would make a host built against 4 refuse a library it would work with.
+
+- **The JSON schema goes to 4.** D1039 made a chunk compile under its whole
+  module name, so `check --json` writes `std.text.upper#text` where it wrote
+  `text.upper#text`. The rule as written was about names going away or being
+  added where a reader was told the list was everything, and it missed this: a
+  name whose *value* means something else is, to a tool that matched it, a name
+  that went away. The rule has that clause now. `module` and `typeParameters`
+  were added beside the others and would not have moved it on their own.
+
+- **The profile stays `kest-det 2`.** It moved today, for the reason D1060
+  gives, and it must not move back. A profile number is the one of the four
+  that gets written into data that outlives the build: a host keeping a replay
+  or a save writes it down beside them. An ABI number and a schema number are
+  compared against the library or the tool that is in front of you and are
+  wrong for a moment; a save tagged `kest-det 1` meaning two different things
+  is wrong for as long as the save exists.
+
+**So the rule that tells the three apart is written down**: a number compared
+against something present may be reset while nobody depends on it; a number
+written into something that outlives the run may not. That is why this pass
+settles three numbers three different ways and none of them is 1.
+
+**The rest of the pass.** The version constants are `0.0.1` and the archive
+name is read from them — `kest-0.0.1-linux-x86_64.tar.gz` and the same on
+Windows. The editor extension says `0.0.1` and a hole holds it there. `kest
+--version` prints all four and `check-docs.sh` holds every document that
+quotes it. The changelog keeps the `1.0.0` section under a heading that says it
+was withdrawn, which is what section 41 asks for.
+
+**And the 1.x wording that was left.** The front page said *What 1.0 does not
+mean* and that the C ABI is frozen under the 1.x rule; it is not frozen and
+this is not 1.0. It said the standard library is small, there is one machine,
+one target family and no optimiser worth the name — two of those are no longer
+true, and the target family is two instruction sets and four platforms (D1058)
+while the optimizer is D1024's four transformations. `docs/state.md` said *this
+is 1.0.0* and *1.0.0 is tagged and published*. All of it is what section 41
+means by dead 1.x assumptions, and none of it was load-bearing: it was the
+sentences nobody re-reads.

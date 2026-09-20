@@ -247,10 +247,16 @@ that was already written. See D1062.
 shape a `K0402` message tells a reader to write were missing the word, so a
 tool that compared shapes as text was comparing the wrong ones. See D1064.
 
-**What changed for a host.** The version, and the profile. The C ABI and the
-JSON schema still read 4 and 3, the profile reads 2, and all three will be
-settled to clean `0.0.x` numbers once the architecture this reset is correcting
-has stopped moving. See D1035 and D1060.
+**What changed for a host.** The version, the JSON schema and the profile.
+**Kest 1.0.0 → 0.0.1. ABI 4, unchanged. JSON schema 3 → 4. Profile kest-det
+1 → 2.** The ABI does not move because everything added to the header since is
+additive and D974's rule says a door added at the end is not a change. The
+schema moves because a declaration is written under its whole module now, and a
+name whose value means something else is a name that went away to the tool that
+matched it. The profile moves for the reason D1060 gives and will not move
+back: it is the one of the four written into data that outlives the build.
+**What a tool has to do:** read `"schema"` first, as it always should have.
+See D1069.
 
 ## 1.0.0 — 2026-09-18 (withdrawn 2026-09-19)
 

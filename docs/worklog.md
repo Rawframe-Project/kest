@@ -38653,3 +38653,40 @@ See D1068.
 **Runs:** `bench/measure` at eleven samples before and after; the four
 workloads at two sizes each, three times before and four after, middle
 reported; every `.kest` in the tree swept for a warning; `make check`.
+
+## The four numbers, settled
+
+Section 41 asks for the version constants and the ABI, schema and profile
+numbers to be settled in one pass near the end, with everything that quotes
+them. D1035 left them unsettled and guessed the end: *the likely end is 1, 1
+and 1.*
+
+It is 4, 4 and 2, because the rules that give those numbers a meaning already
+say so. The C ABI stays 4: everything added to the public header since the tree
+`1.0.0` shipped is additive — a hundred and seventy-one lines at the end, four
+version constants changed, nothing taken away, nothing reordered, no struct or
+enum edited in the middle — and D974's rule is that a door added at the end is
+not a change. The JSON schema goes to 4, because D1039 made a declaration's
+name its whole module and a name whose value means something else is a name
+that went away to the tool that matched it; the rule has that clause now. The
+profile stays `kest-det 2`, because it is the one of the four that gets written
+into data that outlives the build, and a save tagged `kest-det 1` meaning two
+different things is wrong for as long as the save exists.
+
+So the rule that tells them apart is written down: a number compared against
+something present may be reset while nobody depends on it, and a number written
+into something that outlives the run may not.
+
+The rest of the pass was verification and one piece of rot. The version
+constants are `0.0.1`, the archive names are read from them, the editor
+extension says the same and a hole holds it there, and the changelog keeps the
+`1.0.0` section under a heading that says it was withdrawn. The rot was the 1.x
+wording: the front page said *What 1.0 does not mean* and that the C ABI is
+frozen under the 1.x rule, and that there is one target family and no optimiser
+worth the name; `docs/state.md` said *this is 1.0.0* and *1.0.0 is tagged and
+published*.
+
+See D1069.
+
+**Runs:** `kest --version` and every document that quotes it; the release
+archive built and named; `make check`.
