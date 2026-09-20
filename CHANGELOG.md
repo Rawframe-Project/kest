@@ -291,6 +291,15 @@ is refused with `K0708` rather than stopping the machine, because there is
 nothing for `kest_resume` to carry on into once the bound function has returned.
 See D1079.
 
+**A `while true` nothing breaks out of is a body that ends.** A function that
+gives something back and ends in a loop the program does not come back from had
+to write a `return` after the loop that nothing could reach. It does not now.
+`while let` and `for` are not those loops, and neither is a `while true` with a
+`break` in it wherever the `break` is written — a `break` that leaves a loop
+*inside* this one belongs to that one. **What a program has to do:** nothing.
+The `return` nothing can reach still compiles; it is a line that can come out.
+See D1080.
+
 **A run of bytes takes a whole piece of text.** `push(out, piece)` and
 `fit(out, piece)` put the piece on the end in one move where a program used to
 write a loop, because text is its bytes and a `[u8]` is the same bytes. Every

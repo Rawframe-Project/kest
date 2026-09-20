@@ -3778,6 +3778,7 @@ K0312|fn main() -> i32 {\n    if 1 {\n        return 1\n    }\n    return 0\n}|m
 K0313|fn main() -> i32 {\n    break\n    return 0\n}|outside a loop
 K0315|fn main() -> i32 {\n    let a: [i32] = array()\n    return a["x"]\n}|must be an integer
 K0316|fn f(n: i32) -> i32 {\n    if n > 0 {\n        return 1\n    }\n}\n\nfn main() -> i32 {\n    return f(1)\n}|can end without returning
+K0316|fn f(n: i32) -> i32 {\n    while true {\n        if n > 3 {\n            break\n        }\n        n += 1\n    }\n}\n\nfn main() -> i32 {\n    return f(1)\n}|can end without returning
 K0318|fn main() -> i32 {\n    let a = 1\n    let a = 2\n    return a\n}|already declared
 K0319|struct P {\n    p: P\n}\n\nfn main() -> i32 {\n    return 0\n}|contains itself
 K0320|fn main() -> i32 {\n    let a = []\n    return len(a)\n}|no element type

@@ -579,11 +579,19 @@ bool kest_text(KestRuntime *runtime, const char *bytes, uint32_t length,
                KestValue *into);
 
 // Who owns what, which is the whole of what this library promises about
-// threads. A build is read-only once it has been built: the program, the
-// layouts, the text a diagnostic points at, all of it is written once and read
-// by every machine after. The one field of it a machine writes is the count of
-// how many are standing on it, and that is an atomic, so machines may be
-// started and freed from any thread.
+// threads. A build is read-only once it has been built, with two exceptions
+// written down below: the program, the layouts, the text a diagnostic points
+// at, all of it is written once and read by every machine after. The field of
+// it a machine writes as it starts is the count of how many are standing on
+// it, and that is an atomic, so machines may be started and freed from any
+// thread.
+//
+// The two exceptions are both a host's to keep to. A start that *fails* writes
+// why into the build's report, so two of those at once are two threads writing
+// one report (D1071). And a debugger writes the program itself: a breakpoint
+// is an instruction written over, in the build, so every machine of that build
+// runs into it -- debug a build no other machine is standing on (D1077, and
+// `kest_code_of` says it again where a host writes the byte).
 //
 // A machine is one thread's while it runs. Everything it changes is its own --
 // its heap, its stack, its stamps, its world, its report -- so two machines of
@@ -799,6 +807,17 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
 // asked a question rather than made a mistake: whether a program defines
 // something is what this is for. `kest_host_bind` is the other, and for a
 // different reason — a host has no report to write into.
+//
+// What comes back is where a function lives *in this program*, so it belongs
+// to the build this machine was started from and to no other. A host that
+// reloads asks again for every name it calls: the same name in a program
+// compiled again is very likely a different number, and a number from the old
+// one is a call into whatever is at that place now, made with a frame the
+// program never agreed to. Nothing in the machine can see that a number came
+// from somewhere else -- it is a number. What a host can hold it to is the
+// shape: `kest_frame_takes` and `kest_frame_layout` say what the function that
+// came back wants, and `examples/engine.c` asks both of every door it calls
+// across each of its reloads. See D985.
 int32_t kest_entry(KestRuntime *runtime, const char *name);
 
 // The one at `at` of the functions of that name, or -1 past the last. A name

@@ -36146,3 +36146,64 @@ and held to something — and what was never asked is what the machine looks lik
 the moment *after* one of them goes wrong with another one underneath it. The
 question to ask of a boundary is not only what crosses it but what is left when
 something on the far side does not come back.
+
+## D1080. A `while true` nothing breaks out of is a body that ends
+
+*decided*, and the code it takes out of every program that had one.
+
+A body that gives something back has to end in something that gives it, and the
+question is what counts. A `return` counts; an `if` or a `match` whose every arm
+returns counts, because D726 taught the checker to read one. A loop counted as
+nothing at all, so this was refused with `K0316`:
+
+```kest
+fn firstOver(n: i32) -> i32 {
+    while true {
+        if n > 3 {
+            return n
+        }
+        n += 1
+    }
+}
+```
+
+and what a program had to write after the loop was a `return` nothing can
+reach. A language that refuses a second spelling of one thing, strips a
+redundant grouping and will not let a name be declared before it holds
+something was asking for a line of dead code, in the one shape where a loop is
+the whole body: a search, a retry, a frame loop that answers when it is done.
+
+**Decided.** A `while` written with `true` for its condition and nothing that
+breaks out of it is a statement the program does not come back from, so a body
+that ends in one ends. Three things it is not:
+
+- `while let`, which ends when what it asks for is `none`.
+- `for`, which walks something that can be empty and is a loop a program comes
+  back from however it is written.
+- a `while true` with a `break` in it, wherever the `break` is written — inside
+  an `if`, inside a `match` arm, inside a block. Those are expressions with
+  blocks in them, so the walk that looks for one goes through expressions as
+  well.
+
+A `break` that leaves a loop *inside* this one belongs to that loop, and the
+walk stops at a nested loop's body for exactly that reason. It does not stop at
+a nested loop's *condition* or at what a `for` walks: those are read where this
+loop's body is, and a `break` written in one of them leaves this loop.
+
+**Why the condition is read as it is written rather than worked out.** A
+constant that folds to `true` is not the same thing as `true`: the rule a
+programmer keeps in their head is *a loop written `while true`*, and a rule that
+depends on what the compiler folded is a rule nobody can read off the page. A
+program that wants this writes the word.
+
+**What it costs.** The walk is over the body of a loop that is already being
+walked by the checker, and it runs once per `while true` at the end of a body.
+Nothing in the machine changes: the compiler already ends every body with an
+instruction that gives nothing back, so that nothing runs off the end of one,
+and that instruction is now unreachable in one more shape than it was.
+
+**What this is really about.** Every rule in this language that refuses
+something has to be worth the line it makes somebody write. This one was worth
+nothing: it refused a body that cannot fall out of its loop, and the fix a
+programmer reached for was to write code the machine can never run — which is
+the thing the rule was supposed to prevent.

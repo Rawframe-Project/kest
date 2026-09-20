@@ -4981,6 +4981,123 @@ static bool expr_returns(const KestExpr *value) {
     return true;
 }
 
+// Whether a `break` written anywhere in here leaves *this* loop. A `break`
+// inside a loop nested in it leaves that one, so its body is not walked --
+// what is walked is everything else, including the conditions and sequences
+// of those nested loops, because those are read where this loop's body is.
+// An `if` and a `match` are expressions with blocks in them, so the walk goes
+// through expressions as well: a `break` inside the arm of a `match` is a
+// `break` in the body it is written in. See D1080.
+static bool block_leaves(const KestBlock *block);
+
+static bool expr_leaves(const KestExpr *expr) {
+    if (expr == NULL) {
+        return false;
+    }
+    switch (expr->kind) {
+    case KEST_EXPR_INT:
+    case KEST_EXPR_FLOAT:
+    case KEST_EXPR_STRING:
+    case KEST_EXPR_BYTE:
+    case KEST_EXPR_BOOL:
+    case KEST_EXPR_NAME:
+    case KEST_EXPR_NONE:
+        return false;
+    case KEST_EXPR_UNARY:
+        return expr_leaves(expr->unary.operand);
+    case KEST_EXPR_BINARY:
+        return expr_leaves(expr->binary.left) ||
+               expr_leaves(expr->binary.right);
+    case KEST_EXPR_CALL:
+        if (expr_leaves(expr->call.callee)) {
+            return true;
+        }
+        for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+            if (expr_leaves(expr->call.args[i])) {
+                return true;
+            }
+        }
+        return false;
+    case KEST_EXPR_FIELD:
+        return expr_leaves(expr->field.object);
+    case KEST_EXPR_INDEX:
+        return expr_leaves(expr->index.object) ||
+               expr_leaves(expr->index.index);
+    case KEST_EXPR_ARRAY:
+        for (uint32_t i = 0; i < expr->array.count; i++) {
+            if (expr_leaves(expr->array.items[i])) {
+                return true;
+            }
+        }
+        return false;
+    case KEST_EXPR_TEXT:
+        for (uint32_t i = 0; i < expr->text.count; i++) {
+            if (expr_leaves(expr->text.parts[i].value)) {
+                return true;
+            }
+        }
+        return false;
+    case KEST_EXPR_MATCH:
+        for (uint32_t i = 0; i < expr->choose->subject_count; i++) {
+            if (expr_leaves(expr->choose->subjects[i])) {
+                return true;
+            }
+        }
+        for (uint32_t a = 0; a < expr->choose->arm_count; a++) {
+            if (expr_leaves(expr->choose->arms[a].value) ||
+                block_leaves(&expr->choose->arms[a].body)) {
+                return true;
+            }
+        }
+        return false;
+    case KEST_EXPR_IF:
+        return expr_leaves(expr->branch->condition) ||
+               expr_leaves(expr->branch->then_value) ||
+               block_leaves(&expr->branch->then_body) ||
+               expr_leaves(expr->branch->otherwise) ||
+               expr_leaves(expr->branch->else_value) ||
+               block_leaves(&expr->branch->else_body);
+    }
+    return false;
+}
+
+static bool stmt_leaves(const KestStmt *stmt) {
+    switch (stmt->kind) {
+    case KEST_STMT_BREAK:
+        return true;
+    case KEST_STMT_CONTINUE:
+        return false;
+    case KEST_STMT_LET:
+        return expr_leaves(stmt->let.value);
+    case KEST_STMT_ASSIGN:
+        return expr_leaves(stmt->assign.target) ||
+               expr_leaves(stmt->assign.value);
+    case KEST_STMT_EXPR:
+    case KEST_STMT_DEFER:
+        return expr_leaves(stmt->value);
+    case KEST_STMT_WHILE:
+        return expr_leaves(stmt->loop.condition);
+    case KEST_STMT_FOR:
+        return expr_leaves(stmt->each->sequence) ||
+               expr_leaves(stmt->each->until);
+    case KEST_STMT_RETURN:
+        return expr_leaves(stmt->result);
+    case KEST_STMT_SCRATCH:
+    case KEST_STMT_BLOCK:
+        return block_leaves(&stmt->block);
+    }
+    return false;
+}
+
+static bool block_leaves(const KestBlock *block) {
+    for (uint32_t i = 0; i < block->count; i++) {
+        if (stmt_leaves(block->items[i])) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static bool stmt_returns(const KestStmt *stmt) {
     switch (stmt->kind) {
     case KEST_STMT_RETURN:
@@ -4990,9 +5107,27 @@ static bool stmt_returns(const KestStmt *stmt) {
         return always_returns(&stmt->block);
     case KEST_STMT_EXPR:
         return expr_returns(stmt->value);
-    default:
+    case KEST_STMT_WHILE:
+        // A loop written `while true` that nothing breaks out of is a loop the
+        // program does not come back from, so a body that ends in one ends in
+        // a `return` or in nothing at all. `while let` is not one: it ends
+        // when what it asks for is `none`. See D1080.
+        return stmt->loop.binding.length == 0 && stmt->loop.condition != NULL &&
+               stmt->loop.condition->kind == KEST_EXPR_BOOL &&
+               stmt->loop.condition->boolean &&
+               !block_leaves(&stmt->loop.body);
+    // A `for` walks something that can be empty, so it is a loop a program
+    // comes back from however it is written. The rest leave the body the way
+    // the statement after them does.
+    case KEST_STMT_LET:
+    case KEST_STMT_ASSIGN:
+    case KEST_STMT_FOR:
+    case KEST_STMT_BREAK:
+    case KEST_STMT_CONTINUE:
+    case KEST_STMT_DEFER:
         return false;
     }
+    return false;
 }
 
 static bool check_unit(KestProgram *program, KestUnit *unit);

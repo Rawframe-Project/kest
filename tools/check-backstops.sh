@@ -495,6 +495,25 @@ fn main() -> i32 {
         "caught": "a machine stopped in a call this host made",
     },
     {
+        # A loop with a way out of it, read as one the program does not come
+        # back from. A body ending in `while true` ends only when nothing
+        # breaks out of the loop; a walk that finds no `break` anywhere says
+        # every one of them does, and a body that can fall out of its loop
+        # without returning is accepted. See D1080.
+        "what": "a loop with a way out read as one nothing comes back from",
+        "file": "src/check.c",
+        "from": r"""        if (stmt_leaves(block->items[i])) {
+            return true;
+        }""",
+        "to": r"""        if (stmt_leaves(block->items[i])) {
+            return false;
+        }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "check: K0316 said",
+    },
+    {
         # A refusal that sends a reader to a door there is no way in through.
         # What a message names is a claim about where the answer is, and a
         # name out of `src` is a name a host looks for in the public header

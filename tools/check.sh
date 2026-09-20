@@ -712,9 +712,64 @@ another name"
     rm -f "$faulting"
 done
 
+# And the way out of a body that is not a way out at all: a loop written
+# `while true` that nothing breaks out of. A body ending in one of those ends,
+# so the `return` a program used to write after it -- a line the machine can
+# never reach -- is not written any more. The one with a `break` in it is
+# refused, and `check-commands.sh` asks for that; what is asked here is that
+# the one without runs and answers. See D1080.
+forever="$scratch"/forever.kest
+cat > "$forever" <<'EOF'
+module forever
+
+import std.io
+
+// Nothing after the loop, because there is nothing after the loop.
+fn firstOver(n: i32) -> i32 {
+    while true {
+        if n > 3 {
+            return n * 2
+        }
+        n += 1
+    }
+}
+
+// A `break` that leaves a loop inside this one is that loop's, so this one is
+// still a loop nothing comes back from.
+fn inner(n: i32) -> i32 {
+    while true {
+        for i in 0..10 {
+            if i > n {
+                break
+            }
+        }
+        if n > 3 {
+            return n
+        }
+        n += 1
+    }
+}
+
+fn main() -> i32 {
+    io.print("{firstOver(1)} and {inner(1)}")
+    return 0
+}
+EOF
+said=$(./kest run "$forever" 2>&1 </dev/null)
+case "$said" in
+*"8 and 4"*) ;;
+*)
+    complain "returns" "a body ending in a loop nothing breaks out of did not \
+run and answer"
+    printf '%s\n' "$said" | sed 's/^/    /' | head -4
+    ;;
+esac
+rm -f "$forever"
+
 say "returns" "line endings, noughts inside text, a promise around a \`defer\`, \
-and the two ways out of a block a program does not take: a \`defer\` runs on \
-neither"
+the two ways out of a block a program does not take -- a \`defer\` runs on \
+neither -- and a body that ends in a loop nothing breaks out of, which is a \
+body that ends"
 
 # What a budget is, asked of both builds. A program that would not stop has to
 # stop; a program that would has to be given the number of steps it takes and

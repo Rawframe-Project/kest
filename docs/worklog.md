@@ -39056,3 +39056,69 @@ each half of it out again.
 
 **Next:** the fresh cold review of section 42, which is somebody outside this
 project's to start.
+
+## The header said a build is read-only, and stopped saying it
+
+D1077 took the sentence out of `kest_start` and wrote the exception beside
+`kest_code_of`, and left the one at the top of *Who owns what* — the block a
+host reads first about threads — saying flatly that a build is written once and
+read by every machine after. Three copies, two fixed and one missed, which is
+what a sentence repeated in three places does. It names both exceptions now: a
+start that fails writes the build's report (D1071), and a debugger writes the
+program itself (D1077).
+
+**Runs:** `make check`, sections `sharing` and `races`, which are what hold the
+two exceptions the sentence now names.
+
+## A `while true` nothing breaks out of is a body that ends
+
+A body that gives something back has to end in something that gives it, and a
+loop counted as nothing at all. So this was refused:
+
+```
+fn firstOver(n: i32) -> i32 {
+    while true {
+        if n > 3 {
+            return n
+        }
+        n += 1
+    }
+}
+```
+
+and what a program wrote after the loop was a `return` nothing can reach. A
+language that refuses a second spelling of one thing and strips a redundant
+grouping was asking for a line of dead code, in the one shape where the loop is
+the whole body.
+
+A `while` written with `true` for its condition that nothing breaks out of is a
+statement the program does not come back from, so a body ending in one ends.
+Not `while let`, which ends when what it asks for is `none`; not `for`, which
+walks something that can be empty; and not a `while true` with a `break` in it
+wherever the `break` is written — inside an `if`, inside a `match` arm, inside a
+block, which are expressions with blocks in them, so the walk goes through
+expressions as well. A `break` that leaves a loop inside this one belongs to
+that loop, and the walk stops at a nested loop's body for that reason — but not
+at its condition, which is read where this loop's body is.
+
+The condition is read as it is written rather than worked out: a constant that
+folds to `true` is not the word `true`, and a rule that depends on what the
+compiler folded is a rule nobody can read off the page.
+
+See D1080.
+
+**Runs:** `make check`'s `returns` section runs a body that ends in one of those
+loops and one whose inner loop breaks, and `check-commands.sh` asks for `K0316`
+on the one with a `break` that leaves the outer loop. A hole reads every `break`
+as belonging to somewhere else and the refusal stops happening.
+
+**Also:** `kest_entry` says what it hands back is where a function lives in
+*this* program, and that a host which reloads asks again for every name it
+calls. A number from the old build is a call into whatever is at that place
+now, made with a frame the program never agreed to, and nothing in the machine
+can see that a number came from somewhere else. What a host can hold it to is
+the shape, which `examples/engine.c` has asked of every door across every
+reload since D985 — the header had never said so.
+
+**Next:** the fresh cold review of section 42, which is somebody outside this
+project's to start.

@@ -850,6 +850,29 @@ is written `fn f() { }`, with no `->`, and that is the only way to write it:
 language does not have. Nothing else can hold one either — a field, a parameter
 and a binding all name something there is.
 
+**A body that gives something back has to end in something that gives it.** A
+`return`, or an `if` or a `match` whose every arm does, or a block ending in one
+of those — and a `while true` that nothing breaks out of, which is a loop the
+program does not come back from:
+
+```kest
+fn firstOver(n: i32) -> i32 {
+    while true {
+        if n > 3 {
+            return n
+        }
+        n += 1
+    }
+}
+```
+
+`while let` is not one of those, because it ends when what it asks for is
+`none`, and neither is a `for`, which walks something that can be empty. A
+`break` makes it a loop that ends wherever it is written — inside an `if`,
+inside a `match` arm, inside a block — and then the body needs a `return` after
+the loop. A `break` that leaves a loop *inside* this one belongs to that one and
+says nothing about this. See D1080.
+
 A `let` gives its value where it is written, and what it is given has to be a
 value: a call that gives nothing back names nothing, and `let a = note(1)` is
 refused rather than leaving a name that cannot be read. There is no declaring a
