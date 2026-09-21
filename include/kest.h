@@ -678,6 +678,56 @@ typedef struct {
 // of elements rather than a world of them or a lend the host has taken back.
 #define KEST_RUN_IS 0x4b415252u
 
+// What a call keeps while it is running, and where the machine keeps them.
+// This is the second piece of the runtime's own memory anything outside it
+// reads directly, and it is here for the same one reader the first was: the C
+// this project's other backend writes (D1093, D1112).
+//
+// A call from a body the host's compiler compiled was a call to
+// `kest_native_room`, which asked three things and wrote four fields. The
+// asking is three comparisons and the writing is four stores; what a call
+// cost on top of that is the call -- a wall the host's compiler cannot hoist
+// a loop-invariant across, cannot keep a counter in a register over, and
+// cannot inline through. Taking it away took 28% of the instructions and 35%
+// of the cycles off `bench/rules.kest`. See D1122.
+//
+// Every field of both of these is what `KEST_ABI_VERSION` is about, for the
+// reason the run of elements is: one of them moving is every generated file
+// in the world reading memory that means something else. `chunk` is the
+// build's own idea of a function and is nothing a host can read; `ip` may be
+// NULL for a call that was made from compiled code, which has no
+// instructions to point at.
+typedef struct {
+    const void *chunk;
+    const unsigned char *ip;
+    KestValue *base;
+    // Where in the source this call was made, which a compiled body knows
+    // and an instruction does not: nought means "work it out from `ip`".
+    uint32_t said_at;
+} KestCall;
+
+typedef struct {
+    // The calls that are standing, and how many of them there are.
+    KestCall *calls;
+    uint32_t *many;
+    // How many there may be, and how far the slots go.
+    uint32_t most;
+    const KestValue *limit;
+    // How far up the slots are live, for the collector: a call raises it and
+    // nothing lowers it, because what is above it is slots nothing wrote.
+    KestValue **reached;
+    // What the program's functions are, in the order a generated file names
+    // them. `calls[n].chunk` comes from here.
+    const void *const *chunks;
+} KestLedger;
+
+// What reads one of these is `kest_ledger`, which is not a door a host is
+// given: a host that wanted one would be asking how the machine keeps its
+// calls, and what a host is given about that is `kest_needs_from` and what a
+// refusal says. The shape is here because it is what the version number is
+// about; the door is in the library's own header beside the rest of what a
+// generated file calls.
+
 // And the end of a lend, which is the host saying the block is not its to lend
 // any more. Nothing is freed: the block was the host's throughout. What
 // changes is what the program holds — every use of it afterwards is a message

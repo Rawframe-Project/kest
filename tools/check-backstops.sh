@@ -16217,11 +16217,11 @@ kest 9.9.9""",
         # one refusal under one engine and another under the other is caught.
         # See D1098.
         "what": "a run of compiled calls that nothing counts",
-        "file": "src/vm.c",
-        "from": r"""    if (runtime->frame_count == runtime->call_depth) {
-        stopped_saying(runtime, where, "K0602",""",
-        "to": r"""    if (false) {
-        stopped_saying(runtime, where, "K0602",""",
+        "file": "src/emitc.c",
+        "from": '            "        if (was == led.most) {\\n"\n'
+                '            "            return kest_native_crowded(rt, %u, %u, true);\\n"',
+        "to": '            "        if (false) {\\n"\n'
+              '            "            return kest_native_crowded(rt, %u, %u, true);\\n"',
         "make": ["kest"],
         "tool": "tools/check-c.sh",
         "arguments": ["examples/math.kest", "examples/game/npc.kest"],

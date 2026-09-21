@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1121
+    CURRENT SHA:       (this commit) D1093-D1122
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -19,7 +19,7 @@ reasoning; this holds the position.
                        working out where a refusal would be reported before
                        every door call
     LAST FAST GATE:    green
-    LAST FULL GATE:    green at a48610a
+    LAST FULL GATE:    green at 25134e6
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.
                        Every number below was taken on it.
@@ -462,13 +462,15 @@ backend's own half instead.
    The 16.5% was a defect and is gone: `bench/agents.kest` went from 18.31 G
    instructions to 6.84 G, and from 11.40 G cycles to 3.80 G. What the profile names next is
    `kest_native_room` — see item 7.
-7. **The ledger frame, twelve per cent of the release engine.**
-   `kest_native_room` pushes and pops a frame per call, with a depth check and
-   a stack check in front of it. It is what a refusal deep in a compiled
-   program is reported from and what a host is told about depth, so it cannot
-   simply go; what would take it down is what D1112 did to the element read —
-   the shape in a header and the fast path inline — at the cost of a much
-   larger ABI surface. D1117 is the measurement that would pay for it.
+7. *(done, D1122)* **The ledger frame.** What a call keeps is in the public
+   header now, held to the machine's own shape by `_Static_assert`, and a
+   body that makes calls reads it once and writes each call out.
+   `bench/control.kest` 242.1 M instructions down to 194.2 M (20%),
+   `bench/rules.kest` 1,048.1 M down to 904.2 M (14%), `bench/agents.kest`
+   3,013.2 M down to 2,705.8 M (10%), `bench/kernel.kest` unmoved. The
+   ceiling was measured first — a build with no ledger at all runs `rules` in
+   0.755 G — so half the 28% is the ledger itself, and the ledger is what a
+   refusal deep in a compiled program is reported from.
 8. Comparators, kept in step as the engines move. The harness names the mode
    of every row (D1090), which is what stops an interpreter's number being
    read as a compiler's.

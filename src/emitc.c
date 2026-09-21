@@ -333,6 +333,19 @@ static bool reaches_no_heap(const KestEmitC *c, const KestIrBody *body) {
     return true;
 }
 
+// Whether a body makes a call at all, which is whether it wants the ledger
+// read at the top of it. Asked before anything is written, because the
+// reading goes in the preamble and what is in the body is not known until
+// after. See D1122.
+static bool calls_anything(const KestIrBody *body) {
+    for (uint32_t i = 0; i < body->op_count; i++) {
+        if (body->ops[i].kind == KEST_IR_CALL) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // Where an operand sits, written the way the file writes it. Small buffers
 // rather than one string built up, because every line below names two or three
 // of these and a shared one would name the last of them three times.
@@ -1973,19 +1986,52 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         // callee's frame goes.
         snprintf(handed, sizeof(Where), walk->on_the_stack ? "s + %u" : "frame + %u",
                  walk->on_the_stack ? base : walk->body->slot_count);
+        // What `kest_native_room` did, written out: is there a frame to
+        // spare, is there stack for what the callee wants, where the call is
+        // written, and the ledger entry itself. The three questions are three
+        // comparisons and the entry is four stores; what the call to a door
+        // cost on top of them was the call, which the host's compiler cannot
+        // hoist a loop-invariant across. See D1122.
+        const KestChunk *callee =
+            c->module == NULL || which >= c->module->count
+                ? NULL
+                : c->module->functions[which];
+        if (callee == NULL) {
+            cannot(walk, "a call to a body this was not given");
+            break;
+        }
+        uint32_t needs =
+            (uint32_t)callee->slot_count + (uint32_t)callee->stack_needed;
         say(c, out,
-            "    {\n        uint32_t was = 0;\n"
-            "        if (!kest_native_room(rt, %s, %u, %u, &was)) {\n"
-            "            return false;\n        }\n"
-            "        bool went = kf_%u(rt, %s, %s%s",
-            handed, which, op->span.offset, which, handed,
+            "    {\n        uint32_t was = *led.many;\n"
+            "        if (was > 0) {\n"
+            "            led.calls[was - 1].said_at = %u;\n"
+            "        }\n"
+            "        if (was == led.most) {\n"
+            "            return kest_native_crowded(rt, %u, %u, true);\n"
+            "        }\n"
+            "        KV *stands = %s;\n"
+            "        if (stands + %u > led.limit) {\n"
+            "            return kest_native_crowded(rt, %u, %u, false);\n"
+            "        }\n"
+            "        led.calls[was].chunk = led.chunks[%u];\n"
+            "        led.calls[was].ip = NULL;\n"
+            "        led.calls[was].base = stands;\n"
+            "        led.calls[was].said_at = 0;\n"
+            "        *led.many = was + 1;\n"
+            "        if (stands + %u > *led.reached) {\n"
+            "            *led.reached = stands + %u;\n"
+            "        }\n"
+            "        bool went = kf_%u(rt, stands, %s%s",
+            op->span.offset, which, op->span.offset, handed, needs, which,
+            op->span.offset, which, needs, needs, which,
             leaves > 0 ? "&" : "", leaves > 0 ? first : "NULL");
         for (uint32_t k = 0; k < reads; k++) {
             at_stack(second, base + k);
             say(c, out, ", %s", second);
         }
         say(c, out,
-            ");\n        kest_native_left(rt, was);\n"
+            ");\n        *led.many = was;\n"
             "        if (!went) {\n            return false;\n        }\n"
             "    }\n");
         break;
@@ -2264,6 +2310,16 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
                 say(c, &into->wrote, "    KV s[%u];\n", walk.deepest);
             }
         }
+        if (calls_anything(body)) {
+            // Where the machine keeps what is standing, read once. Every
+            // call below writes its own ledger entry rather than asking a
+            // door to: three comparisons and four stores, which a call is a
+            // wall in front of. See D1122.
+            say(c, &into->wrote,
+                "    KestLedger led;\n"
+                "    if (!kest_ledger(rt, &led)) {\n"
+                "        return false;\n    }\n");
+        }
         for (uint16_t p = 0; p < body->param_slots; p++) {
             say(c, &into->wrote, "    f[%u] = a%u;\n", (unsigned)p,
                 (unsigned)p);
@@ -2439,10 +2495,9 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "                            uint32_t where);\n"
         "bool kest_elem_count(KestRuntime *runtime, KestValue handle,\n"
         "                     uint32_t where, int64_t *into);\n"
-        "bool kest_native_room(KestRuntime *runtime, KestValue *base,\n"
-        "                      uint32_t which, uint32_t where,\n"
-        "                      uint32_t *was);\n"
-        "void kest_native_left(KestRuntime *runtime, uint32_t was);\n"
+        "bool kest_ledger(KestRuntime *runtime, KestLedger *into);\n"
+        "bool kest_native_crowded(KestRuntime *runtime, uint32_t which,\n"
+        "                         uint32_t where, bool deep);\n"
         "bool kest_store_new(KestRuntime *runtime, uint16_t layout,\n"
         "                    int64_t room, uint32_t where, KestValue "
         "*into);\n"

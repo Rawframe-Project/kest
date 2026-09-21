@@ -38297,3 +38297,66 @@ same shape in Luau is a table of functions over a table, so the two halves are
 the same task rather than the same words.
 
 Seven of fourteen.
+
+## D1122. A call written out, and the ledger in a header
+
+D1117's profile said `kest_native_room` and `kest_native_left` were fourteen
+per cent of the release engine on the gameplay workload. This writes them out.
+
+**First the ceiling was measured, because a design is worth what it can
+recover.** A build with the ledger removed entirely — wrong, and only a
+measurement — runs `bench/rules.kest` in 0.755 G instructions against 1.048 G.
+So the whole prize was 28% of the instructions and 35% of the cycles, and what
+a call to that door cost was never the three comparisons and four stores
+inside it: it was the call, which the host's compiler cannot hoist a
+loop-invariant across, cannot keep a counter in a register over, and cannot
+inline through.
+
+**So the shape is in the header.** `KestCall` is what a call keeps while it is
+running and `KestLedger` is where the machine keeps them, both held to
+`src/vm.c`'s own `Frame` by `_Static_assert`. A body that makes calls reads
+the ledger once at the top of itself and then writes each call out: is there a
+frame to spare, is there stack for what the callee wants, where the call is
+written, and four stores. The two refusals go through `kest_native_crowded`,
+which says what the machine says.
+
+**And `kest_native_room` is now that sequence written once for whoever cannot
+inline it** — a call through a function value, and a shim handing a body to
+the machine. It reads the ledger and writes the same seven things in the same
+order. One sequence, two spellings, and the second is there because the first
+cannot be reached from everywhere.
+
+### What it is worth
+
+Whole processes, compiled, machine instructions:
+
+| workload | before | after | |
+| --- | --- | --- | --- |
+| `bench/control.kest` — branches and a call a round | 242.1 M | 194.2 M | **20% fewer** |
+| `bench/rules.kest` — gameplay | 1,048.1 M | 904.2 M | **14% fewer** |
+| `bench/agents.kest` — a persistent world | 3,013.2 M | 2,705.8 M | **10% fewer** |
+| `bench/kernel.kest` — numbers | 149.5 M | 149.5 M | — |
+
+The kernel does not move because its hot loop makes no call the host's
+compiler had not already inlined. The other half of the 28% is not
+recoverable: it is the ledger itself, and the ledger is what a refusal deep in
+a compiled program is reported from.
+
+### What it costs
+
+`KestCall` and `KestLedger` are the second and third pieces of the runtime's
+own memory anything outside it reads directly, after the run of elements
+D1112 exposed. Every field of both is what `KEST_ABI_VERSION` is about: one
+of them moving is every generated file in the world writing into memory that
+means something else. The number exists for exactly this and moving it is
+allowed; what is not allowed is moving a field and leaving the number alone,
+and the `_Static_assert` is what makes that a build failure rather than a
+Tuesday.
+
+**One thing in the machine had to give.** A frame a compiled body writes has
+no instruction to point at, so its `ip` is NULL; the walk that writes a call
+chain read `caller->ip - chunk->code` unconditionally. It reads nought for a
+frame with no instruction now, which is the front of the body and where a
+caller nobody can place belongs. Nothing reaches it in practice — a frame that
+is a caller always has `said_at` — and a subtraction from NULL is not a thing
+to leave in a program because nothing reaches it today.

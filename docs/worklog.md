@@ -40228,3 +40228,33 @@ See D1120 and D1121.
 
 **Runs:** `make check`, and `ai/run.sh called` over both languages against the
 answer, the scaffold and the wrong answer.
+
+## A call written out, and the ledger in a header
+
+D1117 said the ledger a call keeps was fourteen per cent of the release
+engine. The ceiling was measured first: a build with the ledger removed
+entirely -- wrong, and only a measurement -- runs `bench/rules.kest` in
+0.755 G instructions against 1.048 G, so the prize was 28% of the
+instructions and 35% of the cycles. What a call to that door cost was never
+the three comparisons and four stores inside it; it was the call.
+
+`KestCall` and `KestLedger` are in the public header now, held to `Frame` by
+`_Static_assert`. A body that makes calls reads the ledger once at the top of
+itself and writes each call out. `kest_native_room` is that same sequence
+written once for whoever cannot inline it -- a call through a function value,
+and a shim handing a body to the machine.
+
+Compiled, whole processes: `bench/control.kest` 242.1 M instructions down to
+194.2 M, `bench/rules.kest` 1,048.1 M down to 904.2 M, `bench/agents.kest`
+3,013.2 M down to 2,705.8 M, `bench/kernel.kest` unmoved -- its hot loop makes
+no call the host's compiler had not already inlined.
+
+A frame a compiled body writes has no instruction to point at, so the walk
+that writes a call chain reads nought for one rather than subtracting from
+NULL.
+
+See D1122.
+
+**Runs:** `make check`, `tools/check-c.sh` over the tree, the depth hole
+repointed at the written-out check and seen catching, and the four workloads
+measured before and after under `perf stat`.

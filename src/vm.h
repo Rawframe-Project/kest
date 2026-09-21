@@ -111,23 +111,6 @@ bool kest_store_ref(KestRuntime *runtime, KestValue handle, int64_t index,
 bool kest_store_seek(KestRuntime *runtime, KestValue handle, int64_t from,
                      uint32_t where, int64_t *found);
 
-// Entering a body the host's compiler compiled from another one. A call
-// between two of those does not go through the machine, so this is where what
-// a call does still happens: the two refusals -- calls nested deeper than a
-// machine allows, and a frame that would not fit on its stack -- the frame
-// the ledger keeps, so a fault inside says what it was called from and a host
-// asking how deep a run is is told the truth, and how far up the stack is
-// live, for the collector. `which` is the body being entered, `where` is the
-// call in the source, and `was` comes back for `kest_native_left`. Answers
-// false when it refused, and has said so. See D1098.
-bool kest_native_room(KestRuntime *runtime, KestValue *base, uint32_t which,
-                      uint32_t where, uint32_t *was);
-
-// And back out of it: what `was` said, put back. A run of compiled calls
-// leaves the machine's ledger where it found it, so a body that calls in a
-// loop does not fill the frame list.
-void kest_native_left(KestRuntime *runtime, uint32_t was);
-
 // What a piece of text hashes to, what a value of a shape hashes to, and
 // whether two values of a shape are the same value. All three are answers the
 // machine has and the folder has, written once each and called from both
@@ -276,6 +259,19 @@ bool kest_region_close(KestRuntime *runtime, int64_t was, uint32_t where);
 // D1109.
 bool kest_run_at(KestRuntime *runtime, int64_t index, uint32_t count,
                  uint32_t where);
+
+// The ledger of a machine, read once by a body the host's compiler compiled
+// that makes calls: what that body then writes for each call is what
+// `kest_native_room` writes, and the two are the same sequence because one of
+// them is the other written out. False for a machine with no program.
+// See D1122.
+bool kest_ledger(KestRuntime *runtime, KestLedger *into);
+
+// And what a call says when there is no room for it: too deep, or past the
+// end of the slots. Answers false, so a body can give back what it gives
+// back. `deep` says which of the two it is.
+bool kest_native_crowded(KestRuntime *runtime, uint32_t which, uint32_t where,
+                         bool deep);
 
 // A crossing into the host. Everything the boundary asks is behind this door
 // -- what the declaration says against what was moved, how far in a host is

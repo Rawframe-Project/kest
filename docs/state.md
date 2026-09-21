@@ -217,7 +217,11 @@ machine through a call of its own, and the machine writes its frame over the
 one the call already made (D1105); a call through a function value is written
 too (D1107), and so is the crossing into the host (D1108) and one of a
 fixed run of slots (D1109) -- which leaves seven bodies of two thousand and no
-family among them. On `bench/kernel.kest` the release engine runs a
+family among them. A call from one compiled body to another is written out rather than made
+through a door, which is 14% of the gameplay workload and 20% of the one that
+is mostly branches (D1122); what a call keeps is in the public header for
+that, held to the machine's own shape while it builds.
+On `bench/kernel.kest` the release engine runs a
 body-step in 65.5 machine instructions against the machine's 527 and Luau's
 native code generation at 158, with `g++ -O2` at 23 — the five times that
 workload cost against `g++` is 2.8 times since a run of elements stopped being

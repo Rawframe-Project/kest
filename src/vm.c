@@ -604,6 +604,19 @@ typedef struct {
     uint32_t said_at;
 } Frame;
 
+// The same shape, said again where a generated file can read it, and held to
+// being the same shape by the compiler rather than by a rule somebody
+// remembers. A body the host's compiler compiled writes one of these itself
+// (D1122); a field that moved here and not there is every such file writing
+// into memory that means something else.
+_Static_assert(sizeof(Frame) == sizeof(KestCall),
+               "a call is one shape, and the header says another");
+_Static_assert(offsetof(Frame, chunk) == offsetof(KestCall, chunk) &&
+                   offsetof(Frame, ip) == offsetof(KestCall, ip) &&
+                   offsetof(Frame, base) == offsetof(KestCall, base) &&
+                   offsetof(Frame, said_at) == offsetof(KestCall, said_at),
+               "a call keeps its pieces where the header says");
+
 struct KestRuntime {
     // What this machine is made of, in an arena of its own: the stack, the
     // frames, the table of what the host provides, and this struct. It goes
@@ -2226,7 +2239,13 @@ static void said_at(Vm *vm, const KestSource *source, KestSpan span,
         if (chunk == NULL || chunk->origins == NULL) {
             continue;
         }
-        uint32_t at = (uint32_t)(caller->ip - chunk->code);
+        // A frame a compiled body made has no instruction to point at and
+        // says where its call is instead; nought there and no instruction is
+        // the front of the body, which is where a caller nobody can place
+        // belongs. See D1122.
+        uint32_t at = caller->ip == NULL || chunk->code == NULL
+                          ? 0
+                          : (uint32_t)(caller->ip - chunk->code);
         KestSpan call = {caller->said_at != 0
                              ? caller->said_at
                              : kest_chunk_origin(chunk, at > 0 ? at - 1 : 0),
@@ -7682,55 +7701,86 @@ bool kest_elem_count(KestRuntime *runtime, KestValue handle, uint32_t where,
     return true;
 }
 
-bool kest_native_room(KestRuntime *runtime, KestValue *base, uint32_t which,
-                      uint32_t where, uint32_t *was) {
-    if (runtime == NULL || runtime->module == NULL || was == NULL ||
-        which >= runtime->module->count) {
+bool kest_ledger(KestRuntime *rt, KestLedger *into) {
+    if (rt == NULL || rt->module == NULL || into == NULL) {
         return false;
     }
-    *was = runtime->frame_count;
+    into->calls = (KestCall *)(void *)rt->frames;
+    into->many = &rt->frame_count;
+    into->most = rt->call_depth;
+    into->limit = rt->limit;
+    into->reached = &rt->running_top;
+    into->chunks = (const void *const *)rt->module->functions;
+    return true;
+}
+
+bool kest_native_crowded(KestRuntime *rt, uint32_t which, uint32_t where,
+                         bool deep) {
+    if (rt == NULL || rt->module == NULL || which >= rt->module->count) {
+        return false;
+    }
+    if (deep) {
+        stopped_saying(rt, where, "K0602", "calls nest more than %u deep",
+                       rt->call_depth);
+    } else {
+        stopped_saying(rt, where, "K0602",
+                       "this call wants more than the %u slots of stack there "
+                       "are",
+                       rt->stack_slots);
+    }
+    // And what to ask for, which is the same answer the machine gives where
+    // it refuses the same call: a refusal about a number a host picked is one
+    // a host can act on.
+    what_it_needed(rt, rt, (int32_t)which);
+    return false;
+}
+
+// Entering a body the host's compiler compiled from another one, for whoever
+// cannot write the sequence out: a call through a function value, and a shim
+// handing a body to the machine. A call from one compiled body to another
+// writes it out rather than calling this, which is what D1122 is about.
+static bool kest_native_room(KestRuntime *runtime, KestValue *base,
+                             uint32_t which, uint32_t where, uint32_t *was) {
+    KestLedger led;
+    if (runtime == NULL || runtime->module == NULL || was == NULL ||
+        which >= runtime->module->count || !kest_ledger(runtime, &led)) {
+        return false;
+    }
+    const KestChunk *callee = runtime->module->functions[which];
+    uint32_t needs =
+        (uint32_t)callee->slot_count + (uint32_t)callee->stack_needed;
+    uint32_t at = *led.many;
+    *was = at;
     // Where the call this is about is written, on the frame making it: a body
     // the host's compiler compiled has no instruction pointer to read one
     // off, and a fault under it says `was called here` about a line either
     // way.
-    if (runtime->frame_count > 0) {
-        runtime->frames[runtime->frame_count - 1].said_at =
-            where_asked(runtime, where).offset;
+    if (at > 0) {
+        led.calls[at - 1].said_at = where_asked(runtime, where).offset;
     }
-    const KestChunk *callee = runtime->module->functions[which];
-    if (runtime->frame_count == runtime->call_depth) {
-        stopped_saying(runtime, where, "K0602",
-                       "calls nest more than %u deep", runtime->call_depth);
-        // And what to ask for, which is the same answer the machine gives
-        // where it refuses the same call: a refusal about a number a host
-        // picked is one a host can act on.
-        what_it_needed(runtime, runtime, (int32_t)which);
-        return false;
+    if (at == led.most) {
+        return kest_native_crowded(runtime, which, where, true);
     }
-    if (base + callee->slot_count + callee->stack_needed > runtime->limit) {
-        stopped_saying(runtime, where, "K0602",
-                       "this call wants more than the %u slots of stack there "
-                       "are",
-                       runtime->stack_slots);
-        what_it_needed(runtime, runtime, (int32_t)which);
-        return false;
+    if (base + needs > led.limit) {
+        return kest_native_crowded(runtime, which, where, false);
     }
     // The frame the ledger keeps. Nothing walks its instructions -- there are
     // none to walk -- and what it is for is everything else that reads
     // frames: what a fault says it was called from, how deep a host is told a
-    // run is, and what a machine says it needs.
-    Frame *mine = &runtime->frames[runtime->frame_count++];
-    mine->chunk = callee;
-    mine->ip = callee->code;
-    mine->base = base;
-    mine->said_at = 0;
+    // run is, and what a machine says it needs. This is the sequence a body
+    // the host's compiler compiled writes for itself, written once here for
+    // whoever cannot inline it. See D1122.
+    led.calls[at].chunk = led.chunks[which];
+    led.calls[at].ip = NULL;
+    led.calls[at].base = base;
+    led.calls[at].said_at = 0;
+    *led.many = at + 1;
     // How far up the stack is live, for the collector. What is above it is
     // slots nothing wrote, and a walk that reads one keeps something alive a
     // little longer, which is what a conservative walk of a stack does
     // anyway.
-    KestValue *reaches = base + callee->slot_count + callee->stack_needed;
-    if (runtime->running_top == NULL || reaches > runtime->running_top) {
-        runtime->running_top = reaches;
+    if (base + needs > *led.reached) {
+        *led.reached = base + needs;
     }
     return true;
 }
@@ -7961,6 +8011,8 @@ bool kest_call_host(KestRuntime *rt, uint16_t index, KestValue *base,
     return true;
 }
 
+static void kest_native_left(KestRuntime *runtime, uint32_t was);
+
 bool kest_call_value(KestRuntime *rt, KestValue what, KestValue *base,
                      uint16_t handed, uint16_t coming_back, uint32_t where,
                      uint16_t *gave) {
@@ -8002,7 +8054,8 @@ bool kest_call_value(KestRuntime *rt, KestValue what, KestValue *base,
     return went;
 }
 
-void kest_native_left(KestRuntime *runtime, uint32_t was) {
+// And back out of it: what `was` said, put back.
+static void kest_native_left(KestRuntime *runtime, uint32_t was) {
     if (runtime != NULL && was <= runtime->frame_count) {
         runtime->frame_count = was;
     }
