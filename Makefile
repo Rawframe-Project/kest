@@ -228,6 +228,12 @@ fuzz: tools/fuzz-debug
 	    done; \
 	done
 
--include $(RELEASE_OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) build/release/main.d \
+# And the thread sanitiser's objects with them. They were left out, so a
+# header that changed rebuilt the release and the sanitised builds and left
+# these as they were: half the objects held the old shape of a struct and half
+# the new, which is a null pointer in the middle of a compile and a gate that
+# fails for a reason nothing in the source explains. See D1089.
+-include $(RELEASE_OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) $(RACES_OBJ:.o=.d) \
+    build/release/main.d \
     build/debug/main.d build/release/embed.d build/release/engine.d \
     build/release/least.d

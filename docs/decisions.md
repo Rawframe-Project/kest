@@ -36651,3 +36651,33 @@ not a million: 288 ms, against the 250 ms the direction asks for. A million
 lines is 4.9 s against 2 s, and it is a shape nobody has yet — the largest
 gameplay codebases in this class are in the hundreds of thousands. It is
 measured, it is written down, and it is not where the next hour goes.
+
+## D1089. The thread sanitiser's objects were not rebuilt when a header changed
+
+*reproduced*, by changing a struct in `src/types.h` and watching the gate fall
+over inside a compile with a null pointer.
+
+The Makefile keeps a dependency file beside every object — `-MMD -MP` — so a
+header that changes rebuilds what included it. The line that reads those files
+back named the release objects, the sanitised objects, and the four hosts. It
+did not name the thread sanitiser's.
+
+So `make races` after a header change rebuilt whichever objects happened to be
+older than the header for some other reason and kept the rest. Half of them
+held the old shape of `KestProgram` and half the new, and a field written
+through one layout landed on a different field read through the other:
+`program->instances` was nought while `instance_count` said there were some,
+and the gate's `races` section died reading it — inside `kest_check_bodies`,
+which is nowhere near anything about threads.
+
+It has been wrong since that build was added and was only ever quiet because
+nothing had changed a header between two runs of it in the same tree. The
+release build and the sanitised build were right all along, which is what made
+it look like a defect in the new code rather than in the build.
+
+**Decided.** The line names `$(RACES_OBJ:.o=.d)` too. A build that can hold two
+shapes of one struct is not a build, and the sanitiser it feeds is the one that
+watches threads — the last place where a stale object should be allowed to
+produce a report nobody can reproduce.
+
+**What it cost.** Nothing: the dependency files were already being written.

@@ -39357,3 +39357,22 @@ promises, in 456 MB — no walk the size of the program left in it.
 See D1088.
 
 **Runs:** `make check`, and `tools/make-project.py` for the corpus.
+
+## A build that could hold two shapes of one struct
+
+D1088 added fields to `KestProgram`, and the gate's `races` section died
+reading a null pointer inside `kest_check_bodies` — nowhere near anything about
+threads. The release build and the sanitised build were fine.
+
+The Makefile writes a dependency file beside every object and reads them back
+for the release objects, the sanitised objects and the hosts. Not for the
+thread sanitiser's. So half of those objects held the old shape of the struct
+and half the new, and a field written through one layout was read as another
+through the other.
+
+The line names them now. It has been wrong since that build was added, and it
+was quiet because nothing had changed a header between two runs of it.
+
+See D1089.
+
+**Runs:** `make check`'s `races` section, which is what caught it.

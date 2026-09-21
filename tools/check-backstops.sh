@@ -2565,9 +2565,35 @@ yield""",
         # holds becomes whatever the first of its kind held. See D780.
         "what": "a composed type found by its kind alone",
         "file": "src/types.c",
-        "from": r"""        if (already->tag == tag && already->element == element &&
+        "from": r"""    uint64_t mixed = (uint64_t)tag * 1099511628211u;
+    mixed ^= (uint64_t)(uintptr_t)element * 2654435761u;
+    mixed ^= (uint64_t)count * 40503u;
+    return (uint32_t)(mixed ^ (mixed >> 32));
+}
+
+static uint32_t composed_slot(const KestProgram *program, KestTypeTag tag,
+                              const KestType *element, uint32_t count) {
+    uint32_t mask = program->composed_by_shape_slots - 1;
+    uint32_t slot = shape_hash(tag, element, count) & mask;
+    while (program->composed_by_shape[slot] != 0) {
+        const KestType *already =
+            program->composed[program->composed_by_shape[slot] - 1u];
+        if (already->tag == tag && already->element == element &&
             already->count == count) {""",
-        "to": r"""        if (already->tag == tag) {""",
+        "to": r"""    uint64_t mixed = (uint64_t)tag * 1099511628211u;
+    (void)element;
+    (void)count;
+    return (uint32_t)(mixed ^ (mixed >> 32));
+}
+
+static uint32_t composed_slot(const KestProgram *program, KestTypeTag tag,
+                              const KestType *element, uint32_t count) {
+    uint32_t mask = program->composed_by_shape_slots - 1;
+    uint32_t slot = shape_hash(tag, element, count) & mask;
+    while (program->composed_by_shape[slot] != 0) {
+        const KestType *already =
+            program->composed[program->composed_by_shape[slot] - 1u];
+        if (already->tag == tag) {""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/words.kest"],
@@ -14653,8 +14679,12 @@ fn main() -> i32 {
         # reusing one would be what it pays for writing sixty.
         "what": "a copy of a generic made for every call",
         "file": "src/types.c",
-        "from": """        if (held->decl != decl || held->count != count) {""",
-        "to": """        if (held->decl != decl || held->count != count + 1) {""",
+        "from": """    if (held->decl != decl || held->count != count) {
+        return false;
+    }""",
+        "to": """    if (held->decl != decl || held->count != count + 1) {
+        return false;
+    }""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
