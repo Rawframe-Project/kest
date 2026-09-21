@@ -39376,3 +39376,26 @@ was quiet because nothing had changed a header between two runs of it.
 See D1089.
 
 **Runs:** `make check`'s `races` section, which is what caught it.
+
+## What a gameplay round costs, against Luau
+
+`bench/rules.kest` had no twin in another language, so the comparison this
+project published was four language kernels — and a kernel is not a game.
+`bench/rules.lua` is the same workload written the way gameplay is written in
+Luau, and both print the same checksum, which is what says it is the same work.
+
+Four thousand actors over two hundred rounds: Kest 693 ms, Luau -O2 430 ms,
+Luau with native code generation 208 ms, process start 6 ms for both. Kest runs
+2.1 times the machine instructions per actor-round at a higher IPC and with
+fewer branch misses, so the machine is not waiting — it is doing more work per
+gameplay operation. A fifth of the interpreter is the dispatch sequence and
+about a fifth is packing and unpacking values.
+
+Daslang's interpreter looks slower by the clock and most of that is its 100 ms
+process start; its AOT path is what its own documentation points at and is not
+measured yet.
+
+See D1090.
+
+**Runs:** `bench/run.sh` with `KEST_LUAU` and `KEST_DAS` set, which now names
+each comparator mode in its own row.

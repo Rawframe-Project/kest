@@ -36681,3 +36681,86 @@ watches threads — the last place where a stale object should be allowed to
 produce a report nobody can reproduce.
 
 **What it cost.** Nothing: the dependency files were already being written.
+
+## D1090. What a gameplay round costs, against Luau and Daslang
+
+*measured*, on the machine in `docs/game-ai-direction-state.md`, with the same
+workload answering the same checksum in every language.
+
+The product question is why a game developer would choose this over Luau or
+Daslang. The first half of the answer has to be a number, and the number had
+never been taken on gameplay-shaped work: `bench/` compared four language
+kernels, and a kernel is not a game.
+
+`bench/rules.kest` is the gameplay-shaped one — actors with bags, flags,
+timers, a task with a payload, rules that read all four every round. It now has
+a Luau twin, `bench/rules.lua`, written the way somebody writing gameplay in
+Luau would write it: tables with named fields, numbers for the bits, a tag
+beside a value where Kest has an enum with a payload, `--!strict` throughout.
+Both print the same line, checksum and all:
+
+```text
+rules 108175838 worth 2308710 of 4000 over 200
+```
+
+That is what says the translation is faithful.
+
+**What it costs**, best of five whole processes, four thousand actors over two
+hundred rounds:
+
+| ran by | time |
+| --- | --- |
+| kest | 693 ms |
+| luau -O2 | 430 ms |
+| luau -O2 --codegen | 208 ms |
+
+Process start is 6 ms for both. So on gameplay-shaped work Kest is **1.6 times
+slower than Luau's interpreter and 3.3 times slower than Luau with native code
+generation**.
+
+**Where the difference is.** Not in stalls:
+
+| | instructions | cycles | IPC | branch misses |
+| --- | --- | --- | --- | --- |
+| kest | 5.31 G | 2.09 G | 2.55 | 4.5 M |
+| luau -O2 | 3.23 G | 1.39 G | 2.32 | 2.7 M |
+
+Kest runs **2.1 times the machine instructions per actor-round** — 6,207
+against 2,913, measured by the difference one extra round makes — at a higher
+instructions-per-cycle and with fewer mispredictions. The machine is not
+waiting; it is doing more work per unit of gameplay.
+
+Two things account for most of it. About a fifth of the interpreter's time is
+the dispatch sequence itself — read the byte, bound it, load the table entry,
+add the base, jump — which is five or six machine instructions paid once per
+bytecode operation, and a stack machine needs more operations per gameplay
+operation than a register machine does. About another fifth is packing and
+unpacking values: `unpack_typed`, `pack_typed` and `move_scalar` together, which
+is what a language whose structs are values pays where one whose objects are
+references does not.
+
+**Daslang.** Its interpreter is slower than Kest on the kernels by the clock —
+220 ms against 132 — but 100 ms of every Daslang row is process start, against
+6 ms for the other two, so on the work alone the two interpreters are close.
+Its `-jit` did not run in this environment, and its AOT path, which is what its
+own documentation points at for shipping performance, has not been measured
+here yet. Saying Kest beats Daslang on these numbers would be reading a startup
+difference as a language difference.
+
+**What this decides.** The owner's first goal is extremely fast runtime, and
+the evidence says the runtime is the ceiling: not the collector, not the host
+boundary, not the library — the machine work spent per gameplay operation. The
+next experiment is therefore the backend, and it is an experiment rather than a
+conclusion. What it must attack is instructions per operation, which means
+fewer bytecode operations for the same source and less paid per operation. A
+register-shaped instruction set and stronger fusion are the first thing to try,
+because they keep everything else — the checker, the contracts, the debugger,
+the differential tests — exactly where it is. If that does not close enough of
+the gap, the release path is where a C backend belongs, and the dev path keeps
+the machine that compiles in milliseconds.
+
+**What would change this reading.** A workload where Kest's fixed layouts and
+`no.alloc` frames matter more than dispatch does: the rules workload allocates
+on a cold path and walks small arrays, which is fair, but a world of tens of
+thousands of entities with references into it is the other half of a game and
+is not measured here yet.

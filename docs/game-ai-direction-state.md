@@ -105,18 +105,45 @@ is left. What remains there is parallel reading and less copying, and neither
 is where the product's daily loop is: that is a hundred thousand lines at
 288 ms against a 250 ms target.
 
+## D1090 — the runtime, measured against the incumbent
+
+`bench/rules.lua` is a faithful Luau twin of the gameplay-shaped workload; both
+print the same checksum. Four thousand actors, two hundred rounds, best of five
+whole processes, 6 ms of process start on both:
+
+| ran by | time |
+| --- | --- |
+| kest | 693 ms |
+| luau -O2 | 430 ms |
+| luau -O2 --codegen | 208 ms |
+
+Kest runs 2.1× the machine instructions per actor-round (6,207 against 2,913)
+at a *higher* IPC and with fewer branch misses. The ceiling is machine work per
+gameplay operation: about a fifth of the interpreter is the dispatch sequence,
+about a fifth is packing and unpacking values.
+
+Daslang's interpreter is close to Kest on work alone once its 100 ms process
+start is taken off; its `-jit` would not run here and its AOT path is not
+measured yet.
+
+**This is the mission's central finding so far: the runtime is the ceiling, and
+"extremely fast runtime" is not true today against Luau's best realistic mode.**
+
 ## Open, in priority order
 
-1. **The runtime, which is the owner's first goal and has not been measured
-   yet.** Profile a game-shaped workload — `examples/slice` and the engine —
-   and attribute the cost: dispatch, value movement, bounds and addressing,
-   aggregate copying, host crossing, allocation, collector, library. Find the
-   ceiling before touching the VM.
-2. Comparators, once our own numbers are understood: Luau in its best
-   realistic gameplay mode, Daslang interpreter and AOT named separately.
-3. What `kest check` prints by default: the declaration listing is output
-   rather than verification and costs as much as checking at scale. An agent
-   asking "is this valid" should not pay for it.
+1. **The backend experiment.** Attack machine instructions per gameplay
+   operation: fewer bytecode operations for the same source, and less paid per
+   operation. A register-shaped instruction set and stronger fusion first,
+   because they keep the checker, the contracts, the debugger and the
+   differential tests where they are. Hold semantics with the optimizer-off
+   and dev-versus-release differentials that already exist.
+2. The other half of a game: a world of tens of thousands of entities with
+   references into it, measured the same way, because the rules workload is
+   small arrays and a cold allocation path.
+3. Daslang's AOT path, measured and named as AOT, so the comparison is against
+   what its documentation points at rather than against its interpreter.
+4. What `kest check` prints by default: the declaration listing is output
+   rather than verification and costs as much as checking at scale.
 3. Measure the edit loop the way an agent drives it: edit → check → diagnostic,
    including process start, on the 100k corpus. Only then decide whether
    persistence or incrementality is worth its correctness cost.
