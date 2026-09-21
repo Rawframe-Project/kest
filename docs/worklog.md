@@ -40300,3 +40300,44 @@ See D1123.
 
 **Runs:** `make check`, and `bench/frame --frames 500` three times, quoting
 the one whose control was quiet.
+
+## The tails of any program, both ways, and what a vertical slice gets
+
+`bench/measure` binds a generated file when one is linked beside it, and
+`bench/tails.sh` writes that file for whatever program it is given, builds the
+instrument around it, and runs both halves. D1123 gave a frame two answers;
+this gives any program two.
+
+`examples/slice` is the vertical slice -- a colony with references at each
+other, rules promising `no.alloc`, churn every round, and a save written as
+text and read back. Sixty calls, five warmed:
+
+| | the machine | the release engine |
+| --- | --- | --- |
+| a call, p50 | 1.613 ms | 0.640 ms |
+| p95 | 1.949 ms | 0.849 ms |
+| p99 | 3.438 ms | 0.893 ms |
+| max | 4.089 ms | 2.796 ms |
+| dispersion | 0.171 ms | 0.092 ms |
+| the first call of all | 1.506 ms | 0.804 ms |
+| compiling | 3.640 ms | 5.030 ms |
+
+Two and a half times, where a frame of arithmetic was nearly six: an
+integrated program spends its time in the runtime, and compiling the bodies
+around that leaves the rest standing.
+
+The heap does the same thing under both engines to the byte -- 125,466
+allocations, 8,303,328 given, 31 walks, 350 plots made and 326 handed back --
+which is a measurement and a proof at once. The collector's longest pause is
+0.18 ms by the machine and 0.23 ms compiled, one and a half per cent of a
+sixty-hertz budget, on a program making a hundred and twenty-five thousand
+allocations in sixty calls.
+
+Compiling costs the release engine more (5.03 ms against 3.64) because a
+generated file's `main` builds the program and binds sixty-eight bodies to
+their chunks by name, which is what says the C was written from this program.
+
+See D1124.
+
+**Runs:** `make check`, and `bench/tails.sh examples/slice/src/main.kest
+--samples 60 --warmup 5 --builds 1`.

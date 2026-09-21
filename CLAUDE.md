@@ -105,6 +105,14 @@ bench/             Four shapes of work and what each costs, in this language
                    machine, and the dispersion beside the middle is what says
                    how much of that there was. `make bench/measure` builds it.
                    See D1004.
+                   `bench/tails.sh` is the third: `bench/measure` is generic
+                   and a generated file belongs to one program, so this one
+                   writes the C for whatever program it is given, builds the
+                   instrument around it, and runs both -- what a program costs
+                   run by the machine and run by the bodies the other backend
+                   wrote, with the middle, the tails and the worst of each. It
+                   leaves nothing behind and is not in the gate, for the
+                   reason none of `bench` is. See D1124.
                    `bench/agents.kest` and `bench/frame.{kest,c}` are the
                    reference programs the optimizing is measured on rather
                    than the four workloads above, which are one shape each.

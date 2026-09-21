@@ -38421,3 +38421,55 @@ worst frame against its best, and a sentence naming whose the tails are. The
 table above is from a run whose control was 2.2, and runs whose control was
 ten were thrown away rather than quoted. A worst frame that belongs to
 somebody else's build is not a measurement of this one.
+
+## D1124. The tails of any program, both ways, and what a vertical slice gets
+
+D1123 gave a frame two answers. This gives any program two: `bench/measure`
+keeps every sample and answers with the middle, the tails and the worst, and
+it now binds a generated file when one is linked beside it. `bench/tails.sh`
+writes that file for whatever program it is given, builds the instrument
+around it, and runs both halves.
+
+**And then the question section 34 actually asks: what does a serious
+integrated gameplay slice get?** `examples/slice` is that program — a colony
+that outlives every frame with references at each other, rules that promise
+`no.alloc`, an inventory counted rather than kept in step, colonists joining
+and leaving every round, and a save written as text and read back into a world
+that is not the one it came from.
+
+Sixty calls, five warmed, one build:
+
+| | the machine | the release engine |
+| --- | --- | --- |
+| a call, p50 | 1.613 ms | **0.640 ms** |
+| p95 | 1.949 ms | 0.849 ms |
+| p99 | 3.438 ms | 0.893 ms |
+| max | 4.089 ms | 2.796 ms |
+| dispersion | 0.171 ms | 0.092 ms |
+| the first call of all | 1.506 ms | 0.804 ms |
+| compiling | 3.640 ms | 5.030 ms |
+
+**Two and a half times, where a frame of arithmetic was nearly six.** That is
+the number to quote at somebody asking what a game gets, and the reason is the
+same one D1104 found in text and D1112 found in the kernel: an integrated
+program spends its time in the runtime — allocating, copying, walking — and
+compiling the bodies around that takes off what dispatch cost and leaves the
+rest standing. A frame that only does arithmetic has nothing else in it, which
+is why it moves six times and a slice moves two and a half.
+
+**The heap does exactly the same thing under both engines, to the byte.**
+125,466 allocations asking 6,487,998 bytes and given 8,303,328; 24,618 grown
+where they stood; 713,328 bytes copied; 31 walks giving back 8,052,528 bytes;
+350 plots made and 326 handed back. That is a measurement and a proof at once:
+two engines that allocate differently would be two languages.
+
+**The collector's longest pause on it is 0.18 ms by the machine and 0.23 ms
+compiled**, over a program making a hundred and twenty-five thousand
+allocations in sixty calls. Against a sixteen-millisecond budget that is one
+and a half per cent, and it is the answer to what a collector costs a game
+that churns.
+
+**Compiling costs the release engine more, and that is right.** 5.03 ms
+against 3.64: a generated file's own `main` builds the program *and* binds
+sixty-eight bodies to their chunks by name, which is the check that the C was
+written from this program and not another one. It is paid once at startup.

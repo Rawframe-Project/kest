@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1123
+    CURRENT SHA:       (this commit) D1093-D1124
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -19,7 +19,7 @@ reasoning; this holds the position.
                        working out where a refusal would be reported before
                        every door call
     LAST FAST GATE:    green
-    LAST FULL GATE:    green at d7452e0
+    LAST FULL GATE:    green at 94821bd
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.
                        Every number below was taken on it.
@@ -493,7 +493,31 @@ backend's own half instead.
    than the source. The C row is the control and the instrument says whether
    its own tails are worth reading, because on a shared machine pure C showed
    a ninety-ninth of 786 µs against a middle of 62.
-9. Comparators, kept in step as the engines move. The harness names the mode
+9. *(done, D1124)* **What a serious integrated gameplay slice gets.**
+   `bench/tails.sh` writes the C for whatever program it is given, builds
+   `bench/measure` around it, and runs both halves. `examples/slice` -- a
+   colony with references at each other, rules promising `no.alloc`, churn
+   every round, and a save written as text and read back -- over sixty calls:
+
+   | | the machine | the release engine |
+   | --- | --- | --- |
+   | a call, p50 | 1.613 ms | **0.640 ms** |
+   | p95 | 1.949 ms | 0.849 ms |
+   | p99 | 3.438 ms | 0.893 ms |
+   | max | 4.089 ms | 2.796 ms |
+   | dispersion | 0.171 ms | 0.092 ms |
+   | compiling | 3.640 ms | 5.030 ms |
+
+   **Two and a half times, where a frame of arithmetic was nearly six.** An
+   integrated program spends its time in the runtime, and compiling the bodies
+   around that leaves the rest standing — the same thing D1104 found in text
+   and D1112 in the kernel. The heap does the same thing under both engines to
+   the byte (125,466 allocations, 8,303,328 given, 31 walks, 350 plots made
+   and 326 handed back), which is a measurement and a proof at once. **The
+   collector's longest pause on it is 0.18 ms by the machine and 0.23 ms
+   compiled** — one and a half per cent of a sixty-hertz budget on a program
+   making a hundred and twenty-five thousand allocations in sixty calls.
+10. Comparators, kept in step as the engines move. The harness names the mode
    of every row (D1090), which is what stops an interpreter's number being
    read as a compiler's.
 

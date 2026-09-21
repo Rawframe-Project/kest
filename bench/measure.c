@@ -277,6 +277,10 @@ static uint64_t a_clock(void *context) {
     return (uint64_t)in_nanoseconds();
 }
 
+#ifdef KEST_MEASURE_BUILT
+bool kest_natives_here(KestRuntime *runtime);
+#endif
+
 static void how_to_run(void) {
     fprintf(stderr,
             "usage: measure <file.kest> [options]\n"
@@ -385,6 +389,19 @@ int main(int argc, char **argv) {
         return 2;
     }
     KestRuntime *runtime = host == NULL ? NULL : kest_start(build, host, NULL);
+#ifdef KEST_MEASURE_BUILT
+    /* A generated file for this same program is linked beside this one, and
+       binding it is the whole of what a host does with one (D1111). What is
+       timed below is then the release engine rather than the machine, which
+       is the other half of every number this instrument answers. `kest emit
+       --c` writes the file and `bench/tails.sh` builds this. See D1124. */
+    if (runtime != NULL && !kest_natives_here(runtime)) {
+        fprintf(stderr, "measure: this C was written from another program\n");
+        kest_build_free(build);
+        free(build_took);
+        return 2;
+    }
+#endif
     long long start_took = in_nanoseconds() - before_start;
     kest_host_free(host);
     if (runtime == NULL) {
