@@ -38045,3 +38045,156 @@ What follows from it, for whoever is next:
 `make check` is now about ten minutes on the reference machine and most of it
 is the 899 holes. That is the price, it is known, and the list should stop
 growing again.
+
+## D1116. The table, with both engines in it
+
+`bench/run.sh` had no row for the release engine. It has one now, and with it
+the four things that turned out to be in the way of getting one.
+
+**The generated file's own host was too small to run the programs.** Eleven of
+this tree's programs could be written whole as C and still not start, because
+they ask a host for a square root, a clock, an argument or a file and the
+little host at the bottom of a generated file offered none of them. It offers
+all of them now (D1109 did the arithmetic; this does the rest), and 45 of this
+tree's programs run both ways where 30 did.
+
+**A row that did not run no longer carries a number.** `run_it` timed the
+failing and printed it beside `(did not run)`, which is a duration a reader
+compares with the rows that ran.
+
+**Daslang's AOT cannot be measured on this machine, and that is the finding.**
+The harness names the row — `daslang -exe (AOT)`, built before it is timed, so
+the comparison is against what its documentation points at rather than against
+its interpreter. This build of daslang has no LLVM behind it, so `-exe` and
+`-jit` both refuse before they compile anything. The row is left out, which is
+what the harness does with a comparator that is not there, and the interpreter
+row stands on its own and says which it is. What it would take is building
+daScript with LLVM, which is not this tree's to build (D980).
+
+**And the table.** Whole processes, best of five, wall clock, on a machine
+somebody else was also using — instructions are what this project measures
+with and these are what a reader compares:
+
+| workload | kest | **kest, compiled** | `g++ -O2` | `luau -O2` | `luau --codegen` | daslang |
+| --- | --- | --- | --- | --- | --- | --- |
+| kernel | 127 ms | **27 ms** | 13 ms | 108 ms | 49 ms | 180 ms |
+| control | 186 ms | **34 ms** | 13 ms | 127 ms | 57 ms | 168 ms |
+| graph | 79 ms | **9 ms** | 7 ms | 19 ms | 15 ms | — |
+| words | 48 ms | **33 ms** | 17 ms | 36 ms | 32 ms | — |
+| rules | 909 ms | **122 ms** | 64 ms | 637 ms | 182 ms | — |
+
+**The release engine is ahead of Luau's native tier on four of the five and
+level on the fifth.** The fifth is `words`, which is text made, joined and
+split: it is bound by the allocator and by `memcpy`, and compiling the bodies
+around those takes off what dispatch cost and leaves the rest standing, which
+is what D1104 measured and said.
+
+**What a compiled row still pays, said plainly.** A file this backend writes
+reads and compiles the program at startup, because half of it may be the
+machine's to run and the natives have to be bound to the chunks they belong
+to. Every `kest, compiled` row here carries that, and on `graph` it is most of
+the eight milliseconds. It is the shape D1094 chose and it is what a host
+embedding one of these files does too.
+
+## D1117. Where the ceiling is, and sixteen per cent of it was a walk to nowhere
+
+The mission's sixth open item was a game-shaped runtime profile: where the
+time actually goes now that there are two engines. Here it is, on
+`bench/rules.kest`, which is the gameplay reference program — `perf record`,
+cycles, whole process.
+
+**The machine:**
+
+| | |
+| --- | --- |
+| `run_body` — dispatch and the instruction bodies | 54% |
+| `kest_chunk_origin` | **16.5%** |
+| value movement (`unpack_typed`, `pack_typed`, `move_scalar`, `unpack`) | 22% |
+| the collector and the heap | 0.4% |
+
+**The release engine:**
+
+| | |
+| --- | --- |
+| the compiled bodies | 73% |
+| `kest_native_room` and `kest_native_left` | **14%** |
+| making a run of elements, packing, following a reference | 5% |
+| reading and compiling the program at startup | the rest |
+
+**The collector is not the ceiling and never was here.** A world whose live
+set does not change costs a fifth of one per cent, which is what D1005 said
+and this is the measurement of it on a workload nobody wrote to show it.
+
+### The sixteen per cent
+
+`kest_chunk_origin` turns an instruction into the place in the source it came
+from. Its own comment says what it is for: *what reads one is a program that
+has already failed, and a walk over a body is nothing beside writing a message
+about it.* That was true until the doors arrived. A door takes where it was
+asked from, so that a refusal inside it is reported where the machine would
+have reported it — and eleven instructions were working that out **before**
+calling, on every element read, every push, every store operation and every
+crossing, whether anything refused or not.
+
+**So the machine says where it is in one store and the walk happens on the way
+to a message.** `KEST_WHERE_RUNNING` is the word a door is handed by the
+machine; `where_asked` turns it into a place, and it is called from
+`kest_native_stopped` and from the four doors that build a span, which are all
+on the way out of something that failed.
+
+### What it was worth
+
+Whole processes, machine instructions and cycles:
+
+| workload | before | after | |
+| --- | --- | --- | --- |
+| `bench/agents.kest` — the persistent world | 18.31 G / 11.40 G | 6.84 G / 3.80 G | **2.7× / 3.0× fewer** |
+| `bench/rules.kest` — gameplay | 6.237 G / 3.888 G | 5.833 G / 3.205 G | 6.5% / 18% fewer |
+| `bench/kernel.kest` — numbers | 1.097 G | 1.087 G | — |
+
+**The profile said sixteen and a half per cent of the cycles and eighteen went
+away**, which is the profile being right about itself and a little more: what
+is not walking a body is also not filling a cache with it.
+
+**Two and three quarter times on the reference program for a persistent
+world**, and almost nothing on the kernel. That is the shape of the defect: the walk is
+over the body from its start, so what it costs is the length of the body times
+how many door calls are in it. `bench/agents.kest` has long bodies full of
+store operations. The four workloads that were being watched have short ones,
+which is why nothing saw this for four decisions.
+
+The compiled half is unchanged to within noise — it hands over a real place
+and always did — at 2.972 G against 3.083 G on `agents`.
+
+### And what is next, named by the same profile
+
+`kest_native_room` is twelve per cent of the release engine: a ledger frame
+pushed and popped per call, with a depth check and a stack check in front of
+it. It is what a refusal deep in a compiled program is reported from and what
+a host is told about depth, so it cannot simply go. What would take it down is
+what D1112 did to the element read — the shape in a header and the fast path
+inline — at the cost of a much larger ABI surface than a run of elements was.
+That is a decision, and this is the measurement that would pay for it.
+
+## D1118. Daslang runs without its module cache, and so leaves nothing behind
+
+`bench/run.sh` gained a daslang row before this project's own comparator rows
+did, and running it for the first time in a while turned up two things at
+once.
+
+**It wrote a cache into this tree.** `daslang` keeps an AST module cache under
+`.jitted_scripts/module_cache` by default. `make clean` takes the directory
+away and the gate's `tree` check reads files rather than directories, so a
+cache with something in it is a file in this tree that nothing says is
+allowed. It has never had anything in it before, because the JIT it belongs
+to refuses on this machine.
+
+**And it was not the same measurement as the rows beside it.** Every other row
+here reads and compiles its program on every run: `kest` does, `luau -O2`
+does, `g++` is built before it is timed and says so. A daslang row that reads
+a cache the run above it wrote is a row measuring something the others are not
+allowed to measure, and `best of 5` takes the cached one.
+
+So every daslang row runs `-no-module-cache`. It is the fairer setting and it
+keeps somebody else's directory out of this tree, which is the same answer
+twice.

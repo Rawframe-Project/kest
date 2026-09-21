@@ -834,6 +834,13 @@ struct KestRuntime {
     // the program's is running. See D072.
     KestValue *running_top;
     uint32_t running_frames;
+    // Which instruction the machine was running when it last asked a door
+    // for something. A door takes where it was asked from so that a refusal
+    // inside it is reported where the machine would have reported it, and
+    // working that out is a walk over the body: this is the machine saying
+    // where it is in one store, and the walk happening only if the door
+    // refuses. See D1117.
+    const uint8_t *asked_at;
     // Where the operand stack had got to when a debugger stopped the machine.
     // One machine stops in one place, so it is the machine's rather than
     // every frame's: it is written at one instruction and read at one, and a
@@ -2175,6 +2182,22 @@ static KestSpan where_it_is(const Frame *frame, const uint8_t *instruction) {
     uint32_t offset = (uint32_t)(instruction - frame->chunk->code);
     KestSpan span = {kest_chunk_origin(frame->chunk, offset), 1};
     return span;
+}
+
+// Where a door was asked from, which is a source offset from a body the
+// host's compiler compiled and a word saying `the machine` from the machine.
+// The second is turned into the first here, on the way to a message and
+// nowhere else. See D1117.
+static KestSpan where_asked(const KestRuntime *rt, uint32_t where) {
+    if (where != KEST_WHERE_RUNNING) {
+        KestSpan said = {where, 1};
+        return said;
+    }
+    if (rt == NULL || rt->frame_count == 0 || rt->asked_at == NULL) {
+        KestSpan nowhere = {0, 1};
+        return nowhere;
+    }
+    return where_it_is(&rt->frames[rt->frame_count - 1], rt->asked_at);
 }
 
 // The same, where the place is already known rather than worked out from an
@@ -3744,10 +3767,11 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // make an array the same way and say the same thing when they
             // cannot. See D1099.
             frame->ip = ip;
+            rt->asked_at = instruction;
             KestValue *was_top = rt->running_top;
             rt->running_top = fill + layout->slots;
             bool made = kest_array_new(rt, of_which, count, fill,
-                                       where_it_is(frame, instruction).offset,
+                                       KEST_WHERE_RUNNING,
                                        top);
             rt->running_top = was_top;
             if (!made) {
@@ -3832,10 +3856,11 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // compiled goes through, so an array grows one way and says one
             // thing when it cannot. See D1099.
             frame->ip = ip;
+            rt->asked_at = instruction;
             KestValue *was_pushing = rt->running_top;
             rt->running_top = value + layout->slots;
             bool grew = kest_array_push(rt, handle, of_which, value,
-                                        where_it_is(frame, instruction).offset);
+                                        KEST_WHERE_RUNNING);
             rt->running_top = was_pushing;
             if (!grew) {
                 return false;
@@ -4063,8 +4088,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // compiler compiled goes through: one answer about what a run of
             // elements does when one is taken out of the middle. See D1099.
             frame->ip = ip;
+            rt->asked_at = instruction;
             if (!kest_array_remove(rt, handle, index,
-                                   where_it_is(frame, instruction).offset)) {
+                                   KEST_WHERE_RUNNING)) {
                 return false;
             }
             break;
@@ -4210,8 +4236,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t holds = READ_U16();
             OF_THE_MODULE(holds, module->layout_count, "a layout");
             frame->ip = ip;
+            rt->asked_at = instruction;
             if (!kest_store_new(rt, holds, room,
-                                where_it_is(frame, instruction).offset,
+                                KEST_WHERE_RUNNING,
                                 top)) {
                 return false;
             }
@@ -4301,8 +4328,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             int64_t which = (--top)->integer;
             KestValue held = *--top;
             frame->ip = ip;
+            rt->asked_at = instruction;
             if (!kest_store_get(rt, held, which, stride, top,
-                                where_it_is(frame, instruction).offset)) {
+                                KEST_WHERE_RUNNING)) {
                 return false;
             }
             top += stride + 1;
@@ -4316,8 +4344,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             KestValue held = *--top;
             bool was = false;
             frame->ip = ip;
+            rt->asked_at = instruction;
             if (!kest_store_set(rt, held, which, stride, value,
-                                where_it_is(frame, instruction).offset,
+                                KEST_WHERE_RUNNING,
                                 &was)) {
                 return false;
             }
@@ -4329,8 +4358,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             KestValue held = *--top;
             bool was = false;
             frame->ip = ip;
+            rt->asked_at = instruction;
             if (!kest_store_remove(rt, held, which,
-                                   where_it_is(frame, instruction).offset,
+                                   KEST_WHERE_RUNNING,
                                    &was)) {
                 return false;
             }
@@ -4344,10 +4374,11 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t at = READ_U16();
             uint16_t away = READ_U16();
             frame->ip = ip;
+            rt->asked_at = instruction;
             int64_t found = 0;
             if (!kest_store_seek(rt, mine[which],
                                  mine[at].integer + (first ? 0 : 1),
-                                 where_it_is(frame, instruction).offset,
+                                 KEST_WHERE_RUNNING,
                                  &found)) {
                 return false;
             }
@@ -4369,8 +4400,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             int64_t index = (--top)->integer;
             KestValue held = *--top;
             frame->ip = ip;
+            rt->asked_at = instruction;
             if (!kest_store_ref(rt, held, index,
-                                where_it_is(frame, instruction).offset,
+                                KEST_WHERE_RUNNING,
                                 &top->integer)) {
                 return false;
             }
@@ -4379,8 +4411,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
         case KEST_OP_COUNT: {
             frame->ip = ip;
+            rt->asked_at = instruction;
             if (!kest_store_count(rt, top[-1],
-                                  where_it_is(frame, instruction).offset,
+                                  KEST_WHERE_RUNNING,
                                   &top[-1].integer)) {
                 return false;
             }
@@ -5481,6 +5514,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // this one is under: where this frame is has to be in the frame
             // before the host runs. See D869.
             frame->ip = ip;
+            rt->asked_at = instruction;
             // And the budget, which is held in a register while this body
             // runs and is nobody else's until it is put back. A host may call
             // in again from in there: what that call could see was the budget
@@ -5498,7 +5532,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // asks is asked in one place, and both engines cross the same
             // way. See D1108.
             if (!kest_call_host(rt, index, base, argument_slots, result_slots,
-                                where_it_is(frame, instruction).offset)) {
+                                KEST_WHERE_RUNNING)) {
                 return false;
             }
             top = base + result_slots;
@@ -7695,7 +7729,8 @@ bool kest_native_room(KestRuntime *runtime, KestValue *base, uint32_t which,
     // off, and a fault under it says `was called here` about a line either
     // way.
     if (runtime->frame_count > 0) {
-        runtime->frames[runtime->frame_count - 1].said_at = where;
+        runtime->frames[runtime->frame_count - 1].said_at =
+            where_asked(runtime, where).offset;
     }
     const KestChunk *callee = runtime->module->functions[which];
     if (runtime->frame_count == runtime->call_depth) {
@@ -7793,7 +7828,7 @@ bool kest_call_host(KestRuntime *rt, uint16_t index, KestValue *base,
     // back in from inside this and what it calls may fail, and then every
     // frame under it says where it made its call -- which a body the host's
     // compiler compiled has no instruction pointer to answer with. See D1094.
-    frame->said_at = where;
+    frame->said_at = where_asked(rt, where).offset;
     // Read only where the machine holds itself to the declaration, which is
     // the build that checks itself. Named here so that a release build does
     // not have to be told twice that it is a number nobody read.
@@ -8034,7 +8069,7 @@ bool kest_array_new(KestRuntime *rt, uint16_t layout, int64_t count,
         return false;
     }
     const KestLayout *what = &rt->module->layouts[layout];
-    KestSpan span = {where, 1};
+    KestSpan span = where_asked(rt, where);
     if (count < 0) {
         return stopped_saying(rt, where, "K0604",
                               "an array cannot have %lld elements",
@@ -8102,7 +8137,7 @@ bool kest_array_push(KestRuntime *rt, KestValue handle, uint16_t layout,
         return false;
     }
     const KestLayout *what = &rt->module->layouts[layout];
-    KestSpan span = {where, 1};
+    KestSpan span = where_asked(rt, where);
     if (it_is_lent(rt, array, where, true)) {
         return false;
     }
@@ -8160,7 +8195,7 @@ bool kest_array_room(KestRuntime *rt, KestValue handle, uint16_t layout,
         return false;
     }
     void *given = handle.object;
-    KestSpan span = {where, 1};
+    KestSpan span = where_asked(rt, where);
     if (KEST_HANDLE_IS(given, KEST_IS_STORE)) {
         Store *store = given;
         if (wanted > MAX_COUNTED) {
@@ -8257,7 +8292,7 @@ bool kest_array_written(KestRuntime *rt, uint16_t layout, uint16_t count,
         return false;
     }
     const KestLayout *what = &rt->module->layouts[layout];
-    KestSpan span = {where, 1};
+    KestSpan span = where_asked(rt, where);
     uint32_t hands = rt->hands;
     unsigned char *bytes = in_hand(rt, elements_for(rt, NULL, what, count));
     Array *array =
@@ -8328,7 +8363,7 @@ bool kest_array_push_text(KestRuntime *rt, KestValue handle, uint16_t layout,
         return false;
     }
     const KestLayout *what = &rt->module->layouts[layout];
-    KestSpan span = {where, 1};
+    KestSpan span = where_asked(rt, where);
     if (it_is_lent(rt, array, where, true)) {
         return false;
     }
@@ -8435,7 +8470,7 @@ bool kest_store_new(KestRuntime *rt, uint16_t layout, int64_t room,
         layout >= rt->module->layout_count) {
         return false;
     }
-    KestSpan span = {where, 1};
+    KestSpan span = where_asked(rt, where);
     if (room < 0) {
         return stopped_saying(rt, where, "K0604",
                               "a store cannot have room for %lld",
@@ -8476,7 +8511,7 @@ bool kest_store_add(KestRuntime *rt, KestValue handle, uint16_t stride,
     if (store == NULL || into == NULL) {
         return false;
     }
-    KestSpan span = {where, 1};
+    KestSpan span = where_asked(rt, where);
     uint32_t index;
     if (store->free_count > 0) {
         index = store->free_slots[--store->free_count];
@@ -8813,7 +8848,7 @@ bool kest_text_of(KestRuntime *rt, uint8_t how, KestValue value,
                            (long long)value.integer);
         break;
     }
-    KestSpan span = {where, 1};
+    KestSpan span = where_asked(rt, where);
     char *text = take(rt, NULL, (size_t)written + 1, KEST_GROUND_PLAIN);
     if (text == NULL) {
         no_room_at(rt, where_from(rt), span, rt);
@@ -8836,7 +8871,7 @@ bool kest_text_of_value(KestRuntime *rt, uint16_t layout,
         return false;
     }
     size_t length = format_value(NULL, 0, type, slots);
-    KestSpan span = {where, 1};
+    KestSpan span = where_asked(rt, where);
     char *text = take(rt, NULL, length + 1, KEST_GROUND_PLAIN);
     if (text == NULL) {
         no_room_at(rt, where_from(rt), span, rt);
@@ -8868,7 +8903,7 @@ bool kest_text_join(KestRuntime *rt, const KestValue *pieces, uint16_t count,
                               "`len` can count",
                               length);
     }
-    KestSpan span = {where, 1};
+    KestSpan span = where_asked(rt, where);
     char *text = take(rt, NULL, length + 1, KEST_GROUND_PLAIN);
     if (text == NULL) {
         no_room_at(rt, where_from(rt), span, rt);
@@ -8896,7 +8931,7 @@ bool kest_text_from(KestRuntime *rt, KestValue handle, uint32_t where,
     if (bytes == NULL || into == NULL) {
         return false;
     }
-    KestSpan span = {where, 1};
+    KestSpan span = where_asked(rt, where);
     uint32_t many = bytes->length;
     char *text = take(rt, NULL, (size_t)many + 1, KEST_GROUND_PLAIN);
     if (text == NULL) {
@@ -8927,7 +8962,7 @@ bool kest_native_stopped(KestRuntime *runtime, uint32_t offset,
     if (runtime == NULL) {
         return false;
     }
-    KestSpan span = {offset, 1};
+    KestSpan span = where_asked(runtime, offset);
     const KestSource *source =
         runtime->frame_count > 0
             ? runtime->frames[runtime->frame_count - 1].chunk->source

@@ -253,6 +253,15 @@ bool kest_call_value(KestRuntime *runtime, KestValue what, KestValue *base,
                      uint16_t handed, uint16_t coming_back, uint32_t where,
                      uint16_t *gave);
 
+// What a door is told when the machine is what asked it. A body the host's
+// compiler compiled knows where in the source it is and hands that over; the
+// machine knows which instruction it is running, and turning one into the
+// other is a walk over the whole body (`kest_chunk_origin`) that only matters
+// if something refuses. So the machine hands this over instead and the walk
+// happens on the way to the message, which is the one time the answer is
+// wanted. It was sixteen per cent of a gameplay workload. See D1117.
+#define KEST_WHERE_RUNNING 0xffffffffu
+
 // One of a fixed run of slots in the frame, at an index worked out while it
 // runs: whether the index is one of them. The machine's own sentence, because
 // two engines that put a bounds failure differently are two languages. See

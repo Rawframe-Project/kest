@@ -40093,3 +40093,85 @@ See D1115.
 
 **Runs:** `tools/check-backstops.sh`, 899 holes, every one of them seen
 catching what it is for.
+
+## The table, with both engines in it
+
+`bench/run.sh` has a row for the release engine now, and one for daslang's own
+compiler writing a binary, named as AOT.
+
+Four things were in the way. The generated file's own host was too small to
+run the programs -- eleven of this tree's could be written whole as C and
+still not start, for want of a clock, an argument or a file -- so it offers
+those now, and 45 of this tree's programs run both ways where 30 did. A row
+that did not run printed the time it took to fail, which is a number a reader
+compares with the rows that ran; it prints `--` now. Daslang's `-exe` and
+`-jit` both refuse on this machine, because this build of daslang has no LLVM
+behind it, so the AOT row is left out the way the harness leaves out a
+comparator that is not there.
+
+And the table. Whole processes, best of five, wall clock, on a machine
+somebody else was also using:
+
+| workload | kest | kest, compiled | `g++ -O2` | `luau -O2` | `luau --codegen` | daslang |
+| --- | --- | --- | --- | --- | --- | --- |
+| kernel | 127 ms | 27 ms | 13 ms | 108 ms | 49 ms | 180 ms |
+| control | 186 ms | 34 ms | 13 ms | 127 ms | 57 ms | 168 ms |
+| graph | 79 ms | 9 ms | 7 ms | 19 ms | 15 ms | -- |
+| words | 48 ms | 33 ms | 17 ms | 36 ms | 32 ms | -- |
+| rules | 909 ms | 122 ms | 64 ms | 637 ms | 182 ms | -- |
+
+Ahead of Luau's native tier on four of five and level on `words`, which is
+allocator-bound. Every compiled row still reads and compiles the program at
+startup, because half of it may be the machine's and the natives have to be
+bound to their chunks.
+
+See D1116.
+
+**Runs:** `bench/run.sh` with all three comparators found, and
+`tools/check-c.sh` over the tree.
+
+## Where the ceiling is, and sixteen per cent of it was a walk to nowhere
+
+A profile of `bench/rules.kest` under both engines, which is the mission's
+sixth open item. The machine: `run_body` 54%, `kest_chunk_origin` 16.5%, value
+movement 22%, the collector and the heap 0.4%. The release engine: the
+compiled bodies 73%, `kest_native_room` and `kest_native_left` 14%, the
+runtime 5%, startup the rest.
+
+`kest_chunk_origin` turns an instruction into a place in the source, and its
+own comment says it is for a program that has already failed. The doors
+changed that without anybody noticing: eleven instructions worked out where a
+refusal *would* be reported before every element read, every push, every store
+operation and every crossing. The machine says where it is in one store now,
+and the walk happens on the way to a message.
+
+`bench/agents.kest`, the persistent-world reference program: 18.31 G
+instructions and 11.40 G cycles down to 6.84 G and 3.80 G, which is 2.7 and
+3.0 times fewer. `bench/rules.kest`: 6.5% and 18% fewer. `bench/kernel.kest`:
+nothing. The walk is over the body from its start, so what it cost is the
+length of the body times the door calls in it, and the four workloads that
+were being watched have short bodies.
+
+What the same profile names next: `kest_native_room` at twelve per cent of the
+release engine, a ledger frame pushed and popped per call.
+
+See D1117.
+
+**Runs:** `make check`, and `bench/rules.kest`, `bench/agents.kest` and
+`bench/kernel.kest` under `perf stat` and `perf record` before and after.
+
+## Daslang runs without its module cache
+
+Running `bench/run.sh` with daslang found two things at once: it writes an AST
+module cache into `.jitted_scripts` in this tree, which the gate's `tree`
+check reads as a file nothing allows, and a row that reads a cache the run
+above it wrote is not the measurement the rows beside it are -- `kest` and
+`luau` both read and compile their program on every run, and `best of 5` takes
+the cached one.
+
+Every daslang row runs `-no-module-cache` now. Fairer, and it leaves nothing
+behind.
+
+See D1118.
+
+**Runs:** `make check`, and `bench/run.sh` with all three comparators found.

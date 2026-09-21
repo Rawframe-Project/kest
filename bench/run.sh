@@ -62,6 +62,13 @@ run_it() {
         answer=$said
         i=$((i + 1))
     done
+    # A row that did not run has no duration. What was timed was the failing,
+    # and a number beside `(did not run)` is a number a reader compares with
+    # the rows that did. See D1116.
+    if [ "$answer" = "(did not run)" ]; then
+        printf '%-10s %-20s %6s     %s\n' "$name" "$ran_by" "--" "$answer"
+        return
+    fi
     printf '%-10s %-20s %6s ms  %s\n' "$name" "$ran_by" "$fastest" "$answer"
 }
 
@@ -119,12 +126,19 @@ for one in kernel control graph words rules; do
         run_it "$one" "kest, compiled" "$built/$one" "bench/$one.kest"
     fi
     if [ -n "${KEST_DAS:-}" ] && [ -f "bench/$one.das" ]; then
-        run_it "$one" "daslang" "$KEST_DAS" "bench/$one.das"
-        run_it "$one" "daslang -jit" "$KEST_DAS" -jit "bench/$one.das"
+        # Without its module cache, which is the same thing every other row
+        # here does: `kest` reads and compiles the program on every run and so
+        # does `luau`, and a row that reads a cache the row above it wrote is
+        # not the same measurement. It also keeps a directory of somebody
+        # else's out of this tree. See D1118.
+        run_it "$one" "daslang" "$KEST_DAS" -no-module-cache "bench/$one.das"
+        run_it "$one" "daslang -jit" "$KEST_DAS" -no-module-cache -jit \
+            "bench/$one.das"
         # And the one its documentation points at, named as what it is: the
         # compiler writing a binary rather than running the program. See
         # D1090's rule about naming the mode.
-        if "$KEST_DAS" -exe -output "$built/$one.das.bin" "bench/$one.das" \
+        if "$KEST_DAS" -no-module-cache -exe \
+                -output "$built/$one.das.bin" "bench/$one.das" \
                 >/dev/null 2>&1 && [ -x "$built/$one.das.bin" ]; then
             run_it "$one" "daslang -exe (AOT)" "$built/$one.das.bin"
         fi

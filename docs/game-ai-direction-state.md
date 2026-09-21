@@ -6,15 +6,19 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1112
+    CURRENT SHA:       (this commit) D1093-D1118
     PHASE:             B — the release engine, and it is whole: 2,081 of this
                        tree's 2,088 bodies are written as C, `bench/rules.kest`
                        compiles entire, the gameplay workload is inside
-                       D1092's trigger against `g++` and level with Luau's
-                       native tier, and the kernel workload is 2.8 times
-                       `g++` where it was five
+                       D1092's trigger against `g++` and ahead of Luau's
+                       native tier on four of the five workloads, and the
+                       kernel is 2.8 times `g++` where it was five. And the
+                       machine is measured rather than guessed at: the
+                       persistent-world reference program runs 2.7 times fewer
+                       instructions since it stopped working out where a
+                       refusal would be reported before every door call
     LAST FAST GATE:    green
-    LAST FULL GATE:    green at fe1772d
+    LAST FULL GATE:    green at f410a55
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.
                        Every number below was taken on it.
@@ -391,10 +395,11 @@ backend's own half instead.
    family and all of them are in `examples`. Shipping one of these files is
    written and held: a generated file exports `kest_natives_here` for a
    game's own host, and the check runs one program twice in one process,
-   compiled and not, through a door that calls back in (D1111). What is left
-   here is the rest of the **generated file's own host**: it offers writing
-   and the arithmetic now, and eight programs in this tree still ask it for a
-   clock, a file or an argument, so they cannot be run both ways.
+   compiled and not, through a door that calls back in (D1111). The
+   **generated file's own host** offers writing, the arithmetic, a clock, the
+   arguments and the files now (D1109, D1116), so 45 of this tree's programs
+   run both ways where 30 did; the four that still cannot want the command
+   line's own toy engine, which is not a generated file's business.
 2. *(done, D1112)* **The five times on the kernel, read down to 2.8.** What
    a run of elements is in memory is in the public header now, so a read is
    four lines of C rather than a call: the host's compiler hoists the length
@@ -408,12 +413,24 @@ backend's own half instead.
    and a world of two thousand things walked twenty rounds runs 4.4 times
    fewer instructions. A reference to a place that has been handed back still
    reads as nothing, which is the property a game most needs from this.
-4. **The table, with both engines and both of Daslang's in it.**
-   `bench/run.sh` has two rows it did not: this language's release engine,
-   built before it is timed, and `daslang -exe`, which is its own compiler
-   writing a binary, named as AOT rather than left to look like its
-   interpreter. What is left is running it with all three comparators present
-   and writing down what it says — one run, one decision.
+4. *(done, D1116)* **The table, with both engines in it.** Whole processes,
+   best of five, wall clock, on a machine somebody else was also using:
+
+   | workload | kest | **kest, compiled** | `g++ -O2` | `luau -O2` | `luau --codegen` | daslang |
+   | --- | --- | --- | --- | --- | --- | --- |
+   | kernel | 127 ms | **27 ms** | 13 ms | 108 ms | 49 ms | 180 ms |
+   | control | 186 ms | **34 ms** | 13 ms | 127 ms | 57 ms | 168 ms |
+   | graph | 79 ms | **9 ms** | 7 ms | 19 ms | 15 ms | — |
+   | words | 48 ms | **33 ms** | 17 ms | 36 ms | 32 ms | — |
+   | rules | 909 ms | **122 ms** | 64 ms | 637 ms | 182 ms | — |
+
+   Ahead of Luau's native tier on four of the five and level on `words`,
+   which is allocator-bound. **Daslang's AOT is named and not measured**:
+   `daslang -exe` is a row in the harness, and this build of daslang has no
+   LLVM behind it, so `-exe` and `-jit` both refuse. What it would take is
+   building daScript with LLVM, which is not this tree's to build. Every
+   daslang row runs without its module cache (D1118), which is what the rows
+   beside it do and what keeps its directory out of this tree.
 5. **More of the AI suite.** Six of the nine kinds the mission lists are
    written (D1101, D1106, D1110, D1113, D1114) with held-out tests, a wrong
    answer beside each and a gate that holds all three. Four of them are the
@@ -423,10 +440,23 @@ backend's own half instead.
    meant. What is not written: a host API, which has no shape here that is
    fair to both languages. Running models against it is the owner's, at the
    end.
-6. Game-shaped runtime profile: where the ceiling actually is (dispatch, value
-   movement, allocation, collector, host crossing) on `examples/slice` and the
-   engine, now that the release engine changes which of them matter.
-7. Comparators, kept in step as the engines move. The harness names the mode
+6. *(done, D1117)* **Game-shaped runtime profile**, on `bench/rules.kest`.
+   The machine: dispatch and the instruction bodies 54%, working out where a
+   refusal would be reported 16.5%, value movement 22%, the collector and the
+   heap 0.4%. The release engine: the compiled bodies 73%, the ledger frame
+   pushed and popped per call 14%, the runtime 5%, startup the rest. **The
+   collector is not the ceiling**, which is what D1005 said and this measures.
+   The 16.5% was a defect and is gone: `bench/agents.kest` went from 18.31 G
+   instructions to 6.84 G, and from 11.40 G cycles to 3.80 G. What the profile names next is
+   `kest_native_room` — see item 7.
+7. **The ledger frame, twelve per cent of the release engine.**
+   `kest_native_room` pushes and pops a frame per call, with a depth check and
+   a stack check in front of it. It is what a refusal deep in a compiled
+   program is reported from and what a host is told about depth, so it cannot
+   simply go; what would take it down is what D1112 did to the element read —
+   the shape in a header and the fast path inline — at the cost of a much
+   larger ABI surface. D1117 is the measurement that would pay for it.
+8. Comparators, kept in step as the engines move. The harness names the mode
    of every row (D1090), which is what stops an interpreter's number being
    read as a compiler's.
 
