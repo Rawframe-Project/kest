@@ -1,0 +1,26 @@
+module stale
+
+// A world of things, and a round that takes some of them out. What each
+// function has to do is in `ask.md`; the shapes and the signatures here are
+// the task's and are not to be changed.
+
+struct Thing {
+    name: text
+    worth: i32
+}
+
+struct Hit {
+    who: ref<Thing>
+    by: i32
+}
+
+// Every hit takes its worth off what it names. A thing at nought or less goes
+// out of the world. Answers how many went.
+fn fell(world: store<Thing>, hits: [Hit]) -> i32 {
+    return 0
+}
+
+// What everything still standing is worth, added up.
+fn standing(world: store<Thing>) -> i32 {
+    return 0
+}

@@ -1,0 +1,31 @@
+module cooldown
+
+// Abilities that cool down. What each function has to do is in `ask.md`; the
+// shapes and the signatures here are the task's and are not to be changed.
+
+struct Ability {
+    name: text
+    cools: i32
+    left: i32
+}
+
+struct Actor {
+    name: text
+    energy: i32
+    abilities: [Ability]
+}
+
+// Every ability counts down by `by`, and a cooldown never goes below nought.
+fn tick(who: Actor, by: i32) -> Actor no.alloc no.host {
+    return who
+}
+
+// Whether the ability at `which` can be used now.
+fn ready(who: Actor, which: i32, costs: i32) -> bool no.alloc no.host {
+    return false
+}
+
+// Use it if it is ready, and answer the actor either way.
+fn spend(who: Actor, which: i32, costs: i32) -> Actor no.alloc no.host {
+    return who
+}

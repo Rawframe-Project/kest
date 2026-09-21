@@ -37418,3 +37418,63 @@ it is embarrassingly parallel, and it needs no state kept between runs. That is
 the cheaper half and it comes first. Until then this is a compiler that answers
 a hundred thousand lines in a third of a second from nothing at all, which is
 what "fast iteration" was supposed to mean.
+
+## D1101. The tasks a model is given
+
+Two of this project's three goals are about a model writing the language:
+that it works well with one, and that it catches what one gets wrong early.
+Nothing measured either. This is the thing that can: a small paired suite of
+gameplay tasks with tests the answer never sees.
+
+**Paired, because the question is about the language and not the model.** Each
+task is written twice — in Kest and in Luau — from one statement, with the
+same shapes, the same signatures and the same checks in the same order. What a
+run of models against it answers is not "can a model do this" but "where does
+the same model get further, and where is a mistake caught by the compiler
+rather than by a test."
+
+**Held out, because the interesting failure is the quiet one.** The tests sit
+beside the task rather than beside the answer, and `ai/run.sh` copies the
+answer into a room of its own to run them. Each check answers with its own
+number, so a failure says which sentence of the task was not kept. A refusal —
+the compiler saying no, or the machine stopping — is reported as `refused`
+rather than as a failing check, because it is the opposite of a silent escape
+and counting the two together is what the mission warns against: *do not use
+errors intercepted alone; a language that prevents completion can score well
+on that metric.*
+
+**And a wrong answer is kept beside every task.** `tools/check-ai.sh` asks
+three things of each task in each language: the answer written here keeps
+every test, the scaffold nobody filled in does not, and the plausible wrong
+answer is caught. That is the backstop rule applied to a test suite — a suite
+nobody has seen fail is indistinguishable from no suite — and it is what stops
+this from becoming a directory of prose nobody runs.
+
+**What is here.** Two tasks of the nine kinds the mission lists: a gameplay
+feature under a promise to reach no heap, and a handle to something the world
+has taken out. The second is the one this language should win: the wrong
+answer is the same shape in both — what is left is worked out where the thing
+may not be there — and in Kest that nought comes from an `if let` whose scope
+has closed, where in Luau it comes from a `nil` that nothing mentions.
+
+**What this does not do is run models against it.** That is the owner's, at
+the end, and it is deliberately not automated here: a suite that runs itself
+against whatever model is to hand measures the model that was to hand.
+
+**And the first failure classes, which are this model's own.** Writing the
+compiler in this session, the same model that would be measured made three
+mistakes worth writing down because each names a root cause the mission's list
+has a word for:
+
+- `take` for what this language calls `remove` — *documentation*: the builtin
+  list is in the reference and the name is not near the thing it does.
+- `array(2, 0)` for `[u8]`, where the fill has to be `u8(0)` — *missing static
+  information* in the message rather than in the language: the refusal says
+  the types differ and not that a literal is the thing to narrow.
+- expecting `%` on floats to cost what it costs in C — *ambiguous semantics*
+  about what is a builtin and what is a call, which D970 decided and nothing
+  says at the use.
+
+None is fixed here. They are written down because a class of mistake with a
+root cause beside it is what section 21 asks for, and because the first entries
+in that list being the model's own is worth more than the same list guessed at.

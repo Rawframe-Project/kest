@@ -1,0 +1,45 @@
+module cooldown
+
+// A plausible wrong answer: the cooldown is taken down without stopping at
+// nought, and `ready` reads the ability before asking whether there is one.
+// Both are what somebody writes when they have the sentences in their head
+// rather than in front of them, and neither is caught by the compiler.
+
+struct Ability {
+    name: text
+    cools: i32
+    left: i32
+}
+
+struct Actor {
+    name: text
+    energy: i32
+    abilities: [Ability]
+}
+
+fn tick(who: Actor, by: i32) -> Actor no.alloc no.host {
+    for at in 0..len(who.abilities) {
+        let one = who.abilities[at]
+        one.left -= by
+        who.abilities[at] = one
+    }
+    return who
+}
+
+fn ready(who: Actor, which: i32, costs: i32) -> bool no.alloc no.host {
+    if which >= len(who.abilities) {
+        return false
+    }
+    return who.abilities[which].left <= 0 && who.energy >= costs
+}
+
+fn spend(who: Actor, which: i32, costs: i32) -> Actor no.alloc no.host {
+    if !ready(who, which, costs) {
+        return who
+    }
+    who.energy -= costs
+    let one = who.abilities[which]
+    one.left = one.cools
+    who.abilities[which] = one
+    return who
+}

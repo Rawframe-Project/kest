@@ -39706,3 +39706,30 @@ See D1100.
 
 **Runs:** ten `kest check` runs over each of three corpora, `KEST_SPENT=1` for
 where the time goes, and the same run written to `/dev/null` and to a file.
+
+## The tasks a model is given
+
+Two of the three goals are about a model writing this language and nothing
+measured either. `ai/` is the thing that can: paired gameplay tasks, written
+twice from one statement -- in Kest and in Luau -- with tests the answer never
+sees and a plausible wrong answer kept beside each.
+
+`ai/run.sh` copies an answer into a room of its own, runs the held-out checks
+and says which one it did not keep, or `refused` where the language caught it
+before a test did. Those two are counted apart on purpose: a language that
+prevents completion scores well on errors intercepted, which is what the
+mission warns about.
+
+`tools/check-ai.sh` holds the suite to being worth being judged by -- the
+answer written here keeps every test, the scaffold does not, and the wrong
+answer is caught -- and a hole in `check-backstops.sh` has been seen catching
+a test that stopped asking.
+
+Two tasks of the nine kinds the mission lists, and the first three AI failure
+classes, which are this model's own from writing the compiler this session.
+Running models against the suite is the owner's, at the end.
+
+See D1101.
+
+**Runs:** `make check`, and `ai/run.sh` over both tasks in both languages
+against the answer, the scaffold and the wrong answer.

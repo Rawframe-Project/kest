@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1100
+    CURRENT SHA:       (this commit) D1093-D1101
     PHASE:             B — the release engine: level with Luau's native tier
                        on the gameplay workload, and inside D1092's trigger
     LAST FAST GATE:    green
@@ -285,12 +285,11 @@ and a language that refuses what it cannot prove.
    small arrays and a cold allocation path.
 4. Daslang's AOT path, measured and named as AOT, so the comparison is against
    what its documentation points at rather than against its interpreter.
-5. **The AI half of the mission, which nothing has touched**: paired tasks a
-   model is asked to do, hidden tests it does not see, and what comes of them
-   — how often the work is finished, how often a mistake is caught by the
-   compiler rather than by a test, and how often one gets through both. The
-   corpus and the tests are this project's to write; running models against
-   them is the owner's, at the end.
+5. **More of the AI suite.** Two tasks of the nine kinds the mission lists
+   are written (D1101) with held-out tests, a wrong answer beside each and a
+   gate that holds all three. What is not written: repairing a bug,
+   refactoring across modules, a host API, save and load, failure handling.
+   Running models against it is the owner's, at the end.
 6. Game-shaped runtime profile: where the ceiling actually is (dispatch, value
    movement, allocation, collector, host crossing) on `examples/slice` and the
    engine, now that the release engine changes which of them matter.

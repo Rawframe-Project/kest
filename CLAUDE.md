@@ -148,6 +148,18 @@ editors/           What an editor needs, and nothing that parses Kest. The
                    `check-tables.sh` holds the copy to being the same bytes as
                    the one at the root: two copies of a licence is two
                    licences the day one of them is edited.
+ai/                The tasks a model is given: the same gameplay work
+                   written twice, in Kest and in an incumbent, with tests
+                   whoever does the task is not shown. It is the one claim
+                   about this language that cannot be measured by running a
+                   program -- that code written with a model is easier to get
+                   right here -- and it has to come out of task outcomes
+                   rather than out of feature names. `ai/run.sh` runs one task
+                   against one answer and says which check it did not keep, or
+                   `refused` where the language caught it before a test did;
+                   `tools/check-ai.sh` holds the suite to being worth being
+                   judged by. Luau is found rather than built, the way the
+                   benchmarks find their comparators. See D1101.
 tools/             Build and development scripts. `make check` runs all of
                    them and everything else, and is what "it passes" means.
                    `fast.sh` is the other tier and is not one of them: it is
@@ -306,6 +318,14 @@ tools/             Build and development scripts. `make check` runs all of
                    it, because the public header is the one file somebody else
                    compiles and every build in this tree takes the extensions
                    its own compiler offers without a word.
+                   `check-ai.sh` holds the tasks a model is given to being
+                   tasks: for every one of them, in every language it is
+                   written in, the answer written here keeps every test, the
+                   scaffold nobody filled in does not, and the plausible wrong
+                   answer written beside it is caught. A suite nobody has seen
+                   fail is indistinguishable from no suite, which is the rule
+                   the backstops are written under and the reason a wrong
+                   answer is kept beside every task.
                    `check-c.sh` holds the other backend to answering what the
                    first one does. `kest emit --c` writes the same bodies as C
                    for the compiler a release is built with, and three things
@@ -522,7 +542,8 @@ tools/             Build and development scripts. `make check` runs all of
                    element read from outside the array it is in, about a
                    case's payload moved to where its bytes are, about text
                    hashed by where it is rather than what it says, about a run
-                   of compiled calls that nothing counts,
+                   of compiled calls that nothing counts, about a task whose
+                   tests let the wrong answer through,
                    about a message that says an `i64` through a `%u`,
                    about a kind of type nothing says how to write, about a
                    kind of token nothing says a line may end after, about an

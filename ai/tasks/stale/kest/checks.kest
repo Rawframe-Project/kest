@@ -1,0 +1,72 @@
+module checks
+
+// What the task is judged by, which whoever does it does not see. Each check
+// answers with its own number; nought is every check passing.
+
+import stale
+
+fn main() -> i32 {
+    let world: store<stale.Thing> = store(8)
+    let made: [ref<stale.Thing>] = array()
+    push(made, add(world, stale.Thing("oak", 10)))
+    push(made, add(world, stale.Thing("ash", 4)))
+    push(made, add(world, stale.Thing("elm", 7)))
+
+    // Nothing has happened yet, so everything is standing.
+    if stale.standing(world) != 21 {
+        return 1
+    }
+
+    // One hit that fells nothing.
+    let light: [stale.Hit] = array()
+    push(light, stale.Hit(made[0], 3))
+    if stale.fell(world, light) != 0 {
+        return 2
+    }
+    if stale.standing(world) != 18 {
+        return 3
+    }
+
+    // Two hits on one thing: the second is what fells it, and it goes once.
+    let twice: [stale.Hit] = array()
+    push(twice, stale.Hit(made[1], 2))
+    push(twice, stale.Hit(made[1], 2))
+    if stale.fell(world, twice) != 1 {
+        return 4
+    }
+    if stale.standing(world) != 14 {
+        return 5
+    }
+
+    // And a third hit on the one that is already gone fells nothing, counts
+    // nothing, and does not read what the world has handed back.
+    let after: [stale.Hit] = array()
+    push(after, stale.Hit(made[1], 5))
+    if stale.fell(world, after) != 0 {
+        return 6
+    }
+    if stale.standing(world) != 14 {
+        return 7
+    }
+
+    // The world is still walkable, and holds what it should.
+    let count = 0
+    for r in world {
+        count += 1
+    }
+    if count != 2 {
+        return 8
+    }
+
+    // Felling everything leaves nothing standing.
+    let rest: [stale.Hit] = array()
+    push(rest, stale.Hit(made[0], 100))
+    push(rest, stale.Hit(made[2], 100))
+    if stale.fell(world, rest) != 2 {
+        return 9
+    }
+    if stale.standing(world) != 0 {
+        return 10
+    }
+    return 0
+}

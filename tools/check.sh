@@ -41,11 +41,18 @@ instruments=$(find tools -name '*.kest' | sort)
 # backend that writes C can write.
 workloads=$(find bench -name '*.kest' | sort)
 
+# And the tasks a model is given, which are held to the one form and to
+# nothing else here: a scaffold that does not run and a wrong answer that does
+# the wrong thing are what they are for, so the sweeps that ask a file to run
+# and to answer nought are not asked of them. `check-ai.sh` is.
+tasks=$(find ai -name '*.kest' | sort)
+
 # And what those lists are, because everything below is a sweep over them: a
 # list that came back empty is every check in this file passing without reading
 # a file. There is no number here to hold them to — a count is the thing that
 # goes stale — but there is a floor, and the floor is one.
-if [ -z "$sources" ] || [ -z "$instruments" ] || [ -z "$workloads" ]; then
+if [ -z "$sources" ] || [ -z "$instruments" ] || [ -z "$workloads" ] ||
+        [ -z "$tasks" ]; then
     printf 'check: nothing was found to check; this is not a tree with a\n'
     printf '       language in it\n'
     exit 1
@@ -2787,7 +2794,7 @@ heard() {
 }
 
 # shellcheck disable=SC2086
-ask "formatting" tools/check-fmt.sh $sources $instruments
+ask "formatting" tools/check-fmt.sh $sources $instruments $tasks
 # shellcheck disable=SC2086
 ask "commands" tools/check-commands.sh $sources
 ask "tables" tools/check-tables.sh
@@ -2795,6 +2802,7 @@ ask "header" tools/check-header.sh
 ask "declarations" tools/check-dead.sh
 # shellcheck disable=SC2086
 ask "backend" tools/check-c.sh $sources $workloads
+ask "tasks" tools/check-ai.sh
 # And the same check over a document with nothing in it, which is what every
 # pattern in it finding nothing looks like from outside. A check that reads
 # documents with patterns passes when the patterns stop matching, unless it

@@ -1,0 +1,41 @@
+module stale
+
+struct Thing {
+    name: text
+    worth: i32
+}
+
+struct Hit {
+    who: ref<Thing>
+    by: i32
+}
+
+fn fell(world: store<Thing>, hits: [Hit]) -> i32 {
+    let gone = 0
+    for at in 0..len(hits) {
+        let hit = hits[at]
+        // A hit may name something an earlier hit took out, so what is there
+        // is asked rather than assumed.
+        if let one = get(world, hit.who) {
+            let hurt = one
+            hurt.worth -= hit.by
+            if hurt.worth <= 0 {
+                remove(world, hit.who)
+                gone += 1
+            } else {
+                set(world, hit.who, hurt)
+            }
+        }
+    }
+    return gone
+}
+
+fn standing(world: store<Thing>) -> i32 {
+    let total = 0
+    for r in world {
+        if let one = get(world, r) {
+            total += one.worth
+        }
+    }
+    return total
+}

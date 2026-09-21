@@ -1,0 +1,101 @@
+module checks
+
+// What the task is judged by, which whoever does it does not see. Each check
+// answers with its own number, so a failure says which sentence of `ask.md`
+// was not kept. Nought is every check passing.
+
+import cooldown
+
+fn three() -> cooldown.Actor {
+    let abilities: [cooldown.Ability] = array()
+    push(abilities, cooldown.Ability("swing", 3, 0))
+    push(abilities, cooldown.Ability("shout", 5, 2))
+    push(abilities, cooldown.Ability("heal", 7, 7))
+    return cooldown.Actor("who", 10, abilities)
+}
+
+fn main() -> i32 {
+    // Counting down takes one off each, and nought stays nought.
+    let who = cooldown.tick(three(), 1)
+    if who.abilities[0].left != 0 {
+        return 1
+    }
+    if who.abilities[1].left != 1 {
+        return 2
+    }
+    if who.abilities[2].left != 6 {
+        return 3
+    }
+
+    // Past nought is nought rather than a negative number.
+    who = cooldown.tick(who, 100)
+    if who.abilities[1].left != 0 || who.abilities[2].left != 0 {
+        return 4
+    }
+
+    // Nothing else about the actor moved.
+    if who.energy != 10 || len(who.abilities) != 3 {
+        return 5
+    }
+    if who.abilities[0].cools != 3 || who.abilities[2].cools != 7 {
+        return 6
+    }
+
+    // Counting down by nought changes nothing.
+    let fresh = three()
+    let same = cooldown.tick(fresh, 0)
+    if same.abilities[1].left != 2 {
+        return 7
+    }
+
+    // Ready asks two things: cooled down, and enough energy for it.
+    let ours = three()
+    if !cooldown.ready(ours, 0, 10) {
+        return 8
+    }
+    if cooldown.ready(ours, 0, 11) {
+        return 9
+    }
+    if cooldown.ready(ours, 1, 1) {
+        return 10
+    }
+
+    // An index that is not one of them is not ready, and is not a refusal.
+    if cooldown.ready(ours, 3, 1) {
+        return 11
+    }
+    if cooldown.ready(ours, 0 - 1, 1) {
+        return 12
+    }
+
+    // Spending takes the energy and puts the cooldown back to full.
+    let after = cooldown.spend(ours, 0, 4)
+    if after.energy != 6 {
+        return 13
+    }
+    if after.abilities[0].left != 3 {
+        return 14
+    }
+    if after.abilities[1].left != 2 {
+        return 15
+    }
+
+    // Spending what is not ready changes nothing at all.
+    let no = cooldown.spend(ours, 1, 1)
+    if no.energy != 10 || no.abilities[1].left != 2 {
+        return 16
+    }
+    let past = cooldown.spend(ours, 9, 1)
+    if past.energy != 10 {
+        return 17
+    }
+
+    // And energy never goes below what was asked for: a spend that cannot be
+    // afforded is a spend that does not happen.
+    let poor = cooldown.Actor("poor", 2, three().abilities)
+    let tried = cooldown.spend(poor, 0, 5)
+    if tried.energy != 2 {
+        return 18
+    }
+    return 0
+}

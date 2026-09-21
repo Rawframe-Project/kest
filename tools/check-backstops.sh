@@ -16049,6 +16049,24 @@ kest 9.9.9""",
         "arguments": ["examples/math.kest", "examples/game/npc.kest"],
         "caught": "deep.kest",
     },
+    {
+        # A held-out test that does not hold anything out. The wrong answer
+        # written beside a task is what says the tests are worth being judged
+        # by; a check that stops asking about it is a suite that would pass a
+        # model's mistake and call it a completion. See D1101.
+        "what": "a task whose tests let the wrong answer through",
+        "file": "ai/tasks/stale/kest/checks.kest",
+        "from": """    if stale.fell(world, after) != 0 {
+        return 6
+    }""",
+        "to": """    if stale.fell(world, after) < 0 {
+        return 6
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-ai.sh",
+        "arguments": [],
+        "caught": "the wrong answer written for it passes",
+    },
 ]
 
 failed = 0
@@ -16174,8 +16192,11 @@ def put_out_of_order(hole):
         # documents name to being there, and the documents name the workloads
         # the optimizing is measured on. A copy without them is a copy where
         # that check fails for its own reasons and says nothing about the hole.
+        # And `ai`, which is the tasks a model is given: `check-ai.sh` runs
+        # them, so a copy without them is a copy where that check says nothing
+        # about the hole it was handed.
         for what in ("src", "include", "lib", "tools", "docs", "editors",
-                     "bench"):
+                     "bench", "ai"):
             shutil.copytree(what, os.path.join(work, what),
                             copy_function=bring)
         # The two hosts are making into this one, so they are made rather than

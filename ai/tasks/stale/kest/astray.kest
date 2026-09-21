@@ -1,0 +1,49 @@
+module stale
+
+// A plausible wrong answer, and the shape of it is what an `if let` does at
+// its closing brace: what was read inside it is not there afterwards, so the
+// decision below is made on a nought that means "there was nothing" rather
+// than on what the thing is worth. A hit that names something an earlier hit
+// took out is then taken out again and counted again.
+
+struct Thing {
+    name: text
+    worth: i32
+}
+
+struct Hit {
+    who: ref<Thing>
+    by: i32
+}
+
+fn fell(world: store<Thing>, hits: [Hit]) -> i32 {
+    let gone = 0
+    for at in 0..len(hits) {
+        let hit = hits[at]
+        let left = 0
+        if let one = get(world, hit.who) {
+            left = one.worth - hit.by
+        }
+        if left <= 0 {
+            remove(world, hit.who)
+            gone += 1
+        } else {
+            if let one = get(world, hit.who) {
+                let hurt = one
+                hurt.worth = left
+                set(world, hit.who, hurt)
+            }
+        }
+    }
+    return gone
+}
+
+fn standing(world: store<Thing>) -> i32 {
+    let total = 0
+    for r in world {
+        if let one = get(world, r) {
+            total += one.worth
+        }
+    }
+    return total
+}
