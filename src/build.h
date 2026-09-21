@@ -68,6 +68,12 @@ struct KestBuild {
     // The one walk of the whole program, worked out when somebody first asks
     // and handed to everybody who asks after, machines included. See D607.
     KestWalk walked;
+    // Whether the bodies are written as C as well as as bytecode, and what
+    // came out. Said between opening a build and compiling it: the two
+    // backends read one body each time one is made, and a body is let go
+    // before the next is built. See D1093.
+    bool wants_c;
+    const char *c_wrote;
     // The clock, or NULL for a build nobody is weighing, and what each stage
     // took by it.
     uint64_t (*now)(void *);
@@ -113,6 +119,15 @@ void kest_build_clock(KestBuild *build, uint64_t (*now)(void *), void *context,
                       uint64_t reading);
 // What each stage took, by that clock. Nought everywhere when there was none.
 const KestSpent *kest_build_spent(const KestBuild *build);
+// Asks the next compile to write the bodies as C beside the bytecode, which is
+// what `kest emit --c` is. Nothing else changes: the same walk hands each body
+// to both backends, so what the C says and what the machine runs came from one
+// reading of the program.
+void kest_build_writes_c(KestBuild *build, bool on);
+// That C, or NULL for a build that was not asked or did not get that far. It
+// is one translation unit, and every body this backend had no C for is named
+// in it with the reason.
+const char *kest_build_c(const KestBuild *build);
 bool kest_build_check(KestBuild *build);
 bool kest_build_emit(KestBuild *build);
 

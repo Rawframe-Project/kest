@@ -39422,3 +39422,57 @@ See D1091.
 
 **Runs:** `make check`, and the two shapes of `bench/rules.kest` answering the
 same line.
+
+## The other backend: the same bodies written as C
+
+D1092 decided the release engine and this is the first of it. `src/emitc.c` is
+handed each body the same way the lowering is, and the build hands each one to
+both: there is no second walk of the program and no second answer about what a
+program means.
+
+It writes what a frame is made of when nothing it touches is a handle —
+constants, the frame, arithmetic at every width, the cuts that keep a number at
+its width, conversions, comparisons, branches, a walk's step, calls, giving
+back — and stops on everything else, naming the body and the reason in the
+file it produces. Over this tree that is 627 of 2,088 bodies, and what stops
+the rest is, in order: a crossing into the host, making an array, asking how
+long one is, an equality over something wider than a number, and text.
+
+The stack becomes locals: a value is made once and read once, innermost first,
+so every operand is a place in one C array with an index known while compiling,
+and the host's compiler turns the array into registers. What that costs is that
+two ways to one operation have to leave the same amount behind, which the
+machine does not need. One shape where they disagree turned out to be right
+anyway: the guard of the last arm of a `match` branches to the end with nothing
+pushed, because the arms cover every case and that edge is one nothing reaches.
+The machine would read a slot nothing wrote if it ever did; this writes it as a
+stop.
+
+Two scalar workloads of four million rounds each, by instruction count: an
+actor's rule 3.04 G on the machine against 0.187 G compiled, a float step
+3.34 G against 0.144 G — sixteen and twenty-three times fewer instructions, and
+twenty-five times fewer cycles on the first. Both answer the same number under
+both engines. Dispatch is only part of it: the host's compiler also inlines the
+call and keeps the frame in registers, which is the reason for writing C rather
+than a faster interpreter loop.
+
+`tools/check-c.sh` is what holds the two to being one language: every program
+in the tree written as C and handed to the host's compiler, five programs the
+check writes itself run both ways for the same answer and the same output, one
+of them a program that stops while it runs, and how much was left out read back
+and held to being neither nothing nor everything. Two holes in
+`check-backstops.sh` have been seen catching a subtraction written as an
+addition and a backend that writes a body it has no C for.
+
+And a number that came out of it: `x % 7.0` costs about 750 machine
+instructions in both engines, because the remainder of two floats is a software
+one written to keep this library to libc (D970). It dominates any float
+workload that uses it.
+
+See D1093.
+
+**Runs:** `make check`, with `tools/check-backstops.sh` run again in full
+after the figure a hole quotes moved -- the build grew by two fields, so what
+compiling `lib/std/text.kest` costs moved by sixteen bytes and the reference
+and the hole both say the new number. And `tools/check-c.sh` over the tree, and
+the two workloads under `perf stat -e instructions` compiled both ways.

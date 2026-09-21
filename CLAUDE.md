@@ -275,10 +275,13 @@ tools/             Build and development scripts. `make check` runs all of
                    source goes through one door that refuses an empty one,
                    because a pattern that stops matching finds nothing and
                    nothing agrees with everything. And it holds nine of the
-                   ten checks to saying nothing a hole has not been seen
-                   making them say — the tenth is the one that puts the holes
-                   out of order, left off for the reason the gate's own guards
-                   are: a check whose every complaint has a hole
+                   eleven checks to saying nothing a hole has not been seen
+                   making them say — the two left off are the one that puts
+                   the holes out of order, for the reason the gate's own
+                   guards are left off, and `check-c.sh`, whose two holes are
+                   the two halves of what it is for and whose other sentences
+                   are the plumbing of a check that is still growing with the
+                   backend it reads: a check whose every complaint has a hole
                    behind it is put on that list, so a
                    rule written there without a hole beside it refuses. A
                    check comes off it only when the reading that put it there
@@ -303,6 +306,25 @@ tools/             Build and development scripts. `make check` runs all of
                    it, because the public header is the one file somebody else
                    compiles and every build in this tree takes the extensions
                    its own compiler offers without a word.
+                   `check-c.sh` holds the other backend to answering what the
+                   first one does. `kest emit --c` writes the same bodies as C
+                   for the compiler a release is built with, and two halves
+                   say the two are one program: every program in the tree
+                   written as C and handed to the host's compiler, because C
+                   that will not compile is the one kind of wrongness this
+                   backend can have that reading the file does not show and
+                   the programs here are a corpus of two thousand bodies
+                   nobody had to write for it, and then programs the check
+                   writes itself, run both ways and held to the same answer,
+                   because a file that compiles says nothing about what it
+                   does. One of them is written to stop while it runs, so that
+                   what a program does when it goes wrong is held as well as
+                   what it does when it does not. How much was left out is
+                   read back and held to being neither nothing nor
+                   everything: a backend that wrote no body would hand the
+                   host's compiler a file of comments and pass, and one that
+                   claimed every body would be writing C for a crossing into
+                   the host, which it has none for.
                    `check-dead.sh` holds every header to declaring what is
                    there and nothing that nothing calls, and the library to
                    making nothing a header does not declare — which is the
@@ -485,7 +507,9 @@ tools/             Build and development scripts. `make check` runs all of
                    it, about a refusal that does not say what it refused,
                    about a heap that ran out without saying what was growing,
                    about a heap that ran out without saying what was being
-                   made, about a message that says an `i64` through a `%u`,
+                   made, about a subtraction written as C that
+                   adds, about a body with no C for it written anyway,
+                   about a message that says an `i64` through a `%u`,
                    about a kind of type nothing says how to write, about a
                    kind of token nothing says a line may end after, about an
                    instruction the promise's second proof does not know, about
@@ -992,6 +1016,7 @@ value    runtime values, the instruction set, the disassembler
 fmt      ast -> the one form the language has
 ir       what a checked program means, written down once
 lower    ir -> bytecode
+emitc    ir -> C, which the host's compiler makes a release engine from
 compile  ast -> ir
 vm       bytecode execution
 build    the stages as one thing, which is what a host has

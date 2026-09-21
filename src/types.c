@@ -756,6 +756,16 @@ bool kest_is_unsigned(const KestType *type) {
     return type != NULL && type->tag == KEST_T_INT && !type->is_signed;
 }
 
+bool kest_is_float(const KestType *type) {
+    return type != NULL && type->tag == KEST_T_FLOAT;
+}
+
+bool kest_is_a_run(const KestType *type) {
+    return type != NULL &&
+           (type->tag == KEST_T_ENUM || type->tag == KEST_T_STRUCT ||
+            type->tag == KEST_T_FIXED);
+}
+
 // What a constant is, worked out where it is written rather than where it is
 // used: one value, so it is the same value everywhere it appears and it costs
 // one instruction to push. The checker has already said the expression makes

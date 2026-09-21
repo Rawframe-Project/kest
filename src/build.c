@@ -1,5 +1,7 @@
 #include "build.h"
 
+#include "emitc.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -86,6 +88,22 @@ bool kest_build_check(KestBuild *build) {
 // What the optimizer found in one body, for whoever is writing a pass. It
 // goes to the error stream because what a program wrote is the program's
 // answer, the same rule the profile's own numbers follow. See D1024.
+// The backends a body is handed to, in the order they read it. There is one
+// door into a build for what a body means and two things that want it, and a
+// second walk of the program would be a second reading of the same answer.
+typedef struct {
+    KestLower *lower;
+    KestEmitC *c;
+} Backends;
+
+static bool write_body(void *reading, const KestIrBody *body) {
+    Backends *both = reading;
+    if (!kest_lower_body(both->lower, body)) {
+        return false;
+    }
+    return both->c == NULL || kest_emitc_body(both->c, body);
+}
+
 static void say_what_the_optimizer_found(const KestIrBody *body,
                                          const KestIrFound *found) {
     if (found->slot_copies == 0 && found->reloads == 0 &&
@@ -134,7 +152,20 @@ bool kest_build_emit(KestBuild *build) {
         kest_diags_starve(&build->diags);
         return false;
     }
-    kest_ir_program_init(&ir, bodies, kest_lower_body, writes);
+    // Both backends, when both were asked for. The C goes in the build's own
+    // arena rather than the bodies' one: a body is let go as soon as it has
+    // been written and what was written from it is read after the last of
+    // them. See D1093.
+    Backends both = {writes, NULL};
+    if (build->wants_c) {
+        both.c = kest_emitc_new(build->arena);
+        if (both.c == NULL) {
+            kest_arena_free(bodies);
+            kest_diags_starve(&build->diags);
+            return false;
+        }
+    }
+    kest_ir_program_init(&ir, bodies, write_body, &both);
     ir.now = build->now;
     ir.now_context = build->now_context;
     // What the optimizer found, said per body, when somebody asks. It is a
@@ -165,6 +196,17 @@ bool kest_build_emit(KestBuild *build) {
     build->spent.copies += ir.copies;
     uint64_t inside = ir.verifying + ir.optimizing + ir.lowering;
     build->spent.writing += compiling > inside ? compiling - inside : 0;
+    // Written once every body has been through, because what one body calls
+    // may be a body that had not arrived yet: a call to something this
+    // backend did not write is a call with nowhere to go, and which those are
+    // is a question about the whole program.
+    if (both.c != NULL && compiled) {
+        build->c_wrote =
+            kest_emitc_done(both.c, kest_build_name(build, KEST_MAIN));
+        if (build->c_wrote == NULL) {
+            kest_diags_starve(&build->diags);
+        }
+    }
     kest_arena_free(bodies);
     if (!compiled || build->module.out_of_room) {
         kest_diags_starve(&build->diags);
@@ -494,6 +536,14 @@ bool kest_build_free(KestBuild *build) {
 
 // The name something lives under in the file that was named, which is what a
 // host has to ask for and does not otherwise know.
+void kest_build_writes_c(KestBuild *build, bool on) {
+    build->wants_c = on;
+}
+
+const char *kest_build_c(const KestBuild *build) {
+    return build->c_wrote;
+}
+
 const char *kest_build_name(KestBuild *build, const char *name) {
     // The module's own, which is the field `kest_entry` reads when it looks
     // for the qualified form of what a host asked for. One field, so the two

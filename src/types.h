@@ -609,6 +609,16 @@ bool kest_is_narrow(const KestType *type);
 // comparison, a shift and a widening go. Two bodies for that as well.
 bool kest_is_unsigned(const KestType *type);
 
+// Whether it is a float at all, which is what says arithmetic on it is the
+// machine's floating instruction rather than its whole-number one.
+bool kest_is_float(const KestType *type);
+
+// And whether one value of it is a run of slots rather than one, which is what
+// says a comparison of two of them walks memory and a hash of one does. Here
+// rather than in a backend because both backends ask it, and the same question
+// answered in two files is two answers the day either moves.
+bool kest_is_a_run(const KestType *type);
+
 bool kest_type_equal(const KestType *a, const KestType *b);
 
 // What a constant is worth, worked out from what it is written as: a number, a

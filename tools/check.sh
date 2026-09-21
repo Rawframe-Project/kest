@@ -36,11 +36,16 @@ count=$(printf '%s\n' "$sources" | grep -c .)
 # take a while on purpose.
 instruments=$(find tools -name '*.kest' | sort)
 
+# And the workloads, which nothing else here sweeps: they are the programs
+# with the most arithmetic in them, which is the half of the language the
+# backend that writes C can write.
+workloads=$(find bench -name '*.kest' | sort)
+
 # And what those lists are, because everything below is a sweep over them: a
 # list that came back empty is every check in this file passing without reading
 # a file. There is no number here to hold them to — a count is the thing that
 # goes stale — but there is a floor, and the floor is one.
-if [ -z "$sources" ] || [ -z "$instruments" ]; then
+if [ -z "$sources" ] || [ -z "$instruments" ] || [ -z "$workloads" ]; then
     printf 'check: nothing was found to check; this is not a tree with a\n'
     printf '       language in it\n'
     exit 1
@@ -2788,6 +2793,8 @@ ask "commands" tools/check-commands.sh $sources
 ask "tables" tools/check-tables.sh
 ask "header" tools/check-header.sh
 ask "declarations" tools/check-dead.sh
+# shellcheck disable=SC2086
+ask "backend" tools/check-c.sh $sources $workloads
 # And the same check over a document with nothing in it, which is what every
 # pattern in it finding nothing looks like from outside. A check that reads
 # documents with patterns passes when the patterns stop matching, unless it
@@ -2798,7 +2805,7 @@ ask "declarations" tools/check-dead.sh
 # nought, which reads like a success; nothing in this tree is an empty list, so
 # what this stands for is a caller that lost its own. It is asked here because
 # nothing but the check itself can catch it.
-for tool in check-fmt.sh check-commands.sh; do
+for tool in check-fmt.sh check-commands.sh check-c.sh; do
     if tools/"$tool" >"$scratch"/check-none 2>&1; then
         complain "$tool" "was given nothing and looked at nothing"
         sed 's/^/    /' "$scratch"/check-none | head -3
@@ -2819,7 +2826,7 @@ some other reason"
     sed 's/^/    /' "$scratch"/check-empty-said | head -4
 fi
 
-say "nothing" "a document with nothing in it, and two checks handed no files"
+say "nothing" "a document with nothing in it, and three checks handed no files"
 
 ask "lends" tools/check-lends.sh
 ask "documentation" tools/check-docs.sh docs/language.md \

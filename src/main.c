@@ -165,6 +165,11 @@ static void help(FILE *out) {
             "  --check           fmt names the files it would rewrite, without\n"
             "                    writing them, and exits non-zero\n"
             "  --reset           tick throws the heap away between events\n"
+            "  --c               emit writes the bodies as C rather than as\n"
+            "                    instructions: one translation unit, with a\n"
+            "                    `main` when the program has one and a line\n"
+            "                    naming every body this backend has no C for\n"
+            "                    yet, which the machine runs instead\n"
             "  --cost            check says what it proved about each body:\n"
             "                    whether it reaches the heap, whether it\n"
             "                    crosses to the host, whether anything in it\n"
@@ -2189,7 +2194,8 @@ static int look_over(const char *executable, const char *where, bool json) {
 
 static int run(const char *command, const char *executable, char **paths,
                int path_count, bool json, int32_t count, const int32_t *given,
-               bool reset, size_t room, uint64_t fuel, bool costing) {
+               bool reset, size_t room, uint64_t fuel, bool costing,
+               bool writing_c) {
     // Asked once, because a compiler that asked the environment twice could
     // give two answers about one run.
     static int weighing = -1;
@@ -2226,6 +2232,13 @@ static int run(const char *command, const char *executable, char **paths,
         kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
                            KEST_STARVED_SAYS);
         return 1;
+    }
+
+    // Asked before anything is compiled, because the two backends read one
+    // body each as it is made: a build told afterwards would have nothing
+    // left to read.
+    if (writing_c) {
+        kest_build_writes_c(build, true);
     }
 
     bool ticking = strcmp(command, "tick") == 0;
@@ -2287,7 +2300,16 @@ static int run(const char *command, const char *executable, char **paths,
             }
         } else if (emitting) {
             if (kest_build_emit(build) && !json && !building) {
-                kest_module_disassemble(&build->module, EVERY_CALL, stdout);
+                // The instructions, or the C the same bodies were written as
+                // when that was asked for. Not both: a listing and a
+                // translation unit on one stream are neither.
+                const char *written = writing_c ? kest_build_c(build) : NULL;
+                if (written != NULL) {
+                    fputs(written, stdout);
+                } else if (!writing_c) {
+                    kest_module_disassemble(&build->module, EVERY_CALL,
+                                            stdout);
+                }
             }
             // In JSON it goes inside the object below, because a stream that
             // is an object and a listing at once is neither.
@@ -2815,6 +2837,13 @@ static int run(const char *command, const char *executable, char **paths,
                     (unsigned long long)kest_build_code_mark(build));
             fputc(',', stdout);
             kest_module_disassemble_json(&build->module, EVERY_CALL, stdout);
+            // And the same bodies as C, for a tool that asked for them. It is
+            // a string rather than a stream of its own for the reason
+            // everything else here is one: what a command says is one object.
+            if (writing_c && kest_build_c(build) != NULL) {
+                fputs(",\"c\":", stdout);
+                kest_json_text(kest_build_c(build), stdout);
+            }
         }
         // And what a run answered, which nothing but the exit status carried:
         // a status is eight bits and a byte of it is the whole answer, so a
@@ -3038,7 +3067,7 @@ static int run_tests(const char *executable, char **paths, int path_count,
         // Each on its own, because a program that will not compile is one
         // program that will not compile and the rest still run.
         int status = run("run", executable, one, 1, false, 0, NULL, false,
-                         room, fuel, false);
+                         room, fuel, false, false);
         if (status != 0) {
             failed++;
         }
@@ -3131,6 +3160,9 @@ int main(int argc, char **argv) {
     // person. The same facts are in `--json` whether this was asked for or
     // not, because a tool reads one shape. See D976.
     bool costing = false;
+    // `emit --c`: the same bodies written as C rather than as instructions,
+    // for the compiler a release is built with. See D1093.
+    bool writing_c = false;
     FormatMode mode = FORMAT_PRINT;
     // Gathered rather than sliced out of argv, because a number among them is
     // how many events to send and not a file to read.
@@ -3166,6 +3198,8 @@ int main(int argc, char **argv) {
             reset = true;
         } else if (strcmp(argv[i], "--cost") == 0) {
             costing = true;
+        } else if (strcmp(argv[i], "--c") == 0) {
+            writing_c = true;
         } else if (strcmp(argv[i], "--fuel") == 0) {
             // The count is the word after, for the reason `--room`'s is.
             if (i + 1 >= argc) {
@@ -3365,7 +3399,7 @@ int main(int argc, char **argv) {
         }
         int status =
             run(argv[1], argv[0], paths, path_count, json, count, given,
-                reset, room, fuel, costing);
+                reset, room, fuel, costing, writing_c);
         free(from_project);
         free(paths);
         free(given);

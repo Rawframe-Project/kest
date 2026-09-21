@@ -194,6 +194,18 @@ What was real beside it is fixed: reading a field of an element cost two
 dispatches and is one now, which is 16.9 % of the place form's instructions and
 nothing at all to the benchmarks, none of which is written that way (D1044).
 
+**And the native question is open again, and is being answered by building
+it.** D1017 and D1067 closed it twice on the reading that what a generated-C
+backend takes away is the dispatch and that the dispatch is not the gap. A
+gameplay-shaped workload measured against Luau's own native tier reopened it
+(D1090), and D1092 decided two engines: the machine for developing and C for
+shipping. The first of that backend is in the tree — `kest emit --c`, 627 of
+this tree's 2,088 bodies, held to answering what the machine answers by
+`tools/check-c.sh` — and on two scalar workloads it runs sixteen and
+twenty-three times fewer machine instructions than the machine does (D1093).
+What is not there is a hybrid binary: a body the machine runs and a body the
+host's compiler compiled, inside one process.
+
 ## What the closeout shipped, and what it rests on
 
 1.0.0 was tagged and published on 2026-09-18 and withdrawn on 2026-09-19

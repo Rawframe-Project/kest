@@ -5118,12 +5118,8 @@ for file in "$@"; do""",
         # this went unnoticed the first time.
         "what": "a listing written beside the object a tool reads",
         "file": "src/main.c",
-        "from": r"""            if (kest_build_emit(build) && !json && !building) {
-                kest_module_disassemble(&build->module, EVERY_CALL, stdout);
-            }""",
-        "to": r"""            if (kest_build_emit(build) && !building) {
-                kest_module_disassemble(&build->module, EVERY_CALL, stdout);
-            }""",
+        "from": r"""            if (kest_build_emit(build) && !json && !building) {""",
+        "to": r"""            if (kest_build_emit(build) && !building) {""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -6140,7 +6136,7 @@ anywhere, and it is why the gate holds""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "136000 as a tree, 174760 checked",
+        "caught": "136000 as a tree, 174776 checked",
     },
     {
         # And the section they are in saying whose machine they are. Bytes of
@@ -15910,6 +15906,46 @@ kest 9.9.9""",
         "tool": "tools/check-docs.sh",
         "arguments": ["docs/language.md", "docs/decisions.md"],
         "caught": "the editor extension says version 9.9.9",
+    },
+    {
+        # The other backend writing a program that means something else. What
+        # holds a second way of compiling a body is that the program answers
+        # what it answered, which is the same test the fusions and the
+        # optimizer are held by (D1009, D1025) and now the C as well: a
+        # subtraction written as an addition compiles, reads well, and is a
+        # different program. See D1093.
+        "what": "a subtraction written as C that adds",
+        "file": "src/emitc.c",
+        "from": r"""    case KEST_IR_SUB:
+        return real ? (narrow ? "%s.f = (double)((float)%s.f - (float)%s.f);"
+                              : "%s.f = %s.f - %s.f;")
+                    : "%s.i = (int64_t)((uint64_t)%s.i - (uint64_t)%s.i);";""",
+        "to": r"""    case KEST_IR_SUB:
+        return real ? (narrow ? "%s.f = (double)((float)%s.f + (float)%s.f);"
+                              : "%s.f = %s.f + %s.f;")
+                    : "%s.i = (int64_t)((uint64_t)%s.i + (uint64_t)%s.i);";""",
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest", "examples/game/npc.kest"],
+        "caught": "run by the machine and",
+    },
+    {
+        # A backend that writes every body, including the ones it has no C
+        # for. Nothing about the file it produces says so -- an operation with
+        # no C is simply not written, and what comes out compiles and is a
+        # program missing a line. The half of this check that catches it is
+        # the one that reads how much was left out, because a backend that
+        # leaves nothing out is either finished or not telling. See D1093.
+        "what": "a body with no C for it, written anyway",
+        "file": "src/emitc.c",
+        "from": r"""static void cannot(Walk *walk, const char *why) {
+    if (walk->why == NULL) {""",
+        "to": r"""static void cannot(Walk *walk, const char *why) {
+    if (walk->why == NULL && why == NULL) {""",
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest", "examples/game/npc.kest"],
+        "caught": "not both halves of what this backend is",
     },
 ]
 

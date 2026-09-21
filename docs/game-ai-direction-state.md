@@ -6,8 +6,8 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       96285c5 (D1086, D1087)
-    PHASE:             A — baseline, and the clean-check curve
+    CURRENT SHA:       (this commit) D1093
+    PHASE:             B — the release engine, first milestone in the tree
     LAST FAST GATE:    green
     LAST FULL GATE:    green at 96285c5
     REFERENCE MACHINE: the spare Linux box this repository is on --
@@ -129,20 +129,88 @@ measured yet.
 **This is the mission's central finding so far: the runtime is the ceiling, and
 "extremely fast runtime" is not true today against Luau's best realistic mode.**
 
+## D1091, D1092 — a fault found by measuring, and what two engines are for
+
+Writing the gameplay workload through the place instead of copying the struct
+found a compiler fault (`K0505` on `who[at].cools[i] = n`), fixed in D1091 —
+and the shape that avoids the copy turned out to be *slower*, so value structs
+are being paid for here rather than paid.
+
+The gameplay workload in four languages, same checksum, machine instructions
+(the clock on this shared box moves ±50 per cent between afternoons; the
+instruction count does not):
+
+| | instructions | against C++ |
+| --- | --- | --- |
+| c++ -O2 (`bench/rules.cpp`) | 0.43 G | 1.0 |
+| luau -O2 --codegen | 1.27 G | 3.0 |
+| luau -O2 | 3.23 G | 7.5 |
+| kest | 5.31 G | 12.4 |
+
+The machine spends 34 machine instructions per bytecode operation, a fifth of
+it dispatch, and half the operations it runs move values between slots and the
+stack. Fewer operations and cheaper ones together land near Luau's
+*interpreter*; nothing an interpreter does reaches its native code generation.
+
+So D1092: **two engines.** The machine stays what a program is developed
+against — it compiles a hundred thousand lines in 282 ms and carries the
+debugger, the profiler and the contracts. Shipping gets native code generated
+as C11 out of the same checked IR, through the host's own compiler, linked with
+the same runtime. Both must answer the same, the way optimizer-on and
+optimizer-off already do.
+
+## D1093 — the C backend exists, and what the first of it is worth
+
+`src/emitc.c` is handed each body the same way the lowering is, and the build
+hands each one to both: one reading of the program, two backends. `kest emit
+--c` writes one translation unit; a body it has no C for is named in the file
+with the reason and is a body the machine runs.
+
+Over this tree it writes **627 of 2,088 bodies**. What stops the rest, in
+order: a crossing into the host, making an array, asking how long one is, an
+equality over something wider than a number, and text.
+
+Two scalar workloads, four million rounds each, machine instructions:
+
+| workload | the machine | generated C | |
+| --- | --- | --- | --- |
+| an actor's rule: five states, four numbers, a call a round | 3.04 G | 0.187 G | 16× |
+| a step: four floats, two comparisons, a call a round | 3.34 G | 0.144 G | 23× |
+
+Cycles move further than instructions (1.22 G against 0.049 G on the first).
+Both answer the same number under both engines. Two things are in those ratios
+and only one is dispatch: the host's compiler also inlines the call, keeps the
+frame in registers and strength-reduces the loop.
+
+**These are scalar bodies and reach nothing the runtime owns.** A workload that
+touches an array pays the same bounds check, the same generation check and the
+same layout in both engines, so the next number is the one that matters and it
+is not this one.
+
+`tools/check-c.sh` holds the two engines to being one language: every program
+in the tree written as C and compiled by the host's compiler, five programs the
+check writes itself run both ways for the same answer, and how much was left
+out read back and held to being neither nothing nor everything. Two backstop
+holes have been seen catching it.
+
 ## Open, in priority order
 
-1. **The backend experiment.** Attack machine instructions per gameplay
-   operation: fewer bytecode operations for the same source, and less paid per
-   operation. A register-shaped instruction set and stronger fusion first,
-   because they keep the checker, the contracts, the debugger and the
-   differential tests where they are. Hold semantics with the optimizer-off
-   and dev-versus-release differentials that already exist.
-2. The other half of a game: a world of tens of thousands of entities with
+1. **Arrays and elements in the C backend**, which is what a frame of a game
+   is made of: `LOAD`/`PUT` through an element place, `len`, and the bounds
+   and generation checks the runtime does, written as the same calls. Then
+   `bench/kernel.kest` and `bench/rules.kest` measured against the machine and
+   against `bench/rules.cpp`, which is D1092's re-evaluation trigger and the
+   first honest test of the release engine.
+2. **One process, two engines.** A body the machine runs calling a body the
+   host's compiler compiled, and back. It is a runtime question rather than a
+   backend one: the generated function has to be reachable from a `call`
+   instruction and has to be able to call back in. Nothing ships without it.
+3. The other half of a game: a world of tens of thousands of entities with
    references into it, measured the same way, because the rules workload is
    small arrays and a cold allocation path.
-3. Daslang's AOT path, measured and named as AOT, so the comparison is against
+4. Daslang's AOT path, measured and named as AOT, so the comparison is against
    what its documentation points at rather than against its interpreter.
-4. What `kest check` prints by default: the declaration listing is output
+5. What `kest check` prints by default: the declaration listing is output
    rather than verification and costs as much as checking at scale.
 3. Measure the edit loop the way an agent drives it: edit → check → diagnostic,
    including process start, on the 100k corpus. Only then decide whether

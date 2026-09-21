@@ -4531,6 +4531,16 @@ ships is the source beside the runtime, and a program is compiled by the
 compiler that runs it. `kest emit` prints it for a reader and for this
 project's own checks; nothing reads it back.
 
+**And the bytecode is not the only thing a program is compiled to.** `kest emit
+--c` writes the same bodies as C, out of the same resolved form the machine's
+instructions are written from, for the compiler a release is built with. It is
+one translation unit: a body it has no C for is named in the file with the
+reason and is a body the machine runs, and a program every reachable body of
+which was written gets a `main` and is a program of its own. The two are one
+language and are held to it — a program compiled both ways answers the same
+thing, which `tools/check-c.sh` asks of this tree and of programs it writes
+itself. See D1092 and D1093.
+
 **Saved state is the host's.** What a world is saved as is what the host wrote
 down, and the shapes it was written from are held by the layout marks a reload
 compares — that is what refuses a save read back into a program whose shapes
@@ -6264,7 +6274,7 @@ bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 577 lines:
-55860 bytes as tokens, 136241 as a tree, 174760 checked and 205071 compiled.
+55860 bytes as tokens, 136241 as a tree, 174776 checked and 205087 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
 
@@ -6281,7 +6291,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 20701 bytes, against the 205071 it costs to compile.
+file and 20701 bytes, against the 205087 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.

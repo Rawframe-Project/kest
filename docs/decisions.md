@@ -44,6 +44,8 @@ another and is not named here is a check that fails.
 | D1021 | D1036 | the tag gate is retired, and a migration record takes its place |
 | D185 | D1039 | a name lives under the whole of its module, so two modules may end in one word |
 | D693 | D1041 | a field its module keeps to itself, so a library keeps an invariant |
+| D1017 | D1093 | the backend that decision said would not be built, built, and weighed |
+| D1067 | D1093 | the native question, answered by writing the C rather than by bounding it |
 
 ---
 
@@ -36886,3 +36888,113 @@ the number to beat is then Luau's interpreter rather than its native code.
 **The re-evaluation trigger.** If generated C does not land within three times
 of `bench/rules.cpp` on this workload, the reason is in the representation
 rather than in the backend, and the decision comes back here.
+
+## D1093. The C backend, grown by what it can write
+
+D1092 decided the release engine writes C out of the same resolved form the
+machine's lowering reads. This is what that is, the first of it, and how it
+grows.
+
+**One seam, two backends.** `src/emitc.c` is handed one body at a time, the
+same way `src/lower.c` is, and the build hands each body to both. There is no
+second walk of the program and no second answer about what a program means: a
+body arrives resolved, typed and verified, and the two backends disagree about
+nothing because neither of them decides anything.
+
+**A body it cannot write is a body the machine runs.** The first version
+writes what a frame is made of when nothing it touches is a handle: constants,
+the frame, arithmetic at every width, the cuts that keep a number at its
+declared width, conversions, comparisons, `not`, branches, a walk's step,
+calls, and giving back. Everything else — the heap, text, stores, the host,
+working memory, and every place that is not a run of the frame — stops a body,
+and the file says which bodies those were and why. A `default` in that switch
+is deliberate and is the one place in this project where one is: the list is
+what this backend can write rather than a list that has to be complete, and an
+operation added and forgotten here is a body that runs a little slower rather
+than a program that means something else.
+
+Over this tree that is 627 of 2,088 bodies. What stops the rest, in order: a
+crossing into the host, making an array, asking how long one is, an equality
+over something wider than a number, and text. Which of those to write next is
+a measurement rather than a list, and the first of them is what a world of
+entities does: read one of an array, change it, write it back.
+
+**How a stack becomes registers.** The resolved form is stack-oriented: a
+value is made once and read once, innermost first. So every operand is a place
+in one C array whose index is known while compiling — `s[3]`, not a pointer
+that has got somewhere — and the host's compiler turns the array into
+registers because nothing takes its address. The frame is the same. What this
+costs is that where a value sits has to be the same whichever way the program
+arrived at an operation, which the machine does not need: an instruction works
+from the top of the stack wherever the top is. Two ways to one place that
+disagree stop the body.
+
+There is one shape where they disagree and the program is still right: the
+guard of the last arm of a `match` branches to the end with nothing pushed,
+because the checker proved the arms cover every case and that edge is one
+nothing reaches. The machine would read a slot nothing wrote if it ever did.
+That edge is written as a stop rather than as a jump into a value that is not
+there, which is what `arrives` explains.
+
+**What holds it.** `tools/check-c.sh`, run by `make check`. Every program in
+the tree is written as C and handed to the host's compiler, because C that
+will not compile is the one wrongness this can have that reading it does not
+show — the programs here are a corpus of two thousand bodies nobody had to
+write for it. Then five programs the check writes itself are run both ways and
+held to the same answer and the same output, one of them a program that stops
+while it runs. How much was left out is read back and held to being neither
+nothing nor everything. It is the same differential the fusions and the
+optimizer are held by (D1009, D1025), and for the same reason: two ways of
+writing one body down are the same program or one of them is wrong.
+
+**What it is worth, measured.** Two scalar workloads, four million rounds
+each, instruction counts by `perf stat`, release build, this machine:
+
+| workload | the machine | generated C | |
+| --- | --- | --- | --- |
+| an actor's rule: five states, four numbers, a call a round | 3.04 G | 0.187 G | 16× fewer |
+| a step: four floats, two comparisons, a call a round | 3.34 G | 0.144 G | 23× fewer |
+
+Cycles move further than instructions — 1.22 G against 0.049 G on the first —
+because what is left is straight-line work the host's compiler schedules. Both
+programs answer the same number under both engines.
+
+Two things are in those ratios and only one of them is dispatch: the host's
+compiler also inlines the call, keeps the frame in registers and strength-
+reduces the loop, which is the whole reason for writing C rather than a
+threaded interpreter. Neither number is a claim about a game: a workload that
+reaches the heap reaches the same runtime under both engines, and that is the
+next thing to measure rather than the next thing to assume.
+
+**What it is not yet.** There is no hybrid binary. `kest emit --c` writes a
+translation unit, and a program whose every reachable body was written gets a
+`main` and is a program; one whose bodies were not is a file that says which.
+A body the machine runs and a body the host's compiler compiled inside one
+process is the next step, and it is a runtime question rather than a backend
+one: the generated function has to be reachable from a `call` instruction and
+has to be able to call back into the machine.
+
+**What this supersedes.** D1017 decided there would be no generated-C
+backend and not a prototype either, and D1067 re-asked the question on the work
+rather than on the process and left it closed. Both rest on one reading: that
+what such a backend takes away is the dispatch, that a dispatch is about one to
+one against what it dispatches (D1047), and so that the most it could buy is
+about two times — against a gap of five to twenty-eight, not the gap anywhere.
+This *supersedes* D1017 and D1067, and the measurement says what the reading
+missed. What the host's compiler takes away is not the dispatch alone: it is
+the call, the frame, the operand stack and the loop, all at once, because the
+body arrives as C rather than as something to be interpreted. Sixteen and
+twenty-three times, not two.
+
+The rest of that reading stands and is why this is the release engine rather
+than the only one: the bounds check, the generation check and the host's layout
+are the product and are kept, so they are in the numbers above wherever a
+workload reaches them. Scalar bodies reach none of them, which is why these two
+are the first and not the last measurement.
+
+**A number that came out of this.** `x % 7.0` costs about 750 machine
+instructions, because `kest_left_over` is a software remainder written to keep
+this library to libc without `<math.h>` (D970). It dominates any float
+workload that uses `%`, in both engines: the float workload above spends more
+than half its instructions there when the remainder is left in. It is not part
+of this decision and is written down here because this is where it was found.

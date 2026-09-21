@@ -378,21 +378,9 @@ static const struct {
     {KEST_IR_NE, KEST_OP_NE_I, KEST_OP_NE_I, KEST_OP_NE_F, KEST_OP_NE_T},
 };
 
-static bool is_float(const KestType *type) {
-    return type != NULL && type->tag == KEST_T_FLOAT;
-}
-
-// Whether a value of this type is a run of slots rather than one, which is
-// what says a comparison walks it and a hash walks it.
-static bool is_a_run(const KestType *type) {
-    return type != NULL &&
-           (type->tag == KEST_T_ENUM || type->tag == KEST_T_STRUCT ||
-            type->tag == KEST_T_FIXED);
-}
-
 static uint8_t compares(uint16_t operation, const KestType *type) {
     bool text = type != NULL && type->tag == KEST_T_TEXT;
-    bool real = is_float(type);
+    bool real = kest_is_float(type);
     bool without_sign = kest_is_unsigned(type);
     for (size_t i = 0; i < sizeof(COMPARISONS) / sizeof(COMPARISONS[0]); i++) {
         if (COMPARISONS[i].operation != operation) {
@@ -410,7 +398,7 @@ static uint8_t compares(uint16_t operation, const KestType *type) {
 // families it belongs to is the type's to say, which is why the body carries
 // one addition and this carries three.
 static uint8_t arithmetic(uint16_t operation, const KestType *type) {
-    bool real = is_float(type);
+    bool real = kest_is_float(type);
     bool narrow = kest_is_narrow(type);
     bool without_sign = kest_is_unsigned(type);
     switch (operation) {
@@ -781,7 +769,7 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
     case KEST_IR_GE:
     case KEST_IR_EQ:
     case KEST_IR_NE:
-        if (is_a_run(op->type)) {
+        if (kest_is_a_run(op->type)) {
             emit(lower, op->kind == KEST_IR_EQ ? KEST_OP_EQ_VALUE
                                                : KEST_OP_NE_VALUE,
                  span);
@@ -805,7 +793,7 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         // value is made of, because only part of it may be hashed: the place
         // is the program's and the number above it is the process's. See
         // D1054.
-        if (is_a_run(op->type) ||
+        if (kest_is_a_run(op->type) ||
             (op->type != NULL && op->type->tag == KEST_T_REF)) {
             emit(lower, KEST_OP_HASH_VALUE, span);
             emit_u16(lower, op->imm[0], span);
@@ -813,7 +801,7 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         }
         emit(lower,
              op->type != NULL && op->type->tag == KEST_T_TEXT ? KEST_OP_HASH_T
-             : is_float(op->type)                             ? KEST_OP_HASH_F
+             : kest_is_float(op->type)                             ? KEST_OP_HASH_F
                                                               : KEST_OP_HASH_I,
              span);
         return;
