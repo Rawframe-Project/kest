@@ -152,6 +152,8 @@ fn main() -> i32 {
     for i in 0..4 {
         push(counts, split(i * 6, 2))
     }
+    let spare = remove(counts, 0)
+    push(counts, spare)
     let one = Tag("counting", 3)
     return (walk(counts) + i32(weigh(one) % 7) +
             (if same(one, Tag("counting", 4)) -> 1 else -> 0)) % 251

@@ -1190,6 +1190,74 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             first, first);
         break;
     }
+    case KEST_IR_ARRAY_NEW: {
+        // `array(n)` and `array(n, v)`: how many, and what each one starts
+        // as. The count is under the fill, which is where the machine has
+        // them too.
+        if (leaves != 1) {
+            cannot(walk, "a run of elements that leaves something else");
+            break;
+        }
+        at_stack(first, base);
+        at_stack(second, base + 1);
+        say(c, out,
+            "    if (!kest_array_new(rt, %u, %s.integer, %s%s, %u, &%s)) {\n"
+            "        return false;\n    }\n",
+            (unsigned)op->imm[0], first, reads > 1 ? "&" : "",
+            reads > 1 ? second : "NULL", op->span.offset, first);
+        break;
+    }
+    case KEST_IR_APPEND: {
+        // One more on the end: the handle, and then what is being put there.
+        if (reads < 2 || leaves != 0) {
+            cannot(walk, "an append of something other than one thing");
+            break;
+        }
+        at_stack(first, base);
+        at_stack(second, base + 1);
+        say(c, out,
+            "    if (!kest_array_push(rt, %s, %u, &%s, %u)) {\n"
+            "        return false;\n    }\n",
+            first, (unsigned)op->imm[0], second, op->span.offset);
+        break;
+    }
+    case KEST_IR_TAKE: {
+        // One out of the middle: read where it is, move it into slots, and
+        // then take it away. Two doors and the moves between them, which is
+        // the same three things the instruction does.
+        const KestLayout *layout =
+            c->module == NULL || op->imm[0] >= c->module->layout_count
+                ? NULL
+                : &c->module->layouts[op->imm[0]];
+        if (layout == NULL || layout->type == NULL || reads != 2 ||
+            leaves != layout->slots) {
+            cannot(walk, "a take of something other than one of a run");
+            break;
+        }
+        at_stack(first, base);
+        at_stack(second, base + 1);
+        // The element goes where the handle was, so the handle and the index
+        // are held aside first: what takes it away needs both after the read.
+        // Nothing here can reach the heap, so holding them is holding them.
+        say(c, out,
+            "    {\n        KV held = %s;\n        KV which = %s;\n"
+            "        unsigned char *at = kest_elem_at(rt, held, "
+            "which.integer, 0, %u);\n"
+            "        if (at == NULL) {\n            return false;\n"
+            "        }\n",
+            first, second, op->span.offset);
+        uint16_t moved = move_value(walk, layout->type, base, 0, true,
+                                    op->span.offset);
+        say(c, out,
+            "        if (!kest_array_remove(rt, held, which.integer, %u)) {\n"
+            "            return false;\n        }\n    }\n",
+            op->span.offset);
+        if (moved != layout->slots) {
+            cannot(walk, "a take whose type and layout say different widths");
+            break;
+        }
+        break;
+    }
     case KEST_IR_LEN: {
         if (reads != 1 || leaves != 1) {
             cannot(walk, "a length of something other than one thing");
@@ -1600,6 +1668,14 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "                      uint32_t which, uint32_t where,\n"
         "                      uint32_t *was);\n"
         "void kest_native_left(KestRuntime *runtime, uint32_t was);\n"
+        "bool kest_array_remove(KestRuntime *runtime, KestValue handle,\n"
+        "                       int64_t index, uint32_t where);\n"
+        "bool kest_array_push(KestRuntime *runtime, KestValue handle,\n"
+        "                     uint16_t layout, const KestValue *value,\n"
+        "                     uint32_t where);\n"
+        "bool kest_array_new(KestRuntime *runtime, uint16_t layout,\n"
+        "                    int64_t count, const KestValue *fill,\n"
+        "                    uint32_t where, KestValue *into);\n"
         "int64_t kest_text_hash(const char *bytes, int64_t length);\n"
         "int64_t kest_value_hash(KestRuntime *runtime, uint16_t layout,\n"
         "                        const KestValue *slots);\n"

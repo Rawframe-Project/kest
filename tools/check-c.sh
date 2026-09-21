@@ -238,6 +238,49 @@ fn main() -> i32 {
     return i32((i64(step(world, 20)) % 251 + 251) % 251)
 }
 PROGRAM
+cat >"$work"/programs/growing.kest <<'PROGRAM'
+module growing
+
+struct Item {
+    name: text
+    many: i32
+}
+
+fn fill(how: i32) -> [Item] {
+    let bag: [Item] = array()
+    for i in 0..how {
+        push(bag, Item("thing", i))
+    }
+    return bag
+}
+
+fn drain(bag: [Item]) -> i32 no.host {
+    let total = 0
+    while len(bag) > 0 {
+        let one = remove(bag, 0)
+        total += one.many + i32(len(one.name))
+    }
+    return total
+}
+
+fn counted(how: i32, what: i32) -> i32 no.host {
+    let counts: [i32] = array(how, what)
+    let sum = 0
+    for at in 0..len(counts) {
+        sum += counts[at]
+    }
+    return sum
+}
+
+fn main() -> i32 {
+    let bag = fill(24)
+    let total = drain(bag) + counted(6, 7)
+    if len(bag) != 0 {
+        return 1
+    }
+    return i32((total % 251 + 251) % 251)
+}
+PROGRAM
 cat >"$work"/programs/stacked.kest <<'PROGRAM'
 module stacked
 

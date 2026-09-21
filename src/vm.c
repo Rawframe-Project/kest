@@ -2148,6 +2148,16 @@ static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
 // frame a host filled and what says something about the frame it wrote back
 // into are one walk with two sayings, and the second of them ends up here with
 // a `va_list` in its hand. See D719.
+// Where an instruction was written, which is what a refusal about it points
+// at. A body the host's compiler compiled has no instruction and does have
+// the offset the resolved form carried, so everything that reports takes one
+// of these rather than the two it used to. See D1099.
+static KestSpan where_it_is(const Frame *frame, const uint8_t *instruction) {
+    uint32_t offset = (uint32_t)(instruction - frame->chunk->code);
+    KestSpan span = {kest_chunk_origin(frame->chunk, offset), 1};
+    return span;
+}
+
 // The same, where the place is already known rather than worked out from an
 // instruction. A body the host's compiler compiled has no instruction to point
 // at and does have the source offset the resolved form carried, so it comes in
@@ -2204,11 +2214,10 @@ static void said_here(Vm *vm, const KestSource *source, KestSpan span,
 
 static void failv(Vm *vm, const Frame *frame, const uint8_t *instruction,
                   const char *code, const char *format, va_list args) {
-    uint32_t offset = (uint32_t)(instruction - frame->chunk->code);
     // The file the instruction came from was set when it was compiled, and
     // the machine does not change it.
-    KestSpan span = {kest_chunk_origin(frame->chunk, offset), 1};
-    said_at(vm, frame->chunk->source, span, code, format, args);
+    said_at(vm, frame->chunk->source, where_it_is(frame, instruction), code,
+            format, args);
 }
 
 static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
@@ -2232,40 +2241,54 @@ static size_t was_refused(const KestRuntime *rt) {
     return ground != 0 ? ground : kest_arena_refused(rt->heap);
 }
 
-static void no_room(Vm *vm, const Frame *frame, const uint8_t *instruction,
-                    const KestRuntime *rt) {
+static void no_room_at(Vm *vm, const KestSource *source, KestSpan span,
+                       const KestRuntime *rt) {
     if (rt->heap_bytes != 0) {
         // What it has and what it wanted, because a program that missed by
         // eight bytes and one that missed by a megabyte are the same message
         // otherwise, and they are not the same problem.
-        fail(vm, frame, instruction, "K0617",
-             "the program has used %zu of the %zu bytes it was given, and this "
-             "asked for %zu more",
-             kest_heap_used(rt), rt->heap_bytes, was_refused(rt));
+        said_here(vm, source, span, "K0617",
+                  "the program has used %zu of the %zu bytes it was given, "
+                  "and this asked for %zu more",
+                  kest_heap_used(rt), rt->heap_bytes, was_refused(rt));
         return;
     }
     // And the same two numbers when nobody set a ceiling, because a host
     // reading `out of memory` learns nothing it did not know: whether this is
     // a program that wants a gigabyte or a machine that has a megabyte left is
     // the whole of what it would do about it.
-    fail(vm, frame, instruction, "K0605",
-         "the program has used %zu bytes and this asked for %zu more, which "
-         "this machine has not got",
-         kest_heap_used(rt), was_refused(rt));
+    said_here(vm, source, span, "K0605",
+              "the program has used %zu bytes and this asked for %zu more, "
+              "which this machine has not got",
+              kest_heap_used(rt), was_refused(rt));
+}
+
+static void no_room(Vm *vm, const Frame *frame, const uint8_t *instruction,
+                    const KestRuntime *rt) {
+    no_room_at(vm, frame->chunk->source, where_it_is(frame, instruction), rt);
 }
 
 // And what it was doing when it ran out. What a host raises a ceiling by is not
 // what the last allocation asked for: a thing that doubles will ask for the
 // double again at the next one. What it needs to know is what was growing and
 // how far along it was, which is what this says.
+static void no_room_growing_at(Vm *vm, const KestSource *source, KestSpan span,
+                               const KestRuntime *rt, const char *what,
+                               uint32_t held, size_t each,
+                               uint32_t growing_to) {
+    no_room_at(vm, source, span, rt);
+    kest_diags_suggest(vm->diags,
+                       "it was %s holding %u of %zu bytes each, growing to %u",
+                       what, held, each, growing_to);
+}
+
 static void no_room_growing(Vm *vm, const Frame *frame,
                             const uint8_t *instruction, const KestRuntime *rt,
                             const char *what, uint32_t held, size_t each,
                             uint32_t growing_to) {
-    no_room(vm, frame, instruction, rt);
-    kest_diags_suggest(vm->diags,
-                       "it was %s holding %u of %zu bytes each, growing to %u",
-                       what, held, each, growing_to);
+    no_room_growing_at(vm, frame->chunk->source,
+                       where_it_is(frame, instruction), rt, what, held, each,
+                       growing_to);
 }
 
 // And what it would have needed, said where it ran out. A host picks the two
@@ -3616,62 +3639,23 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             KestValue *fill = top;
             int64_t count = (--top)->integer;
             SPEND_WORK(count < 0 ? 0 : (uint64_t)count);
-            if (count < 0) {
-                fail(vmp, frame, instruction, "K0604",
-                     "an array cannot have %lld elements", (long long)count);
+            // What fills it is above the top, because the count was taken off
+            // after it: a walk has to read to the top of what is live and not
+            // to the top of the stack. The making itself is the door a body
+            // the host's compiler compiled goes through, so the two engines
+            // make an array the same way and say the same thing when they
+            // cannot. See D1099.
+            frame->ip = ip;
+            KestValue *was_top = rt->running_top;
+            rt->running_top = fill + layout->slots;
+            bool made = kest_array_new(rt, of_which, count, fill,
+                                       where_it_is(frame, instruction).offset,
+                                       top);
+            rt->running_top = was_top;
+            if (!made) {
                 return false;
             }
-
-            // What fills it is above the top, because the count was taken
-            // off after it: a walk has to read to the top of what is live and
-            // not to the top of the stack.
-            KestValue *reach = fill + layout->slots;
-            uint32_t hands = rt->hands;
-            unsigned char *bytes =
-                count > (int64_t)UINT32_MAX
-                    ? NULL
-                    : in_hand(rt, elements_for(rt, reach, layout,
-                                               (uint32_t)count));
-            Array *array = bytes == NULL
-                               ? NULL
-                               : take(rt, reach, sizeof(Array),
-                                      KEST_GROUND_ARRAY);
-            hands_off(rt, hands);
-            if (array == NULL || bytes == NULL) {
-                no_room(vmp, frame, instruction, rt);
-                // How many was said by the program rather than written into
-                // the instruction, so it is as wide as the program can count.
-                kest_diags_suggest(vmp->diags,
-                                   "it was making an array of %lld of %u bytes "
-                                   "each",
-                                   (long long)count, layout->size);
-                return false;
-            }
-            array->what = KEST_IS_ARRAY;
-            array->length = (uint32_t)count;
-            array->capacity = (uint32_t)count;
-            array->stride = layout->size;
-            array->of = layout->type;
-            array->bytes = bytes;
-            // A fill of nought is what the arena already handed over, so the
-            // writing is skipped rather than done twice. Every slot being
-            // nought is every byte being nought, whatever the pieces are: a
-            // slot is eight bytes of whichever kind it is read as, and nought
-            // is nought as a number, as a float, and as a handle. What this
-            // buys is the room an array is asked for and does not read, which
-            // is `array(n, v)` and `clear` — the reservation this language has
-            // instead of a word for one.
-            bool nothing = true;
-            for (uint16_t i = 0; i < layout->slots && nothing; i++) {
-                nothing = fill[i].integer == 0;
-            }
-            if (!nothing) {
-                for (int64_t i = 0; i < count; i++) {
-                    MOVED(moved_packed, layout->size);
-                    pack(bytes + (size_t)i * layout->size, layout, fill);
-                }
-            }
-            (top++)->object = array;
+            top++;
             break;
         }
         case KEST_OP_ROOM: {
@@ -3745,60 +3729,19 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             const KestLayout *layout = &module->layouts[of_which];
             top -= layout->slots;
             KestValue *value = top;
-            Array *array = (--top)->object;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-
-            if (array->borrowed) {
-                fail(vmp, frame, instruction, "K0608",
-                     "this array is the host's, so it cannot grow");
+            KestValue handle = *--top;
+            // The growing itself is the door a body the host's compiler
+            // compiled goes through, so an array grows one way and says one
+            // thing when it cannot. See D1099.
+            frame->ip = ip;
+            KestValue *was_pushing = rt->running_top;
+            rt->running_top = value + layout->slots;
+            bool grew = kest_array_push(rt, handle, of_which, value,
+                                        where_it_is(frame, instruction).offset);
+            rt->running_top = was_pushing;
+            if (!grew) {
                 return false;
             }
-            // What a program can be told is what it can count to, and `len`
-            // gives back an `i32`. One more than that used to double a
-            // capacity past what a `uint32_t` holds, which asked for nought
-            // bytes and copied two thousand million into them.
-            if (array->length == MAX_COUNTED) {
-                fail(vmp, frame, instruction, "K0630",
-                     "this array holds %d, which is all `len` can count",
-                     MAX_COUNTED);
-                return false;
-            }
-            if (array->length == array->capacity) {
-                uint32_t capacity = array->capacity == 0 ? 8
-                                                         : array->capacity * 2;
-                // Bigger where it stands, when the place it is in has the
-                // room — which is what a loop filling one array is. Then
-                // there is no copy and no place left behind, and an array
-                // built by pushing costs what it holds rather than twice
-                // that.
-                unsigned char *was = array->bytes;
-                unsigned char *grown = elements_grown(
-                    rt, value + layout->slots, array, layout, capacity);
-                if (grown != NULL) {
-                    capacity = all_it_holds(rt, grown, layout, capacity);
-                    (((Elems *)(void *)grown) - 1)->places = capacity;
-                }
-                if (grown == NULL) {
-                    no_room_growing(vmp, frame, instruction, rt, "an array",
-                                    array->length, layout->size, capacity);
-                    return false;
-                }
-                if (grown != was) {
-                    // What the copy cost. Only the push that could not grow
-                    // where it stood pays it: the one that could moved
-                    // nothing, and a program that says how many there will be
-                    // never arrives here at all. See D950.
-                    SPEND_WORK((uint64_t)array->length);
-                }
-                // The handle is the header, and the header is what moved
-                // nothing, so every reference to this array sees the growth.
-                array->bytes = grown;
-                array->capacity = capacity;
-            }
-            MOVED(moved_packed, layout->size);
-            pack(array->bytes + (size_t)array->length * layout->size, layout,
-                 value);
-            array->length++;
             break;
         }
         // The same append with the growth taken out. Where `push` would double
@@ -3830,6 +3773,12 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             (top++)->integer = 1;
             break;
         }
+        // A whole piece of text onto a run of bytes. Text is its bytes
+        // (D021), so this is the loop a program had to write taken into one
+        // move: the same growth `push` does, once for the whole piece rather
+        // than once a byte, and a `memcpy`. Building text a byte at a time was
+        // eighty per cent of the instructions `bench/words.kest` ran. See
+        // D1068.
         // A whole piece of text onto a run of bytes. Text is its bytes
         // (D021), so this is the loop a program had to write taken into one
         // move: the same growth `push` does, once for the whole piece rather
@@ -4007,6 +3956,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             const KestLayout *layout = &module->layouts[of_which];
             int64_t index = (--top)->integer;
             Array *array = (--top)->object;
+            KestValue handle = *top;
             HOLD(array, KEST_IS_ARRAY, "an array");
             if (array->borrowed) {
                 fail(vmp, frame, instruction, "K0608",
@@ -4017,13 +3967,14 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             unsigned char *at = array->bytes + (size_t)index * array->stride;
             READ_INTO(top, layout, at);
             top += layout->slots;
-            // What is after it keeps its order, which is the whole difference
-            // between this and a store: a position here means something.
-            MOVED(moved_shifted, (uint64_t)(array->length - index - 1) *
-                                     array->stride);
-            memmove(at, at + array->stride,
-                    (size_t)(array->length - index - 1) * array->stride);
-            array->length--;
+            // And the taking away, which is the door a body the host's
+            // compiler compiled goes through: one answer about what a run of
+            // elements does when one is taken out of the middle. See D1099.
+            frame->ip = ip;
+            if (!kest_array_remove(rt, handle, index,
+                                   where_it_is(frame, instruction).offset)) {
+                return false;
+            }
             break;
         }
         case KEST_OP_CLEAR: {
@@ -7909,6 +7860,158 @@ void kest_native_left(KestRuntime *runtime, uint32_t was) {
     if (runtime != NULL && was <= runtime->frame_count) {
         runtime->frame_count = was;
     }
+}
+
+
+// The array operations a body the host's compiler compiled reaches, each one
+// what the instruction of the same name does and each one called by that
+// instruction as well: `push` is one answer, and two would be two the day
+// either moved. What a caller hands over is where its own operands are, which
+// is on the machine's stack -- a body that can reach the heap lives there
+// (D1098) -- so nothing here has to be told what to keep alive: the walk that
+// a collection starts with reaches it already. See D1099.
+//
+// `where` is where in the source the operation is, and a refusal says so at
+// that line whichever engine ran it.
+
+// The source a refusal from one of these is reported in, which is the body
+// the machine is in the middle of.
+static const KestSource *where_from(KestRuntime *rt) {
+    return rt->frame_count > 0 ? rt->frames[rt->frame_count - 1].chunk->source
+                               : NULL;
+}
+
+bool kest_array_new(KestRuntime *rt, uint16_t layout, int64_t count,
+                    const KestValue *fill, uint32_t where, KestValue *into) {
+    if (rt == NULL || rt->module == NULL || layout >= rt->module->layout_count ||
+        into == NULL) {
+        return false;
+    }
+    const KestLayout *what = &rt->module->layouts[layout];
+    KestSpan span = {where, 1};
+    if (count < 0) {
+        return stopped_saying(rt, where, "K0604",
+                              "an array cannot have %lld elements",
+                              (long long)count);
+    }
+    uint32_t hands = rt->hands;
+    unsigned char *bytes =
+        count > (int64_t)UINT32_MAX
+            ? NULL
+            : in_hand(rt, elements_for(rt, NULL, what, (uint32_t)count));
+    Array *array =
+        bytes == NULL ? NULL : take(rt, NULL, sizeof(Array), KEST_GROUND_ARRAY);
+    hands_off(rt, hands);
+    if (array == NULL || bytes == NULL) {
+        no_room_at(rt, where_from(rt), span, rt);
+        kest_diags_suggest(rt->diags,
+                           "it was making an array of %lld of %u bytes each",
+                           (long long)count, what->size);
+        return false;
+    }
+    array->what = KEST_IS_ARRAY;
+    array->length = (uint32_t)count;
+    array->capacity = (uint32_t)count;
+    array->stride = what->size;
+    array->of = what->type;
+    array->bytes = bytes;
+    bool nothing = true;
+    for (uint16_t i = 0; i < what->slots && nothing; i++) {
+        nothing = fill == NULL || fill[i].integer == 0;
+    }
+    if (!nothing) {
+        for (int64_t i = 0; i < count; i++) {
+            MOVED(moved_packed, what->size);
+            pack(bytes + (size_t)i * what->size, what, fill);
+        }
+    }
+    into->object = array;
+    return true;
+}
+
+
+bool kest_array_push(KestRuntime *rt, KestValue handle, uint16_t layout,
+                     const KestValue *value, uint32_t where) {
+    if (rt == NULL || rt->module == NULL || layout >= rt->module->layout_count) {
+        return false;
+    }
+    Array *array = the_array(rt, handle, where);
+    if (array == NULL) {
+        return false;
+    }
+    const KestLayout *what = &rt->module->layouts[layout];
+    KestSpan span = {where, 1};
+    if (array->borrowed) {
+        return stopped_saying(rt, where, "K0608",
+                              "this array is the host's, so it cannot grow");
+    }
+    // What a program can be told is what it can count to, and `len` gives
+    // back an `i32`. One more than that used to double a capacity past what a
+    // `uint32_t` holds, which asked for nought bytes and copied two thousand
+    // million into them.
+    if (array->length == MAX_COUNTED) {
+        return stopped_saying(rt, where, "K0630",
+                              "this array holds %d, which is all `len` can "
+                              "count",
+                              MAX_COUNTED);
+    }
+    if (array->length == array->capacity) {
+        uint32_t capacity = array->capacity == 0 ? 8 : array->capacity * 2;
+        // Bigger where it stands, when the place it is in has the room --
+        // which is what a loop filling one array is. Then there is no copy
+        // and no place left behind.
+        unsigned char *was = array->bytes;
+        unsigned char *grown = elements_grown(rt, NULL, array, what, capacity);
+        if (grown != NULL) {
+            capacity = all_it_holds(rt, grown, what, capacity);
+            (((Elems *)(void *)grown) - 1)->places = capacity;
+        }
+        if (grown == NULL) {
+            no_room_growing_at(rt, where_from(rt), span, rt, "an array",
+                               array->length, what->size, capacity);
+            return false;
+        }
+        if (grown != was) {
+            // What the copy cost, charged where a budget counts work. Only
+            // the push that could not grow where it stood pays it. See D950.
+            kest_fuel_spend(rt, array->length);
+        }
+        // The handle is the header, and the header is what moved nothing, so
+        // every reference to this array sees the growth.
+        array->bytes = grown;
+        array->capacity = capacity;
+    }
+    MOVED(moved_packed, what->size);
+    pack(array->bytes + (size_t)array->length * what->size, what, value);
+    array->length++;
+    return true;
+}
+
+
+bool kest_array_remove(KestRuntime *rt, KestValue handle, int64_t index,
+                       uint32_t where) {
+    Array *array = rt == NULL ? NULL : the_array(rt, handle, where);
+    if (array == NULL) {
+        return false;
+    }
+    if (array->borrowed) {
+        return stopped_saying(rt, where, "K0608",
+                              "this array is the host's, so it cannot shrink");
+    }
+    if (index < 0 || (uint64_t)index >= array->length) {
+        return stopped_saying(rt, where, "K0604",
+                              "index %lld is outside an array of length %u",
+                              (long long)index, array->length);
+    }
+    // What is after it keeps its order, which is the whole difference between
+    // this and a store: a position here means something.
+    unsigned char *at = array->bytes + (size_t)index * array->stride;
+    MOVED(moved_shifted,
+          (uint64_t)(array->length - index - 1) * array->stride);
+    memmove(at, at + array->stride,
+            (size_t)(array->length - index - 1) * array->stride);
+    array->length--;
+    return true;
 }
 
 int64_t kest_text_hash(const char *bytes, int64_t length) {

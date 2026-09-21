@@ -6,9 +6,9 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1098
-    PHASE:             B — the release engine: ahead of Luau's native tier on
-                       the numeric kernel, not yet reaching the gameplay one
+    CURRENT SHA:       (this commit) D1093-D1099
+    PHASE:             B — the release engine: level with Luau's native tier
+                       on the gameplay workload, and inside D1092's trigger
     LAST FAST GATE:    green
     LAST FULL GATE:    green at 96285c5
     REFERENCE MACHINE: the spare Linux box this repository is on --
@@ -243,17 +243,37 @@ release engine is a quarter cheaper than Luau's best realistic mode**, where
 the machine alone is level with Luau's interpreter. One workload, and the one
 most favourable to a native backend.
 
+## D1099 — the gameplay workload, measured
+
+With the doors for what reaches the heap, eleven of `bench/rules.kest`'s
+fourteen bodies compile. Whole processes, every row answering the same
+checksum:
+
+| | instructions | against g++ |
+| --- | --- | --- |
+| `g++ -O2` (`bench/rules.cpp`) | 0.429 G | 1.0 |
+| **Kest, the release engine** | **1.244 G** | **2.9×** |
+| `luau -O2 --codegen` | 1.294 G | 3.0× |
+| `luau -O2` | 3.323 G | 7.7× |
+| Kest, the machine | 6.254 G | 14.6× |
+
+**D1092's re-evaluation trigger was three times `bench/rules.cpp`. This is
+2.9.** The architecture holds, and on the workload written to be gameplay
+rather than a kernel the release engine is level with Luau's best realistic
+mode — where the machine alone is twice Luau's interpreter.
+
+That is the mission's binding question answered on both workloads there are:
+what a serious game developer gets here that Luau does not give them is the
+same runtime ceiling with a check loop of 282 ms for a hundred thousand lines
+and a language that refuses what it cannot prove.
+
 ## Open, in priority order
 
-1. **The doors for what reaches the heap**, which is all that is between the
-   backend and the gameplay workload now. A body that can reach the heap lives
-   on the machine's stack already (D1098), so what is left is the operations:
-   `array()` and `array(n, x)`, `push`, `take`, making text, and a crossing
-   into the host — 71, 43 and 29 bodies of this tree by the first three
-   reasons. Each is a door in `vm.c` that the instruction of the same name
-   calls too, because two answers to one question is what the tree refuses.
-   Then `bench/rules.kest` against `bench/rules.cpp`, which is D1092's
-   re-evaluation trigger.
+1. **The rest of the doors**, in the order the tree asks for them: a crossing
+   into the host (44 bodies), what reads and makes text (33 and 21), a store
+   and what walks one (34 and 20), a call through a function value (17). None
+   is in the way of the numbers below; what they buy is breadth — how much of
+   a whole game compiles rather than how fast the part that does runs.
 2. **The five times on the kernel, read down.** A call per element, a bounds
    check the C compiler cannot hoist because it is behind that call, and a
    `memcpy` a piece where four doubles could be one. All three go away by

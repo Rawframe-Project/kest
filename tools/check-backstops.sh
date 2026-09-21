@@ -5318,18 +5318,13 @@ for file in "$@"; do""",
         # not know about — four ways to ask for that and one sentence for it.
         "what": "a lent array that grows without saying which refusal it is",
         "file": "src/vm.c",
-        "from": """            Array *array = (--top)->object;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-
-            if (array->borrowed) {
-                fail(vmp, frame, instruction, "K0608",
-                     "this array is the host's, so it cannot grow");""",
-        "to": """            Array *array = (--top)->object;
-            HOLD(array, KEST_IS_ARRAY, "an array");
-
-            if (array->borrowed) {
-                fail(vmp, frame, instruction, "K0608",
-                     "this array is the host's, and it may not");""",
+        "from": """    if (array->borrowed) {
+        return stopped_saying(rt, where, "K0608",
+                              "this array is the host's, so it cannot grow");
+    }""",
+        "to": """    if (array->borrowed) {
+        return stopped_saying(rt, where, "K0608", "no");
+    }""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "refused without saying `K0608`",
@@ -8307,12 +8302,10 @@ const char *kest_scalar_name(uint8_t kind) {""",
         # compiler, so what catches this is a build that stops.
         "what": "a message that says an `i64` through a `%u`",
         "file": "src/vm.c",
-        "from": '''                                   "it was making an array of %lld of %u bytes "
-                                   "each",
-                                   (long long)count, layout->size);''',
-        "to": '''                                   "it was making an array of %u of %u bytes "
-                                   "each",
-                                   count, layout->size);''',
+        "from": '''                           "it was making an array of %lld of %u bytes each",
+                           (long long)count, what->size);''',
+        "to": '''                           "it was making an array of %u of %u bytes each",
+                           count, what->size);''',
         "make": ["build/release/vm.o"],
         "in_build": True,
         "caught": "expects argument of type",
@@ -8324,10 +8317,9 @@ const char *kest_scalar_name(uint8_t kind) {""",
         # a number in the program while the second is a ceiling.
         "what": "a heap that ran out without saying what was being made",
         "file": "src/vm.c",
-        "from": """                kest_diags_suggest(vmp->diags,
-                                   "it was making an array of %lld of %u bytes "
-                                   "each",
-                                   (long long)count, layout->size);""",
+        "from": """        kest_diags_suggest(rt->diags,
+                           "it was making an array of %lld of %u bytes each",
+                           (long long)count, what->size);""",
         "to": "",
         "make": ["kest", "embed"],
         "host": "examples/embed",
@@ -13295,12 +13287,11 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # numbers this used to leave out.
         "what": "a machine with no memory left that says only that",
         "file": "src/vm.c",
-        "from": """    fail(vm, frame, instruction, "K0605",
-         "the program has used %zu bytes and this asked for %zu more, which "
-         "this machine has not got",
-         kest_heap_used(rt), was_refused(rt));""",
-        "to": """    (void)rt;
-    fail(vm, frame, instruction, "K0605", "out of memory");""",
+        "from": """    said_here(vm, source, span, "K0605",
+              "the program has used %zu bytes and this asked for %zu more, "
+              "which this machine has not got",
+              kest_heap_used(rt), was_refused(rt));""",
+        "to": """    said_here(vm, source, span, "K0605", "out of memory");""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "out of memory a bit at a time and was told",

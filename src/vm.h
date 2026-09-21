@@ -64,6 +64,28 @@ unsigned char *kest_elem_at(KestRuntime *runtime, KestValue handle,
 bool kest_elem_count(KestRuntime *runtime, KestValue handle, uint32_t where,
                      int64_t *into);
 
+// Making a run of elements: what `array(n, v)` does, and what the instruction
+// of that name does, because it calls this. What a caller hands over is where
+// its own operands are, which is on the machine's stack -- a body that can
+// reach the heap lives there (D1098) -- so there is nothing to tell the
+// collector about: the walk it starts with reaches them already. `where` is
+// the operation in the source, and a refusal says so at that line whichever
+// engine ran it. See D1099.
+bool kest_array_new(KestRuntime *runtime, uint16_t layout, int64_t count,
+                    const KestValue *fill, uint32_t where, KestValue *into);
+
+// One more on the end of a run of them: what `push` does, and what the
+// instruction of that name does, because it calls this. See D1099.
+bool kest_array_push(KestRuntime *runtime, KestValue handle, uint16_t layout,
+                     const KestValue *value, uint32_t where);
+
+// One taken out of the middle of a run of them: what `take` does after the
+// element has been read, and what the instruction of that name does, because
+// it calls this. What is after it keeps its order, which is the whole
+// difference between a run of elements and a store. See D1099.
+bool kest_array_remove(KestRuntime *runtime, KestValue handle, int64_t index,
+                       uint32_t where);
+
 // Entering a body the host's compiler compiled from another one. A call
 // between two of those does not go through the machine, so this is where what
 // a call does still happens: the two refusals -- calls nested deeper than a

@@ -37302,3 +37302,67 @@ reach the heap also *uses* an operation that reaches it — `array()`, `push`,
 making text — and those have no doors yet. The shape is what has to be right
 first: the check runs a program written both ways round it, one body on the
 stack calling one in registers and back.
+
+## D1099. The doors that reach the heap, and the gameplay workload measured
+
+D1098 put a body that can reach the heap where the collector can see it and
+said the operations that reach it had no doors. These are the first of those
+doors — making a run of elements, growing one, taking one out of the middle —
+and with them the workload this whole line of work was aimed at can be
+measured.
+
+**A door is not a second answer.** Each one is what the instruction of the same
+name does, and the instruction calls it: `push` grows an array in one place,
+and the machine and the compiled body both go through it. That is D668's rule
+applied to the runtime rather than to the folder, and this tree refuses the
+alternative on its own — `check-tables.sh` holds every body in `src` to being
+written once, so a door that copied an instruction's work would fail the gate
+rather than drift quietly.
+
+Two things had to move to make that true. The refusals that read a frame and
+an instruction — what ran out of room, and what it was growing — take a span
+now, because a body the host's compiler compiled has no instruction and does
+have the source offset the resolved form carried. And a refusal is written
+code first and words after, because the check that holds every wording to
+having been seen reads the words that follow a code.
+
+**What a door is handed is already a root.** A body that can reach the heap
+lives on the machine's stack (D1098), so what it hands a door is on that stack
+and the walk a collection starts with reaches it. Nothing here has to be told
+what to keep alive, which is the payoff of getting the shape right first.
+
+**The measurement.** `bench/rules.kest` — four thousand actors, two hundred
+rounds, a bag that grows, a tagged union a `match` reads, a flag test, a timer,
+and a whole struct read out of an array, changed and written back. Eleven of
+its fourteen bodies are compiled; `main` and the two that print are the
+machine's. Every row answers the checksum 108175838. Instruction counts, whole
+processes:
+
+| | instructions | against g++ |
+| --- | --- | --- |
+| `g++ -O2` (`bench/rules.cpp`) | 0.429 G | 1.0 |
+| **Kest, the release engine** | **1.244 G** | **2.9×** |
+| `luau -O2 --codegen` | 1.294 G | 3.0× |
+| `luau -O2` | 3.323 G | 7.7× |
+| Kest, the machine | 6.254 G | 14.6× |
+
+**D1092's re-evaluation trigger was `within three times of bench/rules.cpp`,
+and this is 2.9.** The architecture holds: the reason the machine was twelve
+times off was the machine, not the representation. And on the workload this
+project wrote to be a gameplay workload rather than a kernel, the release
+engine is level with Luau's native code generation — where the machine alone
+is twice Luau's interpreter.
+
+Cycles say 2.6× rather than 2.9, which is the same answer; instructions are
+what this box can be trusted about (D1092).
+
+The program measured is `bench/rules.kest` with the two bodies that read the
+command line replaced by the constants they default to, because a file this
+backend writes binds one host door and `std.os` is not it. The machine runs
+that program in 6.249 G against the original's 6.254 G, which is what says it
+is the same work.
+
+**What is still the machine's**, and what each would take: a crossing into the
+host (44 bodies of this tree), the rest of what reads and makes text (33 and
+21), a store and what walks one (34 and 20), and a call through a function
+value (17). None of them is in the way of the number above.

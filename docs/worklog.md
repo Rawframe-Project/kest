@@ -39643,3 +39643,41 @@ See D1098.
 
 **Runs:** `make check`, and two programs written for it -- one body on the
 stack calling one in registers and back, and one that reaches itself for ever.
+
+## The doors that reach the heap, and the gameplay workload measured
+
+Making a run of elements, growing one, taking one out of the middle: three
+doors, each one what the instruction of that name does, and the instruction
+calls it. The tree refuses the alternative by itself -- every body in `src` is
+held to being written once -- so a door that copied an instruction's work
+would be a failing gate rather than a quiet drift.
+
+With them, eleven of `bench/rules.kest`'s fourteen bodies are compiled, which
+is the workload this line of work was aimed at. Whole processes, same checksum:
+
+| | instructions | against g++ |
+| --- | --- | --- |
+| `g++ -O2` | 0.429 G | 1.0 |
+| Kest, the release engine | 1.244 G | 2.9× |
+| `luau -O2 --codegen` | 1.294 G | 3.0× |
+| `luau -O2` | 3.323 G | 7.7× |
+| Kest, the machine | 6.254 G | 14.6× |
+
+D1092's re-evaluation trigger was three times `bench/rules.cpp`; this is 2.9,
+so the architecture holds rather than coming back to be argued. And on a
+gameplay workload the release engine is level with Luau's native code
+generation, where the machine alone is twice Luau's interpreter.
+
+Two things went wrong on the way and both were caught by the gate rather than
+by reading. A text replacement that quoted an instruction's tail matched the
+*next* instruction's tail as well and swallowed `fit` whole; what said so was
+the build that checks itself, complaining that a body gave back one slot more
+than it was given. And the handle for `remove` was read a slot too high, which
+segfaulted four examples in `make fast`. Neither would have been visible in a
+release build.
+
+See D1099.
+
+**Runs:** `make check`, and `bench/rules.kest` under `perf stat -e
+instructions` against `bench/rules.cpp`, `bench/rules.lua` in both Luau modes,
+and the machine.
