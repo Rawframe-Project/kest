@@ -39586,3 +39586,26 @@ See D1096.
 
 **Runs:** `make check`, and a program of tagged, optional and text-carrying
 elements run both ways for the same answer.
+
+## Text written down, and the three answers a value has
+
+A text constant in a body was an address in the compiling process, which is
+what the broadened check caught segfaulting. It is the bytes now, written into
+the generated file as a string literal a byte an escape, which needed no door:
+the bytes were known all along. That alone is 59 bodies of this tree.
+
+Beside it: how long a piece of text is, which is the second of its two slots;
+and the three answers a value has that are the machine's and the folder's
+alike -- the hash of a piece of text, the hash of a shape, and whether two of
+a shape are the same value. Those are doors rather than a second copy, because
+two answers to one question is what D668 is about. Hashing a number and a
+float are written out, and the float is the one that has to say nought and
+minus nought are one value.
+
+763 of 2,088 bodies now, and `bench/rules.kest`'s `worth` is written. What
+still stops that workload is what allocates.
+
+See D1097.
+
+**Runs:** `make check`, and a program of text constants, hashes and shape
+equality run both ways for the same answer.

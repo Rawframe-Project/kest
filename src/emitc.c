@@ -646,13 +646,31 @@ static void write_const(Walk *walk, const KestIrOp *op) {
         uint8_t class = body->constant_classes[first + k];
         Where into;
         at_stack(into, walk->stack + k);
-        // The bytes of a piece of text are where they are in the process that
-        // compiled it, and a number written down here is read in another
-        // process: a body holding one is a body the machine runs until this
-        // knows how to write text that outlives the compiler.
+        // The bytes of a piece of text, written down as bytes. What the
+        // constant holds is where they are in the process that compiled it,
+        // which means nothing in another process -- so what goes into the
+        // file is the bytes themselves, and the file's own copy of them lasts
+        // as long as the program does, which is what a constant is. Every one
+        // written as its number, because a byte that reads as the beginning
+        // of the next escape is how a string ends up meaning something else.
         if (class == KEST_CONST_TEXT) {
-            cannot(walk, "a piece of text written where it was compiled");
-            return;
+            if (k + 1 >= count ||
+                body->constant_classes[first + k + 1] != KEST_CONST_INT) {
+                cannot(walk, "a piece of text with no length beside it");
+                return;
+            }
+            int64_t many = body->constants[first + k + 1].integer;
+            if (value.text == NULL || many < 0) {
+                cannot(walk, "a piece of text that is nowhere");
+                return;
+            }
+            say(walk->c, &walk->into->wrote, "    %s.text = \"", into);
+            for (int64_t byte = 0; byte < many; byte++) {
+                say(walk->c, &walk->into->wrote, "\\x%02x",
+                    (unsigned)(unsigned char)value.text[byte]);
+            }
+            say(walk->c, &walk->into->wrote, "\";\n");
+            continue;
         }
         if (class == KEST_CONST_FLOAT) {
             // Written as hexadecimal, which is the one spelling of a double
@@ -921,9 +939,24 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
     case KEST_IR_GE:
     case KEST_IR_EQ:
     case KEST_IR_NE: {
-        if (kest_is_a_run(op->type) || (op->type != NULL &&
-                                   op->type->tag == KEST_T_TEXT)) {
-            cannot(walk, "an answer about something wider than a number");
+        if (kest_is_a_run(op->type)) {
+            // Two runs of slots, compared over the same parts that decide
+            // what one of them hashes to. Only `==` and `!=` are asked of a
+            // shape; the rest are refused by the checker.
+            if (op->kind != KEST_IR_EQ && op->kind != KEST_IR_NE) {
+                cannot(walk, "an ordering of something wider than a number");
+                break;
+            }
+            at_stack(first, base);
+            at_stack(second, base + reads / 2);
+            say(c, out,
+                "    %s.integer = %skest_value_same(rt, %u, &%s, &%s);\n",
+                first, op->kind == KEST_IR_NE ? "!" : "",
+                (unsigned)op->imm[0], first, second);
+            break;
+        }
+        if (op->type != NULL && op->type->tag == KEST_T_TEXT) {
+            cannot(walk, "an answer about a piece of text");
             break;
         }
         const char *how = binary_c(op->kind, op->type);
@@ -1115,6 +1148,55 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             "    %s.object = kest_elem_at(rt, %s, %s.integer, 0, %u);\n"
             "    if (%s.object == NULL) {\n        return false;\n    }\n",
             first, first, second, op->span.offset, first);
+        break;
+    }
+    case KEST_IR_TEXT_LEN:
+        // How many bytes there are is part of what a piece of text is: the
+        // second of its two slots. A read rather than a walk, the same as the
+        // machine's. See D964.
+        if (reads != 2 || leaves != 1) {
+            cannot(walk, "a length of something other than a piece of text");
+            break;
+        }
+        at_stack(first, base);
+        at_stack(second, base + 1);
+        say(c, out, "    %s.integer = %s.integer;\n", first, second);
+        break;
+    case KEST_IR_HASH: {
+        if (leaves != 1) {
+            cannot(walk, "a hash that leaves something other than a number");
+            break;
+        }
+        at_stack(first, base);
+        // A shape or a reference goes through the walk that knows what a
+        // value is made of, because only part of a reference is hashed: the
+        // place is the program's and the number above it is the process's
+        // (D1054). Everything else is one slot, or two for text.
+        if (kest_is_a_run(op->type) ||
+            (op->type != NULL && op->type->tag == KEST_T_REF)) {
+            say(c, out, "    %s.integer = kest_value_hash(rt, %u, &%s);\n",
+                first, (unsigned)op->imm[0], first);
+            break;
+        }
+        if (op->type != NULL && op->type->tag == KEST_T_TEXT) {
+            at_stack(second, base + 1);
+            say(c, out, "    %s.integer = kest_text_hash(%s.text, "
+                        "%s.integer);\n",
+                first, first, second);
+            break;
+        }
+        if (kest_is_float(op->type)) {
+            // Nought and minus nought are one value to `==`, so they are one
+            // value here.
+            say(c, out,
+                "    %s.integer = (int64_t)kest_mix(%s.real == 0.0 ? 0 :\n"
+                "                                   (uint64_t)%s.integer);\n",
+                first, first, first);
+            break;
+        }
+        say(c, out,
+            "    %s.integer = (int64_t)kest_mix((uint64_t)%s.integer);\n",
+            first, first);
         break;
     }
     case KEST_IR_LEN: {
@@ -1480,7 +1562,14 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "                            int64_t index, uint16_t offset,\n"
         "                            uint32_t where);\n"
         "bool kest_elem_count(KestRuntime *runtime, KestValue handle,\n"
-        "                     uint32_t where, int64_t *into);\n\n");
+        "                     uint32_t where, int64_t *into);\n"
+        "int64_t kest_text_hash(const char *bytes, int64_t length);\n"
+        "int64_t kest_value_hash(KestRuntime *runtime, uint16_t layout,\n"
+        "                        const KestValue *slots);\n"
+        "bool kest_value_same(KestRuntime *runtime, uint16_t layout,\n"
+        "                     const KestValue *left, const KestValue "
+        "*right);\n"
+        "uint64_t kest_mix(uint64_t bits);\n\n");
     if (c->wants_library) {
         say(c, &file,
             "// And the two answers this file does not work out for itself:\n"

@@ -37210,3 +37210,41 @@ that workload is `text.len` and bodies that can reach the heap. Over this tree
 the backend writes 708 of 2,088 bodies, and `bench/kernel.kest` is unchanged
 at 119 instructions a body-step: a flat struct moves the same either way,
 which is what says the new walk costs nothing where the old one worked.
+
+## D1097. Text written down, and the three answers a value has
+
+Four things the backend had no C for, taken together because they are one
+question asked four ways: what a value *is* when it is not a number.
+
+**A piece of text in a body is its bytes.** What a chunk holds for a text
+constant is where the bytes are in the process that compiled it, which means
+nothing in another process — the first sweep of the broadened check caught the
+generated C carrying one as a number and reading it (D1094). So what goes into
+the file is the bytes themselves, as a C string literal with every byte
+written as its own escape, and the file's own copy lasts as long as the
+program does, which is what a constant is. Every byte as `\xNN` rather than as
+itself, because a byte that reads as the beginning of the next escape is how a
+string ends up meaning something else.
+
+That is 59 bodies of this tree, and it needed no door: the bytes were known
+all along.
+
+**How long a piece of text is, is the second of its two slots.** A read rather
+than a walk, the same as the machine's (D964).
+
+**And three answers that are the machine's and the folder's alike**, so they
+are called rather than written again (D668): `kest_text_hash` over the bytes,
+`kest_value_hash` over a shape, and `kest_value_same` for two of one shape.
+The last two take the layout, because a generated file cannot name a type
+pointer, and read it back through the module the runtime holds. Hashing a
+number and a float are two lines each and are written out: the float is the
+one that has to say that nought and minus nought are one value, because `==`
+says so.
+
+`hash` over text is where this could have gone quietly wrong — a hash of the
+address compiles, agrees with itself, and disagrees with `==` and with the
+machine. There is a hole for it.
+
+Over this tree the backend now writes **763 of 2,088 bodies**, and
+`bench/rules.kest`'s `worth` is one of them. What still stops that workload is
+what allocates: `array()` and a body that can reach the heap.

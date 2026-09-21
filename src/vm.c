@@ -7828,6 +7828,40 @@ bool kest_elem_count(KestRuntime *runtime, KestValue handle, uint32_t where,
     return true;
 }
 
+int64_t kest_text_hash(const char *bytes, int64_t length) {
+    return (int64_t)kest_mark_bytes(KEST_MARK_START, bytes,
+                                    length < 0 ? 0 : (size_t)length);
+}
+
+// The shape a layout is, which is what both of the two below are about. A
+// layout the module has not got is nothing, and the callers answer for that
+// rather than reading past the end of the list.
+static const KestType *the_shape(KestRuntime *rt, uint16_t layout) {
+    if (rt == NULL || rt->module == NULL ||
+        layout >= rt->module->layout_count) {
+        return NULL;
+    }
+    return rt->module->layout_types[layout];
+}
+
+int64_t kest_value_hash(KestRuntime *runtime, uint16_t layout,
+                        const KestValue *slots) {
+    const KestType *type = the_shape(runtime, layout);
+    if (type == NULL || slots == NULL) {
+        return 0;
+    }
+    return (int64_t)kest_hash_value(type, slots);
+}
+
+bool kest_value_same(KestRuntime *runtime, uint16_t layout,
+                     const KestValue *left, const KestValue *right) {
+    const KestType *type = the_shape(runtime, layout);
+    if (type == NULL || left == NULL || right == NULL) {
+        return false;
+    }
+    return values_equal(type, left, right);
+}
+
 bool kest_native_stopped(KestRuntime *runtime, uint32_t offset,
                          const char *code, const char *message) {
     if (runtime == NULL) {

@@ -64,6 +64,18 @@ unsigned char *kest_elem_at(KestRuntime *runtime, KestValue handle,
 bool kest_elem_count(KestRuntime *runtime, KestValue handle, uint32_t where,
                      int64_t *into);
 
+// What a piece of text hashes to, what a value of a shape hashes to, and
+// whether two values of a shape are the same value. All three are answers the
+// machine has and the folder has, written once each and called from both
+// (D668): a generated file that worked them out again would be a third answer
+// the day any of them moved. `layout` is which of the module's shapes the
+// value is. See D1097.
+int64_t kest_text_hash(const char *bytes, int64_t length);
+int64_t kest_value_hash(KestRuntime *runtime, uint16_t layout,
+                        const KestValue *slots);
+bool kest_value_same(KestRuntime *runtime, uint16_t layout,
+                     const KestValue *left, const KestValue *right);
+
 // What a body written in C says when it stops. `offset` is where in the source
 // it was, which the resolved form carries and the C keeps beside the operation
 // it came from, so a refusal from a compiled body is reported where the same

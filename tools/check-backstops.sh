@@ -16024,6 +16024,21 @@ kest 9.9.9""",
         "arguments": ["examples/math.kest", "examples/game/npc.kest"],
         "caught": "tagged.kest",
     },
+    {
+        # Text hashed by where it is rather than by what it says. Two pieces
+        # of text that compare equal are the same bytes (D021), so a hash
+        # over the address is a hash that disagrees with `==` -- and with the
+        # machine, which is what catches it here. It is the oldest mistake
+        # there is about hashing text, and it compiles.
+        "what": "text hashed by where it is rather than what it says",
+        "file": "src/emitc.c",
+        "from": '            say(c, out, "    %s.integer = kest_text_hash(%s.text, "',
+        "to": '            say(c, out, "    %s.integer = (int64_t)(size_t)(%s.text + 0 * "',
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest", "examples/game/npc.kest"],
+        "caught": "words.kest",
+    },
 ]
 
 failed = 0

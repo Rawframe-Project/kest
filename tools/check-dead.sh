@@ -125,6 +125,19 @@ fn split(a: i32, b: i32) -> i32 no.alloc no.host deterministic {
     return a / b
 }
 
+struct Tag {
+    name: text
+    rank: i32
+}
+
+fn weigh(one: Tag) -> i64 no.alloc no.host deterministic {
+    return i64(hash(one) % 97) + i64(hash(one.name) % 89)
+}
+
+fn same(a: Tag, b: Tag) -> bool no.alloc no.host deterministic {
+    return a == b
+}
+
 fn walk(counts: [i32]) -> i32 no.alloc no.host deterministic {
     let sum = 0
     for at in 0..len(counts) {
@@ -139,7 +152,9 @@ fn main() -> i32 {
     for i in 0..4 {
         push(counts, split(i * 6, 2))
     }
-    return walk(counts) % 251
+    let one = Tag("counting", 3)
+    return (walk(counts) + i32(weigh(one) % 7) +
+            (if same(one, Tag("counting", 4)) -> 1 else -> 0)) % 251
 }
 """
 room = tempfile.mkdtemp()

@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1096
+    CURRENT SHA:       (this commit) D1093-D1097
     PHASE:             B — the release engine: ahead of Luau's native tier on
                        the numeric kernel, not yet reaching the gameplay one
     LAST FAST GATE:    green
@@ -245,13 +245,13 @@ most favourable to a native backend.
 
 ## Open, in priority order
 
-1. **The gameplay workload, which is what the claim has to rest on.**
-   Tagged elements and text in one are written now (D1096), so what
-   `bench/rules.kest` still needs is `text.len` and the rest of what reads a
-   piece of text, and bodies that can reach the heap — which needs the frame
-   and the operands to live where the collector can see them, and doors for
-   the operations that allocate. Then rules against `bench/rules.cpp`, which
-   is D1092's re-evaluation trigger.
+1. **The gameplay workload, which is what the claim has to rest on.** What
+   `bench/rules.kest` still needs is what allocates: `array()`, `push`, and a
+   body that can reach the heap — which needs the frame and the operands to
+   live where the collector can see them, and doors for the operations that
+   reach it. Tagged elements, text constants, hashes and shape equality are
+   written (D1096, D1097), and the tree is at 763 of 2,088 bodies. Then rules
+   against `bench/rules.cpp`, which is D1092's re-evaluation trigger.
 2. **The five times on the kernel, read down.** A call per element, a bounds
    check the C compiler cannot hoist because it is behind that call, and a
    `memcpy` a piece where four doubles could be one. All three go away by

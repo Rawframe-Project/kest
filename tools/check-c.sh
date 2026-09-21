@@ -238,6 +238,51 @@ fn main() -> i32 {
     return i32((i64(step(world, 20)) % 251 + 251) % 251)
 }
 PROGRAM
+cat >"$work"/programs/words.kest <<'PROGRAM'
+module words
+
+struct Tag {
+    name: text
+    rank: i32
+}
+
+fn same(a: Tag, b: Tag) -> bool no.alloc no.host deterministic {
+    return a == b
+}
+
+fn weigh(t: Tag) -> i64 no.alloc no.host deterministic {
+    let mixed = hash(t)
+    let named = hash(t.name)
+    let ranked = hash(t.rank)
+    let odd = hash(f64(t.rank) * 0.5)
+    return i64(mixed % 1000) + i64(named % 1000) + i64(ranked % 100) +
+        i64(odd % 10)
+}
+
+fn label(which: i32) -> text no.alloc no.host deterministic {
+    if which == 0 {
+        return "bread"
+    }
+    if which == 1 {
+        return "hammer"
+    }
+    return "coin"
+}
+
+fn main() -> i32 {
+    let total: i64 = 0
+    for i in 0..30 {
+        let one = Tag(label(i % 3), i % 7)
+        let two = Tag(label((i + 1) % 3), i % 7)
+        total += weigh(one)
+        if same(one, two) {
+            total += 3
+        }
+        total += i64(len(label(i % 3)))
+    }
+    return i32((total % 251 + 251) % 251)
+}
+PROGRAM
 cat >"$work"/programs/tagged.kest <<'PROGRAM'
 module tagged
 
