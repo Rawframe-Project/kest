@@ -39609,3 +39609,37 @@ See D1097.
 
 **Runs:** `make check`, and a program of text constants, hashes and shape
 equality run both ways for the same answer.
+
+## Where a body lives
+
+Only a body that cannot reach the heap could hold a handle, which left every
+body that allocates to the machine. A body lives in one of two places now, and
+which one is read off the body: one that cannot reach the heap keeps its slots
+and operands in C locals, and one that can lives on the machine's stack, laid
+out where the machine would have laid it, so the collector sees everything it
+holds.
+
+Both are called the same way, which is what lets a body be written before the
+ones it calls. And a call between two compiled bodies still does what a call
+does: the two refusals, the frame the ledger keeps, and how far up the stack
+is live. A frame now carries where its own call is written, because compiled C
+has no instruction pointer to read that off -- so a program that reaches
+itself for ever refuses with the same code, the same line, the same notes and
+the same suggestion under both engines, which is one of the check's programs.
+
+What it unlocks in this tree is nothing yet: a body that can reach the heap
+also uses an operation that reaches it, and those have no doors. The shape had
+to be right first.
+
+Two things the gate found on the way. A frame carrying one more field made a
+machine bigger than a walk of the program, which the other host holds to being
+the other way round (D607) -- so where the operand stack had got to when a
+debugger stopped is the machine's now rather than every frame's, which is
+where it belonged: one machine stops in one place. And a refusal written as
+the words first and the code after reads, to the check that holds every
+wording to having been seen, as the code before it saying those words.
+
+See D1098.
+
+**Runs:** `make check`, and two programs written for it -- one body on the
+stack calling one in registers and back, and one that reaches itself for ever.

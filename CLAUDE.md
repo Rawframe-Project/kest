@@ -521,7 +521,8 @@ tools/             Build and development scripts. `make check` runs all of
                    generated file the host's compiler will not read, about an
                    element read from outside the array it is in, about a
                    case's payload moved to where its bytes are, about text
-                   hashed by where it is rather than what it says,
+                   hashed by where it is rather than what it says, about a run
+                   of compiled calls that nothing counts,
                    about a message that says an `i64` through a `%u`,
                    about a kind of type nothing says how to write, about a
                    kind of token nothing says a line may end after, about an

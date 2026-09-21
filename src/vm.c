@@ -578,11 +578,11 @@ typedef struct {
     const uint8_t *ip;
     // Where this call's slots begin. The operand stack sits above them.
     KestValue *base;
-    // And where the operand stack had got to when a debugger stopped the
-    // machine here. It is written at one instruction and read at one, so a
-    // machine nobody is debugging never touches it: everywhere else the top is
-    // a register, for the reason D869 gives. See D991.
-    KestValue *stopped_top;
+    // Where in the source this frame's own call is written, for a frame whose
+    // body is compiled C and so has no instruction to read one off. Nought
+    // for every frame the machine made, which reads it from where the
+    // instruction pointer has got to. See D1098.
+    uint32_t said_at;
 } Frame;
 
 struct KestRuntime {
@@ -815,6 +815,11 @@ struct KestRuntime {
     // the program's is running. See D072.
     KestValue *running_top;
     uint32_t running_frames;
+    // Where the operand stack had got to when a debugger stopped the machine.
+    // One machine stops in one place, so it is the machine's rather than
+    // every frame's: it is written at one instruction and read at one, and a
+    // frame is a thing there are a thousand of. See D991 and D1098.
+    KestValue *stopped_top;
     // Headers of lends the host has ended, kept to be lent again. A host that
     // lends a batch a frame and ends it at the end of the frame would
     // otherwise leave a header on the heap every frame, which is a frame
@@ -2170,7 +2175,10 @@ static void said_at(Vm *vm, const KestSource *source, KestSpan span,
             continue;
         }
         uint32_t at = (uint32_t)(caller->ip - chunk->code);
-        KestSpan call = {kest_chunk_origin(chunk, at > 0 ? at - 1 : 0), 1};
+        KestSpan call = {caller->said_at != 0
+                             ? caller->said_at
+                             : kest_chunk_origin(chunk, at > 0 ? at - 1 : 0),
+                         1};
         const char *written = vm->frames[i].chunk->wrote;
         if (i == shown && depth - 1 > shown) {
             kest_diags_note(vm->diags, chunk->source, call,
@@ -3177,14 +3185,14 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     KestValue *top = NULL;
     if (carrying_on) {
         frame = &rt->frames[rt->frame_count - 1];
-        top = frame->stopped_top;
+        top = rt->stopped_top;
     } else {
         rt->frame_count = under;
         frame = &rt->frames[rt->frame_count++];
         frame->chunk = chunk;
         frame->ip = chunk->code;
         frame->base = floor;
-        frame->stopped_top = NULL;
+        frame->said_at = 0;
         top = floor + (chunk->slot_count > arg_slots ? chunk->slot_count
                                                      : arg_slots);
         // A run that enters a body the host's compiler compiled is that body
@@ -5361,6 +5369,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 frame->chunk = callee;
                 frame->ip = callee->code;
                 frame->base = base;
+                frame->said_at = 0;
                 uint16_t gave = 0;
                 // Where the machine's stack has got to, for the collector: a
                 // body written in C keeps what it is working on in the frame
@@ -5384,6 +5393,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             frame->chunk = callee;
             frame->ip = callee->code;
             frame->base = base;
+            frame->said_at = 0;
             ip = callee->code;
             mine = base;
             constants = callee->constants;
@@ -5691,7 +5701,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             frame->ip = instruction;
-            frame->stopped_top = top;
+            rt->stopped_top = top;
             rt->stopped_at = instruction;
             rt->running_frames = 0;
             rt->running_top = NULL;
@@ -7798,6 +7808,23 @@ static Array *the_array(KestRuntime *rt, KestValue handle, uint32_t where) {
     return NULL;
 }
 
+// What a body written in C says when it stops, with the numbers in it. The
+// code and the words are one call for the reason every other refusal here is
+// written that way: what reads a refusal reads the words beside the code they
+// belong to, and a check holds the two together.
+static bool stopped_saying(KestRuntime *rt, uint32_t where, const char *code,
+                           const char *format, ...) KEST_SAYS(4, 5);
+
+static bool stopped_saying(KestRuntime *rt, uint32_t where, const char *code,
+                           const char *format, ...) {
+    char said[160];
+    va_list args;
+    va_start(args, format);
+    vsnprintf(said, sizeof said, format, args);
+    va_end(args);
+    return kest_native_stopped(rt, where, code, said);
+}
+
 unsigned char *kest_elem_at(KestRuntime *runtime, KestValue handle,
                             int64_t index, uint16_t offset, uint32_t where) {
     Array *array = runtime == NULL ? NULL : the_array(runtime, handle, where);
@@ -7805,14 +7832,12 @@ unsigned char *kest_elem_at(KestRuntime *runtime, KestValue handle,
         return NULL;
     }
     if (index < 0 || (uint64_t)index >= array->length) {
-        char said[96];
         // The machine's own sentence, because it is the machine's own
         // refusal: two engines that say a bounds failure differently are two
         // languages, and the check that runs both reads the words.
-        snprintf(said, sizeof said,
-                 "index %lld is outside an array of length %u",
-                 (long long)index, array->length);
-        kest_native_stopped(runtime, where, "K0604", said);
+        stopped_saying(runtime, where, "K0604",
+                       "index %lld is outside an array of length %u",
+                       (long long)index, array->length);
         return NULL;
     }
     return array->bytes + (size_t)index * array->stride + offset;
@@ -7826,6 +7851,64 @@ bool kest_elem_count(KestRuntime *runtime, KestValue handle, uint32_t where,
     }
     *into = array->length;
     return true;
+}
+
+bool kest_native_room(KestRuntime *runtime, KestValue *base, uint32_t which,
+                      uint32_t where, uint32_t *was) {
+    if (runtime == NULL || runtime->module == NULL || was == NULL ||
+        which >= runtime->module->count) {
+        return false;
+    }
+    *was = runtime->frame_count;
+    // Where the call this is about is written, on the frame making it: a body
+    // the host's compiler compiled has no instruction pointer to read one
+    // off, and a fault under it says `was called here` about a line either
+    // way.
+    if (runtime->frame_count > 0) {
+        runtime->frames[runtime->frame_count - 1].said_at = where;
+    }
+    const KestChunk *callee = runtime->module->functions[which];
+    if (runtime->frame_count == runtime->call_depth) {
+        stopped_saying(runtime, where, "K0602",
+                       "calls nest more than %u deep", runtime->call_depth);
+        // And what to ask for, which is the same answer the machine gives
+        // where it refuses the same call: a refusal about a number a host
+        // picked is one a host can act on.
+        what_it_needed(runtime, runtime, (int32_t)which);
+        return false;
+    }
+    if (base + callee->slot_count + callee->stack_needed > runtime->limit) {
+        stopped_saying(runtime, where, "K0602",
+                       "this call wants more than the %u slots of stack there "
+                       "are",
+                       runtime->stack_slots);
+        what_it_needed(runtime, runtime, (int32_t)which);
+        return false;
+    }
+    // The frame the ledger keeps. Nothing walks its instructions -- there are
+    // none to walk -- and what it is for is everything else that reads
+    // frames: what a fault says it was called from, how deep a host is told a
+    // run is, and what a machine says it needs.
+    Frame *mine = &runtime->frames[runtime->frame_count++];
+    mine->chunk = callee;
+    mine->ip = callee->code;
+    mine->base = base;
+    mine->said_at = 0;
+    // How far up the stack is live, for the collector. What is above it is
+    // slots nothing wrote, and a walk that reads one keeps something alive a
+    // little longer, which is what a conservative walk of a stack does
+    // anyway.
+    KestValue *reaches = base + callee->slot_count + callee->stack_needed;
+    if (runtime->running_top == NULL || reaches > runtime->running_top) {
+        runtime->running_top = reaches;
+    }
+    return true;
+}
+
+void kest_native_left(KestRuntime *runtime, uint32_t was) {
+    if (runtime != NULL && was <= runtime->frame_count) {
+        runtime->frame_count = was;
+    }
 }
 
 int64_t kest_text_hash(const char *bytes, int64_t length) {

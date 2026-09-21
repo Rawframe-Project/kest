@@ -37248,3 +37248,57 @@ machine. There is a hole for it.
 Over this tree the backend now writes **763 of 2,088 bodies**, and
 `bench/rules.kest`'s `worth` is one of them. What still stops that workload is
 what allocates: `array()` and a body that can reach the heap.
+
+## D1098. Where a body lives, and what a call between two compiled ones does
+
+D1095 let only a body that cannot reach the heap hold a handle, because the
+collector walks the machine's stack and a C local is not on it. That was the
+right rule and the wrong shape: it left every body that allocates to the
+machine, which is most of a program that does anything.
+
+**So a body lives in one of two places, and which one is read off the body.**
+One that cannot reach the heap — no allocating, host or moving effect, and
+every call to something the module says promised `no.alloc` — keeps its slots
+and its operands in C locals, which is what the sixteen-to-twenty-three times
+of D1093 is made of. One that can, lives on the machine's stack: `f` is the
+frame it was handed and `s` is the run above it, laid out exactly where the
+machine would have laid them. The collector then sees everything it holds and
+knows nothing about C.
+
+**Both are called the same way.** Every body takes the frame it was given,
+whether it uses it or not, so a body can be written before the bodies it
+calls: what a caller has to know about a callee is nothing. A body that keeps
+its operands in locals holds nothing on the machine's stack, so the room it
+was given for operands is where a callee's frame goes; one that lives there
+hands over what is above its live operands, which is exactly where a call
+leaves them.
+
+**And a call between two compiled bodies still does what a call does.** It
+does not go through the machine, so `kest_native_room` is where the rest of it
+happens: the two refusals a call can make — calls nested deeper than the
+machine allows, and a frame that will not fit on the stack — the frame the
+ledger keeps, and how far up the stack is live, for the collector. A frame
+carries one new thing for this: where in the source its own call is written,
+because a body of compiled C has no instruction pointer to read that off, and
+a fault under a run of them says `was called here` about a line either way.
+
+The proof that this is not decoration: a program that reaches itself for ever
+refuses with the same code, the same line, the same eight notes and the same
+suggestion under both engines. It is one of the check's programs.
+
+**What it costs**: a call into a compiled body from a compiled body is a door
+in, a door out and a frame written — about five instructions on a call that
+already costs more than that. A frame is the same size it was: where the
+operand stack had got to when a debugger stopped the machine was written on
+every frame and is the machine's now, because one machine stops in one place
+and a frame is a thing there are a thousand of. That is not tidying: a frame
+eight bytes wider made a machine with the frames a host asked for bigger than
+a walk of the program, which is a thing the other host holds and D607 decided. What it buys is that the machine's ledger is
+true while compiled code runs, which is what the debugger, the profiler, a
+host asking how deep a run is, and every refusal above rest on.
+
+**What it does not yet buy.** Nothing in this tree, because a body that can
+reach the heap also *uses* an operation that reaches it — `array()`, `push`,
+making text — and those have no doors yet. The shape is what has to be right
+first: the check runs a program written both ways round it, one body on the
+stack calling one in registers and back.

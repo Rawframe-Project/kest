@@ -64,6 +64,23 @@ unsigned char *kest_elem_at(KestRuntime *runtime, KestValue handle,
 bool kest_elem_count(KestRuntime *runtime, KestValue handle, uint32_t where,
                      int64_t *into);
 
+// Entering a body the host's compiler compiled from another one. A call
+// between two of those does not go through the machine, so this is where what
+// a call does still happens: the two refusals -- calls nested deeper than a
+// machine allows, and a frame that would not fit on its stack -- the frame
+// the ledger keeps, so a fault inside says what it was called from and a host
+// asking how deep a run is is told the truth, and how far up the stack is
+// live, for the collector. `which` is the body being entered, `where` is the
+// call in the source, and `was` comes back for `kest_native_left`. Answers
+// false when it refused, and has said so. See D1098.
+bool kest_native_room(KestRuntime *runtime, KestValue *base, uint32_t which,
+                      uint32_t where, uint32_t *was);
+
+// And back out of it: what `was` said, put back. A run of compiled calls
+// leaves the machine's ledger where it found it, so a body that calls in a
+// loop does not fill the frame list.
+void kest_native_left(KestRuntime *runtime, uint32_t was);
+
 // What a piece of text hashes to, what a value of a shape hashes to, and
 // whether two values of a shape are the same value. All three are answers the
 // machine has and the folder has, written once each and called from both

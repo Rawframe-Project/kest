@@ -141,7 +141,7 @@ fn same(a: Tag, b: Tag) -> bool no.alloc no.host deterministic {
 fn walk(counts: [i32]) -> i32 no.alloc no.host deterministic {
     let sum = 0
     for at in 0..len(counts) {
-        sum += counts[at]
+        sum += split(counts[at] * 2, 2)
         counts[at] = sum
     }
     return sum

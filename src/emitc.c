@@ -139,8 +139,11 @@ typedef struct {
     Body *into;
     // Whether this body may hold a handle in a local, which is whether
     // nothing it does can reach the heap. Worked out once before anything is
-    // written.
+    // written, and its opposite is where the body lives: one that can reach
+    // the heap keeps its slots and its operands on the machine's stack, where
+    // the collector walks. See D1098.
     bool no_heap;
+    bool on_the_stack;
     uint32_t *depth;
     bool *known;
     bool *landed;
@@ -707,10 +710,6 @@ static bool write_elem(Walk *walk, const KestIrOp *op,
                        uint32_t value, bool reading) {
     KestEmitC *c = walk->c;
     Text *out = &walk->into->wrote;
-    if (!walk->no_heap) {
-        cannot(walk, "a handle held where this body can reach the heap");
-        return false;
-    }
     if (c->module == NULL || place->layout >= c->module->layout_count) {
         cannot(walk, "an element of a shape this module has not laid out");
         return false;
@@ -746,10 +745,6 @@ static bool write_elem(Walk *walk, const KestIrOp *op,
 static bool write_at(Walk *walk, const KestIrPlace *place, uint32_t value,
                      uint32_t address) {
     KestEmitC *c = walk->c;
-    if (!walk->no_heap) {
-        cannot(walk, "a handle held where this body can reach the heap");
-        return false;
-    }
     if (c->module == NULL || place->layout >= c->module->layout_count) {
         cannot(walk, "a field of a shape this module has not laid out");
         return false;
@@ -1134,10 +1129,6 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "the address of a place this does not take one of");
             break;
         }
-        if (!walk->no_heap) {
-            cannot(walk, "a handle held where this body can reach the heap");
-            break;
-        }
         if (reads != 2 || leaves != 1) {
             cannot(walk, "an address of something other than one of a run");
             break;
@@ -1204,10 +1195,6 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a length of something other than one thing");
             break;
         }
-        if (!walk->no_heap) {
-            cannot(walk, "a handle held where this body can reach the heap");
-            break;
-        }
         at_stack(first, base);
         say(c, out, "    if (!kest_elem_count(rt, %s, %u, &%s.integer)) {\n"
                     "        return false;\n    }\n",
@@ -1241,13 +1228,37 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         // said so through the machine, so the caller gives back what it gave
         // back and nothing here writes a second message about it.
         at_stack(first, base);
-        say(c, out, "    if (!kf_%u(rt, %s%s", which, leaves > 0 ? "&" : "",
-            leaves > 0 ? first : "NULL");
+        // Where the callee's own slots go on the machine's stack: above
+        // everything this body is holding there. A body that keeps its
+        // operands in locals holds nothing there, so the room it was given
+        // for them is where the callee's frame goes; one that lives on the
+        // stack hands over what is above its live operands, which is exactly
+        // where a call leaves them. Either way the machine is asked first
+        // whether there is room, because a call that walks off the stack is
+        // what that refusal is for.
+        Where handed;
+        // A stack-shaped body hands over what a call leaves: the arguments
+        // are the callee's slots, in the place the machine would have put
+        // them. One that keeps its operands in locals has nothing on the
+        // machine's stack, so the room it was given for operands is where a
+        // callee's frame goes.
+        snprintf(handed, sizeof(Where), walk->on_the_stack ? "s + %u" : "frame + %u",
+                 walk->on_the_stack ? base : walk->body->slot_count);
+        say(c, out,
+            "    {\n        uint32_t was = 0;\n"
+            "        if (!kest_native_room(rt, %s, %u, %u, &was)) {\n"
+            "            return false;\n        }\n"
+            "        bool went = kf_%u(rt, %s, %s%s",
+            handed, which, op->span.offset, which, handed,
+            leaves > 0 ? "&" : "", leaves > 0 ? first : "NULL");
         for (uint32_t k = 0; k < reads; k++) {
             at_stack(second, base + k);
             say(c, out, ", %s", second);
         }
-        say(c, out, ")) {\n        return false;\n    }\n");
+        say(c, out,
+            ");\n        kest_native_left(rt, was);\n"
+            "        if (!went) {\n            return false;\n        }\n"
+            "    }\n");
         break;
     }
     case KEST_IR_GO:
@@ -1312,10 +1323,19 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
 // count that is not one -- and what it worked out goes where the caller says.
 // The machine comes with it because a body that stops says so through the
 // machine, which is what makes a refusal from compiled code read like a
-// refusal from the instructions. See D1094.
+// refusal from the instructions (D1094).
+//
+// And the frame, which is the run of slots on the machine's stack that this
+// body was given. A body that cannot reach the heap keeps its slots and its
+// operands in locals and uses the frame for nothing but handing one to
+// whatever it calls; one that can reach the heap lives in it, because the
+// collector walks the machine's stack and a local is not on it. Both are
+// called the same way, which is what lets a body be written before the ones
+// it calls. See D1098.
 static void write_head(KestEmitC *c, Text *into, const Body *body,
                        uint32_t which) {
-    say(c, into, "static bool kf_%u(KestRuntime *rt, KV *out", which);
+    say(c, into, "static bool kf_%u(KestRuntime *rt, KV *frame, KV *out",
+        which);
     for (uint16_t p = 0; p < body->params; p++) {
         say(c, into, ", KV a%u", (unsigned)p);
     }
@@ -1423,14 +1443,26 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
     memset(walk.landed, 0, sizeof(bool) * many);
 
     walk.no_heap = reaches_no_heap(c, body);
+    walk.on_the_stack = !walk.no_heap;
     if (depths(&walk)) {
         write_head(c, &into->wrote, into, c->count - 1);
         say(c, &into->wrote, " {\n");
-        if (body->slot_count > 0) {
-            say(c, &into->wrote, "    KV f[%u];\n", (unsigned)body->slot_count);
-        }
-        if (walk.deepest > 0) {
-            say(c, &into->wrote, "    KV s[%u];\n", walk.deepest);
+        if (walk.on_the_stack) {
+            // On the machine's stack, laid out the way the machine would have
+            // laid it out: the slots where the caller left the arguments, and
+            // the operands above them. What that buys is that the collector
+            // sees everything this body is holding, which a local is not.
+            say(c, &into->wrote,
+                "    KV *f = frame;\n    KV *s = frame + %u;\n",
+                (unsigned)body->slot_count);
+        } else {
+            if (body->slot_count > 0) {
+                say(c, &into->wrote, "    KV f[%u];\n",
+                    (unsigned)body->slot_count);
+            }
+            if (walk.deepest > 0) {
+                say(c, &into->wrote, "    KV s[%u];\n", walk.deepest);
+            }
         }
         for (uint16_t p = 0; p < body->param_slots; p++) {
             say(c, &into->wrote, "    f[%u] = a%u;\n", (unsigned)p,
@@ -1439,11 +1471,12 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
         // Said out loud rather than left to whether the body happens to read
         // them: a frame nothing reads is a warning in somebody else's build,
         // and a warning in a generated file is noise a reader learns to skip.
-        say(c, &into->wrote, "    (void)rt;\n    (void)out;\n");
-        if (body->slot_count > 0) {
+        say(c, &into->wrote, "    (void)rt;\n    (void)out;\n"
+                             "    (void)frame;\n");
+        if (body->slot_count > 0 || walk.on_the_stack) {
             say(c, &into->wrote, "    (void)f;\n");
         }
-        if (walk.deepest > 0) {
+        if (walk.deepest > 0 || walk.on_the_stack) {
             say(c, &into->wrote, "    (void)s;\n");
         }
         for (uint32_t i = 0; i < body->op_count && walk.why == NULL; i++) {
@@ -1563,6 +1596,10 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "                            uint32_t where);\n"
         "bool kest_elem_count(KestRuntime *runtime, KestValue handle,\n"
         "                     uint32_t where, int64_t *into);\n"
+        "bool kest_native_room(KestRuntime *runtime, KestValue *base,\n"
+        "                      uint32_t which, uint32_t where,\n"
+        "                      uint32_t *was);\n"
+        "void kest_native_left(KestRuntime *runtime, uint32_t was);\n"
         "int64_t kest_text_hash(const char *bytes, int64_t length);\n"
         "int64_t kest_value_hash(KestRuntime *runtime, uint16_t layout,\n"
         "                        const KestValue *slots);\n"
@@ -1638,7 +1675,7 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         say(c, &file,
             "static bool kn_%u(KestRuntime *rt, KestValue *frame,\n"
             "                 uint16_t *gave) {\n    kest_entered[%u]++;\n"
-            "    if (!kf_%u(rt, %s",
+            "    if (!kf_%u(rt, frame, %s",
             i, bound_so_far++, i, body->results > 0 ? "frame" : "NULL");
         for (uint16_t p = 0; p < body->params; p++) {
             say(c, &file, ", frame[%u]", (unsigned)p);

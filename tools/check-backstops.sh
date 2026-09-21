@@ -15997,9 +15997,9 @@ kest 9.9.9""",
         "what": "an element read from outside the array it is in",
         "file": "src/vm.c",
         "from": r"""    if (index < 0 || (uint64_t)index >= array->length) {
-        char said[96];""",
+        // The machine's own sentence,""",
         "to": r"""    if (false) {
-        char said[96];""",
+        // The machine's own sentence,""",
         "make": ["kest"],
         "tool": "tools/check-c.sh",
         "arguments": ["examples/math.kest", "examples/game/npc.kest"],
@@ -16038,6 +16038,25 @@ kest 9.9.9""",
         "tool": "tools/check-c.sh",
         "arguments": ["examples/math.kest", "examples/game/npc.kest"],
         "caught": "words.kest",
+    },
+    {
+        # A run of calls between bodies the host's compiler compiled, with
+        # nothing counting how deep it has got. The machine refuses a program
+        # that reaches itself for ever; compiled code that does not count is
+        # compiled code that goes until something else stops it, and what
+        # stops it says different words -- which is how a program that ends in
+        # one refusal under one engine and another under the other is caught.
+        # See D1098.
+        "what": "a run of compiled calls that nothing counts",
+        "file": "src/vm.c",
+        "from": r"""    if (runtime->frame_count == runtime->call_depth) {
+        stopped_saying(runtime, where, "K0602",""",
+        "to": r"""    if (false) {
+        stopped_saying(runtime, where, "K0602",""",
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest", "examples/game/npc.kest"],
+        "caught": "deep.kest",
     },
 ]
 

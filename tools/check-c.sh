@@ -238,6 +238,56 @@ fn main() -> i32 {
     return i32((i64(step(world, 20)) % 251 + 251) % 251)
 }
 PROGRAM
+cat >"$work"/programs/stacked.kest <<'PROGRAM'
+module stacked
+
+struct Point {
+    x: f64
+    y: i32
+}
+
+fn bump(n: i32) -> i32 {
+    return n + 1
+}
+
+fn walk(world: [Point], rounds: i32) -> i64 {
+    let sum: i64 = 0
+    let i = 0
+    while i < rounds {
+        for at in 0..len(world) {
+            let one = world[at]
+            one.y = bump(one.y) % 11
+            one.x += f64(one.y)
+            world[at] = one
+            sum += i64(one.y)
+        }
+        i = bump(i)
+    }
+    return sum
+}
+
+fn main() -> i32 {
+    let world: [Point] = array()
+    for i in 0..32 {
+        push(world, Point(f64(i), i % 7))
+    }
+    return i32((walk(world, 20) % 251 + 251) % 251)
+}
+PROGRAM
+cat >"$work"/programs/deep.kest <<'PROGRAM'
+module deep
+
+fn down(n: i32) -> i64 no.alloc no.host deterministic {
+    if n <= 0 {
+        return 0
+    }
+    return 1 + down(n - 1)
+}
+
+fn main() -> i32 {
+    return i32(down(100000) % 251)
+}
+PROGRAM
 cat >"$work"/programs/words.kest <<'PROGRAM'
 module words
 
@@ -478,12 +528,12 @@ with what was written as C, or says something else" >>"$said"
     alike=$((alike + 1))
 done
 
-# Three of them are programs that stop while they are running, and both halves
+# Four of them are programs that stop while they are running, and both halves
 # have to stop: a backend that wrote a division by nought as one the host's machine
 # traps on, or as one it quietly answers, would be a program that means
 # something else. Counted rather than assumed, because a program that stops is
 # one whose answer is the same either way for the wrong reason.
-for stopping in stopped shifted outside; do
+for stopping in stopped shifted outside deep; do
     stops=$(./kest run "$work"/programs/$stopping.kest 2>/dev/null </dev/null
             echo $?)
     if [ "$stops" -eq 0 ]; then
