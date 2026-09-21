@@ -1,0 +1,143 @@
+module checks
+
+// What the task is judged by, which whoever does it does not see. Each check
+// answers with its own number; nought is every check passing.
+//
+// The pool writes down every slot it hands out, so what `handed` holds
+// afterwards is what was taken, and what `free` holds is whether it came back.
+
+import pooled
+
+fn pool() -> pooled.Pool {
+    let free: [i32] = array()
+    room(free, 8)
+    fit(free, 1)
+    fit(free, 2)
+    fit(free, 3)
+    let handed: [i32] = array()
+    room(handed, 32)
+    return pooled.Pool(free, handed)
+}
+
+fn room8() -> [i32] {
+    let into: [i32] = array()
+    room(into, 8)
+    return into
+}
+
+fn holds(values: [i32], wanted: [i32]) -> bool no.alloc no.host deterministic {
+    if len(values) != len(wanted) {
+        return false
+    }
+    for i in 0..len(values) {
+        if values[i] != wanted[i] {
+            return false
+        }
+    }
+    return true
+}
+
+fn main() -> i32 {
+    // Two out of three, newest first, and the pool keeps the rest.
+    let p = pool()
+    let into = room8()
+    if pooled.refill(p, 2, into) != 2 {
+        return 1
+    }
+    if !holds(into, [3, 2]) {
+        return 2
+    }
+    if !holds(p.free, [1]) {
+        return 3
+    }
+    if !holds(p.handed, [3, 2]) {
+        return 4
+    }
+
+    // The last one, and `into` is what this call took and not what the last
+    // one did.
+    if pooled.refill(p, 1, into) != 1 {
+        return 5
+    }
+    if !holds(into, [1]) {
+        return 6
+    }
+    if len(p.free) != 0 {
+        return 7
+    }
+
+    // And nothing left to take.
+    if pooled.refill(p, 1, into) != 0 {
+        return 8
+    }
+    if len(into) != 0 {
+        return 9
+    }
+    if len(p.free) != 0 {
+        return 10
+    }
+    if !holds(p.handed, [3, 2, 1]) {
+        return 11
+    }
+
+    // More than there is: none of it is kept, and the pool ends holding what
+    // it held, in the order it held it.
+    let short = pool()
+    let some = room8()
+    if pooled.refill(short, 5, some) != 0 {
+        return 12
+    }
+    if len(some) != 0 {
+        return 13
+    }
+    if !holds(short.free, [1, 2, 3]) {
+        return 14
+    }
+    // The takes happened, so the pool wrote them down.
+    if !holds(short.handed, [3, 2, 1]) {
+        return 15
+    }
+    // And a pool that gave everything back gives it out again.
+    if pooled.refill(short, 3, some) != 3 {
+        return 16
+    }
+    if !holds(some, [3, 2, 1]) {
+        return 17
+    }
+
+    // Nothing asked for takes nothing, and empties what it was handed.
+    let quiet = pool()
+    let held = room8()
+    if pooled.refill(quiet, 2, held) != 2 {
+        return 18
+    }
+    if pooled.refill(quiet, 0, held) != 0 {
+        return 19
+    }
+    if len(held) != 0 {
+        return 20
+    }
+    if !holds(quiet.free, [1]) {
+        return 21
+    }
+    if pooled.refill(quiet, 0 - 3, held) != 0 {
+        return 22
+    }
+    if len(held) != 0 || len(quiet.free) != 1 {
+        return 23
+    }
+
+    // The whole pool at once.
+    let all = pool()
+    let every = room8()
+    if pooled.refill(all, 3, every) != 3 {
+        return 24
+    }
+    if !holds(every, [3, 2, 1]) {
+        return 25
+    }
+    if len(all.free) != 0 {
+        return 26
+    }
+    return 0
+}

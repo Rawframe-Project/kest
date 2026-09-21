@@ -1,0 +1,142 @@
+module checks
+
+// What the task is judged by, which whoever does it does not see. Each check
+// answers with its own number; nought is every check passing.
+//
+// What this holds is the one thing a promise cannot: that the same elapsed
+// time, split into frames any way at all, gives the same world.
+
+import stepped
+
+fn world(a: i32, b: i32, c: i32) -> [i32] {
+    let values: [i32] = array()
+    room(values, 3)
+    fit(values, a)
+    fit(values, b)
+    fit(values, c)
+    return values
+}
+
+fn holds(values: [i32], wanted: [i32]) -> bool no.alloc no.host deterministic {
+    if len(values) != len(wanted) {
+        return false
+    }
+    for i in 0..len(values) {
+        if values[i] != wanted[i] {
+            return false
+        }
+    }
+    return true
+}
+
+fn main() -> i32 {
+    // A hundred milliseconds in one call: five whole steps and nothing left.
+    // One step of [1, 2, 3] is [3, 5, 4], because the last thing's neighbour
+    // is the first and nothing reads what this step has written.
+    let once = world(1, 2, 3)
+    let after = stepped.advance(once, stepped.Clock(0, 0), 100)
+    if after.steps != 5 || after.left != 0 {
+        return 1
+    }
+    if !holds(once, [64, 63, 65]) {
+        return 2
+    }
+
+    // The same hundred as five frames of twenty.
+    let evenly = world(1, 2, 3)
+    let clock = stepped.Clock(0, 0)
+    for i in 0..5 {
+        clock = stepped.advance(evenly, clock, 20)
+    }
+    if clock.steps != 5 || clock.left != 0 {
+        return 3
+    }
+    if !holds(evenly, [64, 63, 65]) {
+        return 4
+    }
+
+    // And as five uneven ones adding to the same hundred.
+    let unevenly = world(1, 2, 3)
+    let each = [7, 13, 19, 21, 40]
+    let uneven = stepped.Clock(0, 0)
+    for one in each {
+        uneven = stepped.advance(unevenly, uneven, one)
+    }
+    if uneven.steps != 5 || uneven.left != 0 {
+        return 5
+    }
+    if !holds(unevenly, [64, 63, 65]) {
+        return 6
+    }
+
+    // One step of [1, 2, 3] on its own, which is what the ring is about: a
+    // world written into as it is walked gives [3, 5, 6] here.
+    let one = world(1, 2, 3)
+    if stepped.advance(one, stepped.Clock(0, 0), 20).steps != 1 {
+        return 7
+    }
+    if !holds(one, [3, 5, 4]) {
+        return 8
+    }
+
+    // Time that does not pay for a step is held for the next call.
+    let carried = world(1, 2, 3)
+    let held = stepped.advance(carried, stepped.Clock(0, 0), 30)
+    if held.steps != 1 || held.left != 10 {
+        return 9
+    }
+    held = stepped.advance(carried, held, 10)
+    if held.steps != 2 || held.left != 0 {
+        return 10
+    }
+    if !holds(carried, [8, 9, 7]) {
+        return 11
+    }
+    let still = stepped.advance(carried, held, 19)
+    if still.steps != 2 || still.left != 19 {
+        return 12
+    }
+    if !holds(carried, [8, 9, 7]) {
+        return 13
+    }
+
+    // Five steps is all one call runs, and the time the sixth would have cost
+    // is dropped rather than carried into the call after it.
+    let late = world(1, 2, 3)
+    let limit = stepped.advance(late, stepped.Clock(0, 0), 1000)
+    if limit.steps != 5 {
+        return 14
+    }
+    if limit.left != 0 {
+        return 15
+    }
+    if !holds(late, [64, 63, 65]) {
+        return 16
+    }
+    limit = stepped.advance(late, limit, 0)
+    if limit.steps != 5 {
+        return 17
+    }
+
+    // A world with nothing in it still keeps time.
+    let empty: [i32] = array()
+    let quiet = stepped.advance(empty, stepped.Clock(0, 0), 45)
+    if quiet.steps != 2 || quiet.left != 5 {
+        return 18
+    }
+    if len(empty) != 0 {
+        return 19
+    }
+
+    // And a world of one thing, whose neighbour is itself.
+    let alone: [i32] = array()
+    room(alone, 1)
+    fit(alone, 7)
+    if stepped.advance(alone, stepped.Clock(0, 0), 60).steps != 3 {
+        return 20
+    }
+    if alone[0] != 56 {
+        return 21
+    }
+    return 0
+}

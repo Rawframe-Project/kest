@@ -38473,3 +38473,65 @@ that churns.
 against 3.64: a generated file's own `main` builds the program *and* binds
 sixty-eight bodies to their chunks by name, which is the check that the C was
 written from this program and not another one. It is paid once at startup.
+
+## D1125 — Three more task families, and counting which side caught the mistake
+
+The suite had seven of the fourteen families the mission lists, and the two
+that were writable with a single-file runner were written down as writable and
+left. Three are written now, and one of them is the one the whole suite is for.
+
+**`stepped` — a deterministic update.** A world advanced in whole steps of
+twenty milliseconds, with the leftover carried and a five-step limit past
+which the time it could not spend is dropped rather than kept. One step gives
+each thing its own value plus the one the thing after it around the ring held
+*at the start of the step*. The checks run the same hundred milliseconds as
+one frame, as five even ones and as five uneven ones, and hold the three
+worlds against each other — which is the thing the `deterministic` promise
+cannot see, because a body that reads no clock can still depend on how the
+time arrived. The wrong answer keeps the accumulator and writes the world as
+it walks it, so a thing late in the run reads what the step already gave the
+thing before it; check 2 catches it in both languages.
+
+**`nearby` — names that are nearly the one you want.** A scoreboard read out
+of lines. The library this repository ships is full of real near misses:
+`table.get` answers the value where `table.find` answers *where* it is kept,
+`table.set` puts a name in where `table.fit` only writes over one already
+there, `text.number` reads a whole number where `text.real` reads a fraction,
+and `text.left` and `text.right` pad to a width rather than cut to one. The
+wrong answer calls `find` where it meant `get` — **both answer `i32?` on this
+board, so neither the compiler nor the analyser has anything to say** — and
+what tells them apart is a name that turns up twice. In Luau the wrong answer
+is `tonumber` with nothing said about the number having been a whole one.
+
+**`pooled` — obeying `no.alloc`, and the one task the compiler answers.**
+`refill(pool, want, into)` takes `want` slots or none, and on running out gives
+back every slot it took, newest first, so the pool ends holding what it held.
+The natural way to write all-or-nothing is a scratch list of what was taken —
+and `refill` promises `no.alloc`, so **that answer is refused before the
+program runs**, naming both the `array()` and the promise. The same answer in
+Luau is a table nobody counts; what catches the Luau wrong answer is a hidden
+test on what the pool was left holding, two files and a run away.
+
+**And that is now counted.** `tools/check-ai.sh` says, per language, how many
+of the wrong answers were refused before running and how many only a hidden
+test caught: **one refused and nine tested in Kest, none refused and ten
+tested in Luau, none escaping either.** The number is small and it is honest —
+nine of the ten mistakes written here are the kind no type system can be
+credited for, which is deliberate, because a suite whose mistakes are all
+spelling is a suite that measures nothing. What the one says is the shape of
+the claim: a mistake a compiler refuses costs a model a turn, a mistake a
+hidden test catches costs it a run, and a mistake nothing catches escapes into
+the game. Nothing here escapes, because the gate would not pass if it did.
+
+Ten families of fourteen. The four left — host API use, a hot-update-compatible
+change, generic API use, and a task *about* `no.host` — want a host or a reload
+that the single-file runner has neither of.
+
+**And the fast gate reads the same files the whole gate does.** It formatted
+`examples/*.kest lib/std/*.kest tools/*.kest` — three globs, none of them
+reaching into a directory — where the whole gate formats `examples`, `lib`,
+`tools` and `ai` whole. Two of the task files written here were out of the one
+form, `make fast` said nothing, and the whole gate said it thirty minutes
+later. That is the opposite of what a fast gate is for, so `tools/fast.sh` now
+finds the same four trees. Roughing up one line of `ai/tasks/nearby` and
+watching `make fast` name the file is the hole for it.

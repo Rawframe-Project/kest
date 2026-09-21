@@ -1,0 +1,132 @@
+module checks
+
+// What the task is judged by, which whoever does it does not see. Each check
+// answers with its own number; nought is every check passing.
+//
+// What most of these hold is that the right one of two names that are nearly
+// the same was called: a name that turns up twice adds, which is the one
+// place `get` and `find` say different things and neither the compiler nor the
+// analyser can tell them apart.
+
+import nearby
+import std.table
+
+fn lines(of: [text]) -> [text] {
+    return of
+}
+
+fn worth(board: table.Table<text, i32>, name: text) -> i32 {
+    return table.orElse(board, name, 0 - 999)
+}
+
+fn named(got: text?, wanted: text) -> bool {
+    if let one = got {
+        return one == wanted
+    }
+    return false
+}
+
+fn main() -> i32 {
+    // A plain board, and the greatest on it.
+    let plain = nearby.tally(lines(["gil:12", "ada:5", "rex:9"]))
+    if table.count(plain) != 3 {
+        return 1
+    }
+    if worth(plain, "gil") != 12 ||
+            worth(plain, "ada") != 5 ||
+            worth(plain, "rex") != 9 {
+        return 2
+    }
+    if !named(nearby.best(plain), "gil") {
+        return 3
+    }
+
+    // A name that turns up three times adds up.
+    let again = nearby.tally(lines(["gil:12", "gil:5", "gil:1"]))
+    if table.count(again) != 1 {
+        return 4
+    }
+    if worth(again, "gil") != 18 {
+        return 5
+    }
+    if !named(nearby.best(again), "gil") {
+        return 6
+    }
+
+    // Two names, each of them twice, and the one that adds up higher wins.
+    let mixed = nearby.tally(lines(["ada:10", "gil:12", "ada:9", "gil:1"]))
+    if table.count(mixed) != 2 {
+        return 7
+    }
+    if worth(mixed, "ada") != 19 || worth(mixed, "gil") != 13 {
+        return 8
+    }
+    if !named(nearby.best(mixed), "ada") {
+        return 9
+    }
+
+    // Spaces at either end of the name and of the number are not part of them.
+    let spaced = nearby.tally(lines([" gil : 12 ", "  ada:5"]))
+    if table.count(spaced) != 2 {
+        return 10
+    }
+    if worth(spaced, "gil") != 12 || worth(spaced, "ada") != 5 {
+        return 11
+    }
+
+    // And the ways a line is not a line: no colon, two colons, no name, no
+    // number, a number with a fraction in it, and a number that is not one.
+    let wrong = nearby.tally(lines([
+        "gil",
+        "gil:12:3",
+        ":9",
+        "   :9",
+        "gil:",
+        "gil:3.5",
+        "gil:x",
+        ""
+    ]))
+    if table.count(wrong) != 0 {
+        return 12
+    }
+    if let anybody = nearby.best(wrong) {
+        return 13
+    }
+
+    // A line that is not a line is passed over rather than stopping the ones
+    // after it.
+    let among = nearby.tally(lines(["gil:12", "rubbish", "ada:5"]))
+    if table.count(among) != 2 || worth(among, "ada") != 5 {
+        return 14
+    }
+
+    // The same greatest score twice goes to the name that comes first, and the
+    // one that comes last is the one read first here.
+    let tied = nearby.tally(lines(["rex:7", "ada:7", "gil:3"]))
+    if !named(nearby.best(tied), "ada") {
+        return 15
+    }
+
+    // Scores below nought are scores.
+    let below = nearby.tally(lines(["gil:-4", "ada:-9"]))
+    if worth(below, "gil") != 0 - 4 || worth(below, "ada") != 0 - 9 {
+        return 16
+    }
+    if !named(nearby.best(below), "gil") {
+        return 17
+    }
+    let crossing = nearby.tally(lines(["gil:-4", "gil:10"]))
+    if worth(crossing, "gil") != 6 {
+        return 18
+    }
+
+    // A board with nothing on it has nobody at the top of it.
+    let empty = nearby.tally(lines([]))
+    if table.count(empty) != 0 {
+        return 19
+    }
+    if let anybody = nearby.best(empty) {
+        return 20
+    }
+    return 0
+}

@@ -58,8 +58,11 @@ A suite nobody has seen fail is indistinguishable from no suite.
 | `saved` | a world written down and read back, and the saves that are not one |
 | `spread` | one function that does three things, moved into three |
 | `called` | doors somebody else wrote, and the order you call them in |
+| `stepped` | a fixed-step update, and the same time split into different frames |
+| `nearby` | library names that are nearly the one you want |
+| `pooled` | taking from a pool under a promise to reach no heap |
 
-**Seven of the fourteen task families the mission lists**, and two of the seven
+**Ten of the fourteen task families the mission lists**, and two of the ten
 are narrower than the family they sit under. The mission's list, and what is here
 against it:
 
@@ -68,9 +71,9 @@ against it:
 | implement feature | `cooldown` |
 | repair bug | `patch` |
 | refactor across modules | `spread`, which is within one module |
-| obey `no.alloc` | `cooldown` carries it; no task is about it |
+| obey `no.alloc` | `pooled`, and `cooldown` carries it |
 | obey `no.host` | every task carries it; no task is about it |
-| deterministic update | — |
+| deterministic update | `stepped` |
 | ref-safe store logic | `stale` |
 | host API use | — |
 | save/load change | `saved`, which is save and load rather than a change |
@@ -78,12 +81,29 @@ against it:
 | generic API use | — |
 | error handling | `frail` |
 | callback/context use | `called` |
-| near-miss API names | — |
+| near-miss API names | `nearby` |
+
+`pooled` is the one the compiler answers rather than a test: the wrong answer
+written for it keeps a scratch list of what it took, which is something that can
+grow, and `no.alloc` is refused before the program runs. The same wrong answer
+in Luau is a table nobody counts, so what catches it there is a hidden test on
+what the pool was left holding. That is the difference this suite exists to
+measure, and `tools/check-ai.sh` counts it: of the wrong answers here, **one is
+refused before running in Kest and none is in Luau**, and the other nine on each
+side are caught by a test. A mistake a compiler refuses costs a turn, one only a
+test catches costs a run, and one nothing catches escapes -- nothing here
+escapes, because the gate would not pass if it did. See D1125.
 
 `patch` is the one that is written rather than left undone: the scaffold is
 working-looking code with a defect in it, and the answer is the fix. `frail`
 and `saved` have more tests about what does not happen than about what does.
 `spread`'s tests call each piece on its own, so a frame still doing the work
 itself passes nothing. `called`'s doors write down what they were called with,
-so the log is the order the calls were made in. What is here is written so that adding one is four
+so the log is the order the calls were made in. `stepped`'s checks run the same
+hundred milliseconds as one frame, as five even ones and as five uneven ones and
+hold the three worlds against each other, which is the one thing the
+`deterministic` promise cannot see. `nearby`'s wrong answer calls `table.find`
+where it meant `table.get` -- both answer `i32?` on this board, so neither the
+compiler nor the analyser has anything to say, and what tells them apart is a
+name that turns up twice. What is here is written so that adding one is four
 files and a row in the table above.

@@ -40341,3 +40341,36 @@ See D1124.
 
 **Runs:** `make check`, and `bench/tails.sh examples/slice/src/main.kest
 --samples 60 --warmup 5 --builds 1`.
+
+## Three more task families, and which side caught the mistake
+
+`stepped` is a deterministic update: whole twenty-millisecond steps, the
+leftover carried, a five-step limit past which the unspent time is dropped, and
+a world where each thing reads what its neighbour held at the start of the
+step. Its checks run the same hundred milliseconds three ways — one frame, five
+even, five uneven — and hold the three worlds against each other.
+
+`nearby` is near-miss API names: a scoreboard, where the wrong answer calls
+`table.find` where it meant `table.get`. Both answer `i32?` here, so nothing in
+either language's type system separates them; a name that turns up twice does.
+
+`pooled` is obeying `no.alloc`, and it is the first task the compiler answers
+rather than a test. All-or-nothing taking from a pool, written the natural way
+with a scratch list, is refused before it runs — and the same answer in Luau is
+a table nobody counts, caught only by a hidden test on what the pool was left
+holding.
+
+`tools/check-ai.sh` now counts that difference: one wrong answer refused and
+nine caught by a test in Kest, none refused and ten caught by a test in Luau,
+none escaping either. Ten of the fourteen families are written; the four left
+want a host or a reload the single-file runner has neither of.
+
+See D1125.
+
+And the fast gate now formats the same four trees the whole gate does. It read
+three globs that reached into no directory, so two task files out of the one
+form went unseen for thirty minutes.
+
+**Runs:** `make check`, and `tools/check-ai.sh` with `KEST_LUAU` set.
+
+Next: the four families that are left want a host or a reload in the runner.

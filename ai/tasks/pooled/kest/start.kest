@@ -1,0 +1,31 @@
+module pooled
+
+// A pool of slots somebody else wrote. What the one function left undone has
+// to do is in `ask.md`; the shapes and the signatures here are the task's and
+// are not to be changed.
+
+struct Pool {
+    // Slots free to be handed out. The next one out is the last one in.
+    free: [i32]
+    // Every slot handed out since the pool was made, in the order it went out.
+    handed: [i32]
+}
+
+// Take one slot, or nothing where there are none left. Not yours to write.
+fn take(pool: Pool) -> i32? no.alloc no.host deterministic {
+    if let slot = pop(pool.free) {
+        fit(pool.handed, slot)
+        return slot
+    }
+    return none
+}
+
+// Give one back, so that it is the next one out again. Not yours to write.
+fn give(pool: Pool, slot: i32) no.alloc no.host deterministic {
+    fit(pool.free, slot)
+}
+
+// Fill `into` with `want` slots out of the pool, all of them or none of them.
+fn refill(pool: Pool, want: i32, into: [i32]) -> i32 no.alloc no.host deterministic {
+    return 0
+}

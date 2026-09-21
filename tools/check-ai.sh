@@ -28,9 +28,20 @@ if [ -z "$tasks" ]; then
     exit 1
 fi
 
+# What the suite can say without a model having been near it: of the answers
+# that are wrong, how many the language refused before they ran and how many
+# only a test caught. A mistake a compiler refuses costs a model one turn; a
+# mistake only a hidden test catches costs it a run, and one nothing catches
+# escapes. Nothing here escapes, because the gate below would not pass if it
+# did -- what this counts is which of the two caught it, per language. See
+# D1125.
 wrong=0
 asked=0
 skipped=0
+kest_refused=0
+kest_tested=0
+luau_refused=0
+luau_tested=0
 for one in $tasks; do
     name=$(basename "$one")
     if [ ! -f "$one"/ask.md ]; then
@@ -69,12 +80,29 @@ so the tests ask for nothing"
             wrong=$((wrong + 1))
         fi
         # And the wrong answer is caught rather than passed, which is the
-        # whole of what a held-out test is for.
+        # whole of what a held-out test is for -- and which of the two caught
+        # it is counted, because that is the difference between a mistake a
+        # model is told about at once and one it has to run to find.
         said=$(./ai/run.sh "$name" "$language" "$one/$language/astray.$suffix")
         if [ "$said" = "0" ]; then
             echo "\`$name\` in $language: the wrong answer written for it \
 passes, so nothing here would catch that mistake"
             wrong=$((wrong + 1))
+        else
+            case "$said" in
+            refused*)
+                case "$language" in
+                kest) kest_refused=$((kest_refused + 1)) ;;
+                luau) luau_refused=$((luau_refused + 1)) ;;
+                esac
+                ;;
+            *)
+                case "$language" in
+                kest) kest_tested=$((kest_tested + 1)) ;;
+                luau) luau_tested=$((luau_tested + 1)) ;;
+                esac
+                ;;
+            esac
         fi
     done
 done
@@ -84,5 +112,7 @@ if [ "$wrong" -ne 0 ]; then
     exit 1
 fi
 echo "$asked task(s) and language(s): the answer written here keeps every \
-test, the scaffold does not, and the wrong answer is caught -- and \
+test, the scaffold does not, and none of the wrong answers escapes: \
+$kest_tested caught by a test and $kest_refused refused before running in \
+Kest, $luau_tested and $luau_refused in Luau -- and \
 $skipped left out for want of the language they are written beside"

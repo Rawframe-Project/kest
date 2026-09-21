@@ -1,0 +1,19 @@
+module nearby
+
+import std.table
+import std.text
+
+// A scoreboard read out of lines somebody else wrote. What each function has
+// to do is in `ask.md`; the shapes and the signatures here are the task's and
+// are not to be changed.
+
+// Every line that is a name and a whole number, added up by name.
+fn tally(lines: [text]) -> table.Table<text, i32> no.host deterministic {
+    let board: table.Table<text, i32> = table.empty()
+    return board
+}
+
+// The greatest score on the board, by name, or nothing where it is empty.
+fn best(board: table.Table<text, i32>) -> text? no.host deterministic {
+    return none
+}

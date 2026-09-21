@@ -435,24 +435,29 @@ backend's own half instead.
    building daScript with LLVM, which is not this tree's to build. Every
    daslang row runs without its module cache (D1118), which is what the rows
    beside it do and what keeps its directory out of this tree.
-5. **More of the AI suite.** Seven of the **fourteen** task families the
-   mission lists are written (D1101, D1106, D1110, D1113, D1114, D1121), with
-   held-out tests, a wrong answer beside each and a gate that holds all
-   three — and two of the seven are narrower than the family they sit under:
-   `spread` refactors within one module rather than across modules, and
+5. **More of the AI suite.** Ten of the **fourteen** task families the
+   mission lists are written (D1101, D1106, D1110, D1113, D1114, D1121,
+   D1125), with held-out tests, a wrong answer beside each and a gate that
+   holds all three -- and two of the ten are narrower than the family they sit
+   under: `spread` refactors within one module rather than across modules, and
    `saved` is save and load rather than a change to a save format. Four of
    them are the kinds a type system cannot be credited for: a bug to find in
    code that compiles and analyses clean in both languages, input that is
    mostly wrong, a save somebody else wrote, and a refactor that has to mean
-   exactly what it meant. **Seven families are not written**: deterministic
-   update, host API use, hot-update-compatible change, generic API use,
-   near-miss API names, and the two promises — obeying `no.alloc` and
-   `no.host` — which every task here carries and none is about. Two of the
-   seven, near-miss API names and a deterministic update, are writable with
-   what the runner already does; the rest want a host or a reload, which it
-   has neither of. `ai/README.md` holds the table. The count said nine until D1120,
-   which is where that is written down. Running models against it is the
-   owner's, at the end.
+   exactly what it meant. **Four families are not written**: host API use, a
+   hot-update-compatible change, generic API use, and obeying `no.host`, which
+   every task here carries and none is about -- the first three want a host or
+   a reload, which the single-file runner has neither of. D1125 wrote the
+   three the runner could carry: `stepped` is a deterministic update, `nearby`
+   is near-miss API names, and `pooled` is obeying `no.alloc`.
+   **And the suite now measures which side caught the mistake**, which is the
+   thing the goal is about: of the ten wrong answers, **one is refused before
+   running in Kest and none in Luau**, the rest caught by a hidden test, and
+   none escaping either. `pooled` is that one -- the same wrong answer, a
+   scratch list of what was taken, is a refusal in Kest and a table nobody
+   counts in Luau. `ai/README.md` holds the table. The count said nine until
+   D1120, which is where that is written down. Running models against it is
+   the owner's, at the end.
 6. *(done, D1117)* **Game-shaped runtime profile**, on `bench/rules.kest`.
    The machine: dispatch and the instruction bodies 54%, working out where a
    refusal would be reported 16.5%, value movement 22%, the collector and the

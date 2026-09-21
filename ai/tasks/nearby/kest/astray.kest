@@ -1,0 +1,52 @@
+module nearby
+
+import std.table
+import std.text
+
+// A scoreboard read out of lines somebody else wrote. What each function has
+// to do is in `ask.md`; the shapes and the signatures here are the task's and
+// are not to be changed.
+
+// Every line that is a name and a whole number, added up by name.
+fn tally(lines: [text]) -> table.Table<text, i32> no.host deterministic {
+    let board: table.Table<text, i32> = table.empty()
+    for line in lines {
+        let pieces = text.split(line, ":")
+        if len(pieces) != 2 {
+            continue
+        }
+        let name = text.trim(pieces[0])
+        if name == "" {
+            continue
+        }
+        if let worth = text.number(text.trim(pieces[1])) {
+            // `table.find` rather than `table.get`: both answer `i32?` here,
+            // so nothing about the types says which one this is.
+            if let had = table.find(board, name) {
+                table.set(board, name, had + worth)
+            } else {
+                table.set(board, name, worth)
+            }
+        }
+    }
+    return board
+}
+
+// The greatest score on the board, by name, or nothing where it is empty.
+fn best(board: table.Table<text, i32>) -> text? no.host deterministic {
+    let many = table.count(board)
+    if many == 0 {
+        return none
+    }
+    let name = table.keyAt(board, 0)
+    let worth = table.valueAt(board, 0)
+    for at in 1..many {
+        let one = table.keyAt(board, at)
+        let score = table.valueAt(board, at)
+        if score > worth || score == worth && one < name {
+            name = one
+            worth = score
+        }
+    }
+    return name
+}

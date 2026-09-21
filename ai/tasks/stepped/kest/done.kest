@@ -1,0 +1,54 @@
+module stepped
+
+// A world advanced in whole steps of a fixed size. What the function has to do
+// is in `ask.md`; the shapes, the names and the two numbers here are the
+// task's and are not to be changed.
+
+// One step is twenty milliseconds, and no one call runs more than five.
+const STEP: i32 = 20
+const MOST: i32 = 5
+
+struct Clock {
+    // Time handed in that has not been spent on a whole step yet.
+    left: i32
+    // How many whole steps this world has taken.
+    steps: i32
+}
+
+// One step: every thing takes on its own value plus the one the thing after it
+// around the ring held at the start of the step, so what is read is what the
+// step began with and never what this step has already written.
+fn stepOnce(values: [i32]) no.host deterministic {
+    let many = len(values)
+    if many == 0 {
+        return
+    }
+    let was: [i32] = array()
+    room(was, many)
+    for i in 0..many {
+        fit(was, values[i])
+    }
+    for i in 0..many {
+        values[i] = was[i] + was[(i + 1) % many]
+    }
+}
+
+// Advance `values` by however many whole steps `elapsed` pays for, and answer
+// the clock afterwards.
+fn advance(values: [i32], clock: Clock, elapsed: i32) -> Clock no.host deterministic {
+    let left = clock.left + elapsed
+    let steps = clock.steps
+    let ran = 0
+    while left >= STEP && ran < MOST {
+        stepOnce(values)
+        left -= STEP
+        steps += 1
+        ran += 1
+    }
+    if ran == MOST {
+        // Time five steps could not pay for is dropped rather than carried,
+        // or a frame that arrived late makes every frame after it later.
+        left = 0
+    }
+    return Clock(left, steps)
+}

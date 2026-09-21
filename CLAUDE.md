@@ -177,8 +177,11 @@ ai/                The tasks a model is given: the same gameplay work
                    against one answer and says which check it did not keep, or
                    `refused` where the language caught it before a test did;
                    `tools/check-ai.sh` holds the suite to being worth being
-                   judged by. Luau is found rather than built, the way the
-                   benchmarks find their comparators. See D1101.
+                   judged by, and counts which side caught each wrong answer:
+                   a refusal costs a turn where a hidden test costs a run, and
+                   one nothing catches escapes. Luau is found rather than
+                   built, the way the benchmarks find their comparators.
+                   See D1101 and D1125.
 tools/             Build and development scripts. `make check` runs all of
                    them and everything else, and is what "it passes" means.
                    `fast.sh` is the other tier and is not one of them: it is
