@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1101
+    CURRENT SHA:       (this commit) D1093-D1102
     PHASE:             B — the release engine: level with Luau's native tier
                        on the gameplay workload, and inside D1092's trigger
     LAST FAST GATE:    green
@@ -270,19 +270,21 @@ and a language that refuses what it cannot prove.
 ## Open, in priority order
 
 1. **The rest of the doors**, in the order the tree asks for them: a crossing
-   into the host (44 bodies), what reads and makes text (33 and 21), a store
-   and what walks one (34 and 20), a call through a function value (17). None
-   is in the way of the numbers below; what they buy is breadth — how much of
-   a whole game compiles rather than how fast the part that does runs.
+   into the host (45 bodies), comparing and making text (40 and 30), a call
+   through a function value (17). Stores are done (D1102). None is in the way
+   of the numbers below; what they buy is breadth — how much of a whole game
+   compiles rather than how fast the part that does runs.
 2. **The five times on the kernel, read down.** A call per element, a bounds
    check the C compiler cannot hoist because it is behind that call, and a
    `memcpy` a piece where four doubles could be one. All three go away by
    putting the array's header in a header, which makes the shape of a handle
    part of what a generated file is compiled against and so part of what the
    abi version carries.
-3. The other half of a game: a world of tens of thousands of entities with
-   references into it, measured the same way, because the rules workload is
-   small arrays and a cold allocation path.
+3. *(closed by D1102)* A world of entities: stores and the references into
+   them are written, `bench/agents.kest`'s working bodies are all compiled,
+   and a world of two thousand things walked twenty rounds runs 4.4 times
+   fewer instructions. A reference to a place that has been handed back still
+   reads as nothing, which is the property a game most needs from this.
 4. Daslang's AOT path, measured and named as AOT, so the comparison is against
    what its documentation points at rather than against its interpreter.
 5. **More of the AI suite.** Two tasks of the nine kinds the mission lists

@@ -238,6 +238,71 @@ fn main() -> i32 {
     return i32((i64(step(world, 20)) % 251 + 251) % 251)
 }
 PROGRAM
+cat >"$work"/programs/world.kest <<'PROGRAM'
+module world
+
+struct Thing {
+    name: text
+    worth: i32
+    next: ref<Thing>?
+}
+
+fn build(many: i32) -> store<Thing> {
+    let all: store<Thing> = store(many)
+    let made: [ref<Thing>] = array()
+    for i in 0..many {
+        push(made, add(all, Thing("thing", i, none)))
+    }
+    for i in 0..len(made) {
+        if let one = get(all, made[i]) {
+            let linked = one
+            linked.next = made[(i + 1) % len(made)]
+            set(all, made[i], linked)
+        }
+    }
+    return all
+}
+
+fn worth(all: store<Thing>) -> i64 no.host {
+    let total: i64 = 0
+    for r in all {
+        if let one = get(all, r) {
+            total += i64(one.worth)
+            if let onward = one.next {
+                if let there = get(all, onward) {
+                    total += i64(there.worth % 3)
+                }
+            }
+        }
+    }
+    return total
+}
+
+fn thin(all: store<Thing>, every: i32) -> i32 no.host {
+    let gone = 0
+    for r in all {
+        if let one = get(all, r) {
+            if one.worth % every == 0 {
+                remove(all, r)
+                gone += 1
+            }
+        }
+    }
+    return gone
+}
+
+fn main() -> i32 {
+    let all = build(200)
+    let sum: i64 = 0
+    for round in 0..8 {
+        sum += worth(all)
+        if round == 4 {
+            sum += i64(thin(all, 7))
+        }
+    }
+    return i32((sum % 251 + 251) % 251) + len(all) % 7
+}
+PROGRAM
 cat >"$work"/programs/growing.kest <<'PROGRAM'
 module growing
 

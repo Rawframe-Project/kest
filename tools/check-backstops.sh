@@ -16067,6 +16067,22 @@ kest 9.9.9""",
         "arguments": [],
         "caught": "the wrong answer written for it passes",
     },
+    {
+        # A store read into one slot fewer than the shape has. What comes back
+        # from a place is what it holds and a byte beside it that says there
+        # was something there; a width one short writes that byte over the
+        # last field, and the field it lands on is whatever the shape ends
+        # with. The C compiles, the shapes agree, and a world read that way
+        # answers something else. See D1102.
+        "what": "a store read a slot short of what it holds",
+        "file": "src/emitc.c",
+        "from": """            first, second, (unsigned)(leaves - 1), first, op->span.offset);""",
+        "to": """            first, second, (unsigned)(leaves - 2), first, op->span.offset);""",
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest", "examples/game/npc.kest"],
+        "caught": "world.kest",
+    },
 ]
 
 failed = 0

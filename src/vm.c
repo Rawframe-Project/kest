@@ -4111,41 +4111,19 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_NEW_STORE: {
             int64_t room = (--top)->integer;
             SPEND_WORK(room < 0 ? 0 : (uint64_t)room);
-            if (room < 0) {
-                fail(vmp, frame, instruction, "K0604",
-                     "a store cannot have room for %lld", (long long)room);
+            // The stride is the layout's, which the door reads: what the
+            // instruction carries is which layout, the same as everywhere
+            // else a shape is named.
+            READ_U16();
+            uint16_t holds = READ_U16();
+            OF_THE_MODULE(holds, module->layout_count, "a layout");
+            frame->ip = ip;
+            if (!kest_store_new(rt, holds, room,
+                                where_it_is(frame, instruction).offset,
+                                top)) {
                 return false;
             }
-            uint32_t hands = rt->hands;
-            Store *store = in_hand(rt, take(rt, top + 1, sizeof(Store),
-                                            KEST_GROUND_STORE));
-            if (store == NULL) {
-                hands_off(rt, hands);
-                no_room(vmp, frame, instruction, rt);
-                kest_diags_suggest(vmp->diags, "it was making a store");
-                return false;
-            }
-            store->what = KEST_IS_STORE;
-            store->stride = READ_U16();
-            {
-                uint16_t holds = READ_U16();
-                OF_THE_MODULE(holds, module->layout_count, "a layout");
-                store->of = module->layouts[holds].type;
-                store->holds = &module->layouts[holds];
-            }
-            // Made here rather than at the first `add`, which is the whole of
-            // what a count buys: the growth is where the program asked for it
-            // instead of in whichever frame filled the last slot.
-            if (room > 0 && !room_for(rt, top + 1, store, (uint32_t)room)) {
-                hands_off(rt, hands);
-                no_room(vmp, frame, instruction, rt);
-                kest_diags_suggest(vmp->diags,
-                                   "it was making a store with room for %lld",
-                                   (long long)room);
-                return false;
-            }
-            (top++)->object = store;
-            hands_off(rt, hands);
+            top++;
             break;
         }
         case KEST_OP_ADD: {
@@ -4228,63 +4206,43 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
         case KEST_OP_GET: {
             uint16_t stride = READ_U16();
-            int64_t handle = (--top)->integer;
-            Store *store = (--top)->object;
-            HOLD(store, KEST_IS_STORE, "a store");
-            const KestValue *at = resolve_ref(store, handle);
-            if (at == NULL) {
-                for (uint16_t i = 0; i < stride; i++) {
-                    (top++)->integer = 0;
-                }
-                (top++)->integer = 0;
-            } else {
-                MOVED(moved_payload, (uint64_t)stride * sizeof(KestValue));
-                memcpy(top, at, sizeof(KestValue) * stride);
-                top += stride;
-                (top++)->integer = 1;
+            int64_t which = (--top)->integer;
+            KestValue held = *--top;
+            frame->ip = ip;
+            if (!kest_store_get(rt, held, which, stride, top,
+                                where_it_is(frame, instruction).offset)) {
+                return false;
             }
+            top += stride + 1;
             break;
         }
         case KEST_OP_SET: {
             uint16_t stride = READ_U16();
             top -= stride;
             KestValue *value = top;
-            int64_t handle = (--top)->integer;
-            Store *store = (--top)->object;
-            HOLD(store, KEST_IS_STORE, "a store");
-            KestValue *at = resolve_ref(store, handle);
-            if (at != NULL) {
-                MOVED(moved_payload, (uint64_t)stride * sizeof(KestValue));
-                memcpy(at, value, sizeof(KestValue) * stride);
+            int64_t which = (--top)->integer;
+            KestValue held = *--top;
+            bool was = false;
+            frame->ip = ip;
+            if (!kest_store_set(rt, held, which, stride, value,
+                                where_it_is(frame, instruction).offset,
+                                &was)) {
+                return false;
             }
-            (top++)->integer = at != NULL;
+            (top++)->integer = was;
             break;
         }
         case KEST_OP_REMOVE: {
-            int64_t handle = (--top)->integer;
-            Store *store = (--top)->object;
-            HOLD(store, KEST_IS_STORE, "a store");
-            if (resolve_ref(store, handle) == NULL) {
-                (top++)->integer = 0;
-                break;
+            int64_t which = (--top)->integer;
+            KestValue held = *--top;
+            bool was = false;
+            frame->ip = ip;
+            if (!kest_store_remove(rt, held, which,
+                                   where_it_is(frame, instruction).offset,
+                                   &was)) {
+                return false;
             }
-            uint32_t index = ref_place(handle);
-            mark_live(store, index, false);
-            // The slot keeps the stamp it was handed out with, so a
-            // reference made before it was given back still names that stamp
-            // and the slot is not live: stale stays stale. What the slot gets
-            // when it is handed out again is the next stamp there is, which is
-            // one nothing else carries.
-            store->free_slots[store->free_count++] = index;
-            store->count--;
-            // A store with nothing in it walks nothing. Everything a walk
-            // would step over is dead, and what each slot has counted is kept,
-            // so a reference from before is as stale as it was.
-            if (store->count == 0) {
-                store->used = 0;
-                store->free_count = 0;
-            }
-            (top++)->integer = 1;
+            (top++)->integer = was;
             break;
         }
         case KEST_OP_SEEK_FROM:
@@ -4293,10 +4251,14 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t which = READ_U16();
             uint16_t at = READ_U16();
             uint16_t away = READ_U16();
-            const Store *store = mine[which].object;
-            HOLD(store, KEST_IS_STORE, "a store");
-            int64_t from = mine[at].integer + (first ? 0 : 1);
-            int64_t found = live_from(store, from);
+            frame->ip = ip;
+            int64_t found = 0;
+            if (!kest_store_seek(rt, mine[which],
+                                 mine[at].integer + (first ? 0 : 1),
+                                 where_it_is(frame, instruction).offset,
+                                 &found)) {
+                return false;
+            }
             mine[at].integer = found;
             // The first one leaves when there is none and the ones after go
             // back while there is one, which is the same shape every other
@@ -4312,16 +4274,24 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         }
         case KEST_OP_STORE_REF: {
-            uint32_t index = (uint32_t)(--top)->integer;
-            const Store *store = (--top)->object;
-            HOLD(store, KEST_IS_STORE, "a store");
-            (top++)->integer = pack_ref(store->serials[index], index);
+            int64_t index = (--top)->integer;
+            KestValue held = *--top;
+            frame->ip = ip;
+            if (!kest_store_ref(rt, held, index,
+                                where_it_is(frame, instruction).offset,
+                                &top->integer)) {
+                return false;
+            }
+            top++;
             break;
         }
         case KEST_OP_COUNT: {
-            const Store *store = top[-1].object;
-            HOLD(store, KEST_IS_STORE, "a store");
-            top[-1].integer = store->count;
+            frame->ip = ip;
+            if (!kest_store_count(rt, top[-1],
+                                  where_it_is(frame, instruction).offset,
+                                  &top[-1].integer)) {
+                return false;
+            }
             break;
         }
         case KEST_OP_TEXT_FLAGS:
@@ -7742,23 +7712,6 @@ bool kest_native_at(KestRuntime *runtime, uint32_t index, const char *symbol,
     return true;
 }
 
-// The two above are one question asked twice, so what says a handle is an
-// array is written once here: the tag at the front of a header, and the one
-// other thing it can be that a program is told about by name.
-static Array *the_array(KestRuntime *rt, KestValue handle, uint32_t where) {
-    Array *array = handle.object;
-    if (KEST_HANDLE_IS(array, KEST_IS_ARRAY)) {
-        return array;
-    }
-    if (KEST_HANDLE_IS(array, KEST_WAS_LENT)) {
-        kest_native_stopped(rt, where, "K0637",
-                            "the host has taken this lend back");
-        return NULL;
-    }
-    kest_native_stopped(rt, where, "K0612", "this is not an array");
-    return NULL;
-}
-
 // What a body written in C says when it stops, with the numbers in it. The
 // code and the words are one call for the reason every other refusal here is
 // written that way: what reads a refusal reads the words beside the code they
@@ -7776,9 +7729,28 @@ static bool stopped_saying(KestRuntime *rt, uint32_t where, const char *code,
     return kest_native_stopped(rt, where, code, said);
 }
 
+// What says a handle is the thing it is used as, written once for both of the
+// two there are: the tag at the front of a header, and the one other thing it
+// can be that a program is told about by name. It is the door's half of what
+// `HOLD` does for an instruction.
+static void *the_handle(KestRuntime *rt, KestValue handle, uint32_t what,
+                        const char *called, uint32_t where) {
+    void *at = handle.object;
+    if (KEST_HANDLE_IS(at, what)) {
+        return at;
+    }
+    if (KEST_HANDLE_IS(at, KEST_WAS_LENT)) {
+        kest_native_stopped(rt, where, "K0637",
+                            "the host has taken this lend back");
+        return NULL;
+    }
+    stopped_saying(rt, where, "K0612", "this is not %s", called);
+    return NULL;
+}
+
 unsigned char *kest_elem_at(KestRuntime *runtime, KestValue handle,
                             int64_t index, uint16_t offset, uint32_t where) {
-    Array *array = runtime == NULL ? NULL : the_array(runtime, handle, where);
+    Array *array = runtime == NULL ? NULL : the_handle(runtime, handle, KEST_IS_ARRAY, "an array", where);
     if (array == NULL) {
         return NULL;
     }
@@ -7796,7 +7768,7 @@ unsigned char *kest_elem_at(KestRuntime *runtime, KestValue handle,
 
 bool kest_elem_count(KestRuntime *runtime, KestValue handle, uint32_t where,
                      int64_t *into) {
-    Array *array = runtime == NULL ? NULL : the_array(runtime, handle, where);
+    Array *array = runtime == NULL ? NULL : the_handle(runtime, handle, KEST_IS_ARRAY, "an array", where);
     if (array == NULL || into == NULL) {
         return false;
     }
@@ -7935,7 +7907,7 @@ bool kest_array_push(KestRuntime *rt, KestValue handle, uint16_t layout,
     if (rt == NULL || rt->module == NULL || layout >= rt->module->layout_count) {
         return false;
     }
-    Array *array = the_array(rt, handle, where);
+    Array *array = the_handle(rt, handle, KEST_IS_ARRAY, "an array", where);
     if (array == NULL) {
         return false;
     }
@@ -7990,7 +7962,7 @@ bool kest_array_push(KestRuntime *rt, KestValue handle, uint16_t layout,
 
 bool kest_array_remove(KestRuntime *rt, KestValue handle, int64_t index,
                        uint32_t where) {
-    Array *array = rt == NULL ? NULL : the_array(rt, handle, where);
+    Array *array = rt == NULL ? NULL : the_handle(rt, handle, KEST_IS_ARRAY, "an array", where);
     if (array == NULL) {
         return false;
     }
@@ -8011,6 +7983,205 @@ bool kest_array_remove(KestRuntime *rt, KestValue handle, int64_t index,
     memmove(at, at + array->stride,
             (size_t)(array->length - index - 1) * array->stride);
     array->length--;
+    return true;
+}
+
+
+// A store and what a program asks of one: made, added to, read, written,
+// taken from, counted, walked. Each is what the instruction of that name
+// does, and the instruction calls it. A store keeps what it holds as slots
+// rather than as packed bytes, so none of these walks a layout: what moves is
+// a run of slots the width the shape is. See D1102.
+
+bool kest_store_new(KestRuntime *rt, uint16_t layout, int64_t room,
+                    uint32_t where, KestValue *into) {
+    if (rt == NULL || rt->module == NULL || into == NULL ||
+        layout >= rt->module->layout_count) {
+        return false;
+    }
+    KestSpan span = {where, 1};
+    if (room < 0) {
+        return stopped_saying(rt, where, "K0604",
+                              "a store cannot have room for %lld",
+                              (long long)room);
+    }
+    uint32_t hands = rt->hands;
+    Store *store = in_hand(rt, take(rt, NULL, sizeof(Store),
+                                    KEST_GROUND_STORE));
+    if (store == NULL) {
+        hands_off(rt, hands);
+        no_room_at(rt, where_from(rt), span, rt);
+        kest_diags_suggest(rt->diags, "it was making a store");
+        return false;
+    }
+    store->what = KEST_IS_STORE;
+    store->stride = rt->module->layouts[layout].slots;
+    store->of = rt->module->layouts[layout].type;
+    store->holds = &rt->module->layouts[layout];
+    // Made here rather than at the first `add`, which is the whole of what a
+    // count buys: the growth is where the program asked for it.
+    if (room > 0 && !room_for(rt, NULL, store, (uint32_t)room)) {
+        hands_off(rt, hands);
+        no_room_at(rt, where_from(rt), span, rt);
+        kest_diags_suggest(rt->diags,
+                           "it was making a store with room for %lld",
+                           (long long)room);
+        return false;
+    }
+    into->object = store;
+    hands_off(rt, hands);
+    return true;
+}
+
+
+bool kest_store_add(KestRuntime *rt, KestValue handle, uint16_t stride,
+                    const KestValue *value, uint32_t where, int64_t *into) {
+    Store *store = rt == NULL ? NULL : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
+    if (store == NULL || into == NULL) {
+        return false;
+    }
+    KestSpan span = {where, 1};
+    uint32_t index;
+    if (store->free_count > 0) {
+        index = store->free_slots[--store->free_count];
+    } else {
+        if (store->used == MAX_COUNTED) {
+            return stopped_saying(rt, where, "K0630",
+                                  "this store holds %d, which is all `len` "
+                                  "can count",
+                                  MAX_COUNTED);
+        }
+        if (store->used == store->capacity) {
+            // What a store that has to grow copies, charged before it does.
+            kest_fuel_spend(rt, store->used);
+        }
+        if (store->used == store->capacity && !grow_store(rt, NULL, store)) {
+            // A store grows by four runs at once, so what it was reaching for
+            // is wider than one of them.
+            no_room_growing_at(rt, where_from(rt), span, rt, "a store",
+                               store->used, sizeof(KestValue) * store->stride,
+                               store->capacity == 0 ? 8
+                                                    : store->capacity * 2);
+            return false;
+        }
+        index = store->used++;
+        if (index >= store->high) {
+            store->high = index + 1;
+        }
+    }
+    // The next handout number there is, taken from the count for the whole
+    // process so that no two places anywhere are ever stamped the same. See
+    // D1033.
+    uint64_t handout = next_handout(rt);
+    if (handout > MOST_STAMPS) {
+        stopped_saying(rt, where, "K0630",
+                       "this process has handed out %llu places in stores, "
+                       "which is all it can tell apart",
+                       (unsigned long long)MOST_STAMPS);
+        kest_diags_suggest(rt->diags,
+                           "a place is stamped once for every `add`, and a "
+                           "number is never handed out twice");
+        return false;
+    }
+    rt->stamps++;
+    store->serials[index] = handout;
+    mark_live(store, index, true);
+    store->count++;
+    MOVED(moved_payload, (uint64_t)stride * sizeof(KestValue));
+    memcpy(store->elements + (size_t)index * stride, value,
+           sizeof(KestValue) * stride);
+    *into = pack_ref(store->serials[index], index);
+    return true;
+}
+
+bool kest_store_get(KestRuntime *rt, KestValue handle, int64_t which,
+                    uint16_t stride, KestValue *into, uint32_t where) {
+    Store *store = rt == NULL ? NULL : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
+    if (store == NULL || into == NULL) {
+        return false;
+    }
+    const KestValue *at = resolve_ref(store, which);
+    if (at == NULL) {
+        for (uint16_t i = 0; i < stride; i++) {
+            into[i].integer = 0;
+        }
+        into[stride].integer = 0;
+        return true;
+    }
+    MOVED(moved_payload, (uint64_t)stride * sizeof(KestValue));
+    memcpy(into, at, sizeof(KestValue) * stride);
+    into[stride].integer = 1;
+    return true;
+}
+
+bool kest_store_set(KestRuntime *rt, KestValue handle, int64_t which,
+                    uint16_t stride, const KestValue *value, uint32_t where,
+                    bool *was) {
+    Store *store = rt == NULL ? NULL : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
+    if (store == NULL || was == NULL) {
+        return false;
+    }
+    KestValue *at = resolve_ref(store, which);
+    if (at != NULL) {
+        MOVED(moved_payload, (uint64_t)stride * sizeof(KestValue));
+        memcpy(at, value, sizeof(KestValue) * stride);
+    }
+    *was = at != NULL;
+    return true;
+}
+
+bool kest_store_remove(KestRuntime *rt, KestValue handle, int64_t which,
+                       uint32_t where, bool *was) {
+    Store *store = rt == NULL ? NULL : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
+    if (store == NULL || was == NULL) {
+        return false;
+    }
+    if (resolve_ref(store, which) == NULL) {
+        *was = false;
+        return true;
+    }
+    uint32_t index = ref_place(which);
+    mark_live(store, index, false);
+    // The slot keeps the stamp it was handed out with, so a reference made
+    // before it was given back still names that stamp and the slot is not
+    // live: stale stays stale.
+    store->free_slots[store->free_count++] = index;
+    store->count--;
+    if (store->count == 0) {
+        store->used = 0;
+        store->free_count = 0;
+    }
+    *was = true;
+    return true;
+}
+
+bool kest_store_count(KestRuntime *rt, KestValue handle, uint32_t where,
+                      int64_t *into) {
+    const Store *store = rt == NULL ? NULL : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
+    if (store == NULL || into == NULL) {
+        return false;
+    }
+    *into = store->count;
+    return true;
+}
+
+bool kest_store_ref(KestRuntime *rt, KestValue handle, int64_t index,
+                    uint32_t where, int64_t *into) {
+    const Store *store = rt == NULL ? NULL : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
+    if (store == NULL || into == NULL || index < 0) {
+        return false;
+    }
+    *into = pack_ref(store->serials[(uint32_t)index], (uint32_t)index);
+    return true;
+}
+
+bool kest_store_seek(KestRuntime *rt, KestValue handle, int64_t from,
+                     uint32_t where, int64_t *found) {
+    const Store *store = rt == NULL ? NULL : the_handle(rt, handle, KEST_IS_STORE, "a store", where);
+    if (store == NULL || found == NULL) {
+        return false;
+    }
+    *found = live_from(store, from);
     return true;
 }
 

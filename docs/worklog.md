@@ -39733,3 +39733,31 @@ See D1101.
 
 **Runs:** `make check`, and `ai/run.sh` over both tasks in both languages
 against the answer, the scaffold and the wrong answer.
+
+## A world of entities in the release engine
+
+The other half of a game: a store, and the references into it. Eight doors --
+made, added to, read, written, taken from, counted, turned into a reference,
+walked -- each what the instruction of that name does and each called by it. A
+store keeps slots rather than packed bytes, so none of them walks a layout.
+
+A reference survives being compiled: a place handed back reads as nothing
+rather than as whatever is there now, because the compiled half asks the same
+`resolve_ref` the machine does. Two thousand things each naming the next,
+walked twenty rounds with a seventh taken out half way: 103.1 M instructions
+by the machine against 23.5 M compiled, and every working body of
+`bench/agents.kest` is now written.
+
+874 of 2,088 bodies over this tree. What still stops the rest is a crossing
+into the host, comparing and making text, and a call through a function value.
+
+One thing this turned up about checks: a door and an instruction that are one
+answer are one answer to a hole as well, so breaking the door breaks both
+engines and the differential sees nothing. The hole for this is in the backend
+instead -- a store read a slot short of what it holds -- and the
+reference-read hole already there covers the shared half.
+
+See D1102.
+
+**Runs:** `make check`, and a world of two thousand things run both ways under
+`perf stat -e instructions`.

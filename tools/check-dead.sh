@@ -147,6 +147,31 @@ fn walk(counts: [i32]) -> i32 no.alloc no.host deterministic {
     return sum
 }
 
+struct Held {
+    what: i32
+}
+
+fn worlds(many: i32) -> i32 {
+    let all: store<Held> = store(many)
+    let made: [ref<Held>] = array()
+    for i in 0..many {
+        push(made, add(all, Held(i)))
+    }
+    let sum = 0
+    for r in all {
+        if let one = get(all, r) {
+            sum += one.what
+            let changed = one
+            changed.what += 1
+            set(all, r, changed)
+        }
+    }
+    if len(made) > 0 {
+        remove(all, made[0])
+    }
+    return sum + len(all)
+}
+
 fn main() -> i32 {
     let counts: [i32] = array()
     for i in 0..4 {
@@ -155,7 +180,7 @@ fn main() -> i32 {
     let spare = remove(counts, 0)
     push(counts, spare)
     let one = Tag("counting", 3)
-    return (walk(counts) + i32(weigh(one) % 7) +
+    return (walk(counts) + i32(weigh(one) % 7) + worlds(4) +
             (if same(one, Tag("counting", 4)) -> 1 else -> 0)) % 251
 }
 """

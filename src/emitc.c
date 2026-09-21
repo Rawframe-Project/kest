@@ -1258,6 +1258,126 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         }
         break;
     }
+    case KEST_IR_STORE_NEW: {
+        // How much room, and what it holds.
+        if (reads != 1 || leaves != 1) {
+            cannot(walk, "a store made of something other than a count");
+            break;
+        }
+        at_stack(first, base);
+        say(c, out,
+            "    if (!kest_store_new(rt, %u, %s.integer, %u, &%s)) {\n"
+            "        return false;\n    }\n",
+            (unsigned)op->imm[1], first, op->span.offset, first);
+        break;
+    }
+    case KEST_IR_STORE_ADD: {
+        // The store, and then what is being put in it. What comes back is
+        // where it went, as a place and the stamp it was handed out with.
+        if (reads < 2 || leaves != 1) {
+            cannot(walk, "an add of something other than one thing");
+            break;
+        }
+        at_stack(first, base);
+        at_stack(second, base + 1);
+        say(c, out,
+            "    if (!kest_store_add(rt, %s, %u, &%s, %u, &%s.integer)) {\n"
+            "        return false;\n    }\n",
+            first, (unsigned)(reads - 1), second, op->span.offset, first);
+        break;
+    }
+    case KEST_IR_STORE_GET: {
+        // What is there, and a byte beside it that says whether there was
+        // anything: a reference to a place that has been given back reads as
+        // nothing rather than as whatever is there now.
+        if (reads != 2 || leaves < 1) {
+            cannot(walk, "a read of something other than one place");
+            break;
+        }
+        at_stack(first, base);
+        at_stack(second, base + 1);
+        say(c, out,
+            "    if (!kest_store_get(rt, %s, %s.integer, %u, &%s, %u)) {\n"
+            "        return false;\n    }\n",
+            first, second, (unsigned)(leaves - 1), first, op->span.offset);
+        break;
+    }
+    case KEST_IR_STORE_SET: {
+        if (reads < 3 || leaves != 1) {
+            cannot(walk, "a write of something other than one place");
+            break;
+        }
+        at_stack(first, base);
+        at_stack(second, base + 1);
+        at_stack(third, base + 2);
+        say(c, out,
+            "    {\n        bool was = false;\n"
+            "        if (!kest_store_set(rt, %s, %s.integer, %u, &%s, %u, "
+            "&was)) {\n"
+            "            return false;\n        }\n"
+            "        %s.integer = was;\n    }\n",
+            first, second, (unsigned)(reads - 2), third, op->span.offset,
+            first);
+        break;
+    }
+    case KEST_IR_STORE_REMOVE: {
+        if (reads != 2 || leaves != 1) {
+            cannot(walk, "a removal of something other than one place");
+            break;
+        }
+        at_stack(first, base);
+        at_stack(second, base + 1);
+        say(c, out,
+            "    {\n        bool was = false;\n"
+            "        if (!kest_store_remove(rt, %s, %s.integer, %u, &was)) {\n"
+            "            return false;\n        }\n"
+            "        %s.integer = was;\n    }\n",
+            first, second, op->span.offset, first);
+        break;
+    }
+    case KEST_IR_STORE_COUNT: {
+        if (reads != 1 || leaves != 1) {
+            cannot(walk, "a count of something other than one store");
+            break;
+        }
+        at_stack(first, base);
+        say(c, out,
+            "    if (!kest_store_count(rt, %s, %u, &%s.integer)) {\n"
+            "        return false;\n    }\n",
+            first, op->span.offset, first);
+        break;
+    }
+    case KEST_IR_STORE_REF: {
+        if (reads != 2 || leaves != 1) {
+            cannot(walk, "a reference to something other than one place");
+            break;
+        }
+        at_stack(first, base);
+        at_stack(second, base + 1);
+        say(c, out,
+            "    if (!kest_store_ref(rt, %s, %s.integer, %u, &%s.integer)) "
+            "{\n        return false;\n    }\n",
+            first, second, op->span.offset, first);
+        break;
+    }
+    case KEST_IR_SEEK_FROM:
+    case KEST_IR_SEEK_NEXT: {
+        // A walk of a store: the first one leaves when there is none and the
+        // ones after go back while there is one, which is the same shape
+        // every other walk has.
+        bool first_one = op->kind == KEST_IR_SEEK_FROM;
+        at_frame(first, op->imm[0]);
+        at_frame(second, op->imm[1]);
+        say(c, out,
+            "    if (!kest_store_seek(rt, %s, %s.integer + %d, %u, "
+            "&%s.integer)) {\n        return false;\n    }\n",
+            first, second, first_one ? 0 : 1, op->span.offset, second);
+        say(c, out, "    if (%s.integer %s 0) {\n        ", second,
+            first_one ? "<" : ">=");
+        write_branch(walk, op->target, base + leaves, op->span.offset);
+        say(c, out, "    }\n");
+        break;
+    }
     case KEST_IR_LEN: {
         if (reads != 1 || leaves != 1) {
             cannot(walk, "a length of something other than one thing");
@@ -1668,6 +1788,28 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "                      uint32_t which, uint32_t where,\n"
         "                      uint32_t *was);\n"
         "void kest_native_left(KestRuntime *runtime, uint32_t was);\n"
+        "bool kest_store_new(KestRuntime *runtime, uint16_t layout,\n"
+        "                    int64_t room, uint32_t where, KestValue "
+        "*into);\n"
+        "bool kest_store_add(KestRuntime *runtime, KestValue handle,\n"
+        "                    uint16_t stride, const KestValue *value,\n"
+        "                    uint32_t where, int64_t *into);\n"
+        "bool kest_store_get(KestRuntime *runtime, KestValue handle,\n"
+        "                    int64_t which, uint16_t stride,\n"
+        "                    KestValue *into, uint32_t where);\n"
+        "bool kest_store_set(KestRuntime *runtime, KestValue handle,\n"
+        "                    int64_t which, uint16_t stride,\n"
+        "                    const KestValue *value, uint32_t where,\n"
+        "                    bool *was);\n"
+        "bool kest_store_remove(KestRuntime *runtime, KestValue handle,\n"
+        "                       int64_t which, uint32_t where, bool *was);\n"
+        "bool kest_store_count(KestRuntime *runtime, KestValue handle,\n"
+        "                      uint32_t where, int64_t *into);\n"
+        "bool kest_store_ref(KestRuntime *runtime, KestValue handle,\n"
+        "                    int64_t index, uint32_t where, int64_t *into);\n"
+        "bool kest_store_seek(KestRuntime *runtime, KestValue handle,\n"
+        "                     int64_t from, uint32_t where, int64_t "
+        "*found);\n"
         "bool kest_array_remove(KestRuntime *runtime, KestValue handle,\n"
         "                       int64_t index, uint32_t where);\n"
         "bool kest_array_push(KestRuntime *runtime, KestValue handle,\n"

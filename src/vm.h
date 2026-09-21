@@ -86,6 +86,31 @@ bool kest_array_push(KestRuntime *runtime, KestValue handle, uint16_t layout,
 bool kest_array_remove(KestRuntime *runtime, KestValue handle, int64_t index,
                        uint32_t where);
 
+// A store and what a program asks of one, each what the instruction of that
+// name does and each called by it. A store keeps what it holds as slots
+// rather than as packed bytes, so none of these walks a layout: what moves is
+// a run of slots the width the shape is. `which` is a reference as the
+// program holds one -- a place and the stamp it was handed out with -- and a
+// reference to a place that has been given back reads as nothing rather than
+// as whatever is there now. See D1102.
+bool kest_store_new(KestRuntime *runtime, uint16_t layout, int64_t room,
+                    uint32_t where, KestValue *into);
+bool kest_store_add(KestRuntime *runtime, KestValue handle, uint16_t stride,
+                    const KestValue *value, uint32_t where, int64_t *into);
+bool kest_store_get(KestRuntime *runtime, KestValue handle, int64_t which,
+                    uint16_t stride, KestValue *into, uint32_t where);
+bool kest_store_set(KestRuntime *runtime, KestValue handle, int64_t which,
+                    uint16_t stride, const KestValue *value, uint32_t where,
+                    bool *was);
+bool kest_store_remove(KestRuntime *runtime, KestValue handle, int64_t which,
+                       uint32_t where, bool *was);
+bool kest_store_count(KestRuntime *runtime, KestValue handle, uint32_t where,
+                      int64_t *into);
+bool kest_store_ref(KestRuntime *runtime, KestValue handle, int64_t index,
+                    uint32_t where, int64_t *into);
+bool kest_store_seek(KestRuntime *runtime, KestValue handle, int64_t from,
+                     uint32_t where, int64_t *found);
+
 // Entering a body the host's compiler compiled from another one. A call
 // between two of those does not go through the machine, so this is where what
 // a call does still happens: the two refusals -- calls nested deeper than a

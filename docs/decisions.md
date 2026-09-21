@@ -37478,3 +37478,57 @@ has a word for:
 None is fixed here. They are written down because a class of mistake with a
 root cause beside it is what section 21 asks for, and because the first entries
 in that list being the model's own is worth more than the same list guessed at.
+
+## D1102. A world of entities in the release engine
+
+D1099 gave the backend what reaches the heap for a run of elements. This is
+the other half of a game: a store, which is where a world that is kept lives,
+and the references into it that are what makes it a world rather than a list.
+
+**Eight doors, each what the instruction of that name does.** Made, added to,
+read, written, taken from, counted, turned into a reference, and walked. A
+store keeps what it holds as slots rather than as packed bytes, so none of
+them walks a layout: what moves is a run of slots the width the shape is,
+which is why these are shorter than the element doors were.
+
+The walk is the one worth reading: `for r in world` is a seek from a place and
+a seek to the next, each of them the instruction's three things — count on,
+ask whether there is one, and go round or leave — written as a call and a
+branch. That is the shape D963 gave the machine and it survives being written
+as C.
+
+**What a reference is survives too.** A place is handed out with a stamp, and
+a reference to a place that has been given back reads as nothing rather than
+as whatever is there now (D1033). The compiled half asks that through the same
+`resolve_ref` the machine does, so a world walked by compiled code and a world
+walked by the machine answer the same about a thing that is gone. That is the
+one property of this language a game most needs and the one a backend could
+most easily lose.
+
+**What it is worth.** Two thousand things in a store, each naming the next,
+walked twenty rounds with a seventh of them taken out half way, whole
+processes, same answer both ways:
+
+| | instructions | cycles |
+| --- | --- | --- |
+| Kest, the machine | 103.1 M | 57.0 M |
+| Kest, the release engine | 23.5 M | 22.0 M |
+| | **4.4× fewer** | **2.5× fewer** |
+
+And `bench/agents.kest` — the persistent-world reference program, twenty
+thousand agents with references both ways, tags, and identities going and
+coming back — now has every one of its working bodies written. What is left
+there is what prints.
+
+Over this tree the backend writes **874 of 2,088 bodies**. What still stops
+the rest is a crossing into the host (45), comparing and making text (40 and
+30), and a call through a function value (17).
+
+**And one thing this decision paid for elsewhere.** The door and the
+instruction are one answer, so a hole that breaks the door is a hole both
+engines fall into and the differential cannot see. The hole for this is in the
+backend instead — a store read one slot short of what the shape holds, which
+writes the byte that says *there was something there* over the last field —
+and the reference-read hole that was already there still covers the shared
+half. A check that cannot tell two things apart is a check that has to be
+pointed at the half that differs.
