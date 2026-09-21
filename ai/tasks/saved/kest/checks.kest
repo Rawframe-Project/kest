@@ -1,0 +1,109 @@
+module checks
+
+// What the task is judged by, which whoever does it does not see. Each check
+// answers with its own number; nought is every check passing.
+
+import saved
+
+fn same(a: [saved.Thing], b: [saved.Thing]) -> bool no.host deterministic {
+    if len(a) != len(b) {
+        return false
+    }
+    for i in 0..len(a) {
+        if a[i].name != b[i].name ||
+                a[i].worth != b[i].worth ||
+                a[i].alive != b[i].alive {
+            return false
+        }
+    }
+    return true
+}
+
+fn readsNothing(save: text) -> bool no.host deterministic {
+    if let all = saved.read(save) {
+        return false
+    }
+    return true
+}
+
+fn main() -> i32 {
+    let world: [saved.Thing] = array()
+    push(world, saved.Thing("oak", 10, true))
+    push(world, saved.Thing("ash", -4, false))
+    push(world, saved.Thing("elm", 0, true))
+
+    // What it writes reads back as what it wrote.
+    if let back = saved.read(saved.written(world)) {
+        if !same(back, world) {
+            return 1
+        }
+    } else {
+        return 2
+    }
+
+    // And what it reads writes back as what it read: the two are one thing
+    // from both ends.
+    let whole = saved.written(world)
+    if let back = saved.read(whole) {
+        if saved.written(back) != whole {
+            return 3
+        }
+    } else {
+        return 4
+    }
+
+    // A world with nothing in it is a save, and reads back as nothing in it.
+    let empty: [saved.Thing] = array()
+    if let back = saved.read(saved.written(empty)) {
+        if len(back) != 0 {
+            return 5
+        }
+    } else {
+        return 6
+    }
+
+    // A save of another version, and a text that is no save at all.
+    if !readsNothing("v2|oak,10,1") {
+        return 7
+    }
+    if !readsNothing("") {
+        return 8
+    }
+    if !readsNothing("oak,10,1") {
+        return 9
+    }
+
+    // A record with a field missing, and one with a field too many.
+    if !readsNothing("v1|oak,10") {
+        return 10
+    }
+    if !readsNothing("v1|oak,10,1,extra") {
+        return 11
+    }
+
+    // A worth that is not a number, and a flag that is neither.
+    if !readsNothing("v1|oak,ten,1") {
+        return 12
+    }
+    if !readsNothing("v1|oak,10,yes") {
+        return 13
+    }
+    if !readsNothing("v1|oak,10,2") {
+        return 14
+    }
+
+    // A name with nothing in it.
+    if !readsNothing("v1|,10,1") {
+        return 15
+    }
+
+    // And a save that is only the version, which is the empty world again.
+    if let back = saved.read("v1") {
+        if len(back) != 0 {
+            return 16
+        }
+    } else {
+        return 17
+    }
+    return 0
+}

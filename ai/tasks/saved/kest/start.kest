@@ -1,0 +1,23 @@
+module saved
+
+import std.text
+
+// A world written down and read back. What each function has to do is in
+// `ask.md`; the shapes and the signatures here are the task's and are not to
+// be changed.
+
+struct Thing {
+    name: text
+    worth: i32
+    alive: bool
+}
+
+// The world, written down.
+fn written(all: [Thing]) -> text no.host deterministic {
+    return ""
+}
+
+// And read back, or nothing where the text is not a save this can read.
+fn read(save: text) -> [Thing]? no.host deterministic {
+    return none
+}

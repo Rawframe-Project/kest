@@ -40006,3 +40006,51 @@ host calls back in.
 See D1111.
 
 **Runs:** `make check`, and the new hole seen catching.
+
+## A run of elements, read without a call
+
+The kernel workload's five times against `g++` was a call per element, a
+bounds check behind that call, and a move per piece. This is the first two.
+
+What the call cost was not the call: it was everything the host's compiler
+could not do across it -- hoist the length out of the loop, keep the block in
+a register, know that nothing in the loop moved the array. So what a run of
+elements is in memory is in the public header now as `KestRun`, held to the
+machine's own spelling by `_Static_assert`, and the read is four lines of C.
+Anything the inline test does not like goes through `kest_elem_at`, so a
+refusal is the same refusal with the same words at the same line.
+
+`bench/kernel.kest` per body-step, delta method over two million of them:
+`g++ -O2` 23.1, the release engine 65.5 where it was 105.1, `luau -O2
+--codegen` 157.9, the machine 526.7. **Five times `g++` is two point eight
+times**, and the release engine runs two and a half times fewer instructions
+than Luau's native tier on the workload the comparison was worst on.
+
+What is left against `g++` is a move per piece: a packed `f32` is four bytes
+and a slot is eight, so a run of them cannot be one `memcpy`.
+
+See D1112.
+
+**Runs:** `make check`, `tools/check-c.sh` over the tree, two new holes seen
+catching, and `bench/kernel.kest` measured five ways under `perf stat -e
+instructions`.
+
+## A fifth AI task: a world written down and read back
+
+`ai/tasks/saved`: a save is a version and a record for each thing, and the two
+functions have to be each other's undoing from both ends. Eight of seventeen
+checks hand `read` a text that is not a save.
+
+That is the second task in a row whose weight is on what does not happen. A
+loader that is right about the save it wrote and guesses at the save somebody
+else wrote is a loader that corrupts a world. The wrong answer beside it takes
+a record with a field too many, which is what a loader written against its own
+output never meets.
+
+Five of the nine kinds. What is left: refactoring across modules, and a host
+API.
+
+See D1113.
+
+**Runs:** `tools/check-ai.sh`, and `ai/run.sh saved` over both languages
+against the answer, the scaffold and the wrong answer.

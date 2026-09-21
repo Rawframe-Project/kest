@@ -55,10 +55,12 @@ A suite nobody has seen fail is indistinguishable from no suite.
 | `stale` | a handle to something the world has taken out |
 | `patch` | a bug to find in code that compiles and analyses clean |
 | `frail` | input that is mostly wrong, and what a reader does about it |
+| `saved` | a world written down and read back, and the saves that are not one |
 
-Four of the nine kinds the mission lists. `patch` is the one that is written
+Five of the nine kinds the mission lists. `patch` is the one that is written
 rather than left undone: the scaffold is working-looking code with a defect in
-it, and the answer is the fix. `frail` is failure handling, and its tests are
-mostly lines that are not records. The others — refactoring across modules, a
-host API, save and load — are not written yet, and what is here is written so
+it, and the answer is the fix. `frail` is failure handling and `saved`
+is save and load, and both have more tests about what does not happen than
+about what does. The others — refactoring across modules and a host API — are
+not written yet, and what is here is written so
 that adding one is four files and a row in this table.

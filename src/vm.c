@@ -10,6 +10,7 @@
 
 #include <stdatomic.h>
 #include <stdarg.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -103,6 +104,24 @@ typedef struct {
     // trusted. See D927.
     const KestType *of;
 } Array;
+
+// The same shape, said again where anything outside this file can read it,
+// and held to being the same shape by the compiler rather than by a rule
+// somebody remembers. A generated file reads a run of elements through
+// `KestRun` (D1112); a field that moved here and not there is every such file
+// reading memory that means something else.
+_Static_assert(sizeof(Array) == sizeof(KestRun),
+               "a run of elements is one shape, and the header says another");
+_Static_assert(offsetof(Array, what) == offsetof(KestRun, what) &&
+                   offsetof(Array, length) == offsetof(KestRun, length) &&
+                   offsetof(Array, capacity) == offsetof(KestRun, capacity) &&
+                   offsetof(Array, stride) == offsetof(KestRun, stride) &&
+                   offsetof(Array, borrowed) == offsetof(KestRun, borrowed) &&
+                   offsetof(Array, bytes) == offsetof(KestRun, bytes) &&
+                   offsetof(Array, of) == offsetof(KestRun, of),
+               "a run of elements keeps its pieces where the header says");
+_Static_assert(KEST_IS_ARRAY == KEST_RUN_IS,
+               "what the first word of a run says is said twice");
 
 // What reading a value out of memory turned up, which is one thing: a tag that
 // is no case of its own enum. Every other piece of a value means what its width

@@ -37911,3 +37911,75 @@ before a host runs. Without it a call back in stands on the frames an older
 run left, which is under the frames still running: nothing crashes, the
 answer is wrong, and it is wrong only for a program whose host calls back in.
 Exactly the shape of thing that hides until somebody ships.
+
+## D1112. A run of elements, read without a call
+
+D1092's open list has had one performance item on it since D1095: the kernel
+workload ran five times the instructions `g++` did, and the three reasons were
+a call per element, a bounds check the host's compiler could not hoist because
+it was behind that call, and a move per piece. This is the first two of them.
+
+**What a call costs here is not the call.** `kest_elem_at` is eight lines; the
+call is a handful of instructions. What it costs is everything the host's
+compiler cannot do across it: it cannot hoist the length out of a loop, it
+cannot keep the block in a register, and it cannot tell that nothing in the
+loop moved the array. A hop of a walk over ten thousand things paid all three
+ten thousand times.
+
+**So the shape is in the header now.** `KestRun` is what a run of elements is
+in memory, and it is the one piece of the runtime's own memory anything
+outside it reads directly. The read is four lines of C: is it a run, is the
+index one of them, and where one of them sits. Anything the test does not like
+goes through `kest_elem_at`, which is the machine's own answer and the
+machine's own words — so a refusal is the same refusal, at the same line, and
+the fast path never has to be right about what to say.
+
+`_Static_assert` holds the two spellings of that shape together. A field that
+moved in `src/vm.c` and not in the header is every generated file in the world
+reading memory that means something else, and that is what `KEST_ABI_VERSION`
+is for (D974): a host that reads `KestRun` is a host holding itself to that
+number.
+
+**What it is worth.** `bench/kernel.kest`, per body-step, delta method over
+two million of them:
+
+| | instructions a body-step | against `g++` |
+| --- | --- | --- |
+| `g++ -O2` (`bench/kernel.cpp`) | 23.1 | 1.0 |
+| **Kest, the release engine** | **65.5** | **2.8×** |
+| Kest, the release engine before this | 105.1 | 4.5× |
+| `luau -O2 --codegen` | 157.9 | 6.8× |
+| Kest, the machine | 526.7 | 22.8× |
+
+**The five times is a two point eight times.** On the workload the comparison
+was worst on, the release engine now runs two and a half times fewer
+instructions than Luau's native tier, and what is left against `g++` is a move
+per piece — a packed `f32` is four bytes and a slot is eight, so a run of them
+cannot be one `memcpy` the way a C array can. That is a different decision and
+it is not obviously worth making.
+
+Two holes, both on the four lines: the bounds test written with the wrong
+comparison, which is the oldest mistake in the subject, and a field read at
+the front of the element rather than where the field is.
+
+## D1113. A fifth task: a world written down and read back
+
+`ai/tasks/saved` is save and load, which the mission lists and which every
+game has. A save is one piece of text — a version, then a record for each
+thing — and the two functions have to be each other's undoing from both ends:
+reading what was written gives back the world, and writing what was read gives
+back the text.
+
+Eight of its seventeen checks hand `read` a text that is not a save: another
+version, no version at all, a record with a field missing, one with a field
+too many, a worth that is not a number, a flag that is neither `1` nor `0`, a
+name with nothing in it. That is the second task in a row whose weight is on
+what does not happen, and it is on purpose: **a loader that is right about the
+save it wrote and guesses at the save somebody else wrote is a loader that
+corrupts a world**, and it is the failure a model writing quickly makes.
+
+The plausible wrong answer takes a record with a field too many, which is what
+a loader written against its own output never meets and a loader meeting
+another version's output meets first.
+
+Five of nine. What is left: refactoring across modules, and a host API.

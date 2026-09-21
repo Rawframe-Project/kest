@@ -643,6 +643,41 @@ KestValue kest_borrow(KestRuntime *runtime, void *data, uint32_t length,
 uint32_t kest_array_length(const KestRuntime *runtime, KestValue array,
                            uint32_t *room);
 
+// What a run of elements is, in memory. This is the one piece of the runtime's
+// own memory anything outside it reads directly, and it is here for one
+// reader: the C this project's other backend writes (D1093). A read of one
+// element was a call to `kest_elem_at`, and a call is a wall the host's
+// compiler cannot see past -- it cannot hoist the length out of a loop, it
+// cannot keep the block in a register, and it cannot tell that nothing in the
+// loop moved the array. With the shape here the fast path is four lines of C
+// and the refusals are still the machine's: anything the inline test does not
+// like goes through `kest_elem_at`, which says what the machine says.
+//
+// A host may read it too, and a host that does is a host holding itself to
+// `KEST_ABI_VERSION`. Every field of this is what that number is about: this
+// struct changing is every generated file in the world reading memory that
+// means something else, which is exactly what D974 put the number there for.
+//
+// `of` is the build's own idea of what one element is, and is nothing a host
+// can read. It is here because the shape has to be the whole shape -- a
+// struct written out to the field before the last one is a struct whose size
+// is wrong. See D1112.
+typedef struct {
+    uint32_t what;
+    uint32_t length;
+    uint32_t capacity;
+    uint16_t stride;
+    // Lent by the host, which means the block is not the machine's to move
+    // and the run is not the machine's to grow.
+    bool borrowed;
+    unsigned char *bytes;
+    const void *of;
+} KestRun;
+
+// What the first word of one says, for the test that says a handle is a run
+// of elements rather than a world of them or a lend the host has taken back.
+#define KEST_RUN_IS 0x4b415252u
+
 // And the end of a lend, which is the host saying the block is not its to lend
 // any more. Nothing is freed: the block was the host's throughout. What
 // changes is what the program holds — every use of it afterwards is a message

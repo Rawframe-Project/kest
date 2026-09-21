@@ -6,14 +6,15 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1110
+    CURRENT SHA:       (this commit) D1093-D1112
     PHASE:             B — the release engine, and it is whole: 2,081 of this
                        tree's 2,088 bodies are written as C, `bench/rules.kest`
-                       compiles entire, and the gameplay workload is inside
+                       compiles entire, the gameplay workload is inside
                        D1092's trigger against `g++` and level with Luau's
-                       native tier
+                       native tier, and the kernel workload is 2.8 times
+                       `g++` where it was five
     LAST FAST GATE:    green
-    LAST FULL GATE:    green at 2cd6c90
+    LAST FULL GATE:    green at fe1772d
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.
                        Every number below was taken on it.
@@ -270,6 +271,26 @@ what a serious game developer gets here that Luau does not give them is the
 same runtime ceiling with a check loop of 282 ms for a hundred thousand lines
 and a language that refuses what it cannot prove.
 
+## D1112 — the kernel's five times, read down to 2.8
+
+What a run of elements is in memory is in the public header now (`KestRun`,
+held to the machine's own spelling by `_Static_assert`), so reading one is
+four lines of C rather than a call to a door. What the call cost was never the
+call: it was everything the host's compiler could not do across it.
+
+`bench/kernel.kest`, per body-step, delta method over two million of them:
+
+| | a body-step | against `g++` |
+| --- | --- | --- |
+| `g++ -O2` | 23.1 | 1.0 |
+| **Kest, the release engine** | **65.5** | **2.8×** |
+| Kest, before this | 105.1 | 4.5× |
+| `luau -O2 --codegen` | 157.9 | 6.8× |
+| Kest, the machine | 526.7 | 22.8× |
+
+On the workload the comparison was worst on, the release engine runs two and a
+half times fewer instructions than Luau's native tier.
+
 ## D1108, D1109 — the crossing into the host, and the backend is whole
 
 The last family, and the biggest: forty-five of the sixty-two bodies left were
@@ -359,41 +380,48 @@ backend's own half instead.
 ## Open, in priority order
 
 1. *(all but done)* **The doors.** The backend writes 2,081 of this tree's
-   2,088 bodies (D1109). What is left is seven: a region opened (3), a number
-   with no spelling in C (2), a constant read where it is (1) and one address
-   of a place this does not take one of. None of them is a family and all of
-   them are in `examples`. What is left in this area is the rest of the
-   **generated file's own host**: it offers writing and the arithmetic now,
-   and eight programs in this tree still ask it for a clock, a file or an
-   argument, so they cannot be run both ways. *(done, D1111)* A host in the check
-   calls back into the program from a body this backend wrote, and a
-   generated file exports `kest_natives_here` so a game's own host can bind
-   its bodies -- which is the whole of what shipping one is.
-2. **The five times on the kernel, read down.** A call per element, a bounds
-   check the C compiler cannot hoist because it is behind that call, and a
-   `memcpy` a piece where four doubles could be one. All three go away by
-   putting the array's header in a header, which makes the shape of a handle
-   part of what a generated file is compiled against and so part of what the
-   abi version carries.
+   2,088 bodies (D1105 to D1109). What is left is seven — a region opened
+   (3), a number with no spelling in C (2), a constant read where it is (1)
+   and one address of a place this does not take one of. None of them is a
+   family and all of them are in `examples`. Shipping one of these files is
+   written and held: a generated file exports `kest_natives_here` for a
+   game's own host, and the check runs one program twice in one process,
+   compiled and not, through a door that calls back in (D1111). What is left
+   here is the rest of the **generated file's own host**: it offers writing
+   and the arithmetic now, and eight programs in this tree still ask it for a
+   clock, a file or an argument, so they cannot be run both ways.
+2. *(done, D1112)* **The five times on the kernel, read down to 2.8.** What
+   a run of elements is in memory is in the public header now, so a read is
+   four lines of C rather than a call: the host's compiler hoists the length
+   out of the loop, keeps the block in a register, and knows nothing moved the
+   array. `bench/kernel.kest` is 65.5 instructions a body-step where it was
+   105.1, against `g++`'s 23.1 and Luau's native tier at 157.9. What is left
+   against `g++` is a move per piece — a packed `f32` is four bytes and a slot
+   is eight — and that is a different decision.
 3. *(closed by D1102)* A world of entities: stores and the references into
    them are written, `bench/agents.kest`'s working bodies are all compiled,
    and a world of two thousand things walked twenty rounds runs 4.4 times
    fewer instructions. A reference to a place that has been handed back still
    reads as nothing, which is the property a game most needs from this.
-4. Daslang's AOT path, measured and named as AOT, so the comparison is against
-   what its documentation points at rather than against its interpreter.
-5. **More of the AI suite.** Four of the nine kinds the mission lists are
-   written (D1101, D1106, D1110) with held-out tests, a wrong answer beside
-   each and a gate that holds all three. Two of them are the kinds a type
-   system cannot be credited for: a bug to find in code that compiles and
-   analyses clean in both languages, and input that is mostly wrong. What is
-   not written: refactoring across modules, a host API, save and load.
-   Running models against it is the owner's, at the end.
+4. **The table, with both engines and both of Daslang's in it.**
+   `bench/run.sh` has two rows it did not: this language's release engine,
+   built before it is timed, and `daslang -exe`, which is its own compiler
+   writing a binary, named as AOT rather than left to look like its
+   interpreter. What is left is running it with all three comparators present
+   and writing down what it says — one run, one decision.
+5. **More of the AI suite.** Five of the nine kinds the mission lists are
+   written (D1101, D1106, D1110, D1113) with held-out tests, a wrong answer
+   beside each and a gate that holds all three. Three of them are the kinds a
+   type system cannot be credited for: a bug to find in code that compiles and
+   analyses clean in both languages, input that is mostly wrong, and a save
+   somebody else wrote. What is not written: refactoring across modules and a
+   host API. Running models against it is the owner's, at the end.
 6. Game-shaped runtime profile: where the ceiling actually is (dispatch, value
    movement, allocation, collector, host crossing) on `examples/slice` and the
    engine, now that the release engine changes which of them matter.
-7. Comparators, kept in step as the engines move: Luau in its best realistic
-   gameplay mode, Daslang's interpreter and its AOT named separately.
+7. Comparators, kept in step as the engines move. The harness names the mode
+   of every row (D1090), which is what stops an interpreter's number being
+   read as a compiler's.
 
 ## Closed by measurement
 

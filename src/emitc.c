@@ -727,11 +727,28 @@ static bool write_elem(Walk *walk, const KestIrOp *op,
     Where index;
     at_stack(held, handle);
     at_stack(index, handle + 1);
+    // Where the element is, worked out here rather than asked for. A run of
+    // elements is a shape the header says (D1112), so the three things that
+    // have to be true -- that the handle is a run, that the index is one of
+    // them, and where one of them sits -- are four lines of C the host's
+    // compiler can see through: it hoists the length out of a loop, keeps the
+    // block in a register, and stops writing a call frame a hop of a walk
+    // does not need. Anything the test does not like goes through
+    // `kest_elem_at`, which is the machine's own answer and the machine's own
+    // words, so a refusal here is the refusal there.
     say(c, out,
-        "    {\n        unsigned char *at = kest_elem_at(rt, %s, %s.integer, "
-        "%u, %u);\n"
-        "        if (at == NULL) {\n            return false;\n        }\n",
-        held, index, (unsigned)place->offset, op->span.offset);
+        "    {\n        const KestRun *run = (const KestRun *)%s.object;\n"
+        "        int64_t which = %s.integer;\n"
+        "        unsigned char *at;\n"
+        "        if (run != NULL && run->what == KEST_RUN_IS &&\n"
+        "            (uint64_t)which < (uint64_t)run->length) {\n"
+        "            at = run->bytes + (size_t)which * run->stride + %u;\n"
+        "        } else {\n"
+        "            at = kest_elem_at(rt, %s, which, %u, %u);\n"
+        "            if (at == NULL) {\n                return false;\n"
+        "            }\n        }\n",
+        held, index, (unsigned)place->offset, held,
+        (unsigned)place->offset, op->span.offset);
     uint16_t moved = move_value(walk, layout->type, value, 0, reading,
                                 op->span.offset);
     say(c, out, "    }\n");
@@ -1212,10 +1229,20 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         }
         at_stack(first, base);
         at_stack(second, base + 1);
+        // The same four lines the read uses, for the same reason. See D1112.
         say(c, out,
-            "    %s.object = kest_elem_at(rt, %s, %s.integer, 0, %u);\n"
-            "    if (%s.object == NULL) {\n        return false;\n    }\n",
-            first, first, second, op->span.offset, first);
+            "    {\n        const KestRun *run = (const KestRun *)%s.object;\n"
+            "        int64_t which = %s.integer;\n"
+            "        if (run != NULL && run->what == KEST_RUN_IS &&\n"
+            "            (uint64_t)which < (uint64_t)run->length) {\n"
+            "            %s.object = run->bytes + (size_t)which * "
+            "run->stride;\n"
+            "        } else {\n"
+            "            %s.object = kest_elem_at(rt, %s, which, 0, %u);\n"
+            "            if (%s.object == NULL) {\n"
+            "                return false;\n            }\n"
+            "        }\n    }\n",
+            first, second, first, first, first, op->span.offset, first);
         break;
     }
     case KEST_IR_TEXT_LEN:

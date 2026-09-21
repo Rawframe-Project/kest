@@ -218,8 +218,10 @@ one the call already made (D1105); a call through a function value is written
 too (D1107), and so is the crossing into the host (D1108) and one of a
 fixed run of slots (D1109) -- which leaves seven bodies of two thousand and no
 family among them. On `bench/kernel.kest` the release engine runs a
-body-step in 119 machine instructions against the machine's 529 and Luau's
-native code generation at 158, with `g++ -O2` at 23; on `bench/rules.kest`,
+body-step in 65.5 machine instructions against the machine's 527 and Luau's
+native code generation at 158, with `g++ -O2` at 23 — the five times that
+workload cost against `g++` is 2.8 times since a run of elements stopped being
+read through a call (D1112); on `bench/rules.kest`,
 the gameplay workload, it runs the whole process in 1.244 G instructions
 against the machine's 6.254 G, Luau's native tier at 1.294 G and `g++ -O2` at
 0.429 G. **D1092's re-evaluation trigger was three times `bench/rules.cpp` and

@@ -1,0 +1,53 @@
+module saved
+
+import std.text
+
+// A world written down and read back. What each function has to do is in
+// `ask.md`; the shapes and the signatures here are the task's and are not to
+// be changed.
+
+struct Thing {
+    name: text
+    worth: i32
+    alive: bool
+}
+
+// The world, written down.
+fn written(all: [Thing]) -> text no.host deterministic {
+    let pieces: [text] = array()
+    push(pieces, "v1")
+    for one in all {
+        push(pieces, "{one.name},{one.worth},{if one.alive -> 1 else -> 0}")
+    }
+    return text.join(pieces, "|")
+}
+
+// And read back, or nothing where the text is not a save this can read.
+fn read(save: text) -> [Thing]? no.host deterministic {
+    let pieces = text.split(save, "|")
+    if len(pieces) == 0 || pieces[0] != "v1" {
+        return none
+    }
+    let all: [Thing] = array()
+    for i in 1..len(pieces) {
+        let fields = text.split(pieces[i], ",")
+        if len(fields) < 3 {
+            return none
+        }
+        if len(fields[0]) == 0 {
+            return none
+        }
+        if let worth = text.number(fields[1]) {
+            if fields[2] == "1" {
+                push(all, Thing(fields[0], worth, true))
+            } else if fields[2] == "0" {
+                push(all, Thing(fields[0], worth, false))
+            } else {
+                return none
+            }
+        } else {
+            return none
+        }
+    }
+    return all
+}

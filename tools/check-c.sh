@@ -214,6 +214,24 @@ struct Body {
     small: u8
 }
 
+// A field of an element rather than the whole of it, which is the read a
+// frame does most and the one that carries a byte offset into the element.
+fn tagsOf(world: [Body]) -> i32 no.alloc no.host deterministic {
+    let sum = 0
+    for at in 0..len(world) {
+        sum += world[at].tag + i32(world[at].small)
+    }
+    return sum
+}
+
+fn spread(world: [Body]) -> f64 no.alloc no.host deterministic {
+    let sum: f64 = 0.0
+    for at in 0..len(world) {
+        sum += world[at].y
+    }
+    return sum
+}
+
 fn step(world: [Body], rounds: i32) -> f64 no.alloc no.host deterministic {
     let sum: f64 = 0.0
     let i = 0
@@ -238,7 +256,9 @@ fn main() -> i32 {
     for i in 0..64 {
         push(world, Body(f64(i), f64(i) * 0.5, i % 5, u8(i % 256)))
     }
-    return i32((i64(step(world, 20)) % 251 + 251) % 251)
+    let total = i64(step(world, 20)) + i64(tagsOf(world)) +
+        i64(spread(world))
+    return i32((total % 251 + 251) % 251)
 }
 PROGRAM
 cat >"$work"/programs/world.kest <<'PROGRAM'
@@ -813,7 +833,10 @@ fn main() -> i32 {
     for i in 0..4 {
         push(world, i)
     }
-    return look(world, 9)
+    // One past the end rather than far past it, because one past is the
+    // index a bounds test written with the wrong comparison lets through and
+    // nine is the index any test at all refuses.
+    return look(world, 4)
 }
 PROGRAM
 cat >"$work"/programs/shifted.kest <<'PROGRAM'

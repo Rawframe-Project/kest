@@ -16025,6 +16025,43 @@ kest 9.9.9""",
         "caught": "a host running one program both ways",
     },
     {
+        # A run of elements read one past the end, because the test that says
+        # an index is one of them was written with the wrong comparison. The
+        # oldest mistake in the subject, and one the fast path is where it now
+        # lives: the read is four lines of the backend's own rather than a
+        # call to a door. See D1112.
+        "what": "one past the end of a run, read",
+        "file": "src/emitc.c",
+        "from": '        "            (uint64_t)which < (uint64_t)run->length) '
+                '{\\n"\n'
+                '        "            at = run->bytes + (size_t)which * '
+                'run->stride + %u;\\n"',
+        "to": '        "            (uint64_t)which <= (uint64_t)run->length) '
+              '{\\n"\n'
+              '        "            at = run->bytes + (size_t)which * '
+              'run->stride + %u;\\n"',
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "outside.kest",
+    },
+    {
+        # A field read at the front of the element rather than where the
+        # field is. Every value whose first field is the one being read is
+        # right, which is most of the short ones somebody writes while
+        # testing, and every other one reads a neighbour. Reading a field of
+        # an element is what a frame does most (D1044), so this is the line
+        # the most instructions in this tree go through.
+        "what": "a field of an element read at the front of it",
+        "file": "src/emitc.c",
+        "from": r"""        "    {\n        unsigned char *at = (unsigned char *)%s.object + %u;\n",""",
+        "to": r"""        "    {\n        unsigned char *at = (unsigned char *)%s.object + 0 * %u;\n",""",
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "elements.kest",
+    },
+    {
         # A crossing into the host, handed the slot above the one the
         # arguments start at. The convention is that the arguments are where
         # the answer goes, so a host reads what it was given from there and
