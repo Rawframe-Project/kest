@@ -6947,10 +6947,8 @@ fn main() -> i32 {
         "what": "a machine that stops saying where a frame had got to",
         "file": "src/vm.c",
         "from": """            // call was written, and a `return` comes back to it. See D869.
-            frame->ip = ip;
-            frame = &rt->frames[rt->frame_count++];""",
-        "to": """            // call was written, and a `return` comes back to it. See D869.
-            frame = &rt->frames[rt->frame_count++];""",
+            frame->ip = ip;""",
+        "to": """            // call was written, and a `return` comes back to it. See D869.""",
         "make": ["kest"],
         "program": "calling.kest",
         # The second call comes back to where the first one left, which is an
@@ -15917,13 +15915,13 @@ kest 9.9.9""",
         "what": "a subtraction written as C that adds",
         "file": "src/emitc.c",
         "from": r"""    case KEST_IR_SUB:
-        return real ? (narrow ? "%s.f = (double)((float)%s.f - (float)%s.f);"
-                              : "%s.f = %s.f - %s.f;")
-                    : "%s.i = (int64_t)((uint64_t)%s.i - (uint64_t)%s.i);";""",
+        return real ? (narrow ? "%s.real = (double)((float)%s.real - (float)%s.real);"
+                              : "%s.real = %s.real - %s.real;")
+                    : "%s.integer = (int64_t)((uint64_t)%s.integer - (uint64_t)%s.integer);";""",
         "to": r"""    case KEST_IR_SUB:
-        return real ? (narrow ? "%s.f = (double)((float)%s.f + (float)%s.f);"
-                              : "%s.f = %s.f + %s.f;")
-                    : "%s.i = (int64_t)((uint64_t)%s.i + (uint64_t)%s.i);";""",
+        return real ? (narrow ? "%s.real = (double)((float)%s.real + (float)%s.real);"
+                              : "%s.real = %s.real + %s.real;")
+                    : "%s.integer = (int64_t)((uint64_t)%s.integer + (uint64_t)%s.integer);";""",
         "make": ["kest"],
         "tool": "tools/check-c.sh",
         "arguments": ["examples/math.kest", "examples/game/npc.kest"],
@@ -15946,6 +15944,47 @@ kest 9.9.9""",
         "tool": "tools/check-c.sh",
         "arguments": ["examples/math.kest", "examples/game/npc.kest"],
         "caught": "not both halves of what this backend is",
+    },
+    {
+        # A call that never enters the body the host's compiler compiled. The
+        # program still answers, because the instructions under that body are
+        # still there and still right -- which is exactly why a check that
+        # reads only the answer would pass with the whole of this backend
+        # switched off. What catches it is the run counting its own
+        # crossings. See D1094.
+        "what": "compiled bodies that nothing ever enters",
+        "file": "src/vm.c",
+        "from": r"""            if (callee->native != NULL) {
+                frame = &rt->frames[rt->frame_count++];""",
+        "to": r"""            if (callee->native != NULL && false) {
+                frame = &rt->frames[rt->frame_count++];""",
+        # Both ways in, because a program whose every body was written enters
+        # the C at its entry and never through a call.
+        "also": ["src/vm.c",
+                 r"""        if (chunk->native != NULL) {
+            KestValue *was_top = rt->running_top;""",
+                 r"""        if (chunk->native != NULL && false) {
+            KestValue *was_top = rt->running_top;"""],
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest", "examples/game/npc.kest"],
+        "caught": "was entered, so what ran was the machine",
+    },
+    {
+        # A backend whose C the host's compiler will not read. What this hole
+        # is pointed at is not the check that compiles every file in the tree
+        # -- that one catches it too -- but the one that reads a generated
+        # object for which of the machine's doors it calls: a file that will
+        # not compile is an object that asks for nothing, and two doors would
+        # quietly read as dead. See D1094.
+        "what": "a generated file the host's compiler will not read",
+        "file": "src/emitc.c",
+        "from": '        "#include \\"kest.h\\"\\n"',
+        "to": '        "#include \\"kest-not-here.h\\"\\n"',
+        "make": ["kest"],
+        "tool": "tools/check-dead.sh",
+        "arguments": [],
+        "caught": "what the other backend writes will not compile",
     },
 ]
 

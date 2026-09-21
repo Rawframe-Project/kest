@@ -308,23 +308,31 @@ tools/             Build and development scripts. `make check` runs all of
                    its own compiler offers without a word.
                    `check-c.sh` holds the other backend to answering what the
                    first one does. `kest emit --c` writes the same bodies as C
-                   for the compiler a release is built with, and two halves
-                   say the two are one program: every program in the tree
+                   for the compiler a release is built with, and three things
+                   say the two are one program. Every program in the tree
                    written as C and handed to the host's compiler, because C
                    that will not compile is the one kind of wrongness this
                    backend can have that reading the file does not show and
                    the programs here are a corpus of two thousand bodies
-                   nobody had to write for it, and then programs the check
-                   writes itself, run both ways and held to the same answer,
-                   because a file that compiles says nothing about what it
-                   does. One of them is written to stop while it runs, so that
-                   what a program does when it goes wrong is held as well as
-                   what it does when it does not. How much was left out is
-                   read back and held to being neither nothing nor
-                   everything: a backend that wrote no body would hand the
-                   host's compiler a file of comments and pass, and one that
-                   claimed every body would be writing C for a crossing into
-                   the host, which it has none for.
+                   nobody had to write for it. Then programs run both ways and
+                   held to the same answer *and* the same words on both
+                   streams: the ones the check writes itself, which are what
+                   it can write whole, and every program in the tree that
+                   runs, which is where a fixture's blind spot shows -- the
+                   first sweep of those caught a piece of text written into
+                   the C as the address it had in the compiling process. Two
+                   of the written ones stop while they are running, so that
+                   what a program says when it goes wrong is held as well as
+                   what it says when it does not, and a program that asks the
+                   host for what a generated file does not provide is counted
+                   rather than passed over. And that the compiled half was
+                   entered at all, which a file this backend writes counts for
+                   itself: two engines that agree agree when one of them never
+                   started. How much was left out is read back and held to
+                   being neither nothing nor everything: a backend that wrote
+                   no body would hand the host's compiler a file of comments
+                   and pass, and one that claimed every body would be writing
+                   C for a crossing into the host, which it has none for.
                    `check-dead.sh` holds every header to declaring what is
                    there and nothing that nothing calls, and the library to
                    making nothing a header does not declare — which is the
@@ -509,6 +517,8 @@ tools/             Build and development scripts. `make check` runs all of
                    about a heap that ran out without saying what was being
                    made, about a subtraction written as C that
                    adds, about a body with no C for it written anyway,
+                   about compiled bodies that nothing ever enters, about a
+                   generated file the host's compiler will not read,
                    about a message that says an `i64` through a `%u`,
                    about a kind of type nothing says how to write, about a
                    kind of token nothing says a line may end after, about an

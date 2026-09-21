@@ -203,8 +203,13 @@ shipping. The first of that backend is in the tree — `kest emit --c`, 627 of
 this tree's 2,088 bodies, held to answering what the machine answers by
 `tools/check-c.sh` — and on two scalar workloads it runs sixteen and
 twenty-three times fewer machine instructions than the machine does (D1093).
-What is not there is a hybrid binary: a body the machine runs and a body the
-host's compiler compiled, inside one process.
+The hybrid binary is there too (D1094): a chunk may carry a C function, a call
+enters it instead of the instructions, and a refusal inside it is reported at
+the same line with the same words. On `bench/control.kest` -- a real program
+with one writable body -- an actor-round costs 1,333 machine instructions
+interpreted and 1,144 with that body compiled. The other four fifths of that
+loop are array elements, which the backend cannot write yet, and that is what
+says what to write next.
 
 ## What the closeout shipped, and what it rests on
 

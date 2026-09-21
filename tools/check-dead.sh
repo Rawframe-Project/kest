@@ -19,6 +19,9 @@ import re
 import subprocess
 import sys
 
+import shutil
+import tempfile
+
 OBJECTS = "build/release"
 # And the build that checks itself, which is the same sources with one more
 # thing turned on. A name the machine calls only inside `#if KEST_CHECKED` is
@@ -107,6 +110,51 @@ for path in built:
         for symbol in theirs:
             inside[symbol] = path
     wanted[path] = asked
+
+# And the third thing that calls this library, which is this project's other
+# backend: a file it writes calls two doors of the machine and nothing else
+# in the tree does. So one is written and compiled here, and what it asks for
+# is read the way a host's object is -- the day the backend stops writing a
+# call to one of those doors, that door is dead and this is what says so. The
+# program is written here rather than taken from the tree because it has to
+# hold what provokes both of them: a body written whole, and something in it
+# that can stop. See D1094.
+WRITTEN = """module dividing
+
+fn split(a: i32, b: i32) -> i32 no.alloc no.host deterministic {
+    return a / b
+}
+
+fn main() -> i32 {
+    let n = 0
+    for i in 0..4 {
+        n += split(i * 6, 2)
+    }
+    return n
+}
+"""
+room = tempfile.mkdtemp()
+try:
+    program = os.path.join(room, "dividing.kest")
+    open(program, "w").write(WRITTEN)
+    wrote = os.path.join(room, "wrote.c")
+    writing = subprocess.run(["./kest", "emit", "--c", program],
+                             capture_output=True, text=True)
+    open(wrote, "w").write(writing.stdout)
+    object_of_it = os.path.join(room, "wrote.o")
+    built_it = subprocess.run([os.environ.get("CC", "cc"), "-O0", "-Iinclude",
+                               "-c", "-o", object_of_it, wrote],
+                              capture_output=True, text=True)
+    if writing.returncode != 0 or built_it.returncode != 0:
+        print("what the other backend writes will not compile, so nothing "
+              "here says which of the machine's doors it calls")
+        failed = 1
+    else:
+        _, _, asked = symbols(object_of_it)
+        wanted[object_of_it] = asked
+finally:
+    shutil.rmtree(room, ignore_errors=True)
+
 # A pattern that reads a header finds what it finds, and a header it read
 # nothing out of is a header nothing here is holding to anything. Every list
 # read out of the source goes through this.

@@ -33,9 +33,11 @@ KestEmitC *kest_emitc_new(KestArena *arena);
 bool kest_emitc_body(void *writing, const KestIrBody *body);
 
 // The whole translation unit, once every body has been through. `entry` is the
-// symbol whose body `main` calls, or NULL for a program with none, and a
-// program whose entry is not among what was written gets a file with no `main`
-// in it. NULL when there was no memory.
-const char *kest_emitc_done(KestEmitC *writing, const char *entry);
+// symbol the program's `main` is compiled under and `from` is the file it was
+// all written from, which the host this produces reads again: the C is half of
+// a program and the machine holds the other half, so the program itself is
+// what says which half is which. NULL when there was no memory.
+const char *kest_emitc_done(KestEmitC *writing, const char *entry,
+                            const char *from);
 
 #endif

@@ -361,6 +361,19 @@ typedef struct {
     bool at_address;
 } KestNamed;
 
+// A body the host's compiler compiled, standing in for the instructions of
+// the chunk it belongs to. Its arguments are the slots at `frame`, laid out
+// the way a call leaves them; it writes its answer over them and says in
+// `gave` how many slots came back, which is what `return` does. False means it
+// stopped and said why, the same as an instruction that fails.
+//
+// It is not `KestNative`: that is a function the *host* provides and the
+// program calls, and this is a body of the program the host's compiler wrote.
+// Both are C functions handed a frame and they are the two ends of different
+// boundaries. See D1094.
+typedef bool (*KestNativeBody)(KestRuntime *runtime, KestValue *frame,
+                               uint16_t *gave);
+
 typedef struct {
     const char *name;
     // The same name as it was written, which is the name without what tells
@@ -468,6 +481,13 @@ typedef struct {
     bool no_alloc;
     bool no_host;
     bool deterministic;
+    // The same body, compiled by the host's compiler out of the C this
+    // project's other backend wrote, or NULL for a body the machine runs. A
+    // call enters it instead of the instructions, and everything around the
+    // call is unchanged: the frame is where the caller left it, the answer
+    // goes where a `return` would put it, and a fault inside it is reported
+    // the way one inside the instructions is. See D1094.
+    KestNativeBody native;
 } KestChunk;
 
 // A function the program declared and the host must provide.

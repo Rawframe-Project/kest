@@ -2112,6 +2112,12 @@ LEFT_OUT = {
                                    "out from the type the mark already folds "
                                    "and is a thing about reading a value "
                                    "rather than part of one",
+    ("KestChunk", "native"): "which engine runs this body, which is a thing "
+                             "about how a program was built rather than part "
+                             "of what it means: the same program with a body "
+                             "compiled by the host's compiler and with it "
+                             "interpreted is the same program, and what holds "
+                             "that is `check-c.sh` (D1094)",
     ("KestChunk", "as_value"): "whether anything names this function as a "
                                "value, which is read off the code that names "
                                "it and is a thing about the module rather "

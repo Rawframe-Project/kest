@@ -201,8 +201,9 @@ bool kest_build_emit(KestBuild *build) {
     // backend did not write is a call with nowhere to go, and which those are
     // is a question about the whole program.
     if (both.c != NULL && compiled) {
-        build->c_wrote =
-            kest_emitc_done(both.c, kest_build_name(build, KEST_MAIN));
+        build->c_wrote = kest_emitc_done(
+            both.c, kest_build_name(build, KEST_MAIN),
+            build->units.count > 0 ? build->units.items[0].source.path : NULL);
         if (build->c_wrote == NULL) {
             kest_diags_starve(&build->diags);
         }

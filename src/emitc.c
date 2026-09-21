@@ -311,60 +311,60 @@ static const char *binary_c(uint16_t kind, const KestType *type) {
     bool without_sign = kest_is_unsigned(type);
     switch (kind) {
     case KEST_IR_ADD:
-        return real ? (narrow ? "%s.f = (double)((float)%s.f + (float)%s.f);"
-                              : "%s.f = %s.f + %s.f;")
-                    : "%s.i = (int64_t)((uint64_t)%s.i + (uint64_t)%s.i);";
+        return real ? (narrow ? "%s.real = (double)((float)%s.real + (float)%s.real);"
+                              : "%s.real = %s.real + %s.real;")
+                    : "%s.integer = (int64_t)((uint64_t)%s.integer + (uint64_t)%s.integer);";
     case KEST_IR_SUB:
-        return real ? (narrow ? "%s.f = (double)((float)%s.f - (float)%s.f);"
-                              : "%s.f = %s.f - %s.f;")
-                    : "%s.i = (int64_t)((uint64_t)%s.i - (uint64_t)%s.i);";
+        return real ? (narrow ? "%s.real = (double)((float)%s.real - (float)%s.real);"
+                              : "%s.real = %s.real - %s.real;")
+                    : "%s.integer = (int64_t)((uint64_t)%s.integer - (uint64_t)%s.integer);";
     case KEST_IR_MUL:
-        return real ? (narrow ? "%s.f = (double)((float)%s.f * (float)%s.f);"
-                              : "%s.f = %s.f * %s.f;")
-                    : "%s.i = (int64_t)((uint64_t)%s.i * (uint64_t)%s.i);";
+        return real ? (narrow ? "%s.real = (double)((float)%s.real * (float)%s.real);"
+                              : "%s.real = %s.real * %s.real;")
+                    : "%s.integer = (int64_t)((uint64_t)%s.integer * (uint64_t)%s.integer);";
     case KEST_IR_DIV:
         if (real) {
-            return narrow ? "%s.f = (double)((float)%s.f / (float)%s.f);"
-                          : "%s.f = %s.f / %s.f;";
+            return narrow ? "%s.real = (double)((float)%s.real / (float)%s.real);"
+                          : "%s.real = %s.real / %s.real;";
         }
         return without_sign
-                   ? "%s.i = (int64_t)((uint64_t)%s.i / (uint64_t)%s.i);"
+                   ? "%s.integer = (int64_t)((uint64_t)%s.integer / (uint64_t)%s.integer);"
                    : NULL;
     case KEST_IR_MOD:
         if (real) {
             return NULL;
         }
         return without_sign
-                   ? "%s.i = (int64_t)((uint64_t)%s.i %% (uint64_t)%s.i);"
+                   ? "%s.integer = (int64_t)((uint64_t)%s.integer %% (uint64_t)%s.integer);"
                    : NULL;
     case KEST_IR_AND:
-        return "%s.i = %s.i & %s.i;";
+        return "%s.integer = %s.integer & %s.integer;";
     case KEST_IR_OR:
-        return "%s.i = %s.i | %s.i;";
+        return "%s.integer = %s.integer | %s.integer;";
     case KEST_IR_XOR:
-        return "%s.i = %s.i ^ %s.i;";
+        return "%s.integer = %s.integer ^ %s.integer;";
     case KEST_IR_LT:
-        return real            ? "%s.i = (%s.f < %s.f);"
-               : without_sign  ? "%s.i = ((uint64_t)%s.i < (uint64_t)%s.i);"
-                               : "%s.i = (%s.i < %s.i);";
+        return real            ? "%s.integer = (%s.real < %s.real);"
+               : without_sign  ? "%s.integer = ((uint64_t)%s.integer < (uint64_t)%s.integer);"
+                               : "%s.integer = (%s.integer < %s.integer);";
     case KEST_IR_LE:
-        return real            ? "%s.i = (%s.f <= %s.f);"
-               : without_sign  ? "%s.i = ((uint64_t)%s.i <= (uint64_t)%s.i);"
-                               : "%s.i = (%s.i <= %s.i);";
+        return real            ? "%s.integer = (%s.real <= %s.real);"
+               : without_sign  ? "%s.integer = ((uint64_t)%s.integer <= (uint64_t)%s.integer);"
+                               : "%s.integer = (%s.integer <= %s.integer);";
     case KEST_IR_GT:
-        return real            ? "%s.i = (%s.f > %s.f);"
-               : without_sign  ? "%s.i = ((uint64_t)%s.i > (uint64_t)%s.i);"
-                               : "%s.i = (%s.i > %s.i);";
+        return real            ? "%s.integer = (%s.real > %s.real);"
+               : without_sign  ? "%s.integer = ((uint64_t)%s.integer > (uint64_t)%s.integer);"
+                               : "%s.integer = (%s.integer > %s.integer);";
     case KEST_IR_GE:
-        return real            ? "%s.i = (%s.f >= %s.f);"
-               : without_sign  ? "%s.i = ((uint64_t)%s.i >= (uint64_t)%s.i);"
-                               : "%s.i = (%s.i >= %s.i);";
+        return real            ? "%s.integer = (%s.real >= %s.real);"
+               : without_sign  ? "%s.integer = ((uint64_t)%s.integer >= (uint64_t)%s.integer);"
+                               : "%s.integer = (%s.integer >= %s.integer);";
     // Equality asks nothing about a sign: the same bits are the same bits
     // either way, which is what `lower` reads out of its own table.
     case KEST_IR_EQ:
-        return real ? "%s.i = (%s.f == %s.f);" : "%s.i = (%s.i == %s.i);";
+        return real ? "%s.integer = (%s.real == %s.real);" : "%s.integer = (%s.integer == %s.integer);";
     case KEST_IR_NE:
-        return real ? "%s.i = (%s.f != %s.f);" : "%s.i = (%s.i != %s.i);";
+        return real ? "%s.integer = (%s.real != %s.real);" : "%s.integer = (%s.integer != %s.integer);";
     default:
         return NULL;
     }
@@ -376,18 +376,18 @@ static const char *binary_c(uint16_t kind, const KestType *type) {
 static const char *narrow_c(uint16_t scalar) {
     switch (scalar) {
     case KEST_L_I8:
-        return "%s.i = (int64_t)(int8_t)%s.i;";
+        return "%s.integer = (int64_t)(int8_t)%s.integer;";
     case KEST_L_I16:
-        return "%s.i = (int64_t)(int16_t)%s.i;";
+        return "%s.integer = (int64_t)(int16_t)%s.integer;";
     case KEST_L_I32:
-        return "%s.i = (int64_t)(int32_t)%s.i;";
+        return "%s.integer = (int64_t)(int32_t)%s.integer;";
     case KEST_L_BOOL:
     case KEST_L_U8:
-        return "%s.i = (int64_t)(uint8_t)%s.i;";
+        return "%s.integer = (int64_t)(uint8_t)%s.integer;";
     case KEST_L_U16:
-        return "%s.i = (int64_t)(uint16_t)%s.i;";
+        return "%s.integer = (int64_t)(uint16_t)%s.integer;";
     case KEST_L_U32:
-        return "%s.i = (int64_t)(uint32_t)%s.i;";
+        return "%s.integer = (int64_t)(uint32_t)%s.integer;";
     default:
         return NULL;
     }
@@ -403,10 +403,22 @@ static void write_const(Walk *walk, const KestIrOp *op) {
     }
     for (uint32_t k = 0; k < count; k++) {
         KestValue value = body->constants[first + k];
+        // What the slot is, which is what a chunk says about its own
+        // constants rather than what a layout says about a type: three
+        // things, because what a reader of a chunk needs is to tell a number
+        // from a float from the bytes of a piece of text.
         uint8_t class = body->constant_classes[first + k];
         Where into;
         at_stack(into, walk->stack + k);
-        if (kest_slot_of(class) == KEST_S_REAL) {
+        // The bytes of a piece of text are where they are in the process that
+        // compiled it, and a number written down here is read in another
+        // process: a body holding one is a body the machine runs until this
+        // knows how to write text that outlives the compiler.
+        if (class == KEST_CONST_TEXT) {
+            cannot(walk, "a piece of text written where it was compiled");
+            return;
+        }
+        if (class == KEST_CONST_FLOAT) {
             // Written as hexadecimal, which is the one spelling of a double
             // that reads back as the bits it was written from. What has no
             // such spelling -- an infinity, or what is not a number -- is a
@@ -417,16 +429,16 @@ static void write_const(Walk *walk, const KestIrOp *op) {
                 cannot(walk, "a number with no spelling in C");
                 return;
             }
-            say(walk->c, &walk->into->wrote, "    %s.f = %a;\n", into,
+            say(walk->c, &walk->into->wrote, "    %s.real = %a;\n", into,
                 value.real);
             continue;
         }
-        if (kest_slot_of(class) != KEST_S_INTEGER) {
-            cannot(walk, "a value that is not a number");
+        if (class != KEST_CONST_INT) {
+            cannot(walk, "a value this backend has no spelling for");
             return;
         }
         say(walk->c, &walk->into->wrote,
-            "    %s.i = (int64_t)UINT64_C(0x%016llx);\n", into,
+            "    %s.integer = (int64_t)UINT64_C(0x%016llx);\n", into,
             (unsigned long long)(uint64_t)value.integer);
     }
 }
@@ -434,11 +446,17 @@ static void write_const(Walk *walk, const KestIrOp *op) {
 // Where a branch goes: the operation it lands on, or nowhere when this way
 // there leaves less than the operation is written for. The second is the edge
 // no program takes, which `arrives` explains.
-static void write_branch(Walk *walk, uint32_t target, uint32_t leaving) {
+static void write_branch(Walk *walk, uint32_t target, uint32_t leaving,
+                         uint32_t where) {
     if (target < walk->body->op_count && walk->known[target] &&
         walk->depth[target] > leaving) {
+        // Said in the machine's own words and with the machine's own code for
+        // it: what got here is this project being wrong about its own
+        // program, which is what `K0655` is.
         say(walk->c, &walk->into->wrote,
-            "k_stopped(\"no arm of this answered\");\n");
+            "return kest_native_stopped(rt, %u, \"K0655\",\n"
+            "            \"no way to this operation left a value for it\");\n",
+            where);
         return;
     }
     say(walk->c, &walk->into->wrote, "goto L%u;\n", target);
@@ -467,7 +485,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
     case KEST_IR_TRUE:
     case KEST_IR_FALSE:
         at_stack(first, base);
-        say(c, out, "    %s.i = %d;\n", first,
+        say(c, out, "    %s.integer = %d;\n", first,
             op->kind == KEST_IR_TRUE ? 1 : 0);
         break;
     case KEST_IR_LOAD: {
@@ -596,7 +614,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             // What is left over from dividing two floats is the library's
             // answer rather than one written again here. See D970.
             c->wants_library = true;
-            say(c, out, "    %s.f = %skest_left_over(%s.f, %s.f);\n", first,
+            say(c, out, "    %s.real = %skest_left_over(%s.real, %s.real);\n", first,
                 kest_is_narrow(op->type) ? "(double)(float)" : "", second,
                 third);
             break;
@@ -604,8 +622,11 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         // Dividing by nought stops the program where the machine stops it,
         // and the one pair whose quotient does not fit answers what wrapping
         // says rather than what the host's machine traps on. See D667.
-        say(c, out, "    if (%s.i == 0) {\n", third);
-        say(c, out, "        k_stopped(\"division by zero\");\n    }\n");
+        say(c, out, "    if (%s.integer == 0) {\n", third);
+        say(c, out,
+            "        return kest_native_stopped(rt, %u, \"K0601\",\n"
+            "            \"division by zero\");\n    }\n",
+            op->span.offset);
         if (kest_is_unsigned(op->type)) {
             say(c, out, "    ");
             say(c, out, binary_c(op->kind, op->type), first, second, third);
@@ -613,8 +634,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             break;
         }
         say(c, out,
-            "    %s.i = (%s.i == INT64_MIN && %s.i == -1) ? %s : (%s.i %s "
-            "%s.i);\n",
+            "    %s.integer = (%s.integer == INT64_MIN && %s.integer == -1) ? %s : (%s.integer %s "
+            "%s.integer);\n",
             first, second, third,
             op->kind == KEST_IR_DIV ? "INT64_MIN" : "0", second,
             op->kind == KEST_IR_DIV ? "/" : "%", third);
@@ -629,17 +650,17 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         at_stack(first, base);
         at_stack(second, base);
         if (op->kind == KEST_IR_FLIP) {
-            say(c, out, "    %s.i = ~%s.i;\n", first, second);
+            say(c, out, "    %s.integer = ~%s.integer;\n", first, second);
             break;
         }
         if (kest_is_float(op->type)) {
-            say(c, out, "    %s.f = %s-%s.f;\n", first,
+            say(c, out, "    %s.real = %s-%s.real;\n", first,
                 kest_is_narrow(op->type) ? "(double)(float)" : "", second);
             break;
         }
         // The smallest number negated is itself, which is what wrapping says
         // and what negating it signed would leave undefined.
-        say(c, out, "    %s.i = (int64_t)(0 - (uint64_t)%s.i);\n", first,
+        say(c, out, "    %s.integer = (int64_t)(0 - (uint64_t)%s.integer);\n", first,
             second);
         break;
     }
@@ -652,27 +673,38 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         at_stack(first, base);
         at_stack(second, base);
         at_stack(third, base + 1);
-        say(c, out, "    if (%s.i < 0) {\n", third);
-        say(c, out, "        k_stopped(\"a shift is not a count\");\n    }\n");
+        // The machine says how far it was asked to shift, in those words,
+        // and so does this: two engines that refuse the same program with
+        // two sentences are two languages, and what holds them to one is a
+        // check that reads both.
+        say(c, out, "    if (%s.integer < 0) {\n", third);
+        say(c, out,
+            "        char said[64];\n"
+            "        snprintf(said, sizeof said, \"a shift of %%lld is not "
+            "a count\",\n"
+            "                 (long long)%s.integer);\n"
+            "        return kest_native_stopped(rt, %u, \"K0604\", said);\n"
+            "    }\n",
+            third, op->span.offset);
         // A count past the width of a slot has no meaning in C, so it is
         // answered here rather than left to the machine: everything shifts
         // out, and a signed number keeps its sign.
         if (op->kind == KEST_IR_SHL) {
             say(c, out,
-                "    %s.i = %s.i >= 64 ? 0 : (int64_t)((uint64_t)%s.i << "
-                "%s.i);\n",
+                "    %s.integer = %s.integer >= 64 ? 0 : (int64_t)((uint64_t)%s.integer << "
+                "%s.integer);\n",
                 first, third, second, third);
             break;
         }
         if (kest_is_unsigned(op->type)) {
             say(c, out,
-                "    %s.i = %s.i >= 64 ? 0 : (int64_t)((uint64_t)%s.i >> "
-                "%s.i);\n",
+                "    %s.integer = %s.integer >= 64 ? 0 : (int64_t)((uint64_t)%s.integer >> "
+                "%s.integer);\n",
                 first, third, second, third);
             break;
         }
         say(c, out,
-            "    %s.i = %s.i >= 64 ? (%s.i < 0 ? -1 : 0) : (%s.i >> %s.i);\n",
+            "    %s.integer = %s.integer >= 64 ? (%s.integer < 0 ? -1 : 0) : (%s.integer >> %s.integer);\n",
             first, third, second, second, third);
         break;
     }
@@ -696,7 +728,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
     case KEST_IR_TO_FLOAT:
         at_stack(first, base);
         at_stack(second, base);
-        say(c, out, "    %s.f = (double)%s%s.i;\n", first,
+        say(c, out, "    %s.real = (double)%s%s.integer;\n", first,
             kest_is_unsigned(op->type) ? "(uint64_t)" : "", second);
         break;
     case KEST_IR_TO_WHOLE:
@@ -705,18 +737,18 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         c->wants_library = true;
         at_stack(first, base);
         at_stack(second, base);
-        say(c, out, "    %s.i = kest_real_to_int(%u, %s.f);\n", first,
+        say(c, out, "    %s.integer = kest_real_to_int(%u, %s.real);\n", first,
             (unsigned)op->imm[0], second);
         break;
     case KEST_IR_TO_F32:
         at_stack(first, base);
         at_stack(second, base);
-        say(c, out, "    %s.f = (double)(float)%s.f;\n", first, second);
+        say(c, out, "    %s.real = (double)(float)%s.real;\n", first, second);
         break;
     case KEST_IR_NOT:
         at_stack(first, base);
         at_stack(second, base);
-        say(c, out, "    %s.i = !%s.i;\n", first, second);
+        say(c, out, "    %s.integer = !%s.integer;\n", first, second);
         break;
     case KEST_IR_CALL: {
         uint32_t which = op->imm[0];
@@ -741,26 +773,22 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             walk->into->call_room = room;
         }
         walk->into->calls[walk->into->call_count++] = which;
-        say(c, out, "    ");
-        if (leaves == 1) {
-            at_stack(first, base);
-            say(c, out, "%s = ", first);
-        }
-        say(c, out, "kf_%u(", which);
-        if (leaves > 1) {
-            at_stack(first, base);
-            say(c, out, "&%s%s", first, reads > 0 ? ", " : "");
-        }
+        // What it answers is whether it ran. A body that stopped has already
+        // said so through the machine, so the caller gives back what it gave
+        // back and nothing here writes a second message about it.
+        at_stack(first, base);
+        say(c, out, "    if (!kf_%u(rt, %s%s", which, leaves > 0 ? "&" : "",
+            leaves > 0 ? first : "NULL");
         for (uint32_t k = 0; k < reads; k++) {
-            at_stack(first, base + k);
-            say(c, out, "%s%s", k > 0 ? ", " : "", first);
+            at_stack(second, base + k);
+            say(c, out, ", %s", second);
         }
-        say(c, out, ");\n");
+        say(c, out, ")) {\n        return false;\n    }\n");
         break;
     }
     case KEST_IR_GO:
         say(c, out, "    ");
-        write_branch(walk, op->target, base + leaves);
+        write_branch(walk, op->target, base + leaves, op->span.offset);
         break;
     case KEST_IR_ASK:
         if (reads != leaves + 1) {
@@ -768,9 +796,9 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             break;
         }
         at_stack(first, walk->stack - 1);
-        say(c, out, "    if (%s%s.i) {\n        ", op->imm[1] != 0 ? "" : "!",
+        say(c, out, "    if (%s%s.integer) {\n        ", op->imm[1] != 0 ? "" : "!",
             first);
-        write_branch(walk, op->target, base + leaves);
+        write_branch(walk, op->target, base + leaves, op->span.offset);
         say(c, out, "    }\n");
         break;
     case KEST_IR_NEXT: {
@@ -780,12 +808,12 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         // recognises.
         at_frame(first, op->imm[0]);
         at_frame(second, op->imm[1]);
-        say(c, out, "    %s.i += 1;\n", first);
-        say(c, out, "    if (%s%s.i %s %s%s.i) {\n        ",
+        say(c, out, "    %s.integer += 1;\n", first);
+        say(c, out, "    if (%s%s.integer %s %s%s.integer) {\n        ",
             kest_is_unsigned(op->type) ? "(uint64_t)" : "", first,
             kest_is_unsigned(op->type) ? "<" : "<",
             kest_is_unsigned(op->type) ? "(uint64_t)" : "", second);
-        write_branch(walk, op->target, base + leaves);
+        write_branch(walk, op->target, base + leaves, op->span.offset);
         say(c, out, "    }\n");
         break;
     }
@@ -795,20 +823,11 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "giving back something other than what it gives");
             break;
         }
-        if (count == 0) {
-            say(c, out, "    return;\n");
-            break;
-        }
-        if (count == 1) {
-            at_stack(first, base);
-            say(c, out, "    return %s;\n", first);
-            break;
-        }
         for (uint32_t k = 0; k < count; k++) {
             at_stack(first, base + k);
             say(c, out, "    out[%u] = %s;\n", k, first);
         }
-        say(c, out, "    return;\n");
+        say(c, out, "    return true;\n");
         break;
     }
     default:
@@ -824,22 +843,17 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
     walk->stack = base + leaves;
 }
 
-// What a body is declared as. A result of one slot comes back as the value it
-// is, a wider one is written where the caller says, and nothing else about a
-// call crosses: what the machine keeps in a frame the host's compiler keeps
-// wherever it likes.
+// What a body is declared as. It answers whether it ran rather than what it
+// worked out, because a body can stop -- dividing by nought, shifting by a
+// count that is not one -- and what it worked out goes where the caller says.
+// The machine comes with it because a body that stops says so through the
+// machine, which is what makes a refusal from compiled code read like a
+// refusal from the instructions. See D1094.
 static void write_head(KestEmitC *c, Text *into, const Body *body,
                        uint32_t which) {
-    say(c, into, "static %s kf_%u(", body->results == 1 ? "KV" : "void",
-        which);
-    if (body->results > 1) {
-        say(c, into, "KV *out%s", body->params > 0 ? ", " : "");
-    }
+    say(c, into, "static bool kf_%u(KestRuntime *rt, KV *out", which);
     for (uint16_t p = 0; p < body->params; p++) {
-        say(c, into, "%sKV a%u", p > 0 ? ", " : "", (unsigned)p);
-    }
-    if (body->params == 0 && body->results <= 1) {
-        say(c, into, "void");
+        say(c, into, ", KV a%u", (unsigned)p);
     }
     say(c, into, ")");
 }
@@ -959,6 +973,7 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
         // Said out loud rather than left to whether the body happens to read
         // them: a frame nothing reads is a warning in somebody else's build,
         // and a warning in a generated file is noise a reader learns to skip.
+        say(c, &into->wrote, "    (void)rt;\n    (void)out;\n");
         if (body->slot_count > 0) {
             say(c, &into->wrote, "    (void)f;\n");
         }
@@ -980,7 +995,10 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
             if (i + 1 < body->op_count && walk.known[i + 1] &&
                 walk.depth[i + 1] > walk.stack) {
                 say(c, &into->wrote,
-                    "    k_stopped(\"no arm of this answered\");\n");
+                    "    return kest_native_stopped(rt, %u, \"K0655\",\n"
+                    "        \"no way to this operation left a value for "
+                    "it\");\n",
+                    body->ops[i].span.offset);
             }
         }
         say(c, &into->wrote, "}\n\n");
@@ -1039,7 +1057,8 @@ static void settle(KestEmitC *c) {
     }
 }
 
-const char *kest_emitc_done(KestEmitC *c, const char *entry) {
+const char *kest_emitc_done(KestEmitC *c, const char *entry,
+                            const char *from) {
     // What was read while the bodies were written is read no further.
     kest_arena_free(c->scratch);
     c->scratch = NULL;
@@ -1049,31 +1068,36 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry) {
         "// Written by `kest emit --c`. What this means is the program it was\n"
         "// written from: edit that and write this again.\n"
         "//\n"
-        "// A slot is eight bytes whatever is in it, the same union the\n"
-        "// machine has, because this and the machine are one program: a body\n"
-        "// neither could write is a body the other runs.\n"
-        "#include <stdint.h>\n"
+        "// It is a host of that program as well as a translation of it. A\n"
+        "// body this backend had no C for is named below with the reason and\n"
+        "// is a body the machine runs, so what this holds is half a program\n"
+        "// and the machine holds the other half. See D1093 and D1094.\n"
         "#include <stdio.h>\n"
         "#include <stdlib.h>\n"
         "\n"
-        "typedef union {\n"
-        "    int64_t i;\n"
-        "    double f;\n"
-        "    const char *t;\n"
-        "    void *o;\n"
-        "} KV;\n"
+        "#include \"kest.h\"\n"
         "\n"
-        "static void k_stopped(const char *why) {\n"
-        "    fprintf(stderr, \"stopped: %%s\\n\", why);\n"
-        "    exit(1);\n"
-        "}\n\n");
+        "// A slot, under the name the machine's own backend gives it.\n"
+        "typedef KestValue KV;\n"
+        "\n"
+        "// The doors a file this backend wrote calls, and the only ones that\n"
+        "// are not in the public header: one binds a body to the chunk it\n"
+        "// was written from, the other says what a body says when it stops.\n"
+        "// Written out here rather than included, because what this includes\n"
+        "// is what a host includes. Link against `libkest.a`.\n"
+        "bool kest_native_at(KestRuntime *runtime, uint32_t index,\n"
+        "                    const char *symbol,\n"
+        "                    bool (*body)(KestRuntime *, KestValue *,\n"
+        "                                 uint16_t *));\n"
+        "bool kest_native_stopped(KestRuntime *runtime, uint32_t offset,\n"
+        "                         const char *code, const char *message);\n\n");
     if (c->wants_library) {
         say(c, &file,
-            "// The two answers this file does not work out for itself: what\n"
-            "// a number outside a width becomes, and what is left over from\n"
-            "// dividing two floats. They are the machine's answers and the\n"
-            "// folder's alike, so this calls them rather than being a third\n"
-            "// copy. Link against `libkest.a`.\n"
+            "// And the two answers this file does not work out for itself:\n"
+            "// what a number outside a width becomes, and what is left over\n"
+            "// from dividing two floats. They are the machine's answers and\n"
+            "// the folder's alike, so this calls them rather than being a\n"
+            "// third copy.\n"
             "int64_t kest_real_to_int(uint16_t scalar, double value);\n"
             "double kest_left_over(double left, double right);\n\n");
     }
@@ -1107,36 +1131,191 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry) {
         say(c, &file, "%s", c->bodies[i].wrote.bytes);
     }
 
-    // And the way in. A program whose entry is a body this did not write is a
-    // file with no `main` in it: what it holds is still worth reading, and
-    // nothing here pretends it is a program.
-    for (uint32_t i = 0; entry != NULL && i < c->count; i++) {
+    // How many bodies this file holds, and how many times the machine
+    // entered each of them. A check that cannot tell whether any of this ran
+    // is a check that passes when none of it does, and two engines that
+    // answer alike answer alike when one of them never started. It is one
+    // increment at a crossing that already costs a call.
+    uint32_t bound_count = 0;
+    for (uint32_t i = 0; i < c->count; i++) {
+        if (c->bodies[i].written && c->bodies[i].symbol != NULL) {
+            bound_count++;
+        }
+    }
+    say(c, &file, "\nstatic uint64_t kest_entered[%u];\n\n",
+        bound_count == 0 ? 1 : bound_count);
+
+    // What the machine calls, which is not what the C calls. A body is
+    // written here as the C it is, taking its arguments as values and
+    // answering through a pointer; a call from the machine hands over a frame
+    // and is handed back how many slots came of it. One of these a body, so
+    // the shape the machine needs costs the C nothing.
+    uint32_t bound_so_far = 0;
+    for (uint32_t i = 0; i < c->count; i++) {
         const Body *body = &c->bodies[i];
-        if (!body->written || body->symbol == NULL ||
-            strcmp(body->symbol, entry) != 0 || body->params != 0 ||
-            body->results > 1) {
+        if (!body->written) {
             continue;
         }
-        // The status a run answers with, which is the command line's rule
-        // rather than the language's: a file this backend wrote is a host of
-        // the same program, and a host that answered something else would be
-        // two programs rather than one compiled two ways.
-        say(c, &file, "int main(void) {\n");
-        if (body->results == 1) {
-            say(c, &file,
-                "    KV answer = kf_%u();\n"
-                "    if (answer.i < 0 || answer.i > 255) {\n"
-                "        fprintf(stderr, \"`main` answered %%lld, and an exit "
-                "status carries 0 to 255\\n\",\n"
-                "                (long long)answer.i);\n"
-                "        return 1;\n"
-                "    }\n"
-                "    return (int)answer.i;\n}\n",
-                i);
-        } else {
-            say(c, &file, "    kf_%u();\n    return 0;\n}\n", i);
+        say(c, &file,
+            "static bool kn_%u(KestRuntime *rt, KestValue *frame,\n"
+            "                 uint16_t *gave) {\n    kest_entered[%u]++;\n"
+            "    if (!kf_%u(rt, %s",
+            i, bound_so_far++, i, body->results > 0 ? "frame" : "NULL");
+        for (uint16_t p = 0; p < body->params; p++) {
+            say(c, &file, ", frame[%u]", (unsigned)p);
         }
-        break;
+        say(c, &file,
+            ")) {\n        return false;\n    }\n    *gave = %u;\n"
+            "    return true;\n}\n",
+            (unsigned)body->results);
+    }
+
+    // And which chunk each of them belongs to. The number is where the body
+    // is in the module, which is what this file names them by; the name is
+    // held against what is there, so a file written from another version of
+    // the program refuses rather than putting one body's C under another
+    // body's name.
+    say(c, &file,
+        "\nstatic bool bound(KestRuntime *rt) {\n    return true");
+    for (uint32_t i = 0; i < c->count; i++) {
+        if (!c->bodies[i].written || c->bodies[i].symbol == NULL) {
+            continue;
+        }
+        say(c, &file, " &&\n           kest_native_at(rt, %u, \"%s\", kn_%u)",
+            i, c->bodies[i].symbol, i);
+    }
+    say(c, &file, ";\n}\n");
+
+    // And the way in: this file is a host of the program it was written from,
+    // because half of that program may still be the machine's to run. It
+    // builds the same program, binds what it wrote, and calls `main` -- and
+    // what answers `main` is whichever of the two engines holds it.
+    const Body *way_in = NULL;
+    for (uint32_t i = 0; entry != NULL && i < c->count; i++) {
+        if (c->bodies[i].symbol != NULL &&
+            strcmp(c->bodies[i].symbol, entry) == 0) {
+            way_in = &c->bodies[i];
+            break;
+        }
+    }
+    // The one door a program needs to say anything, provided here so that a
+    // program that writes a line is a program this can run. Everything else a
+    // host provides -- a clock, a file, what the process was started with,
+    // whatever an engine offers -- is the host's to bind and is not bound
+    // here: a file this backend wrote is half a program rather than an engine.
+    // See D1094.
+    say(c, &file,
+        "\n// What `std.io` asks the host for. Written by its length rather\n"
+        "// than to a nought, because a piece of text cut out of the middle "
+        "of\n// another does not end in one.\n"
+        "static void wrote_it(KestValue *frame, KestRuntime *runtime,\n"
+        "                     void *context) {\n"
+        "    (void)runtime;\n"
+        "    (void)context;\n"
+        "    uint32_t length = 0;\n"
+        "    const char *bytes = kest_text_bytes(frame, &length);\n"
+        "    if (bytes != NULL && length > 0) {\n"
+        "        fwrite(bytes, 1, length, stdout);\n"
+        "    }\n"
+        "}\n");
+    say(c, &file,
+        "\n// How much of a run was this file's, for whoever asks: a program\n"
+        "// that stopped is a program half of which may still have run, so it\n"
+        "// is said on the way out either way.\n"
+        "static void said_how_much(const char *saying) {\n"
+        "    if (saying == NULL) {\n        return;\n    }\n"
+        "    uint32_t ran = 0;\n"
+        "    uint64_t times = 0;\n"
+        "    for (size_t i = 0; i < sizeof(kest_entered) /\n"
+        "                           sizeof(kest_entered[0]); i++) {\n"
+        "        times += kest_entered[i];\n"
+        "        if (kest_entered[i] > 0) {\n            ran++;\n        }\n"
+        "    }\n"
+        "    fprintf(stderr, \"natives: %u written, %%u entered, %%llu "
+        "time(s)\\n\",\n"
+        "            ran, (unsigned long long)times);\n"
+        "}\n"
+        "\nint main(int argc, char **argv) {\n",
+        bound_count);
+    say(c, &file,
+        "    // The program this was written from, or another copy of it "
+        "named\n"
+        "    // on the command line. The C is half of a program and this is "
+        "the\n"
+        "    // other half; a file that has moved on since is refused by the\n"
+        "    // binding rather than run.\n"
+        "    const char *path = argc > 1 ? argv[1] : \"%s\";\n"
+        "    // Where the library is, the way anything that is not this\n"
+        "    // project's own command line finds it: the command line looks\n"
+        "    // beside itself and then where it was installed, and a host has\n"
+        "    // neither of those to go on.\n"
+        "    KestBuild *build = kest_build(path, getenv(\"KEST_LIB\"), "
+        "stderr,\n                                  KEST_FORM_TEXT, 0);\n"
+        "    if (build == NULL) {\n"
+        "        fprintf(stderr, \"`%%s` is not a program this can read\\n\","
+        "\n                path);\n"
+        "        return 1;\n"
+        "    }\n"
+        "    KestHost *host = kest_host_new();\n"
+
+        "    if (host == NULL ||\n"
+        "        !kest_host_bind(host, \"Io.write\", wrote_it, NULL)) {\n"
+        "        fprintf(stderr, \"there is no room for a host\\n\");\n"
+        "        kest_build_free(build);\n"
+        "        return 1;\n"
+        "    }\n"
+
+        "    KestRuntime *rt = kest_start(build, host, NULL);\n"
+        "    kest_host_free(host);\n"
+        "    if (rt == NULL) {\n"
+        "        kest_build_report(build, stderr, KEST_FORM_TEXT);\n"
+        "        kest_build_free(build);\n"
+        "        return 1;\n"
+        "    }\n"
+        "    if (!bound(rt)) {\n"
+        "        fprintf(stderr, \"this C was written from another `%%s`\\n\","
+        "\n                path);\n"
+        "        kest_runtime_free(rt);\n"
+        "        kest_build_free(build);\n"
+        "        return 1;\n"
+        "    }\n"
+        "    // How much of this run was this file's, when somebody asks.\n"
+        "    const char *saying = getenv(\"KEST_NATIVES\");\n"
+        "    int32_t entry = kest_entry(rt, KEST_MAIN);\n"
+        "    KestValue frame[8] = {{0}};\n"
+        "    if (entry < 0 || !kest_call(rt, entry, frame,\n"
+        "                                sizeof(frame) / sizeof(frame[0]))) "
+        "{\n"
+        "        kest_report(rt, stderr, KEST_FORM_TEXT);\n"
+        "        said_how_much(saying);\n"
+        "        kest_runtime_free(rt);\n"
+        "        kest_build_free(build);\n"
+        "        return 1;\n"
+        "    }\n"
+        "    said_how_much(saying);\n",
+        from == NULL ? "" : from);
+    // The status a run answers with, which is the command line's rule rather
+    // than the language's: a file this backend wrote is a host of the same
+    // program, and a host that answered something else would be two programs
+    // rather than one compiled two ways.
+    if (way_in != NULL && way_in->results == 1) {
+        say(c, &file,
+            "    int64_t answer = frame[0].integer;\n"
+            "    kest_runtime_free(rt);\n"
+            "    kest_build_free(build);\n"
+            "    if (answer < 0 || answer > 255) {\n"
+            "        fprintf(stderr,\n"
+            "                \"`main` answered %%lld, and an exit status "
+            "carries 0 to 255\\n\",\n"
+            "                (long long)answer);\n"
+            "        return 1;\n"
+            "    }\n"
+            "    return (int)answer;\n}\n");
+    } else {
+        say(c, &file,
+            "    kest_runtime_free(rt);\n"
+            "    kest_build_free(build);\n"
+            "    return 0;\n}\n");
     }
     if (c->out_of_memory || file.bytes == NULL) {
         return NULL;

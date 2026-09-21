@@ -2143,13 +2143,14 @@ static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
 // frame a host filled and what says something about the frame it wrote back
 // into are one walk with two sayings, and the second of them ends up here with
 // a `va_list` in its hand. See D719.
-static void failv(Vm *vm, const Frame *frame, const uint8_t *instruction,
-                  const char *code, const char *format, va_list args) {
-    uint32_t offset = (uint32_t)(instruction - frame->chunk->code);
-    KestSpan span = {kest_chunk_origin(frame->chunk, offset), 1};
-    kest_diags_in(vm->diags, frame->chunk->source);
-    // The file the instruction came from was set when it was compiled, and
-    // the machine does not change it.
+// The same, where the place is already known rather than worked out from an
+// instruction. A body the host's compiler compiled has no instruction to point
+// at and does have the source offset the resolved form carried, so it comes in
+// here and is reported exactly where the machine would have reported it. See
+// D1094.
+static void said_at(Vm *vm, const KestSource *source, KestSpan span,
+                    const char *code, const char *format, va_list args) {
+    kest_diags_in(vm->diags, source);
     kest_diags_addv(vm->diags, KEST_SEVERITY_ERROR, code, span, format, args);
 
     // And how it got here. Every frame under this one made a call, and its
@@ -2180,6 +2181,26 @@ static void failv(Vm *vm, const Frame *frame, const uint8_t *instruction,
                             "`%s` was called here", written);
         }
     }
+}
+
+static void said_here(Vm *vm, const KestSource *source, KestSpan span,
+                      const char *code, const char *format, ...) KEST_SAYS(5, 6);
+
+static void said_here(Vm *vm, const KestSource *source, KestSpan span,
+                      const char *code, const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    said_at(vm, source, span, code, format, args);
+    va_end(args);
+}
+
+static void failv(Vm *vm, const Frame *frame, const uint8_t *instruction,
+                  const char *code, const char *format, va_list args) {
+    uint32_t offset = (uint32_t)(instruction - frame->chunk->code);
+    // The file the instruction came from was set when it was compiled, and
+    // the machine does not change it.
+    KestSpan span = {kest_chunk_origin(frame->chunk, offset), 1};
+    said_at(vm, frame->chunk->source, span, code, format, args);
 }
 
 static void fail(Vm *vm, const Frame *frame, const uint8_t *instruction,
@@ -3166,6 +3187,23 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         frame->stopped_top = NULL;
         top = floor + (chunk->slot_count > arg_slots ? chunk->slot_count
                                                      : arg_slots);
+        // A run that enters a body the host's compiler compiled is that body
+        // and nothing else: there are no instructions to walk. It is entered
+        // the same way a call enters one -- the frame is pushed, the
+        // arguments are where the caller left them, and the answer goes back
+        // over them. See D1094.
+        if (chunk->native != NULL) {
+            KestValue *was_top = rt->running_top;
+            rt->running_top = floor + chunk->slot_count + chunk->stack_needed;
+            uint16_t gave = 0;
+            bool went = chunk->native(rt, floor, &gave);
+            rt->running_top = was_top;
+            rt->frame_count--;
+            if (went && returned != NULL) {
+                *returned = gave;
+            }
+            return went;
+        }
     }
     // Where the machine is, held here rather than in the frame. Every
     // instruction reads at least one byte and most read two more, and through a
@@ -5311,6 +5349,37 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // top of it: a fault inside the callee reads it to say where the
             // call was written, and a `return` comes back to it. See D869.
             frame->ip = ip;
+            // A body the host's compiler compiled runs here instead of the
+            // instructions under it. Everything around the call is the same:
+            // it is handed the frame where the caller left the arguments, it
+            // writes its answer where a `return` would, and a frame is pushed
+            // for it so that what is deep in a run, what a fault says it was
+            // called from, and what a machine says it needs are all still
+            // true of it. See D1094.
+            if (callee->native != NULL) {
+                frame = &rt->frames[rt->frame_count++];
+                frame->chunk = callee;
+                frame->ip = callee->code;
+                frame->base = base;
+                uint16_t gave = 0;
+                // Where the machine's stack has got to, for the collector: a
+                // body written in C keeps what it is working on in the frame
+                // it was handed, and a walk of the stack has to reach the end
+                // of it. What it was is put back, because a native called
+                // from inside a host call is standing on one.
+                KestValue *was_top = rt->running_top;
+                rt->running_top = base + callee->slot_count +
+                                  callee->stack_needed;
+                bool went = callee->native(rt, base, &gave);
+                rt->running_top = was_top;
+                rt->frame_count--;
+                frame = &rt->frames[rt->frame_count - 1];
+                if (!went) {
+                    return false;
+                }
+                top = base + gave;
+                break;
+            }
             frame = &rt->frames[rt->frame_count++];
             frame->chunk = callee;
             frame->ip = callee->code;
@@ -7693,6 +7762,39 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
         memcpy(frame, floor, sizeof(KestValue) * returned);
     }
     return true;
+}
+
+bool kest_native_at(KestRuntime *runtime, uint32_t index, const char *symbol,
+                    KestNativeBody body) {
+    if (runtime == NULL || runtime->module == NULL || body == NULL ||
+        symbol == NULL || index >= runtime->module->count) {
+        return false;
+    }
+    KestChunk *chunk = runtime->module->functions[index];
+    // The whole name rather than the one somebody wrote: two copies of a
+    // generic are two bodies and are told apart by what follows the `#`.
+    if (chunk->name == NULL || strcmp(chunk->name, symbol) != 0 ||
+        chunk->native != NULL) {
+        return false;
+    }
+    chunk->native = body;
+    return true;
+}
+
+bool kest_native_stopped(KestRuntime *runtime, uint32_t offset,
+                         const char *code, const char *message) {
+    if (runtime == NULL) {
+        return false;
+    }
+    KestSpan span = {offset, 1};
+    const KestSource *source =
+        runtime->frame_count > 0
+            ? runtime->frames[runtime->frame_count - 1].chunk->source
+            : NULL;
+    // The words are the body's, already put together: what a refusal says is
+    // the machine's sentence and a compiled body says the same one.
+    said_here(runtime, source, span, code, "%s", message);
+    return false;
 }
 
 void kest_collected(KestRuntime *runtime,

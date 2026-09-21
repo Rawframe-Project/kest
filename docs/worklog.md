@@ -39476,3 +39476,47 @@ after the figure a hole quotes moved -- the build grew by two fields, so what
 compiling `lib/std/text.kest` costs moved by sixteen bytes and the reference
 and the hole both say the new number. And `tools/check-c.sh` over the tree, and
 the two workloads under `perf stat -e instructions` compiled both ways.
+
+## One process, two engines
+
+The C the last entry wrote had nowhere to run: it was a file, and a program is
+what the machine has. A chunk may carry a C function now, and a call enters it
+instead of the instructions -- with a frame pushed for it, so how deep a run
+is and what a fault says it was called from are still true of it, and with the
+source offset the resolved form carries, so a refusal inside compiled code is
+reported at the same line, with the same code and the same calls under it, as
+the same program interpreted.
+
+The file this backend writes is now a host of the program it was written from:
+it builds that program, binds the bodies it wrote by index with the name held
+against what is there, and calls `main`. Which engine runs a body is a fact
+about the build rather than about the program. It binds one door -- `Io.write`
+-- because a program needs to be able to say something and everything else a
+host provides is an engine's business.
+
+What it is worth on a real program: `bench/control.kest` with its one writable
+body compiled runs an actor-round in 1,144 machine instructions against 1,333
+interpreted, by the delta method over twice the rounds. Fourteen per cent, for
+the fifth of that loop which is the call; the other four fifths are array
+elements read and written in `main`, which this backend cannot write yet. The
+two scalar programs that are written whole are 13.5 and 23 times fewer
+instructions than the machine, startup and compiling included.
+
+And the check grew from five programs written for it to every program in this
+tree that runs -- thirty of them, compared on their answer *and* their words,
+with one more thing asked of each: that the compiled half was entered at all.
+Two engines that agree agree when one of them never started, and a file
+written by this backend now counts its own crossings so a run can be asked.
+
+That broadening caught a miscompilation in its first minutes: a piece of text
+in a body was written into the C as the address it had in the compiling
+process, because the class beside a constant says int, float or text and this
+backend was reading it as what a layout says. The generated program
+segfaulted. Text is refused now, and the five bodies that were quietly wrong
+are five the machine runs.
+
+See D1094.
+
+**Runs:** `make check`, `tools/check-c.sh` over the tree, and the two
+workloads and `bench/control.kest` under `perf stat -e instructions` both
+ways.

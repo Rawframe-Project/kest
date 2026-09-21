@@ -54,7 +54,8 @@ written" >>"$said"
     fi
     written=$((written + ${counted% *}))
     bodies=$((bodies + ${counted#* }))
-    if $cc -O1 -c -o "$work"/wrote.o "$work"/wrote.c 2>"$work"/why; then
+    if $cc -O1 -Iinclude -c -o "$work"/wrote.o "$work"/wrote.c \
+            2>"$work"/why; then
         compiled=$((compiled + 1))
         continue
     fi
@@ -200,6 +201,17 @@ fn main() -> i32 {
     return i32(total % 251)
 }
 PROGRAM
+cat >"$work"/programs/shifted.kest <<'PROGRAM'
+module shifted
+
+fn main() -> i32 {
+    let by: i32 = 0
+    for i in 0..3 {
+        by -= i
+    }
+    return 1 << by
+}
+PROGRAM
 cat >"$work"/programs/stopped.kest <<'PROGRAM'
 module stopped
 
@@ -226,7 +238,8 @@ for file in "$work"/programs/*.kest; do
         wrong=$((wrong + 1))
         continue
     fi
-    if ! $cc -O2 -o "$work"/one "$work"/one.c libkest.a -lm 2>"$work"/why; then
+    if ! $cc -O2 -Iinclude -o "$work"/one "$work"/one.c libkest.a -lm \
+            2>"$work"/why; then
         {
             echo "    the C written for $name will not compile:"
             sed 's/^/        /' "$work"/why | head -5
@@ -234,9 +247,13 @@ for file in "$work"/programs/*.kest; do
         wrong=$((wrong + 1))
         continue
     fi
-    machine_said=$(./kest run "$file" 2>/dev/null </dev/null)
+    # Both streams, because what a program writes and what a refusal says are
+    # both what it said: the program that stops while it runs is here to hold
+    # a compiled body's refusal to being the machine's refusal, word for word
+    # and with the same line under it.
+    machine_said=$(./kest run "$file" 2>&1 </dev/null)
     machine_was=$?
-    c_said=$("$work"/one 2>/dev/null </dev/null)
+    c_said=$(KEST_LIB=lib/ "$work"/one "$file" 2>&1 </dev/null)
     c_was=$?
     if [ "$machine_was" -ne "$c_was" ]; then
         echo "    $name answers $machine_was run by the machine and $c_was \
@@ -249,20 +266,82 @@ compiled as C" >>"$said"
         wrong=$((wrong + 1))
         continue
     fi
+    # And that any of it ran. Two engines that answer alike answer alike when
+    # one of them never started, so what this reads is the run's own count of
+    # which bodies it entered: a backend whose C is never called is a backend
+    # nothing here would notice. Every program above is written whole, so at
+    # least one of its bodies has to have been the C's.
+    ran=$(KEST_LIB=lib/ KEST_NATIVES=1 "$work"/one "$file" 2>&1 >/dev/null |
+          sed -n 's/^natives: [0-9]* written, \([0-9]*\) entered.*$/\1/p')
+    if [ -z "$ran" ] || [ "$ran" -eq 0 ]; then
+        echo "    nothing written for $name was entered, so what ran was the \
+machine" >>"$said"
+        wrong=$((wrong + 1))
+        continue
+    fi
     both=$((both + 1))
 done
 
-# One of them is a program that stops while it is running, and both halves have
-# to stop: a backend that wrote a division by nought as one the host's machine
+# And every program in this tree that runs, run both ways. The ones above are
+# written for this check and are what it can write; these are what somebody
+# wrote for another reason, which is where a fixture's blind spot shows. A
+# program that asks the host for something a file this backend wrote does not
+# provide -- a clock, a file, whatever an engine offers -- cannot be run this
+# way, and is counted rather than passed over quietly.
+alike=0
+wants_a_host=0
+for file in "$@"; do
+    if ! grep -q '^fn main(' "$file"; then
+        continue
+    fi
+    if ! ./kest emit --c "$file" >"$work"/one.c 2>/dev/null; then
+        continue
+    fi
+    if ! grep -q '^int main' "$work"/one.c; then
+        continue
+    fi
+    if ! $cc -O2 -Iinclude -o "$work"/one "$work"/one.c libkest.a -lm \
+            2>"$work"/why; then
+        {
+            echo "    the C written for $file will not link:"
+            sed 's/^/        /' "$work"/why | head -5
+        } >>"$said"
+        wrong=$((wrong + 1))
+        continue
+    fi
+    machine_said=$(./kest run "$file" 2>&1 </dev/null)
+    machine_was=$?
+    c_said=$(KEST_LIB=lib/ "$work"/one "$file" 2>&1 </dev/null)
+    c_was=$?
+    case "$c_said" in
+    *"the host does not provide"*)
+        wants_a_host=$((wants_a_host + 1))
+        continue
+        ;;
+    esac
+    if [ "$machine_was" -ne "$c_was" ] || [ "$machine_said" != "$c_said" ]; then
+        echo "    $file answers $machine_was run by the machine and $c_was \
+with what was written as C, or says something else" >>"$said"
+        wrong=$((wrong + 1))
+        continue
+    fi
+    alike=$((alike + 1))
+done
+
+# Two of them are programs that stop while they are running, and both halves
+# have to stop: a backend that wrote a division by nought as one the host's machine
 # traps on, or as one it quietly answers, would be a program that means
 # something else. Counted rather than assumed, because a program that stops is
 # one whose answer is the same either way for the wrong reason.
-stops=$(./kest run "$work"/programs/stopped.kest 2>/dev/null </dev/null; echo $?)
-if [ "$stops" -eq 0 ]; then
-    echo "    the program written to stop while it runs does not stop" \
-        >>"$said"
-    wrong=$((wrong + 1))
-fi
+for stopping in stopped shifted; do
+    stops=$(./kest run "$work"/programs/$stopping.kest 2>/dev/null </dev/null
+            echo $?)
+    if [ "$stops" -eq 0 ]; then
+        echo "    $stopping.kest is written to stop while it runs and does \
+not stop" >>"$said"
+        wrong=$((wrong + 1))
+    fi
+done
 
 if [ "$wrong" -ne 0 ]; then
     echo "$wrong thing(s) wrong with the C this backend wrote"
@@ -270,4 +349,6 @@ if [ "$wrong" -ne 0 ]; then
     exit 1
 fi
 echo "$written of $bodies body(s) over $compiled program(s) written as C the \
-host compiler takes, and $both program(s) run both ways for the same answer"
+host compiler takes, $both program(s) written here and $alike of this tree's \
+own run both ways for the same answer and the same words, and $wants_a_host \
+that ask the host for what a file this wrote does not provide"

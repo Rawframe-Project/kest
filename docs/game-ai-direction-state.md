@@ -193,34 +193,58 @@ check writes itself run both ways for the same answer, and how much was left
 out read back and held to being neither nothing nor everything. Two backstop
 holes have been seen catching it.
 
+## D1094 — the seam, and the first number from a real program
+
+A chunk may carry a C function now, and a call enters it instead of the
+instructions: a frame is pushed for it, a refusal inside it is reported at the
+same line with the same words, and the file this backend writes is a host of
+the program it was written from — it builds that program, binds what it wrote,
+and calls `main`. Which engine runs a body is a fact about the build.
+
+`bench/control.kest` with its one writable body compiled, by the delta method
+over twice the rounds:
+
+| | an actor-round |
+| --- | --- |
+| the machine | 1,333 instructions |
+| with `decide` compiled | 1,144 instructions |
+
+**Fourteen per cent, for the fifth of that loop which is the call. The other
+four fifths are array elements read and written in `main`.** That is the
+measurement that says what to write next, and it says elements.
+
+The check now runs thirty of this tree's own programs both ways, on their
+answer and their words, and asks each one whether the compiled half was
+entered at all. Its first sweep caught a miscompilation: text constants were
+written into the C as addresses in the compiling process.
+
 ## Open, in priority order
 
 1. **Arrays and elements in the C backend**, which is what a frame of a game
    is made of: `LOAD`/`PUT` through an element place, `len`, and the bounds
-   and generation checks the runtime does, written as the same calls. Then
-   `bench/kernel.kest` and `bench/rules.kest` measured against the machine and
-   against `bench/rules.cpp`, which is D1092's re-evaluation trigger and the
-   first honest test of the release engine.
-2. **One process, two engines.** A body the machine runs calling a body the
-   host's compiler compiled, and back. It is a runtime question rather than a
-   backend one: the generated function has to be reachable from a `call`
-   instruction and has to be able to call back in. Nothing ships without it.
-3. The other half of a game: a world of tens of thousands of entities with
+   and generation checks the runtime does — written out rather than called,
+   because the layout is known while compiling and the machine's own walk of
+   it is a third of `bench/rules.kest` (D1028). It needs the other half of
+   D1094 as well: a body that can hold a handle keeps its frame where the
+   interpreter would, so the collector sees it. Then `bench/kernel.kest` and
+   `bench/rules.kest` measured against the machine and against
+   `bench/rules.cpp`, which is D1092's re-evaluation trigger.
+2. The other half of a game: a world of tens of thousands of entities with
    references into it, measured the same way, because the rules workload is
    small arrays and a cold allocation path.
-4. Daslang's AOT path, measured and named as AOT, so the comparison is against
+3. Daslang's AOT path, measured and named as AOT, so the comparison is against
    what its documentation points at rather than against its interpreter.
-5. What `kest check` prints by default: the declaration listing is output
+4. What `kest check` prints by default: the declaration listing is output
    rather than verification and costs as much as checking at scale.
-3. Measure the edit loop the way an agent drives it: edit → check → diagnostic,
+5. Measure the edit loop the way an agent drives it: edit → check → diagnostic,
    including process start, on the 100k corpus. Only then decide whether
    persistence or incrementality is worth its correctness cost.
-4. Game-shaped runtime profile: where the ceiling actually is (dispatch, value
+6. Game-shaped runtime profile: where the ceiling actually is (dispatch, value
    movement, allocation, collector, host crossing) on `examples/slice` and the
    engine, before touching the VM.
-5. Comparators: Luau in its best realistic gameplay mode, Daslang interpreter
-   and AOT named separately. Not before our own numbers are understood.
-6. The AI mistake corpus and the silent-error interception measurement.
+7. Comparators, kept in step as the engines move: Luau in its best realistic
+   gameplay mode, Daslang's interpreter and its AOT named separately.
+8. The AI mistake corpus and the silent-error interception measurement.
 
 ## Rejected so far
 

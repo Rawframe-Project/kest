@@ -36998,3 +36998,96 @@ this library to libc without `<math.h>` (D970). It dominates any float
 workload that uses `%`, in both engines: the float workload above spends more
 than half its instructions there when the remainder is left in. It is not part
 of this decision and is written down here because this is where it was found.
+
+## D1094. One process, two engines: what a call into compiled code is
+
+D1093 wrote the C. This is the seam it runs through, and the shape of it is
+the thing a reader should be able to hold in their head: **a chunk may carry a
+C function, and a call enters it instead of the instructions.** Everything
+around the call is unchanged.
+
+```c
+typedef bool (*KestNativeBody)(KestRuntime *runtime, KestValue *frame,
+                               uint16_t *gave);
+```
+
+The arguments are where the caller left them, the answer goes where a `return`
+would put it, and `gave` is how many slots came back. A frame is pushed for it
+first, so how deep a run is, what a fault says it was called from, and what a
+machine says it needs are all still true of a body the host's compiler
+compiled. Two places enter one: `call`, and the entry of a run.
+
+**Why a frame for something that has no instructions.** Because everything
+that reads the machine reads frames. Without one, a refusal inside compiled
+code would have no call notes under it, `kest_frames_deep` would be short by
+one, and a host asking what a run needs would be told the wrong number. The
+frame costs three stores at a crossing that already costs a call.
+
+**A refusal is the same refusal.** `kest_native_stopped` takes the source
+offset the resolved form carries beside each operation, so a division by
+nought in compiled code is reported with the same code, the same line, the
+same caret and the same calls under it as the same program interpreted. That
+is held rather than claimed: the check runs both engines and compares *both*
+streams, so a wording that drifts is a failing gate. It is why the C says
+`a shift of -3 is not a count` and not something shorter.
+
+**What binds.** `kest_native_at(rt, index, symbol, body)` binds by index and
+holds the symbol against what is there. A generated file and a program that
+has moved on since are two programs; binding by number alone would put one
+body's C under another body's name, quietly. The file this backend writes is
+also a host of the program it was written from: it builds the same program,
+binds what it wrote, and calls `main`, so *which engine runs a body is a
+property of the build rather than of the program*.
+
+**What that host provides is one door.** `Io.write`, which is what a program
+needs to say anything. A clock, a file, the words a process was started with,
+whatever an engine offers: those are the host's, and a file this backend wrote
+is half a program rather than an engine. Nineteen programs in this tree ask
+for more than that and are counted rather than passed over.
+
+**What it is worth, measured.** Whole processes, instruction counts, this
+machine:
+
+| program | the machine | with the C | |
+| --- | --- | --- | --- |
+| an actor's rule over four million rounds | 3.06 G | 0.226 G | 13.5× |
+| a float step over four million rounds | 3.34 G | 0.145 G | 23× |
+| `bench/control.kest`, one body of it compiled | 1.34 G | 1.15 G | 1.16× |
+
+The third is the one to read. It is a real program: five thousand actors, two
+hundred rounds, arrays of state and health, and one body — `decide` — that the
+backend can write. By the delta method over twice the rounds, an actor-round
+costs **1,333 machine instructions interpreted and 1,144 with that one body
+compiled**: 189 saved, fourteen per cent, for the fifth of the loop that is
+the call. The other four fifths are the loop in `main` reading and writing
+array elements, which this backend cannot write yet.
+
+**So the next thing is elements, and the measurement says so rather than
+somebody's plan.**
+
+**What a written body may not do yet, and why.** It may not call a body the
+backend did not write. The collector walks the machine's stack for roots and a
+C local is not on it, so a body holding a handle in a local across a call that
+allocates is a body whose handle can be collected under it. Nothing written
+today can hold a handle — every operation that makes one is refused — and the
+day one can, the shape changes: a body that can allocate will keep its frame
+and its operands where the interpreter would have, at `base`, and set
+`running_top` before each allocating call, so the collector sees them without
+knowing anything about C. A body that cannot allocate keeps registers, which
+is what the sixteen-to-twenty-three times is made of.
+
+**And what it does not do.** Fuel is not spent inside compiled code: a loop in
+a native body runs without a budget, which a host bounding untrusted code has
+to know. A breakpoint inside a body called from compiled code refuses rather
+than stops. Both are the dev engine's business and both are written down here
+rather than discovered.
+
+**A defect this found within an hour of existing.** Broadening the check from
+five programs written for it to every program in this tree caught a
+miscompilation: a piece of text in a body was written into the C as the
+address it had *in the compiling process*, because the class beside a constant
+is what a chunk says about it and this backend read it as what a layout says.
+The generated program segfaulted in a text comparison. Text is refused now
+until there is a way to write bytes that outlive the compiler, and the check
+that found it is the one that runs thirty of this tree's own programs both
+ways.
