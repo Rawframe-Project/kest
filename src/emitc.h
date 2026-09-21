@@ -25,8 +25,9 @@ typedef struct KestEmitC KestEmitC;
 
 // Somewhere to write bodies into. The arena is the caller's and outlives the
 // bodies, which are freed one at a time: everything kept here is copied into
-// it rather than pointed at.
-KestEmitC *kest_emitc_new(KestArena *arena);
+// it rather than pointed at. The module is what is being compiled, read for
+// how a value is laid out and for what a body promised.
+KestEmitC *kest_emitc_new(KestArena *arena, const KestModule *module);
 
 // One body, in the shape a backend is handed one. It answers false only when
 // there was no memory: a body it cannot write is not a failure of the walk.

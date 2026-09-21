@@ -207,9 +207,12 @@ The hybrid binary is there too (D1094): a chunk may carry a C function, a call
 enters it instead of the instructions, and a refusal inside it is reported at
 the same line with the same words. On `bench/control.kest` -- a real program
 with one writable body -- an actor-round costs 1,333 machine instructions
-interpreted and 1,144 with that body compiled. The other four fifths of that
-loop are array elements, which the backend cannot write yet, and that is what
-says what to write next.
+interpreted and 1,144 with that body compiled. Elements followed (D1095), and
+on `bench/kernel.kest` the release engine runs a body-step in 119 machine
+instructions against the machine's 529 and Luau's native code generation at
+158, with `g++ -O2` at 23 -- one workload, and the one most favourable to a
+native backend. The gameplay workload needs tagged elements, text and bodies
+that allocate before it can be measured at all.
 
 ## What the closeout shipped, and what it rests on
 

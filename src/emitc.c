@@ -41,6 +41,12 @@ typedef struct {
 
 struct KestEmitC {
     KestArena *arena;
+    // What the module says about itself, which is two things this backend
+    // asks: how a value is laid out where memory is shared, and what a body
+    // it is about to call promised. Both are known before any body is
+    // compiled, so a call forward is answered the same as a call back. See
+    // D1095.
+    const KestModule *module;
     // Where what is read while one body is written goes: how deep the stack
     // is at each operation, and which of them a branch lands on. It is put
     // back between bodies rather than kept, because a program is as many of
@@ -131,6 +137,10 @@ typedef struct {
     KestEmitC *c;
     const KestIrBody *body;
     Body *into;
+    // Whether this body may hold a handle in a local, which is whether
+    // nothing it does can reach the heap. Worked out once before anything is
+    // written.
+    bool no_heap;
     uint32_t *depth;
     bool *known;
     bool *landed;
@@ -283,6 +293,57 @@ static bool depths(Walk *walk) {
     return true;
 }
 
+// Whether nothing this body does can reach the heap. It is what says a handle
+// may sit in a C local: the collector walks the machine's stack for roots and
+// a local is not on it, so a body holding a handle across anything that can
+// allocate is a body whose handle can go out from under it. A body that
+// cannot allocate at all cannot be in the middle of a collection, so there is
+// nothing to see. What a call reaches is read off the callee's declaration,
+// which the module carries before any body is compiled. See D1095.
+static bool reaches_no_heap(const KestEmitC *c, const KestIrBody *body) {
+    for (uint32_t i = 0; i < body->op_count; i++) {
+        const KestIrOp *op = &body->ops[i];
+        if ((op->effects & (KEST_IR_EFFECT_ALLOCATES | KEST_IR_EFFECT_HOST |
+                            KEST_IR_EFFECT_MOVES)) != 0) {
+            return false;
+        }
+        if (op->kind == KEST_IR_CALL_VALUE || op->kind == KEST_IR_CALL_HOST) {
+            return false;
+        }
+        if (op->kind != KEST_IR_CALL) {
+            continue;
+        }
+        if (c->module == NULL || op->imm[0] >= c->module->count ||
+            !c->module->functions[op->imm[0]]->no_alloc) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Whether one of these is a run of scalars this backend can move itself.
+// Anything with a tag in it is moved by reading the tag and then by what that
+// says, which is a walk rather than a run of moves; a piece of text is two
+// slots and an address into the compiling process is not one of them. Both
+// are bodies the machine runs, for now. See D1095.
+static bool plain_layout(const KestLayout *layout) {
+    if (layout == NULL || layout->tagged) {
+        return false;
+    }
+    for (uint16_t i = 0; i < layout->count; i++) {
+        switch (layout->pieces[i].kind) {
+        case KEST_L_TEXT:
+        case KEST_L_TAG:
+        case KEST_L_PAYLOAD:
+        case KEST_L_NOTHING:
+            return false;
+        default:
+            break;
+        }
+    }
+    return true;
+}
+
 // Where an operand sits, written the way the file writes it. Small buffers
 // rather than one string built up, because every line below names two or three
 // of these and a shared one would name the last of them three times.
@@ -295,6 +356,82 @@ static void at_stack(Where into, uint32_t slot) {
 static void at_frame(Where into, uint32_t slot) {
     snprintf(into, sizeof(Where), "f[%u]", slot);
 }
+
+// One element moved between memory and slots, written out rather than walked.
+// Which piece sits where is the module's and is known while compiling, so
+// what the machine does with a loop over pieces is a run of moves here --
+// and that loop is a third of `bench/rules.kest`. Every move is a `memcpy` of
+// the width the piece is, which is what the machine does and is what a C
+// compiler turns into one load or one store. See D1028 and D1095.
+static void move_pieces(Walk *walk, const KestLayout *layout, uint32_t base,
+                        bool reading) {
+    KestEmitC *c = walk->c;
+    Text *out = &walk->into->wrote;
+    Where slot;
+    for (uint16_t i = 0; i < layout->count; i++) {
+        at_stack(slot, base + i);
+        unsigned offset = layout->pieces[i].offset;
+        const char *width = NULL;
+        bool real = false;
+        switch (layout->pieces[i].kind) {
+        case KEST_L_I8:
+            width = "int8_t";
+            break;
+        case KEST_L_I16:
+            width = "int16_t";
+            break;
+        case KEST_L_I32:
+            width = "int32_t";
+            break;
+        case KEST_L_U8:
+        case KEST_L_BOOL:
+        case KEST_L_HELD:
+            width = "uint8_t";
+            break;
+        case KEST_L_U16:
+            width = "uint16_t";
+            break;
+        case KEST_L_U32:
+            width = "uint32_t";
+            break;
+        case KEST_L_F32:
+            width = "float";
+            real = true;
+            break;
+        case KEST_L_F64:
+            width = "double";
+            real = true;
+            break;
+        default:
+            break;
+        }
+        if (width == NULL) {
+            // A whole slot either way, which is what the machine does for
+            // everything it has no narrower name for.
+            if (reading) {
+                say(c, out, "        memcpy(&%s, at + %u, 8);\n", slot,
+                    offset);
+            } else {
+                say(c, out, "        memcpy(at + %u, &%s, 8);\n", offset,
+                    slot);
+            }
+            continue;
+        }
+        if (reading) {
+            say(c, out,
+                "        {\n            %s piece;\n"
+                "            memcpy(&piece, at + %u, sizeof piece);\n"
+                "            %s.%s = piece;\n        }\n",
+                width, offset, slot, real ? "real" : "integer");
+            continue;
+        }
+        say(c, out,
+            "        {\n            %s piece = (%s)%s.%s;\n"
+            "            memcpy(at + %u, &piece, sizeof piece);\n        }\n",
+            width, width, slot, real ? "real" : "integer", offset);
+    }
+}
+
 
 // What arithmetic is in C, by what it answers. Three `%s`: where the answer
 // goes and the two it is worked out from, in that order, and the answer's
@@ -443,6 +580,77 @@ static void write_const(Walk *walk, const KestIrOp *op) {
     }
 }
 
+// One of an array, read into slots or written out of them. The two things
+// the machine asks before it touches one -- that the handle is an array and
+// that the index is inside it -- are a call, because they are the same two
+// questions however wide an element is; the moving is written out, because
+// which piece sits where is known while compiling. See D1095.
+static bool write_elem(Walk *walk, const KestIrOp *op,
+                       const KestIrPlace *place, uint32_t handle,
+                       uint32_t value, bool reading) {
+    KestEmitC *c = walk->c;
+    Text *out = &walk->into->wrote;
+    if (!walk->no_heap) {
+        cannot(walk, "a handle held where this body can reach the heap");
+        return false;
+    }
+    if (c->module == NULL || place->layout >= c->module->layout_count) {
+        cannot(walk, "an element of a shape this module has not laid out");
+        return false;
+    }
+    const KestLayout *layout = &c->module->layouts[place->layout];
+    if (!plain_layout(layout)) {
+        cannot(walk, "an element with a tag or a piece of text in it");
+        return false;
+    }
+    if (layout->slots != place->slots) {
+        cannot(walk, "an element read at a width the layout does not have");
+        return false;
+    }
+    Where held;
+    Where index;
+    at_stack(held, handle);
+    at_stack(index, handle + 1);
+    say(c, out,
+        "    {\n        unsigned char *at = kest_elem_at(rt, %s, %s.integer, "
+        "%u, %u);\n"
+        "        if (at == NULL) {\n            return false;\n        }\n",
+        held, index, (unsigned)place->offset, op->span.offset);
+    move_pieces(walk, layout, value, reading);
+    say(c, out, "    }\n");
+    return true;
+}
+
+// A field read through an address that was worked out before it. The address
+// is the program's to hold -- an element of an array, and nothing moves under
+// it while it is held, which is what D931 and D996 make true -- so there is
+// nothing to check here and nothing to call.
+static bool write_at(Walk *walk, const KestIrPlace *place, uint32_t value,
+                     uint32_t address) {
+    KestEmitC *c = walk->c;
+    if (!walk->no_heap) {
+        cannot(walk, "a handle held where this body can reach the heap");
+        return false;
+    }
+    if (c->module == NULL || place->layout >= c->module->layout_count) {
+        cannot(walk, "a field of a shape this module has not laid out");
+        return false;
+    }
+    const KestLayout *layout = &c->module->layouts[place->layout];
+    if (!plain_layout(layout) || layout->slots != place->slots) {
+        cannot(walk, "a field with a tag or a piece of text in it");
+        return false;
+    }
+    Where held;
+    at_stack(held, address);
+    say(c, &walk->into->wrote,
+        "    {\n        unsigned char *at = (unsigned char *)%s.object + %u;\n",
+        held, (unsigned)place->offset);
+    move_pieces(walk, layout, value, true);
+    say(c, &walk->into->wrote, "    }\n");
+    return true;
+}
+
 // Where a branch goes: the operation it lands on, or nowhere when this way
 // there leaves less than the operation is written for. The second is the edge
 // no program takes, which `arrives` explains.
@@ -490,6 +698,28 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         break;
     case KEST_IR_LOAD: {
         const KestIrPlace *place = &body->places[op->place];
+        if (place->kind == KEST_IR_PLACE_ELEM) {
+            // The handle and the index are the two slots under what this
+            // leaves, and whether they are read away is which of the two
+            // element reads it is: one that consumes them is an index, and
+            // one that does not is a place a write is coming to.
+            uint32_t handle = reads == 0 ? walk->stack - 2 : base;
+            if (!write_elem(walk, op, place, handle, base, true)) {
+                break;
+            }
+            break;
+        }
+        if (place->kind == KEST_IR_PLACE_AT) {
+            // An address worked out before this, and how far into what it
+            // points at the field sits. The machine has an instruction that
+            // does this and the element read before it in one (D1044); here
+            // the two are two lines the host's compiler puts together itself.
+            if (!write_at(walk, place, base, reads == 0 ? walk->stack - 1
+                                                        : base)) {
+                break;
+            }
+            break;
+        }
         if (place->kind != KEST_IR_PLACE_SLOT) {
             cannot(walk, "a place that is not a run of the frame");
             break;
@@ -503,6 +733,16 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
     }
     case KEST_IR_PUT: {
         const KestIrPlace *place = &body->places[op->place];
+        if (place->kind == KEST_IR_PLACE_ELEM) {
+            // The handle, the index, and then what is being written, which is
+            // what the machine pops in that order.
+            if (reads < 3) {
+                cannot(walk, "a write of an element with nothing to write");
+                break;
+            }
+            write_elem(walk, op, place, base, base + 2, false);
+            break;
+        }
         if (place->kind != KEST_IR_PLACE_SLOT) {
             cannot(walk, "a place that is not a run of the frame");
             break;
@@ -750,6 +990,43 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         at_stack(second, base);
         say(c, out, "    %s.integer = !%s.integer;\n", first, second);
         break;
+    case KEST_IR_ADDR: {
+        const KestIrPlace *place = &body->places[op->place];
+        if (place->kind != KEST_IR_PLACE_ELEM) {
+            cannot(walk, "the address of a place this does not take one of");
+            break;
+        }
+        if (!walk->no_heap) {
+            cannot(walk, "a handle held where this body can reach the heap");
+            break;
+        }
+        if (reads != 2 || leaves != 1) {
+            cannot(walk, "an address of something other than one of a run");
+            break;
+        }
+        at_stack(first, base);
+        at_stack(second, base + 1);
+        say(c, out,
+            "    %s.object = kest_elem_at(rt, %s, %s.integer, 0, %u);\n"
+            "    if (%s.object == NULL) {\n        return false;\n    }\n",
+            first, first, second, op->span.offset, first);
+        break;
+    }
+    case KEST_IR_LEN: {
+        if (reads != 1 || leaves != 1) {
+            cannot(walk, "a length of something other than one thing");
+            break;
+        }
+        if (!walk->no_heap) {
+            cannot(walk, "a handle held where this body can reach the heap");
+            break;
+        }
+        at_stack(first, base);
+        say(c, out, "    if (!kest_elem_count(rt, %s, %u, &%s.integer)) {\n"
+                    "        return false;\n    }\n",
+            first, op->span.offset, first);
+        break;
+    }
     case KEST_IR_CALL: {
         uint32_t which = op->imm[0];
         if (op->imm[1] != reads) {
@@ -889,13 +1166,14 @@ static void say_body(const KestIrBody *body) {
     }
 }
 
-KestEmitC *kest_emitc_new(KestArena *arena) {
+KestEmitC *kest_emitc_new(KestArena *arena, const KestModule *module) {
     KestEmitC *c = KEST_ARENA_NEW(arena, KestEmitC);
     if (c == NULL) {
         return NULL;
     }
     memset(c, 0, sizeof(*c));
     c->arena = arena;
+    c->module = module;
     c->scratch = kest_arena_new();
     if (c->scratch == NULL) {
         return NULL;
@@ -957,6 +1235,7 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
     memset(walk.known, 0, sizeof(bool) * many);
     memset(walk.landed, 0, sizeof(bool) * many);
 
+    walk.no_heap = reaches_no_heap(c, body);
     if (depths(&walk)) {
         write_head(c, &into->wrote, into, c->count - 1);
         say(c, &into->wrote, " {\n");
@@ -1074,6 +1353,7 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "// and the machine holds the other half. See D1093 and D1094.\n"
         "#include <stdio.h>\n"
         "#include <stdlib.h>\n"
+        "#include <string.h>\n"
         "\n"
         "#include \"kest.h\"\n"
         "\n"
@@ -1090,7 +1370,12 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "                    bool (*body)(KestRuntime *, KestValue *,\n"
         "                                 uint16_t *));\n"
         "bool kest_native_stopped(KestRuntime *runtime, uint32_t offset,\n"
-        "                         const char *code, const char *message);\n\n");
+        "                         const char *code, const char *message);\n"
+        "unsigned char *kest_elem_at(KestRuntime *runtime, KestValue handle,\n"
+        "                            int64_t index, uint16_t offset,\n"
+        "                            uint32_t where);\n"
+        "bool kest_elem_count(KestRuntime *runtime, KestValue handle,\n"
+        "                     uint32_t where, int64_t *into);\n\n");
     if (c->wants_library) {
         say(c, &file,
             "// And the two answers this file does not work out for itself:\n"

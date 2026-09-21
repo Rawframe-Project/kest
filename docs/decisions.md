@@ -37091,3 +37091,79 @@ The generated program segfaulted in a text comparison. Text is refused now
 until there is a way to write bytes that outlive the compiler, and the check
 that found it is the one that runs thirty of this tree's own programs both
 ways.
+
+## D1095. Elements written out, and the first workload the release engine wins
+
+D1094's measurement said the next thing to write was array elements, because
+four fifths of a gameplay loop is reading one, changing it and writing it
+back. This is that, and the number it produced is the first one that answers
+the mission's question on a whole workload.
+
+**Two doors and a run of moves.** What the machine asks before it touches an
+element is two things — that the handle is an array rather than something else
+or a lend the host took back, and that the index is inside it — and those are
+the same two questions however wide an element is, so they are a call:
+`kest_elem_at` answers the bytes or refuses in the machine's own words.
+Everything after that is written out. Which piece of an element sits at which
+byte, and how wide each is, is the module's answer and is known while
+compiling, so what the machine does with a loop over a layout is a run of
+`memcpy`s here — each one the width the piece is, which a C compiler turns
+into a single load or store. That loop is a third of `bench/rules.kest`
+(D1028), and this is what removing it looks like.
+
+`kest_elem_count` is the same shape for `len`, refusing what the machine
+refuses: a host asking `kest_array_length` about something that is not an
+array is answered nought, and a program asking is refused, because a host may
+ask about anything and a program may not.
+
+**What may hold a handle.** Only a body that cannot reach the heap. The
+collector walks the machine's stack for roots and a C local is not on it, so a
+body holding a handle across anything that allocates is a body whose array can
+go out from under it. `reaches_no_heap` reads that off the body: no operation
+with the allocating, host or moving effects, no call through a value, and
+every call to a body the module says promised `no.alloc`. A gameplay body that
+says what it does gets the fast shape; one that does not is a body the machine
+runs. That is the promise earning something for the first time beyond being
+checked.
+
+**What is still refused.** An element with a tag in it or a piece of text —
+`bench/rules.kest`'s actors are both — because a tagged value is moved by
+reading the tag and then by what it says, which is a walk rather than a run,
+and because text in a body is still an address in the compiling process. And a
+body that can allocate, for the reason above. So `rules` is not reachable yet
+and `kernel` is.
+
+**The measurement.** `bench/kernel.kest`: twenty thousand bodies, a hundred
+rounds, four doubles each, read, moved, bounced off the walls and written
+back. Every row answers the checksum 26893912. Instruction counts, because
+this box is shared and the clock is not to be trusted with a ratio; the whole
+process, compiling included, and then the work alone by the delta method over
+twice the rounds.
+
+| | whole process | a body-step | against g++ |
+| --- | --- | --- | --- |
+| `g++ -O2` (`bench/kernel.cpp`) | 0.052 G | 23 | 1.0 |
+| **Kest, the C backend** | **0.270 G** | **119** | **5.2×** |
+| `luau -O2 --codegen` | 0.331 G | 158 | 6.9× |
+| `luau -O2` | 1.008 G | 491 | 21× |
+| Kest, the machine | 1.087 G | 529 | 23× |
+
+**Kest's release engine runs this workload in a quarter fewer instructions
+than Luau's native code generation**, where Kest's interpreter is level with
+Luau's interpreter. Cycles put the two within noise of each other on this
+machine and are not the number to read here (D1092 says why).
+
+One workload, and the one most favourable to a native backend: it is numbers
+in a flat array and nothing else. What it does say is that the architecture
+D1092 chose works and that the cost model behind it was right. What it does
+not say is anything about gameplay, which is `rules`, and which needs tagged
+elements and bodies that allocate before it can be measured at all.
+
+**What this leaves on the table, and what it is worth.** The five times is
+made of three things that can be read off the generated C: a call to
+`kest_elem_at` per element, a bounds check the C compiler cannot hoist out of
+the loop because it is behind that call, and a `memcpy` per piece where four
+doubles in a row could be one. All three go away by putting the array's header
+in a header — which makes the shape of a handle something a generated file is
+compiled against, and so something the abi version has to carry. That is the
+next measurement rather than the next assumption.

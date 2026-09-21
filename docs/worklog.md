@@ -39520,3 +39520,48 @@ See D1094.
 **Runs:** `make check`, `tools/check-c.sh` over the tree, and the two
 workloads and `bench/control.kest` under `perf stat -e instructions` both
 ways.
+
+## Elements written out, and the first workload the release engine wins
+
+The seam said the next thing to write was array elements, because four fifths
+of a gameplay loop is reading one, changing it and writing it back. So: the
+two things the machine asks before it touches an element -- that the handle is
+an array and that the index is inside it -- are a call, because they are the
+same two questions however wide an element is, and the moving is written out,
+because which piece sits at which byte is known while compiling. The loop over
+a layout that the machine runs for every element is a third of
+`bench/rules.kest`; this is what removing it looks like.
+
+Only a body that cannot reach the heap may hold a handle, and that is read off
+the body: no allocating, host or moving effect, no call through a value, and
+every call to something the module says promised `no.alloc`. A gameplay body
+that says what it does gets the fast shape. The promise has earned something
+beyond being checked.
+
+`bench/kernel.kest`, every row answering 26893912, instruction counts, whole
+process and then a body-step by the delta method:
+
+| | whole process | a body-step |
+| --- | --- | --- |
+| `g++ -O2` | 0.052 G | 23 |
+| Kest, the C backend | 0.270 G | 119 |
+| `luau -O2 --codegen` | 0.331 G | 158 |
+| `luau -O2` | 1.008 G | 491 |
+| Kest, the machine | 1.087 G | 529 |
+
+A quarter fewer instructions than Luau's native code generation, where the
+machine is level with Luau's interpreter. One workload, and the one most
+favourable to a native backend; `rules` is the one that matters for a game and
+needs tagged elements and bodies that allocate before it can be measured.
+
+What is left in the five times is a call per element, a bounds check the C
+compiler cannot hoist because it is behind that call, and a `memcpy` a piece
+where four doubles could be one. All three go away by putting the array's
+header in a header, which makes the shape of a handle part of what a generated
+file is compiled against. That is the next measurement.
+
+See D1095.
+
+**Runs:** `make check`, and `bench/kernel.kest` under `perf stat -e
+instructions` against `bench/kernel.cpp`, `bench/kernel.lua` in both Luau
+modes, and the machine.

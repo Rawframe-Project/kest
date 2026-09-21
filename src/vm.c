@@ -7781,6 +7781,53 @@ bool kest_native_at(KestRuntime *runtime, uint32_t index, const char *symbol,
     return true;
 }
 
+// The two above are one question asked twice, so what says a handle is an
+// array is written once here: the tag at the front of a header, and the one
+// other thing it can be that a program is told about by name.
+static Array *the_array(KestRuntime *rt, KestValue handle, uint32_t where) {
+    Array *array = handle.object;
+    if (KEST_HANDLE_IS(array, KEST_IS_ARRAY)) {
+        return array;
+    }
+    if (KEST_HANDLE_IS(array, KEST_WAS_LENT)) {
+        kest_native_stopped(rt, where, "K0637",
+                            "the host has taken this lend back");
+        return NULL;
+    }
+    kest_native_stopped(rt, where, "K0612", "this is not an array");
+    return NULL;
+}
+
+unsigned char *kest_elem_at(KestRuntime *runtime, KestValue handle,
+                            int64_t index, uint16_t offset, uint32_t where) {
+    Array *array = runtime == NULL ? NULL : the_array(runtime, handle, where);
+    if (array == NULL) {
+        return NULL;
+    }
+    if (index < 0 || (uint64_t)index >= array->length) {
+        char said[96];
+        // The machine's own sentence, because it is the machine's own
+        // refusal: two engines that say a bounds failure differently are two
+        // languages, and the check that runs both reads the words.
+        snprintf(said, sizeof said,
+                 "index %lld is outside an array of length %u",
+                 (long long)index, array->length);
+        kest_native_stopped(runtime, where, "K0604", said);
+        return NULL;
+    }
+    return array->bytes + (size_t)index * array->stride + offset;
+}
+
+bool kest_elem_count(KestRuntime *runtime, KestValue handle, uint32_t where,
+                     int64_t *into) {
+    Array *array = runtime == NULL ? NULL : the_array(runtime, handle, where);
+    if (array == NULL || into == NULL) {
+        return false;
+    }
+    *into = array->length;
+    return true;
+}
+
 bool kest_native_stopped(KestRuntime *runtime, uint32_t offset,
                          const char *code, const char *message) {
     if (runtime == NULL) {

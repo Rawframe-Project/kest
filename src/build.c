@@ -158,7 +158,7 @@ bool kest_build_emit(KestBuild *build) {
     // them. See D1093.
     Backends both = {writes, NULL};
     if (build->wants_c) {
-        both.c = kest_emitc_new(build->arena);
+        both.c = kest_emitc_new(build->arena, &build->module);
         if (both.c == NULL) {
             kest_arena_free(bodies);
             kest_diags_starve(&build->diags);

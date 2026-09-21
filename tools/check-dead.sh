@@ -125,12 +125,21 @@ fn split(a: i32, b: i32) -> i32 no.alloc no.host deterministic {
     return a / b
 }
 
-fn main() -> i32 {
-    let n = 0
-    for i in 0..4 {
-        n += split(i * 6, 2)
+fn walk(counts: [i32]) -> i32 no.alloc no.host deterministic {
+    let sum = 0
+    for at in 0..len(counts) {
+        sum += counts[at]
+        counts[at] = sum
     }
-    return n
+    return sum
+}
+
+fn main() -> i32 {
+    let counts: [i32] = array()
+    for i in 0..4 {
+        push(counts, split(i * 6, 2))
+    }
+    return walk(counts) % 251
 }
 """
 room = tempfile.mkdtemp()

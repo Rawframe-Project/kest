@@ -15986,6 +15986,25 @@ kest 9.9.9""",
         "arguments": [],
         "caught": "what the other backend writes will not compile",
     },
+    {
+        # An element read without asking whether the index is inside the
+        # array. The machine refuses it and a body the host's compiler
+        # compiled would read whatever is past the end, which is the one kind
+        # of wrongness in this backend that a program cannot see and a
+        # sanitiser cannot always either: the bytes past a short array are
+        # the heap's own. What catches it is a program written to read
+        # outside, run both ways. See D1095.
+        "what": "an element read from outside the array it is in",
+        "file": "src/vm.c",
+        "from": r"""    if (index < 0 || (uint64_t)index >= array->length) {
+        char said[96];""",
+        "to": r"""    if (false) {
+        char said[96];""",
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest", "examples/game/npc.kest"],
+        "caught": "outside.kest answers",
+    },
 ]
 
 failed = 0

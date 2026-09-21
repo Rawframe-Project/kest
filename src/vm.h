@@ -44,6 +44,26 @@ bool kest_runtime_free(KestRuntime *runtime);
 bool kest_native_at(KestRuntime *runtime, uint32_t index, const char *symbol,
                     KestNativeBody body);
 
+// The bytes of one of an array, after the two things the machine asks before
+// it reads or writes one: that the handle is an array rather than something
+// else or a lend the host has taken back, and that the index is inside it.
+// `offset` is how far into an element a field path reached, which the
+// resolved form works out while compiling and which a generated file writes
+// down. NULL when it refused, and it has said why at `where` -- in the same
+// words, with the same code, as the instruction that does this. What a
+// generated file does with the bytes is move them itself: which piece sits
+// where is known while compiling, and the walk over a layout that the machine
+// does for every element is a third of `bench/rules.kest` (D1028). See D1095.
+unsigned char *kest_elem_at(KestRuntime *runtime, KestValue handle,
+                            int64_t index, uint16_t offset, uint32_t where);
+
+// How many there are in one, refused the way the machine refuses it: a host
+// asking the same question through `kest_array_length` is answered nought for
+// a handle that is not an array, because a host may ask about anything and a
+// program may not. Answers false when it refused. See D1095.
+bool kest_elem_count(KestRuntime *runtime, KestValue handle, uint32_t where,
+                     int64_t *into);
+
 // What a body written in C says when it stops. `offset` is where in the source
 // it was, which the resolved form carries and the C keeps beside the operation
 // it came from, so a refusal from a compiled body is reported where the same

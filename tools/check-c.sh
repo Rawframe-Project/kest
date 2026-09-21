@@ -201,6 +201,58 @@ fn main() -> i32 {
     return i32(total % 251)
 }
 PROGRAM
+cat >"$work"/programs/elements.kest <<'PROGRAM'
+module elements
+
+struct Body {
+    x: f64
+    y: f64
+    tag: i32
+    small: u8
+}
+
+fn step(world: [Body], rounds: i32) -> f64 no.alloc no.host deterministic {
+    let sum: f64 = 0.0
+    let i = 0
+    while i < rounds {
+        for at in 0..len(world) {
+            let one = world[at]
+            one.x += one.y
+            one.tag = (one.tag + 1) % 7
+            one.small = u8((i32(one.small) + 3) % 256)
+            world[at] = one
+        }
+        i += 1
+    }
+    for one in world {
+        sum += one.x + one.y + f64(one.tag) + f64(one.small)
+    }
+    return sum
+}
+
+fn main() -> i32 {
+    let world: [Body] = array()
+    for i in 0..64 {
+        push(world, Body(f64(i), f64(i) * 0.5, i % 5, u8(i % 256)))
+    }
+    return i32((i64(step(world, 20)) % 251 + 251) % 251)
+}
+PROGRAM
+cat >"$work"/programs/outside.kest <<'PROGRAM'
+module outside
+
+fn look(world: [i32], at: i32) -> i32 no.alloc no.host deterministic {
+    return world[at]
+}
+
+fn main() -> i32 {
+    let world: [i32] = array()
+    for i in 0..4 {
+        push(world, i)
+    }
+    return look(world, 9)
+}
+PROGRAM
 cat >"$work"/programs/shifted.kest <<'PROGRAM'
 module shifted
 
@@ -328,12 +380,12 @@ with what was written as C, or says something else" >>"$said"
     alike=$((alike + 1))
 done
 
-# Two of them are programs that stop while they are running, and both halves
+# Three of them are programs that stop while they are running, and both halves
 # have to stop: a backend that wrote a division by nought as one the host's machine
 # traps on, or as one it quietly answers, would be a program that means
 # something else. Counted rather than assumed, because a program that stops is
 # one whose answer is the same either way for the wrong reason.
-for stopping in stopped shifted; do
+for stopping in stopped shifted outside; do
     stops=$(./kest run "$work"/programs/$stopping.kest 2>/dev/null </dev/null
             echo $?)
     if [ "$stops" -eq 0 ]; then

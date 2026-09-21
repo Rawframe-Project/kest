@@ -6,8 +6,9 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093
-    PHASE:             B — the release engine, first milestone in the tree
+    CURRENT SHA:       (this commit) D1093, D1094, D1095
+    PHASE:             B — the release engine: ahead of Luau's native tier on
+                       the numeric kernel, not yet reaching the gameplay one
     LAST FAST GATE:    green
     LAST FULL GATE:    green at 96285c5
     REFERENCE MACHINE: the spare Linux box this repository is on --
@@ -218,33 +219,61 @@ answer and their words, and asks each one whether the compiled half was
 entered at all. Its first sweep caught a miscompilation: text constants were
 written into the C as addresses in the compiling process.
 
+## D1095 — elements, and the first workload the release engine wins
+
+Element reads and writes are two doors and a run of moves: the bounds and
+handle checks are a call, and the layout walk is gone because which piece sits
+at which byte is known while compiling. Only a body that cannot reach the heap
+may hold a handle, which is read off the body and off what its callees
+promised — the `no.alloc` promise earning something beyond being checked.
+
+`bench/kernel.kest`, every row answering the same checksum, instruction counts,
+whole process and then a body-step by the delta method:
+
+| | whole process | a body-step | against g++ |
+| --- | --- | --- | --- |
+| `g++ -O2` | 0.052 G | 23 | 1.0 |
+| **Kest, the C backend** | **0.270 G** | **119** | **5.2×** |
+| `luau -O2 --codegen` | 0.331 G | 158 | 6.9× |
+| `luau -O2` | 1.008 G | 491 | 21× |
+| Kest, the machine | 1.087 G | 529 | 23× |
+
+**The first row of the mission's own question answered: on this workload the
+release engine is a quarter cheaper than Luau's best realistic mode**, where
+the machine alone is level with Luau's interpreter. One workload, and the one
+most favourable to a native backend.
+
 ## Open, in priority order
 
-1. **Arrays and elements in the C backend**, which is what a frame of a game
-   is made of: `LOAD`/`PUT` through an element place, `len`, and the bounds
-   and generation checks the runtime does — written out rather than called,
-   because the layout is known while compiling and the machine's own walk of
-   it is a third of `bench/rules.kest` (D1028). It needs the other half of
-   D1094 as well: a body that can hold a handle keeps its frame where the
-   interpreter would, so the collector sees it. Then `bench/kernel.kest` and
-   `bench/rules.kest` measured against the machine and against
-   `bench/rules.cpp`, which is D1092's re-evaluation trigger.
-2. The other half of a game: a world of tens of thousands of entities with
+1. **The gameplay workload, which is what the claim has to rest on.**
+   `bench/rules.kest` needs three things the backend refuses today: an element
+   with a tag in it — its actors are tagged unions, moved by reading the tag
+   and then by what it says — text in a body, and a body that can allocate,
+   which needs the frame and the operands to live where the collector can see
+   them. Then rules against `bench/rules.cpp`, which is D1092's re-evaluation
+   trigger.
+2. **The five times on the kernel, read down.** A call per element, a bounds
+   check the C compiler cannot hoist because it is behind that call, and a
+   `memcpy` a piece where four doubles could be one. All three go away by
+   putting the array's header in a header, which makes the shape of a handle
+   part of what a generated file is compiled against and so part of what the
+   abi version carries.
+3. The other half of a game: a world of tens of thousands of entities with
    references into it, measured the same way, because the rules workload is
    small arrays and a cold allocation path.
-3. Daslang's AOT path, measured and named as AOT, so the comparison is against
+4. Daslang's AOT path, measured and named as AOT, so the comparison is against
    what its documentation points at rather than against its interpreter.
-4. What `kest check` prints by default: the declaration listing is output
+5. What `kest check` prints by default: the declaration listing is output
    rather than verification and costs as much as checking at scale.
-5. Measure the edit loop the way an agent drives it: edit → check → diagnostic,
+6. Measure the edit loop the way an agent drives it: edit → check → diagnostic,
    including process start, on the 100k corpus. Only then decide whether
    persistence or incrementality is worth its correctness cost.
-6. Game-shaped runtime profile: where the ceiling actually is (dispatch, value
+7. Game-shaped runtime profile: where the ceiling actually is (dispatch, value
    movement, allocation, collector, host crossing) on `examples/slice` and the
    engine, before touching the VM.
-7. Comparators, kept in step as the engines move: Luau in its best realistic
+8. Comparators, kept in step as the engines move: Luau in its best realistic
    gameplay mode, Daslang's interpreter and its AOT named separately.
-8. The AI mistake corpus and the silent-error interception measurement.
+9. The AI mistake corpus and the silent-error interception measurement.
 
 ## Rejected so far
 
