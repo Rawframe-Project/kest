@@ -37366,3 +37366,55 @@ is the same work.
 host (44 bodies of this tree), the rest of what reads and makes text (33 and
 21), a store and what walks one (34 and 20), and a call through a function
 value (17). None of them is in the way of the number above.
+
+## D1100. The edit loop measured, and why there is no daemon
+
+The compiler direction asks for an extremely fast check/compile/iteration loop
+and proposes a daemon, a persistent session and an incremental architecture to
+get one. This is the measurement those proposals have to be earned against:
+what an edit costs today, from cold, with no state kept between runs.
+
+Three corpora, ten runs each, release build, warm page cache, this machine.
+`kest check` from the entry of a project, which is what an agent runs after it
+writes a file — process start, reading every file, naming, checking every
+body, proving the promises, and printing what the program holds:
+
+| what | lines | files | p50 | p95 |
+| --- | --- | --- | --- | --- |
+| `examples/slice`, a real small project | 550 | 6 | **7 ms** | 8 ms |
+| generated, gameplay-shaped | 112,647 | 1,892 | **366 ms** | 436 ms |
+| generated, gameplay-shaped | 1,000,857 | 16,802 | **4.4 s** | 5.5 s |
+
+Beside them, three things that turned out not to be true:
+
+- **A mistake costs no more than no mistake.** A body in a leaf file with an
+  unknown name in it is reported in 0.32 s at 112k lines, against 0.36 s for
+  the clean run. There is no penalty path.
+- **One file on its own is milliseconds at any scale**, because a file is
+  checked against what it imports rather than against the program. An agent
+  asking *is what I just wrote well formed* pays 7 ms; one asking *is the
+  program still whole* pays the table above.
+- **What `check` prints costs nothing measurable.** The same run to `/dev/null`
+  and to a file is 0.36 s either way, and the listing is one line per imported
+  module — the file that was named is written out in full and the rest are
+  counted (which `check-commands.sh` already holds the two forms to). The open
+  item that said the listing cost as much as checking at scale does not
+  reproduce: what it is proportional to is the file named, not the program.
+
+**So: no daemon, no persistent session, no incremental state.** At the scale a
+gameplay layer is — a few hundred files, tens of thousands of lines — the
+whole-program answer from cold is under half a second and a single file is
+under ten milliseconds. What incrementality would add is a cache to invalidate,
+a protocol to keep in step, and a class of defect where what the compiler
+believes and what is on disk differ; what it would buy is a fraction of half a
+second. The language server already holds a build between requests, which is
+the one place a session is what the client wants.
+
+**What would earn one, written down so it is a measurement rather than a
+mood.** A project somebody is actually writing in this language whose
+whole-program check passes about a second, *with reading already parallel* —
+reading is 46 per cent of the 112k run and 44 per cent of the million-line one,
+it is embarrassingly parallel, and it needs no state kept between runs. That is
+the cheaper half and it comes first. Until then this is a compiler that answers
+a hundred thousand lines in a third of a second from nothing at all, which is
+what "fast iteration" was supposed to mean.

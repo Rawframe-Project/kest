@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1099
+    CURRENT SHA:       (this commit) D1093-D1100
     PHASE:             B — the release engine: level with Luau's native tier
                        on the gameplay workload, and inside D1092's trigger
     LAST FAST GATE:    green
@@ -285,17 +285,27 @@ and a language that refuses what it cannot prove.
    small arrays and a cold allocation path.
 4. Daslang's AOT path, measured and named as AOT, so the comparison is against
    what its documentation points at rather than against its interpreter.
-5. What `kest check` prints by default: the declaration listing is output
-   rather than verification and costs as much as checking at scale.
-6. Measure the edit loop the way an agent drives it: edit → check → diagnostic,
-   including process start, on the 100k corpus. Only then decide whether
-   persistence or incrementality is worth its correctness cost.
-7. Game-shaped runtime profile: where the ceiling actually is (dispatch, value
+5. **The AI half of the mission, which nothing has touched**: paired tasks a
+   model is asked to do, hidden tests it does not see, and what comes of them
+   — how often the work is finished, how often a mistake is caught by the
+   compiler rather than by a test, and how often one gets through both. The
+   corpus and the tests are this project's to write; running models against
+   them is the owner's, at the end.
+6. Game-shaped runtime profile: where the ceiling actually is (dispatch, value
    movement, allocation, collector, host crossing) on `examples/slice` and the
-   engine, before touching the VM.
-8. Comparators, kept in step as the engines move: Luau in its best realistic
+   engine, now that the release engine changes which of them matter.
+7. Comparators, kept in step as the engines move: Luau in its best realistic
    gameplay mode, Daslang's interpreter and its AOT named separately.
-9. The AI mistake corpus and the silent-error interception measurement.
+
+## Closed by measurement
+
+- **The edit loop** (D1100): 7 ms for a real small project, 366 ms for 112k
+  lines, 4.4 s for a million, from cold. A mistake costs no more than no
+  mistake, one file on its own is milliseconds at any scale, and what `check`
+  prints costs nothing measurable — which also closes the item that said the
+  declaration listing cost as much as checking at scale. No daemon, no
+  persistent session, no incremental state; what would earn one is written
+  down instead.
 
 ## Rejected so far
 

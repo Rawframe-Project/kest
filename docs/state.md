@@ -218,6 +218,13 @@ against the machine's 6.254 G, Luau's native tier at 1.294 G and `g++ -O2` at
 this is 2.9**, so the two-engine decision stands on a measurement rather than
 on an argument.
 
+**And the edit loop is measured** (D1100): `kest check` from a project's entry,
+from cold, is 7 ms for a real small project, 366 ms for 112,647 lines in 1,892
+files and 4.4 s for a million lines. A mistake costs no more than no mistake,
+one file on its own is milliseconds at any scale, and what `check` prints
+costs nothing measurable. So there is no daemon, no persistent session and no
+incremental state, and the number that would earn one is written down.
+
 ## What the closeout shipped, and what it rests on
 
 1.0.0 was tagged and published on 2026-09-18 and withdrawn on 2026-09-19

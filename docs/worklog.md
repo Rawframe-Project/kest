@@ -39681,3 +39681,28 @@ See D1099.
 **Runs:** `make check`, and `bench/rules.kest` under `perf stat -e
 instructions` against `bench/rules.cpp`, `bench/rules.lua` in both Luau modes,
 and the machine.
+
+## The edit loop measured, and why there is no daemon
+
+The compiler direction proposes a daemon, a persistent session and an
+incremental architecture. This is what they have to be earned against: ten
+runs of `kest check` from a project's entry, from cold, with nothing kept
+between runs -- 7 ms for a real small project, 366 ms for 112,647 lines in
+1,892 files, 4.4 s for a million lines. A mistake costs no more than no
+mistake, one file on its own is milliseconds at any scale, and what `check`
+prints costs nothing measurable: the same run to `/dev/null` and to a file is
+the same time, and the listing is one line per imported module.
+
+So none of the three is earned. What would earn one is written down instead: a
+project somebody is actually writing whose whole-program check passes about a
+second with reading already parallel -- reading is 46 per cent of the 112k run
+and is embarrassingly parallel, so it is the cheaper half and comes first.
+
+That also closes the open item that said the declaration listing costs as much
+as checking at scale. It does not: what it is proportional to is the file that
+was named, not the program.
+
+See D1100.
+
+**Runs:** ten `kest check` runs over each of three corpora, `KEST_SPENT=1` for
+where the time goes, and the same run written to `/dev/null` and to a file.
