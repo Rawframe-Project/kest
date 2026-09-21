@@ -541,6 +541,93 @@ fn main() -> i32 {
     return i32(total % 251)
 }
 PROGRAM
+cat >"$work"/programs/texting.kest <<'PROGRAM'
+module texting
+
+struct Tag {
+    name: text
+    rank: i32
+}
+
+fn parts(line: text, sep: text) -> i32 no.alloc no.host deterministic {
+    let many = 1
+    let at = 0
+    while true {
+        if let found = find(line, sep, at) {
+            many += 1
+            at = found + len(sep)
+        } else {
+            break
+        }
+    }
+    return many
+}
+
+fn headed(line: text) -> text no.alloc no.host deterministic {
+    if matches(line, 0, "## ") {
+        return rest(line, 3)
+    }
+    return slice(line, 0, 2)
+}
+
+fn spaces(line: text) -> i32 no.alloc no.host deterministic {
+    let n = 0
+    for b in line {
+        if b == 32 {
+            n += 1
+        }
+    }
+    return n + i32(line[0])
+}
+
+fn spelled(t: Tag, n: i32, f: f64, g: f32, b: bool, u: u32) -> text {
+    return "{t} {n} {f} {g} {b} {u}"
+}
+
+fn bytes(what: text, room: i32) -> i32 {
+    let out: [u8] = array()
+    room(out, room)
+    let fitted = 0
+    for i in 0..4 {
+        if fit(out, what) {
+            fitted += 1
+        }
+        if fit(out, 46) {
+            fitted += 1
+        }
+    }
+    push(out, "-tail")
+    let whole = text(out)
+    clear(out)
+    return len(whole) + fitted + len(out)
+}
+
+fn drained(all: [i32]) -> i32 no.alloc no.host deterministic {
+    let sum = 0
+    while true {
+        if let one = pop(all) {
+            sum += one
+        } else {
+            break
+        }
+    }
+    return sum
+}
+
+fn main() -> i32 {
+    let line = "## a line of words, with a comma"
+    let total = 0
+    total += parts(line, ", ")
+    total += len(headed(line))
+    total += len(headed("a line with no heading on it"))
+    total += spaces(line)
+    total += len(spelled(Tag("thing", 4), -7, 0.5, 1.25, true, 9))
+    total += bytes("ab", 4)
+    total += bytes("ab", 64)
+    total += drained([1, 2, 3, 4])
+    return total % 251
+}
+PROGRAM
 cat >"$work"/programs/outside.kest <<'PROGRAM'
 module outside
 

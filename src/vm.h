@@ -151,6 +151,85 @@ int64_t kest_text_order(const char *left, int64_t left_length,
                         const char *right, int64_t right_length,
                         int64_t *read);
 
+// The five reads into a piece of text that do not make one: the byte at a
+// place, a cut, the rest from a place, whether a needle sits at a place, and
+// where one is first found. None of them reaches the heap -- a cut is a place
+// inside what it was cut from and how many bytes of it (D964) -- so a body
+// that only reads text keeps its slots in C locals. Each says what the
+// instruction of that name says when it refuses, in the instruction's own
+// words: two engines that put a bounds failure differently are two languages,
+// and the check that runs both reads the words. See D1104.
+bool kest_text_at(KestRuntime *runtime, const char *bytes, int64_t length,
+                  int64_t index, uint32_t where, int64_t *into);
+bool kest_text_cut(KestRuntime *runtime, const char *bytes, int64_t length,
+                   int64_t from, int64_t count, uint32_t where,
+                   const char **at, int64_t *many);
+bool kest_text_rest(KestRuntime *runtime, const char *bytes, int64_t length,
+                    int64_t from, uint32_t where, const char **at,
+                    int64_t *many);
+bool kest_text_matches(KestRuntime *runtime, const char *bytes, int64_t length,
+                       int64_t at, const char *needle, int64_t needle_length,
+                       uint32_t where, int64_t *into);
+bool kest_text_find(KestRuntime *runtime, const char *bytes, int64_t length,
+                    const char *needle, int64_t needle_length, int64_t from,
+                    uint32_t where, int64_t *at, int64_t *found);
+
+// Which of the five ways a value is written as text, for the door below. A
+// number with a sign and one without are written differently and a narrow
+// float is written to the places a narrow float has, so what is being written
+// has to come with it: the backend reads it off the type the way the machine
+// reads it off the instruction.
+typedef enum {
+    KEST_TEXT_OF_INT,
+    KEST_TEXT_OF_UNSIGNED,
+    KEST_TEXT_OF_REAL,
+    KEST_TEXT_OF_NARROW,
+    KEST_TEXT_OF_BOOL,
+} KestTextOf;
+
+// The four that make text, which is the half of it that reaches the heap and
+// so the half a body promising `no.alloc` never gets to: a value written out,
+// a shape or a set of bits written out, pieces joined, and a run of bytes
+// become text. Each leaves two slots -- what it is made of and how many bytes
+// that is -- and each says what the instruction of that name says when there
+// is no room for it. See D1104.
+bool kest_text_of(KestRuntime *runtime, uint8_t how, KestValue value,
+                  uint32_t where, KestValue *into);
+bool kest_text_of_value(KestRuntime *runtime, uint16_t layout,
+                        const KestValue *slots, uint32_t where,
+                        KestValue *into);
+bool kest_text_join(KestRuntime *runtime, const KestValue *pieces,
+                    uint16_t count, uint32_t where, KestValue *into);
+bool kest_text_from(KestRuntime *runtime, KestValue handle, uint32_t where,
+                    KestValue *into);
+
+// A whole piece of text onto a run of bytes, and the two appends that answer
+// rather than grow. `fit` and `fit.text` are what a body under a promise to
+// reach no heap may do: all of it goes in or none of it does, and what comes
+// back says which (D940). `append.text` is the loop a program used to write
+// taken into one move (D1068).
+bool kest_array_fit(KestRuntime *runtime, KestValue handle, uint16_t layout,
+                    const KestValue *value, uint32_t where, int64_t *put);
+bool kest_array_push_text(KestRuntime *runtime, KestValue handle,
+                          uint16_t layout, const char *bytes, int64_t length,
+                          uint32_t where);
+bool kest_array_fit_text(KestRuntime *runtime, KestValue handle,
+                         const char *bytes, int64_t length, uint32_t where,
+                         int64_t *put);
+
+// And the four left of what a run of elements does: room made for what is
+// coming, everything taken out, the last one taken off, and a run written out
+// in the program. `room` is the one that answers about a store as well, which
+// is the one instruction in this language that looks at what it was handed to
+// decide which of two things it is about.
+bool kest_array_room(KestRuntime *runtime, KestValue handle, uint16_t layout,
+                     int64_t wanted, uint32_t where);
+bool kest_array_clear(KestRuntime *runtime, KestValue handle, uint32_t where);
+bool kest_array_pop(KestRuntime *runtime, KestValue handle, uint32_t where,
+                    unsigned char **at);
+bool kest_array_written(KestRuntime *runtime, uint16_t layout, uint16_t count,
+                   const KestValue *values, uint32_t where, KestValue *into);
+
 // What a body written in C says when it stops. `offset` is where in the source
 // it was, which the resolved form carries and the C keeps beside the operation
 // it came from, so a refusal from a compiled body is reported where the same

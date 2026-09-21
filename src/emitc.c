@@ -1178,6 +1178,189 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         at_stack(second, base + 1);
         say(c, out, "    %s.integer = %s.integer;\n", first, second);
         break;
+    case KEST_IR_TEXT_AT: {
+        // The byte at a place: what it is made of, how many bytes that is,
+        // and where to look. A comparison and a read rather than a walk,
+        // which is what D964 bought.
+        if (reads != 3 || leaves != 1) {
+            cannot(walk, "a byte of something other than a piece of text");
+            break;
+        }
+        at_stack(first, base);
+        at_stack(second, base + 1);
+        at_stack(third, base + 2);
+        say(c, out,
+            "    if (!kest_text_at(rt, %s.text, %s.integer, %s.integer, %u,\n"
+            "                      &%s.integer)) {\n        return false;\n"
+            "    }\n",
+            first, second, third, op->span.offset, first);
+        break;
+    }
+    case KEST_IR_TEXT_IN: {
+        // The one read in this language that does not ask, because the walk
+        // took the length before its first turn and the place is there. The
+        // machine asks anyway in the build that checks itself, where nothing
+        // else can; a file this writes is compiled by somebody else's
+        // compiler and has no such build, so what it writes is the read.
+        Where held;
+        if (reads != 0 || leaves != 1) {
+            cannot(walk, "a walk over something other than a piece of text");
+            break;
+        }
+        at_stack(first, base);
+        at_frame(held, op->imm[0]);
+        at_frame(second, op->imm[1]);
+        say(c, out,
+            "    %s.integer = (unsigned char)%s.text[%s.integer];\n",
+            first, held, second);
+        break;
+    }
+    case KEST_IR_TEXT_SLICE:
+    case KEST_IR_TEXT_REST: {
+        // A cut, and the rest from a place. Both leave a piece of text that
+        // is a place inside the one they were cut from and a length: nothing
+        // is copied and nothing reaches the heap.
+        bool whole = op->kind == KEST_IR_TEXT_REST;
+        if (reads != (whole ? 3u : 4u) || leaves != 2) {
+            cannot(walk, "a cut of something other than a piece of text");
+            break;
+        }
+        at_stack(first, base);
+        at_stack(second, base + 1);
+        at_stack(third, base + 2);
+        if (whole) {
+            say(c, out,
+                "    if (!kest_text_rest(rt, %s.text, %s.integer, "
+                "%s.integer,\n"
+                "                        %u, &%s.text, &%s.integer)) {\n"
+                "        return false;\n    }\n",
+                first, second, third, op->span.offset, first, second);
+            break;
+        }
+        Where fourth;
+        at_stack(fourth, base + 3);
+        say(c, out,
+            "    if (!kest_text_cut(rt, %s.text, %s.integer, %s.integer,\n"
+            "                       %s.integer, %u, &%s.text, "
+            "&%s.integer)) {\n"
+            "        return false;\n    }\n",
+            first, second, third, fourth, op->span.offset, first, second);
+        break;
+    }
+    case KEST_IR_TEXT_MATCHES: {
+        // Whether a needle sits at a place, which is five slots: the text,
+        // where to look, and the needle.
+        Where fourth;
+        Where fifth;
+        if (reads != 5 || leaves != 1) {
+            cannot(walk, "a match of something other than a piece of text");
+            break;
+        }
+        at_stack(first, base);
+        at_stack(second, base + 1);
+        at_stack(third, base + 2);
+        at_stack(fourth, base + 3);
+        at_stack(fifth, base + 4);
+        say(c, out,
+            "    if (!kest_text_matches(rt, %s.text, %s.integer, %s.integer,"
+            "\n"
+            "                           %s.text, %s.integer, %u,\n"
+            "                           &%s.integer)) {\n"
+            "        return false;\n    }\n",
+            first, second, third, fourth, fifth, op->span.offset, first);
+        break;
+    }
+    case KEST_IR_TEXT_FIND: {
+        // Where a needle is first found, and whether it was: the place comes
+        // back under the answer, which is the pair a `match` reads.
+        Where fourth;
+        Where fifth;
+        if (reads != 5 || leaves != 2) {
+            cannot(walk, "a search of something other than a piece of text");
+            break;
+        }
+        at_stack(first, base);
+        at_stack(second, base + 1);
+        at_stack(third, base + 2);
+        at_stack(fourth, base + 3);
+        at_stack(fifth, base + 4);
+        say(c, out,
+            "    if (!kest_text_find(rt, %s.text, %s.integer, %s.text,\n"
+            "                        %s.integer, %s.integer, %u,\n"
+            "                        &%s.integer, &%s.integer)) {\n"
+            "        return false;\n    }\n",
+            first, second, third, fourth, fifth, op->span.offset, first,
+            second);
+        break;
+    }
+    case KEST_IR_TEXT_OF: {
+        // A value written out as text. Which of the five ways is read off the
+        // type here the way the machine reads it off the instruction, and a
+        // shape, an enum, an optional or a set of bits goes through the walk
+        // that knows what a value is made of -- which is one answer, in
+        // `format_value`, shared by both engines.
+        if (leaves != 2) {
+            cannot(walk, "text made of something that leaves something else");
+            break;
+        }
+        const KestType *of = op->type;
+        at_stack(first, base);
+        if (of != NULL &&
+            (of->tag == KEST_T_FLAGS || of->tag == KEST_T_ENUM ||
+             of->tag == KEST_T_OPTIONAL || of->tag == KEST_T_STRUCT ||
+             of->tag == KEST_T_FIXED)) {
+            say(c, out,
+                "    if (!kest_text_of_value(rt, %u, &%s, %u, &%s)) {\n"
+                "        return false;\n    }\n",
+                (unsigned)op->imm[0], first, op->span.offset, first);
+            break;
+        }
+        if (reads != 1) {
+            cannot(walk, "text made of something wider than a number");
+            break;
+        }
+        const char *how =
+            of == NULL                ? "KEST_TEXT_OF_INT"
+            : of->tag == KEST_T_FLOAT ? (kest_is_narrow(of)
+                                             ? "KEST_TEXT_OF_NARROW"
+                                             : "KEST_TEXT_OF_REAL")
+            : of->tag == KEST_T_BOOL  ? "KEST_TEXT_OF_BOOL"
+            : kest_is_unsigned(of)    ? "KEST_TEXT_OF_UNSIGNED"
+                                      : "KEST_TEXT_OF_INT";
+        say(c, out,
+            "    if (!kest_text_of(rt, %s, %s, %u, &%s)) {\n"
+            "        return false;\n    }\n",
+            how, first, op->span.offset, first);
+        break;
+    }
+    case KEST_IR_TEXT_JOIN: {
+        // Pieces joined into one. Two slots each, in the order they are
+        // written, and what comes back sits where the first of them was.
+        if (reads != (uint32_t)op->imm[0] * 2 || leaves != 2) {
+            cannot(walk, "text joined out of something other than pieces");
+            break;
+        }
+        at_stack(first, base);
+        say(c, out,
+            "    if (!kest_text_join(rt, &%s, %u, %u, &%s)) {\n"
+            "        return false;\n    }\n",
+            first, (unsigned)op->imm[0], op->span.offset, first);
+        break;
+    }
+    case KEST_IR_TEXT_FROM: {
+        // A run of bytes become text, which is the one place the walk that
+        // says it is UTF-8 is paid for.
+        if (reads != 1 || leaves != 2) {
+            cannot(walk, "text made of something other than a run of bytes");
+            break;
+        }
+        at_stack(first, base);
+        say(c, out,
+            "    if (!kest_text_from(rt, %s, %u, &%s)) {\n"
+            "        return false;\n    }\n",
+            first, op->span.offset, first);
+        break;
+    }
     case KEST_IR_HASH: {
         if (leaves != 1) {
             cannot(walk, "a hash that leaves something other than a number");
@@ -1244,6 +1427,136 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             "    if (!kest_array_push(rt, %s, %u, &%s, %u)) {\n"
             "        return false;\n    }\n",
             first, (unsigned)op->imm[0], second, op->span.offset);
+        break;
+    }
+    case KEST_IR_FIT: {
+        // One more on the end when the room is already there, and an answer
+        // saying so when it is not: the append a body under a promise may do.
+        if (reads < 2 || leaves != 1) {
+            cannot(walk, "a fit of something other than one thing");
+            break;
+        }
+        at_stack(first, base);
+        at_stack(second, base + 1);
+        say(c, out,
+            "    if (!kest_array_fit(rt, %s, %u, &%s, %u, &%s.integer)) {\n"
+            "        return false;\n    }\n",
+            first, (unsigned)op->imm[0], second, op->span.offset, first);
+        break;
+    }
+    case KEST_IR_APPEND_TEXT:
+    case KEST_IR_FIT_TEXT: {
+        // A whole piece of text onto a run of bytes: the handle, and then
+        // what it is made of and how many bytes that is.
+        bool fitting = op->kind == KEST_IR_FIT_TEXT;
+        if (reads != 3 || leaves != (fitting ? 1u : 0u)) {
+            cannot(walk, "an append of something other than a piece of text");
+            break;
+        }
+        at_stack(first, base);
+        at_stack(second, base + 1);
+        at_stack(third, base + 2);
+        if (fitting) {
+            say(c, out,
+                "    if (!kest_array_fit_text(rt, %s, %s.text, %s.integer, "
+                "%u,\n"
+                "                             &%s.integer)) {\n"
+                "        return false;\n    }\n",
+                first, second, third, op->span.offset, first);
+            break;
+        }
+        say(c, out,
+            "    if (!kest_array_push_text(rt, %s, %u, %s.text, %s.integer,\n"
+            "                              %u)) {\n"
+            "        return false;\n    }\n",
+            first, (unsigned)op->imm[0], second, third, op->span.offset);
+        break;
+    }
+    case KEST_IR_ROOM: {
+        // Room for what is coming, in the one thing that has room or the
+        // other. Which of the two it is about is read off what it was handed,
+        // the way the instruction reads it.
+        if (reads != 2 || leaves != 0) {
+            cannot(walk, "room made in something other than one thing");
+            break;
+        }
+        at_stack(first, base);
+        at_stack(second, base + 1);
+        say(c, out,
+            "    if (!kest_array_room(rt, %s, %u, %s.integer, %u)) {\n"
+            "        return false;\n    }\n",
+            first, (unsigned)op->imm[0], second, op->span.offset);
+        break;
+    }
+    case KEST_IR_CLEAR: {
+        if (reads != 1 || leaves != 0) {
+            cannot(walk, "everything taken out of something other than a run");
+            break;
+        }
+        at_stack(first, base);
+        say(c, out,
+            "    if (!kest_array_clear(rt, %s, %u)) {\n"
+            "        return false;\n    }\n",
+            first, op->span.offset);
+        break;
+    }
+    case KEST_IR_POP_LAST: {
+        // The last one off the end, and whether there was one. Where it was
+        // is still the run's own memory, so the move reads it after the
+        // length has already moved -- which is what the instruction does too.
+        const KestLayout *layout =
+            c->module == NULL || op->imm[0] >= c->module->layout_count
+                ? NULL
+                : &c->module->layouts[op->imm[0]];
+        if (layout == NULL || layout->type == NULL || reads != 1 ||
+            leaves != (uint32_t)layout->slots + 1) {
+            cannot(walk, "a last one taken off something other than a run");
+            break;
+        }
+        at_stack(first, base);
+        at_stack(second, base + layout->slots);
+        say(c, out,
+            "    {\n        unsigned char *at = NULL;\n"
+            "        if (!kest_array_pop(rt, %s, %u, &at)) {\n"
+            "            return false;\n        }\n"
+            "        if (at == NULL) {\n",
+            first, op->span.offset);
+        for (uint16_t i = 0; i < layout->slots; i++) {
+            Where empty;
+            at_stack(empty, base + i);
+            say(c, out, "            %s.integer = 0;\n", empty);
+        }
+        say(c, out,
+            "            %s.integer = 0;\n        } else {\n", second);
+        uint16_t moved = move_value(walk, layout->type, base, 0, true,
+                                    op->span.offset);
+        say(c, out, "            %s.integer = 1;\n        }\n    }\n",
+            second);
+        if (moved != layout->slots) {
+            cannot(walk, "a last one whose type and layout say different "
+                         "widths");
+            break;
+        }
+        break;
+    }
+    case KEST_IR_ARRAY: {
+        // A run written out in the program: that many values, already where
+        // they are read from, becoming the one thing that names them.
+        const KestLayout *layout =
+            c->module == NULL || op->imm[1] >= c->module->layout_count
+                ? NULL
+                : &c->module->layouts[op->imm[1]];
+        if (layout == NULL ||
+            reads != (uint32_t)op->imm[0] * layout->slots || leaves != 1) {
+            cannot(walk, "a run written out of something else");
+            break;
+        }
+        at_stack(first, base);
+        say(c, out,
+            "    if (!kest_array_written(rt, %u, %u, &%s, %u, &%s)) {\n"
+            "        return false;\n    }\n",
+            (unsigned)op->imm[1], (unsigned)op->imm[0], first,
+            op->span.offset, first);
         break;
     }
     case KEST_IR_TAKE: {
@@ -1847,6 +2160,60 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "int64_t kest_text_order(const char *left, int64_t left_length,\n"
         "                        const char *right, int64_t right_length,\n"
         "                        int64_t *read);\n"
+        "bool kest_text_at(KestRuntime *runtime, const char *bytes,\n"
+        "                  int64_t length, int64_t index, uint32_t where,\n"
+        "                  int64_t *into);\n"
+        "bool kest_text_cut(KestRuntime *runtime, const char *bytes,\n"
+        "                   int64_t length, int64_t from, int64_t count,\n"
+        "                   uint32_t where, const char **at, int64_t *many);\n"
+        "bool kest_text_rest(KestRuntime *runtime, const char *bytes,\n"
+        "                    int64_t length, int64_t from, uint32_t where,\n"
+        "                    const char **at, int64_t *many);\n"
+        "bool kest_text_matches(KestRuntime *runtime, const char *bytes,\n"
+        "                       int64_t length, int64_t at,\n"
+        "                       const char *needle, int64_t needle_length,\n"
+        "                       uint32_t where, int64_t *into);\n"
+        "bool kest_text_find(KestRuntime *runtime, const char *bytes,\n"
+        "                    int64_t length, const char *needle,\n"
+        "                    int64_t needle_length, int64_t from,\n"
+        "                    uint32_t where, int64_t *at, int64_t *found);\n"
+        "typedef enum {\n"
+        "    KEST_TEXT_OF_INT,\n"
+        "    KEST_TEXT_OF_UNSIGNED,\n"
+        "    KEST_TEXT_OF_REAL,\n"
+        "    KEST_TEXT_OF_NARROW,\n"
+        "    KEST_TEXT_OF_BOOL,\n"
+        "} KestTextOf;\n"
+        "bool kest_text_of(KestRuntime *runtime, uint8_t how, KestValue "
+        "value,\n"
+        "                  uint32_t where, KestValue *into);\n"
+        "bool kest_text_of_value(KestRuntime *runtime, uint16_t layout,\n"
+        "                        const KestValue *slots, uint32_t where,\n"
+        "                        KestValue *into);\n"
+        "bool kest_text_join(KestRuntime *runtime, const KestValue *pieces,\n"
+        "                    uint16_t count, uint32_t where, "
+        "KestValue *into);\n"
+        "bool kest_text_from(KestRuntime *runtime, KestValue handle,\n"
+        "                    uint32_t where, KestValue *into);\n"
+        "bool kest_array_fit(KestRuntime *runtime, KestValue handle,\n"
+        "                    uint16_t layout, const KestValue *value,\n"
+        "                    uint32_t where, int64_t *put);\n"
+        "bool kest_array_push_text(KestRuntime *runtime, KestValue handle,\n"
+        "                          uint16_t layout, const char *bytes,\n"
+        "                          int64_t length, uint32_t where);\n"
+        "bool kest_array_fit_text(KestRuntime *runtime, KestValue handle,\n"
+        "                         const char *bytes, int64_t length,\n"
+        "                         uint32_t where, int64_t *put);\n"
+        "bool kest_array_room(KestRuntime *runtime, KestValue handle,\n"
+        "                     uint16_t layout, int64_t wanted,\n"
+        "                     uint32_t where);\n"
+        "bool kest_array_clear(KestRuntime *runtime, KestValue handle,\n"
+        "                      uint32_t where);\n"
+        "bool kest_array_pop(KestRuntime *runtime, KestValue handle,\n"
+        "                    uint32_t where, unsigned char **at);\n"
+        "bool kest_array_written(KestRuntime *runtime, uint16_t layout,\n"
+        "                        uint16_t count, const KestValue *values,\n"
+        "                        uint32_t where, KestValue *into);\n"
         "int64_t kest_value_hash(KestRuntime *runtime, uint16_t layout,\n"
         "                        const KestValue *slots);\n"
         "bool kest_value_same(KestRuntime *runtime, uint16_t layout,\n"

@@ -37580,3 +37580,63 @@ rest, by distinct body: a crossing into the host (45), making text (`text.of`,
 35, and `text.from`, 10), reading into text (`text.at`, `text.find`,
 `text.slice`, `text.in`, `text.matches`, `text.rest`, 27 between them), and a
 body that calls one of those (53).
+
+## D1104. Text, and the rest of what a run of elements does
+
+D1103 compared text. This writes the rest of it, and with it the four things a
+run of elements does that no decision had reached: sixteen doors, after which
+`std.text` compiles whole and `bench/words.kest` goes from 2 of its 28 bodies
+written to 25.
+
+**Read and make, which is the line the `no.alloc` promise is drawn on.** The
+five that read — the byte at a place, a cut, the rest, whether a needle sits
+at a place, and where one is first found — reach no heap at all, because a cut
+is a place inside what it was cut from and how many bytes of it (D964). So a
+body that only reads text keeps its slots in C locals, which is the shape
+D1098 gave the faster half of this backend. The four that make one —
+`text.of`, a shape written out, pieces joined, and a run of bytes become text
+— all reach the heap, and a body holding one keeps its slots where the
+collector walks.
+
+**And seven more for runs of elements**, because a program that builds text
+builds it in a buffer: room made for what is coming, one more on the end where
+the room already is, a whole piece of text appended, the same that answers
+rather than grows, everything taken out, the last one off, and a run written
+out in the program. `fit` and `fit.text` are the two a body under a promise to
+reach no heap may call, which is what D940 gave the language and what a frame
+writing a line a tick actually uses.
+
+**What it is worth, and the honest shape of it.** Two text workloads, whole
+processes, the fixed cost taken off with the delta method:
+
+| | the machine | the release engine | |
+| --- | --- | --- | --- |
+| scanning: fields found, bytes walked, needles matched, no allocation | 25.2 M | 8.8 M | **2.9×** |
+| building: two thousand pieces made, joined and split a round | 357.3 M | 255.0 M | **1.4×** |
+
+The second is the one worth reading. Building text is bound by the allocator
+and by `memcpy`, and neither is dispatch: compiling the bodies around them
+takes off what dispatch cost and leaves the rest standing. **A workload that
+spends its time in the runtime gets runtime numbers, whichever engine is
+driving.** That is the same lesson D1095 wrote down about arrays, met again
+where it costs more.
+
+**A refusal is still the same refusal.** Every one of these doors says what
+the instruction of that name says, in the instruction's own words and at the
+same line — a byte outside a piece of text, a cut that runs off the end, a
+buffer that is the host's, a run longer than `len` can count, and bytes that
+begin no character. The differential check is what holds them to it: a program
+that refuses under one engine and not the other, or refuses with different
+words, is a program the check reads as two languages.
+
+Over this tree the backend now writes **1,509 of 2,088 bodies**, up from 928.
+What is left, by distinct body: a crossing into the host (45), a call through
+a function value (19), an address of a place that is not a run of the frame
+(11), a region opened (3), a number with no spelling in C (2), a constant read
+where it is (1) — and 72 bodies that call one of those.
+
+**Three holes, all in the backend's own half**, for the reason D1102 wrote
+down: a cut taken with where it starts and how much of it the wrong way round,
+a number with a sign written out as though it had none, and a run drained of
+something it says it has not got. Each compiles, each is right about some
+input, and each is caught by the fixture written for this.

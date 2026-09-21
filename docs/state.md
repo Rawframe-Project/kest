@@ -199,7 +199,7 @@ it.** D1017 and D1067 closed it twice on the reading that what a generated-C
 backend takes away is the dispatch and that the dispatch is not the gap. A
 gameplay-shaped workload measured against Luau's own native tier reopened it
 (D1090), and D1092 decided two engines: the machine for developing and C for
-shipping. The first of that backend is in the tree — `kest emit --c`, 928 of
+shipping. The first of that backend is in the tree — `kest emit --c`, 1,509 of
 this tree's 2,088 bodies, held to answering what the machine answers by
 `tools/check-c.sh` — and on two scalar workloads it runs sixteen and
 twenty-three times fewer machine instructions than the machine does (D1093).
@@ -210,7 +210,8 @@ with one writable body -- an actor-round costs 1,333 machine instructions
 interpreted and 1,144 with that body compiled. Elements followed (D1095), then tagged
 values and text (D1096, D1097), then bodies that reach the heap and the doors
 they need (D1098, D1099), then the world a game keeps — stores and the
-references into them (D1102) — and text put in order (D1103). On `bench/kernel.kest` the release engine runs a
+references into them (D1102) — and then text: put in order (D1103), and read, made and built in a
+buffer (D1104), after which `std.text` compiles whole. On `bench/kernel.kest` the release engine runs a
 body-step in 119 machine instructions against the machine's 529 and Luau's
 native code generation at 158, with `g++ -O2` at 23; on `bench/rules.kest`,
 the gameplay workload, it runs the whole process in 1.244 G instructions

@@ -3774,12 +3774,6 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // than once a byte, and a `memcpy`. Building text a byte at a time was
         // eighty per cent of the instructions `bench/words.kest` ran. See
         // D1068.
-        // A whole piece of text onto a run of bytes. Text is its bytes
-        // (D021), so this is the loop a program had to write taken into one
-        // move: the same growth `push` does, once for the whole piece rather
-        // than once a byte, and a `memcpy`. Building text a byte at a time was
-        // eighty per cent of the instructions `bench/words.kest` ran. See
-        // D1068.
         case KEST_OP_PUSH_TEXT: {
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
@@ -7897,6 +7891,22 @@ bool kest_array_new(KestRuntime *rt, uint16_t layout, int64_t count,
 }
 
 
+// A run of elements the host lent, which a program may read and write and may
+// not make longer or shorter: what a host lends is as long as the host said,
+// and growing one would move the elements somewhere the host does not know
+// about. Said in the one place because eight doors ask it, and eight copies
+// of a sentence are eight sentences the day one of them moves. See D668.
+static bool it_is_lent(KestRuntime *rt, const Array *array, uint32_t where,
+                       bool growing) {
+    if (!array->borrowed) {
+        return false;
+    }
+    stopped_saying(rt, where, "K0608",
+                   growing ? "this array is the host's, so it cannot grow"
+                           : "this array is the host's, so it cannot shrink");
+    return true;
+}
+
 bool kest_array_push(KestRuntime *rt, KestValue handle, uint16_t layout,
                      const KestValue *value, uint32_t where) {
     if (rt == NULL || rt->module == NULL || layout >= rt->module->layout_count) {
@@ -7908,9 +7918,8 @@ bool kest_array_push(KestRuntime *rt, KestValue handle, uint16_t layout,
     }
     const KestLayout *what = &rt->module->layouts[layout];
     KestSpan span = {where, 1};
-    if (array->borrowed) {
-        return stopped_saying(rt, where, "K0608",
-                              "this array is the host's, so it cannot grow");
+    if (it_is_lent(rt, array, where, true)) {
+        return false;
     }
     // What a program can be told is what it can count to, and `len` gives
     // back an `i32`. One more than that used to double a capacity past what a
@@ -7955,15 +7964,262 @@ bool kest_array_push(KestRuntime *rt, KestValue handle, uint16_t layout,
 }
 
 
+// Room for what is coming, in the one thing that has room or the other: a
+// store is made with room by `store(n)` and an array by `array(n, v)`, and
+// this is the same sentence said to one that is already there. The length
+// does not move, so asking for less than it holds is asking for nothing.
+bool kest_array_room(KestRuntime *rt, KestValue handle, uint16_t layout,
+                     int64_t wanted, uint32_t where) {
+    if (rt == NULL || rt->module == NULL ||
+        layout >= rt->module->layout_count) {
+        return false;
+    }
+    void *given = handle.object;
+    KestSpan span = {where, 1};
+    if (KEST_HANDLE_IS(given, KEST_IS_STORE)) {
+        Store *store = given;
+        if (wanted > MAX_COUNTED) {
+            return stopped_saying(rt, where, "K0630",
+                                  "this store holds %d, which is all `len` "
+                                  "can count",
+                                  MAX_COUNTED);
+        }
+        if (wanted > (int64_t)store->capacity &&
+            !room_for(rt, NULL, store, (uint32_t)wanted)) {
+            no_room_growing_at(rt, where_from(rt), span, rt, "a store",
+                               store->used,
+                               (uint32_t)(sizeof(KestValue) * store->stride),
+                               (uint32_t)wanted);
+            return false;
+        }
+        return true;
+    }
+    Array *array = the_handle(rt, handle, KEST_IS_ARRAY, "an array", where);
+    if (array == NULL) {
+        return false;
+    }
+    if (it_is_lent(rt, array, where, true)) {
+        return false;
+    }
+    if (wanted > MAX_COUNTED) {
+        return stopped_saying(rt, where, "K0630",
+                              "this array holds %d, which is all `len` can "
+                              "count",
+                              MAX_COUNTED);
+    }
+    if (wanted > (int64_t)array->capacity) {
+        const KestLayout *what = &rt->module->layouts[layout];
+        uint32_t capacity = (uint32_t)wanted;
+        unsigned char *grown = elements_grown(rt, NULL, array, what, capacity);
+        if (grown == NULL) {
+            no_room_growing_at(rt, where_from(rt), span, rt, "an array",
+                               array->length, what->size, capacity);
+            return false;
+        }
+        array->bytes = grown;
+        array->capacity = capacity;
+    }
+    return true;
+}
+
+// Everything out of it, which is the length and not the block: what it held
+// is still there to be written over.
+bool kest_array_clear(KestRuntime *rt, KestValue handle, uint32_t where) {
+    Array *array =
+        rt == NULL ? NULL
+                   : the_handle(rt, handle, KEST_IS_ARRAY, "an array", where);
+    if (array == NULL) {
+        return false;
+    }
+    if (it_is_lent(rt, array, where, false)) {
+        return false;
+    }
+    array->length = 0;
+    return true;
+}
+
+// The last one off the end. Where it was comes back, which is still the run's
+// own memory -- the length moved and the block did not -- or nothing where
+// there was nothing to take.
+bool kest_array_pop(KestRuntime *rt, KestValue handle, uint32_t where,
+                    unsigned char **at) {
+    Array *array =
+        rt == NULL ? NULL
+                   : the_handle(rt, handle, KEST_IS_ARRAY, "an array", where);
+    if (array == NULL || at == NULL) {
+        return false;
+    }
+    if (it_is_lent(rt, array, where, false)) {
+        return false;
+    }
+    if (array->length == 0) {
+        *at = NULL;
+        return true;
+    }
+    array->length--;
+    *at = array->bytes + (size_t)array->length * array->stride;
+    return true;
+}
+
+// A run written out in the program: that many values, already on the stack,
+// becoming the one thing that names them. The elements are taken before the
+// header, because a walk set off by taking the header would find elements
+// nothing names.
+bool kest_array_written(KestRuntime *rt, uint16_t layout, uint16_t count,
+                   const KestValue *values, uint32_t where, KestValue *into) {
+    if (rt == NULL || rt->module == NULL ||
+        layout >= rt->module->layout_count || into == NULL) {
+        return false;
+    }
+    const KestLayout *what = &rt->module->layouts[layout];
+    KestSpan span = {where, 1};
+    uint32_t hands = rt->hands;
+    unsigned char *bytes = in_hand(rt, elements_for(rt, NULL, what, count));
+    Array *array =
+        bytes == NULL ? NULL : take(rt, NULL, sizeof(Array), KEST_GROUND_ARRAY);
+    hands_off(rt, hands);
+    if (array == NULL || bytes == NULL) {
+        no_room_at(rt, where_from(rt), span, rt);
+        kest_diags_suggest(rt->diags,
+                           "it was making an array of %u of %u bytes each",
+                           count, what->size);
+        return false;
+    }
+    array->what = KEST_IS_ARRAY;
+    array->length = count;
+    array->capacity = count;
+    array->stride = what->size;
+    array->of = what->type;
+    array->bytes = bytes;
+    for (uint16_t i = 0; i < count; i++) {
+        MOVED(moved_packed, what->size);
+        pack(bytes + (size_t)i * what->size, what,
+             values + (size_t)i * what->slots);
+    }
+    into->object = array;
+    return true;
+}
+
+// One more on the end when the room is already there, and nothing when it is
+// not: the same append with the growth taken out, which is what a body under
+// a promise to reach no heap may do (D940). Answers whether it went in.
+bool kest_array_fit(KestRuntime *rt, KestValue handle, uint16_t layout,
+                    const KestValue *value, uint32_t where, int64_t *put) {
+    if (rt == NULL || rt->module == NULL ||
+        layout >= rt->module->layout_count || put == NULL) {
+        return false;
+    }
+    Array *array = the_handle(rt, handle, KEST_IS_ARRAY, "an array", where);
+    if (array == NULL) {
+        return false;
+    }
+    if (it_is_lent(rt, array, where, true)) {
+        return false;
+    }
+    const KestLayout *what = &rt->module->layouts[layout];
+    if (array->length >= array->capacity || array->length == MAX_COUNTED) {
+        *put = 0;
+        return true;
+    }
+    MOVED(moved_packed, what->size);
+    pack(array->bytes + (size_t)array->length * what->size, what, value);
+    array->length++;
+    MOVED(moved_held, sizeof(KestValue));
+    *put = 1;
+    return true;
+}
+
+// A whole piece of text onto a run of bytes, growing for it. Text is its
+// bytes (D021), so this is the loop a program had to write taken into one
+// move. See D1068.
+bool kest_array_push_text(KestRuntime *rt, KestValue handle, uint16_t layout,
+                          const char *bytes, int64_t length, uint32_t where) {
+    if (rt == NULL || rt->module == NULL ||
+        layout >= rt->module->layout_count) {
+        return false;
+    }
+    Array *array = the_handle(rt, handle, KEST_IS_ARRAY, "an array", where);
+    if (array == NULL) {
+        return false;
+    }
+    const KestLayout *what = &rt->module->layouts[layout];
+    KestSpan span = {where, 1};
+    if (it_is_lent(rt, array, where, true)) {
+        return false;
+    }
+    if ((uint64_t)array->length + (uint64_t)length > (uint64_t)MAX_COUNTED) {
+        return stopped_saying(rt, where, "K0630",
+                              "this array holds %d, which is all `len` can "
+                              "count",
+                              MAX_COUNTED);
+    }
+    uint32_t wanted = array->length + (uint32_t)length;
+    if (wanted > array->capacity) {
+        uint32_t capacity = array->capacity == 0 ? 8 : array->capacity;
+        while (capacity < wanted) {
+            capacity *= 2;
+        }
+        unsigned char *was = array->bytes;
+        unsigned char *grown = elements_grown(rt, NULL, array, what, capacity);
+        if (grown == NULL) {
+            no_room_growing_at(rt, where_from(rt), span, rt, "an array",
+                               array->length, what->size, capacity);
+            return false;
+        }
+        capacity = all_it_holds(rt, grown, what, capacity);
+        (((Elems *)(void *)grown) - 1)->places = capacity;
+        if (grown != was) {
+            kest_fuel_spend(rt, array->length);
+        }
+        array->bytes = grown;
+        array->capacity = capacity;
+    }
+    MOVED(moved_packed, (uint64_t)length);
+    if (length > 0) {
+        memcpy(array->bytes + array->length, bytes, (size_t)length);
+    }
+    array->length = wanted;
+    return true;
+}
+
+// And the same with the growth taken out: all of it fits or none of it goes
+// in, because a piece half written is a piece nobody can take back.
+bool kest_array_fit_text(KestRuntime *rt, KestValue handle, const char *bytes,
+                         int64_t length, uint32_t where, int64_t *put) {
+    if (rt == NULL || put == NULL) {
+        return false;
+    }
+    Array *array = the_handle(rt, handle, KEST_IS_ARRAY, "an array", where);
+    if (array == NULL) {
+        return false;
+    }
+    if (it_is_lent(rt, array, where, true)) {
+        return false;
+    }
+    if ((uint64_t)array->length + (uint64_t)length >
+            (uint64_t)array->capacity ||
+        (uint64_t)array->length + (uint64_t)length > (uint64_t)MAX_COUNTED) {
+        *put = 0;
+        return true;
+    }
+    MOVED(moved_packed, (uint64_t)length);
+    if (length > 0) {
+        memcpy(array->bytes + array->length, bytes, (size_t)length);
+    }
+    array->length += (uint32_t)length;
+    MOVED(moved_held, sizeof(KestValue));
+    *put = 1;
+    return true;
+}
+
 bool kest_array_remove(KestRuntime *rt, KestValue handle, int64_t index,
                        uint32_t where) {
     Array *array = rt == NULL ? NULL : the_handle(rt, handle, KEST_IS_ARRAY, "an array", where);
     if (array == NULL) {
         return false;
     }
-    if (array->borrowed) {
-        return stopped_saying(rt, where, "K0608",
-                              "this array is the host's, so it cannot shrink");
+    if (it_is_lent(rt, array, where, false)) {
+        return false;
     }
     if (index < 0 || (uint64_t)index >= array->length) {
         return stopped_saying(rt, where, "K0604",
@@ -8211,6 +8467,104 @@ int64_t kest_text_order(const char *left, int64_t left_length,
            (int64_t)(unsigned char)right[far];
 }
 
+bool kest_text_at(KestRuntime *runtime, const char *bytes, int64_t length,
+                  int64_t index, uint32_t where, int64_t *into) {
+    if (runtime == NULL || into == NULL) {
+        return false;
+    }
+    if (index < 0 || index >= length) {
+        return stopped_saying(runtime, where, "K0604",
+                              "index %lld is outside text of %u bytes",
+                              (long long)index, (unsigned)length);
+    }
+    *into = (unsigned char)bytes[index];
+    return true;
+}
+
+bool kest_text_cut(KestRuntime *runtime, const char *bytes, int64_t length,
+                   int64_t from, int64_t count, uint32_t where,
+                   const char **at, int64_t *many) {
+    if (runtime == NULL || at == NULL || many == NULL) {
+        return false;
+    }
+    if (from < 0 || count < 0 || from + count > length) {
+        return stopped_saying(runtime, where, "K0604",
+                              "%lld bytes from %lld is outside text of %u "
+                              "bytes",
+                              (long long)count, (long long)from,
+                              (unsigned)length);
+    }
+    *at = bytes + from;
+    *many = count;
+    return true;
+}
+
+bool kest_text_rest(KestRuntime *runtime, const char *bytes, int64_t length,
+                    int64_t from, uint32_t where, const char **at,
+                    int64_t *many) {
+    if (runtime == NULL || at == NULL || many == NULL) {
+        return false;
+    }
+    if (from < 0 || from > length) {
+        return stopped_saying(runtime, where, "K0604",
+                              "the rest from %lld is outside text of %u bytes",
+                              (long long)from, (unsigned)length);
+    }
+    *at = bytes + from;
+    *many = length - from;
+    return true;
+}
+
+bool kest_text_matches(KestRuntime *runtime, const char *bytes, int64_t length,
+                       int64_t at, const char *needle, int64_t needle_length,
+                       uint32_t where, int64_t *into) {
+    if (runtime == NULL || into == NULL) {
+        return false;
+    }
+    if (at < 0 || at > length) {
+        return stopped_saying(runtime, where, "K0604",
+                              "looking at %lld, which is outside text of %u "
+                              "bytes",
+                              (long long)at, (unsigned)length);
+    }
+    bool same = at + needle_length <= length;
+    int64_t read = 0;
+    while (same && read < needle_length &&
+           bytes[at + read] == needle[read]) {
+        read++;
+    }
+    *into = same && read == needle_length;
+    return true;
+}
+
+bool kest_text_find(KestRuntime *runtime, const char *bytes, int64_t length,
+                    const char *needle, int64_t needle_length, int64_t from,
+                    uint32_t where, int64_t *at, int64_t *found) {
+    if (runtime == NULL || at == NULL || found == NULL) {
+        return false;
+    }
+    if (from < 0 || from > length) {
+        return stopped_saying(runtime, where, "K0604",
+                              "looking from %lld, which is outside text of %u "
+                              "bytes",
+                              (long long)from, (unsigned)length);
+    }
+    int64_t where_it_is = -1;
+    for (int64_t start = from;
+         where_it_is < 0 && start + needle_length <= length; start++) {
+        int64_t i = 0;
+        while (i < needle_length && bytes[start + i] == needle[i]) {
+            i++;
+        }
+        if (i == needle_length) {
+            where_it_is = start;
+        }
+    }
+    *at = where_it_is < 0 ? 0 : where_it_is;
+    *found = where_it_is >= 0;
+    return true;
+}
+
 // The shape a layout is, which is what both of the two below are about. A
 // layout the module has not got is nothing, and the callers answer for that
 // rather than reading past the end of the list.
@@ -8238,6 +8592,149 @@ bool kest_value_same(KestRuntime *runtime, uint16_t layout,
         return false;
     }
     return values_equal(type, left, right);
+}
+
+// Two slots made out of bytes the arena handed back, which is the last thing
+// each of the four below does.
+static void text_lands(KestValue *into, const char *bytes, size_t length) {
+    into[0].text = bytes;
+    into[1].integer = (int64_t)length;
+}
+
+bool kest_text_of(KestRuntime *rt, uint8_t how, KestValue value,
+                  uint32_t where, KestValue *into) {
+    if (rt == NULL || into == NULL) {
+        return false;
+    }
+    char buffer[64];
+    int written;
+    switch ((KestTextOf)how) {
+    case KEST_TEXT_OF_UNSIGNED:
+        written = snprintf(buffer, sizeof(buffer), "%llu",
+                           (unsigned long long)value.integer);
+        break;
+    case KEST_TEXT_OF_REAL:
+    case KEST_TEXT_OF_NARROW:
+        written = kest_write_real(buffer, sizeof(buffer), value.real,
+                                  (KestTextOf)how == KEST_TEXT_OF_NARROW);
+        break;
+    case KEST_TEXT_OF_BOOL:
+        written = snprintf(buffer, sizeof(buffer), "%s",
+                           value.integer ? "true" : "false");
+        break;
+    case KEST_TEXT_OF_INT:
+    default:
+        written = snprintf(buffer, sizeof(buffer), "%lld",
+                           (long long)value.integer);
+        break;
+    }
+    KestSpan span = {where, 1};
+    char *text = take(rt, NULL, (size_t)written + 1, KEST_GROUND_PLAIN);
+    if (text == NULL) {
+        no_room_at(rt, where_from(rt), span, rt);
+        kest_diags_suggest(rt->diags,
+                           "it was writing a number as %d bytes of text",
+                           written);
+        return false;
+    }
+    MOVED(moved_text, (uint64_t)written + 1);
+    memcpy(text, buffer, (size_t)written + 1);
+    text_lands(into, text, (size_t)written);
+    return true;
+}
+
+bool kest_text_of_value(KestRuntime *rt, uint16_t layout,
+                        const KestValue *slots, uint32_t where,
+                        KestValue *into) {
+    const KestType *type = the_shape(rt, layout);
+    if (type == NULL || slots == NULL || into == NULL) {
+        return false;
+    }
+    size_t length = format_value(NULL, 0, type, slots);
+    KestSpan span = {where, 1};
+    char *text = take(rt, NULL, length + 1, KEST_GROUND_PLAIN);
+    if (text == NULL) {
+        no_room_at(rt, where_from(rt), span, rt);
+        kest_diags_suggest(rt->diags,
+                           "it was writing a value as %zu bytes of text",
+                           length);
+        return false;
+    }
+    format_value(text, length, type, slots);
+    text[length] = '\0';
+    text_lands(into, text, length);
+    return true;
+}
+
+bool kest_text_join(KestRuntime *rt, const KestValue *pieces, uint16_t count,
+                    uint32_t where, KestValue *into) {
+    if (rt == NULL || (pieces == NULL && count != 0) || into == NULL) {
+        return false;
+    }
+    size_t length = 0;
+    for (uint16_t i = 0; i < count; i++) {
+        length += (size_t)pieces[(uint32_t)i * 2 + 1].integer;
+    }
+    // The same ceiling an array has, and text is where a program reaches it
+    // without meaning to: two of these joined is a new one as long as both.
+    if (length > (size_t)MAX_COUNTED) {
+        return stopped_saying(rt, where, "K0630",
+                              "this text would hold %zu, which is more than "
+                              "`len` can count",
+                              length);
+    }
+    KestSpan span = {where, 1};
+    char *text = take(rt, NULL, length + 1, KEST_GROUND_PLAIN);
+    if (text == NULL) {
+        no_room_at(rt, where_from(rt), span, rt);
+        kest_diags_suggest(rt->diags, "it was joining text into %zu bytes",
+                           length);
+        return false;
+    }
+    size_t used = 0;
+    for (uint16_t i = 0; i < count; i++) {
+        size_t many = (size_t)pieces[(uint32_t)i * 2 + 1].integer;
+        MOVED(moved_text, many);
+        memcpy(text + used, pieces[(uint32_t)i * 2].text, many);
+        used += many;
+    }
+    text[used] = '\0';
+    text_lands(into, text, used);
+    return true;
+}
+
+bool kest_text_from(KestRuntime *rt, KestValue handle, uint32_t where,
+                    KestValue *into) {
+    Array *bytes =
+        rt == NULL ? NULL
+                   : the_handle(rt, handle, KEST_IS_ARRAY, "an array", where);
+    if (bytes == NULL || into == NULL) {
+        return false;
+    }
+    KestSpan span = {where, 1};
+    uint32_t many = bytes->length;
+    char *text = take(rt, NULL, (size_t)many + 1, KEST_GROUND_PLAIN);
+    if (text == NULL) {
+        no_room_at(rt, where_from(rt), span, rt);
+        kest_diags_suggest(rt->diags,
+                           "it was making %u bytes of text out of an array",
+                           many);
+        return false;
+    }
+    // Text is UTF-8 and a run of bytes is whatever it holds, so this is the
+    // door where the two meet and the one place the walk is paid for. A
+    // nought is fine: it is a character. See D971.
+    uint32_t bad = 0;
+    if (!kest_utf8_whole((const char *)bytes->bytes, many, &bad)) {
+        return stopped_saying(rt, where, "K0604",
+                              "byte %u begins no character, and text is UTF-8",
+                              bad);
+    }
+    MOVED(moved_text, many);
+    memcpy(text, bytes->bytes, many);
+    text[many] = '\0';
+    text_lands(into, text, many);
+    return true;
 }
 
 bool kest_native_stopped(KestRuntime *runtime, uint32_t offset,

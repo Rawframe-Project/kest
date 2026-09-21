@@ -5318,13 +5318,10 @@ for file in "$@"; do""",
         # not know about — four ways to ask for that and one sentence for it.
         "what": "a lent array that grows without saying which refusal it is",
         "file": "src/vm.c",
-        "from": """    if (array->borrowed) {
-        return stopped_saying(rt, where, "K0608",
-                              "this array is the host's, so it cannot grow");
-    }""",
-        "to": """    if (array->borrowed) {
-        return stopped_saying(rt, where, "K0608", "no");
-    }""",
+        "from": """    stopped_saying(rt, where, "K0608",
+                   growing ? "this array is the host's, so it cannot grow"
+                           : "this array is the host's, so it cannot shrink");""",
+        "to": """    stopped_saying(rt, where, "K0608", growing ? "no" : "no");""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "refused without saying `K0608`",
@@ -16014,6 +16011,54 @@ kest 9.9.9""",
         "tool": "tools/check-c.sh",
         "arguments": ["examples/math.kest", "examples/game/npc.kest"],
         "caught": "tagged.kest",
+    },
+    {
+        # A cut of text taken with where it starts and how much of it the
+        # wrong way round. Both are numbers, both are small, and `slice(s, 0,
+        # 2)` is right about either -- so the C compiles and every other cut
+        # in the program is a different piece of text. See D1104.
+        "what": "a cut of text taken from where it ends",
+        "file": "src/emitc.c",
+        "from": r"""            first, second, third, fourth, op->span.offset, first, second);""",
+        "to": r"""            first, second, fourth, third, op->span.offset, first, second);""",
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest", "examples/game/npc.kest"],
+        "caught": "texting.kest",
+    },
+    {
+        # A number with a sign written out as though it had none. Every
+        # number that is not negative reads the same either way, so a program
+        # has to write a negative one before anything says so -- which is the
+        # kind of wrongness a corpus of programs that compile does not catch
+        # and a program run both ways does.
+        "what": "a number with a sign written as text without one",
+        "file": "src/emitc.c",
+        "from": r"""            : kest_is_unsigned(of)    ? "KEST_TEXT_OF_UNSIGNED"
+                                      : "KEST_TEXT_OF_INT";""",
+        "to": r"""            : kest_is_unsigned(of)    ? "KEST_TEXT_OF_UNSIGNED"
+                                      : "KEST_TEXT_OF_UNSIGNED";""",
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest", "examples/game/npc.kest"],
+        "caught": "texting.kest",
+    },
+    {
+        # The last one taken off a run, with the answer that says there was
+        # one written as the answer that says there was not. A loop that
+        # drains a run reads that answer to know when to stop, so this is a
+        # loop that stops before it has begun -- and the run it was draining
+        # is a run that still holds everything.
+        "what": "a run drained of something it says it has not got",
+        "file": "src/emitc.c",
+        "from": r"""        say(c, out, "            %s.integer = 1;\n        }\n    }\n",
+            second);""",
+        "to": r"""        say(c, out, "            %s.integer = 0;\n        }\n    }\n",
+            second);""",
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest", "examples/game/npc.kest"],
+        "caught": "texting.kest",
     },
     {
         # Text put in order the wrong way round in the C, which is the half of

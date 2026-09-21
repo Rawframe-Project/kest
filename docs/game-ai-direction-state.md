@@ -267,6 +267,27 @@ what a serious game developer gets here that Luau does not give them is the
 same runtime ceiling with a check loop of 282 ms for a hundred thousand lines
 and a language that refuses what it cannot prove.
 
+## D1104 — text whole, and where it says the ceiling is
+
+Reading into text, making it, and the seven things a run of elements does that
+a program building text needs. After them `std.text` compiles whole,
+`bench/words.kest` goes from 2 of its 28 bodies written to 25, and the backend
+writes **1,509 of 2,088 bodies** over this tree.
+
+Two text workloads, delta method, whole processes:
+
+| | the machine | the release engine | |
+| --- | --- | --- | --- |
+| scanning text, no allocation | 25.2 M | 8.8 M | 2.9× |
+| building two thousand pieces a round | 357.3 M | 255.0 M | 1.4× |
+
+**The second is the finding.** Building text is bound by the allocator and by
+`memcpy`. Compiling the bodies around them takes off what dispatch cost and
+leaves the rest standing, so a workload that spends its time in the runtime
+gets runtime numbers whichever engine drives it. That is the same thing D1095
+found about arrays, met again where it costs more — and it is what the
+game-shaped runtime profile below is for.
+
 ## D1102, D1103 — a world of entities, and text put in order
 
 Stores and the references into them are written as C, and so are the six ways
@@ -292,15 +313,13 @@ backend's own half instead.
 ## Open, in priority order
 
 1. **The rest of the doors**, in the order the tree asks for them: a crossing
-   into the host (45 bodies), making text (`text.of` and `text.from`, 45) and
-   reading into it (`text.at`, `text.find`, `text.slice`, `text.in`,
-   `text.matches`, `text.rest`, 27 between them), a call through a function
-   value (2), and 53 bodies that call one of those. Stores are done (D1102)
-   and text is now compared rather than only carried (D1103). None is in the
+   into the host (45 distinct bodies), a call through a function value (19),
+   an address of a place that is not a run of the frame (11), and 72 bodies
+   that call one of those. Stores (D1102) and text (D1103, D1104) are done,
+   and with them `std.text` compiles whole. None of what is left is in the
    way of the numbers below; what they buy is breadth — how much of a whole
-   game compiles rather than how fast the part that does runs. The text
-   family is the one that would unlock `std.text` whole, and with it
-   `bench/words.kest`, which today compiles 2 bodies of 28.
+   game compiles rather than how fast the part that does runs. The host
+   crossing is the biggest of them and the one a game reaches every frame.
 2. **The five times on the kernel, read down.** A call per element, a bounds
    check the C compiler cannot hoist because it is behind that call, and a
    `memcpy` a piece where four doubles could be one. All three go away by

@@ -39793,3 +39793,37 @@ See D1103.
 **Runs:** `make check`, `tools/check-c.sh` over the tree, the new hole seen
 catching, and six hundred names compared both ways under `perf stat -e
 instructions`.
+
+## Text, and the rest of what a run of elements does
+
+Sixteen doors. Five that read into a piece of text and reach no heap -- the
+byte at a place, a cut, the rest, a match, a search -- four that make one and
+so do, and seven for runs of elements: room, `fit`, `append.text`,
+`fit.text`, `clear`, `pop` and a run written out in the program.
+
+After them `std.text` compiles whole and `bench/words.kest` goes from 2 of its
+28 bodies written to 25. Over the tree the backend writes 1,509 of 2,088, up
+from 928.
+
+Two text workloads, delta method, whole processes: scanning text with no
+allocation is 25.2 M instructions by the machine against 8.8 M compiled, which
+is 2.9×; building two thousand pieces a round, joining and splitting them, is
+357.3 M against 255.0 M, which is 1.4×. The second is the one to read.
+Building text is bound by the allocator and by `memcpy`, and compiling takes
+off what dispatch cost and leaves the rest standing -- the lesson D1095 wrote
+down about arrays, met again where it costs more.
+
+Every door says what its instruction says when it refuses, in the same words
+at the same line. Three new holes, all in the backend's own half: a cut taken
+from where it ends, a number with a sign written without one, and a run
+drained of something it says it has not got.
+
+What is left: a crossing into the host (45 distinct bodies), a call through a
+function value (19), an address of a place that is not a run of the frame
+(11), and 72 bodies that call one of those.
+
+See D1104.
+
+**Runs:** `make check`, `tools/check-c.sh` over the tree, the three new holes
+seen catching, and two text workloads run both ways under `perf stat -e
+instructions`.

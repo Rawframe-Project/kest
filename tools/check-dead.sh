@@ -145,6 +145,46 @@ fn first(a: Tag, b: Tag) -> text no.alloc no.host deterministic {
     return b.name
 }
 
+// Every read into a piece of text that does not make one, in one body: the
+// byte at a place, a cut, the rest, a match, a search and a walk.
+fn reading(line: text) -> i32 no.alloc no.host deterministic {
+    let n = i32(line[0]) + len(slice(line, 1, 2)) + len(rest(line, 1))
+    if matches(line, 0, "co") {
+        n += 1
+    }
+    if let at = find(line, "un", 0) {
+        n += at
+    }
+    for b in line {
+        n += i32(b) % 3
+    }
+    return n
+}
+
+// And every way of making one, beside the four things a run of elements does
+// that nothing above reaches: room made for what is coming, one more on the
+// end where the room already is, everything taken out, and the last one off.
+fn writing(one: Tag, n: i32, f: f64, yes: bool) -> i32 {
+    let said = "{one} {n} {f} {yes}"
+    let out: [u8] = array()
+    room(out, 32)
+    let fitted = if fit(out, said) -> 1 else -> 0
+    fitted += if fit(out, 46) -> 1 else -> 0
+    push(out, "-tail")
+    let whole = text(out)
+    clear(out)
+    let counted = [1, 2, 3]
+    let sum = 0
+    while true {
+        if let last = pop(counted) {
+            sum += last
+        } else {
+            break
+        }
+    }
+    return len(whole) + len(said) + fitted + sum + len(out) + len(counted)
+}
+
 fn walk(counts: [i32]) -> i32 no.alloc no.host deterministic {
     let sum = 0
     for at in 0..len(counts) {
@@ -188,7 +228,8 @@ fn main() -> i32 {
     push(counts, spare)
     let one = Tag("counting", 3)
     return (walk(counts) + i32(weigh(one) % 7) + worlds(4) +
-            len(first(one, Tag("counted", 4))) +
+            len(first(one, Tag("counted", 4))) + reading("counting") +
+            writing(one, -7, 0.5, true) +
             (if same(one, Tag("counting", 4)) -> 1 else -> 0)) % 251
 }
 """
