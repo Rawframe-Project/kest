@@ -39761,3 +39761,35 @@ See D1102.
 
 **Runs:** `make check`, and a world of two thousand things run both ways under
 `perf stat -e instructions`.
+
+## Text put in order in the release engine
+
+`==` between two pieces of text was the largest single operation stopping the
+backend. Written now, with `!=`, `<`, `<=`, `>` and `>=` beside it.
+
+Where two pieces of text stand to one another lived inside the machine's
+`TEXT_ORDER` macro and is now `kest_text_order`, which the macro calls and a
+generated file calls -- one answer, as D668 asks. The door hands back how far
+it had to read, which is what comparing costs and what the machine charges a
+budget for; a generated file passes nothing there, having no budget to charge.
+
+Six hundred names, compared in two loops over two hundred rounds, the fixed
+cost taken off with the delta method: 310,528 instructions a round by the
+machine against 114,477 compiled, which is 259 instructions a comparison
+against 95. The comparison is the same door in both, so what compiling took
+off is the loop around it -- not every door pays 4×, and this is what the
+honest shape of one looks like.
+
+The hole is in the backend's half, for the reason D1102 wrote down: the two
+operands handed to the door the wrong way round, which compiles and is right
+about texts that are equal and wrong about every other pair.
+
+928 of 2,088 bodies over this tree. What stops the rest is a crossing into the
+host (45 distinct bodies), making text (45), reading into text (27), and a
+body that calls one of those (53).
+
+See D1103.
+
+**Runs:** `make check`, `tools/check-c.sh` over the tree, the new hole seen
+catching, and six hundred names compared both ways under `perf stat -e
+instructions`.

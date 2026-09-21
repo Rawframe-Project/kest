@@ -3339,25 +3339,20 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         (top++)->integer = (int64_t)(many);                                    \
     } while (0)
 
-// How far two pieces of text had to be read to be put in order, which is what
-// comparing them costs: it stops at the first byte that differs, so two long
-// ones that differ early are cheap and two long ones that are the same are
-// not. Counted rather than left to `memcmp`, because what is charged for has
-// to be what was done. See D950.
+// Two pieces of text put in order, which is one answer the machine and the
+// folder share rather than two (D668, D1103). How far it had to read is what
+// comparing them costs and is charged for here: it stops at the first byte
+// that differs, so two long ones that differ early are cheap and two long
+// ones that are the same are not. Counted rather than left to `memcmp`,
+// because what is charged for has to be what was done. See D950.
 #define TEXT_ORDER(test)                                                       \
     do {                                                                       \
         Said right = TEXT_OFF();                                               \
         Said left = TEXT_OFF();                                                \
-        uint32_t read = 0;                                                     \
-        while (read < left.length && read < right.length &&                    \
-               left.bytes[read] == right.bytes[read]) {                        \
-            read++;                                                            \
-        }                                                                      \
-        int order = read == left.length && read == right.length ? 0            \
-                    : read == left.length                       ? -1           \
-                    : read == right.length                      ? 1            \
-                    : (int)(unsigned char)left.bytes[read] -                   \
-                          (int)(unsigned char)right.bytes[read];               \
+        int64_t read = 0;                                                      \
+        int64_t order =                                                        \
+            kest_text_order(left.bytes, (int64_t)left.length, right.bytes,     \
+                            (int64_t)right.length, &read);                     \
         (top++)->integer = (test);                                             \
         SPEND_WORK(read);                                                      \
     } while (0)
@@ -8188,6 +8183,32 @@ bool kest_store_seek(KestRuntime *rt, KestValue handle, int64_t from,
 int64_t kest_text_hash(const char *bytes, int64_t length) {
     return (int64_t)kest_mark_bytes(KEST_MARK_START, bytes,
                                     length < 0 ? 0 : (size_t)length);
+}
+
+int64_t kest_text_order(const char *left, int64_t left_length,
+                        const char *right, int64_t right_length,
+                        int64_t *read) {
+    if (left_length < 0) {
+        left_length = 0;
+    }
+    if (right_length < 0) {
+        right_length = 0;
+    }
+    int64_t shorter = left_length < right_length ? left_length : right_length;
+    int64_t far = 0;
+    while (far < shorter && left[far] == right[far]) {
+        far++;
+    }
+    if (read != NULL) {
+        *read = far;
+    }
+    if (far == left_length || far == right_length) {
+        // One ran out before they differed, so the shorter one comes first,
+        // and two that ran out together are one piece of text.
+        return left_length - right_length;
+    }
+    return (int64_t)(unsigned char)left[far] -
+           (int64_t)(unsigned char)right[far];
 }
 
 // The shape a layout is, which is what both of the two below are about. A

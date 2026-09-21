@@ -37532,3 +37532,51 @@ writes the byte that says *there was something there* over the last field —
 and the reference-read hole that was already there still covers the shared
 half. A check that cannot tell two things apart is a check that has to be
 pointed at the half that differs.
+
+## D1103. Text put in order in the release engine
+
+`==` between two pieces of text was the third-largest reason the backend gave
+for not writing a body, and the largest that was a single operation rather
+than a family. It is written now, and with it `!=`, `<`, `<=`, `>` and `>=`.
+
+**One door, as D668 asks.** Where two pieces of text stand to one another was
+written inside the machine's `TEXT_ORDER` macro and is now
+`kest_text_order`, which the macro calls and which a generated file calls.
+Text is its bytes (D021), so the order is the bytes' order and is the same
+everywhere rather than the host's idea of it — writing that walk a second time
+in the backend would have been a second answer the day either moved.
+
+**What the door hands back that the machine needs and the C does not.** How
+far it had to read. That is what comparing costs — it stops at the first byte
+that differs, so two long pieces that differ early are cheap and two that are
+the same are not — and the machine charges a budget for it (D950). A
+generated file passes nothing there: compiled code has no budget, which is
+what D1093 said compiling gives up.
+
+**What it is worth.** Six hundred names, compared in two loops — the least of
+them, and how many equal a given one — two hundred rounds, whole processes,
+the fixed cost taken off with the delta method:
+
+| | instructions a round | a comparison |
+| --- | --- | --- |
+| Kest, the machine | 310,528 | 259 |
+| Kest, the release engine | 114,477 | 95 |
+| | **2.7× fewer** | |
+
+The comparison itself is the same door in both, so what compiling took off is
+the loop around it: the dispatch, the operand traffic and the budget. That is
+the honest shape of this one, and it is worth writing down that not every door
+pays 4×.
+
+**Where the hole is.** The door is shared, so a hole in the door is a hole
+both engines fall into and the differential cannot see it — the lesson D1102
+paid for. The hole is in the backend's own half instead: the two operands
+written to the door the wrong way round, which compiles, answers for texts
+that are equal, and answers wrongly for every other pair. `ordered.kest`, the
+fixture written for this, catches it.
+
+Over this tree the backend now writes **928 of 2,088 bodies**. What stops the
+rest, by distinct body: a crossing into the host (45), making text (`text.of`,
+35, and `text.from`, 10), reading into text (`text.at`, `text.find`,
+`text.slice`, `text.in`, `text.matches`, `text.rest`, 27 between them), and a
+body that calls one of those (53).

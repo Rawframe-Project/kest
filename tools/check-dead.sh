@@ -138,6 +138,13 @@ fn same(a: Tag, b: Tag) -> bool no.alloc no.host deterministic {
     return a == b
 }
 
+fn first(a: Tag, b: Tag) -> text no.alloc no.host deterministic {
+    if a.name < b.name {
+        return a.name
+    }
+    return b.name
+}
+
 fn walk(counts: [i32]) -> i32 no.alloc no.host deterministic {
     let sum = 0
     for at in 0..len(counts) {
@@ -181,6 +188,7 @@ fn main() -> i32 {
     push(counts, spare)
     let one = Tag("counting", 3)
     return (walk(counts) + i32(weigh(one) % 7) + worlds(4) +
+            len(first(one, Tag("counted", 4))) +
             (if same(one, Tag("counting", 4)) -> 1 else -> 0)) % 251
 }
 """

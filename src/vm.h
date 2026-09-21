@@ -140,6 +140,17 @@ int64_t kest_value_hash(KestRuntime *runtime, uint16_t layout,
 bool kest_value_same(KestRuntime *runtime, uint16_t layout,
                      const KestValue *left, const KestValue *right);
 
+// Where one piece of text stands to another: below nought, nought, or above,
+// the way the bytes stand, which is an order that is the same everywhere
+// rather than one that depends on where the program is run (D021). How far it
+// had to read comes back in `read`, because what comparing costs is how far it
+// got and the machine charges for that -- two long pieces that differ in the
+// first byte are cheap and two that are the same are not. A generated file
+// passes nothing for `read`: it has no budget to charge. See D950 and D1103.
+int64_t kest_text_order(const char *left, int64_t left_length,
+                        const char *right, int64_t right_length,
+                        int64_t *read);
+
 // What a body written in C says when it stops. `offset` is where in the source
 // it was, which the resolved form carries and the C keeps beside the operation
 // it came from, so a refusal from a compiled body is reported where the same

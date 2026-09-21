@@ -951,7 +951,32 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             break;
         }
         if (op->type != NULL && op->type->tag == KEST_T_TEXT) {
-            cannot(walk, "an answer about a piece of text");
+            // Two pieces of text, each two slots: what they are made of and
+            // how many bytes that is. Where they stand to one another is the
+            // door the machine goes through too, and the answer the operation
+            // wants is where that number stands to nought. Nothing is charged
+            // for how far it read: a body written in C has no budget to
+            // charge, which is what D1093 says compiling gives up.
+            Where fourth;
+            if (reads != 4 || leaves != 1) {
+                cannot(walk, "an answer about a piece of text");
+                break;
+            }
+            const char *stands = op->kind == KEST_IR_EQ   ? "=="
+                                 : op->kind == KEST_IR_NE ? "!="
+                                 : op->kind == KEST_IR_LT ? "<"
+                                 : op->kind == KEST_IR_LE ? "<="
+                                 : op->kind == KEST_IR_GT ? ">"
+                                                          : ">=";
+            at_stack(first, base);
+            at_stack(second, base + 1);
+            at_stack(third, base + 2);
+            at_stack(fourth, base + 3);
+            say(c, out,
+                "    %s.integer = kest_text_order(%s.text, %s.integer,\n"
+                "                                 %s.text, %s.integer,\n"
+                "                                 NULL) %s 0;\n",
+                first, first, second, third, fourth, stands);
             break;
         }
         const char *how = binary_c(op->kind, op->type);
@@ -1819,6 +1844,9 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "                    int64_t count, const KestValue *fill,\n"
         "                    uint32_t where, KestValue *into);\n"
         "int64_t kest_text_hash(const char *bytes, int64_t length);\n"
+        "int64_t kest_text_order(const char *left, int64_t left_length,\n"
+        "                        const char *right, int64_t right_length,\n"
+        "                        int64_t *read);\n"
         "int64_t kest_value_hash(KestRuntime *runtime, uint16_t layout,\n"
         "                        const KestValue *slots);\n"
         "bool kest_value_same(KestRuntime *runtime, uint16_t layout,\n"

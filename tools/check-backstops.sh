@@ -16016,6 +16016,23 @@ kest 9.9.9""",
         "caught": "tagged.kest",
     },
     {
+        # Text put in order the wrong way round in the C, which is the half of
+        # the answer the backend writes for itself: where the two pieces stand
+        # is one door both engines go through, so a mistake in the door is a
+        # mistake both halves make and neither notices. The operands, on the
+        # other hand, are the backend's own -- and `a < b` written as `b < a`
+        # compiles, answers for texts that are equal, and answers wrongly for
+        # every other pair. See D1103.
+        "what": "text put in order against the piece it is compared with",
+        "file": "src/emitc.c",
+        "from": r"""                first, first, second, third, fourth, stands);""",
+        "to": r"""                first, third, fourth, first, second, stands);""",
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest", "examples/game/npc.kest"],
+        "caught": "ordered.kest",
+    },
+    {
         # Text hashed by where it is rather than by what it says. Two pieces
         # of text that compare equal are the same bytes (D021), so a hash
         # over the address is a hash that disagrees with `==` -- and with the

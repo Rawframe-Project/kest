@@ -267,13 +267,40 @@ what a serious game developer gets here that Luau does not give them is the
 same runtime ceiling with a check loop of 282 ms for a hundred thousand lines
 and a language that refuses what it cannot prove.
 
+## D1102, D1103 — a world of entities, and text put in order
+
+Stores and the references into them are written as C, and so are the six ways
+two pieces of text can be compared. A world of two thousand things each naming
+the next, walked twenty rounds: 103.1 M instructions by the machine against
+23.5 M compiled. Six hundred names compared in two loops: 259 instructions a
+comparison against 95, which is 2.7× — the comparison itself is one door both
+engines call, so what compiling took off there is the loop around it and not
+every door pays 4×.
+
+A reference to a place that has been handed back reads as nothing under both
+engines, because the compiled half asks the same `resolve_ref` the machine
+does. That is the property a persistent world most needs and the one a second
+backend could most easily lose.
+
+Over this tree the backend writes **928 of 2,088 bodies**.
+
+One thing both decisions paid for about checks: a door and an instruction that
+are one answer are one answer to a hole as well, so breaking the door breaks
+both engines and the differential sees nothing. Both holes are in the
+backend's own half instead.
+
 ## Open, in priority order
 
 1. **The rest of the doors**, in the order the tree asks for them: a crossing
-   into the host (45 bodies), comparing and making text (40 and 30), a call
-   through a function value (17). Stores are done (D1102). None is in the way
-   of the numbers below; what they buy is breadth — how much of a whole game
-   compiles rather than how fast the part that does runs.
+   into the host (45 bodies), making text (`text.of` and `text.from`, 45) and
+   reading into it (`text.at`, `text.find`, `text.slice`, `text.in`,
+   `text.matches`, `text.rest`, 27 between them), a call through a function
+   value (2), and 53 bodies that call one of those. Stores are done (D1102)
+   and text is now compared rather than only carried (D1103). None is in the
+   way of the numbers below; what they buy is breadth — how much of a whole
+   game compiles rather than how fast the part that does runs. The text
+   family is the one that would unlock `std.text` whole, and with it
+   `bench/words.kest`, which today compiles 2 bodies of 28.
 2. **The five times on the kernel, read down.** A call per element, a bounds
    check the C compiler cannot hoist because it is behind that call, and a
    `memcpy` a piece where four doubles could be one. All three go away by

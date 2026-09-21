@@ -290,8 +290,8 @@ tools/             Build and development scripts. `make check` runs all of
                    eleven checks to saying nothing a hole has not been seen
                    making them say — the two left off are the one that puts
                    the holes out of order, for the reason the gate's own
-                   guards are left off, and `check-c.sh`, whose two holes are
-                   the two halves of what it is for and whose other sentences
+                   guards are left off, and `check-c.sh`, whose every hole is one
+                   of the two halves of what it is for and whose other sentences
                    are the plumbing of a check that is still growing with the
                    backend it reads: a check whose every complaint has a hole
                    behind it is put on that list, so a

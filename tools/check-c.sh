@@ -494,6 +494,53 @@ fn main() -> i32 {
     return i32((total % 251 + 251) % 251)
 }
 PROGRAM
+cat >"$work"/programs/ordered.kest <<'PROGRAM'
+module ordered
+
+fn pick(i: i32) -> text no.alloc no.host deterministic {
+    if i % 5 == 0 { return "apple" }
+    if i % 5 == 1 { return "apricot" }
+    if i % 5 == 2 { return "ap" }
+    if i % 5 == 3 { return "" }
+    return "banana"
+}
+
+fn least(names: [text]) -> text no.host deterministic {
+    let best = names[0]
+    for i in 1..len(names) {
+        if names[i] < best {
+            best = names[i]
+        }
+    }
+    return best
+}
+
+fn weigh(a: text, b: text) -> i64 no.alloc no.host deterministic {
+    let n: i64 = 0
+    if a == b { n += 1 }
+    if a != b { n += 2 }
+    if a < b { n += 4 }
+    if a <= b { n += 8 }
+    if a > b { n += 16 }
+    if a >= b { n += 32 }
+    return n
+}
+
+fn main() -> i32 {
+    let names: [text] = array()
+    for i in 0..10 {
+        push(names, pick(i))
+    }
+    let total: i64 = 0
+    if least(names) == "" {
+        total += 7
+    }
+    for i in 0..16 {
+        total += weigh(pick(i), pick(i / 4))
+    }
+    return i32(total % 251)
+}
+PROGRAM
 cat >"$work"/programs/outside.kest <<'PROGRAM'
 module outside
 
