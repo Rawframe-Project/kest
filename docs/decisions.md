@@ -38198,3 +38198,102 @@ allowed to measure, and `best of 5` takes the cached one.
 So every daslang row runs `-no-module-cache`. It is the fairer setting and it
 keeps somebody else's directory out of this tree, which is the same answer
 twice.
+
+## D1119. The last four, and the backend writes every body in this tree
+
+D1108 left seven bodies. This writes them, and the sweep now reads **2,088 of
+2,088**.
+
+**An infinity has no spelling C reads back.** `%a` writes `inf` and `nan`,
+which are not literals, so a body holding one was a body this backend left
+alone. What is written now is the bits and a copy into the slot — every double
+has those, and the copy is what the machine does with one anyway.
+
+**A run of constants read at an index worked out while it runs.** A table of
+tiers, a curve, a list of names: the machine keeps them in the chunk and reads
+them at the index, and this writes them out once at the top of the file and
+reads them the same way. A run holding an infinity is the one that is still
+left alone, because the bits trick above cannot be written into an
+initialiser — and that turned out to be useful, which is the next paragraph.
+
+**Working memory.** `scratch { }` is a block of the heap handed back whole
+when the block ends, however it ends, and it is two doors: opened and put
+back. Both are shared, so the machine goes through them too — it is once a
+region rather than once an element, and one answer is worth more than a few
+instructions there.
+
+**An address stepped by an index.** One of a fixed run inside memory the
+program holds an address into, which is `many[which].cells[cell]` and the one
+way to reach the instruction D430 is about.
+
+### What a backend that writes everything costs a check
+
+`tools/check-dead.sh` holds every declaration to being called, and it reads a
+generated file's undefined symbols to hold the backend's own doors. With every
+body in this tree written, `kest_call_body` — the door a compiled body calls
+to hand a body to the machine — had no user anywhere, and the check said so.
+It is right to say so and wrong to delete the door: what it is for is the
+program somebody writes tomorrow that this backend cannot do all of.
+
+So the fixture that check writes for itself now holds a run of numbers with an
+infinity in it, which is the one thing left that this backend will not write.
+**The check keeps a body the backend refuses on purpose**, and the day the
+backend can write that too, this is where a reader is told to find another.
+
+### And the rule the holes are under
+
+D1115 added a narrow exception to *the list of holes does not grow*: new code
+that is a new kind of thing gets one. These four are four more operations in a
+backend that already has a hundred, which is not a new kind of thing — so they
+get a fixture, `held.kest`, which holds all four and is run both ways. That is
+the rule working as written, on the first occasion after it was written.
+
+## D1120. The suite is six of fourteen, not six of nine
+
+Five decisions in a row said the tasks a model is given were *of the nine
+kinds the mission lists*. The mission lists **fourteen**, under `Task families
+should include:` — implement feature, repair bug, refactor across modules,
+obey `no.alloc`, obey `no.host`, deterministic update, ref-safe store logic,
+host API use, save/load change, hot-update-compatible change, generic API use,
+error handling, callback/context use, and intentionally misleading near-miss
+API names.
+
+Nobody read the number back against the document. It was carried from one
+entry to the next and each carrying made it look more settled, which is the
+failure this project's rule about reading the source before deciding is
+for — applied to a document rather than to code. D1101, D1106, D1110, D1113
+and D1114 say nine; they are not edited, because nothing here is, and this is
+the entry that says what the number is.
+
+**And two of the six were narrower than the family they sit under.** `spread`
+refactors within one module rather than across modules, because the runner
+takes one file. `saved` is save and load rather than a change to a save
+format, which is the migration the family means.
+
+So `ai/README.md` holds a table of the mission's fourteen against what is
+here, rather than a number in prose: a table cannot be carried forward wrong
+the way a number can, because every row of it names something a reader can go
+and look at.
+
+## D1121. A seventh family: doors somebody else wrote
+
+`ai/tasks/called` is callback and context use, which is the seventh family and
+the first that is about *when* something is called rather than what it
+answers.
+
+`Doors` holds two function values. One is called once for each thing before
+any thing moves; the other is called for each step and answers whether that
+thing may go on. **The doors the tests hand over write down what they were
+called with**, so the log afterwards is the order the calls were made in —
+and that is most of what is checked. The plausible wrong answer spawns each
+thing and marches it before spawning the next, which answers the same number
+on every world in the suite and leaves a different log.
+
+**This one needed no captured state, which is why it could be written at
+all.** A function value in this language is one slot saying which function it
+is and carries no environment; the way a callback reports here is by writing
+into a run of elements it was handed, which is what a frame does anyway. The
+same shape in Luau is a table of functions over a table, so the two halves are
+the same task rather than the same words.
+
+Seven of fourteen.

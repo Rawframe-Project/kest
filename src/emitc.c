@@ -27,6 +27,11 @@ typedef struct {
 typedef struct {
     const char *symbol;
     Text wrote;
+    // What has to stand at the top of the file for this body to read: a run
+    // of constants written out where an index can reach it. A body reads one
+    // and cannot hold one, because what it reads is decided while it runs.
+    // See D1119.
+    Text ahead;
     // Which functions of the module it calls, so that a body calling one this
     // backend did not write can be found and left out as well. A call is a
     // call to a C function here; there is no dispatch to fall back through.
@@ -636,6 +641,83 @@ static const char *narrow_c(uint16_t scalar) {
     }
 }
 
+// A run of constants written into the program, read at an index worked out
+// while it runs: a table of tiers, a curve, a list of names. The machine
+// keeps them in the chunk and reads them at the index; this writes them out
+// once at the top of the file and reads them the same way. See D1119.
+static void write_const_at(Walk *walk, const KestIrOp *op, uint32_t index) {
+    KestEmitC *c = walk->c;
+    const KestIrBody *body = walk->body;
+    uint32_t first = op->imm[0];
+    uint32_t stride = op->imm[1];
+    uint32_t count = op->imm[2];
+    uint32_t many = stride * count;
+    if (stride == 0 || count == 0 ||
+        (size_t)first + many > body->constant_count) {
+        cannot(walk, "a run of values the body has not got");
+        return;
+    }
+    Text *out = &walk->into->ahead;
+    say(c, out, "static const KV kr_%u_%u[] = {\n", c->count - 1, index);
+    for (uint32_t k = 0; k < many; k++) {
+        KestValue value = body->constants[first + k];
+        uint8_t class = body->constant_classes[first + k];
+        if (class == KEST_CONST_TEXT) {
+            if (k + 1 >= many ||
+                body->constant_classes[first + k + 1] != KEST_CONST_INT) {
+                cannot(walk, "a piece of text with no length beside it");
+                return;
+            }
+            int64_t wide = body->constants[first + k + 1].integer;
+            if (value.text == NULL || wide < 0) {
+                cannot(walk, "a piece of text that is nowhere");
+                return;
+            }
+            say(c, out, "    { .text = \"");
+            for (int64_t byte = 0; byte < wide; byte++) {
+                say(c, out, "\\x%02x",
+                    (unsigned)(unsigned char)value.text[byte]);
+            }
+            say(c, out, "\" },\n");
+            continue;
+        }
+        if (class == KEST_CONST_FLOAT) {
+            // The bits trick the single values use cannot be written into an
+            // initialiser, and an infinity has no literal, so a run holding
+            // one is a run this leaves alone.
+            if (value.real != value.real ||
+                value.real - value.real != 0.0) {
+                cannot(walk, "a number with no spelling in C");
+                return;
+            }
+            say(c, out, "    { .real = %a },\n", value.real);
+            continue;
+        }
+        if (class != KEST_CONST_INT) {
+            cannot(walk, "a value this backend has no spelling for");
+            return;
+        }
+        say(c, out, "    { .integer = (int64_t)UINT64_C(0x%016llx) },\n",
+            (unsigned long long)(uint64_t)value.integer);
+    }
+    say(c, out, "};\n");
+    Where held;
+    at_stack(held, walk->stack - 1);
+    say(c, &walk->into->wrote,
+        "    {\n        int64_t which = %s.integer;\n"
+        "        if (!kest_run_at(rt, which, %u, %u)) {\n"
+        "            return false;\n        }\n",
+        held, count, op->span.offset);
+    for (uint32_t k = 0; k < stride; k++) {
+        Where into;
+        at_stack(into, walk->stack - 1 + k);
+        say(c, &walk->into->wrote,
+            "        %s = kr_%u_%u[which * %u + %u];\n", into, c->count - 1,
+            index, stride, k);
+    }
+    say(c, &walk->into->wrote, "    }\n");
+}
+
 static void write_const(Walk *walk, const KestIrOp *op) {
     const KestIrBody *body = walk->body;
     uint32_t first = op->imm[0];
@@ -687,8 +769,18 @@ static void write_const(Walk *walk, const KestIrOp *op) {
             // number for that means something else.
             if (value.real != value.real ||
                 value.real - value.real != 0.0) {
-                cannot(walk, "a number with no spelling in C");
-                return;
+                // An infinity and a not-a-number have no spelling C reads
+                // back -- `%a` writes `inf` and `nan`, which are not
+                // literals -- so what is written is the bits and a copy into
+                // the slot. Every double has those, and the copy is what the
+                // machine does with one anyway. See D1119.
+                uint64_t bits = 0;
+                memcpy(&bits, &value.real, sizeof bits);
+                say(walk->c, &walk->into->wrote,
+                    "    {\n        uint64_t bits = UINT64_C(0x%016llx);\n"
+                    "        memcpy(&%s.real, &bits, sizeof bits);\n    }\n",
+                    (unsigned long long)bits, into);
+                continue;
             }
             say(walk->c, &walk->into->wrote, "    %s.real = %a;\n", into,
                 value.real);
@@ -828,6 +920,16 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
     switch ((KestIrKind)op->kind) {
     case KEST_IR_CONST:
         write_const(walk, op);
+        break;
+    case KEST_IR_CONST_AT:
+        // The index is read away and the run it names is left where it was,
+        // which is what the machine does with the slot under it.
+        if (reads != 1 || leaves != op->imm[1]) {
+            cannot(walk, "a run of values read at something other than an "
+                         "index");
+            break;
+        }
+        write_const_at(walk, op, index);
         break;
     case KEST_IR_TRUE:
     case KEST_IR_FALSE:
@@ -1219,6 +1321,28 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         break;
     case KEST_IR_ADDR: {
         const KestIrPlace *place = &body->places[op->place];
+        if (place->kind == KEST_IR_PLACE_AT) {
+            // An address already worked out, stepped by an index worked out
+            // while it runs: one of a fixed run inside memory the program
+            // holds an address into. The machine's own sentence answers for
+            // an index that is not one of them. See D430 and D1119.
+            if (reads != 2 || leaves != 1) {
+                cannot(walk, "an address stepped by something other than an "
+                             "index");
+                break;
+            }
+            at_stack(first, base);
+            at_stack(second, base + 1);
+            say(c, out,
+                "    {\n        int64_t which = %s.integer;\n"
+                "        if (!kest_run_at(rt, which, %u, %u)) {\n"
+                "            return false;\n        }\n"
+                "        %s.object = (unsigned char *)%s.object +\n"
+                "                    (size_t)which * %u;\n    }\n",
+                second, (unsigned)place->count, op->span.offset, first, first,
+                (unsigned)place->stride);
+            break;
+        }
         if (place->kind != KEST_IR_PLACE_ELEM) {
             cannot(walk, "the address of a place this does not take one of");
             break;
@@ -1913,6 +2037,31 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             (unsigned)op->imm[2], op->span.offset);
         break;
     }
+    case KEST_IR_REGION_OPEN:
+    case KEST_IR_REGION_CLOSE: {
+        // A block of the heap handed back whole when the block ends. Which
+        // block it is lives in a slot of the frame, which is where the
+        // machine keeps it too. See D1119.
+        Where held;
+        if (reads != 0 || leaves != 0) {
+            cannot(walk, "working memory opened around something other than "
+                         "a block");
+            break;
+        }
+        at_frame(held, op->imm[0]);
+        if (op->kind == KEST_IR_REGION_OPEN) {
+            say(c, out,
+                "    if (!kest_region_open(rt, %u, &%s.integer)) {\n"
+                "        return false;\n    }\n",
+                op->span.offset, held);
+            break;
+        }
+        say(c, out,
+            "    if (!kest_region_close(rt, %s.integer, %u)) {\n"
+            "        return false;\n    }\n",
+            held, op->span.offset);
+        break;
+    }
     case KEST_IR_GO:
         say(c, out, "    ");
         write_branch(walk, op->target, base + leaves, op->span.offset);
@@ -1966,7 +2115,6 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         cannot(walk, kest_ir_word((KestIrKind)op->kind));
         break;
     }
-    (void)index;
     walk->stack = base + leaves;
 }
 
@@ -2282,6 +2430,10 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "                    uint16_t result_slots, uint32_t where);\n"
         "bool kest_run_at(KestRuntime *runtime, int64_t index,\n"
         "                 uint32_t count, uint32_t where);\n"
+        "bool kest_region_open(KestRuntime *runtime, uint32_t where,\n"
+        "                      int64_t *into);\n"
+        "bool kest_region_close(KestRuntime *runtime, int64_t was,\n"
+        "                       uint32_t where);\n"
         "unsigned char *kest_elem_at(KestRuntime *runtime, KestValue handle,\n"
         "                            int64_t index, uint16_t offset,\n"
         "                            uint32_t where);\n"
@@ -2415,6 +2567,16 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         }
         write_head(c, &file, &c->bodies[i], i);
         say(c, &file, ";\n");
+    }
+    say(c, &file, "\n");
+    // And what a body needs standing at the top of the file: a run of
+    // constants written into the program, which a body reads at an index and
+    // cannot hold. See D1119.
+    for (uint32_t i = 0; i < c->count; i++) {
+        if (!c->bodies[i].written || c->bodies[i].ahead.bytes == NULL) {
+            continue;
+        }
+        say(c, &file, "%s", c->bodies[i].ahead.bytes);
     }
     say(c, &file, "\n");
     // The bodies this backend handed to the machine, each a C function of the

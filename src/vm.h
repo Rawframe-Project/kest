@@ -262,6 +262,14 @@ bool kest_call_value(KestRuntime *runtime, KestValue what, KestValue *base,
 // wanted. It was sixteen per cent of a gameplay workload. See D1117.
 #define KEST_WHERE_RUNNING 0xffffffffu
 
+// Working memory opened and put back. A `scratch { }` block is a block of the
+// heap that is handed back whole when the block ends, however the block ends
+// -- which is what makes it the one way a body can make something and pay
+// nothing for it afterwards. `into` comes back holding which block it is, and
+// closing one closes everything opened inside it. See D1119.
+bool kest_region_open(KestRuntime *runtime, uint32_t where, int64_t *into);
+bool kest_region_close(KestRuntime *runtime, int64_t was, uint32_t where);
+
 // One of a fixed run of slots in the frame, at an index worked out while it
 // runs: whether the index is one of them. The machine's own sentence, because
 // two engines that put a bounds failure differently are two languages. See

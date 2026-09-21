@@ -5249,59 +5249,24 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 
         case KEST_OP_SCRATCH: {
             uint16_t where = READ_U16();
-            if (rt->kept_count == rt->kept_room &&
-                rt->kept_room < MAX_KEPT) {
-                uint32_t room = rt->kept_room == 0 ? 8 : rt->kept_room * 2;
-                KestMark *grown = KEST_ARENA_ARRAY(rt->own, KestMark, room);
-                if (grown == NULL) {
-                    no_room(vmp, frame, instruction, rt);
-                    return false;
-                }
-                for (uint32_t i = 0; i < rt->kept_count; i++) {
-                    grown[i] = rt->kept[i];
-                }
-                rt->kept = grown;
-                rt->kept_room = room;
-            }
-            if (rt->kept_count == MAX_KEPT) {
-                fail(vmp, frame, instruction, "K0656",
-                     "this machine holds %u working-memory blocks at once",
-                     (unsigned)MAX_KEPT);
-                kest_diags_suggest(vmp->diags,
-                                   "a `scratch { }` inside a function that "
-                                   "calls itself opens one a call deep");
+            // The door both engines go through, so working memory is opened
+            // one way and says one thing when it cannot be. See D1119.
+            frame->ip = ip;
+            rt->asked_at = instruction;
+            int64_t opened = 0;
+            if (!kest_region_open(rt, KEST_WHERE_RUNNING, &opened)) {
                 return false;
             }
-            if (!kest_ground_open(rt->ground)) {
-                no_room(vmp, frame, instruction, rt);
-                kest_diags_suggest(vmp->diags,
-                                   "it was opening a block of working memory");
-                return false;
-            }
-            rt->kept[rt->kept_count] = kest_arena_mark(rt->heap);
-            mine[where].integer = (int64_t)rt->kept_count++;
+            mine[where].integer = opened;
             break;
         }
         case KEST_OP_UNSCRATCH: {
             uint16_t where = READ_U16();
-            uint32_t was = (uint32_t)mine[where].integer;
-#if KEST_CHECKED
-            rt->guarded++;
-            if (was >= rt->kept_count) {
-                fail(vmp, frame, instruction, "K0655",
-                     "this puts the heap back to a block that is not open");
-                kest_diags_fault(vmp->diags,
-                                 "a block the compiler opened and the machine "
-                                 "did not");
+            frame->ip = ip;
+            rt->asked_at = instruction;
+            if (!kest_region_close(rt, mine[where].integer,
+                                   KEST_WHERE_RUNNING)) {
                 return false;
-            }
-#endif
-            if (was < rt->kept_count) {
-                kest_arena_rewind(rt->heap, rt->kept[was]);
-                while (rt->kept_count > was) {
-                    kest_ground_close(rt->ground);
-                    rt->kept_count--;
-                }
             }
             break;
         }
@@ -8061,6 +8026,72 @@ static const KestSource *where_from(KestRuntime *rt) {
     return rt->frame_count > 0 ? rt->frames[rt->frame_count - 1].chunk->source
                                : NULL;
 }
+
+bool kest_region_open(KestRuntime *rt, uint32_t where, int64_t *into) {
+    if (rt == NULL || into == NULL) {
+        return false;
+    }
+    KestSpan span = where_asked(rt, where);
+    if (rt->kept_count == rt->kept_room && rt->kept_room < MAX_KEPT) {
+        uint32_t room = rt->kept_room == 0 ? 8 : rt->kept_room * 2;
+        KestMark *grown = KEST_ARENA_ARRAY(rt->own, KestMark, room);
+        if (grown == NULL) {
+            no_room_at(rt, where_from(rt), span, rt);
+            return false;
+        }
+        for (uint32_t i = 0; i < rt->kept_count; i++) {
+            grown[i] = rt->kept[i];
+        }
+        rt->kept = grown;
+        rt->kept_room = room;
+    }
+    if (rt->kept_count == MAX_KEPT) {
+        stopped_saying(rt, where, "K0656",
+                       "this machine holds %u working-memory blocks at once",
+                       (unsigned)MAX_KEPT);
+        kest_diags_suggest(rt->diags,
+                           "a `scratch { }` inside a function that calls "
+                           "itself opens one a call deep");
+        return false;
+    }
+    if (!kest_ground_open(rt->ground)) {
+        no_room_at(rt, where_from(rt), span, rt);
+        kest_diags_suggest(rt->diags,
+                           "it was opening a block of working memory");
+        return false;
+    }
+    rt->kept[rt->kept_count] = kest_arena_mark(rt->heap);
+    *into = (int64_t)rt->kept_count++;
+    return true;
+}
+
+bool kest_region_close(KestRuntime *rt, int64_t was, uint32_t where) {
+    if (rt == NULL) {
+        return false;
+    }
+#if KEST_CHECKED
+    rt->guarded++;
+    if (was < 0 || (uint64_t)was >= rt->kept_count) {
+        stopped_saying(rt, where, "K0655",
+                       "this puts the heap back to a block that is not open");
+        kest_diags_fault(rt->diags,
+                         "a block the compiler opened and the machine did "
+                         "not");
+        return false;
+    }
+#else
+    (void)where;
+#endif
+    if (was >= 0 && (uint64_t)was < rt->kept_count) {
+        kest_arena_rewind(rt->heap, rt->kept[was]);
+        while (rt->kept_count > (uint32_t)was) {
+            kest_ground_close(rt->ground);
+            rt->kept_count--;
+        }
+    }
+    return true;
+}
+
 
 bool kest_array_new(KestRuntime *rt, uint16_t layout, int64_t count,
                     const KestValue *fill, uint32_t where, KestValue *into) {

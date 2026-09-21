@@ -6,17 +6,18 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1118
-    PHASE:             B — the release engine, and it is whole: 2,081 of this
-                       tree's 2,088 bodies are written as C, `bench/rules.kest`
-                       compiles entire, the gameplay workload is inside
-                       D1092's trigger against `g++` and ahead of Luau's
-                       native tier on four of the five workloads, and the
-                       kernel is 2.8 times `g++` where it was five. And the
-                       machine is measured rather than guessed at: the
-                       persistent-world reference program runs 2.7 times fewer
-                       instructions since it stopped working out where a
-                       refusal would be reported before every door call
+    CURRENT SHA:       (this commit) D1093-D1121
+    PHASE:             B — the release engine, and it is whole: every one of
+                       this tree's 2,088 bodies is written as C (D1119),
+                       `bench/rules.kest` compiles entire, the gameplay
+                       workload is inside D1092's trigger against `g++` and
+                       ahead of Luau's native tier on four of the five
+                       workloads, and the kernel is 2.8 times `g++` where it
+                       was five. And the machine is measured rather than
+                       guessed at: the persistent-world reference program
+                       runs 2.7 times fewer instructions since it stopped
+                       working out where a refusal would be reported before
+                       every door call
     LAST FAST GATE:    green
     LAST FULL GATE:    green at b51cc0b
     REFERENCE MACHINE: the spare Linux box this repository is on --
@@ -318,7 +319,8 @@ nothing left of that program for the machine to run.
 
 With one of a fixed run written too, and the arithmetic a generated file's own
 host now offers, the backend writes **2,081 of 2,088** and 41 of this tree's
-programs run both ways rather than 30.
+programs run both ways rather than 30. *(D1119 wrote the last seven: it is all
+2,088 now, and 45 run both ways.)*
 
 The seven questions a crossing asks are asked in one place now, which also
 turned up a fault in the machine that could not be seen before: the check
@@ -388,11 +390,13 @@ backend's own half instead.
 
 ## Open, in priority order
 
-1. *(all but done)* **The doors.** The backend writes 2,081 of this tree's
-   2,088 bodies (D1105 to D1109). What is left is seven — a region opened
-   (3), a number with no spelling in C (2), a constant read where it is (1)
-   and one address of a place this does not take one of. None of them is a
-   family and all of them are in `examples`. Shipping one of these files is
+1. *(done, D1119)* **The doors.** The backend writes **every one of this
+   tree's 2,088 bodies** (D1105 to D1109, D1112, D1119). The one thing left
+   that it will not write is a run of numbers with an infinity in it, whose
+   bits cannot go in an initialiser; `check-dead.sh` and two of
+   `check-c.sh`'s own programs keep a body like that on purpose, so that the
+   door a compiled body hands work to the machine through has a user and the
+   holes that watch it have something to catch. Shipping one of these files is
    written and held: a generated file exports `kest_natives_here` for a
    game's own host, and the check runs one program twice in one process,
    compiled and not, through a door that calls back in (D1111). The
@@ -431,15 +435,24 @@ backend's own half instead.
    building daScript with LLVM, which is not this tree's to build. Every
    daslang row runs without its module cache (D1118), which is what the rows
    beside it do and what keeps its directory out of this tree.
-5. **More of the AI suite.** Six of the nine kinds the mission lists are
-   written (D1101, D1106, D1110, D1113, D1114) with held-out tests, a wrong
-   answer beside each and a gate that holds all three. Four of them are the
-   kinds a type system cannot be credited for: a bug to find in code that
-   compiles and analyses clean in both languages, input that is mostly wrong,
-   a save somebody else wrote, and a refactor that has to mean exactly what it
-   meant. What is not written: a host API, which has no shape here that is
-   fair to both languages. Running models against it is the owner's, at the
-   end.
+5. **More of the AI suite.** Seven of the **fourteen** task families the
+   mission lists are written (D1101, D1106, D1110, D1113, D1114, D1121), with
+   held-out tests, a wrong answer beside each and a gate that holds all
+   three — and two of the seven are narrower than the family they sit under:
+   `spread` refactors within one module rather than across modules, and
+   `saved` is save and load rather than a change to a save format. Four of
+   them are the kinds a type system cannot be credited for: a bug to find in
+   code that compiles and analyses clean in both languages, input that is
+   mostly wrong, a save somebody else wrote, and a refactor that has to mean
+   exactly what it meant. **Seven families are not written**: deterministic
+   update, host API use, hot-update-compatible change, generic API use,
+   near-miss API names, and the two promises — obeying `no.alloc` and
+   `no.host` — which every task here carries and none is about. Two of the
+   seven, near-miss API names and a deterministic update, are writable with
+   what the runner already does; the rest want a host or a reload, which it
+   has neither of. `ai/README.md` holds the table. The count said nine until D1120,
+   which is where that is written down. Running models against it is the
+   owner's, at the end.
 6. *(done, D1117)* **Game-shaped runtime profile**, on `bench/rules.kest`.
    The machine: dispatch and the instruction bodies 54%, working out where a
    refusal would be reported 16.5%, value movement 22%, the collector and the

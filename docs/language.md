@@ -4539,7 +4539,8 @@ reason and is a body the machine runs, called from the compiled ones through a
 door of its own -- so one such body costs the program that body and nothing
 above it -- and the file is a program of its own, with a `main` that reads the
 source beside it for whatever half the machine holds. For most programs there
-is no such half: over this tree it writes 2,081 of 2,088 bodies. A host of its
+is no such half: over this tree it writes every one of the 2,088 bodies there
+are. A host of its
 own -- a game, with its own doors and its own `main` -- compiles that file
 with `-DKEST_NO_MAIN` and calls the one function it exports,
 `kest_natives_here(runtime)`, which binds every body in it to the machine that

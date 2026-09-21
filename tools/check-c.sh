@@ -655,8 +655,14 @@ cat >"$work"/programs/across.kest <<'PROGRAM'
 module across
 
 // A run written into the program rather than made while it runs, read at an
-// index: the other thing this backend has no C for.
+// index.
 const TIERS: [i32; 4] = [0, 90, 250, 1200]
+
+// And one holding a number with no spelling C reads back, which is the one
+// thing this backend will not write: the bits an infinity is made of cannot
+// go in an initialiser. A body holding this is a body the machine runs, and
+// what is written for it hands the call to the machine.
+const FAR: [f64; 2] = [1.0 / 0.0, 0.0 - 1.0 / 0.0]
 
 fn through(f: fn(i32, i32) -> i32 no.alloc no.host deterministic, a: i32,
            b: i32) -> i32 no.alloc no.host deterministic {
@@ -667,15 +673,11 @@ fn apart(a: i32, b: i32) -> i32 no.alloc no.host deterministic {
     return a * 2 + b
 }
 
-// A body this backend has no C for -- it opens working memory -- called by
-// one it does. What is written for it hands the call to the machine.
-fn scratched(many: i32, each: i32) -> i32 no.host deterministic {
-    let sum = 0
-    scratch {
-        let made: [i32] = array(many, each)
-        sum = len(made) * 3 + made[0]
+fn stretched(which: i32, by: i32) -> i32 no.alloc no.host deterministic {
+    if FAR[which % 2] > 0.0 {
+        return by * 3
     }
-    return sum
+    return by
 }
 
 fn tier(i: i32) -> i32 no.alloc no.host deterministic {
@@ -698,27 +700,29 @@ fn main() -> i32 {
     for i in 0..4 {
         total += tier(i)
     }
-    total += scratched(3, 5)
-    total += scratched(7, 2)
+    total += stretched(0, 5)
+    total += stretched(1, 7)
     return total % 251
 }
 PROGRAM
 cat >"$work"/programs/crossed.kest <<'PROGRAM'
 module crossed
 
-// A body this backend has no C for, in the middle of a run of calls that
-// nests until the machine refuses it: one half of the chain is C and the
+// A run holding a number with no spelling C reads back, which is the one
+// thing this backend will not write. `through` holds it, so `through` is a
+// body the machine runs -- and it is in the middle of a run of calls that
+// nests until the machine refuses it, so one half of the chain is C and the
 // other half is the machine, and both halves count.
-fn through(n: i32) -> i32 no.host deterministic {
-    let out = 0
-    scratch {
-        let one: [i32] = array(1, n)
-        out = one[0]
+const FAR: [f64; 2] = [1.0 / 0.0, 0.0 - 1.0 / 0.0]
+
+fn through(n: i32) -> i32 no.alloc no.host deterministic {
+    if FAR[n % 2] != 0.0 {
+        return down(n) + 1
     }
-    return down(out) + 1
+    return 0
 }
 
-fn down(n: i32) -> i32 no.host deterministic {
+fn down(n: i32) -> i32 no.alloc no.host deterministic {
     if n <= 0 {
         return 0
     }
@@ -819,6 +823,87 @@ fn main() -> i32 {
         sum += at(b, i)
     }
     return sum
+}
+PROGRAM
+cat >"$work"/programs/held.kest <<'PROGRAM'
+module held
+
+struct Cell {
+    at: i32
+    weight: f32
+}
+
+struct Row {
+    cells: [Cell; 3]
+    tag: i32
+}
+
+const TIERS: [i32; 4] = [0, 90, 250, 1200]
+const NAMES: [text; 3] = ["bronze", "silver", "gold"]
+
+fn tier(i: i32) -> i32 no.alloc no.host deterministic {
+    return TIERS[i]
+}
+
+fn named(i: i32) -> text no.alloc no.host deterministic {
+    return NAMES[i]
+}
+
+// A number with no spelling C reads back, which is what the bits are for.
+fn far(by: f64) -> f64 no.alloc no.host deterministic {
+    let big: f64 = 1.0 / 0.0
+    if by > 0.0 {
+        return big
+    }
+    return 0.0 - big
+}
+
+fn rowOf(tag: i32) -> Row no.alloc no.host deterministic {
+    return Row([Cell(1, 0.5), Cell(2, 0.75), Cell(3, 1.0)], tag)
+}
+
+// One of a fixed run inside memory the program holds an address into, at an
+// index worked out while it runs.
+fn cellAt(rows: [Row], which: i32,
+          cell: i32) -> i32 no.alloc no.host deterministic {
+    return rows[which].cells[cell].at
+}
+
+fn scratched(rounds: i32) -> i32 no.host deterministic {
+    let sum = 0
+    for i in 0..rounds {
+        scratch {
+            let made: [i32] = array(4, i)
+            sum += len(made) + made[0]
+        }
+    }
+    return sum
+}
+
+fn main() -> i32 {
+    let total = 0
+    for i in 0..4 {
+        total += tier(i)
+    }
+    for i in 0..3 {
+        total += len(named(i))
+    }
+    if far(1.0) > 0.0 {
+        total += 1
+    }
+    if far(-1.0) < 0.0 {
+        total += 2
+    }
+    let rows: [Row] = array()
+    push(rows, rowOf(1))
+    push(rows, rowOf(2))
+    for w in 0..2 {
+        for c in 0..3 {
+            total += cellAt(rows, w, c)
+        }
+    }
+    total += scratched(3)
+    return total % 251
 }
 PROGRAM
 cat >"$work"/programs/outside.kest <<'PROGRAM'

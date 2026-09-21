@@ -199,7 +199,7 @@ it.** D1017 and D1067 closed it twice on the reading that what a generated-C
 backend takes away is the dispatch and that the dispatch is not the gap. A
 gameplay-shaped workload measured against Luau's own native tier reopened it
 (D1090), and D1092 decided two engines: the machine for developing and C for
-shipping. That backend is in the tree — `kest emit --c`, 2,081 of
+shipping. That backend is in the tree — `kest emit --c`, every one of
 this tree's 2,088 bodies, held to answering what the machine answers by
 `tools/check-c.sh` — and on two scalar workloads it runs sixteen and
 twenty-three times fewer machine instructions than the machine does (D1093).

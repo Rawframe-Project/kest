@@ -40175,3 +40175,56 @@ behind.
 See D1118.
 
 **Runs:** `make check`, and `bench/run.sh` with all three comparators found.
+
+## The last four, and the backend writes every body in this tree
+
+An infinity written as the bits it is made of, since `%a` writes `inf` and
+that is not a literal. A run of constants read at an index worked out while it
+runs, written out once at the top of the file. Working memory, which is two
+shared doors. And an address stepped by an index, which is one of a fixed run
+inside memory the program holds an address into.
+
+**2,088 of 2,088 bodies.**
+
+That cost `check-dead.sh` something: with every body written, `kest_call_body`
+-- the door a compiled body calls to hand a body to the machine -- had no user
+anywhere and the check said so. The door is right and the check is right, so
+the fixture that check writes for itself now holds the one thing left that
+this backend will not write: a run of numbers with an infinity in it, whose
+bits cannot go in an initialiser.
+
+Four more operations in a backend that already has a hundred is not a new kind
+of thing, so they get a fixture rather than a hole -- which is D1115's rule
+working as written, on the first occasion after it was written.
+
+See D1119.
+
+**Runs:** `make check`, and `tools/check-c.sh` over the tree.
+
+## The suite is six of fourteen, and then seven
+
+The tasks a model is given were called *of the nine kinds the mission lists*
+in five entries running. The mission lists fourteen families, and nobody read
+the number back against the document -- it was carried forward until it looked
+settled. `ai/README.md` holds a table of the fourteen against what is here
+now, because a table cannot be carried forward wrong the way a number can.
+
+Two of the six were also narrower than the family they sit under: `spread`
+refactors within one module rather than across them, and `saved` is save and
+load rather than a change to a save format.
+
+And a seventh: `ai/tasks/called`, callback and context use. Two function
+values handed in, one called once for each thing before any thing moves and
+one called for each step; the doors the tests hand over write down what they
+were called with, so the log is the order the calls were made in. The wrong
+answer spawns each thing and marches it before spawning the next, which
+answers the same number everywhere and leaves a different log.
+
+It needed no captured state, which is why it could be written: a function
+value here is one slot saying which function it is, and the way a callback
+reports is by writing into a run of elements it was handed.
+
+See D1120 and D1121.
+
+**Runs:** `make check`, and `ai/run.sh called` over both languages against the
+answer, the scaffold and the wrong answer.

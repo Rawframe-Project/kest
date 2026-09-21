@@ -57,13 +57,33 @@ A suite nobody has seen fail is indistinguishable from no suite.
 | `frail` | input that is mostly wrong, and what a reader does about it |
 | `saved` | a world written down and read back, and the saves that are not one |
 | `spread` | one function that does three things, moved into three |
+| `called` | doors somebody else wrote, and the order you call them in |
 
-Six of the nine kinds the mission lists. `patch` is the one that is written
-rather than left undone: the scaffold is working-looking code with a defect in
-it, and the answer is the fix. `frail` is failure handling and `saved`
-is save and load, and both have more tests about what does not happen than
-about what does. `spread` is refactoring, and its tests call each
-piece on its own so that a frame still doing the work itself passes nothing.
-The others — a host API, and two the mission names that this suite has no
-shape for yet — are not written, and what is here is written so
-that adding one is four files and a row in this table.
+**Seven of the fourteen task families the mission lists**, and two of the seven
+are narrower than the family they sit under. The mission's list, and what is here
+against it:
+
+| family | here |
+| --- | --- |
+| implement feature | `cooldown` |
+| repair bug | `patch` |
+| refactor across modules | `spread`, which is within one module |
+| obey `no.alloc` | `cooldown` carries it; no task is about it |
+| obey `no.host` | every task carries it; no task is about it |
+| deterministic update | — |
+| ref-safe store logic | `stale` |
+| host API use | — |
+| save/load change | `saved`, which is save and load rather than a change |
+| hot-update-compatible change | — |
+| generic API use | — |
+| error handling | `frail` |
+| callback/context use | `called` |
+| near-miss API names | — |
+
+`patch` is the one that is written rather than left undone: the scaffold is
+working-looking code with a defect in it, and the answer is the fix. `frail`
+and `saved` have more tests about what does not happen than about what does.
+`spread`'s tests call each piece on its own, so a frame still doing the work
+itself passes nothing. `called`'s doors write down what they were called with,
+so the log is the order the calls were made in. What is here is written so that adding one is four
+files and a row in the table above.

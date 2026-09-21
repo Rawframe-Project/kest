@@ -1,0 +1,18 @@
+module called
+
+// Doors somebody else wrote, handed in rather than imported. What each
+// function has to do is in `ask.md`; the shapes and the signatures here are
+// the task's and are not to be changed.
+
+struct Doors {
+    // Called once for each thing, before any of them moves.
+    spawned: fn([i32], i32) no.alloc no.host deterministic
+    // Called for each step of each thing. Answers whether it may go on.
+    moved: fn([i32], i32, i32) -> bool no.alloc no.host deterministic
+}
+
+// Drive the doors over `many` things for `steps` steps each, writing what
+// happened into `log`. Answers how many things took all their steps.
+fn marched(doors: Doors, log: [i32], many: i32, steps: i32) -> i32 no.alloc no.host deterministic {
+    return 0
+}

@@ -1,0 +1,96 @@
+module checks
+
+// What the task is judged by, which whoever does it does not see. Each check
+// answers with its own number; nought is every check passing.
+//
+// The doors write what they were called with into the log, so what the log
+// holds afterwards is the order the calls were made in. That is what this
+// task is about and what nothing else here can see.
+
+import called
+
+fn spawned(log: [i32], id: i32) no.alloc no.host deterministic {
+    fit(log, id)
+}
+
+// Every thing may take two steps and no more.
+fn twice(log: [i32], id: i32, step: i32) -> bool no.alloc no.host deterministic {
+    fit(log, 100 + id * 10 + step)
+    return step < 3
+}
+
+// And one where nothing may move at all.
+fn never(log: [i32], id: i32, step: i32) -> bool no.alloc no.host deterministic {
+    fit(log, 200 + id * 10 + step)
+    return false
+}
+
+// And one where everything may.
+fn always(log: [i32], id: i32, step: i32) -> bool no.alloc no.host deterministic {
+    fit(log, 300 + id * 10 + step)
+    return true
+}
+
+fn holds(log: [i32], wanted: [i32]) -> bool no.alloc no.host deterministic {
+    if len(log) != len(wanted) {
+        return false
+    }
+    for i in 0..len(log) {
+        if log[i] != wanted[i] {
+            return false
+        }
+    }
+    return true
+}
+
+fn main() -> i32 {
+    // Two things, four steps each, and nothing may take more than two: every
+    // spawn happens before any move, and a thing that is refused stops.
+    let log: [i32] = array()
+    room(log, 64)
+    if called.marched(called.Doors(spawned, twice), log, 2, 4) != 0 {
+        return 1
+    }
+    if !holds(log, [0, 1, 101, 102, 103, 111, 112, 113]) {
+        return 2
+    }
+
+    // Nothing may move, so every thing is asked once and stops.
+    let stuck: [i32] = array()
+    room(stuck, 64)
+    if called.marched(called.Doors(spawned, never), stuck, 3, 2) != 0 {
+        return 3
+    }
+    if !holds(stuck, [0, 1, 2, 201, 211, 221]) {
+        return 4
+    }
+
+    // Everything may, so every thing takes all its steps and is counted.
+    let all: [i32] = array()
+    room(all, 64)
+    if called.marched(called.Doors(spawned, always), all, 2, 3) != 2 {
+        return 5
+    }
+    if !holds(all, [0, 1, 301, 302, 303, 311, 312, 313]) {
+        return 6
+    }
+
+    // No things at all, and no steps at all.
+    let empty: [i32] = array()
+    room(empty, 8)
+    if called.marched(called.Doors(spawned, always), empty, 0, 3) != 0 {
+        return 7
+    }
+    if len(empty) != 0 {
+        return 8
+    }
+    let still: [i32] = array()
+    room(still, 8)
+    if called.marched(called.Doors(spawned, always), still, 2, 0) != 2 {
+        return 9
+    }
+    if !holds(still, [0, 1]) {
+        return 10
+    }
+    return 0
+}
