@@ -36,6 +36,10 @@ typedef struct {
     uint16_t params;
     uint16_t results;
     bool written;
+    // And, for one this backend did not write, whether anything it did write
+    // calls it: such a body gets a C function of its own all the same, which
+    // hands the call to the machine. See D1105.
+    bool handed_over;
     const char *why;
 } Body;
 
@@ -838,6 +842,31 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             }
             break;
         }
+        if (place->kind == KEST_IR_PLACE_RUN) {
+            // One of a fixed run in the frame, at an index worked out while
+            // it runs. The index is held aside because what comes back sits
+            // where it was, and the machine's own sentence answers for an
+            // index that is not one of them. See D1109.
+            if (reads != 1 || leaves != place->stride) {
+                cannot(walk, "one of a run read at something other than an "
+                             "index");
+                break;
+            }
+            at_stack(first, base);
+            say(c, out,
+                "    {\n        int64_t which = %s.integer;\n"
+                "        if (!kest_run_at(rt, which, %u, %u)) {\n"
+                "            return false;\n        }\n",
+                first, (unsigned)place->count, op->span.offset);
+            for (uint16_t k = 0; k < place->stride; k++) {
+                at_stack(first, base + k);
+                say(c, out,
+                    "        %s = f[%u + which * %u];\n", first,
+                    (unsigned)place->slot + k, (unsigned)place->stride);
+            }
+            say(c, out, "    }\n");
+            break;
+        }
         if (place->kind != KEST_IR_PLACE_SLOT) {
             cannot(walk, "a place that is not a run of the frame");
             break;
@@ -859,6 +888,29 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
                 break;
             }
             write_elem(walk, op, place, base, base + 2, false);
+            break;
+        }
+        if (place->kind == KEST_IR_PLACE_RUN) {
+            // And the same the other way round: the index under what is being
+            // written, which is what the machine pops in that order.
+            if (reads != (uint32_t)place->stride + 1 || leaves != 0) {
+                cannot(walk, "one of a run written at something other than an "
+                             "index");
+                break;
+            }
+            at_stack(first, base);
+            say(c, out,
+                "    {\n        int64_t which = %s.integer;\n"
+                "        if (!kest_run_at(rt, which, %u, %u)) {\n"
+                "            return false;\n        }\n",
+                first, (unsigned)place->count, op->span.offset);
+            for (uint16_t k = 0; k < place->stride; k++) {
+                at_stack(second, base + 1 + k);
+                say(c, out, "        f[%u + which * %u] = %s;\n",
+                    (unsigned)place->slot + k, (unsigned)place->stride,
+                    second);
+            }
+            say(c, out, "    }\n");
             break;
         }
         if (place->kind != KEST_IR_PLACE_SLOT) {
@@ -1787,6 +1839,53 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             "    }\n");
         break;
     }
+    case KEST_IR_CALL_VALUE: {
+        // A call whose callee is decided while it runs. Everything the
+        // machine asks before it enters one -- that the value names a
+        // function, that the function is of the shape the call was written
+        // against, and that it keeps what this body promised -- is asked
+        // behind one door, because none of it can be worked out here. What a
+        // body reaching one of these can do is refused before this: it may
+        // hold a handle in a local only if nothing it does can reach the
+        // heap, and a call through a value can. So this body is on the
+        // machine's stack, the arguments are already where the callee's
+        // frame goes, and what comes back lands over them. See D1107.
+        if (reads != (uint32_t)op->imm[0] + 1 || leaves != op->imm[1] ||
+            !walk->on_the_stack) {
+            cannot(walk, "a call through a value handing over something "
+                         "other than what it read");
+            break;
+        }
+        at_stack(first, base + op->imm[0]);
+        say(c, out,
+            "    {\n        KV what = %s;\n        uint16_t gave = 0;\n"
+            "        if (!kest_call_value(rt, what, s + %u, %u, %u, %u,\n"
+            "                             &gave)) {\n"
+            "            return false;\n        }\n    }\n",
+            first, base, (unsigned)op->imm[0], (unsigned)op->imm[1],
+            op->span.offset);
+        break;
+    }
+    case KEST_IR_CALL_HOST: {
+        // A crossing into the host. Everything the boundary asks is behind
+        // one door, and this is the same call the machine's instruction
+        // makes: the arguments are where the answer goes, and where the
+        // machine had got to is what a host calling back in stands on. A body
+        // that reaches one of these is on the machine's stack, because a host
+        // may take the heap while it is in there. See D1108.
+        if (reads != op->imm[1] || leaves != op->imm[2] ||
+            !walk->on_the_stack) {
+            cannot(walk, "a crossing handing over something other than what "
+                         "it read");
+            break;
+        }
+        say(c, out,
+            "    if (!kest_call_host(rt, %u, s + %u, %u, %u, %u)) {\n"
+            "        return false;\n    }\n",
+            (unsigned)op->imm[0], base, (unsigned)op->imm[1],
+            (unsigned)op->imm[2], op->span.offset);
+        break;
+    }
     case KEST_IR_GO:
         say(c, out, "    ");
         write_branch(walk, op->target, base + leaves, op->span.offset);
@@ -2055,28 +2154,53 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
     return true;
 }
 
-// A body that calls one this backend did not write is one it cannot write
-// either: there is no dispatch here to fall back through, so the call has
-// nowhere to go. Followed until nothing moves, because the caller of a caller
-// is in the same position.
-static void settle(KestEmitC *c) {
-    bool moved = true;
-    while (moved) {
-        moved = false;
-        for (uint32_t i = 0; i < c->count; i++) {
-            Body *body = &c->bodies[i];
-            if (!body->written) {
-                continue;
-            }
-            for (uint32_t k = 0; k < body->call_count; k++) {
-                uint32_t which = body->calls[k];
-                if (which < c->count && c->bodies[which].written) {
-                    continue;
-                }
+// A body that calls one this backend did not write used to be a body it could
+// not write either, and the whole chain above it with it: there was no
+// dispatch here to fall back through, so the call had nowhere to go. Now it
+// has somewhere -- the machine, which runs that body already. What is written
+// for it is a C function of the shape a call here expects, whose body is the
+// arguments put into the frame and one call to `kest_call_body`. So a body
+// this backend cannot write costs the program that body and nothing above
+// it, which is what makes half a program worth having. See D1105.
+//
+// A body nothing written calls gets nothing: the file is smaller and the
+// symbol would be a symbol nothing names.
+static void hands_over(KestEmitC *c) {
+    // First, the two a caller cannot be written around: a body this backend
+    // was never handed, whose shape is not here to write a call to, and one
+    // with more arguments than this writes out. Both are the caller's to pay
+    // for, and nothing in this tree does either.
+    for (uint32_t i = 0; i < c->count; i++) {
+        Body *body = &c->bodies[i];
+        if (!body->written) {
+            continue;
+        }
+        for (uint32_t k = 0; k < body->call_count; k++) {
+            uint32_t which = body->calls[k];
+            if (which >= c->count) {
                 body->written = false;
-                body->why = "it calls a body this does not write";
-                moved = true;
+                body->why = "it calls a body this was not given";
                 break;
+            }
+            if (c->bodies[which].params > MOST_PARAMS) {
+                body->written = false;
+                body->why = "it calls a body with more arguments than this "
+                            "writes";
+                break;
+            }
+        }
+    }
+    // And then what is handed over, read off what is still written, so that a
+    // body given up on above does not leave a shim nothing names.
+    for (uint32_t i = 0; i < c->count; i++) {
+        const Body *body = &c->bodies[i];
+        if (!body->written) {
+            continue;
+        }
+        for (uint32_t k = 0; k < body->call_count; k++) {
+            uint32_t which = body->calls[k];
+            if (!c->bodies[which].written) {
+                c->bodies[which].handed_over = true;
             }
         }
     }
@@ -2087,7 +2211,7 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
     // What was read while the bodies were written is read no further.
     kest_arena_free(c->scratch);
     c->scratch = NULL;
-    settle(c);
+    hands_over(c);
     Text file = {NULL, 0, 0};
     say(c, &file,
         "// Written by `kest emit --c`. What this means is the program it was\n"
@@ -2100,6 +2224,7 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "#include <stdio.h>\n"
         "#include <stdlib.h>\n"
         "#include <string.h>\n"
+        "#include <math.h>\n"
         "\n"
         "#include \"kest.h\"\n"
         "\n"
@@ -2117,6 +2242,18 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "                                 uint16_t *));\n"
         "bool kest_native_stopped(KestRuntime *runtime, uint32_t offset,\n"
         "                         const char *code, const char *message);\n"
+        "bool kest_call_body(KestRuntime *runtime, uint32_t which,\n"
+        "                    KestValue *base, uint16_t handed,\n"
+        "                    uint16_t *gave);\n"
+        "bool kest_call_value(KestRuntime *runtime, KestValue what,\n"
+        "                     KestValue *base, uint16_t handed,\n"
+        "                     uint16_t coming_back, uint32_t where,\n"
+        "                     uint16_t *gave);\n"
+        "bool kest_call_host(KestRuntime *runtime, uint16_t index,\n"
+        "                    KestValue *base, uint16_t argument_slots,\n"
+        "                    uint16_t result_slots, uint32_t where);\n"
+        "bool kest_run_at(KestRuntime *runtime, int64_t index,\n"
+        "                 uint32_t count, uint32_t where);\n"
         "unsigned char *kest_elem_at(KestRuntime *runtime, KestValue handle,\n"
         "                            int64_t index, uint16_t offset,\n"
         "                            uint32_t where);\n"
@@ -2237,20 +2374,52 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
             written++;
             continue;
         }
-        say(c, &file, "// not written: %s -- %s\n",
+        say(c, &file, "// not written: %s -- %s%s\n",
             c->bodies[i].symbol == NULL ? "(no name)" : c->bodies[i].symbol,
-            c->bodies[i].why == NULL ? "no reason" : c->bodies[i].why);
+            c->bodies[i].why == NULL ? "no reason" : c->bodies[i].why,
+            c->bodies[i].handed_over ? ", and handed to the machine" : "");
     }
     say(c, &file, "// %u of %u bodies written\n\n", written, c->count);
 
     for (uint32_t i = 0; i < c->count; i++) {
-        if (!c->bodies[i].written) {
+        if (!c->bodies[i].written && !c->bodies[i].handed_over) {
             continue;
         }
         write_head(c, &file, &c->bodies[i], i);
         say(c, &file, ";\n");
     }
     say(c, &file, "\n");
+    // The bodies this backend handed to the machine, each a C function of the
+    // shape a call here expects: the arguments into the frame the caller
+    // already made room for, one call in, and what came back read out of the
+    // same frame. It is the whole of what a body the machine runs costs a
+    // body written here. See D1105.
+    for (uint32_t i = 0; i < c->count; i++) {
+        const Body *body = &c->bodies[i];
+        if (body->written || !body->handed_over) {
+            continue;
+        }
+        say(c, &file, "// %s -- the machine runs this one\n",
+            body->symbol == NULL ? "(no name)" : body->symbol);
+        write_head(c, &file, body, i);
+        say(c, &file, " {\n");
+        for (uint16_t p = 0; p < body->params; p++) {
+            say(c, &file, "    frame[%u] = a%u;\n", (unsigned)p, (unsigned)p);
+        }
+        say(c, &file,
+            "    uint16_t gave = 0;\n"
+            "    if (!kest_call_body(rt, %u, frame, %u, &gave)) {\n"
+            "        return false;\n    }\n",
+            i, (unsigned)body->params);
+        for (uint16_t r = 0; r < body->results; r++) {
+            say(c, &file, "    out[%u] = frame[%u];\n", (unsigned)r,
+                (unsigned)r);
+        }
+        if (body->results == 0) {
+            say(c, &file, "    (void)out;\n");
+        }
+        say(c, &file, "    return true;\n}\n");
+    }
     for (uint32_t i = 0; i < c->count; i++) {
         if (!c->bodies[i].written) {
             continue;
@@ -2313,7 +2482,19 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         say(c, &file, " &&\n           kest_native_at(rt, %u, \"%s\", kn_%u)",
             i, c->bodies[i].symbol, i);
     }
-    say(c, &file, ";\n}\n");
+    say(c, &file,
+        ";\n}\n"
+        "\n// And the way a host of its own uses this file. It makes a\n"
+        "// machine for the same program, hands it to this, and the bodies\n"
+        "// above are the ones that machine runs -- which is the whole of\n"
+        "// what shipping a program compiled this way is. A host that embeds\n"
+        "// two programs written this way compiles one of them with\n"
+        "// `-DKEST_BOUND=some_other_name`, because two programs' bodies\n"
+        "// under one name is a name that says nothing, and a host that has\n"
+        "// a `main` of its own compiles with `-DKEST_NO_MAIN`. See D1111.\n"
+        "#ifndef KEST_BOUND\n#define KEST_BOUND kest_natives_here\n#endif\n"
+        "bool KEST_BOUND(KestRuntime *rt);\n"
+        "bool KEST_BOUND(KestRuntime *rt) {\n    return bound(rt);\n}\n");
 
     // And the way in: this file is a host of the program it was written from,
     // because half of that program may still be the machine's to run. It
@@ -2334,9 +2515,30 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
     // here: a file this backend wrote is half a program rather than an engine.
     // See D1094.
     say(c, &file,
-        "\n// What `std.io` asks the host for. Written by its length rather\n"
+        "\n#ifndef KEST_NO_MAIN\n"
+        "// What `std.io` asks the host for. Written by its length rather\n"
         "// than to a nought, because a piece of text cut out of the middle "
         "of\n// another does not end in one.\n"
+        "// The arithmetic `std.math` asks the host for. A host is whoever\n"
+        "// runs the program and these are its to provide, the same as the\n"
+        "// command line provides them: a program that runs under `kest run`\n"
+        "// runs here. Each is one line, because each is one of the host's\n"
+        "// own machine's. See D1109.\n"
+        "#define KEST_ONE_REAL(name, what)                                  \\\n"
+        "    static void name(KestValue *frame, KestRuntime *runtime,       \\\n"
+        "                     void *context) {                              \\\n"
+        "        (void)runtime;                                             \\\n"
+        "        (void)context;                                             \\\n"
+        "        frame[0].real = what;                                      \\\n"
+        "    }\n"
+        "KEST_ONE_REAL(did_sqrt, sqrt(frame[0].real))\n"
+        "KEST_ONE_REAL(did_floor, floor(frame[0].real))\n"
+        "KEST_ONE_REAL(did_ceil, ceil(frame[0].real))\n"
+        "KEST_ONE_REAL(did_sin, sin(frame[0].real))\n"
+        "KEST_ONE_REAL(did_cos, cos(frame[0].real))\n"
+        "KEST_ONE_REAL(did_pow, pow(frame[0].real, frame[1].real))\n"
+        "KEST_ONE_REAL(did_atan2, atan2(frame[0].real, frame[1].real))\n"
+        "\n"
         "static void wrote_it(KestValue *frame, KestRuntime *runtime,\n"
         "                     void *context) {\n"
         "    (void)runtime;\n"
@@ -2388,7 +2590,15 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "    KestHost *host = kest_host_new();\n"
 
         "    if (host == NULL ||\n"
-        "        !kest_host_bind(host, \"Io.write\", wrote_it, NULL)) {\n"
+        "        !kest_host_bind(host, \"Io.write\", wrote_it, NULL) ||\n"
+        "        !kest_host_bind(host, \"Math.sqrt\", did_sqrt, NULL) ||\n"
+        "        !kest_host_bind(host, \"Math.floor\", did_floor, NULL) ||\n"
+        "        !kest_host_bind(host, \"Math.ceil\", did_ceil, NULL) ||\n"
+        "        !kest_host_bind(host, \"Math.sin\", did_sin, NULL) ||\n"
+        "        !kest_host_bind(host, \"Math.cos\", did_cos, NULL) ||\n"
+        "        !kest_host_bind(host, \"Math.pow\", did_pow, NULL) ||\n"
+        "        !kest_host_bind(host, \"Math.atan2\", did_atan2, NULL) ||\n"
+        "        !kest_host_bind(host, \"Host.sqrt\", did_sqrt, NULL)) {\n"
         "        fprintf(stderr, \"there is no room for a host\\n\");\n"
         "        kest_build_free(build);\n"
         "        return 1;\n"
@@ -2446,6 +2656,7 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
             "    kest_build_free(build);\n"
             "    return 0;\n}\n");
     }
+    say(c, &file, "#endif\n");
     if (c->out_of_memory || file.bytes == NULL) {
         return NULL;
     }

@@ -1,0 +1,28 @@
+module frail
+
+import std.text
+
+// Lines somebody else wrote, read into records. What each function has to do
+// is in `ask.md`; the shapes and the signatures here are the task's and are
+// not to be changed.
+
+struct Record {
+    name: text
+    worth: i32
+}
+
+struct Tally {
+    got: i32
+    dropped: i32
+    worth: i32
+}
+
+// One line read, or nothing where the line is not a record.
+fn read(line: text) -> Record? no.host deterministic {
+    return none
+}
+
+// Every line read, and what came of it.
+fn readAll(lines: [text]) -> Tally no.host deterministic {
+    return Tally(0, 0, 0)
+}

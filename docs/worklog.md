@@ -39827,3 +39827,182 @@ See D1104.
 **Runs:** `make check`, `tools/check-c.sh` over the tree, the three new holes
 seen catching, and two text workloads run both ways under `perf stat -e
 instructions`.
+
+## A body the machine runs, called from one the host's compiler compiled
+
+`settle()` is gone. A body this backend cannot write used to take the whole
+chain above it, because a call here is a call to a C function and there was
+nothing to fall back through. Now every body a written body calls gets a C
+function: the translation where there is one, and otherwise four lines that
+put the arguments into the frame the caller already made room for and hand the
+call to `kest_call_body`.
+
+The frame is the one that is already there. A compiled call asks
+`kest_native_room` for room and for a ledger frame; when what it enters is the
+machine, the machine writes a real frame over the ledger one rather than
+beside it, so a fault under the call says it was called once.
+
+1,667 of 2,088 bodies over this tree, up from 1,509, and every workload in
+`bench` now has its `main` compiled. `bench/rules.kest` is unchanged at 1.239 G
+instructions against the machine's 6.232 G -- what this buys is breadth, not
+speed: the bodies that mattered were already written.
+
+A program that recurses compiled -> machine -> compiled until it runs out of
+frames refuses at the same depth, with the same words and the same call chain,
+under both engines. Two holes: the arguments handed over the wrong way round,
+and the ledger frame left where it was rather than written over.
+
+81 distinct bodies left, and no chain above any of them: a crossing into the
+host (45), a call through a function value (19), an address of a place that is
+not a run of the frame (11), and six others.
+
+See D1105.
+
+**Runs:** `make check`, `tools/check-c.sh` over the tree, the two new holes
+seen catching, and `bench/rules.kest` and `bench/words.kest` run both ways
+under `perf stat -e instructions`.
+
+## A third AI task, and the first that is a bug to find
+
+`ai/tasks/patch`: a bag of stackable things whose `put` starts a new stack
+holding everything left over rather than what a stack holds. The scaffold is
+the bug, and the answer is the fix -- the first task of that shape, and the
+third of the nine kinds the mission lists.
+
+Neither `kest check` nor `luau-analyze` has anything to say about the code
+handed over. That is what this task is for: a mistake a type system does not
+catch, asked in both languages with the same hidden tests. The plausible wrong
+answer beside it is the fix somebody writes and gets subtly wrong -- a whole
+stack taken off what is left over rather than what went in, so a put of five
+answers minus fifteen.
+
+See D1106.
+
+**Runs:** `tools/check-ai.sh`, and `ai/run.sh patch` over both languages
+against the answer, the scaffold and the wrong answer.
+
+## A call through a function value, compiled
+
+`kest_call_value`: the nineteen bodies D1105 left over were all one operation.
+Room and the ledger frame come from the same door a call by name goes through,
+and the callee is entered as C where it was compiled and through
+`kest_call_body` where it was not.
+
+The three questions in front of such a call -- whether the value names a
+function, whether it is of the shape the call was written against, and whether
+it keeps what the caller promised -- are one answer now rather than the
+machine's. That was worth doing for its own sake and it also kept the net
+whole: the two backstops for those questions are provoked by a host writing a
+number into a function slot, so a second copy inside the backend would have
+been a copy no hole watched. Both holes point at the shared answer.
+
+1,692 of 2,088 bodies over this tree. What is left is 62 distinct bodies, and
+45 of them are the crossing into the host.
+
+See D1107.
+
+**Runs:** `make check`, `tools/check-c.sh` over the tree, and the two
+repointed holes seen catching through `examples/embed`.
+
+## The crossing into the host, compiled
+
+`kest_call_host`: the last family, and the biggest. Forty-five of the
+sixty-two bodies left were one operation. The release engine now writes 2,071
+of this tree's 2,088 bodies, and `bench/rules.kest` and `bench/words.kest`
+compile whole.
+
+Seven questions are asked at a crossing and they are asked in one place now:
+what the declaration says against what was moved, how far in a host is being
+called from, whether what it bound is still there, whether it did what it was
+asked, whether it kept a promise made on its behalf, whether the tag it
+answered with is a case, and what is inside the value under it. The machine's
+instruction is that door with the budget and the operand stack around it.
+
+The walk over what a host hands back reported eleven things at an instruction;
+a compiled body has none, so the `Saying` carries a source offset too and one
+helper picks which to say it at.
+
+One fault in the machine turned up on the way. The check that holds a crossing
+to what a host was measured for read where the run began off `running_top` --
+true for the machine, false for a compiled body, because entering one raises
+`running_top` to the top of its frame for the collector. It read a floor above
+the top and a width of four thousand million. It reads the first frame of the
+run now, which is the same number for the machine and the right one for both.
+
+Seventeen bodies left over this tree: an address of a place that is not a run
+of the frame (11), a region opened (3), a number with no spelling in C (2),
+and a constant read where it is (1).
+
+`check-c.sh` no longer refuses a sweep that wrote every body. That rule was
+written when there was no C for a crossing, and a program wholly written is
+the ordinary case now.
+
+See D1108.
+
+**Runs:** `make check`, `tools/check-c.sh` over the tree, two new holes seen
+catching, and `bench/rules.kest` and `bench/words.kest` run both ways under
+`perf stat -e instructions`.
+
+## One of a fixed run, and the arithmetic a generated host provides
+
+`[f32; 4]` in a struct is a run of slots in the frame; reading one of them at
+a name rather than a number was the eleven bodies D1108 left. Four lines of C
+and one door for the bounds sentence.
+
+And the seven pieces of arithmetic `std.math` asks a host for, which a
+generated file now binds itself -- eleven programs could be written whole and
+still not run without them. A host is whoever runs the program, and each of
+these is one line of its own machine.
+
+2,081 of 2,088 bodies over this tree, and 41 of this tree's own programs run
+both ways rather than 30. Seven bodies left: a region opened (3), a number
+with no spelling in C (2), a constant read where it is (1) and one address of
+a place this does not take one of.
+
+See D1109.
+
+**Runs:** `make check`, `tools/check-c.sh` over the tree, and the new hole
+seen catching.
+
+## A fourth AI task: input that is mostly wrong
+
+`ai/tasks/frail`: records read out of lines somebody else wrote, where
+thirteen of the seventeen hidden checks are lines that are not records. A
+reader that is right about the good line and guesses at the bad one is a
+reader that is wrong, which is the failure a suite of happy paths never sees.
+
+The wrong answer beside it takes the first two pieces of a split and ignores
+the rest, so a line with a field too many reads as a record. It passes every
+check but the eighth.
+
+Four of the nine kinds. What is left: refactoring across modules, a host API,
+and save and load.
+
+See D1110.
+
+**Runs:** `tools/check-ai.sh`, and `ai/run.sh frail` over both languages
+against the answer, the scaffold and the wrong answer.
+
+## A host of its own, and the seam held where a game meets it
+
+Everything a generated file held was `static` but `main`, so a game could not
+use one: it has a host of its own, with its own doors and its own `main`, and
+what it wants is these bodies bound to its machine. A generated file exports
+`kest_natives_here(rt)` now, and compiles with `-DKEST_NO_MAIN` for a host
+that has a `main`, or `-DKEST_BOUND=another_name` for one that embeds two
+programs.
+
+`tools/check-c.sh` uses it: a host written by the check binds a door that
+calls back into the program, links the generated file, and runs the same
+program twice in one process -- once with the compiled bodies bound and once
+without. Same answer, same words, one binary. That closes the path D1108
+wrote down as unheld: a host called from a compiled body, calling back in.
+
+The hole takes the line that writes down where the machine had got to before
+a host runs. Without it a call back in stands on the frames an older run left.
+Nothing crashes; the answer is wrong; and it is wrong only for a program whose
+host calls back in.
+
+See D1111.
+
+**Runs:** `make check`, and the new hole seen catching.

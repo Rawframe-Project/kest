@@ -20,10 +20,21 @@
 # and `KEST_DAS` to say where each is, or leave them out and the row is left
 # out with them. Nothing is downloaded and nothing is built that is not this
 # tree's. See D980.
+#
+# Two of the rows are of something built before it is run, because that is
+# what the thing is: this language's release engine is C the host's compiler
+# compiled (D1093), and daslang's `-exe` is its own compiler writing a
+# binary. Building is not in the duration -- it is not what either of them
+# does when a game runs -- and a row whose build failed is left out rather
+# than shown as a slow one. See D1108.
 set -eu
 
 kest=${KEST:-./kest}
 best=${BEST:-5}
+cc=${CC:-cc}
+built=$(mktemp -d)
+nothing=""
+trap 'rm -rf "$built" "$nothing"' EXIT
 
 run_it() {
     # The best of several, because what a machine does once is what the machine
@@ -65,7 +76,6 @@ run_it() {
 # the processes on every workload here, by 1.1 to 3.4 times on the machine this
 # was written on. See D1067.
 nothing=$(mktemp -d)
-trap 'rm -rf "$nothing"' EXIT
 cat > "$nothing"/nothing.kest <<'KEST'
 module nothing
 
@@ -99,8 +109,24 @@ for one in kernel control graph words rules; do
         run_it "$one" "luau -O2 --codegen" "$KEST_LUAU" -O2 --codegen \
             "bench/$one.lua"
     fi
+    # This language's other engine: the same program written as C and
+    # compiled by the compiler a release is built with. A body it has no C
+    # for is one the machine runs, so a row here is whatever mixture that
+    # program turns out to be -- which is what shipping one would be.
+    if "$kest" emit --c "bench/$one.kest" >"$built/$one.c" 2>/dev/null &&
+            $cc -O2 -Iinclude -o "$built/$one" "$built/$one.c" libkest.a \
+                -lm 2>/dev/null; then
+        run_it "$one" "kest, compiled" "$built/$one" "bench/$one.kest"
+    fi
     if [ -n "${KEST_DAS:-}" ] && [ -f "bench/$one.das" ]; then
         run_it "$one" "daslang" "$KEST_DAS" "bench/$one.das"
         run_it "$one" "daslang -jit" "$KEST_DAS" -jit "bench/$one.das"
+        # And the one its documentation points at, named as what it is: the
+        # compiler writing a binary rather than running the program. See
+        # D1090's rule about naming the mode.
+        if "$KEST_DAS" -exe -output "$built/$one.das.bin" "bench/$one.das" \
+                >/dev/null 2>&1 && [ -x "$built/$one.das.bin" ]; then
+            run_it "$one" "daslang -exe (AOT)" "$built/$one.das.bin"
+        fi
     fi
 done

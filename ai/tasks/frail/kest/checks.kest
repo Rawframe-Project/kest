@@ -1,0 +1,100 @@
+module checks
+
+// What the task is judged by, which whoever does it does not see. Each check
+// answers with its own number; nought is every check passing.
+
+import frail
+
+fn readsAs(line: text, name: text, worth: i32) -> bool no.host deterministic {
+    if let r = frail.read(line) {
+        return r.name == name && r.worth == worth
+    }
+    return false
+}
+
+fn readsNothing(line: text) -> bool no.host deterministic {
+    if let r = frail.read(line) {
+        return false
+    }
+    return true
+}
+
+fn main() -> i32 {
+    // The plain one.
+    if !readsAs("name=oak;worth=10", "oak", 10) {
+        return 1
+    }
+
+    // A worth with a sign, and a worth of nought.
+    if !readsAs("name=ash;worth=-4", "ash", -4) {
+        return 2
+    }
+    if !readsAs("name=elm;worth=0", "elm", 0) {
+        return 3
+    }
+
+    // Nothing at all, and the two halves each missing.
+    if !readsNothing("") {
+        return 4
+    }
+    if !readsNothing("name=oak") {
+        return 5
+    }
+    if !readsNothing("worth=10") {
+        return 6
+    }
+
+    // The right pieces in the wrong order, and a piece too many.
+    if !readsNothing("worth=10;name=oak") {
+        return 7
+    }
+    if !readsNothing("name=oak;worth=10;extra=1") {
+        return 8
+    }
+
+    // A worth that is not a number, and one that is more than a worth holds.
+    if !readsNothing("name=oak;worth=ten") {
+        return 9
+    }
+    if !readsNothing("name=oak;worth=") {
+        return 10
+    }
+    if !readsNothing("name=oak;worth=2147483648") {
+        return 11
+    }
+
+    // A name with nothing in it, and a name with a space in it, which is a
+    // name.
+    if !readsNothing("name=;worth=1") {
+        return 12
+    }
+    if !readsAs("name=an oak;worth=1", "an oak", 1) {
+        return 13
+    }
+
+    // And the tally, over lines that are both.
+    let lines: [text] = array()
+    push(lines, "name=oak;worth=10")
+    push(lines, "nonsense")
+    push(lines, "name=ash;worth=-4")
+    push(lines, "name=elm;worth=ten")
+    push(lines, "name=yew;worth=0")
+    let t = frail.readAll(lines)
+    if t.got != 3 {
+        return 14
+    }
+    if t.dropped != 2 {
+        return 15
+    }
+    if t.worth != 6 {
+        return 16
+    }
+
+    // No lines at all is nothing of everything.
+    let nothing: [text] = array()
+    let empty = frail.readAll(nothing)
+    if empty.got != 0 || empty.dropped != 0 || empty.worth != 0 {
+        return 17
+    }
+    return 0
+}

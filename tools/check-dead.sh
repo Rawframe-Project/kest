@@ -121,6 +121,8 @@ for path in built:
 # that can stop. See D1094.
 WRITTEN = """module dividing
 
+import std.io
+
 fn split(a: i32, b: i32) -> i32 no.alloc no.host deterministic {
     return a / b
 }
@@ -198,6 +200,19 @@ struct Held {
     what: i32
 }
 
+// One of a fixed run in the frame, at an index worked out while it runs,
+// which is the last of the doors nothing else in the tree reaches. See D1109.
+struct Board {
+    cells: [i32; 4]
+    turn: i32
+}
+
+fn played(b: Board, at: i32) -> i32 no.alloc no.host deterministic {
+    let one = b
+    one.cells[at] = one.cells[at] + 1
+    return one.cells[at] + one.turn
+}
+
 fn worlds(many: i32) -> i32 {
     let all: store<Held> = store(many)
     let made: [ref<Held>] = array()
@@ -219,6 +234,39 @@ fn worlds(many: i32) -> i32 {
     return sum + len(all)
 }
 
+// A call through a function value, which this backend writes by asking the
+// machine which function it is. And, below, a crossing into the host, which
+// it does not write: what a file it wrote does instead is hand that body to
+// the machine, which is the other door nothing else in the tree reaches.
+// See D1105 and D1107.
+fn through(f: fn(i32) -> i32 no.alloc no.host deterministic,
+           n: i32) -> i32 no.alloc no.host deterministic {
+    return f(n) + 1
+}
+
+fn twice(n: i32) -> i32 no.alloc no.host deterministic {
+    return n * 2
+}
+
+fn said(what: i32) {
+    io.print("counted {what}")
+}
+
+// Working memory, which this backend has no C for: a body that opens one is
+// a body the machine runs, and a file this backend wrote calls it through a
+// door of its own. That door is the one thing here nothing else in the tree
+// reaches. See D1105.
+fn scratched(rounds: i32) -> i32 no.host deterministic {
+    let sum = 0
+    for i in 0..rounds {
+        scratch {
+            let made: [i32] = array(4, i)
+            sum += len(made)
+        }
+    }
+    return sum
+}
+
 fn main() -> i32 {
     let counts: [i32] = array()
     for i in 0..4 {
@@ -227,8 +275,10 @@ fn main() -> i32 {
     let spare = remove(counts, 0)
     push(counts, spare)
     let one = Tag("counting", 3)
+    said(walk(counts) + scratched(3) + played(Board([1, 2, 3, 4], 5), 2))
     return (walk(counts) + i32(weigh(one) % 7) + worlds(4) +
             len(first(one, Tag("counted", 4))) + reading("counting") +
+            through(twice, 3) +
             writing(one, -7, 0.5, true) +
             (if same(one, Tag("counting", 4)) -> 1 else -> 0)) % 251
 }

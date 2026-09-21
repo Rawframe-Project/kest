@@ -4535,11 +4535,18 @@ project's own checks; nothing reads it back.
 --c` writes the same bodies as C, out of the same resolved form the machine's
 instructions are written from, for the compiler a release is built with. It is
 one translation unit: a body it has no C for is named in the file with the
-reason and is a body the machine runs, and a program every reachable body of
-which was written gets a `main` and is a program of its own. The two are one
+reason and is a body the machine runs, called from the compiled ones through a
+door of its own -- so one such body costs the program that body and nothing
+above it -- and the file is a program of its own, with a `main` that reads the
+source beside it for whatever half the machine holds. For most programs there
+is no such half: over this tree it writes 2,081 of 2,088 bodies. A host of its
+own -- a game, with its own doors and its own `main` -- compiles that file
+with `-DKEST_NO_MAIN` and calls the one function it exports,
+`kest_natives_here(runtime)`, which binds every body in it to the machine that
+host made. The two are one
 language and are held to it — a program compiled both ways answers the same
 thing, which `tools/check-c.sh` asks of this tree and of programs it writes
-itself. See D1092 and D1093.
+itself. See D1092, D1093, D1105, D1108 and D1111.
 
 **Saved state is the host's.** What a world is saved as is what the host wrote
 down, and the shapes it was written from are held by the layout marks a reload

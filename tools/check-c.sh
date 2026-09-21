@@ -66,14 +66,17 @@ written" >>"$said"
     wrong=$((wrong + 1))
 done
 
-# And that both halves are there, which is what says the sweep above was about
-# anything. A backend that wrote nothing would hand the host's compiler a file
-# of comments and pass; one that claimed everything would be writing C for a
-# crossing into the host, which it has none for.
+# And that the sweep above was about anything. A backend that wrote nothing
+# would hand the host's compiler a file of comments and pass. It used to be
+# wrong to write everything as well -- there was no C for a crossing into the
+# host, so a file that claimed the whole of a program was a file claiming what
+# it could not do. There is now (D1108), and a program every body of which is
+# written is the ordinary case rather than a fault; what says a body left out
+# is left out honestly is the reason beside its name and the run that follows.
 if [ "$compiled" -eq 0 ] || [ "$written" -eq 0 ] ||
-        [ "$written" -ge "$bodies" ]; then
+        [ "$written" -gt "$bodies" ]; then
     echo "    $written of $bodies body(s) written over $compiled file(s), \
-which is not both halves of what this backend is" >>"$said"
+which is not a backend that wrote anything" >>"$said"
     wrong=$((wrong + 1))
 fi
 
@@ -628,6 +631,176 @@ fn main() -> i32 {
     return total % 251
 }
 PROGRAM
+cat >"$work"/programs/across.kest <<'PROGRAM'
+module across
+
+// A run written into the program rather than made while it runs, read at an
+// index: the other thing this backend has no C for.
+const TIERS: [i32; 4] = [0, 90, 250, 1200]
+
+fn through(f: fn(i32, i32) -> i32 no.alloc no.host deterministic, a: i32,
+           b: i32) -> i32 no.alloc no.host deterministic {
+    return f(a, b) + 1
+}
+
+fn apart(a: i32, b: i32) -> i32 no.alloc no.host deterministic {
+    return a * 2 + b
+}
+
+// A body this backend has no C for -- it opens working memory -- called by
+// one it does. What is written for it hands the call to the machine.
+fn scratched(many: i32, each: i32) -> i32 no.host deterministic {
+    let sum = 0
+    scratch {
+        let made: [i32] = array(many, each)
+        sum = len(made) * 3 + made[0]
+    }
+    return sum
+}
+
+fn tier(i: i32) -> i32 no.alloc no.host deterministic {
+    return TIERS[i]
+}
+
+fn down(n: i32, by: i32) -> i32 no.alloc no.host deterministic {
+    if n <= 0 {
+        return 0
+    }
+    return 1 + through(down, n - by, by)
+}
+
+fn main() -> i32 {
+    let total = 0
+    for i in 0..20 {
+        total += through(apart, i, i % 3)
+    }
+    total += down(50, 1)
+    for i in 0..4 {
+        total += tier(i)
+    }
+    total += scratched(3, 5)
+    total += scratched(7, 2)
+    return total % 251
+}
+PROGRAM
+cat >"$work"/programs/crossed.kest <<'PROGRAM'
+module crossed
+
+// A body this backend has no C for, in the middle of a run of calls that
+// nests until the machine refuses it: one half of the chain is C and the
+// other half is the machine, and both halves count.
+fn through(n: i32) -> i32 no.host deterministic {
+    let out = 0
+    scratch {
+        let one: [i32] = array(1, n)
+        out = one[0]
+    }
+    return down(out) + 1
+}
+
+fn down(n: i32) -> i32 no.host deterministic {
+    if n <= 0 {
+        return 0
+    }
+    return 1 + through(n - 1)
+}
+
+fn main() -> i32 {
+    return down(100000) % 251
+}
+PROGRAM
+cat >"$work"/programs/crossing.kest <<'PROGRAM'
+module crossing
+
+import std.io
+
+struct Row {
+    name: text
+    worth: i32
+}
+
+fn said(r: Row) -> i32 {
+    io.print("{r.name} is worth {r.worth}")
+    return r.worth
+}
+
+fn main() -> i32 {
+    let total = 0
+    for i in 0..4 {
+        total += said(Row("row {i}", i * 3))
+    }
+    io.print("total {total}")
+    return total % 251
+}
+PROGRAM
+cat >"$work"/programs/fixedrun.kest <<'PROGRAM'
+module fixedrun
+
+struct Cell {
+    worth: i32
+    weight: f32
+}
+
+struct Board {
+    cells: [Cell; 4]
+    turn: i32
+}
+
+fn made() -> Board no.alloc no.host deterministic {
+    return Board([Cell(3, 0.5), Cell(1, 1.5), Cell(4, 2.5), Cell(1, 3.5)], 0)
+}
+
+fn walked(b: Board) -> i32 no.alloc no.host deterministic {
+    let sum = 0
+    for one in b.cells {
+        sum += one.worth + i32(one.weight)
+    }
+    return sum
+}
+
+fn at(b: Board, i: i32) -> i32 no.alloc no.host deterministic {
+    return b.cells[i].worth + i32(b.cells[i].weight * 2.0)
+}
+
+fn turned(b: Board, i: i32, to: i32) -> Board no.alloc no.host deterministic {
+    let one = b
+    one.cells[i] = Cell(to, f32(to) + 0.5)
+    one.turn += 1
+    return one
+}
+
+fn main() -> i32 {
+    let b = made()
+    let total = walked(b)
+    for i in 0..4 {
+        total += at(b, i) * (i + 1)
+    }
+    let after = turned(turned(b, 0, 7), 3, 2)
+    total += walked(after) + after.turn
+    return total % 251
+}
+PROGRAM
+cat >"$work"/programs/runoff.kest <<'PROGRAM'
+module runoff
+
+struct Board {
+    cells: [i32; 4]
+    turn: i32
+}
+
+fn at(b: Board, i: i32) -> i32 no.alloc no.host deterministic {
+    return b.cells[i]
+}
+
+fn main() -> i32 {
+    let b = Board([3, 1, 4, 1], 0)
+    let sum = 0
+    for i in 0..6 {
+        sum += at(b, i)
+    }
+    return sum
+}
+PROGRAM
 cat >"$work"/programs/outside.kest <<'PROGRAM'
 module outside
 
@@ -724,6 +897,164 @@ machine" >>"$said"
     both=$((both + 1))
 done
 
+# And one program run both ways inside one process, by a host of its own. It
+# is the only thing here that holds the seam in the direction a game meets it:
+# a host that calls back into the program while a body the host's compiler
+# compiled is the frame underneath. The two hosts in this tree that call back
+# in drive the machine, and the little host at the bottom of a generated file
+# only writes -- so this one is written here, links the generated file with
+# `-DKEST_NO_MAIN`, and calls `kest_natives_here` for one of its two runs and
+# not for the other. Same answer, same words, one binary. See D1111.
+inside_said="no host of its own was built"
+cat >"$work"/reentry.kest <<'PROGRAM'
+module reentry
+
+import std.io
+
+extern fn Host.askedBack(n: i32) -> i32
+
+fn doubled(n: i32) -> i32 {
+    return n * 2 + 1
+}
+
+fn worked(n: i32) -> i32 {
+    return Host.askedBack(n) + doubled(n)
+}
+
+fn main() -> i32 {
+    let total = 0
+    for i in 0..5 {
+        total += worked(i)
+    }
+    io.print("reentry {total}")
+    return total % 251
+}
+PROGRAM
+cat >"$work"/twice.c <<'HOST'
+/* One program run twice in one process: once with the bodies this backend
+   wrote bound to their chunks and once with none of them bound. The door it
+   binds calls back into the program, which is the path nothing else here
+   runs. */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "kest.h"
+
+bool kest_natives_here(KestRuntime *rt);
+
+static void wrote_it(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)runtime;
+    (void)context;
+    uint32_t length = 0;
+    const char *bytes = kest_text_bytes(frame, &length);
+    if (bytes != NULL && length > 0) {
+        fwrite(bytes, 1, length, stdout);
+    }
+}
+
+static void asked_back(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)context;
+    int32_t which = kest_entry(runtime, "reentry.doubled");
+    if (which < 0) {
+        kest_native_failed(runtime, "there is no `doubled`");
+        return;
+    }
+    KestValue handing[8];
+    memset(handing, 0, sizeof handing);
+    handing[0] = frame[0];
+    if (!kest_call(runtime, which, handing,
+                   sizeof handing / sizeof handing[0])) {
+        kest_native_failed(runtime, "the call back in did not run");
+        return;
+    }
+    frame[0] = handing[0];
+}
+
+static int ran(const char *path, bool compiled) {
+    KestBuild *build = kest_build(path, getenv("KEST_LIB"), stderr,
+                                  KEST_FORM_TEXT, 0);
+    if (build == NULL) {
+        fprintf(stderr, "no program\n");
+        return -1;
+    }
+    KestHost *host = kest_host_new();
+    if (host == NULL ||
+        !kest_host_bind(host, "Io.write", wrote_it, NULL) ||
+        !kest_host_bind(host, "Host.askedBack", asked_back, NULL)) {
+        fprintf(stderr, "no host\n");
+        return -1;
+    }
+    KestRuntime *rt = kest_start(build, host, NULL);
+    kest_host_free(host);
+    if (rt == NULL) {
+        kest_build_report(build, stderr, KEST_FORM_TEXT);
+        kest_build_free(build);
+        return -1;
+    }
+    if (compiled && !kest_natives_here(rt)) {
+        fprintf(stderr, "this C was written from another program\n");
+        kest_runtime_free(rt);
+        kest_build_free(build);
+        return -1;
+    }
+    int32_t which = kest_entry(rt, "reentry.main");
+    KestValue answer[8];
+    memset(answer, 0, sizeof answer);
+    bool went = which >= 0 &&
+                kest_call(rt, which, answer,
+                          sizeof answer / sizeof answer[0]);
+    if (!went) {
+        kest_report(rt, stderr, KEST_FORM_TEXT);
+    }
+    int said = went ? (int)answer[0].integer : -1;
+    kest_runtime_free(rt);
+    kest_build_free(build);
+    return said;
+}
+
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        fprintf(stderr, "usage: twice <program>\n");
+        return 2;
+    }
+    int with = ran(argv[1], true);
+    int without = ran(argv[1], false);
+    printf("compiled %d machine %d\n", with, without);
+    return with == without && with >= 0 ? 0 : 1;
+}
+HOST
+if ! ./kest emit --c "$work"/reentry.kest >"$work"/reentry.c 2>"$work"/why ||
+        ! $cc -O1 -Iinclude -DKEST_NO_MAIN -c -o "$work"/reentry.o \
+            "$work"/reentry.c 2>>"$work"/why ||
+        ! $cc -O1 -Iinclude -o "$work"/twice "$work"/twice.c "$work"/reentry.o \
+            libkest.a -lm 2>>"$work"/why; then
+    {
+        echo "    a host of its own will not build against the C this wrote:"
+        sed 's/^/        /' "$work"/why | head -5
+    } >>"$said"
+    wrong=$((wrong + 1))
+else
+    inside=$(KEST_LIB=lib/ "$work"/twice "$work"/reentry.kest 2>&1 </dev/null)
+    inside_was=$?
+    inside_said="one run both ways inside one process by a host of its own, \
+which calls back into the program from a body this backend wrote"
+    case "$inside" in
+    *"reentry 50"*"reentry 50"*"compiled 50 machine 50"*)
+        if [ "$inside_was" -ne 0 ]; then
+            echo "    a host running one program both ways said the right \
+thing and came back $inside_was" >>"$said"
+            wrong=$((wrong + 1))
+        fi
+        ;;
+    *)
+        echo "    a host running one program both ways, with a door that \
+calls back in, said \`$inside\` and came back $inside_was" >>"$said"
+        wrong=$((wrong + 1))
+        ;;
+    esac
+fi
+
 # And every program in this tree that runs, run both ways. The ones above are
 # written for this check and are what it can write; these are what somebody
 # wrote for another reason, which is where a fixture's blind spot shows. A
@@ -775,7 +1106,7 @@ done
 # traps on, or as one it quietly answers, would be a program that means
 # something else. Counted rather than assumed, because a program that stops is
 # one whose answer is the same either way for the wrong reason.
-for stopping in stopped shifted outside deep; do
+for stopping in stopped shifted outside deep crossed runoff; do
     stops=$(./kest run "$work"/programs/$stopping.kest 2>/dev/null </dev/null
             echo $?)
     if [ "$stops" -eq 0 ]; then
@@ -792,5 +1123,5 @@ if [ "$wrong" -ne 0 ]; then
 fi
 echo "$written of $bodies body(s) over $compiled program(s) written as C the \
 host compiler takes, $both program(s) written here and $alike of this tree's \
-own run both ways for the same answer and the same words, and $wants_a_host \
-that ask the host for what a file this wrote does not provide"
+own run both ways for the same answer and the same words, $inside_said, and \
+$wants_a_host that ask the host for what a file this wrote does not provide"

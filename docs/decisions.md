@@ -37640,3 +37640,274 @@ down: a cut taken with where it starts and how much of it the wrong way round,
 a number with a sign written out as though it had none, and a run drained of
 something it says it has not got. Each compiles, each is right about some
 input, and each is caught by the fixture written for this.
+
+## D1105. A body the machine runs, called from one the host's compiler compiled
+
+Until now a body this backend could not write was a body nothing above it
+could be written either: a call here is a call to a C function, there is no
+dispatch to fall back through, and so one refusal at the bottom of a program
+took the whole chain above it. That was `settle()`, and it was costing more
+than everything else left put together — 72 bodies of this tree were written
+out for no reason of their own.
+
+**What replaces it.** Every body a written body calls gets a C function of the
+shape a call here expects. For a body this backend wrote, that function is the
+translation. For one it did not, it is four lines: the arguments into the
+frame the caller already made room for, one call to `kest_call_body`, and what
+came back read out of the same frame. The machine runs that body, as it was
+going to anyway.
+
+**The frame is the one that is already there.** A compiled call asks
+`kest_native_room` for room and for a ledger frame before it enters anything
+(D1098). When what it enters is the machine, the machine writes a real frame
+over the ledger one rather than beside it — same index, same base — so a fault
+under the call says it was called once and from one place. Getting this wrong
+is invisible until something refuses: both frames name the same body, nothing
+crashes, and what changes is the depth a run is allowed to reach. There is a
+hole for exactly that.
+
+**What it is worth.** Breadth, and only breadth. Over this tree the backend
+writes **1,667 of 2,088 bodies**, up from 1,509, and every workload in `bench`
+now has its `main` compiled — `bench/kernel.kest`, `bench/control.kest` and
+`bench/graph.kest` have nothing left in them but the crossing that prints.
+`bench/rules.kest` runs 1.239 G instructions against the machine's 6.232 G,
+which is where D1099 left it: the bodies that mattered were already written,
+and what this adds is the ones that were being held back by a body underneath
+them.
+
+**And the seam holds in both directions.** A program that recurses compiled →
+machine → compiled until it runs out of frames refuses at the same depth with
+the same words and the same call chain under both engines. That is the
+`crossed.kest` fixture, and it is the property the whole two-engine decision
+(D1092) rests on: one language, two ways of running it.
+
+What is left, by distinct body: a crossing into the host (45), a call through
+a function value (19), an address of a place that is not a run of the frame
+(11), a region opened (3), a number with no spelling in C (2), and a constant
+read where it is (1). **Eighty-one bodies of two thousand, and no chain above
+any of them.**
+
+## D1106. A third task, and the first that is a bug to find
+
+D1101 put two tasks in `ai/`, both of them a scaffold with the bodies left
+undone. This adds the third kind the mission lists, and it is a different
+shape: **the scaffold is working-looking code with a defect in it, and the
+answer is the fix.**
+
+`ai/tasks/patch` is a bag of stackable things. `put` fills part-used stacks
+first and then starts new ones, and the version handed over starts a new stack
+holding everything that was left rather than what a stack holds. Nothing in
+either language has anything to say about it: it compiles under `kest check`
+and analyses clean under `luau-analyze`. That is the point of this one — a
+type system does not catch it, so what is being measured is whether it is
+easier to find in a language that says what a body may do than in one that
+does not.
+
+**The wrong answer beside it is a plausible fix rather than a random one**: it
+caps the new stack at what a stack holds and then takes a whole stack off what
+is left over, so a put of five answers minus fifteen. That is the mistake
+somebody makes while fixing this one, and the suite is worth nothing unless it
+catches it — `tools/check-ai.sh` watches it being caught, as it does for the
+other two.
+
+Three of the nine kinds. What is left: refactoring across modules, a host API,
+save and load, failure handling.
+
+## D1107. A call through a function value, compiled
+
+The nineteen bodies left over from D1105 were all one operation: a call whose
+callee is decided while it runs. `kest_call_value` writes it, and after it the
+only thing left in this tree that stops a body is the crossing into the host.
+
+**The three questions are asked in one place, and they were asked in two.**
+Before either engine enters a function value it asks whether the value names a
+function at all, whether that function is of the shape the call was written
+against, and whether it keeps what the body making the call promised. Those
+sentences were the machine's; writing them again in the door would have been
+three more copies to drift. They are `the_function` now, which answers the
+chunk to enter or the code, the sentence and the note that goes under it --
+and each engine says it the way it says everything else, the machine at an
+instruction and a compiled body at a source offset.
+
+That also fixes what would otherwise have been a hole in the net. The two
+backstops for this -- a call through a value that does not ask its shape, and
+one that does not ask what it promised -- are provoked by a host writing a
+number into a function slot, which only `examples/embed` does. A second copy
+of those questions inside the backend would have been a copy no hole watched.
+They now point at the shared answer, and both engines fall through it.
+
+**What it enters.** Room and the ledger frame come from `kest_native_room`,
+the same door a call by name goes through, and then the callee is entered as C
+where it was compiled and through `kest_call_body` (D1105) where it was not.
+A program that recurses compiled → value → machine → compiled until it runs
+out of frames refuses at the same depth with the same words under both
+engines; that is `crossed.kest`, and it is now compiled whole.
+
+Over this tree the backend writes **1,692 of 2,088 bodies**. What is left, by
+distinct body: **a crossing into the host (45)**, an address of a place that
+is not a run of the frame (11), a region opened (3), a number with no spelling
+in C (2), and a constant read where it is (1). Sixty-two bodies, and
+three quarters of them are one door.
+
+## D1108. The crossing into the host, compiled — and the backend is whole
+
+Forty-five of the sixty-two bodies this backend could not write were one
+operation: a call out to the host. It is written now, and with it the release
+engine writes **2,071 of this tree's 2,088 bodies**. `bench/words.kest` and
+`bench/rules.kest` compile whole — every body of the gameplay reference
+program, the printing included.
+
+**Seven questions, asked once.** A crossing is the most guarded thing this
+machine does: what the declaration says against what was moved, how far in a
+host is being called from against what it was measured for, whether what the
+host bound is still there, whether it did what it was asked, whether it kept a
+promise made on its behalf, whether the tag it answered with is a case of the
+enum, and what is inside the value under that tag. Writing those again in the
+backend would have been seven more copies of the boundary, which is the last
+place in this project where a second copy would be worth having. They are
+`kest_call_host`, and the machine's instruction is now that door with the
+budget and the operand stack around it.
+
+**What the walk over the answer had to learn.** `handed_well` reports eleven
+different things and reported them all at an instruction. A body the host's
+compiler compiled has no instructions, so the `Saying` it walks under now
+carries a source offset as well, and one helper picks which of the two to say
+it at. Eleven call sites, one change.
+
+**And one thing that was wrong in the machine and could not be seen until
+now.** The check that holds a crossing to what a host was measured for reads
+where this run of the machine began. It read that off `running_top`, which is
+where a host calling in left the slots — true for the machine, and false for a
+compiled body, because entering one *raises* `running_top` to the top of its
+frame so the collector reaches what it is holding. Read from a compiled body
+it gave a floor above the top and a width of four thousand million. It is read
+off the first frame of the run now, which is the same number for the machine
+and the right one for both.
+
+**What is left: seventeen bodies of two thousand.** An address of a place that
+is not a run of the frame (11), a region opened (3), a number with no spelling
+in C (2), and a constant read where it is (1). None of them is a family; all
+of them are in `examples`.
+
+**And a rule of the check that had to go.** `check-c.sh` held every sweep to
+writing *neither nothing nor everything*, on the reading that a file claiming
+a whole program was claiming C for a crossing it had none for. There is C for
+it now, and a program wholly written is the ordinary case. What says a body
+left out is left out honestly is still there: the reason beside its name, the
+run that follows, and the holes that watch both.
+
+`bench/rules.kest` whole: 1.246 G instructions against the machine's 6.311 G,
+with `g++ -O2` at 0.429 G. The ratio has not moved since D1099 — what moved is
+that there is nothing left of that program for the machine to run.
+
+**What is not held yet, written down rather than left quiet.** A host called
+from a compiled body may call back into the program, and nothing in this tree
+runs that path: the differential check's own host writes and does no more, and
+the two hosts that do call back in — `examples/embed` and `examples/engine` —
+drive the machine rather than a compiled file. The code that does the calling
+back in is the same code either way, which is why this decision made it one
+door and not two; what is not watched is a compiled frame being the one
+underneath. It wants a host in the check that calls back in, and that is the
+next thing to write here.
+
+**And a smaller one, taken while it was open.** A compiled frame now records
+where its crossing was written, so a failure inside a call the host made back
+in says where every frame above it made its call. It had nothing to answer
+with before, because a compiled body has no instruction pointer.
+
+## D1109. One of a fixed run, and the arithmetic a generated host provides
+
+Two small things that between them took the backend from 2,071 of this tree's
+bodies to **2,081 of 2,088**, and took the programs that can be *run* both
+ways from 30 to 41.
+
+**A fixed run, at an index worked out while it runs.** `[f32; 4]` in a struct
+is a run of slots in the frame, and reading one of them at a name rather than
+at a number written down was the eleven bodies left after D1108. It is four
+lines of C: the index held aside, the machine's own sentence for an index that
+is not one of them, and the slots read or written at the index times how wide
+one of them is. The hole for it reaches one of them as though they were a slot
+each, which every run of single-slot numbers reads the same way and every run
+of anything wider does not.
+
+**And the arithmetic.** Eleven programs in this tree could be written whole as
+C and still not run, because they ask the host for a square root and the file
+this backend writes did not offer one. A host is whoever runs the program and
+these are its to provide, exactly as the command line provides them; each is
+one line of the host's own machine. So a generated file now binds `Math.sqrt`,
+`floor`, `ceil`, `sin`, `cos`, `pow` and `atan2`, and a program that runs
+under `kest run` runs when it is compiled.
+
+That is not a door of the backend's: it is what the little host at the bottom
+of the file offers, the same place `Io.write` was already written. What is
+left there is a clock, a file and an argument — five more programs — and the
+command line's own toy engine, which is not a generated file's business.
+
+**Seven bodies left over this tree.** A region opened (3), a number with no
+spelling in C (2), a constant read where it is (1), and one address of a place
+this does not take one of. They are in four `examples` files and none of them
+is a family.
+
+## D1110. A fourth task: input that is mostly wrong
+
+The fourth of the nine kinds the mission lists, and the first whose tests are
+mostly about what *does not* happen. `ai/tasks/frail` reads records out of
+lines somebody else wrote: `name=<something>;worth=<a whole number>`, and
+every line that is not exactly that is nothing rather than a guess.
+
+Thirteen of its seventeen checks are lines that are not records — a half
+missing, the halves the wrong way round, a half too many, a name with nothing
+in it, a worth that is not a number, a worth one past what a worth holds.
+**That is the task.** A reader that is right about the good line and guesses at
+the bad one is a reader that is wrong, and it is the failure that a model
+writing quickly makes and a suite of happy paths never sees.
+
+The plausible wrong answer beside it takes the first two pieces of a split and
+ignores the rest, so `name=oak;worth=10;extra=1` reads as a record. That is
+the fix somebody writes in a hurry, and it passes every check but the eighth.
+
+What the two languages are being compared on here is what each gives a reader
+to hold nothing in: Kest answers `Record?`, which is nothing or a record and
+nothing else, and Luau answers `Record?` too but with `nil` in every field's
+reach. Whether that shows up in what a model writes is the owner's to run.
+
+Four of nine. What is left: refactoring across modules, a host API, and save
+and load.
+
+## D1111. A host of its own, and the seam held in the direction a game meets it
+
+D1108 wrote down what this decision fixes: a host called from a compiled body
+may call back into the program, and nothing in this tree ran that path. It
+could not: the two hosts here that call back in drive the machine, and a
+generated file's own little host only writes.
+
+**And underneath that was a larger thing missing.** Everything a generated
+file holds was `static` but `main`. A game cannot use a file like that at all
+— it has a host of its own, with its own doors, its own loop and its own
+`main`, and what it wants from this backend is *these bodies bound to my
+machine*. So a generated file now exports one function:
+
+```c
+bool kest_natives_here(KestRuntime *rt);
+```
+
+A host makes a machine for the same program, hands it to that, and the bodies
+in the file are the ones that machine runs. It compiles the file with
+`-DKEST_NO_MAIN` when it has a `main` of its own, and with
+`-DKEST_BOUND=another_name` when it embeds two programs written this way. That
+is the whole of what shipping a program compiled this way is, and it was three
+lines away the entire time.
+
+**What the check does with it.** `tools/check-c.sh` writes a host of its own
+now: it binds `Io.write` and one door that calls back into the program, links
+the generated file with `-DKEST_NO_MAIN`, and runs the same program twice in
+one process — once having called `kest_natives_here` and once not. Same
+answer, same words, one binary. That is the differential this project already
+had, moved inside a single process and pointed at the one seam the tree-wide
+sweep cannot reach.
+
+The hole for it takes the line that writes down where the machine had got to
+before a host runs. Without it a call back in stands on the frames an older
+run left, which is under the frames still running: nothing crashes, the
+answer is wrong, and it is wrong only for a program whose host calls back in.
+Exactly the shape of thing that hides until somebody ships.

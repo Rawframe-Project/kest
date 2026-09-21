@@ -1,0 +1,86 @@
+module checks
+
+// What the task is judged by, which whoever does it does not see. Each check
+// answers with its own number; nought is every check passing.
+
+import patch
+
+// No stack ever holds more than a stack holds. Asked after everything below,
+// because it is the sentence the bug in the scaffold breaks and a suite that
+// only added up what was in the bag would pass it.
+fn overfull(bag: [patch.Stack]) -> bool no.alloc no.host deterministic {
+    for i in 0..len(bag) {
+        if bag[i].many > 20 || bag[i].many < 1 {
+            return true
+        }
+    }
+    return false
+}
+
+fn main() -> i32 {
+    let bag: [patch.Stack] = array()
+
+    // An empty bag holds nothing of anything.
+    if patch.held(bag, "ore") != 0 {
+        return 1
+    }
+
+    // Less than a stack goes in one stack.
+    if patch.put(bag, 4, "ore", 5) != 0 {
+        return 2
+    }
+    if patch.held(bag, "ore") != 5 || len(bag) != 1 {
+        return 3
+    }
+
+    // More than a stack tops up what is there and starts another.
+    if patch.put(bag, 4, "ore", 30) != 0 {
+        return 4
+    }
+    if patch.held(bag, "ore") != 35 {
+        return 5
+    }
+    if len(bag) != 2 {
+        return 6
+    }
+    if overfull(bag) {
+        return 7
+    }
+
+    // Another kind starts a stack of its own and leaves the first alone.
+    if patch.put(bag, 4, "wood", 3) != 0 {
+        return 8
+    }
+    if patch.held(bag, "ore") != 35 || patch.held(bag, "wood") != 3 {
+        return 9
+    }
+
+    // Enough to need more stacks than there is room for: what fits goes in
+    // and the rest comes back.
+    if patch.put(bag, 4, "ore", 30) != 5 {
+        return 10
+    }
+    if patch.held(bag, "ore") != 60 {
+        return 11
+    }
+    if overfull(bag) {
+        return 12
+    }
+
+    // Nothing put in is nothing left over, and nothing moves.
+    if patch.put(bag, 4, "ore", 0) != 0 {
+        return 13
+    }
+    if len(bag) != 4 || patch.held(bag, "ore") != 60 {
+        return 14
+    }
+
+    // And a kind nothing in the bag is, with no room left for it.
+    if patch.put(bag, 4, "iron", 2) != 2 {
+        return 15
+    }
+    if patch.held(bag, "iron") != 0 {
+        return 16
+    }
+    return 0
+}

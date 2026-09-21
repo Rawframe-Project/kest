@@ -2608,8 +2608,35 @@ static bool grow_store(Vm *rt, KestValue *reach, Store *store) {
 typedef struct {
     bool at_a_crossing;
     const Frame *frame;
+    // What the machine was running when it asked, or nothing for a body the
+    // host's compiler compiled: that one has no instructions at all and does
+    // have the source offset the resolved form carried, which is `where`.
+    // See D1108.
     const uint8_t *instruction;
+    uint32_t where;
 } Saying;
+
+// What a walk over a frame says when something in it is wrong, said the way
+// the engine that asked says everything else. One helper rather than a test
+// at each of the places that say something, because a walk that reports
+// eleven things is eleven places to forget.
+static void crossing_failed(KestRuntime *runtime, const Saying *saying,
+                            const char *code, const char *format, ...)
+    KEST_SAYS(4, 5);
+
+static void crossing_failed(KestRuntime *runtime, const Saying *saying,
+                            const char *code, const char *format, ...) {
+    va_list args;
+    va_start(args, format);
+    if (saying->instruction != NULL) {
+        failv(runtime, saying->frame, saying->instruction, code, format, args);
+    } else {
+        char said[200];
+        vsnprintf(said, sizeof said, format, args);
+        kest_native_stopped(runtime, saying->where, code, said);
+    }
+    va_end(args);
+}
 
 #if KEST_CHECKED
 // A run of the chunk's own constants, held to being the chunk's. The same
@@ -2797,7 +2824,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         int32_t tag = (int32_t)frame[*at].integer;
         if (tag < 0 || (uint32_t)tag >= type->case_count) {
             if (saying->at_a_crossing) {
-                fail(runtime, saying->frame, saying->instruction, "K0650",
+                crossing_failed(runtime, saying, "K0650",
                      "`%s` answers with a tag in slot %u and %lld is no case "
                      "of it",
                      name, *at, (long long)frame[*at].integer);
@@ -2844,7 +2871,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         // See D629.
         if (frame[*at].text == NULL) {
             if (saying->at_a_crossing) {
-                fail(runtime, saying->frame, saying->instruction, "K0652",
+                crossing_failed(runtime, saying, "K0652",
                      "`%s` answers with text in slot %u and there is no "
                      "address there",
                      name, *at);
@@ -2863,7 +2890,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         if (!ours(runtime, frame[*at].text) &&
             !kest_arena_holds(runtime->module->arena, frame[*at].text)) {
             if (saying->at_a_crossing) {
-                fail(runtime, saying->frame, saying->instruction, "K0652",
+                crossing_failed(runtime, saying, "K0652",
                      "`%s` answers with text in slot %u that did not come "
                      "from this machine",
                      name, *at);
@@ -2892,7 +2919,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         // the host did. Said at the door, it names the slot. See D630.
         if (frame[*at].object == NULL) {
             if (saying->at_a_crossing) {
-                fail(runtime, saying->frame, saying->instruction, "K0652",
+                crossing_failed(runtime, saying, "K0652",
                      "`%s` answers with a handle in slot %u and there is none "
                      "there",
                      name, *at);
@@ -2911,7 +2938,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         }
         if (!ours(runtime, frame[*at].object)) {
             if (saying->at_a_crossing) {
-                fail(runtime, saying->frame, saying->instruction, "K0652",
+                crossing_failed(runtime, saying, "K0652",
                      "`%s` answers with a handle in slot %u that did not come "
                      "from this machine",
                      name, *at);
@@ -2944,7 +2971,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
             // two things happened.
             if (KEST_HANDLE_IS(frame[*at].object, KEST_WAS_LENT)) {
                 if (saying->at_a_crossing) {
-                    fail(runtime, saying->frame, saying->instruction, "K0637",
+                    crossing_failed(runtime, saying, "K0637",
                          "`%s` answers with a handle in slot %u the host has "
                          "taken back",
                          name, *at);
@@ -2970,7 +2997,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
                           ? "a store"
                           : "something this machine did not make";
             if (saying->at_a_crossing) {
-                fail(runtime, saying->frame, saying->instruction, "K0652",
+                crossing_failed(runtime, saying, "K0652",
                      "`%s` answers with %s in slot %u and this host wrote %s",
                      name, asked_for, *at, handed);
             } else {
@@ -3006,7 +3033,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
                                 "its handles hold"
                               : kest_type_name(runtime->diags->arena, holds);
             if (saying->at_a_crossing) {
-                fail(runtime, saying->frame, saying->instruction, "K0661",
+                crossing_failed(runtime, saying, "K0661",
                      "`%s` answers in slot %u with a handle of `%s` where one "
                      "of `%s` was wanted",
                      name, *at, given, wanted);
@@ -3046,7 +3073,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         uint64_t given = (uint64_t)frame[*at].integer;
         if ((given & ~named) != 0) {
             if (saying->at_a_crossing) {
-                fail(runtime, saying->frame, saying->instruction, "K0652",
+                crossing_failed(runtime, saying, "K0652",
                      "`%s` answers with `%s` in slot %u and %llu has bits it "
                      "has no names for",
                      name, kest_type_written(type), *at,
@@ -3070,7 +3097,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         double given = frame[*at].real;
         if (given == given && (double)(float)given != given) {
             if (saying->at_a_crossing) {
-                fail(runtime, saying->frame, saying->instruction, "K0652",
+                crossing_failed(runtime, saying, "K0652",
                      "`%s` answers with `f32` in slot %u and %.17g is not one",
                      name, *at, given);
             } else {
@@ -3091,7 +3118,7 @@ static bool handed_well(KestRuntime *runtime, const Saying *saying,
         int64_t given = frame[*at].integer;
         if (kest_narrow_to(kest_scalar_of(type), given) != given) {
             if (saying->at_a_crossing) {
-                fail(runtime, saying->frame, saying->instruction, "K0652",
+                crossing_failed(runtime, saying, "K0652",
                      "`%s` answers with `%s` in slot %u and %lld is not one",
                      name, the_width_of_type(type), *at, (long long)given);
             } else {
@@ -3171,6 +3198,64 @@ static uint16_t read_u16(const uint8_t **ip) {
     return (uint16_t)(at[0] | ((uint16_t)at[1] << 8));
 }
 
+// The three questions asked before a call through a function value enters
+// anything: whether the value names a function at all, whether that function
+// is of the shape the call was written against, and whether it keeps what the
+// body making the call promised. Answers the chunk to enter, or nothing with
+// the code, the sentence and the note that goes under it -- so that the
+// machine and a body the host's compiler compiled refuse the same call with
+// the same words rather than with two copies of them. See D1107.
+//
+// A program cannot get here with the wrong shape: the shape is the type and
+// the type is checked. What can is a host, which writes a number into the
+// slot and a number is only in range or not (D835). The promise is asked here
+// because which chunk this enters is not known until it runs, which is the
+// one call the proof over the emitted code cannot see through (D058, D853).
+static const KestChunk *the_function(const KestModule *module,
+                                     const KestChunk *mine, int64_t which,
+                                     uint16_t handed, uint16_t coming_back,
+                                     const char **code, char *said,
+                                     size_t room, const char **suggest,
+                                     const char **fault) {
+    *code = NULL;
+    *suggest = NULL;
+    *fault = NULL;
+    if (module == NULL || mine == NULL || which < 0 ||
+        (uint64_t)which >= module->count) {
+        *code = "K0609";
+        snprintf(said, room, "this is not a function");
+        return NULL;
+    }
+    const KestChunk *callee = module->functions[which];
+    if (callee->param_slots != handed || callee->result_slots != coming_back) {
+        *code = "K0657";
+        snprintf(said, room,
+                 "this calls something taking %u slot(s) and giving %u, and "
+                 "`%s` takes %u and gives %u",
+                 handed, coming_back, callee->wrote, callee->param_slots,
+                 callee->result_slots);
+        *suggest = "a function value is one slot holding which function it "
+                   "is, and `kest_entry` is what a host reads one from";
+        return NULL;
+    }
+    // Either promise, and the one that is broken is the one said: a body
+    // promising both and entering one that promises neither is two things
+    // wrong with one call, and a reader told the first fixes it and is told
+    // the second. See D853.
+    const char *broken = mine->no_alloc && !callee->no_alloc ? "no.alloc"
+                         : mine->no_host && !callee->no_host ? "no.host"
+                                                             : NULL;
+    if (broken != NULL) {
+        *code = "K0623";
+        snprintf(said, room,
+                 "`%s` promises `%s` and this enters `%s`, which does not",
+                 mine->wrote, broken, callee->wrote);
+        *fault = "the shape it was held in promises and the body does not";
+        return NULL;
+    }
+    return callee;
+}
+
 // `entry` of -1 is a machine carrying on from where a debugger stopped it:
 // the frames are where they were, and the instruction and the operand stack
 // come out of the frame the stop wrote them into. See D991.
@@ -3178,7 +3263,6 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                      uint16_t *returned) {
     bool carrying_on = entry < 0;
     const KestModule *module = rt->module;
-    KestNative *natives = rt->natives;
     Vm *vmp = rt;
 
     const KestChunk *chunk =
@@ -5316,59 +5400,25 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t argument_slots = READ_U16();
             uint16_t coming_back = READ_U16();
             int64_t which = (--top)->integer;
-            if (which < 0 || (uint64_t)which >= module->count) {
-                fail(vmp, frame, instruction, "K0609",
-                     "this is not a function");
-                return false;
-            }
-            const KestChunk *callee = module->functions[which];
-
-            // And that it is a function of this shape. A program cannot get
-            // here with the wrong one — the shape is the type and the type is
-            // checked — so what can is a host, which writes a number into the
-            // slot and a number is only in range or not. Entered with a frame
-            // of the wrong width, a body reads the slots below the ones it
-            // was given, which are the caller's, and a machine walks off its
-            // own stack. See D835.
-            if (callee->param_slots != argument_slots ||
-                callee->result_slots != coming_back) {
-                fail(vmp, frame, instruction, "K0657",
-                     "this calls something taking %u slot(s) and giving %u, "
-                     "and `%s` takes %u and gives %u",
-                     argument_slots, coming_back, callee->wrote,
-                     callee->param_slots, callee->result_slots);
-                kest_diags_suggest(vmp->diags,
-                                   "a function value is one slot holding "
-                                   "which function it is, and `kest_entry` is "
-                                   "what a host reads one from");
-                return false;
-            }
-
-            // A promise is proved twice: over the tree, and over the code
-            // that was emitted for it. The second proof follows `call` and
-            // stops here, because which chunk this enters is not known until
-            // it runs. It is known now, and a chunk carries what it promised,
-            // so the one call that proof cannot see through is checked where
-            // it is made. See D058.
-            // Either promise, and the one that is broken is the one said:
-            // a body promising both and entering one that promises neither is
-            // two things wrong with one call, and a reader told the first
-            // fixes it and is told the second. See D853.
-            const char *broken = frame->chunk->no_alloc && !callee->no_alloc
-                                     ? "no.alloc"
-                                 : frame->chunk->no_host && !callee->no_host
-                                     ? "no.host"
-                                     : NULL;
-            if (broken != NULL) {
-                const char *promised = frame->chunk->wrote;
-                const char *entered = callee->wrote;
-                fail(vmp, frame, instruction, "K0623",
-                     "`%s` promises `%s` and this enters `%s`, which "
-                     "does not",
-                     promised, broken, entered);
-                kest_diags_fault(vmp->diags,
-                                 "the shape it was held in promises and the "
-                                 "body does not");
+            // The three questions in front of this call, asked in the one
+            // place a body the host's compiler compiled asks them too. See
+            // D1107.
+            const char *code = NULL;
+            char said[160];
+            const char *suggest = NULL;
+            const char *fault = NULL;
+            const KestChunk *callee =
+                the_function(module, frame->chunk, which, argument_slots,
+                             coming_back, &code, said, sizeof said, &suggest,
+                             &fault);
+            if (callee == NULL) {
+                fail(vmp, frame, instruction, code, "%s", said);
+                if (suggest != NULL) {
+                    kest_diags_suggest(vmp->diags, "%s", suggest);
+                }
+                if (fault != NULL) {
+                    kest_diags_fault(vmp->diags, fault);
+                }
                 return false;
             }
 
@@ -5407,181 +5457,30 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint16_t argument_slots = READ_U16();
             uint16_t result_slots = READ_U16();
             OF_THE_MODULE(index, module->extern_count, "a door of the host");
-            if (rt->entered != NULL) {
-                rt->crossings++;
-            }
             KestValue *base = top - argument_slots;
-#if KEST_CHECKED
-            // And the same three numbers at the crossing, held against the
-            // declaration rather than against a body: what an extern takes and
-            // gives is a layout for each argument and one for the answer, and
-            // how many slots those come to is the number the compiler wrote
-            // here. A host is held to this from its own side by
-            // `kest_frame_fills`; nothing held the machine to it. See D901.
-            {
-                uint32_t wanted = 0;
-                for (uint16_t which = 0;
-                     which < module->externs[index].takes_count; which++) {
-                    wanted +=
-                        module->layouts[module->externs[index].takes[which]]
-                            .slots;
-                }
-                uint32_t answered =
-                    module->externs[index].gives_value
-                        ? module->layouts[module->externs[index].gives].slots
-                        : 0;
-            rt->guarded++;
-                if (argument_slots != wanted || result_slots != answered ||
-                    base < mine + frame->chunk->slot_count) {
-                    fail(vmp, frame, instruction, "K0655",
-                         "this crossing hands over %u slot(s) and takes back "
-                         "%u, and `%s` is declared to take %u and give %u",
-                         argument_slots, result_slots,
-                         module->externs[index].name, wanted, answered);
-                    kest_diags_fault(vmp->diags,
-                                     "the compiler's count of the operand "
-                                     "stack and what the machine moved "
-                                     "disagree");
-                    return false;
-                }
-            }
-#endif
-            // The same convention a Kest call uses: the arguments are where
-            // the result goes. Where the machine is, is written down first,
-            // because the host may call back in from inside this.
-            // What a host was told against what this turned out to be. A
-            // host sizes a stack from `kest_needs_from` and then calls back in
-            // from here, so a number that is too small is a host that runs out
-            // of room somewhere it was told it would not. The floor of this
-            // run is where a host function above it left the machine, which is
-            // the same place a call back in would start from.
-            if (rt->host_measured) {
-                const KestValue *bottom =
-                    rt->running_top != NULL ? rt->running_top : rt->stack;
-                uint32_t deep = rt->frame_count - rt->running_frames;
-                uint32_t wide = (uint32_t)(top - bottom);
-                if (deep > rt->host_frames || wide > rt->host_slots) {
-                    fail(vmp, frame, instruction, "K0633",
-                         "`%s` calls into the host %u slots and %u frames in, "
-                         "where `%s` was measured at %u and %u",
-                         frame->chunk->name, wide, deep,
-                         rt->host_where != NULL ? rt->host_where : "nothing",
-                         rt->host_slots, rt->host_frames);
-                    kest_diags_fault(vmp->diags,
-                                     "what a host is told it needs to call "
-                                     "back in from here is that measurement");
-                    return false;
-                }
-            }
-            KestValue *was_top = rt->running_top;
-            uint32_t was_frames = rt->running_frames;
-            // A host may call back in, and what it calls stands on frames this
-            // one is under: where this frame is has to be in the frame before
-            // the host runs. See D869.
+            // A host may call back in, and what it calls stands on frames
+            // this one is under: where this frame is has to be in the frame
+            // before the host runs. See D869.
             frame->ip = ip;
-            rt->running_top = top;
-            rt->running_frames = rt->frame_count;
-            // And the budget, which is held in a register while this body runs
-            // and is nobody else's until it is put back. A host may call in
-            // again from in there: what that call could see was the budget
+            // And the budget, which is held in a register while this body
+            // runs and is nobody else's until it is put back. A host may call
+            // in again from in there: what that call could see was the budget
             // minus this body's whole slice, so an outer call given three
             // hundred steps took all three hundred and the call inside it was
-            // refused after fifty. Put back here and taken again below, so the
-            // number a reentrant call reads is the number that is left. See
-            // D929.
+            // refused after fifty. Put back here and taken again below, so
+            // the number a reentrant call reads is the number that is left.
+            // See D929.
             if (rt->fuel_bounded) {
                 rt->fuel_left += slice;
             }
             slice = 0;
-            // The one promise in this language that somebody else keeps. A
-            // declaration says a host function does not reach the heap, the
-            // compiler lets a `no.alloc` body call it on the strength of that,
-            // and nothing but this would notice a host that made text in it.
-            bool promised = module->externs[index].promises;
-            size_t held = promised ? kest_heap_used(rt) : 0;
-            // And whether what the host bound is still there to be handed
-            // over. A context is the host's own memory and the machine keeps
-            // the pointer and never reads it, so a host that binds something
-            // on a frame it then returns from leaves this handing a function
-            // of its own a pointer into somebody else's stack. Nothing about a
-            // pointer says when it stops being one, so this cannot be asked at
-            // the binding and can be asked here, in the build that is told
-            // where every block a host has ends. One byte of it, because the
-            // machine is not told how big a context is and does not need to
-            // be: a frame that has gone and a block that has been freed are
-            // both gone at their first byte. See D722.
-#if KEST_CHECKED
-            if (rt->contexts[index] != NULL &&
-                __asan_region_is_poisoned(rt->contexts[index], 1) != NULL) {
-                rt->running_top = was_top;
-                rt->running_frames = was_frames;
-                fail(vmp, frame, instruction, "K0654",
-                     "`%s` was bound with something this host has since given "
-                     "back",
-                     module->externs[index].name);
-                kest_diags_suggest(vmp->diags,
-                                   "what a host binds a context with has to "
-                                   "outlive every machine started with that "
-                                   "list");
+            // And the crossing itself, which is the door a body the host's
+            // compiler compiled goes through as well: everything the boundary
+            // asks is asked in one place, and both engines cross the same
+            // way. See D1108.
+            if (!kest_call_host(rt, index, base, argument_slots, result_slots,
+                                where_it_is(frame, instruction).offset)) {
                 return false;
-            }
-#endif
-            rt->native_failed = NULL;
-            natives[index](base, rt, rt->contexts[index]);
-            // Whether the host could do what it was asked. It is asked first,
-            // because everything below reads what the door wrote and a door
-            // that failed wrote nothing worth reading. See D937.
-            if (rt->native_failed != NULL) {
-                const char *said = rt->native_failed;
-                rt->native_failed = NULL;
-                rt->running_top = was_top;
-                rt->running_frames = was_frames;
-                fail(vmp, frame, instruction, "K0662",
-                     "`%s` could not do what it was asked: %s",
-                     module->externs[index].name, said);
-                kest_diags_suggest(vmp->diags,
-                                   "the host said so with "
-                                   "`kest_native_failed`, and what it wrote "
-                                   "into the frame was not read");
-                return false;
-            }
-            if (promised && kest_heap_used(rt) != held) {
-                rt->running_top = was_top;
-                rt->running_frames = was_frames;
-                fail(vmp, frame, instruction, "K0631",
-                     "`%s` promises `no.alloc` and this host took %zu bytes in "
-                     "it",
-                     module->externs[index].name, kest_heap_used(rt) - held);
-                return false;
-            }
-            // A call back in unwound to exactly where it started, so there
-            // is nothing to put back but where the machine was.
-            rt->running_top = was_top;
-            rt->running_frames = was_frames;
-            // And the tag, for a crossing that answers a value with one in it.
-            // Every slot after a tag means whatever the tag says, so a host
-            // that writes a number the enum has no case for hands back a value
-            // whose payload the program reads as a type nobody wrote there —
-            // and unlike every other way a host can be wrong here, there is
-            // nowhere to ask about it beforehand: the tag is decided inside the
-            // call. This is the one moment it can be said, which is what makes
-            // it the machine's to say, the same as the promise above. See D706.
-            if (module->externs[index].gives_value) {
-                const KestLayout *answers =
-                    &module->layouts[module->externs[index].gives];
-                // Everything in what came back, read the way the door reads
-                // what a host hands in: the same walk, over the one value a
-                // crossing answers with, saying what a crossing did rather
-                // than what a function takes. It used to read the top of that
-                // value and no further, so a host answering with a shape that
-                // had a piece of text in a field was where the door was before
-                // D718. See D719.
-                Saying answering = {true, frame, instruction};
-                uint32_t gave = 0;
-                if (!handed_well(rt, &answering, module->externs[index].name,
-                                 answers->type, base, &gave)) {
-                    return false;
-                }
             }
             top = base + result_slots;
             break;
@@ -7644,7 +7543,7 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
             at += layout->slots;
             continue;
         }
-        Saying door = {false, NULL, NULL};
+        Saying door = {false, NULL, NULL, 0};
         if (!handed_well(runtime, &door, name, layout->type, frame, &at)) {
             return false;
         }
@@ -7815,6 +7714,273 @@ bool kest_native_room(KestRuntime *runtime, KestValue *base, uint32_t which,
         runtime->running_top = reaches;
     }
     return true;
+}
+
+bool kest_call_body(KestRuntime *rt, uint32_t which, KestValue *base,
+                    uint16_t handed, uint16_t *gave) {
+    if (rt == NULL || rt->module == NULL || which >= rt->module->count ||
+        rt->frame_count == 0) {
+        return false;
+    }
+    // The frame `kest_native_room` pushed for this call is the ledger's: it
+    // has the chunk and the place and nothing walking it. The machine writes
+    // a real one over it rather than beside it, so a fault inside says it was
+    // called once. What was asked about room, about how deep calls nest and
+    // about how much stack is left was asked there, in the machine's own
+    // words, so none of it is asked again here.
+    KestValue *was_top = rt->running_top;
+    uint32_t was_frames = rt->running_frames;
+    rt->running_top = base;
+    rt->running_frames = rt->frame_count - 1;
+    bool went = run_body(rt, (int32_t)which, handed, gave);
+    rt->running_frames = was_frames;
+    rt->running_top = was_top;
+    return went;
+}
+
+// A crossing into the host, which is one answer both engines go through: the
+// machine's instruction is this door with the budget and the operand stack
+// around it, and a body the host's compiler compiled calls it with the
+// arguments where the answer goes. Everything the boundary asks is here --
+// what the declaration says against what was moved, how far in a host is
+// being called from against what it was measured for, whether what it bound
+// is still there, whether it did what it was asked, whether it kept a promise
+// made on its behalf, and what it wrote back. Seven questions, asked once.
+// See D1108.
+bool kest_run_at(KestRuntime *rt, int64_t index, uint32_t count,
+                 uint32_t where) {
+    if (rt == NULL) {
+        return false;
+    }
+    if (index < 0 || (uint64_t)index >= count) {
+        return stopped_saying(rt, where, "K0604",
+                              "index %lld is outside %u of them",
+                              (long long)index, count);
+    }
+    return true;
+}
+
+bool kest_call_host(KestRuntime *rt, uint16_t index, KestValue *base,
+                    uint16_t argument_slots, uint16_t result_slots,
+                    uint32_t where) {
+    if (rt == NULL || rt->module == NULL || rt->frame_count == 0 ||
+        base == NULL || index >= rt->module->extern_count) {
+        return false;
+    }
+    const KestModule *module = rt->module;
+    Frame *frame = &rt->frames[rt->frame_count - 1];
+    KestValue *top = base + argument_slots;
+    // Where the crossing is written, on the frame making it. A host may call
+    // back in from inside this and what it calls may fail, and then every
+    // frame under it says where it made its call -- which a body the host's
+    // compiler compiled has no instruction pointer to answer with. See D1094.
+    frame->said_at = where;
+    // Read only where the machine holds itself to the declaration, which is
+    // the build that checks itself. Named here so that a release build does
+    // not have to be told twice that it is a number nobody read.
+    (void)result_slots;
+    if (rt->entered != NULL) {
+        rt->crossings++;
+    }
+#if KEST_CHECKED
+    // The same three numbers at the crossing, held against the declaration
+    // rather than against a body: what an extern takes and gives is a layout
+    // for each argument and one for the answer, and how many slots those come
+    // to is the number the compiler wrote here. A host is held to this from
+    // its own side by `kest_frame_fills`; nothing held the machine to it.
+    // See D901.
+    {
+        uint32_t wanted = 0;
+        for (uint16_t which = 0; which < module->externs[index].takes_count;
+             which++) {
+            wanted +=
+                module->layouts[module->externs[index].takes[which]].slots;
+        }
+        uint32_t answered =
+            module->externs[index].gives_value
+                ? module->layouts[module->externs[index].gives].slots
+                : 0;
+        rt->guarded++;
+        if (argument_slots != wanted || result_slots != answered ||
+            base < frame->base + frame->chunk->slot_count) {
+            stopped_saying(rt, where, "K0655",
+                           "this crossing hands over %u slot(s) and takes "
+                           "back %u, and `%s` is declared to take %u and give "
+                           "%u",
+                           argument_slots, result_slots,
+                           module->externs[index].name, wanted, answered);
+            kest_diags_fault(rt->diags,
+                             "the compiler's count of the operand stack and "
+                             "what the machine moved disagree");
+            return false;
+        }
+    }
+#endif
+    // What a host was told against what this turned out to be. A host sizes a
+    // stack from `kest_needs_from` and then calls back in from here, so a
+    // number that is too small is a host that runs out of room somewhere it
+    // was told it would not. The floor of this run is where a host function
+    // above it left the machine, which is the same place a call back in would
+    // start from.
+    if (rt->host_measured) {
+        // Where this run began, which is the bottom of its first frame. The
+        // machine could read that off `running_top`, because a host calling
+        // in leaves it there and the first frame stands on it; a body the
+        // host's compiler compiled cannot, because entering one raises
+        // `running_top` to the top of its frame so that the collector reaches
+        // what it is holding. The frame says it either way. See D1108.
+        const KestValue *bottom =
+            rt->frame_count > rt->running_frames
+                ? rt->frames[rt->running_frames].base
+            : rt->running_top != NULL ? rt->running_top
+                                      : rt->stack;
+        uint32_t deep = rt->frame_count - rt->running_frames;
+        uint32_t wide = (uint32_t)(top - bottom);
+        if (deep > rt->host_frames || wide > rt->host_slots) {
+            stopped_saying(rt, where, "K0633",
+                           "`%s` calls into the host %u slots and %u frames "
+                           "in, where `%s` was measured at %u and %u",
+                           frame->chunk->name, wide, deep,
+                           rt->host_where != NULL ? rt->host_where : "nothing",
+                           rt->host_slots, rt->host_frames);
+            kest_diags_fault(rt->diags,
+                             "what a host is told it needs to call back in "
+                             "from here is that measurement");
+            return false;
+        }
+    }
+    KestValue *was_top = rt->running_top;
+    uint32_t was_frames = rt->running_frames;
+    rt->running_top = top;
+    rt->running_frames = rt->frame_count;
+    // The one promise in this language that somebody else keeps. A
+    // declaration says a host function does not reach the heap, the compiler
+    // lets a `no.alloc` body call it on the strength of that, and nothing but
+    // this would notice a host that made text in it.
+    bool promised = module->externs[index].promises;
+    size_t held = promised ? kest_heap_used(rt) : 0;
+#if KEST_CHECKED
+    // And whether what the host bound is still there to be handed over. A
+    // context is the host's own memory and the machine keeps the pointer and
+    // never reads it, so a host that binds something on a frame it then
+    // returns from leaves this handing a function of its own a pointer into
+    // somebody else's stack. Nothing about a pointer says when it stops being
+    // one, so this cannot be asked at the binding and can be asked here, in
+    // the build that is told where every block a host has ends. One byte of
+    // it, because the machine is not told how big a context is and does not
+    // need to be: a frame that has gone and a block that has been freed are
+    // both gone at their first byte. See D722.
+    if (rt->contexts[index] != NULL &&
+        __asan_region_is_poisoned(rt->contexts[index], 1) != NULL) {
+        rt->running_top = was_top;
+        rt->running_frames = was_frames;
+        stopped_saying(rt, where, "K0654",
+                       "`%s` was bound with something this host has since "
+                       "given back",
+                       module->externs[index].name);
+        kest_diags_suggest(rt->diags,
+                           "what a host binds a context with has to outlive "
+                           "every machine started with that list");
+        return false;
+    }
+#endif
+    rt->native_failed = NULL;
+    rt->natives[index](base, rt, rt->contexts[index]);
+    // Whether the host could do what it was asked. It is asked first, because
+    // everything below reads what the door wrote and a door that failed wrote
+    // nothing worth reading. See D937.
+    if (rt->native_failed != NULL) {
+        const char *said = rt->native_failed;
+        rt->native_failed = NULL;
+        rt->running_top = was_top;
+        rt->running_frames = was_frames;
+        stopped_saying(rt, where, "K0662",
+                       "`%s` could not do what it was asked: %s",
+                       module->externs[index].name, said);
+        kest_diags_suggest(rt->diags,
+                           "the host said so with `kest_native_failed`, and "
+                           "what it wrote into the frame was not read");
+        return false;
+    }
+    if (promised && kest_heap_used(rt) != held) {
+        rt->running_top = was_top;
+        rt->running_frames = was_frames;
+        stopped_saying(rt, where, "K0631",
+                       "`%s` promises `no.alloc` and this host took %zu bytes "
+                       "in it",
+                       module->externs[index].name, kest_heap_used(rt) - held);
+        return false;
+    }
+    // A call back in unwound to exactly where it started, so there is nothing
+    // to put back but where the machine was.
+    rt->running_top = was_top;
+    rt->running_frames = was_frames;
+    // And the tag, for a crossing that answers a value with one in it. Every
+    // slot after a tag means whatever the tag says, so a host that writes a
+    // number the enum has no case for hands back a value whose payload the
+    // program reads as a type nobody wrote there -- and unlike every other
+    // way a host can be wrong here, there is nowhere to ask about it
+    // beforehand: the tag is decided inside the call. This is the one moment
+    // it can be said, which is what makes it the machine's to say, the same
+    // as the promise above. See D706.
+    if (module->externs[index].gives_value) {
+        const KestLayout *answers =
+            &module->layouts[module->externs[index].gives];
+        // Everything in what came back, read the way the door reads what a
+        // host hands in: the same walk, over the one value a crossing answers
+        // with, saying what a crossing did rather than what a function takes.
+        // It used to read the top of that value and no further, so a host
+        // answering with a shape that had a piece of text in a field was
+        // where the door was before D718. See D719.
+        Saying answering = {true, frame, NULL, where};
+        uint32_t gave = 0;
+        if (!handed_well(rt, &answering, module->externs[index].name,
+                         answers->type, base, &gave)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool kest_call_value(KestRuntime *rt, KestValue what, KestValue *base,
+                     uint16_t handed, uint16_t coming_back, uint32_t where,
+                     uint16_t *gave) {
+    if (rt == NULL || rt->module == NULL || rt->frame_count == 0 ||
+        gave == NULL) {
+        return false;
+    }
+    const char *code = NULL;
+    char said[160];
+    const char *suggest = NULL;
+    const char *fault = NULL;
+    int64_t which = what.integer;
+    const KestChunk *callee = the_function(
+        rt->module, rt->frames[rt->frame_count - 1].chunk, which, handed,
+        coming_back, &code, said, sizeof said, &suggest, &fault);
+    if (callee == NULL) {
+        kest_native_stopped(rt, where, code, said);
+        if (suggest != NULL) {
+            kest_diags_suggest(rt->diags, "%s", suggest);
+        }
+        if (fault != NULL) {
+            kest_diags_fault(rt->diags, fault);
+        }
+        return false;
+    }
+    // Room, the ledger frame, and how deep this has got: the same door a call
+    // by name goes through, because a call through a value is a call.
+    uint32_t was = 0;
+    if (!kest_native_room(rt, base, (uint32_t)which, where, &was)) {
+        return false;
+    }
+    bool went;
+    if (callee->native != NULL) {
+        went = callee->native(rt, base, gave);
+    } else {
+        went = kest_call_body(rt, (uint32_t)which, base, handed, gave);
+    }
+    kest_native_left(rt, was);
+    return went;
 }
 
 void kest_native_left(KestRuntime *runtime, uint32_t was) {

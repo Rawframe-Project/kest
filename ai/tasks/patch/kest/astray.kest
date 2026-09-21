@@ -1,0 +1,48 @@
+module patch
+
+// A bag that holds stacks of things. What each function has to do is in
+// `ask.md`; the shapes and the signatures here are the task's and are not to
+// be changed.
+
+// The most of one kind that fits in a stack.
+const MOST: i32 = 20
+
+struct Stack {
+    kind: text
+    many: i32
+}
+
+// How many of `kind` the bag holds altogether.
+fn held(bag: [Stack], kind: text) -> i32 no.alloc no.host deterministic {
+    let sum = 0
+    for i in 0..len(bag) {
+        if bag[i].kind == kind {
+            sum += bag[i].many
+        }
+    }
+    return sum
+}
+
+// Put `many` of `kind` in, and answer how many would not go.
+fn put(bag: [Stack], room: i32, kind: text, many: i32) -> i32 {
+    let left = many
+    for i in 0..len(bag) {
+        if left == 0 {
+            return 0
+        }
+        if bag[i].kind == kind && bag[i].many < MOST {
+            let space = MOST - bag[i].many
+            let fits = if space < left -> space else -> left
+            let one = bag[i]
+            one.many += fits
+            bag[i] = one
+            left -= fits
+        }
+    }
+    while left > 0 && len(bag) < room {
+        let fits = if left < MOST -> left else -> MOST
+        push(bag, Stack(kind, fits))
+        left -= MOST
+    }
+    return left
+}

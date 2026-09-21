@@ -413,9 +413,8 @@ fn main() -> i32 {
         # refusing. See D835.
         "what": "a call through a value that does not ask its shape",
         "file": "src/vm.c",
-        "from": r"""            if (callee->param_slots != argument_slots ||
-                callee->result_slots != coming_back) {""",
-        "to": r"""            if (false) {""",
+        "from": r"""    if (callee->param_slots != handed || callee->result_slots != coming_back) {""",
+        "to": r"""    if (false) {""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "of another shape was entered",
@@ -430,8 +429,10 @@ fn main() -> i32 {
         # See D834.
         "what": "a call through a value that does not ask what it promised",
         "file": "src/vm.c",
-        "from": r"""            if (broken != NULL) {""",
-        "to": r"""            if (false) {""",
+        "from": r"""    if (broken != NULL) {
+        *code = "K0623";""",
+        "to": r"""    if (false) {
+        *code = "K0623";""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "the program ran it under a promise",
@@ -5272,8 +5273,8 @@ for file in "$@"; do""",
         # cannot be told what a host does.
         "what": "a promise refused for a heap that did not move",
         "file": "src/vm.c",
-        "from": r"""            if (promised && kest_heap_used(rt) != held) {""",
-        "to": r"""            if (promised && kest_heap_used(rt) >= held) {""",
+        "from": r"""    if (promised && kest_heap_used(rt) != held) {""",
+        "to": r"""    if (promised && kest_heap_used(rt) >= held) {""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -8048,44 +8049,10 @@ _Static_assert(MAX_EXTERNS > 1024, "a program may ask for plenty of names");""",
         # because the two are the same three lines.
         "what": "a stack that runs out under a call through a value",
         "file": "src/vm.c",
-        "from": """                     promised, broken, entered);
-                kest_diags_fault(vmp->diags,
-                                 "the shape it was held in promises and the "
-                                 "body does not");
-                return false;
-            }
-
-            if (rt->frame_count == rt->call_depth) {
-                fail(vmp, frame, instruction, "K0602",
-                     "calls nest more than %u deep", rt->call_depth);
-                what_it_needed(vmp, rt, entry);
-                return false;
-            }
-            KestValue *base = top - argument_slots;
-            if (base + callee->slot_count + callee->stack_needed > rt->limit) {
-                // The same sentence in front of the other call instruction,
-                // which is the pair D440 is about. See D523.
-                fail(vmp, frame, instruction, "K0602",
-                     "this call wants more than the %u slots of stack there "
-                     "are", rt->stack_slots);""",
-        "to": """                     promised, broken, entered);
-                kest_diags_fault(vmp->diags,
-                                 "the shape it was held in promises and the "
-                                 "body does not");
-                return false;
-            }
-
-            if (rt->frame_count == rt->call_depth) {
-                fail(vmp, frame, instruction, "K0602",
-                     "calls nest more than %u deep", rt->call_depth);
-                what_it_needed(vmp, rt, entry);
-                return false;
-            }
-            KestValue *base = top - argument_slots;
-            if (false) {
-                fail(vmp, frame, instruction, "K0602",
-                     "this call wants more than the %u slots of stack there "
-                     "are", rt->stack_slots);""",
+        "from": """            if (base + callee->slot_count + callee->stack_needed > rt->limit) {
+                // The same sentence in front of the other call instruction,""",
+        "to": """            if (false) {
+                // The same sentence in front of the other call instruction,""",
         "make": ["kest"],
         "tool": "tools/check-ceilings.sh",
         "caught": "holding-through.kest was not told what the machine has",
@@ -8096,12 +8063,16 @@ _Static_assert(MAX_EXTERNS > 1024, "a program may ask for plenty of names");""",
         # program run the machine off its own stack and answer with a signal.
         "what": "calls through a value that nest deeper than they may",
         "file": "src/vm.c",
-        "from": """                                 "body does not");
+        "from": """                if (fault != NULL) {
+                    kest_diags_fault(vmp->diags, fault);
+                }
                 return false;
             }
 
             if (rt->frame_count == rt->call_depth) {""",
-        "to": """                                 "body does not");
+        "to": """                if (fault != NULL) {
+                    kest_diags_fault(vmp->diags, fault);
+                }
                 return false;
             }
 
@@ -11951,8 +11922,8 @@ static const Keyword KEYWORDS[] = {
         # the other end's words, a refusal names the wrong end of the call.
         "what": "a crossing's answer said in the door's words",
         "file": "src/vm.c",
-        "from": """                Saying answering = {true, frame, instruction};""",
-        "to": """                Saying answering = {false, frame, instruction};""",
+        "from": """        Saying answering = {true, frame, NULL, where};""",
+        "to": """        Saying answering = {false, frame, NULL, where};""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "without saying `K0652`",
@@ -12134,13 +12105,13 @@ static const Keyword KEYWORDS[] = {
         # outlives the call it came from only for as long as the host says.
         "what": "text a crossing answered with, believed",
         "file": "src/vm.c",
-        "from": """                uint32_t gave = 0;
-                if (!handed_well(rt, &answering, module->externs[index].name,
+        "from": """        uint32_t gave = 0;
+        if (!handed_well(rt, &answering, module->externs[index].name,
+                         answers->type, base, &gave)) {""",
+        "to": """        uint32_t gave = 0;
+        if (false && handed_well(rt, &answering,
+                                 module->externs[index].name,
                                  answers->type, base, &gave)) {""",
-        "to": """                uint32_t gave = 0;
-                if (false && handed_well(rt, &answering,
-                                         module->externs[index].name,
-                                         answers->type, base, &gave)) {""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "this host's own bytes were kept as the machine's",
@@ -13834,8 +13805,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # compiler ships with, which makes one in three of the names it binds.
         "what": "a promise about a host that nothing measures",
         "file": "src/vm.c",
-        "from": """            if (promised && kest_heap_used(rt) != held) {""",
-        "to": """            if (false && kest_heap_used(rt) != held) {""",
+        "from": """    bool promised = module->externs[index].promises;""",
+        "to": """    bool promised = false;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/world.kest"],
@@ -15919,9 +15890,12 @@ kest 9.9.9""",
         # A backend that writes every body, including the ones it has no C
         # for. Nothing about the file it produces says so -- an operation with
         # no C is simply not written, and what comes out compiles and is a
-        # program missing a line. The half of this check that catches it is
-        # the one that reads how much was left out, because a backend that
-        # leaves nothing out is either finished or not telling. See D1093.
+        # program missing a line. What catches it is a program run both ways:
+        # the fixture opens working memory, which this backend has no C for,
+        # so a backend that claims it writes the body writes a body that does
+        # not do it. It used to be caught by the count of what was left out,
+        # which stopped saying anything the day the backend could write a
+        # whole program. See D1093 and D1108.
         "what": "a body with no C for it, written anyway",
         "file": "src/emitc.c",
         "from": r"""static void cannot(Walk *walk, const char *why) {
@@ -15931,7 +15905,7 @@ kest 9.9.9""",
         "make": ["kest"],
         "tool": "tools/check-c.sh",
         "arguments": ["examples/math.kest", "examples/game/npc.kest"],
-        "caught": "not both halves of what this backend is",
+        "caught": "across.kest",
     },
     {
         # A call that never enters the body the host's compiler compiled. The
@@ -16011,6 +15985,111 @@ kest 9.9.9""",
         "tool": "tools/check-c.sh",
         "arguments": ["examples/math.kest", "examples/game/npc.kest"],
         "caught": "tagged.kest",
+    },
+    {
+        # One of a fixed run in the frame, reached at the index times one
+        # slot rather than the index times how wide one of them is. A run of
+        # single-slot numbers reads the same either way, and a run of
+        # anything wider reads the front of the wrong one -- which is the
+        # mistake a reader of the generated file would have to be counting
+        # slots to see. See D1109.
+        "what": "one of a run reached as though they were one slot each",
+        "file": "src/emitc.c",
+        "from": r"""                    "        %s = f[%u + which * %u];\n", first,
+                    (unsigned)place->slot + k, (unsigned)place->stride);""",
+        "to": r"""                    "        %s = f[%u + which * %u];\n", first,
+                    (unsigned)place->slot + k, 1u);""",
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest", "examples/game/npc.kest"],
+        "caught": "fixedrun.kest",
+    },
+    {
+        # A crossing that does not write down where the machine had got to
+        # before the host runs. A host may call back into the program from in
+        # there, and what it calls stands on the frames of the run it was
+        # called from: without this it stands on whatever the last call in
+        # left, which is under the frames that are still running. Nothing
+        # crashes and the answer is wrong -- and it is wrong only for a
+        # program whose host calls back in, which is why there is a host in
+        # the check that does. See D1111.
+        "what": "a crossing that leaves the frames where an older run left "
+                "them",
+        "file": "src/vm.c",
+        "from": r"""    rt->running_top = top;
+    rt->running_frames = rt->frame_count;""",
+        "to": r"""    rt->running_top = top;""",
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a host running one program both ways",
+    },
+    {
+        # A crossing into the host, handed the slot above the one the
+        # arguments start at. The convention is that the arguments are where
+        # the answer goes, so a host reads what it was given from there and
+        # writes back over it -- one slot out and it reads the slot above its
+        # first argument and writes its answer into the caller's. It
+        # compiles, and everything that crosses says something else. See
+        # D1108.
+        "what": "a crossing handed the slot above its arguments",
+        "file": "src/emitc.c",
+        "from": r"""            (unsigned)op->imm[0], base, (unsigned)op->imm[1],""",
+        "to": r"""            (unsigned)op->imm[0], base + 1, (unsigned)op->imm[1],""",
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest", "examples/game/npc.kest"],
+        "caught": "crossing.kest",
+    },
+    {
+        # A call through a function value, told the shape the other way
+        # round: how many slots go over where how many come back was wanted.
+        # The door asks what it was told against what the function is, so
+        # this is a call that refuses under one engine and runs under the
+        # other -- which is the shape of every mistake a second backend can
+        # make and the reason the two are run against each other. See D1107.
+        "what": "a call through a value told its shape the wrong way round",
+        "file": "src/emitc.c",
+        "from": r"""            first, base, (unsigned)op->imm[0], (unsigned)op->imm[1],""",
+        "to": r"""            first, base, (unsigned)op->imm[1], (unsigned)op->imm[0],""",
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest", "examples/game/npc.kest"],
+        "caught": "across.kest",
+    },
+    {
+        # A body the machine runs, entered from one the host's compiler
+        # compiled, with the arguments put into the frame in the order they
+        # came back. Two arguments of one width are two slots either way, so
+        # the C compiles and every call across the seam hands over the wrong
+        # thing -- which is the one mistake this shim can make that reading
+        # it does not show. See D1105.
+        "what": "arguments handed to the machine the wrong way round",
+        "file": "src/emitc.c",
+        "from": r"""            say(c, &file, "    frame[%u] = a%u;\n", (unsigned)p, (unsigned)p);""",
+        "to": r"""            say(c, &file, "    frame[%u] = a%u;\n",
+                (unsigned)(body->params - 1 - p), (unsigned)p);""",
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest", "examples/game/npc.kest"],
+        "caught": "across.kest",
+    },
+    {
+        # The frame the ledger kept for a call into the machine, left where it
+        # was rather than written over. Both frames name the same body, so
+        # nothing crashes and nothing is lost -- what changes is what a fault
+        # under the call says it was called from, which is said twice, and how
+        # deep a run is allowed to get before the machine refuses it. A
+        # program that refuses at a different depth under one engine is a
+        # program that means something else.
+        "what": "a call into the machine counted twice",
+        "file": "src/vm.c",
+        "from": r"""    rt->running_frames = rt->frame_count - 1;""",
+        "to": r"""    rt->running_frames = rt->frame_count;""",
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest", "examples/game/npc.kest"],
+        "caught": "crossed.kest",
     },
     {
         # A cut of text taken with where it starts and how much of it the

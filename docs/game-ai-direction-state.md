@@ -6,11 +6,14 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1102
-    PHASE:             B — the release engine: level with Luau's native tier
-                       on the gameplay workload, and inside D1092's trigger
+    CURRENT SHA:       (this commit) D1093-D1110
+    PHASE:             B — the release engine, and it is whole: 2,081 of this
+                       tree's 2,088 bodies are written as C, `bench/rules.kest`
+                       compiles entire, and the gameplay workload is inside
+                       D1092's trigger against `g++` and level with Luau's
+                       native tier
     LAST FAST GATE:    green
-    LAST FULL GATE:    green at 96285c5
+    LAST FULL GATE:    green at 2cd6c90
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.
                        Every number below was taken on it.
@@ -267,6 +270,49 @@ what a serious game developer gets here that Luau does not give them is the
 same runtime ceiling with a check loop of 282 ms for a hundred thousand lines
 and a language that refuses what it cannot prove.
 
+## D1108, D1109 — the crossing into the host, and the backend is whole
+
+The last family, and the biggest: forty-five of the sixty-two bodies left were
+a call out to the host. The release engine writes **2,071 of this tree's 2,088
+bodies**, and `bench/rules.kest` — the gameplay reference program — compiles
+whole, printing included.
+
+| | instructions | cycles |
+| --- | --- | --- |
+| `g++ -O2` (`bench/rules.cpp`) | 0.429 G | — |
+| **Kest, the release engine** | **1.246 G** | 0.704 G |
+| Kest, the machine | 6.311 G | 3.882 G |
+
+The ratio against `g++` has not moved since D1099. What moved is that there is
+nothing left of that program for the machine to run.
+
+With one of a fixed run written too, and the arithmetic a generated file's own
+host now offers, the backend writes **2,081 of 2,088** and 41 of this tree's
+programs run both ways rather than 30.
+
+The seven questions a crossing asks are asked in one place now, which also
+turned up a fault in the machine that could not be seen before: the check
+holding a crossing to what a host was measured for read where the run began
+off `running_top`, which a compiled body raises to the top of its own frame.
+It reads the first frame of the run instead.
+
+## D1105, D1107 — one language, two ways of running it
+
+A body the backend cannot write is handed to the machine through a call of its
+own, and a call through a function value is written too, so one refusal at the
+bottom of a program no longer takes the chain above it. `settle()` is gone;
+over this tree the backend writes **1,692 of 2,088 bodies**, and every
+workload in `bench` now has its `main` compiled.
+
+`bench/rules.kest` is unchanged at 1.239 G instructions against the machine's
+6.232 G — what this buys is breadth, not speed. What it proves is the seam: a
+program that recurses compiled → machine → compiled until it runs out of
+frames refuses at the same depth, with the same words and the same call chain,
+under both engines. That is what D1092's two-engine decision rests on.
+
+**What is left is one door.** 45 of the 62 bodies this backend does not write
+are the crossing into the host.
+
 ## D1104 — text whole, and where it says the ceiling is
 
 Reading into text, making it, and the seven things a run of elements does that
@@ -312,14 +358,17 @@ backend's own half instead.
 
 ## Open, in priority order
 
-1. **The rest of the doors**, in the order the tree asks for them: a crossing
-   into the host (45 distinct bodies), a call through a function value (19),
-   an address of a place that is not a run of the frame (11), and 72 bodies
-   that call one of those. Stores (D1102) and text (D1103, D1104) are done,
-   and with them `std.text` compiles whole. None of what is left is in the
-   way of the numbers below; what they buy is breadth — how much of a whole
-   game compiles rather than how fast the part that does runs. The host
-   crossing is the biggest of them and the one a game reaches every frame.
+1. *(all but done)* **The doors.** The backend writes 2,081 of this tree's
+   2,088 bodies (D1109). What is left is seven: a region opened (3), a number
+   with no spelling in C (2), a constant read where it is (1) and one address
+   of a place this does not take one of. None of them is a family and all of
+   them are in `examples`. What is left in this area is the rest of the
+   **generated file's own host**: it offers writing and the arithmetic now,
+   and eight programs in this tree still ask it for a clock, a file or an
+   argument, so they cannot be run both ways. *(done, D1111)* A host in the check
+   calls back into the program from a body this backend wrote, and a
+   generated file exports `kest_natives_here` so a game's own host can bind
+   its bodies -- which is the whole of what shipping one is.
 2. **The five times on the kernel, read down.** A call per element, a bounds
    check the C compiler cannot hoist because it is behind that call, and a
    `memcpy` a piece where four doubles could be one. All three go away by
@@ -333,10 +382,12 @@ backend's own half instead.
    reads as nothing, which is the property a game most needs from this.
 4. Daslang's AOT path, measured and named as AOT, so the comparison is against
    what its documentation points at rather than against its interpreter.
-5. **More of the AI suite.** Two tasks of the nine kinds the mission lists
-   are written (D1101) with held-out tests, a wrong answer beside each and a
-   gate that holds all three. What is not written: repairing a bug,
-   refactoring across modules, a host API, save and load, failure handling.
+5. **More of the AI suite.** Four of the nine kinds the mission lists are
+   written (D1101, D1106, D1110) with held-out tests, a wrong answer beside
+   each and a gate that holds all three. Two of them are the kinds a type
+   system cannot be credited for: a bug to find in code that compiles and
+   analyses clean in both languages, and input that is mostly wrong. What is
+   not written: refactoring across modules, a host API, save and load.
    Running models against it is the owner's, at the end.
 6. Game-shaped runtime profile: where the ceiling actually is (dispatch, value
    movement, allocation, collector, host crossing) on `examples/slice` and the

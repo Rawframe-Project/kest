@@ -230,6 +230,48 @@ bool kest_array_pop(KestRuntime *runtime, KestValue handle, uint32_t where,
 bool kest_array_written(KestRuntime *runtime, uint16_t layout, uint16_t count,
                    const KestValue *values, uint32_t where, KestValue *into);
 
+// A body the machine runs, entered from one the host's compiler compiled.
+// This is what makes the two engines one program rather than two halves that
+// can only call inwards: a compiled body can call anything, and what it calls
+// does not have to have been compiled. The caller has already asked
+// `kest_native_room` for room and for the ledger frame, so the frame this
+// runs in is the one that is already there -- the machine writes a real frame
+// over the ledger one, in the same place, and what a fault says about the
+// call is the same either way. `handed` is how many slots of arguments are at
+// `base`, and how many came back is left in `gave`. See D1105.
+bool kest_call_body(KestRuntime *runtime, uint32_t which, KestValue *base,
+                    uint16_t handed, uint16_t *gave);
+
+// And a call through a function value, which is the same thing with what it
+// enters decided while it runs. The three questions the machine asks before
+// it enters one are asked here in the machine's own words: whether the value
+// names a function at all, whether that function is of the shape the call
+// was written against, and whether it keeps the promises the body making the
+// call made. Only then is it entered -- as C where it was compiled, and
+// through `kest_call_body` where it was not. See D1107.
+bool kest_call_value(KestRuntime *runtime, KestValue what, KestValue *base,
+                     uint16_t handed, uint16_t coming_back, uint32_t where,
+                     uint16_t *gave);
+
+// One of a fixed run of slots in the frame, at an index worked out while it
+// runs: whether the index is one of them. The machine's own sentence, because
+// two engines that put a bounds failure differently are two languages. See
+// D1109.
+bool kest_run_at(KestRuntime *runtime, int64_t index, uint32_t count,
+                 uint32_t where);
+
+// A crossing into the host. Everything the boundary asks is behind this door
+// -- what the declaration says against what was moved, how far in a host is
+// being called from against what it was measured for, whether what it bound
+// is still there, whether it did what it was asked, whether it kept a promise
+// made on its behalf, and what it wrote back -- so the machine's instruction
+// and a body the host's compiler compiled cross the same way. The arguments
+// are at `base` and the answer goes over them, which is the convention a call
+// in this language uses everywhere. See D1108.
+bool kest_call_host(KestRuntime *runtime, uint16_t index, KestValue *base,
+                    uint16_t argument_slots, uint16_t result_slots,
+                    uint32_t where);
+
 // What a body written in C says when it stops. `offset` is where in the source
 // it was, which the resolved form carries and the C keeps beside the operation
 // it came from, so a refusal from a compiled body is reported where the same

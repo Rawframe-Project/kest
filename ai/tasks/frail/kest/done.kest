@@ -1,0 +1,56 @@
+module frail
+
+import std.text
+
+// Lines somebody else wrote, read into records. What each function has to do
+// is in `ask.md`; the shapes and the signatures here are the task's and are
+// not to be changed.
+
+struct Record {
+    name: text
+    worth: i32
+}
+
+struct Tally {
+    got: i32
+    dropped: i32
+    worth: i32
+}
+
+// One line read, or nothing where the line is not a record.
+fn read(line: text) -> Record? no.host deterministic {
+    let pieces = text.split(line, ";")
+    if len(pieces) != 2 {
+        return none
+    }
+    if !text.starts(pieces[0], "name=") {
+        return none
+    }
+    if !text.starts(pieces[1], "worth=") {
+        return none
+    }
+    let name = rest(pieces[0], 5)
+    if len(name) == 0 {
+        return none
+    }
+    if let worth = text.number(rest(pieces[1], 6)) {
+        return Record(name, worth)
+    }
+    return none
+}
+
+// Every line read, and what came of it.
+fn readAll(lines: [text]) -> Tally no.host deterministic {
+    let got = 0
+    let dropped = 0
+    let worth = 0
+    for one in lines {
+        if let r = read(one) {
+            got += 1
+            worth += r.worth
+        } else {
+            dropped += 1
+        }
+    }
+    return Tally(got, dropped, worth)
+}
