@@ -36764,3 +36764,125 @@ the machine that compiles in milliseconds.
 on a cold path and walks small arrays, which is fair, but a world of tens of
 thousands of entities with references into it is the other half of a game and
 is not measured here yet.
+
+## D1091. A place inside a value inside a place
+
+*reproduced*, by writing the gameplay workload the other way round and watching
+the compiler call itself wrong.
+
+`bench/rules.kest` reads an actor out of an array, changes it and writes it
+back, which is what this language's value structs make the ordinary shape. The
+other shape — writing through the place itself — is what somebody avoiding the
+copy would write, so it was written to measure the difference:
+
+```kest
+who[at].cools[which % KINDS] = 3 + which % 4
+```
+
+The compiler answered `K0505`: *the two halves of the compiler disagree about
+what a program is, which is a fault in the compiler*. A legal program, refused,
+with this project's own name on the mistake.
+
+**What was wrong.** An assignment works its target out as a place rather than a
+value, and a place inside an array is held apart — the array and the index kept
+separately so that anything the program does in between cannot leave it holding
+a block nobody will read again (D931). The flag that says so was set for the
+whole of the target, so the *middle* of `who[at].cools[...]` was held apart
+too: reading the element's field left the array and the index on the stack
+where the handle should have been, and the statement ended two slots deep.
+
+**Decided.** What is being indexed and where is read as a value, even while the
+place around it is being held apart. One flag, saved and cleared for the two
+sub-expressions and put back after — the place stays apart, and the value in
+the middle is a value.
+
+Both shapes of the workload now compile and answer the same checksum, which is
+what says the fix did not change what either of them means.
+
+**What it turned up beside it.** The shape that avoids the copy is *slower*:
+6.43 billion machine instructions against 5.31 for the same work, because
+`who[at]` is worked out again for every field it touches while the copy is read
+into slots once. A language whose structs are values is not paying for that
+here — it is being paid.
+
+## D1092. Two engines: the machine for developing, native code for shipping
+
+*decided from measurement*, on the gameplay-shaped workload, with every row
+answering the same checksum.
+
+Machine instructions are the measure here rather than the clock: this box is
+shared with another tenant, and the same Kest run varied between 490 ms and
+746 ms over an afternoon while its instruction count did not move. What each
+one costs for four thousand actors over two hundred rounds:
+
+| | instructions | against C++ |
+| --- | --- | --- |
+| c++ -O2 | 0.43 G | 1.0 |
+| luau -O2 --codegen | 1.27 G | 3.0 |
+| luau -O2 | 3.23 G | 7.5 |
+| kest | 5.31 G | 12.4 |
+
+`bench/rules.cpp` is the native ceiling for this shape — the same data layout,
+the same bounds checks, the same copy of the actor a Kest struct makes, with no
+interpreter under it. 48 ms.
+
+**What the machine costs per operation.** 181 bytecode operations per
+actor-round and 6,207 machine instructions, which is **34 machine instructions
+for every bytecode operation**. On a tight loop of five operations it is 23.
+About a fifth of that is the dispatch sequence; the rest is what each operation
+does. Half of the operations executed are moving values between slots and the
+stack: `load.k`, `const`, `load2`, `store`, `load` are 251,000 of the 498,000 a
+round runs.
+
+So there are two levers, and their sizes are known. Fewer operations — a
+register-shaped instruction set — could take perhaps 40 per cent off the
+count. Cheaper operations — computed-goto dispatch and the rest — perhaps
+another fifth. Both together would land near Luau's *interpreter*, which is
+3.23 G instructions. Neither reaches Luau's native code generation at 1.27 G,
+and nothing an interpreter does reaches 0.43 G.
+
+**Decided.** Kest gets two execution engines, and which one runs is what
+`dev` and `release` mean:
+
+```text
+                     checked typed IR
+                            │
+              ┌─────────────┴─────────────┐
+              │                           │
+         DEV: the machine          RELEASE: native
+     compiles in milliseconds      C11 out of the same IR,
+     hot iteration, debugger,      through the host's own
+     profiler, contracts           compiler, linked with
+                                   the same runtime
+```
+
+The machine stays and stays the thing a program is developed against: it
+compiles a hundred thousand lines in 282 ms, it is what the debugger and the
+profiler are written for, and an AI loop that has to compile before it can run
+cannot afford a C compiler in the middle of it. The release path is where a
+game earns the performance claim, and it is the only path that can: a bytecode
+interpreter cannot be within three times of native, and being within three
+times of native is what the incumbents already offer.
+
+**Why C11 rather than machine code.** This compiler is C11 and every platform
+it supports has a C compiler; a native backend of our own would be register
+allocation, instruction encoding, ABIs, unwind metadata and a per-platform
+maintenance burden for the same answer. Generated C is what Daslang's AOT does
+for the same reason. A JIT is not on this list: consoles and phones forbid it,
+and it buys what AOT already gives for a great deal more machinery.
+
+**What must hold.** The two engines are one language. Every example and every
+benchmark answers the same under both, the same way the optimizer-on and
+optimizer-off builds already do — that differential is the gate, not a
+courtesy. Contracts, diagnostics, determinism, the host boundary and the
+collector are the runtime's and are shared: the generated C calls the same
+library the machine does, so `no.alloc` means the same thing in both.
+
+**What this does not decide.** Whether the machine also gets a register-shaped
+instruction set. That is worth its own measurement once the release path
+exists, because what it buys is iteration speed rather than shipping speed, and
+the number to beat is then Luau's interpreter rather than its native code.
+
+**The re-evaluation trigger.** If generated C does not land within three times
+of `bench/rules.cpp` on this workload, the reason is in the representation
+rather than in the backend, and the decision comes back here.

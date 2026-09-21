@@ -39399,3 +39399,26 @@ See D1090.
 
 **Runs:** `bench/run.sh` with `KEST_LUAU` and `KEST_DAS` set, which now names
 each comparator mode in its own row.
+
+## A place inside a value inside a place
+
+Writing the gameplay workload the other way round — through the place instead
+of copying the struct out and back — made the compiler answer `K0505`: the two
+halves of the compiler disagree about what a program is. A legal program,
+refused, with a fault in our own name.
+
+An assignment holds a place inside an array apart, the array and the index kept
+separately (D931), and the flag that says so covered the whole target: the
+middle of `who[at].cools[...]` was held apart too, so reading the element's
+field left two slots where the handle should have been. The flag is cleared for
+the sub-expressions and put back after.
+
+Both shapes answer the same checksum now. And the shape that avoids the copy
+turned out to be slower — 6.43 billion machine instructions against 5.31 —
+because the place is worked out again for every field it touches, where the
+copy is read into slots once.
+
+See D1091.
+
+**Runs:** `make check`, and the two shapes of `bench/rules.kest` answering the
+same line.

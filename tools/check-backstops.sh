@@ -495,6 +495,37 @@ fn main() -> i32 {
         "caught": "a machine stopped in a call this host made",
     },
     {
+        # A place inside a value inside a place. An assignment holds a place
+        # inside an array apart -- the array and the index kept separately so
+        # that growing that array cannot leave it holding a block nobody reads
+        # (D931) -- and holding the *middle* of `held[0].cools[1] = 7` apart
+        # too leaves the array and the index where the handle belongs. The
+        # statement ends two slots deep and the compiler says the two halves
+        # of it disagree, which is what it says when it is wrong about itself.
+        # See D1091.
+        "what": "a place held apart inside another place",
+        "file": "src/compile.c",
+        "from": r"""    bool apart = compiler->place_apart;
+    compiler->place_apart = false;
+    compile_expr(compiler, expr->index.object);""",
+        "to": r"""    bool apart = compiler->place_apart;
+    compile_expr(compiler, expr->index.object);""",
+        "make": ["kest"],
+        "program": "nesting.kest",
+        "source": """struct Holder {
+    cools: [i32]
+    n: i32
+}
+
+fn main() -> i32 {
+    let hs: [Holder] = array()
+    push(hs, Holder(array(4, 0), 1))
+    hs[0].cools[1] = 7
+    return hs[0].cools[1] - 7
+}""",
+        "caught": "a fault in the compiler",
+    },
+    {
         # A name index that does not hold every name. The types of a program
         # are found by name through a table now, because the walk that found
         # one was the program's own size for every type any body mentions --

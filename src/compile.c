@@ -1594,8 +1594,18 @@ static bool compile_address(Compiler *compiler, const KestExpr *expr,
         return false;
     }
 
+    // What is being indexed and where is read as a value, even while the place
+    // this is working out is being held apart: `held[0].cools[1] = 7` is a
+    // place inside a value inside a place, and the value in the middle has to
+    // be one. Held apart all the way down, the element read left the array and
+    // the index on the stack instead of the handle, and the statement ended
+    // two slots deep -- which the build that checks itself called a fault in
+    // the compiler, because that is what it is. See D1091.
+    bool apart = compiler->place_apart;
+    compiler->place_apart = false;
     compile_expr(compiler, expr->index.object);
     compile_expr(compiler, expr->index.index);
+    compiler->place_apart = apart;
     if (compiler->place_apart) {
         // Left as the array and the index. What reads or writes it works the
         // address out at that moment, so anything the program does in between
