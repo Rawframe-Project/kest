@@ -213,6 +213,7 @@ clean:
 	    examples/least tools/inward tools/fuzz tools/fuzz-debug \
 	    bench/measure bench/frame \
 	    bench/control-cpp bench/graph-cpp bench/kernel-cpp bench/words-cpp \
+	    bench/rules-cpp \
 	    .jitted_scripts
 
 .PHONY: debug least embed embed-debug engine engine-debug fast check time \

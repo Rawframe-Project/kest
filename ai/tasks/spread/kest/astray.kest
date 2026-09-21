@@ -1,0 +1,79 @@
+module spread
+
+// A frame of a game, written as one function that does four things. What each
+// function has to do is in `ask.md`; the shapes and the signatures here are
+// the task's and are not to be changed.
+
+struct Thing {
+    x: f32
+    y: f32
+    dx: f32
+    dy: f32
+    cool: i32
+    score: i32
+}
+
+// Everything moves by its own speed.
+fn moved(all: [Thing]) no.alloc no.host deterministic {
+    for i in 0..len(all) {
+        let one = all[i]
+        one.x += one.dx
+        one.y += one.dy
+        all[i] = one
+    }
+}
+
+// Anything that has gone outside the board comes back in, turns round, and
+// takes a point for it. Answers how many bounces there were.
+fn bounced(all: [Thing], wide: f32) -> i32 no.alloc no.host deterministic {
+    let many = 0
+    for i in 0..len(all) {
+        let one = all[i]
+        if one.x < 0.0 {
+            one.x = 0.0 - one.x
+            one.dx = 0.0 - one.dx
+            one.score += 1
+            many += 1
+        }
+        if one.x > wide {
+            one.x = wide - (one.x - wide)
+            one.dx = 0.0 - one.dx
+            one.score += 1
+            many += 1
+        }
+        if one.y < 0.0 {
+            one.y = 0.0 - one.y
+            one.dy = 0.0 - one.dy
+            one.score += 1
+            many += 1
+        }
+        if one.y > wide {
+            one.y = wide - (one.y - wide)
+            one.dy = 0.0 - one.dy
+            one.score += 1
+            many += 1
+        }
+        all[i] = one
+    }
+    return many
+}
+
+// Every cooldown counts down by one, and never below nought.
+fn cooled(all: [Thing]) no.alloc no.host deterministic {
+    for i in 0..len(all) {
+        let one = all[i]
+        if one.cool > 0 {
+            one.cool -= 1
+        }
+        all[i] = one
+    }
+}
+
+// One frame, which is the three of them in that order. Answers how many
+// bounces there were.
+fn tick(all: [Thing], wide: f32) -> i32 no.alloc no.host deterministic {
+    let many = bounced(all, wide)
+    moved(all)
+    cooled(all)
+    return many
+}

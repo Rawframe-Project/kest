@@ -1342,6 +1342,13 @@ of them had found anything.
 catching something, and that is the discipline this project is built on. What
 changes is that the list does not grow.
 
+**With one exception, and it is narrow: new code that is a new kind of
+thing.** A backend, a door, a boundary — something that has never been seen
+catching anything, because it has never been run in anger. A body is not one;
+a fix is not one. The second backend was written under this exception and it
+cost twelve holes and nine repointings, which is written out in D1115 so that
+the next reader can weigh the same trade with the numbers in front of them.
+
 **A stale quotation is found in a second.** Every hole quotes a piece of this
 tree, and a quotation goes stale when the code it quotes is rewritten.
 `check-backstops.sh` reads all of them before it copies or builds anything, so

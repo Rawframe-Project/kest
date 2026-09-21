@@ -1,0 +1,92 @@
+module checks
+
+// What the task is judged by, which whoever does it does not see. Each check
+// answers with its own number; nought is every check passing.
+//
+// The three pieces are called on their own as well as through `tick`, which
+// is what says the work was moved into them rather than copied beside them.
+
+import spread
+
+fn one(x: f32, y: f32, dx: f32, dy: f32, cool: i32) -> spread.Thing {
+    return spread.Thing(x, y, dx, dy, cool, 0)
+}
+
+fn near(a: f32, b: f32) -> bool no.alloc no.host deterministic {
+    let d = a - b
+    if d < 0.0 {
+        return 0.0 - d < 0.001
+    }
+    return d < 0.001
+}
+
+fn main() -> i32 {
+    // Moving moves and does nothing else.
+    let moving: [spread.Thing] = array()
+    push(moving, one(1.0, 2.0, 0.5, -0.25, 3))
+    spread.moved(moving)
+    if !near(moving[0].x, 1.5) || !near(moving[0].y, 1.75) {
+        return 1
+    }
+    if moving[0].cool != 3 || moving[0].score != 0 {
+        return 2
+    }
+
+    // Bouncing brings back in, turns round, takes a point, and counts.
+    let bouncing: [spread.Thing] = array()
+    push(bouncing, one(-1.0, 5.0, -2.0, 1.0, 0))
+    push(bouncing, one(11.0, 12.0, 1.0, 1.0, 0))
+    push(bouncing, one(5.0, 5.0, 1.0, 1.0, 0))
+    let many = spread.bounced(bouncing, 10.0)
+    if many != 3 {
+        return 3
+    }
+    if !near(bouncing[0].x, 1.0) || !near(bouncing[0].dx, 2.0) {
+        return 4
+    }
+    if bouncing[0].score != 1 {
+        return 5
+    }
+    if !near(bouncing[1].x, 9.0) || !near(bouncing[1].y, 8.0) {
+        return 6
+    }
+    if bouncing[1].score != 2 {
+        return 7
+    }
+    if bouncing[2].score != 0 {
+        return 8
+    }
+
+    // Cooling counts down and stops at nought.
+    let cooling: [spread.Thing] = array()
+    push(cooling, one(0.0, 0.0, 0.0, 0.0, 2))
+    push(cooling, one(0.0, 0.0, 0.0, 0.0, 0))
+    spread.cooled(cooling)
+    spread.cooled(cooling)
+    spread.cooled(cooling)
+    if cooling[0].cool != 0 || cooling[1].cool != 0 {
+        return 9
+    }
+
+    // And a frame, which is the three of them in that order: a thing that
+    // would not have bounced where it started bounces where moving put it.
+    let world: [spread.Thing] = array()
+    push(world, one(9.5, 5.0, 1.0, 0.0, 1))
+    let bounces = spread.tick(world, 10.0)
+    if bounces != 1 {
+        return 10
+    }
+    if !near(world[0].x, 9.5) || !near(world[0].dx, -1.0) {
+        return 11
+    }
+    if world[0].cool != 0 || world[0].score != 1 {
+        return 12
+    }
+
+    // Nothing at all is a frame too.
+    let nothing: [spread.Thing] = array()
+    if spread.tick(nothing, 10.0) != 0 {
+        return 13
+    }
+    return 0
+}

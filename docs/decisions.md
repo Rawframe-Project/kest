@@ -37983,3 +37983,65 @@ a loader written against its own output never meets and a loader meeting
 another version's output meets first.
 
 Five of nine. What is left: refactoring across modules, and a host API.
+
+## D1114. A sixth task: one function that does three things
+
+`ai/tasks/spread` is the refactoring kind. A frame is one loop doing three
+things — moving, bouncing, cooling — and the task is to move each of them into
+the function already named for it and leave `tick` calling the three in order.
+
+**What makes it a task rather than a formality is what the tests ask.** They
+call each of the three on its own, with a world made for that one, so a `tick`
+that still does the work itself passes nothing; and then they call `tick` on a
+world where the order matters — a thing that would not have bounced where it
+started bounces where moving put it. The plausible wrong answer is the frame
+with two of the three the other way round, which is right about every world
+except that one.
+
+Nothing about it is hard. What is measured is whether a frame comes out of it
+meaning exactly what it meant, which is what a refactor is and what anybody
+doing one at speed gets wrong.
+
+Six of the nine kinds.
+
+## D1115. The holes grew by twelve, against the rule that says they do not
+
+`CLAUDE.md` says what a new check costs and when to write one: *a defect gets
+a behavioural test, not a new hole; the holes that are here stay; what changes
+is that the list does not grow.* The reason is written beside it — a hole
+quotes a piece of this tree, and a quotation goes stale when the code it
+quotes is rewritten, and one sprint of repairs repointed ten of them for that
+reason and none of the ten had ever found anything.
+
+**This run grew the list by twelve, and paid that cost nine times.** D1103 to
+D1112 rewrote the second backend from 928 of this tree's bodies to 2,081, and
+nine holes quoting the machine or the backend had to be repointed on the way —
+two because a call through a function value stopped asking its own questions
+and started asking a shared one, six because the crossing into the host became
+a door, and one because the sentence a lent array is refused with is written
+once now rather than eight times.
+
+**The rule is right and the exception is real, so both are written down.** The
+rule is about a tree that is being repaired: there, a hole is a liability and a
+program that shows the defect is an asset. This was not that. A door written
+this week has never been seen catching anything, and the older rule beside it —
+*a net nobody has seen catch anything is indistinguishable from no net* — is
+what says a new door needs one. Every one of the twelve breaks a place nothing
+else breaks; none of them proves a sentence another already proves.
+
+What follows from it, for whoever is next:
+
+- **New code that is a new kind of thing gets a hole.** A backend, a door, a
+  boundary. Not a body, not a fix.
+- **Everything else gets a fixture.** The nine programs this run added to
+  `tools/check-c.sh` are behavioural tests in the sense the rule means, and
+  they are what actually caught things: seven of the twelve holes were first
+  written pointing at a fixture that could not reach them, and the fixture had
+  to be widened before the hole was worth anything.
+- **A hole that cannot be reached is worse than none**, because it reads as a
+  net. Each of the twelve was watched catching what it is for, in a copy of
+  the tree, before it was left in.
+
+`make check` is now about ten minutes on the reference machine and most of it
+is the 899 holes. That is the price, it is known, and the list should stop
+growing again.

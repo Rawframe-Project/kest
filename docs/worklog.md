@@ -40054,3 +40054,42 @@ See D1113.
 
 **Runs:** `tools/check-ai.sh`, and `ai/run.sh saved` over both languages
 against the answer, the scaffold and the wrong answer.
+
+## A sixth AI task: one function that does three things
+
+`ai/tasks/spread`: a frame that moves, bounces and cools in one loop, and
+three functions already named for those three. The tests call each piece on
+its own, so a `tick` that still does the work itself passes nothing, and then
+call `tick` where the order matters. The wrong answer is the frame with two of
+the three the other way round.
+
+Six of the nine kinds.
+
+See D1114.
+
+**Runs:** `tools/check-ai.sh`, and `ai/run.sh spread` over both languages
+against the answer, the scaffold and the wrong answer.
+
+## The holes grew by twelve, against the rule that says they do not
+
+`CLAUDE.md` says the list of backstop holes does not grow: a defect gets a
+behavioural test, because a hole quotes the tree and goes stale when the tree
+is rewritten. This run grew it by twelve and repointed nine, which is exactly
+the cost the rule warns about.
+
+It is written down rather than left quiet, with the case for the exception:
+the rule is about repairing a tree, and this was a second backend going from
+928 of this tree's bodies to 2,081. A door written this week has never been
+seen catching anything, which is the older rule the holes exist under. Every
+one of the twelve breaks a place nothing else breaks.
+
+What follows: new code that is a new kind of thing gets a hole; everything
+else gets a fixture; and a hole that cannot be reached is worse than none --
+seven of the twelve were first written pointing at a fixture that could not
+reach them, and the fixture had to be widened before the hole was worth
+anything.
+
+See D1115.
+
+**Runs:** `tools/check-backstops.sh`, 899 holes, every one of them seen
+catching what it is for.

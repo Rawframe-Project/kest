@@ -56,11 +56,14 @@ A suite nobody has seen fail is indistinguishable from no suite.
 | `patch` | a bug to find in code that compiles and analyses clean |
 | `frail` | input that is mostly wrong, and what a reader does about it |
 | `saved` | a world written down and read back, and the saves that are not one |
+| `spread` | one function that does three things, moved into three |
 
-Five of the nine kinds the mission lists. `patch` is the one that is written
+Six of the nine kinds the mission lists. `patch` is the one that is written
 rather than left undone: the scaffold is working-looking code with a defect in
 it, and the answer is the fix. `frail` is failure handling and `saved`
 is save and load, and both have more tests about what does not happen than
-about what does. The others — refactoring across modules and a host API — are
-not written yet, and what is here is written so
+about what does. `spread` is refactoring, and its tests call each
+piece on its own so that a frame still doing the work itself passes nothing.
+The others — a host API, and two the mission names that this suite has no
+shape for yet — are not written, and what is here is written so
 that adding one is four files and a row in this table.

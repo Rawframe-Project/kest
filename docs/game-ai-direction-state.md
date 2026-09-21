@@ -198,6 +198,11 @@ check writes itself run both ways for the same answer, and how much was left
 out read back and held to being neither nothing nor everything. Two backstop
 holes have been seen catching it.
 
+*(That paragraph is what the check was on the day this was written. It is
+twenty-one programs of its own now, forty-one of the tree's, one run both ways
+inside a single process, and twelve holes; and the rule about writing
+everything went when there was C for a crossing. See D1108 and D1111.)*
+
 ## D1094 — the seam, and the first number from a real program
 
 A chunk may carry a C function now, and a call enters it instead of the
@@ -409,13 +414,15 @@ backend's own half instead.
    writing a binary, named as AOT rather than left to look like its
    interpreter. What is left is running it with all three comparators present
    and writing down what it says — one run, one decision.
-5. **More of the AI suite.** Five of the nine kinds the mission lists are
-   written (D1101, D1106, D1110, D1113) with held-out tests, a wrong answer
-   beside each and a gate that holds all three. Three of them are the kinds a
-   type system cannot be credited for: a bug to find in code that compiles and
-   analyses clean in both languages, input that is mostly wrong, and a save
-   somebody else wrote. What is not written: refactoring across modules and a
-   host API. Running models against it is the owner's, at the end.
+5. **More of the AI suite.** Six of the nine kinds the mission lists are
+   written (D1101, D1106, D1110, D1113, D1114) with held-out tests, a wrong
+   answer beside each and a gate that holds all three. Four of them are the
+   kinds a type system cannot be credited for: a bug to find in code that
+   compiles and analyses clean in both languages, input that is mostly wrong,
+   a save somebody else wrote, and a refactor that has to mean exactly what it
+   meant. What is not written: a host API, which has no shape here that is
+   fair to both languages. Running models against it is the owner's, at the
+   end.
 6. Game-shaped runtime profile: where the ceiling actually is (dispatch, value
    movement, allocation, collector, host crossing) on `examples/slice` and the
    engine, now that the release engine changes which of them matter.
