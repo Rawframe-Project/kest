@@ -179,9 +179,13 @@ ai/                The tasks a model is given: the same gameplay work
                    `tools/check-ai.sh` holds the suite to being worth being
                    judged by, and counts which side caught each wrong answer:
                    a refusal costs a turn where a hidden test costs a run, and
-                   one nothing catches escapes. Luau is found rather than
-                   built, the way the benchmarks find their comparators.
-                   See D1101 and D1125.
+                   one nothing catches escapes. `ai/cost.sh` reads what those
+                   two cost in milliseconds -- the loop somebody edits in, how
+                   long being told takes, and whether a diagnostic names a
+                   line the repair is on. It measures rather than checks and
+                   is not in the gate, for the reason none of `bench` is.
+                   Luau is found rather than built, the way the benchmarks
+                   find their comparators. See D1101, D1125 and D1126.
 tools/             Build and development scripts. `make check` runs all of
                    them and everything else, and is what "it passes" means.
                    `fast.sh` is the other tier and is not one of them: it is

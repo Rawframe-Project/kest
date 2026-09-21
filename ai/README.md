@@ -40,6 +40,18 @@ a test did, which is exactly what this suite is here to count.
 
 Luau is found rather than built: `KEST_LUAU` says where it is.
 
+## What it costs to be told
+
+`ai/cost.sh` reads that off the suite with no model near it: the loop somebody
+edits in, which of the two caught each wrong answer, how long being told took,
+and whether a compiler's complaint names a line the repair is on.
+
+```text
+KEST_LUAU=/where/luau/is RUNS=15 sh ai/cost.sh
+```
+
+It measures and does not check, for the reason none of `bench` does. See D1126.
+
 ## What holds it
 
 `tools/check-ai.sh`, which `make check` runs. For every task and every

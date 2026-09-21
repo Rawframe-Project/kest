@@ -38535,3 +38535,46 @@ form, `make fast` said nothing, and the whole gate said it thirty minutes
 later. That is the opposite of what a fast gate is for, so `tools/fast.sh` now
 finds the same four trees. Roughing up one line of `ai/tasks/nearby` and
 watching `make fast` name the file is the hole for it.
+
+## D1126 — What a mistake costs, in milliseconds, with no model near it
+
+D1125 counted *which* of the two caught each wrong answer. What it cost to be
+caught was not measured, and the mission asks for it: task time and repair,
+beside completion and silent escapes. `ai/cost.sh` reads all four off the suite
+that is already here, with no model anywhere near it.
+
+Four things per task and language: how long the language takes to say nothing
+is wrong about the answer that is right, which of the two caught the wrong one,
+how long being told took, and — where a compiler caught it — whether the line it
+points at is one of the lines that have to change. Milliseconds are the least of
+three batches of fifteen runs, because this is a shared box and the least
+disturbed sample is the one worth reading; they are wall clock and carry a
+process launch each, which is what somebody waiting for an answer waits for.
+
+**The loop somebody edits in: 3.0 ms by `kest check` against 14.9 ms by
+`luau-analyze`**, over the ten tasks. Five times, and it is worth saying where
+it goes: starting the program is 2.8 ms of Kest's and 12.2 ms of Luau's, so the
+reading itself is about 0.2 ms against 2.7 ms. Most of what either costs on a
+file this size is a process, and a language that wants a fast loop has to be
+cheap to start before it can be cheap to read.
+
+**Being told by a compiler costs 1.9 ms; being told by a test costs 24 to 38.**
+`pooled` is the only task a compiler answers, and it answers it in less time
+than it takes to check the answer that is right — a refusal stops where it
+happens and never reaches the rest of the file. Every other mistake here is one
+no type system can be credited for, and each of them costs a whole run of a
+program and its hidden checks: **thirteen to twenty times** as long, before
+anybody has read a word of what came back.
+
+**And the refusal names the line the repair is on.** `pooled`'s complaint points
+at the `array()` on line 32 of the wrong answer, which is one of the lines that
+differ from the right one. That is the difference between a diagnostic that
+repairs and one that only complains, and it is now read off a diff rather than
+asserted.
+
+The script measures and does not check, for the reason none of `bench` does: a
+number that moves with the box does not belong in a gate. Two bugs in writing it
+are worth keeping: `diff` says `30,32c30` for a run of lines and reading only
+the number a range starts at misses the line the fix is on, and a function in a
+shell shares the caller's names — an `inside()` that walked `$one` ate the
+sweep's own task variable and every second row went missing.

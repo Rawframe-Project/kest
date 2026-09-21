@@ -40374,3 +40374,23 @@ form went unseen for thirty minutes.
 **Runs:** `make check`, and `tools/check-ai.sh` with `KEST_LUAU` set.
 
 Next: the four families that are left want a host or a reload in the runner.
+
+## What a mistake costs, in milliseconds
+
+`ai/cost.sh` reads four things off the suite with no model near it: how long the
+language takes to say nothing is wrong, which of the two caught the wrong
+answer, how long being told took, and whether a compiler's complaint names a
+line the repair is on.
+
+The loop somebody edits in is **3.0 ms by `kest check` against 14.9 ms by
+`luau-analyze`** -- of which starting the program is 2.8 and 12.2, so the
+reading is 0.2 against 2.7. Being told by a compiler is **1.9 ms**; being told
+by a hidden test is **24 to 38**. `pooled`'s refusal points at line 32 of the
+wrong answer, which is one of the lines that have to change.
+
+See D1126.
+
+**Runs:** `KEST_LUAU=... RUNS=15 sh ai/cost.sh`, and `make check`.
+
+Next: the development and reload path, which is checked over eleven edits and
+not measured.

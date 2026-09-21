@@ -455,9 +455,15 @@ backend's own half instead.
    running in Kest and none in Luau**, the rest caught by a hidden test, and
    none escaping either. `pooled` is that one -- the same wrong answer, a
    scratch list of what was taken, is a refusal in Kest and a table nobody
-   counts in Luau. `ai/README.md` holds the table. The count said nine until
-   D1120, which is where that is written down. Running models against it is
-   the owner's, at the end.
+   counts in Luau.
+   **And what each costs is measured** (D1126): `ai/cost.sh` reads the loop
+   somebody edits in at **3.0 ms by `kest check` against 14.9 by
+   `luau-analyze`** -- 2.8 and 12.2 of that being the process starting, so the
+   reading is 0.2 against 2.7 -- being told by a compiler at **1.9 ms** against
+   **24 to 38 ms** for being told by a hidden test, and the one refusal here
+   pointing at a line that has to change. `ai/README.md` holds the table. The
+   count said nine until D1120, which is where that is written down. Running
+   models against it is the owner's, at the end.
 6. *(done, D1117)* **Game-shaped runtime profile**, on `bench/rules.kest`.
    The machine: dispatch and the instruction bodies 54%, working out where a
    refusal would be reported 16.5%, value movement 22%, the collector and the
