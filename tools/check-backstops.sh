@@ -16005,6 +16005,25 @@ kest 9.9.9""",
         "arguments": ["examples/math.kest", "examples/game/npc.kest"],
         "caught": "outside.kest answers",
     },
+    {
+        # A tagged value moved with the slot a case fills and the byte it sits
+        # at the wrong way round. Both are numbers of a case and both are
+        # small, so the C compiles and the program answers something else --
+        # which is what a differential test is for and what reading the
+        # generated file would not show. See D1096.
+        "what": "a case's payload moved to where its bytes are",
+        "file": "src/emitc.c",
+        "from": r"""            move_value(walk, variant->payload[piece],
+                       slot + variant->offsets[piece],
+                       byte + variant->byte_offsets[piece], reading, where);""",
+        "to": r"""            move_value(walk, variant->payload[piece],
+                       slot + variant->byte_offsets[piece],
+                       byte + variant->offsets[piece], reading, where);""",
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest", "examples/game/npc.kest"],
+        "caught": "tagged.kest",
+    },
 ]
 
 failed = 0

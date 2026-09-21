@@ -37167,3 +37167,46 @@ doubles in a row could be one. All three go away by putting the array's header
 in a header — which makes the shape of a handle something a generated file is
 compiled against, and so something the abi version has to carry. That is the
 next measurement rather than the next assumption.
+
+## D1096. One walk for a value, and the tag written as a switch
+
+D1095 wrote elements out by walking the layout's flat run of pieces, and left
+two things to the machine: an element with a tag in it, and one with a piece
+of text. Both are gone, and what took them away is using the *type* rather
+than the pieces.
+
+**The machine has two walks and this has one.** `unpack` runs a flat list of
+pieces for anything with no tag in it, and `unpack_typed` walks the type for
+anything with one, because which slots a payload fills is what the tag says
+(D710) and a flat list cannot say that. The machine picks between them at
+runtime and pays for the choice. Here the walk happens while compiling, so
+there is no reason to have the fast one: the type walk is unrolled into moves
+either way, and a tag becomes a `switch` on a number the host's compiler can
+see through, with one case per case of the enum and the moves of that case
+written inside it.
+
+So `move_value` mirrors `unpack_typed` and `pack_typed` exactly: a struct is
+its members at their byte offsets, a fixed run is its elements, an optional is
+its value and then the byte that says whether it is there, an enum is the tag
+and then a `switch`, and everything else is one scalar at the width its kind
+says. A piece of text is two slots — what it is made of and how many bytes
+that is — and the bytes stay where they are, which is what makes carrying one
+out of an array free.
+
+**Writing a tagged value zeroes it first**, the way `pack_typed` does and for
+D711's reason: a case written over a wider one would otherwise leave the wider
+one's fields under the new tag. Nothing a program can be written in this
+language can see that — reading by the tag zeroes what the case does not fill
+— so there is no hole for it and this paragraph is what says it was not
+forgotten. A host reading the bytes, a save written out, or a hash over them
+would see it.
+
+**And reading one refuses a tag with no case behind it**, in the machine's
+words and with the machine's code, which is the one thing reading a value can
+refuse.
+
+`bench/rules.kest`'s `nameOf` and `worthOf` are written now. What still stops
+that workload is `text.len` and bodies that can reach the heap. Over this tree
+the backend writes 708 of 2,088 bodies, and `bench/kernel.kest` is unchanged
+at 119 instructions a body-step: a flat struct moves the same either way,
+which is what says the new walk costs nothing where the old one worked.

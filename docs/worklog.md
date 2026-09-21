@@ -39565,3 +39565,24 @@ See D1095.
 **Runs:** `make check`, and `bench/kernel.kest` under `perf stat -e
 instructions` against `bench/kernel.cpp`, `bench/kernel.lua` in both Luau
 modes, and the machine.
+
+## One walk for a value, and the tag written as a switch
+
+Elements were written out by walking the layout's flat pieces, which left a
+tagged value and a piece of text to the machine. Walking the type instead
+takes both: a struct is its members, an optional is its value and the byte
+that says whether it is there, an enum is the tag and a `switch` with one case
+per case, and a piece of text is two slots that carry rather than copy. The
+machine keeps both walks and picks between them at runtime; a backend that
+walks while compiling has no reason to.
+
+`bench/rules.kest`'s `nameOf` and `worthOf` are written now, and the tree is
+at 708 of 2,088 bodies. `bench/kernel.kest` is unchanged at 119 instructions a
+body-step, which is what says the new walk costs nothing where the old one
+worked. What still stops the gameplay workload is `text.len` and bodies that
+can reach the heap.
+
+See D1096.
+
+**Runs:** `make check`, and a program of tagged, optional and text-carrying
+elements run both ways for the same answer.

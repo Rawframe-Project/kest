@@ -321,29 +321,6 @@ static bool reaches_no_heap(const KestEmitC *c, const KestIrBody *body) {
     return true;
 }
 
-// Whether one of these is a run of scalars this backend can move itself.
-// Anything with a tag in it is moved by reading the tag and then by what that
-// says, which is a walk rather than a run of moves; a piece of text is two
-// slots and an address into the compiling process is not one of them. Both
-// are bodies the machine runs, for now. See D1095.
-static bool plain_layout(const KestLayout *layout) {
-    if (layout == NULL || layout->tagged) {
-        return false;
-    }
-    for (uint16_t i = 0; i < layout->count; i++) {
-        switch (layout->pieces[i].kind) {
-        case KEST_L_TEXT:
-        case KEST_L_TAG:
-        case KEST_L_PAYLOAD:
-        case KEST_L_NOTHING:
-            return false;
-        default:
-            break;
-        }
-    }
-    return true;
-}
-
 // Where an operand sits, written the way the file writes it. Small buffers
 // rather than one string built up, because every line below names two or three
 // of these and a shared one would name the last of them three times.
@@ -357,79 +334,201 @@ static void at_frame(Where into, uint32_t slot) {
     snprintf(into, sizeof(Where), "f[%u]", slot);
 }
 
-// One element moved between memory and slots, written out rather than walked.
-// Which piece sits where is the module's and is known while compiling, so
-// what the machine does with a loop over pieces is a run of moves here --
-// and that loop is a third of `bench/rules.kest`. Every move is a `memcpy` of
-// the width the piece is, which is what the machine does and is what a C
-// compiler turns into one load or one store. See D1028 and D1095.
-static void move_pieces(Walk *walk, const KestLayout *layout, uint32_t base,
-                        bool reading) {
+// One scalar moved between memory and slots: the same switch the machine runs
+// over a piece, written out at the width the piece is, which a C compiler
+// turns into one load or one store.
+static void move_one(Walk *walk, uint8_t kind, uint32_t slot, uint32_t byte,
+                     bool reading) {
     KestEmitC *c = walk->c;
     Text *out = &walk->into->wrote;
-    Where slot;
-    for (uint16_t i = 0; i < layout->count; i++) {
-        at_stack(slot, base + i);
-        unsigned offset = layout->pieces[i].offset;
-        const char *width = NULL;
-        bool real = false;
-        switch (layout->pieces[i].kind) {
-        case KEST_L_I8:
-            width = "int8_t";
-            break;
-        case KEST_L_I16:
-            width = "int16_t";
-            break;
-        case KEST_L_I32:
-            width = "int32_t";
-            break;
-        case KEST_L_U8:
-        case KEST_L_BOOL:
-        case KEST_L_HELD:
-            width = "uint8_t";
-            break;
-        case KEST_L_U16:
-            width = "uint16_t";
-            break;
-        case KEST_L_U32:
-            width = "uint32_t";
-            break;
-        case KEST_L_F32:
-            width = "float";
-            real = true;
-            break;
-        case KEST_L_F64:
-            width = "double";
-            real = true;
-            break;
-        default:
-            break;
-        }
-        if (width == NULL) {
-            // A whole slot either way, which is what the machine does for
-            // everything it has no narrower name for.
-            if (reading) {
-                say(c, out, "        memcpy(&%s, at + %u, 8);\n", slot,
-                    offset);
-            } else {
-                say(c, out, "        memcpy(at + %u, &%s, 8);\n", offset,
-                    slot);
-            }
-            continue;
-        }
+    Where held;
+    Where beside;
+    at_stack(held, slot);
+    const char *width = NULL;
+    bool real = false;
+    switch (kind) {
+    case KEST_L_TEXT:
+        // Two slots: what it is made of and how many bytes that is. The bytes
+        // are the heap's and are carried rather than copied.
+        at_stack(beside, slot + 1);
         if (reading) {
             say(c, out,
-                "        {\n            %s piece;\n"
-                "            memcpy(&piece, at + %u, sizeof piece);\n"
-                "            %s.%s = piece;\n        }\n",
-                width, offset, slot, real ? "real" : "integer");
-            continue;
+                "        memcpy(&%s, at + %u, 8);\n"
+                "        {\n            uint64_t many;\n"
+                "            memcpy(&many, at + %u, 8);\n"
+                "            %s.integer = (int64_t)many;\n        }\n",
+                held, byte, byte + 8, beside);
+            return;
         }
         say(c, out,
-            "        {\n            %s piece = (%s)%s.%s;\n"
-            "            memcpy(at + %u, &piece, sizeof piece);\n        }\n",
-            width, width, slot, real ? "real" : "integer", offset);
+            "        memcpy(at + %u, &%s, 8);\n"
+            "        {\n            uint64_t many = (uint64_t)%s.integer;\n"
+            "            memcpy(at + %u, &many, 8);\n        }\n",
+            byte, held, beside, byte + 8);
+        return;
+    case KEST_L_I8:
+        width = "int8_t";
+        break;
+    case KEST_L_I16:
+        width = "int16_t";
+        break;
+    case KEST_L_I32:
+        width = "int32_t";
+        break;
+    case KEST_L_U8:
+    case KEST_L_BOOL:
+    case KEST_L_HELD:
+        width = "uint8_t";
+        break;
+    case KEST_L_U16:
+        width = "uint16_t";
+        break;
+    case KEST_L_U32:
+        width = "uint32_t";
+        break;
+    case KEST_L_F32:
+        width = "float";
+        real = true;
+        break;
+    case KEST_L_F64:
+        width = "double";
+        real = true;
+        break;
+    default:
+        break;
     }
+    if (width == NULL) {
+        // A whole slot either way, which is what the machine moves for
+        // everything it has no narrower name for.
+        if (reading) {
+            say(c, out, "        memcpy(&%s, at + %u, 8);\n", held, byte);
+        } else {
+            say(c, out, "        memcpy(at + %u, &%s, 8);\n", byte, held);
+        }
+        return;
+    }
+    if (reading) {
+        say(c, out,
+            "        {\n            %s piece;\n"
+            "            memcpy(&piece, at + %u, sizeof piece);\n"
+            "            %s.%s = piece;\n        }\n",
+            width, byte, held, real ? "real" : "integer");
+        return;
+    }
+    say(c, out,
+        "        {\n            %s piece = (%s)%s.%s;\n"
+        "            memcpy(at + %u, &piece, sizeof piece);\n        }\n",
+        width, width, held, real ? "real" : "integer", byte);
+}
+
+// A whole value moved between memory and slots, by walking the type rather
+// than the flat list of pieces a layout carries. The machine has both walks
+// and picks between them -- a run of pieces for anything with no tag in it,
+// and the type itself for anything with one, because which slots a payload
+// fills is what the tag says (D710). Here there is one walk, because a walk
+// done while compiling costs nothing at either end and a tag is a `switch`
+// the host's compiler can see through. What the machine does with a loop over
+// a layout for every element is a run of moves here, and that loop is a third
+// of `bench/rules.kest`. See D1028 and D1096.
+//
+// Answers how many slots it moved. `where` is where in the source this is,
+// for the one thing reading a value can refuse: a tag that names no case.
+static uint16_t move_value(Walk *walk, const KestType *type, uint32_t slot,
+                           uint32_t byte, bool reading, uint32_t where) {
+    KestEmitC *c = walk->c;
+    Text *out = &walk->into->wrote;
+    if (type == NULL) {
+        move_one(walk, KEST_L_WORD, slot, byte, reading);
+        return 1;
+    }
+    if (type->tag == KEST_T_STRUCT) {
+        uint16_t used = 0;
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            used = (uint16_t)(used +
+                              move_value(walk, type->members[i].type,
+                                         slot + used,
+                                         byte + type->members[i].byte_offset,
+                                         reading, where));
+        }
+        return used;
+    }
+    if (type->tag == KEST_T_FIXED) {
+        uint16_t used = 0;
+        for (uint32_t i = 0; i < type->count; i++) {
+            used = (uint16_t)(used +
+                              move_value(walk, type->element, slot + used,
+                                         byte + i * type->element->byte_size,
+                                         reading, where));
+        }
+        return used;
+    }
+    if (type->tag == KEST_T_OPTIONAL) {
+        uint16_t used = move_value(walk, type->element, slot, byte, reading,
+                                   where);
+        move_one(walk, KEST_L_HELD, slot + used,
+                 byte + type->element->byte_size, reading);
+        return (uint16_t)(used + 1);
+    }
+    if (type->tag != KEST_T_ENUM) {
+        move_one(walk, kest_scalar_of(type), slot, byte, reading);
+        return type->tag == KEST_T_TEXT ? 2 : 1;
+    }
+    Where tag;
+    at_stack(tag, slot);
+    if (!reading) {
+        // What the case does not carry is written as nought, because a tag
+        // says which reading the bytes beside it have and a case written over
+        // a wider one would otherwise leave the wider one's fields under the
+        // new tag. See D711.
+        say(c, out,
+            "        memset(at + %u, 0, %u);\n"
+            "        {\n            int32_t tag = (int32_t)%s.integer;\n"
+            "            memcpy(at + %u, &tag, 4);\n"
+            "            switch (tag) {\n",
+            byte, (unsigned)type->byte_size, tag, byte);
+    } else {
+        say(c, out,
+            "        {\n            int32_t tag;\n"
+            "            memcpy(&tag, at + %u, 4);\n"
+            "            %s.integer = tag;\n",
+            byte, tag);
+        for (uint16_t piece = 1; piece < type->slots; piece++) {
+            Where empty;
+            at_stack(empty, slot + piece);
+            say(c, out, "            %s.integer = 0;\n", empty);
+        }
+        say(c, out, "            switch (tag) {\n");
+    }
+    for (uint32_t which = 0; which < type->case_count; which++) {
+        const KestVariantType *variant = &type->cases[which];
+        say(c, out, "            case %u:\n", which);
+        for (uint32_t piece = 0; piece < variant->payload_count; piece++) {
+            move_value(walk, variant->payload[piece],
+                       slot + variant->offsets[piece],
+                       byte + variant->byte_offsets[piece], reading, where);
+        }
+        say(c, out, "                break;\n");
+    }
+    if (!reading) {
+        // Writing one does not refuse a tag with no case behind it: the tag
+        // goes down and nothing else does, which is what the machine writes.
+        say(c, out,
+            "            default:\n                break;\n"
+            "            }\n        }\n");
+        return type->slots;
+    }
+    const char *written = kest_type_written(type);
+    say(c, out,
+        "            default: {\n                char said[96];\n"
+        "                snprintf(said, sizeof said,\n"
+        "                         \"`%s` here holds tag %%lld and has no such "
+        "case\",\n"
+        "                         (long long)tag);\n"
+        "                return kest_native_stopped(rt, %u, \"K0651\", "
+        "said);\n"
+        "            }\n            }\n        }\n",
+        written == NULL ? "a value with a tag in it" : written, where);
+    return type->slots;
 }
 
 
@@ -599,11 +698,7 @@ static bool write_elem(Walk *walk, const KestIrOp *op,
         return false;
     }
     const KestLayout *layout = &c->module->layouts[place->layout];
-    if (!plain_layout(layout)) {
-        cannot(walk, "an element with a tag or a piece of text in it");
-        return false;
-    }
-    if (layout->slots != place->slots) {
+    if (layout->type == NULL || layout->slots != place->slots) {
         cannot(walk, "an element read at a width the layout does not have");
         return false;
     }
@@ -616,8 +711,13 @@ static bool write_elem(Walk *walk, const KestIrOp *op,
         "%u, %u);\n"
         "        if (at == NULL) {\n            return false;\n        }\n",
         held, index, (unsigned)place->offset, op->span.offset);
-    move_pieces(walk, layout, value, reading);
+    uint16_t moved = move_value(walk, layout->type, value, 0, reading,
+                                op->span.offset);
     say(c, out, "    }\n");
+    if (moved != layout->slots) {
+        cannot(walk, "an element whose type and layout say different widths");
+        return false;
+    }
     return true;
 }
 
@@ -637,8 +737,8 @@ static bool write_at(Walk *walk, const KestIrPlace *place, uint32_t value,
         return false;
     }
     const KestLayout *layout = &c->module->layouts[place->layout];
-    if (!plain_layout(layout) || layout->slots != place->slots) {
-        cannot(walk, "a field with a tag or a piece of text in it");
+    if (layout->type == NULL || layout->slots != place->slots) {
+        cannot(walk, "a field read at a width the layout does not have");
         return false;
     }
     Where held;
@@ -646,8 +746,13 @@ static bool write_at(Walk *walk, const KestIrPlace *place, uint32_t value,
     say(c, &walk->into->wrote,
         "    {\n        unsigned char *at = (unsigned char *)%s.object + %u;\n",
         held, (unsigned)place->offset);
-    move_pieces(walk, layout, value, true);
+    uint16_t moved = move_value(walk, layout->type, value, 0, true,
+                                walk->body->ops[0].span.offset);
     say(c, &walk->into->wrote, "    }\n");
+    if (moved != layout->slots) {
+        cannot(walk, "a field whose type and layout say different widths");
+        return false;
+    }
     return true;
 }
 

@@ -238,6 +238,59 @@ fn main() -> i32 {
     return i32((i64(step(world, 20)) % 251 + 251) % 251)
 }
 PROGRAM
+cat >"$work"/programs/tagged.kest <<'PROGRAM'
+module tagged
+
+enum Kind {
+    Food(i32)
+    Tool(i32)
+    Coin
+    Note(i32)
+}
+
+struct Item {
+    name: text
+    kind: Kind
+    many: i32
+    spare: f32?
+}
+
+fn worth(items: [Item], round: i32) -> i32 no.alloc no.host deterministic {
+    let total = 0
+    for at in 0..len(items) {
+        let one = items[at]
+        total += match one.kind {
+            Food(fills) -> fills * one.many
+            Tool(power) -> power * 3
+            Coin -> one.many
+            Note(which) -> if which == 0 -> 0 else -> 1
+        }
+        if let held = one.spare {
+            total += i32(held)
+        }
+        one.many = (one.many + round) % 5
+        one.kind = Kind.Tool(at % 3)
+        items[at] = one
+    }
+    return total
+}
+
+fn main() -> i32 {
+    let items: [Item] = array()
+    for i in 0..16 {
+        let spare: f32? = none
+        if i % 3 == 0 {
+            spare = f32(i)
+        }
+        push(items, Item("a", Kind.Food(i % 4), i, spare))
+    }
+    let total = 0
+    for round in 0..5 {
+        total += worth(items, round)
+    }
+    return i32((total % 251 + 251) % 251)
+}
+PROGRAM
 cat >"$work"/programs/outside.kest <<'PROGRAM'
 module outside
 

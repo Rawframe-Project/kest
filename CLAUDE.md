@@ -519,7 +519,8 @@ tools/             Build and development scripts. `make check` runs all of
                    adds, about a body with no C for it written anyway,
                    about compiled bodies that nothing ever enters, about a
                    generated file the host's compiler will not read, about an
-                   element read from outside the array it is in,
+                   element read from outside the array it is in, about a
+                   case's payload moved to where its bytes are,
                    about a message that says an `i64` through a `%u`,
                    about a kind of type nothing says how to write, about a
                    kind of token nothing says a line may end after, about an
