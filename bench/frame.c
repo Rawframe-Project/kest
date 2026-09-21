@@ -117,6 +117,74 @@ static void fill(Body *world, uint32_t many) {
     }
 }
 
+/* One frame, the run lent where it stands, timed and kept. Written once
+   because it is run twice: by the machine, and by the same program with the
+   bodies the other backend wrote bound to it. What a frame costs is the
+   question a game asks, and it has two answers now. See D1123. */
+static bool lending(KestRuntime *runtime, int32_t stepping, Body *world,
+                    uint32_t many, long long frames, long long *took,
+                    const char *what, double *answered) {
+    fill(world, many);
+    for (long long f = 0; f < frames; f++) {
+        long long before = in_nanoseconds();
+        KestValue lent = kest_borrow(runtime, world, many, "bench.frame.Body",
+                                     sizeof *world);
+        KestValue slots[3] = {{0}};
+        slots[0] = lent;
+        slots[1].real = (double)WALL;
+        bool went = kest_call(runtime, stepping, slots, 3);
+        kest_lend_ends(runtime, lent);
+        took[f] = in_nanoseconds() - before;
+        if (!went) {
+            kest_report(runtime, stderr, KEST_FORM_TEXT);
+            return false;
+        }
+        *answered = slots[0].real;
+    }
+    say(what, took, frames, *answered);
+    return true;
+}
+
+/* And the same frame with a crossing a body, over the same data. */
+static bool crossing_each(KestRuntime *runtime, int32_t once, Body *world,
+                          uint32_t many, long long frames, long long *took,
+                          const char *what, double *answered) {
+    fill(world, many);
+    for (long long f = 0; f < frames; f++) {
+        long long before = in_nanoseconds();
+        double sum = 0.0;
+        for (uint32_t i = 0; i < many; i++) {
+            KestValue slots[5] = {{0}};
+            slots[0].real = (double)world[i].x;
+            slots[1].real = (double)world[i].y;
+            slots[2].real = (double)world[i].dx;
+            slots[3].real = (double)world[i].dy;
+            slots[4].real = (double)WALL;
+            if (!kest_call(runtime, once, slots, 5)) {
+                kest_report(runtime, stderr, KEST_FORM_TEXT);
+                return false;
+            }
+            /* The body comes back over the arguments, which is what makes
+               this the same work rather than a cheaper program. */
+            world[i].x = (float)slots[0].real;
+            world[i].y = (float)slots[1].real;
+            world[i].dx = (float)slots[2].real;
+            world[i].dy = (float)slots[3].real;
+            sum += (double)(world[i].x + world[i].y);
+        }
+        took[f] = in_nanoseconds() - before;
+        *answered = sum;
+    }
+    say(what, took, frames, *answered);
+    return true;
+}
+
+/* What the other backend wrote for this program, bound to a machine of its
+   own. A generated file exports one function and this is the whole of what a
+   host does with it (D1111): make a machine for the same program, hand it
+   over, and the bodies in the file are the ones that machine runs. */
+bool kest_natives_here(KestRuntime *runtime);
+
 int main(int argc, char **argv) {
     uint32_t many = 20000;
     long long frames = 200;
@@ -175,26 +243,12 @@ int main(int argc, char **argv) {
     /* One crossing a frame. The run is lent where it stands, so what crosses
        is an address and a count rather than the bodies. */
     double answered = 0.0;
-    fill(world, many);
     KestTelemetry before_frames = {0};
     kest_telemetry(runtime, &before_frames);
-    for (long long f = 0; f < frames; f++) {
-        long long before = in_nanoseconds();
-        KestValue lent =
-            kest_borrow(runtime, world, many, "bench.frame.Body", sizeof *world);
-        KestValue slots[3] = {{0}};
-        slots[0] = lent;
-        slots[1].real = (double)WALL;
-        bool went = kest_call(runtime, stepping, slots, 3);
-        kest_lend_ends(runtime, lent);
-        took[f] = in_nanoseconds() - before;
-        if (!went) {
-            kest_report(runtime, stderr, KEST_FORM_TEXT);
-            return 3;
-        }
-        answered = slots[0].real;
+    if (!lending(runtime, stepping, world, many, frames, took, "lend",
+                 &answered)) {
+        return 3;
     }
-    say("lend", took, frames, answered);
 
     /* And the question a frame budget actually asks: did anything happen in
        there that the program did not ask for? The hot phase promises
@@ -213,33 +267,10 @@ int main(int argc, char **argv) {
 
     /* One crossing a body, over the same data, so that what a crossing costs
        is a number rather than an argument. */
-    fill(world, many);
-    for (long long f = 0; f < frames; f++) {
-        long long before = in_nanoseconds();
-        double sum = 0.0;
-        for (uint32_t i = 0; i < many; i++) {
-            KestValue slots[5] = {{0}};
-            slots[0].real = (double)world[i].x;
-            slots[1].real = (double)world[i].y;
-            slots[2].real = (double)world[i].dx;
-            slots[3].real = (double)world[i].dy;
-            slots[4].real = (double)WALL;
-            if (!kest_call(runtime, once, slots, 5)) {
-                kest_report(runtime, stderr, KEST_FORM_TEXT);
-                return 3;
-            }
-            /* The body comes back over the arguments, which is what makes
-               this the same work rather than a cheaper program. */
-            world[i].x = (float)slots[0].real;
-            world[i].y = (float)slots[1].real;
-            world[i].dx = (float)slots[2].real;
-            world[i].dy = (float)slots[3].real;
-            sum += (double)(world[i].x + world[i].y);
-        }
-        took[f] = in_nanoseconds() - before;
-        answered = sum;
+    if (!crossing_each(runtime, once, world, many, frames, took, "fine",
+                       &answered)) {
+        return 3;
     }
-    say("fine", took, frames, answered);
 
     /* And the same arithmetic here, which is the floor: what this machine
        does when nothing crosses at all. */
@@ -272,6 +303,29 @@ int main(int argc, char **argv) {
         answered = (double)sum;
     }
     say("native", took, frames, answered);
+    /* And whether the tails above are worth reading at all. The C row is the
+       control: it is the same arithmetic with no machine under it, so what it
+       does above its own middle is what this computer was doing at the time
+       rather than anything this project wrote. A run whose control is quiet
+       is a run whose tails are the engine's; a run whose control is not says
+       so here rather than leaving a reader to believe a worst frame that
+       belongs to somebody else's build. See D1123. */
+    long long floor_middle = took[0];
+    long long floor_worst = took[0];
+    for (long long f = 0; f < frames; f++) {
+        if (took[f] < floor_middle) {
+            floor_middle = took[f];
+        }
+        if (took[f] > floor_worst) {
+            floor_worst = took[f];
+        }
+    }
+    printf("the floor's worst frame is %.1f times its best, so the tails "
+           "above are %s\n",
+           floor_middle > 0 ? (double)floor_worst / (double)floor_middle : 0.0,
+           floor_worst > floor_middle * 4 ? "this computer's and not this "
+                                            "language's"
+                                          : "the engines' own");
 
     /* What each of the two crossed, which the timings above cannot say: a
        boundary is a count of crossings and a count of bytes, and two ways of
@@ -296,8 +350,40 @@ int main(int argc, char **argv) {
     printf("%-8s %11d %11llu %14llu %14llu\n", "native", 0, bodies, crossing,
            0ULL);
 
+    /* And the same two frames again, run by the other engine: a second
+       machine of the same build, with the bodies the C backend wrote bound to
+       it. Same world, same clock, same host -- the only difference is which
+       of the two engines is answering, which is what makes these rows a
+       comparison rather than two measurements. See D1123. */
+    KestHost *again = kest_host_new();
+    if (again == NULL || !kest_host_bind(again, "Io.write", io_write, stderr)) {
+        fprintf(stderr, "frame: the host could not be made twice\n");
+        return 2;
+    }
+    KestRuntime *compiled = kest_start(build, again, NULL);
+    kest_host_free(again);
+    if (compiled == NULL || !kest_natives_here(compiled)) {
+        fprintf(stderr, "frame: this C was written from another program\n");
+        return 2;
+    }
+    int32_t stepping_c = kest_entry(compiled, "bench.frame.step");
+    int32_t once_c = kest_entry(compiled, "bench.frame.one");
+    if (stepping_c < 0 || once_c < 0) {
+        fprintf(stderr, "frame: the compiled program has no `step` or `one`\n");
+        return 2;
+    }
+    printf("the same two frames, run by the bodies the other backend wrote "
+           "(microseconds)\n");
+    if (!lending(compiled, stepping_c, world, many, frames, took, "lend",
+                 &answered) ||
+        !crossing_each(compiled, once_c, world, many, frames, took, "fine",
+                       &answered)) {
+        return 3;
+    }
+
     free(world);
     free(took);
+    kest_runtime_free(compiled);
     kest_runtime_free(runtime);
     kest_build_free(build);
     return 0;

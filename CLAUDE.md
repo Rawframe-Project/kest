@@ -117,7 +117,14 @@ bench/             Four shapes of work and what each costs, in this language
                    frame, one crossing a body, and the same arithmetic in C,
                    all three answering one checksum so the difference between
                    them is the boundary and nothing else. `make bench/frame`
-                   builds that host. `bench/rules.kest` is the third and is
+                   builds that host, and links it with what the other backend
+                   wrote for the same program, so it runs the two crossings
+                   twice: once by the machine and once by the engine a game
+                   would ship. It is the one instrument here that says what a
+                   *frame* costs rather than what a program costs, which is
+                   the question a frame budget asks -- the middle, the tails
+                   and the worst of them. See D1123.
+                   `bench/rules.kest` is the third and is
                    mostly branches: what somebody carries, what they have been
                    asked to do, what they may do again yet, and the rules that
                    read all three -- a lookup, a flag test, a `match` over what

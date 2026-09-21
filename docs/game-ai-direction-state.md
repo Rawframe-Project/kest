@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1122
+    CURRENT SHA:       (this commit) D1093-D1123
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -19,7 +19,7 @@ reasoning; this holds the position.
                        working out where a refusal would be reported before
                        every door call
     LAST FAST GATE:    green
-    LAST FULL GATE:    green at 43160fd
+    LAST FULL GATE:    green at d7452e0
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.
                        Every number below was taken on it.
@@ -471,7 +471,29 @@ backend's own half instead.
    ceiling was measured first — a build with no ledger at all runs `rules` in
    0.755 G — so half the 28% is the ledger itself, and the ledger is what a
    refusal deep in a compiled program is reported from.
-8. Comparators, kept in step as the engines move. The harness names the mode
+8. *(done, D1123)* **What a frame costs, and what its worst one costs.**
+   Every tail figure here was the machine's until `bench/frame` was linked
+   with what the C backend wrote for its own program. Twenty thousand bodies
+   a frame, five hundred frames, one checksum across every row:
+
+   | | p50 | p95 | p99 | max | mad |
+   | --- | --- | --- | --- | --- | --- |
+   | a lent frame, the machine | 1812 µs | 2921 | 5065 | 8168 | 123 |
+   | **a lent frame, the release engine** | **306 µs** | **331** | **339** | **403** | **3.6** |
+   | a crossing a body, the machine | 1892 µs | 2195 | 4895 | 13322 | 57 |
+   | a crossing a body, the release engine | 1179 µs | 1239 | 1465 | 4552 | 5.7 |
+   | the same arithmetic in C | 63 µs | 67 | 71 | 97 | 1.2 |
+
+   **The worst frame the release engine had is below the median frame the
+   machine had.** At sixty frames a second, twenty thousand bodies cost it
+   2.4% of the budget at its worst and the machine 49%. Against hand-written
+   C it is 4.9× at the middle and 4.8× at the ninety-ninth. Over five hundred
+   frames: one allocation, no walks — **a frame that promised `no.alloc`
+   cannot be interrupted by the collector**, and the instrument says so rather
+   than the source. The C row is the control and the instrument says whether
+   its own tails are worth reading, because on a shared machine pure C showed
+   a ninety-ninth of 786 µs against a middle of 62.
+9. Comparators, kept in step as the engines move. The harness names the mode
    of every row (D1090), which is what stops an interpreter's number being
    read as a compiler's.
 

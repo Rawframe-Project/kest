@@ -38360,3 +38360,64 @@ frame with no instruction now, which is the front of the body and where a
 caller nobody can place belongs. Nothing reaches it in practice — a frame that
 is a caller always has `said_at` — and a subtraction from NULL is not a thing
 to leave in a program because nothing reaches it today.
+
+## D1123. What a frame costs, and what its worst one costs
+
+Section 34 asks for runtime p50/p95/p99/max. Every tail figure in this tree
+was the machine's: `bench/frame` — the one instrument here that times a
+*frame* rather than a program — drove the bytecode machine and nothing else.
+It drives both engines now.
+
+**How.** A generated file exports `kest_natives_here` (D1111), which is the
+whole of what a host does with one: make a machine for the same program and
+hand it over. So `bench/frame` is linked with what the C backend wrote for
+`bench/frame.kest`, makes a second machine of the same build, hands it over,
+and runs the same two crossings again. Same world, same clock, same host; the
+only difference is which engine answers, which is what makes these rows a
+comparison rather than two measurements.
+
+**Twenty thousand bodies a frame, five hundred frames, one checksum across
+every row:**
+
+| | p50 | p95 | p99 | max | mad |
+| --- | --- | --- | --- | --- | --- |
+| a lent frame, the machine | 1812 µs | 2921 | 5065 | 8168 | 123 |
+| **a lent frame, the release engine** | **306 µs** | **331** | **339** | **403** | **3.6** |
+| a crossing a body, the machine | 1892 µs | 2195 | 4895 | 13322 | 57 |
+| a crossing a body, the release engine | 1179 µs | 1239 | 1465 | 4552 | 5.7 |
+| the same arithmetic in C | 63 µs | 67 | 71 | 97 | 1.2 |
+
+**The worst frame the release engine had is below the median frame the machine
+had.** 5.9× at the middle, 15× at the ninety-ninth, 20× at the worst — and the
+dispersion is 3.6 µs against 123. A frame budget is a question about the worst
+case, and the compiled engine's worst is 1.3 times its middle where the
+machine's is 4.5.
+
+At sixty frames a second the budget is 16.7 ms. Twenty thousand bodies cost
+the release engine **2.4% of it at the worst** and the machine 49%.
+
+**Against hand-written C it is 4.9× at the middle and 4.8× at the
+ninety-ninth.** The whole distribution is scaled rather than the tail being
+fat, which is the shape a frame budget can be written against.
+
+**And the boundary is still the boundary.** A crossing a body is 3.9 times a
+lent frame even with both compiled, and compiling takes only 1.6× off it. What
+a crossing costs is not what a body costs, which is what D1029 said and this
+measures with the body's cost taken away.
+
+**The collector cannot interrupt a frame that promised not to allocate.** Over
+five hundred frames: one allocation, no walks, no bytes copied. That was a
+thing to read in the source and it is a thing the instrument says.
+
+### The control, and why the tails are quoted at all
+
+The C row is the control. It is the same arithmetic with no machine under it,
+so what it does above its own middle is what the computer was doing at the
+time. On a shared machine a run of it showed a ninety-ninth of 786 µs against
+a middle of 62 — pure C, nothing of this project in it.
+
+So the instrument says whether its own tails are worth reading: the floor's
+worst frame against its best, and a sentence naming whose the tails are. The
+table above is from a run whose control was 2.2, and runs whose control was
+ten were thrown away rather than quoted. A worst frame that belongs to
+somebody else's build is not a measurement of this one.

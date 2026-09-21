@@ -217,7 +217,14 @@ machine through a call of its own, and the machine writes its frame over the
 one the call already made (D1105); a call through a function value is written
 too (D1107), and so is the crossing into the host (D1108) and one of a
 fixed run of slots (D1109) -- which leaves seven bodies of two thousand and no
-family among them. A call from one compiled body to another is written out rather than made
+family among them. **And what a frame costs is measured, both ways** (D1123): twenty thousand
+bodies a frame, five hundred frames, the release engine at 306 µs in the
+middle and 403 at its worst against the machine's 1812 and 8168, with
+hand-written C at 63 and 97. The worst frame the release engine had is below
+the median frame the machine had, and over those five hundred frames there was
+one allocation and no walks — a frame that promised `no.alloc` cannot be
+interrupted by the collector.
+A call from one compiled body to another is written out rather than made
 through a door, which is 14% of the gameplay workload and 20% of the one that
 is mostly branches (D1122); what a call keeps is in the public header for
 that, held to the machine's own shape while it builds.

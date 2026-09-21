@@ -40258,3 +40258,45 @@ See D1122.
 **Runs:** `make check`, `tools/check-c.sh` over the tree, the depth hole
 repointed at the written-out check and seen catching, and the four workloads
 measured before and after under `perf stat`.
+
+## What a frame costs, and what its worst one costs
+
+Every tail figure in this tree was the machine's. `bench/frame` -- the one
+instrument that times a frame rather than a program -- is linked with what the
+C backend wrote for its own program now, makes a second machine of the same
+build, hands it to `kest_natives_here`, and runs the same two crossings again.
+
+Twenty thousand bodies a frame, five hundred frames, one checksum across every
+row:
+
+| | p50 | p95 | p99 | max | mad |
+| --- | --- | --- | --- | --- | --- |
+| a lent frame, the machine | 1812 us | 2921 | 5065 | 8168 | 123 |
+| a lent frame, the release engine | 306 us | 331 | 339 | 403 | 3.6 |
+| a crossing a body, the machine | 1892 us | 2195 | 4895 | 13322 | 57 |
+| a crossing a body, the release engine | 1179 us | 1239 | 1465 | 4552 | 5.7 |
+| the same arithmetic in C | 63 us | 67 | 71 | 97 | 1.2 |
+
+The worst frame the release engine had is below the median frame the machine
+had: 5.9x at the middle, 15x at the ninety-ninth, 20x at the worst, with a
+dispersion of 3.6 us against 123. At sixty frames a second, twenty thousand
+bodies cost the release engine 2.4% of the budget at its worst and the machine
+49%. Against hand-written C it is 4.9x at the middle and 4.8x at the
+ninety-ninth -- the whole distribution scaled rather than a fat tail.
+
+A crossing a body is 3.9 times a lent frame even with both compiled, and
+compiling takes only 1.6x off it: what a crossing costs is not what a body
+costs. And over five hundred frames there was one allocation and no walks, so
+a frame whose hot phase promised `no.alloc` cannot be interrupted by the
+collector -- which was a thing to read in the source and is a thing the
+instrument says.
+
+The C row is the control, and the instrument says whether its own tails are
+worth reading: on a shared machine a run of pure C showed a ninety-ninth of
+786 us against a middle of 62. Runs whose control was noisy were thrown away
+rather than quoted.
+
+See D1123.
+
+**Runs:** `make check`, and `bench/frame --frames 500` three times, quoting
+the one whose control was quiet.

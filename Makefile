@@ -136,8 +136,20 @@ bench/measure: bench/measure.c libkest.a include/kest.h
 # The frame workload's host, which owns the bodies and lends them: what a
 # frame costs when the data is the host's and crosses once, against what it
 # costs when every value crosses on its own, against the same arithmetic in C.
-bench/frame: bench/frame.c bench/frame.kest libkest.a include/kest.h
-	$(CC) $(WARN) -O2 -Iinclude -o $@ bench/frame.c libkest.a -lm
+# It is linked with what the other backend wrote for the same program, so
+# that the frame it times has two answers: the machine's, and the one a game
+# would ship. The generated file is not held to this project's warnings --
+# nobody writes it and nobody reads it for style. See D1123.
+build/frame-native.c: bench/frame.kest kest | build/release
+	./kest emit --c bench/frame.kest > $@
+
+build/frame-native.o: build/frame-native.c include/kest.h
+	$(CC) -O2 -Iinclude -DKEST_NO_MAIN -c -o $@ build/frame-native.c
+
+bench/frame: bench/frame.c bench/frame.kest build/frame-native.o libkest.a \
+	    include/kest.h
+	$(CC) $(WARN) -O2 -Iinclude -o $@ bench/frame.c build/frame-native.o \
+	    libkest.a -lm
 
 # Where another project looks.
 install: kest libkest.a
