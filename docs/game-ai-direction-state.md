@@ -18,7 +18,7 @@ reasoning; this holds the position.
                        instructions since it stopped working out where a
                        refusal would be reported before every door call
     LAST FAST GATE:    green
-    LAST FULL GATE:    green at f410a55
+    LAST FULL GATE:    green at b51cc0b
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.
                        Every number below was taken on it.
