@@ -106,6 +106,10 @@ const char *kest_build_name(KestBuild *build, const char *name);
 // Asks the next check to keep the index an editor reads. Nothing else wants
 // it and it is a third again of what a finished build holds, so it is off.
 void kest_build_index_names(KestBuild *build, bool keep);
+// Asks the next emit to call every body where it is called rather than carry
+// small ones to their calls, which is what a profile of calls wants. See
+// D1156.
+void kest_build_calls_as_written(KestBuild *build);
 // The clock this build times its own stages with, and how long opening it
 // took, which the caller timed because there was nowhere to keep a clock while
 // it happened. The clock is the caller's for the reason `kest_clock` is the

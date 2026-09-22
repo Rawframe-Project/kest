@@ -1471,6 +1471,13 @@ bool kest_resume(KestRuntime *runtime, KestValue *frame, uint32_t room);
 // cost a running machine nothing, and it is the one thing that writes a build
 // after it was built: debug a build no other machine is standing on. See
 // D1077.
+//
+// A body of a handful of instructions that can stop nothing may also have been
+// written into its callers rather than called (D1156). Those copies say where
+// they came from through `kest_came_from`, the way every instruction does, so
+// a breakpoint put on a line is put in every body with an instruction from
+// that line; one written at the start of a body stops the calls that were
+// left calls. `kest debug` compiles every call as a call.
 uint8_t *kest_code_of(KestRuntime *runtime, int32_t entry, uint32_t *count);
 
 // Where in the source the instruction at this offset came from, or -1. One per

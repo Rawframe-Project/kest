@@ -168,6 +168,26 @@ typedef struct {
     char said[96];
 } Walk;
 
+// Whether the body being written had the one at `which` carried into it by
+// the lowering rather than calling it. See D1156.
+static bool carried_here(const Walk *walk, uint32_t which) {
+    const KestModule *module = walk->c->module;
+    uint32_t caller = (uint32_t)(walk->into - walk->c->bodies);
+    // One this backend did not write is handed to the machine, which gives it
+    // a frame of its own. A carried body is written before its caller.
+    if (module == NULL || caller >= module->count || which >= caller ||
+        !walk->c->bodies[which].written) {
+        return false;
+    }
+    const KestChunk *chunk = module->functions[caller];
+    for (uint16_t i = 0; chunk != NULL && i < chunk->carried_count; i++) {
+        if (chunk->carried[i] == which) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static void cannot(Walk *walk, const char *why) {
     if (walk->why == NULL) {
         walk->why = why;
@@ -2018,6 +2038,32 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         }
         uint32_t needs =
             (uint32_t)callee->slot_count + (uint32_t)callee->stack_needed;
+        if (carried_here(walk, which)) {
+            // A body the machine carries into this one rather than calling it
+            // is given no frame there, so it is given none here: nothing in
+            // one can stop the program, so there is nothing a frame would be
+            // asked for, and two engines that count frames differently are
+            // two numbers a host is told to find. See D1156.
+            say(c, out,
+                "    {\n        KV *stands = %s;\n"
+                "        if (stands + %u > led.limit) {\n"
+                "            return kest_native_crowded(rt, %u, %u, false);\n"
+                "        }\n"
+                "        if (stands + %u > *led.reached) {\n"
+                "            *led.reached = stands + %u;\n"
+                "        }\n"
+                "        bool went = kf_%u(rt, stands, %s%s",
+                handed, needs, which, op->span.offset, needs, needs, which,
+                leaves > 0 ? "&" : "", leaves > 0 ? first : "NULL");
+            for (uint32_t k = 0; k < reads; k++) {
+                at_stack(second, base + k);
+                say(c, out, ", %s", second);
+            }
+            say(c, out,
+                ");\n        if (!went) {\n            return false;\n"
+                "        }\n    }\n");
+            break;
+        }
         say(c, out,
             "    {\n        uint32_t was = *led.many;\n"
             "        if (was > 0) {\n"

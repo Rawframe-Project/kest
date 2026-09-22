@@ -2112,6 +2112,17 @@ LEFT_OUT = {
                                   "down rather than about what it means: two "
                                   "builds that differ only in it run the same "
                                   "program (D1012)",
+    ("KestChunk", "carried"): "which functions were carried into this body "
+                              "rather than called, which the code the mark "
+                              "folds already is: a body carrying another "
+                              "carries its instructions (D1156)",
+    ("KestChunk", "carried_count"): "how many of those there are",
+    ("KestChunk", "carried_room"): "room rather than what is in it",
+    ("KestModule", "carrying_off"): "whether small bodies are carried to where "
+                                    "they are called, which is how a program "
+                                    "was written down rather than what it "
+                                    "means and shows in the code the mark "
+                                    "folds (D1156)",
     ("KestLayout", "by_the_type"): "whether what a host writes into this has "
                                    "to be read by its type, which is worked "
                                    "out from the type the mark already folds "

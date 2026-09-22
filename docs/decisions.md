@@ -39960,3 +39960,71 @@ body's own, and what it moves is counted the way the pair it was made of is.
 Every workload answers the same fused and plain. `rules` is 4.64 thousand
 million instructions against Luau's interpreter's 3.33: 1.39 times, where it
 was 1.76. The frame step the reference counts is forty-one instructions.
+
+## D1156 — A small body is carried to where it is called
+
+*measured*. After D1154 and D1155 the commonest thing left in `rules` that was
+not one instruction was a call: `call`, the frame written, the callee's loads
+and its `return`, around a body of a handful of instructions -- a helper that
+reads a field, weighs two numbers or gives back one of two things. Writing the
+three helpers `rules` calls most out by hand took 8.8 per cent off what it runs,
+which is what a call was costing a body that small.
+
+So the lowering writes such a body where it is called. It may when the body is
+written already, by the same file, no more than 160 bytes of code, and made of
+nothing but locals, constants, arithmetic that wraps, comparisons and forward
+jumps -- nothing that can stop the program, spend a step of a budget, reach the
+heap or call anything, so no refusal is ever said from a body not standing in a
+frame of its own and what a budget bounds is what it bounded less the calls.
+Which instructions those are is one table, `CARRIED`, with what each operand
+is: a slot, which moves above the caller's own; a constant, which moves by
+where the body's constants were appended; a distance forward; or a number that
+means the same anywhere.
+
+- The arguments are stored into the slots the body calls its parameters,
+  unless they were one load just before the call and the body writes none of
+  them: then the body reads them where the caller has them and nothing is
+  handed over.
+- A `return` is a jump to the end, and the returns a body ends with are left
+  out, with anything that went to one going to where they were.
+- The table is held to each instruction's own width, so a row written wrong is
+  a body called as it always was rather than one carried a byte out: `f2i` was
+  written with no operand the first time, and `examples/embed.c`'s `worst()`
+  answered another case until the row was right and the guard was written.
+- What the body is said to need counts the carried call, because the other
+  backend still makes it: `check-c.sh`'s `stacked.kest` answered with a machine
+  one frame short until the chunk kept which bodies were carried into it.
+- The slots a caller asks for grow by the widest carried body and its stack by
+  how much deeper a body goes than the arguments it takes off; what may be more
+  than enough is said as slack, the way D1012's is.
+- `KEST_PLAIN` turns it off with the other fusions, and `kest profile` and
+  `kest debug` compile calls as written, because a profile says which function
+  the time went to and a debugger which frame it stopped in, and a carried body
+  is spent in its caller. A host writing breakpoints itself is told in the
+  header that a carried copy says where it came from like every instruction
+  does, so a breakpoint on a line finds it and one at the start of a body stops
+  the calls that were left calls.
+- Neither engine gives a carried body a frame: the other backend calls it
+  without the entry a refusal would be said from, because nothing in one can
+  stop the program, so what a program is told to find in frames is what either
+  engine uses. The gate's two programs that are about frames -- a chain five
+  deep that runs out of them and a stop under one -- take a remainder in the
+  innermost body so that it stays a call.
+
+| workload | after D1155 | after this | |
+| --- | --- | --- | --- |
+| rules | 4,639,050,136 | 4,254,191,527 | -8.3 % |
+| control | 1,147,766,665 | 1,148,602,304 | +0.1 % |
+| words | 309,955,411 | 311,911,896 | +0.6 % |
+| graph | 110,206,651 | 110,040,892 | -0.2 % |
+| kernel | 1,095,811,971 | 1,095,434,101 | 0.0 % |
+
+Every example and every workload answers the same carried and plain. `rules`
+is 1.28 times Luau's interpreter in instructions, where it was 1.39. A frame
+step an entity is thirty-nine instructions, three of them the `store.n` that
+puts what a call would have handed over where the carried body reads it, and
+the checked build asks forty-three questions over it where it asked fifty-one.
+A turn of the loop `tools/crossing.kest` calls in is eight instructions and not
+nine, because the call in it is carried; the nanoseconds the reference prints
+beside it were taken before, and it says so. `lib/std/text.kest` costs 206822
+bytes to compile rather than 203853.

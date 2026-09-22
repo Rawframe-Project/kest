@@ -1039,9 +1039,12 @@ done
 # kind, and the command line cannot be the host for it because the command line
 # asks first and gets what it asked for. A host that picked too small a number
 # is the one that needs telling. See D569.
+# The innermost body takes a remainder, which can stop a program and so is
+# never carried to where it is called: every call in the chain stays a call and
+# the chain is five deep however small its bodies are (D1156).
 cat > "$work/chained.kest" <<'KEST'
 fn fifth(n: i32) -> i32 {
-    return n + 1
+    return n % 7 + 1
 }
 
 fn fourth(n: i32) -> i32 {

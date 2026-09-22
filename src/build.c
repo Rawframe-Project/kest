@@ -54,6 +54,12 @@ void kest_build_index_names(KestBuild *build, bool keep) {
     }
 }
 
+void kest_build_calls_as_written(KestBuild *build) {
+    if (build != NULL) {
+        build->module.carrying_off = true;
+    }
+}
+
 bool kest_build_check(KestBuild *build) {
     if (build->diags.error_count > 0 || build->units.count == 0) {
         return false;

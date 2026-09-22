@@ -40973,3 +40973,22 @@ See D1155.
 
 **Runs:** the five workloads fused and plain, `perf stat`, `KEST_DEEP` pairs,
 `check-costs.sh`, and `make most`.
+
+## 2026-09-23, a small body carried to where it is called
+
+The lowering writes a body of a handful of instructions where it is called
+rather than calling it, reading the arguments where the caller has them when
+nothing writes them. `rules` runs 8.3 per cent fewer instructions and is 1.28
+times Luau's interpreter. Three things it turned up on the way, each caught by
+something already in the gate: a table row one operand short that
+`examples/embed.c` caught as a wrong answer, a needs walk that stopped counting
+the calls the other backend still makes, which `check-c.sh` caught, and a
+dropped `return` that sent a jump past the end, which the examples caught fused
+against plain. The CI failure on the commit before was a hole still quoting
+fifty-two questions; it is repointed with the three this moved.
+
+See D1156.
+
+**Runs:** every example fused and with `KEST_PLAIN=1`, the five workloads by
+`perf stat` both ways, `check-costs.sh`, `check-tables.sh`, `check-c.sh` and
+`make most`.

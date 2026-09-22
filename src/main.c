@@ -2213,6 +2213,13 @@ static int run(const char *command, const char *executable, char **paths,
         kest_build_clock(build, compiling_now, NULL,
                          (uint64_t)(host_nanoseconds() - opened));
     }
+    // A profile counts the calls the program makes, and a debugger stops in
+    // them and says which frame it is in, so both are compiled with every one
+    // of them a call. See D1156.
+    if (build != NULL && (strcmp(command, "profile") == 0 ||
+                          strcmp(command, "debug") == 0)) {
+        kest_build_calls_as_written(build);
+    }
     if (build == NULL) {
         // Before there is anywhere to write a diagnostic down, which is what
         // this door is for: the words are the ones every other refusal is

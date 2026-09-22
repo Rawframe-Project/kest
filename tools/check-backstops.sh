@@ -1256,10 +1256,10 @@ fn main() -> i32 {
         # frame rather than a wrong answer. See D813.
         "what": "a call charged its arguments twice over",
         "file": "src/value.c",
-        "from": r"""            uint32_t callee_adds =
-                slots[callee] - module->functions[callee]->param_slots;""",
-        "to": r"""            uint32_t callee_adds =
-                slots[callee] - module->functions[callee]->param_slots * 2;""",
+        "from": r"""    uint32_t callee_adds =
+        slots[callee] - module->functions[callee]->param_slots;""",
+        "to": r"""    uint32_t callee_adds =
+        slots[callee] - module->functions[callee]->param_slots * 2;""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",
         "caught": "what a program is told to find is what it uses",
@@ -5992,7 +5992,7 @@ fn main() -> i32 {
         # number. See D915.
         "what": "a frame step's instructions written down and not measured",
         "file": "docs/language.md",
-        "from": """**forty-one instructions**""",
+        "from": """**thirty-nine instructions**""",
         "to": """**forty instructions**""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",
@@ -6008,10 +6008,10 @@ fn main() -> i32 {
         # reached by a hole of its own. See D907 and D915.
         "what": "what the checked build asks written down and not measured",
         "file": "docs/language.md",
-        "from": """it asks its own compiler **fifty-two
-questions**""",
-        "to": """it asks its own compiler **fifty
-questions**""",
+        "from": """it asks its own compiler
+**forty-three questions**""",
+        "to": """it asks its own compiler
+**fifty questions**""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
@@ -6054,7 +6054,7 @@ anywhere, and it is why the gate holds""",
         # is the one a reader would most like to be able to trust. See D917.
         "what": "what a crossing runs written down and not measured",
         "file": "docs/language.md",
-        "from": """**nine instructions**""",
+        "from": """**eight instructions**""",
         "to": """**twelve instructions**""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",
@@ -6396,19 +6396,19 @@ fn main() -> i32 {
         # the one it can. See D901.
         "what": "a call handing over more slots than the body takes",
         "file": "src/lower.c",
-        "from": r"""    case KEST_IR_CALL:
-        emit(lower, KEST_OP_CALL, span);
+        "from": r"""        emit(lower, KEST_OP_CALL, span);
         emit_u16(lower, op->imm[0], span);
         emit_u16(lower, op->imm[1], span);""",
-        "to": r"""    case KEST_IR_CALL:
-        emit(lower, KEST_OP_CALL, span);
+        "to": r"""        emit(lower, KEST_OP_CALL, span);
         emit_u16(lower, op->imm[0], span);
         emit_u16(lower, (uint16_t)(op->imm[1] + 1), span);""",
         "make": ["debug"],
         "binary": "kest-debug",
         "program": "calling.kest",
+        # A remainder keeps `counted` a call rather than a body carried to
+        # where it is called (D1156).
         "source": """fn counted(a: i32, b: i32) -> i32 {
-    return a + b
+    return a % 100 + b
 }
 
 fn main() -> i32 {
@@ -9098,9 +9098,9 @@ fn main() -> i32 {
         # the whole program does and tells a host nothing it did not have.
         "what": "where a call back in starts answered from the top of the chain",
         "file": "src/value.c",
-        "from": """                host_widest = host_adds;
-                host_started = host_from[callee];""",
-        "to": """                host_widest = host_adds;""",
+        "from": """        sums->host_widest = host_adds;
+        sums->host_started = host_from[callee];""",
+        "to": """        sums->host_widest = host_adds;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "said to be in",
@@ -9131,10 +9131,9 @@ fn main() -> i32 {
         # something else.
         "what": "a reason from elsewhere said to have come from here",
         "file": "src/value.c",
-        "from": """                    reasons[which].from = reasons[callee].reach != 0
-                                              ? reasons[callee].from
-                                              : callee;""",
-        "to": """                    reasons[which].from = which;""",
+        "from": """            reasons[which].from =
+                reasons[callee].reach != 0 ? reasons[callee].from : callee;""",
+        "to": """            reasons[which].from = which;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/tree.kest"],
@@ -9149,10 +9148,10 @@ fn main() -> i32 {
         # the same question asked about one of them says.
         "what": "a caller of a function with no answer that says it has one",
         "file": "src/value.c",
-        "from": """                    reasons[which].reach = reasons[callee].reach != 0
-                                               ? reasons[callee].reach
-                                               : (uint8_t)why->reach;""",
-        "to": """                    reasons[which].reach = 0;""",
+        "from": """            reasons[which].reach = reasons[callee].reach != 0
+                                       ? reasons[callee].reach
+                                       : (uint8_t)why->reach;""",
+        "to": """            reasons[which].reach = 0;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/tree.kest"],

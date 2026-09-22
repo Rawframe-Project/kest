@@ -43,6 +43,13 @@ struct KestLower {
     uint32_t pointed_at;
 
     bool out_of_memory;
+    // What bodies carried into this one at their calls need of the frame: the
+    // slots one of them takes, above the body's own, and how much deeper the
+    // stack may go. Every carried body is done with before the next begins,
+    // so the slots are the widest one's rather than all of them. See D1156.
+    uint16_t carried_slots;
+    uint16_t carried_stack;
+    uint16_t carried_slack;
 };
 
 typedef struct KestLower Lower;
@@ -610,6 +617,388 @@ static bool local_and_constant_before(const Lower *lower, uint16_t *slot,
     return true;
 }
 
+// A small body carried to where it is called rather than called: its
+// instructions written into the caller with its slots moved above the
+// caller's own and its constants added to the caller's, the arguments stored
+// into those slots where a call would have handed them over, and every
+// `return` a jump to the end, which is the same three bytes -- so the jumps
+// inside it land where they landed. What `rules` measured by writing three of
+// them out by hand was 8.8 per cent, and D1070's reasons for not doing this
+// are each answered by what may be carried: see D1156.
+//
+// What a carried body may hold is what cannot be refused, loop or call:
+// arithmetic that wraps, comparisons, constants, locals and jumps forward.
+// Nothing in one can stop the program, so no refusal is ever said from inside
+// a body that is not standing in a frame of its own, and nothing in one
+// spends a step of a budget, so what a budget bounds is what it bounded less
+// the calls. Everything else is the kind of operand a call site cannot know
+// how to move, and a body with one in it is called as it always was.
+// A distance is how far forward a jump lands, counted from the end of the
+// jump, which is the one number the carrying can change: what a body ends
+// with is left out of it. See D1156.
+typedef enum { NO_OPERAND, A_SLOT, A_CONSTANT, A_NUMBER, A_DISTANCE } Operand;
+
+static const struct {
+    uint8_t op;
+    Operand operands[3];
+} CARRIED[] = {
+    {KEST_OP_CONST, {A_CONSTANT}},
+    {KEST_OP_CONST_RUN, {A_CONSTANT, A_NUMBER}},
+    {KEST_OP_LOAD, {A_SLOT}},
+    {KEST_OP_STORE, {A_SLOT}},
+    {KEST_OP_LOADN, {A_SLOT, A_NUMBER}},
+    {KEST_OP_STOREN, {A_SLOT, A_NUMBER}},
+    {KEST_OP_LOAD2, {A_SLOT, A_SLOT}},
+    {KEST_OP_LOADK, {A_SLOT, A_CONSTANT}},
+    {KEST_OP_STORE_K, {A_SLOT, A_CONSTANT}},
+    {KEST_OP_ADD_K_SELF, {A_NUMBER, A_SLOT, A_CONSTANT}},
+    {KEST_OP_SUB_K_SELF, {A_NUMBER, A_SLOT, A_CONSTANT}},
+    {KEST_OP_ADD_I_NARROW_TO, {A_NUMBER, A_SLOT}},
+    {KEST_OP_SUB_I_NARROW_TO, {A_NUMBER, A_SLOT}},
+    {KEST_OP_ADD_F_TO, {A_SLOT}},
+    {KEST_OP_SUB_F_TO, {A_SLOT}},
+    {KEST_OP_NARROW, {A_NUMBER}},
+    {KEST_OP_ADD_I_NARROW, {A_NUMBER}},
+    {KEST_OP_SUB_I_NARROW, {A_NUMBER}},
+    {KEST_OP_MUL_I_NARROW, {A_NUMBER}},
+    {KEST_OP_ROTATE, {A_NUMBER}},
+    {KEST_OP_POPN, {A_NUMBER}},
+    {KEST_OP_POP, {NO_OPERAND}},
+    {KEST_OP_TRUE, {NO_OPERAND}},
+    {KEST_OP_FALSE, {NO_OPERAND}},
+    {KEST_OP_ADD_I, {NO_OPERAND}},
+    {KEST_OP_SUB_I, {NO_OPERAND}},
+    {KEST_OP_MUL_I, {NO_OPERAND}},
+    {KEST_OP_NEG_I, {NO_OPERAND}},
+    {KEST_OP_AND_I, {NO_OPERAND}},
+    {KEST_OP_OR_I, {NO_OPERAND}},
+    {KEST_OP_XOR_I, {NO_OPERAND}},
+    {KEST_OP_NOT_I, {NO_OPERAND}},
+    {KEST_OP_NOT, {NO_OPERAND}},
+    {KEST_OP_I2F, {NO_OPERAND}},
+    {KEST_OP_U2F, {NO_OPERAND}},
+    {KEST_OP_F2I, {A_NUMBER}},
+    {KEST_OP_TO_F32, {NO_OPERAND}},
+    {KEST_OP_ADD_F, {NO_OPERAND}},
+    {KEST_OP_SUB_F, {NO_OPERAND}},
+    {KEST_OP_MUL_F, {NO_OPERAND}},
+    {KEST_OP_DIV_F, {NO_OPERAND}},
+    {KEST_OP_NEG_F, {NO_OPERAND}},
+    {KEST_OP_ADD_F32, {NO_OPERAND}},
+    {KEST_OP_SUB_F32, {NO_OPERAND}},
+    {KEST_OP_MUL_F32, {NO_OPERAND}},
+    {KEST_OP_DIV_F32, {NO_OPERAND}},
+    {KEST_OP_NEG_F32, {NO_OPERAND}},
+    {KEST_OP_LT_I, {NO_OPERAND}},
+    {KEST_OP_LE_I, {NO_OPERAND}},
+    {KEST_OP_GT_I, {NO_OPERAND}},
+    {KEST_OP_GE_I, {NO_OPERAND}},
+    {KEST_OP_LT_U, {NO_OPERAND}},
+    {KEST_OP_LE_U, {NO_OPERAND}},
+    {KEST_OP_GT_U, {NO_OPERAND}},
+    {KEST_OP_GE_U, {NO_OPERAND}},
+    {KEST_OP_LT_F, {NO_OPERAND}},
+    {KEST_OP_LE_F, {NO_OPERAND}},
+    {KEST_OP_GT_F, {NO_OPERAND}},
+    {KEST_OP_GE_F, {NO_OPERAND}},
+    {KEST_OP_EQ_I, {NO_OPERAND}},
+    {KEST_OP_NE_I, {NO_OPERAND}},
+    {KEST_OP_EQ_F, {NO_OPERAND}},
+    {KEST_OP_NE_F, {NO_OPERAND}},
+    // Forward jumps carry a distance, which is the same inside the caller as
+    // inside the body because the body is written whole and in order.
+    {KEST_OP_JUMP, {A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE, {A_DISTANCE}},
+    {KEST_OP_JUMP_TRUE, {A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_LT_I, {A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_LE_I, {A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_GT_I, {A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_GE_I, {A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_EQ_I, {A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_NE_I, {A_DISTANCE}},
+    {KEST_OP_JUMP_TRUE_LT_I, {A_DISTANCE}},
+    {KEST_OP_JUMP_TRUE_LE_I, {A_DISTANCE}},
+    {KEST_OP_JUMP_TRUE_GT_I, {A_DISTANCE}},
+    {KEST_OP_JUMP_TRUE_GE_I, {A_DISTANCE}},
+    {KEST_OP_JUMP_TRUE_EQ_I, {A_DISTANCE}},
+    {KEST_OP_JUMP_TRUE_NE_I, {A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_LT_F, {A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_LE_F, {A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_GT_F, {A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_GE_F, {A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_EQ_F, {A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_NE_F, {A_DISTANCE}},
+    {KEST_OP_JUMP_TRUE_LT_F, {A_DISTANCE}},
+    {KEST_OP_JUMP_TRUE_LE_F, {A_DISTANCE}},
+    {KEST_OP_JUMP_TRUE_GT_F, {A_DISTANCE}},
+    {KEST_OP_JUMP_TRUE_GE_F, {A_DISTANCE}},
+    {KEST_OP_JUMP_TRUE_EQ_F, {A_DISTANCE}},
+    {KEST_OP_JUMP_TRUE_NE_F, {A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_LT_K, {A_SLOT, A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_LE_K, {A_SLOT, A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_GT_K, {A_SLOT, A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_GE_K, {A_SLOT, A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_EQ_K, {A_SLOT, A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_NE_K, {A_SLOT, A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_LT_C, {A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_LE_C, {A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_GT_C, {A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_GE_C, {A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_EQ_C, {A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_NE_C, {A_CONSTANT, A_DISTANCE}},
+    // Carried as a jump to the end, which is the one thing about it that
+    // changes.
+    {KEST_OP_RETURN, {A_DISTANCE}},
+};
+
+// The operands of one of those, or NULL for an instruction a body carrying it
+// could not be moved with.
+static const Operand *carried_operands(uint8_t op) {
+    for (size_t i = 0; i < sizeof(CARRIED) / sizeof(CARRIED[0]); i++) {
+        if (CARRIED[i].op == op) {
+            return CARRIED[i].operands;
+        }
+    }
+    return NULL;
+}
+
+// The most bytes of code a carried body may be. A body is carried to every
+// place it is called from, so what a program grows by is this times the
+// calls; what a call costs is paid once a call whatever the body's size, so
+// past a few dozen instructions there is nothing left to buy. See D1156.
+#define MOST_CARRIED 160
+
+// Whether the function at `index` may be carried to a call of it from the
+// body being written: written already, by the same file, small, and made of
+// nothing but what `CARRIED` names.
+static bool may_carry(const Lower *lower, uint16_t index) {
+    if (!fusing() || lower->module->carrying_off ||
+        index >= lower->next - 1 ||
+        index >= lower->module->count) {
+        return false;
+    }
+    const KestChunk *callee = lower->module->functions[index];
+    if (callee == NULL || callee->native != NULL || callee->code_count == 0 ||
+        callee->code_count > MOST_CARRIED ||
+        callee->source != lower->chunk->source ||
+        callee->origin_count == 0) {
+        return false;
+    }
+    for (uint32_t at = 0; at < callee->code_count;) {
+        const Operand *operands = carried_operands(callee->code[at]);
+        if (operands == NULL) {
+            return false;
+        }
+        // And the row held to the instruction's own width, so that a row
+        // written wrong is a body called as it always was rather than one
+        // carried a byte out: `f2i` was written with no operand the first
+        // time, and the body it was in answered another case. See D1156.
+        uint32_t said = 1;
+        for (int o = 0; o < 3 && operands[o] != NO_OPERAND; o++) {
+            said += 2;
+        }
+        if (said != kest_op_wide(callee->code[at])) {
+            return false;
+        }
+        at += said;
+    }
+    return true;
+}
+
+static uint16_t operand_at(const uint8_t *code, uint32_t at) {
+    return (uint16_t)(code[at] | ((uint16_t)code[at + 1] << 8));
+}
+
+// Whether a carried body writes any of its parameters. One that does not can
+// read them where the caller's locals are, which is what a call that pushed
+// them out of a local and a carry that stored them back into a slot was two
+// copies of the same thing for.
+static bool writes_a_parameter(const KestChunk *callee) {
+    for (uint32_t at = 0; at < callee->code_count;) {
+        uint8_t op = callee->code[at];
+        const Operand *operands = carried_operands(op);
+        bool writes = op == KEST_OP_STORE || op == KEST_OP_STOREN ||
+                      op == KEST_OP_STORE_K || op == KEST_OP_ADD_K_SELF ||
+                      op == KEST_OP_SUB_K_SELF ||
+                      op == KEST_OP_ADD_I_NARROW_TO ||
+                      op == KEST_OP_SUB_I_NARROW_TO ||
+                      op == KEST_OP_ADD_F_TO || op == KEST_OP_SUB_F_TO;
+        uint32_t read = at + 1;
+        for (int o = 0; writes && o < 3 && operands[o] != NO_OPERAND; o++) {
+            if (operands[o] == A_SLOT &&
+                operand_at(callee->code, read) < callee->param_slots) {
+                return true;
+            }
+            read += 2;
+        }
+        at += kest_op_wide(op);
+    }
+    return false;
+}
+
+// The caller's slots the arguments were just loaded out of, one a parameter
+// slot, when the last thing written was one load of them all nothing points
+// between. Answers how many, or nought.
+#define MOST_ALIASED 16
+static uint16_t loaded_just_now(const Lower *lower, uint16_t wanted,
+                                uint16_t from[MOST_ALIASED]) {
+    if (wanted == 0 || wanted > MOST_ALIASED ||
+        lower->last_at < lower->pointed_at) {
+        return 0;
+    }
+    const uint8_t *at = lower->chunk->code + lower->last_at;
+    uint32_t wide = lower->chunk->code_count - lower->last_at;
+    if (lower->last_op == KEST_OP_LOAD && wide == 3 && wanted == 1) {
+        from[0] = operand_at(at, 1);
+        return 1;
+    }
+    if (lower->last_op == KEST_OP_LOADN && wide == 5 &&
+        operand_at(at, 3) == wanted) {
+        for (uint16_t i = 0; i < wanted; i++) {
+            from[i] = (uint16_t)(operand_at(at, 1) + i);
+        }
+        return wanted;
+    }
+    if (lower->last_op == KEST_OP_LOAD2 && wide == 5 && wanted == 2) {
+        from[0] = operand_at(at, 1);
+        from[1] = operand_at(at, 3);
+        return 2;
+    }
+    return 0;
+}
+
+// The function at `index`, written where it is called. The arguments are on
+// the stack where the call would have handed them over, so they are stored
+// into the slots the body calls its parameters, and the body runs above the
+// caller's own slots.
+static void carry(Lower *lower, uint16_t index, uint16_t argument_slots,
+                  KestSpan span) {
+    const KestChunk *callee = lower->module->functions[index];
+    uint16_t base = lower->body->slot_count;
+    // Written down on the body it was carried into, so that what the body is
+    // said to need still counts the call the other backend makes.
+    KestChunk *into = lower->chunk;
+    if (into->carried_count == into->carried_room) {
+        uint16_t room = into->carried_room == 0 ? 4 : into->carried_room * 2;
+        uint16_t *grown = KEST_ARENA_ARRAY(lower->module->arena, uint16_t, room);
+        if (grown == NULL) {
+            lower->out_of_memory = true;
+            return;
+        }
+        for (uint16_t i = 0; i < into->carried_count; i++) {
+            grown[i] = into->carried[i];
+        }
+        into->carried = grown;
+        into->carried_room = room;
+    }
+    into->carried[into->carried_count++] = index;
+    uint16_t from[MOST_ALIASED];
+    uint16_t aliased = 0;
+    if (argument_slots == callee->param_slots &&
+        !writes_a_parameter(callee)) {
+        aliased = loaded_just_now(lower, argument_slots, from);
+    }
+    if (aliased > 0) {
+        // Nothing to hand over: the parameters are read where they are.
+        take_back(lower);
+    } else if (argument_slots > 0) {
+        emit(lower, argument_slots == 1 ? KEST_OP_STORE : KEST_OP_STOREN,
+             span);
+        emit_u16(lower, base, span);
+        if (argument_slots != 1) {
+            emit_u16(lower, argument_slots, span);
+        }
+    }
+    uint32_t first = 0;
+    if (callee->constant_count > 0) {
+        first = kest_chunk_constant_run(lower->module, lower->chunk,
+                                        callee->constants,
+                                        callee->constant_classes,
+                                        (uint16_t)callee->constant_count);
+        if (lower->module->out_of_room) {
+            lower->out_of_memory = true;
+            return;
+        }
+    }
+    // The returns a body ends with land where they are, so they are left out
+    // and everything that went to one goes to where they were: a body that
+    // answers on its last line ends with that return and then the one a body
+    // with no answer would have.
+    uint32_t end = callee->code_count;
+    for (uint32_t at = 0; at < callee->code_count;
+         at += kest_op_wide(callee->code[at])) {
+        if (callee->code[at] != KEST_OP_RETURN) {
+            end = callee->code_count;
+        } else if (end == callee->code_count) {
+            end = at;
+        }
+    }
+    uint32_t which = 0;
+    for (uint32_t at = 0; at < end; which++) {
+        uint8_t op = callee->code[at];
+        uint32_t wide = kest_op_wide(op);
+        KestSpan where = {which < callee->origin_count
+                              ? callee->origins[which]
+                              : span.offset,
+                          1};
+        const Operand *operands = carried_operands(op);
+        if (op == KEST_OP_RETURN) {
+            emit(lower, KEST_OP_JUMP, where);
+            emit_u16(lower, (uint16_t)(end - at - wide), where);
+            at += wide;
+            continue;
+        }
+        emit(lower, op, where);
+        uint32_t read = at + 1;
+        for (int o = 0; o < 3 && operands[o] != NO_OPERAND; o++) {
+            uint16_t value = operand_at(callee->code, read);
+            read += 2;
+            if (operands[o] == A_SLOT) {
+                // A parameter read where the caller has it takes no slot of
+                // its own, so the body's other slots start at the base.
+                value = value < aliased ? from[value]
+                        : aliased > 0
+                            ? (uint16_t)(value - callee->param_slots + base)
+                            : (uint16_t)(value + base);
+            } else if (operands[o] == A_CONSTANT) {
+                value = (uint16_t)(value + first);
+            } else if (operands[o] == A_DISTANCE && at + wide + value > end) {
+                // Into the returns the body ends with, none of which is
+                // written: where they were is the end.
+                value = (uint16_t)(end - at - wide);
+            }
+            emit_u16(lower, value, where);
+        }
+        at += wide;
+    }
+    // Nothing written after the carried body may be taken back into it: its
+    // end is where every one of its returns lands.
+    lower->pointed_at = lower->chunk->code_count;
+    uint16_t taken = (uint16_t)(aliased > 0
+                                    ? callee->slot_count - callee->param_slots
+                                    : callee->slot_count);
+    if (taken > lower->carried_slots) {
+        lower->carried_slots = taken;
+    }
+    // Where the body's stack starts is where the arguments were, and the
+    // compiler's reckoning of this body already counted them there: what the
+    // carried body can add to the deepest moment is how much deeper it goes
+    // than the arguments it took off.
+    uint16_t deeper = callee->stack_needed > argument_slots
+                          ? (uint16_t)(callee->stack_needed - argument_slots)
+                          : 0;
+    if (deeper > lower->carried_stack) {
+        lower->carried_stack = deeper;
+    }
+    // And by how much the reckoning may now be more than enough: what the
+    // carried body adds, and the arguments too where they were never pushed
+    // because the body reads them where the caller has them.
+    uint16_t slack = (uint16_t)(deeper + (aliased > 0 ? argument_slots : 0));
+    if (slack > lower->carried_slack) {
+        lower->carried_slack = slack;
+    }
+}
+
 // Whether the last thing written was `load2` nothing points between, and the
 // two slots it read. See D1155.
 static bool two_locals_before(const Lower *lower, uint16_t *first,
@@ -1050,6 +1439,10 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         return;
 
     case KEST_IR_CALL:
+        if (may_carry(lower, op->imm[0])) {
+            carry(lower, op->imm[0], op->imm[1], span);
+            return;
+        }
         emit(lower, KEST_OP_CALL, span);
         emit_u16(lower, op->imm[0], span);
         emit_u16(lower, op->imm[1], span);
@@ -1175,6 +1568,9 @@ static bool lower_body(Lower *lower, const KestIrBody *body, KestChunk *chunk) {
     lower->before_op = 0;
     lower->before_at = 0;
     lower->pointed_at = 0;
+    lower->carried_slots = 0;
+    lower->carried_stack = 0;
+    lower->carried_slack = 0;
 
     // In the bodies' own arena: what is worked out here is read while this one
     // body is written and by nothing after it.
@@ -1220,8 +1616,15 @@ static bool lower_body(Lower *lower, const KestIrBody *body, KestChunk *chunk) {
     }
     fill_in_branches(lower);
 
-    chunk->slot_count = body->slot_count;
-    chunk->stack_needed = body->stack_needed;
+    // What the bodies carried here need of the frame: their slots above this
+    // body's own, and their stack said as slack beside the reckoning, because
+    // where a carried body runs is below the deepest moment of this one or
+    // above it and nothing here says which. See D1156.
+    chunk->slot_count = (uint16_t)(body->slot_count + lower->carried_slots);
+    chunk->stack_needed = (uint16_t)(body->stack_needed + lower->carried_stack);
+    if (lower->carried_slack > chunk->fused_slots) {
+        chunk->fused_slots = lower->carried_slack;
+    }
     chunk->folded = body->folded;
     chunk->folded_slots = body->folded_slots;
     return !lower->out_of_memory;

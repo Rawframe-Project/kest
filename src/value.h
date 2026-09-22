@@ -496,6 +496,13 @@ typedef struct {
     // `check-costs.sh` holds a body to asking for no more than its deepest
     // run used plus this. Nought for a body nothing was fused in.
     uint16_t fused_slots;
+    // The functions carried into this body at their calls rather than called
+    // (D1156). The machine never enters them from here, and the other backend
+    // does: a machine is sized for both engines, so a walk of what a body
+    // needs counts each of these as the call it would have been.
+    uint16_t *carried;
+    uint16_t carried_count;
+    uint16_t carried_room;
     // Whether anything in this program ever names this function as a value.
     // A call through a value enters one of these and nothing else, so it is
     // what a walk that meets one has to look at — and a program that names
@@ -576,6 +583,11 @@ typedef struct {
     // what a program is, about a machine that ran out. The one thing that
     // happened is said by whoever notices. See D750.
     bool out_of_room;
+    // Whether small bodies are carried to their calls rather than called. On
+    // for every build but one that is going to be profiled: a profile says how
+    // many times each body was entered, which is a question about the program
+    // as written rather than about how it was written out. See D1156.
+    bool carrying_off;
     KestLayout *layouts;
     const KestType **layout_types;
     uint32_t layout_count;

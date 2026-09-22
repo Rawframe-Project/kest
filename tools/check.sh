@@ -1471,8 +1471,10 @@ stopped="$scratch"/stopped
 cat > "$stopped".kest <<'KEST'
 module stopping
 
+// A remainder can stop a program, so `inner` is called rather than carried
+// into `work` (D1156) and the breakpoint at its start is where a call stops.
 fn inner(n: i32) -> i32 no.alloc {
-    return n + 1
+    return n % 7 + 1
 }
 
 // Something on the heap in the frame under the stop, which is what the walk

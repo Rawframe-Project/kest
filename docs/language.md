@@ -5692,10 +5692,11 @@ than guessed at: the build that checks itself counts every instruction it runs,
 and `KEST_DEEP=1` makes it say so. Run at two step counts and two entity
 counts and take the difference of the differences — a world is built once
 however many rounds there are, and a round has a loop of its own however many
-entities are in it — and a frame step an entity is **forty-one instructions**,
-of which five are `load.k`, five are `load`, four are `load2`, three are
-`load.n`, three are `store` and one is `store.n` — twenty-one of the forty-one,
-near enough half, move a value onto the stack or off it. The
+entities are in it — and what is left says that
+a frame step an entity is **thirty-nine instructions**, of which five are
+`load.k`, five are `load`, four are `load2`, three are `load.n`, three are
+`store` and three are `store.n` — twenty-three of the thirty-nine, near enough
+three in five, move a value onto the stack or off it. The
 arithmetic is six: two `mul.f32`, two `add.f32`, one `add.k.self` and one
 `sub.i.narrow`. That is what a stack machine is, and it is where the next thing
 to be gone after was found: it was fifty-seven instructions before `load.k` and
@@ -5704,12 +5705,15 @@ instruction, and what that bought is in D961. It was forty-six until an element
 read out of a run went straight into the frame rather than through the stack
 (D1012), forty-five until an addition wrote its answer where it was going
 (D1014), forty-four until a local weighed against a constant was one
-instruction with the jump that reads it (D1154), and forty-two until a count
-moved by a constant was moved where it is (D1155).
+instruction with the jump that reads it (D1154), forty-two until a count
+moved by a constant was moved where it is (D1155), and forty-one until the two
+helpers were carried to where they are called rather than called (D1156) --
+which is why three of the stores are `store.n`: what a call handed over on the
+stack is put where the carried body reads it.
 
 Counting them is not free, and what it costs is the other number this build
-says: over those forty-one instructions it asks its own compiler **fifty-one
-questions** about what it is about to do — whose slots these are, whose
+says: over those thirty-nine instructions it asks its own compiler
+**forty-three questions** about what it is about to do — whose slots these are, whose
 constants, whether what a frame holds is the shape the chunk was declared with.
 That is the machine holding itself to what it was handed rather than trusting
 it, and it is why the count above is worth what it says (D907). None of it is
@@ -5729,14 +5733,18 @@ is the crossing.
 19 ns for a call and 25 ns for a crossing, which is 6 ns more, best of 7 over 1000000 calls, spread 3%
 ```
 
-Counted rather than timed, a turn of that loop is **nine instructions** when
+Counted rather than timed, a turn of that loop is **eight instructions** when
 it calls a function of the program and **seven** when it crosses out. The dearer
-one runs two fewer: a crossing out is one instruction that does a great deal,
-and a call is `call`, the frame written between them, and the callee's own
-`load` and `return`. It is the clearest case on this page of a duration and a
-count disagreeing, and it is why both are printed rather than either alone —
-reading the count as though it were the time would have you move work across the
-boundary to save two instructions and pay six nanoseconds for it.
+one runs one fewer: a crossing out is one instruction that does a great deal,
+and a body as small as `inside` is not called at all but carried to where it is
+called, so what is left of the call is the argument put where the body reads it
+and the body's own `load`. It was nine, and the call was `call`, the frame
+written between them and the callee's own `load` and `return`, until D1156; the
+nanoseconds above were taken before that. It is the clearest case on this page
+of a duration and a count disagreeing, and it is why both are printed rather
+than either alone — reading the count as though it were the time would have you
+move work across the boundary to save an instruction and pay six nanoseconds for
+it.
 
 `tools/reference.kest` is a hop of a loop, a read through an index and a read
 through a reference. A `store<T>` hands out a `ref<T>` and can delete what it holds, so every
@@ -5779,8 +5787,9 @@ one `kest_call`.
 
 This is the one of the four the machine cannot count about itself. What it can
 say is what it did: a crossing in runs **two instructions** of the program and
-**three** of its questions, against **nine** and **twelve** for a turn of that
-loop. Fifteen nanoseconds for two instructions and eighteen for eleven — which
+**three** of its questions, against **eight** and **eight** for a turn of that
+loop. Fifteen nanoseconds for two instructions and eighteen for what was eleven
+before the call in the loop was carried (D1156) — which
 means almost all of what a crossing in costs is outside anything the machine
 counts. It is the frame the host writes, the arguments weighed on the way in and
 the answer weighed on the way back, and none of those is an instruction.
@@ -6338,7 +6347,7 @@ bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 577 lines:
-55860 bytes as tokens, 136241 as a tree, 174904 checked and 203853 compiled.
+55860 bytes as tokens, 136241 as a tree, 174904 checked and 206822 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
 
@@ -6355,7 +6364,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 20701 bytes, against the 203853 it costs to compile.
+file and 20701 bytes, against the 206822 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.

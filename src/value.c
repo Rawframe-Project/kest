@@ -97,6 +97,7 @@ static void *grow(KestArena *arena, void *items, uint32_t count,
 void kest_module_init(KestModule *module, KestArena *arena) {
     module->arena = arena;
     module->out_of_room = false;
+    module->carrying_off = false;
     module->functions = NULL;
     module->count = 0;
     module->capacity = 0;
@@ -1106,6 +1107,85 @@ static uint32_t kest_op_width(uint8_t op) {
 // together, written into `depth` and `slots` at this function's own place. A
 // program that can reach itself has no answer and neither has one that calls
 // through a value, because what a value points at is not known until it runs.
+// What one call adds to what a body needs, gathered as the walk goes. Kept
+// apart from the walk's own numbers because a call is counted in two places:
+// where the code calls, and where a body was carried rather than called.
+typedef struct {
+    uint32_t deepest;
+    uint32_t widest;
+    bool reaches_host;
+    uint32_t host_deepest;
+    uint32_t host_widest;
+    uint32_t host_started;
+} Sums;
+
+static bool measure_chunk(const KestModule *module, uint32_t which,
+                          uint8_t *state, uint32_t *depth, uint32_t *slots,
+                          uint32_t *host_depth, uint32_t *host_slots,
+                          uint32_t *host_from, KestNoLeast *reasons,
+                          KestReason *why);
+
+static bool count_the_call(const KestModule *module, uint32_t which,
+                           uint16_t callee, uint8_t *state, uint32_t *depth,
+                           uint32_t *slots, uint32_t *host_depth,
+                           uint32_t *host_slots, uint32_t *host_from,
+                           KestNoLeast *reasons, KestReason *why, Sums *sums,
+                           bool framed) {
+    if (callee >= module->count ||
+        !measure_chunk(module, callee, state, depth, slots, host_depth,
+                       host_slots, host_from, reasons, why)) {
+        state[which] = 0;
+        // A function that calls one with no answer has none either, and for
+        // the same reason: what a reader asks about a function is whether its
+        // own stack can be worked out, and it cannot if anything it reaches
+        // has no bottom. See D601.
+        if (reasons != NULL && callee < module->count) {
+            // And where it came from, which is what a reader opens: a
+            // function three calls above a `call.value` is told it calls
+            // through a value, and the one that does is the one to look at.
+            // See D602.
+            reasons[which].reach = reasons[callee].reach != 0
+                                       ? reasons[callee].reach
+                                       : (uint8_t)why->reach;
+            reasons[which].from =
+                reasons[callee].reach != 0 ? reasons[callee].from : callee;
+        }
+        return false;
+    }
+    // A body carried rather than called runs in its caller's frame, on both
+    // engines: what it adds is its slots and not a frame. See D1156.
+    uint32_t deeper = framed ? depth[callee] : depth[callee] - 1;
+    if (deeper > sums->deepest) {
+        sums->deepest = deeper;
+    }
+    // What a call adds is what the callee needs less the arguments it was
+    // handed: the machine puts the callee's frame at `top` less the slots the
+    // call carries, so the caller's arguments and the callee's parameters are
+    // the same slots counted once. Added whole, a chain of calls was charged
+    // its arguments twice at every step -- which is room a host is told to
+    // find and no program reaches. See D813.
+    uint32_t callee_adds =
+        slots[callee] - module->functions[callee]->param_slots;
+    if (callee_adds > sums->widest) {
+        sums->widest = callee_adds;
+    }
+    if (host_depth[callee] > 0) {
+        sums->reaches_host = true;
+    }
+    if (host_depth[callee] > sums->host_deepest) {
+        sums->host_deepest = host_depth[callee];
+    }
+    uint32_t host_adds =
+        host_slots[callee] == 0
+            ? 0
+            : host_slots[callee] - module->functions[callee]->param_slots;
+    if (host_adds > sums->host_widest) {
+        sums->host_widest = host_adds;
+        sums->host_started = host_from[callee];
+    }
+    return true;
+}
+
 static bool measure_chunk(const KestModule *module, uint32_t which,
                           uint8_t *state, uint32_t *depth, uint32_t *slots,
                           uint32_t *host_depth, uint32_t *host_slots,
@@ -1140,6 +1220,7 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
     // until a callee turns out to reach one from further in. A host reads the
     // number to size a machine and the name to know what to shorten. See D605.
     uint32_t host_started = which;
+    Sums sums = {0, 0, false, 0, 0, which};
     for (uint32_t at = 0; at < chunk->code_count;) {
         uint8_t op = chunk->code[at];
         if (op == KEST_OP_CALL_VALUE) {
@@ -1214,62 +1295,33 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
         if (op == KEST_OP_CALL_HOST) {
             reaches_host = true;
         }
-        if (op == KEST_OP_CALL) {
-            uint16_t callee = read_u16(chunk, at + 1);
-            if (callee >= module->count ||
-                !measure_chunk(module, callee, state, depth, slots, host_depth,
-                               host_slots, host_from, reasons, why)) {
-                state[which] = 0;
-                // A function that calls one with no answer has none either,
-                // and for the same reason: what a reader asks about a function
-                // is whether its own stack can be worked out, and it cannot if
-                // anything it reaches has no bottom. See D601.
-                if (reasons != NULL && callee < module->count) {
-                    // And where it came from, which is what a reader opens: a
-                    // function three calls above a `call.value` is told it
-                    // calls through a value, and the one that does is the one
-                    // to look at. See D602.
-                    reasons[which].reach = reasons[callee].reach != 0
-                                               ? reasons[callee].reach
-                                               : (uint8_t)why->reach;
-                    reasons[which].from = reasons[callee].reach != 0
-                                              ? reasons[callee].from
-                                              : callee;
-                }
-                return false;
-            }
-            if (depth[callee] > deepest) {
-                deepest = depth[callee];
-            }
-            // What a call adds is what the callee needs less the arguments
-            // it was handed: the machine puts the callee's frame at `top`
-            // less the slots the call carries, so the caller's arguments and
-            // the callee's parameters are the same slots counted once. Added
-            // whole, a chain of calls was charged its arguments twice at
-            // every step — which is room a host is told to find and no
-            // program reaches. See D813.
-            uint32_t callee_adds =
-                slots[callee] - module->functions[callee]->param_slots;
-            if (callee_adds > widest) {
-                widest = callee_adds;
-            }
-            if (host_depth[callee] > 0) {
-                reaches_host = true;
-            }
-            if (host_depth[callee] > host_deepest) {
-                host_deepest = host_depth[callee];
-            }
-            uint32_t host_adds =
-                host_slots[callee] == 0
-                    ? 0
-                    : host_slots[callee] -
-                          module->functions[callee]->param_slots;
-            if (host_adds > host_widest) {
-                host_widest = host_adds;
-                host_started = host_from[callee];
-            }
+        if (op == KEST_OP_CALL &&
+            !count_the_call(module, which, read_u16(chunk, at + 1), state,
+                            depth, slots, host_depth, host_slots, host_from,
+                            reasons, why, &sums, true)) {
+            return false;
         }
         at += kest_op_width(op);
+    }
+    // And the bodies carried here rather than called: the other backend
+    // still calls them, above this body's own slots, and neither engine gives
+    // one a frame. See D1156.
+    for (uint16_t i = 0; i < chunk->carried_count; i++) {
+        if (!count_the_call(module, which, chunk->carried[i], state, depth,
+                            slots, host_depth, host_slots, host_from, reasons,
+                            why, &sums, false)) {
+            return false;
+        }
+    }
+    deepest = deepest > sums.deepest ? deepest : sums.deepest;
+    widest = widest > sums.widest ? widest : sums.widest;
+    reaches_host = reaches_host || sums.reaches_host;
+    if (sums.host_deepest > host_deepest) {
+        host_deepest = sums.host_deepest;
+    }
+    if (sums.host_widest > host_widest) {
+        host_widest = sums.host_widest;
+        host_started = sums.host_started;
     }
 
     state[which] = 2;
