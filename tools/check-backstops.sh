@@ -5992,12 +5992,12 @@ fn main() -> i32 {
         # number. See D915.
         "what": "a frame step's instructions written down and not measured",
         "file": "docs/language.md",
-        "from": """**forty-two instructions**""",
-        "to": """**forty-one instructions**""",
+        "from": """**forty-one instructions**""",
+        "to": """**forty instructions**""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "a frame step an entity is 41 instruction(s)",
+        "caught": "a frame step an entity is 40 instruction(s)",
     },
     {
         # And the other half of that paragraph: what the build that checks

@@ -942,8 +942,11 @@ apart = cuts_apart(ADDING, 'add.i')
 # about: the second is the first with the store after it taken in as well
 # (D1014), and a check that counted only the first would be a check that
 # stopped counting the day the addition got shorter still.
+# And `add.k.self`, which is the local and the constant it adds taken in too
+# (D1155): `n` here is a name nothing writes, so it is a constant.
 together = (cuts_together(ADDING, 'add.i.narrow') +
-            cuts_together(ADDING, 'add.i.narrow.to'))
+            cuts_together(ADDING, 'add.i.narrow.to') +
+            cuts_together(ADDING, 'add.k.self'))
 if apart != 0 or together != 1:
     print("costs: an `i32` `+` and the cut behind it are one instruction and "
           "not two: %s pair(s) left apart and %s together" % (apart, together))
