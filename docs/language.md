@@ -943,6 +943,19 @@ it. What can be left unbalanced is a host's own state, taken through an
 would leave its bracket open. A host closes what it paired when a call answers
 false, the same way it would for any other refusal. See D1040.
 
+**And the program's own state is whatever the fault left.** A fault is not a
+rollback: a body that writes a field of every entity and then writes a second
+field, and runs off the end on the second pass, leaves the first pass whole and
+part of the second, and there is no transaction around either. **The machine is
+not spoiled by having refused** — the next `kest_call` answers, on the same
+world, half written. So a host holding a world through a refusal has three
+answers and has to pick one on purpose: throw the machine away and start it
+again, reload from a save it took before the call, or carry on knowing what it
+is carrying on with. What it must not do is read the refusal as though nothing
+happened. `examples/embed` runs all three halves of this — the refusal, what
+was left, and the call after it — so the sentence is held by something rather
+than written. See D1133.
+
 What it is given is what its names hold where the block ends, not where the
 `defer` is written: nothing is copied and put aside, because a copy per `defer`
 is memory nobody asked for and this language does not spend that quietly. So a

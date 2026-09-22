@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1132
+    CURRENT SHA:       (this commit) D1093-D1133
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -591,7 +591,22 @@ backend's own half instead.
    And the editor stays right when the disk moves under it: rename a function
    in a dependency without touching the buffer and both sides say `K0353` at
    the same line and column. The gate holds that now.
-14. Comparators, kept in step as the engines move. The harness names the mode
+14. *(done, D1132, D1133)* **What a refusal costs and what it leaves.** F10,
+   open since the foundation, is measured rather than read from the source: a
+   refusal inside a body that promises `no.alloc` raises K0604 at the line
+   that asked -- reading the file again and drawing a caret -- and leaves the
+   program heap at 912 bytes with 912 ever asked for. A build where the
+   refusal path takes sixteen bytes of that heap does not fail the assertion;
+   it dies, because taking heap runs the collector over a machine in the
+   middle of refusing.
+   And the failure-and-state policy is explicit now that it is measured.
+   **A fault is not a rollback and does not spoil the machine**: a body that
+   stamps every row and then writes a second field past the end leaves the
+   first pass whole, part of the second there, and answers the next call on
+   the same half-written world. The reference says so beside the `defer` rule,
+   with the three answers a host has, and `examples/embed` runs all three
+   halves of it.
+15. Comparators, kept in step as the engines move. The harness names the mode
    of every row (D1090), which is what stops an interpreter's number being
    read as a compiler's.
 

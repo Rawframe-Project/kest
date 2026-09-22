@@ -38876,3 +38876,44 @@ over.
 
 F10 moves out of what is read from the source. It is read from a run that
 `make fast` and `make check` both do every time.
+
+## D1133 — What a refusal leaves behind, said out loud
+
+Section 34 asks that the runtime failure and state policy be explicit **if
+partial effects are possible**. They are, and it was not.
+
+The reference already said what a fault does to the machinery: the machine stops
+where it faulted, `kest_call` answers false, no `defer` runs, and what the
+machine owns goes with the machine. What it did not say is what has happened to
+the **program's own world**, which is the half a host holding that world has to
+act on. So it was measured rather than reasoned about. A body that stamps a
+field of every row and then writes a second field up to an index, handed an
+index past the end:
+
+```text
+halfWritten(rows, 99) was refused with K0604
+every row's tag is 7, and the weight the second pass wrote is there
+halfWritten(rows, 1) after the refusal answered
+```
+
+**A fault is not a rollback and does not spoil the machine.** The first pass is
+whole, part of the second is there, and the next call answers on the same
+half-written world. That is now written in the reference beside the `defer`
+rule, with the three answers a host has and the one thing it must not do: read
+the refusal as though nothing happened.
+
+`examples/embed` runs all three halves — the refusal, what was left in the
+host's own rows, and the call after it — because the rows are the host's bytes
+and it can read what the refused call wrote without asking the program
+anything. Both new sentences were watched being said: changing the stamp from
+seven to six makes it say `a refused call left row 0 with tag 6, so the pass
+that finished did not`, and asking the second call for a row that is not there
+makes it say `a machine that refused once would not answer again`.
+
+**And where it goes in that host matters.** Written beside the other things
+done to those rows, it fired before the check above it could: a write into a
+lend that goes somewhere else is a fault with a backstop of its own, and this
+one noticed the wrong tag first and said the wrong thing about it. The gate
+said so — `MISSED: a write into a lend that goes somewhere else` — which is the
+backstop list catching a new check for stealing an old one's catch. It runs
+after that check now, on rows of its own.

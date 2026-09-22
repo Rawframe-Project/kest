@@ -111,7 +111,8 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, DAMAGE_OF, HURT_BY, WORST,
        EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST,
        BORN, HEALTH_OF, DROPPED, TOTAL_OF, ANSWER_INTO, SAY_INTO, WORN,
        MOVED, PUT_RECORD, OWN_ARRAY, HOW_MANY_ON, REACH,
-       HEAVIEST_CELL, AS_WRITTEN, RANKED, APPLY, DOUBLED, GROWS, WEIGHED,
+       HEAVIEST_CELL, HALF_WRITTEN, AS_WRITTEN, RANKED, APPLY, DOUBLED,
+       GROWS, WEIGHED,
        // What the list of names below has to be as long as. This host looked
        // each of them up into an array sized by the last name in this list,
        // so a name added after that one was a write past the end of it — this
@@ -3048,6 +3049,7 @@ int main(int argc, char **argv) {
          {KEST_L_F32}, 1},
         {"heaviestCell", {KEST_L_WORD, KEST_L_I32}, 2,
          {KEST_L_I32, KEST_L_F32}, 2},
+        {"halfWritten", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_I32}, 1},
         {"asWritten", {0}, 0, {KEST_L_TEXT}, 1},
         {"ranked", {KEST_L_F32, KEST_L_F32, KEST_L_F32}, 3, {KEST_L_I32}, 1},
         // A function value is one slot holding which function it is, which is
@@ -5330,6 +5332,71 @@ int main(int argc, char **argv) {
     }
     printf("and wrote its answer back into the same bytes: %d and %d\n",
            wrote_first, wrote_second);
+
+    // What a refusal leaves behind, which is the half of the failure policy a
+    // host has to act on. `halfWritten` stamps every row's tag and then writes
+    // weights up to `upto`; an `upto` past the end stops in the middle. A
+    // fault is not an end and not a rollback: the first pass is whole, part of
+    // the second is there, and the machine is usable afterwards. A host that
+    // carries on is carrying on with a half-written world, and the choice to
+    // do that has to be its own rather than something it finds out by reading
+    // the wrong number.
+    //
+    // Down here rather than beside the other things done to these rows,
+    // because the rows are lent and a write into a lend going somewhere else
+    // is a fault of its own with a check of its own above: this one would
+    // notice it first and say the wrong thing about it. See D1133.
+    {
+        Row halves[2];
+        memset(halves, 0, sizeof(halves));
+        KestValue lent = kest_borrow(engine.runtime, halves, 2, "Row",
+                                     sizeof(halves[0]));
+        if (lent.object == NULL) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        uint32_t upto_at = kest_frame_at(engine.runtime,
+                                         engine.entry[HALF_WRITTEN], 1);
+        engine.frame[0] = lent;
+        engine.frame[upto_at].integer = 99;
+        if (kest_call(engine.runtime, engine.entry[HALF_WRITTEN],
+                      engine.frame,
+                      sizeof(engine.frame) / sizeof(engine.frame[0]))) {
+            fprintf(stderr, "`halfWritten` answered about a row that is not "
+                            "there\n");
+            return 1;
+        }
+        if (!said_that(engine.runtime, "K0604", "outside an array")) {
+            return 1;
+        }
+        for (size_t r = 0; r < sizeof(halves) / sizeof(halves[0]); r++) {
+            if (halves[r].tag != 7) {
+                fprintf(stderr, "the pass that finished before a refusal left "
+                                "row %zu tagged %d\n", r, halves[r].tag);
+                return 1;
+            }
+            if (halves[r].cells[0].weight != 99.0f) {
+                fprintf(stderr, "what a refused call wrote before it stopped "
+                                "is not in row %zu, which weighs %g\n",
+                        r, (double)halves[r].cells[0].weight);
+                return 1;
+            }
+        }
+        // And the machine is not spoiled by having refused.
+        engine.frame[0] = lent;
+        engine.frame[upto_at].integer = 1;
+        if (!asks(&engine, HALF_WRITTEN)) {
+            fprintf(stderr, "a machine that refused once would not answer "
+                            "again\n");
+            return 1;
+        }
+        if (!kest_lend_ends(engine.runtime, lent)) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        printf("and a refused call left the pass that finished whole and the "
+               "machine able to answer again\n");
+    }
 
 
     // And back the other way: what the program writes is what the host reads,

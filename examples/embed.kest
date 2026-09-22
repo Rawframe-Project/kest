@@ -928,3 +928,18 @@ fn grows(n: i32) -> i32 {
     push(made, n)
     return len(made) + n
 }
+
+// A body that writes twice and runs off the end on the second pass, which is
+// what a host has to have an answer for: every row's tag is stamped, then the
+// weights are written up to `upto`, and an `upto` past the end stops there.
+// What the host is left holding is the first pass whole and part of the
+// second. See D1133.
+fn halfWritten(rows: [Row], upto: i32) -> i32 no.alloc {
+    for i in 0..len(rows) {
+        rows[i].tag = 7
+    }
+    for i in 0..upto {
+        rows[i].cells[0].weight = 99.0
+    }
+    return len(rows)
+}

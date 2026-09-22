@@ -40467,6 +40467,26 @@ See D1129.
 
 Next: CI green on the exact final HEAD.
 
+## What a refusal leaves behind, said out loud
+
+Section 34 asks the failure and state policy to be explicit if partial effects
+are possible. They are: a body that stamps a field of every row and then writes
+a second field past the end leaves **the first pass whole, part of the second
+there, and the machine able to answer the next call** on the same half-written
+world. A fault is not a rollback and does not spoil the machine.
+
+That is in the reference now beside the `defer` rule, with the three answers a
+host has -- throw the machine away, reload from a save taken before the call, or
+carry on knowing what it is carrying on with -- and the one thing it must not
+do, which is read the refusal as though nothing happened. `examples/embed` runs
+all three halves, and both of its new sentences were watched being said.
+
+See D1133.
+
+**Runs:** `make fast`, `make check`, and `examples/embed`.
+
+Next: CI green on the exact final HEAD.
+
 ## F10 closed by a run
 
 `examples/embed` refuses inside a body that promises `no.alloc` -- K0604 at
