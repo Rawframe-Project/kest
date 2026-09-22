@@ -4287,12 +4287,30 @@ than something written wrongly — that is where a host walks `kest_frame_gives`
 and lays the slots out itself, which it may do for a struct too when the way
 the language writes one is not the way it wants.
 
-The C API is 99 doors in 6 families: 39 for running a program, 18 for reading
+The C API is 107 doors in 6 families: 47 for running a program, 18 for reading
 what one is made of, 14 for watching what it cost, 13 for stopping one, 10 for
 its memory and 5 for steering it while it runs. A host that compiles, binds,
 sizes and calls needs 22 of them, which is what `examples/least.c` is; the rest
 are there for hosts that want more, and every one of them is called by one of
 the three hosts in this tree. See D1046.
+
+Eight of the running ones are made of the others and nothing else, for a host
+that keeps a world across frames: `kest_held_new` builds and starts a machine,
+`kest_held_free` hands both back, `kest_held_runtime` is the machine for
+everything else a host does with one -- a lend, a report, fuel -- and is
+another machine after a reload, `kest_held_begin` calls a function and keeps what it gives back as the world
+-- every handle in it said to the machine -- and `kest_held_call` calls with
+the world in front, finding a door by name once. `kest_held_run` reads a run of
+the world where it lies, by the name the program gave the piece, which is what
+drawing a map costs when the program is not asked to copy it out a byte at a
+time. `kest_held_changed` reads every file the build read and holds it to its
+mark. `kest_held_reload` is a reload that keeps the world: the running program's
+`save` answers bytes, a machine of the new build is lent them and its `restore`
+answers a world, and every door the host has called is held to still being
+there and taking what it took -- all before anything replaces the running
+machine, which is exactly where it was when any of it refuses.
+`examples/held.kest` is the program side of that, and `examples/embed.c` drives
+it. See D1151.
 
 A program that asks the host for nothing needs no host: `kest_start` takes NULL
 there, and what a host writer writes is a build, a call and what came back.
@@ -6017,6 +6035,7 @@ here, is a check that fails.
 | `frame.kest` | two structs that name each other, and a reference that may be nothing |
 | `game.kest` | where a package's directories start, from a module name |
 | `grow.kest` | an array whose size nobody wrote down |
+| `held.kest` | a world kept across frames and carried over a reload as bytes, the program side of `kest_held_reload` |
 | `holding.kest` | what a store holds while it grows, which was wrong until D1005 |
 | `host.kest` | what an `extern` declares and what crosses at one |
 | `inline.kest` | `[f32; 4]` where it stands, rather than a handle to four elsewhere |

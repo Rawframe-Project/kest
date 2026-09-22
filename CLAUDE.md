@@ -1091,6 +1091,7 @@ emitc    ir -> C, which the host's compiler makes a release engine from
 compile  ast -> ir
 vm       bytecode execution
 build    the stages as one thing, which is what a host has
+held     a machine a host keeps across frames, and reloads under a world
 lsp      the same build, answering an editor
 debug    the same machine, stopped and asked about
 main     CLI

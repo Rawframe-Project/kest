@@ -122,7 +122,7 @@ which the compiler proves nothing escapes from; a bytecode VM of 167
 instructions, one of which nothing compiles to and a debugger writes; diagnostics with stable codes,
 spans, notes, suggested fixes and `--json`, all of a file's mistakes in one
 pass, with the shape of every object a command writes versioned; one canonical
-source form and a formatter that holds it; a C embedding API of 99 doors
+source form and a formatter that holds it; a C embedding API of 107 doors
 covering compile, start, call, layout introspection with field names, lent
 memory, a frame's working memory marked and put back, per-machine limits, what
 a program may do, what a run did, and stopping a machine and asking it where it

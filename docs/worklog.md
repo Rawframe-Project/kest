@@ -40902,3 +40902,18 @@ The whole gate is run by CI on every push rather than here before every push;
 `make most` is what a change is pushed on. Nothing leaves the gate. See D1149.
 
 **Runs:** `check-docs.sh` over the page, and `make most`.
+
+## 2026-09-22, a world a host keeps, as doors
+
+Eight doors do what every host keeping a world wrote by hand: build and start,
+keep what a function gives back as the world, call with the world in front,
+read a run of the world where it lies, notice a file edited under the build,
+and reload under the world through the program's own `save` and `restore`,
+publishing nothing until all of it answered. `examples/held.kest` is the
+program side and `examples/embed.c` drives it; two ways of breaking the doors
+were each seen caught.
+
+See D1151.
+
+**Runs:** `examples/embed` against the doors and against two broken copies of
+them, `check-tables.sh`, `check-header.sh`, `check-dead.sh`, and `make most`.

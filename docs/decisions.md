@@ -39756,3 +39756,50 @@ of its first draft's own claims being wrong: an `f32` printed as `1` that is
 It is one more document than the rule allowed, and the rule is changed to name
 it. It says what and leaves why to the reference, which stays the one that is
 normative.
+
+## D1151 — A world a host keeps, as doors rather than as every host's code
+
+The colony's host (D1146) and `examples/engine.c` each wrote the same few
+hundred lines: a frame with the world in front of every call, every handle in
+the world said to the machine with `kest_keeps`, doors found by name and held
+to their width across a reload, the files the build read watched for edits,
+and a reload that builds beside the running machine, carries the world over
+and publishes only when that worked. Two hosts writing it were two sets of the
+same mistakes, and the colony's first cut of it was a hundred and fifty lines
+it did not need to be.
+
+Eight doors do it now, all in the running family and all made of the doors
+that were there and nothing else, so a host that wants to do any of it its own
+way still can:
+
+- `kest_held_new`, `kest_held_free` and `kest_held_runtime` -- a build and a
+  machine held as one, and the machine for everything else a host does with
+  one;
+- `kest_held_begin` -- call a function and keep what it answers as the world,
+  every handle said to the machine;
+- `kest_held_call` -- the world in front, the door found by name once and
+  remembered;
+- `kest_held_run` -- a run of the world read where it lies, by the name the
+  program gave the piece. It is the colony's 288 µs against 10 (D1146), and it
+  was done by reading `KestRun` by hand; the door holds the handle to being a
+  run before it hands the bytes over;
+- `kest_held_changed` -- every file the build read, read again and held to its
+  mark, which is FNV over the bytes and needs no clock and no file system's
+  idea of when a file was written: the library is ISO C;
+- `kest_held_reload` -- the running program's `save` answers bytes, a machine
+  of the new build is lent them and its `restore` answers a world, and every
+  door the host has called is held to being there and taking what it took
+  beyond the world. Nothing replaces the running machine until all of that
+  answered; any refusal leaves it exactly where it was and says which stage.
+
+The protocol is bytes rather than the lends `examples/engine.c` saves through,
+because bytes are what a save to disk is as well: a program that can reload can
+be saved, and a host that saves has nothing more to write.
+
+Held by `examples/embed.c`, driving `examples/held.kest` through all of it: two
+steps, the cells read where they lie, a reload from itself that carries the
+turn over, one refused by a program with no `restore` that leaves the world
+where it was, and a file edited under a held build noticed. Watched catching:
+with `kest_held_changed` answering no whatever the bytes are, `embed` refuses;
+with the saved bytes zeroed on the way across, it says `a reload lost the
+world`.
