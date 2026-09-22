@@ -1013,7 +1013,27 @@ static KestExpr *parse_match(Parser *parser) {
         arm->span =
             span_between(arm_start, parser->tokens[parser->position - 1].span);
 
-        if (match(parser, KEST_TOK_ARROW)) {
+        if (match(parser, KEST_TOK_ARROW) && check(parser, KEST_TOK_LBRACE)) {
+            // `Case -> {` is an arm from a language whose blocks are values.
+            // Here an arm that does something is a block with no arrow, so this
+            // says that, and reads the block as the arm it was meant to be:
+            // every arm written this way is one mistake, rather than the first
+            // one and then a line about an arrow for every arm after it. The
+            // sentence the expression parser has for a stray block is about
+            // `if`, which is not what was written. See D1147.
+            error_at(parser, current_span(parser), "K0204",
+                     "expected an expression, found %s",
+                     kest_token_name(KEST_TOK_LBRACE));
+            suggest(parser,
+                    "an arm that does something is a block with no `->` "
+                    "before it: `%.*s {`",
+                    (int)arm->span.length, span_text(parser, arm->span));
+            blocks = true;
+            if (!parse_block(parser, &arm->body)) {
+                return NULL;
+            }
+        } else if (parser->tokens[parser->position - 1].kind ==
+                   KEST_TOK_ARROW) {
             gives = true;
             arm->value = parse_expr(parser);
             if (arm->value == NULL) {

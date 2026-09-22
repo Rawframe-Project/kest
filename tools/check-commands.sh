@@ -3848,6 +3848,7 @@ K0203|fn f(a: 3) -> i32 {\n    return 0\n}|a type is a name, `[T]`, `[T; N]` or 
 K0204|fn main() -> i32 {\n    let a = {\n        1\n    }\n    return a\n}|a block is not a value: an `if` gives one with `->`
 K0204|fn main() -> i32 {\n    let a = 1\n    let b = 2\n    if a >\n            b {\n        return 1\n    }\n    return 0\n}|a line may end after `>` because a type may
 K0204|fn main() -> i32 {\n    let a = 1\n    let b = 2\n    if a\n            > b {\n        return 1\n    }\n    return 0\n}|a line may end after `>` because a type may
+K0204|enum Door {\n    Shut\n    Locked(i32)\n}\n\nfn main() -> i32 {\n    let d = Door.Shut\n    match d {\n        Shut -> {\n            return 0\n        }\n        Locked(key) -> {\n            return key\n        }\n    }\n    return 1\n}|an arm that does something is a block with no `->` before it: `Locked(key) {`
 K0201|fn main() -> i32 {\n    let a = 1\n    let b = a > 0 ? 1 : 2\n    return b\n}|there is no ternary here and `?` means optional
 K0314|fn main() -> i32 {\n    let a = "x" + "y"\n    return len(a)\n}|a hole joins them
 K0345|fn main() -> i32 {\n    let a = if true { 1 } else { 2 }\n    return a\n}|this `if` gives nothing, and both its arms end in a value
