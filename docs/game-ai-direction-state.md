@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1144
+    CURRENT SHA:       (this commit) D1093-D1147
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -18,15 +18,13 @@ reasoning; this holds the position.
                        runs 2.7 times fewer instructions since it stopped
                        working out where a refusal would be reported before
                        every door call
-    LAST CI:           green on 3b2607c, all nine jobs -- linux, linux-arm64,
+    LAST CI:           green on 6bf6e02, all nine jobs -- linux, linux-arm64,
                        macos, windows, clang, threads, package, linux-full
-                       and agree, linux-full catching all 900 holes. What is
-                       after it is D1144, which changes one check
+                       and agree. What is after it is D1145 to D1147
     LAST FAST GATE:    green
-    LAST FULL GATE:    `make check` green here, under a plain `/tmp`, with
-                       every one of the 900 holes caught -- the first whole
-                       gate on this box since the sweep started missing one
-                       (D1144)
+    LAST FULL GATE:    `make check` green here on e7657d6, the loader and
+                       the parser of D1145 and D1147, every one of the 900
+                       holes caught
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.
                        Every number below was taken on it.
@@ -743,6 +741,19 @@ the same workload.
    the gate nests its rooms, so under a plain `/tmp` the window is 2020 to
    3976 -- between the rungs. The ceiling is walked a quarter of a kilobyte at
    a time now. Every replication by hand had been one room deep.
+25. *(done, D1146)* **A game written in it.** `/home/kest/colony` is a colony
+   game whose rules are six hundred lines of Kest and whose host is raylib.
+   Two thousand people on a 512-by-512 map are 0.74 ms a frame in the rules
+   as C and 4.7 ms on the machine; a reload that keeps the world is 4.7 ms
+   small and 50 ms for 512 people on 196,608 cells; a broken edit is refused
+   in a millisecond with the diagnostic in the game's corner. Reading the
+   ground where it lies rather than having the program copy it was 288 µs
+   against 10. It found D1145 and D1147, and a 26% number for inlining.
+26. *(done, D1145)* **A library named without a slash.** `kest_build` ran the
+   library and a module's path together; `KEST_LIB` never did.
+27. *(done, D1147)* **`Case -> {` in a `match`.** Said as what it is, one
+   diagnostic an arm with the arm's own fix, where it was one about `if` and
+   then a line about an arrow for every arm after it.
 
 ## Closed by measurement
 

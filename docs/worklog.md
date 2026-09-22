@@ -40828,3 +40828,42 @@ See D1144.
 **Runs:** every ceiling from 1 to 14000 over the holed build, the check old
 and new at three path lengths with and without the hole, `check-tables.sh`,
 and `make check` under `/tmp`.
+
+## 2026-09-22, a library path without a slash
+
+The first host written outside this tree named the library the way a
+directory is usually named, without a slash after it, and was told `std` was
+in `libstd`. `KEST_LIB` has always added the slash; `kest_build` did not. The
+loader adds it now, for every door, and `examples/embed.c` builds with `"lib"`
+to hold it.
+
+See D1145.
+
+**Runs:** `examples/embed` against the loader before and after, `make fast`,
+and `make most`.
+
+## 2026-09-22, a game in it
+
+`/home/kest/colony` is a colony game whose rules are about six hundred lines
+of Kest, drawn by a raylib host in C outside this tree. It runs: colonists
+chop, haul, sow, reap and build, get hungry and tired, and join while there is
+food to spare, and two thousand of them on a 512-by-512 map cost 0.74 ms a
+frame in the engine a release runs.
+
+It found three things about the language. A host naming the library without
+a slash was sent to `libstd` (D1145). `Case -> {` in a `match` was answered
+with a sentence about `if` and then a line about an arrow for every arm after
+it (D1147). And a call to a one-line function in the game's search is 26% of
+what the machine spends there, three times the number D1070 set inlining
+aside on. The rest -- where a frame went, what the boundary costs read in
+place and copied, the two engines side by side -- is D1146.
+
+It also found that the first draft of the rules walked the whole map for jobs
+that were not there, which is the game's and not the language's, and
+`kest profile` is what found it.
+
+See D1145, D1146 and D1147.
+
+**Runs:** `make trial` in the colony, its host headless under `xvfb-run` at
+five sizes on both engines, `kest profile` over the trials, the refusal corpus
+against the parser before and after, and `make check`.

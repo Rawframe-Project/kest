@@ -39453,3 +39453,184 @@ so the sweep keeps its holes and the list does not grow.
 What this repeats is the rule in CLAUDE.md about a number a machine gave a
 check -- a level, a band, an address space -- being asked of the run rather
 than written in the check. Three ceilings are three such numbers.
+
+## D1145 — A library named without a slash after it
+
+`kest_build(path, library, ...)` joins `library` and a module's path by
+running them together, so `"/home/kest/kest/lib"` was looked for as
+`/home/kest/kest/libstd`:
+
+```
+ --> game/map.kest:3:8
+  |
+3 | import std.random
+  |        ^^^^^^^^^^ a `std` import resolves from the library, which is `/home/kest/kest/libstd`
+```
+
+`KEST_LIB` has always been read the other way: `kest_library_path` puts the
+separator on when it is not there. Two doors onto one question answered it two
+ways, and the one a host is given was the one that did not. Every host in this
+tree hands over `"lib/"` or NULL, so nothing here had asked; the first host
+written outside it asked in its first minute.
+
+The separator goes on where the library is taken, in `kest_load_many`, which
+every build passes through -- the command line, a host, the language server --
+so that there is one reading of a library path rather than one per door.
+`include/kest.h` says so beside `kest_build`.
+
+Held by `examples/embed.c`, which builds its own program a third time with the
+library named `"lib"` and nothing after it, and refuses if that is not found.
+Against the loader before this it says `a library named without a slash after
+it was not found`.
+
+Found by writing a game outside this tree (D1146), which is the one place a
+host's own layout is not this tree's.
+
+## D1146 — A game written in it, and what the game found
+
+*measured*, by a game that is not in this tree: `/home/kest/colony`, commit
+`6a821f2`. About six hundred lines of Kest are the rules -- ground from a
+seed, colonists with hunger and tiredness, jobs found by a breadth-first
+search, trees chopped and hauled to a stockpile, fields sown and reaped, walls
+built out of wood -- and five hundred lines of C are a raylib host that owns
+the window and the mouse. It is outside this tree because raylib is a
+dependency and this tree has none; it links `libkest.a` and includes
+`kest.h`, which is what a game would do.
+
+Everything below is a run of that repository, on the reference machine.
+
+**What the language caught while the rules were being written.** They were
+written by a model, which is the case the language is meant for, and three
+mistakes were stopped before anything ran:
+
+- `walk` wrote a colonist's `x` and `y` into the copy it had been handed.
+  `K0346` said so at each of the four lines and said what to write instead --
+  answer with the changed one. Run as written, nobody in the colony would ever
+  have moved, and nothing would have said why.
+- `array(cells, 0)` for a field declared `[u8]` is `[i32]`, and `K0310` said
+  which field wanted what.
+- A `match` arm written `Idle -> {`, which is Rust's and not this language's.
+  `K0204` stopped at the right column, and then said `an if gives one with
+  ->`, which is about something else. That is D1147.
+
+**What a frame costs, and where it went.** `kest profile`'s count of calls per
+function is what found every one of these, each in a minute:
+
+| the colony | steps before | after |
+| --- | --- | --- |
+| fields ripened by walking every cell, every frame | 24.7M | a walk a second |
+| searches made for a kind of job there is none of | 23.1M | 9.5M, and the neighbour worked out rather than asked for |
+| searches for what somebody else had already claimed | 9.46M | 0.96M |
+| searches for what cannot be reached until the map changes | 1,465M | 15.3M |
+
+Each row answered what it answered before to the number -- the colony after
+five minutes has the same people, wood, food, fields and walls -- which is
+the same differential this tree holds its optimizer to, done by hand. None of
+them is the language: all four are the game doing work it did not need to.
+
+**What the boundary costs.** The host draws the ground, which is three bytes a
+cell. Lending it three buffers and having the program copy the cells into
+them cost **288 µs a frame** on a 96-by-64 map, seven times what the whole
+simulation cost. Reading the three runs where they lie -- the header says a
+host may read a `KestRun`, and holds itself to `KEST_ABI_VERSION` if it does --
+cost **10 µs**. What the host has to find for that is which slot of the world
+each run is in, and it finds them by the names the layout gives the pieces,
+`ground.tiles`, `marks` and `items`.
+
+**What the two engines cost.** The same program, the same seed, the same
+orders, 1,800 frames; every row answered the same wood and food on both:
+
+| map | people | the machine | the rules as C | |
+| --- | --- | --- | --- | --- |
+| 96x64 | 8 | 24.6 µs | 17.0 µs | 1.4x |
+| 128x96 | 32 | 51.1 µs | 26.7 µs | 1.9x |
+| 256x192 | 128 | 878 µs | 114 µs | 7.7x |
+| 512x384 | 512 | 5,744 µs | 462 µs | 12.4x |
+| 512x512 | 2,000 | 4,709 µs | 743 µs | 6.3x |
+
+Two thousand people on a quarter of a million cells is three quarters of a
+millisecond a frame in the engine a release runs, and under five in the one
+a reload runs. The small rows are the crossing and the machine's own
+standing costs; the large ones are the search, which is the loop the C
+compiler is best at.
+
+**What a reload costs.** The host watches every file the build read and,
+when one is written, builds the rules again beside the running machine, has
+the old one save the world into memory of the host's, has a machine of the
+new build make a world out of those numbers, and only then lets the old one
+go -- `examples/engine.c`'s order, in a game. An edit that makes people walk
+twice as fast, run with no hands on it:
+
+| map | people | reload | building | saving | making it again |
+| --- | --- | --- | --- | --- | --- |
+| 96x64 | 8 | 4.7 ms | 2.7 | 0.2 | 1.8 |
+| 256x192 | 128 | 22.6 ms | 3.0 | 7.1 | 12.2 |
+| 512x384 | 512 | 50.2 ms | 3.2 | 6.2 | 40.3 |
+
+A field added to the world is the same reload, 6.7 ms at the smallest size,
+because the new program makes its own world rather than being handed the old
+one's bytes. An edit that does not build is refused in 1.0 ms, says the first
+diagnostic and where it is in the corner of the game, and the colony carries
+on under the rules it had. After a reload the rules run on the machine: the
+compiled bodies were written from the program before the edit, and a machine
+refuses them.
+
+**One number for a decision already made.** D1070 measured what inlining
+would buy on `bench/control.kest` at 8% and set it aside. In the search here,
+asking `map.open(tile)` for each cell rather than writing its three
+comparisons in place is **26%** of the machine's steps (7.48M written in
+place, 9.46M asked). It stays a call, because a rule written twice is two
+rules, and the engine a release runs is the C compiler's to inline. It is
+written here because it is three times the number that decision was made on.
+
+**What was awkward, and is not a defect.** A world is a struct and a struct
+is a value, so a count the world keeps between frames cannot be a field of it:
+the host hands the world in and does not take a new one back. The counts are
+a run of `i32` behind a handle, named by constants, and the clock is a run of
+one `f32`. That is what `K0346` says to do and what D1065 decided; it is
+recorded here as what it cost to write, which is a table of constants where a
+reader would have looked for fields.
+
+## D1147 — `Case -> {` said as what it is
+
+A model writing the colony (D1146) wrote every block arm of a `match` the way
+Rust writes one:
+
+```kest
+enum Door {
+    Shut
+    Locked(i32)
+}
+
+fn open(door: Door) -> i32 {
+    match door {
+        Shut {
+            return 0
+        }
+        Locked(key) {
+            return key
+        }
+    }
+}
+```
+
+with `->` between the case and the brace. The parser read the arrow as an arm
+that gives a value, met a brace where a value begins, and said `K0204` at the
+right column with the sentence the expression parser has for a stray block --
+`a block is not a value: an if gives one with ->`, which is about `let a = {`
+and not about an arm. Having not read an arm, it then said `K0201 expected end
+of line, found ->` at every arm after it, and `K0202` at the brace that closed
+the function. Nine diagnostics for one mistake made nine times, eight of them
+about an arrow.
+
+The arm parser looks now: an arrow with a brace straight after it is `K0204`
+with the arm's own fix -- `an arm that does something is a block with no ->
+before it: Locked(key) {` -- and the block is read as the arm it was meant to
+be. One diagnostic an arm, each naming the line to change and what to change
+it to, and none about anything else. The code is the one it was, because what
+went wrong is still an expression that was not there.
+
+Held by the refusal corpus in `check-commands.sh`, with a program of two such
+arms whose words are the second arm's: against the parser before this, the
+second arm said `K0201` and the line said `K0204 said expected an expression,
+found {`.
