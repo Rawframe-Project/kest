@@ -18,6 +18,11 @@ reasoning; this holds the position.
                        runs 2.7 times fewer instructions since it stopped
                        working out where a refusal would be reported before
                        every door call
+    LAST CI:           green on 6a1be89, all nine jobs -- linux, linux-arm64,
+                       macos, windows, clang, threads, package, linux-full
+                       and agree. That commit is the one section 34's last
+                       criterion is about, and nothing is committed after it
+                       but the line you are reading
     LAST FAST GATE:    green
     LAST FULL GATE:    green at 6dd0912
     REFERENCE MACHINE: the spare Linux box this repository is on --
@@ -402,6 +407,27 @@ One thing both decisions paid for about checks: a door and an instruction that
 are one answer are one answer to a hole as well, so breaking the door breaks
 both engines and the differential sees nothing. Both holes are in the
 backend's own half instead.
+
+## Where section 34 stands
+
+Thirty-one criteria. **Thirty are met by something that runs**, and the last of
+them -- supported CI green on the exact final HEAD -- went green on `6a1be89`,
+all nine jobs.
+
+**One is a judgement and it is the owner's to make, not this worker's.** The AI
+section asks that "task completion/time/repair/silent escapes" be measured. The
+suite exists, the hidden tests exist, the harness runs both languages, what a
+mistake costs to be told about is measured in milliseconds, and nothing
+escapes. **But no model has been run against any of it**, and running them has
+been this project's note as the owner's from the start. Whether an instrumented
+suite with no model run counts as "task completion measured" decides whether
+`GAME_AI_DIRECTION_COMPLETE` can be marked, and reading it either way is
+defensible.
+
+So it is not marked here. `docs/report.md` says the same thing in its own
+words: the runtime claim, the contract claim and the loop claim each hold by
+something that runs, and the claim the owner asked for first has an instrument
+and no result.
 
 ## The report
 
