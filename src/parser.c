@@ -426,6 +426,19 @@ static void end_statement(Parser *parser) {
                 "an `if` gives a value with `->`, as "
                 "`if c -> a else -> b`");
     }
+    // `Thing { x: 1.0 }`, a struct built the way a language with struct
+    // literals builds one. Here it is built by position, the way a function
+    // is called, so the brace is where the line ended. See D1148.
+    if (found.kind == KEST_TOK_LBRACE && parser->position >= 1 &&
+        parser->tokens[parser->position - 1].kind == KEST_TOK_IDENT &&
+        peek_at(parser, 1).kind == KEST_TOK_IDENT &&
+        peek_at(parser, 2).kind == KEST_TOK_COLON) {
+        KestSpan named = parser->tokens[parser->position - 1].span;
+        suggest(parser,
+                "a struct is built by position, in the order its fields are "
+                "declared: `%.*s(...)`",
+                (int)named.length, span_text(parser, named));
+    }
     // A statement that begins with a word this language nearly has is a
     // misspelt keyword, and the message above is about the token after it —
     // which is the one thing in the line that is not wrong. So the word is
@@ -1410,7 +1423,17 @@ static KestExpr *parse_postfix(Parser *parser) {
                 } while (match(parser, KEST_TOK_COMMA));
             }
             KestSpan close = current_span(parser);
-            expect(parser, KEST_TOK_RPAREN);
+            // `Thing(x: 1.0)` is a call from a language that passes by name.
+            // Nothing does here: a struct is built, and a function called,
+            // with what it takes in the order it is declared. See D1148.
+            if (!expect(parser, KEST_TOK_RPAREN) &&
+                check(parser, KEST_TOK_COLON) &&
+                parser->tokens[parser->position - 1].kind == KEST_TOK_IDENT) {
+                suggest(parser,
+                        "nothing is passed by name: `%.*s(...)` takes what "
+                        "it takes in the order it is declared",
+                        (int)expr->span.length, span_text(parser, expr->span));
+            }
 
             KestExpr *call = new_expr(parser, KEST_EXPR_CALL,
                                       span_between(expr->span, close));

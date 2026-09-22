@@ -201,13 +201,28 @@ static bool say_wrapped_once(Checker *checker, const KestType *got,
     return true;
 }
 
+// A number or a truth where text is wanted. What makes text of one here is a
+// hole, and a reader arriving from a language whose `print` takes anything
+// writes `io.print(3)` and is told only the two types. See D1148.
+static bool say_made_text(Checker *checker, const KestType *got,
+                          const KestType *want) {
+    if (got == NULL || want == NULL || want->tag != KEST_T_TEXT ||
+        (got->tag != KEST_T_INT && got->tag != KEST_T_FLOAT &&
+         got->tag != KEST_T_BOOL)) {
+        return false;
+    }
+    suggest(checker, "a hole makes text of it: `\"{...}\"`");
+    return true;
+}
+
 // Reports a mismatch in the one shape every mismatch is reported in, so a
 // reader learns to read it once.
 static void expected_but(Checker *checker, KestSpan span, const KestType *want,
                          const KestType *got, const char *where) {
     report(checker, span, "K0310", "%s expects `%s`, found `%s`", where,
            type_name(checker, want), type_name(checker, got));
-    if (!say_if_let(checker, got, want)) {
+    if (!say_if_let(checker, got, want) &&
+        !say_made_text(checker, got, want)) {
         say_wrapped_once(checker, got, want);
     }
 }
@@ -219,7 +234,8 @@ static void expected_called(Checker *checker, KestSpan span,
                             const char *called) {
     report(checker, span, "K0310", "`%s` expects `%s`, found `%s`", called,
            type_name(checker, want), type_name(checker, got));
-    if (!say_if_let(checker, got, want)) {
+    if (!say_if_let(checker, got, want) &&
+        !say_made_text(checker, got, want)) {
         say_wrapped_once(checker, got, want);
     }
 }
@@ -240,7 +256,8 @@ static void expected_for(Checker *checker, KestSpan span, const KestType *want,
     report(checker, span, "K0310", "`%.*s` expects `%s`, found `%s`",
            (int)name.length, kest_span_text(declared_in, name),
            type_name(checker, want), type_name(checker, got));
-    if (!say_if_let(checker, got, want)) {
+    if (!say_if_let(checker, got, want) &&
+        !say_made_text(checker, got, want)) {
         say_wrapped_once(checker, got, want);
     }
 }
