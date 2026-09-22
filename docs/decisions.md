@@ -39921,3 +39921,42 @@ Every workload answers what it answered, fused and with `KEST_PLAIN=1`.
 that distance is dispatches: the next of the commonest pairs are an element
 read by a local index from a local run, a value weighed against a constant
 off the stack, `t = s + k`, and a constant stored into a local.
+
+## D1155 — Four more pairs as one instruction each
+
+*measured*, the way D1154 was, and chosen off what `rules` runs most once
+D1154's jump was in: `KEST_DEEP=1` counts every pair the machine dispatches.
+
+- **`jump.false.<cmp>.c`** -- a value on the stack weighed against a constant,
+  and the jump: `const` and a whole-number compare-and-jump, which is every
+  `xs[i] > 0`. Five bytes, a constant and a forward distance.
+- **`index.ll`** -- an element read out of a run a local holds by an index a
+  local holds: `load2` and `index`. Only where an element is one slot: a struct
+  read this way is stored next, and `index.to` takes that store into the read
+  (D1012), which is worth more. Made for every element it was first, and
+  `kernel`, whose elements are structs, went 4.3 per cent the wrong way.
+- **`add.k.self`, `sub.k.self`** -- a local moved by a constant where it is:
+  `load.k`, the arithmetic and the store it was written into, which is every
+  `count += 1` and every timer that runs down. The cut is the kind's.
+- **`store.k`** -- a constant written into a local: `const` and `store`.
+
+Each is made where the lowering already takes the pair's second half into
+something and finds the first half just before it, nothing pointing between,
+and `KEST_PLAIN` turns all of them off. A fused instruction never pushes what
+its first half pushed, so the compiler's reckoning of how deep a body goes may
+be more than it goes; each says so as slack, the way D1012's does, rather than
+taking it off a number whose deepest moment may be somewhere else. The
+build that checks itself holds every slot and constant each reads to being the
+body's own, and what it moves is counted the way the pair it was made of is.
+
+| workload | before D1154 | after D1154 | after this | |
+| --- | --- | --- | --- | --- |
+| rules | 5,842,948,537 | 5,029,969,847 | 4,639,050,136 | -20.6 % in all |
+| control | 1,330,118,661 | 1,192,717,805 | 1,147,766,665 | -13.7 % |
+| words | 365,593,337 | 310,818,955 | 309,955,411 | -15.2 % |
+| graph | 120,466,663 | 114,793,169 | 110,206,651 | -8.5 % |
+| kernel | 1,087,403,268 | 1,096,888,123 | 1,095,811,971 | +0.8 % |
+
+Every workload answers the same fused and plain. `rules` is 4.64 thousand
+million instructions against Luau's interpreter's 3.33: 1.39 times, where it
+was 1.76. The frame step the reference counts is forty-one instructions.

@@ -40958,3 +40958,18 @@ See D1154.
 **Runs:** the five workloads on six engines by `perf stat`, `KEST_DEEP` counts
 of what `rules` runs, the five fused and with `KEST_PLAIN=1`, `check-costs.sh`
 and the one hole it reads put in by hand, and `make most`.
+
+## 2026-09-22, four more pairs as one instruction
+
+A value weighed against a constant and the jump, an element read by a local
+index out of a local run, a local moved by a constant where it is, and a
+constant stored into a local: each one instruction now, each where the lowering
+already took the pair's second half into something. `rules` is 20.6 per cent
+fewer instructions than this morning and 1.39 times Luau's interpreter where it
+was 1.76. The moved-bytes check counts what the new ones move; two helpers the
+bodies check found written twice are one each.
+
+See D1155.
+
+**Runs:** the five workloads fused and plain, `perf stat`, `KEST_DEEP` pairs,
+`check-costs.sh`, and `make most`.
