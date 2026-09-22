@@ -228,6 +228,11 @@ FAMILY = {
  "kest_frame_slots":"running","kest_takes_text":"running","kest_gave_text":"running",
  "kest_text":"running","kest_text_bytes":"running","kest_borrow":"running",
  "kest_lend_ends":"running","kest_array_length":"running","kest_native_failed":"running",
+ # and the same, done for a host that keeps a world across frames and reloads
+ # under it: made of the doors above and nothing else. See D1151.
+ "kest_held_new":"running","kest_held_free":"running","kest_held_runtime":"running",
+ "kest_held_begin":"running","kest_held_call":"running","kest_held_run":"running",
+ "kest_held_changed":"running","kest_held_reload":"running",
  # steering: what a host does to a machine while it runs.
  "kest_fuel_set":"steering","kest_fuel_spend":"steering","kest_fuel_left":"steering",
  "kest_cancel":"steering","kest_cancelled":"steering",

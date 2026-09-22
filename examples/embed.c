@@ -2013,6 +2013,103 @@ static bool weighs_what_it_costs(Engine *engine) {
     return true;
 }
 
+// A machine held across frames, and reloaded under the world it holds, by the
+// doors that do it for a host rather than by the few hundred lines every host
+// keeping a world used to write. What is held to here is what a game leans on:
+// the world is the program's own after every step, a run of it is read where
+// it lies, a reload carries the world over and a refused one leaves it exactly
+// where it was, and a file edited under a build is noticed. See D1151.
+static bool held_across_a_reload(void) {
+    KestHost *host = kest_host_new();
+    KestHeld *held = host == NULL
+                         ? NULL
+                         : kest_held_new("examples/held.kest", NULL, host,
+                                         stderr);
+    KestValue many = {.integer = 5};
+    KestValue turn = {0};
+    if (held == NULL || !kest_held_begin(held, "begin", &many, 1) ||
+        !kest_held_call(held, "step", NULL, 0, &turn) ||
+        !kest_held_call(held, "step", NULL, 0, &turn) || turn.integer != 2) {
+        fprintf(stderr, "a held world was not stepped twice: turn %lld\n",
+                (long long)turn.integer);
+        return false;
+    }
+    uint32_t cells = 0;
+    uint16_t stride = 0;
+    const uint8_t *read = kest_held_run(held, "cells", &cells, &stride);
+    if (read == NULL || cells != 5 || stride != 1 || read[4] != 6 ||
+        kest_held_run(held, "nothing", NULL, NULL) != NULL ||
+        kest_held_changed(held)) {
+        fprintf(stderr, "a held world's cells were not read where they lie\n");
+        return false;
+    }
+
+    // Reloaded from itself, which is the whole protocol with nothing changed:
+    // the world is the one it was, a turn later is the turn after.
+    char said[256];
+    if (!kest_held_reload(held, NULL, said, sizeof(said)) ||
+        !kest_held_call(held, "step", NULL, 0, &turn) || turn.integer != 3) {
+        fprintf(stderr, "a reload lost the world: %s, turn %lld\n", said,
+                (long long)turn.integer);
+        return false;
+    }
+    read = kest_held_run(held, "cells", &cells, NULL);
+    if (read == NULL || cells != 5 || read[0] != 3) {
+        fprintf(stderr, "a reload lost the cells\n");
+        return false;
+    }
+
+    // And one refused: a program with no `restore` cannot take the world, so
+    // the machine is the one it was and so is its world.
+    if (kest_held_reload(held, "examples/frame.kest", said, sizeof(said)) ||
+        strstr(said, "restore") == NULL ||
+        !kest_held_call(held, "step", NULL, 0, &turn) || turn.integer != 4) {
+        fprintf(stderr, "a refused reload did not leave the world where it "
+                        "was: %s, turn %lld\n",
+                said, (long long)turn.integer);
+        return false;
+    }
+    printf("a held world stepped, was read where it lies, reloaded under "
+           "itself, and was refused a program with no restore: %s\n", said);
+
+    // A file written under a build is noticed. Written somewhere of the
+    // gate's own rather than into the tree, and taken away again.
+    const char *room = getenv("TMPDIR");
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/held-changed.kest",
+             room != NULL && room[0] != '\0' ? room : ".");
+    FILE *file = fopen(path, "wb");
+    bool noticed = false;
+    if (file != NULL) {
+        fputs("module changed\n\nfn main() -> i32 {\n    return 0\n}\n",
+              file);
+        fclose(file);
+        KestHeld *other = kest_held_new(path, NULL, host, stderr);
+        bool before = other != NULL && kest_held_changed(other);
+        file = fopen(path, "ab");
+        if (file != NULL) {
+            fputs("// and a line more\n", file);
+            fclose(file);
+        }
+        noticed = other != NULL && !before && kest_held_changed(other);
+        kest_held_free(other);
+        remove(path);
+    }
+    if (!noticed) {
+        fprintf(stderr, "a file edited under a held build was not noticed\n");
+        return false;
+    }
+
+    bool gone = kest_held_free(held) && kest_held_free(NULL) &&
+                kest_held_runtime(NULL) == NULL &&
+                !kest_held_call(NULL, "step", NULL, 0, NULL);
+    kest_host_free(host);
+    if (!gone) {
+        fprintf(stderr, "a held machine was not given back\n");
+    }
+    return gone;
+}
+
 int main(int argc, char **argv) {
     // The first thing a host does, before it crosses at all: ask the library
     // what shape its doors are in and compare it with the number this host's
@@ -7835,6 +7932,9 @@ int main(int argc, char **argv) {
     // And then the build, which nothing is standing on now.
     if (!kest_build_free(build)) {
         kest_build_report(build, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (!held_across_a_reload()) {
         return 1;
     }
     return 0;

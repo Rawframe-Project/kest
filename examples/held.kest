@@ -1,0 +1,66 @@
+module examples.held
+
+// The program a held machine runs, which is what a host keeping a world across
+// frames and reloads looks like from this side: a world made once, a step the
+// host calls with it, and the two functions a reload is made of -- `save`,
+// which writes the world as bytes, and `restore`, which makes a world out of
+// nothing but those bytes in a machine that never saw the first. See D1151.
+
+// Two handles, held in step: the turns count what was done to the cells, and
+// a save writes both or neither.
+struct World {
+    cells: [u8]
+    turns: [i32]
+}
+
+fn begin(many: i32) -> World no.host deterministic {
+    let cells: [u8] = array(many, u8(0))
+    for i in 0..many {
+        cells[i] = u8(i)
+    }
+    return World(cells, array(1, 0))
+}
+
+// One turn: every cell goes up by one, and the turn is counted.
+fn step(w: World) -> i32 no.alloc no.host deterministic {
+    for i in 0..len(w.cells) {
+        w.cells[i] = w.cells[i] + u8(1)
+    }
+    w.turns[0] += 1
+    return w.turns[0]
+}
+
+// The turn first, a byte at a time low byte first, and then the cells.
+fn save(w: World) -> [u8] no.host deterministic {
+    let bytes: [u8] = array()
+    let turn = w.turns[0]
+    for i in 0..4 {
+        push(bytes, u8(turn >> (i * 8)))
+    }
+    for i in 0..len(w.cells) {
+        push(bytes, w.cells[i])
+    }
+    return bytes
+}
+
+fn restore(bytes: [u8]) -> World no.host deterministic {
+    let turn = 0
+    for i in 0..4 {
+        turn = turn | (i32(bytes[i]) << (i * 8))
+    }
+    let cells: [u8] = array()
+    for i in 4..len(bytes) {
+        push(cells, bytes[i])
+    }
+    return World(cells, array(1, turn))
+}
+
+fn main() -> i32 no.host deterministic {
+    let w = begin(4)
+    step(w)
+    let back = restore(save(w))
+    if back.turns[0] != 1 || len(back.cells) != 4 || back.cells[3] != u8(4) {
+        return 1
+    }
+    return 0
+}

@@ -1941,5 +1941,68 @@ KestRuntime *kest_start(KestBuild *build, const KestHost *host,
 // it. See D323.
 bool kest_runtime_free(KestRuntime *runtime);
 
+// A machine a host keeps across frames, with the world it is keeping, and the
+// reload a game does under that world. Everything below is made of the doors
+// above and nothing else, and a host that wants to do one of these things its
+// own way does it with those. What these are for is that every host that keeps
+// a world wrote the same few hundred lines to do it -- a frame with the world
+// in front, every handle in it said to the machine, the doors found again
+// after a reload and held to taking what they took, the files watched -- and
+// two hosts writing them are two sets of the same mistakes. See D1151.
+typedef struct KestHeld KestHeld;
+
+// Builds `path` against `library` (NULL as `kest_build` takes it) and starts a
+// machine over it with `host`, which has to outlive what this answers: a
+// reload starts another machine with it. What would not build goes to
+// `errors`. NULL when it did not build or start, and then there is nothing to
+// free.
+KestHeld *kest_held_new(const char *path, const char *library,
+                        const KestHost *host, FILE *errors);
+
+// Frees the machine and the build. True when there is nothing held now.
+bool kest_held_free(KestHeld *held);
+
+// The machine being held, for everything the doors above do with one: a lend,
+// a report, fuel. It is another machine after a reload.
+KestRuntime *kest_held_runtime(KestHeld *held);
+
+// Calls `entry` with `count` values and keeps what it gives back as the world:
+// every slot of it, and every handle in it said to the machine, because this
+// host holds them between calls where no walk of the program's can see them.
+bool kest_held_begin(KestHeld *held, const char *entry, const KestValue *args,
+                     uint32_t count);
+
+// Calls `entry` with the world in front of `count` more values, and writes
+// what it answered into `answer` where that is not NULL. A door is found by
+// name the first time it is called and remembered, and a reload holds every
+// door remembered to still being there and taking what it took.
+bool kest_held_call(KestHeld *held, const char *entry, const KestValue *args,
+                    uint32_t count, KestValue *answer);
+
+// A run of the world's, read where it lies rather than copied out by the
+// program: the piece of the world the program calls `piece` -- `ground.tiles`
+// for a field of a field -- as its bytes, how many elements, and how wide one
+// is. NULL when the world has no such piece or it is not a run. Good until
+// the next call into the machine, which may move it.
+const void *kest_held_run(KestHeld *held, const char *piece, uint32_t *count,
+                          uint16_t *stride);
+
+// Whether any file the program was built from is not the bytes it was built
+// from: every one is read again and held to its mark. A host asks this as
+// often as it wants a reload to be noticed, and not every frame.
+bool kest_held_changed(KestHeld *held);
+
+// The program built again from `path` (NULL for the one it was) and put under
+// the world the running one holds, or the running one kept exactly as it was.
+// The protocol is the program's two functions: `save`, which the running
+// machine is asked with the world and answers with bytes, and `restore`, which
+// a machine of the new build is handed those bytes and answers with a world.
+// Nothing replaces the running machine until the new one has made its world
+// and every door this host has called is there and takes what it took. What
+// happened is written into `said` either way, the stage it stopped at when it
+// did, and what would not build goes to the errors this was made with.
+bool kest_held_reload(KestHeld *held, const char *path, char *said,
+                      size_t room);
+
 
 #endif
