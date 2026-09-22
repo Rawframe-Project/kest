@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1147
+    CURRENT SHA:       (this commit) D1093-D1148
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -22,9 +22,8 @@ reasoning; this holds the position.
                        macos, windows, clang, threads, package, linux-full
                        and agree. What is after it is D1145 to D1147
     LAST FAST GATE:    green
-    LAST FULL GATE:    `make check` green here on e7657d6, the loader and
-                       the parser of D1145 and D1147, every one of the 900
-                       holes caught
+    LAST FULL GATE:    `make check` green here with D1148's three refusals
+                       in it, every one of the 900 holes caught
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.
                        Every number below was taken on it.
@@ -417,20 +416,21 @@ all nine jobs, and again on `3b2607c`.
 Committing past a green commit makes that criterion false again until CI runs
 on the new HEAD, which is what CI is for and what it is being asked.
 
-**One is a judgement and it is the owner's to make, not this worker's.** The AI
-section asks that "task completion/time/repair/silent escapes" be measured. The
-suite exists, the hidden tests exist, the harness runs both languages, what a
-mistake costs to be told about is measured in milliseconds, and nothing
-escapes. **But no model has been run against any of it**, and running them has
-been this project's note as the owner's from the start. Whether an instrumented
-suite with no model run counts as "task completion measured" decides whether
-`GAME_AI_DIRECTION_COMPLETE` can be marked, and reading it either way is
-defensible.
+**The last is now measured.** The AI section asks that "task
+completion/time/repair/silent escapes" be measured, and the suite has been run
+blind with a model, seventy-two times (D1148). Kest 36 of 36 and Luau 30 of 36,
+the six being two tasks whose hidden tests held a rule the task did not say;
+30 of 30 each on the ten asked fairly. The measurement exists and what it says
+is that this suite does not tell the languages apart on correctness, and that
+Kest costs more to get there. The repeated Kest-specific failure classes it
+turned up are addressed where practical: three refusals say what to write now.
+The docs say what the evidence says and no more.
 
-So it is not marked here. `docs/report.md` says the same thing in its own
-words: the runtime claim, the contract claim and the loop claim each hold by
-something that runs, and the claim the owner asked for first has an instrument
-and no result.
+So every criterion is met by something that runs but one: supported CI green
+on the exact final HEAD, which a commit cannot meet by itself. It is marked in
+the commit after CI answers for this one. `docs/report.md` says the same thing
+in its own words, including that the claim the owner asked for first was
+measured and not shown.
 
 ## The report
 
@@ -754,6 +754,12 @@ the same workload.
 27. *(done, D1147)* **`Case -> {` in a `match`.** Said as what it is, one
    diagnostic an arm with the arm's own fix, where it was one about `if` and
    then a line about an arrow for every arm after it.
+28. *(done, D1148)* **The AI suite run blind.** Seventy-two runs of an Opus
+   model, each in a room holding only what it may see. Kest 36 of 36, Luau 30
+   of 36, and the six are the suite's: two tasks whose tests held an unstated
+   rule, stated now. No difference on correctness; Kest costs more runs and
+   more tokens, mostly the reference. Three repeated Kest mistakes are told
+   what to write now. The AI claim is not shown by this suite.
 
 ## Closed by measurement
 

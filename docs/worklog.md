@@ -40867,3 +40867,26 @@ See D1145, D1146 and D1147.
 **Runs:** `make trial` in the colony, its host headless under `xvfb-run` at
 five sizes on both engines, `kest profile` over the trials, the refusal corpus
 against the parser before and after, and `make check`.
+
+## 2026-09-22, the AI suite run blind
+
+Seventy-two runs of an Opus model, twelve tasks in both languages three times
+each, every run in a room holding the task, the scaffold and for Kest the
+reference, judged afterwards by the tests it never saw. Kest 36 of 36, Luau 30
+of 36, and the six are two tasks whose tests held a rule the task never said --
+things numbered from nought, and a worth held to 32 bits where the Luau
+scaffold says `number`. Both `ask.md`s say it now. On the ten tasks asked
+fairly it is 30 of 30 each: the suite does not tell the languages apart on
+correctness. Kest cost more to get there: 2.7 compiler runs a task to 2.2, and
+more tokens, most of them spent searching the reference.
+
+Every Kest refusal was in a run's own test program. Three kinds repeated and
+were told only what went wrong -- a struct built by field name, a call by
+name, a number where text is wanted -- and each is told what to write now.
+`ai/blind.sh` makes the rooms and scores them.
+
+See D1148.
+
+**Runs:** the seventy-two answers through `ai/run.sh`, again through
+`ai/blind.sh score`, the refusal corpus against the compiler before and after,
+`check-ai.sh`, and `make check`.

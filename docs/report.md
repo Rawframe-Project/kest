@@ -251,8 +251,13 @@ scaffold nobody filled in does not, and the plausible wrong answer is caught.
 All nine families the mission lists in section 20 are written; twelve of the
 fourteen in the mechanisms document, which is a menu and says so.
 
-**No model has been run against it.** That is the owner's, at the end, and this
-report does not guess at what a model would score.
+**Run blind, seventy-two times** (D1148): twelve tasks, both languages, three
+attempts, each an Opus model in a room holding the task, the scaffold and --
+for Kest -- the reference, and judged afterwards by the tests it never saw.
+**Kest 36 of 36, Luau 30 of 36**, and all six Luau misses are two tasks whose
+hidden tests held a rule `ask.md` never said; on the ten tasks asked fairly it
+is **30 of 30 in both**. The suite does not tell the two languages apart on
+correctness, because a strong model gets every fair task right in either.
 
 ## 22. Repair iteration results
 
@@ -273,6 +278,12 @@ and `ai/cost.sh` measures it (D1126):
 and none in Luau**; the rest are caught by a hidden test, and nothing escapes —
 the gate would not pass if it did.
 
+Run blind (D1148), no Kest answer failed a hidden test. The six Luau answers
+that did were each believed right by the run that wrote it, with the analyser
+clean -- which is what a silent escape looks like -- and every one of them is a
+rule the task never stated, so they count against the suite rather than for
+this language.
+
 The small number is honest and deliberate: eleven of the twelve mistakes
 written here are the kind no type system can be credited for, because a suite
 whose mistakes are all spelling is a suite that measures nothing. `pooled` is
@@ -281,7 +292,8 @@ was taken, is a refusal in Kest and a table nobody counts in Luau.
 
 ## 24. Kest changes caused by AI evidence
 
-Two, and both came from writing the tasks rather than from thinking about them:
+Four, the first two from writing the tasks and the last two from running a
+model against them and against a game:
 
 - **K0347** (D1135). Writing three task files turned up the Kest-specific
   mistakes a model makes here, and the compiler answered all but one at the
@@ -294,6 +306,13 @@ Two, and both came from writing the tasks rather than from thinking about them:
 - **A runner with a host** (D1137). A task about the doors a host gives cannot
   be judged by a program on this side of them, so `ai/run.sh` builds a task's
   own `host.c` against `libkest.a` where there is one.
+- **Three refusals that say what to write** (D1148). Run blind, the mistakes
+  models made again and again in Kest were a struct built by field name, a call
+  by name, and a number handed where text is wanted; each was told only which
+  token or type it had, and is told the fix now.
+- **`Case -> {` said as what it is** (D1147), written by a model writing the
+  colony: one diagnostic an arm with the arm's own fix, where it was one about
+  `if` and then a line about an arrow for every arm after it.
 
 ## 25. Whether a dedicated AI protocol was needed
 
@@ -374,11 +393,14 @@ least evidence about why.
 
 ## 29. Largest remaining product weakness
 
-**No model has been run against the AI suite.** It is built, it is held to
-being worth being judged by, and what a mistake costs is measured — but the one
-claim the suite exists to settle, that code written with a model is easier to
-get right here, has no model behind it yet. Everything in section 21 to 23 is
-the instrument rather than the result.
+**The AI claim is not shown.** The suite has been run blind with a model
+(D1148) and it cannot tell the languages apart: both are 30 of 30 on the tasks
+asked fairly. What does differ is cost, and against this language: 2.7
+compiler runs a task against 2.2, about half as many tokens again, and every
+Kest run searching a seven-thousand-line reference its Luau counterpart did not
+need. The one time a model's mistake was caught before it ran is the colony
+(D1146), not the suite. Settling the claim needs tasks a strong model gets
+wrong in the incumbent.
 
 Second: **`daslang`'s AOT is named and not measured**, so every claim against
 daslang is a claim against its interpreter. Closing it needs a daScript built
@@ -410,21 +432,24 @@ one difference no amount of tuning on the other side closes.
 runtime code generation.
 
 **Where it is weak, it is weak in the open.** It is about twice `g++` and it is
-not trying to be C++; it is level with Luau where the work is allocation; no
-model has been run against its AI suite; and daslang's AOT is unmeasured. All
+not trying to be C++; it is level with Luau where the work is allocation; a
+model run blind against its AI suite does no better in it than in Luau and
+spends more getting there; and daslang's AOT is unmeasured. All
 four are written down here rather than left for somebody to find.
 
 **Is 30 still weak?** Partly, and in one place: the AI claim. The runtime
 claim, the contract claim and the loop claim each hold by something that runs
 and can be run again. The claim that this language is better to write *with a
-model* is the one the owner asked for first and the one with an instrument but
-no result.
+model* is the one the owner asked for first, and run blind (D1148) it is not
+shown: a strong model gets every fair task right in both languages, and costs
+more to get there in this one.
 
-**So the highest-value next technical direction is to run models against the
-suite** — the same eleven paired tasks, several models, several attempts,
-counting completion, repair turns and what escapes on each side. The suite, the
-hidden tests, the harness and the cost measurements are all built for exactly
-that and none of it has been spent.
+**So the highest-value next technical direction is a harder suite** -- tasks a
+strong model gets wrong in the incumbent often enough for a difference to be
+seen, which is where a refusal before running is worth something -- and a
+short page for a reader who knows Lua or Rust, because the reference is most of
+what a Kest run spends. `ai/blind.sh` runs the next suite the way it ran this
+one.
 
 The second **has now been done** (D1141), and what it found is above in 28:
 on the workload with the largest gap, 190.4 instructions a decision against

@@ -39634,3 +39634,84 @@ Held by the refusal corpus in `check-commands.sh`, with a program of two such
 arms whose words are the second arm's: against the parser before this, the
 second arm said `K0201` and the line said `K0204 said expected an expression,
 found {`.
+
+## D1148 — The AI suite run blind
+
+*measured*, by seventy-two runs of a model that had not seen the answers:
+twelve tasks, both languages, three attempts each. Every run was an Opus model
+started on its own in a room of its own that held `ask.md`, the scaffold, and
+for Kest the reference and the standard library's source -- what a newcomer
+has. The right answer, the plausible wrong one and the hidden tests stayed in
+this tree, and each answer was judged by `ai/run.sh` afterwards. `ai/blind.sh`
+makes the rooms and scores them, so this is a run that can be made again; what
+it cannot do is start the models, which is the session running it.
+
+| task | Kest | Luau |
+| --- | --- | --- |
+| among, cooldown, crossing, nearby, patch, pooled, saved, spread, stale, stepped | 30 of 30 | 30 of 30 |
+| called | 3 of 3 | 0 of 3, all at check 2 |
+| frail | 3 of 3 | 0 of 3, all at check 11 |
+| **all** | **36 of 36** | **30 of 36** |
+
+**The six Luau misses are the suite's and not the language's.** Every one is a
+rule the hidden tests hold and `ask.md` never said. `called` numbers the things
+from nought in both languages, and all three Luau runs numbered them from one,
+which is what Luau counts from and what nothing told them otherwise. `frail`
+holds a worth to 32 bits in both languages, and the Luau scaffold declares it a
+`number`; all three Luau runs took "too big for the one a record holds" to mean
+2^53, which is the right reading of what they were shown. Kest's scaffold says
+`i32` and the same sentence is unambiguous there. Both `ask.md`s say it now.
+
+**So the suite does not tell the two apart on correctness.** On the ten tasks
+it asks fairly, a strong model writes a right answer every time in either
+language, and a suite every run passes is a suite with nothing left to
+measure. What the mission asked for -- completion, time, repair, silent escapes
+-- is measured, and the answer about correctness is *no difference here*.
+
+**What it costs to get there does differ, and not in this language's favour.**
+
+| | Kest | Luau |
+| --- | --- | --- |
+| compiler or analyser runs a task | 2.69 | 2.22 |
+| runs refused, any file | 18 | 0 |
+| runs refused, the answer itself | 0 | 0 |
+| a run's tokens, from what the harness reported | about 42k to 64k | about 37k to 40k |
+| a run's wall clock, the same way | about 40 to 93 s | about 26 to 54 s |
+
+Three Luau runs sat for close to three minutes on a shell command of their own
+that waited for input; that is the run's and not the language's, and it is left
+out of the range.
+
+Every refusal was in a test program the run wrote for itself, and not one was
+in an answer. They are the language being new to the reader, and they repeat:
+
+- a name from an imported module written without the module in front of it
+  (five runs) -- `K0306`, which already says `did you mean patch.Stack`;
+- a struct built by field name, `Thing { x: 1.0 }` or `Thing(x: 1.0)` (four
+  runs) -- `K0201`, which said only which token it expected;
+- `print` without `import std.io`, or `io.print` handed a number (four runs)
+  -- the first already said what to import; the second said only the two
+  types;
+- an escaped quote inside a hole (three runs) -- `K0102`, which already says a
+  hole holds code;
+- and one each of an array in a hole, an `i32` literal out of range, and a
+  host function `kest run` cannot provide.
+
+The three that said only what went wrong say what to write now: a struct built
+by name is told `a struct is built by position, in the order its fields are
+declared: P(...)`, a call by name is told `nothing is passed by name`, and a
+number where text is wanted is told `a hole makes text of it`. Each is a line
+of the refusal corpus that fails against the compiler before this.
+
+And every Kest run said the reference is long -- about seven thousand lines --
+and searched it rather than read it. That is most of the token difference, and
+it is the cost a newcomer pays that the incumbent's reader, who has met Lua
+before, does not.
+
+**What this does not show.** It does not show that this language catches a
+model's mistakes earlier, because there were no mistakes in the answers to
+catch. The one place a model's mistake was caught before it ran is the colony
+(D1146): `K0346` on a colonist written into a copy, which would have left
+everybody standing still. A suite that measures that has to be harder than this
+one -- tasks a strong model gets wrong often enough in the incumbent for a
+difference to be seen.

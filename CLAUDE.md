@@ -174,7 +174,10 @@ ai/                The tasks a model is given: the same gameplay work
                    about this language that cannot be measured by running a
                    program -- that code written with a model is easier to get
                    right here -- and it has to come out of task outcomes
-                   rather than out of feature names. `ai/run.sh` runs one task
+                   rather than out of feature names. `ai/blind.sh` makes a
+                   room a run holding what a model may see and scores what it
+                   left there, which is how the suite was run blind (D1148).
+                   `ai/run.sh` runs one task
                    against one answer and says which check it did not keep, or
                    `refused` where the language caught it before a test did;
                    `tools/check-ai.sh` holds the suite to being worth being
