@@ -64,6 +64,10 @@ typedef enum {
     // are coming bought half of what it buys an array. See D912.
     KEST_OP_ROOM,       // u16 layout
     KEST_OP_INDEX,      // u16 layout
+    // An element read out of a run a local holds, by an index a local holds:
+    // `load2` and then `index` was two dispatches for every `xs[i]` in a loop.
+    // See D1155.
+    KEST_OP_INDEX_LL,   // u16 run's slot, u16 index's slot, u16 layout
     KEST_OP_POP_LAST,   // u16 layout, leaves an optional
     KEST_OP_TAKE,       // u16 layout, shifts what is after it down
     KEST_OP_CLEAR,
@@ -312,12 +316,29 @@ typedef enum {
     // for `if one.hp > 20` and every flag test, which are what a rule is made
     // of. Whole numbers only, and only where the jump is taken when the
     // answer is no. See D1154.
+    // A local moved by a constant in place: `load.k`, the arithmetic and the
+    // store it was written into, which is every `count += 1` and every timer
+    // that runs down. The cut is the kind's, as in the two above. See D1155.
+    // A constant written into a local: `const` and `store`, which is every
+    // `let x = 0` and every reset a rule makes. See D1155.
+    KEST_OP_STORE_K, // u16 slot, u16 constant
+    KEST_OP_ADD_K_SELF, // u16 kind, u16 slot, u16 constant
+    KEST_OP_SUB_K_SELF, // u16 kind, u16 slot, u16 constant
     KEST_OP_JUMP_FALSE_LT_K, // u16 slot, u16 constant, u16 forward offset
     KEST_OP_JUMP_FALSE_LE_K,
     KEST_OP_JUMP_FALSE_GT_K,
     KEST_OP_JUMP_FALSE_GE_K,
     KEST_OP_JUMP_FALSE_EQ_K,
     KEST_OP_JUMP_FALSE_NE_K,
+    // And what is on the stack weighed against a constant: `const` and then
+    // one of the six whole-number jumps, which is every `xs[i] > 0` and every
+    // answer of a call compared with a written number. See D1155.
+    KEST_OP_JUMP_FALSE_LT_C, // u16 constant, u16 forward offset, pops one
+    KEST_OP_JUMP_FALSE_LE_C,
+    KEST_OP_JUMP_FALSE_GT_C,
+    KEST_OP_JUMP_FALSE_GE_C,
+    KEST_OP_JUMP_FALSE_EQ_C,
+    KEST_OP_JUMP_FALSE_NE_C,
     KEST_OP_LOOP,        // u16 backward offset
     // The whole of a counted walk's turn: add one to the count, compare it
     // with the limit beside it, and go back while it is less. The test is at

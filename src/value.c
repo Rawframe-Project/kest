@@ -963,6 +963,8 @@ typedef enum {
     WALK,
     FIND,
     FIND_BACK,
+    // A constant and then a forward jump, which is five bytes.
+    WEIGH,
 } Operands;
 
 typedef struct {
@@ -979,7 +981,8 @@ static const Instruction INSTRUCTIONS[] = {
     {"array", U16_U16},    {"make.array", U16},   {"push", U16},         {"fit", U16},
     {"push.text", U16},    {"fit.text", U16},
     {"room", U16},
-    {"index", U16},        {"pop.last", U16},     {"take", U16},
+    {"index", U16},        {"index.ll", U16_U16_U16},
+    {"pop.last", U16},     {"take", U16},
     {"clear", NONE},       {"elem.addr", U16},    {"elem.at", U16_U16},
     {"load.slots", U16_U16_U16},              {"store.slots", U16_U16_U16},
     {"offset.addr", U16_U16},
@@ -1039,9 +1042,14 @@ static const Instruction INSTRUCTIONS[] = {
     {"jump.true.lt.f", JUMP}, {"jump.true.le.f", JUMP},
     {"jump.true.gt.f", JUMP}, {"jump.true.ge.f", JUMP},
     {"jump.true.eq.f", JUMP}, {"jump.true.ne.f", JUMP},
+    {"store.k", U16_U16},
+    {"add.k.self", U16_U16_U16}, {"sub.k.self", U16_U16_U16},
     {"jump.false.lt.k", FIND}, {"jump.false.le.k", FIND},
     {"jump.false.gt.k", FIND}, {"jump.false.ge.k", FIND},
     {"jump.false.eq.k", FIND}, {"jump.false.ne.k", FIND},
+    {"jump.false.lt.c", WEIGH}, {"jump.false.le.c", WEIGH},
+    {"jump.false.gt.c", WEIGH}, {"jump.false.ge.c", WEIGH},
+    {"jump.false.eq.c", WEIGH}, {"jump.false.ne.c", WEIGH},
     {"loop", BACK},
 {"next.less.i", WALK}, {"next.less.u", WALK},
     {"scratch", U16},      {"unscratch", U16},
@@ -1083,6 +1091,7 @@ static uint32_t kest_op_width(uint8_t op) {
         // readable. It is the same two bytes.
         return 3;
     case U16_U16:
+    case WEIGH:
         return 5;
     case U16_U16_U16:
     case WALK:
@@ -1481,6 +1490,7 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_LOADK:
     case KEST_OP_FIELD:
     case KEST_OP_INDEX:
+    case KEST_OP_INDEX_LL:
     case KEST_OP_POP_LAST:
     case KEST_OP_TAKE:
     case KEST_OP_CLEAR:
@@ -1615,12 +1625,21 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_JUMP_TRUE_GE_F:
     case KEST_OP_JUMP_TRUE_EQ_F:
     case KEST_OP_JUMP_TRUE_NE_F:
+    case KEST_OP_STORE_K:
+    case KEST_OP_ADD_K_SELF:
+    case KEST_OP_SUB_K_SELF:
     case KEST_OP_JUMP_FALSE_LT_K:
     case KEST_OP_JUMP_FALSE_LE_K:
     case KEST_OP_JUMP_FALSE_GT_K:
     case KEST_OP_JUMP_FALSE_GE_K:
     case KEST_OP_JUMP_FALSE_EQ_K:
     case KEST_OP_JUMP_FALSE_NE_K:
+    case KEST_OP_JUMP_FALSE_LT_C:
+    case KEST_OP_JUMP_FALSE_LE_C:
+    case KEST_OP_JUMP_FALSE_GT_C:
+    case KEST_OP_JUMP_FALSE_GE_C:
+    case KEST_OP_JUMP_FALSE_EQ_C:
+    case KEST_OP_JUMP_FALSE_NE_C:
     case KEST_OP_LOOP:
     case KEST_OP_NEXT_LESS_I:
     case KEST_OP_NEXT_LESS_U:
@@ -2003,6 +2022,10 @@ static uint32_t disassemble_one(const KestModule *module,
         fprintf(out, "%u  %u  -> %u\n", read_u16(chunk, offset + 1),
                 read_u16(chunk, offset + 3),
                 offset + 7 - read_u16(chunk, offset + 5));
+        break;
+    case WEIGH:
+        fprintf(out, "%u  -> %u\n", read_u16(chunk, offset + 1),
+                offset + 5 + read_u16(chunk, offset + 3));
         break;
     }
     return offset + kest_op_width(op);

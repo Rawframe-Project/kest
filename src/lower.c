@@ -87,17 +87,19 @@ static void take_back(Lower *lower) {
     lower->last_at = lower->before_at;
 }
 
-// Whether the last thing written was a load of one slot, and which. It is the
-// same question `load_before` asks and a narrower one: a run of slots cannot be
-// the first half of either pair below, because what follows it is not where it
-// ends. See D961.
-static bool one_load_before(const Lower *lower, uint16_t *slot) {
-    if (lower->last_op != KEST_OP_LOAD || lower->last_at < lower->pointed_at ||
+// Whether the last thing written was `op` with one operand, nothing pointing
+// between, and what the operand is. A load of one slot and a constant of one
+// value are the two this is asked about: a run of slots cannot be the first
+// half of a pair, because what follows it is not where it ends. See D961 and
+// D1155.
+static bool one_operand_before(const Lower *lower, uint8_t op,
+                               uint16_t *operand) {
+    if (lower->last_op != op || lower->last_at < lower->pointed_at ||
         lower->last_at + 3 != lower->chunk->code_count) {
         return false;
     }
     const uint8_t *at = lower->chunk->code + lower->last_at;
-    *slot = (uint16_t)(at[1] | ((uint16_t)at[2] << 8));
+    *operand = (uint16_t)(at[1] | ((uint16_t)at[2] << 8));
     return true;
 }
 
@@ -136,7 +138,7 @@ static void emit_load(Lower *lower, uint16_t slot, uint16_t size,
     // is one instruction with two operands. The pair is a tenth of what the
     // frame step runs. See D961.
     uint16_t first = 0;
-    if (size == 1 && one_load_before(lower, &first)) {
+    if (size == 1 && one_operand_before(lower, KEST_OP_LOAD, &first)) {
         take_back(lower);
         emit(lower, KEST_OP_LOAD2, origin);
         emit_u16(lower, first, origin);
@@ -151,6 +153,8 @@ static void emit_load(Lower *lower, uint16_t slot, uint16_t size,
 }
 
 static bool fusing(void);
+static bool local_and_constant_before(const Lower *lower, uint16_t *slot,
+                                      uint16_t *which);
 
 // Whether the last thing written was an index of a run whose element is this
 // many slots wide, and which layout it read. An index pushes a struct onto the
@@ -233,11 +237,44 @@ static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
     uint8_t made = size != 1 || !fusing() ? 0 : arithmetic_before(lower, &kind);
     if (made != 0) {
         take_back(lower);
+        // And the local and the constant it was made of, when the local is
+        // the one being written: `x += k` as one instruction. See D1155.
+        uint16_t read = 0;
+        uint16_t which = 0;
+        if ((made == KEST_OP_ADD_I_NARROW_TO ||
+             made == KEST_OP_SUB_I_NARROW_TO) &&
+            local_and_constant_before(lower, &read, &which) && read == slot) {
+            if (lower->chunk->fused_slots < 2) {
+                lower->chunk->fused_slots = 2;
+            }
+            take_back(lower);
+            emit(lower,
+                 made == KEST_OP_ADD_I_NARROW_TO ? KEST_OP_ADD_K_SELF
+                                                  : KEST_OP_SUB_K_SELF,
+                 origin);
+            emit_u16(lower, kind, origin);
+            emit_u16(lower, slot, origin);
+            emit_u16(lower, which, origin);
+            return;
+        }
         emit(lower, made, origin);
         if (made == KEST_OP_ADD_I_NARROW_TO || made == KEST_OP_SUB_I_NARROW_TO) {
             emit_u16(lower, kind, origin);
         }
         emit_u16(lower, slot, origin);
+        return;
+    }
+    uint16_t constant = 0;
+    if (size == 1 && fusing() &&
+        one_operand_before(lower, KEST_OP_CONST, &constant)) {
+        // The constant is never on the stack now. See D1155.
+        if (lower->chunk->fused_slots < 1) {
+            lower->chunk->fused_slots = 1;
+        }
+        take_back(lower);
+        emit(lower, KEST_OP_STORE_K, origin);
+        emit_u16(lower, slot, origin);
+        emit_u16(lower, constant, origin);
         return;
     }
     emit(lower, size == 1 ? KEST_OP_STORE : KEST_OP_STOREN, origin);
@@ -286,7 +323,7 @@ static void emit_constant(Lower *lower, uint16_t first, uint16_t count,
     }
     uint16_t slot = 0;
     if (fusing() && count == 1 && index <= UINT16_MAX &&
-        one_load_before(lower, &slot)) {
+        one_operand_before(lower, KEST_OP_LOAD, &slot)) {
         take_back(lower);
         emit(lower, KEST_OP_LOADK, origin);
         emit_u16(lower, slot, origin);
@@ -535,27 +572,30 @@ static uint8_t asks(Lower *lower, bool when_true) {
     return op;
 }
 
-// The jump a local and a constant are weighed in, when what the jump took
-// into itself was a comparison of whole numbers and what is before that is a
-// `load.k` nothing points between. Answers nought for anything else. See
-// D1154.
-static uint8_t weighed_against_constant(uint8_t jump) {
-    switch (jump) {
-    case KEST_OP_JUMP_FALSE_LT_I:
-        return KEST_OP_JUMP_FALSE_LT_K;
-    case KEST_OP_JUMP_FALSE_LE_I:
-        return KEST_OP_JUMP_FALSE_LE_K;
-    case KEST_OP_JUMP_FALSE_GT_I:
-        return KEST_OP_JUMP_FALSE_GT_K;
-    case KEST_OP_JUMP_FALSE_GE_I:
-        return KEST_OP_JUMP_FALSE_GE_K;
-    case KEST_OP_JUMP_FALSE_EQ_I:
-        return KEST_OP_JUMP_FALSE_EQ_K;
-    case KEST_OP_JUMP_FALSE_NE_I:
-        return KEST_OP_JUMP_FALSE_NE_K;
-    default:
-        return 0;
+// The jump a comparison of whole numbers was taken into, and the two it can
+// become when what is before it is a `load.k` or a `const` nothing points
+// between: a local weighed against a constant, or what is on the stack. One
+// row a comparison. See D1154 and D1155.
+static const struct {
+    uint8_t jump;
+    uint8_t local;
+    uint8_t top;
+} WEIGHED[] = {
+    {KEST_OP_JUMP_FALSE_LT_I, KEST_OP_JUMP_FALSE_LT_K, KEST_OP_JUMP_FALSE_LT_C},
+    {KEST_OP_JUMP_FALSE_LE_I, KEST_OP_JUMP_FALSE_LE_K, KEST_OP_JUMP_FALSE_LE_C},
+    {KEST_OP_JUMP_FALSE_GT_I, KEST_OP_JUMP_FALSE_GT_K, KEST_OP_JUMP_FALSE_GT_C},
+    {KEST_OP_JUMP_FALSE_GE_I, KEST_OP_JUMP_FALSE_GE_K, KEST_OP_JUMP_FALSE_GE_C},
+    {KEST_OP_JUMP_FALSE_EQ_I, KEST_OP_JUMP_FALSE_EQ_K, KEST_OP_JUMP_FALSE_EQ_C},
+    {KEST_OP_JUMP_FALSE_NE_I, KEST_OP_JUMP_FALSE_NE_K, KEST_OP_JUMP_FALSE_NE_C},
+};
+
+static uint8_t weighed(uint8_t jump, bool against_local) {
+    for (size_t i = 0; i < sizeof(WEIGHED) / sizeof(WEIGHED[0]); i++) {
+        if (WEIGHED[i].jump == jump) {
+            return against_local ? WEIGHED[i].local : WEIGHED[i].top;
+        }
     }
+    return 0;
 }
 
 static bool local_and_constant_before(const Lower *lower, uint16_t *slot,
@@ -567,6 +607,20 @@ static bool local_and_constant_before(const Lower *lower, uint16_t *slot,
     const uint8_t *at = lower->chunk->code + lower->last_at;
     *slot = (uint16_t)(at[1] | ((uint16_t)at[2] << 8));
     *which = (uint16_t)(at[3] | ((uint16_t)at[4] << 8));
+    return true;
+}
+
+// Whether the last thing written was `load2` nothing points between, and the
+// two slots it read. See D1155.
+static bool two_locals_before(const Lower *lower, uint16_t *first,
+                              uint16_t *second) {
+    if (lower->last_op != KEST_OP_LOAD2 || lower->last_at < lower->pointed_at ||
+        lower->last_at + 5 != lower->chunk->code_count) {
+        return false;
+    }
+    const uint8_t *at = lower->chunk->code + lower->last_at;
+    *first = (uint16_t)(at[1] | ((uint16_t)at[2] << 8));
+    *second = (uint16_t)(at[3] | ((uint16_t)at[4] << 8));
     return true;
 }
 
@@ -593,6 +647,27 @@ static void read_place(Lower *lower, const KestIrOp *op) {
             emit_u16(lower, place->offset, op->span);
             emit_u16(lower, place->layout, op->span);
             return;
+        }
+        {
+            uint16_t holds = 0;
+            uint16_t at = 0;
+            // One slot an element only: a struct read this way is stored
+            // next, and `index.to` takes that store into the read, which
+            // is worth more than this. See D1155.
+            if (fusing() && place->layout < lower->module->layout_count &&
+                lower->module->layouts[place->layout].slots == 1 &&
+                two_locals_before(lower, &holds, &at)) {
+                // The two slots `load2` pushed are never on the stack now.
+                if (lower->chunk->fused_slots < 2) {
+                    lower->chunk->fused_slots = 2;
+                }
+                take_back(lower);
+                emit(lower, KEST_OP_INDEX_LL, op->span);
+                emit_u16(lower, holds, op->span);
+                emit_u16(lower, at, op->span);
+                emit_u16(lower, place->layout, op->span);
+                return;
+            }
         }
         emit(lower, KEST_OP_INDEX, op->span);
         emit_u16(lower, place->layout, op->span);
@@ -1013,10 +1088,10 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         return;
     case KEST_IR_ASK: {
         uint8_t jump = asks(lower, op->imm[1] != 0);
-        uint8_t weighed = fusing() ? weighed_against_constant(jump) : 0;
+        uint8_t against = fusing() ? weighed(jump, true) : 0;
         uint16_t slot = 0;
         uint16_t which = 0;
-        if (weighed != 0 && local_and_constant_before(lower, &slot, &which)) {
+        if (against != 0 && local_and_constant_before(lower, &slot, &which)) {
             // The two values `load.k` pushed are never on the stack now, so
             // the compiler's reckoning may be two more than this body goes:
             // said as slack, the way D1012 says it, rather than taken off a
@@ -1025,8 +1100,18 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
                 lower->chunk->fused_slots = 2;
             }
             take_back(lower);
-            emit(lower, weighed, span);
+            emit(lower, against, span);
             emit_u16(lower, slot, span);
+            emit_u16(lower, which, span);
+        } else if (fusing() && weighed(jump, false) != 0 &&
+                   one_operand_before(lower, KEST_OP_CONST, &which)) {
+            // The constant is never on the stack now, so the reckoning may be
+            // one more than this body goes; said as slack, as above.
+            if (lower->chunk->fused_slots < 1) {
+                lower->chunk->fused_slots = 1;
+            }
+            take_back(lower);
+            emit(lower, weighed(jump, false), span);
             emit_u16(lower, which, span);
         } else {
             emit(lower, jump, span);

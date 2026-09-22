@@ -2117,6 +2117,27 @@ static bool values_equal(const KestType *type, const KestValue *a,
 #define OF_THE_MODULE(which, many, what) ((void)0)
 #endif
 
+// A slot and a constant a fused instruction reads, held to being the body's
+// own in the build that checks itself, the way `load.k` holds them.
+#if KEST_CHECKED
+#define OWN_SLOT_AND_CONSTANT(slot, which)                                     \
+    do {                                                                       \
+        if (!own_slots(vmp, frame, instruction, (slot), (slot) + 1u) ||         \
+            !own_constants(vmp, frame, instruction, (which) + 1u)) {           \
+            return false;                                                      \
+        }                                                                      \
+    } while (0)
+#define OWN_CONSTANT(which)                                                    \
+    do {                                                                       \
+        if (!own_constants(vmp, frame, instruction, (which) + 1u)) {           \
+            return false;                                                      \
+        }                                                                      \
+    } while (0)
+#else
+#define OWN_SLOT_AND_CONSTANT(slot, which) ((void)0)
+#define OWN_CONSTANT(which) ((void)0)
+#endif
+
 #define IN_RUN(index, count)                                                   \
     do {                                                                       \
         if ((index) < 0 || (uint64_t)(index) >= (count)) {                     \
@@ -4025,6 +4046,30 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             top += layout->slots;
             break;
         }
+        // `load2` and `index` as one. The run and the index are read out of
+        // the slots they are in rather than pushed to be popped. See D1155.
+        case KEST_OP_INDEX_LL: {
+            uint16_t holds = READ_U16();
+            uint16_t at = READ_U16();
+            uint16_t of_which = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, holds, holds + 1u) ||
+                !own_slots(vmp, frame, instruction, at, at + 1u)) {
+                return false;
+            }
+#endif
+            MOVED(moved_loaded, 2 * sizeof(KestValue));
+            const KestLayout *layout = &module->layouts[of_which];
+            int64_t index = mine[at].integer;
+            const Array *array = mine[holds].object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
+            IN_ARRAY(index, array);
+            READ_INTO(top, layout,
+                      array->bytes + (size_t)index * array->stride);
+            top += layout->slots;
+            break;
+        }
         // The two above, each with the move at the other end taken into it.
         // `index` unpacks a struct onto the stack and the store that follows
         // copies it off again; this writes it where it is going. See D1012.
@@ -4955,6 +5000,34 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                                 (uint64_t)right.integer));
             break;
         }
+        // A constant written into a local. See D1155.
+        case KEST_OP_STORE_K: {
+            uint16_t slot = READ_U16();
+            uint16_t which = READ_U16();
+            OWN_SLOT_AND_CONSTANT(slot, which);
+            MOVED(moved_held, sizeof(KestValue));
+            MOVED(moved_stored, sizeof(KestValue));
+            mine[slot] = constants[which];
+            break;
+        }
+        // A local moved by a constant where it is. See D1155.
+        case KEST_OP_ADD_K_SELF:
+        case KEST_OP_SUB_K_SELF: {
+            uint8_t which_way = *instruction;
+            uint16_t kind = READ_U16();
+            uint16_t slot = READ_U16();
+            uint16_t which = READ_U16();
+            OWN_SLOT_AND_CONSTANT(slot, which);
+            MOVED(moved_loaded, sizeof(KestValue));
+            MOVED(moved_held, sizeof(KestValue));
+            MOVED(moved_stored, sizeof(KestValue));
+            uint64_t by = (uint64_t)constants[which].integer;
+            uint64_t was = (uint64_t)mine[slot].integer;
+            mine[slot].integer = kest_narrow_to(
+                kind, (int64_t)(which_way == KEST_OP_ADD_K_SELF ? was + by
+                                                               : was - by));
+            break;
+        }
         case KEST_OP_SUB_I_NARROW_TO: {
             uint16_t kind = READ_U16();
             uint16_t slot = READ_U16();
@@ -5157,17 +5230,6 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }                                                                      \
     } while (0)
 
-#if KEST_CHECKED
-#define OWN_SLOT_AND_CONSTANT(slot, which)                                     \
-    do {                                                                       \
-        if (!own_slots(vmp, frame, instruction, (slot), (slot) + 1u) ||         \
-            !own_constants(vmp, frame, instruction, (which) + 1u)) {           \
-            return false;                                                      \
-        }                                                                      \
-    } while (0)
-#else
-#define OWN_SLOT_AND_CONSTANT(slot, which) ((void)0)
-#endif
 // A local against a constant, and the jump. What `load.k` would have put on
 // the stack is read where it is, so nothing is pushed and nothing is popped.
 // See D1154.
@@ -5186,6 +5248,38 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }                                                                      \
     } while (0)
 
+// What is on the stack against a constant, and the jump. See D1155.
+#define JUMP_UNLESS_C(test)                                                    \
+    do {                                                                       \
+        uint16_t which = READ_U16();                                           \
+        uint16_t distance = READ_U16();                                        \
+        OWN_CONSTANT(which);                                                   \
+        MOVED(moved_held, sizeof(KestValue));                                  \
+        int64_t left = (--top)->integer;                                       \
+        int64_t right = constants[which].integer;                              \
+        if (!(test)) {                                                         \
+            ip += distance;                                                    \
+        }                                                                      \
+    } while (0)
+
+        case KEST_OP_JUMP_FALSE_LT_C:
+            JUMP_UNLESS_C(left < right);
+            break;
+        case KEST_OP_JUMP_FALSE_LE_C:
+            JUMP_UNLESS_C(left <= right);
+            break;
+        case KEST_OP_JUMP_FALSE_GT_C:
+            JUMP_UNLESS_C(left > right);
+            break;
+        case KEST_OP_JUMP_FALSE_GE_C:
+            JUMP_UNLESS_C(left >= right);
+            break;
+        case KEST_OP_JUMP_FALSE_EQ_C:
+            JUMP_UNLESS_C(left == right);
+            break;
+        case KEST_OP_JUMP_FALSE_NE_C:
+            JUMP_UNLESS_C(left != right);
+            break;
         case KEST_OP_JUMP_FALSE_LT_K:
             JUMP_UNLESS_K(left < right);
             break;
