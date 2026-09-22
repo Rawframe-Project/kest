@@ -40467,6 +40467,26 @@ See D1129.
 
 Next: CI green on the exact final HEAD.
 
+## F10 closed by a run
+
+`examples/embed` refuses inside a body that promises `no.alloc` -- K0604 at
+the line that asked, which reads the file again and draws a caret under it --
+and holds the program heap and what it has ever asked for to being unmoved
+either side: **912 bytes and 912**. Both, because what a program is holding
+would be unmoved by an allocation that was freed again and what it has ever
+asked for would not.
+
+A build where the refusal path takes sixteen bytes of that heap does not fail
+the assertion; it dies, because taking heap runs the collector over the frames
+of a machine in the middle of refusing. So the rule is not that a refusal here
+happens not to allocate -- it cannot.
+
+See D1132.
+
+**Runs:** `make fast`, `make check`, and `examples/embed`.
+
+Next: CI green on the exact final HEAD.
+
 ## Real edit latency, in an editor, on a large project
 
 Driving `kest lsp` over a pipe on 112,647 lines: a keystroke in a leaf system

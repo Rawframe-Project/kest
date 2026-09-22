@@ -38840,3 +38840,39 @@ the message, which is the diagnostic, rather than how the two carry what is
 written under it. And `open(w, "w").write(open(w).read()...)` empties the file
 before reading it, which is the second time that has been written here and the
 first time it has been written down.
+
+## D1132 — F10 closed by a run: a refusal inside `no.alloc` leaves the heap alone
+
+F10 has sat in `docs/state.md` under "read from the source rather than run"
+since the foundation: "`no.alloc` is documented more broadly than what is
+measured: diagnostic and trap machinery allocate outside the program heap."
+The reference has since narrowed the claim exactly — `no.alloc` is about the
+Kest program heap, and three things allocate outside it and are outside the
+contract, the middle one being "the machinery that writes a diagnostic, which
+runs when something has already gone wrong". What was missing was a run.
+
+`examples/embed` takes one now. `heaviestCell` promises `no.alloc`; handed a
+row that is not there it refuses with **K0604 at the line that asked**, which
+means the machine read the file again, worked out which line it was and drew a
+caret under it. Either side of that:
+
+```text
+and a refusal inside a body promising `no.alloc` left the program heap at
+912 bytes, 912 ever asked for
+```
+
+Both numbers, because one of them could hide the other: what a program is
+holding would be unmoved by an allocation that was freed again, and what it has
+**ever asked for** would not.
+
+**And the attempt to break it says something stronger than the assertion
+does.** A build where the refusal path takes sixteen bytes of the program heap
+— placed after the diagnostic and its notes are recorded, so nothing is lost —
+does not fail the assertion. It dies. Taking heap runs the collector, and the
+collector walks the frames of a machine that is in the middle of refusing. So
+the rule is not that a refusal here happens not to allocate: **it cannot**, and
+the measurement above is what a quieter version of the same mistake would trip
+over.
+
+F10 moves out of what is read from the source. It is read from a run that
+`make fast` and `make check` both do every time.

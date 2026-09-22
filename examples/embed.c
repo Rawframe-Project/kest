@@ -4465,6 +4465,37 @@ int main(int argc, char **argv) {
                     (double)here->weight);
             return 1;
         }
+        // And the same body handed a row that is not there. `heaviestCell`
+        // promises `no.alloc`, and the reference says the promise is about
+        // the Kest program heap and that the machinery which writes a
+        // diagnostic is outside it. That is read here rather than from the
+        // source: what the program is holding and what it has ever asked for,
+        // either side of a refusal raised inside the body that promised.
+        // Writing K0604 reads the file again, works out which line asked and
+        // draws a caret under it, and none of that may land here. See D1132.
+        const size_t held_before = kest_heap_used(engine.runtime);
+        const size_t asked_before = kest_heap_taken(engine.runtime);
+        engine.frame[0] = again;
+        engine.frame[row_at].integer = 99;
+        if (kest_call(engine.runtime, engine.entry[HEAVIEST_CELL],
+                      engine.frame,
+                      sizeof(engine.frame) / sizeof(engine.frame[0]))) {
+            fprintf(stderr, "`heaviestCell` answered about a row that is not "
+                            "there\n");
+            return 1;
+        }
+        if (!said_that(engine.runtime, "K0604", "outside an array")) {
+            return 1;
+        }
+        const size_t held_after = kest_heap_used(engine.runtime);
+        const size_t asked_after = kest_heap_taken(engine.runtime);
+        if (held_after != held_before || asked_after != asked_before) {
+            fprintf(stderr, "a refusal inside a `no.alloc` body moved the "
+                            "program heap: holding %zu then %zu, ever asked "
+                            "%zu then %zu\n",
+                    held_before, held_after, asked_before, asked_after);
+            return 1;
+        }
         if (!kest_lend_ends(engine.runtime, again)) {
             kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
             return 1;
@@ -4472,6 +4503,9 @@ int main(int argc, char **argv) {
         printf("host read a %u slot result of two kinds through what the "
                "program says they are: %d weighing %g\n", cell->count,
                (int)answered[0], answered[1]);
+        printf("and a refusal inside a body promising `no.alloc` left the "
+               "program heap at %zu bytes, %zu ever asked for\n",
+               held_after, asked_after);
     }
 
     // And the same crossing over the widths a C header is full of. Nothing
