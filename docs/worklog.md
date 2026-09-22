@@ -40467,6 +40467,80 @@ See D1129.
 
 Next: CI green on the exact final HEAD.
 
+## The report, and what it says is still weak
+
+`docs/report.md` answers the thirty questions section 35 asks, under the rule
+this project already keeps: every number is one this tree takes and can take
+again, and where the record is thin it says so.
+
+Three answers worth carrying: the dominant ceiling moved and the answer to it
+was a second engine rather than a faster interpreter; incrementality was not
+needed and that is a measurement, because a keystroke is **0.3 ms** on a
+hundred and twelve thousand lines; and **the AI claim is the weak one**. The
+runtime, contract and loop claims each hold by something that runs. The claim
+the owner asked for first -- that code written with a model is easier to get
+right here -- has a suite, hidden tests, a harness, a cost measurement and no
+model.
+
+So the report names the highest-value next direction as running models against
+the suite, and the second as reading the generated C against what `g++` writes
+for the same workload.
+
+See D1140.
+
+**Runs:** `make fast`, `make most`, `make check`.
+
+Next: CI green on the exact final HEAD.
+
+## One body, any set
+
+`among` is the twelfth family: three small functions that work for whatever
+they are handed, each asked of two sets that share nothing. Three things it is
+about, none of them caught by a type: **nothing is what there is** (a value of
+the set standing for "none" is one the caller cannot tell from an answer),
+**the first is the first** (the wrong answer keeps walking and hands back the
+last), and **a run somebody else owns may be too small**.
+
+Both languages fail the wrong answer at `checks 1`.
+
+Writing it found its own mistake: the first version's checks said three pieces
+of text were longer than two letters and only two were, so the answer written
+here failed its own test at check 8. The rule that the answer written here must
+keep every test caught it in one run.
+
+See D1139.
+
+**Runs:** `tools/check-ai.sh` -- 24 task and language pairs -- and `make most`.
+
+Next: CI green on the exact final HEAD.
+
+## What the same work costs a reader
+
+Of the seven things the owner asked for, *very readable* had no evidence behind
+it -- the hardest to measure and the easiest to assert. The suite is the one
+place where identical gameplay work is written twice by the same hand, so
+`ai/reading.sh` counts it: lines that are not blank or comment, and tokens,
+Kest's from the compiler's own lexer and Luau's by the same rule.
+
+**The answers are 2,463 words of Kest against 2,716 of Luau. The scaffolds --
+what has to be read before writing anything -- are 1,240 against 1,213.**
+
+The spread is where the reading is. Where the work is about things that may not
+be there (`saved` 60 per hundred, `frail` 55), Kest is a little over half the
+words, because `if let` and an optional do what a guard and a comment do on the
+other side. Where it is shuffling data known to be there (`nearby` 125,
+`stale` 111), Kest is longer, because the types are written down.
+
+Not a claim that fewer words is better: a type written down is a word a reader
+does not have to work out. What it is for is that the difference is small and
+known rather than large and guessed.
+
+See D1138.
+
+**Runs:** `sh ai/reading.sh`, `make most`, `make check`.
+
+Next: CI green on the exact final HEAD.
+
 ## The doors an engine gives, and a runner that has a host
 
 The suite's families were being counted against the fourteen in the mechanisms

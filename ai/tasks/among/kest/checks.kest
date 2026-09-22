@@ -1,0 +1,95 @@
+module checks
+
+// What the task is judged by, which whoever does it does not see. Each check
+// answers with its own number; nought is every check passing.
+//
+// Every one of the three is asked of two sets that share nothing -- whole
+// numbers and pieces of text -- because one body for any set is the whole of
+// what this task is about, and a body written for one of them passes half of
+// this.
+
+import among
+
+fn big(n: i32) -> bool no.alloc no.host deterministic {
+    return n > 2
+}
+
+fn never(n: i32) -> bool no.alloc no.host deterministic {
+    return false
+}
+
+fn long(t: text) -> bool no.alloc no.host deterministic {
+    return len(t) > 2
+}
+
+fn main() -> i32 {
+    let numbers = [1, 5, 2, 9, 3]
+    let words = ["a", "abc", "bb", "abcd"]
+
+    // The first, and it is the first rather than any of the others.
+    if let one = among.firstThat(numbers, big) {
+        if one != 5 {
+            return 1
+        }
+    } else {
+        return 2
+    }
+    if let one = among.firstThat(words, long) {
+        if one != "abc" {
+            return 3
+        }
+    } else {
+        return 4
+    }
+
+    // And nothing, which is what there is rather than a value of the set.
+    if let one = among.firstThat(numbers, never) {
+        return 5
+    }
+    let none_at_all: [i32] = array()
+    if let one = among.firstThat(none_at_all, big) {
+        return 6
+    }
+
+    // How many, over both sets and over none.
+    if among.howMany(numbers, big) != 3 {
+        return 7
+    }
+    if among.howMany(words, long) != 2 {
+        return 8
+    }
+    if among.howMany(numbers, never) != 0 {
+        return 9
+    }
+
+    // Every one, in the order they are in.
+    let four: [i32] = array(4, 0)
+    if among.allThat(numbers, big, four) != 3 {
+        return 10
+    }
+    if four[0] != 5 || four[1] != 9 || four[2] != 3 {
+        return 11
+    }
+    let three: [text] = array(3, "")
+    if among.allThat(words, long, three) != 2 {
+        return 12
+    }
+    if three[0] != "abc" || three[1] != "abcd" {
+        return 13
+    }
+
+    // And a run with room for fewer than there are: what fits is written and
+    // what is answered is what was written.
+    let two: [i32] = array(2, 0)
+    if among.allThat(numbers, big, two) != 2 {
+        return 14
+    }
+    if two[0] != 5 || two[1] != 9 {
+        return 15
+    }
+    let no_room: [i32] = array()
+    if among.allThat(numbers, big, no_room) != 0 {
+        return 16
+    }
+    return 0
+}

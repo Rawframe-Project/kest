@@ -1,0 +1,45 @@
+module among
+
+// One body, any set. What each function has to do is in `ask.md`; the shapes
+// and the signatures here are the task's and are not to be changed.
+//
+// `fn(T) -> bool no.alloc no.host` is a function value that carries what it
+// promises, so a body that calls one under those promises is held to them.
+
+// The first of `xs` that `keeps` answers yes to, or nothing.
+fn firstThat<T>(xs: [T], keeps: fn(T) -> bool no.alloc no.host) -> T? no.alloc no.host {
+    let found: T? = none
+    for one in xs {
+        if keeps(one) {
+            // Kept walking, so what comes back is the last rather than the
+            // first.
+            found = one
+        }
+    }
+    return found
+}
+
+// How many of `xs` it answers yes to.
+fn howMany<T>(xs: [T], keeps: fn(T) -> bool no.alloc no.host) -> i32 no.alloc no.host {
+    let many = 0
+    for one in xs {
+        if keeps(one) {
+            many += 1
+        }
+    }
+    return many
+}
+
+// Every one it answers yes to, written into `into` in the order they are in
+// `xs`, and how many were written. `into` is a run somebody else owns: it may
+// have room for fewer than there are.
+fn allThat<T>(xs: [T], keeps: fn(T) -> bool no.alloc no.host, into: [T]) -> i32 no.alloc no.host {
+    let put = 0
+    for one in xs {
+        if keeps(one) {
+            into[put] = one
+            put += 1
+        }
+    }
+    return put
+}

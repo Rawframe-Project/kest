@@ -42,6 +42,7 @@ table and the tree and holds them to each other.
 | `docs/state.md` | Where this is and what is known to be wrong: the defects reproduced against this tree, with the evidence named, and which phase of the work is open. Short, current, and the one read for what to do next. |
 | `CHANGELOG.md` | What changed between one version and the next, for somebody who has a program written against the last one. It is not the worklog: the worklog is what was built and this is what a reader has to do about it. Newest first, one section a version, and a version with nothing a reader has to do about it says so. See D983. |
 | `docs/game-ai-direction-state.md` | Where the game-first / AI-native work is: the mission's start SHA, the reference machine, the baseline numbers, what has been measured, what is open in priority order, and what has been rejected. The documents it serves are in `/home/kest/mission/direction/`; their goals are binding and their proposed mechanisms are not. It is the operational position, not a diary: reasoning goes in `docs/decisions.md`. |
+| `docs/report.md` | The final report section 35 of the mission asks for: thirty answers, each held by a number this tree takes and can take again, and each place the record is thin saying so rather than filling it in. It is written once the criteria are met and kept true afterwards. See D1140. |
 | `docs/worklog.md` | What was built, in order. Newest last. An entry is a heading, what was done and what it turned up, and a `**Runs:**` line saying what was run to believe it, which `check-docs.sh` holds. It is a record and not a queue: entries used to end with a `**Next:**` line that the next turn was given as its work, which made the last thing written the source of what happens next, and scope that comes from the last thing written is scope nobody chose. Those lines are left where they are and nothing reads them. What to do next comes from whoever is directing the work. |
 
 ## Layout
@@ -179,7 +180,9 @@ ai/                The tasks a model is given: the same gameplay work
                    `tools/check-ai.sh` holds the suite to being worth being
                    judged by, and counts which side caught each wrong answer:
                    a refusal costs a turn where a hidden test costs a run, and
-                   one nothing catches escapes. `ai/cost.sh` reads what those
+                   one nothing catches escapes. `ai/reading.sh` counts what the same
+                   work costs a reader in each language, over the answers and
+                   the scaffolds both. `ai/cost.sh` reads what those
                    two cost in milliseconds -- the loop somebody edits in, how
                    long being told takes, and whether a diagnostic names a
                    line the repair is on. It measures rather than checks and

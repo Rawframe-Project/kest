@@ -57,6 +57,16 @@ KEST_LUAU=/where/luau/is RUNS=15 sh ai/cost.sh
 
 It measures and does not check, for the reason none of `bench` does. See D1126.
 
+## What the same work costs a reader
+
+`ai/reading.sh` counts the answers and the scaffolds both ways: the eleven
+tasks are **2,463 words of Kest against 2,716 of Luau**, and the scaffolds --
+what has to be read before a word of the answer can be written -- are 1,240
+against 1,213. Where the work is about things that may not be there, Kest is a
+little over half the words; where it is shuffling data known to be there, it is
+a tenth to a quarter longer, because the types are written down. It measures
+and does not check. See D1138.
+
 ## What holds it
 
 `tools/check-ai.sh`, which `make check` runs. For every task and every
@@ -79,10 +89,11 @@ A suite nobody has seen fail is indistinguishable from no suite.
 | `nearby` | library names that are nearly the one you want |
 | `pooled` | taking from a pool under a promise to reach no heap |
 | `crossing` | doors an engine gives, and what their answers mean |
+| `among` | one body that has to work for whatever it is handed |
 
-**Eleven of the fourteen task families the mechanisms document lists** -- and
+**Twelve of the fourteen task families the mechanisms document lists** -- and
 **all nine the mission itself lists**, which is the binding one. Two of the
-eleven are narrower than the family they sit under. The mission's list, and what is here
+twelve are narrower than the family they sit under. The mission's list, and what is here
 against it:
 
 | family | here |
@@ -97,7 +108,7 @@ against it:
 | host API use | `crossing` |
 | save/load change | `saved`, which is save and load rather than a change |
 | hot-update-compatible change | — |
-| generic API use | — |
+| generic API use | `among` |
 | error handling | `frail` |
 | callback/context use | `called` |
 | near-miss API names | `nearby` |

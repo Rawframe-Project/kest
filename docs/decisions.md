@@ -39114,3 +39114,135 @@ should be asked once, `checks 12` in Kest and in Luau.
 In Luau the engine arrives as a table the host hands in, which is how a Luau
 embedder gives a script the API it may call; in Kest it is `extern`, bound by
 name. Each language's own mechanism, the same task, and the same numbers.
+
+## D1138 — What the same work costs a reader
+
+Of the seven things the owner asked for, *very readable* had no evidence at all
+behind it. It is the hardest to measure honestly and the easiest to assert, so
+it had been asserted.
+
+The suite is the one place in this tree where **identical gameplay work is
+written twice by the same hand**, which makes it the only fair place to ask.
+`ai/reading.sh` counts, over eleven paired tasks: the lines that are not blank
+and not a comment, and the tokens — Kest's from the compiler's own lexer with
+comments and line ends taken out, Luau's by the same rule, because a count
+taken two different ways is two numbers rather than one.
+
+| | Kest | Luau | |
+| --- | --- | --- | --- |
+| the answers | **2,463 words** | 2,716 | 90 per hundred |
+| the scaffolds, read before a word is written | 1,240 | 1,213 | 102 per hundred |
+
+**What a reader has to read before writing anything is the same size** — two
+per cent more in Kest, which is the types and the promises written down — and
+**the answer itself is a tenth shorter.**
+
+The spread is where the reading is:
+
+| task | Kest | Luau | |
+| --- | --- | --- | --- |
+| `saved` | 259 | 431 | 60 per hundred |
+| `frail` | 222 | 402 | 55 |
+| `nearby` | 273 | 219 | 125 |
+| `stale` | 170 | 153 | 111 |
+| `spread` | 377 | 352 | 107 |
+
+Where the work is about **things that may not be there** — a line that is not a
+record, a save somebody else wrote — Kest is a little over half the words,
+because `if let` and an optional do what a guard and a comment do on the other
+side. Where it is straightforward shuffling of data that is known to be there,
+Kest is a tenth to a quarter longer, because the types are written down.
+
+That is the honest shape of it, and it is not a claim that fewer words is
+better. A type written down is a word a reader does not have to work out; a
+promise is a word that saves reading a body. What these numbers are for is that
+the difference is **small and known** rather than large and guessed — and that
+the one place Kest is longer is the one place it is longer on purpose.
+
+Tokens and lines are a proxy for what reading costs and not the thing itself.
+What would settle it is people, and that is the owner's to run.
+
+## D1139 — One body, any set
+
+The twelfth of the fourteen families the mechanisms document lists, and the one
+most likely to show where a language's ergonomics are: **generic API use**.
+
+`among` is three small functions that have to work for whatever they are handed
+— the first that a test answers yes to, how many, and every one written into a
+run somebody else owns. Each is asked of **two sets that share nothing**,
+whole numbers and pieces of text, because one body for any set is the whole of
+it and a body written for one of them passes half.
+
+Three things it is really about, and each has a wrong answer that a type system
+does not catch:
+
+- **Nothing is what there is.** `firstThat` answers `T?`; a value of the set
+  picked to stand for "none" is one the caller cannot tell from an answer. In
+  Kest that is `T?` and `if let`; in Luau `T?` and a `nil` check, and the check
+  has to ask about `nil` before it compares, or comparing a possible `nil` is
+  the mistake instead.
+- **The first is the first.** The wrong answer keeps walking and hands back the
+  last, which is one line's difference and passes every check about how many.
+- **A run somebody else owns may be too small.** Writing past the end is the
+  third, and the checks hand over a run with room for two of three and one with
+  no room at all.
+
+In Kest a function value carries what it promises — `fn(T) -> bool no.alloc
+no.host` — so a body that calls one under those promises is held to them, which
+is why all three can promise them. Luau's `into` is handed its size beside it,
+because a Lua table does not carry one.
+
+Both languages fail the wrong answer at the same check, `checks 1`: the last
+rather than the first.
+
+Writing it found its own mistake, which is worth keeping: the first version's
+checks said three pieces of text were longer than two letters and only two of
+them were, so the answer written here failed its own test at check 8. The tests
+are held to being right by the same rule everything else here is — the answer
+written here keeps every one of them — and that rule caught it in one run.
+
+## D1140 — The report, and what it says is still weak
+
+Section 35 asks thirty questions. `docs/report.md` answers them, and the rule
+followed writing it was the one this project already keeps: every number is one
+this tree takes and can take again, and where the record is thin the report
+says so rather than filling it in.
+
+Three of the answers are worth carrying here, because they are the ones an
+independent reader will go to first.
+
+**The dominant ceiling moved, and the answer to it was a second engine.** The
+machine was dispatch and instruction bodies at 54 per cent with 16.5 per cent
+going on working out where a refusal would be reported before every door call —
+a cost paid on every call for a message almost no call needs. Taking it off the
+hot path took the reference program from 18.31 G instructions to 6.84 G. What
+was left after that does not yield to more dispatch work, which is why the
+release engine writes C11 instead.
+
+**Incrementality was not needed, and that is a measurement.** A keystroke in a
+leaf system is 0.3 ms on a hundred and twelve thousand lines, because latency
+follows what a file imports rather than how big the project is. The one case a
+resident compiler would help is the single file that imports everything, and it
+is edited when a system is added rather than while code is written.
+
+**The AI claim is the weak one, and the report says so in those words.** The
+runtime claim, the contract claim and the loop claim each hold by something
+that runs. The claim the owner asked for first — that code written with a model
+is easier to get right here — has a suite, hidden tests, a harness, a cost
+measurement and no model. Everything built for it is unspent.
+
+So the report names the highest-value next direction as running models against
+the suite, and the second as reading the generated C against what `g++` writes
+for the same workload, which is where the remaining runtime distance is and
+where nobody has looked.
+
+The report does not mark `GAME_AI_DIRECTION_COMPLETE`. That is section 34's and
+is decided by its criteria, not by having written a report about them.
+
+**And writing it while a gate was running made that gate say so.** D1134's
+fourth walk compares the tree before the gate to the tree afterwards, so a file
+written in between is a file the gate looks to have left: `a run left a file in
+the tree that make clean does not take away: docs/report.md`. The check was
+right and the process was wrong — a gate is a question about a tree that is
+holding still, and the answer to a gate that caught the tree moving is to run
+it again rather than to make the walk cleverer.
