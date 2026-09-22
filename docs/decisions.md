@@ -39715,3 +39715,44 @@ catch. The one place a model's mistake was caught before it ran is the colony
 everybody standing still. A suite that measures that has to be harder than this
 one -- tasks a strong model gets wrong often enough in the incumbent for a
 difference to be seen.
+
+## D1149 — The whole gate is CI's to run
+
+`make check` is about half an hour on the reference machine and most of it is
+the sweep of 900 holes, which is about the checks rather than the language. It
+was run here before every push, and CI's `linux-full` job ran it again on every
+push. The second run is the one that counts -- the mission's own criterion is
+CI green on the final HEAD -- so the first was half an hour a change spent
+agreeing with it in advance. In the last week it disagreed once, and that once
+was the sweep being wrong on this machine and right on CI's (D1144).
+
+So a change is pushed when `make most` passes here and is done when CI says the
+whole gate passed on that commit. The whole gate is run here when CI cannot
+answer, or when what changed is the sweep itself. Nothing is taken out of the
+gate: every check, every hole and every guard still runs on every push, on a
+machine that is not this one.
+
+And no new check about the other checks. The ones there are stay; what goes
+wrong in one is fixed in it.
+
+## D1150 — One page for somebody arriving from another language
+
+Every Kest run of the blind suite (D1148) said the reference is long and
+searched it rather than read it, and that is most of why a Kest run cost about
+half as many tokens again as a Luau one. The reference is long because it is
+normative: it says why, and every figure in it is held to a run. A newcomer
+wants what is different, and what is different is short.
+
+`docs/primer.md` is that page, written from what people and models new to the
+language got wrong: a name keeps its module, a struct is built by position, a
+struct is a value and an array a handle, arrays count from nought, numbers are
+sized and never convert on their own, `if` gives a value with `->`, block arms
+of a `match` have no arrow, nothing is `none`, a `ref` can go stale, text is
+joined by holes, and the three promises. Every program on it is run by
+`check-docs.sh` for its answer, the way the reference's are -- which caught two
+of its first draft's own claims being wrong: an `f32` printed as `1` that is
+`1.0`, and text joined with `+`, which this language refuses.
+
+It is one more document than the rule allowed, and the rule is changed to name
+it. It says what and leaves why to the reference, which stays the one that is
+normative.

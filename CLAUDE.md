@@ -28,10 +28,11 @@ identifiers, error messages. No exceptions.
 decision was superseded the day it was accepted because it was written from a
 summary instead of the documents it cited.
 
-**Seven documents, and that is all.** One front page, four that hold the work,
-one that says where it is, and one a reader of a *release* needs rather than a
-reader of the tree. An eighth is refused by `check-docs.sh`, which reads this
-table and the tree and holds them to each other.
+**These documents, and that is all.** One front page, the ones that hold the
+work, one that says where it is, one a reader of a *release* needs rather than
+a reader of the tree, and one page for somebody arriving from another language.
+Another is refused by `check-docs.sh`, which reads this table and the tree and
+holds them to each other.
 
 | File | Holds |
 | --- | --- |
@@ -42,6 +43,7 @@ table and the tree and holds them to each other.
 | `docs/state.md` | Where this is and what is known to be wrong: the defects reproduced against this tree, with the evidence named, and which phase of the work is open. Short, current, and the one read for what to do next. |
 | `CHANGELOG.md` | What changed between one version and the next, for somebody who has a program written against the last one. It is not the worklog: the worklog is what was built and this is what a reader has to do about it. Newest first, one section a version, and a version with nothing a reader has to do about it says so. See D983. |
 | `docs/game-ai-direction-state.md` | Where the game-first / AI-native work is: the mission's start SHA, the reference machine, the baseline numbers, what has been measured, what is open in priority order, and what has been rejected. The documents it serves are in `/home/kest/mission/direction/`; their goals are binding and their proposed mechanisms are not. It is the operational position, not a diary: reasoning goes in `docs/decisions.md`. |
+| `docs/primer.md` | One page for somebody who knows Lua or Rust: what is different here, written from what people and models new to the language got wrong, every program on it run by `check-docs.sh` for its answer. It says what; `docs/language.md` says why and is the one that is normative. See D1150. |
 | `docs/report.md` | The final report section 35 of the mission asks for: thirty answers, each held by a number this tree takes and can take again, and each place the record is thin saying so rather than filling it in. It is written once the criteria are met and kept true afterwards. See D1140. |
 | `docs/worklog.md` | What was built, in order. Newest last. An entry is a heading, what was done and what it turned up, and a `**Runs:**` line saying what was run to believe it, which `check-docs.sh` holds. It is a record and not a queue: entries used to end with a `**Next:**` line that the next turn was given as its work, which made the last thing written the source of what happens next, and scope that comes from the last thing written is scope nobody chose. Those lines are left where they are and nothing reads them. What to do next comes from whoever is directing the work. |
 
@@ -1428,11 +1430,19 @@ other. Run it while something is being written; do not say a thing is done on
 it. `KEST_HOLES=no` is what the Makefile sets. See D1136.
 
 `make check` is the whole of it and takes about ten minutes — half an hour on a
-box somebody else is also using. Run it at a milestone and before saying
-something is done — not after every edit, which is what made a change cost four
-full runs of the gate and the gate the reason nothing moved. Every check in
+box somebody else is also using. CI's `linux-full` job runs it on every push,
+and that is where it is run: a change is pushed once `make most` passes here,
+and is done once CI says the whole gate passed on that commit. It is run here
+only when CI cannot answer, or when what changed is the sweep itself. What that
+buys is half an hour a change; what it costs is a red CI run now and then that
+a local run would have caught first, which is cheaper. See D1149. Every check in
 `tools` also runs on its own, which is how a change that moves one figure is
 answered in seconds rather than in a round trip.
+
+No new check about the other checks. The gate's own guards and the sweep are
+what they are, and the list of holes does not grow for the reason given
+above; a defect in a check is fixed in that check and held by a line of the
+corpus it already reads.
 
 `make check` is the whole of it: both builds, every host, every example run or
 resolved, every command against every file under the sanitisers, every tool

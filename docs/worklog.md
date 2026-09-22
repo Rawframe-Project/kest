@@ -40890,3 +40890,15 @@ See D1148.
 **Runs:** the seventy-two answers through `ai/run.sh`, again through
 `ai/blind.sh score`, the refusal corpus against the compiler before and after,
 `check-ai.sh`, and `make check`.
+
+## 2026-09-22, one page for a newcomer, and the gate CI's to run
+
+`docs/primer.md` is what is different here for somebody who knows Lua or Rust,
+written from what the blind runs and the colony got wrong; every program on it
+is run for its answer, and the check caught two of the first draft's own claims
+being wrong. The document rule names it. See D1150.
+
+The whole gate is run by CI on every push rather than here before every push;
+`make most` is what a change is pushed on. Nothing leaves the gate. See D1149.
+
+**Runs:** `check-docs.sh` over the page, and `make most`.

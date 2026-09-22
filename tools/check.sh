@@ -2849,7 +2849,7 @@ say "nothing" "a document with nothing in it, and three checks handed no files"
 
 ask "lends" tools/check-lends.sh
 ask "documentation" tools/check-docs.sh docs/language.md \
-    docs/decisions.md CHANGELOG.md
+    docs/decisions.md CHANGELOG.md docs/primer.md
 ask "costs" tools/check-costs.sh
 ask "ceilings" tools/check-ceilings.sh
 
