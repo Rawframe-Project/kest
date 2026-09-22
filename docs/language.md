@@ -5692,21 +5692,22 @@ than guessed at: the build that checks itself counts every instruction it runs,
 and `KEST_DEEP=1` makes it say so. Run at two step counts and two entity
 counts and take the difference of the differences — a world is built once
 however many rounds there are, and a round has a loop of its own however many
-entities are in it — and a frame step an entity is **forty-four instructions**,
-of which eight are `load.k`, five are `load`, four are `load2`, three are
-`load.n`, three are `store` and one is `store.n` — twenty-four of the forty-four,
-near enough three in five, move a value onto the stack or off it. The
+entities are in it — and a frame step an entity is **forty-two instructions**,
+of which six are `load.k`, five are `load`, four are `load2`, three are
+`load.n`, three are `store` and one is `store.n` — twenty-two of the forty-two,
+near enough half, move a value onto the stack or off it. The
 arithmetic is six: two `mul.f32`, two `add.f32`, one `add.i.narrow.to` and one
 `sub.i.narrow`. That is what a stack machine is, and it is where the next thing
 to be gone after was found: it was fifty-seven instructions before `load.k` and
 `load2` took the two commonest pairs of pushes and made each of them one
 instruction, and what that bought is in D961. It was forty-six until an element
 read out of a run went straight into the frame rather than through the stack
-(D1012), and forty-five until an addition wrote its answer where it was going
-(D1014).
+(D1012), forty-five until an addition wrote its answer where it was going
+(D1014), and forty-four until a local weighed against a constant was one
+instruction with the jump that reads it (D1154).
 
 Counting them is not free, and what it costs is the other number this build
-says: over those forty-four instructions it asks its own compiler **fifty-two
+says: over those forty-two instructions it asks its own compiler **fifty-two
 questions** about what it is about to do — whose slots these are, whose
 constants, whether what a frame holds is the shape the chunk was declared with.
 That is the machine holding itself to what it was handed rather than trusting
@@ -6336,7 +6337,7 @@ bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 577 lines:
-55860 bytes as tokens, 136241 as a tree, 174904 checked and 205417 compiled.
+55860 bytes as tokens, 136241 as a tree, 174904 checked and 204905 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
 
@@ -6353,7 +6354,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 20701 bytes, against the 205417 it costs to compile.
+file and 20701 bytes, against the 204905 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.

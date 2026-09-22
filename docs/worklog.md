@@ -40941,3 +40941,20 @@ See D1153.
 **Runs:** the colony before and after on both engines, reloads at three sizes
 and one that does not build, `examples/embed` against the doors and a broken
 copy, the stale-quotation pass of the sweep, and `make most`.
+
+## 2026-09-22, the machine against Luau's again
+
+Every workload measured again by task clock and instructions: this machine is
+behind Luau's interpreter by a sixth to double, not the four times `graph` was
+quoted at, and the release engine is ahead of Luau's native tier on four of
+five. Three things came off the machine: the source place of a refusal worked
+out before every `push` rather than when one is refused, an element of one
+piece read inline, and a local weighed against a constant made one instruction
+with the jump that reads it. `rules` is 14 per cent fewer instructions,
+`words` 15, `control` 10, and every workload answers the same fused and plain.
+
+See D1154.
+
+**Runs:** the five workloads on six engines by `perf stat`, `KEST_DEEP` counts
+of what `rules` runs, the five fused and with `KEST_PLAIN=1`, `check-costs.sh`
+and the one hole it reads put in by hand, and `make most`.

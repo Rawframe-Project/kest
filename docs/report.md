@@ -59,7 +59,10 @@ direction's own work began.
 ## 6. Game-shaped runtime numbers
 
 Whole processes, best of five, wall clock, on a machine somebody else was also
-using (D1116):
+using (D1116). Run again by task clock on 2026-09-22 (D1154), `graph` is 16.6 ms
+on the machine against Luau's 15.9 rather than 79 against 19, and the machine
+is behind Luau's interpreter by a sixth to double everywhere else; the table
+below is the first measurement and D1154 has the second:
 
 | workload | kest | **kest, compiled** | `g++ -O2` | `luau -O2` | `luau --codegen` | daslang |
 | --- | --- | --- | --- | --- | --- | --- |

@@ -39859,3 +39859,65 @@ whole rather than an element at a time.
 Two holes quoted the door count the reference and the front page had before
 D1151, and CI's sweep stopped before it started with both named. They quote
 107 now.
+
+## D1154 — The machine against Luau's, measured again, and three things off it
+
+*measured*, instructions by `perf stat` and the best of five by task clock, on
+a machine other people were using; the instructions are what to read.
+
+`docs/report.md` section 6 put this machine at 79 ms on `graph` against Luau's
+interpreter at 19. Run again the same day, it is 16.6 against 15.9 -- 120
+million instructions against Luau's 117. The table was a whole process timed
+by the shell on a busier afternoon, and it had gone on being quoted. Every row
+again, best of five by task clock:
+
+| workload | machine | Luau | rules as C | Luau --codegen | daslang | g++ -O2 |
+| --- | --- | --- | --- | --- | --- | --- |
+| kernel | 124.5 | 104.9 | 19.1 | 44.0 | 168.3 | 6.7 |
+| control | 166.3 | 120.8 | 23.7 | 46.8 | 167.6 | 6.7 |
+| graph | 16.6 | 15.9 | 4.2 | 9.5 | -- | 1.9 |
+| words | 50.0 | 35.7 | 34.7 | 34.5 | -- | 13.2 |
+| rules | 901.0 | 453.4 | 130.7 | 211.9 | -- | 58.5 |
+
+The engine a release runs is ahead of Luau's native tier on four and level on
+`words`. This machine is behind Luau's interpreter by between a sixth and
+double, and furthest on `rules`, which is the most like a game. That is what
+this is about.
+
+**Where a refusal would be said, worked out before every `push`.** Twelve of
+the doors a running program allocates through -- `push`, a new array, a new
+store, `add` to one -- began by working out the source place a refusal would be
+reported at, which is a walk of the body's instructions from its first to the
+one running. It is wanted only when the allocation is refused. D1117 took the
+same thing off the host's doors; these were left. It is worked out on the way
+to the refusal now: 10.9 per cent of `rules` at a thousand actors was that walk,
+and `rules` went from 5.84 thousand million instructions to 5.34.
+
+**An element of one piece, read where it is.** Reading a number, a handle or a
+piece of text out of a run went through a call to `unpack`, a record of what
+tag was read, and a walk of one piece. A layout of one piece with no tag in it
+is read inline now. Two to six per cent where runs of numbers are read, and
+`kernel`, whose elements are structs, pays the one extra test: 0.6 per cent.
+
+**A local weighed against a constant, and the jump, as one instruction.**
+`load.k` pushes a local and a constant, and one of the six compare-and-jumps
+pops them: two dispatches for every `if one.hp > 20` and every flag test, and
+the commonest pairs `rules` runs. `jump.false.lt.k` and its five siblings read
+the slot and the constant where they are and jump. The lowering makes them
+where a jump has already taken a comparison of whole numbers into itself and
+the instruction before is a `load.k` nothing points between, and nowhere else;
+`KEST_PLAIN` turns them off with the rest.
+
+| workload | instructions before | after all three | |
+| --- | --- | --- | --- |
+| rules | 5,842,948,537 | 5,029,969,847 | -13.9 % |
+| control | 1,330,118,661 | 1,192,717,805 | -10.3 % |
+| words | 365,593,337 | 310,818,955 | -15.0 % |
+| graph | 120,466,663 | 114,793,169 | -4.7 % |
+| kernel | 1,087,403,268 | 1,096,888,123 | +0.9 % |
+
+Every workload answers what it answered, fused and with `KEST_PLAIN=1`.
+`rules` is still 1.5 times Luau's interpreter in instructions, and the rest of
+that distance is dispatches: the next of the commonest pairs are an element
+read by a local index from a local run, a value weighed against a constant
+off the stack, `t = s + k`, and a constant stored into a local.
