@@ -40467,6 +40467,35 @@ See D1129.
 
 Next: CI green on the exact final HEAD.
 
+## The doors an engine gives, and a runner that has a host
+
+The suite's families were being counted against the fourteen in the mechanisms
+document, which is a menu and says so. The **mission** lists nine, and one was
+missing: *use host API*. It was missing because `ai/run.sh` judged a task by
+handing a Kest program to `kest run`, and a task about the doors a host gives
+cannot be judged by a program on this side of them.
+
+The runner has a host now: a task with `kest/host.c` is built against
+`libkest.a`, binds what the task declares `extern`, and answers `checks N` like
+everything else. `crossing` is that task -- three doors whose **answers** are
+the whole of it: `spawn` answers an id or a refusal, `despawn` answers whether
+there was one to take, and a run the engine lends **cannot grow** (`fit` into
+one is K0608), so the answer writes into the room it was given and says how
+many it used.
+
+The wrong answer reads the refusal as an id. Both languages catch it at the
+same check -- `checks 12` -- and in Luau the engine arrives as a table the host
+hands in, which is how a Luau embedder does it.
+
+All nine families the mission lists are written.
+
+See D1137.
+
+**Runs:** `make check`, and `tools/check-ai.sh` with `KEST_LUAU` set: 22 task
+and language pairs.
+
+Next: CI green on the exact final HEAD.
+
 ## The tier between a tenth of a second and half an hour
 
 `make fast` is a quarter of a second and `make check` is half an hour on this

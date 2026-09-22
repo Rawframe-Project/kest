@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1136
+    CURRENT SHA:       (this commit) D1093-D1137
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -450,7 +450,19 @@ backend's own half instead.
    building daScript with LLVM, which is not this tree's to build. Every
    daslang row runs without its module cache (D1118), which is what the rows
    beside it do and what keeps its directory out of this tree.
-5. **More of the AI suite.** Ten of the **fourteen** task families the
+5. *(done, D1137)* **The AI suite against the list that binds it.** Eleven of
+   the fourteen in the mechanisms document -- which is a menu and says so --
+   and **all nine the mission itself lists in section 20**. The last of the
+   nine was *use host API*, and it was missing because the runner had no host:
+   a task about the doors a host gives cannot be judged by a program on this
+   side of them. `ai/run.sh` builds `kest/host.c` against `libkest.a` where a
+   task has one, and it answers `checks N` like everything else. `crossing` is
+   that task -- three doors whose *answers* are the whole of it, a run the
+   engine lends that cannot grow (`fit` into one is K0608), and a wrong answer
+   that reads a refusal as an id, caught at the same check in both languages.
+   Running models against it is the owner's, at the end.
+6. **The three families left, which are the menu's rather than the mission's.**
+   Ten of the **fourteen** task families the
    mission lists are written (D1101, D1106, D1110, D1113, D1114, D1121,
    D1125), with held-out tests, a wrong answer beside each and a gate that
    holds all three -- and two of the ten are narrower than the family they sit
@@ -479,7 +491,7 @@ backend's own half instead.
    pointing at a line that has to change. `ai/README.md` holds the table. The
    count said nine until D1120, which is where that is written down. Running
    models against it is the owner's, at the end.
-6. *(done, D1117)* **Game-shaped runtime profile**, on `bench/rules.kest`.
+7. *(done, D1117)* **Game-shaped runtime profile**, on `bench/rules.kest`.
    The machine: dispatch and the instruction bodies 54%, working out where a
    refusal would be reported 16.5%, value movement 22%, the collector and the
    heap 0.4%. The release engine: the compiled bodies 73%, the ledger frame
@@ -488,7 +500,7 @@ backend's own half instead.
    The 16.5% was a defect and is gone: `bench/agents.kest` went from 18.31 G
    instructions to 6.84 G, and from 11.40 G cycles to 3.80 G. What the profile names next is
    `kest_native_room` — see item 7.
-7. *(done, D1122)* **The ledger frame.** What a call keeps is in the public
+8. *(done, D1122)* **The ledger frame.** What a call keeps is in the public
    header now, held to the machine's own shape by `_Static_assert`, and a
    body that makes calls reads it once and writes each call out.
    `bench/control.kest` 242.1 M instructions down to 194.2 M (20%),
@@ -497,7 +509,7 @@ backend's own half instead.
    ceiling was measured first — a build with no ledger at all runs `rules` in
    0.755 G — so half the 28% is the ledger itself, and the ledger is what a
    refusal deep in a compiled program is reported from.
-8. *(done, D1123)* **What a frame costs, and what its worst one costs.**
+9. *(done, D1123)* **What a frame costs, and what its worst one costs.**
    Every tail figure here was the machine's until `bench/frame` was linked
    with what the C backend wrote for its own program. Twenty thousand bodies
    a frame, five hundred frames, one checksum across every row:
@@ -519,7 +531,7 @@ backend's own half instead.
    than the source. The C row is the control and the instrument says whether
    its own tails are worth reading, because on a shared machine pure C showed
    a ninety-ninth of 786 µs against a middle of 62.
-9. *(done, D1124)* **What a serious integrated gameplay slice gets.**
+10. *(done, D1124)* **What a serious integrated gameplay slice gets.**
    `bench/tails.sh` writes the C for whatever program it is given, builds
    `bench/measure` around it, and runs both halves. `examples/slice` -- a
    colony with references at each other, rules promising `no.alloc`, churn
@@ -543,7 +555,7 @@ backend's own half instead.
    collector's longest pause on it is 0.18 ms by the machine and 0.23 ms
    compiled** — one and a half per cent of a sixty-hertz budget on a program
    making a hundred and twenty-five thousand allocations in sixty calls.
-10. *(done, D1127)* **The development loop, timed.** A reload costs **0.48 ms,
+11. *(done, D1127)* **The development loop, timed.** A reload costs **0.48 ms,
    of which 0.44 is building the program**; starting a machine, putting the
    world back into it, asking the seven doors and swapping are 0.05 ms between
    them. The reload path is a compile, so what it costs on a real project is
@@ -557,7 +569,7 @@ backend's own half instead.
    program while saying the world was the one it was. The doors are asked of
    the candidate now, and the gate holds every refused edit to ending where a
    run with no edit in it ends.
-11. *(done, D1128)* **The newcomer workflow, run rather than described.** The
+12. *(done, D1128)* **The newcomer workflow, run rather than described.** The
    README says an archive is installed by unpacking it and putting `bin` on
    the path. It was not: a shell that finds `kest` on `PATH` hands over the
    bare name, the two probes for the library resolved against whatever
@@ -570,7 +582,7 @@ backend's own half instead.
    ends with `nothing here is wrong`. The gate lays out a directory like an
    unpacked archive and stands somewhere else; CI's package job runs it that
    way too, rather than only with `KEST_LIB` exported.
-12. *(done, D1129)* **The rest of the documented workflow.** `make install
+13. *(done, D1129)* **The rest of the documented workflow.** `make install
    PREFIX=...` puts twelve files there and a program importing `std.io` runs
    from it both named with a path and found on `PATH`; `make uninstall`
    removes every one of them. And the README's sentence about the editor --
@@ -578,7 +590,7 @@ backend's own half instead.
    what `kest check` says cannot differ -- is held rather than asserted: four
    mistakes of four kinds, compared code by code, line by line, column by
    column and word by word against `kest check --json`.
-13. *(done, D1131)* **Real edit latency, in an editor, on a large project.**
+14. *(done, D1131)* **Real edit latency, in an editor, on a large project.**
    Driving `kest lsp` over a pipe on 112,647 lines: **a keystroke in a leaf
    system is 0.3 ms**, in a group importing twenty systems 3.0 ms, and in the
    one file that imports all ninety groups 475 ms. Edit latency follows what
@@ -591,7 +603,7 @@ backend's own half instead.
    And the editor stays right when the disk moves under it: rename a function
    in a dependency without touching the buffer and both sides say `K0353` at
    the same line and column. The gate holds that now.
-14. *(done, D1132, D1133)* **What a refusal costs and what it leaves.** F10,
+15. *(done, D1132, D1133)* **What a refusal costs and what it leaves.** F10,
    open since the foundation, is measured rather than read from the source: a
    refusal inside a body that promises `no.alloc` raises K0604 at the line
    that asked -- reading the file again and drawing a caret -- and leaves the
@@ -606,7 +618,7 @@ backend's own half instead.
    the same half-written world. The reference says so beside the `defer` rule,
    with the three answers a host has, and `examples/embed` runs all three
    halves of it.
-15. *(done, D1134)* **A file a run left in the tree.** `kest-colony-day.txt`,
+16. *(done, D1134)* **A file a run left in the tree.** `kest-colony-day.txt`,
    thirteen bytes, in the root of the repository: `examples/colony.kest`
    writes it beside whatever runs the program and `std.os` has no way to take
    a file away, so nothing tidied up. The tree check asked what a compiler
@@ -615,7 +627,7 @@ backend's own half instead.
    three. `make clean` takes it now, and the fourth walk is there: the tree
    before the gate ran against the tree afterwards, with whatever `make clean`
    names allowed.
-16. *(done, D1135)* **The Kest-specific mistake nothing answered.** Writing
+17. *(done, D1135)* **The Kest-specific mistake nothing answered.** Writing
    the three task files for D1125 turned up what a model gets wrong here, and
    the compiler answered all but one at the line: `pop` gives `T?` and not `T`
    (K0310), `none` is a keyword and not a name (K0201), `table.find` against
@@ -628,7 +640,7 @@ backend's own half instead.
    at the `let`, as a warning for the reason K0346 is one. Quiet where `room`
    or `push` is called on the name or where it is handed to another function
    at all, and no false positives over every `.kest` file in the tree.
-17. *(done, D1136)* **The tier between a tenth of a second and half an hour.**
+18. *(done, D1136)* **The tier between a tenth of a second and half an hour.**
    `make fast` is a quarter of a second and `make check` is half an hour on
    this box, and nothing sat in between -- so a task file, a paragraph or a
    one-line fix each cost a full gate. Timed one at a time, the eleven tools
@@ -644,7 +656,7 @@ backend's own half instead.
    the other and `LAST FULL GATE` goes on meaning `make check`. The other half
    of the slowness is the box: `/bin/true` costs 5.7 ms here and the load
    average sits at 31 to 37 on twelve cores, most of it other tenants.
-18. Comparators, kept in step as the engines move. The harness names the mode
+19. Comparators, kept in step as the engines move. The harness names the mode
    of every row (D1090), which is what stops an interpreter's number being
    read as a compiler's.
 

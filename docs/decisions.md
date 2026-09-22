@@ -39075,3 +39075,42 @@ The load on this box is the other half of the story and is nobody's design:
 twelve cores, most of it other tenants. A gate that gets a third of a machine
 takes three times as long, and the only answer to that is to ask for less of
 it more often.
+
+## D1137 — The doors an engine gives, and a runner that has a host
+
+The suite's families were being counted against the fourteen in the mechanisms
+document, which is a menu and says so. **The mission itself lists nine** in
+section 20, and against that list one was missing: **use host API**. It was
+missing for a reason — `ai/run.sh` ran a task by handing a Kest program to
+`kest run`, and a task about the doors a host gives cannot be judged by a
+program on this side of them.
+
+So the runner has a host now. A task with `kest/host.c` instead of
+`kest/checks.kest` is built against `libkest.a`, binds what the task declares
+`extern`, runs the answer and answers the same way everything else does —
+`checks N` on its own line — so nothing above or below that branch has to know
+which kind of task it was.
+
+**`crossing`** is the task. The engine gives three doors and the whole of it is
+what their answers mean:
+
+- `spawn(kind)` answers the id, **or a number below nought where the engine
+  would not make one**;
+- `despawn(id)` answers **whether there was one there to take**;
+- `alive()` answers the count.
+
+`settle(kind, mine, many, wanted)` brings the world to `wanted` alive, keeping
+`mine` — a run **the engine lent** — in step with it. A lent run cannot grow:
+`fit` into one is refused with K0608, which is the right refusal and is what
+makes the task's shape the host's rather than the program's. So the answer
+writes into the room it was given and says how many it used, which is the
+`answerInto` shape `examples/embed` already shows.
+
+The wrong answer takes what `spawn` answered as an id rather than as whether it
+made one, and takes `despawn` as having taken one away. Both sides catch it at
+the same check: the engine that will not make another is asked twice where it
+should be asked once, `checks 12` in Kest and in Luau.
+
+In Luau the engine arrives as a table the host hands in, which is how a Luau
+embedder gives a script the API it may call; in Kest it is `extern`, bound by
+name. Each language's own mechanism, the same task, and the same numbers.

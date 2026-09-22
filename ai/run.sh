@@ -39,6 +39,32 @@ kest)
         echo "the compiler is not built; \`make\` first"
         exit 2
     fi
+    # A task about the doors an engine gives is judged by a host rather than
+    # by a program: what holds it has to be the thing on the other side of
+    # them. It answers the same way the rest do -- `checks N` on its own line
+    # -- so nothing above or below this has to know which kind it was.
+    # See D1137.
+    if [ -f "$tasks/$task"/kest/host.c ]; then
+        if [ ! -f libkest.a ]; then
+            echo "the library is not built; \`make\` first"
+            exit 2
+        fi
+        cp "$answer" "$work"/"$task".kest
+        if ! ${CC:-cc} -std=c11 -O1 -Iinclude -o "$work"/host \
+                "$tasks/$task"/kest/host.c libkest.a -lm 2>"$work"/said; then
+            echo "the host this task is judged by would not build"
+            sed 's/^/    /' "$work"/said | head -12
+            exit 2
+        fi
+        "$work"/host "$work"/"$task".kest >"$work"/out 2>"$work"/said
+        if ! grep -q '^checks ' "$work"/out; then
+            echo "refused"
+            sed 's/^/    /' "$work"/said | head -12
+            exit 1
+        fi
+        sed -n 's/^checks //p' "$work"/out
+        exit 0
+    fi
     cp "$answer" "$work"/"$task".kest
     cp "$tasks/$task"/kest/checks.kest "$work"/checks.kest
     ./kest run "$work"/checks.kest >/dev/null 2>"$work"/said

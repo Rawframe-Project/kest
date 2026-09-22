@@ -23,6 +23,11 @@ ai/tasks/<name>/
   luau/checks.lua
 ```
 
+A task about the doors an engine gives has `kest/host.c` instead of
+`kest/checks.kest`: what holds it has to be the thing on the other side of
+them. It answers the same way -- `checks N` on its own line -- so nothing else
+has to know which kind it is. `crossing` is the one. See D1137.
+
 The tests live beside the task rather than beside the answer: what a task is
 judged by is not something the answer can read. Each check answers with its
 own number, so a failure says which sentence of `ask.md` was not kept.
@@ -73,9 +78,11 @@ A suite nobody has seen fail is indistinguishable from no suite.
 | `stepped` | a fixed-step update, and the same time split into different frames |
 | `nearby` | library names that are nearly the one you want |
 | `pooled` | taking from a pool under a promise to reach no heap |
+| `crossing` | doors an engine gives, and what their answers mean |
 
-**Ten of the fourteen task families the mission lists**, and two of the ten
-are narrower than the family they sit under. The mission's list, and what is here
+**Eleven of the fourteen task families the mechanisms document lists** -- and
+**all nine the mission itself lists**, which is the binding one. Two of the
+eleven are narrower than the family they sit under. The mission's list, and what is here
 against it:
 
 | family | here |
@@ -87,7 +94,7 @@ against it:
 | obey `no.host` | every task carries it; no task is about it |
 | deterministic update | `stepped` |
 | ref-safe store logic | `stale` |
-| host API use | — |
+| host API use | `crossing` |
 | save/load change | `saved`, which is save and load rather than a change |
 | hot-update-compatible change | — |
 | generic API use | — |

@@ -1,0 +1,48 @@
+module crossing
+
+// Doors the engine gives this program, bound by the host that runs it. What
+// the one function left undone has to do is in `ask.md`; these declarations
+// are the task's and are not to be changed.
+
+// Make one thing of a kind. Answers the id it was given, or a number below
+// nought where the engine would not make one.
+extern fn Engine.spawn(kind: i32) -> i32 no.alloc
+
+// Take one away by id. Answers whether there was one there to take.
+extern fn Engine.despawn(id: i32) -> bool no.alloc
+
+// How many are alive now.
+extern fn Engine.alive() -> i32 no.alloc
+
+// Bring the world to `wanted` alive things, keeping the engine's own run of
+// ids in step with it, and answer how many ids are in it afterwards.
+fn settle(kind: i32, mine: [i32], many: i32, wanted: i32) -> i32 no.alloc {
+    let held = many
+    let alive = Engine.alive()
+    while alive < wanted {
+        // The engine lent this run and a lent run cannot grow, so what is
+        // left in it is the ceiling on what this can take on.
+        if held == len(mine) {
+            return held
+        }
+        let id = Engine.spawn(kind)
+        // A full engine answers that it made nothing, and asking again
+        // answers the same thing.
+        if id < 0 {
+            return held
+        }
+        mine[held] = id
+        held += 1
+        alive += 1
+    }
+    while alive > wanted && held > 0 {
+        held -= 1
+        // And this answer says whether there was one to take: an id this
+        // program is holding that the engine has already lost is not one
+        // alive fewer.
+        if Engine.despawn(mine[held]) {
+            alive -= 1
+        }
+    }
+    return held
+}
