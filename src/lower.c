@@ -535,6 +535,41 @@ static uint8_t asks(Lower *lower, bool when_true) {
     return op;
 }
 
+// The jump a local and a constant are weighed in, when what the jump took
+// into itself was a comparison of whole numbers and what is before that is a
+// `load.k` nothing points between. Answers nought for anything else. See
+// D1154.
+static uint8_t weighed_against_constant(uint8_t jump) {
+    switch (jump) {
+    case KEST_OP_JUMP_FALSE_LT_I:
+        return KEST_OP_JUMP_FALSE_LT_K;
+    case KEST_OP_JUMP_FALSE_LE_I:
+        return KEST_OP_JUMP_FALSE_LE_K;
+    case KEST_OP_JUMP_FALSE_GT_I:
+        return KEST_OP_JUMP_FALSE_GT_K;
+    case KEST_OP_JUMP_FALSE_GE_I:
+        return KEST_OP_JUMP_FALSE_GE_K;
+    case KEST_OP_JUMP_FALSE_EQ_I:
+        return KEST_OP_JUMP_FALSE_EQ_K;
+    case KEST_OP_JUMP_FALSE_NE_I:
+        return KEST_OP_JUMP_FALSE_NE_K;
+    default:
+        return 0;
+    }
+}
+
+static bool local_and_constant_before(const Lower *lower, uint16_t *slot,
+                                      uint16_t *which) {
+    if (lower->last_op != KEST_OP_LOADK || lower->last_at < lower->pointed_at ||
+        lower->last_at + 5 != lower->chunk->code_count) {
+        return false;
+    }
+    const uint8_t *at = lower->chunk->code + lower->last_at;
+    *slot = (uint16_t)(at[1] | ((uint16_t)at[2] << 8));
+    *which = (uint16_t)(at[3] | ((uint16_t)at[4] << 8));
+    return true;
+}
+
 // Reading a place into what is on the stack, and writing what is on the stack
 // into one.
 static void read_place(Lower *lower, const KestIrOp *op) {
@@ -976,10 +1011,29 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         emit(lower, KEST_OP_JUMP, span);
         waits_for(lower, op->target, span);
         return;
-    case KEST_IR_ASK:
-        emit(lower, asks(lower, op->imm[1] != 0), span);
+    case KEST_IR_ASK: {
+        uint8_t jump = asks(lower, op->imm[1] != 0);
+        uint8_t weighed = fusing() ? weighed_against_constant(jump) : 0;
+        uint16_t slot = 0;
+        uint16_t which = 0;
+        if (weighed != 0 && local_and_constant_before(lower, &slot, &which)) {
+            // The two values `load.k` pushed are never on the stack now, so
+            // the compiler's reckoning may be two more than this body goes:
+            // said as slack, the way D1012 says it, rather than taken off a
+            // number whose deepest moment may be somewhere else.
+            if (lower->chunk->fused_slots < 2) {
+                lower->chunk->fused_slots = 2;
+            }
+            take_back(lower);
+            emit(lower, weighed, span);
+            emit_u16(lower, slot, span);
+            emit_u16(lower, which, span);
+        } else {
+            emit(lower, jump, span);
+        }
         waits_for(lower, op->target, span);
         return;
+    }
     case KEST_IR_GIVE:
         emit(lower, KEST_OP_RETURN, span);
         emit_u16(lower, op->imm[0], span);

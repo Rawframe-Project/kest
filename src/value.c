@@ -1039,6 +1039,9 @@ static const Instruction INSTRUCTIONS[] = {
     {"jump.true.lt.f", JUMP}, {"jump.true.le.f", JUMP},
     {"jump.true.gt.f", JUMP}, {"jump.true.ge.f", JUMP},
     {"jump.true.eq.f", JUMP}, {"jump.true.ne.f", JUMP},
+    {"jump.false.lt.k", FIND}, {"jump.false.le.k", FIND},
+    {"jump.false.gt.k", FIND}, {"jump.false.ge.k", FIND},
+    {"jump.false.eq.k", FIND}, {"jump.false.ne.k", FIND},
     {"loop", BACK},
 {"next.less.i", WALK}, {"next.less.u", WALK},
     {"scratch", U16},      {"unscratch", U16},
@@ -1612,6 +1615,12 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_JUMP_TRUE_GE_F:
     case KEST_OP_JUMP_TRUE_EQ_F:
     case KEST_OP_JUMP_TRUE_NE_F:
+    case KEST_OP_JUMP_FALSE_LT_K:
+    case KEST_OP_JUMP_FALSE_LE_K:
+    case KEST_OP_JUMP_FALSE_GT_K:
+    case KEST_OP_JUMP_FALSE_GE_K:
+    case KEST_OP_JUMP_FALSE_EQ_K:
+    case KEST_OP_JUMP_FALSE_NE_K:
     case KEST_OP_LOOP:
     case KEST_OP_NEXT_LESS_I:
     case KEST_OP_NEXT_LESS_U:

@@ -2068,6 +2068,14 @@ static bool values_equal(const KestType *type, const KestValue *a,
     do {                                                                       \
         TagRead told = {NULL, 0, false};                                       \
         MOVED(moved_unpacked, (layout)->size);                                 \
+        /* One piece with no tag in it is most of what a program reads out */ \
+        /* of a run -- a number, a handle, a piece of text -- and is read   */ \
+        /* here rather than through a call and a walk of one. See D1154.    */ \
+        if ((layout)->count == 1 && !(layout)->tagged) {                       \
+            read_piece((where), (layout)->pieces[0].kind,                      \
+                       (from) + (layout)->pieces[0].offset);                   \
+            break;                                                             \
+        }                                                                      \
         unpack((where), (layout), (from), &told);                              \
         if (told.wrong) {                                                      \
             fail(vmp, frame, instruction, "K0651",                             \
@@ -5149,6 +5157,53 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }                                                                      \
     } while (0)
 
+#if KEST_CHECKED
+#define OWN_SLOT_AND_CONSTANT(slot, which)                                     \
+    do {                                                                       \
+        if (!own_slots(vmp, frame, instruction, (slot), (slot) + 1u) ||         \
+            !own_constants(vmp, frame, instruction, (which) + 1u)) {           \
+            return false;                                                      \
+        }                                                                      \
+    } while (0)
+#else
+#define OWN_SLOT_AND_CONSTANT(slot, which) ((void)0)
+#endif
+// A local against a constant, and the jump. What `load.k` would have put on
+// the stack is read where it is, so nothing is pushed and nothing is popped.
+// See D1154.
+#define JUMP_UNLESS_K(test)                                                    \
+    do {                                                                       \
+        uint16_t slot = READ_U16();                                            \
+        uint16_t which = READ_U16();                                           \
+        uint16_t distance = READ_U16();                                        \
+        OWN_SLOT_AND_CONSTANT(slot, which);                                    \
+        MOVED(moved_loaded, sizeof(KestValue));                                \
+        MOVED(moved_held, sizeof(KestValue));                                  \
+        int64_t left = mine[slot].integer;                                     \
+        int64_t right = constants[which].integer;                              \
+        if (!(test)) {                                                         \
+            ip += distance;                                                    \
+        }                                                                      \
+    } while (0)
+
+        case KEST_OP_JUMP_FALSE_LT_K:
+            JUMP_UNLESS_K(left < right);
+            break;
+        case KEST_OP_JUMP_FALSE_LE_K:
+            JUMP_UNLESS_K(left <= right);
+            break;
+        case KEST_OP_JUMP_FALSE_GT_K:
+            JUMP_UNLESS_K(left > right);
+            break;
+        case KEST_OP_JUMP_FALSE_GE_K:
+            JUMP_UNLESS_K(left >= right);
+            break;
+        case KEST_OP_JUMP_FALSE_EQ_K:
+            JUMP_UNLESS_K(left == right);
+            break;
+        case KEST_OP_JUMP_FALSE_NE_K:
+            JUMP_UNLESS_K(left != right);
+            break;
         case KEST_OP_JUMP_FALSE_LT_I:
             JUMP_UNLESS(left.integer < right.integer);
             break;
@@ -8084,12 +8139,11 @@ bool kest_region_open(KestRuntime *rt, uint32_t where, int64_t *into) {
     if (rt == NULL || into == NULL) {
         return false;
     }
-    KestSpan span = where_asked(rt, where);
     if (rt->kept_count == rt->kept_room && rt->kept_room < MAX_KEPT) {
         uint32_t room = rt->kept_room == 0 ? 8 : rt->kept_room * 2;
         KestMark *grown = KEST_ARENA_ARRAY(rt->own, KestMark, room);
         if (grown == NULL) {
-            no_room_at(rt, where_from(rt), span, rt);
+            no_room_at(rt, where_from(rt), where_asked(rt, where), rt);
             return false;
         }
         for (uint32_t i = 0; i < rt->kept_count; i++) {
@@ -8108,7 +8162,7 @@ bool kest_region_open(KestRuntime *rt, uint32_t where, int64_t *into) {
         return false;
     }
     if (!kest_ground_open(rt->ground)) {
-        no_room_at(rt, where_from(rt), span, rt);
+        no_room_at(rt, where_from(rt), where_asked(rt, where), rt);
         kest_diags_suggest(rt->diags,
                            "it was opening a block of working memory");
         return false;
@@ -8153,7 +8207,6 @@ bool kest_array_new(KestRuntime *rt, uint16_t layout, int64_t count,
         return false;
     }
     const KestLayout *what = &rt->module->layouts[layout];
-    KestSpan span = where_asked(rt, where);
     if (count < 0) {
         return stopped_saying(rt, where, "K0604",
                               "an array cannot have %lld elements",
@@ -8168,7 +8221,7 @@ bool kest_array_new(KestRuntime *rt, uint16_t layout, int64_t count,
         bytes == NULL ? NULL : take(rt, NULL, sizeof(Array), KEST_GROUND_ARRAY);
     hands_off(rt, hands);
     if (array == NULL || bytes == NULL) {
-        no_room_at(rt, where_from(rt), span, rt);
+        no_room_at(rt, where_from(rt), where_asked(rt, where), rt);
         kest_diags_suggest(rt->diags,
                            "it was making an array of %lld of %u bytes each",
                            (long long)count, what->size);
@@ -8221,7 +8274,6 @@ bool kest_array_push(KestRuntime *rt, KestValue handle, uint16_t layout,
         return false;
     }
     const KestLayout *what = &rt->module->layouts[layout];
-    KestSpan span = where_asked(rt, where);
     if (it_is_lent(rt, array, where, true)) {
         return false;
     }
@@ -8247,7 +8299,7 @@ bool kest_array_push(KestRuntime *rt, KestValue handle, uint16_t layout,
             (((Elems *)(void *)grown) - 1)->places = capacity;
         }
         if (grown == NULL) {
-            no_room_growing_at(rt, where_from(rt), span, rt, "an array",
+            no_room_growing_at(rt, where_from(rt), where_asked(rt, where), rt, "an array",
                                array->length, what->size, capacity);
             return false;
         }
@@ -8279,7 +8331,6 @@ bool kest_array_room(KestRuntime *rt, KestValue handle, uint16_t layout,
         return false;
     }
     void *given = handle.object;
-    KestSpan span = where_asked(rt, where);
     if (KEST_HANDLE_IS(given, KEST_IS_STORE)) {
         Store *store = given;
         if (wanted > MAX_COUNTED) {
@@ -8290,7 +8341,7 @@ bool kest_array_room(KestRuntime *rt, KestValue handle, uint16_t layout,
         }
         if (wanted > (int64_t)store->capacity &&
             !room_for(rt, NULL, store, (uint32_t)wanted)) {
-            no_room_growing_at(rt, where_from(rt), span, rt, "a store",
+            no_room_growing_at(rt, where_from(rt), where_asked(rt, where), rt, "a store",
                                store->used,
                                (uint32_t)(sizeof(KestValue) * store->stride),
                                (uint32_t)wanted);
@@ -8316,7 +8367,7 @@ bool kest_array_room(KestRuntime *rt, KestValue handle, uint16_t layout,
         uint32_t capacity = (uint32_t)wanted;
         unsigned char *grown = elements_grown(rt, NULL, array, what, capacity);
         if (grown == NULL) {
-            no_room_growing_at(rt, where_from(rt), span, rt, "an array",
+            no_room_growing_at(rt, where_from(rt), where_asked(rt, where), rt, "an array",
                                array->length, what->size, capacity);
             return false;
         }
@@ -8376,14 +8427,13 @@ bool kest_array_written(KestRuntime *rt, uint16_t layout, uint16_t count,
         return false;
     }
     const KestLayout *what = &rt->module->layouts[layout];
-    KestSpan span = where_asked(rt, where);
     uint32_t hands = rt->hands;
     unsigned char *bytes = in_hand(rt, elements_for(rt, NULL, what, count));
     Array *array =
         bytes == NULL ? NULL : take(rt, NULL, sizeof(Array), KEST_GROUND_ARRAY);
     hands_off(rt, hands);
     if (array == NULL || bytes == NULL) {
-        no_room_at(rt, where_from(rt), span, rt);
+        no_room_at(rt, where_from(rt), where_asked(rt, where), rt);
         kest_diags_suggest(rt->diags,
                            "it was making an array of %u of %u bytes each",
                            count, what->size);
@@ -8447,7 +8497,6 @@ bool kest_array_push_text(KestRuntime *rt, KestValue handle, uint16_t layout,
         return false;
     }
     const KestLayout *what = &rt->module->layouts[layout];
-    KestSpan span = where_asked(rt, where);
     if (it_is_lent(rt, array, where, true)) {
         return false;
     }
@@ -8466,7 +8515,7 @@ bool kest_array_push_text(KestRuntime *rt, KestValue handle, uint16_t layout,
         unsigned char *was = array->bytes;
         unsigned char *grown = elements_grown(rt, NULL, array, what, capacity);
         if (grown == NULL) {
-            no_room_growing_at(rt, where_from(rt), span, rt, "an array",
+            no_room_growing_at(rt, where_from(rt), where_asked(rt, where), rt, "an array",
                                array->length, what->size, capacity);
             return false;
         }
@@ -8554,7 +8603,6 @@ bool kest_store_new(KestRuntime *rt, uint16_t layout, int64_t room,
         layout >= rt->module->layout_count) {
         return false;
     }
-    KestSpan span = where_asked(rt, where);
     if (room < 0) {
         return stopped_saying(rt, where, "K0604",
                               "a store cannot have room for %lld",
@@ -8565,7 +8613,7 @@ bool kest_store_new(KestRuntime *rt, uint16_t layout, int64_t room,
                                     KEST_GROUND_STORE));
     if (store == NULL) {
         hands_off(rt, hands);
-        no_room_at(rt, where_from(rt), span, rt);
+        no_room_at(rt, where_from(rt), where_asked(rt, where), rt);
         kest_diags_suggest(rt->diags, "it was making a store");
         return false;
     }
@@ -8577,7 +8625,7 @@ bool kest_store_new(KestRuntime *rt, uint16_t layout, int64_t room,
     // count buys: the growth is where the program asked for it.
     if (room > 0 && !room_for(rt, NULL, store, (uint32_t)room)) {
         hands_off(rt, hands);
-        no_room_at(rt, where_from(rt), span, rt);
+        no_room_at(rt, where_from(rt), where_asked(rt, where), rt);
         kest_diags_suggest(rt->diags,
                            "it was making a store with room for %lld",
                            (long long)room);
@@ -8595,7 +8643,6 @@ bool kest_store_add(KestRuntime *rt, KestValue handle, uint16_t stride,
     if (store == NULL || into == NULL) {
         return false;
     }
-    KestSpan span = where_asked(rt, where);
     uint32_t index;
     if (store->free_count > 0) {
         index = store->free_slots[--store->free_count];
@@ -8613,7 +8660,7 @@ bool kest_store_add(KestRuntime *rt, KestValue handle, uint16_t stride,
         if (store->used == store->capacity && !grow_store(rt, NULL, store)) {
             // A store grows by four runs at once, so what it was reaching for
             // is wider than one of them.
-            no_room_growing_at(rt, where_from(rt), span, rt, "a store",
+            no_room_growing_at(rt, where_from(rt), where_asked(rt, where), rt, "a store",
                                store->used, sizeof(KestValue) * store->stride,
                                store->capacity == 0 ? 8
                                                     : store->capacity * 2);
@@ -8932,10 +8979,9 @@ bool kest_text_of(KestRuntime *rt, uint8_t how, KestValue value,
                            (long long)value.integer);
         break;
     }
-    KestSpan span = where_asked(rt, where);
     char *text = take(rt, NULL, (size_t)written + 1, KEST_GROUND_PLAIN);
     if (text == NULL) {
-        no_room_at(rt, where_from(rt), span, rt);
+        no_room_at(rt, where_from(rt), where_asked(rt, where), rt);
         kest_diags_suggest(rt->diags,
                            "it was writing a number as %d bytes of text",
                            written);
@@ -8955,10 +9001,9 @@ bool kest_text_of_value(KestRuntime *rt, uint16_t layout,
         return false;
     }
     size_t length = format_value(NULL, 0, type, slots);
-    KestSpan span = where_asked(rt, where);
     char *text = take(rt, NULL, length + 1, KEST_GROUND_PLAIN);
     if (text == NULL) {
-        no_room_at(rt, where_from(rt), span, rt);
+        no_room_at(rt, where_from(rt), where_asked(rt, where), rt);
         kest_diags_suggest(rt->diags,
                            "it was writing a value as %zu bytes of text",
                            length);
@@ -8987,10 +9032,9 @@ bool kest_text_join(KestRuntime *rt, const KestValue *pieces, uint16_t count,
                               "`len` can count",
                               length);
     }
-    KestSpan span = where_asked(rt, where);
     char *text = take(rt, NULL, length + 1, KEST_GROUND_PLAIN);
     if (text == NULL) {
-        no_room_at(rt, where_from(rt), span, rt);
+        no_room_at(rt, where_from(rt), where_asked(rt, where), rt);
         kest_diags_suggest(rt->diags, "it was joining text into %zu bytes",
                            length);
         return false;
@@ -9015,11 +9059,10 @@ bool kest_text_from(KestRuntime *rt, KestValue handle, uint32_t where,
     if (bytes == NULL || into == NULL) {
         return false;
     }
-    KestSpan span = where_asked(rt, where);
     uint32_t many = bytes->length;
     char *text = take(rt, NULL, (size_t)many + 1, KEST_GROUND_PLAIN);
     if (text == NULL) {
-        no_room_at(rt, where_from(rt), span, rt);
+        no_room_at(rt, where_from(rt), where_asked(rt, where), rt);
         kest_diags_suggest(rt->diags,
                            "it was making %u bytes of text out of an array",
                            many);

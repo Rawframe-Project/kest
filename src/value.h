@@ -307,6 +307,17 @@ typedef enum {
     KEST_OP_JUMP_TRUE_GE_F,
     KEST_OP_JUMP_TRUE_EQ_F,
     KEST_OP_JUMP_TRUE_NE_F,
+    // A local weighed against a constant and the jump that reads it, as one
+    // instruction: `load.k` and then one of the six above was two dispatches
+    // for `if one.hp > 20` and every flag test, which are what a rule is made
+    // of. Whole numbers only, and only where the jump is taken when the
+    // answer is no. See D1154.
+    KEST_OP_JUMP_FALSE_LT_K, // u16 slot, u16 constant, u16 forward offset
+    KEST_OP_JUMP_FALSE_LE_K,
+    KEST_OP_JUMP_FALSE_GT_K,
+    KEST_OP_JUMP_FALSE_GE_K,
+    KEST_OP_JUMP_FALSE_EQ_K,
+    KEST_OP_JUMP_FALSE_NE_K,
     KEST_OP_LOOP,        // u16 backward offset
     // The whole of a counted walk's turn: add one to the count, compare it
     // with the limit beside it, and go back while it is less. The test is at
