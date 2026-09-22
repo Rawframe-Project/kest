@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1156
+    CURRENT SHA:       (this commit) D1093-D1157
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -767,7 +767,7 @@ the same workload.
    396, the same colony; a refusal names its diagnostic again. A reload at
    scale is 211 ms through bytes against 50 through lends, which is what the
    bytes library answers first.
-31. *(open, D1154, D1155, D1156)* **The machine against Luau's interpreter.**
+31. *(open, D1154, D1155, D1156, D1157)* **The machine against Luau's interpreter.**
    Measured again: behind by a sixth to double, `rules` furthest. Eight things
    off it so far, the last a small body carried to where it is called: `rules`
    is 27.2% fewer instructions and 1.28 times Luau's interpreter where it was

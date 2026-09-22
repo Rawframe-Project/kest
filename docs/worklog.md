@@ -40992,3 +40992,18 @@ See D1156.
 **Runs:** every example fused and with `KEST_PLAIN=1`, the five workloads by
 `perf stat` both ways, `check-costs.sh`, `check-tables.sh`, `check-c.sh` and
 `make most`.
+
+## 2026-09-23, a carried body's runs of slots, and arguments read in place
+
+D1156 miscompiled `sum(x, z)` when the caller kept `x` and `z` apart and the
+body read both as one run: found while splitting the arguments further, with
+no example in the tree of that shape. Runs are now held to landing as runs,
+the last arguments are read where the caller has them and the rest stored
+through the ordinary store, and `examples/carried.kest` holds every shape --
+answering `1` on the tree before. The frame with two helpers costs what it
+costs written out, twenty-nine instructions, and the check now holds that.
+
+See D1157.
+
+**Runs:** `examples/carried.kest` at the commit before and here, every example
+and workload fused and with `KEST_PLAIN=1`, `check-costs.sh`, and `make most`.

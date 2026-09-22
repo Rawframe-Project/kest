@@ -5693,9 +5693,9 @@ and `KEST_DEEP=1` makes it say so. Run at two step counts and two entity
 counts and take the difference of the differences — a world is built once
 however many rounds there are, and a round has a loop of its own however many
 entities are in it — and what is left says that
-a frame step an entity is **thirty-nine instructions**, of which five are
-`load.k`, five are `load`, four are `load2`, three are `load.n`, three are
-`store` and three are `store.n` — twenty-three of the thirty-nine, near enough
+a frame step an entity is **thirty-seven instructions**, of which five are
+`load.k`, four are `load`, four are `load2`, three are `load.n`, three are
+`store` and two are `store.n` — twenty-one of the thirty-seven, near enough
 three in five, move a value onto the stack or off it. The
 arithmetic is six: two `mul.f32`, two `add.f32`, one `add.k.self` and one
 `sub.i.narrow`. That is what a stack machine is, and it is where the next thing
@@ -5707,13 +5707,14 @@ read out of a run went straight into the frame rather than through the stack
 (D1014), forty-four until a local weighed against a constant was one
 instruction with the jump that reads it (D1154), forty-two until a count
 moved by a constant was moved where it is (D1155), and forty-one until the two
-helpers were carried to where they are called rather than called (D1156) --
-which is why three of the stores are `store.n`: what a call handed over on the
-stack is put where the carried body reads it.
+helpers were carried to where they are called rather than called (D1156) and
+thirty-nine until what a helper was handed was read where the caller had it
+(D1157) -- which is why two of the stores are `store.n`: a whole `Npc` handed
+from one helper to the next is put where the second reads it.
 
 Counting them is not free, and what it costs is the other number this build
-says: over those thirty-nine instructions it asks its own compiler
-**forty-three questions** about what it is about to do — whose slots these are, whose
+says: over those thirty-seven instructions it asks its own compiler
+**forty-two questions** about what it is about to do — whose slots these are, whose
 constants, whether what a frame holds is the shape the chunk was declared with.
 That is the machine holding itself to what it was handed rather than trusting
 it, and it is why the count above is worth what it says (D907). None of it is
@@ -6036,6 +6037,7 @@ here, is a check that fails.
 | `borrow.kest` | what has to be given back on every way out of a function |
 | `boxes.kest` | a shape that takes types, and a copy for every set of them |
 | `camera.kest` | `std.vec` and `std.math` where a camera follows something |
+| `carried.kest` | small bodies written where they are called, in every shape a carried body has to come out of right |
 | `chance.kest` | numbers that look random, and two runs from one seed |
 | `colony.kest` | a world kept and worked on a day at a time, which is a program rather than a rule |
 | `churn.kest` | one round over a world whose live set never changes, written six ways, which is what memory costs |

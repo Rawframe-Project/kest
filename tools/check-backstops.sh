@@ -5992,7 +5992,7 @@ fn main() -> i32 {
         # number. See D915.
         "what": "a frame step's instructions written down and not measured",
         "file": "docs/language.md",
-        "from": """**thirty-nine instructions**""",
+        "from": """**thirty-seven instructions**""",
         "to": """**forty instructions**""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",
@@ -6009,7 +6009,7 @@ fn main() -> i32 {
         "what": "what the checked build asks written down and not measured",
         "file": "docs/language.md",
         "from": """it asks its own compiler
-**forty-three questions**""",
+**forty-two questions**""",
         "to": """it asks its own compiler
 **fifty questions**""",
         "make": ["kest", "debug"],

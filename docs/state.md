@@ -65,6 +65,7 @@ reader who finds the same shape again should find the first one beside it.
 | F50 | a `match` arm written `Case -> {` was answered about `if`, then with a line about an arrow for every arm after it | nine diagnostics for one mistake made nine times, eight of them about something that was not wrong. The arm parser says `K0204` with the arm's own fix and reads the block as the arm (D1147) |
 | F51 | two AI tasks held a rule their `ask.md` never said | run blind (D1148), all three Luau runs of `called` numbered things from one and all three of `frail` read a worth's limit off a `number`; the hidden tests wanted nought and 32 bits. The `ask.md`s say both now |
 | F52 | three refusals said what was wrong and not what to write | a struct built by field name, a call by name, and a number where text is wanted -- the Kest mistakes that repeated across blind runs. Each is told the fix now, held by the refusal corpus (D1148) |
+| F53 | a carried body read two parameters the caller kept apart as though they were side by side | `sum(x, z)` answered `x + y` once `sum` was carried (D1156). Runs of slots are held to landing as runs, and `examples/carried.kest` answers `1` on the tree before the fix (D1157) |
 
 ## Read from the source rather than run
 
@@ -86,7 +87,7 @@ a run with a decision knows which is which.
 | the colony's steady state, at 200, 400 and 800 days | 2,370,304 bytes (D940) | 2,338,096 bytes, and still flat: a store keeps a bit a slot rather than a byte (D954) |
 | a frame step an entity | 127 ns (D926), 122 after D931 | 107 to 110 ns, `make time` on this machine, and the number D979 would not pay a third of |
 | what an array of text costs a frame, an entity | 25 bytes (D915) | 51, and read as what a frame was handed rather than what it still holds: a piece of text in one is sixteen bytes rather than eight (D964), and a step takes a place off a heap that gives places back, which is as wide as the step above what was asked for (D996) |
-| what a frame step runs, an entity | 57 instructions (D958) | 39, after D961 took the two commonest pairs of pushes, D1154 and D1155 made more pairs one instruction, and D1156 carried the two helpers to where they are called |
+| what a frame step runs, an entity | 57 instructions (D958) | 37, after D961 took the two commonest pairs of pushes, D1154 and D1155 made more pairs one instruction, and D1156 and D1157 carried the two helpers to where they are called |
 
 ## Phases
 

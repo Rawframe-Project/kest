@@ -1138,7 +1138,10 @@ if (there is None or worked_out is None or 'hash.t' in there or
 # above -- the world is built once either way, so what is left is the step. And
 # the same frame with its two helpers written out where they are called beside
 # it, because what a call costs is the one thing a program cannot ask for from
-# inside the language. See D889.
+# inside the language. See D889. The helpers are carried to where they are
+# called now, so what is held is that they cost nothing: a frame written with
+# them is no dearer than the same frame written out, which is what makes a
+# helper something a reader can be given for free. See D1157.
 ENTITIES = 20
 ROUNDS = 4
 
@@ -1606,10 +1609,10 @@ reaches = what_a_frame_reaches(HELPED) if have_checked else None
 asked_of_itself = a_step_asks() if have_checked else None
 if have_checked and (a_frame is None or by_hand is None or reaches is None or
                      asked_of_itself is None or asked_of_itself < 1 or
-                     a_frame < 1 or by_hand < 1 or a_frame - by_hand < 2):
+                     a_frame < 1 or by_hand < 1 or a_frame > by_hand):
     print("costs: a frame step is %s instruction(s) an entity and %s with its "
-          "helpers written out, and a call and its answer are two of them, "
-          "and it reaches %s of the machine's %u, and the build that checks "
+          "helpers written out, and a helper carried to where it is called is "
+          "to cost nothing over that, and it reaches %s of the machine's %u, and the build that checks "
           "itself asks %s question(s) of its own compiler over it"
           % (a_frame, by_hand, reaches, len(instruction_names),
              asked_of_itself))

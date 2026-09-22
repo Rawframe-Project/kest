@@ -40028,3 +40028,35 @@ A turn of the loop `tools/crossing.kest` calls in is eight instructions and not
 nine, because the call in it is carried; the nanoseconds the reference prints
 beside it were taken before, and it says so. `lib/std/text.kest` costs 206822
 bytes to compile rather than 203853.
+
+## D1157 — A carried body's runs of slots stay runs, and the last arguments are read in place
+
+*a defect in D1156, and what fixing it bought*. D1156 let a carried body read
+its parameters where the caller kept them when the arguments were one load, and
+mapped each slot a body names on its own. A body names a run of slots by its
+first -- `load.n 0 2` reads its two parameters -- and a caller's `load2 x z`
+keeps them in two slots that are not side by side, so `sum(x, z)` inside a body
+whose locals were `x, y, z` answered `x + y`. Nothing in the tree had that
+shape: every example answered the same carried and plain, and the defect was
+found by writing the next thing, which split the arguments further.
+
+- Every `load.n` and `store.n` a body has is held to landing on one run of
+  slots in its caller before the body is carried with its parameters read in
+  place; one that would not is carried with its arguments stored, which is
+  always one run.
+- The parameters loaded last are read in place and the ones before them are
+  stored, through the store every local goes through: `moved(world[i], dt)`
+  reads `dt` where it is and puts the element straight into the body's slots
+  with `index.to`, which is one instruction where it was three.
+- `examples/carried.kest` is every shape a carried body comes out of --
+  arguments apart, split, written by the body, more than one way out, one
+  carried answer handed to another, a struct -- and answers `1` on the tree
+  before this. `check.sh` runs it fused, plain and unoptimized.
+
+A frame step an entity is thirty-seven instructions and forty-two questions,
+and the frame `check-costs.sh` writes both ways -- with its two helpers and
+with them written out by hand -- is twenty-nine instructions either way. What
+that check held was that a call and its answer cost two instructions at least;
+what it holds now is that a helper costs nothing over writing it out, which is
+the thing a reader wants to be true. The five workloads move by less than a
+tenth of a per cent.

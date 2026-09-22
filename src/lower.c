@@ -836,35 +836,70 @@ static bool writes_a_parameter(const KestChunk *callee) {
     return false;
 }
 
-// The caller's slots the arguments were just loaded out of, one a parameter
-// slot, when the last thing written was one load of them all nothing points
-// between. Answers how many, or nought.
+// The caller's slots the last of the arguments were just loaded out of, one a
+// parameter slot, when the last thing written was one load of them nothing
+// points between. Answers how many, or nought: a call `f(xs[i], dt)` loads
+// `dt` last, and the body can read it where it is while `xs[i]` is stored.
 #define MOST_ALIASED 16
 static uint16_t loaded_just_now(const Lower *lower, uint16_t wanted,
                                 uint16_t from[MOST_ALIASED]) {
-    if (wanted == 0 || wanted > MOST_ALIASED ||
-        lower->last_at < lower->pointed_at) {
+    if (wanted == 0 || lower->last_at < lower->pointed_at) {
         return 0;
     }
     const uint8_t *at = lower->chunk->code + lower->last_at;
     uint32_t wide = lower->chunk->code_count - lower->last_at;
-    if (lower->last_op == KEST_OP_LOAD && wide == 3 && wanted == 1) {
+    if (lower->last_op == KEST_OP_LOAD && wide == 3) {
         from[0] = operand_at(at, 1);
         return 1;
     }
     if (lower->last_op == KEST_OP_LOADN && wide == 5 &&
-        operand_at(at, 3) == wanted) {
-        for (uint16_t i = 0; i < wanted; i++) {
+        operand_at(at, 3) <= wanted && operand_at(at, 3) <= MOST_ALIASED) {
+        uint16_t many = operand_at(at, 3);
+        for (uint16_t i = 0; i < many; i++) {
             from[i] = (uint16_t)(operand_at(at, 1) + i);
         }
-        return wanted;
+        return many;
     }
-    if (lower->last_op == KEST_OP_LOAD2 && wide == 5 && wanted == 2) {
+    if (lower->last_op == KEST_OP_LOAD2 && wide == 5 && wanted >= 2) {
         from[0] = operand_at(at, 1);
         from[1] = operand_at(at, 3);
         return 2;
     }
     return 0;
+}
+
+// Where a carried body's slot is in its caller: the parameters stored before
+// the base, the ones read where the caller has them in `from`, and the body's
+// other slots after the stored ones.
+static uint16_t carried_slot(uint16_t value, uint16_t stored, uint16_t aliased,
+                             const uint16_t *from, uint16_t base) {
+    return value < stored ? (uint16_t)(value + base)
+           : value < stored + aliased ? from[value - stored]
+                                       : (uint16_t)(value - aliased + base);
+}
+
+// Whether every run of slots the body reads or writes as one is still one run
+// where the slots land. A parameter read where the caller has it is wherever
+// the caller had it, and `load.n` over two of them reads the two slots after
+// the first: a body with such a run is carried with its arguments stored.
+static bool runs_hold(const KestChunk *callee, uint16_t stored,
+                      uint16_t aliased, const uint16_t *from, uint16_t base) {
+    for (uint32_t at = 0; at < callee->code_count;) {
+        uint8_t op = callee->code[at];
+        if (op == KEST_OP_LOADN || op == KEST_OP_STOREN) {
+            uint16_t first = operand_at(callee->code, at + 1);
+            uint16_t many = operand_at(callee->code, at + 3);
+            uint16_t landed = carried_slot(first, stored, aliased, from, base);
+            for (uint16_t i = 1; i < many; i++) {
+                if (carried_slot((uint16_t)(first + i), stored, aliased, from,
+                                 base) != landed + i) {
+                    return false;
+                }
+            }
+        }
+        at += kest_op_wide(op);
+    }
+    return true;
 }
 
 // The function at `index`, written where it is called. The arguments are on
@@ -897,17 +932,21 @@ static void carry(Lower *lower, uint16_t index, uint16_t argument_slots,
     if (argument_slots == callee->param_slots &&
         !writes_a_parameter(callee)) {
         aliased = loaded_just_now(lower, argument_slots, from);
-    }
-    if (aliased > 0) {
-        // Nothing to hand over: the parameters are read where they are.
-        take_back(lower);
-    } else if (argument_slots > 0) {
-        emit(lower, argument_slots == 1 ? KEST_OP_STORE : KEST_OP_STOREN,
-             span);
-        emit_u16(lower, base, span);
-        if (argument_slots != 1) {
-            emit_u16(lower, argument_slots, span);
+        if (aliased > 0 &&
+            !runs_hold(callee, (uint16_t)(argument_slots - aliased), aliased,
+                       from, base)) {
+            aliased = 0;
         }
+    }
+    // The parameters loaded last are read where they are, and the ones
+    // before them are stored the way any local is, so an element read
+    // straight into them is one instruction.
+    uint16_t stored = (uint16_t)(argument_slots - aliased);
+    if (aliased > 0) {
+        take_back(lower);
+    }
+    if (stored > 0) {
+        emit_store(lower, base, stored, span);
     }
     uint32_t first = 0;
     if (callee->constant_count > 0) {
@@ -954,12 +993,7 @@ static void carry(Lower *lower, uint16_t index, uint16_t argument_slots,
             uint16_t value = operand_at(callee->code, read);
             read += 2;
             if (operands[o] == A_SLOT) {
-                // A parameter read where the caller has it takes no slot of
-                // its own, so the body's other slots start at the base.
-                value = value < aliased ? from[value]
-                        : aliased > 0
-                            ? (uint16_t)(value - callee->param_slots + base)
-                            : (uint16_t)(value + base);
+                value = carried_slot(value, stored, aliased, from, base);
             } else if (operands[o] == A_CONSTANT) {
                 value = (uint16_t)(value + first);
             } else if (operands[o] == A_DISTANCE && at + wide + value > end) {
@@ -974,9 +1008,7 @@ static void carry(Lower *lower, uint16_t index, uint16_t argument_slots,
     // Nothing written after the carried body may be taken back into it: its
     // end is where every one of its returns lands.
     lower->pointed_at = lower->chunk->code_count;
-    uint16_t taken = (uint16_t)(aliased > 0
-                                    ? callee->slot_count - callee->param_slots
-                                    : callee->slot_count);
+    uint16_t taken = (uint16_t)(callee->slot_count - aliased);
     if (taken > lower->carried_slots) {
         lower->carried_slots = taken;
     }
@@ -993,7 +1025,7 @@ static void carry(Lower *lower, uint16_t index, uint16_t argument_slots,
     // And by how much the reckoning may now be more than enough: what the
     // carried body adds, and the arguments too where they were never pushed
     // because the body reads them where the caller has them.
-    uint16_t slack = (uint16_t)(deeper + (aliased > 0 ? argument_slots : 0));
+    uint16_t slack = (uint16_t)(deeper + aliased);
     if (slack > lower->carried_slack) {
         lower->carried_slack = slack;
     }
