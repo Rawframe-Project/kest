@@ -4085,17 +4085,35 @@ printf '%s\n' "$cramped" >> "$scratch"/said
 # a third. A rung that stops at the first says nothing about the two under it,
 # and the two under it said the machine had run out when nothing of the kind
 # had happened.
-for how_much in 1000 2000 4000; do
-    cramped=$("$kest" check --room $how_much "$scratch"/room/hungry.kest \
-        2>&1 </dev/null)
+#
+# Walked rather than three numbers written here. Where each place is crossed
+# moves with everything the build writes down before it gets there, the path
+# of the file included, and the rungs this was once -- 1000, 2000 and 4000 --
+# stepped clean over the reading arena whenever the gate ran from a room
+# nested under `/tmp`: that place was the 1956 bytes from 2020 on, and a net
+# with a hole in it said so on no rung at all. What does not move is how wide
+# a place is, which is the block asked for there, and reading this file asks
+# for nearly two thousand. So the ceiling goes up a quarter of a kilobyte at a
+# time from nothing to where the file fits, and lands in every place wherever
+# the path has pushed it. A megabyte still refused is a walk with no end,
+# and is said as what the last rung said. See D1144.
+how_much=0
+while :; do
+    how_much=$((how_much + 256))
+    if cramped=$("$kest" check --room $how_much "$scratch"/room/hungry.kest \
+        2>&1 </dev/null); then
+        break
+    fi
     case "$cramped" in
-    *"K0658"*"bytes it was given"*) ;;
-    *)
-        complain "check: \`--room $how_much\` said \
-\`$(printf '%s' "$cramped" | head -1)\`"
+    *"K0658"*"bytes it was given"* | \
+    *"K0658"*"is not enough to begin reading a program"*)
+        printf '%s\n' "$cramped" >> "$scratch"/said
+        [ $how_much -lt 1048576 ] && continue
         ;;
     esac
-    printf '%s\n' "$cramped" >> "$scratch"/said
+    complain "check: \`--room $how_much\` said \
+\`$(printf '%s' "$cramped" | head -1)\`"
+    break
 done
 # And under `--json`, because the run that ran out is written out where the
 # list is written rather than made and put in it, and that is two places.

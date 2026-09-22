@@ -858,10 +858,11 @@ fn main() -> i32 {
         "make": ["kest", "debug"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
-        # Which of the three rungs says it is whichever the compiler's own
-        # memory lands on, and that moves when the compiler does. What is
-        # caught is a rung saying the machine ran out where a ceiling should
-        # have been carried back, not a particular one.
+        # Which rung of the walk says it is whichever the compiler's own
+        # memory lands on, and that moves when the compiler does and when the
+        # path of the file does. What is caught is a rung saying the machine
+        # ran out where a ceiling should have been carried back, not a
+        # particular one. See D1144.
         "caught": "said `error[K0639]: there was not enough memory to finish",
     },
     {

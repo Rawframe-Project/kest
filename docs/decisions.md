@@ -39394,3 +39394,62 @@ list does not grow.
 `rename` across files is still not done, and is still refused whole rather than
 half done. What has changed is that the file it renames in is the file the
 request named.
+
+## D1144 — A ceiling walked rather than three rungs written down
+
+`make check` refused on the reference machine with `MISSED: a ceiling crossed
+in a scratch arena and not carried back`, and did on `fd729c1` as well, which
+has none of D1143 in it. CI's `linux-full` ran the whole gate on the same
+commit and every hole was caught. The hole is sound; the check it is caught by
+held three numbers that belong to one machine's paths.
+
+`check-commands.sh` asks `kest check --room N` over a small file at 1000, 2000
+and 4000 bytes, so that a ceiling is crossed in each of the three arenas a
+build writes into, and holds each to saying `K0658`. The hole makes a crossing
+in the arena a file is read into say `K0639` instead -- the machine ran out --
+and the check is meant to see that. A crossing in that arena only happens
+under a ceiling inside a window as wide as the block reading the file asks
+for, 1956 bytes; every ceiling from 1 to where the file fits, one byte at a
+time, has exactly one such window. Where it begins moves about five bytes for
+every character of the file's path, because the path is written down several
+times before the file is read:
+
+| path of the file | window |
+| --- | --- |
+| 32 characters | 1860 to 3816 |
+| 56 | 2020 to 3976 |
+| 70 | 2152 to 4108 |
+| 73 | 2180 to 4136 |
+
+The rungs were 2000 apart and the window is 1956 wide, so there is a band of
+path lengths with no rung in it. The gate nests: `check.sh` sets `TMPDIR` to a
+room of its own, and a check makes its room under that, so the file's path is
+56 characters when the gate is run under a plain `/tmp`, and the window starts
+at 2020 -- past 2000 and ending before 4000. CI runs the gate under
+`/home/runner/kest-tmp`, 73 characters, and the 4000 rung lands inside. That is
+the whole of why one machine missed and the other caught, and it is why every
+replication by hand caught: each was one room deep.
+
+Reproduced without the sweep: with `TMPDIR` a room under `/tmp` and the hole
+in the tree, `check-commands.sh examples/math.kest` from before this comes back
+nought having said nothing.
+
+The ceiling is walked now, from nothing up to where the file fits, a quarter
+of a kilobyte at a time. What moves is where each place begins; what does not
+is how wide a place is, which is the block asked for there. The check was
+first written as a walk driven by the run's own numbers, each rung the last
+one's taken plus wanted, and that stepped over the window too: at the longest
+path the first refusal is the build's own arena asking for 4016 bytes, and
+taken plus wanted went from 1000 to 5016. What a rung wanted is where the
+next allocation *in that arena* fits, not where the next arena begins.
+
+Fifty-odd runs at about a millisecond each. The same file under the same
+hole, walked this way, is caught at 2048 bytes from a room under `/tmp`, at
+2304 from one under `/home/kest/scratch`, and at 2048 at the O1 path, where
+the check before this passed it; the tree without the hole passes the walk.
+No sentence is new: a megabyte still refused is said as what that rung said,
+so the sweep keeps its holes and the list does not grow.
+
+What this repeats is the rule in CLAUDE.md about a number a machine gave a
+check -- a level, a band, an address space -- being asked of the run rather
+than written in the check. Three ceilings are three such numbers.

@@ -40805,3 +40805,26 @@ See D1143.
 **Runs:** `make check`, and the two-file case driven through `kest lsp`.
 
 Next: a real game in Kest, and a model against the AI suite.
+
+## 2026-09-22, the net that missed on one machine
+
+O1 in `docs/state.md` was the sweep saying a check missed a hole that every
+replication by hand caught. CI's `linux-full` caught it on the same commit.
+
+The check tries a small file under ceilings of 1000, 2000 and 4000 bytes, and
+the hole is only seen under a ceiling inside a 1956-byte window. Scanned one
+byte at a time there is one such window, and where it starts moves with the
+length of the file's path. The gate nests its rooms, so under a plain `/tmp`
+the path is 56 characters and the window is 2020 to 3976: between the rungs.
+CI's room is longer and 4000 lands inside. Every replication was one room deep.
+
+The ceiling is walked a quarter of a kilobyte at a time now, and the hole is
+caught at every path tried; the check before this passes the hole at the O1
+path, run on its own. A walk driven by what each refusal said it wanted was
+tried first and stepped over the window as well.
+
+See D1144.
+
+**Runs:** every ceiling from 1 to 14000 over the holed build, the check old
+and new at three path lengths with and without the hole, `check-tables.sh`,
+and `make check` under `/tmp`.

@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1143
+    CURRENT SHA:       (this commit) D1093-D1144
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -18,18 +18,15 @@ reasoning; this holds the position.
                        runs 2.7 times fewer instructions since it stopped
                        working out where a refusal would be reported before
                        every door call
-    LAST CI:           green on 6a1be89, all nine jobs -- linux, linux-arm64,
+    LAST CI:           green on 3b2607c, all nine jobs -- linux, linux-arm64,
                        macos, windows, clang, threads, package, linux-full
-                       and agree. That commit is the one section 34's last
-                       criterion is about, and nothing is committed after it
-                       but the line you are reading
+                       and agree, linux-full catching all 900 holes. What is
+                       after it is D1144, which changes one check
     LAST FAST GATE:    green
-    LAST FULL GATE:    `make most` green here -- everything but the sweep.
-                       The whole gate refuses on this box for O1 in
-                       docs/state.md, which is not this work's: the same
-                       sweep prints the same three lines on fd729c1, which
-                       has none of it in it. CI's linux-full job is the
-                       arbiter
+    LAST FULL GATE:    `make check` green here, under a plain `/tmp`, with
+                       every one of the 900 holes caught -- the first whole
+                       gate on this box since the sweep started missing one
+                       (D1144)
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.
                        Every number below was taken on it.
@@ -417,10 +414,10 @@ backend's own half instead.
 
 Thirty-one criteria. **Thirty are met by something that runs**, and the last of
 them -- supported CI green on the exact final HEAD -- went green on `6a1be89`,
-all nine jobs.
+all nine jobs, and again on `3b2607c`.
 
-Committing past `6a1be89` makes that criterion false again until CI runs on
-this HEAD, which is what CI is for and what it is being asked.
+Committing past a green commit makes that criterion false again until CI runs
+on the new HEAD, which is what CI is for and what it is being asked.
 
 **One is a judgement and it is the owner's to make, not this worker's.** The AI
 section asks that "task completion/time/repair/silent escapes" be measured. The
@@ -738,6 +735,14 @@ the same workload.
    has. **What this says about the discipline**: the 899 holes ask whether the
    code is wrong and not whether the scenario was narrow, and a thing measured
    carefully and never widened is a place where nothing has been seen.
+24. *(done, D1144)* **A net that missed on one machine.** The whole gate
+   refused here and not on CI with `MISSED: a ceiling crossed in a scratch
+   arena and not carried back`. The check held a file to `K0658` under
+   ceilings of 1000, 2000 and 4000 bytes; the hole shows only inside a
+   1956-byte window whose start moves with the length of the file's path, and
+   the gate nests its rooms, so under a plain `/tmp` the window is 2020 to
+   3976 -- between the rungs. The ceiling is walked a quarter of a kilobyte at
+   a time now. Every replication by hand had been one room deep.
 
 ## Closed by measurement
 
