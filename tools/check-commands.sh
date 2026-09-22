@@ -5732,6 +5732,26 @@ fi
 # agreed about how many there were and not about where they are would pass
 # everything above. See D1129.
 mkdir -p "$scratch"/agreeing
+# And a file that imports another, whose dependency changes on disk under the
+# buffer the editor is holding. An editor that kept what it read the first time
+# would say a program is fine while the command line says it is not, which is
+# the same sentence failing for a different reason.
+cat > "$scratch"/agreeing/kit.kest <<'KEST'
+module kit
+
+fn doubled(n: i32) -> i32 {
+    return n * 2
+}
+KEST
+cat > "$scratch"/agreeing/user.kest <<'KEST'
+module user
+
+import kit
+
+fn main() -> i32 {
+    return kit.doubled(3)
+}
+KEST
 cat > "$scratch"/agreeing/agreeing.kest <<'KEST'
 module agreeing
 
@@ -5746,49 +5766,99 @@ fn main() -> i32 {
     return y
 }
 KEST
-agreed=$(python3 - "$kest" "$scratch"/agreeing/agreeing.kest <<'SAME'
+agreed=$(python3 - "$kest" "$scratch"/agreeing/agreeing.kest \
+        "$scratch"/agreeing/user.kest "$scratch"/agreeing/kit.kest <<'SAME'
 import json, os, subprocess, sys
 
-kest, path = sys.argv[1], os.path.abspath(sys.argv[2])
-text = open(path).read()
-uri = "file://" + path
-messages = [
-    {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
-    {"jsonrpc": "2.0", "method": "textDocument/didOpen",
-     "params": {"textDocument": {"uri": uri, "languageId": "kest",
-                                 "version": 1, "text": text}}},
-]
-body = b""
-for one in messages:
-    written = json.dumps(one).encode()
-    body += b"Content-Length: %d\r\n\r\n" % len(written) + written
-ran = subprocess.run([kest, "lsp"], input=body, capture_output=True)
+kest = sys.argv[1]
 
-told = []
-out, at = ran.stdout, 0
-while True:
-    head = out.find(b"Content-Length: ", at)
-    if head < 0:
-        break
-    blank = out.find(b"\r\n\r\n", head)
-    if blank < 0:
-        break
-    many = int(out[head + 16:blank])
-    said = json.loads(out[blank + 4:blank + 4 + many])
-    at = blank + 4 + many
-    if said.get("method") == "textDocument/publishDiagnostics":
-        for one in said["params"]["diagnostics"]:
-            told.append((one.get("code"),
-                         one["range"]["start"]["line"] + 1,
-                         one["range"]["start"]["character"] + 1,
-                         one.get("message")))
 
-# The command line, asked the same thing in the form a machine reads.
-ran = subprocess.run([kest, "check", "--json", path], capture_output=True)
-written = json.loads(ran.stdout.decode() or "{}")
-each = written.get("diagnostics", written if isinstance(written, list) else [])
-checked = [(one.get("code"), one.get("line"), one.get("column"),
-            one.get("message")) for one in each]
+def what_an_editor_is_told(path, change=None):
+    """The diagnostics an editor is published for a file, as an editor gets
+    them: the buffer on open, and once more after `change` has happened on
+    disk without the buffer moving."""
+    uri = "file://" + path
+    text = open(path).read()
+    messages = [
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+        {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+         "params": {"textDocument": {"uri": uri, "languageId": "kest",
+                                     "version": 1, "text": text}}},
+    ]
+    if change is not None:
+        messages.append(
+            {"jsonrpc": "2.0", "method": "textDocument/didChange",
+             "params": {"textDocument": {"uri": uri, "version": 2},
+                        "contentChanges": [{"text": text}]}})
+    body = b""
+    for one in messages:
+        written = json.dumps(one).encode()
+        body += b"Content-Length: %d\r\n\r\n" % len(written) + written
+    if change is None:
+        ran = subprocess.run([kest, "lsp"], input=body, capture_output=True)
+        out = ran.stdout
+    else:
+        # The dependency is edited between the open and the change, which is
+        # why this one is written to the server rather than handed over whole.
+        server = subprocess.Popen([kest, "lsp"], stdin=subprocess.PIPE,
+                                  stdout=subprocess.PIPE)
+        half = body.index(b"Content-Length", body.index(b"didOpen"))
+        server.stdin.write(body[:half])
+        server.stdin.flush()
+        where, was, now = change
+        # Read before the write: `open(w)` inside the argument of `open(w,
+        # "w")` reads a file the outer call has already emptied.
+        held = open(where).read()
+        open(where, "w").write(held.replace(was, now))
+        server.stdin.write(body[half:])
+        server.stdin.close()
+        out = server.stdout.read()
+        server.wait()
+    told, at = [], 0
+    while True:
+        head = out.find(b"Content-Length: ", at)
+        if head < 0:
+            break
+        blank = out.find(b"\r\n\r\n", head)
+        if blank < 0:
+            break
+        many = int(out[head + 16:blank])
+        said = json.loads(out[blank + 4:blank + 4 + many])
+        at = blank + 4 + many
+        if said.get("method") == "textDocument/publishDiagnostics":
+            # The first line of the message and not all of it: an editor shows
+            # one field, so the notes a diagnostic carries are folded into it,
+            # where the form a machine reads keeps them in `notes` beside it.
+            # What has to be the same is the diagnostic, not how the two carry
+            # what is written under it.
+            told = [(one.get("code"),
+                     one["range"]["start"]["line"] + 1,
+                     one["range"]["start"]["character"] + 1,
+                     (one.get("message") or "").split("\n")[0])
+                    for one in said["params"]["diagnostics"]]
+    return told
+
+
+def what_the_command_line_says(path):
+    """The same thing, in the form a machine reads."""
+    ran = subprocess.run([kest, "check", "--json", path], capture_output=True)
+    written = json.loads(ran.stdout.decode() or "{}")
+    each = written.get("diagnostics",
+                       written if isinstance(written, list) else [])
+    return [(one.get("code"), one.get("line"), one.get("column"),
+             one.get("message")) for one in each]
+
+
+alone, user, kit = (os.path.abspath(one) for one in sys.argv[2:5])
+told = what_an_editor_is_told(alone)
+checked = what_the_command_line_says(alone)
+
+# And the one whose dependency moved under it. Both sides are asked after the
+# edit, so what is held is that they answer the same thing about the same
+# state of the disk.
+if told == checked:
+    told = what_an_editor_is_told(user, (kit, "fn doubled", "fn twice"))
+    checked = what_the_command_line_says(user)
 
 # A command line that said nothing about a file with four mistakes in it
 # fails this as surely as one that disagreed: what the editor was told is not

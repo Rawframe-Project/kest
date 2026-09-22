@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1130
+    CURRENT SHA:       (this commit) D1093-D1131
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -578,7 +578,20 @@ backend's own half instead.
    what `kest check` says cannot differ -- is held rather than asserted: four
    mistakes of four kinds, compared code by code, line by line, column by
    column and word by word against `kest check --json`.
-13. Comparators, kept in step as the engines move. The harness names the mode
+13. *(done, D1131)* **Real edit latency, in an editor, on a large project.**
+   Driving `kest lsp` over a pipe on 112,647 lines: **a keystroke in a leaf
+   system is 0.3 ms**, in a group importing twenty systems 3.0 ms, and in the
+   one file that imports all ninety groups 475 ms. Edit latency follows what
+   the file imports and not how big the project is -- at 62,607 lines the same
+   three are 0.2, 3.0 and 221 ms, and only the top moved. **So there is no
+   resident compiler, by measurement rather than preference**: for the file
+   somebody is editing it would save nothing measurable, and for the one file
+   that imports everything it would buy half a second at the price of
+   invalidating a symbol graph correctly everywhere else.
+   And the editor stays right when the disk moves under it: rename a function
+   in a dependency without touching the buffer and both sides say `K0353` at
+   the same line and column. The gate holds that now.
+14. Comparators, kept in step as the engines move. The harness names the mode
    of every row (D1090), which is what stops an interpreter's number being
    read as a compiler's.
 

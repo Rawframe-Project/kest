@@ -38791,3 +38791,52 @@ nought. Every check in this tree has a hole the gate puts out of order on
 purpose, and 899 of those ran on this HEAD. Rerunning the probes is what the
 gate does every time it is green; what was missing was the baseline's own
 table, and that is above.
+
+## D1131 — Real edit latency, in an editor, on a large project
+
+"Real edit latency measured" and "persistent/incremental architecture exists
+only if justified" are two criteria with one measurement behind them, and it
+had not been taken: D1126 timed `kest check` on a forty-line task file, which
+is not what an editor does. What an editor does is send the whole buffer on
+every change and wait for diagnostics, so that is what was timed — driving
+`kest lsp` over a pipe on the generated project of **112,647 lines**.
+
+| what is being edited | a keystroke |
+| --- | --- |
+| a leaf system, importing one module | **0.3 ms** |
+| a group importing twenty systems | 3.0 ms |
+| the top, importing all ninety groups | 475 ms |
+
+**Edit latency follows what the file imports, not how big the project is.** A
+leaf system is 0.3 ms whether the project around it is six thousand lines or a
+hundred and twelve thousand, because the server reads the file and what it
+imports and nothing else. At 62,607 lines the same three are 0.2 ms, 3.0 ms and
+221 ms, which is the same shape: only the top moved, and it moved with the
+project.
+
+**So there is no resident compiler, and that is the measurement rather than a
+preference.** Section 12 of the compiler direction says to consider one "when
+measurement justifies it". For the file somebody is actually editing it saves
+nothing measurable — 0.3 ms is already below the tick of anything an editor
+does with it. For the one file in a project that imports everything it would
+save most of half a second, and that file is edited when a system is added
+rather than while code is written. A symbol graph held across keystrokes would
+buy that one case and would have to be invalidated correctly for every other,
+which is the trade the numbers above do not support.
+
+**And the editor stays right when the disk moves under it.** D1129 held the
+editor and the command line to the same diagnostics on a self-contained file.
+A file that imports another is the case where a server that kept what it read
+would drift: open `user.kest`, rename `doubled` to `twice` in `kit.kest` on
+disk without touching the buffer, and both sides say `K0353: kit has nothing
+called doubled` at the same line and column. The check now does that, in the
+server rather than through a pipe handed over whole, because the dependency has
+to move between the open and the change.
+
+Two things that had to be got right to write it. The LSP folds a diagnostic's
+notes into the one field a client shows, where the form a machine reads keeps
+them in `notes` beside the message — so what is compared is the first line of
+the message, which is the diagnostic, rather than how the two carry what is
+written under it. And `open(w, "w").write(open(w).read()...)` empties the file
+before reading it, which is the second time that has been written here and the
+first time it has been written down.

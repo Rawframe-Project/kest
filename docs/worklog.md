@@ -40467,6 +40467,26 @@ See D1129.
 
 Next: CI green on the exact final HEAD.
 
+## Real edit latency, in an editor, on a large project
+
+Driving `kest lsp` over a pipe on 112,647 lines: a keystroke in a leaf system
+is **0.3 ms**, in a group of twenty 3.0 ms, in the one file that imports all
+ninety groups 475 ms. Latency follows what the file imports, not how big the
+project is. So no resident compiler -- it would save nothing on the file
+somebody is editing, and half a second on the one file that imports everything,
+at the price of invalidating a symbol graph correctly everywhere else.
+
+And the editor stays right when the disk moves under it: rename a function in a
+dependency without touching the buffer, and the editor and the command line
+both say `K0353` at the same line and column. The gate holds that now.
+
+See D1131.
+
+**Runs:** `make check`, and `kest lsp` driven over a pipe at three depths on
+two project sizes.
+
+Next: CI green on the exact final HEAD.
+
 ## The foundation's baseline, rerun where the floor is named
 
 `/bin/true` costs 5.7 ms on this box and `kest --version` 6.5, so the
