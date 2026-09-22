@@ -45,6 +45,22 @@ a test did, which is exactly what this suite is here to count.
 
 Luau is found rather than built: `KEST_LUAU` says where it is.
 
+## Running it blind
+
+```text
+KEST_LUAU=/where/luau/is sh ai/blind.sh make /somewhere 3
+KEST_LUAU=/where/luau/is sh ai/blind.sh score /somewhere
+```
+
+`make` writes a room for every task, language and attempt, holding `ask.md`,
+the scaffold, and for Kest the reference and the standard library -- and an
+`INSTRUCTIONS.md` a model started on its own in that room reads. The right
+answer, the wrong one and the tests stay here. Starting the models is
+whoever runs this. `score` judges every answer left in the rooms with
+`ai/run.sh`. Run seventy-two times with Opus, it was Kest 36 of 36 and Luau 30
+of 36, the six being two tasks whose tests held a rule the task did not say,
+which it says now. See D1148.
+
 ## What it costs to be told
 
 `ai/cost.sh` reads that off the suite with no model near it: the loop somebody
