@@ -743,7 +743,10 @@ decisions = open('docs/decisions.md').read()
 replaced = set(re.findall(r'\n\| (D\d+) \| (D\d+) \|', decisions))
 for was, now in sorted(replaced):
     for name in (was, now):
-        if ('\n## %s' % name) not in decisions:
+        # A heading is a number and then a word boundary: `## D1150` begins
+        # with the characters of `## D115`, and a test for the characters
+        # found D1150 where D115 had gone. See D1152.
+        if not re.search(r'\n## %s\b' % name, decisions):
             print("docs/decisions.md: the list at the top names `%s` and no "
                   "decision is written under it" % name)
             failed = 1
