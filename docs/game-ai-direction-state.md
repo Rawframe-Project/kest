@@ -19,7 +19,7 @@ reasoning; this holds the position.
                        working out where a refusal would be reported before
                        every door call
     LAST FAST GATE:    green
-    LAST FULL GATE:    green at 654e96c
+    LAST FULL GATE:    green at 6dd0912
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.
                        Every number below was taken on it.
