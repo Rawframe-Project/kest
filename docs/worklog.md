@@ -40917,3 +40917,13 @@ See D1151.
 
 **Runs:** `examples/embed` against the doors and against two broken copies of
 them, `check-tables.sh`, `check-header.sh`, `check-dead.sh`, and `make most`.
+
+## 2026-09-22, a heading found by its first characters
+
+CI refused D1150's push: a hole that takes the heading off D115 was missed,
+because `check-docs.sh` looked for the characters `## D115` and D1150 begins
+with them. It looks for the number and a word boundary now, and the hole is
+caught again. See D1152.
+
+**Runs:** the hole put in by hand before and after, `check-docs.sh`, and
+`make most`.

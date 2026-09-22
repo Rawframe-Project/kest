@@ -39803,3 +39803,19 @@ where it was, and a file edited under a held build noticed. Watched catching:
 with `kest_held_changed` answering no whatever the bytes are, `embed` refuses;
 with the saved bytes zeroed on the way across, it says `a reload lost the
 world`.
+
+## D1152 — A heading is a number and then a word boundary
+
+CI's whole gate refused the push of D1150: the hole about a row of the list
+at the top whose decision nobody wrote was missed. The hole takes the heading off D115 and wants
+`check-docs.sh` to say the list at the top names a decision nobody wrote. It
+said nothing, because what it looked for was the characters `\n## D115`, and
+`## D1150` begins with them: the day there was a D1150, every decision from
+D115 to D119 could lose its heading and the list would still read as held.
+
+It looks for the number and a word boundary now, and the hole is caught again
+with the sentence it is for as the first line. A defect in a check, fixed in
+the check; the hole that found it is the one that was already there.
+
+It was found by CI and not here, because the whole gate is CI's to run since
+D1149 -- which is what that decision said the trade was.
