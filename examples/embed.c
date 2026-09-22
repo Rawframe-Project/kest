@@ -2061,6 +2061,20 @@ int main(int argc, char **argv) {
                 first_build, kest_build_cost(read_again));
         return 1;
     }
+    // And the library named by this host rather than found, the way a host
+    // with its own layout names it: a directory, with nothing after it.
+    // `KEST_LIB` has always been read that way, and the same words handed
+    // here were looked for as `libstd`. Every host in this tree wrote the
+    // slash, so nothing had asked. See D1145.
+    {
+        KestBuild *named = kest_build(path, "lib", stderr, KEST_FORM_TEXT, 0);
+        if (named == NULL) {
+            fprintf(stderr, "a library named without a slash after it was not "
+                            "found\n");
+            return 1;
+        }
+        kest_build_free(named);
+    }
     // And what that cost was paid for: every file the build read, which is the
     // one named and everything it imports. A host that reloads when something
     // changes watches these rather than the file it named — an import is a

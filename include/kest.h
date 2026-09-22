@@ -1712,8 +1712,10 @@ KestNative kest_host_find(const KestHost *host, const char *name,
 
 // A compiled program, and everything it was compiled from. One of these is
 // what a host has instead of the stages there are.
-// Compiles a file and everything it imports. `library` is where `std` lives, or
-// NULL for `lib/` beside the program. Returns NULL when it did not compile.
+// Compiles a file and everything it imports. `library` is where `std` lives --
+// a directory, with a separator after it or without, the way `KEST_LIB` is
+// read -- or NULL for `lib/` beside the program. Returns NULL when it did not
+// compile. See D1145.
 //
 // What it could not compile goes to `errors` in the form asked for, or nowhere
 // when that is NULL. A program that compiled and had something said about it —

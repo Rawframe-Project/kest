@@ -830,6 +830,20 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
 
 bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
                     char **paths, int count, KestUnits *units) {
+    // A library named without a separator at its end is the same directory as
+    // one named with it, and every import is that and a module's path run
+    // together. `KEST_LIB` has always been read that way; a host handing the
+    // same words to `kest_build` was looked for in `libstd`. See D1145.
+    size_t named = library == NULL ? 0 : strlen(library);
+    if (named > 0 && !KEST_PATH_SEPARATOR(library[named - 1])) {
+        char *ended = kest_arena_alloc(arena, named + 2, 1);
+        if (ended != NULL) {
+            memcpy(ended, library, named);
+            ended[named] = '/';
+            ended[named + 1] = '\0';
+            library = ended;
+        }
+    }
     units->library = library;
     if (count <= 0) {
         return false;
