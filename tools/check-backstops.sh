@@ -575,6 +575,21 @@ fn main() -> i32 {
         "caught": "check: K0316 said",
     },
     {
+        # An editor told where a mistake is, one column along from where the
+        # command line says it is. The README's sentence is that `kest lsp` is
+        # this compiler, so the two cannot differ; an editor that agreed about
+        # how many mistakes there were and not about where they are passed
+        # everything there was before D1129.
+        "what": "an editor pointing one column past the mistake",
+        "file": "src/lsp.c",
+        "from": r"""    sayf(out, "{\"start\":{\"line\":%u,\"character\":%u},", line, column);""",
+        "to": r"""    sayf(out, "{\"start\":{\"line\":%u,\"character\":%u},", line, column + 1);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "an editor and the command line differ about a file",
+    },
+    {
         # A slot that holds where the value is rather than the value, with
         # nothing saying so. A `for` binds its element by address where the
         # body never writes it, which is a copy a turn saved -- and what a

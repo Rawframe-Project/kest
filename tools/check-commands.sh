@@ -5725,6 +5725,90 @@ if [ "$served" != "yes" ]; then
     complain "lsp: the editor was not answered by this compiler: $served"
 fi
 
+# And the sentence the README makes of that: `kest lsp` is this compiler, so
+# what an editor is told about a file and what `kest check` says about it
+# cannot differ. Held over a file with four mistakes of four kinds, code by
+# code, line by line, column by column and word by word -- an editor that
+# agreed about how many there were and not about where they are would pass
+# everything above. See D1129.
+mkdir -p "$scratch"/agreeing
+cat > "$scratch"/agreeing/agreeing.kest <<'KEST'
+module agreeing
+
+fn adding(a: i32, b: i32) -> i32 {
+    return a + b
+}
+
+fn main() -> i32 {
+    let x = adding(1)
+    let y: text = 4
+    missing(x)
+    return y
+}
+KEST
+agreed=$(python3 - "$kest" "$scratch"/agreeing/agreeing.kest <<'SAME'
+import json, os, subprocess, sys
+
+kest, path = sys.argv[1], os.path.abspath(sys.argv[2])
+text = open(path).read()
+uri = "file://" + path
+messages = [
+    {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+    {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+     "params": {"textDocument": {"uri": uri, "languageId": "kest",
+                                 "version": 1, "text": text}}},
+]
+body = b""
+for one in messages:
+    written = json.dumps(one).encode()
+    body += b"Content-Length: %d\r\n\r\n" % len(written) + written
+ran = subprocess.run([kest, "lsp"], input=body, capture_output=True)
+
+told = []
+out, at = ran.stdout, 0
+while True:
+    head = out.find(b"Content-Length: ", at)
+    if head < 0:
+        break
+    blank = out.find(b"\r\n\r\n", head)
+    if blank < 0:
+        break
+    many = int(out[head + 16:blank])
+    said = json.loads(out[blank + 4:blank + 4 + many])
+    at = blank + 4 + many
+    if said.get("method") == "textDocument/publishDiagnostics":
+        for one in said["params"]["diagnostics"]:
+            told.append((one.get("code"),
+                         one["range"]["start"]["line"] + 1,
+                         one["range"]["start"]["character"] + 1,
+                         one.get("message")))
+
+# The command line, asked the same thing in the form a machine reads.
+ran = subprocess.run([kest, "check", "--json", path], capture_output=True)
+written = json.loads(ran.stdout.decode() or "{}")
+each = written.get("diagnostics", written if isinstance(written, list) else [])
+checked = [(one.get("code"), one.get("line"), one.get("column"),
+            one.get("message")) for one in each]
+
+# A command line that said nothing about a file with four mistakes in it
+# fails this as surely as one that disagreed: what the editor was told is not
+# empty, so an empty list on the other side is a difference like any other.
+#
+# The two lists and no words of its own. What is wrong is one sentence, and
+# the shell below says it: a sentence written here as well would be a second
+# thing this check can say, and every sentence a check says has to have been
+# watched being said.
+if told != checked:
+    print("%r / %r" % (told, checked))
+else:
+    print("yes")
+SAME
+)
+if [ "$agreed" != "yes" ]; then
+    complain "lsp: an editor and the command line differ about a file, being \
+told $agreed"
+fi
+
 # What `check --cost` says about a body, held to the two things it is for: a
 # body that reaches nothing is said to reach nothing and is told which promise
 # it keeps and does not make, and a body that prints reaches both. The facts

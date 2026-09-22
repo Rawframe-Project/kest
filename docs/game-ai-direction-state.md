@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1128
+    CURRENT SHA:       (this commit) D1093-D1129
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -555,7 +555,15 @@ backend's own half instead.
    ends with `nothing here is wrong`. The gate lays out a directory like an
    unpacked archive and stands somewhere else; CI's package job runs it that
    way too, rather than only with `KEST_LIB` exported.
-12. Comparators, kept in step as the engines move. The harness names the mode
+12. *(done, D1129)* **The rest of the documented workflow.** `make install
+   PREFIX=...` puts twelve files there and a program importing `std.io` runs
+   from it both named with a path and found on `PATH`; `make uninstall`
+   removes every one of them. And the README's sentence about the editor --
+   that `kest lsp` is this compiler, so what an editor says about a file and
+   what `kest check` says cannot differ -- is held rather than asserted: four
+   mistakes of four kinds, compared code by code, line by line, column by
+   column and word by word against `kest check --json`.
+13. Comparators, kept in step as the engines move. The harness names the mode
    of every row (D1090), which is what stops an interpreter's number being
    read as a compiler's.
 

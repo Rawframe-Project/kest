@@ -38700,3 +38700,54 @@ running the binary, which is the one thing that makes the question go away. The
 Linux package job now also runs it the way somebody who unpacked it would: from
 a directory that is not the archive, with `bin` on the path and `KEST_LIB`
 empty.
+
+## D1129 — The rest of the documented workflow, run rather than described
+
+D1128 found a README sentence that was false by doing what it said. The rest of
+what the README tells somebody to do was run the same way, and what held is now
+held by something rather than by the sentence.
+
+**Installing to a prefix, and taking it away.** `make install PREFIX=...` puts
+twelve files there — the binary, the header, the static library and the nine of
+the standard library — and a program importing `std.io` runs from it both named
+with a path and found on `PATH`. `make uninstall PREFIX=...` removes every one
+of the twelve. The three directories it made are left, which is right: `bin`,
+`include` and `lib` under a prefix are not this project's to delete.
+
+**The editor and the command line cannot differ.** The README says `kest lsp`
+"is this compiler, so what an editor says about a file and what `kest check`
+says about it cannot differ". The LSP check held that the editor answers about
+the buffer it was handed — document identity — and that it says *something*
+about a broken one. It did not hold the sentence. It does now, over a file with
+four mistakes of four kinds:
+
+```text
+K0309 8 13  `agreeing.adding` takes 2 arguments, found 1
+K0310 9 19  this binding expects `text`, found `i32`
+K0306 10 5  unknown name `missing`
+K0310 11 12 this return expects `i32`, found `text`
+```
+
+Code by code, line by line, column by column and word by word, against what
+`kest check --json` says about the same file. They agree exactly, and an editor
+that agreed about how many there were and not about where they are would have
+passed everything that was there before. Adding one to the column the LSP
+writes makes it say so: `the editor was told [('K0309', 8, 14, ...` where the
+command line says 13.
+
+**And the gate would not take the check until it had seen it fire.** The
+backstops list said so in as many words -- `says \`an editor and the command
+line differ about a file\`, and nothing has ever made it` -- for all three
+strings the first version of this check could print. One of the three was a
+branch that did not need to exist: a command line that says nothing about a
+file with four mistakes differs from a non-empty list already, so the
+comparison catches it without a sentence of its own. The one that remains is
+registered as a hole in `src/lsp.c`, one column along.
+
+The third took a second turn of the same crank. A check may say more than one
+sentence, and every one of them has to have been watched being said; the
+comparison printed one sentence of its own from Python and the shell printed
+another around it, and one hole cannot cover both — half a sentence's words is
+the bar, and neither sentence's words are half of the other's. So the Python
+prints the two lists and nothing else, and the one sentence is the shell's.
+What is wrong is said in one place, which is the rule the gate was holding.

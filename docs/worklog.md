@@ -40448,3 +40448,21 @@ archive with nothing installed.
 
 Next: CI green on the exact final HEAD, and the last of section 34 read
 through.
+
+## The rest of the documented workflow, run rather than described
+
+`make install PREFIX=...` puts twelve files there and a program importing
+`std.io` runs from it both ways; `make uninstall` removes every one of them.
+
+And the README's sentence about the editor -- that `kest lsp` is this compiler,
+so what an editor says about a file and what `kest check` says cannot differ --
+is held now rather than asserted: four mistakes of four kinds, compared code by
+code, line by line, column by column and word by word against
+`kest check --json`. Adding one to the column the LSP writes makes the gate say
+so.
+
+See D1129.
+
+**Runs:** `make check`, `make install`/`uninstall` into a scratch prefix.
+
+Next: CI green on the exact final HEAD.
