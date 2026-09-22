@@ -2852,7 +2852,22 @@ ask "documentation" tools/check-docs.sh docs/language.md \
     docs/decisions.md CHANGELOG.md
 ask "costs" tools/check-costs.sh
 ask "ceilings" tools/check-ceilings.sh
-ask "backstops" tools/check-backstops.sh
+
+# The sweep that puts every check out of order, and the one thing here that is
+# about the other checks rather than about this language: 899 holes, each a
+# tree of its own with a build in it. It is most of what this gate costs --
+# every other tool it runs finishes inside forty seconds between them, and
+# this one takes half an hour on a loaded box. So `make most` leaves it out
+# and says so at the end, which is the tier between a tenth of a second and
+# half an hour that was missing. What it is right to leave out of is a run
+# while something is being written; what it is not right to leave out of is
+# saying a thing is done, and the last line is what keeps those apart.
+# See D1136.
+if [ "${KEST_HOLES:-yes}" = no ]; then
+    say "backstops" "left out, because \`make most\` is everything else"
+else
+    ask "backstops" tools/check-backstops.sh
+fi
 
 wait
 heard
@@ -3278,6 +3293,11 @@ fi
 
 if [ $failed -eq 0 ]; then
     echo
-    echo "everything passes"
+    if [ "${KEST_HOLES:-yes}" = no ]; then
+        echo "everything but the holes passes. \`make check\` is the whole \
+of it."
+    else
+        echo "everything passes"
+    fi
 fi
 exit $failed

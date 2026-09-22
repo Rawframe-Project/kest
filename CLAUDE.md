@@ -1325,6 +1325,11 @@ tree         nothing a compiler made in the tree but what `make clean` takes
              a walk that found nothing and a walk that looked at nothing print
              the same nothing
 room         every check handing back the room it took
+backstops    said only when it was left out, which is what `make most` does:
+             the sweep that puts every check out of order is most of what the
+             whole gate costs and the one check here about the other checks
+             rather than about this language. `make check` asks it as a tool
+             like the rest and this row is not printed at all
 ```
 
 `check-tables.sh` holds that list to what `check.sh` says: a line deleted from
@@ -1347,9 +1352,10 @@ lines being right is one thing and the files arriving is another.
 The self-checking here is large and it is not free. Measured on the machine this
 was written on: `make fast` is a quarter of a second, `make check` is about ten
 minutes, and six and a half of those are the backstops — eight hundred and
-seventy-seven holes, each of which copies the tree, builds it and runs a check.
-Both numbers are this machine's; what is the same anywhere is that the gate is
-mostly the holes.
+ninety-nine holes now, each of which copies the tree, builds it and runs a
+check. Both numbers are this machine's; what is the same anywhere is that the
+gate is mostly the holes — which is why `make most` leaves them out and why
+that is the tier to work in.
 
 So the rule from here is:
 
@@ -1394,7 +1400,7 @@ A hole goes when what it is about goes, and not because another says the same
 thing. One went that way this year: "a cut that copies what was already ending"
 stopped being a thing a cut does when text became two slots.
 
-## Two tiers
+## Three tiers
 
 `make fast` is what a change is tried against while it is being written: the
 build, every example run for its answer, the library and the instruments
@@ -1404,12 +1410,23 @@ takes about a quarter of a second and it is `tools/fast.sh`. It is not a gate an
 it proves nothing about itself; everything in it is also done by `make check`,
 in more shapes and under more builds.
 
-`make check` is the whole of it and takes about ten minutes. Run it at a
-milestone and before saying something is done — not after every edit, which is
-what made a change cost four full runs of the gate and the gate the reason
-nothing moved. Every check in `tools` also runs on its own, which is how a
-change that moves one figure is answered in seconds rather than in a round
-trip.
+`make most` is everything `make check` does except the sweep that puts every
+check out of order. That sweep is 899 holes, each a tree of its own with a
+build in it, and it is most of what the whole gate costs: the eleven other
+tools it runs finish in about forty seconds of wall clock between them. It is
+also the one check here that is about the *other checks* rather than about this
+language, so what it answers changes when a check changes and not when the
+compiler does. Its row says it was left out and the last line says `everything
+but the holes passes`, because a run of one must never be read as a run of the
+other. Run it while something is being written; do not say a thing is done on
+it. `KEST_HOLES=no` is what the Makefile sets. See D1136.
+
+`make check` is the whole of it and takes about ten minutes — half an hour on a
+box somebody else is also using. Run it at a milestone and before saying
+something is done — not after every edit, which is what made a change cost four
+full runs of the gate and the gate the reason nothing moved. Every check in
+`tools` also runs on its own, which is how a change that moves one figure is
+answered in seconds rather than in a round trip.
 
 `make check` is the whole of it: both builds, every host, every example run or
 resolved, every command against every file under the sanitisers, every tool

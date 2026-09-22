@@ -109,6 +109,14 @@ engine-debug: examples/engine-debug
 fast: tools/fast.sh
 	@tools/fast.sh
 
+# Everything but the sweep that puts every check out of order, which is most
+# of what the whole gate costs and the one check in it that is about the other
+# checks rather than about this language. The tier between a tenth of a second
+# and half an hour: run it while something is being written, and `check`
+# before saying it is done. See D1136.
+most: tools/check.sh
+	@KEST_HOLES=no tools/check.sh
+
 # Everything, so that "it passes" is a command rather than a claim. Minutes.
 # Run at a milestone and before saying something is done, not after every edit.
 check: tools/check.sh
@@ -228,8 +236,8 @@ clean:
 	    bench/rules-cpp \
 	    .jitted_scripts kest-colony-day.txt
 
-.PHONY: debug least embed embed-debug engine engine-debug fast check time \
-    fuzz release install uninstall clean
+.PHONY: debug least embed embed-debug engine engine-debug fast most check \
+    time fuzz release install uninstall clean
 
 # A short campaign, which is what a gate can afford: eight seeds and four
 # hundred inputs each, sanitised. A longer one is the same command with other

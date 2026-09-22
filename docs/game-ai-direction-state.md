@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1135
+    CURRENT SHA:       (this commit) D1093-D1136
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -628,7 +628,23 @@ backend's own half instead.
    at the `let`, as a warning for the reason K0346 is one. Quiet where `room`
    or `push` is called on the name or where it is handed to another function
    at all, and no false positives over every `.kest` file in the tree.
-17. Comparators, kept in step as the engines move. The harness names the mode
+17. *(done, D1136)* **The tier between a tenth of a second and half an hour.**
+   `make fast` is a quarter of a second and `make check` is half an hour on
+   this box, and nothing sat in between -- so a task file, a paragraph or a
+   one-line fix each cost a full gate. Timed one at a time, the eleven tools
+   beside the sweep come to **about forty seconds of wall clock together**
+   (ceilings 39s, costs 22, dead 20, tables 12, fmt 8, c 7, commands 4, docs
+   2, the rest under 2); the sweep that puts every check out of order was
+   killed at thirteen minutes without finishing, 899 holes each a tree of its
+   own with a build in it. **`make most` is everything but that sweep: 356
+   seconds.** It is the one check here about the *other checks* rather than
+   about this language, so what it answers changes when a check changes and
+   not when the compiler does. Its row says it was left out and its last line
+   says `everything but the holes passes`, so no run of one reads as a run of
+   the other and `LAST FULL GATE` goes on meaning `make check`. The other half
+   of the slowness is the box: `/bin/true` costs 5.7 ms here and the load
+   average sits at 31 to 37 on twelve cores, most of it other tenants.
+18. Comparators, kept in step as the engines move. The harness names the mode
    of every row (D1090), which is what stops an interpreter's number being
    read as a compiler's.
 

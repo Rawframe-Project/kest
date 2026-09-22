@@ -40467,6 +40467,33 @@ See D1129.
 
 Next: CI green on the exact final HEAD.
 
+## The tier between a tenth of a second and half an hour
+
+`make fast` is a quarter of a second and `make check` is half an hour on this
+box, and there was nothing in between -- so a task file, a paragraph or a
+one-line fix each cost a full gate.
+
+Timed one at a time: ceilings 39s, costs 22, dead 20, tables 12, fmt 8, c 7,
+commands 4, docs 2, lends and ai 1 each, header under 1 -- **about forty
+seconds of wall clock together**, because they run at once. And backstops,
+killed at thirteen minutes without finishing: 899 holes, each a tree of its own
+with a build in it.
+
+So **`make most`** runs everything but that one sweep, which is the only check
+here about the *other checks* rather than about this language. **356 seconds**
+against half an hour. Its row says it was left out and its last line says
+`everything but the holes passes`, so no run of one reads as a run of the
+other, and `LAST FULL GATE` goes on meaning `make check`.
+
+The other half is the box: `/bin/true` costs 5.7 ms here and the load average
+sits at 31 to 37 on twelve cores, most of it other tenants.
+
+See D1136.
+
+**Runs:** `make most` (356s), and every tool timed on its own.
+
+Next: CI green on the exact final HEAD.
+
 ## An array with no room, filled with `fit`, and nothing said
 
 Writing the three task files for D1125 turned up what a model gets wrong here,

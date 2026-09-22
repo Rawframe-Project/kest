@@ -39021,3 +39021,57 @@ hole that breaks a machine's hold on that list landed on a different entry and
 made a different refusal come first — `MISSED: a machine that points into the
 list it was started from`. A list a hole is aimed at is a list to add to at the
 end.
+
+## D1136 — The tier between a tenth of a second and half an hour
+
+`make fast` is a quarter of a second and `make check` is half an hour on this
+box. There was nothing in between, so every change — a task file, a paragraph,
+a one-line host fix — cost a full gate, and a day's work turned into a day of
+waiting for one.
+
+Measured rather than guessed. The twelve tools the gate runs in parallel, timed
+one at a time on this box:
+
+| tool | seconds |
+| --- | --- |
+| ceilings | 39 |
+| costs | 22 |
+| dead | 20 |
+| tables | 12 |
+| fmt | 8 |
+| c | 7 |
+| commands | 4 |
+| docs | 2 |
+| lends, ai | 1 each |
+| header | under 1 |
+| **backstops** | **killed at thirteen minutes, unfinished** |
+
+They run at once, so the eleven together are **about forty seconds of wall
+clock**. Everything else in that block is the sweep that puts every check out
+of order: 899 holes, each a tree of its own with a build in it.
+
+**So `make most` runs everything except that one sweep.** It is a principled
+line rather than a speed trick: the backstop sweep is the only check here that
+is about the *other checks* rather than about this language, and what it
+answers changes when a check changes, not when the compiler does. Its row says
+`left out, because make most is everything else`, and the last line says
+`everything but the holes passes. make check is the whole of it.` — so no run
+of one can be mistaken for the other, and `LAST FULL GATE` in the state file
+goes on meaning `make check`.
+
+What it is right to leave out of is a run while something is being written.
+What it is not right to leave out of is saying a thing is done.
+
+**356 seconds.** Under six minutes against half an hour, on the same loaded
+box, for everything except the holes.
+
+The gate held the change to its own rules on the way in: `check.sh` now *says*
+`backstops` in the tier that leaves it out, and every row the gate says for
+itself has to be in the table in `CLAUDE.md` that lists them — so the row is
+written there, saying it appears only when it was left out.
+
+The load on this box is the other half of the story and is nobody's design:
+`/bin/true` costs 5.7 ms here and the load average sits between 31 and 37 on
+twelve cores, most of it other tenants. A gate that gets a third of a machine
+takes three times as long, and the only answer to that is to ask for less of
+it more often.
