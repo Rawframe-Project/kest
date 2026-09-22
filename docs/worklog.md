@@ -40466,3 +40466,22 @@ See D1129.
 **Runs:** `make check`, `make install`/`uninstall` into a scratch prefix.
 
 Next: CI green on the exact final HEAD.
+
+## The foundation's baseline, rerun where the floor is named
+
+`/bin/true` costs 5.7 ms on this box and `kest --version` 6.5, so the
+baseline's five rows are rerun as what they cost above that floor. A thousand
+generated modules: **609 ms then, 173.8 ms now, on nearly twice the lines** --
+the quadratic curve is gone and stayed gone through two engines, a ledger frame
+and two thousand bodies of C backend. The small rows are where they were, and a
+four-line check costs less than the variance in starting the process.
+
+And the forty-six defects the foundation era found each name what holds them;
+every check in the tree has a hole the gate puts out of order on purpose, and
+899 of them ran green on this HEAD.
+
+See D1130.
+
+**Runs:** `make check`, and `kest check` over the five baseline rows.
+
+Next: CI green on the exact final HEAD.

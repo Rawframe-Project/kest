@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1129
+    CURRENT SHA:       (this commit) D1093-D1130
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -55,6 +55,21 @@ contracts.
 
 The curve was quadratic: ten times the modules cost thirty-eight times the
 time. Stage timing (`KEST_SPENT=1`) put it in naming and in checking bodies.
+
+**Rerun at this HEAD** (D1130), read above the floor a process costs -- 6.5 ms
+for `kest --version` on this box, where `/bin/true` is 5.7:
+
+| what | then | here, above the floor |
+| --- | --- | --- |
+| a four-line program | 1 ms | inside the floor's own noise |
+| `examples/slice` entry | 3 ms | 2.6 ms |
+| all of `lib/std` | 3 ms | 3.6 ms |
+| 100 generated modules | 16 ms at ~3.5k lines | 14.6 ms at 6,312 lines |
+| 1000 generated modules | 609 ms at ~35k lines | 173.8 ms at 62,607 lines |
+
+Three and a half times faster at a thousand modules on nearly twice the lines,
+and the quadratic curve is gone and stayed gone through two engines, a ledger
+frame and two thousand bodies of C backend.
 
 ## What has been done
 

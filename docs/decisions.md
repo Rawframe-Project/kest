@@ -38751,3 +38751,43 @@ another around it, and one hole cannot cover both — half a sentence's words is
 the bar, and neither sentence's words are half of the other's. So the Python
 prints the two lists and nothing else, and the one sentence is the shell's.
 What is wrong is said in one place, which is the rule the gate was holding.
+
+## D1130 — The foundation's baseline, rerun where the floor is named
+
+The baseline this direction started from is five rows of `kest check` taken at
+e458ee2. Rerunning them at this HEAD needs one thing the original table did not
+say: **what starting a process costs on the box the numbers were taken on.**
+`/bin/true` takes 5.7 ms here today, and `kest --version` — the same binary,
+the same dynamic linking, no file read — takes 6.5. A four-line program
+"taking 1 ms" and a four-line program "taking 6.4 ms" can be the same compiler
+on two differently loaded machines, so every row below is read as what it costs
+*above that floor*.
+
+| what | at e458ee2 | here, above the floor |
+| --- | --- | --- |
+| a four-line program | 1 ms | inside the floor's own noise |
+| `examples/slice` entry | 3 ms | 2.6 ms |
+| all of `lib/std`, 9 modules | 3 ms | 3.6 ms |
+| 100 generated modules | 16 ms at ~3.5k lines | 14.6 ms at 6,312 lines |
+| 1000 generated modules | 609 ms at ~35k lines | 173.8 ms at 62,607 lines |
+
+**The thousand-module row is three and a half times faster on nearly twice the
+lines** — about six times the source read per second — and the quadratic curve
+the baseline recorded is gone, which is what D1088 was for and this is the
+check that it stayed gone through two engines, a ledger frame and two thousand
+bodies of C backend. The small rows are where they were; a four-line check
+costs less than the variance in starting the process that runs it, which is the
+only honest thing to say about it.
+
+The corpus is `tools/make-project.py`'s rather than the baseline's, which
+predates it, so the line counts are stated beside the module counts rather than
+matched to them: a hundred modules of this generator is nearly twice the source
+a hundred of that one was, and it is read in less time.
+
+**And the defects the foundation era found are each held by something that
+runs.** Forty-six are written down in `docs/state.md`, each naming what holds
+it — a fixture, a checksum two shapes have to agree on, an example that answers
+nought. Every check in this tree has a hole the gate puts out of order on
+purpose, and 899 of those ran on this HEAD. Rerunning the probes is what the
+gate does every time it is green; what was missing was the baseline's own
+table, and that is above.
