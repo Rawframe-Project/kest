@@ -40060,3 +40060,44 @@ that check held was that a call and its answer cost two instructions at least;
 what it holds now is that a helper costs nothing over writing it out, which is
 the thing a reader wants to be true. The five workloads move by less than a
 tenth of a per cent.
+
+## D1158 — The machine's loop is built with every case at a sixteen-byte boundary
+
+*measured*, and what it corrects is how the work before it was measured.
+D1154 to D1157 were weighed in instructions, which the box does not share with
+anybody and the clock does. Read in cycles, D1155 -- five new cases, none of
+which `kernel` runs -- made `kernel` 37 per cent slower at the same
+instructions: 336 million cycles at `06fa618` and 462 million at `77d6ba7`,
+best of seven each. The op mix was the same to the count, and so were the
+branch misses, the instruction cache misses and the data cache misses.
+`control` had run 4 per cent fewer instructions and 2 per cent more cycles,
+and `graph` 13 per cent more.
+
+What moved was where the compiler put the cases of the one `switch` every
+instruction goes through. Built again with nothing changed but that:
+
+| `vm.c` built with | kernel | control | graph | rules |
+| --- | --- | --- | --- | --- |
+| `-O2`, at `06fa618` | 339 M | 470 M | 47.1 M | |
+| `-O3`, at `06fa618` | 383 M | 503 M | 49.7 M | |
+| `-O2 -falign-labels=16`, at `06fa618` | 330 M | 462 M | 48.9 M | |
+| `-O2`, here | 430 M | 491 M | 50.9 M | 1,764 M |
+| `-O2 -falign-labels=16`, here | 322 M | 451 M | 45.1 M | 1,596 M |
+
+`-O3` was better here and worse there, which is a different lottery ticket
+rather than a fix. Every case put at a sixteen-byte boundary was no worse where
+the layout was already good and 8 to 25 per cent better where it was not:
+`kernel` -25.2 %, `control` -8.2 %, `graph` -11.3 %, `words` -2.0 %, `rules`
+-9.5 %, each the best of seven interleaved with the build without it (four for
+`rules`).
+
+So the release build of `vm.c` is asked for it, and only that file: nothing
+else here is a loop of a few hundred cases that every instruction goes through.
+It is an option of the compiler, not of the language this is written in, so
+the Makefile asks the compiler whether it takes it and asks nothing of one that
+does not, rather than refusing to build; the source is ISO C11 as it was, and
+D1047's reason for not threading the dispatch stands.
+
+From here a change to the machine is weighed in cycles as well as instructions,
+the two binaries run turn about so that whatever else the box is doing falls on
+both.

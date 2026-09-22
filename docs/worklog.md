@@ -41007,3 +41007,18 @@ See D1157.
 
 **Runs:** `examples/carried.kest` at the commit before and here, every example
 and workload fused and with `KEST_PLAIN=1`, `check-costs.sh`, and `make most`.
+
+## 2026-09-23, the machine's cases aligned
+
+Read in cycles rather than instructions, the four pairs made one instruction
+each (D1155) had made `kernel` 37 per cent slower, at the same instructions and
+the same cache and branch misses: the compiler had put the cases of the
+machine's `switch` somewhere worse. Every case at a sixteen-byte boundary is no
+worse where the layout was good and 8 to 25 per cent faster here; `vm.c` is
+built that way by a compiler that takes the option.
+
+See D1158.
+
+**Runs:** best-of-seven cycles at `06fa618`, `77d6ba7` and here with `vm.c`
+built five ways, the two builds interleaved over all five workloads, `perf
+stat` of branch and cache misses, and `make most`.
