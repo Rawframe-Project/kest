@@ -238,6 +238,16 @@ jobs:
           export KEST_LIB=lib/kest/
           ./bin/kest --version
           ./bin/kest run "$GITHUB_WORKSPACE/examples/math.kest"
+          # And the way somebody who unpacked it actually runs it: `bin` on
+          # the path, nothing installed, nothing in the environment, and
+          # standing somewhere that is not the archive. That is what the
+          # README says is all it takes, and it was not true until D1128.
+          unpacked=$PWD
+          (
+            cd "$RUNNER_TEMP"
+            PATH="$unpacked/bin:$PATH" KEST_LIB= \
+              kest run "$GITHUB_WORKSPACE/examples/math.kest"
+          )
           # And a host built against the header and the library that are in
           # the archive, which is the question an archive is for. See D1000.
           printf '%s\n' '#include "kest.h"' '#include <stdio.h>' \

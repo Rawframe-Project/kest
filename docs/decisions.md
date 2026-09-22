@@ -38643,3 +38643,60 @@ somewhere else: 6.423 -1.017 rather than 4.017 -1.017`.
 shape of the world, two at the doors this host calls, one kept. All of them
 inside 0.4 to 0.8 ms, which is the other half of the loop — how long it takes
 to find out a change cannot be taken.
+
+## D1128 — An unpacked archive could not find the library beside it
+
+"Newcomer workflow coherent" was the last usability criterion with nothing run
+behind it. Running it found the first command after `kest new` failing, in
+exactly the way the README says it will not.
+
+The README says an archive is installed by unpacking it: "`bin/kest` looks for
+the standard library in `lib/kest` beside it, so a host that would rather not
+install anything at all adds `bin` to its path". It does look beside the
+program — and the program it looks beside is `argv[0]`. A shell that found
+`kest` on `PATH` hands over the bare name `kest`, with no separator in it, so
+the two probes resolved against **whatever directory the caller was standing
+in** and neither existed. What was left was the prefix compiled in at build
+time, `/usr/local/lib/kest/`, which an unpacked archive has never written to:
+
+```text
+$ kest build
+error[K0701]: cannot read `/usr/local/lib/kest/std/io.kest`
+```
+
+The same binary named with a path worked. So the one route the README
+recommends was the one route that did not.
+
+`kest_library_path` now walks `PATH` itself when what it was called by holds no
+separator — the walk the shell already did, in libc and nothing else, with `;`
+for a list separator on Windows and `:` elsewhere. An empty entry is skipped
+rather than read as the root, because a bare name has already probed the
+directory somebody is standing in. With that, the whole of what the README
+tells a newcomer to type works from an unpacked archive with nothing installed
+and nothing in the environment:
+
+```text
+kest new game && cd game && kest build && kest run && kest test tests/*.kest
+```
+
+and `kest doctor` ends with `nothing here is wrong`.
+
+**The hole.** `tools/check-commands.sh` lays out a directory like an unpacked
+archive — `bin/kest` beside `lib/kest/std` — puts `bin` on the path, unsets
+`KEST_LIB`, and stands somewhere else on purpose, because standing in the
+archive passes either way. Taking the walk out makes it say so: `an unpacked
+archive with its `bin` on the path cannot find the library beside it`.
+
+**And what the walk must not do.** `kest_build` with no library named reaches
+this with an *empty* program, because a host that says nothing about where the
+library is is asking about the directory it is standing in and not about any
+binary. Walking `PATH` for the empty name opens each directory on it — which
+`fopen` on a directory is happy to do on glibc — and answers with the first
+one, and `examples/embed` stopped finding the library it had always found. The
+walk answers no to an empty name.
+
+**And CI asks it too.** Every archive job exported `KEST_LIB=lib/kest/` before
+running the binary, which is the one thing that makes the question go away. The
+Linux package job now also runs it the way somebody who unpacked it would: from
+a directory that is not the archive, with `bin` on the path and `KEST_LIB`
+empty.

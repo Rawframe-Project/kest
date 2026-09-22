@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1127
+    CURRENT SHA:       (this commit) D1093-D1128
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -542,7 +542,20 @@ backend's own half instead.
    program while saying the world was the one it was. The doors are asked of
    the candidate now, and the gate holds every refused edit to ending where a
    run with no edit in it ends.
-11. Comparators, kept in step as the engines move. The harness names the mode
+11. *(done, D1128)* **The newcomer workflow, run rather than described.** The
+   README says an archive is installed by unpacking it and putting `bin` on
+   the path. It was not: a shell that finds `kest` on `PATH` hands over the
+   bare name, the two probes for the library resolved against whatever
+   directory the caller was standing in, and the first command after
+   `kest new` failed with `cannot read /usr/local/lib/kest/std/io.kest`. The
+   same binary named with a path worked, so the one route the README
+   recommends was the one that did not. `kest_library_path` walks `PATH`
+   itself now. All six commands the README lists run from an unpacked archive
+   with nothing installed and nothing in the environment, and `kest doctor`
+   ends with `nothing here is wrong`. The gate lays out a directory like an
+   unpacked archive and stands somewhere else; CI's package job runs it that
+   way too, rather than only with `KEST_LIB` exported.
+12. Comparators, kept in step as the engines move. The harness names the mode
    of every row (D1090), which is what stops an interpreter's number being
    read as a compiler's.
 

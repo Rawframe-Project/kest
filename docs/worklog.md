@@ -40421,3 +40421,30 @@ See D1127.
 `kest check` over five generated projects.
 
 Next: the newcomer workflow, and CI green on the final HEAD.
+
+## An unpacked archive could not find the library beside it
+
+Running the newcomer path the README describes -- unpack, put `bin` on the
+path, `kest new game && cd game && kest build` -- found the first command after
+`kest new` failing. `kest_library_path` probes beside `argv[0]`, and a shell
+that found `kest` on `PATH` hands over the bare name, so the probes resolved
+against whatever directory the caller was standing in. The same binary named
+with a path worked, so the one route the README recommends was the one that did
+not.
+
+It walks `PATH` itself now when the name holds no separator. An empty name
+answers no: `kest_build` with no library named reaches this with one, and
+walking `PATH` for it opens each directory on the path, which glibc's `fopen`
+is happy to do.
+
+`tools/check-commands.sh` lays out a directory like an unpacked archive and
+stands somewhere else; CI's package job runs the archive that way too, rather
+than only with `KEST_LIB` exported.
+
+See D1128.
+
+**Runs:** `make check`, and the six commands of the README from an unpacked
+archive with nothing installed.
+
+Next: CI green on the exact final HEAD, and the last of section 34 read
+through.

@@ -5402,6 +5402,36 @@ if [ -z "$wrong" ]; then
     esac
     rm -f "$scratch"/projects/kest.project
 fi
+if [ -z "$wrong" ]; then
+    # And the way somebody who unpacked an archive runs it: `bin` on the path
+    # and nothing installed, which is what the README says is all it takes. A
+    # shell that finds `kest` on the path hands over the bare name, so probing
+    # beside "the program" probes beside whatever directory the caller is
+    # standing in -- and the library sitting next to the binary is not found.
+    # Standing somewhere else on purpose, because standing in the archive
+    # would pass either way. See D1128.
+    unpacked="$scratch"/unpacked
+    rm -rf "$unpacked"
+    mkdir -p "$unpacked"/bin "$unpacked"/lib/kest
+    cp "$kest" "$unpacked"/bin/kest
+    cp -r lib/std "$unpacked"/lib/kest/std
+    mkdir -p "$scratch"/elsewhere
+    printf 'import std.io\n\nfn main() -> i32 {\n    io.print("unpacked")\n    return 0\n}\n' > "$scratch"/elsewhere/first.kest
+    said=$(cd "$scratch"/elsewhere &&
+        PATH="$unpacked/bin:$PATH" KEST_LIB= kest run first.kest 2>&1)
+    case "$said" in
+    *unpacked*) ;;
+    *) wrong="an unpacked archive with its \`bin\` on the path cannot find the library beside it: $said" ;;
+    esac
+    if [ -z "$wrong" ]; then
+        said=$(cd "$scratch"/elsewhere &&
+            PATH="$unpacked/bin:$PATH" KEST_LIB= kest doctor 2>&1)
+        case "$said" in
+        *"found, and \`import std.io\` will resolve"*) ;;
+        *) wrong="an unpacked archive on the path says its library is not there: $said" ;;
+        esac
+    fi
+fi
 if [ -n "$wrong" ]; then
     complain "project: the workflow a reader starts with does not work: $wrong"
 fi

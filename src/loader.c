@@ -849,6 +849,58 @@ bool kest_library_has(const char *library, const char *name, size_t length) {
     return true;
 }
 
+// Where the program actually is, when what it was called by holds no
+// separator at all. A shell that found `kest` on `PATH` hands over the bare
+// name, and probing beside a bare name probes beside whatever directory
+// somebody happened to be standing in -- which is how an unpacked archive
+// with its `bin` on the path could not find the library sitting next to it,
+// while the same binary named with a path could. The walk is the one the
+// shell already did, in libc and nothing else. See D1128.
+#if defined(_WIN32)
+#define KEST_PATH_LIST_SEPARATOR ';'
+#else
+#define KEST_PATH_LIST_SEPARATOR ':'
+#endif
+static bool found_on_path(const char *program, char *into, size_t room) {
+    // A host that hands over no program at all -- `kest_build` with no
+    // library named does, through `build.c` -- is asking about the directory
+    // it is standing in and not about any binary. Walking `PATH` for the
+    // empty name would open each directory on it, which `fopen` on a
+    // directory is happy to do on glibc, and answer with the first one.
+    if (program == NULL || program[0] == '\0') {
+        return false;
+    }
+    const char *path = getenv("PATH");
+    if (path == NULL || path[0] == '\0') {
+        return false;
+    }
+    for (const char *at = path; *at != '\0';) {
+        const char *end = at;
+        while (*end != '\0' && *end != KEST_PATH_LIST_SEPARATOR) {
+            end++;
+        }
+        // An empty entry means the directory somebody is standing in, which
+        // is what a bare name already probed, so it is skipped rather than
+        // read as the root.
+        if (end != at) {
+            size_t length = (size_t)(end - at);
+            int written = snprintf(into, room, "%.*s%s%s", (int)length, at,
+                                   KEST_PATH_SEPARATOR(at[length - 1]) ? ""
+                                                                       : "/",
+                                   program);
+            if (written > 0 && (size_t)written < room) {
+                FILE *file = fopen(into, "rb");
+                if (file != NULL) {
+                    fclose(file);
+                    return true;
+                }
+            }
+        }
+        at = *end == '\0' ? end : end + 1;
+    }
+    return false;
+}
+
 const char *kest_library_path(KestArena *arena, const char *program) {
     // A caller that has no arena yet gets one answer at a time, which is all
     // anybody needs of this.
@@ -860,6 +912,11 @@ const char *kest_library_path(KestArena *arena, const char *program) {
         snprintf(scratch, sizeof(scratch), "%s%s", given,
                  given[length - 1] == '/' ? "" : "/");
     } else {
+        char found[1024];
+        if (last_separator(program) == NULL &&
+            found_on_path(program, found, sizeof(found))) {
+            program = found;
+        }
         const char *slash = last_separator(program);
         int length = slash == NULL ? 0 : (int)(slash - program) + 1;
 
