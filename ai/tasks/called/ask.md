@@ -15,7 +15,8 @@ Fill in the one function the scaffold leaves undone. Do not change the shapes,
 the names, or what it takes and gives back.
 
 - **`marched(doors, log, many, steps)`** — **every thing is spawned before any
-  thing moves.** Then each thing in turn takes its steps, numbered from one; a
+  thing moves.** The things are numbered from nought, in both languages. Then
+  each thing in turn takes its steps, numbered from one; a
   thing whose `moved` answers no stops there and takes no more. Answers how
   many things took all their steps. `log` is handed to the doors and is not
   yours to write into.

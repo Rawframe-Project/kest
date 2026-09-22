@@ -19,7 +19,9 @@ shapes, the names, or what each function takes and gives back.
   answer for every line that is not exactly the form above: a line missing
   either half, the two halves the wrong way round, a third half, a name with
   nothing in it, a worth that is not a whole number, and a worth too big for
-  the one a record holds. A name may hold spaces.
+  the one a record holds -- which is a 32-bit whole number in both languages,
+  -2147483648 to 2147483647, though a Luau `number` could hold more. A name may
+  hold spaces.
 - **`readAll(lines)`** — every line read, and what came of it: how many were
   records, how many were not, and what the records are worth altogether.
 
