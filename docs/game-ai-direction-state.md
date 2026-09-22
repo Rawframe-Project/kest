@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1131
+    CURRENT SHA:       (this commit) D1093-D1132
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -19,7 +19,7 @@ reasoning; this holds the position.
                        working out where a refusal would be reported before
                        every door call
     LAST FAST GATE:    green
-    LAST FULL GATE:    green at 5ab7509
+    LAST FULL GATE:    green at fefe519
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.
                        Every number below was taken on it.
