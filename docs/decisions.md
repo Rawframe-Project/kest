@@ -39246,3 +39246,60 @@ the tree that make clean does not take away: docs/report.md`. The check was
 right and the process was wrong — a gate is a question about a tree that is
 holding still, and the answer to a gate that caught the tree moving is to run
 it again rather than to make the walk cleverer.
+
+## D1141 — Where the distance to C actually is
+
+D1140's report named this as the highest-value next direction that is this
+project's to do: the release engine is about twice `g++` on three of the five
+workloads and **nobody had read the generated C against what `g++` writes for
+the same program.** So it was read, and priced.
+
+`bench/control.kest` and `bench/control.cpp` are the same program — branches
+rather than arithmetic, five thousand actors, two hundred rounds — and the gap
+is the largest of the five. Instructions rather than the clock, and the delta
+method to take the startup and the compiling off both sides: two hundred rounds
+against one, divided by the hundred and ninety-nine between them.
+
+**190.4 instructions a decision against `g++`'s 48.7.** Wall clock said 2.6
+times; instructions say 3.9, and instructions are the measure that does not
+move with the box.
+
+Each piece was priced by taking it out of the generated C and running it again:
+
+| | instructions a decision | of the gap |
+| --- | --- | --- |
+| as the backend writes it | **190.4** | |
+| the ledger frame round every call | −26.0 | 18% |
+| the guard on every element access | −49.1 | 35% |
+| the body not inlined at `-O2` | −13.4 | 9% |
+| what is left | **101.9** | |
+| `g++ -O2` | **48.7** | |
+
+**More than half of the distance to C is the safety, and it is the safety this
+language is for.** The ledger frame is what lets a host walk the stack of a
+running program and what makes a refusal name the line that asked; the guard is
+what makes an index past the end a refusal in words rather than a read past the
+end. Neither is waste and neither is going away.
+
+Two things that were suspected and are not the cost:
+
+- **The `i32` narrowing after every arithmetic op is free.** Taking all nine of
+  them out of this program made it *slower* — 121.3 against 115.3 — because it
+  changed what gcc did with its registers. A 64-bit slot narrowed to 32 bits
+  costs nothing measurable here.
+- **Inlining is worth 13.4 and not more.** `g++` inlines `decide` entirely:
+  zero calls in the disassembly. At `-O2` the generated C still calls `kf_0`
+  twice; at `-O3` gcc inlines it too, and the whole of that is 13.4.
+
+**What this says to do next, in order.** The element guard is the largest single
+piece and the only one a compiler can prove away without losing anything: where
+the index comes from a walk over the same run — `for at in 0..MANY` over an
+array of `MANY` — the check is redundant by construction, and that is the
+commonest shape in gameplay code. The ledger frame is second and harder,
+because what it keeps is only needed when something asks, and the thing that
+asks is a refusal that has already happened.
+
+The remaining 53 instructions are the slot machine itself: every value is eight
+bytes where C++ uses four, so a run of `i32` is twice the memory traffic and
+gcc cannot make the same choices about it. That is the floor of this
+representation rather than a thing to tune.

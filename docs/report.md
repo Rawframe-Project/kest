@@ -340,9 +340,32 @@ the release engine's floor is the C compiler's.** The machine's own ceiling was
 found and moved — dispatch and instruction bodies at 54 per cent, and a 16.5
 per cent cost on every door call taken off — but the compiled engine's
 remaining distance to C is not a dispatch problem and will not yield to the
-same kind of work. What it would take is reading the generated C against what
-`g++` writes for the same program, workload by workload, and that has not been
-done.
+same kind of work.
+
+**That distance has now been read** (D1141), on the workload with the largest
+gap, in instructions rather than on the clock and with startup and compiling
+taken off both sides:
+
+| | instructions a decision | of the gap |
+| --- | --- | --- |
+| as the backend writes it | **190.4** | |
+| the ledger frame round every call | −26.0 | 18% |
+| the guard on every element access | −49.1 | 35% |
+| the body not inlined at `-O2` | −13.4 | 9% |
+| what is left | **101.9** | |
+| `g++ -O2` | **48.7** | |
+
+**More than half of it is the safety, and it is the safety this language is
+for**: a host walking the stack of a running program, and an index past the end
+refusing in words rather than reading past the end. The `i32` narrowing after
+every arithmetic op is free — taking all nine out of that program made it
+slower. The remaining 53 instructions are the slot machine itself, eight bytes
+where C++ uses four.
+
+So the weakness is real and it is now quantified rather than guessed, and the
+one piece a compiler can prove away without losing anything is the element
+guard where the index comes from a walk over the same run — the commonest shape
+in gameplay code, and the thing to do next.
 
 Second to it: **`words` is level with Luau rather than ahead**, and it is the
 allocator-bound row. The collector is measured and its pause is small, but
@@ -403,6 +426,10 @@ counting completion, repair turns and what escapes on each side. The suite, the
 hidden tests, the harness and the cost measurements are all built for exactly
 that and none of it has been spent.
 
-The second is the generated C read against what `g++` writes for the same
-workload, because that is where the remaining runtime distance is and nobody
-has looked.
+The second **has now been done** (D1141), and what it found is above in 28:
+on the workload with the largest gap, 190.4 instructions a decision against
+`g++`'s 48.7, of which the ledger frame is 26.0, the guard on every element
+access 49.1 and inlining 13.4. **More than half the distance to C is the
+safety, and it is the safety this language is for.** The one piece a compiler
+can prove away without losing anything is the element guard where the index
+comes from a walk over the same run.

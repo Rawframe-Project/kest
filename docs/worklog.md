@@ -40467,6 +40467,43 @@ See D1129.
 
 Next: CI green on the exact final HEAD.
 
+## Where the distance to C actually is
+
+The report named reading the generated C against what `g++` writes as the
+highest-value next direction that is this project's to do. It was read, and
+priced, on `bench/control.kest` -- the workload with the largest gap -- with
+instructions rather than the clock and the delta method to take startup and
+compiling off both sides.
+
+**190.4 instructions a decision against `g++`'s 48.7.** Wall clock said 2.6
+times; instructions say 3.9.
+
+Each piece priced by taking it out and running again: the **ledger frame round
+every call 26.0** (18 per cent of the gap), the **guard on every element access
+49.1** (35 per cent), the body **not inlined at -O2 13.4** (9 per cent), and
+what is left 101.9 against 48.7.
+
+So **more than half the distance to C is the safety, and it is the safety this
+language is for** -- a host walking the stack of a running program, and an
+index past the end refusing in words rather than reading past the end.
+
+Two suspects cleared: the `i32` narrowing after every arithmetic op is free
+(taking all nine out made it *slower*, 121.3 against 115.3, by changing what
+gcc did with registers), and inlining is worth 13.4 and not more.
+
+What to do next, in order: the element guard is the only piece a compiler can
+prove away without losing anything, where the index comes from a walk over the
+same run -- the commonest shape in gameplay code. The ledger frame is second
+and harder. The remaining 53 is the slot machine itself, eight bytes where C++
+uses four.
+
+See D1141.
+
+**Runs:** `perf stat -e instructions` over six builds of one workload, and
+`make most`.
+
+Next: CI green on the exact final HEAD.
+
 ## The report, and what it says is still weak
 
 `docs/report.md` answers the thirty questions section 35 asks, under the rule
