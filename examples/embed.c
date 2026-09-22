@@ -111,8 +111,11 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, DAMAGE_OF, HURT_BY, WORST,
        EMPTIED, UNDER, NAMED, AT_ONCE, COPIED, BLANK, FIRST,
        BORN, HEALTH_OF, DROPPED, TOTAL_OF, ANSWER_INTO, SAY_INTO, WORN,
        MOVED, PUT_RECORD, OWN_ARRAY, HOW_MANY_ON, REACH,
-       HEAVIEST_CELL, HALF_WRITTEN, AS_WRITTEN, RANKED, APPLY, DOUBLED,
-       GROWS, WEIGHED,
+       HEAVIEST_CELL, AS_WRITTEN, RANKED, APPLY, DOUBLED, GROWS, WEIGHED,
+       // Added at the end on purpose: every name before this one keeps the
+       // place it had, and a hole that breaks a machine's hold on the list it
+       // was started from lands on the same entry it always did. See D1135.
+       HALF_WRITTEN,
        // What the list of names below has to be as long as. This host looked
        // each of them up into an array sized by the last name in this list,
        // so a name added after that one was a write past the end of it — this
@@ -3049,7 +3052,6 @@ int main(int argc, char **argv) {
          {KEST_L_F32}, 1},
         {"heaviestCell", {KEST_L_WORD, KEST_L_I32}, 2,
          {KEST_L_I32, KEST_L_F32}, 2},
-        {"halfWritten", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_I32}, 1},
         {"asWritten", {0}, 0, {KEST_L_TEXT}, 1},
         {"ranked", {KEST_L_F32, KEST_L_F32, KEST_L_F32}, 3, {KEST_L_I32}, 1},
         // A function value is one slot holding which function it is, which is
@@ -3058,7 +3060,8 @@ int main(int argc, char **argv) {
         {"apply", {KEST_L_FN, KEST_L_I32}, 2, {KEST_L_I32}, 1},
         {"doubled", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
         {"grows", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
-        {"weighed", {0}, 0, {KEST_L_I32}, 1}};
+        {"weighed", {0}, 0, {KEST_L_I32}, 1},
+        {"halfWritten", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_I32}, 1}};
     _Static_assert(sizeof(wanted) / sizeof(wanted[0]) == ENTRIES,
                    "every name this host asks for has somewhere to be put");
     // And what walking the names costs a host in news, which is nothing. The

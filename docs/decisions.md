@@ -38951,3 +38951,73 @@ The first version of the walk called its list of what `make clean` names
 gate said so — `` `swept` is a place at line 2655 and a text at line 3116, and
 one name is one thing`` — which is a check this project wrote about itself
 catching the writing of another one.
+
+## D1135 — An array with no room, filled with `fit`, and nothing said
+
+Writing three task files for D1125 turned up the Kest-specific mistakes a model
+makes here, and the compiler answered all but one of them at the line: `pop`
+gives `T?` and not `T` (K0310), `none` is a keyword and not a name (K0201),
+`table.find` answers where a value is kept and `table.get` answers the value
+(the `nearby` task, because both are `i32?` and no type system separates them),
+and the one form is the formatter's (`kest fmt --check`).
+
+The one nothing answered:
+
+```kest
+let xs: [i32] = array()
+fit(xs, 1)
+fit(xs, 2)
+```
+
+`array()` makes an array with nothing in it and **no room for anything**.
+`fit` writes where there is room, answers `false` where there is not, and never
+reaches the heap — which is what makes it the one a `no.alloc` body can use,
+and `push` the one it cannot. So those two lines write nothing, answer false
+twice, and neither the compiler nor the run said a word: `len(xs)` is nought
+afterwards and the program carries on. It is exactly the shape a body under
+`no.alloc` falls into, because `push` is refused there and `fit` is what is
+left.
+
+```text
+warning[K0347]: `xs` has no room, so every `fit` into it writes nothing
+      make room for what is coming: `room(xs, n)` after it, or `array(n, v)`
+      instead of `array()`
+```
+
+A warning rather than a refusal, for the reason K0346 is one: the shape that
+works is one word away, and a body that means it can have it.
+
+**It is said where the scope ends and pointed at the `let`**, because the first
+moment anybody knows nothing gave the array room is the moment the name goes
+out of scope, and the line to change is the one that made it. Three things are
+remembered about a local: that it was declared `= array()` with no count, that
+something `fit` it, and that something might have given it room. The third is
+what keeps it quiet: `room` and `push` by name, and **being handed to any other
+function at all**, because an array that goes somewhere else may come back with
+room and this body cannot see it.
+
+A builtin is not somebody else. `len(xs)` and `fit(xs, v)` and an index read
+the name without saying anything about its room, and the two builtins that do
+give room say so themselves — so the flag is cleared across the whole of a
+builtin rather than around each argument, and a call to somebody's own function
+nested inside one sets it again on its own way down. Without that, `io.print(
+"{len(xs)}")` was enough to silence the warning, which is the first thing a
+program that fills a buffer does with it.
+
+Every `.kest` file in `examples`, `lib`, `tools`, `ai` and `bench` was checked
+with it: **no false positives**, and the two shapes that are right — `room`
+after `array()`, and `array(n, v)` instead of it — stay quiet.
+
+Three fields on a local are three fields the compiler carries, and the gate
+priced them: checking `lib/std/text.kest` went from 174,776 bytes to 174,904
+and compiling it from 205,274 to 205,417 — a hundred and twenty-eight bytes and
+a hundred and forty-three, which the reference quotes and a run answers, so
+both had to move together. A backstop that quotes the `Local` initializer moved
+with them.
+
+And `examples/embed`'s new entry went in at the **end** of the list its host
+looks names up in. Put in the middle it shifted every index after it, and a
+hole that breaks a machine's hold on that list landed on a different entry and
+made a different refusal come first — `MISSED: a machine that points into the
+list it was started from`. A list a hole is aimed at is a list to add to at the
+end.

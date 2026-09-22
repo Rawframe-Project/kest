@@ -6144,7 +6144,7 @@ anywhere, and it is why the gate holds""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "136000 as a tree, 174776 checked",
+        "caught": "136000 as a tree, 174904 checked",
     },
     {
         # And the section they are in saying whose machine they are. Bytes of
@@ -14028,7 +14028,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "what": "a local that keeps what the last one at its place left",
         "file": "src/check.c",
         "from": """    Local fresh = {name, type, span, checker->depth, false, false, false,
-                   false, false, false, false, false, NULL};
+                   false, false, false, false, false, NULL,
+                   false, false, false};
     *local = fresh;""",
         "to": """    local->name = name;
     local->type = type;

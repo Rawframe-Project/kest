@@ -1470,6 +1470,21 @@ fn gather(into: [i32], many: i32) -> i32 no.alloc {
 }
 ```
 
+**`array()` makes one with no room**, so a `fit` into it writes nothing and
+answers false. A body that makes an array that way and fills it with `fit`
+without giving it room is told so, at the line that made it:
+
+```
+warning[K0347]: `xs` has no room, so every `fit` into it writes nothing
+      make room for what is coming: `room(xs, n)` after it, or `array(n, v)`
+      instead of `array()`
+```
+
+A warning and not a refusal, for the reason K0346 is one: the shape that works
+is one word away. Nothing is said where `room` or `push` is called on the name,
+or where it is handed to another function at all — an array that goes somewhere
+else may come back with room, and this body cannot see it. See D1135.
+
 `clear` keeps the room it took, so a buffer made once with `array(n, v)` and
 cleared each turn is a buffer that is filled for the rest of the program's life
 without asking for anything. `std.text`'s `fitting` and `fittingNumber` write a
@@ -6295,7 +6310,7 @@ bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 577 lines:
-55860 bytes as tokens, 136241 as a tree, 174776 checked and 205274 compiled.
+55860 bytes as tokens, 136241 as a tree, 174904 checked and 205417 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
 
@@ -6312,7 +6327,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 20701 bytes, against the 205274 it costs to compile.
+file and 20701 bytes, against the 205417 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.

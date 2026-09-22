@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1134
+    CURRENT SHA:       (this commit) D1093-D1135
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -615,7 +615,20 @@ backend's own half instead.
    three. `make clean` takes it now, and the fourth walk is there: the tree
    before the gate ran against the tree afterwards, with whatever `make clean`
    names allowed.
-16. Comparators, kept in step as the engines move. The harness names the mode
+16. *(done, D1135)* **The Kest-specific mistake nothing answered.** Writing
+   the three task files for D1125 turned up what a model gets wrong here, and
+   the compiler answered all but one at the line: `pop` gives `T?` and not `T`
+   (K0310), `none` is a keyword and not a name (K0201), `table.find` against
+   `table.get` (both `i32?`, which is what the `nearby` task is about), and
+   the one form (`kest fmt --check`). The one nothing answered was
+   `let xs: [i32] = array()` followed by `fit(xs, 1)`: `array()` makes an
+   array with no room, `fit` writes where there is room, so it writes nothing
+   and says nothing -- the shape a body under `no.alloc` falls into, because
+   `push` is refused there and `fit` is what is left. **K0347** says so now,
+   at the `let`, as a warning for the reason K0346 is one. Quiet where `room`
+   or `push` is called on the name or where it is handed to another function
+   at all, and no false positives over every `.kest` file in the tree.
+17. Comparators, kept in step as the engines move. The harness names the mode
    of every row (D1090), which is what stops an interpreter's number being
    read as a compiler's.
 

@@ -46,6 +46,19 @@ typedef struct {
     // put where the compiler reads it. Whether a name is written is known when
     // the scope holding it ends and not before. See D887.
     KestStmt *declared_by;
+    // Declared `= array()`, which is an array with nothing in it and no room
+    // for anything: `array(n, v)` is the one that comes with room. `fit`
+    // writes where there is room and answers false where there is not, so a
+    // `fit` into one of these writes nothing, answers false, and says nothing
+    // at all unless somebody reads the answer. It is the shape a body under
+    // `no.alloc` falls into, because `push` is refused there and `fit` is
+    // what is left. See D1135.
+    bool made_with_no_room;
+    bool fitted;
+    // And whether anything could have given it room since: `room` and `push`
+    // by name, and being handed to any other function, which is where this
+    // stops being able to see. Any one of them and nothing is said.
+    bool given_room;
 } Local;
 
 typedef struct {
@@ -70,6 +83,11 @@ typedef struct {
     // and the same walk checks both. A field or an index is not one of these —
     // `p.x = 1` reads `p` to find the field. See D726.
     bool writing_to_a_name;
+    // Whether what is being checked is an argument of a call to something
+    // other than the builtins that read an array without giving it room. A
+    // name handed over is a name this body can no longer say anything about.
+    // See D1135.
+    bool handing_a_name_over;
     // Where the copy being checked was asked for, when one is. A copy asked
     // for inside a copy is asked for by whoever asked for that one: the reader
     // wrote `table.set(t, Key(1), 5)` and the library wrote everything under
@@ -240,6 +258,21 @@ static Local *find_local(Checker *checker, const char *name, size_t length) {
 
 // Dropping a scope, and what nothing in it read. A local is a name for a value
 // in one body: no host can ask for one and no other file can name one, so a
+// Whether a `let`'s value is `array()` with no count in it, which is the one
+// shape that makes an array with no room. Written as a question of its own
+// because what it is for is asked where the scope ends and not here. See
+// D1135.
+static bool made_with_no_room(Checker *checker, const KestExpr *value) {
+    if (value == NULL || value->kind != KEST_EXPR_CALL ||
+        value->call.arg_count != 0 ||
+        value->call.callee->kind != KEST_EXPR_NAME) {
+        return false;
+    }
+    const char *called = span_text(checker, value->call.callee->span);
+    return value->call.callee->span.length == 5 &&
+           strncmp(called, "array", 5) == 0;
+}
+
 // `let` nothing reads is the one name in this language nobody at all can be
 // relying on. See D726.
 static void drop_locals(Checker *checker, uint32_t mark) {
@@ -250,6 +283,22 @@ static void drop_locals(Checker *checker, uint32_t mark) {
         // moment anybody knows. See D887.
         if (local->declared_by != NULL) {
             local->declared_by->let.name_written = local->written_into;
+        }
+        // An array made with no room, filled with `fit`, and never given
+        // any. Said where the scope ends because that is the first moment
+        // anybody knows nothing gave it room, and said at the `let` because
+        // that is the line to change. A warning rather than a refusal, for
+        // the reason K0346 is one: the shape that works is one word away.
+        // See D1135.
+        if (local->made_with_no_room && local->fitted && !local->given_room) {
+            kest_diags_add(checker->program->diags, KEST_SEVERITY_WARNING,
+                           "K0347", local->span,
+                           "`%s` has no room, so every `fit` into it writes "
+                           "nothing", local->name);
+            kest_diags_suggest(checker->program->diags,
+                               "make room for what is coming: `room(xs, n)` "
+                               "after it, or `array(n, v)` instead of "
+                               "`array()`");
         }
         // A `let`, an `if let`, and the position a `for` binds beside an
         // element: the three a program had another way to write. What a `for`
@@ -321,7 +370,8 @@ static void declare_local(Checker *checker, KestSpan span, KestType *type) {
     // See D726.
     Local *local = &checker->locals[checker->local_count++];
     Local fresh = {name, type, span, checker->depth, false, false, false,
-                   false, false, false, false, false, NULL};
+                   false, false, false, false, false, NULL,
+                   false, false, false};
     *local = fresh;
 }
 
@@ -815,6 +865,9 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
         // name read. See D726.
         if (!checker->writing_to_a_name) {
             local->read = true;
+        }
+        if (checker->handing_a_name_over) {
+            local->given_room = true;
         }
         kest_program_used(checker->program, checker->program->source,
                           expr->span, checker->program->source, local->span,
@@ -1446,7 +1499,25 @@ static void check_ref_argument(Checker *checker, KestExpr *expr, uint32_t at,
     }
 }
 
+// A builtin is not somebody else. Reading a name inside one -- `len(xs)`,
+// `fit(xs, v)`, an index -- says nothing about whether it was given room, and
+// the two that do give room say so themselves. Cleared across the whole of
+// one rather than around each argument, because a call to somebody's own
+// function nested inside a builtin sets it again on its own way down.
+// See D1135.
+static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
+                                    const KestType *expected, bool *handled);
+
 static KestType *check_builtin(Checker *checker, KestExpr *expr,
+                               const KestType *expected, bool *handled) {
+    bool was_handing = checker->handing_a_name_over;
+    checker->handing_a_name_over = false;
+    KestType *answered = check_builtin_here(checker, expr, expected, handled);
+    checker->handing_a_name_over = was_handing;
+    return answered;
+}
+
+static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
                                const KestType *expected, bool *handled) {
     *handled = true;
     KestSpan name = expr->call.callee->span;
@@ -1534,6 +1605,17 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
     }
 
     if (is_builtin(checker, expr, name, "push")) {
+        // And this one gives it room, so nothing is said about it. See
+        // D1135.
+        if (expr->call.arg_count > 0 &&
+            expr->call.args[0]->kind == KEST_EXPR_NAME) {
+            Local *held = find_local(
+                checker, span_text(checker, expr->call.args[0]->span),
+                expr->call.args[0]->span.length);
+            if (held != NULL) {
+                held->given_room = true;
+            }
+        }
         if (check_arity(checker, expr, 2) < 2) {
             for (uint32_t i = 0; i < expr->call.arg_count; i++) {
                 check_expr(checker, expr->call.args[i], NULL);
@@ -1571,6 +1653,17 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
     // promise can do: it answers whether it fitted rather than making room.
     // See D940.
     if (is_builtin(checker, expr, name, "fit")) {
+        // The name itself, so what this body did to it can be read where the
+        // scope ends. See D1135.
+        if (expr->call.arg_count > 0 &&
+            expr->call.args[0]->kind == KEST_EXPR_NAME) {
+            Local *held = find_local(
+                checker, span_text(checker, expr->call.args[0]->span),
+                expr->call.args[0]->span.length);
+            if (held != NULL) {
+                held->fitted = true;
+            }
+        }
         if (check_arity(checker, expr, 2) < 2) {
             for (uint32_t i = 0; i < expr->call.arg_count; i++) {
                 check_expr(checker, expr->call.args[i], NULL);
@@ -1606,6 +1699,17 @@ static KestType *check_builtin(Checker *checker, KestExpr *expr,
     // a program that asks for less than it holds has asked for nothing. See
     // D912.
     if (is_builtin(checker, expr, name, "room")) {
+        // And this one gives it room, so nothing is said about it. See
+        // D1135.
+        if (expr->call.arg_count > 0 &&
+            expr->call.args[0]->kind == KEST_EXPR_NAME) {
+            Local *held = find_local(
+                checker, span_text(checker, expr->call.args[0]->span),
+                expr->call.args[0]->span.length);
+            if (held != NULL) {
+                held->given_room = true;
+            }
+        }
         if (check_arity(checker, expr, 2) < 2) {
             for (uint32_t i = 0; i < expr->call.arg_count; i++) {
                 check_expr(checker, expr->call.args[i], NULL);
@@ -1950,6 +2054,8 @@ static uint32_t find_callable(Checker *checker, const KestExpr *expr,
 // round.
 static KestType *check_arguments(Checker *checker, KestExpr *expr,
                                  const KestType *callee);
+static KestType *arguments_checked(Checker *checker, KestExpr *expr,
+                                   const KestType *callee);
 
 
 // What a literal is when nothing says otherwise: a whole number is an `i32`,
@@ -3013,6 +3119,20 @@ static const KestSymbol *declared_at(Checker *checker, const KestType *callee) {
 
 static KestType *check_arguments(Checker *checker, KestExpr *expr,
                                  const KestType *callee) {
+    // Everything checked from here down is being handed to somebody else, so
+    // a name among it is a name this body can no longer say anything about --
+    // an array with no room handed over may come back with room. Set here
+    // rather than at each argument because every path below reaches one.
+    // See D1135.
+    bool was_handing = checker->handing_a_name_over;
+    checker->handing_a_name_over = true;
+    KestType *answered = arguments_checked(checker, expr, callee);
+    checker->handing_a_name_over = was_handing;
+    return answered;
+}
+
+static KestType *arguments_checked(Checker *checker, KestExpr *expr,
+                                   const KestType *callee) {
     // A call through a value has no name and nowhere it was declared: the
     // shape is all there is to say. Everything else is a function somebody
     // wrote, and the line they wrote it on says what it takes and what each
@@ -4584,6 +4704,8 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         if (checker->local_count > 0) {
             checker->locals[checker->local_count - 1].from_let = true;
             checker->locals[checker->local_count - 1].declared_by = stmt;
+            checker->locals[checker->local_count - 1].made_with_no_room =
+                made_with_no_room(checker, stmt->let.value);
         }
         break;
     }

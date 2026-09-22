@@ -40467,6 +40467,30 @@ See D1129.
 
 Next: CI green on the exact final HEAD.
 
+## An array with no room, filled with `fit`, and nothing said
+
+Writing the three task files for D1125 turned up what a model gets wrong here,
+and the compiler answered all but one at the line. The one nothing answered:
+`let xs: [i32] = array()` followed by `fit(xs, 1)` writes nothing, answers
+false, and says nothing -- the shape a body under `no.alloc` falls into,
+because `push` is refused there and `fit` is what is left.
+
+**K0347** now, a warning at the `let` for the reason K0346 is one: the shape
+that works is one word away. Quiet where `room` or `push` is called on the
+name, and quiet where it is handed to another function at all, because an array
+that goes somewhere else may come back with room. A builtin is not somebody
+else -- without that, `io.print("{len(xs)}")` silenced it, which is the first
+thing a program that fills a buffer does.
+
+No false positives over every `.kest` file in `examples`, `lib`, `tools`, `ai`
+and `bench`.
+
+See D1135.
+
+**Runs:** `make check`, and `kest check` over every file in the tree.
+
+Next: CI green on the exact final HEAD.
+
 ## A file a run left in the tree
 
 `kest-colony-day.txt` sat in the root of the repository, thirteen bytes,
