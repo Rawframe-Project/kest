@@ -835,12 +835,28 @@ static bool write_elem(Walk *walk, const KestIrOp *op,
     // Where the element is, worked out here rather than asked for. A run of
     // elements is a shape the header says (D1112), so the three things that
     // have to be true -- that the handle is a run, that the index is one of
-    // them, and where one of them sits -- are four lines of C the host's
-    // compiler can see through: it hoists the length out of a loop, keeps the
-    // block in a register, and stops writing a call frame a hop of a walk
-    // does not need. Anything the test does not like goes through
-    // `kest_elem_at`, which is the machine's own answer and the machine's own
-    // words, so a refusal here is the refusal there.
+    // them, and where one of them sits -- are four lines of C rather than a
+    // call. Anything the test does not like goes through `kest_elem_at`,
+    // which is the machine's own answer and the machine's own words, so a
+    // refusal here is the refusal there.
+    //
+    // This used to say the host's compiler sees through it: that it hoists
+    // the length out of a loop and keeps the block in a register. Measured,
+    // it does not, and the reason is in the shape of a frame rather than in
+    // gcc: a loop that reads an element, calls a body and writes one back has
+    // an opaque call between the reads, and a call may allocate, so nothing
+    // about the run survives it as far as the C compiler is concerned. On
+    // `bench/control.kest` the whole guard is 49.1 instructions a decision of
+    // the 141.7 between this backend and `g++` -- 25.1 of it the two tests
+    // asking what the handle is and 14.6 the bounds.
+    //
+    // The two that ask what the handle is are invariant and could be hoisted
+    // by something that knew more than gcc does: this heap is non-moving, so
+    // a header that was a run stays a run at the same address for as long as
+    // the slot holds it. What would have to be proved is that the slot is not
+    // written between the uses. The bounds are not invariant -- a `push` may
+    // move the bytes and change the length -- and are the part that is
+    // genuinely per-access. See D1141 and D1142.
     say(c, out,
         "    {\n        const KestRun *run = (const KestRun *)%s.object;\n"
         "        int64_t which = %s.integer;\n"

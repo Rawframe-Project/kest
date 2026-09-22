@@ -39303,3 +39303,32 @@ The remaining 53 instructions are the slot machine itself: every value is eight
 bytes where C++ uses four, so a run of `i32` is twice the memory traffic and
 gcc cannot make the same choices about it. That is the floor of this
 representation rather than a thing to tune.
+
+## D1142 — A comment that measurement made false
+
+`src/emitc.c` said of the element guard that it is "four lines of C the host's
+compiler can see through: it hoists the length out of a loop, keeps the block
+in a register, and stops writing a call frame a hop of a walk does not need".
+
+The last clause is true. The first two are not, and D1141 measured it: the
+whole guard is **49.1 instructions a decision** on `bench/control.kest`, which
+is a third of the distance to `g++`. If gcc were hoisting the length it would
+be a fraction of that.
+
+The reason is the shape of a frame rather than anything about gcc. A gameplay
+loop reads an element, **calls a body**, and writes one back. A call may
+allocate, so as far as the C compiler can tell nothing about the run survives
+it — not the pointer, not the tag, not the length. Every access re-reads and
+re-tests all three.
+
+Split, the guard is **25.1 for the two tests that ask what the handle is** and
+**14.6 for the bounds**. The first two are invariant and the third is not: this
+heap is **non-moving mark and sweep**, so a header that was a run stays a run
+at the same address for as long as a slot holds it, while a `push` may move the
+bytes and change the length. So the part that could be hoisted is the larger
+part, and what would have to be proved is that the slot is not written between
+the uses — a small dataflow question inside one body, not a whole-program one.
+
+The comment says that now. A comment that tells the next reader the compiler
+will do something it does not do is worse than no comment, because it is the
+reason nobody looked for three months.

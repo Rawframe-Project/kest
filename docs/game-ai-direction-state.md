@@ -672,7 +672,18 @@ the same workload.
    what it is for is that the difference is small and known. Tokens are a
    proxy for reading and not the thing itself; people would settle it, and
    that is the owner's to run.
-21. Comparators, kept in step as the engines move. The harness names the mode
+21. *(done, D1142)* **A comment that measurement made false.** `src/emitc.c`
+   said the element guard is four lines the host's compiler sees through --
+   that it hoists the length out of a loop and keeps the block in a register.
+   It does not, and the reason is the shape of a frame rather than gcc: a
+   gameplay loop reads an element, **calls a body**, and writes one back, and
+   a call may allocate, so nothing about the run survives it as far as the C
+   compiler can tell. Split, the guard is **25.1 for the two tests asking what
+   the handle is and 14.6 for the bounds** -- and the larger part is the
+   invariant one, because this heap is non-moving. What would have to be
+   proved to hoist it is that the slot is not written between the uses, which
+   is a question inside one body.
+22. Comparators, kept in step as the engines move. The harness names the mode
    of every row (D1090), which is what stops an interpreter's number being
    read as a compiler's.
 

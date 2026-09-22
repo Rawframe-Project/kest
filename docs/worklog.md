@@ -40467,6 +40467,32 @@ See D1129.
 
 Next: CI green on the exact final HEAD.
 
+## A comment that measurement made false
+
+`src/emitc.c` said the element guard is four lines the host's compiler sees
+through -- that it hoists the length out of a loop and keeps the block in a
+register. D1141 measured the guard at **49.1 instructions a decision**, a third
+of the distance to `g++`, so it does not.
+
+The reason is the shape of a frame rather than anything about gcc: a gameplay
+loop reads an element, **calls a body**, and writes one back, and a call may
+allocate, so nothing about the run survives it as far as the C compiler can
+tell. Split, it is **25.1 for the two tests that ask what the handle is** and
+**14.6 for the bounds** -- and the larger part is the invariant one, because
+this heap is non-moving, so a header that was a run stays a run at the same
+address for as long as a slot holds it.
+
+The comment says that now. One that tells the next reader the compiler will do
+something it does not do is worse than none, because it is the reason nobody
+looked.
+
+See D1142.
+
+**Runs:** `perf stat -e instructions` over eight builds of one workload, and
+`make most`.
+
+Next: CI green on the exact final HEAD.
+
 ## Where the distance to C actually is
 
 The report named reading the generated C against what `g++` writes as the
