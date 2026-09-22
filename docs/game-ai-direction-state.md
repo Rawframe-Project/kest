@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1151
+    CURRENT SHA:       (this commit) D1093-D1153
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -763,6 +763,10 @@ the same workload.
 29. *(done, D1151)* **A world a host keeps, as doors.** Eight doors in the
    running family do what every host keeping a world wrote by hand, reload
    through the program's own `save` and `restore` included.
+30. *(done, D1153)* **The colony on the held doors.** 744 lines of host to
+   396, the same colony; a refusal names its diagnostic again. A reload at
+   scale is 211 ms through bytes against 50 through lends, which is what the
+   bytes library answers first.
 
 ## Closed by measurement
 

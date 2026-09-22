@@ -39819,3 +39819,43 @@ the check; the hole that found it is the one that was already there.
 
 It was found by CI and not here, because the whole gate is CI's to run since
 D1149 -- which is what that decision said the trade was.
+
+## D1153 — The colony on the held doors, and what that cost it
+
+*measured*, on `/home/kest/colony` moved onto `kest_held_*` (D1151).
+
+The host is 396 lines where it was 744. What went is what the doors do: the
+frame with the world in front, the handles said to the machine, the doors found
+and held to their widths, the files watched, the reload's stages. What is left
+is the game's: drawing, input and the numbers in the corner. The colony after a
+minute on both engines is what it was before the move, wood and food to the
+unit.
+
+**A refusal says what was wrong again.** The host before this drew the first
+diagnostic and where it was in the corner; on the doors it drew `refused at
+building`, because the build's words went to the errors the held machine was
+made with. `kest_held_reload` builds into a file of its own first now --
+`tmpfile`, which is ISO C -- hands all of it on to those errors, and puts the
+first diagnostic and its place into `said`: `refused at building:
+error[K0204]: expected an expression, found let at colony.kest:348:5`.
+`examples/embed.c` edits a held file into one that does not build and holds
+the answer to naming the code and the file; with the first line never taken,
+it refuses.
+
+**A reload at scale got slower, and why is measured.** The protocol is bytes
+(D1151), and the colony's `save` writes them a byte at a time with `push`:
+
+| map | people | reload through lends, before | through bytes, now |
+| --- | --- | --- | --- |
+| 96x64 | 8 | 4.7 ms | 6.7 ms |
+| 256x192 | 128 | 22.6 ms | 53.2 ms |
+| 512x384 | 512 | 50.2 ms | 211.5 ms |
+
+Most of it is the machine walking 1.38 MB a byte at a time, three bytes of
+every cell and four of its ripeness, and then walking them back. That is the
+first thing the bytes library has to answer: a run of bytes written and read
+whole rather than an element at a time.
+
+Two holes quoted the door count the reference and the front page had before
+D1151, and CI's sweep stopped before it started with both named. They quote
+107 now.

@@ -40927,3 +40927,17 @@ caught again. See D1152.
 
 **Runs:** the hole put in by hand before and after, `check-docs.sh`, and
 `make most`.
+
+## 2026-09-22, the colony on the held doors
+
+The colony's host is 396 lines on `kest_held_*`, down from 744, and answers
+what it answered. A reload that will not build says the first diagnostic and
+where again, now through the doors. A reload at 512 by 384 is 211 ms through
+bytes where it was 50 through lends, which is the bytes library's first job.
+Two holes repointed at the new door count.
+
+See D1153.
+
+**Runs:** the colony before and after on both engines, reloads at three sizes
+and one that does not build, `examples/embed` against the doors and a broken
+copy, the stale-quotation pass of the sweep, and `make most`.
