@@ -31,6 +31,17 @@ complain() { say "$1" "$2"; failed=1; }
 sources=$(find examples lib -name '*.kest' | sort)
 count=$(printf '%s\n' "$sources" | grep -c .)
 
+# What is in the tree before any of this runs. A program that writes a file
+# beside whatever is running it leaves it in the repository, and
+# `examples/colony.kest` wrote `kest-colony-day.txt` into the root of this one
+# for as long as anybody had run it -- past a walk that asks what a compiler
+# made and a walk that asks whether a name has a space in it, because it is
+# neither. What catches the next one is the difference between the tree now
+# and the tree afterwards. `build` is left out because the gate fills it, and
+# it is what `make clean` takes away first. See D1134.
+tree_before=$(find . -type f -not -path './build/*' -not -path './.git/*' |
+              sort)
+
 # Kest under `tools` is an instrument rather than a program: it is held to
 # resolving and to formatting, and not to running, because what it does is
 # take a while on purpose.
@@ -3099,9 +3110,50 @@ what_was_committed() {
     fi
 }
 
+# And the fourth way: a file a run left behind. What `make clean` takes away
+# is allowed, because that is what naming it there means.
+left_behind() {
+    taken_away=$(sed -n '/^clean:/,/^$/p' Makefile | tr -d '\\' |
+                 tr ' \t' '\n\n' |
+                 sed '/^$/d;/^clean:$/d;/^rm$/d;/^-rf$/d;/^-f$/d')
+    found=""
+    while IFS= read -r file; do
+        [ -n "$file" ] || continue
+        here=${file#./}
+        case "
+$taken_away" in
+        *"
+$here") continue ;;
+        *"
+$here
+"*) continue ;;
+        esac
+        case "
+$tree_before" in
+        *"
+$file") continue ;;
+        *"
+$file
+"*) continue ;;
+        esac
+        found="$found
+    $here"
+    done <<LEFT
+$(find . -type f -not -path './build/*' -not -path './.git/*' | sort)
+LEFT
+    if [ -n "$found" ]; then
+        printf 'a run left a file in the tree that `make clean` does not take '
+        printf 'away:%s\n' "$found"
+    fi
+}
+
 made_by_a_compiler=$(what_a_compiler_made .)
 nobody_meant=$(a_name_nobody_meant .)
 committed_and_built=$(what_was_committed .)
+a_run_left=$(left_behind)
+if [ -n "$a_run_left" ]; then
+    complain "tree" "$a_run_left"
+fi
 if [ -n "$committed_and_built" ]; then
     complain "tree" "$committed_and_built"
 fi

@@ -226,7 +226,7 @@ clean:
 	    bench/measure bench/frame \
 	    bench/control-cpp bench/graph-cpp bench/kernel-cpp bench/words-cpp \
 	    bench/rules-cpp \
-	    .jitted_scripts
+	    .jitted_scripts kest-colony-day.txt
 
 .PHONY: debug least embed embed-debug engine engine-debug fast check time \
     fuzz release install uninstall clean

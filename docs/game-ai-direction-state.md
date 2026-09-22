@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1133
+    CURRENT SHA:       (this commit) D1093-D1134
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -606,7 +606,16 @@ backend's own half instead.
    the same half-written world. The reference says so beside the `defer` rule,
    with the three answers a host has, and `examples/embed` runs all three
    halves of it.
-15. Comparators, kept in step as the engines move. The harness names the mode
+15. *(done, D1134)* **A file a run left in the tree.** `kest-colony-day.txt`,
+   thirteen bytes, in the root of the repository: `examples/colony.kest`
+   writes it beside whatever runs the program and `std.os` has no way to take
+   a file away, so nothing tidied up. The tree check asked what a compiler
+   made, whether a name has a space in it, and whether something `make clean`
+   takes away got committed -- and a text file a program wrote is none of the
+   three. `make clean` takes it now, and the fourth walk is there: the tree
+   before the gate ran against the tree afterwards, with whatever `make clean`
+   names allowed.
+16. Comparators, kept in step as the engines move. The harness names the mode
    of every row (D1090), which is what stops an interpreter's number being
    read as a compiler's.
 

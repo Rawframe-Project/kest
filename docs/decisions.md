@@ -38917,3 +38917,37 @@ one noticed the wrong tag first and said the wrong thing about it. The gate
 said so — `MISSED: a write into a lend that goes somewhere else` — which is the
 backstop list catching a new check for stealing an old one's catch. It runs
 after that check now, on rows of its own.
+
+## D1134 — A file a run left in the tree, and the walk that was missing
+
+`kest-colony-day.txt`, thirteen bytes, in the root of the repository. Untracked,
+named by nothing, and written by whichever run of the examples went last.
+`examples/colony.kest` writes it on purpose and beside whatever is running the
+program rather than in a named directory — D970, because a path that begins
+with a slash is a path one of the two platforms has not got — and `std.os` has
+`read`, `write` and `exists` and no way to take a file away. So the program
+cannot tidy up after itself, and nothing else did.
+
+The tree check asks three things and this was none of them: what a compiler
+made, whether a name has a space in it, and whether something `make clean`
+takes away got committed. A text file a program wrote is not a compiler's, has
+an ordinary name, and was never committed.
+
+`make clean` takes it now — which is where `.jitted_scripts`, the same shape of
+artifact from another language's module cache, already was. And the walk that
+was missing is the fourth: **the tree before the gate ran against the tree
+afterwards, with whatever `make clean` names allowed.** It needs no git, which
+is the same rule the other three keep, and it does not punish work in progress,
+because a file that was there before the gate started is a file the gate did
+not leave.
+
+The hole is the artifact itself: take `kest-colony-day.txt` out of the `clean`
+rule, run the examples, and the gate says `a run left a file in the tree that
+make clean does not take away: kest-colony-day.txt`. Put it back and it is
+quiet.
+
+The first version of the walk called its list of what `make clean` names
+`swept`, which is already the name of a directory further up the same file. The
+gate said so — `` `swept` is a place at line 2655 and a text at line 3116, and
+one name is one thing`` — which is a check this project wrote about itself
+catching the writing of another one.

@@ -40467,6 +40467,25 @@ See D1129.
 
 Next: CI green on the exact final HEAD.
 
+## A file a run left in the tree
+
+`kest-colony-day.txt` sat in the root of the repository, thirteen bytes,
+untracked and named by nothing. `examples/colony.kest` writes it beside
+whatever runs the program (D970) and `std.os` has no way to take a file away,
+so the program cannot tidy up after itself.
+
+The tree check asked three things and this was none of them: what a compiler
+made, whether a name has a space in it, and whether something `make clean`
+takes away got committed. `make clean` takes it now, and the fourth walk is
+there: the tree before the gate ran against the tree afterwards, with whatever
+`make clean` names allowed. No git, and no complaint about work in progress.
+
+See D1134.
+
+**Runs:** `make check`, and the walk exercised on the artifact itself.
+
+Next: CI green on the exact final HEAD.
+
 ## What a refusal leaves behind, said out loud
 
 Section 34 asks the failure and state policy to be explicit if partial effects
