@@ -2092,6 +2092,22 @@ static bool held_across_a_reload(void) {
             fclose(file);
         }
         noticed = other != NULL && !before && kest_held_changed(other);
+        // And an edit that does not build, refused with the first thing the
+        // compiler said and where, which is what a game draws in its corner.
+        file = fopen(path, "ab");
+        if (file != NULL) {
+            fputs("fn broken( {\n", file);
+            fclose(file);
+        }
+        char why[256] = "";
+        noticed = noticed && other != NULL &&
+                  !kest_held_reload(other, NULL, why, sizeof(why)) &&
+                  strstr(why, "error[K") != NULL &&
+                  strstr(why, "held-changed.kest:") != NULL;
+        if (!noticed) {
+            fprintf(stderr, "an edit that does not build was refused as `%s`\n",
+                    why);
+        }
         kest_held_free(other);
         remove(path);
     }

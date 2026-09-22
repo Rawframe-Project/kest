@@ -350,8 +350,43 @@ bool kest_held_reload(KestHeld *held, const char *path, char *said,
         return refused(said, room, "nothing is held%s", NULL);
     }
     const char *from = path == NULL ? held->path : path;
-    KestBuild *candidate =
-        kest_build(from, held->library, held->errors, KEST_FORM_TEXT, 0);
+    // Built into a file of its own first, so that the first thing it said can
+    // go into `said` as well as all of it to the errors this was made with: a
+    // game draws `said` in a corner, and a refusal that says only that it was
+    // refused sends the person back to a terminal to find out what for.
+    FILE *heard = tmpfile();
+    KestBuild *candidate = kest_build(
+        from, held->library, heard != NULL ? heard : held->errors,
+        KEST_FORM_TEXT, 0);
+    if (heard != NULL) {
+        char first[512] = "";
+        char where[512] = "";
+        char line[512];
+        rewind(heard);
+        while (fgets(line, sizeof(line), heard) != NULL) {
+            if (held->errors != NULL) {
+                fputs(line, held->errors);
+            }
+            if (first[0] == '\0' && strncmp(line, "error", 5) == 0) {
+                snprintf(first, sizeof(first), "%s", line);
+            } else if (first[0] != '\0' && where[0] == '\0') {
+                const char *arrow = strstr(line, "--> ");
+                if (arrow != NULL) {
+                    snprintf(where, sizeof(where), "%s", arrow + 4);
+                }
+            }
+        }
+        fclose(heard);
+        first[strcspn(first, "\n")] = '\0';
+        where[strcspn(where, "\n")] = '\0';
+        if (candidate == NULL && first[0] != '\0') {
+            if (said != NULL && room > 0) {
+                snprintf(said, room, "refused at building: %s at %s", first,
+                         where[0] != '\0' ? where : from);
+            }
+            return false;
+        }
+    }
     if (candidate == NULL) {
         return refused(said, room, "refused at building `%s`", from);
     }
