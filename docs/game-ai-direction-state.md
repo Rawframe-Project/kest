@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1140
+    CURRENT SHA:       (this commit) D1093-D1143
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -24,7 +24,12 @@ reasoning; this holds the position.
                        criterion is about, and nothing is committed after it
                        but the line you are reading
     LAST FAST GATE:    green
-    LAST FULL GATE:    green at 6dd0912
+    LAST FULL GATE:    `make most` green here -- everything but the sweep.
+                       The whole gate refuses on this box for O1 in
+                       docs/state.md, which is not this work's: the same
+                       sweep prints the same three lines on fd729c1, which
+                       has none of it in it. CI's linux-full job is the
+                       arbiter
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.
                        Every number below was taken on it.
@@ -414,6 +419,9 @@ Thirty-one criteria. **Thirty are met by something that runs**, and the last of
 them -- supported CI green on the exact final HEAD -- went green on `6a1be89`,
 all nine jobs.
 
+Committing past `6a1be89` makes that criterion false again until CI runs on
+this HEAD, which is what CI is for and what it is being asked.
+
 **One is a judgement and it is the owner's to make, not this worker's.** The AI
 section asks that "task completion/time/repair/silent escapes" be measured. The
 suite exists, the hidden tests exist, the harness runs both languages, what a
@@ -632,6 +640,9 @@ the same workload.
    And the editor stays right when the disk moves under it: rename a function
    in a dependency without touching the buffer and both sides say `K0353` at
    the same line and column. The gate holds that now.
+   **Every one of these runs opened one file**, which is where item 23 came
+   from: what was measured was measured right, and the scenario was never
+   widened.
 16. *(done, D1132, D1133)* **What a refusal costs and what it leaves.** F10,
    open since the foundation, is measured rather than read from the source: a
    refusal inside a body that promises `no.alloc` raises K0604 at the line
@@ -712,6 +723,21 @@ the same workload.
 22. Comparators, kept in step as the engines move. The harness names the mode
    of every row (D1090), which is what stops an interpreter's number being
    read as a compiler's.
+23. *(done, D1143)* **The file an editor is asking about.** `kest lsp` kept
+   one document, under a comment saying an editor has one file in front of the
+   person using it. Driven through the protocol -- open A, open B, change A --
+   the `K0306` typed into A was published **against B's name** while A was told
+   it was clean, and hover, definition, rename and formatting all read the same
+   one text. Beneath it, the loader's overlay held one path, so a file that
+   imports one the person has edited and not saved was checked against the
+   saved copy. The server keeps every open file now and chooses the one a
+   message names out of its uri before it dispatches; the overlay is a set;
+   there is still one build, with the file it is of beside it, so a request
+   about another rebuilds at the price of a keystroke in it. Held by the check
+   that was already there, with a third leg, so the sweep keeps the holes it
+   has. **What this says about the discipline**: the 899 holes ask whether the
+   code is wrong and not whether the scenario was narrow, and a thing measured
+   carefully and never widened is a place where nothing has been seen.
 
 ## Closed by measurement
 

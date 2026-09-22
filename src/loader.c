@@ -56,31 +56,80 @@ static char *read_stream(KestArena *arena, FILE *file, size_t *length) {
     return text;
 }
 
-// What an editor has in a buffer that is not on the disk yet. There is one at
-// a time, because there is one file being typed in at a time, and it is read
-// before the disk is: a language server that answered about the saved copy
-// would answer about a file the person in front of it is not looking at. Set
-// and cleared by whoever is driving; nothing else in this tree ever sets one.
-// See D977.
-static const char *overlaid_path;
-static const char *overlaid_text;
-static size_t overlaid_length;
+// What an editor has in buffers that are not on the disk yet, read before the
+// disk is: a language server that answered about the saved copy would answer
+// about a file the person in front of it is not looking at. There is more than
+// one, because an editor holds more than one open and a program is more than
+// one file -- checking the file being typed in reads everything it imports, and
+// an import that is itself open and unsaved has to be read as the person can
+// see it rather than as it was last saved. Set and cleared by whoever is
+// driving; nothing else in this tree ever sets one. See D977 and D1143.
+typedef struct {
+    const char *path;
+    const char *text;
+    size_t length;
+} Overlaid;
 
+static Overlaid *overlaid;
+static size_t overlaid_count;
+static size_t overlaid_room;
+
+// A NULL path takes every one away, which is what a driver does when it has
+// finished with the set. A NULL text takes away the one path names, which is
+// what a client closing a document means. Giving room can fail, and a path
+// that could not be held is read from the disk: the answer is then about the
+// saved copy, which is where this began, rather than about nothing.
 void kest_loader_overlay(const char *path, const char *text, size_t length) {
-    overlaid_path = path;
-    overlaid_text = text;
-    overlaid_length = length;
+    if (path == NULL) {
+        free(overlaid);
+        overlaid = NULL;
+        overlaid_count = 0;
+        overlaid_room = 0;
+        return;
+    }
+    for (size_t i = 0; i < overlaid_count; i++) {
+        if (strcmp(overlaid[i].path, path) != 0) {
+            continue;
+        }
+        if (text == NULL) {
+            overlaid[i] = overlaid[overlaid_count - 1];
+            overlaid_count--;
+            return;
+        }
+        overlaid[i].text = text;
+        overlaid[i].length = length;
+        return;
+    }
+    if (text == NULL) {
+        return;
+    }
+    if (overlaid_count == overlaid_room) {
+        size_t grown = overlaid_room == 0 ? 4 : overlaid_room * 2;
+        Overlaid *moved = realloc(overlaid, grown * sizeof(*moved));
+        if (moved == NULL) {
+            return;
+        }
+        overlaid = moved;
+        overlaid_room = grown;
+    }
+    overlaid[overlaid_count].path = path;
+    overlaid[overlaid_count].text = text;
+    overlaid[overlaid_count].length = length;
+    overlaid_count++;
 }
 
 static char *read_file(KestArena *arena, const char *path, size_t *length) {
-    if (overlaid_path != NULL && strcmp(overlaid_path, path) == 0) {
-        char *held = kest_arena_alloc(arena, overlaid_length + 1, 1);
+    for (size_t i = 0; i < overlaid_count; i++) {
+        if (strcmp(overlaid[i].path, path) != 0) {
+            continue;
+        }
+        char *held = kest_arena_alloc(arena, overlaid[i].length + 1, 1);
         if (held == NULL) {
             return NULL;
         }
-        memcpy(held, overlaid_text, overlaid_length);
-        held[overlaid_length] = '\0';
-        *length = overlaid_length;
+        memcpy(held, overlaid[i].text, overlaid[i].length);
+        held[overlaid[i].length] = '\0';
+        *length = overlaid[i].length;
         return held;
     }
 

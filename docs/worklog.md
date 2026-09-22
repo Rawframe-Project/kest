@@ -40781,3 +40781,27 @@ See D1130.
 **Runs:** `make check`, and `kest check` over the five baseline rows.
 
 Next: CI green on the exact final HEAD.
+
+## 2026-09-22, the file an editor is asking about
+
+`kest lsp` held one file, and an editor holds many. Open A, open B, type in A:
+the mistake was published against B's name and A was left looking clean, and
+the same one text answered hover, definition, rename and formatting. The buffer
+the loader puts in front of the disk was one buffer too, so a file that imports
+one the person has edited and not saved was checked against the saved copy.
+
+The server keeps the set now and chooses the file out of the uri every message
+carries, before it dispatches. The overlay is a set. One build still, with the
+file it is of written beside it, so a request about another rebuilds -- which
+costs what a keystroke in that file costs.
+
+Found by taking the two-file case through the protocol rather than by reading
+the source, and it is a defect in a thing that was measured carefully and never
+widened: D1131 timed this server at three depths on two project sizes, one file
+at a time.
+
+See D1143.
+
+**Runs:** `make check`, and the two-file case driven through `kest lsp`.
+
+Next: a real game in Kest, and a model against the AI suite.

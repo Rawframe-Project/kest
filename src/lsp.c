@@ -311,21 +311,97 @@ static const Json *down(const Json *object, const char *first,
     return member(member(object, first), second);
 }
 
-// What this server keeps: one file being worked on, its text, and the last
-// build of it. There is one because an editor has one file in front of the
-// person using it; a second would be a second build of the same program with
-// nothing to say which is current.
+// One file the client has opened: the uri it names the file by, the path the
+// rest of this compiler knows it by, and the text as the person has it rather
+// than as the disk has it.
+typedef struct {
+    char *uri;
+    char *path;
+    char *text;
+    size_t length;
+} Open;
+
+// What `here` answers when the client has opened nothing, so that a handler
+// reads a file rather than a null. Its text is empty and its path is no path,
+// which every walk below already asks about.
+static char no_text[1] = "";
+static Open nothing_open = {NULL, NULL, no_text, 0};
+
+// What this server keeps: every file the client has opened, which one the
+// message in hand is about, and the last build of one of them.
+//
+// There is more than one file because an editor holds more than one open and
+// addresses every message to the one it means. The file being typed in is not
+// always the one opened last, and a server that kept a single file wrote a
+// change to one into another: before D1143, opening A, opening B and then
+// typing in A published A's mistakes against B's name and left A looking
+// clean.
+//
+// There is one build, because building is what every answer is made of and
+// building every open file at once is work nobody asked for. `built` says
+// which file the build in hand is of, so a request about another rebuilds --
+// which costs what a keystroke in that file costs, because a keystroke
+// rebuilds too.
 typedef struct {
     KestArena *arena;
     const char *library;
     FILE *out;
-    char *path;
-    char *uri;
-    char *text;
-    size_t length;
+    Open *open;
+    size_t count;
+    size_t room;
+    size_t at;
     KestBuild *build;
+    char *built;
     bool shutting_down;
 } Server;
+
+// The file the message in hand is about. `handle` chooses it out of the open
+// set before it dispatches anything, and a message naming a file nothing was
+// opened for is answered before a handler is reached.
+static Open *here(Server *server) {
+    return server->at < server->count ? &server->open[server->at]
+                                      : &nothing_open;
+}
+
+// A copy this server holds on to. Everything a message carries sits in an
+// arena that is rewound the moment the message is answered, so a document kept
+// between messages is a document copied out of it.
+static char *copy_of(const char *text, size_t length) {
+    char *held = malloc(length + 1);
+    if (held == NULL) {
+        return NULL;
+    }
+    memcpy(held, text, length);
+    held[length] = '\0';
+    return held;
+}
+
+static bool point_at(Server *server, const char *uri, size_t length) {
+    for (size_t i = 0; i < server->count; i++) {
+        if (server->open[i].uri != NULL &&
+            kest_word_same(server->open[i].uri, uri, length)) {
+            server->at = i;
+            return true;
+        }
+    }
+    server->at = server->count;
+    return false;
+}
+
+static Open *room_for_another(Server *server) {
+    if (server->count == server->room) {
+        size_t grown = server->room == 0 ? 4 : server->room * 2;
+        Open *moved = realloc(server->open, grown * sizeof(*moved));
+        if (moved == NULL) {
+            return NULL;
+        }
+        server->open = moved;
+        server->room = grown;
+    }
+    Open *one = &server->open[server->count++];
+    memset(one, 0, sizeof(*one));
+    return one;
+}
 
 // A message and its length, which is how LSP frames one. Written into a buffer
 // first because the header says how long the body is and a body written
@@ -574,26 +650,50 @@ static void build_again(Server *server) {
         kest_build_free(server->build);
         server->build = NULL;
     }
-    if (server->path == NULL) {
+    free(server->built);
+    server->built = NULL;
+    Open *file = here(server);
+    if (file->path == NULL) {
         return;
     }
-    kest_loader_overlay(server->path, server->text, server->length);
-    char *paths[1] = {server->path};
+    // Every open file goes in front of the disk, not only the one being built:
+    // a file that imports one the person has edited and not saved has to be
+    // checked against what they can see rather than against what was saved.
+    for (size_t i = 0; i < server->count; i++) {
+        if (server->open[i].path != NULL) {
+            kest_loader_overlay(server->open[i].path, server->open[i].text,
+                                server->open[i].length);
+        }
+    }
+    char *paths[1] = {file->path};
     server->build = kest_build_open(server->library, paths, 1, 0);
     if (server->build != NULL) {
         kest_build_index_names(server->build, true);
         kest_build_check(server->build);
+        server->built = copy_of(file->path, strlen(file->path));
     }
     kest_loader_overlay(NULL, NULL, 0);
+}
+
+// The build a request is answered out of, which has to be of the file the
+// request names. A request about the file last built costs nothing here.
+static void ready(Server *server) {
+    Open *file = here(server);
+    if (server->build != NULL && server->built != NULL &&
+        file->path != NULL && strcmp(server->built, file->path) == 0) {
+        return;
+    }
+    build_again(server);
 }
 
 // What is wrong with the file, sent whether or not anything is: a client that
 // is told nothing leaves the last set on the screen.
 static void publish(Server *server) {
+    Open *file = here(server);
     Said out = {0};
     say(&out, "{\"jsonrpc\":\"2.0\",\"method\":"
               "\"textDocument/publishDiagnostics\",\"params\":{\"uri\":");
-    put_text(&out, server->uri);
+    put_text(&out, file->uri);
     say(&out, ",\"diagnostics\":[");
     bool first = true;
     if (server->build != NULL) {
@@ -602,8 +702,8 @@ static void publish(Server *server) {
             const KestDiag *one = &diags->items[i];
             // Only what is wrong with the file in front of the person. A
             // program is more than one file and a client is told about one.
-            if (one->source == NULL || server->path == NULL ||
-                strcmp(one->source->path, server->path) != 0) {
+            if (one->source == NULL || file->path == NULL ||
+                strcmp(one->source->path, file->path) != 0) {
                 continue;
             }
             size_t length = 0;
@@ -651,10 +751,11 @@ static const KestUse *use_at(Server *server, size_t offset) {
     uint32_t count = 0;
     const KestUse *uses = kest_program_uses(server->build->program, &count);
     const KestUse *best = NULL;
+    const Open *file = here(server);
     for (uint32_t i = 0; i < count; i++) {
         const KestUse *one = &uses[i];
-        if (one->source == NULL || server->path == NULL ||
-            strcmp(one->source->path, server->path) != 0) {
+        if (one->source == NULL || file->path == NULL ||
+            strcmp(one->source->path, file->path) != 0) {
             continue;
         }
         if (offset < one->span.offset ||
@@ -714,7 +815,8 @@ static size_t position_in(Server *server, const Json *params) {
     if (line == NULL || column == NULL) {
         return (size_t)-1;
     }
-    return offset_of(server->text, server->length, (uint32_t)line->number,
+    Open *file = here(server);
+    return offset_of(file->text, file->length, (uint32_t)line->number,
                      (uint32_t)column->number);
 }
 
@@ -738,8 +840,8 @@ static void hover(Server *server, const Json *id, const Json *params) {
             say(&out, "{\"contents\":{\"kind\":\"plaintext\",\"value\":");
             put_text(&out, said);
             say(&out, "},\"range\":");
-            put_range(&out, server->text, server->length, one->span.offset,
-                      one->span.length);
+            put_range(&out, here(server)->text, here(server)->length,
+                      one->span.offset, one->span.length);
             say_char(&out, '}');
         }
     }
@@ -813,36 +915,37 @@ static void rename_everywhere(Server *server, const Json *id,
         finish_answer(server, &out);
         return;
     }
-    // One file at a time, which is what this server holds. A rename that
+    // One file at a time, which is the file the request named. A rename that
     // reaches another file is a rename this says nothing about rather than one
     // it half does.
+    Open *file = here(server);
     say(&out, "{\"changes\":{");
-    put_uri(&out, server->path);
+    put_uri(&out, file->path);
     say(&out, ":[");
     bool first = true;
     uint32_t count = 0;
     const KestUse *uses = kest_program_uses(server->build->program, &count);
     for (uint32_t i = 0; i < count; i++) {
         if (!same_declaration(&uses[i], wanted) ||
-            uses[i].source == NULL ||
-            strcmp(uses[i].source->path, server->path) != 0) {
+            uses[i].source == NULL || file->path == NULL ||
+            strcmp(uses[i].source->path, file->path) != 0) {
             continue;
         }
         say(&out, first ? "" : ",");
         first = false;
         say(&out, "{\"range\":");
-        put_range(&out, server->text, server->length, uses[i].span.offset,
+        put_range(&out, file->text, file->length, uses[i].span.offset,
                   uses[i].span.length);
         say(&out, ",\"newText\":");
         put_escaped(&out, fresh->text, fresh->length);
         say_char(&out, '}');
     }
     // And the declaration itself, when it is in this file.
-    if (wanted->declared_in != NULL &&
-        strcmp(wanted->declared_in->path, server->path) == 0) {
+    if (wanted->declared_in != NULL && file->path != NULL &&
+        strcmp(wanted->declared_in->path, file->path) == 0) {
         say(&out, first ? "" : ",");
         say(&out, "{\"range\":");
-        put_range(&out, server->text, server->length, wanted->declared.offset,
+        put_range(&out, file->text, file->length, wanted->declared.offset,
                   wanted->declared.length);
         say(&out, ",\"newText\":");
         put_escaped(&out, fresh->text, fresh->length);
@@ -867,8 +970,9 @@ static void symbols(Server *server, const Json *id, bool one_file,
             if (symbol->source == NULL) {
                 continue;
             }
-            if (one_file && (server->path == NULL ||
-                             strcmp(symbol->source->path, server->path) != 0)) {
+            if (one_file && (here(server)->path == NULL ||
+                             strcmp(symbol->source->path,
+                                    here(server)->path) != 0)) {
                 continue;
             }
             if (query_length > 0 &&
@@ -958,8 +1062,9 @@ static void formatting(Server *server, const Json *id) {
     if (!worked || formatted == NULL) {
         say(&out, "null");
     } else {
+        Open *file = here(server);
         say(&out, "[{\"range\":");
-        put_range(&out, server->text, server->length, 0, server->length);
+        put_range(&out, file->text, file->length, 0, file->length);
         say(&out, ",\"newText\":");
         put_escaped(&out, formatted, formatted_size);
         say(&out, "}]");
@@ -967,32 +1072,34 @@ static void formatting(Server *server, const Json *id) {
     finish_answer(server, &out);
 }
 
+// A file the client has opened, added to the set rather than put in place of
+// what was there. Opening one the set already holds replaces its text, which
+// is what a client does when it reopens a file it never told this it closed.
 static void opened(Server *server, const Json *params) {
     const Json *uri = down(params, "textDocument", "uri");
     const Json *text = down(params, "textDocument", "text");
     if (uri == NULL || uri->kind != JSON_TEXT) {
         return;
     }
-    free(server->uri);
-    free(server->text);
-    free(server->path);
-    server->uri = malloc(uri->length + 1);
-    if (server->uri != NULL) {
-        memcpy(server->uri, uri->text, uri->length);
-        server->uri[uri->length] = '\0';
-    }
-    server->path = path_of_uri(uri->text, uri->length);
-    if (text != NULL && text->kind == JSON_TEXT) {
-        server->text = malloc(text->length + 1);
-        if (server->text != NULL) {
-            memcpy(server->text, text->text, text->length);
-            server->text[text->length] = '\0';
-            server->length = text->length;
-        }
+    Open *file;
+    if (point_at(server, uri->text, uri->length)) {
+        file = here(server);
     } else {
-        server->text = NULL;
-        server->length = 0;
+        file = room_for_another(server);
+        if (file == NULL) {
+            return;
+        }
+        server->at = server->count - 1;
+        file->uri = copy_of(uri->text, uri->length);
+        file->path = path_of_uri(uri->text, uri->length);
     }
+    free(file->text);
+    if (text != NULL && text->kind == JSON_TEXT) {
+        file->text = copy_of(text->text, text->length);
+    } else {
+        file->text = copy_of("", 0);
+    }
+    file->length = file->text == NULL ? 0 : strlen(file->text);
     build_again(server);
     publish(server);
 }
@@ -1009,17 +1116,58 @@ static void changed(Server *server, const Json *params) {
     if (text == NULL || text->kind != JSON_TEXT) {
         return;
     }
-    free(server->text);
-    server->text = malloc(text->length + 1);
-    if (server->text == NULL) {
-        server->length = 0;
+    Open *file = here(server);
+    char *fresh = copy_of(text->text, text->length);
+    if (fresh == NULL) {
         return;
     }
-    memcpy(server->text, text->text, text->length);
-    server->text[text->length] = '\0';
-    server->length = text->length;
+    free(file->text);
+    file->text = fresh;
+    file->length = text->length;
     build_again(server);
     publish(server);
+}
+
+// A file the client has closed is one this no longer has the text of, and the
+// disk has it again. The build goes with it when it was of that file, because
+// what it was built from has gone.
+static void closed(Server *server) {
+    Open *file = here(server);
+    if (file == &nothing_open) {
+        return;
+    }
+    if (server->built != NULL && file->path != NULL &&
+        strcmp(server->built, file->path) == 0) {
+        kest_build_free(server->build);
+        server->build = NULL;
+        free(server->built);
+        server->built = NULL;
+    }
+    free(file->uri);
+    free(file->path);
+    free(file->text);
+    *file = server->open[server->count - 1];
+    server->count--;
+    server->at = server->count;
+}
+
+static bool method_starts(const Json *method, const char *prefix) {
+    size_t length = strlen(prefix);
+    return method != NULL && method->kind == JSON_TEXT &&
+           method->length >= length &&
+           memcmp(method->text, prefix, length) == 0;
+}
+
+// Which file a message is about, out of the set the client has opened. Every
+// `textDocument` method carries the uri of the one it means, and a server that
+// did not read it answered about whichever file it happened to be holding.
+static bool pointed_at(Server *server, const Json *params) {
+    const Json *uri = down(params, "textDocument", "uri");
+    if (uri == NULL || uri->kind != JSON_TEXT) {
+        server->at = server->count;
+        return false;
+    }
+    return point_at(server, uri->text, uri->length);
 }
 
 static bool method_is(const Json *method, const char *name) {
@@ -1059,6 +1207,24 @@ static void handle(Server *server, const Json *message) {
         opened(server, params);
         return;
     }
+    // Every message from here on is about the file its uri names. Choosing
+    // once, before the dispatch below, is what makes that true of all of them
+    // at once rather than of whichever handlers remembered to ask. A uri
+    // nothing was opened for is answered rather than guessed at. See D1143.
+    if (method_starts(method, "textDocument/")) {
+        if (!pointed_at(server, params)) {
+            if (id != NULL) {
+                answer(server, id, "null");
+            }
+            return;
+        }
+        // A request is answered out of a build, and the build in hand may be
+        // of another file. A notification builds for itself, and building
+        // twice for one keystroke is what this stays out of.
+        if (id != NULL) {
+            ready(server);
+        }
+    }
     if (method_is(method, "textDocument/didChange")) {
         changed(server, params);
         return;
@@ -1069,6 +1235,7 @@ static void handle(Server *server, const Json *message) {
         return;
     }
     if (method_is(method, "textDocument/didClose")) {
+        closed(server);
         return;
     }
     if (method_is(method, "textDocument/hover")) {
@@ -1173,9 +1340,13 @@ int kest_lsp_serve(const char *library, FILE *in, FILE *out) {
     if (server.build != NULL) {
         kest_build_free(server.build);
     }
-    free(server.uri);
-    free(server.text);
-    free(server.path);
+    free(server.built);
+    for (size_t i = 0; i < server.count; i++) {
+        free(server.open[i].uri);
+        free(server.open[i].path);
+        free(server.open[i].text);
+    }
+    free(server.open);
     kest_arena_free(server.arena);
     return 0;
 }

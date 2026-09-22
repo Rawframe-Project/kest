@@ -107,11 +107,13 @@ const char *kest_library_path(KestArena *arena, const char *program);
 // The source and nothing else. `lex` is the whole of what this is for: the
 // token stream is what that command answers, and parsing to reach it is work
 // nobody asked for and a second reading of the same file.
-// Puts a buffer in front of the disk for one path, or takes it away again with
-// a NULL path. What it is for is a language server: the file being typed in has
-// not been saved, and answering about the saved copy is answering about a
-// different file. The text is the caller's and has to outlive every read.
-// See D977.
+// Puts a buffer in front of the disk for one path, takes that one away again
+// with a NULL text, and takes every one away with a NULL path. What it is for
+// is a language server: the files open in an editor have not been saved, and
+// answering about the saved copies is answering about different files. There
+// is a set rather than one because a program is more than one file and an
+// editor holds more than one open. The text is the caller's and has to outlive
+// every read. See D977 and D1143.
 void kest_loader_overlay(const char *path, const char *text, size_t length);
 
 bool kest_read_source(KestArena *arena, KestDiags *diags, const char *path,

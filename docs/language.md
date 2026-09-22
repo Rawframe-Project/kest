@@ -4862,9 +4862,16 @@ It answers `textDocument/publishDiagnostics`, `hover`, `definition`,
 sends the whole document on every change and the compiler reads that rather
 than the disk.
 
-What it does not do: rename across files, because it holds the one file the
-editor opened; and incremental changes, because applying an edit twice is the
-one way a server can be wrong about what a file says.
+Every buffer, and not one. An editor holds as many files open as the person
+does, and every message it sends names the file it is about: what is answered
+is that file, whichever was opened last. A file that imports one the person has
+edited and not saved is checked against what they can see rather than against
+what was saved.
+
+What it does not do: rename across files, because a rename reaching another
+file is one it would half do rather than one it says nothing about; and
+incremental changes, because applying an edit twice is the one way a server can
+be wrong about what a file says.
 
 ## Running
 

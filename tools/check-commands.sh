@@ -5738,6 +5738,12 @@ mkdir -p "$scratch"/agreeing
 # buffer the editor is holding. An editor that kept what it read the first time
 # would say a program is fine while the command line says it is not, which is
 # the same sentence failing for a different reason.
+#
+# And the same file again with a second one open beside it, which is what an
+# editor has: a server that held one file wrote a change to this one into
+# whichever was opened last, so the mistakes in it were published against the
+# other file's name and this one was left looking clean. The same sentence
+# failing for a third reason. See D1143.
 cat > "$scratch"/agreeing/kit.kest <<'KEST'
 module kit
 
@@ -5775,19 +5781,29 @@ import json, os, subprocess, sys
 kest = sys.argv[1]
 
 
-def what_an_editor_is_told(path, change=None):
+def what_an_editor_is_told(path, change=None, beside=None, opened_as=None):
     """The diagnostics an editor is published for a file, as an editor gets
     them: the buffer on open, and once more after `change` has happened on
-    disk without the buffer moving."""
+    disk without the buffer moving. `beside` is a second file opened after
+    this one, and `opened_as` is what the buffer held before the change, so
+    that the change is what the file's own mistakes arrive in."""
     uri = "file://" + path
     text = open(path).read()
     messages = [
         {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
         {"jsonrpc": "2.0", "method": "textDocument/didOpen",
          "params": {"textDocument": {"uri": uri, "languageId": "kest",
-                                     "version": 1, "text": text}}},
+                                     "version": 1,
+                                     "text": text if opened_as is None
+                                     else opened_as}}},
     ]
-    if change is not None:
+    if beside is not None:
+        messages.append(
+            {"jsonrpc": "2.0", "method": "textDocument/didOpen",
+             "params": {"textDocument": {"uri": "file://" + beside,
+                                         "languageId": "kest", "version": 1,
+                                         "text": open(beside).read()}}})
+    if change is not None or beside is not None:
         messages.append(
             {"jsonrpc": "2.0", "method": "textDocument/didChange",
              "params": {"textDocument": {"uri": uri, "version": 2},
@@ -5827,7 +5843,11 @@ def what_an_editor_is_told(path, change=None):
         many = int(out[head + 16:blank])
         said = json.loads(out[blank + 4:blank + 4 + many])
         at = blank + 4 + many
-        if said.get("method") == "textDocument/publishDiagnostics":
+        # Only what was published about this file. With a second one open a
+        # server is publishing about both, and the last message is not the
+        # answer to what was asked unless it names what was asked about.
+        if (said.get("method") == "textDocument/publishDiagnostics"
+                and said["params"]["uri"] == uri):
             # The first line of the message and not all of it: an editor shows
             # one field, so the notes a diagnostic carries are folded into it,
             # where the form a machine reads keeps them in `notes` beside it.
@@ -5861,6 +5881,13 @@ checked = what_the_command_line_says(alone)
 if told == checked:
     told = what_an_editor_is_told(user, (kit, "fn doubled", "fn twice"))
     checked = what_the_command_line_says(user)
+
+# And the file with four mistakes once more, opened empty with a second file
+# opened after it, so that its own text arrives as a change while another file
+# is the one most recently opened.
+if told == checked:
+    told = what_an_editor_is_told(alone, beside=kit, opened_as="")
+    checked = what_the_command_line_says(alone)
 
 # A command line that said nothing about a file with four mistakes in it
 # fails this as surely as one that disagreed: what the editor was told is not

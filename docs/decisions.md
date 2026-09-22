@@ -39332,3 +39332,65 @@ the uses — a small dataflow question inside one body, not a whole-program one.
 The comment says that now. A comment that tells the next reader the compiler
 will do something it does not do is worse than no comment, because it is the
 reason nobody looked for three months.
+
+## D1143 — An editor has more than one file open
+
+`kest lsp` kept one file: a path, its uri, its text and the last build of it,
+under a comment saying there is one because "an editor has one file in front of
+the person using it".
+
+That is false about the protocol and false about the editor. A client opens as
+many files as the person does, and every `textDocument` message carries the uri
+of the one it means. `didOpen` put the file it was given in place of the one
+before it, and `didChange` never read the uri at all: it took the text out of
+the message and wrote it over whatever the server happened to be holding.
+
+Driven through the protocol -- open A, open B, change A:
+
+```
+a.kest     0 diagnostics
+b.kest     0 diagnostics
+b.kest     1 diagnostic: K0306 unknown name `nowhere`
+```
+
+The mistake typed into A is published against B's name and A is left looking
+clean. Every other answer went the same way, because they all read the one
+text: a hover in A after that change reads B's body.
+
+The second half of it is the overlay. `kest_loader_overlay` held one path, so
+building the file being typed in read every file it imports off the disk. A
+file that imports one the person has edited and not saved was checked against
+the saved copy -- which is the thing an overlay exists to stop, done for one
+file instead of for the set.
+
+Both are one belief. The server keeps every file the client has opened;
+`handle` chooses the one a message names out of its uri, before it dispatches,
+so that it is true of every handler at once rather than of whichever ones
+remembered to ask; and a uri nothing was opened for is answered rather than
+guessed at. The overlay is a set, and every open file goes in front of the disk
+before a build.
+
+One build still, and not one per file. Building is what every answer is made
+of, and `built` says which file the build in hand is of, so a request about
+another rebuilds. That costs what a keystroke in that file costs, because a
+keystroke rebuilds too: 0.3 ms on a leaf of a 112,647-line project, 475 ms at
+the top of it (D1131).
+
+What it cost to find is the part worth keeping. Nothing here was measured
+wrong. D1131 drove this same server over a pipe to time it at three depths on
+two project sizes, and every one of those runs opened one file. The check that
+holds an editor and the command line to the same answer opened one file. The
+sweep's 899 holes ask whether the code is wrong, not whether the scenario was
+narrow -- so a thing measured carefully and never widened is a place where
+nothing has been seen, and no amount of care inside the scenario finds it.
+
+Held by the check that was already there, with a third leg: the file with four
+mistakes is opened empty, a second file is opened after it, and its own text
+arrives as a change. Against the server before this, the editor is told nothing
+and the command line reports four. That is the sentence that check already
+says, failing for a third reason, so the sweep keeps the holes it has and the
+list does not grow.
+
+`rename` across files is still not done, and is still refused whole rather than
+half done. What has changed is that the file it renames in is the file the
+request named.

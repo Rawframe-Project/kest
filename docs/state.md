@@ -59,6 +59,31 @@ reader who finds the same shape again should find the first one beside it.
 | F44 | the formatter wrote a different program, and a block inside brackets ran its lines together | a giving `if` or `match` takes whatever follows it into its arm, so `(if c -> a else -> b) - 2` without brackets is an `else` arm of `b - 2` — and the printer bracketed an operand only when it was a binary of lower precedence. Four shapes came out meaning something else, silently where the result was stable under a second formatting. Fixing it made the formatter print a bracketed `match` over lines, which the lexer refused: the bracket count was never put aside at a brace, though the field beside it said it was. Both fixed, held by `examples/ordering.kest` and by the formatter check's own program (D1085) |
 | F45 | the thread sanitiser's objects were not rebuilt when a header changed | every object has a dependency file beside it and the line that reads them back named the release objects, the sanitised objects and the hosts, not these. A header that changed left half of them holding the old shape of `KestProgram` and half the new, so a field written through one layout was read as another: `program->instances` was nought while the count said there were some, and the `races` section died inside `kest_check_bodies`, nowhere near anything about threads. Wrong since that build was added, quiet because nothing had changed a header between two runs of it (D1089) |
 | F46 | a place inside a value inside a place was refused as a fault in the compiler | `who[at].cools[i] = n` -- an index through a field of an indexed element -- answered `K0505`, which is what this compiler says when its two halves disagree. An assignment holds a place inside an array apart (D931) and the flag covered the whole target, so the element read in the middle left the array and the index on the stack where the handle belonged. Found by writing the gameplay benchmark the other way round; both shapes now answer the same checksum (D1091) |
+ | F47 | an editor was answered about the file it opened last, not the file it asked about | `kest lsp` kept one document. Open A, open B, change A, and `K0306 unknown name` typed into A was published against B's uri while A was told it was clean; hover, definition, rename and formatting all read the same one text. And the loader's overlay held one path, so a file importing one the person had edited and not saved was checked against the saved copy. Driven through the protocol rather than read out of the source. The server keeps every open file and chooses by uri before it dispatches, and the overlay is a set (D1143) |
+
+## Open, and it is the gate rather than the language
+
+**O1 -- one backstop hole misses when all 899 run together, and only then.**
+`make check` refuses on this box with `MISSED: a ceiling crossed in a scratch
+arena and not carried back`. The hole is sound and the check is sound: poked by
+hand into a fresh copy it is caught four ways -- a clean rebuild, a rebuild
+from a long temporary path, the sweep's own copying done verbatim by hand
+(hard links, `libkest.a`, the sanitised objects, `cwd` and the sanitiser's
+wall), and the sweep's own machinery run for that one hole, which prints
+`caught`. Twelve of those run at once are twelve catches. Only the whole sweep,
+899 holes twelve wide, reports it missed, and what it reports is that the check
+came back nought having said nothing -- not that it timed out and not that it
+asked for too much memory, which the sweep has its own words for.
+
+**It is not a change of this tree's.** The same sweep on `fd729c1`, which is
+the commit CI last went green on and has none of this work in it, prints the
+same three lines byte for byte. So what moved is this machine or the sweep
+under its own load, and not the compiler.
+
+It matters more than an ordinary flake, because this is the one check that is
+*about the other checks*: a sweep that says a net missed when the net catches
+is a sweep a reader stops believing, in both directions. CI's `linux-full` job
+runs the whole gate on another machine and is the arbiter for now.
 
 ## Read from the source rather than run
 
@@ -298,6 +323,10 @@ the same way: by making the thing do what it says.
   that met a breakpoint read a one-byte instruction where a three-byte one is.
   The debugger reported the wrong line, and a wrong line looks exactly like a
   right one. Found by stepping (D991).
+- The language server answered about the file opened last rather than the file
+  a message named. Measured carefully and never widened: D1131 timed it at
+  three depths on two project sizes and opened one file every time. Found by
+  opening two (D1143).
 
 Two more were found by building for a second and third platform: a test that
 relied on where an array happened to land, and a line end that made two
