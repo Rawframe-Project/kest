@@ -38578,3 +38578,68 @@ are worth keeping: `diff` says `30,32c30` for a run of lines and reading only
 the number a range starts at misses the line the fix is on, and a function in a
 shell shares the caller's names — an `inside()` that walked `$one` ate the
 sweep's own task variable and every second row went missing.
+
+## D1127 — The development loop, timed, and a host that published before it knew
+
+"Development/reload path measured and intentional" was the one usability
+criterion nothing here had a number for. A reload was *checked* over eleven
+edits and never timed, and timing it found a defect in the host that does it.
+
+**A reload costs a build and nothing else.** `examples/engine` now times every
+step of its own reload and prints the four together:
+
+```text
+a reload took 0.48 ms: building 0.44, the shape 0.00, a machine and the
+world back into it 0.05, the doors 0.00, publishing 0.00
+```
+
+Starting a machine, putting the world back into it, asking the seven doors and
+swapping are **0.05 ms between them**. That is the intentional part: the reload
+path is a compile, so what a reload costs on a real project is what a compile
+costs on it, and nothing else has to be designed.
+
+**And a compile has not moved across the whole backend era.** The corpus
+generator writes the same project every time, so D1088's sizes came back to the
+byte and `kest check` was run on them again at this HEAD:
+
+| lines | at D1088 | here |
+| --- | --- | --- |
+| 6,312 | — | 17 ms |
+| 62,607 | — | 141 ms |
+| 112,647 | 288 ms | **286 ms** |
+| 625,557 | — | 2,256 ms |
+| 1,000,857 | 4,910 ms | **4,644 ms** |
+
+Two engines, a ledger frame, doors written twice and two thousand bodies of C
+backend later, the daily loop is where it was: **a hundred thousand lines
+checked in 286 ms**, and a million in under five seconds. The million is the
+least of five on a shared box whose runs spread 4.6 to 5.9 s; the hundred
+thousand is steady.
+
+**The defect.** The host asked for its doors *after* it had published the
+candidate — freed the old machine, taken the new build, restored the world —
+and only then noticed that `round` took a slot more than it used to. It
+returned false, and `main` printed "the reload did not happen and the world is
+the one it was", which by then was not true: the sixty frames after it ran the
+new program. An edit that changes a signature *and* a body shows it — the first
+body ends at 6.423 where a run with no edit at all ends at 4.017.
+
+`entries` is split into a `doors_of` that asks whichever machine it is handed
+and writes into the caller's array, and a `doors_into` that installs them. The
+reload asks the candidate while the old machine is still the one being held, so
+backing out costs a machine nobody has used. `worth_installing` takes a runtime
+and a step for the same reason.
+
+**The hole.** The host now ends both paths with the same sentence — where the
+first body is after sixty frames — and the gate holds every refused edit to
+ending where a run with no edit in it ends. A twelfth edit was added that moves
+a signature and a body together, because the eleven that were there all left
+behaviour alone and a host publishing early would have ended in the same place.
+Putting the door check back after the swap makes the gate say it: `a signature
+changed and a body with it was refused and then ran the frames after it
+somewhere else: 6.423 -1.017 rather than 4.017 -1.017`.
+
+**Where a refusal stops**, over the twelve: five at building it, four at the
+shape of the world, two at the doors this host calls, one kept. All of them
+inside 0.4 to 0.8 ms, which is the other half of the loop — how long it takes
+to find out a change cannot be taken.

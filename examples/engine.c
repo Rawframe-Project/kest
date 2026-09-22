@@ -8,10 +8,24 @@
 // list is. This one asks the doors a frame loop uses, in the order a frame
 // loop uses them, and is meant to be read start to finish. See D949.
 
+// A monotonic clock is not in ISO C, so this asks for the POSIX one by name
+// before anything is included, and takes the other one where there is no
+// POSIX. `bench/measure.c` says the same thing at more length.
+#if !defined(_WIN32)
+#define _POSIX_C_SOURCE 200809L
+#endif
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+
+#if defined(_WIN32)
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#else
+#include <time.h>
+#endif
 
 #include "kest.h"
 
@@ -124,32 +138,54 @@ static void engine_refuse(KestValue *frame, KestRuntime *runtime,
 // program does not agree with, and nothing but this notices. The shape of the
 // world is checked by its layout's mark; the shape of a *call* is this. See
 // D985.
-static bool entries(Engine *engine) {
-    const struct {
-        const char *name;
-        int32_t *into;
-    } doors[] = {{"begin", &engine->begin},     {"step", &engine->step},
-                 {"place", &engine->place},     {"save", &engine->save},
-                 {"restore", &engine->restore}, {"round", &engine->round},
-                 {"watched", &engine->watched}};
-    for (size_t i = 0; i < sizeof(doors) / sizeof(doors[0]); i++) {
-        *doors[i].into = kest_entry(engine->runtime, doors[i].name);
-        if (*doors[i].into < 0) {
+// The seven doors, asked of whichever machine is handed in and written into
+// `found` and `wide` rather than into the engine. A reload asks them of the
+// candidate *before* it publishes it: a host that asks after it has swapped
+// has already thrown the old machine away by the time it finds out, and then
+// has nothing true to say about which world it is holding. See D1127.
+#define DOORS 7
+static const char *const door_names[DOORS] = {"begin", "step",    "place",
+                                              "save",  "restore", "round",
+                                              "watched"};
+static bool doors_of(KestRuntime *runtime, const uint32_t was[DOORS],
+                     int32_t found[DOORS], uint32_t wide[DOORS]) {
+    for (size_t i = 0; i < DOORS; i++) {
+        found[i] = kest_entry(runtime, door_names[i]);
+        if (found[i] < 0) {
             fprintf(stderr, "the program has no `%s` to call\n",
-                    doors[i].name);
+                    door_names[i]);
             return false;
         }
-        uint32_t wide = kest_frame_takes(engine->runtime, *doors[i].into);
-        if (engine->wide[i] == 0) {
-            engine->wide[i] = wide;
-        } else if (engine->wide[i] != wide) {
+        wide[i] = kest_frame_takes(runtime, found[i]);
+        if (was != NULL && was[i] != 0 && was[i] != wide[i]) {
             fprintf(stderr,
                     "`%s` took %u slot(s) and now takes %u, and this engine "
                     "calls it with what it took\n",
-                    doors[i].name, engine->wide[i], wide);
+                    door_names[i], was[i], wide[i]);
             return false;
         }
     }
+    return true;
+}
+
+static void doors_into(Engine *engine, const int32_t found[DOORS],
+                       const uint32_t wide[DOORS]) {
+    int32_t *into[DOORS] = {&engine->begin,   &engine->step,  &engine->place,
+                            &engine->save,    &engine->restore,
+                            &engine->round,   &engine->watched};
+    for (size_t i = 0; i < DOORS; i++) {
+        *into[i] = found[i];
+        engine->wide[i] = wide[i];
+    }
+}
+
+static bool entries(Engine *engine) {
+    int32_t found[DOORS];
+    uint32_t wide[DOORS];
+    if (!doors_of(engine->runtime, engine->wide, found, wide)) {
+        return false;
+    }
+    doors_into(engine, found, wide);
     return true;
 }
 
@@ -178,7 +214,7 @@ static KestRuntime *started(KestBuild *build) {
 // those before it installs a step, because a step that may allocate belongs
 // somewhere other than a frame and one that may call back in cannot run while
 // this host holds its own lock.
-static bool worth_installing(Engine *engine) {
+static bool worth_installing(KestRuntime *runtime, int32_t step) {
     const struct {
         KestPromise which;
         const char *called;
@@ -186,8 +222,7 @@ static bool worth_installing(Engine *engine) {
                   {KEST_PROMISE_NO_HOST, "no.host"},
                   {KEST_PROMISE_DETERMINISTIC, "deterministic"}};
     for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
-        if (!kest_entry_promises(engine->runtime, engine->step,
-                                 wanted[i].which)) {
+        if (!kest_entry_promises(runtime, step, wanted[i].which)) {
             fprintf(stderr, "`step` does not promise `%s`, so this engine will "
                             "not put it in a frame\n", wanted[i].called);
             return false;
@@ -429,25 +464,60 @@ static bool restore_into(KestRuntime *into, int32_t restore, int32_t round,
     return true;
 }
 
+// A clock for the reload, because how long a reload takes is what decides
+// whether a change is felt or waited for. A monotonic one and not the wall,
+// which somebody may set while a game is running.
+#if defined(_WIN32)
+static double now_in_ms(void) {
+    static LARGE_INTEGER a_second;
+    LARGE_INTEGER now;
+    if (a_second.QuadPart == 0) {
+        QueryPerformanceFrequency(&a_second);
+    }
+    QueryPerformanceCounter(&now);
+    return (double)now.QuadPart * 1000.0 / (double)a_second.QuadPart;
+}
+#else
+static double now_in_ms(void) {
+    struct timespec at;
+    clock_gettime(CLOCK_MONOTONIC, &at);
+    return (double)at.tv_sec * 1000.0 + (double)at.tv_nsec / 1000000.0;
+}
+#endif
+
 // The whole of a reload, in the order a reload happens: read the file again,
 // build it beside the one that is running, refuse if the shape the world was
 // saved as is not the shape the new program has, make the world again in the
 // new machine, and only then let go of the old one. Nothing here touches the
 // running world until the candidate has answered.
+//
+// Every step of it is timed and the four are printed together, because a
+// reload is the one thing in a development loop somebody sits and waits for,
+// and "it reloads" is not a claim anybody can act on. A refusal is timed too:
+// how long it takes to find out a change cannot be taken is as much a part of
+// the loop as how long taking it costs.
 static bool reload(Engine *engine, const char *path, const Saved *saved) {
+    double began = now_in_ms();
     KestBuild *candidate = kest_build(path, NULL, stderr, KEST_FORM_TEXT, 0);
     if (candidate == NULL) {
+        printf("a reload was refused after %.2f ms, at building it\n",
+               now_in_ms() - began);
         fprintf(stderr, "a reload would not build; keeping the world\n");
         return false;
     }
+    double built = now_in_ms();
     const KestLayout *shape = NULL;
     if (kest_build_layout(candidate, "Body", &shape) != 1 ||
         kest_layout_mark(shape) != saved->shaped) {
+        printf("a reload was refused after %.2f ms, at the shape of the "
+               "world -- %.2f of it building\n",
+               now_in_ms() - began, built - began);
         fprintf(stderr, "`Body` is a different shape after a reload, and this "
                         "engine has no migration for it\n");
         kest_build_free(candidate);
         return false;
     }
+    double looked = now_in_ms();
     KestRuntime *fresh = started(candidate);
     if (fresh == NULL) {
         kest_build_report(candidate, stderr, KEST_FORM_TEXT);
@@ -466,6 +536,25 @@ static bool reload(Engine *engine, const char *path, const Saved *saved) {
         return false;
     }
 
+    double restored = now_in_ms();
+
+    // The doors, asked of the candidate while the old machine is still the
+    // one this host is holding. A signature that moved is found here, where
+    // backing out costs a machine nobody has used yet -- and not after the
+    // swap, where there is no old machine left to go back to.
+    int32_t found[DOORS];
+    uint32_t wide[DOORS];
+    if (!doors_of(fresh, engine->wide, found, wide) ||
+        !worth_installing(fresh, found[1])) {
+        printf("a reload was refused after %.2f ms, at the doors this host "
+               "calls -- %.2f of it building\n",
+               now_in_ms() - began, built - began);
+        kest_runtime_free(fresh);
+        kest_build_free(candidate);
+        return false;
+    }
+    double asked = now_in_ms();
+
     // Published. The old machine and the old build go now and not before, and
     // every handle this host held into the old machine goes with them.
     kest_runtime_free(engine->runtime);
@@ -474,7 +563,13 @@ static bool reload(Engine *engine, const char *path, const Saved *saved) {
     engine->runtime = fresh;
     engine->world[0] = world[0];
     engine->world[1] = world[1];
-    return entries(engine) && worth_installing(engine);
+    doors_into(engine, found, wide);
+    printf("a reload took %.2f ms: building %.2f, the shape %.2f, a machine "
+           "and the world back into it %.2f, the doors %.2f, publishing "
+           "%.2f\n",
+           now_in_ms() - began, built - began, looked - built,
+           restored - looked, asked - restored, now_in_ms() - asked);
+    return true;
 }
 
 // A world in one machine is not a world in another: a reference carries which
@@ -530,7 +625,7 @@ int main(int argc, char **argv) {
         return 1;
     }
     driving = &engine;
-    if (!entries(&engine) || !worth_installing(&engine)) {
+    if (!entries(&engine) || !worth_installing(engine.runtime, engine.step)) {
         return 1;
     }
 
@@ -675,6 +770,13 @@ int main(int argc, char **argv) {
                 return 1;
             }
         }
+
+        // The same sentence the other path ends with, because that is what
+        // makes the claim above checkable: a reload that was refused has to
+        // end where no reload at all ends, and a host that published before
+        // it found out would end somewhere else. See D1127.
+        printf("a reload kept nothing, and %d frames later the first body is "
+               "at %.3f %.3f\n", FRAMES, (double)xs[0], (double)ys[0]);
         driving = NULL;
         if (!kest_runtime_free(engine.runtime) ||
             !kest_build_free(engine.build)) {

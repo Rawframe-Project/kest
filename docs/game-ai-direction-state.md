@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1126
+    CURRENT SHA:       (this commit) D1093-D1127
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -528,7 +528,21 @@ backend's own half instead.
    collector's longest pause on it is 0.18 ms by the machine and 0.23 ms
    compiled** — one and a half per cent of a sixty-hertz budget on a program
    making a hundred and twenty-five thousand allocations in sixty calls.
-10. Comparators, kept in step as the engines move. The harness names the mode
+10. *(done, D1127)* **The development loop, timed.** A reload costs **0.48 ms,
+   of which 0.44 is building the program**; starting a machine, putting the
+   world back into it, asking the seven doors and swapping are 0.05 ms between
+   them. The reload path is a compile, so what it costs on a real project is
+   what a compile costs on it -- and a compile has not moved across the whole
+   backend era: **112,647 lines checked in 286 ms** against D1088's 288, and a
+   million in **4,644 ms** against 4,910. A refusal costs 0.4 to 0.8 ms and
+   stops at one of three places: building it (five of twelve edits), the shape
+   of the world (four), or the doors the host calls (two).
+   Timing it found a defect: the host asked for its doors *after* it had
+   published the candidate, so a signature that moved left it running the new
+   program while saying the world was the one it was. The doors are asked of
+   the candidate now, and the gate holds every refused edit to ending where a
+   run with no edit in it ends.
+11. Comparators, kept in step as the engines move. The harness names the mode
    of every row (D1090), which is what stops an interpreter's number being
    read as a compiler's.
 

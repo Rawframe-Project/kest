@@ -2855,6 +2855,18 @@ heard
 # One sentence, because what went wrong is written into it.
 mkdir -p "$scratch"/reloading
 reload_wrong=""
+
+# Where a run with no edit at all ends. Every refused edit has to end there
+# too: "the world is the one it was" is a sentence about which program the
+# frames after it ran, and the only way to hold it is to run them and look. A
+# host that published its candidate before it found out it could not use it
+# says the same sentence and ends somewhere else. See D1127.
+unmoved=$(./examples/engine examples/engine.kest examples/engine.kest 2>&1 |
+    sed -n 's/^a reload kept the ring, and .*first body is at //p')
+if [ -z "$unmoved" ]; then
+    complain "reload" "a run with no edit in it said nothing about where it \
+ended, so there is nothing to hold a refused one to"
+fi
 for edit in \
     "a body only|s/^fn describe(w: World) -> text {$/fn describe(w: World) -> text {\\n    let unused = 0/|kept" \
     "a field added|s/^    id: i32$/    id: i32\n    weight: f32/|refused" \
@@ -2866,7 +2878,8 @@ for edit in \
     "a case added at the end of an enum|s/^    Chasing$/    Chasing\n    Resting/;s/^                Chasing -> 1$/                Chasing -> 1\n                Resting -> 2/|refused" \
     "a bit put in the middle of a set|s/^    Seen$/    Seen\n    Rested/|refused" \
     "a bit added at the end of a set|s/^    Hit$/    Hit\n    Rested/|refused" \
-    "a program that will not build|s/^struct Body {/struct Body {{/|refused"; do
+    "a program that will not build|s/^struct Body {/struct Body {{/|refused" \
+    "a signature changed and a body with it|s/^fn round(w: World, from: i32)/fn round(w: World, from: i32, more: i32)/;s/body.x += body.vx \\* dt$/body.x += body.vx * dt * 2.0/|refused"; do
     what=${edit%%|*}
     rest_of=${edit#*|}
     doing=${rest_of%%|*}
@@ -2889,13 +2902,23 @@ for edit in \
         reload_wrong="$what was $got and the study says $wanted"
         break
     fi
+    if [ "$got" = refused ]; then
+        ended=$(printf '%s\n' "$said" |
+            sed -n 's/^a reload kept nothing, and .*first body is at //p')
+        if [ "$ended" != "$unmoved" ]; then
+            reload_wrong="$what was refused and then ran the frames after it \
+somewhere else: $ended rather than $unmoved"
+            break
+        fi
+    fi
 done
 if [ -n "$reload_wrong" ]; then
     complain "reload" "an edit a reload has to have an answer for: $reload_wrong"
 else
-    say "reload" "eleven edits a reload has to have an answer for, each ending \
+    say "reload" "twelve edits a reload has to have an answer for, each ending \
 with a world: the new program's where the shape did not move, and the one the \
-host was holding where it did"
+host was holding where it did -- held by running the frames after a refusal \
+and finding them where a run with no edit in it ends, $unmoved"
 fi
 
 # The boundaries a stranger's bytes arrive through, sanitised. Eight seeds and

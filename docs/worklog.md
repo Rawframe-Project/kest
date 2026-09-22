@@ -40394,3 +40394,30 @@ See D1126.
 
 Next: the development and reload path, which is checked over eleven edits and
 not measured.
+
+## The development loop, timed, and a host that published before it knew
+
+`examples/engine` times its own reload now: **0.48 ms, of which 0.44 is
+building the program**. Starting a machine, putting the world back, asking the
+doors and swapping are 0.05 ms between them, so the reload path is a compile
+and what it costs on a real project is what a compile costs on it.
+
+A compile has not moved across the whole backend era: D1088's corpus came back
+to the byte and `kest check` reads 112,647 lines in **286 ms** against 288, and
+a million in **4,644 ms** against 4,910.
+
+Timing it found a defect. The host asked for its doors after it had published
+the candidate, so an arity change left it running the new program while saying
+the world was the one it was -- the first body ends at 6.423 where no edit at
+all ends at 4.017. The doors are asked of the candidate now, while the old
+machine is still the one being held. Both paths end with the same sentence and
+the gate holds every refused edit to ending where a run with no edit ends; a
+twelfth edit that moves a signature and a body together is what gives that
+teeth.
+
+See D1127.
+
+**Runs:** `make check`, `./examples/engine` over the twelve edits, and
+`kest check` over five generated projects.
+
+Next: the newcomer workflow, and CI green on the final HEAD.

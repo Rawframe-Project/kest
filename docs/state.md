@@ -217,7 +217,15 @@ machine through a call of its own, and the machine writes its frame over the
 one the call already made (D1105); a call through a function value is written
 too (D1107), and so is the crossing into the host (D1108) and one of a
 fixed run of slots (D1109) -- which leaves seven bodies of two thousand and no
-family among them. **And the vertical slice is measured, both ways** (D1124): sixty calls of
+family among them. **And the development loop is measured** (D1127): a reload costs 0.48 ms, of
+which 0.44 is building the program and 0.05 is everything else -- starting a
+machine, putting the world back, asking the doors, swapping. The reload path is
+a compile, and a compile has not moved across the backend era: 112,647 lines
+checked in 286 ms against D1088's 288, a million in 4,644 against 4,910.
+Timing it found the host asking for its doors after it had published, so an
+arity change ran the new program while saying the world was the one it was.
+
+**And the vertical slice is measured, both ways** (D1124): sixty calls of
 `examples/slice`, 1.613 ms in the middle by the machine against 0.640
 compiled, with the heap doing the same thing under both to the byte and the
 collector's longest pause 0.18 ms. Two and a half times, where a frame of
