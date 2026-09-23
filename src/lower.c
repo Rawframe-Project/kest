@@ -327,6 +327,30 @@ static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
         emit_u16(lower, slot, origin);
         return;
     }
+    // A local moved by a constant and written back where it was read: made as
+    // the arithmetic on a local first, and one instruction with the store.
+    // The operands are the same three. See D1155 and D1168.
+    if (size == 1 && fusing() &&
+        (lower->last_op == KEST_OP_ADD_I_NARROW_K ||
+         lower->last_op == KEST_OP_SUB_I_NARROW_K) &&
+        lower->last_at >= lower->pointed_at &&
+        lower->last_at + 7 == lower->chunk->code_count) {
+        const uint8_t *at = lower->chunk->code + lower->last_at;
+        uint16_t cut_to = (uint16_t)(at[1] | ((uint16_t)at[2] << 8));
+        uint16_t read = (uint16_t)(at[3] | ((uint16_t)at[4] << 8));
+        uint16_t which = (uint16_t)(at[5] | ((uint16_t)at[6] << 8));
+        if (read == slot) {
+            uint8_t self = lower->last_op == KEST_OP_ADD_I_NARROW_K
+                               ? KEST_OP_ADD_K_SELF
+                               : KEST_OP_SUB_K_SELF;
+            take_back(lower);
+            emit(lower, self, origin);
+            emit_u16(lower, cut_to, origin);
+            emit_u16(lower, slot, origin);
+            emit_u16(lower, which, origin);
+            return;
+        }
+    }
     uint16_t constant = 0;
     if (size == 1 && fusing() &&
         one_operand_before(lower, KEST_OP_CONST, &constant)) {
@@ -415,6 +439,18 @@ static uint8_t fused_with_narrow(uint8_t arithmetic) {
     default:
         return KEST_OP_NARROW;
     }
+}
+
+// The same arithmetic with a constant for its right side, and a local for its
+// left or what is on the stack. See D1168.
+static uint8_t by_a_constant(uint8_t narrowed, bool of_a_local) {
+    if (narrowed == KEST_OP_ADD_I_NARROW) {
+        return of_a_local ? KEST_OP_ADD_I_NARROW_K : KEST_OP_ADD_I_NARROW_C;
+    }
+    if (narrowed == KEST_OP_SUB_I_NARROW) {
+        return of_a_local ? KEST_OP_SUB_I_NARROW_K : KEST_OP_SUB_I_NARROW_C;
+    }
+    return of_a_local ? KEST_OP_MUL_I_NARROW_K : KEST_OP_MUL_I_NARROW_C;
 }
 
 // The comparison a jump reads, when the jump is the next thing after it. Every
@@ -732,6 +768,12 @@ static const struct {
     {KEST_OP_ADD_I_NARROW, {A_NUMBER}},
     {KEST_OP_SUB_I_NARROW, {A_NUMBER}},
     {KEST_OP_MUL_I_NARROW, {A_NUMBER}},
+    {KEST_OP_ADD_I_NARROW_C, {A_NUMBER, A_CONSTANT}},
+    {KEST_OP_SUB_I_NARROW_C, {A_NUMBER, A_CONSTANT}},
+    {KEST_OP_MUL_I_NARROW_C, {A_NUMBER, A_CONSTANT}},
+    {KEST_OP_ADD_I_NARROW_K, {A_NUMBER, A_SLOT, A_CONSTANT}},
+    {KEST_OP_SUB_I_NARROW_K, {A_NUMBER, A_SLOT, A_CONSTANT}},
+    {KEST_OP_MUL_I_NARROW_K, {A_NUMBER, A_SLOT, A_CONSTANT}},
     {KEST_OP_ROTATE, {A_NUMBER}},
     {KEST_OP_POPN, {A_NUMBER}},
     {KEST_OP_POP, {NO_OPERAND}},
@@ -1377,6 +1419,36 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
             fault(lower, span, "this is arithmetic with no instruction");
             return;
         }
+        // A division by a constant, of a local or of what is on the stack.
+        // What it refuses it still refuses: the machine asks of the constant
+        // what it asked of the operand. See D1168.
+        if (fusing() && (does == KEST_OP_MOD_I || does == KEST_OP_DIV_I)) {
+            uint16_t slot = 0;
+            uint16_t which = 0;
+            if (local_and_constant_before(lower, &slot, &which)) {
+                if (lower->chunk->fused_slots < 2) {
+                    lower->chunk->fused_slots = 2;
+                }
+                take_back(lower);
+                emit(lower, does == KEST_OP_MOD_I ? KEST_OP_MOD_I_K
+                                                  : KEST_OP_DIV_I_K,
+                     span);
+                emit_u16(lower, slot, span);
+                emit_u16(lower, which, span);
+                return;
+            }
+            if (one_operand_before(lower, KEST_OP_CONST, &which)) {
+                if (lower->chunk->fused_slots < 1) {
+                    lower->chunk->fused_slots = 1;
+                }
+                take_back(lower);
+                emit(lower, does == KEST_OP_MOD_I ? KEST_OP_MOD_I_C
+                                                  : KEST_OP_DIV_I_C,
+                     span);
+                emit_u16(lower, which, span);
+                return;
+            }
+        }
         emit(lower, does, span);
         return;
     }
@@ -1387,6 +1459,31 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
             does = fused_with_narrow(lower->last_op);
             if (does != KEST_OP_NARROW) {
                 take_back(lower);
+                // And the constant the arithmetic had for its right side, of
+                // a local or of what is on the stack. See D1168.
+                uint16_t slot = 0;
+                uint16_t which = 0;
+                if (local_and_constant_before(lower, &slot, &which)) {
+                    if (lower->chunk->fused_slots < 2) {
+                        lower->chunk->fused_slots = 2;
+                    }
+                    take_back(lower);
+                    emit(lower, by_a_constant(does, true), span);
+                    emit_u16(lower, op->imm[0], span);
+                    emit_u16(lower, slot, span);
+                    emit_u16(lower, which, span);
+                    return;
+                }
+                if (one_operand_before(lower, KEST_OP_CONST, &which)) {
+                    if (lower->chunk->fused_slots < 1) {
+                        lower->chunk->fused_slots = 1;
+                    }
+                    take_back(lower);
+                    emit(lower, by_a_constant(does, false), span);
+                    emit_u16(lower, op->imm[0], span);
+                    emit_u16(lower, which, span);
+                    return;
+                }
             }
         }
         emit(lower, does, span);

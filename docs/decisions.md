@@ -40372,3 +40372,41 @@ Every example answers the same fused, plain, unoptimized and under the build
 that checks itself, and the workloads fused and plain. `kernel` has come from
 1.111 thousand million to 0.865 in three steps, 22 per cent, against Luau's
 interpreter's 1.006.
+
+## D1168 — Whole-number arithmetic with a constant on its right is one instruction
+
+*measured*. `control` was 40.9 million instructions of the machine and the two
+commonest pairs in it were a constant fed straight into arithmetic: `const`
+and `mod.i` three million times -- `(at + round) % 7` -- and `load.k` and
+`mul.i.narrow` two million -- `at * 3`. Luau has an instruction for each of
+those shapes; this machine had none. Ten now: `mod.i` and `div.i` by a
+constant, of what is on the stack (`.c`) or of a local (`.k`), and the
+narrowing `add`, `sub` and `mul` the same two ways, carrying the kind the
+answer is cut to. A division by a constant still refuses nought, with the words
+the operand form says. They are made where the arithmetic already is, the
+narrowing ones where the cut is taken into the arithmetic, looking one further
+back through what D1167 made the lowering remember; `KEST_PLAIN` turns them off,
+and the narrowing ones may be carried. `count += 1` is still `add.k.self`: the
+store takes the `.k` form written back where it was read into it.
+
+The first version of the machine's cases asked, while running, which of their
+variants they were -- a local or the stack, an addition or a product -- and
+that ate what the dispatch saved: `control` ran fifteen per cent fewer of the
+machine's instructions and 1.5 per cent fewer of the host's. Written out one
+case an instruction, with the arithmetic a macro puts in each, it is ten per
+cent. The same was tried on `add.f.ll` and `sub.f.ll`, which it helped, and on
+`add.k.self` and `sub.k.self`, which it did not: those two written apart made
+`rules` five per cent slower in cycles for fewer instructions, weighed turn
+about against the build before, so they stay one case and say why.
+
+| workload | instructions before | after | cycles, turn about |
+| --- | --- | --- | --- |
+| kernel | 864,557,340 | 845,014,944 | -9.2 % |
+| control | 1,160,127,156 | 1,043,264,711 | level, +1.8 % and -1.9 % |
+| rules | 3,507,016,223 | 3,442,748,434 | level, -0.1 % |
+
+`control` divides in every turn, and the division is most of what it waits for,
+so fewer instructions did not make it fewer cycles. It is 1.08 times Luau's
+interpreter in instructions, where it was 1.20. The frame step the reference
+counts is thirty instructions; a hop of the instrument's loop, whose own work
+is `i % 64`, is four.

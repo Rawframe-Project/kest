@@ -118,7 +118,7 @@ optionals; functions as values; one body written for many types, a copy
 compiled per set; `defer`; `match`; `for` and `while`; the `no.alloc`,
 `no.host` and `deterministic` promises, proved by the compiler rather than
 trusted; a `scratch { }` block whose working memory goes back where it was, and
-which the compiler proves nothing escapes from; a bytecode VM of 199
+which the compiler proves nothing escapes from; a bytecode VM of 209
 instructions, one of which nothing compiles to and a debugger writes; diagnostics with stable codes,
 spans, notes, suggested fixes and `--json`, all of a file's mistakes in one
 pass, with the shape of every object a command writes versioned; one canonical

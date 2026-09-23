@@ -1220,6 +1220,11 @@ static const Instruction INSTRUCTIONS[] = {
     {"jump.true.eq.f.k", FIND}, {"jump.true.ne.f.k", FIND},
     {"add.f.ll", U16_U16_U16}, {"sub.f.ll", U16_U16_U16},
     {"index.to.ll", U16_X4}, {"elem.from.ll", U16_X5},
+    {"mod.i.c", U16}, {"mod.i.k", U16_U16},
+    {"div.i.c", U16}, {"div.i.k", U16_U16},
+    {"add.i.narrow.c", U16_U16}, {"add.i.narrow.k", U16_U16_U16},
+    {"sub.i.narrow.c", U16_U16}, {"sub.i.narrow.k", U16_U16_U16},
+    {"mul.i.narrow.c", U16_U16}, {"mul.i.narrow.k", U16_U16_U16},
     {"loop", BACK},
 {"next.less.i", WALK}, {"next.less.u", WALK},
     {"scratch", U16},      {"unscratch", U16},
@@ -1731,6 +1736,16 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_ELEM_FROM:
     case KEST_OP_INDEX_TO_LL:
     case KEST_OP_ELEM_FROM_LL:
+    case KEST_OP_MOD_I_C:
+    case KEST_OP_MOD_I_K:
+    case KEST_OP_DIV_I_C:
+    case KEST_OP_DIV_I_K:
+    case KEST_OP_ADD_I_NARROW_C:
+    case KEST_OP_ADD_I_NARROW_K:
+    case KEST_OP_SUB_I_NARROW_C:
+    case KEST_OP_SUB_I_NARROW_K:
+    case KEST_OP_MUL_I_NARROW_C:
+    case KEST_OP_MUL_I_NARROW_K:
     case KEST_OP_ADD_I_NARROW_TO:
     case KEST_OP_SUB_I_NARROW_TO:
     case KEST_OP_ADD_F_TO:

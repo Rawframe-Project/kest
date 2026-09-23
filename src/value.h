@@ -366,6 +366,21 @@ typedef enum {
     // `world[at] = one` a frame walks a world with. See D1167.
     KEST_OP_INDEX_TO_LL, // u16 layout, u16 slot, u16 run, u16 index
     KEST_OP_ELEM_FROM_LL, // u16 offset, u16 layout, u16 slot, u16 run, u16 index
+    // Whole-number arithmetic with a constant for its right side: on what is
+    // on the stack (`.c`, `const` and the arithmetic) or on a local (`.k`,
+    // `load.k` and the arithmetic), which is every `% 7`, `* 3` and `+ 1` a
+    // rule works a number out with. The narrowing ones carry the kind the
+    // answer is cut to. See D1168.
+    KEST_OP_MOD_I_C, // u16 constant
+    KEST_OP_MOD_I_K, // u16 slot, u16 constant
+    KEST_OP_DIV_I_C,
+    KEST_OP_DIV_I_K,
+    KEST_OP_ADD_I_NARROW_C, // u16 kind, u16 constant
+    KEST_OP_ADD_I_NARROW_K, // u16 kind, u16 slot, u16 constant
+    KEST_OP_SUB_I_NARROW_C,
+    KEST_OP_SUB_I_NARROW_K,
+    KEST_OP_MUL_I_NARROW_C,
+    KEST_OP_MUL_I_NARROW_K,
     KEST_OP_LOOP,        // u16 backward offset
     // The whole of a counted walk's turn: add one to the count, compare it
     // with the limit beside it, and go back while it is less. The test is at

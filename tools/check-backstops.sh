@@ -6000,7 +6000,7 @@ fn main() -> i32 {
         # number. See D915.
         "what": "a frame step's instructions written down and not measured",
         "file": "docs/language.md",
-        "from": """**thirty-one instructions**""",
+        "from": """**thirty instructions**""",
         "to": """**forty instructions**""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",
@@ -6062,7 +6062,7 @@ anywhere, and it is why the gate holds""",
         # is the one a reader would most like to be able to trust. See D917.
         "what": "what a crossing runs written down and not measured",
         "file": "docs/language.md",
-        "from": """**eight instructions**""",
+        "from": """**seven instructions**""",
         "to": """**twelve instructions**""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",

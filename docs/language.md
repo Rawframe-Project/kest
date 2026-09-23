@@ -5693,12 +5693,12 @@ and `KEST_DEEP=1` makes it say so. Run at two step counts and two entity
 counts and take the difference of the differences — a world is built once
 however many rounds there are, and a round has a loop of its own however many
 entities are in it — and what is left says that
-a frame step an entity is **thirty-one instructions**, of which one is
-`load.k`, four are `load`, two are `load2`, three are `load.n`, three are
-`store` and two are `store.n` — fifteen of the thirty-one, near enough
-half, move a value onto the stack or off it. The
+a frame step an entity is **thirty instructions**, of which four are
+`load`, two are `load2`, three are `load.n`, three are `store` and two are
+`store.n` — fourteen of the thirty, near enough half, move a value onto the
+stack or off it. The
 arithmetic is six: two `mul.f32`, two `add.f32`, one `add.k.self` and one
-`sub.i.narrow`. That is what a stack machine is, and it is where the next thing
+`sub.i.narrow.k`. That is what a stack machine is, and it is where the next thing
 to be gone after was found: it was fifty-seven instructions before `load.k` and
 `load2` took the two commonest pairs of pushes and made each of them one
 instruction, and what that bought is in D961. It was forty-six until an element
@@ -5714,10 +5714,12 @@ from one helper to the next is put where the second reads it. It was
 thirty-seven until a float local weighed against a constant was one
 instruction with the jump that reads it, both ways round (D1165), and
 thirty-three until the element read out of the world and written back were
-each one instruction with the run and the index they were read by (D1167).
+each one instruction with the run and the index they were read by (D1167), and
+thirty-one until `one.health - 1` read the local and the constant where they
+are (D1168).
 
 Counting them is not free, and what it costs is the other number this build
-says: over those thirty-one instructions it asks its own compiler
+says: over those thirty instructions it asks its own compiler
 **forty-two questions** about what it is about to do — whose slots these are, whose
 constants, whether what a frame holds is the shape the chunk was declared with.
 That is the machine holding itself to what it was handed rather than trusting
@@ -5738,14 +5740,15 @@ is the crossing.
 19 ns for a call and 25 ns for a crossing, which is 6 ns more, best of 7 over 1000000 calls, spread 3%
 ```
 
-Counted rather than timed, a turn of that loop is **eight instructions** when
-it calls a function of the program and **seven** when it crosses out. The dearer
+Counted rather than timed, a turn of that loop is **seven instructions** when
+it calls a function of the program and **six** when it crosses out. The dearer
 one runs one fewer: a crossing out is one instruction that does a great deal,
 and a body as small as `inside` is not called at all but carried to where it is
 called, so what is left of the call is the argument put where the body reads it
 and the body's own `load`. It was nine, and the call was `call`, the frame
-written between them and the callee's own `load` and `return`, until D1156; the
-nanoseconds above were taken before that. It is the clearest case on this page
+written between them and the callee's own `load` and `return`, until D1156, and
+both were one more until `i % 64` divided by the constant where it is (D1168);
+the nanoseconds above were taken before either. It is the clearest case on this page
 of a duration and a count disagreeing, and it is why both are printed rather
 than either alone — reading the count as though it were the time would have you
 move work across the boundary to save an instruction and pay six nanoseconds for
@@ -5762,15 +5765,18 @@ check and the optional it comes back in.
 10 ns for a hop of the loop, 12 ns with an index read and 31 ns with a read through a reference, which is 19 ns more, best of 7 over 200000 reads, spread 14%
 ```
 
-Counted the same way, a hop of that loop is **five instructions**, an index
-read is **five** and a read through a reference is **ten** — **nought** more
-than the hop for the index and five more for the reference. The five are what a
-reference is: the place it names, the stamp held against the one in the store,
-and the optional the answer comes back in, which is a branch whether or not it
-is nothing. It was eleven until the walk read each reference out of its array
-in one instruction, the way the index walk reads its numbers (D1166). The index read costs nothing over the hop because reading a field
-of an element is one instruction; it was two until D1044, and the nanoseconds
-in the paragraph above were taken before that.
+Counted the same way, a hop of that loop is **four instructions**, an index
+read is **five** and a read through a reference is **ten** — **one** more
+than the hop for the index and six more for the reference. The hop's own work
+is `i % 64` added to a total, which divides by the constant where it is since
+D1168; the index walk reads a field of an element instead, which is one
+instruction, and that is the one. The six are that one and what a reference is:
+the place it names, the stamp held against the one in the store, and the
+optional the answer comes back in, which is a branch whether or not it is
+nothing. The reference read was eleven until the walk read each reference out
+of its array in one instruction, the way the index walk reads its numbers
+(D1166). Reading a field of an element was two instructions until D1044, and
+the nanoseconds in the paragraph above were taken before that.
 
 The first of those three is what the other two are measured against, and it is
 the one worth reading first: a hop of a `for` is ten nanoseconds here, so a read
@@ -5793,7 +5799,7 @@ one `kest_call`.
 
 This is the one of the four the machine cannot count about itself. What it can
 say is what it did: a crossing in runs **two instructions** of the program and
-**three** of its questions, against **eight** and **eight** for a turn of that
+**three** of its questions, against **seven** and **eight** for a turn of that
 loop. Fifteen nanoseconds for two instructions and eighteen for what was eleven
 before the call in the loop was carried (D1156) — which
 means almost all of what a crossing in costs is outside anything the machine
@@ -6354,7 +6360,7 @@ bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 577 lines:
-55860 bytes as tokens, 136241 as a tree, 174904 checked and 207126 compiled.
+55860 bytes as tokens, 136241 as a tree, 174904 checked and 206614 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
 
@@ -6371,7 +6377,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 20701 bytes, against the 207126 it costs to compile.
+file and 20701 bytes, against the 206614 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.

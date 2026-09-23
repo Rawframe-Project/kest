@@ -846,7 +846,10 @@ def cuts_after_dividing(body, dividing):
     if printed is None:
         return None
     in_order = [printed[each] for each in sorted(printed)]
-    places = [i for i, (op, rest) in enumerate(in_order) if op == dividing]
+    # A division by a constant, of a local or of what is on the stack, is the
+    # same division written as one instruction. See D1168.
+    places = [i for i, (op, rest) in enumerate(in_order)
+              if op in (dividing, dividing + '.c', dividing + '.k')]
     if len(places) != 1:
         return None
     next_one = places[0] + 1

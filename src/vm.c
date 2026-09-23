@@ -2065,9 +2065,16 @@ static bool values_equal(const KestType *type, const KestValue *a,
             return false;                                                      \
         }                                                                      \
     } while (0)
+#define OWN_SLOT(slot)                                                         \
+    do {                                                                       \
+        if (!own_slots(vmp, frame, instruction, (slot), (slot) + 1u)) {         \
+            return false;                                                      \
+        }                                                                      \
+    } while (0)
 #else
 #define OWN_SLOT_AND_CONSTANT(slot, which) ((void)0)
 #define OWN_CONSTANT(which) ((void)0)
+#define OWN_SLOT(slot) ((void)0)
 #endif
 
 #define IN_RUN(index, count)                                                   \
@@ -4857,6 +4864,99 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                                    : left.integer % right.integer;
             break;
         }
+// Whole-number arithmetic with a constant on its right, written out one case
+// an instruction so that each is the arithmetic and nothing deciding which it
+// is: `LEFT` is the left side, `DOES` what is made of it. See D1168.
+#define BY_CONSTANT(LEFT, DOES)                                                \
+    do {                                                                       \
+        uint16_t which = READ_U16();                                           \
+        OWN_CONSTANT(which);                                                   \
+        MOVED(moved_held, sizeof(KestValue));                                  \
+        int64_t left = (LEFT);                                                 \
+        int64_t right = constants[which].integer;                              \
+        DOES;                                                                  \
+    } while (0)
+#define DIVIDED(QUOTIENT)                                                      \
+    do {                                                                       \
+        if (right == 0) {                                                      \
+            fail(vmp, frame, instruction, "K0601", "division by zero");        \
+            return false;                                                      \
+        }                                                                      \
+        (top++)->integer = left == INT64_MIN && right == -1                    \
+                               ? ((QUOTIENT) ? INT64_MIN : 0)                  \
+                           : (QUOTIENT) ? left / right                         \
+                                        : left % right;                        \
+    } while (0)
+#define CUT(KIND, MADE)                                                        \
+    ((top++)->integer = kest_narrow_to((KIND), (int64_t)(MADE)))
+        case KEST_OP_MOD_I_C:
+            BY_CONSTANT((--top)->integer, DIVIDED(false));
+            break;
+        case KEST_OP_DIV_I_C:
+            BY_CONSTANT((--top)->integer, DIVIDED(true));
+            break;
+        case KEST_OP_MOD_I_K: {
+            uint16_t slot = READ_U16();
+            OWN_SLOT(slot);
+            MOVED(moved_loaded, sizeof(KestValue));
+            BY_CONSTANT(mine[slot].integer, DIVIDED(false));
+            break;
+        }
+        case KEST_OP_DIV_I_K: {
+            uint16_t slot = READ_U16();
+            OWN_SLOT(slot);
+            MOVED(moved_loaded, sizeof(KestValue));
+            BY_CONSTANT(mine[slot].integer, DIVIDED(true));
+            break;
+        }
+        case KEST_OP_ADD_I_NARROW_C: {
+            uint16_t kind = READ_U16();
+            BY_CONSTANT((--top)->integer,
+                        CUT(kind, (uint64_t)left + (uint64_t)right));
+            break;
+        }
+        case KEST_OP_SUB_I_NARROW_C: {
+            uint16_t kind = READ_U16();
+            BY_CONSTANT((--top)->integer,
+                        CUT(kind, (uint64_t)left - (uint64_t)right));
+            break;
+        }
+        case KEST_OP_MUL_I_NARROW_C: {
+            uint16_t kind = READ_U16();
+            BY_CONSTANT((--top)->integer,
+                        CUT(kind, (uint64_t)left * (uint64_t)right));
+            break;
+        }
+        case KEST_OP_ADD_I_NARROW_K: {
+            uint16_t kind = READ_U16();
+            uint16_t slot = READ_U16();
+            OWN_SLOT(slot);
+            MOVED(moved_loaded, sizeof(KestValue));
+            BY_CONSTANT(mine[slot].integer,
+                        CUT(kind, (uint64_t)left + (uint64_t)right));
+            break;
+        }
+        case KEST_OP_SUB_I_NARROW_K: {
+            uint16_t kind = READ_U16();
+            uint16_t slot = READ_U16();
+            OWN_SLOT(slot);
+            MOVED(moved_loaded, sizeof(KestValue));
+            BY_CONSTANT(mine[slot].integer,
+                        CUT(kind, (uint64_t)left - (uint64_t)right));
+            break;
+        }
+        case KEST_OP_MUL_I_NARROW_K: {
+            uint16_t kind = READ_U16();
+            uint16_t slot = READ_U16();
+            OWN_SLOT(slot);
+            MOVED(moved_loaded, sizeof(KestValue));
+            BY_CONSTANT(mine[slot].integer,
+                        CUT(kind, (uint64_t)left * (uint64_t)right));
+            break;
+        }
+#undef BY_CONSTANT
+#undef DIVIDED
+#undef CUT
         case KEST_OP_DIV_U:
         case KEST_OP_MOD_U: {
             KestValue right = *--top;
@@ -5003,6 +5103,10 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             break;
         }
         // A local moved by a constant where it is. See D1155.
+        // One case for both ways round, which is measured rather than
+        // preferred: the two written apart made `rules` five per cent slower
+        // in cycles for fewer instructions, where the compiler put the rest
+        // of the loop. See D1168.
         case KEST_OP_ADD_K_SELF:
         case KEST_OP_SUB_K_SELF: {
             uint8_t which_way = *instruction;
@@ -5049,26 +5153,26 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             mine[slot].real = left.real + right.real;
             break;
         }
+// Two float locals made into a third, one case each way round. See D1166.
+#define TWO_LOCALS(OP)                                                         \
+    do {                                                                       \
+        uint16_t slot = READ_U16();                                            \
+        uint16_t first = READ_U16();                                           \
+        uint16_t second = READ_U16();                                          \
+        OWN_SLOT(slot);                                                        \
+        OWN_SLOT(first);                                                       \
+        OWN_SLOT(second);                                                      \
+        MOVED(moved_loaded, 2 * sizeof(KestValue));                            \
+        MOVED(moved_stored, sizeof(KestValue));                                \
+        mine[slot].real = mine[first].real OP mine[second].real;               \
+    } while (0)
         case KEST_OP_ADD_F_LL:
-        case KEST_OP_SUB_F_LL: {
-            uint16_t slot = READ_U16();
-            uint16_t first = READ_U16();
-            uint16_t second = READ_U16();
-#if KEST_CHECKED
-            if (!own_slots(vmp, frame, instruction, slot, slot + 1u) ||
-                !own_slots(vmp, frame, instruction, first, first + 1u) ||
-                !own_slots(vmp, frame, instruction, second, second + 1u)) {
-                return false;
-            }
-#endif
-            MOVED(moved_loaded, 2 * sizeof(KestValue));
-            MOVED(moved_stored, sizeof(KestValue));
-            double left = mine[first].real;
-            double right = mine[second].real;
-            mine[slot].real = *instruction == KEST_OP_ADD_F_LL ? left + right
-                                                               : left - right;
+            TWO_LOCALS(+);
             break;
-        }
+        case KEST_OP_SUB_F_LL:
+            TWO_LOCALS(-);
+            break;
+#undef TWO_LOCALS
         case KEST_OP_SUB_F_TO: {
             uint16_t slot = READ_U16();
             KestValue right = *--top;

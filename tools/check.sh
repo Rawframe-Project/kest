@@ -3299,9 +3299,18 @@ else:
                      if name.startswith("jump.false.")
                      and name.endswith(".c"))
     moves_self = ran.get("add.k.self", 0) + ran.get("sub.k.self", 0)
+    # And the arithmetic with a constant on its right, on a local or on what
+    # is on the stack. See D1168.
+    works_local = sum(ran.get(name, 0) for name in (
+        "mod.i.k", "div.i.k", "add.i.narrow.k", "sub.i.narrow.k",
+        "mul.i.narrow.k"))
+    works_top = sum(ran.get(name, 0) for name in (
+        "mod.i.c", "div.i.c", "add.i.narrow.c", "sub.i.narrow.c",
+        "mul.i.narrow.c"))
     want = (slots * ran.get("load", 0) + 2 * slots * ran.get("load2", 0)
             + slots * ran.get("load.k", 0) + slots * weighs_local
             + slots * moves_self + 2 * slots * ran.get("index.ll", 0)
+            + slots * works_local
             + 2 * slots * (ran.get("add.f.ll", 0) + ran.get("sub.f.ll", 0)
                            + ran.get("index.to.ll", 0)
                            + ran.get("elem.from.ll", 0)))
@@ -3319,7 +3328,7 @@ else:
     want = slots * (ran.get("const", 0) + ran.get("true", 0)
                     + ran.get("false", 0) + ran.get("load.k", 0)
                     + ran.get("store.k", 0) + moves_self + weighs_local
-                    + weighs_top)
+                    + weighs_top + works_local + works_top)
     if moved.get("held") != want:
         print("it held out %s byte(s) and ran the instructions for %s"
               % (moved.get("held"), want))

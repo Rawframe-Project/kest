@@ -41151,3 +41151,19 @@ See D1167.
 **Runs:** every example fused, plain, unoptimized and checked, the five
 workloads fused and plain with `perf stat`, the helped and written-out frames
 read side by side, `check-costs.sh`, and `make most`.
+
+## 2026-09-23, arithmetic with a constant on its right
+
+Ten instructions for a whole number divided, added to, taken from or
+multiplied by a constant, of a local or of what is on the stack. The first
+version's cases asked which variant they were while running and gave back most
+of what was saved; one case an instruction is ten per cent off `control`. One
+split was measured and undone: `add.k.self` and `sub.k.self` written apart made
+`rules` five per cent slower in cycles.
+
+See D1168.
+
+**Runs:** every example fused, plain and checked, the five workloads fused and
+plain, `perf stat` instructions and cycles turn about against the build before
+on three workloads and three variants, the two holes the figures moved run by
+hand, and `make most`.
