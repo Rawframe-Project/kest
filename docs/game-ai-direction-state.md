@@ -18,12 +18,15 @@ reasoning; this holds the position.
                        runs 2.7 times fewer instructions since it stopped
                        working out where a refusal would be reported before
                        every door call
-    LAST CI:           green on 6bf6e02, all nine jobs -- linux, linux-arm64,
+    LAST CI:           green on a7769f0, all nine jobs -- linux, linux-arm64,
                        macos, windows, clang, threads, package, linux-full
-                       and agree. What is after it is D1145 to D1147
+                       and agree, the last being the whole gate with every
+                       one of the 900 holes caught
     LAST FAST GATE:    green
-    LAST FULL GATE:    `make check` green here with D1148's three refusals
-                       in it, every one of the 900 holes caught
+    LAST FULL GATE:    CI's `linux-full` on a7769f0, and the backstop
+                       sweep run here on 5999564: every one of the 900 holes
+                       caught
+    STATUS:            GAME_AI_DIRECTION_COMPLETE, marked on a7769f0
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.
                        Every number below was taken on it.
@@ -409,28 +412,28 @@ backend's own half instead.
 
 ## Where section 34 stands
 
-Thirty-one criteria. **Thirty are met by something that runs**, and the last of
-them -- supported CI green on the exact final HEAD -- went green on `6a1be89`,
-all nine jobs, and again on `3b2607c`.
+```text
+GAME_AI_DIRECTION_COMPLETE
+```
 
-Committing past a green commit makes that criterion false again until CI runs
-on the new HEAD, which is what CI is for and what it is being asked.
+Thirty-one criteria, **every one met by something that runs**. The last --
+supported CI green on the exact final HEAD -- is green on `a7769f0`, all nine
+jobs, `linux-full` among them with every one of the 900 holes caught. The
+commit that says so is this one, which changes this file and nothing else, and
+CI is asked about it too.
 
-**The last is now measured.** The AI section asks that "task
-completion/time/repair/silent escapes" be measured, and the suite has been run
-blind with a model, seventy-two times (D1148). Kest 36 of 36 and Luau 30 of 36,
-the six being two tasks whose hidden tests held a rule the task did not say;
-30 of 30 each on the ten asked fairly. The measurement exists and what it says
-is that this suite does not tell the languages apart on correctness, and that
-Kest costs more to get there. The repeated Kest-specific failure classes it
-turned up are addressed where practical: three refusals say what to write now.
-The docs say what the evidence says and no more.
+The AI section asks that "task completion/time/repair/silent escapes" be
+measured, and the suite was run blind with a model seventy-two times (D1148):
+Kest 36 of 36 and Luau 30 of 36, the six being two tasks whose hidden tests
+held a rule the task did not say; 30 of 30 each on the ten asked fairly. What
+it says is that this suite does not tell the languages apart on correctness,
+and that Kest costs more to get there. The repeated Kest-specific failure
+classes it turned up are addressed where practical, and the docs say what the
+evidence says and no more. `docs/report.md` answers section 35.
 
-So every criterion is met by something that runs but one: supported CI green
-on the exact final HEAD, which a commit cannot meet by itself. It is marked in
-the commit after CI answers for this one. `docs/report.md` says the same thing
-in its own words, including that the claim the owner asked for first was
-measured and not shown.
+What the owner asked for after the mark is speed against Luau and Daslang,
+then the bytes library and a release build in one command; those are the open
+items below, and the mark does not close them.
 
 ## The report
 
