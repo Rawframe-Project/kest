@@ -41705,3 +41705,16 @@ See D1204.
 instruction; the trial best of nine turn about with the carry and without;
 the five workloads' instructions both ways; `make fast`.
 
+## 2026-09-23, a question that jumps over a jump asks the other way
+
+`if ... { continue }` was a conditional jump over a jump; the optimizer turns
+the question round and drops the jump. The colony's trial is 1.3 to 3.2%
+fewer cycles; the five workloads are level.
+
+See D1205.
+
+**Runs:** the colony's search read instruction by instruction; the trial
+best of eleven turn about and the five workloads best of five, against the
+commit built twice to the same bytes; two wrong versions, one refused by
+`make fast` and one only by `make most`; and `make most`.
+

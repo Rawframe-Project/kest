@@ -41427,3 +41427,32 @@ an `if` chain to work out, a bounds test and a mark. What the machine could
 do about it is what it does about every loop, and nothing here is specific to
 it.
 
+## D1205 — A question whose answer jumps over a jump asks the other way
+
+*measured*. Read for its instructions, the colony's breadth-first search had
+the same pair three times in its inner loop: `jump.false.eq.i 3` over a
+`jump 123` -- `if s.seen[next] == turn { continue }`. The way out, which is
+the way a search mostly goes once most of the map is seen, was two
+dispatches; one question asked the other way round goes straight there.
+Every `if ... { continue }` and `{ break }` a program writes was the same.
+
+So the IR's optimizer turns an `ask` that lands just past the `go` after it
+into one that lands where the `go` did, and the `go` is gone. Where what it
+asks is a comparison nothing else reads, the comparison is turned round in
+place -- a whole number's `<` is its `>=`, `<=` is `>`, and `==` of anything
+is `!=` -- so the lowering's fused forms against a local or a constant stay
+one instruction; a float's `<` is not turned round, NaN being neither, and is
+asked the other way instead, as is a truth read out of a local. A `go`
+anything else lands on stays, because what arrives there has nowhere else to
+go: the `||` in front of a `continue` is that, and keeps its pair.
+
+The colony's trial, best of eleven turn about against the commit built twice
+to the same bytes: 508.7 M cycles against 525.6 M, 522 M against 529 M in the
+middle, at 1,230 M instructions against 1,235 M. The five workloads are
+level; their loops have no such `if`. It is held the way the optimizer is,
+by every example and every fuzzed program run with it and without
+(`KEST_NOOPT`). Written wrong on purpose -- the ask left the way it asked --
+`make fast` refused with `examples/frame.kest`; with `<` turned into `>`
+rather than `>=`, `make fast` passed and `make most` refused, with
+`examples/engine` finding its ring came back round in -8 steps.
+

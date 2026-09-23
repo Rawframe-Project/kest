@@ -223,7 +223,9 @@ says why. The other was bulk text append and it is done.
   asked to be inlined, compiled `rules` 8% and `control` 15% fewer cycles
   (D1202). Taken again at `7769f7c1`, compiled `rules` is 1.17 times
   daslang's AOT (D1203). The colony's trial is 42% its breadth-first search;
-  carrying a helper across files saved no cycles and is not kept (D1204). `control` is 0.98 once its
+  carrying a helper across files saved no cycles and is not kept (D1204). A
+  question that jumps over a jump asks the other way, and the trial is 1.3
+  to 3.2% fewer cycles (D1205). `control` is 0.98 once its
   rule is carried (D1175), and `rules` 0.99 once
   a value is moved a run of its pieces at a time (D1177) and an element is
   weighed against a constant in one instruction (D1178): every workload here

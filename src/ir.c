@@ -1212,6 +1212,78 @@ static bool count_what_there_is(KestIrProgram *program, const KestIrBody *body,
 // Reads one body, counts what is there when somebody asked, and changes what
 // it has been told to change. Answers false only when it ran out of room; a
 // body it cannot improve is one it leaves alone.
+// A branch over a branch: `if` something `{ continue }` is a question whose
+// answer jumps past a jump, and the way out took two of them where one asking
+// the other way round goes straight there. The question is turned round where
+// it is asked -- a whole number's `<` is its `>=`, and anything's `==` its
+// `!=` -- so what the lowering makes one instruction of stays one, and asked
+// the other way where it cannot be. Nothing may land on the jump that goes,
+// because something arriving there would have had nowhere to go. See D1205.
+static KestIrKind turned_round(const KestIrOp *compare) {
+    bool ordered = compare->type != NULL && !kest_is_float(compare->type) &&
+                   !kest_is_a_run(compare->type) &&
+                   compare->type->tag != KEST_T_TEXT;
+    switch ((KestIrKind)compare->kind) {
+    case KEST_IR_EQ:
+        return KEST_IR_NE;
+    case KEST_IR_NE:
+        return KEST_IR_EQ;
+    case KEST_IR_LT:
+        return ordered ? KEST_IR_GE : KEST_IR_OP_COUNT;
+    case KEST_IR_GE:
+        return ordered ? KEST_IR_LT : KEST_IR_OP_COUNT;
+    case KEST_IR_LE:
+        return ordered ? KEST_IR_GT : KEST_IR_OP_COUNT;
+    case KEST_IR_GT:
+        return ordered ? KEST_IR_LE : KEST_IR_OP_COUNT;
+    default:
+        return KEST_IR_OP_COUNT;
+    }
+}
+
+static void jump_straight_out(KestIrBody *body) {
+    for (uint32_t i = 0; i + 2 < body->op_count; i++) {
+        KestIrOp *ask = &body->ops[i];
+        KestIrOp *go = &body->ops[i + 1];
+        if (ask->kind != KEST_IR_ASK || ask->imm[2] != 0 ||
+            ask->target != i + 2 || ask->arg_count != 1 ||
+            go->kind != KEST_IR_GO || go->target <= i + 2 ||
+            go->target >= body->op_count) {
+            continue;
+        }
+        bool landed = false;
+        for (uint32_t k = 0; k < body->op_count && !landed; k++) {
+            const KestIrOp *one = &body->ops[k];
+            landed = (one->kind == KEST_IR_GO || one->kind == KEST_IR_ASK ||
+                      one->kind == KEST_IR_NEXT ||
+                      one->kind == KEST_IR_SEEK_FROM ||
+                      one->kind == KEST_IR_SEEK_NEXT) &&
+                     one->target == i + 1;
+        }
+        if (landed) {
+            continue;
+        }
+        KestIrRef asked = body->args[ask->first_arg];
+        KestIrOp *compare = NULL;
+        for (uint32_t k = i; k > 0; k--) {
+            if (body->ops[k - 1].dest == asked) {
+                compare = &body->ops[k - 1];
+                break;
+            }
+        }
+        KestIrKind other = compare == NULL ? KEST_IR_OP_COUNT
+                                           : turned_round(compare);
+        if (other != KEST_IR_OP_COUNT && asked < body->value_count &&
+            body->values[asked].read_by == i) {
+            compare->kind = (uint16_t)other;
+        } else {
+            ask->imm[1] = ask->imm[1] != 0 ? 0 : 1;
+        }
+        ask->target = go->target;
+        go->kind = KEST_IR_NOTHING;
+    }
+}
+
 static bool optimize(KestIrProgram *program, KestIrBody *body,
                      KestIrFound *found) {
     if (found != NULL && program->say_found != NULL &&
@@ -1248,5 +1320,6 @@ static bool optimize(KestIrProgram *program, KestIrBody *body,
             return false;
         }
     }
+    jump_straight_out(body);
     return true;
 }
