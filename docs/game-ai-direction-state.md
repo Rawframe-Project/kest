@@ -15,14 +15,12 @@ reasoning; this holds the position.
                        interpreter on four of five and 4% behind on `rules`
                        on a quiet machine, and retires fewer instructions on
                        all five (D1190)
-    LAST CI:           green on 710ea66a, all nine jobs -- linux,
+    LAST CI:           green on 627cecf9, all nine jobs -- linux,
                        linux-arm64, macos, windows, clang, threads, package,
                        linux-full and agree, the last being the whole gate
                        with every hole caught
     LAST FAST GATE:    green
-    LAST FULL GATE:    CI's `linux-full` on 710ea66a, and the backstop sweep
-                       run here on 0dade8f1: every one of the 902 holes
-                       caught
+    LAST FULL GATE:    CI's `linux-full` on 627cecf9, every hole caught
     STATUS:            GAME_AI_DIRECTION_COMPLETE, marked on a7769f0
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.
