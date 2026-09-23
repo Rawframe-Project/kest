@@ -41570,3 +41570,30 @@ rarely has one. The first is caught by `examples/engine`; the second by
 `check-dead.sh`, because nothing emits `jump.false.ge.c` then. Neither by
 `make fast`.
 
+## D1211 — Every comparison, in every form it is made one instruction in, asked on its edge
+
+D1210 wrote down two miscompilations nothing quick refused: `>=` against a
+constant on the stack fused as `>`, and D1205's `<` turned round into `>`
+rather than `>=`. `make fast` passed both, and so did the fold over fuzzed
+programs, because a comparison fused as its neighbour differs from the one
+written only where its two sides are equal, and nothing asked any of them
+there. The one set of comparisons that did was D1178's elements against a
+constant.
+
+`examples/numbers.kest` asks the rest: the six comparisons of a value against
+five, at four, five and six, as a local against a constant (`jump.false.*.k`),
+a value worked out on the stack against one (`.c`), two values (`.i`), a float
+against one (`.f.k`), and each as the `if` in front of a `continue`, which is
+D1205's shape and lowers to the `jump.true` forms. Each answers a bit a
+comparison that held, and `main` holds the patterns -- 35, 26 and 44 -- as
+numbers written in the file. The listing shows every one of those forms in
+the five functions.
+
+Both of D1210's miscompilations, put back on purpose, are now refused by
+`make fast` with `examples/numbers.kest` answering where it was not before.
+The first version asked the `continue` forms through `&&` and `||`, which is
+not the shape D1205's pass rewrites, and passed the second; each `continue`
+is behind its own comparison now. The reference's figure for how often the
+folder is asked of `examples/numbers.kest` moves with it, 113 of 527 where
+it was 113 of 507, which `check-docs.sh` read off a run.
+

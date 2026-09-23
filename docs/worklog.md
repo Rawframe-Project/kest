@@ -41782,3 +41782,16 @@ after, the three-way fold on the tree, two broken transformations against
 the old and the new fuzzer and against `make most`, the time of a pass, and
 `make most`.
 
+## 2026-09-24, every comparison asked on its edge
+
+`examples/numbers.kest` asks the six comparisons against five at four, five
+and six in every form the lowering fuses them into, and before a `continue`.
+The two miscompilations D1210 found nothing quick refusing are refused by
+`make fast` now.
+
+See D1211.
+
+**Runs:** the listing read for every fused form; the example run fused,
+plain and bare; both miscompilations put back, each refused by `make fast`;
+and `make most`.
+

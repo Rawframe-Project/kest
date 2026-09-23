@@ -629,6 +629,27 @@ fn main() -> i32 {
     if weighedInPlace(edges) != 111111 {
         return 90
     }
+    // Below, on and above five, in every form a comparison is made one
+    // instruction in: 35 is `<`, `<=` and `!=`; 26 is `<=`, `>=` and `==`;
+    // 44 is `>`, `>=` and `!=`. See D1211.
+    for v in 4..7 {
+        let want = if v == 4 -> 35 else -> if v == 5 -> 26 else -> 44
+        if againstLocal(v) != want {
+            return 95
+        }
+        if againstWorked(v, 3) != want {
+            return 96
+        }
+        if againstEach(v, 5) != want {
+            return 97
+        }
+        if passedOver(v) != 63 - want {
+            return 98
+        }
+        if realAgainst(f64(v)) != want {
+            return 99
+        }
+    }
 
     io.print("every width wraps at its own end, and {NARROW} is one of them")
     return 0
@@ -669,6 +690,152 @@ fn weighedInPlace(xs: [i32]) -> i32 {
         on * 10 +
         off -
         1
+}
+
+// Which of the six comparisons hold, a bit each -- `<` 1, `<=` 2, `>` 4, `>=`
+// 8, `==` 16, `!=` 32 -- asked of a value against five in every form the
+// lowering makes one instruction of: a local against a constant, a value
+// worked out on the stack against one, two values, and each turned round by
+// a `continue` after it, at below, on and above. A comparison fused as its
+// neighbour differs from the one written only where the two sides are equal,
+// which is what a program made at random rarely lands on. See D1211.
+fn againstLocal(v: i32) -> i32 no.alloc {
+    let bits = 0
+    if v < 5 {
+        bits += 1
+    }
+    if v <= 5 {
+        bits += 2
+    }
+    if v > 5 {
+        bits += 4
+    }
+    if v >= 5 {
+        bits += 8
+    }
+    if v == 5 {
+        bits += 16
+    }
+    if v != 5 {
+        bits += 32
+    }
+    return bits
+}
+
+fn againstWorked(v: i32, w: i32) -> i32 no.alloc {
+    let bits = 0
+    if v + w - w < 5 {
+        bits += 1
+    }
+    if v + w - w <= 5 {
+        bits += 2
+    }
+    if v + w - w > 5 {
+        bits += 4
+    }
+    if v + w - w >= 5 {
+        bits += 8
+    }
+    if v + w - w == 5 {
+        bits += 16
+    }
+    if v + w - w != 5 {
+        bits += 32
+    }
+    return bits
+}
+
+fn againstEach(v: i32, w: i32) -> i32 no.alloc {
+    let bits = 0
+    if v < w {
+        bits += 1
+    }
+    if v <= w {
+        bits += 2
+    }
+    if v > w {
+        bits += 4
+    }
+    if v >= w {
+        bits += 8
+    }
+    if v == w {
+        bits += 16
+    }
+    if v != w {
+        bits += 32
+    }
+    return bits
+}
+
+// The same six, each the way out of a turn: what is counted is where the
+// comparison did not hold, so the answer is the other bits.
+fn passedOver(v: i32) -> i32 no.alloc {
+    let bits = 0
+    let asked = 0
+    while asked < 6 {
+        asked += 1
+        if asked == 1 {
+            if v < 5 {
+                continue
+            }
+            bits += 1
+        }
+        if asked == 2 {
+            if v <= 5 {
+                continue
+            }
+            bits += 2
+        }
+        if asked == 3 {
+            if v > 5 {
+                continue
+            }
+            bits += 4
+        }
+        if asked == 4 {
+            if v >= 5 {
+                continue
+            }
+            bits += 8
+        }
+        if asked == 5 {
+            if v == 5 {
+                continue
+            }
+            bits += 16
+        }
+        if asked == 6 {
+            if v != 5 {
+                continue
+            }
+            bits += 32
+        }
+    }
+    return bits
+}
+
+fn realAgainst(v: f64) -> i32 no.alloc {
+    let bits = 0
+    if v < 5.0 {
+        bits += 1
+    }
+    if v <= 5.0 {
+        bits += 2
+    }
+    if v > 5.0 {
+        bits += 4
+    }
+    if v >= 5.0 {
+        bits += 8
+    }
+    if v == 5.0 {
+        bits += 16
+    }
+    if v != 5.0 {
+        bits += 32
+    }
+    return bits
 }
 
 // So many nines, written out one at a time.

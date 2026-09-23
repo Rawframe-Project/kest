@@ -233,7 +233,9 @@ says why. The other was bulk text append and it is done.
   hundred (D1208). Writing out a small constant walk would buy the colony's
   interpreted trial 5.7%, measured by hand and not built (D1209). The gate's
   fuzzed programs that compile went from 40 to 309 of 3,200 once the fuzzer
-  changes numbers (D1210). `control` is 0.98 once its
+  changes numbers (D1210). Every comparison is asked on its edge in every
+  fused form by `examples/numbers.kest`, which refuses both of D1210's
+  miscompilations (D1211). `control` is 0.98 once its
   rule is carried (D1175), and `rules` 0.99 once
   a value is moved a run of its pieces at a time (D1177) and an element is
   weighed against a constant in one instruction (D1178): every workload here
