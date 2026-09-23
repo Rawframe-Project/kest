@@ -60,6 +60,33 @@ fn into(b: Body, face: vec.Vec3) -> bool no.alloc {
 
 // Whether two vectors point the same way, which is the property a direction
 // has that a length does not: it does not depend on how long the vector was.
+// A position kept in `f64` and bounced between two walls, which is what a
+// simulation that cannot carry `f32`'s drift writes. The walls are weighed both
+// ways round, and what a step came to against the speed, because each is an
+// instruction of its own (D1165), and the step and what it came to are sums of
+// two locals (D1166).
+fn bounced(at: f64, speed: f64, steps: i32) -> f64 no.alloc {
+    let x = at
+    let v = speed
+    let wall: f64 = 10.0
+    let near: f64 = 0.0
+    for i in 0..steps {
+        let was = x
+        x += v
+        if x <= 0.0 || x >= wall {
+            v = 0.0 - v
+        }
+        if x >= 10.0 || x <= 0.5 {
+            near += 1.0
+        }
+        let moved = x - was
+        if moved <= v {
+            near += 0.25
+        }
+    }
+    return near * 100.0 + x
+}
+
 fn sameDirection(a: vec.Vec2, b: vec.Vec2) -> bool no.alloc {
     if let one = vec.direction(a) {
         if let two = vec.direction(b) {
@@ -284,6 +311,10 @@ fn main() -> i32 {
     }
     if damp(moving, 1.0, 0.5).velocity.x != 1.0 {
         return 19
+    }
+
+    if bounced(1.0, 3.0, 10) != 432.0 {
+        return 20
     }
 
     io.print("one second of falling, and the vectors kept their shape")

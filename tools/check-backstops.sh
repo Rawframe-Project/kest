@@ -6000,7 +6000,7 @@ fn main() -> i32 {
         # number. See D915.
         "what": "a frame step's instructions written down and not measured",
         "file": "docs/language.md",
-        "from": """**thirty-seven instructions**""",
+        "from": """**thirty-three instructions**""",
         "to": """**forty instructions**""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",
@@ -6075,7 +6075,7 @@ anywhere, and it is why the gate holds""",
         # what those come to is seven instructions over a bare hop. See D917.
         "what": "what a reference read runs written down and not measured",
         "file": "docs/language.md",
-        "from": """a read through a reference is **eleven**""",
+        "from": """a read through a reference is **ten**""",
         "to": """a read through a reference is **thirteen**""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",

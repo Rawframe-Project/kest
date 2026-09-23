@@ -1208,6 +1208,13 @@ static const Instruction INSTRUCTIONS[] = {
     {"jump.false.lt.c", WEIGH}, {"jump.false.le.c", WEIGH},
     {"jump.false.gt.c", WEIGH}, {"jump.false.ge.c", WEIGH},
     {"jump.false.eq.c", WEIGH}, {"jump.false.ne.c", WEIGH},
+    {"jump.false.lt.f.k", FIND}, {"jump.false.le.f.k", FIND},
+    {"jump.false.gt.f.k", FIND}, {"jump.false.ge.f.k", FIND},
+    {"jump.false.eq.f.k", FIND}, {"jump.false.ne.f.k", FIND},
+    {"jump.true.lt.f.k", FIND}, {"jump.true.le.f.k", FIND},
+    {"jump.true.gt.f.k", FIND}, {"jump.true.ge.f.k", FIND},
+    {"jump.true.eq.f.k", FIND}, {"jump.true.ne.f.k", FIND},
+    {"add.f.ll", U16_U16_U16}, {"sub.f.ll", U16_U16_U16},
     {"loop", BACK},
 {"next.less.i", WALK}, {"next.less.u", WALK},
     {"scratch", U16},      {"unscratch", U16},
@@ -1717,6 +1724,8 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_SUB_I_NARROW_TO:
     case KEST_OP_ADD_F_TO:
     case KEST_OP_SUB_F_TO:
+    case KEST_OP_ADD_F_LL:
+    case KEST_OP_SUB_F_LL:
     case KEST_OP_LOAD_SLOTS:
     case KEST_OP_STORE_SLOTS:
     case KEST_OP_OFFSET_ADDR:
@@ -1848,6 +1857,18 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_JUMP_FALSE_GT_C:
     case KEST_OP_JUMP_FALSE_GE_C:
     case KEST_OP_JUMP_FALSE_EQ_C:
+    case KEST_OP_JUMP_FALSE_LT_FK:
+    case KEST_OP_JUMP_FALSE_LE_FK:
+    case KEST_OP_JUMP_FALSE_GT_FK:
+    case KEST_OP_JUMP_FALSE_GE_FK:
+    case KEST_OP_JUMP_FALSE_EQ_FK:
+    case KEST_OP_JUMP_FALSE_NE_FK:
+    case KEST_OP_JUMP_TRUE_LT_FK:
+    case KEST_OP_JUMP_TRUE_LE_FK:
+    case KEST_OP_JUMP_TRUE_GT_FK:
+    case KEST_OP_JUMP_TRUE_GE_FK:
+    case KEST_OP_JUMP_TRUE_EQ_FK:
+    case KEST_OP_JUMP_TRUE_NE_FK:
     case KEST_OP_JUMP_FALSE_NE_C:
     case KEST_OP_LOOP:
     case KEST_OP_NEXT_LESS_I:
@@ -2163,7 +2184,9 @@ static uint32_t disassemble_one(const KestModule *module,
     const Instruction *instruction = &INSTRUCTIONS[op];
     // Wide enough for the longest name there is, so a number after one never
     // runs into it.
-    fprintf(out, "  %04u  %-16s", offset, instruction->name);
+    // A name as wide as the column still has a space after it.
+    fprintf(out, "  %04u  %-16s%s", offset, instruction->name,
+            strlen(instruction->name) >= 16 ? " " : "");
 
     switch (instruction->operands) {
     case NONE:

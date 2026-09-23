@@ -3293,7 +3293,7 @@ else:
     # ones that write a local write one: each is the pair it was made of.
     # See D1155.
     weighs_local = sum(count for name, count in ran.items()
-                       if name.startswith("jump.false.")
+                       if name.startswith("jump.")
                        and name.endswith(".k"))
     weighs_top = sum(count for name, count in ran.items()
                      if name.startswith("jump.false.")
@@ -3301,14 +3301,16 @@ else:
     moves_self = ran.get("add.k.self", 0) + ran.get("sub.k.self", 0)
     want = (slots * ran.get("load", 0) + 2 * slots * ran.get("load2", 0)
             + slots * ran.get("load.k", 0) + slots * weighs_local
-            + slots * moves_self + 2 * slots * ran.get("index.ll", 0))
+            + slots * moves_self + 2 * slots * ran.get("index.ll", 0)
+            + 2 * slots * (ran.get("add.f.ll", 0) + ran.get("sub.f.ll", 0)))
     if moved.get("loaded") != want:
         print("it loaded %s byte(s) and ran the instructions for %s"
               % (moved.get("loaded"), want))
     want = slots * (ran.get("store", 0) + ran.get("add.i.narrow.to", 0)
                     + ran.get("sub.i.narrow.to", 0) + ran.get("add.f.to", 0)
                     + ran.get("sub.f.to", 0) + ran.get("store.k", 0)
-                    + moves_self)
+                    + moves_self + ran.get("add.f.ll", 0)
+                    + ran.get("sub.f.ll", 0))
     if moved.get("stored") != want:
         print("it stored %s byte(s) and ran the instructions for %s"
               % (moved.get("stored"), want))

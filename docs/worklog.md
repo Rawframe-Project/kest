@@ -41120,3 +41120,18 @@ See D1164.
 
 **Runs:** the hole by hand five times, twice after the change, `check-c.sh`,
 and `make most`.
+
+## 2026-09-23, float comparisons and float sums of locals as one instruction
+
+`kernel`'s loop was seventeen instructions an entity. Four were a float local
+loaded against a constant and the jump after it, now one each both ways round
+(D1165); two were `load2` and a float addition written where it goes, now one
+each (D1166). `kernel` is 15.6 per cent fewer instructions and below Luau's
+interpreter. A copy of flat values a word at a time was tried first and
+taken out: its test cost more than it saved.
+
+See D1165 and D1166.
+
+**Runs:** every example fused, plain and under the checked build, the five
+workloads fused and plain with `perf stat`, `check-costs.sh`,
+`check-tables.sh`, and `make most`.

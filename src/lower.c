@@ -227,6 +227,9 @@ static uint8_t arithmetic_before(const Lower *lower, uint16_t *kind) {
     return 0;
 }
 
+static bool two_locals_before(const Lower *lower, uint16_t *first,
+                              uint16_t *second);
+
 static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
                        KestSpan origin) {
     uint16_t layout = 0;
@@ -262,6 +265,24 @@ static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
             emit_u16(lower, kind, origin);
             emit_u16(lower, slot, origin);
             emit_u16(lower, which, origin);
+            return;
+        }
+        // And a float sum of two locals nothing points between, read where
+        // they are. See D1166.
+        uint16_t first = 0;
+        uint16_t second = 0;
+        if ((made == KEST_OP_ADD_F_TO || made == KEST_OP_SUB_F_TO) &&
+            two_locals_before(lower, &first, &second)) {
+            if (lower->chunk->fused_slots < 2) {
+                lower->chunk->fused_slots = 2;
+            }
+            take_back(lower);
+            emit(lower,
+                 made == KEST_OP_ADD_F_TO ? KEST_OP_ADD_F_LL : KEST_OP_SUB_F_LL,
+                 origin);
+            emit_u16(lower, slot, origin);
+            emit_u16(lower, first, origin);
+            emit_u16(lower, second, origin);
             return;
         }
         emit(lower, made, origin);
@@ -579,10 +600,11 @@ static uint8_t asks(Lower *lower, bool when_true) {
     return op;
 }
 
-// The jump a comparison of whole numbers was taken into, and the two it can
-// become when what is before it is a `load.k` or a `const` nothing points
-// between: a local weighed against a constant, or what is on the stack. One
-// row a comparison. See D1154 and D1155.
+// The jump a comparison was taken into, and the two it can become when what
+// is before it is a `load.k` or a `const` nothing points between: a local
+// weighed against a constant, or what is on the stack. One row a comparison;
+// a float one has the first and not the second, and has it both ways round.
+// See D1154, D1155 and D1165.
 static const struct {
     uint8_t jump;
     uint8_t local;
@@ -594,6 +616,18 @@ static const struct {
     {KEST_OP_JUMP_FALSE_GE_I, KEST_OP_JUMP_FALSE_GE_K, KEST_OP_JUMP_FALSE_GE_C},
     {KEST_OP_JUMP_FALSE_EQ_I, KEST_OP_JUMP_FALSE_EQ_K, KEST_OP_JUMP_FALSE_EQ_C},
     {KEST_OP_JUMP_FALSE_NE_I, KEST_OP_JUMP_FALSE_NE_K, KEST_OP_JUMP_FALSE_NE_C},
+    {KEST_OP_JUMP_FALSE_LT_F, KEST_OP_JUMP_FALSE_LT_FK, 0},
+    {KEST_OP_JUMP_FALSE_LE_F, KEST_OP_JUMP_FALSE_LE_FK, 0},
+    {KEST_OP_JUMP_FALSE_GT_F, KEST_OP_JUMP_FALSE_GT_FK, 0},
+    {KEST_OP_JUMP_FALSE_GE_F, KEST_OP_JUMP_FALSE_GE_FK, 0},
+    {KEST_OP_JUMP_FALSE_EQ_F, KEST_OP_JUMP_FALSE_EQ_FK, 0},
+    {KEST_OP_JUMP_FALSE_NE_F, KEST_OP_JUMP_FALSE_NE_FK, 0},
+    {KEST_OP_JUMP_TRUE_LT_F, KEST_OP_JUMP_TRUE_LT_FK, 0},
+    {KEST_OP_JUMP_TRUE_LE_F, KEST_OP_JUMP_TRUE_LE_FK, 0},
+    {KEST_OP_JUMP_TRUE_GT_F, KEST_OP_JUMP_TRUE_GT_FK, 0},
+    {KEST_OP_JUMP_TRUE_GE_F, KEST_OP_JUMP_TRUE_GE_FK, 0},
+    {KEST_OP_JUMP_TRUE_EQ_F, KEST_OP_JUMP_TRUE_EQ_FK, 0},
+    {KEST_OP_JUMP_TRUE_NE_F, KEST_OP_JUMP_TRUE_NE_FK, 0},
 };
 
 static uint8_t weighed(uint8_t jump, bool against_local) {
@@ -656,6 +690,8 @@ static const struct {
     {KEST_OP_ADD_I_NARROW_TO, {A_NUMBER, A_SLOT}},
     {KEST_OP_SUB_I_NARROW_TO, {A_NUMBER, A_SLOT}},
     {KEST_OP_ADD_F_TO, {A_SLOT}},
+    {KEST_OP_ADD_F_LL, {A_SLOT, A_SLOT, A_SLOT}},
+    {KEST_OP_SUB_F_LL, {A_SLOT, A_SLOT, A_SLOT}},
     {KEST_OP_SUB_F_TO, {A_SLOT}},
     {KEST_OP_NARROW, {A_NUMBER}},
     {KEST_OP_ADD_I_NARROW, {A_NUMBER}},
@@ -746,6 +782,18 @@ static const struct {
     {KEST_OP_JUMP_FALSE_GE_C, {A_CONSTANT, A_DISTANCE}},
     {KEST_OP_JUMP_FALSE_EQ_C, {A_CONSTANT, A_DISTANCE}},
     {KEST_OP_JUMP_FALSE_NE_C, {A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_LT_FK, {A_SLOT, A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_LE_FK, {A_SLOT, A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_GT_FK, {A_SLOT, A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_GE_FK, {A_SLOT, A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_EQ_FK, {A_SLOT, A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_NE_FK, {A_SLOT, A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_TRUE_LT_FK, {A_SLOT, A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_TRUE_LE_FK, {A_SLOT, A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_TRUE_GT_FK, {A_SLOT, A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_TRUE_GE_FK, {A_SLOT, A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_TRUE_EQ_FK, {A_SLOT, A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_TRUE_NE_FK, {A_SLOT, A_CONSTANT, A_DISTANCE}},
     // Carried as a jump to the end, which is the one thing about it that
     // changes.
     {KEST_OP_RETURN, {A_DISTANCE}},
@@ -822,7 +870,8 @@ static bool writes_a_parameter(const KestChunk *callee) {
                       op == KEST_OP_SUB_K_SELF ||
                       op == KEST_OP_ADD_I_NARROW_TO ||
                       op == KEST_OP_SUB_I_NARROW_TO ||
-                      op == KEST_OP_ADD_F_TO || op == KEST_OP_SUB_F_TO;
+                      op == KEST_OP_ADD_F_TO || op == KEST_OP_SUB_F_TO ||
+                      op == KEST_OP_ADD_F_LL || op == KEST_OP_SUB_F_LL;
         uint32_t read = at + 1;
         for (int o = 0; writes && o < 3 && operands[o] != NO_OPERAND; o++) {
             if (operands[o] == A_SLOT &&
@@ -1031,17 +1080,27 @@ static void carry(Lower *lower, uint16_t index, uint16_t argument_slots,
     }
 }
 
-// Whether the last thing written was `load2` nothing points between, and the
-// two slots it read. See D1155.
+// Whether the last thing written was `load2`, or `load.n` of two, nothing
+// points between, and the two slots it read. See D1155 and D1166.
 static bool two_locals_before(const Lower *lower, uint16_t *first,
                               uint16_t *second) {
-    if (lower->last_op != KEST_OP_LOAD2 || lower->last_at < lower->pointed_at ||
+    if ((lower->last_op != KEST_OP_LOAD2 && lower->last_op != KEST_OP_LOADN) ||
+        lower->last_at < lower->pointed_at ||
         lower->last_at + 5 != lower->chunk->code_count) {
         return false;
     }
     const uint8_t *at = lower->chunk->code + lower->last_at;
     *first = (uint16_t)(at[1] | ((uint16_t)at[2] << 8));
     *second = (uint16_t)(at[3] | ((uint16_t)at[4] << 8));
+    // Two locals side by side are loaded as a run of two, which is the same
+    // two values: what the second operand says there is how many, and the
+    // second is the slot after the first. See D1166.
+    if (lower->last_op == KEST_OP_LOADN) {
+        if (*second != 2) {
+            return false;
+        }
+        *second = (uint16_t)(*first + 1);
+    }
     return true;
 }
 

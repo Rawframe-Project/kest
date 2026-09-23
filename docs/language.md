@@ -5693,10 +5693,10 @@ and `KEST_DEEP=1` makes it say so. Run at two step counts and two entity
 counts and take the difference of the differences — a world is built once
 however many rounds there are, and a round has a loop of its own however many
 entities are in it — and what is left says that
-a frame step an entity is **thirty-seven instructions**, of which five are
+a frame step an entity is **thirty-three instructions**, of which one is
 `load.k`, four are `load`, four are `load2`, three are `load.n`, three are
-`store` and two are `store.n` — twenty-one of the thirty-seven, near enough
-three in five, move a value onto the stack or off it. The
+`store` and two are `store.n` — seventeen of the thirty-three, near enough
+half, move a value onto the stack or off it. The
 arithmetic is six: two `mul.f32`, two `add.f32`, one `add.k.self` and one
 `sub.i.narrow`. That is what a stack machine is, and it is where the next thing
 to be gone after was found: it was fifty-seven instructions before `load.k` and
@@ -5710,10 +5710,12 @@ moved by a constant was moved where it is (D1155), and forty-one until the two
 helpers were carried to where they are called rather than called (D1156) and
 thirty-nine until what a helper was handed was read where the caller had it
 (D1157) -- which is why two of the stores are `store.n`: a whole `Npc` handed
-from one helper to the next is put where the second reads it.
+from one helper to the next is put where the second reads it. It was
+thirty-seven until a float local weighed against a constant was one
+instruction with the jump that reads it, both ways round (D1165).
 
 Counting them is not free, and what it costs is the other number this build
-says: over those thirty-seven instructions it asks its own compiler
+says: over those thirty-three instructions it asks its own compiler
 **forty-two questions** about what it is about to do — whose slots these are, whose
 constants, whether what a frame holds is the shape the chunk was declared with.
 That is the machine holding itself to what it was handed rather than trusting
@@ -5759,11 +5761,12 @@ check and the optional it comes back in.
 ```
 
 Counted the same way, a hop of that loop is **five instructions**, an index
-read is **five** and a read through a reference is **eleven** — **nought** more
-than the hop for the index and six more for the reference. The six are what a
+read is **five** and a read through a reference is **ten** — **nought** more
+than the hop for the index and five more for the reference. The five are what a
 reference is: the place it names, the stamp held against the one in the store,
 and the optional the answer comes back in, which is a branch whether or not it
-is nothing. The index read costs nothing over the hop because reading a field
+is nothing. It was eleven until the walk read each reference out of its array
+in one instruction, the way the index walk reads its numbers (D1166). The index read costs nothing over the hop because reading a field
 of an element is one instruction; it was two until D1044, and the nanoseconds
 in the paragraph above were taken before that.
 

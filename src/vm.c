@@ -4999,6 +4999,26 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             mine[slot].real = left.real + right.real;
             break;
         }
+        case KEST_OP_ADD_F_LL:
+        case KEST_OP_SUB_F_LL: {
+            uint16_t slot = READ_U16();
+            uint16_t first = READ_U16();
+            uint16_t second = READ_U16();
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, slot, slot + 1u) ||
+                !own_slots(vmp, frame, instruction, first, first + 1u) ||
+                !own_slots(vmp, frame, instruction, second, second + 1u)) {
+                return false;
+            }
+#endif
+            MOVED(moved_loaded, 2 * sizeof(KestValue));
+            MOVED(moved_stored, sizeof(KestValue));
+            double left = mine[first].real;
+            double right = mine[second].real;
+            mine[slot].real = *instruction == KEST_OP_ADD_F_LL ? left + right
+                                                               : left - right;
+            break;
+        }
         case KEST_OP_SUB_F_TO: {
             uint16_t slot = READ_U16();
             KestValue right = *--top;
@@ -5222,6 +5242,59 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_JUMP_FALSE_NE_C:
             JUMP_UNLESS_C(left != right);
             break;
+// A float local against a constant and the jump, taken when the answer is
+// `taken`: the float jumps are written both ways round. See D1165.
+#define JUMP_ON_FK(taken, test)                                                \
+    do {                                                                       \
+        uint16_t slot = READ_U16();                                            \
+        uint16_t which = READ_U16();                                           \
+        uint16_t distance = READ_U16();                                        \
+        OWN_SLOT_AND_CONSTANT(slot, which);                                    \
+        MOVED(moved_loaded, sizeof(KestValue));                                \
+        MOVED(moved_held, sizeof(KestValue));                                  \
+        double left = mine[slot].real;                                         \
+        double right = constants[which].real;                                  \
+        if ((test) == (taken)) {                                               \
+            ip += distance;                                                    \
+        }                                                                      \
+    } while (0)
+        case KEST_OP_JUMP_FALSE_LT_FK:
+            JUMP_ON_FK(false, left < right);
+            break;
+        case KEST_OP_JUMP_FALSE_LE_FK:
+            JUMP_ON_FK(false, left <= right);
+            break;
+        case KEST_OP_JUMP_FALSE_GT_FK:
+            JUMP_ON_FK(false, left > right);
+            break;
+        case KEST_OP_JUMP_FALSE_GE_FK:
+            JUMP_ON_FK(false, left >= right);
+            break;
+        case KEST_OP_JUMP_FALSE_EQ_FK:
+            JUMP_ON_FK(false, left == right);
+            break;
+        case KEST_OP_JUMP_FALSE_NE_FK:
+            JUMP_ON_FK(false, left != right);
+            break;
+        case KEST_OP_JUMP_TRUE_LT_FK:
+            JUMP_ON_FK(true, left < right);
+            break;
+        case KEST_OP_JUMP_TRUE_LE_FK:
+            JUMP_ON_FK(true, left <= right);
+            break;
+        case KEST_OP_JUMP_TRUE_GT_FK:
+            JUMP_ON_FK(true, left > right);
+            break;
+        case KEST_OP_JUMP_TRUE_GE_FK:
+            JUMP_ON_FK(true, left >= right);
+            break;
+        case KEST_OP_JUMP_TRUE_EQ_FK:
+            JUMP_ON_FK(true, left == right);
+            break;
+        case KEST_OP_JUMP_TRUE_NE_FK:
+            JUMP_ON_FK(true, left != right);
+            break;
+#undef JUMP_ON_FK
         case KEST_OP_JUMP_FALSE_LT_K:
             JUMP_UNLESS_K(left < right);
             break;

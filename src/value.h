@@ -339,6 +339,27 @@ typedef enum {
     KEST_OP_JUMP_FALSE_GE_C,
     KEST_OP_JUMP_FALSE_EQ_C,
     KEST_OP_JUMP_FALSE_NE_C,
+    // A float local weighed against a constant and the jump, both ways round,
+    // because a float comparison is written either way by `||` and `&&`:
+    // `load.k` and one of the twelve float jumps above, which is every
+    // `one.x < 0.0` a frame asks of a position. See D1165.
+    KEST_OP_JUMP_FALSE_LT_FK, // u16 slot, u16 constant, u16 forward offset
+    KEST_OP_JUMP_FALSE_LE_FK,
+    KEST_OP_JUMP_FALSE_GT_FK,
+    KEST_OP_JUMP_FALSE_GE_FK,
+    KEST_OP_JUMP_FALSE_EQ_FK,
+    KEST_OP_JUMP_FALSE_NE_FK,
+    KEST_OP_JUMP_TRUE_LT_FK,
+    KEST_OP_JUMP_TRUE_LE_FK,
+    KEST_OP_JUMP_TRUE_GT_FK,
+    KEST_OP_JUMP_TRUE_GE_FK,
+    KEST_OP_JUMP_TRUE_EQ_FK,
+    KEST_OP_JUMP_TRUE_NE_FK,
+    // A float sum or difference of two locals written into a local: `load2`
+    // and the arithmetic that writes where it is going, which is every
+    // `one.x += one.dx` a frame moves something by. See D1166.
+    KEST_OP_ADD_F_LL, // u16 slot, u16 slot, u16 slot
+    KEST_OP_SUB_F_LL,
     KEST_OP_LOOP,        // u16 backward offset
     // The whole of a counted walk's turn: add one to the count, compare it
     // with the limit beside it, and go back while it is less. The test is at

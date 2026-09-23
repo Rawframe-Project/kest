@@ -88,7 +88,7 @@ a run with a decision knows which is which.
 | the colony's steady state, at 200, 400 and 800 days | 2,370,304 bytes (D940) | 2,338,096 bytes, and still flat: a store keeps a bit a slot rather than a byte (D954) |
 | a frame step an entity | 127 ns (D926), 122 after D931 | 107 to 110 ns, `make time` on this machine, and the number D979 would not pay a third of |
 | what an array of text costs a frame, an entity | 25 bytes (D915) | 51, and read as what a frame was handed rather than what it still holds: a piece of text in one is sixteen bytes rather than eight (D964), and a step takes a place off a heap that gives places back, which is as wide as the step above what was asked for (D996) |
-| what a frame step runs, an entity | 57 instructions (D958) | 37, after D961 took the two commonest pairs of pushes, D1154 and D1155 made more pairs one instruction, and D1156 and D1157 carried the two helpers to where they are called |
+| what a frame step runs, an entity | 57 instructions (D958) | 33, after D961 took the two commonest pairs of pushes, D1154, D1155 and D1165 made more pairs one instruction, and D1156 and D1157 carried the two helpers to where they are called |
 
 ## Phases
 

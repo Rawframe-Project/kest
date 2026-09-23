@@ -40281,3 +40281,59 @@ The program now asks the thing outright: the same words made again somewhere
 else hash the same, or it answers 200. With the hole in, a fresh copy is never
 where the constant is, so the two engines disagree every time. Run by hand
 twice with the hole in, and caught both times.
+
+## D1165 — A float local weighed against a constant is one instruction with its jump
+
+*measured*. `kernel` runs 34.6 million instructions of the machine for 1.11
+thousand million of the host's: seventeen a body moved, and four of the
+seventeen were `load.k` and then a float compare-and-jump -- `one.x < 0.0 ||
+one.x > 1000.0` -- which D1154 had made one instruction for whole numbers and
+not for floats. Twelve now: `jump.false.<cmp>.f.k` and `jump.true.<cmp>.f.k`,
+because `||` and `&&` write a float comparison both ways round. They are made
+where the whole-number ones are and nowhere else, `KEST_PLAIN` turns them off,
+a body holding one may be carried (D1156), and what they move is counted the
+way the pair they were made of is.
+
+Before this, one other thing was tried and taken out: a value whose pieces
+are all eight bytes the machine's slot holds bit for bit, one after another --
+`kernel`'s four `f64`s -- moved a word at a time rather than a piece at a time
+through the switch. It saved 1.3 million instructions and the test for it in
+front of every element moved cost 16 million, 1.125 thousand million against
+1.109. The switch over a piece was already what the host's compiler makes of a
+copy.
+
+| workload | before | after | |
+| --- | --- | --- | --- |
+| kernel | 1,111,121,264 | 980,717,382 | -11.7 % |
+| control | 1,160,022,184 | 1,160,119,245 | 0.0 % |
+
+`kernel` is below Luau's interpreter in instructions, 0.98 thousand million
+against 1.01. The frame step the reference counts is thirty-three
+instructions.
+
+## D1166 — A float sum of two locals written where it goes is one instruction
+
+*measured*, off the same seventeen: `one.x += one.dx` was `load2` and
+`add.f.to`, two dispatches for the commonest thing a frame does to a position.
+`add.f.ll` and `sub.f.ll` read two locals and write a third, made where the
+lowering already takes an `f64` sum into the store it is written to and finds
+`load2` just before it with nothing pointing between. `KEST_PLAIN` turns them
+off, a body holding one may be carried, and they count what `load2` and the
+store counted.
+
+| workload | before | after | |
+| --- | --- | --- | --- |
+| kernel | 980,717,382 | 937,230,779 | -4.4 % |
+
+Every example answers the same fused, plain and under the build that checks
+itself, and so do the five workloads fused and plain. `f32` arithmetic is
+three instructions of its own with the cut to thirty-two bits, and is not
+taken into these.
+
+Two locals in neighbouring slots are pushed as `load.n` of two rather than
+`load2`, which is the same two values, and every pair that asks for two locals
+takes either now: an element read by a local index out of a local run became
+`index.ll` in `tools/reference.kest`'s walk, which the reference says -- a read
+through a reference is ten there rather than eleven. `examples/physics.kest`
+bounces an `f64` between two walls so that every one of the new instructions
+is one some example runs, which `check-dead.sh` holds.
