@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1211
+    CURRENT SHA:       (this commit) D1093-D1212
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, and it is ahead of
@@ -15,7 +15,9 @@ reasoning; this holds the position.
                        `rules`; the machine is ahead of Luau's interpreter
                        on all five, by 4% at the least, and retires fewer
                        instructions on all five (D1203)
-    LAST CI:           green on cd52a69b, all nine jobs -- linux,
+    LAST CI:           red on 2c946330 in linux-full, a hole quoting a
+                       figure D1211 moved, fixed by D1212; green before it
+                       on cd52a69b, all nine jobs -- linux,
                        linux-arm64, macos, windows, clang, threads, package,
                        linux-full and agree, the last being the whole gate
                        with every hole caught

@@ -41597,3 +41597,43 @@ is behind its own comparison now. The reference's figure for how often the
 folder is asked of `examples/numbers.kest` moves with it, 113 of 527 where
 it was 113 of 507, which `check-docs.sh` read off a run.
 
+## D1212 — The lowering's fused forms put out of order one at a time, and the two nothing refused
+
+D1211 found two comparisons fused wrong that `make fast` passed. So the rest
+were asked the same way: ten of the lowering's choices, each put out of order
+alone in a copy of `src/lower.c` -- a comparison against a local fused as its
+neighbour, against a value on the stack, against an element, a float against
+a constant both ways round, `!=` as `==`, `jump.true.lt.i` as `le`, and a
+walk of unsigned numbers counted with the signed step -- the tree built, and
+`make fast` run. Eight were refused. Two were not:
+
+- `jump.true.lt.f.k`, a float against a constant asked the other way. It is
+  what D1205 makes of `if v < 5.0 { continue }`, a float's `<` not being
+  turned round, and nothing asked it on its edge. `realPassedOver` does, the
+  float twin of D1211's `passedOver`.
+- `next.less.u` counted as `next.less.i`. The two differ only where the count
+  is below the top of the signed range and the limit is above it, which no
+  walk here reached. `turnsAcrossTheMiddle` walks three `u64`s from one below
+  that top; the first try started at the top itself, where count and limit
+  are both past it and read alike either way, and was not refused either --
+  where the edge is had to be worked out, not guessed.
+
+With both, all ten are refused by `make fast`.
+
+And `turnsAcrossTheMiddle` found a defect the first time the sanitised build
+ran it: `next.less.u` counted on with `++` on the slot's `int64_t`, and one
+more than the top of the signed range is signed overflow -- no wrapped
+number, but nothing C promises anything about. The release build happened to
+wrap, which is what the answer rested on. The generated C was the same, a
+`+= 1` on the signed member. Both count an unsigned walk on in unsigned
+arithmetic now, and the sanitised build runs the example clean.
+
+And CI's whole gate on `2c946330` was red: D1211 changed the reference's
+figure for how often the folder is asked of `examples/numbers.kest`, and the
+hole "a number the reference quotes that a run no longer says" quoted that
+figure, 113 of 507, which D1211 made 113 of 527. The figure moves every time
+that example grows, which this does again (114 of 532), so the hole now
+breaks it without quoting it -- a digit put in front of whatever it is -- and
+is caught by the words of the refusal rather than by the numbers. Run by
+hand, caught.
+

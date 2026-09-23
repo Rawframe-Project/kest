@@ -41795,3 +41795,18 @@ See D1211.
 plain and bare; both miscompilations put back, each refused by `make fast`;
 and `make most`.
 
+## 2026-09-24, the lowering's fused forms put out of order one at a time
+
+Ten of the lowering's fused choices, each broken alone: `make fast` refused
+eight. A float asked the other way against a constant and the unsigned walk
+step were not; `examples/numbers.kest` asks both now, and all ten are
+refused. The unsigned walk, run under the sanitisers, was signed overflow
+in the machine and in the generated C, and counts in unsigned arithmetic now.
+CI was red on D1211's change to a figure a hole quoted; the hole breaks that
+figure without quoting it now.
+
+See D1212.
+
+**Runs:** the ten mutations against `make fast`, twice; the two holes over
+`examples/numbers.kest` and the reference's figure by hand; and `make most`.
+

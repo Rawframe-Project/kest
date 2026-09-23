@@ -2562,7 +2562,15 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         // recognises.
         at_frame(walk, first, op->imm[0]);
         at_frame(walk, second, op->imm[1]);
-        say(c, out, "    %s.integer += 1;\n", first);
+        // And an unsigned count stepped in unsigned arithmetic, for the
+        // reason the machine steps it that way. See D1212.
+        if (kest_is_unsigned(op->type)) {
+            say(c, out,
+                "    %s.integer = (int64_t)((uint64_t)%s.integer + 1u);\n",
+                first, first);
+        } else {
+            say(c, out, "    %s.integer += 1;\n", first);
+        }
         say(c, out, "    if (%s%s.integer %s %s%s.integer) {\n        ",
             kest_is_unsigned(op->type) ? "(uint64_t)" : "", first,
             kest_is_unsigned(op->type) ? "<" : "<",

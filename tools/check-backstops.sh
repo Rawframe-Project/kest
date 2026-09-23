@@ -6813,12 +6813,15 @@ fn main() -> i32 {
         # people and people read the sentence. See D886.
         "what": "a number the reference quotes that a run no longer says",
         "file": "docs/language.md",
-        "from": """numbers together say how much of that finding out answered: 113 of 507 for""",
-        "to": """numbers together say how much of that finding out answered: 113 of 330 for""",
+        # The figure itself moves every time the example grows, so the hole
+        # breaks it without quoting it: a digit put in front of whatever it
+        # is. See D1212.
+        "from": """numbers together say how much of that finding out answered: """,
+        "to": """numbers together say how much of that finding out answered: 1""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",
         "arguments": ["docs/language.md", "docs/decisions.md"],
-        "caught": "the reference says 113 of 330 were worked out for `examples/numbers.kest`",
+        "caught": "were worked out for `examples/numbers.kest` and a run says",
     },
     {
         # A suggestion under somebody else's refusal. A suggestion goes to the

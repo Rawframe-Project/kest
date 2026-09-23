@@ -6020,7 +6020,12 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
 #endif
-            uint64_t next = (uint64_t)++mine[slot].integer;
+            // Counted on as the unsigned number it is: a walk of `u64`s goes
+            // past the top of the signed range, and one more than that as a
+            // signed number is not a wrapped number but no number C
+            // promises anything about. See D1212.
+            uint64_t next = (uint64_t)mine[slot].integer + 1u;
+            mine[slot].integer = (int64_t)next;
             if (next < (uint64_t)mine[limit].integer) {
                 SPEND();
                 ip -= distance;

@@ -649,6 +649,12 @@ fn main() -> i32 {
         if realAgainst(f64(v)) != want {
             return 99
         }
+        if realPassedOver(f64(v)) != 63 - want {
+            return 100
+        }
+    }
+    if turnsAcrossTheMiddle(u64(9223372036854775806)) != 3 {
+        return 101
     }
 
     io.print("every width wraps at its own end, and {NARROW} is one of them")
@@ -836,6 +842,66 @@ fn realAgainst(v: f64) -> i32 no.alloc {
         bits += 32
     }
     return bits
+}
+
+// And the same way out of a turn for a float, which D1205 does not turn round
+// -- a NaN is neither side of five -- but asks the other way: the jumps taken
+// when the comparison holds, against a constant. See D1212.
+fn realPassedOver(v: f64) -> i32 no.alloc {
+    let bits = 0
+    let asked = 0
+    while asked < 6 {
+        asked += 1
+        if asked == 1 {
+            if v < 5.0 {
+                continue
+            }
+            bits += 1
+        }
+        if asked == 2 {
+            if v <= 5.0 {
+                continue
+            }
+            bits += 2
+        }
+        if asked == 3 {
+            if v > 5.0 {
+                continue
+            }
+            bits += 4
+        }
+        if asked == 4 {
+            if v >= 5.0 {
+                continue
+            }
+            bits += 8
+        }
+        if asked == 5 {
+            if v == 5.0 {
+                continue
+            }
+            bits += 16
+        }
+        if asked == 6 {
+            if v != 5.0 {
+                continue
+            }
+            bits += 32
+        }
+    }
+    return bits
+}
+
+// A walk of `u64`s across the top of the signed range, where the count is
+// weighed against its limit as the unsigned number it is: from one below the
+// signed top, the limit is past it and the count not yet, and read as signed
+// the limit is below nought and the walk ends after one turn.
+fn turnsAcrossTheMiddle(from: u64) -> i32 no.alloc {
+    let turns = 0
+    for n in from..from + 3 {
+        turns += 1
+    }
+    return turns
 }
 
 // So many nines, written out one at a time.
