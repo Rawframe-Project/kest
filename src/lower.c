@@ -892,8 +892,11 @@ static const Operand *carried_operands(uint8_t op) {
 // The most bytes of code a carried body may be. A body is carried to every
 // place it is called from, so what a program grows by is this times the
 // calls; what a call costs is paid once a call whatever the body's size, so
-// past a few dozen instructions there is nothing left to buy. See D1156.
-#define MOST_CARRIED 160
+// past a few dozen instructions there is nothing left to buy. See D1156. A
+// rule deciding between five states is forty instructions in 185 bytes, and
+// carried it is eight per cent of `bench/control`, so the few dozen is forty
+// or so rather than thirty. See D1175.
+#define MOST_CARRIED 256
 
 // Whether the function at `index` may be carried to a call of it from the
 // body being written: written already, by the same file, small, and made of

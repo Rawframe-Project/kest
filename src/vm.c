@@ -5964,9 +5964,14 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
 #endif
             // The result lands where the arguments were, which is where the
-            // caller left room for it.
+            // caller left room for it. One slot is most answers, and moved
+            // without a call into the C library.
             KestValue *base = mine;
-            memmove(base, top - count, sizeof(KestValue) * count);
+            if (count == 1) {
+                base[0] = top[-1];
+            } else {
+                memmove(base, top - count, sizeof(KestValue) * count);
+            }
 
             rt->frame_count--;
             if (rt->frame_count == under) {

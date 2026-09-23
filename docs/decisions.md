@@ -40592,3 +40592,20 @@ and a bound function handed anything else says so and stops, whatever the
 memory it was handed now holds. The hole is caught by that, three times out of
 three here, and the other hole about two hosts is still caught by the two hosts
 answering alike.
+
+## D1175 — A body of up to 256 bytes carried, and one answer moved by hand
+
+`bench/control` was 1.08 times Luau's interpreter in instructions, and it is a
+million calls of `decide`: forty instructions of comparisons and constant
+answers, 185 bytes, which is over the 160 D1156 carried. Everything in it is
+carriable, so the size was the only reason it was called.
+
+- `MOST_CARRIED` is 256. `control` is carried whole and runs 948.8 million
+  instructions where it ran 1,027.3, and 4.1% fewer cycles turn about; `rules`
+  1.0% fewer cycles and the same instructions; `kernel` within the noise. Of
+  `bench/control`, `bench/rules` and `examples/colony.kest`, only the first
+  grows, by forty instructions.
+- A `return` of one slot moves it rather than calling `memmove` for eight
+  bytes, which was 1.7% of `control` before the carrying took the calls away.
+
+`control` is 0.98 times Luau's interpreter.

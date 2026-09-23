@@ -41269,3 +41269,17 @@ See D1174.
 **Runs:** the two holes by hand, the one beside the second, the one that
 quotes the body the mark moved, `examples/embed`,
 the quote pass, and `make most`.
+
+## 2026-09-23, a larger body carried
+
+`bench/control` is a million calls of a 185-byte rule, over the 160 bytes a
+carried body could be. The limit is 256 bytes and `control` runs 7.6% fewer
+instructions and 4.1% fewer cycles, now under Luau's interpreter; a `return`
+of one slot moves it without `memmove`. Only `control` of the three programs
+measured grew.
+
+See D1175.
+
+**Runs:** `perf stat` over the five workloads, cycles turn about on `control`,
+`rules` and `kernel`, the instruction counts of three programs before and
+after, and `make most`.
