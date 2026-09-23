@@ -4661,6 +4661,32 @@ for file in "$@"; do""",
         "caught": "is still there after removing it",
     },
     {
+        # A release is a binary that carries its program. One that reads the
+        # file it was written from works beside the file, which is where it
+        # is made, and nowhere else. See D1172.
+        "what": "a release that reads its program from where it was made",
+        "file": "src/emitc.c",
+        "from": "    if (carried != NULL) {\n        write_carried_main(",
+        "to": "    if (false) {\n        write_carried_main(",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "release: a binary with no source beside it did not answer",
+    },
+    {
+        # A compiler that refuses is a release that was not made, and what
+        # was not made has to say so rather than leave a reader looking for a
+        # binary. See D1172.
+        "what": "a release a compiler refused that says nothing",
+        "file": "src/main.c",
+        "from": "    remove(source);\n    if (status != 0) {",
+        "to": "    remove(source);\n    if (status != 0 && false) {",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "release: a release that could not be made did not say why",
+    },
+    {
         # What is wrong with a program, written where its answer goes. A shell
         # reading what `check` says a program holds gets the diagnostics mixed
         # into it, which is the same fault as a run printing its refusals into
@@ -5135,8 +5161,8 @@ for file in "$@"; do""",
         # this went unnoticed the first time.
         "what": "a listing written beside the object a tool reads",
         "file": "src/main.c",
-        "from": r"""            if (kest_build_emit(build) && !json && !building) {""",
-        "to": r"""            if (kest_build_emit(build) && !building) {""",
+        "from": r"""            if (emitted && !json && !building) {""",
+        "to": r"""            if (emitted && !building) {""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -10553,8 +10579,8 @@ fn main() -> i32 {
         # release and a half while the header had 88.
         "what": "the reference counting the doors for itself",
         "file": "docs/language.md",
-        "from": r"""The C API is 107 doors in 6 families: 47 for running""",
-        "to": r"""The C API is 107 doors in 6 families: 46 for running""",
+        "from": r"""The C API is 108 doors in 6 families: 48 for running""",
+        "to": r"""The C API is 108 doors in 6 families: 47 for running""",
         "make": [],
         "tool": "tools/check-tables.sh",
         "arguments": [],
@@ -15896,7 +15922,7 @@ kest 9.9.9""",
         # See D1037.
         "what": "a front page counting the doors for itself",
         "file": "README.md",
-        "from": """a C embedding API of 107 doors""",
+        "from": """a C embedding API of 108 doors""",
         "to": """a C embedding API of 88 doors""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",

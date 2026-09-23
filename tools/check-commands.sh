@@ -1488,6 +1488,50 @@ elif ! ran=$(cd "$elsewhere" &&
     complain "install: what was installed cannot find the library it was installed with"
     printf '%s\n' "$ran" | sed 's/^/    /' | head -4
 else
+    # And a release made by what was installed, which is a binary carrying
+    # its program: moved to a room with nothing else in it and run there, it
+    # answers what the program answers read from its file. See D1172.
+    release_room="$scratch"/check-release
+    mkdir -p "$release_room"
+    release_wanted=$(cd "$elsewhere" &&
+                     "$put/usr/local/bin/kest" run asking.kest >/dev/null \
+                         2>&1 </dev/null
+                     echo $?)
+    release_said=$(cd "$elsewhere" &&
+                   "$put/usr/local/bin/kest" build --release asking.kest \
+                       2>&1 </dev/null)
+    release_answered=none
+    if [ -x "$elsewhere/asking" ] &&
+       mv "$elsewhere/asking" "$release_room/asking"; then
+        release_answered=$(cd "$release_room" &&
+                           ./asking >/dev/null 2>&1 </dev/null
+                           echo $?)
+    fi
+    if [ "$release_answered" != "$release_wanted" ]; then
+        complain "release: a binary with no source beside it did not answer \
+what its program answers"
+        printf '%s\n' "$release_said" | sed 's/^/    /' | head -4
+    fi
+    # And the two ways one cannot be made, each said in the words a release
+    # says: a compiler that refuses, and a command line with its library
+    # beside it and nothing to make a binary with.
+    release_bare="$scratch"/check-release-bare
+    mkdir -p "$release_bare/lib"
+    cp "$put/usr/local/bin/kest" "$release_bare/kest"
+    cp -r "$here/lib/std" "$release_bare/lib/std"
+    release_refused=$(cd "$elsewhere" &&
+                      CC=false "$put/usr/local/bin/kest" build --release \
+                          asking.kest 2>&1 </dev/null
+                      "$release_bare/kest" build --release asking.kest 2>&1 \
+                          </dev/null)
+    case "$release_refused" in
+    *K0663*"could not make a release"*K0663*"needs \`kest.h\`"*) ;;
+    *)
+        complain "release: a release that could not be made did not say why"
+        printf '%s\n' "$release_refused" | sed 's/^/    /' | head -4
+        ;;
+    esac
+    rm -rf "$release_room" "$release_bare" "$elsewhere/asking"
     gone=$(make -C "$here" uninstall DESTDIR="$put" PREFIX=/usr/local 2>&1)
     left=$(find "$put" -type f 2>/dev/null | wc -l)
     if [ "$left" -ne 0 ]; then
@@ -4123,10 +4167,12 @@ while :; do
 done
 # And under `--json`, because the run that ran out is written out where the
 # list is written rather than made and put in it, and that is two places.
+# Which of the two sentences a thousand bytes gets depends on how long the path
+# to this room is, so what is held is the refusal and its ceiling.
 cramped=$("$kest" check --room 1000 --json "$scratch"/room/hungry.kest \
     2>/dev/null </dev/null)
 case "$cramped" in
-*'"code":"K0658"'*'of the 1000 bytes it was given'*) ;;
+*'"code":"K0658"'*'1000 bytes it was given'*) ;;
 *)
     complain "check: \`--room 1000 --json\` wrote \
 \`$(printf '%s' "$cramped" | head -1)\`"

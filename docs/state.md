@@ -121,14 +121,16 @@ carries the mission itself; this is what the tree has to show for it.
     12 reload and identity                done  D985
     13 concurrency                        done  D988
     14 the sandbox claim                  done  D981
-    15 the standard library               small and said to be
+    15 the standard library               small and said to be; D1171
+                                          adds bytes for saves
     16 project and dependencies           done  D982
     17 tooling                            done  D976, D977, D979, D991
     18 the editor                         done  D978
     19 packaging                          done  D986 (no amalgamation),
                                           D989, D1000: an archive on both
                                           platforms, unpacked, run and built
-                                          against in CI
+                                          against in CI, and D1172: one
+                                          binary that carries its program
     20 platforms and CI                   done: linux, windows, macos
     21 the benchmark suite                done  D980
     23 fuzz and sanitisers                done  D984, D997: six boundaries

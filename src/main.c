@@ -170,6 +170,10 @@ static void help(FILE *out) {
             "                    `main` when the program has one and a line\n"
             "                    naming every body this backend has no C for\n"
             "                    yet, which the machine runs instead\n"
+            "  --release         build makes a binary of the program that\n"
+            "                    carries it and needs no source to run,\n"
+            "                    named as the program is without `.kest`,\n"
+            "                    compiled by the C compiler CC names, or cc\n"
             "  --cost            check says what it proved about each body:\n"
             "                    whether it reaches the heap, whether it\n"
             "                    crosses to the host, whether anything in it\n"
@@ -2192,10 +2196,99 @@ static int look_over(const char *executable, const char *where, bool json) {
     return wrong ? 1 : 0;
 }
 
+// Where a release is made from: the header and the library this command line
+// was built with, found beside it the way its standard library is -- in a
+// source tree `include/` and `libkest.a` sit beside `lib/`, and once installed
+// `include/` is one further up. Nought for one that is not there.
+static bool release_parts(const char *executable, char *header, char *archive,
+                          size_t room) {
+    const char *library = kest_library_path(NULL, executable);
+    const char *headers[] = {"%s../include/kest.h", "%s../../include/kest.h"};
+    header[0] = '\0';
+    for (size_t i = 0; i < 2 && header[0] == '\0'; i++) {
+        char probe[1024];
+        snprintf(probe, sizeof(probe), headers[i], library);
+        FILE *there = fopen(probe, "rb");
+        if (there != NULL) {
+            fclose(there);
+            snprintf(header, room, "%.*s", (int)(strlen(probe) - 6), probe);
+        }
+    }
+    snprintf(archive, room, "%s../libkest.a", library);
+    FILE *there = fopen(archive, "rb");
+    if (there == NULL) {
+        return false;
+    }
+    fclose(there);
+    return header[0] != '\0';
+}
+
+// A release of the program at `program`: the C that carries it, written beside
+// where the binary goes, compiled by the compiler this machine names -- `CC`,
+// or `cc` -- against the header and the library above, and taken away again.
+// Answers the binary's name, which is the program's without `.kest`, or NULL
+// with what stopped it said as `K0663`. See D1172.
+static char *made_release(const char *executable, const char *program,
+                          const char *written, KestDiags *diags) {
+    KestSpan nowhere = {0, 0};
+    char header[1024];
+    char archive[1024];
+    if (written == NULL ||
+        !release_parts(executable, header, archive, sizeof(header))) {
+        kest_diags_in(diags, NULL);
+        kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0663", nowhere,
+                       "a release needs `kest.h` and `libkest.a` where this "
+                       "command line is, and they are not there");
+        kest_diags_suggest(diags, "`make install` puts all three in one "
+                                  "place");
+        return NULL;
+    }
+    const char *base = strrchr(program, '/');
+    base = base == NULL ? program : base + 1;
+    size_t length = strlen(base);
+    if (length > 5 && strcmp(base + length - 5, ".kest") == 0) {
+        length -= 5;
+    }
+    char *out = malloc(length + 1);
+    char source[1100];
+    if (out == NULL) {
+        return NULL;
+    }
+    memcpy(out, base, length);
+    out[length] = '\0';
+    snprintf(source, sizeof(source), "%s.release.c", out);
+    FILE *file = fopen(source, "wb");
+    bool wrote = file != NULL && fputs(written, file) >= 0;
+    if (file != NULL && fclose(file) != 0) {
+        wrote = false;
+    }
+    const char *compiler = getenv("CC");
+    if (compiler == NULL || compiler[0] == '\0') {
+        compiler = "cc";
+    }
+    char command[4600];
+    snprintf(command, sizeof(command),
+             "%s -std=c11 -O2 -I'%s' -o '%s' '%s' '%s' -lm", compiler, header,
+             out, source, archive);
+    int status = wrote && strchr(command, '\n') == NULL ? system(command) : -1;
+    remove(source);
+    if (status != 0) {
+        kest_diags_in(diags, NULL);
+        kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0663", nowhere,
+                       "`%s` could not make a release of `%s`", compiler,
+                       program);
+        kest_diags_suggest(diags, "a release is compiled by the C compiler "
+                                  "`CC` names, or `cc`");
+        free(out);
+        return NULL;
+    }
+    return out;
+}
+
 static int run(const char *command, const char *executable, char **paths,
                int path_count, bool json, int32_t count, const int32_t *given,
                bool reset, size_t room, uint64_t fuel, bool costing,
-               bool writing_c) {
+               bool writing_c, bool releasing) {
     // Asked once, because a compiler that asked the environment twice could
     // give two answers about one run.
     static int weighing = -1;
@@ -2203,6 +2296,8 @@ static int run(const char *command, const char *executable, char **paths,
         weighing = getenv("KEST_SPENT") == NULL ? 0 : 1;
     }
     int64_t opened = weighing ? host_nanoseconds() : 0;
+    // The binary a release made, once one has. See D1172.
+    char *released = NULL;
     KestBuild *build = kest_build_open(kest_library_path(NULL, executable),
                                        paths,
                                        strcmp(command, "call") == 0
@@ -2246,6 +2341,9 @@ static int run(const char *command, const char *executable, char **paths,
     // left to read.
     if (writing_c) {
         kest_build_writes_c(build, true);
+    }
+    if (releasing) {
+        kest_build_carries_sources(build);
     }
 
     bool ticking = strcmp(command, "tick") == 0;
@@ -2306,7 +2404,20 @@ static int run(const char *command, const char *executable, char **paths,
                 }
             }
         } else if (emitting) {
-            if (kest_build_emit(build) && !json && !building) {
+            bool emitted = kest_build_emit(build);
+            // What a release is: the C that carries the program, handed to
+            // the compiler a release is built with and linked with this
+            // library, and nothing left behind but the binary. See D1172.
+            if (emitted && releasing && build->diags.error_count == 0) {
+                released = made_release(executable, paths[0],
+                                        kest_build_c(build), &build->diags);
+                if (released != NULL && !json) {
+                    printf("`%s` is a release of `%s`, which runs with no "
+                           "source\n",
+                           released, paths[0]);
+                }
+            }
+            if (emitted && !json && !building) {
                 // The instructions, or the C the same bodies were written as
                 // when that was asked for. Not both: a listing and a
                 // translation unit on one stream are neither.
@@ -2986,6 +3097,7 @@ static int run(const char *command, const char *executable, char **paths,
                      ? 1
                      : (int)(exit_code & 0xff);
     kest_build_free(build);
+    free(released);
     return status;
 }
 
@@ -3074,7 +3186,7 @@ static int run_tests(const char *executable, char **paths, int path_count,
         // Each on its own, because a program that will not compile is one
         // program that will not compile and the rest still run.
         int status = run("run", executable, one, 1, false, 0, NULL, false,
-                         room, fuel, false, false);
+                         room, fuel, false, false, false);
         if (status != 0) {
             failed++;
         }
@@ -3170,6 +3282,7 @@ int main(int argc, char **argv) {
     // `emit --c`: the same bodies written as C rather than as instructions,
     // for the compiler a release is built with. See D1093.
     bool writing_c = false;
+    bool releasing = false;
     FormatMode mode = FORMAT_PRINT;
     // Gathered rather than sliced out of argv, because a number among them is
     // how many events to send and not a file to read.
@@ -3207,6 +3320,8 @@ int main(int argc, char **argv) {
             costing = true;
         } else if (strcmp(argv[i], "--c") == 0) {
             writing_c = true;
+        } else if (strcmp(argv[i], "--release") == 0) {
+            releasing = true;
         } else if (strcmp(argv[i], "--fuel") == 0) {
             // The count is the word after, for the reason `--room`'s is.
             if (i + 1 >= argc) {
@@ -3404,9 +3519,21 @@ int main(int argc, char **argv) {
             free(paths);
             return usage(json);
         }
+        // A release is a build that leaves something behind, and is asked of
+        // `build` alone: a run, a check or an emit leave nothing. See D1172.
+        if (releasing && strcmp(argv[1], "build") != 0) {
+            free(from_project);
+            free(paths);
+            free(given);
+            return refused_at_the_words(json, "K0649",
+                                        "`--release` makes a binary, which "
+                                        "`build` does and `%s` does not",
+                                        argv[1]);
+        }
         int status =
             run(argv[1], argv[0], paths, path_count, json, count, given,
-                reset, room, fuel, costing, writing_c);
+                reset, room, fuel, costing, writing_c || releasing,
+                releasing);
         free(from_project);
         free(paths);
         free(given);

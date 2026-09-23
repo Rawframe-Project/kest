@@ -5,8 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-KestBuild *kest_build_open(const char *library, char **paths, int count,
-                           size_t room) {
+// Reading nothing but the files it is handed, when it is handed any: every
+// path a read asks for is one of those or is not there. See D1172.
+static KestBuild *opened(const char *library, char **paths, int count,
+                         const KestFile *handed, uint32_t handed_count,
+                         size_t room) {
     // A build begins with nobody refused. What was refused before this one is
     // the last build's afternoon, and a host that compiles twice should not
     // have the first one's memory hold its tongue about the second. See D880.
@@ -29,10 +32,17 @@ KestBuild *kest_build_open(const char *library, char **paths, int count,
     build->reported = 0;
     kest_diags_init(&build->diags, arena);
     kest_module_init(&build->module, arena);
+    build->units.handed = handed;
+    build->units.handed_count = handed_count;
     kest_load_many(arena, &build->diags,
                    library == NULL ? kest_library_path(arena, "") : library,
                    paths, count, &build->units);
     return build;
+}
+
+KestBuild *kest_build_open(const char *library, char **paths, int count,
+                           size_t room) {
+    return opened(library, paths, count, NULL, 0, room);
 }
 
 void kest_build_clock(KestBuild *build, uint64_t (*now)(void *), void *context,
@@ -51,6 +61,12 @@ const KestSpent *kest_build_spent(const KestBuild *build) {
 void kest_build_index_names(KestBuild *build, bool keep) {
     if (build != NULL) {
         build->index_names = keep;
+    }
+}
+
+void kest_build_carries_sources(KestBuild *build) {
+    if (build != NULL) {
+        build->carrying = true;
     }
 }
 
@@ -207,9 +223,30 @@ bool kest_build_emit(KestBuild *build) {
     // backend did not write is a call with nowhere to go, and which those are
     // is a question about the whole program.
     if (both.c != NULL && compiled) {
+        // Every file the program was read from, and the manifest that said
+        // where its imports resolve, when the program is to carry them. See
+        // D1172.
+        KestFile *carried = NULL;
+        uint32_t carried_count = 0;
+        if (build->carrying) {
+            uint32_t room = build->units.count + 1;
+            carried = KEST_ARENA_ARRAY(build->arena, KestFile, room);
+            for (uint32_t i = 0; carried != NULL && i < build->units.count;
+                 i++) {
+                const KestSource *source = &build->units.items[i].source;
+                carried[carried_count++] =
+                    (KestFile){source->path, source->text, source->length};
+            }
+            if (carried != NULL && build->units.manifest_path != NULL) {
+                carried[carried_count++] = (KestFile){
+                    build->units.manifest_path, build->units.manifest_text,
+                    strlen(build->units.manifest_text)};
+            }
+        }
         build->c_wrote = kest_emitc_done(
             both.c, kest_build_name(build, KEST_MAIN),
-            build->units.count > 0 ? build->units.items[0].source.path : NULL);
+            build->units.count > 0 ? build->units.items[0].source.path : NULL,
+            carried, carried_count, build->units.library);
         if (build->c_wrote == NULL) {
             kest_diags_starve(&build->diags);
         }
@@ -239,10 +276,34 @@ bool kest_build_emit(KestBuild *build) {
     return build->compiled;
 }
 
+static KestBuild *finished(KestBuild *build, FILE *errors, KestForm form,
+                           size_t room);
+
 KestBuild *kest_build(const char *path, const char *library, FILE *errors,
                       KestForm form, size_t room) {
     char *paths[1] = {(char *)path};
-    KestBuild *build = kest_build_open(library, paths, 1, room);
+    return finished(kest_build_open(library, paths, 1, room), errors, form,
+                    room);
+}
+
+KestBuild *kest_build_from(const KestFile *files, uint32_t count,
+                           const char *library, FILE *errors, KestForm form,
+                           size_t room) {
+    if (files == NULL || count == 0 || files[0].path == NULL) {
+        kest_diags_say_one(errors, form == KEST_FORM_JSON, "K0701",
+                           "a build handed no files has no program to read");
+        return NULL;
+    }
+    char *paths[1] = {(char *)files[0].path};
+    // A library a build was not told of is looked for on no disk: everything
+    // it reads is what it was handed. See D1172.
+    return finished(opened(library == NULL ? "" : library, paths, 1, files,
+                           count, room),
+                    errors, form, room);
+}
+
+static KestBuild *finished(KestBuild *build, FILE *errors, KestForm form,
+                           size_t room) {
     if (build == NULL) {
         // Nothing was made, so there is nothing to ask what went wrong: a
         // host that got NULL here and called `kest_build_report` would be

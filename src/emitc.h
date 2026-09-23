@@ -38,7 +38,13 @@ bool kest_emitc_body(void *writing, const KestIrBody *body);
 // all written from, which the host this produces reads again: the C is half of
 // a program and the machine holds the other half, so the program itself is
 // what says which half is which. NULL when there was no memory.
+// `carried` is every file the program was read from when the program is to
+// carry them, with `library` the root the library's are under: then the host
+// this writes builds from those rather than reading a file, and every word on
+// its command line is the program's. NULL for a host that reads `from`. See
+// D1172.
 const char *kest_emitc_done(KestEmitC *writing, const char *entry,
-                            const char *from);
+                            const char *from, const KestFile *carried,
+                            uint32_t carried_count, const char *library);
 
 #endif

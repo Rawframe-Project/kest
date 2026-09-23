@@ -80,27 +80,40 @@ static char *read_whole(KestArena *arena, const char *path, bool *there) {
     return text;
 }
 
+void kest_project_path(const char *where, char *path, size_t room) {
+    size_t length = strlen(where);
+    size_t named = strlen(KEST_PROJECT_FILE);
+    if (length >= named &&
+        strcmp(where + length - named, KEST_PROJECT_FILE) == 0) {
+        snprintf(path, room, "%s", where);
+    } else if (length == 0) {
+        snprintf(path, room, "%s", KEST_PROJECT_FILE);
+    } else {
+        snprintf(path, room, "%s%s%s", where,
+                 where[length - 1] == '/' ? "" : "/", KEST_PROJECT_FILE);
+    }
+}
+
 KestProject *kest_project_read(KestArena *arena, const char *where,
                                const char **why) {
+    return kest_project_from(arena, where, NULL, why);
+}
+
+KestProject *kest_project_from(KestArena *arena, const char *where,
+                               const char *handed, const char **why) {
     *why = NULL;
     if (arena == NULL || where == NULL) {
         return NULL;
     }
     char path[1024];
-    size_t length = strlen(where);
-    size_t named = strlen(KEST_PROJECT_FILE);
-    if (length >= named &&
-        strcmp(where + length - named, KEST_PROJECT_FILE) == 0) {
-        snprintf(path, sizeof(path), "%s", where);
-    } else if (length == 0) {
-        snprintf(path, sizeof(path), "%s", KEST_PROJECT_FILE);
-    } else {
-        snprintf(path, sizeof(path), "%s%s%s", where,
-                 where[length - 1] == '/' ? "" : "/", KEST_PROJECT_FILE);
-    }
+    kest_project_path(where, path, sizeof(path));
 
-    bool there = false;
-    char *text = read_whole(arena, path, &there);
+    // A manifest handed over is the one there is, and nothing is looked for on
+    // a disk. See D1172.
+    bool there = handed != NULL;
+    char *text = handed != NULL
+                     ? kest_arena_strndup(arena, handed, strlen(handed))
+                     : read_whole(arena, path, &there);
     if (text == NULL) {
         // A file that is not there is not a mistake: a program is a file and
         // needs no project around it. A file that is there and will not be

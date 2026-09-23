@@ -2633,8 +2633,99 @@ static void hands_over(KestEmitC *c) {
     }
 }
 
+// A piece of text written as a C string, a line of it at a time, with every
+// byte that is not printable, a quote, a backslash and a question mark written
+// as an escape: `??=` is a trigraph to a compiler told `-std=c11`.
+static void as_c_string(KestEmitC *c, Text *out, const char *text,
+                        size_t length) {
+    say(c, out, "\"");
+    size_t on_line = 0;
+    for (size_t i = 0; i < length; i++) {
+        unsigned char byte = (unsigned char)text[i];
+        if (byte == '\\' || byte == '"' || byte == '?') {
+            say(c, out, "\\%c", byte);
+        } else if (byte >= 32 && byte < 127) {
+            say(c, out, "%c", byte);
+        } else {
+            say(c, out, "\\%03o", byte);
+        }
+        if (byte == '\n' || ++on_line >= 72) {
+            say(c, out, "\"\n    \"");
+            on_line = 0;
+        }
+    }
+    say(c, out, "\"");
+}
+
+// The main of a binary that reads its program: from the file it was written
+// from, or from another copy of it named on the command line.
+static void write_reading_main(KestEmitC *c, Text *file, const char *from) {
+    say(c, file,
+        "    // The program this was written from, or another copy of it "
+        "named\n"
+        "    // on the command line. The C is half of a program and this is "
+        "the\n"
+        "    // other half; a file that has moved on since is refused by the\n"
+        "    // binding rather than run.\n"
+        "    const char *path = argc > 1 ? argv[1] : \"%s\";\n"
+        "    // And what the program itself was started with, which is\n"
+        "    // whatever follows the file: `Host.arg` answers from here.\n"
+        "    program_args = argc > 2 ? argc - 2 : 0;\n"
+        "    program_arg = argc > 2 ? argv + 2 : NULL;\n"
+        "    // Where the library is, the way anything that is not this\n"
+        "    // project's own command line finds it: the command line looks\n"
+        "    // beside itself and then where it was installed, and a host has\n"
+        "    // neither of those to go on.\n"
+        "    KestBuild *build = kest_build(path, getenv(\"KEST_LIB\"), "
+        "stderr,\n                                  KEST_FORM_TEXT, 0);\n"
+        "    if (build == NULL) {\n"
+        "        fprintf(stderr, \"`%%s` is not a program this can read\\n\","
+        "\n                path);\n"
+        "        return 1;\n"
+        "    }\n",
+        from == NULL ? "" : from);
+}
+
+// The start of a host that carries its program: every file it was read from,
+// written into it, and a build from those rather than from a file -- so it
+// runs where there is no source at all, and every word after its own name is
+// the program's. See D1172.
+static void write_carried_main(KestEmitC *c, Text *file,
+                               const KestFile *carried, uint32_t count,
+                               const char *library) {
+    say(c, file,
+        "    // The program and everything it imports, carried here: this\n"
+        "    // builds from these and reads no file, so it runs where there\n"
+        "    // is no source at all.\n"
+        "    static const KestFile carried[] = {\n");
+    for (uint32_t i = 0; i < count; i++) {
+        say(c, file, "        {");
+        as_c_string(c, file, carried[i].path, strlen(carried[i].path));
+        say(c, file, ",\n    ");
+        as_c_string(c, file, carried[i].text, carried[i].length);
+        say(c, file, ",\n         %zu},\n", carried[i].length);
+    }
+    say(c, file,
+        "    };\n"
+        "    const char *path = carried[0].path;\n"
+        "    program_args = argc > 1 ? argc - 1 : 0;\n"
+        "    program_arg = argc > 1 ? argv + 1 : NULL;\n"
+        "    KestBuild *build = kest_build_from(\n"
+        "        carried, sizeof(carried) / sizeof(carried[0]), ");
+    as_c_string(c, file, library == NULL ? "" : library,
+                library == NULL ? 0 : strlen(library));
+    say(c, file,
+        ",\n        stderr, KEST_FORM_TEXT, 0);\n"
+        "    if (build == NULL) {\n"
+        "        fprintf(stderr, \"`%%s` is not a program this can read\\n\",\n"
+        "                path);\n"
+        "        return 1;\n"
+        "    }\n");
+}
+
 const char *kest_emitc_done(KestEmitC *c, const char *entry,
-                            const char *from) {
+                            const char *from, const KestFile *carried,
+                            uint32_t carried_count, const char *library) {
     // What was read while the bodies were written is read no further.
     kest_arena_free(c->scratch);
     c->scratch = NULL;
@@ -3130,29 +3221,12 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "}\n"
         "\nint main(int argc, char **argv) {\n",
         bound_count);
+    if (carried != NULL) {
+        write_carried_main(c, &file, carried, carried_count, library);
+    } else {
+        write_reading_main(c, &file, from);
+    }
     say(c, &file,
-        "    // The program this was written from, or another copy of it "
-        "named\n"
-        "    // on the command line. The C is half of a program and this is "
-        "the\n"
-        "    // other half; a file that has moved on since is refused by the\n"
-        "    // binding rather than run.\n"
-        "    const char *path = argc > 1 ? argv[1] : \"%s\";\n"
-        "    // And what the program itself was started with, which is\n"
-        "    // whatever follows the file: `Host.arg` answers from here.\n"
-        "    program_args = argc > 2 ? argc - 2 : 0;\n"
-        "    program_arg = argc > 2 ? argv + 2 : NULL;\n"
-        "    // Where the library is, the way anything that is not this\n"
-        "    // project's own command line finds it: the command line looks\n"
-        "    // beside itself and then where it was installed, and a host has\n"
-        "    // neither of those to go on.\n"
-        "    KestBuild *build = kest_build(path, getenv(\"KEST_LIB\"), "
-        "stderr,\n                                  KEST_FORM_TEXT, 0);\n"
-        "    if (build == NULL) {\n"
-        "        fprintf(stderr, \"`%%s` is not a program this can read\\n\","
-        "\n                path);\n"
-        "        return 1;\n"
-        "    }\n"
         "    KestHost *host = kest_host_new();\n"
 
         "    if (host == NULL ||\n"
@@ -3207,8 +3281,7 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "        kest_build_free(build);\n"
         "        return 1;\n"
         "    }\n"
-        "    said_how_much(saying);\n",
-        from == NULL ? "" : from);
+        "    said_how_much(saying);\n");
     // The status a run answers with, which is the command line's rule rather
     // than the language's: a file this backend wrote is a host of the same
     // program, and a host that answered something else would be two programs

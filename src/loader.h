@@ -67,6 +67,16 @@ typedef struct {
     // parses into whatever arena it was handed, which is what the commands
     // that stop at a tree want. See D748.
     KestArena *trees;
+    // The files this read was handed, when it was handed them: then they are
+    // every file there is, and nothing is read from a disk or looked for on
+    // one. NULL for a read of files where they are. See D1172.
+    const KestFile *handed;
+    uint32_t handed_count;
+    // The manifest that said where imports resolve from, where one did, and
+    // what it said: part of what a program was read from, which a release
+    // binary carries with the files. See D1172.
+    const char *manifest_path;
+    const char *manifest_text;
 } KestUnits;
 
 // Reads a file, follows its imports, and parses everything reachable. An

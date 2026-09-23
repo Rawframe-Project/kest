@@ -97,6 +97,15 @@ typedef enum {
     KEST_FORM_JSON,
 } KestForm;
 
+// A file handed to a build rather than read by it: where the build would have
+// found it, and what it holds. A release binary carries its program this way,
+// so it runs where there is no source at all. See D1172.
+typedef struct {
+    const char *path;
+    const char *text;
+    size_t length;
+} KestFile;
+
 // A runtime value carries no tag. The language is statically typed, so an
 // instruction knows what it is operating on and a host function knows what it
 // was declared to take.
@@ -1746,6 +1755,18 @@ KestNative kest_host_find(const KestHost *host, const char *name,
 // raised by picking a bigger number and the other is not. See D843 and D844.
 KestBuild *kest_build(const char *path, const char *library, FILE *errors,
                       KestForm form, size_t room);
+
+// The same from files handed over rather than read: the first is the program
+// and the rest are what it imports, the library's among them, each where a
+// build would have found it -- a library's under `library`, the way
+// `kest_build` is told where one is. Nothing is read from a disk or looked
+// for on one, so what is built is what was handed and nothing else, whatever
+// is beside the program where it is run. A file it asks for and was not
+// handed is refused the way one that is not on a disk is. What a release
+// binary starts with, carrying the program inside it. See D1172.
+KestBuild *kest_build_from(const KestFile *files, uint32_t count,
+                           const char *library, FILE *errors, KestForm form,
+                           size_t room);
 // Frees the build and everything on it. Answers whether there is no build now:
 // true when it freed one and true when there was none, false when a machine is
 // still standing on it. The program the machines run is on here, and so is

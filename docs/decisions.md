@@ -40494,3 +40494,50 @@ different float.
   forty thousand cells, is 795 million instructions against the hand-written
   one's 850, and every float in it comes back as itself where the old one came
   back to the nearest thousandth.
+
+## D1172 — `kest build --release`: one binary that carries its program
+
+*owned*: the sixth thing the owner asked for, a release that runs with no
+source beside it, made by one command. What there was before was the other
+backend's C, which a host compiled and which then read the program from the
+file it was written from: a game shipped its `.kest` files and the library
+beside the binary, and a binary moved away from them was `not a program this
+can read`.
+
+- `kest_build_from(files, count, library, errors, form, room)` is a door: a
+  build from files a host hands over as `KestFile` -- a path, the text and its
+  length -- rather than from a disk. The first is the program. Every read the
+  loader makes, of a module, of the library and of the manifest that says
+  where a project's root is, is answered from what was handed or is not there,
+  so a build from them reads no file at all. No files is `K0701`, and a module
+  asked for that was not handed is the same `K0701` naming it. It is the one
+  hundred and eighth door, and `examples/embed.c` builds a program of two
+  files through it and one short of a file.
+- `kest build --release program.kest` asks the build to keep every file it read
+  -- its modules, the library's it imported and the manifest -- and the other
+  backend writes them into the C as one static array beside a `main` that
+  builds from them. Every word after the binary's own name is the program's,
+  which is what `Host.arg` answers. The C is compiled by the compiler `CC`
+  names, or `cc`, against the `kest.h` and `libkest.a` found where the command
+  line is (installed, or this tree), named as the program is without `.kest`,
+  and taken away again. A compiler that refuses, and a command line with
+  neither beside it, are both `K0663` in words that say which. `--release` on
+  any command but `build` is `K0649`.
+- It carries the source rather than hiding it, and that is on purpose: the
+  bytecode is unstable and unversioned (D987), so it is not a format anything
+  may ship. What the binary pays for that is compiling at start: `saving`
+  released is 713 kilobytes and runs in 13.1 million instructions, where
+  `kest run examples/saving.kest` is 13.3.
+- `check-commands.sh` makes a release with what it installed, moves it into a
+  room with nothing else in it and holds its answer to the program's, and
+  holds the two refusals to their words. A release is a new kind of thing --
+  an artifact nothing in this tree made before -- so under the exception to
+  the rule that the holes do not grow, both have one: a binary that reads its
+  program from where it was made, and a compiler's refusal that says nothing.
+  Both run by hand and caught.
+- The `--room 1000 --json` check held the sentence the refusal had as well as
+  the refusal, and which of the two sentences a thousand bytes gets depends on
+  how long the path to the check's room is -- the build began a hundred bytes
+  nearer the ceiling with the files it keeps, and the room's path on this
+  machine tipped it over. It holds the code and the ceiling now, which is what
+  it was written for (F48 was the same sentence meeting the same edge).

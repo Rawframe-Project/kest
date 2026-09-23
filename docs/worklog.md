@@ -41220,3 +41220,20 @@ See D1171.
 **Runs:** `examples/saving.kest` fused, plain, checked and compiled, the two
 refusals from the corpus, `examples/embed` on the held program, the reference's
 new block, `check-costs.sh` with its new driver, and `make most`.
+
+## 2026-09-23, a release that carries its program
+
+`kest build --release program.kest` writes one binary that runs with no source
+and no library beside it: the files the program was read from are written into
+its C, and it builds from those through `kest_build_from`, a door that reads
+nothing but what it is handed. Made with the installed command line and run in
+an empty room, it answers what the program answers; a compiler that refuses and
+a command line with no library to link are `K0663`. The `--room 1000 --json`
+check held a sentence that depends on the length of a path and holds the
+refusal now.
+
+See D1172.
+
+**Runs:** `saving` released and run in an empty room, `examples/embed` with a
+program built from handed files, the two new holes by hand, the quote pass,
+and `make most`.

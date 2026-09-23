@@ -214,7 +214,8 @@ if held != printed_words:
 FAMILY = {
  # running: what a host that compiles a program, binds what it asks for, sizes
  # a machine and calls it needs.
- "kest_build":"running","kest_build_free":"running","kest_build_report":"running",
+ "kest_build":"running","kest_build_from":"running","kest_build_free":"running",
+ "kest_build_report":"running",
  "kest_build_extern":"running","kest_build_capability":"running",
  "kest_extern_takes":"running","kest_extern_layout":"running","kest_extern_gives":"running",
  "kest_host_new":"running","kest_host_free":"running","kest_host_bind":"running",

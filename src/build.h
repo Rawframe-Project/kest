@@ -74,6 +74,9 @@ struct KestBuild {
     // before the next is built. See D1093.
     bool wants_c;
     const char *c_wrote;
+    // Whether the C written carries every file the program was read from, so
+    // that what is built from it needs none of them. See D1172.
+    bool carrying;
     // The clock, or NULL for a build nobody is weighing, and what each stage
     // took by it.
     uint64_t (*now)(void *);
@@ -110,6 +113,10 @@ void kest_build_index_names(KestBuild *build, bool keep);
 // small ones to their calls, which is what a profile of calls wants. See
 // D1156.
 void kest_build_calls_as_written(KestBuild *build);
+
+// Asks the C this build writes to carry the program's files rather than read
+// them, which is what a release binary is. Asked before the build emits.
+void kest_build_carries_sources(KestBuild *build);
 // The clock this build times its own stages with, and how long opening it
 // took, which the caller timed because there was nowhere to keep a clock while
 // it happened. The clock is the caller's for the reason `kest_clock` is the

@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1171
+    CURRENT SHA:       (this commit) D1093-D1172
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -799,6 +799,12 @@ the same workload.
    and so does the colony (its `df925d1`), a column at a time: five saves and
    restores of forty thousand cells are 795 million instructions against the
    hand-written save's 850, with every float exact.
+34. *(done, D1172)* **A release that runs with no source.** `kest build
+   --release program.kest` is one binary carrying every file the program was
+   read from, built at start through `kest_build_from`, which reads nothing
+   but what it is handed. Made by the installed command line and run in an
+   empty room, it answers what the program answers; `saving` released is 713
+   kilobytes and 13.1 million instructions against `kest run`'s 13.3.
 32. *(open, D1161)* **Daslang in every mode it ships.** `graph`, `words` and
    `rules` written in Daslang, answering what the other two do, and its AOT
    measured with the LLVM its own build downloads: behind the release engine

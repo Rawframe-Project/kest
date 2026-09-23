@@ -2019,6 +2019,70 @@ static bool weighs_what_it_costs(Engine *engine) {
 // the world is the program's own after every step, a run of it is read where
 // it lies, a reload carries the world over and a refused one leaves it exactly
 // where it was, and a file edited under a build is noticed. See D1151.
+// A program built from files handed over rather than read, which is what a
+// release binary carries: the program, the modules it imports and the
+// library's, each where a build would have found it. What is handed is all
+// there is -- a file left out is refused even where it is on the disk beside
+// the program, and a file handed in place of one is what is read. See D1172.
+static bool built_from_files_handed_over(void) {
+    static const char program[] =
+        "module handed\n"
+        "\n"
+        "import handed.more\n"
+        "\n"
+        "fn main() -> i32 {\n"
+        "    return more.seven() * 6\n"
+        "}\n";
+    static const char more[] =
+        "module handed.more\n"
+        "\n"
+        "fn seven() -> i32 {\n"
+        "    return 7\n"
+        "}\n";
+    const KestFile files[] = {
+        {"handed.kest", program, sizeof(program) - 1},
+        {"handed/more.kest", more, sizeof(more) - 1},
+    };
+    KestBuild *build = kest_build_from(files, 2, "lib/", stderr,
+                                       KEST_FORM_TEXT, 0);
+    KestRuntime *rt = build == NULL ? NULL : kest_start(build, NULL, NULL);
+    KestValue frame[2] = {{0}};
+    if (rt == NULL || !kest_call(rt, kest_entry(rt, "main"), frame, 2) ||
+        frame[0].integer != 42) {
+        fprintf(stderr, "a program handed over did not answer 42\n");
+        return false;
+    }
+    kest_runtime_free(rt);
+    kest_build_free(build);
+    // And the same with the module it imports left out: there is nothing to
+    // read it from, whatever is on the disk.
+    FILE *quiet = tmpfile();
+    KestBuild *short_of_one =
+        kest_build_from(files, 1, "lib/", quiet, KEST_FORM_TEXT, 0);
+    char said[256] = {0};
+    if (quiet != NULL) {
+        rewind(quiet);
+        size_t got = fread(said, 1, sizeof(said) - 1, quiet);
+        said[got] = '\0';
+        fclose(quiet);
+    }
+    if (short_of_one != NULL || strstr(said, "K0701") == NULL ||
+        strstr(said, "handed/more.kest") == NULL) {
+        fprintf(stderr, "a program short of a file it imports was built: %s\n",
+                said);
+        kest_build_free(short_of_one);
+        return false;
+    }
+    // And a build handed nothing, which has no program to read.
+    if (kest_build_from(NULL, 0, "lib/", NULL, KEST_FORM_TEXT, 0) != NULL) {
+        fprintf(stderr, "a build handed no files was made\n");
+        return false;
+    }
+    printf("a program handed over as files answered 42, and one handed "
+           "short of a file was refused\n");
+    return true;
+}
+
 static bool held_across_a_reload(void) {
     KestHost *host = kest_host_new();
     KestHeld *held = host == NULL
@@ -7948,6 +8012,9 @@ int main(int argc, char **argv) {
     // And then the build, which nothing is standing on now.
     if (!kest_build_free(build)) {
         kest_build_report(build, stderr, KEST_FORM_TEXT);
+        return 1;
+    }
+    if (!built_from_files_handed_over()) {
         return 1;
     }
     if (!held_across_a_reload()) {

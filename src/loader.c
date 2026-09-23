@@ -118,7 +118,37 @@ void kest_loader_overlay(const char *path, const char *text, size_t length) {
     overlaid_count++;
 }
 
-static char *read_file(KestArena *arena, const char *path, size_t *length) {
+static const char *tidied(KestArena *arena, const char *path);
+
+// One of the files a read was handed, or NULL. A path is a path whichever way
+// it was spelled, so both sides are tidied before they are compared.
+static const KestFile *handed_file(KestArena *arena, const KestUnits *units,
+                                   const char *path) {
+    for (uint32_t i = 0; units != NULL && i < units->handed_count; i++) {
+        const char *tidy = tidied(arena, units->handed[i].path);
+        if (tidy != NULL && strcmp(tidy, path) == 0) {
+            return &units->handed[i];
+        }
+    }
+    return NULL;
+}
+
+static char *read_file(KestArena *arena, const KestUnits *units,
+                       const char *path, size_t *length) {
+    if (units != NULL && units->handed != NULL) {
+        const KestFile *file = handed_file(arena, units, path);
+        if (file == NULL || file->text == NULL) {
+            return NULL;
+        }
+        char *held = kest_arena_alloc(arena, file->length + 1, 1);
+        if (held == NULL) {
+            return NULL;
+        }
+        memcpy(held, file->text, file->length);
+        held[file->length] = '\0';
+        *length = file->length;
+        return held;
+    }
     for (size_t i = 0; i < overlaid_count; i++) {
         if (strcmp(overlaid[i].path, path) != 0) {
             continue;
@@ -418,7 +448,8 @@ typedef struct {
 // program is rather than about who asked for it -- and a host embedding one
 // file of a project then resolves what the command line resolves. Bounded,
 // because a walk up a path is a walk with a machine at the end of it.
-static void roots_above(KestArena *arena, const char *path, Roots *roots) {
+static void roots_above(KestArena *arena, KestUnits *units,
+                        const char *path, Roots *roots) {
     roots->count = 0;
     roots->where = NULL;
     if (path == NULL) {
@@ -430,8 +461,34 @@ static void roots_above(KestArena *arena, const char *path, Roots *roots) {
     }
     for (uint32_t up = 0; up < 32; up++) {
         const char *why = NULL;
-        KestProject *project = kest_project_read(arena, at, &why);
+        KestProject *project = NULL;
+        if (units != NULL && units->handed != NULL) {
+            // Only the manifests the read was handed, and never one that
+            // happens to be on a disk where the program is run.
+            char manifest[1024];
+            kest_project_path(at, manifest, sizeof(manifest));
+            const KestFile *file =
+                handed_file(arena, units, tidied(arena, manifest));
+            const char *text =
+                file == NULL || file->text == NULL
+                    ? NULL
+                    : kest_arena_strndup(arena, file->text, file->length);
+            project = text == NULL ? NULL
+                                   : kest_project_from(arena, at, text, &why);
+        } else {
+            project = kest_project_read(arena, at, &why);
+        }
         if (project != NULL) {
+            // Kept, as what it said, for whoever carries what a program was
+            // read from.
+            if (units != NULL) {
+                size_t length = 0;
+                char *text = read_file(arena, units, project->path, &length);
+                if (text != NULL) {
+                    units->manifest_path = project->path;
+                    units->manifest_text = text;
+                }
+            }
             for (uint32_t i = 0; i < project->source_count; i++) {
                 roots->sources[roots->count++] = project->sources[i];
             }
@@ -483,7 +540,11 @@ static const char *beneath(KestArena *arena, const char *where,
 
 // Whether a file is there to be read, which is what says an import resolved
 // under this root and not another.
-static bool a_file_is_at(const char *path) {
+static bool a_file_is_at(KestArena *arena, const KestUnits *units,
+                         const char *path) {
+    if (units != NULL && units->handed != NULL) {
+        return handed_file(arena, units, tidied(arena, path)) != NULL;
+    }
     FILE *file = fopen(path, "rb");
     if (file == NULL) {
         return false;
@@ -531,7 +592,7 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
     }
 
     size_t length = 0;
-    char *text = read_file(arena, path, &length);
+    char *text = read_file(arena, units, path, &length);
     if (text == NULL) {
         // A missing import is reported where it was written, unless this is
         // the file the command named, which has nowhere to point at.
@@ -760,7 +821,7 @@ static bool load_one(KestArena *arena, KestDiags *diags, const char *root,
                 const char *under = path_of_import(
                     arena, beneath(arena, roots->where, roots->sources[r]),
                     name, decl->name.length);
-                if (under == NULL || !a_file_is_at(under)) {
+                if (under == NULL || !a_file_is_at(arena, units, under)) {
                     continue;
                 }
                 if (found == NULL) {
@@ -854,7 +915,7 @@ bool kest_load_many(KestArena *arena, KestDiags *diags, const char *library,
     }
     const char *root = directory_of(arena, paths[0]);
     Roots roots;
-    roots_above(arena, paths[0], &roots);
+    roots_above(arena, units, paths[0], &roots);
     KestSpan nowhere = {0, 0};
     for (int i = 0; i < count; i++) {
         // The first file settles the root; the rest are read against it.
@@ -1012,7 +1073,7 @@ bool kest_read_source(KestArena *arena, KestDiags *diags, const char *path,
                       KestSource *into) {
     const char *tidy = tidied(arena, path);
     size_t length = 0;
-    char *text = read_file(arena, tidy, &length);
+    char *text = read_file(arena, NULL, tidy, &length);
     if (text == NULL) {
         KestSpan nowhere = {0, 0};
         refuse_to_read(diags, tidy, nowhere, NULL);

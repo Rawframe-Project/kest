@@ -4314,7 +4314,7 @@ than something written wrongly — that is where a host walks `kest_frame_gives`
 and lays the slots out itself, which it may do for a struct too when the way
 the language writes one is not the way it wants.
 
-The C API is 107 doors in 6 families: 47 for running a program, 18 for reading
+The C API is 108 doors in 6 families: 48 for running a program, 18 for reading
 what one is made of, 14 for watching what it cost, 13 for stopping one, 10 for
 its memory and 5 for steering it while it runs. A host that compiles, binds,
 sizes and calls needs 22 of them, which is what `examples/least.c` is; the rest
@@ -4701,9 +4701,18 @@ whose names end in the same word are fine and always were — `render.math` and
 `physics.math` live in two vendored directories in the same program — because a
 name lives under the whole of its module.
 
-`kest build` compiles and says nothing when it compiles. There is no artifact:
-the bytecode is not a format anything else reads and is not stable, and what
-ships is the source beside the runtime.
+`kest build` compiles and says nothing when it compiles. There is no bytecode
+artifact: the bytecode is not a format anything else reads and is not stable.
+
+`kest build --release` makes the one artifact there is, which is a binary: the
+program written as C by the other backend, carrying every file it was read
+from -- its modules, the library's and the manifest that said where they are --
+handed to the C compiler `CC` names, or `cc`, with the `libkest.a` and `kest.h`
+found where the command line is, and named as the program is without `.kest`.
+It builds from what it carries through `kest_build_from` and reads no file, so
+it runs where there is no source and no library at all, and every word after
+its own name is the program's. A release that cannot be made says why, as
+`K0663`. See D1172.
 
 **What that costs, measured.** Six hundred modules in six hundred and three
 files — a hundred and sixty-five kilobytes of Kest, ten times what anybody has
@@ -4714,8 +4723,8 @@ another 0.05 milliseconds, and a host that starts many machines from one build
 pays the compiling once. So startup compilation is not a thing a game has to
 plan around, and there is nothing a cache would buy that is worth a format.
 
-What that costs a studio is that the source is the artifact: a game that must
-not ship readable Kest packs it the way it packs its other content. The
+A release carries the source rather than hiding it: a game that must not ship
+readable Kest packs the binary the way it packs its other content. The
 bytecode is not an answer to that — it is unstable and unversioned on purpose,
 and it would have to stop being both to become one. `kest test` runs each program named and
 reads what it answered — a test here is a program that checks itself and answers
@@ -6388,7 +6397,7 @@ bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 577 lines:
-55860 bytes as tokens, 136241 as a tree, 174904 checked and 206614 compiled.
+55860 bytes as tokens, 136241 as a tree, 174952 checked and 206662 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
 
@@ -6405,7 +6414,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 20701 bytes, against the 206614 it costs to compile.
+file and 20701 bytes, against the 206662 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.

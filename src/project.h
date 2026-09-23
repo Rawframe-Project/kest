@@ -47,6 +47,15 @@ typedef struct {
 KestProject *kest_project_read(KestArena *arena, const char *where,
                                const char **why);
 
+// The same, from the text of a manifest handed over rather than read, which is
+// how a release binary is a project with no files around it. `handed` NULL is
+// `kest_project_read`. See D1172.
+KestProject *kest_project_from(KestArena *arena, const char *where,
+                               const char *handed, const char **why);
+
+// Where the manifest for `where` is, written into `path`.
+void kest_project_path(const char *where, char *path, size_t room);
+
 // The one a project would be written as, for `kest new`. Answers the bytes,
 // which the caller writes wherever it likes.
 const char *kest_project_written(KestArena *arena, const char *name);
