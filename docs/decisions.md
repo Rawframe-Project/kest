@@ -41360,3 +41360,25 @@ baseline is the commit's bytes, and whether it is can be asked in a second:
 built twice from the committed sources, the two are compared, and the one
 measured is the one they agree on.
 
+## D1202 — A body the machine carries, the host's compiler is asked to carry
+
+*measured*. The machine writes a small body that makes no call into the one
+that calls it (D1156), and the release engine wrote a call to it: C of its
+own, handed its arguments, and left to the host's compiler to inline or not.
+GCC kept `worthOf` out of line in `bench/rules`, a call for every thing an
+actor carries, and `control`'s rule the same. Asked by hand in the generated
+file, `worthOf` alone inlined was 5.6% of the cycles of compiled `rules`.
+
+So a body some caller carries is marked when that call is written, and its
+prototype, written once every body is, says `KEST_CARRIED`: `inline` and,
+where the compiler is GCC or clang, `always_inline`. A carried body makes no
+call, so nothing asks one to be inlined into itself; one the machine enters
+by its wrapper is still a function the wrapper calls. The definition says
+nothing, and the prototype is what decides, which was measured the same.
+
+Compiled, best of seven turn about: `rules` 188.6 M cycles against 173.6 M,
+`control` 39.9 M against 33.9 M and 117.2 M instructions against 105.7 M;
+`kernel`, `graph` and `words` level. `check-c.sh` holds every program in the
+tree both ways as before, compiled by the host's compiler with the attribute
+it is asked to honour or refuse.
+

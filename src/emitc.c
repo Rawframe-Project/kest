@@ -48,6 +48,10 @@ typedef struct {
     // Which of its arguments, a bit each, it reads there -- and so is not
     // handed as a value at all. See D1199.
     uint32_t in_frame;
+    // Whether a body calling it carries it, the way the machine writes a
+    // small body into the one that calls it; then its prototype asks the
+    // host's compiler to do the same. See D1202.
+    bool carried_in;
     // And, for one this backend did not write, whether anything it did write
     // calls it: such a body gets a C function of its own all the same, which
     // hands the call to the machine. See D1105.
@@ -2383,6 +2387,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         Where needs;
         snprintf(needs, sizeof(Where), "KN_%u", which);
         if (carried_here(walk, which)) {
+            c->bodies[which].carried_in = true;
             // A body the machine carries into this one rather than calling it
             // is given no frame there, so it is given none here: nothing in
             // one can stop the program, so there is nothing a frame would be
@@ -2599,7 +2604,9 @@ static bool takes_value(const Body *body, bool as_written, uint16_t p) {
 
 static void write_head(KestEmitC *c, Text *into, const Body *body,
                        uint32_t which, bool as_written) {
-    say(c, into, "static bool kf_%u(KestRuntime *rt, KV *frame, KV *out",
+    say(c, into, "static %sbool kf_%u(KestRuntime *rt, KV *frame, KV *out",
+        as_written && body->written && body->carried_in ? "KEST_CARRIED "
+                                                         : "",
         which);
     for (uint16_t p = 0; p < body->params; p++) {
         if (takes_value(body, as_written, p)) {
@@ -3210,6 +3217,15 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
             c->bodies[i].handed_over ? ", and handed to the machine" : "");
     }
     say(c, &file, "// %u of %u bodies written\n\n", written, c->count);
+    // A body the machine writes into the one that calls it is small and
+    // makes no call, and the host's compiler is asked to do the same with
+    // its C, where it can be asked: left to itself it kept `worthOf` out of
+    // line in `rules`, and a call is a wall in front of everything around
+    // it. See D1202.
+    say(c, &file,
+        "#if defined(__GNUC__)\n"
+        "#define KEST_CARRIED inline __attribute__((always_inline))\n"
+        "#else\n#define KEST_CARRIED inline\n#endif\n\n");
 
     for (uint32_t i = 0; i < c->count; i++) {
         if (!c->bodies[i].written && !c->bodies[i].handed_over) {

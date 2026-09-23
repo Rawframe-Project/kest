@@ -219,7 +219,9 @@ says why. The other was bulk text append and it is done.
   an instruction is called rather than carried, since re-laying it wrote a
   jump off the code (D1200). An element written with its run and index read
   in place, and the loop marked `hot`, were measured and not kept; a baseline
-  is the commit built twice to the same bytes (D1201). `control` is 0.98 once its
+  is the commit built twice to the same bytes (D1201). A carried body's C is
+  asked to be inlined, compiled `rules` 8% and `control` 15% fewer cycles
+  (D1202). `control` is 0.98 once its
   rule is carried (D1175), and `rules` 0.99 once
   a value is moved a run of its pieces at a time (D1177) and an element is
   weighed against a constant in one instruction (D1178): every workload here

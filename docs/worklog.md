@@ -41669,3 +41669,15 @@ See D1201.
 against the commit built from its own sources; the commit built twice and
 compared; `make fast` over each.
 
+## 2026-09-23, a carried body inlined in its C as well
+
+A body the machine carries into its caller is written with a prototype asking
+the host's compiler to inline it too. Compiled `rules` 8% fewer cycles and
+`control` 15%.
+
+See D1202.
+
+**Runs:** `worthOf` inlined by hand in the generated file for the ceiling,
+and marked on the prototype alone; the five workloads compiled before and
+after, best of seven turn about; `check-c.sh` over the tree; and `make most`.
+
