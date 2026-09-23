@@ -604,11 +604,20 @@ typedef struct {
 // because a type walked every time an element moved was a third of what
 // `bench/rules.kest` spent. See D1159.
 #define KEST_MOVE_CASES 0xFF
+// A step of more than one of a kind is that kind with this bit set, so a step
+// of one is read the way it always was and only a run pays for a loop.
+#define KEST_MOVE_RUN 0x80
+_Static_assert(KEST_L_REF < KEST_MOVE_RUN, "a kind leaves room for a run");
 typedef struct {
-    // A `KEST_L_*` kind, or `KEST_MOVE_CASES`.
+    // A `KEST_L_*` kind, that kind with `KEST_MOVE_RUN` set, or
+    // `KEST_MOVE_CASES`.
     uint8_t kind;
     uint16_t slot;
     uint32_t byte;
+    // How many of the kind lie side by side from here, in the slots and in the
+    // bytes, which is moved as one run: a struct of four `f32` is one step
+    // rather than four, and a run of handles or of text is one copy. See D1177.
+    uint16_t many;
     // For a tag: how many slots and bytes the enum is, which case steps come
     // first in the ranges, and how many cases there are.
     uint16_t slots;

@@ -793,7 +793,62 @@ static uint32_t flatten(KestMoveStep *steps, uint32_t n, const KestType *type,
     }
 }
 
-// A tagged value's walk. The value's own steps come first; then, for every tag
+// How far apart two of a kind lie in the bytes, and in the slots: what the
+// merging below asks of two steps before it makes them one run.
+static uint32_t bytes_apart(uint8_t kind) {
+    switch (kind) {
+    case KEST_L_I8:
+    case KEST_L_U8:
+    case KEST_L_BOOL:
+    case KEST_L_HELD:
+    case KEST_L_FLAGS8:
+        return 1;
+    case KEST_L_I16:
+    case KEST_L_U16:
+    case KEST_L_FLAGS16:
+        return 2;
+    case KEST_L_I32:
+    case KEST_L_U32:
+    case KEST_L_F32:
+    case KEST_L_FLAGS32:
+        return 4;
+    case KEST_L_TEXT:
+        return 16;
+    default:
+        return 8;
+    }
+}
+
+// The steps from `first` up to `end` with every step that carries on the run
+// before it -- the same kind, the next slot and the next bytes -- folded into
+// that run. Answers where the steps end now.
+static uint32_t merged(KestMoveStep *steps, uint32_t first, uint32_t end) {
+    uint32_t kept = first;
+    for (uint32_t i = first; i < end; i++) {
+        KestMoveStep step = steps[i];
+        step.many = 1;
+        if (kept > first && step.kind != KEST_MOVE_CASES) {
+            KestMoveStep *run = &steps[kept - 1];
+            uint32_t apart = bytes_apart(step.kind);
+            uint32_t slots_apart = step.kind == KEST_L_TEXT ? 2u : 1u;
+            if (run->kind == step.kind && run->many < UINT16_MAX &&
+                step.byte == run->byte + run->many * apart &&
+                step.slot == run->slot + run->many * slots_apart) {
+                run->many++;
+                continue;
+            }
+        }
+        steps[kept++] = step;
+    }
+    for (uint32_t i = first; i < kept; i++) {
+        if (steps[i].many > 1) {
+            steps[i].kind |= KEST_MOVE_RUN;
+        }
+    }
+    return kept;
+}
+
+// A value's walk. The value's own steps come first; then, for every tag
 // among the steps so far in the order they were written, each of its cases as
 // a run of steps of its own -- which may hold tags, whose cases are written
 // when the walk reaches them. NULL for no memory.
@@ -808,7 +863,7 @@ static const KestMoving *walk_of(KestArena *arena, const KestType *type) {
     if (walk == NULL || steps == NULL || runs == NULL) {
         return NULL;
     }
-    uint32_t n = flatten(steps, 0, type, 0, 0);
+    uint32_t n = merged(steps, 0, flatten(steps, 0, type, 0, 0));
     walk->count = n;
     uint32_t r = 0;
     for (uint32_t i = 0; i < n; i++) {
@@ -826,6 +881,7 @@ static const KestMoving *walk_of(KestArena *arena, const KestType *type) {
                             (uint16_t)(steps[i].slot + variant->offsets[p]),
                             steps[i].byte + variant->byte_offsets[p]);
             }
+            n = merged(steps, first, n);
             runs[steps[i].cases + c] = (KestMoveRun){first, n - first};
         }
     }
@@ -872,12 +928,12 @@ int32_t kest_module_layout(KestModule *module, const KestType *type) {
     layout->type = type;
     layout->tagged = holds_a_tag(type);
     layout->by_the_type = by_the_type(type);
-    layout->walk = NULL;
-    if (layout->tagged) {
-        layout->walk = walk_of(module->arena, type);
-        if (layout->walk == NULL) {
-            return -1;
-        }
+    // Every value is moved by its walk, a tag or none: what used to be a loop
+    // over the pieces moved one piece a turn of a switch, which was most of
+    // what reading a struct out of an array cost. See D1177.
+    layout->walk = walk_of(module->arena, type);
+    if (layout->walk == NULL) {
+        return -1;
     }
     layout->size = type == NULL || type->byte_size == 0 ? 8 : type->byte_size;
     layout->align = type == NULL || type->byte_align == 0 ? 8 : type->byte_align;

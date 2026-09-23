@@ -12065,9 +12065,9 @@ static const Keyword KEYWORDS[] = {
         # what the program put there and what was there before it.
         "what": "a case written over a wider one, keeping its bytes",
         "file": "src/vm.c",
-        "from": """        memset(to + step->byte, 0, step->size);
-        memcpy(to + step->byte, &tag, 4);""",
-        "to": """        memcpy(to + step->byte, &tag, 4);""",
+        "from": """            memset(at, 0, step->size);
+            memcpy(at, &tag, 4);""",
+        "to": """            memcpy(at, &tag, 4);""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "left 4 under its tag",
@@ -14944,22 +14944,14 @@ bool kest_needs_of(""",
         # anywhere saying a word about it.
         "what": "a byte written into a lend out of the wrong end",
         "file": "src/vm.c",
-        "from": r"""        case KEST_L_I8:
-        case KEST_L_U8:
-        case KEST_L_FLAGS8:
-        case KEST_L_BOOL:
-        case KEST_L_HELD: {
-            uint8_t v = (uint8_t)from[took].integer;
-            memcpy(at, &v, 1);
-            break;""",
-        "to": r"""        case KEST_L_I8:
-        case KEST_L_U8:
-        case KEST_L_FLAGS8:
-        case KEST_L_BOOL:
-        case KEST_L_HELD: {
-            uint8_t v = (uint8_t)(from[took].integer >> 8);
-            memcpy(at, &v, 1);
-            break;""",
+        # What writes an element of one piece, which a byte is: it goes
+        # through `write_piece` rather than the walk since D1177.
+        "from": r"""    case KEST_L_HELD: {
+        uint8_t v = (uint8_t)from[0].integer;
+        memcpy(at, &v, 1);""",
+        "to": r"""    case KEST_L_HELD: {
+        uint8_t v = (uint8_t)(from[0].integer >> 8);
+        memcpy(at, &v, 1);""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "into this host's bytes",

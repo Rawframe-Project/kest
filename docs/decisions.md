@@ -40632,3 +40632,34 @@ numbers of those widths are; one over 64 was already right.
 `examples/flags.kest` keeps three sets of three widths in a struct beside a
 tag and one in a flat struct, reads them back, writes one and reads it again;
 on the tree before it answers 29.
+
+## D1177 — A value moved a run at a time, and every value by its walk
+
+A profile of `bench/rules` with line numbers said 22% of it was moving values
+that hold a tag between memory and slots -- an `Actor` read out of its array,
+worked on and written back, and each `Item` read out of a bag -- and a program
+that did the same to a struct with the tag taken out cost 528 instructions a
+round trip where the tagged one cost 743. Both paid about twenty instructions a
+piece to move two: the step read, a jump by the kind, the move, the loop.
+
+- The steps of a walk that lie side by side -- the same kind, the next slots,
+  the next bytes -- are merged into one run when the walk is written, and a run
+  is its kind with `KEST_MOVE_RUN` set: moved as one loop of one conversion. A
+  step of one is moved as before, in the same switch rather than in a second
+  one behind it, which was the difference between the tagged round trip going
+  down and going up.
+- Every layout has a walk now, not only one holding a tag, and one piece with
+  no tag in it is still moved without one (D1154), writing as well as reading.
+- The kinds a slot holds bit for bit are moved a slot at a time in a run too,
+  rather than as one copy: a copy of a run of four `f64` was a call into the C
+  library and a wide read of four slots written one at a time a moment before,
+  which waits for every one of those writes. `kernel` was 10% fewer
+  instructions and 12 to 18% more cycles that way.
+
+Instructions, and cycles turn about against the tree before: `kernel` 845.5
+million to 778.5, 8.5% fewer cycles; `rules` 3,447 million to 3,373, 4.8%
+fewer cycles, 1.01 times Luau's interpreter; `control` 948.8 to 927.0 and the
+same cycles; `words` and `graph` within the noise both ways. The two round
+trips are 472 and 663 million where they were 528 and 743. What compiling
+costs grows by the walks: `lib/std/text.kest` is 207,398 bytes compiled where it
+was 206,662.

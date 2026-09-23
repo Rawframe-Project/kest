@@ -307,9 +307,9 @@ typedef struct {
     // width can say. The machine reads this rather than looking at the pieces
     // every call. See D840.
     bool by_the_type;
-    // The machine's own: a value holding a tag, written out once as the run
-    // of reads and writes moving one takes, so moving one is a walk of that
-    // rather than of its type. Nothing a host reads. See D1159.
+    // The machine's own: a value written out once as the runs of reads and
+    // writes moving one takes, so moving one is a walk of that rather than of
+    // its type or of its pieces. Nothing a host reads. See D1159 and D1177.
     const void *walk;
 } KestLayout;
 

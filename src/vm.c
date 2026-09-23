@@ -274,203 +274,264 @@ static inline void write_piece(unsigned char *at, uint8_t kind,
     }
 }
 
-// A value holding a tag, moved by the steps its layout was written out as:
-// every scalar where it sits, and for a tag, the tag and then the steps of the
-// case it names. What a case does not carry is nought in the slots and nought
-// in the bytes, so one value is one run of each whatever was there before.
-// See D711 and D1159.
+// A run of one kind read out of memory into slots, one conversion a loop. The
+// kinds a slot holds bit for bit -- text, a handle, a whole number or a float
+// of sixty-four bits -- are moved a slot at a time as well rather than as one
+// copy: a copy of the whole run is a call, and a wide read of slots written
+// one at a time a moment before waits for every one of those writes to land,
+// which took a run of four `f64` from a tenth fewer cycles to a sixth more.
+// See D1177.
+#define READ_RUN(type, member, count)                                           \
+    for (uint32_t k = 0; k < (uint32_t)(count); k++) {                        \
+        type v;                                                                \
+        memcpy(&v, at + k * sizeof(type), sizeof(type));                       \
+        to[k].member = v;                                                      \
+    }
+
+#define WRITE_RUN(type, member, count)                                          \
+    for (uint32_t k = 0; k < (uint32_t)(count); k++) {                        \
+        type v = (type)from[k].member;                                         \
+        memcpy(at + k * sizeof(type), &v, sizeof(type));                       \
+    }
+
+#define COPY_IN(count)                                                         \
+    for (uint32_t k = 0; k < (uint32_t)(count); k++) {                        \
+        memcpy(&to[k], at + k * 8, 8);                                         \
+    }
+
+#define COPY_OUT(count)                                                        \
+    for (uint32_t k = 0; k < (uint32_t)(count); k++) {                        \
+        memcpy(at + k * 8, &from[k], 8);                                       \
+    }
+
+// And one of them, which is most steps, in the same switch as the runs: a step
+// that went to a second switch for its kind paid for two jumps.
+#define READ_ONE(type, member)                                                  \
+    do {                                                                       \
+        type v;                                                                \
+        memcpy(&v, at, sizeof(type));                                          \
+        to[0].member = v;                                                      \
+    } while (0)
+
+#define WRITE_ONE(type, member)                                                 \
+    do {                                                                       \
+        type v = (type)from[0].member;                                         \
+        memcpy(at, &v, sizeof(type));                                          \
+    } while (0)
+
 static void walk_in(KestValue *out, const KestMoving *walk, uint32_t first,
                     uint32_t count, const unsigned char *from, TagRead *told) {
     for (uint32_t i = first; i < first + count; i++) {
         const KestMoveStep *step = &walk->steps[i];
-        if (step->kind != KEST_MOVE_CASES) {
-            read_piece(out + step->slot, step->kind, from + step->byte);
-            continue;
-        }
-        int32_t tag;
-        memcpy(&tag, from + step->byte, 4);
-        out[step->slot].integer = tag;
-        for (uint16_t s = 1; s < step->slots; s++) {
-            out[step->slot + s].integer = 0;
-        }
-        if (tag >= 0 && (uint32_t)tag < step->case_count) {
-            const KestMoveRun *run = &walk->ranges[step->cases + (uint32_t)tag];
-            walk_in(out, walk, run->first, run->count, from, told);
-        } else if (told != NULL && !told->wrong) {
-            // The payload slots are left at nought above, which is what made
-            // this readable at all; what it is not is a value of this type.
-            // The first one found is the one said, because a run of them is
-            // one mistake about one piece of memory said as many times as the
-            // program looks at it.
-            told->type = step->type;
-            told->tag = tag;
-            told->wrong = true;
-        }
-    }
-}
-
-static void walk_out(unsigned char *to, const KestMoving *walk, uint32_t first,
-                     uint32_t count, const KestValue *from) {
-    for (uint32_t i = first; i < first + count; i++) {
-        const KestMoveStep *step = &walk->steps[i];
-        if (step->kind != KEST_MOVE_CASES) {
-            write_piece(to + step->byte, step->kind, from + step->slot);
-            continue;
-        }
-        int32_t tag = (int32_t)from[step->slot].integer;
-        memset(to + step->byte, 0, step->size);
-        memcpy(to + step->byte, &tag, 4);
-        if (tag >= 0 && (uint32_t)tag < step->case_count) {
-            const KestMoveRun *run = &walk->ranges[step->cases + (uint32_t)tag];
-            walk_out(to, walk, run->first, run->count, from);
-        }
-    }
-}
-
-static void unpack(KestValue *out, const KestLayout *layout,
-                   const unsigned char *from, TagRead *told) {
-    if (layout->tagged) {
-        const KestMoving *walk = layout->walk;
-        walk_in(out, walk, 0, walk->count, from, told);
-        return;
-    }
-    // A piece is not a slot: a piece of text is one piece and two slots, so
-    // the walk over the pieces counts the slots as it goes. See D964.
-    //
-    // The switch is written out here rather than handed to `read_piece`, and
-    // that is measured rather than preferred: a walk that called it was a
-    // third slower on `bench/kernel.kest` and a tenth on `bench/control.kest`,
-    // whose elements are flat runs of numbers and whose whole cost is this
-    // loop. See D1028.
-    uint16_t put = 0;
-    for (uint16_t i = 0; i < layout->count; i++, put++) {
-        const unsigned char *at = from + layout->pieces[i].offset;
-        switch (layout->pieces[i].kind) {
-        case KEST_L_TEXT: {
-            memcpy(&out[put], at, 8);
-            uint64_t many;
-            memcpy(&many, at + 8, 8);
-            out[put + 1].integer = (int64_t)many;
-            put++;
+        KestValue *to = out + step->slot;
+        const unsigned char *at = from + step->byte;
+        uint16_t many = step->many;
+        switch (step->kind) {
+        case KEST_MOVE_RUN | KEST_L_I8:
+            READ_RUN(int8_t, integer, many);
+            break;
+        case KEST_MOVE_RUN | KEST_L_I16:
+            READ_RUN(int16_t, integer, many);
+            break;
+        case KEST_MOVE_RUN | KEST_L_I32:
+            READ_RUN(int32_t, integer, many);
+            break;
+        case KEST_MOVE_RUN | KEST_L_U8:
+        case KEST_MOVE_RUN | KEST_L_FLAGS8:
+        case KEST_MOVE_RUN | KEST_L_BOOL:
+        case KEST_MOVE_RUN | KEST_L_HELD:
+            READ_RUN(uint8_t, integer, many);
+            break;
+        case KEST_MOVE_RUN | KEST_L_U16:
+        case KEST_MOVE_RUN | KEST_L_FLAGS16:
+            READ_RUN(uint16_t, integer, many);
+            break;
+        case KEST_MOVE_RUN | KEST_L_U32:
+        case KEST_MOVE_RUN | KEST_L_FLAGS32:
+            READ_RUN(uint32_t, integer, many);
+            break;
+        case KEST_MOVE_RUN | KEST_L_F32:
+            READ_RUN(float, real, many);
+            break;
+        case KEST_MOVE_RUN | KEST_L_TEXT:
+            COPY_IN(2 * many);
+            break;
+        case KEST_MOVE_RUN | KEST_L_I64:
+        case KEST_MOVE_RUN | KEST_L_U64:
+        case KEST_MOVE_RUN | KEST_L_F64:
+        case KEST_MOVE_RUN | KEST_L_WORD:
+        case KEST_MOVE_RUN | KEST_L_FLAGS64:
+        case KEST_MOVE_RUN | KEST_L_FN:
+        case KEST_MOVE_RUN | KEST_L_REF:
+            COPY_IN(many);
+            break;
+        case KEST_MOVE_CASES: {
+            int32_t tag;
+            memcpy(&tag, at, 4);
+            to[0].integer = tag;
+            for (uint16_t s = 1; s < step->slots; s++) {
+                to[s].integer = 0;
+            }
+            if (tag >= 0 && (uint32_t)tag < step->case_count) {
+                const KestMoveRun *run =
+                    &walk->ranges[step->cases + (uint32_t)tag];
+                walk_in(out, walk, run->first, run->count, from, told);
+            } else if (told != NULL && !told->wrong) {
+                // The payload slots are left at nought above, which is what
+                // made this readable at all; what it is not is a value of this
+                // type. The first one found is the one said, because a run of
+                // them is one mistake about one piece of memory said as many
+                // times as the program looks at it.
+                told->type = step->type;
+                told->tag = tag;
+                told->wrong = true;
+            }
             break;
         }
-        case KEST_L_I8: {
-            int8_t v;
-            memcpy(&v, at, 1);
-            out[put].integer = v;
+        case KEST_L_I8:
+            READ_ONE(int8_t, integer);
             break;
-        }
-        case KEST_L_I16: {
-            int16_t v;
-            memcpy(&v, at, 2);
-            out[put].integer = v;
+        case KEST_L_I16:
+            READ_ONE(int16_t, integer);
             break;
-        }
-        case KEST_L_I32: {
-            int32_t v;
-            memcpy(&v, at, 4);
-            out[put].integer = v;
+        case KEST_L_I32:
+            READ_ONE(int32_t, integer);
             break;
-        }
         case KEST_L_U8:
         case KEST_L_FLAGS8:
         case KEST_L_BOOL:
-        case KEST_L_HELD: {
-            uint8_t v;
-            memcpy(&v, at, 1);
-            out[put].integer = v;
+        case KEST_L_HELD:
+            READ_ONE(uint8_t, integer);
             break;
-        }
+        case KEST_L_U16:
         case KEST_L_FLAGS16:
-        case KEST_L_U16: {
-            uint16_t v;
-            memcpy(&v, at, 2);
-            out[put].integer = v;
+            READ_ONE(uint16_t, integer);
             break;
-        }
+        case KEST_L_U32:
         case KEST_L_FLAGS32:
-        case KEST_L_U32: {
-            uint32_t v;
-            memcpy(&v, at, 4);
-            out[put].integer = v;
+            READ_ONE(uint32_t, integer);
             break;
-        }
-        case KEST_L_F32: {
-            float v;
-            memcpy(&v, at, 4);
-            out[put].real = v;
+        case KEST_L_F32:
+            READ_ONE(float, real);
             break;
-        }
-        case KEST_L_F64: {
-            double v;
-            memcpy(&v, at, 8);
-            out[put].real = v;
+        case KEST_L_TEXT:
+            memcpy(to, at, 16);
             break;
-        }
         default:
-            memcpy(&out[put], at, 8);
+            memcpy(to, at, 8);
             break;
         }
     }
 }
 
-static void pack(unsigned char *to, const KestLayout *layout,
-                 const KestValue *from) {
-    if (layout->tagged) {
-        const KestMoving *walk = layout->walk;
-        walk_out(to, walk, 0, walk->count, from);
-        return;
-    }
-    // Written out for the reason the one above is. See D1028.
-    uint16_t took = 0;
-    for (uint16_t i = 0; i < layout->count; i++, took++) {
-        unsigned char *at = to + layout->pieces[i].offset;
-        switch (layout->pieces[i].kind) {
-        case KEST_L_TEXT: {
-            memcpy(at, &from[took], 8);
-            uint64_t many = (uint64_t)from[took + 1].integer;
-            memcpy(at + 8, &many, 8);
-            took++;
+static void walk_out(unsigned char *to_bytes, const KestMoving *walk,
+                     uint32_t first, uint32_t count, const KestValue *from_slots) {
+    for (uint32_t i = first; i < first + count; i++) {
+        const KestMoveStep *step = &walk->steps[i];
+        unsigned char *at = to_bytes + step->byte;
+        const KestValue *from = from_slots + step->slot;
+        uint16_t many = step->many;
+        switch (step->kind) {
+        case KEST_MOVE_RUN | KEST_L_I8:
+        case KEST_MOVE_RUN | KEST_L_U8:
+        case KEST_MOVE_RUN | KEST_L_FLAGS8:
+        case KEST_MOVE_RUN | KEST_L_BOOL:
+        case KEST_MOVE_RUN | KEST_L_HELD:
+            WRITE_RUN(uint8_t, integer, many);
+            break;
+        case KEST_MOVE_RUN | KEST_L_I16:
+        case KEST_MOVE_RUN | KEST_L_U16:
+        case KEST_MOVE_RUN | KEST_L_FLAGS16:
+            WRITE_RUN(uint16_t, integer, many);
+            break;
+        case KEST_MOVE_RUN | KEST_L_I32:
+        case KEST_MOVE_RUN | KEST_L_U32:
+        case KEST_MOVE_RUN | KEST_L_FLAGS32:
+            WRITE_RUN(uint32_t, integer, many);
+            break;
+        case KEST_MOVE_RUN | KEST_L_F32:
+            WRITE_RUN(float, real, many);
+            break;
+        case KEST_MOVE_RUN | KEST_L_TEXT:
+            COPY_OUT(2 * many);
+            break;
+        case KEST_MOVE_RUN | KEST_L_I64:
+        case KEST_MOVE_RUN | KEST_L_U64:
+        case KEST_MOVE_RUN | KEST_L_F64:
+        case KEST_MOVE_RUN | KEST_L_WORD:
+        case KEST_MOVE_RUN | KEST_L_FLAGS64:
+        case KEST_MOVE_RUN | KEST_L_FN:
+        case KEST_MOVE_RUN | KEST_L_REF:
+            COPY_OUT(many);
+            break;
+        case KEST_MOVE_CASES: {
+            int32_t tag = (int32_t)from[0].integer;
+            memset(at, 0, step->size);
+            memcpy(at, &tag, 4);
+            if (tag >= 0 && (uint32_t)tag < step->case_count) {
+                const KestMoveRun *run =
+                    &walk->ranges[step->cases + (uint32_t)tag];
+                walk_out(to_bytes, walk, run->first, run->count, from_slots);
+            }
             break;
         }
         case KEST_L_I8:
         case KEST_L_U8:
         case KEST_L_FLAGS8:
         case KEST_L_BOOL:
-        case KEST_L_HELD: {
-            uint8_t v = (uint8_t)from[took].integer;
-            memcpy(at, &v, 1);
+        case KEST_L_HELD:
+            WRITE_ONE(uint8_t, integer);
             break;
-        }
         case KEST_L_I16:
+        case KEST_L_U16:
         case KEST_L_FLAGS16:
-        case KEST_L_U16: {
-            uint16_t v = (uint16_t)from[took].integer;
-            memcpy(at, &v, 2);
+            WRITE_ONE(uint16_t, integer);
             break;
-        }
         case KEST_L_I32:
+        case KEST_L_U32:
         case KEST_L_FLAGS32:
-        case KEST_L_U32: {
-            uint32_t v = (uint32_t)from[took].integer;
-            memcpy(at, &v, 4);
+            WRITE_ONE(uint32_t, integer);
             break;
-        }
-        case KEST_L_F32: {
-            float v = (float)from[took].real;
-            memcpy(at, &v, 4);
+        case KEST_L_F32:
+            WRITE_ONE(float, real);
             break;
-        }
-        case KEST_L_F64: {
-            double v = from[took].real;
-            memcpy(at, &v, 8);
+        case KEST_L_TEXT:
+            memcpy(at, from, 16);
             break;
-        }
         default:
-            memcpy(at, &from[took], 8);
+            memcpy(at, from, 8);
             break;
         }
     }
+}
+
+// Every value is moved by the walk its layout was written out as: every run of
+// scalars where it sits, and for a tag, the tag and then the steps of the case
+// it names. What a case does not carry is nought in the slots and nought in
+// the bytes, so one value is one run of each whatever was there before. See
+// D711, D1159 and D1177.
+//
+// One piece with no tag in it is most of what a program moves -- a number, a
+// handle, a piece of text -- and is moved here rather than through a call and
+// a walk of one. See D1154.
+static void unpack(KestValue *out, const KestLayout *layout,
+                   const unsigned char *from, TagRead *told) {
+    if (layout->count == 1 && !layout->tagged) {
+        read_piece(out, layout->pieces[0].kind, from + layout->pieces[0].offset);
+        return;
+    }
+    const KestMoving *walk = layout->walk;
+    walk_in(out, walk, 0, walk->count, from, told);
+}
+
+static void pack(unsigned char *to, const KestLayout *layout,
+                 const KestValue *from) {
+    if (layout->count == 1 && !layout->tagged) {
+        write_piece(to + layout->pieces[0].offset, layout->pieces[0].kind, from);
+        return;
+    }
+    const KestMoving *walk = layout->walk;
+    walk_out(to, walk, 0, walk->count, from);
 }
 
 // A slot map. Removing marks the slot dead and steps its generation, so a

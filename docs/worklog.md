@@ -41297,3 +41297,20 @@ See D1176.
 **Runs:** two programs written for it, flat and beside a tag, in both engines
 before and after; `examples/flags.kest` on the tree before (29) and after (0);
 the two holes whose quotes the new cases moved, by hand; and `make most`.
+
+## 2026-09-23, a value moved a run at a time
+
+Moving a struct between an array and slots cost about twenty instructions a
+piece. Every layout is moved by a walk now, and the pieces of one that lie
+side by side are one run moved by one loop; a step of one is moved in the same
+switch as the runs, and a run of 64-bit pieces a slot at a time, because one
+copy of it cost `kernel` more cycles than it saved. `kernel` 8.5% fewer
+cycles, `rules` 4.8% and 1.01 times Luau's interpreter in instructions.
+
+See D1177.
+
+**Runs:** `perf record` with line numbers on `rules`, two programs that move a
+struct with a tag and without, `perf stat` over the five workloads at each of
+four versions, cycles turn about against the tree before on all five, the two
+holes whose quotes the walk moved, by hand, and
+`make most`.

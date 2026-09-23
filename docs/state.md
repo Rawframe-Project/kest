@@ -185,7 +185,8 @@ says why. The other was bulk text append and it is done.
   (D1068). What was left after that was a number written through `snprintf`
   and a heap stepping through its bitmaps a bit at a time, and without them
   `words` is 0.81 times Luau's interpreter in instructions (D1173).
-  `control` is 0.98 once its rule is carried (D1175).
+  `control` is 0.98 once its rule is carried (D1175), and `rules` 1.01 once
+  a value is moved a run of its pieces at a time (D1177).
 - The dispatch loop, and what is left of it is smaller than it was written
   down as. The 48 to 92 per cent was the share of cycles *inside* the
   interpreter's loop, which is everything a program does and says nothing about

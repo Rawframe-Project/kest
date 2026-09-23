@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1176
+    CURRENT SHA:       (this commit) D1093-D1177
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -772,7 +772,7 @@ the same workload.
    396, the same colony; a refusal names its diagnostic again. A reload at
    scale is 211 ms through bytes against 50 through lends, which is what the
    bytes library answers first.
-31. *(open, D1154-D1175)* **The machine against Luau's interpreter.**
+31. *(open, D1154-D1177)* **The machine against Luau's interpreter.**
    Measured again: behind by a sixth to double, `rules` furthest. Eight things
    off it so far, the last a small body carried to where it is called: `rules`
    is 27.2% fewer instructions and 1.28 times Luau's interpreter where it was
@@ -795,8 +795,10 @@ the same workload.
    whole number written without `snprintf`, and the heap finding a place by
    its lowest set bit, took `words` to 192.6 million: 0.81 times Luau's
    interpreter, and the persistent world 7% (D1173). A body of up to 256
-   bytes carried took `control` to 0.98 times it (D1175): of the five
-   workloads only `rules` is still behind, by four per cent.
+   bytes carried took `control` to 0.98 times it (D1175). A value moved a
+   run of its pieces at a time took `kernel` 8.5% fewer cycles and `rules`
+   4.8%, to 1.01 times Luau's interpreter in instructions (D1177): the one of
+   the five still behind, by one per cent.
 33. *(done, D1171)* **`std.bytes`.** A byte writer and reader for saves,
    reloads and records on disk, written in the language, and the two builtins
    it needed: `bits(x)` and `float(b)`, a float as its bits and back, so a
