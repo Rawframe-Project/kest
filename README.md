@@ -270,6 +270,7 @@ library has, one after another (`make embed && ./examples/embed`).
 | `kest profile` | what a run did, in counts: steps, calls of each body, crossings into the host, the heap. |
 | `kest check --cost` | what the compiler proved about every body, and which promises each could make. |
 | `kest debug` | breakpoints that cost a running machine nothing until they are hit. |
+| `kest dap` | the same debugger for an editor, over the Debug Adapter Protocol: breakpoints in the gutter, the call stack, a frame's variables, stepping over, into and out. The VS Code extension starts it. |
 | `kest emit --c` | the program written as C, which is what `--release` compiles. |
 
 ## Installing
