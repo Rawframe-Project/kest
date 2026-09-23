@@ -41399,3 +41399,31 @@ interpreter on all five, by 4% on `control` and `rules` and 20 to 25% on the
 others, at 0.66 to 0.83 of its instructions. The README, the charts and the
 report are this run.
 
+## D1204 — What the colony's trial spends, and a carry across files not kept
+
+*measured*. The five workloads are one shape each; the colony in
+`/home/kest/colony` is a game. Its trial -- five simulated minutes, eighteen
+thousand frames of eight colonists -- is 139 ms, 1,235 M instructions and
+524 M cycles run by the machine, and counted by instruction it is 53 million
+dispatches: 42% in `path.nearest`, the breadth-first search jobs are found
+by; 21% in `colony.walk`; 17% in `colony.step`; 10% in `colony.grow`; and 5%
+in `map.open`, one comparison of a tile, called a quarter of a million times
+from inside the search.
+
+`map.open` is small and makes no call, and it was called rather than carried
+because a body is carried only from its own file: what a carried instruction
+says about where it was written is an offset in that file. Nothing a carried
+body is made of can stop a program -- `f2i` saturates and a jump forward
+spends nothing -- so the offset is never what a refusal says, and carried
+from another file it could be said to be at the call. Written that way the
+trial retired 1,217 M instructions against 1,235 M, 1.5% fewer, at 523.2 M
+cycles against 524.0 M, best of nine turn about; the five workloads were
+unchanged, their helpers being in their own files. Not kept: no cycle comes
+back for it, and a debugger asked to stop in `map.open` would have stopped at
+none of its carried copies.
+
+The search is the cost, and it is the program's: four neighbours a cell, each
+an `if` chain to work out, a bounds test and a mark. What the machine could
+do about it is what it does about every loop, and nothing here is specific to
+it.
+

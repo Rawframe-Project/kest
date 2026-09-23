@@ -41692,3 +41692,16 @@ See D1203.
 **Runs:** `bench/compare.sh` best of fifteen at a load of four, the README
 and report figures read against the table, and `make most`.
 
+## 2026-09-23, what the colony's trial spends
+
+Counted by instruction, the colony's trial is 42% the breadth-first search
+and 5% `map.open`, a one-line helper in another file and so never carried.
+Carried across files it saved 1.5% of the instructions and no cycles, and is
+not kept.
+
+See D1204.
+
+**Runs:** the trial under a counting build of the machine, by function and by
+instruction; the trial best of nine turn about with the carry and without;
+the five workloads' instructions both ways; `make fast`.
+

@@ -222,7 +222,8 @@ says why. The other was bulk text append and it is done.
   is the commit built twice to the same bytes (D1201). A carried body's C is
   asked to be inlined, compiled `rules` 8% and `control` 15% fewer cycles
   (D1202). Taken again at `7769f7c1`, compiled `rules` is 1.17 times
-  daslang's AOT (D1203). `control` is 0.98 once its
+  daslang's AOT (D1203). The colony's trial is 42% its breadth-first search;
+  carrying a helper across files saved no cycles and is not kept (D1204). `control` is 0.98 once its
   rule is carried (D1175), and `rules` 0.99 once
   a value is moved a run of its pieces at a time (D1177) and an element is
   weighed against a constant in one instruction (D1178): every workload here
