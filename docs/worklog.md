@@ -41426,3 +41426,15 @@ See D1184.
 
 **Runs:** `bench/compare.sh` with `g++`, Luau and daslang; the campaign's log,
 and the seeds it could not run run again; `check-docs.sh`, and `make most`.
+
+## 2026-09-23, an element of one slot written from a local
+
+`elem.from` and `elem.from.ll` take a value of one slot as well as a wider one,
+so `state[at] = next` is one instruction. `control` retires 3.6% fewer
+instructions; the cycles moved within what the layout of the library moves
+them by.
+
+See D1185.
+
+**Runs:** `perf stat` over the five workloads before and after with the same
+answers, cycles turn about on `control`, `rules` and `kernel`, and `make most`.

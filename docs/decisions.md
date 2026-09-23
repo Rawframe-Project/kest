@@ -40900,3 +40900,19 @@ Luau's interpreter on `kernel` and `control`, `rules` compiled at 119 ms and
   with nothing found. The thirty-four it reported were each a moment the
   fuzzer's own binary was being rebuilt under it, and every one of those
   seeds passes run again.
+
+## D1185 — An element of one slot written from a local in one instruction
+
+*measured*. D1167 took `load2`, a load of the value and `store.elem` into one
+`elem.from.ll`, and a load and `store.elem` into `elem.from`, for values wider
+than a slot. `bench/control` writes `state[at] = next` a million times, a whole
+number out of a local, and was three dispatches for it. Nothing in either
+instruction wants more than one slot, so the width is no longer asked.
+
+`control` retires 794.1 million instructions where it retired 824.1 -- 3.6%
+fewer -- and the other four move by less than a thousandth. By cycles turn
+about `control` is 1.6% fewer and `rules` 1.8% more with the same instructions
+it ran before: only the lowering changed, and what moved `rules` is where the
+machine's loop lands once the object before it in the library is a few bytes
+longer, which is D1158's sensitivity rather than anything `rules` runs. The
+claim is the instructions.

@@ -1301,11 +1301,13 @@ static void write_place(Lower *lower, const KestIrOp *op) {
     case KEST_IR_PLACE_ELEM: {
         // And the same the other way round: a run of slots pushed and then
         // packed into the element. The push and the pack are the same slots.
+        // One slot as well as many: `state[at] = next` is a whole number
+        // read out of a local and written, which is the same pair. See
+        // D1185.
         uint16_t from = 0;
         if (fusing() && place->layout < lower->module->layout_count &&
             load_before(lower, &from) ==
-                lower->module->layouts[place->layout].slots &&
-            lower->module->layouts[place->layout].slots > 1) {
+                lower->module->layouts[place->layout].slots) {
             take_back(lower);
             uint16_t wide = lower->module->layouts[place->layout].slots;
             // And the run and the index, where both are locals nothing
