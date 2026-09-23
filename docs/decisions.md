@@ -41041,3 +41041,11 @@ interpreter the machine is 0.79, 0.94, 0.84 and 0.74 of it on `kernel`,
 quarter to three fifths of Luau's native tier on all five, ahead of daslang's
 AOT on four and 1.4 times it on `rules` -- where it was 1.6 before D1186 to
 D1189 -- and 1.4 to 2.2 times `g++ -O2`.
+
+CI's whole gate on D1189 was red with one hole: "one past the end of a run,
+read" quoted the two lines of the element guard, and D1189 wrote the same two
+lines again in the guarded walk's second branch, which comes first in
+`emitc.c`. The hole broke that branch instead, and `check-c.sh` caught it with
+`shorter.kest` rather than the `outside.kest` it names. It now quotes the
+plain guard with the line above it, which only that one has, and is caught
+with `outside.kest` again.

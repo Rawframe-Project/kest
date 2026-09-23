@@ -832,7 +832,7 @@ the same workload.
    through proved inside its array to 571; `kernel` compiled is a third
    fewer instructions for the same proof (D1187), and `control` compiled
    16% fewer once a walk to a constant asks at its start whether its arrays
-   are long enough (D1189).
+   are long enough (D1189; CI's one missed hole on it repointed, D1190).
 
 ## Closed by measurement
 

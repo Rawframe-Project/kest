@@ -41505,7 +41505,12 @@ Luau more than it slowed this. The report and the front page are the quiet run
 at `a60730d6`, with the load said beside it, and the release engine is 1.4
 times daslang's AOT on `rules` where it was 1.6.
 
+CI's whole gate on D1189 missed one hole, whose quotation D1189 had written a
+second time in the guarded walk's branch; it quotes the plain guard alone now
+and is caught by the program it names.
+
 See D1190.
 
 **Runs:** `bench/compare.sh` best of seven at a load of two, `rules` against
-Luau's interpreter best of nine twice, `check-docs.sh`, and `make most`.
+Luau's interpreter best of nine twice, `check-docs.sh`, the repointed hole by
+hand, the quotation pass, and `make most`.

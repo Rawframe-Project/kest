@@ -16160,14 +16160,14 @@ kest 9.9.9""",
         # call to a door. See D1112.
         "what": "one past the end of a run, read",
         "file": "src/emitc.c",
-        "from": '            "            (uint64_t)which < (uint64_t)run->length) '
-                '{\\n"\n'
-                '            "            at = run->bytes + (size_t)which * '
-                'run->stride + %u;\\n"',
-        "to": '            "            (uint64_t)which <= (uint64_t)run->length) '
-              '{\\n"\n'
-              '            "            at = run->bytes + (size_t)which * '
-              'run->stride + %u;\\n"',
+        "from": '            "        unsigned char *at;\\n"\n'
+                '            "        if (run != NULL && run->what == KEST_RUN_IS &&\\n"\n'
+                '            "            (uint64_t)which < (uint64_t)run->length) '
+                '{\\n"',
+        "to": '            "        unsigned char *at;\\n"\n'
+              '            "        if (run != NULL && run->what == KEST_RUN_IS &&\\n"\n'
+              '            "            (uint64_t)which <= (uint64_t)run->length) '
+              '{\\n"',
         "make": ["kest"],
         "tool": "tools/check-c.sh",
         "arguments": ["examples/math.kest"],
