@@ -40337,3 +40337,38 @@ takes either now: an element read by a local index out of a local run became
 through a reference is ten there rather than eleven. `examples/physics.kest`
 bounces an `f64` between two walls so that every one of the new instructions
 is one some example runs, which `check-dead.sh` holds.
+
+## D1167 — An element read into the frame and written back, by a run and an index read where they are
+
+*measured*, off `kernel`'s loop again, which D1165 and D1166 had brought to
+thirteen instructions an entity: `load2` of the world and the index and then
+`index.to` to read the element into the frame, and the same `load2` and then
+`elem.from` to write it back. Two dispatches each for `let one = world[at]` and
+`world[at] = one`, which is how a frame walks a world. `index.to.ll` and
+`elem.from.ll` read the run and the index where they are, made where the
+lowering already made the two they replace and finds the two locals just
+before, nothing pointing between; `KEST_PLAIN` turns them off, and they count
+the two slots `load2` counted. Four and five numbers each, which is two
+operand shapes the instruction table did not have: nine bytes and eleven.
+
+What the lowering remembers of what it wrote was two deep -- the last
+instruction and the one before -- and taking two back in a row left it naming
+the second as what was in front of the first. That is what a carried body
+does to an element handed to it: `moved(world[i], dt)` reads `dt` in place,
+which takes its `load` back, and then the element is stored into the carried
+body's slots, which takes the `index` back and has to find the `load2` in front
+of it. It remembers four now, and knows when it knows nothing, so the frame
+written with helpers fuses the way the frame written out does: `check-costs.sh`
+counts twenty-six an entity for each, where the new pair had made it
+twenty-seven against twenty-six before the lowering could see past two.
+
+| workload | before | after | |
+| --- | --- | --- | --- |
+| kernel | 937,230,779 | 864,557,340 | -7.8 % |
+| rules | 3,553,754,470 | 3,507,016,223 | -1.3 % |
+| control | 1,159,968,427 | 1,160,127,156 | 0.0 % |
+
+Every example answers the same fused, plain, unoptimized and under the build
+that checks itself, and the workloads fused and plain. `kernel` has come from
+1.111 thousand million to 0.865 in three steps, 22 per cent, against Luau's
+interpreter's 1.006.

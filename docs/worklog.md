@@ -41135,3 +41135,19 @@ See D1165 and D1166.
 **Runs:** every example fused, plain and under the checked build, the five
 workloads fused and plain with `perf stat`, `check-costs.sh`,
 `check-tables.sh`, and `make most`.
+
+## 2026-09-23, an element read and written by a run and an index in place
+
+`let one = world[at]` and `world[at] = one` were each `load2` and an element
+instruction; each is one now, with two new operand shapes for the four and
+five numbers they carry. The lowering's memory of what it wrote was two deep,
+which lost the `load2` in front of an element handed to a carried helper; it is
+four deep now, and the frame written with helpers costs what the frame written
+out does again. `kernel` is 7.8 per cent fewer instructions and 22 per cent
+fewer than before D1165.
+
+See D1167.
+
+**Runs:** every example fused, plain, unoptimized and checked, the five
+workloads fused and plain with `perf stat`, the helped and written-out frames
+read side by side, `check-costs.sh`, and `make most`.

@@ -5693,9 +5693,9 @@ and `KEST_DEEP=1` makes it say so. Run at two step counts and two entity
 counts and take the difference of the differences — a world is built once
 however many rounds there are, and a round has a loop of its own however many
 entities are in it — and what is left says that
-a frame step an entity is **thirty-three instructions**, of which one is
-`load.k`, four are `load`, four are `load2`, three are `load.n`, three are
-`store` and two are `store.n` — seventeen of the thirty-three, near enough
+a frame step an entity is **thirty-one instructions**, of which one is
+`load.k`, four are `load`, two are `load2`, three are `load.n`, three are
+`store` and two are `store.n` — fifteen of the thirty-one, near enough
 half, move a value onto the stack or off it. The
 arithmetic is six: two `mul.f32`, two `add.f32`, one `add.k.self` and one
 `sub.i.narrow`. That is what a stack machine is, and it is where the next thing
@@ -5712,10 +5712,12 @@ thirty-nine until what a helper was handed was read where the caller had it
 (D1157) -- which is why two of the stores are `store.n`: a whole `Npc` handed
 from one helper to the next is put where the second reads it. It was
 thirty-seven until a float local weighed against a constant was one
-instruction with the jump that reads it, both ways round (D1165).
+instruction with the jump that reads it, both ways round (D1165), and
+thirty-three until the element read out of the world and written back were
+each one instruction with the run and the index they were read by (D1167).
 
 Counting them is not free, and what it costs is the other number this build
-says: over those thirty-three instructions it asks its own compiler
+says: over those thirty-one instructions it asks its own compiler
 **forty-two questions** about what it is about to do — whose slots these are, whose
 constants, whether what a frame holds is the shape the chunk was declared with.
 That is the machine holding itself to what it was handed rather than trusting

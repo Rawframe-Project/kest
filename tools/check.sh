@@ -3302,7 +3302,9 @@ else:
     want = (slots * ran.get("load", 0) + 2 * slots * ran.get("load2", 0)
             + slots * ran.get("load.k", 0) + slots * weighs_local
             + slots * moves_self + 2 * slots * ran.get("index.ll", 0)
-            + 2 * slots * (ran.get("add.f.ll", 0) + ran.get("sub.f.ll", 0)))
+            + 2 * slots * (ran.get("add.f.ll", 0) + ran.get("sub.f.ll", 0)
+                           + ran.get("index.to.ll", 0)
+                           + ran.get("elem.from.ll", 0)))
     if moved.get("loaded") != want:
         print("it loaded %s byte(s) and ran the instructions for %s"
               % (moved.get("loaded"), want))

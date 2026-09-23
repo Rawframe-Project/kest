@@ -6000,7 +6000,7 @@ fn main() -> i32 {
         # number. See D915.
         "what": "a frame step's instructions written down and not measured",
         "file": "docs/language.md",
-        "from": """**thirty-three instructions**""",
+        "from": """**thirty-one instructions**""",
         "to": """**forty instructions**""",
         "make": ["kest", "debug"],
         "tool": "tools/check-costs.sh",

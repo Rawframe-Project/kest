@@ -4024,6 +4024,56 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                       array->bytes + (size_t)index * array->stride);
             break;
         }
+        case KEST_OP_INDEX_TO_LL: {
+            uint16_t of_which = READ_U16();
+            uint16_t slot = READ_U16();
+            uint16_t holds = READ_U16();
+            uint16_t at = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, slot,
+                           slot + layout->slots) ||
+                !own_slots(vmp, frame, instruction, holds, holds + 1u) ||
+                !own_slots(vmp, frame, instruction, at, at + 1u)) {
+                return false;
+            }
+#endif
+            MOVED(moved_loaded, 2 * sizeof(KestValue));
+            int64_t index = mine[at].integer;
+            const Array *array = mine[holds].object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
+            IN_ARRAY(index, array);
+            READ_INTO(mine + slot, layout,
+                      array->bytes + (size_t)index * array->stride);
+            break;
+        }
+        case KEST_OP_ELEM_FROM_LL: {
+            uint16_t offset = READ_U16();
+            uint16_t of_which = READ_U16();
+            uint16_t slot = READ_U16();
+            uint16_t holds = READ_U16();
+            uint16_t at = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+            const KestLayout *layout = &module->layouts[of_which];
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, slot,
+                           slot + layout->slots) ||
+                !own_slots(vmp, frame, instruction, holds, holds + 1u) ||
+                !own_slots(vmp, frame, instruction, at, at + 1u)) {
+                return false;
+            }
+#endif
+            MOVED(moved_loaded, 2 * sizeof(KestValue));
+            MOVED(moved_packed, layout->size);
+            int64_t index = mine[at].integer;
+            Array *array = mine[holds].object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
+            IN_ARRAY(index, array);
+            pack(array->bytes + (size_t)index * array->stride + offset, layout,
+                 mine + slot);
+            break;
+        }
         case KEST_OP_ELEM_FROM: {
             uint16_t offset = READ_U16();
             uint16_t of_which = READ_U16();

@@ -1123,6 +1123,10 @@ typedef enum {
     FIND_BACK,
     // A constant and then a forward jump, which is five bytes.
     WEIGH,
+    // Four and five numbers: an element moved by a run and an index read
+    // where they are. See D1167.
+    U16_X4,
+    U16_X5,
 } Operands;
 
 typedef struct {
@@ -1215,6 +1219,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"jump.true.gt.f.k", FIND}, {"jump.true.ge.f.k", FIND},
     {"jump.true.eq.f.k", FIND}, {"jump.true.ne.f.k", FIND},
     {"add.f.ll", U16_U16_U16}, {"sub.f.ll", U16_U16_U16},
+    {"index.to.ll", U16_X4}, {"elem.from.ll", U16_X5},
     {"loop", BACK},
 {"next.less.i", WALK}, {"next.less.u", WALK},
     {"scratch", U16},      {"unscratch", U16},
@@ -1263,6 +1268,10 @@ static uint32_t kest_op_width(uint8_t op) {
     case FIND:
     case FIND_BACK:
         return 7;
+    case U16_X4:
+        return 9;
+    case U16_X5:
+        return 11;
     }
     return 1;
 }
@@ -1720,6 +1729,8 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_STORE_ELEM:
     case KEST_OP_INDEX_TO:
     case KEST_OP_ELEM_FROM:
+    case KEST_OP_INDEX_TO_LL:
+    case KEST_OP_ELEM_FROM_LL:
     case KEST_OP_ADD_I_NARROW_TO:
     case KEST_OP_SUB_I_NARROW_TO:
     case KEST_OP_ADD_F_TO:
@@ -2258,6 +2269,16 @@ static uint32_t disassemble_one(const KestModule *module,
     case WEIGH:
         fprintf(out, "%u  -> %u\n", read_u16(chunk, offset + 1),
                 offset + 5 + read_u16(chunk, offset + 3));
+        break;
+    case U16_X4:
+        fprintf(out, "%u  %u  %u[%u]\n", read_u16(chunk, offset + 1),
+                read_u16(chunk, offset + 3), read_u16(chunk, offset + 5),
+                read_u16(chunk, offset + 7));
+        break;
+    case U16_X5:
+        fprintf(out, "+%u  %u  %u  %u[%u]\n", read_u16(chunk, offset + 1),
+                read_u16(chunk, offset + 3), read_u16(chunk, offset + 5),
+                read_u16(chunk, offset + 7), read_u16(chunk, offset + 9));
         break;
     }
     return offset + kest_op_width(op);

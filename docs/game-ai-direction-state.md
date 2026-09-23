@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1166
+    CURRENT SHA:       (this commit) D1093-D1167
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -18,7 +18,8 @@ reasoning; this holds the position.
                        runs 2.7 times fewer instructions since it stopped
                        working out where a refusal would be reported before
                        every door call
-    LAST CI:           green on a7769f0, all nine jobs -- linux, linux-arm64,
+    LAST CI:           green on 6755b1e, the commit that marks the
+                       direction complete, and on a7769f0, all nine jobs -- linux, linux-arm64,
                        macos, windows, clang, threads, package, linux-full
                        and agree, the last being the whole gate with every
                        one of the 900 holes caught
@@ -771,7 +772,7 @@ the same workload.
    396, the same colony; a refusal names its diagnostic again. A reload at
    scale is 211 ms through bytes against 50 through lends, which is what the
    bytes library answers first.
-31. *(open, D1154-D1166)* **The machine against Luau's interpreter.**
+31. *(open, D1154-D1167)* **The machine against Luau's interpreter.**
    Measured again: behind by a sixth to double, `rules` furthest. Eight things
    off it so far, the last a small body carried to where it is called: `rules`
    is 27.2% fewer instructions and 1.28 times Luau's interpreter where it was
@@ -785,7 +786,9 @@ the same workload.
    interpreter on `rules` and about a third behind on `kernel` and `control`.
    A float local against a constant and a float sum of two locals made one
    instruction each took `kernel` 15.6% below where it was and under Luau's
-   interpreter in instructions (D1165, D1166).
+   interpreter in instructions (D1165, D1166), and an element read and written
+   by a run and an index in place 7.8% more: 0.865 thousand million against
+   Luau's 1.006 (D1167).
 32. *(open, D1161)* **Daslang in every mode it ships.** `graph`, `words` and
    `rules` written in Daslang, answering what the other two do, and its AOT
    measured with the LLVM its own build downloads: behind the release engine

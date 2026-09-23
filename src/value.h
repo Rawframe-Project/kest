@@ -360,6 +360,12 @@ typedef enum {
     // `one.x += one.dx` a frame moves something by. See D1166.
     KEST_OP_ADD_F_LL, // u16 slot, u16 slot, u16 slot
     KEST_OP_SUB_F_LL,
+    // An element read into the frame and an element written out of it, with
+    // the run and the index read where they are: `load2` and `index.to`, and
+    // `load2` and `elem.from`, which is every `let one = world[at]` and every
+    // `world[at] = one` a frame walks a world with. See D1167.
+    KEST_OP_INDEX_TO_LL, // u16 layout, u16 slot, u16 run, u16 index
+    KEST_OP_ELEM_FROM_LL, // u16 offset, u16 layout, u16 slot, u16 run, u16 index
     KEST_OP_LOOP,        // u16 backward offset
     // The whole of a counted walk's turn: add one to the count, compare it
     // with the limit beside it, and go back while it is less. The test is at

@@ -33,13 +33,17 @@ struct KestLower {
     uint32_t *leads_to;
     uint32_t wait_count;
 
-    // The last two instructions written and where each starts, so that a jump
-    // can take the `not` before it and the comparison before that into itself.
-    // Two, because that is as far back as anything reaches.
+    // The last instruction written and where it starts, so that what comes
+    // next can take it into itself.
     uint8_t last_op;
     uint32_t last_at;
-    uint8_t before_op;
-    uint32_t before_at;
+    // What was written before the last instruction, most recent last, so
+    // that taking back two in a row -- an argument read in place and then an
+    // element read into the frame -- still knows what is in front of both.
+    // A body starts with none. See D1167.
+    uint8_t earlier_op[4];
+    uint32_t earlier_at[4];
+    uint8_t earlier;
     uint32_t pointed_at;
 
     bool out_of_memory;
@@ -72,8 +76,16 @@ static void fault(Lower *lower, KestSpan span, const char *what) {
 }
 
 static void emit(Lower *lower, uint8_t byte, KestSpan origin) {
-    lower->before_op = lower->last_op;
-    lower->before_at = lower->last_at;
+    if (lower->earlier == 4) {
+        for (int i = 1; i < 4; i++) {
+            lower->earlier_op[i - 1] = lower->earlier_op[i];
+            lower->earlier_at[i - 1] = lower->earlier_at[i];
+        }
+        lower->earlier = 3;
+    }
+    lower->earlier_op[lower->earlier] = lower->last_op;
+    lower->earlier_at[lower->earlier] = lower->last_at;
+    lower->earlier++;
     lower->last_op = byte;
     lower->last_at = lower->chunk->code_count;
     if (!kest_chunk_emit(lower->module, lower->chunk, byte, origin.offset)) {
@@ -90,8 +102,15 @@ static void emit_u16(Lower *lower, uint16_t value, KestSpan origin) {
 
 static void take_back(Lower *lower) {
     kest_chunk_take_back(lower->chunk, lower->last_at);
-    lower->last_op = lower->before_op;
-    lower->last_at = lower->before_at;
+    if (lower->earlier > 0) {
+        lower->earlier--;
+        lower->last_op = lower->earlier_op[lower->earlier];
+        lower->last_at = lower->earlier_at[lower->earlier];
+    } else {
+        // Nothing known in front of it: an instruction no fusion looks for.
+        lower->last_op = KEST_OP_STOP;
+        lower->last_at = lower->chunk->code_count;
+    }
 }
 
 // Whether the last thing written was `op` with one operand, nothing pointing
@@ -235,6 +254,22 @@ static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
     uint16_t layout = 0;
     if (size != 1 && fusing() && index_before(lower, size, &layout)) {
         take_back(lower);
+        // And the run and the index it was read by, where both are locals
+        // nothing points between: every `let one = world[at]`. See D1167.
+        uint16_t holds = 0;
+        uint16_t at = 0;
+        if (two_locals_before(lower, &holds, &at)) {
+            take_back(lower);
+            emit(lower, KEST_OP_INDEX_TO_LL, origin);
+            emit_u16(lower, layout, origin);
+            emit_u16(lower, slot, origin);
+            emit_u16(lower, holds, origin);
+            emit_u16(lower, at, origin);
+            if (size + 2u > lower->chunk->fused_slots) {
+                lower->chunk->fused_slots = (uint16_t)(size + 2u);
+            }
+            return;
+        }
         emit(lower, KEST_OP_INDEX_TO, origin);
         emit_u16(lower, layout, origin);
         emit_u16(lower, slot, origin);
@@ -1191,11 +1226,28 @@ static void write_place(Lower *lower, const KestIrOp *op) {
                 lower->module->layouts[place->layout].slots &&
             lower->module->layouts[place->layout].slots > 1) {
             take_back(lower);
+            uint16_t wide = lower->module->layouts[place->layout].slots;
+            // And the run and the index, where both are locals nothing
+            // points between: every `world[at] = one`. See D1167.
+            uint16_t holds = 0;
+            uint16_t at = 0;
+            if (two_locals_before(lower, &holds, &at)) {
+                take_back(lower);
+                emit(lower, KEST_OP_ELEM_FROM_LL, op->span);
+                emit_u16(lower, place->offset, op->span);
+                emit_u16(lower, place->layout, op->span);
+                emit_u16(lower, from, op->span);
+                emit_u16(lower, holds, op->span);
+                emit_u16(lower, at, op->span);
+                if (wide + 2u > lower->chunk->fused_slots) {
+                    lower->chunk->fused_slots = (uint16_t)(wide + 2u);
+                }
+                return;
+            }
             emit(lower, KEST_OP_ELEM_FROM, op->span);
             emit_u16(lower, place->offset, op->span);
             emit_u16(lower, place->layout, op->span);
             emit_u16(lower, from, op->span);
-            uint16_t wide = lower->module->layouts[place->layout].slots;
             if (wide > lower->chunk->fused_slots) {
                 lower->chunk->fused_slots = wide;
             }
@@ -1654,10 +1706,9 @@ static bool lower_body(Lower *lower, const KestIrBody *body, KestChunk *chunk) {
     lower->body = body;
     lower->chunk = chunk;
     lower->wait_count = 0;
+    lower->earlier = 0;
     lower->last_op = 0;
     lower->last_at = 0;
-    lower->before_op = 0;
-    lower->before_at = 0;
     lower->pointed_at = 0;
     lower->carried_slots = 0;
     lower->carried_stack = 0;
