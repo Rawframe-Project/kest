@@ -41382,3 +41382,20 @@ Compiled, best of seven turn about: `rules` 188.6 M cycles against 173.6 M,
 tree both ways as before, compiled by the host's compiler with the attribute
 it is asked to honour or refuse.
 
+## D1203 — The front page taken again after the release engine's calls
+
+*measured*. D1198 to D1202 changed what a compiled call costs -- arguments
+read where the caller left them and not handed over twice, and a carried body
+inlined by the host's compiler -- so the table D1195 took was the release
+engine of before them. Taken again at `7769f7c1`, best of fifteen, the runs
+of every row spread through the sitting, at a load of four with a fuzz
+campaign running beside it at low priority.
+
+The release engine on `rules` is 45.6 ms against daslang's AOT at 38.9, 1.17
+times where it was 1.3, and 1.19 times `g++ -O2`; `control` compiled is 9.0 ms
+against 11.0. It is ahead of Luau's native tier by 1.7 to 3.8 times and of
+daslang's AOT on the other four by 2 to 3.5. The machine is ahead of Luau's
+interpreter on all five, by 4% on `control` and `rules` and 20 to 25% on the
+others, at 0.66 to 0.83 of its instructions. The README, the charts and the
+report are this run.
+

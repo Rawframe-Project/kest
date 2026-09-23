@@ -6,15 +6,15 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1202
+    CURRENT SHA:       (this commit) D1093-D1203
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, and it is ahead of
                        Luau's native tier on all five workloads and of
-                       daslang's AOT on four; the machine is ahead of Luau's
-                       interpreter on all five, by 3% on `control` and 6% on
-                       `rules` at the least, and retires fewer instructions
-                       on all five (D1195)
+                       daslang's AOT on four, and 1.17 times behind it on
+                       `rules`; the machine is ahead of Luau's interpreter
+                       on all five, by 4% at the least, and retires fewer
+                       instructions on all five (D1203)
     LAST CI:           green on e145b363, all nine jobs -- linux,
                        linux-arm64, macos, windows, clang, threads, package,
                        linux-full and agree, the last being the whole gate

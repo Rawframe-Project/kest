@@ -41681,3 +41681,14 @@ See D1202.
 and marked on the prototype alone; the five workloads compiled before and
 after, best of seven turn about; `check-c.sh` over the tree; and `make most`.
 
+## 2026-09-23, the front page taken again
+
+After D1198 to D1202 the table was the release engine of before them. Taken
+again at `7769f7c1`: compiled `rules` is 1.17 times daslang's AOT where it
+was 1.3, and the machine is ahead of Luau's interpreter on all five.
+
+See D1203.
+
+**Runs:** `bench/compare.sh` best of fifteen at a load of four, the README
+and report figures read against the table, and `make most`.
+
