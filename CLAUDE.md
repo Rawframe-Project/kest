@@ -1375,9 +1375,8 @@ lines being right is one thing and the files arriving is another.
 
 The self-checking here is large and it is not free. Measured on the machine this
 was written on: `make fast` is a quarter of a second, `make check` is about ten
-minutes, and six and a half of those are the backstops — eight hundred and
-ninety-nine holes now, each of which copies the tree, builds it and runs a
-check. Both numbers are this machine's; what is the same anywhere is that the
+minutes, and six and a half of those are the backstops — over nine hundred
+holes, each of which copies the tree, builds it and runs a check. Both numbers are this machine's; what is the same anywhere is that the
 gate is mostly the holes — which is why `make most` leaves them out and why
 that is the tier to work in.
 
@@ -1435,8 +1434,8 @@ it proves nothing about itself; everything in it is also done by `make check`,
 in more shapes and under more builds.
 
 `make most` is everything `make check` does except the sweep that puts every
-check out of order. That sweep is 899 holes, each a tree of its own with a
-build in it, and it is most of what the whole gate costs: the eleven other
+check out of order. That sweep is over nine hundred holes, each a tree of its
+own with a build in it, and it is most of what the whole gate costs: the eleven other
 tools it runs finish in about forty seconds of wall clock between them. It is
 also the one check here that is about the *other checks* rather than about this
 language, so what it answers changes when a check changes and not when the

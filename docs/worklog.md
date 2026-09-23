@@ -41746,3 +41746,12 @@ See D1207.
 about; the five workloads compiled the same way; `check-c.sh` over the tree;
 the callers' writes left out, which `check-c.sh` refuses; and `make most`.
 
+## 2026-09-23, the count of holes said as a floor
+
+`CLAUDE.md` said the sweep was 899 holes; it is 918. It says "over nine
+hundred" now, in both places.
+
+See D1208.
+
+**Runs:** the holes counted in `tools/check-backstops.sh`, and `make most`.
+

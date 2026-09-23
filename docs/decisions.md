@@ -41507,3 +41507,13 @@ had already reached. `check-c.sh` holds every program both ways as before,
 and with the callers in locals not writing the frame it refuses fifteen ways,
 `across.kest` answering 73 run by the machine and 1 compiled among them.
 
+## D1208 — The count of holes said as a floor rather than a number
+
+`CLAUDE.md` said twice that the sweep is 899 holes. It is 918: the debugger's
+five, the release binary's two and the rest added under the exception for a
+new kind of thing since the number was written. The same file says of its
+lists of files that a count is a thing that goes stale, and this one had. It
+says "over nine hundred" in both places now, which is true of the sweep today
+and stays true, because a hole goes only when what it is about goes. The
+number itself is what `check-backstops.sh` counts when it runs.
+
