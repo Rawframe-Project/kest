@@ -41,6 +41,10 @@ typedef struct {
     uint16_t params;
     uint16_t results;
     bool written;
+    // Whether it reads its arguments in the frame it was handed rather than
+    // out of what it was called with, which every caller then leaves there.
+    // See D1198.
+    bool reads_frame;
     // And, for one this backend did not write, whether anything it did write
     // calls it: such a body gets a C function of its own all the same, which
     // hands the call to the machine. See D1105.
@@ -1231,6 +1235,27 @@ static bool in_memory(const Walk *walk, const KestIrOp *op) {
     }
 }
 
+// The arguments of a call, left in the frame it hands over where the callee
+// reads them there. A body on the machine's stack has them there already:
+// its operands are the slots above its own, and the frame it hands over
+// starts at the first argument. One keeping its operands in locals hands
+// over room above its slots and writes them in, when `KA_` says the callee
+// reads them there -- a body in locals reads them out of what it was called
+// with, and writing them for it is a store nothing reads. See D1198.
+static void leave_arguments(const Walk *walk, Text *out, uint32_t which,
+                            uint32_t base, uint32_t reads) {
+    if (walk->on_the_stack || reads == 0) {
+        return;
+    }
+    say(walk->c, out, "        if (KA_%u) {\n", which);
+    for (uint32_t k = 0; k < reads; k++) {
+        Where one;
+        at_stack(walk, one, base + k);
+        say(walk->c, out, "            stands[%u] = %s;\n", k, one);
+    }
+    say(walk->c, out, "        }\n");
+}
+
 static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
     const KestIrBody *body = walk->body;
     Text *out = &walk->into->wrote;
@@ -2367,9 +2392,10 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
                 "        }\n"
                 "        if (stands + %s > *led.reached) {\n"
                 "            *led.reached = stands + %s;\n"
-                "        }\n"
-                "        bool went = kf_%u(rt, stands, %s%s",
-                handed, needs, which, op->span.offset, needs, needs, which,
+                "        }\n",
+                handed, needs, which, op->span.offset, needs, needs);
+            leave_arguments(walk, out, which, base, reads);
+            say(c, out, "        bool went = kf_%u(rt, stands, %s%s", which,
                 leaves > 0 ? "&" : "", leaves > 0 ? first : "NULL");
             for (uint32_t k = 0; k < reads; k++) {
                 at_stack(walk, second, base + k);
@@ -2399,10 +2425,11 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             "        *led.many = was + 1;\n"
             "        if (stands + %s > *led.reached) {\n"
             "            *led.reached = stands + %s;\n"
-            "        }\n"
-            "        bool went = kf_%u(rt, stands, %s%s",
+            "        }\n",
             op->span.offset, which, op->span.offset, handed, needs, which,
-            op->span.offset, which, needs, needs, which,
+            op->span.offset, which, needs, needs);
+        leave_arguments(walk, out, which, base, reads);
+        say(c, out, "        bool went = kf_%u(rt, stands, %s%s", which,
             leaves > 0 ? "&" : "", leaves > 0 ? first : "NULL");
         for (uint32_t k = 0; k < reads; k++) {
             at_stack(walk, second, base + k);
@@ -2724,9 +2751,21 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
                 "    if (!kest_ledger(rt, &led)) {\n"
                 "        return false;\n    }\n");
         }
+        // A body on the machine's stack is handed the frame its caller
+        // left the arguments in -- the machine, the wrapper it enters one
+        // through, and every caller written here, which writes them there
+        // when `KA_` says the callee reads them there -- so an argument whose
+        // slot is in that frame is read where it is. Written again, it was a
+        // store into the slot a store had just filled, and 10% of the cycles
+        // of compiled `rules`. See D1198.
+        into->reads_frame = walk.on_the_stack;
         for (uint16_t p = 0; p < body->param_slots; p++) {
             Where param;
             at_frame(&walk, param, p);
+            if (walk.on_the_stack && param[0] == 'f') {
+                say(c, &into->wrote, "    (void)a%u;\n", (unsigned)p);
+                continue;
+            }
             say(c, &into->wrote, "    %s = a%u;\n", param, (unsigned)p);
         }
         declare_guards(&walk);
@@ -3165,6 +3204,15 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         }
         say(c, &file, "#define KN_%u %uu\n", i,
             (unsigned)chunk->slot_count + (unsigned)chunk->stack_needed);
+    }
+    say(c, &file, "\n");
+    // And whether each reads its arguments in the frame it is handed, which
+    // is whether a caller keeping its operands in locals writes them there.
+    // A body the machine runs is handed them as values and writes them in
+    // itself. Known once every body is written, like the size. See D1198.
+    for (uint32_t i = 0; i < c->count; i++) {
+        say(c, &file, "#define KA_%u %u\n", i,
+            c->bodies[i].written && c->bodies[i].reads_frame ? 1u : 0u);
     }
     say(c, &file, "\n");
     // And what a body needs standing at the top of the file: a run of

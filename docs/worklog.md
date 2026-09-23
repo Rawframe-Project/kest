@@ -41614,3 +41614,18 @@ See D1197.
 with instruction-cache misses; each walk written wrong, which the new host
 check refuses and nothing else did; and `make most`.
 
+## 2026-09-23, a compiled body reads its arguments where they were left
+
+A body the release engine writes on the machine's stack stored every
+argument it was handed back into the frame slot the caller had just left it
+in. It reads them there now, and a caller keeping its operands in locals
+writes them there when `KA_n` says the callee reads them there. Compiled
+`rules` is 8.2% fewer cycles.
+
+See D1198.
+
+**Runs:** the redundant stores taken out by hand from the generated file
+first, for the ceiling; the five workloads compiled before and after, best
+of seven turn about; `check-c.sh` over the tree; the writes under `KA_` left
+out, which `check-c.sh` refuses three ways; and `make most`.
+

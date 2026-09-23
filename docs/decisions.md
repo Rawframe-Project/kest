@@ -41253,3 +41253,34 @@ what a lend costs refused. The hole "a case written over a wider one, keeping
 its bytes" quoted the clearing as one line; it quotes the wider branch now,
 which is the one an `Event` takes, and was run by hand and caught.
 
+## D1198 — A body on the machine's stack reads its arguments where they were left
+
+*measured*. A body the release engine writes on the machine's stack (D1179)
+is handed the frame its caller made, and a call leaves its arguments in that
+frame: the operands are spilled above the caller's slots before the call and
+the frame handed over starts at the first of them. The callee is also handed
+them as values, and its first lines stored each value back into the slot it
+was read out of. For `bench/rules`' `decide`, twelve slots, that was eleven
+stores into slots a store had just filled, on every call -- and taken out by
+hand from the generated file it was 5% of the instructions and 10% of the
+cycles of the whole run.
+
+So a body on the machine's stack reads an argument whose slot is in its frame
+where it is, and says `(void)` over the value. That is only right where every
+way in leaves them there. The machine does, and so does the wrapper it enters
+a written body through, which passes the frame it was handed. A body the
+machine runs for a written one is handed values and writes them in itself. A
+caller written on the machine's stack has them there already. A caller that
+keeps its operands in locals -- one that reaches no heap -- hands over room
+above its slots and had not written them: it writes them now, under `KA_n`,
+which says whether body `n` reads them there, written at the top of the file
+with `KN_n` because a body written later is not known yet. A body in locals is
+not written for, since it reads the values.
+
+Compiled, best of seven turn about, before and after: `rules` 200.3 M cycles
+against 183.8 M and 543.9 M instructions against 513.0 M; the other four make
+no call with many arguments in a loop and are level. With the writes under
+`KA_` left out, `check-c.sh` refuses three ways, among them `across.kest`
+answering 73 run by the machine and 1 compiled and `examples/chance.kest`
+stopping with a fault.
+
