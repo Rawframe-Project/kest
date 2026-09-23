@@ -41021,3 +41021,23 @@ and `g++`.
 Compiled `control` retires 117.2 million instructions where it retired 139.2,
 16% fewer, with the same answer; `graph` 0.3% fewer; `kernel`, `rules` and
 `words` are unchanged, since their walks were proved outright already.
+
+## D1190 — Measured again while nothing else ran, and what the load had done
+
+*measured*. The run D1184 took at a load of forty put the machine a quarter
+ahead of Luau's interpreter on `rules`. Taken again at `a60730d6` with the box
+quiet -- a load of two -- the same two processes are 300 ms and 287: the
+machine 4% behind, while it still retires 10% fewer instructions. Two runs of
+nine each, one after the other on the quiet box, agree: 303 against 284 and 303
+against 280. What the load had done was slow Luau's interpreter a third more
+than it slowed this one, and a ranking that turns on how busy somebody else
+was is not a measurement of either.
+
+So the report and the front page are this run, best of seven, with the load it
+was taken at said beside it; the instructions each run retired are in
+`bench/results.tsv`, which is the number the load does not move. Against Luau's
+interpreter the machine is 0.79, 0.94, 0.84 and 0.74 of it on `kernel`,
+`control`, `graph` and `words`, and 1.04 on `rules`. The release engine is a
+quarter to three fifths of Luau's native tier on all five, ahead of daslang's
+AOT on four and 1.4 times it on `rules` -- where it was 1.6 before D1186 to
+D1189 -- and 1.4 to 2.2 times `g++ -O2`.

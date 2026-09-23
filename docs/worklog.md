@@ -41496,3 +41496,16 @@ See D1189.
 **Runs:** the five workloads compiled before and after with the same answers
 and no warnings, the two new walks both ways with the proof as written and
 broken, every example compiled under the sanitisers, and `make most`.
+
+## 2026-09-23, measured again while nothing else ran
+
+With the box quiet the machine is 4% behind Luau's interpreter on `rules`,
+where the run taken at a load of forty had it a quarter ahead; the load slowed
+Luau more than it slowed this. The report and the front page are the quiet run
+at `a60730d6`, with the load said beside it, and the release engine is 1.4
+times daslang's AOT on `rules` where it was 1.6.
+
+See D1190.
+
+**Runs:** `bench/compare.sh` best of seven at a load of two, `rules` against
+Luau's interpreter best of nine twice, `check-docs.sh`, and `make most`.
