@@ -40801,3 +40801,7 @@ see, and Luau's interpreter hands over through a table of labels.
 Cycles turn about against the tree before, best of five: `control` 14.7%
 fewer, `kernel` 12.4%, `graph` 13.1%, `rules` 11.1% and `words` 10.6%, with
 the same answers.
+
+Taken again with `bench/compare.sh` at `14e9ba96`, by processor time against
+Luau's interpreter: `kernel` 0.79, `control` 1.01, `graph` 0.81, `words` 0.75,
+`rules` 0.85. The front page and its charts are that run.

@@ -1,35 +1,35 @@
 # taken	2026-09-23
-# commit	b64a9519
+# commit	14e9ba96
 # machine	AMD Ryzen 5 3600 6-Core Processor
 # best of	5
 workload	engine	ms	instructions
-kernel	Kest	78.64	773777224
-kernel	Kest, compiled	13.25	104380359
-kernel	Luau	77.73	999376586
-kernel	Luau, native	33.91	324696263
-kernel	daslang	135.83	863778241
-kernel	daslang, AOT	26.26	111194272
-control	Kest	129.77	921156032
-control	Kest, compiled	16.77	139153999
-control	Luau	116.22	961664641
-control	Luau, native	48.71	314392448
-control	daslang	155.11	715474527
-control	daslang, AOT	27.58	102166523
-graph	Kest	15.44	108687091
-graph	Kest, compiled	4.32	28698816
-graph	Luau	15.49	114291956
-graph	Luau, native	9.73	43451827
-graph	daslang	68.00	284357976
-graph	daslang, AOT	17.34	46201802
-words	Kest	23.69	186662792
-words	Kest, compiled	14.67	142817284
-words	Luau	28.98	233126540
-words	Luau, native	32.94	214112054
-words	daslang	100.74	367408008
-words	daslang, AOT	37.36	211940902
-rules	Kest	361.31	3288039700
-rules	Kest, compiled	70.64	686801649
-rules	Luau	319.94	3304243717
-rules	Luau, native	211.06	1276433212
-rules	daslang	371.48	2166596400
-rules	daslang, AOT	43.23	260603652
+kernel	Kest	56.47	676560890
+kernel	Kest, compiled	9.77	104383416
+kernel	Luau	71.56	999377048
+kernel	Luau, native	31.23	324696496
+kernel	daslang	130.17	863779651
+kernel	daslang, AOT	21.21	111196601
+control	Kest	100.65	824112008
+control	Kest, compiled	13.44	139156784
+control	Luau	99.19	961664269
+control	Luau, native	44.52	314390590
+control	daslang	144.95	715476980
+control	daslang, AOT	24.17	102168867
+graph	Kest	10.52	95237166
+graph	Kest, compiled	3.84	28701207
+graph	Luau	12.94	114292020
+graph	Luau, native	8.42	43450167
+graph	daslang	67.60	284357096
+graph	daslang, AOT	14.09	46201786
+words	Kest	18.68	183906276
+words	Kest, compiled	14.08	142797090
+words	Luau	24.95	232299917
+words	Luau, native	23.78	212372585
+words	daslang	75.71	367408097
+words	daslang, AOT	36.98	211940380
+rules	Kest	331.96	2976216172
+rules	Kest, compiled	79.12	684680176
+rules	Luau	388.29	3304688933
+rules	Luau, native	177.67	1275904259
+rules	daslang	370.32	2166602229
+rules	daslang, AOT	46.23	260604739

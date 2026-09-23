@@ -103,6 +103,13 @@ def interpreters(stamp, rows):
                   "same workload. Under the dashed line is faster than Luau.",
                   size=13, fill="#495057")]
     parts += legend(engines, left, 84)
+    # Under the bars rather than over them, so a number beside a bar that
+    # ends near Luau's is read rather than crossed out.
+    line = left + span / most
+    parts.append("<line x1=\"%.1f\" y1=\"%d\" x2=\"%.1f\" y2=\"%d\" "
+                 "stroke=\"#1864ab\" stroke-width=\"1.5\" "
+                 "stroke-dasharray=\"5,4\" opacity=\"0.6\"/>"
+                 % (line, top, line, top + band * len(workloads)))
     for i, workload in enumerate(workloads):
         y = top + band * i + 10
         parts.append(text(28, y + 22, workload, size=15, weight="bold"))
@@ -117,14 +124,12 @@ def interpreters(stamp, rows):
             parts.append("<rect x=\"%d\" y=\"%.1f\" width=\"%.1f\" "
                          "height=\"15\" rx=\"3\" fill=\"%s\"/>"
                          % (left, by, bar, COLOURS[engine]))
+            parts.append("<rect x=\"%.1f\" y=\"%.1f\" width=\"44\" "
+                         "height=\"15\" fill=\"#ffffff\"/>"
+                         % (left + bar + 3, by))
             parts.append(text(left + bar + 6, by + 12, "%.2f×" % share,
                               size=12, weight="bold" if engine == "Kest"
                               else "normal"))
-    line = left + span / most
-    parts.append("<line x1=\"%.1f\" y1=\"%d\" x2=\"%.1f\" y2=\"%d\" "
-                 "stroke=\"#1864ab\" stroke-width=\"1.5\" "
-                 "stroke-dasharray=\"5,4\"/>"
-                 % (line, top, line, top + band * len(workloads)))
     parts.append(footer(stamp, width, height - 20))
     return svg(width, height, parts)
 
