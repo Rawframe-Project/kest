@@ -40876,3 +40876,27 @@ breadth-first search, whose queue is a run of cells made once and reused, which
 is the colony's and not a container anybody else asked for. Nothing was found
 that a program had to write because the library does not have it. Not built:
 the library grows when a program shows what it is missing, as `std.bytes` did.
+
+## D1184 — The report measured again, with the floor, and the long fuzz run
+
+*measured*. `docs/report.md` sections 6 to 9, 28 and 30 were written from the
+run D1161 took, before twenty-three changes to the machine and the release
+engine, and said things that stopped being true: the machine a third behind
+Luau's interpreter on `kernel` and `control`, `rules` compiled at 119 ms and
+2.6 times daslang's AOT, `words` level with Luau.
+
+- `bench/compare.sh` takes `KEST_CPP` for a C++ compiler and adds the floor as
+  a row of its table, not of its charts, so the whole of section 6 is one run:
+  at `76bf8004`, best of five by processor time. The machine against Luau's
+  interpreter is 0.77 on `kernel`, 0.99 on `control`, 0.80 on `graph`, 0.77 on
+  `words` and 0.75 on `rules`; the release engine against Luau's native tier
+  is a third to three fifths of it; against daslang's AOT it is ahead on four
+  and 1.6 times behind on `rules`; against `g++ -O2` it is 1.5 to 2.3 times.
+  The sections that drew on the old run say those numbers now, and the front
+  page's charts are this run.
+- The fuzz campaign that ran beside all of this -- seeds one to four thousand,
+  four thousand steps each, over the six boundaries somebody else's bytes
+  arrive through, 24,000 runs under the build that checks itself -- finished
+  with nothing found. The thirty-four it reported were each a moment the
+  fuzzer's own binary was being rebuilt under it, and every one of those
+  seeds passes run again.

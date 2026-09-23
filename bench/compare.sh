@@ -14,8 +14,9 @@
 # it. Building a binary ahead of time -- this language's release engine and
 # daslang's `-exe` -- is not, because it is not what a game does when it runs.
 #
-# `KEST_LUAU` and `KEST_DAS` say where the comparators are; a row whose engine
-# is not there is left out rather than guessed. See D1180.
+# `KEST_LUAU` and `KEST_DAS` say where the comparators are, and `KEST_CPP` a
+# C++ compiler for the floor; a row whose engine is not there is left out
+# rather than guessed. See D1180.
 set -eu
 
 kest=${KEST:-./kest}
@@ -67,6 +68,12 @@ for one in kernel control graph words rules; do
             $cc -O2 -Iinclude -o "$built/$one" "$built/$one.c" libkest.a \
                 -lm 2>/dev/null; then
         measure "$one" "Kest, compiled" "$built/$one" "bench/$one.kest"
+    fi
+    # And the floor, where `KEST_CPP` names a C++ compiler: not a guest
+    # language and not on the charts, but what the report measures against.
+    if [ -n "${KEST_CPP:-}" ] && [ -f "bench/$one.cpp" ] &&
+            "$KEST_CPP" -O2 -o "$built/$one-cpp" "bench/$one.cpp" 2>/dev/null; then
+        measure "$one" "C++" "$built/$one-cpp"
     fi
     if [ -n "${KEST_LUAU:-}" ] && [ -f "bench/$one.lua" ]; then
         measure "$one" "Luau" "$KEST_LUAU" -O2 "bench/$one.lua"

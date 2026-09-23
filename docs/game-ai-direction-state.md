@@ -6,26 +6,21 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1183
+    CURRENT SHA:       (this commit) D1093-D1184
     PHASE:             B — the release engine, and it is whole: every one of
-                       this tree's 2,088 bodies is written as C (D1119),
-                       `bench/rules.kest` compiles entire, the gameplay
-                       workload is inside D1092's trigger against `g++` and
-                       ahead of Luau's native tier on all five workloads and
-                       of daslang's AOT on four (D1161), and the kernel is 2.8
-                       times `g++` where it was five. And the machine is measured rather than
-                       guessed at: the persistent-world reference program
-                       runs 2.7 times fewer instructions since it stopped
-                       working out where a refusal would be reported before
-                       every door call
-    LAST CI:           green on 6755b1e, the commit that marks the
-                       direction complete, and on a7769f0, all nine jobs -- linux, linux-arm64,
-                       macos, windows, clang, threads, package, linux-full
-                       and agree, the last being the whole gate with every
-                       one of the 900 holes caught
+                       this tree's bodies is written as C (D1119),
+                       `bench/rules.kest` compiles entire, and it is ahead of
+                       Luau's native tier on all five workloads and of
+                       daslang's AOT on four; the machine is ahead of Luau's
+                       interpreter on four of five and level on the fifth,
+                       and retires fewer instructions on all five (D1184)
+    LAST CI:           green on 710ea66a, all nine jobs -- linux,
+                       linux-arm64, macos, windows, clang, threads, package,
+                       linux-full and agree, the last being the whole gate
+                       with every hole caught
     LAST FAST GATE:    green
-    LAST FULL GATE:    CI's `linux-full` on a7769f0, and the backstop
-                       sweep run here on 5999564: every one of the 900 holes
+    LAST FULL GATE:    CI's `linux-full` on 710ea66a, and the backstop sweep
+                       run here on 0dade8f1: every one of the 902 holes
                        caught
     STATUS:            GAME_AI_DIRECTION_COMPLETE, marked on a7769f0
     REFERENCE MACHINE: the spare Linux box this repository is on --

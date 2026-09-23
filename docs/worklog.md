@@ -41413,3 +41413,16 @@ See D1183.
 
 **Runs:** the colony's jobs, save and restore read; every library call in the
 thirty-six blind runs counted against the library.
+
+## 2026-09-23, the report measured again
+
+Sections 6 to 9, 28 and 30 of the report said what the machine and the release
+engine were two days and twenty-three changes ago. `bench/compare.sh` takes a
+C++ compiler for the floor now, and the report and the front page are one run
+of it at `76bf8004`. The long fuzz campaign finished: 24,000 runs, nothing
+found.
+
+See D1184.
+
+**Runs:** `bench/compare.sh` with `g++`, Luau and daslang; the campaign's log,
+and the seeds it could not run run again; `check-docs.sh`, and `make most`.

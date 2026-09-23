@@ -1,35 +1,40 @@
 # taken	2026-09-23
-# commit	14e9ba96
+# commit	76bf8004
 # machine	AMD Ryzen 5 3600 6-Core Processor
 # best of	5
 workload	engine	ms	instructions
-kernel	Kest	56.47	676560890
-kernel	Kest, compiled	9.77	104383416
-kernel	Luau	71.56	999377048
-kernel	Luau, native	31.23	324696496
-kernel	daslang	130.17	863779651
-kernel	daslang, AOT	21.21	111196601
-control	Kest	100.65	824112008
-control	Kest, compiled	13.44	139156784
-control	Luau	99.19	961664269
-control	Luau, native	44.52	314390590
-control	daslang	144.95	715476980
-control	daslang, AOT	24.17	102168867
-graph	Kest	10.52	95237166
-graph	Kest, compiled	3.84	28701207
-graph	Luau	12.94	114292020
-graph	Luau, native	8.42	43450167
-graph	daslang	67.60	284357096
-graph	daslang, AOT	14.09	46201786
-words	Kest	18.68	183906276
-words	Kest, compiled	14.08	142797090
-words	Luau	24.95	232299917
-words	Luau, native	23.78	212372585
-words	daslang	75.71	367408097
-words	daslang, AOT	36.98	211940380
-rules	Kest	331.96	2976216172
-rules	Kest, compiled	79.12	684680176
-rules	Luau	388.29	3304688933
-rules	Luau, native	177.67	1275904259
-rules	daslang	370.32	2166602229
-rules	daslang, AOT	46.23	260604739
+kernel	Kest	55.00	676560252
+kernel	Kest, compiled	9.69	104384631
+kernel	C++	5.54	49217076
+kernel	Luau	71.72	999377990
+kernel	Luau, native	30.14	324696691
+kernel	daslang	109.75	863782085
+kernel	daslang, AOT	19.70	111207778
+control	Kest	90.71	824113013
+control	Kest, compiled	11.73	139157409
+control	C++	5.03	50519617
+control	Luau	91.91	961663820
+control	Luau, native	35.82	314391165
+control	daslang	121.97	715477015
+control	daslang, AOT	20.79	102166747
+graph	Kest	9.55	95238983
+graph	Kest, compiled	3.79	28701901
+graph	C++	1.74	8519774
+graph	Luau	11.98	114290990
+graph	Luau, native	8.42	43452020
+graph	daslang	59.00	284361119
+graph	daslang, AOT	13.23	46202018
+words	Kest	19.48	183999678
+words	Kest, compiled	13.95	142791867
+words	C++	9.20	83822872
+words	Luau	25.46	232285602
+words	Luau, native	23.16	212742482
+words	daslang	79.38	367410792
+words	daslang, AOT	44.18	211940929
+rules	Kest	298.30	2975950004
+rules	Kest, compiled	66.76	688337355
+rules	C++	41.58	426216101
+rules	Luau	395.33	3305386616
+rules	Luau, native	165.25	1277093515
+rules	daslang	356.63	2166612218
+rules	daslang, AOT	41.89	260603926

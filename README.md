@@ -119,7 +119,7 @@ checksum, and run by every engine in every mode it ships.
 </p>
 
 > **Measured on 2026-09-23 at commit
-> [`14e9ba96`](https://github.com/Rawframe-Project/kest/commit/14e9ba96),**
+> [`76bf8004`](https://github.com/Rawframe-Project/kest/commit/76bf8004),**
 > on an AMD Ryzen 5 3600 running Linux: Kest 0.0.1, Luau `-O2` and
 > `--codegen`, and daslang both interpreted and compiled ahead of time with
 > `-exe`. Best of five by processor time for the whole process, lower is
@@ -129,13 +129,13 @@ checksum, and run by every engine in every mode it ships.
 How to read it, honestly:
 
 - **Interpreters.** On the clock Kest's is ahead of Luau's on `kernel`,
-  `graph`, `words` and `rules` — by 15 to 25% — and level on `control`, where
+  `graph`, `words` and `rules` — by 20 to 25% — and level on `control`, where
   Luau gets more done per cycle; it retires fewer instructions than Luau's on
   all five, from 0.68× on `kernel` to 0.90× on `rules`. Against daslang's
   interpreter it is ahead everywhere.
 - **Compiled.** Kest's release engine is ahead of Luau's native code on all
-  five, and ahead of daslang's AOT on four. daslang's AOT still wins `rules`,
-  by about 1.7×.
+  five, by 1.7 to 3.1×, and ahead of daslang's AOT on four. daslang's AOT still wins `rules`,
+  by about 1.6×.
 - **Reproduce it** on your own machine with
   `KEST_LUAU=path/to/luau KEST_DAS=path/to/daslang sh bench/compare.sh`,
   which rewrites the table and both charts and stamps them with the date and
