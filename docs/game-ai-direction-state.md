@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1195
+    CURRENT SHA:       (this commit) D1093-D1196
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, and it is ahead of
@@ -838,7 +838,9 @@ the same workload.
    3.7% fewer cycles on all five and puts `rules` under Luau's interpreter
    by cycles, 1,075 M against 1,105-1,137 M (D1193); a change to the loop
    is read for instruction-cache misses too, because one variant of it was
-   37% slower on `kernel` at the same instructions.
+   37% slower on `kernel` at the same instructions. A carried body's
+   constant answer is written where it is going: `control` 1.6% fewer
+   instructions (D1196).
 
 ## Closed by measurement
 

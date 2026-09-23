@@ -41190,3 +41190,30 @@ turn them round, and the report says so. The release engine is ahead of
 Luau's native tier by 1.6 to 3.9 times and of daslang's AOT on four, which is
 1.3 times it on `rules`.
 
+## D1196 — A carried body's constant answer is written where it is going
+
+*measured*. A body small enough to be carried to where it is called (D1156)
+is copied in instruction by instruction, and its `return`s become jumps to
+the end of the copy. `bench/control`'s rule is such a body, and every one of
+its answers is a constant: `const 3` and a jump to the end, where the caller
+wrote the answer into `next` -- `store 8`. Three dispatches per decision, and
+the write is the same slot every time.
+
+When the call's answer is written straight into one slot, a `return` of a
+constant in the carried body is written as `store.k` into that slot and a
+jump past the caller's write. That changes the size of the instructions it
+touches, and a carried body's jumps are distances, so the copy is laid out
+before it is written: which returns are taken this way, where every
+instruction moves to, and every jump in the body recomputed from where it
+lands. Nothing in a carried body jumps backwards, which `CARRIED` holds: it
+names no loop. A `return` something inside the body jumps to directly is
+left as it was, because the constant in front of it is not what reaches it
+that way. The operation after the caller's write is marked as landed on, so
+nothing is made one instruction with the write it jumps past.
+
+At the same tree before and after, best of seven turn about: `control` 742.3 M
+instructions against 730.2 M and 321.0 M cycles against 318.2 M; the other
+four have no such call in a loop and moved by nothing. Written into the slot
+after the right one on purpose, `make fast` refuses with
+`examples/locale.kest` and `examples/words.kest`.
+

@@ -41586,3 +41586,17 @@ See D1195.
 of seven, then once best of fifteen for the table; `check-docs.sh` over the
 documents.
 
+## 2026-09-23, a carried body's constant answer written where it is going
+
+A carried body's `return` of a constant, when the call's answer goes straight
+into one slot, is written as `store.k` into that slot and a jump past the
+caller's write, with the carried copy laid out first so its jumps can be
+recomputed. `control` retires 1.6% fewer instructions.
+
+See D1196.
+
+**Runs:** the five workloads before and after, best of seven turn about;
+`control`'s listing read for where every jump lands; the store put in the
+wrong slot on purpose, which `make fast` refuses with two examples; and
+`make most`.
+

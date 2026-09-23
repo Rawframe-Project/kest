@@ -1067,12 +1067,29 @@ static bool runs_hold(const KestChunk *callee, uint16_t stored,
     return true;
 }
 
+// Whether the operation at `at` writes what is on the stack into one slot,
+// and which. A carried body whose answer goes there writes a constant it
+// answers with there itself. See D1196.
+static bool puts_one_slot(const KestIrBody *body, uint32_t at,
+                          uint16_t *slot) {
+    if (at >= body->op_count || body->ops[at].kind != KEST_IR_PUT ||
+        body->ops[at].place == KEST_IR_NO_PLACE) {
+        return false;
+    }
+    const KestIrPlace *place = &body->places[body->ops[at].place];
+    if (place->kind != KEST_IR_PLACE_SLOT || place->slots != 1) {
+        return false;
+    }
+    *slot = place->slot;
+    return true;
+}
+
 // The function at `index`, written where it is called. The arguments are on
 // the stack where the call would have handed them over, so they are stored
 // into the slots the body calls its parameters, and the body runs above the
 // caller's own slots.
 static void carry(Lower *lower, uint16_t index, uint16_t argument_slots,
-                  KestSpan span) {
+                  int32_t answer_to, uint32_t after, KestSpan span) {
     const KestChunk *callee = lower->module->functions[index];
     uint16_t base = lower->body->slot_count;
     // Written down on the body it was carried into, so that what the body is
@@ -1137,6 +1154,47 @@ static void carry(Lower *lower, uint16_t index, uint16_t argument_slots,
             end = at;
         }
     }
+    // Where the value is going, when the call's answer is one slot written
+    // straight into a local: a `return` of a constant is then the constant
+    // written there and a jump past the write, and not a push, a jump to the
+    // end and the write. Which returns those are is decided before anything
+    // is written, because it moves every instruction after them and the
+    // body's jumps are distances. Nothing in a carried body jumps backwards.
+    // See D1196.
+    bool lands[MOST_CARRIED + 1] = {false};
+    bool fused[MOST_CARRIED + 1] = {false};
+    uint16_t moved_to[MOST_CARRIED + 1] = {0};
+    for (uint32_t at = 0; at < end; at += kest_op_wide(callee->code[at])) {
+        const Operand *operands = carried_operands(callee->code[at]);
+        uint32_t wide = kest_op_wide(callee->code[at]);
+        uint32_t read = at + 1;
+        for (int o = 0; o < 3 && operands[o] != NO_OPERAND; o++) {
+            uint32_t lands_at = at + wide + operand_at(callee->code, read);
+            if (operands[o] == A_DISTANCE &&
+                callee->code[at] != KEST_OP_RETURN && lands_at < end) {
+                lands[lands_at] = true;
+            }
+            read += 2;
+        }
+    }
+    uint32_t before = end;
+    for (uint32_t at = 0; at < end; at += kest_op_wide(callee->code[at])) {
+        fused[at] = answer_to >= 0 && callee->code[at] == KEST_OP_RETURN &&
+                    operand_at(callee->code, at + 1) == 1 && before < at &&
+                    callee->code[before] == KEST_OP_CONST && !lands[at];
+        before = at;
+    }
+    uint32_t written = 0;
+    for (uint32_t at = 0; at < end;) {
+        uint32_t wide = kest_op_wide(callee->code[at]);
+        moved_to[at] = (uint16_t)written;
+        written += callee->code[at] == KEST_OP_CONST && at + wide < end &&
+                           fused[at + wide]
+                       ? 5
+                       : wide;
+        at += wide;
+    }
+    uint32_t moved_end = written;
     uint32_t which = 0;
     for (uint32_t at = 0; at < end; which++) {
         uint8_t op = callee->code[at];
@@ -1146,9 +1204,26 @@ static void carry(Lower *lower, uint16_t index, uint16_t argument_slots,
                               : span.offset,
                           1};
         const Operand *operands = carried_operands(op);
+        if (op == KEST_OP_CONST && at + wide < end && fused[at + wide]) {
+            if (lower->chunk->fused_slots < 1) {
+                lower->chunk->fused_slots = 1;
+            }
+            emit(lower, KEST_OP_STORE_K, where);
+            emit_u16(lower, (uint16_t)answer_to, where);
+            emit_u16(lower,
+                     (uint16_t)(operand_at(callee->code, at + 1) + first),
+                     where);
+            at += wide;
+            continue;
+        }
         if (op == KEST_OP_RETURN) {
             emit(lower, KEST_OP_JUMP, where);
-            emit_u16(lower, (uint16_t)(end - at - wide), where);
+            if (fused[at]) {
+                waits_for(lower, after, where);
+            } else {
+                emit_u16(lower, (uint16_t)(moved_end - moved_to[at] - wide),
+                         where);
+            }
             at += wide;
             continue;
         }
@@ -1161,10 +1236,13 @@ static void carry(Lower *lower, uint16_t index, uint16_t argument_slots,
                 value = carried_slot(value, stored, aliased, from, base);
             } else if (operands[o] == A_CONSTANT) {
                 value = (uint16_t)(value + first);
-            } else if (operands[o] == A_DISTANCE && at + wide + value > end) {
+            } else if (operands[o] == A_DISTANCE) {
                 // Into the returns the body ends with, none of which is
                 // written: where they were is the end.
-                value = (uint16_t)(end - at - wide);
+                uint32_t lands_at = at + wide + value;
+                uint32_t moved = lands_at >= end ? moved_end
+                                                 : moved_to[lands_at];
+                value = (uint16_t)(moved - moved_to[at] - wide);
             }
             emit_u16(lower, value, where);
         }
@@ -1731,7 +1809,11 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
 
     case KEST_IR_CALL:
         if (may_carry(lower, op->imm[0])) {
-            carry(lower, op->imm[0], op->imm[1], span);
+            uint16_t slot = 0;
+            bool one = index + 2 < lower->body->op_count &&
+                       puts_one_slot(lower->body, index + 1, &slot);
+            carry(lower, op->imm[0], op->imm[1], one ? (int32_t)slot : -1,
+                  index + 2, span);
             return;
         }
         emit(lower, KEST_OP_CALL, span);
@@ -1904,6 +1986,14 @@ static bool lower_body(Lower *lower, const KestIrBody *body, KestChunk *chunk) {
              op->kind == KEST_IR_SEEK_NEXT) &&
             op->target < body->op_count) {
             lower->landed_on[op->target] = true;
+        }
+        // And past the write a carried body's answer goes to, which is where
+        // one of its returns can land. See D1196.
+        uint16_t slot = 0;
+        if (op->kind == KEST_IR_CALL && i + 2 < body->op_count &&
+            may_carry(lower, op->imm[0]) &&
+            puts_one_slot(body, i + 1, &slot)) {
+            lower->landed_on[i + 2] = true;
         }
     }
 

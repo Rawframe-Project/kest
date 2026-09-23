@@ -209,7 +209,9 @@ says why. The other was bulk text append and it is done.
   without a landing mark on every label retires 1.5 to 4.4% fewer (D1191),
   and the last arm of a `match` is written without a test (D1192). A scalar
   read where the instruction reading it is takes 0.5 to 3.7% of the cycles
-  off all five, and `rules` is under Luau's interpreter by cycles (D1193). `control` is 0.98 once its
+  off all five, and `rules` is under Luau's interpreter by cycles (D1193).
+  A carried body's constant answer is written into the slot it is going to,
+  and `control` retires 1.6% fewer (D1196). `control` is 0.98 once its
   rule is carried (D1175), and `rules` 0.99 once
   a value is moved a run of its pieces at a time (D1177) and an element is
   weighed against a constant in one instruction (D1178): every workload here
