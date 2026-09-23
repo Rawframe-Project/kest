@@ -3316,6 +3316,11 @@ else:
     weighs_top = sum(count for name, count in ran.items()
                      if name.startswith("jump.false.")
                      and name.endswith(".c"))
+    # And an element weighed where it is, which is `index.ll` and one of
+    # those. See D1178.
+    weighs_element = sum(count for name, count in ran.items()
+                         if name.startswith("jump.false.")
+                         and name.endswith(".e"))
     moves_self = ran.get("add.k.self", 0) + ran.get("sub.k.self", 0)
     # And the arithmetic with a constant on its right, on a local or on what
     # is on the stack. See D1168.
@@ -3327,7 +3332,8 @@ else:
         "mul.i.narrow.c"))
     want = (slots * ran.get("load", 0) + 2 * slots * ran.get("load2", 0)
             + slots * ran.get("load.k", 0) + slots * weighs_local
-            + slots * moves_self + 2 * slots * ran.get("index.ll", 0)
+            + slots * moves_self
+            + 2 * slots * (ran.get("index.ll", 0) + weighs_element)
             + slots * works_local
             + 2 * slots * (ran.get("add.f.ll", 0) + ran.get("sub.f.ll", 0)
                            + ran.get("index.to.ll", 0)
@@ -3346,7 +3352,7 @@ else:
     want = slots * (ran.get("const", 0) + ran.get("true", 0)
                     + ran.get("false", 0) + ran.get("load.k", 0)
                     + ran.get("store.k", 0) + moves_self + weighs_local
-                    + weighs_top + works_local + works_top)
+                    + weighs_top + weighs_element + works_local + works_top)
     if moved.get("held") != want:
         print("it held out %s byte(s) and ran the instructions for %s"
               % (moved.get("held"), want))

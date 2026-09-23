@@ -41314,3 +41314,16 @@ struct with a tag and without, `perf stat` over the five workloads at each of
 four versions, cycles turn about against the tree before on all five, the two
 holes whose quotes the walk moved, by hand, and
 `make most`.
+
+## 2026-09-23, an element weighed against a constant
+
+`if one.cools[at] > 0` was an element read and pushed, a constant weighed
+against it, and a jump. Six instructions do all three when the run and the
+index are locals, and `rules` runs 3,307 million instructions where it ran
+3,373: under Luau's interpreter, which all five workloads here now are.
+
+See D1178.
+
+**Runs:** the pair counts of `rules`, `perf stat` over the five workloads,
+cycles turn about on `rules` and `control`, `examples/numbers.kest` fused, plain
+and checked and against a comparison broken on purpose (90), and `make most`.

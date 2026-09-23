@@ -619,9 +619,56 @@ fn main() -> i32 {
         power = power * 10
         noughts = "{noughts}0"
     }
+    // An element weighed against a constant in each of the six ways, which is
+    // one instruction each when the run and the index are locals. Every way
+    // round the edge: below it, on it and above it.
+    let edges: [i32] = array()
+    push(edges, 2)
+    push(edges, 3)
+    push(edges, 4)
+    if weighedInPlace(edges) != 111111 {
+        return 90
+    }
 
     io.print("every width wraps at its own end, and {NARROW} is one of them")
     return 0
+}
+
+// How many of `xs` are each way round three, a place of the answer a way.
+fn weighedInPlace(xs: [i32]) -> i32 {
+    let below = 0
+    let most = 0
+    let above = 0
+    let least = 0
+    let on = 0
+    let off = 0
+    for at in 0..len(xs) {
+        if xs[at] < 3 {
+            below += 1
+        }
+        if xs[at] <= 3 {
+            most += 1
+        }
+        if xs[at] > 3 {
+            above += 1
+        }
+        if xs[at] >= 3 {
+            least += 1
+        }
+        if xs[at] == 3 {
+            on += 1
+        }
+        if xs[at] != 3 {
+            off += 1
+        }
+    }
+    return below * 100000 +
+        (most - 1) * 10000 +
+        above * 1000 +
+        (least - 1) * 100 +
+        on * 10 +
+        off -
+        1
 }
 
 // So many nines, written out one at a time.

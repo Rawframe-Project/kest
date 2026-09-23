@@ -385,6 +385,17 @@ typedef enum {
     // an `f64`, so the two are a conversion each way. See D1171.
     KEST_OP_F32_BITS,
     KEST_OP_BITS_F32,
+    // An element of a run read by a run and an index where they are, weighed
+    // against a constant, and the jump: `index.ll`, `const` and one of the six
+    // whole-number jumps, which is every `if one.cools[at] > 0` a rule asks of
+    // a timer. See D1178.
+    KEST_OP_JUMP_FALSE_LT_E, // u16 run, u16 index, u16 layout, u16 constant,
+                             // u16 forward offset
+    KEST_OP_JUMP_FALSE_LE_E,
+    KEST_OP_JUMP_FALSE_GT_E,
+    KEST_OP_JUMP_FALSE_GE_E,
+    KEST_OP_JUMP_FALSE_EQ_E,
+    KEST_OP_JUMP_FALSE_NE_E,
     KEST_OP_LOOP,        // u16 backward offset
     // The whole of a counted walk's turn: add one to the count, compare it
     // with the limit beside it, and go back while it is less. The test is at

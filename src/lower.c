@@ -680,25 +680,34 @@ static const struct {
     uint8_t jump;
     uint8_t local;
     uint8_t top;
+    // And weighing an element a run and an index read where they are, when
+    // what is before the constant is that read. See D1178.
+    uint8_t element;
 } WEIGHED[] = {
-    {KEST_OP_JUMP_FALSE_LT_I, KEST_OP_JUMP_FALSE_LT_K, KEST_OP_JUMP_FALSE_LT_C},
-    {KEST_OP_JUMP_FALSE_LE_I, KEST_OP_JUMP_FALSE_LE_K, KEST_OP_JUMP_FALSE_LE_C},
-    {KEST_OP_JUMP_FALSE_GT_I, KEST_OP_JUMP_FALSE_GT_K, KEST_OP_JUMP_FALSE_GT_C},
-    {KEST_OP_JUMP_FALSE_GE_I, KEST_OP_JUMP_FALSE_GE_K, KEST_OP_JUMP_FALSE_GE_C},
-    {KEST_OP_JUMP_FALSE_EQ_I, KEST_OP_JUMP_FALSE_EQ_K, KEST_OP_JUMP_FALSE_EQ_C},
-    {KEST_OP_JUMP_FALSE_NE_I, KEST_OP_JUMP_FALSE_NE_K, KEST_OP_JUMP_FALSE_NE_C},
-    {KEST_OP_JUMP_FALSE_LT_F, KEST_OP_JUMP_FALSE_LT_FK, 0},
-    {KEST_OP_JUMP_FALSE_LE_F, KEST_OP_JUMP_FALSE_LE_FK, 0},
-    {KEST_OP_JUMP_FALSE_GT_F, KEST_OP_JUMP_FALSE_GT_FK, 0},
-    {KEST_OP_JUMP_FALSE_GE_F, KEST_OP_JUMP_FALSE_GE_FK, 0},
-    {KEST_OP_JUMP_FALSE_EQ_F, KEST_OP_JUMP_FALSE_EQ_FK, 0},
-    {KEST_OP_JUMP_FALSE_NE_F, KEST_OP_JUMP_FALSE_NE_FK, 0},
-    {KEST_OP_JUMP_TRUE_LT_F, KEST_OP_JUMP_TRUE_LT_FK, 0},
-    {KEST_OP_JUMP_TRUE_LE_F, KEST_OP_JUMP_TRUE_LE_FK, 0},
-    {KEST_OP_JUMP_TRUE_GT_F, KEST_OP_JUMP_TRUE_GT_FK, 0},
-    {KEST_OP_JUMP_TRUE_GE_F, KEST_OP_JUMP_TRUE_GE_FK, 0},
-    {KEST_OP_JUMP_TRUE_EQ_F, KEST_OP_JUMP_TRUE_EQ_FK, 0},
-    {KEST_OP_JUMP_TRUE_NE_F, KEST_OP_JUMP_TRUE_NE_FK, 0},
+    {KEST_OP_JUMP_FALSE_LT_I, KEST_OP_JUMP_FALSE_LT_K, KEST_OP_JUMP_FALSE_LT_C,
+     KEST_OP_JUMP_FALSE_LT_E},
+    {KEST_OP_JUMP_FALSE_LE_I, KEST_OP_JUMP_FALSE_LE_K, KEST_OP_JUMP_FALSE_LE_C,
+     KEST_OP_JUMP_FALSE_LE_E},
+    {KEST_OP_JUMP_FALSE_GT_I, KEST_OP_JUMP_FALSE_GT_K, KEST_OP_JUMP_FALSE_GT_C,
+     KEST_OP_JUMP_FALSE_GT_E},
+    {KEST_OP_JUMP_FALSE_GE_I, KEST_OP_JUMP_FALSE_GE_K, KEST_OP_JUMP_FALSE_GE_C,
+     KEST_OP_JUMP_FALSE_GE_E},
+    {KEST_OP_JUMP_FALSE_EQ_I, KEST_OP_JUMP_FALSE_EQ_K, KEST_OP_JUMP_FALSE_EQ_C,
+     KEST_OP_JUMP_FALSE_EQ_E},
+    {KEST_OP_JUMP_FALSE_NE_I, KEST_OP_JUMP_FALSE_NE_K, KEST_OP_JUMP_FALSE_NE_C,
+     KEST_OP_JUMP_FALSE_NE_E},
+    {KEST_OP_JUMP_FALSE_LT_F, KEST_OP_JUMP_FALSE_LT_FK, 0, 0},
+    {KEST_OP_JUMP_FALSE_LE_F, KEST_OP_JUMP_FALSE_LE_FK, 0, 0},
+    {KEST_OP_JUMP_FALSE_GT_F, KEST_OP_JUMP_FALSE_GT_FK, 0, 0},
+    {KEST_OP_JUMP_FALSE_GE_F, KEST_OP_JUMP_FALSE_GE_FK, 0, 0},
+    {KEST_OP_JUMP_FALSE_EQ_F, KEST_OP_JUMP_FALSE_EQ_FK, 0, 0},
+    {KEST_OP_JUMP_FALSE_NE_F, KEST_OP_JUMP_FALSE_NE_FK, 0, 0},
+    {KEST_OP_JUMP_TRUE_LT_F, KEST_OP_JUMP_TRUE_LT_FK, 0, 0},
+    {KEST_OP_JUMP_TRUE_LE_F, KEST_OP_JUMP_TRUE_LE_FK, 0, 0},
+    {KEST_OP_JUMP_TRUE_GT_F, KEST_OP_JUMP_TRUE_GT_FK, 0, 0},
+    {KEST_OP_JUMP_TRUE_GE_F, KEST_OP_JUMP_TRUE_GE_FK, 0, 0},
+    {KEST_OP_JUMP_TRUE_EQ_F, KEST_OP_JUMP_TRUE_EQ_FK, 0, 0},
+    {KEST_OP_JUMP_TRUE_NE_F, KEST_OP_JUMP_TRUE_NE_FK, 0, 0},
 };
 
 static uint8_t weighed(uint8_t jump, bool against_local) {
@@ -708,6 +717,31 @@ static uint8_t weighed(uint8_t jump, bool against_local) {
         }
     }
     return 0;
+}
+
+static uint8_t weighed_element(uint8_t jump) {
+    for (size_t i = 0; i < sizeof(WEIGHED) / sizeof(WEIGHED[0]); i++) {
+        if (WEIGHED[i].jump == jump) {
+            return WEIGHED[i].element;
+        }
+    }
+    return 0;
+}
+
+// What the element read just written reads, when the last thing written was
+// an `index.ll` nothing points between: the run, the index and the layout.
+static bool element_before(const Lower *lower, uint16_t *holds, uint16_t *at,
+                           uint16_t *layout) {
+    if (lower->last_op != KEST_OP_INDEX_LL ||
+        lower->last_at < lower->pointed_at ||
+        lower->last_at + 7 != lower->chunk->code_count) {
+        return false;
+    }
+    const uint8_t *code = lower->chunk->code + lower->last_at;
+    *holds = (uint16_t)(code[1] | ((uint16_t)code[2] << 8));
+    *at = (uint16_t)(code[3] | ((uint16_t)code[4] << 8));
+    *layout = (uint16_t)(code[5] | ((uint16_t)code[6] << 8));
+    return true;
 }
 
 static bool local_and_constant_before(const Lower *lower, uint16_t *slot,
@@ -1759,8 +1793,27 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
                 lower->chunk->fused_slots = 1;
             }
             take_back(lower);
-            emit(lower, weighed(jump, false), span);
-            emit_u16(lower, which, span);
+            uint16_t holds = 0;
+            uint16_t at = 0;
+            uint16_t layout = 0;
+            uint8_t element = weighed_element(jump);
+            if (element != 0 &&
+                element_before(lower, &holds, &at, &layout)) {
+                // Nor is the element: `index.ll` said as slack the two
+                // slots it read in place, and this is fewer than that.
+                take_back(lower);
+                if (lower->chunk->fused_slots < 2) {
+                    lower->chunk->fused_slots = 2;
+                }
+                emit(lower, element, span);
+                emit_u16(lower, holds, span);
+                emit_u16(lower, at, span);
+                emit_u16(lower, layout, span);
+                emit_u16(lower, which, span);
+            } else {
+                emit(lower, weighed(jump, false), span);
+                emit_u16(lower, which, span);
+            }
         } else {
             emit(lower, jump, span);
         }

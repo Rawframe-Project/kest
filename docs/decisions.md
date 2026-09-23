@@ -40663,3 +40663,27 @@ same cycles; `words` and `graph` within the noise both ways. The two round
 trips are 472 and 663 million where they were 528 and 743. What compiling
 costs grows by the walks: `lib/std/text.kest` is 207,398 bytes compiled where it
 was 206,662.
+
+## D1178 — An element weighed against a constant in one instruction
+
+After D1177 `bench/rules` was 1.01 times Luau's interpreter in instructions,
+and its commonest pair was `index.ll` and then `jump.false.gt.c`, 6.4 million
+times: the timers every actor has, read by a run and an index that are both
+locals and asked whether they have run down. `if one.cools[at] > 0` was two
+dispatches and an element pushed to be popped.
+
+- `jump.false.lt.e` to `jump.false.ne.e`, the six whole-number comparisons,
+  read the element where it is -- the run and the index are slots, the layout
+  says how -- weigh it against a constant, and jump. The lowering takes back an
+  `index.ll` in front of a `const` in front of the jump, which is what the
+  third column of the table that makes the `.k` and `.c` jumps says; a float
+  comparison has none.
+- It can refuse -- a run that is not there, an index outside it -- so a body
+  holding one is not carried, as a body holding `index.ll` was not.
+- `examples/numbers.kest` weighs three elements against three each of the six
+  ways; with `>` read as `>=` it answers 90. The gate's count of what the
+  machine moved holds the six to the pair they were made of.
+
+`rules` 3,373 million instructions to 3,307, and 1.8% fewer cycles turn
+about: 0.994 times Luau's interpreter. All five workloads here now run fewer
+instructions than Luau's interpreter does. The instructions are 217.

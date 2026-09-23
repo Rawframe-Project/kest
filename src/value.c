@@ -1221,6 +1221,9 @@ typedef enum {
     // where they are. See D1167.
     U16_X4,
     U16_X5,
+    // An element by a run and an index, a constant, and a forward jump,
+    // which is eleven bytes. See D1178.
+    WEIGH_ELEMENT,
 } Operands;
 
 typedef struct {
@@ -1320,6 +1323,9 @@ static const Instruction INSTRUCTIONS[] = {
     {"sub.i.narrow.c", U16_U16}, {"sub.i.narrow.k", U16_U16_U16},
     {"mul.i.narrow.c", U16_U16}, {"mul.i.narrow.k", U16_U16_U16},
     {"f32.bits", NONE}, {"bits.f32", NONE},
+    {"jump.false.lt.e", WEIGH_ELEMENT}, {"jump.false.le.e", WEIGH_ELEMENT},
+    {"jump.false.gt.e", WEIGH_ELEMENT}, {"jump.false.ge.e", WEIGH_ELEMENT},
+    {"jump.false.eq.e", WEIGH_ELEMENT}, {"jump.false.ne.e", WEIGH_ELEMENT},
     {"loop", BACK},
 {"next.less.i", WALK}, {"next.less.u", WALK},
     {"scratch", U16},      {"unscratch", U16},
@@ -1371,6 +1377,7 @@ static uint32_t kest_op_width(uint8_t op) {
     case U16_X4:
         return 9;
     case U16_X5:
+    case WEIGH_ELEMENT:
         return 11;
     }
     return 1;
@@ -1993,6 +2000,12 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_JUMP_TRUE_EQ_FK:
     case KEST_OP_JUMP_TRUE_NE_FK:
     case KEST_OP_JUMP_FALSE_NE_C:
+    case KEST_OP_JUMP_FALSE_LT_E:
+    case KEST_OP_JUMP_FALSE_LE_E:
+    case KEST_OP_JUMP_FALSE_GT_E:
+    case KEST_OP_JUMP_FALSE_GE_E:
+    case KEST_OP_JUMP_FALSE_EQ_E:
+    case KEST_OP_JUMP_FALSE_NE_E:
     case KEST_OP_LOOP:
     case KEST_OP_NEXT_LESS_I:
     case KEST_OP_NEXT_LESS_U:
@@ -2391,6 +2404,12 @@ static uint32_t disassemble_one(const KestModule *module,
         fprintf(out, "+%u  %u  %u  %u[%u]\n", read_u16(chunk, offset + 1),
                 read_u16(chunk, offset + 3), read_u16(chunk, offset + 5),
                 read_u16(chunk, offset + 7), read_u16(chunk, offset + 9));
+        break;
+    case WEIGH_ELEMENT:
+        fprintf(out, "%u  %u  %u  %u  -> %u\n", read_u16(chunk, offset + 1),
+                read_u16(chunk, offset + 3), read_u16(chunk, offset + 5),
+                read_u16(chunk, offset + 7),
+                offset + 11 + read_u16(chunk, offset + 9));
         break;
     }
     return offset + kest_op_width(op);

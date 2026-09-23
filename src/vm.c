@@ -2165,10 +2165,19 @@ static bool values_equal(const KestType *type, const KestValue *a,
             return false;                                                      \
         }                                                                      \
     } while (0)
+#define OWN_ELEMENT_AND_CONSTANT(holds, at, which)                             \
+    do {                                                                       \
+        if (!own_slots(vmp, frame, instruction, (holds), (holds) + 1u) ||       \
+            !own_slots(vmp, frame, instruction, (at), (at) + 1u) ||             \
+            !own_constants(vmp, frame, instruction, (which) + 1u)) {           \
+            return false;                                                      \
+        }                                                                      \
+    } while (0)
 #else
 #define OWN_SLOT_AND_CONSTANT(slot, which) ((void)0)
 #define OWN_CONSTANT(which) ((void)0)
 #define OWN_SLOT(slot) ((void)0)
+#define OWN_ELEMENT_AND_CONSTANT(holds, at, which) ((void)0)
 #endif
 
 #define IN_RUN(index, count)                                                   \
@@ -5481,6 +5490,54 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }                                                                      \
     } while (0)
 
+// An element weighed against a constant, and the jump: what `index.ll`
+// reads and `jump.false.*.c` weighs, with nothing on the stack between.
+// See D1178.
+#define JUMP_UNLESS_E(test)                                                    \
+    do {                                                                       \
+        uint16_t holds = READ_U16();                                           \
+        uint16_t at = READ_U16();                                              \
+        uint16_t of_which = READ_U16();                                        \
+        uint16_t which = READ_U16();                                           \
+        uint16_t distance = READ_U16();                                        \
+        OF_THE_MODULE(of_which, module->layout_count, "a layout");             \
+        OWN_ELEMENT_AND_CONSTANT(holds, at, which);                            \
+        MOVED(moved_loaded, 2 * sizeof(KestValue));                            \
+        MOVED(moved_held, sizeof(KestValue));                                  \
+        const KestLayout *layout = &module->layouts[of_which];                 \
+        int64_t index = mine[at].integer;                                      \
+        const Array *array = mine[holds].object;                               \
+        HOLD(array, KEST_IS_ARRAY, "an array");                                \
+        IN_ARRAY(index, array);                                                \
+        /* Two, because a read of a piece is written for text as well. */    \
+        KestValue element[2];                                                  \
+        READ_INTO(element, layout,                                             \
+                  array->bytes + (size_t)index * array->stride);               \
+        int64_t left = element[0].integer;                                     \
+        int64_t right = constants[which].integer;                              \
+        if (!(test)) {                                                         \
+            ip += distance;                                                    \
+        }                                                                      \
+    } while (0)
+
+        case KEST_OP_JUMP_FALSE_LT_E:
+            JUMP_UNLESS_E(left < right);
+            break;
+        case KEST_OP_JUMP_FALSE_LE_E:
+            JUMP_UNLESS_E(left <= right);
+            break;
+        case KEST_OP_JUMP_FALSE_GT_E:
+            JUMP_UNLESS_E(left > right);
+            break;
+        case KEST_OP_JUMP_FALSE_GE_E:
+            JUMP_UNLESS_E(left >= right);
+            break;
+        case KEST_OP_JUMP_FALSE_EQ_E:
+            JUMP_UNLESS_E(left == right);
+            break;
+        case KEST_OP_JUMP_FALSE_NE_E:
+            JUMP_UNLESS_E(left != right);
+            break;
         case KEST_OP_JUMP_FALSE_LT_C:
             JUMP_UNLESS_C(left < right);
             break;
