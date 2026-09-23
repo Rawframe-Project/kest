@@ -40574,3 +40574,21 @@ time.
 `words` 272.6 million instructions to 192.6, where Luau's interpreter is 238:
 0.81 times it, from 1.15. `agents`, the persistent world, 5.41 thousand
 million to 5.04. `kernel`, `control`, `graph` and `rules` do not move.
+
+## D1174 — Two holes the release moved, and a host that knows its own contexts
+
+The sweep over D1172 missed two holes. One quoted the reference's cost of
+checking `lib/std/text.kest` in the words it is caught by, and the build keeping
+what it read moved that number by forty-eight bytes; it quotes the number there
+is. The other is a machine handed a pointer into the list its host bound it
+from, which the host has freed: `examples/embed` caught it by two hosts
+answering alike, and what the freed memory held when the program asked had
+changed, so on this machine the program was refused first for text a host had
+not copied, and on CI it was caught as before. A hole whose catch is whatever a
+freed block holds is a hole caught by chance.
+
+So the host says what it handed over: every decider it binds carries a mark,
+and a bound function handed anything else says so and stops, whatever the
+memory it was handed now holds. The hole is caught by that, three times out of
+three here, and the other hole about two hosts is still caught by the two hosts
+answering alike.

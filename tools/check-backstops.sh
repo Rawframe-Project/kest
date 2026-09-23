@@ -6171,7 +6171,7 @@ anywhere, and it is why the gate holds""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "136000 as a tree, 174904 checked",
+        "caught": "136000 as a tree, 174952 checked",
     },
     {
         # And the section they are in saying whose machine they are. Bytes of
@@ -7262,9 +7262,9 @@ fn main() -> i32 {
         # that reading works is a body that breaks it.
         "what": "a host that makes text under a promise not to",
         "file": "examples/embed.c",
-        "from": """    Decider *decider = context;
+        "from": """    Decider *decider = (Decider *)decided(context);
     if (decider->meddles) {""",
-        "to": """    Decider *decider = context;
+        "to": """    Decider *decider = (Decider *)decided(context);
     KestValue said = kest_text(runtime, "deciding", 8);
     (void)said;
     if (decider->meddles) {""",
@@ -13495,7 +13495,7 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "to": """                *context = (void *)&host->items[i];""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "two hosts answered the same",
+        "caught": "a bound function was handed a context this host never gave it",
     },
     {
         # A machine that never started, counted as one standing on the build.

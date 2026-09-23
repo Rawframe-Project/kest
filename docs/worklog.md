@@ -41253,3 +41253,19 @@ See D1173.
 **Runs:** `perf record` with callers on `words`, `perf stat` over the six
 workloads before and after, `examples/numbers.kest` against a writer broken on
 purpose, and `make most`.
+
+## 2026-09-23, two holes the release moved
+
+CI on D1172 missed the hole about the reference's cost of checking, whose
+catch quoted the number the build moved, and the sweep here also missed one
+about a machine reading its context out of a freed list, whose catch depended on
+what the freed memory held. The first quotes the number there is; for the
+second `examples/embed` marks every context it hands over and a bound function
+handed anything else says so. Both run by hand and caught, the second three
+times.
+
+See D1174.
+
+**Runs:** the two holes by hand, the one beside the second, the one that
+quotes the body the mark moved, `examples/embed`,
+the quote pass, and `make most`.
