@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1185
+    CURRENT SHA:       (this commit) D1093-D1186
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, and it is ahead of
@@ -826,7 +826,8 @@ the same workload.
    JIT is a whole second a process and is not a per-run row. `rules` compiled
    is what is open: with its operands in C it is 2.14 times Daslang's AOT in
    cycles where it was 2.55, 396 million against 185, and 2.6 times in
-   instructions, 685 million against 261 (D1179).
+   instructions, 685 million against 261 (D1179); a run's length read
+   inline took it to 638 million (D1186).
 
 ## Closed by measurement
 

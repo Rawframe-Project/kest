@@ -41438,3 +41438,14 @@ See D1185.
 
 **Runs:** `perf stat` over the five workloads before and after with the same
 answers, cycles turn about on `control`, `rules` and `kernel`, and `make most`.
+
+## 2026-09-23, a run's length read where it stands
+
+The release engine wrote `len` as a call into the library. It tests the handle
+the way an element read does and reads the length inline, and `rules` compiled
+retires 7% fewer instructions.
+
+See D1186.
+
+**Runs:** the five workloads compiled before and after with the same answers,
+and `make most`.

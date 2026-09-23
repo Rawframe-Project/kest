@@ -40916,3 +40916,19 @@ it ran before: only the lowering changed, and what moved `rules` is where the
 machine's loop lands once the object before it in the library is a few bytes
 longer, which is D1158's sensitivity rather than anything `rules` runs. The
 claim is the instructions.
+
+## D1186 — The release engine reads a run's length where it stands
+
+*measured*. `kest_elem_count` was 3.6% of `bench/rules` compiled: every
+`len(one.cools)` a call across into the library to ask a handle how long it
+is. An element read already tests the handle where it stands -- a run whose
+first word says so -- and goes to the door only for anything else (D1112).
+`len` does the same now: a run answers its length inline, and a handle that is
+not one, or a lend the host has taken back, goes to `kest_elem_count`, which
+says what the machine says about it.
+
+`rules` compiled retires 638 million instructions where it retired 686, 7%
+fewer, with the same answer; `kernel`, `control`, `graph` and `words` move by
+less than half a per cent. `check-c.sh` holds every program in the tree to the
+same answer both ways, compiled a second time walking the heap at every
+allocation.

@@ -194,7 +194,8 @@ says why. The other was bulk text append and it is done.
   and 0.75 of Luau's interpreter by processor time on `kernel`, `control`,
   `graph`, `words` and `rules`, and a fuzz campaign of 24,000 runs found
   nothing; `control` retires 3.6% fewer since an element of one slot is
-  written from a local in one instruction (D1185). `control` is 0.98 once its
+  written from a local in one instruction (D1185), and `rules` compiled 7%
+  fewer since the release engine reads a run's length inline (D1186). `control` is 0.98 once its
   rule is carried (D1175), and `rules` 0.99 once
   a value is moved a run of its pieces at a time (D1177) and an element is
   weighed against a constant in one instruction (D1178): every workload here

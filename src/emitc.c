@@ -2172,13 +2172,19 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         }
         at_stack(walk, first, base);
         // Through a number of its own rather than the operand's address, so
-        // the operands stay the body's own. See D1179.
+        // the operands stay the body's own (D1179). A handle that is a run
+        // says how long it is where it stands, the same test an element read
+        // makes; anything else goes to the door, which says what the machine
+        // says about it. See D1186.
         say(c, out,
             "    {\n        int64_t many;\n"
-            "        if (!kest_elem_count(rt, %s, %u, &many)) {\n"
+            "        const KestRun *run = (const KestRun *)%s.object;\n"
+            "        if (run != NULL && run->what == KEST_RUN_IS) {\n"
+            "            many = run->length;\n"
+            "        } else if (!kest_elem_count(rt, %s, %u, &many)) {\n"
             "            return false;\n        }\n"
             "        %s.integer = many;\n    }\n",
-            first, op->span.offset, first);
+            first, first, op->span.offset, first);
         break;
     }
     case KEST_IR_CALL: {
