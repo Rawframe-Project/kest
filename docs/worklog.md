@@ -41480,3 +41480,19 @@ See D1188.
 **Runs:** the three workloads it reaches compiled before and after with the same
 answers, the new program both ways with the proof as written and blind to what
 a body calls, and `make most`.
+
+## 2026-09-23, a walk to a limit asks once whether its arrays are long enough
+
+A walk counting from nought or more to any limit asks, where it begins,
+whether each array it indexes at the count is at least as long as the limit,
+and the release engine tests that one flag at each element rather than the
+whole guard. Compiled `control` retires 16% fewer instructions.
+`check-c.sh` holds a walk past the end of an array and a walk that swaps in a
+shorter one to the same refusal both ways, and each catches the proof broken
+the way it is about.
+
+See D1189.
+
+**Runs:** the five workloads compiled before and after with the same answers
+and no warnings, the two new walks both ways with the proof as written and
+broken, every example compiled under the sanitisers, and `make most`.

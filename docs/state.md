@@ -198,7 +198,9 @@ says why. The other was bulk text append and it is done.
   fewer since the release engine reads a run's length inline (D1186);
   an element a walk counts through is proved inside its array and read with
   no guard compiled, `kernel` a third fewer and `rules` a tenth (D1187), and
-  a walk calling bodies that keep their arrays is proved too (D1188). `control` is 0.98 once its
+  a walk calling bodies that keep their arrays is proved too (D1188); a
+  walk to any limit asks once where it begins whether its arrays are long
+  enough, and `control` compiled retires 16% fewer (D1189). `control` is 0.98 once its
   rule is carried (D1175), and `rules` 0.99 once
   a value is moved a run of its pieces at a time (D1177) and an element is
   weighed against a constant in one instruction (D1178): every workload here

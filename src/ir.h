@@ -84,6 +84,14 @@ typedef struct {
     // element a walk counts through, where nothing in the walk can make the
     // array shorter or name another. See D1187.
     bool in_bounds;
+    // ELEM: inside the array whenever the array held in slot `guard_held` is
+    // at least as long as slot `guard_limit` says, in a walk counting in slot
+    // `guard_counter` from nought or more to that limit -- which is asked
+    // once where the walk begins rather than at every element. See D1189.
+    bool guarded;
+    uint16_t guard_held;
+    uint16_t guard_counter;
+    uint16_t guard_limit;
     KestSpan span;
 } KestIrPlace;
 

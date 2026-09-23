@@ -40990,3 +40990,34 @@ Of the release engine's element accesses 19 of 40 in `rules` are proved where
 the same answers. What compiling `lib/std/text.kest` costs is 207,604 bytes
 where it was 207,398, because a place in the IR carries whether it was proved
 (D1187).
+
+## D1189 — A walk to a limit asks once, where it begins, whether its arrays are long enough
+
+*measured*. D1187 proved an element inside its array only where the walk
+counts to that array's length. `bench/control` counts to a constant and
+indexes two arrays with the count, and D1141 measured the guard in front of
+each of those at 49 of the 142 instructions a decision between this backend
+and `g++`.
+
+- A walk counting from a whole number written down that is nought or more to
+  any limit, whose count nothing but the loop names and that keeps its arrays
+  (D1188), reads every element at the count inside its array whenever the
+  array is a run at least as long as the limit -- if nothing in the walk
+  stores another array into the slot it is held in. That question is the same
+  at every turn, so it is asked once: the release engine sets a flag before
+  the label the walk goes back to, which is on the way in and not on the way
+  round, and an element marked `guarded` tests that flag and falls back to the
+  whole guard when it is false. A program that indexes past the end of an
+  array is refused at the same element with the same words as before.
+- The flags are declared at the top of a body, one for each array, count and
+  limit, because two walks after one another may count in the same slots.
+- `check-c.sh` writes two more walks both engines have to refuse alike: one
+  counting to ten over an array of five, which catches a flag that says yes
+  whatever it is asked (the release engine answered 10), and one that stores a
+  shorter array into the slot it walks, which catches a proof that does not
+  look at stores (it answered 0). Every example and four of the workloads
+  compiled under the sanitisers answer what they answer on the machine.
+
+Compiled `control` retires 117.2 million instructions where it retired 139.2,
+16% fewer, with the same answer; `graph` 0.3% fewer; `kernel`, `rules` and
+`words` are unchanged, since their walks were proved outright already.

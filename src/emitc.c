@@ -986,7 +986,28 @@ static bool write_elem(Walk *walk, const KestIrOp *op,
     // Where the compiler proved the element is inside the array -- one a
     // walk counts through, where nothing in the walk makes the array shorter
     // or names another -- neither question is asked. See D1187.
-    if (place->in_bounds) {
+    // And where it is inside the array whenever the array is as long as the
+    // walk's limit, which was asked where the walk began: one flag held in a
+    // register rather than three things read out of memory. See D1189.
+    if (place->guarded && !place->in_bounds) {
+        say(c, out,
+            "    {\n        const KestRun *run = (const KestRun *)%s.object;\n"
+            "        int64_t which = %s.integer;\n"
+            "        unsigned char *at;\n"
+            "        if (fast_%u_%u_%u) {\n"
+            "            at = run->bytes + (size_t)which * run->stride + %u;\n"
+            "        } else if (run != NULL && run->what == KEST_RUN_IS &&\n"
+            "            (uint64_t)which < (uint64_t)run->length) {\n"
+            "            at = run->bytes + (size_t)which * run->stride + %u;\n"
+            "        } else {\n"
+            "            at = kest_elem_at(rt, %s, which, %u, %u);\n"
+            "            if (at == NULL) {\n                return false;\n"
+            "            }\n        }\n",
+            held, index, (unsigned)place->guard_held,
+            (unsigned)place->guard_counter, (unsigned)place->guard_limit,
+            (unsigned)place->offset, (unsigned)place->offset, held,
+            (unsigned)place->offset, op->span.offset);
+    } else if (place->in_bounds) {
         say(c, out,
             "    {\n        const KestRun *run = (const KestRun *)%s.object;\n"
             "        unsigned char *at = run->bytes +\n"
@@ -1084,6 +1105,75 @@ static void write_branch(Walk *walk, uint32_t target, uint32_t leaving,
 // stack throughout were stored and read again around every element written,
 // because a byte written through a pointer may be one of them as far as the
 // host's compiler can tell. See D1179.
+// The walks' own questions, asked once where each walk begins: for every
+// array an element of which is guarded by a walk's limit (D1189), whether the
+// array held in that slot is a run at least as long as the limit. Declared at
+// the top of the body, because two walks after one another may count in the
+// same slots and ask the same question, and set before the label a walk goes
+// back to, so it is asked on the way in and not at every turn.
+static bool same_guard(const KestIrPlace *a, const KestIrPlace *b) {
+    return a->guard_held == b->guard_held &&
+           a->guard_counter == b->guard_counter &&
+           a->guard_limit == b->guard_limit;
+}
+
+static bool guard_seen_before(const KestIrBody *body, uint32_t which) {
+    for (uint32_t p = 0; p < which; p++) {
+        if (body->places[p].guarded && !body->places[p].in_bounds &&
+            same_guard(&body->places[p], &body->places[which])) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static void declare_guards(Walk *walk) {
+    const KestIrBody *body = walk->body;
+    for (uint32_t p = 0; p < body->place_count; p++) {
+        const KestIrPlace *place = &body->places[p];
+        if (!place->guarded || place->in_bounds || guard_seen_before(body, p)) {
+            continue;
+        }
+        say(walk->c, &walk->into->wrote,
+            "    bool fast_%u_%u_%u = false;\n    (void)fast_%u_%u_%u;\n",
+            (unsigned)place->guard_held, (unsigned)place->guard_counter,
+            (unsigned)place->guard_limit, (unsigned)place->guard_held,
+            (unsigned)place->guard_counter, (unsigned)place->guard_limit);
+    }
+}
+
+static void ask_guards(Walk *walk, uint32_t head) {
+    const KestIrBody *body = walk->body;
+    for (uint32_t i = 0; i < body->op_count; i++) {
+        const KestIrOp *next = &body->ops[i];
+        if (next->kind != KEST_IR_NEXT || next->target != head) {
+            continue;
+        }
+        for (uint32_t p = 0; p < body->place_count; p++) {
+            const KestIrPlace *place = &body->places[p];
+            if (!place->guarded || place->in_bounds ||
+                place->guard_counter != next->imm[0] ||
+                place->guard_limit != next->imm[1] ||
+                guard_seen_before(body, p)) {
+                continue;
+            }
+            Where held;
+            Where limit;
+            at_frame(walk, held, place->guard_held);
+            at_frame(walk, limit, place->guard_limit);
+            say(walk->c, &walk->into->wrote,
+                "    {\n        const KestRun *run = (const KestRun *)%s.object;\n"
+                "        fast_%u_%u_%u = run != NULL && run->what == "
+                "KEST_RUN_IS &&\n"
+                "            (uint64_t)%s.integer <= (uint64_t)run->length;\n"
+                "    }\n",
+                held, (unsigned)place->guard_held,
+                (unsigned)place->guard_counter, (unsigned)place->guard_limit,
+                limit);
+        }
+    }
+}
+
 static bool in_memory(const Walk *walk, const KestIrOp *op) {
     if (!walk->on_the_stack) {
         return false;
@@ -2639,6 +2729,7 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
             at_frame(&walk, param, p);
             say(c, &into->wrote, "    %s = a%u;\n", param, (unsigned)p);
         }
+        declare_guards(&walk);
         // Said out loud rather than left to whether the body happens to read
         // them: a frame nothing reads is a warning in somebody else's build,
         // and a warning in a generated file is noise a reader learns to skip.
@@ -2658,6 +2749,7 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
                 continue;
             }
             if (walk.landed[i]) {
+                ask_guards(&walk, i);
                 say(c, &into->wrote, "L%u:;\n", i);
             }
             walk.stack = walk.depth[i];

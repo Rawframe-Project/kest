@@ -982,6 +982,46 @@ fn main() -> i32 {
     return total % 251
 }
 PROGRAM
+# And a walk that counts past the end of an array it indexes: the question
+# asked where a walk begins says the array is shorter than the limit, and
+# every element goes back to being asked about, so both engines refuse at
+# the sixth. See D1189.
+cat >"$work"/programs/shorter.kest <<'PROGRAM'
+module shorter
+
+fn main() -> i32 {
+    let xs: [i32] = array()
+    for i in 0..5 {
+        push(xs, i)
+    }
+    let total = 0
+    for at in 0..10 {
+        total += xs[at]
+    }
+    return total % 251
+}
+PROGRAM
+# And a walk that puts a shorter array in the slot it is asking about: the
+# question was asked of the array that was there, so an array stored there in
+# the walk makes the walk prove nothing. See D1189.
+cat >"$work"/programs/swapped.kest <<'PROGRAM'
+module swapped
+
+fn main() -> i32 {
+    let xs: [i32] = array()
+    let short: [i32] = array()
+    for i in 0..6 {
+        push(xs, i)
+    }
+    push(short, 7)
+    let total = 0
+    for at in 0..6 {
+        total += xs[at]
+        xs = short
+    }
+    return total % 251
+}
+PROGRAM
 cat >"$work"/programs/outside.kest <<'PROGRAM'
 module outside
 
@@ -1317,7 +1357,7 @@ done
 # traps on, or as one it quietly answers, would be a program that means
 # something else. Counted rather than assumed, because a program that stops is
 # one whose answer is the same either way for the wrong reason.
-for stopping in stopped shifted outside deep crossed runoff shrunk taken handed; do
+for stopping in stopped shifted outside deep crossed runoff shrunk taken handed shorter swapped; do
     stops=$(./kest run "$work"/programs/$stopping.kest 2>/dev/null </dev/null
             echo $?)
     if [ "$stops" -eq 0 ]; then

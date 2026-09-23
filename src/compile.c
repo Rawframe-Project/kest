@@ -3282,24 +3282,19 @@ static bool keeps_runs(const Compiler *compiler) {
     return true;
 }
 
-// Every element of the array in `held` read or written at the count in
-// `counter`, in a walk from `from` whose limit was that array's length when it
-// began and whose count starts at nought or more, proved to be inside the
-// array -- when nothing in the walk can make it shorter or put another array
-// in the slot. What could is a call of any kind, since a body handed the
-// array may take from it; taking, emptying and resizing; closing working
-// memory; and a store into either slot. Growing it is not: the bytes may move,
-// and every read asks the handle where they are. See D1187.
-static void prove_walk(Compiler *compiler, uint32_t from, uint16_t held,
+// Whether nothing in the operations from `from` on can make an array shorter
+// or take one away, or store into the slot `counter` is in: no call but to a
+// body that keeps its arrays, since a body handed one may take from it; no
+// taking, emptying or resizing; and no working memory closed. Growing an
+// array is not among them: the bytes may move, and every read asks the
+// handle where they are. See D1187 and D1188.
+static bool walk_keeps(const Compiler *compiler, uint32_t from,
                        uint16_t counter) {
-    KestIrBody *body = compiler->body;
-    if (body == NULL || compiler->ir->out_of_memory) {
-        return;
-    }
+    const KestIrBody *body = compiler->body;
     for (uint32_t i = from; i < body->op_count; i++) {
         const KestIrOp *op = &body->ops[i];
         if (op->kind == KEST_IR_CALL && !calls_a_keeper(compiler, op)) {
-            return;
+            return false;
         }
         switch ((KestIrKind)op->kind) {
         case KEST_IR_CALL_VALUE:
@@ -3310,21 +3305,55 @@ static void prove_walk(Compiler *compiler, uint32_t from, uint16_t held,
         case KEST_IR_TAKE:
         case KEST_IR_CLEAR:
         case KEST_IR_REGION_CLOSE:
-            return;
+            return false;
         default:
             break;
         }
         if (op->kind == KEST_IR_PUT && op->place != KEST_IR_NO_PLACE) {
             const KestIrPlace *place = &body->places[op->place];
-            if ((place->kind == KEST_IR_PLACE_SLOT ||
-                 place->kind == KEST_IR_PLACE_RUN) &&
-                ((held >= place->slot && held < place->slot + place->slots) ||
-                 (counter >= place->slot &&
-                  counter < place->slot + place->slots) ||
-                 place->kind == KEST_IR_PLACE_RUN)) {
-                return;
+            if (place->kind == KEST_IR_PLACE_RUN ||
+                (place->kind == KEST_IR_PLACE_SLOT &&
+                 counter >= place->slot &&
+                 counter < place->slot + place->slots)) {
+                return false;
             }
         }
+    }
+    return true;
+}
+
+// Whether anything from `from` on stores into `slot`.
+static bool stored_into(const Compiler *compiler, uint32_t from,
+                        uint16_t slot) {
+    const KestIrBody *body = compiler->body;
+    for (uint32_t i = from; i < body->op_count; i++) {
+        const KestIrOp *op = &body->ops[i];
+        if (op->kind != KEST_IR_PUT || op->place == KEST_IR_NO_PLACE) {
+            continue;
+        }
+        const KestIrPlace *place = &body->places[op->place];
+        if (place->kind == KEST_IR_PLACE_SLOT && slot >= place->slot &&
+            slot < place->slot + place->slots) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Every element read or written from `from` on at the count in `counter`, of
+// an array held in a slot nothing from there on stores into, in a walk that
+// counts from nought or more up to what `limit` holds and keeps its arrays:
+// inside the array outright when the array is the one in `measured`, whose
+// length the limit is (D1187), and inside it whenever that array is at least
+// as long as the limit otherwise, which is asked once where the walk begins
+// (D1189). `limit` is -1 for a walk whose limit is the length of `measured`
+// by construction.
+static void prove_walk(Compiler *compiler, uint32_t from, int32_t measured,
+                       uint16_t counter, int32_t limit) {
+    KestIrBody *body = compiler->body;
+    if (body == NULL || compiler->ir->out_of_memory ||
+        !walk_keeps(compiler, from, counter)) {
+        return;
     }
     for (uint32_t i = from; i < body->op_count; i++) {
         const KestIrOp *op = &body->ops[i];
@@ -3334,11 +3363,21 @@ static void prove_walk(Compiler *compiler, uint32_t from, uint16_t held,
             continue;
         }
         KestIrPlace *place = &body->places[op->place];
-        if (place->kind == KEST_IR_PLACE_ELEM &&
-            place->type != NULL &&
-            read_out_of(body, place->base) == (int32_t)held &&
-            read_out_of(body, place->index) == (int32_t)counter) {
+        if (place->kind != KEST_IR_PLACE_ELEM || place->type == NULL ||
+            read_out_of(body, place->index) != (int32_t)counter) {
+            continue;
+        }
+        int32_t held = read_out_of(body, place->base);
+        if (held < 0 || stored_into(compiler, from, (uint16_t)held)) {
+            continue;
+        }
+        if (held == measured) {
             place->in_bounds = true;
+        } else if (limit >= 0) {
+            place->guarded = true;
+            place->guard_held = (uint16_t)held;
+            place->guard_counter = counter;
+            place->guard_limit = (uint16_t)limit;
         }
     }
 }
@@ -3778,13 +3817,15 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             }
 
             compile_block(compiler, &stmt->each->body);
-            // Counting from nought or more up to how long an array was, by a
-            // count nothing names but the loop: every element read at it is
-            // inside the array, if nothing in the walk made it shorter.
-            if (measured >= 0 && !stmt->each->name_written &&
+            // Counting from nought or more to a limit, by a count nothing names
+            // but the loop: every element read at it is inside its array when
+            // the array is as long as the limit -- which it is outright where
+            // the limit is its length -- if nothing in the walk made it
+            // shorter. See D1187 and D1189.
+            if (!stmt->each->name_written &&
                 written_index(compiler, stmt->each->sequence) >= 0) {
-                prove_walk(compiler, loop->start, (uint16_t)measured,
-                           index_slot);
+                prove_walk(compiler, loop->start, measured, index_slot,
+                           end_slot);
             }
             close_walk(compiler, loop, exit, walk, stmt->span);
 
@@ -4108,7 +4149,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         // walking, which is held where nothing can name it, if nothing in
         // the walk made it shorter. See D1187.
         if (!over_store && !over_text && sequence->tag == KEST_T_ARRAY) {
-            prove_walk(compiler, loop->start, walked_slot, index_slot);
+            prove_walk(compiler, loop->start, walked_slot, index_slot, -1);
         }
 
         close_walk(compiler, loop, exit, walk, stmt->span);

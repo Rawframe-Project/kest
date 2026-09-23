@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1188
+    CURRENT SHA:       (this commit) D1093-D1189
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, and it is ahead of
@@ -829,7 +829,9 @@ the same workload.
    instructions, 685 million against 261 (D1179); a run's length read
    inline took it to 638 million (D1186), and the element a walk counts
    through proved inside its array to 571; `kernel` compiled is a third
-   fewer instructions for the same proof (D1187).
+   fewer instructions for the same proof (D1187), and `control` compiled
+   16% fewer once a walk to a constant asks at its start whether its arrays
+   are long enough (D1189).
 
 ## Closed by measurement
 
