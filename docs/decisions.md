@@ -40237,3 +40237,31 @@ the same both ways. Daslang's AOT is still 2.8 times fewer instructions on
 elements themselves -- each one checked for what it is and where it ends on
 every read -- and the operand stack, which a call's arguments are handed over
 through and so cannot leave the machine's stack the same way.
+
+## D1163 — A walk before every allocation, and the store it found
+
+*a defect found by an instrument written for another change*. Moving the
+release engine's operand stack off the machine's stack wants evidence that
+nothing the collector must see is kept where it does not look, and there was
+none to be had: a walk happens when a quarter of a megabyte has been taken
+since the last one, so a handle held somewhere a walk does not read is only
+wrong in a program that happens to allocate that much at that moment.
+`KEST_WALK_EVERY` makes the machine walk before every allocation instead, so
+the first allocation after such a handle gives its memory away.
+
+Run over the examples, six answered differently. Five were one defect in the
+machine: `NEW_STORE` makes a store through the door a host calls, and that
+door's walk reads to where the host's call left the stack. Inside the machine
+that is the frame a host called into, and every frame built above it since --
+the body making the store, holding the store it made the instruction before --
+is above it. Under the sanitised build `examples/frame.kest` read a store the
+walk had given back. The array doors already told the walk where the stack
+was; this one does now, the same way. The sixth, `holding`, was a timeout.
+
+The gate's `examples` row runs every example again under the build that checks
+itself with `KEST_WALK_EVERY` set, and holds it to the same answer and the same
+words. `churn` and `holding` are left out and counted: each grows a world of
+tens of thousands of things, and a walk at every allocation reads all of them
+every time, which is a minute each against a quarter of a second for the rest.
+The guard was watched failing on the tree before the fix, where it said
+`examples/frame.kest` answered differently and the sanitiser said where.

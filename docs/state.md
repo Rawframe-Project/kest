@@ -66,6 +66,7 @@ reader who finds the same shape again should find the first one beside it.
 | F51 | two AI tasks held a rule their `ask.md` never said | run blind (D1148), all three Luau runs of `called` numbered things from one and all three of `frail` read a worth's limit off a `number`; the hidden tests wanted nought and 32 bits. The `ask.md`s say both now |
 | F52 | three refusals said what was wrong and not what to write | a struct built by field name, a call by name, and a number where text is wanted -- the Kest mistakes that repeated across blind runs. Each is told the fix now, held by the refusal corpus (D1148) |
 | F53 | a carried body read two parameters the caller kept apart as though they were side by side | `sum(x, z)` answered `x + y` once `sum` was carried (D1156). Runs of slots are held to landing as runs, and `examples/carried.kest` answers `1` on the tree before the fix (D1157) |
+| F54 | a store made inside the machine could be given back by the walk the next one set off | the walk read to the frame a host called into and not to the machine's own, so `examples/frame.kest` read freed memory once every allocation walked. Told where the stack is, and the gate walks at every allocation over forty-one examples (D1163) |
 
 ## Read from the source rather than run
 

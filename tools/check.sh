@@ -108,6 +108,8 @@ answer"
 # are not the same news.
 ran=0
 resolved=0
+every_walked=0
+not_walked=0
 for file in $sources; do
     if ! grep -q '^fn main(' "$file"; then
         if ./kest check "$file" >/dev/null 2>&1; then
@@ -150,6 +152,33 @@ for file in $sources; do
                     "$file answers differently under the build that checks itself"
                 printf '%s\n' "$checked_said" | sed 's/^/    /' | head -4
             fi
+            # And again walking the heap before every allocation, which is
+            # what finds a handle held somewhere a walk does not read: the
+            # first allocation after it gives the handle's memory away, and
+            # the sanitised build says so where the program reads it. A store
+            # made one instruction after another was one of those for as long
+            # as nothing walked there (D1163). Two examples grow worlds of
+            # tens of thousands of things, and a walk at every one of those
+            # is a walk of all of them each time, so they are left out and
+            # said.
+            case "$file" in
+            examples/churn.kest | examples/holding.kest)
+                not_walked=$((not_walked + 1))
+                ;;
+            *)
+                walked_said=$(KEST_WALK_EVERY=1 ./kest-debug run "$file" \
+                                  2>&1 </dev/null)
+                walked_status=$?
+                if [ "$walked_said" != "$out" ] ||
+                   [ $walked_status -ne $status ]; then
+                    complain "examples" \
+                        "$file answers differently walking before every allocation"
+                    printf '%s\n' "$walked_said" | sed 's/^/    /' | head -4
+                else
+                    every_walked=$((every_walked + 1))
+                fi
+                ;;
+            esac
         else
             complain "examples" "$file answered $status"
             printf '%s\n' "$out" | sed 's/^/    /' | head -6
@@ -2071,7 +2100,13 @@ is one somebody imports"
     fi
 done
 
-say "examples" "$ran ran, $resolved resolved, and one that gives nothing back"
+if [ $every_walked -eq 0 ]; then
+    complain "examples" "no example was run walking before every allocation"
+fi
+say "examples" "$ran ran, $resolved resolved, and one that gives nothing \
+back, and $every_walked of them again walking the heap before every \
+allocation, with $not_walked left out for growing worlds a walk at every \
+allocation reads whole each time"
 
 # The same programs compiled the other way. `KEST_PLAIN` turns off the fusions
 # the lowering makes, so the same body comes out as more instructions doing the

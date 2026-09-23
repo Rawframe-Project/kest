@@ -1259,7 +1259,11 @@ layouts      what every shape takes on the stack against what it takes in
              memory, what it would take packed, and nothing wider in memory
              than on the stack
 examples     every example run or resolved under both builds, answering the
-             same under each, and a `main` that gives nothing
+             same under each, and again under the build that checks itself
+             walking the heap before every allocation, which is what finds a
+             handle held where a walk does not read -- two that grow worlds
+             of tens of thousands of things left out and counted -- and a
+             `main` that gives nothing
 optimized    every one of them again with the lowering's fusions turned off
              and again with the IR optimizer turned off, answering the same
              thing and writing the same words all three ways: what holds a

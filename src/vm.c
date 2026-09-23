@@ -593,6 +593,12 @@ struct KestRuntime {
     uint64_t handout_next;
     uint64_t handout_upto;
     size_t walk_at;
+    // Whether to walk before every allocation rather than when enough has
+    // been taken. It is how a handle held somewhere a walk does not read is
+    // found: under it, the first allocation after such a handle is made
+    // gives the handle's memory away, and the program reads something else
+    // where it was. `KEST_WALK_EVERY` asks for it. See D1163.
+    bool walk_every;
     // How many times what it is holding may be handed out before that is
     // worth a walk. One by default, which is the shortest pause; a host that
     // is not budgeting a frame says otherwise. See D1045.
@@ -1215,7 +1221,7 @@ static void under_the_ceiling(Vm *rt) {
 
 static void *take(Vm *rt, KestValue *reach, size_t bytes, KestGroundKind kind) {
     under_the_ceiling(rt);
-    if (kest_ground_since(rt->ground) >= rt->walk_at) {
+    if (rt->walk_every || kest_ground_since(rt->ground) >= rt->walk_at) {
         gather(rt, reach);
     }
     void *at = kest_ground_take(rt->ground, bytes, kind);
@@ -4235,9 +4241,19 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             OF_THE_MODULE(holds, module->layout_count, "a layout");
             frame->ip = ip;
             rt->asked_at = instruction;
-            if (!kest_store_new(rt, holds, room,
-                                KEST_WHERE_RUNNING,
-                                top)) {
+            // The door is a host's as well, and a host's call leaves where a
+            // walk reads to at the top of what it handed in. Here that is the
+            // body that called in from outside, and every frame this machine
+            // has built above it since -- this one included, which holds the
+            // store made the instruction before -- is above that. So the
+            // walk is told where the stack is now, the way the array doors
+            // are. Found by walking at every allocation. See D1163.
+            KestValue *was_top = rt->running_top;
+            rt->running_top = top;
+            bool made = kest_store_new(rt, holds, room, KEST_WHERE_RUNNING,
+                                       top);
+            rt->running_top = was_top;
+            if (!made) {
                 return false;
             }
             top++;
@@ -5881,6 +5897,7 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
     rt->ground = kest_ground_new();
     rt->walk_at = WALK_FLOOR;
     rt->walk_after = 1;
+    rt->walk_every = getenv("KEST_WALK_EVERY") != NULL;
     rt->heap_bytes = limits == NULL ? 0 : limits->heap_bytes;
     if (rt->heap != NULL) {
         kest_arena_cap(rt->heap, rt->heap_bytes);

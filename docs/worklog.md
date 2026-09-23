@@ -41092,3 +41092,19 @@ See D1162.
 **Runs:** `check-c.sh` over the tree, the five compiled workloads before and
 after by `perf stat`, `perf record` of compiled `rules` by source line, and
 `make most`.
+
+## 2026-09-23, a walk before every allocation
+
+`KEST_WALK_EVERY` makes the machine walk its heap before every allocation, so
+a handle held where a walk does not read is given away at once. Over the
+examples it found one defect five ways: a store made inside the machine was
+walked for from the host's frame rather than from the machine's own, so the
+store made the instruction before could be given back. Fixed the way the array
+doors already were, and the gate runs forty-one examples this way under the
+sanitised build.
+
+See D1163.
+
+**Runs:** every example with and without the walk, `examples/frame.kest` under
+the sanitised build before and after the fix, the gate's `examples` row, and
+`make most`.
