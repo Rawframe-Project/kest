@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1199
+    CURRENT SHA:       (this commit) D1093-D1200
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, and it is ahead of
@@ -15,7 +15,9 @@ reasoning; this holds the position.
                        interpreter on all five, by 3% on `control` and 6% on
                        `rules` at the least, and retires fewer instructions
                        on all five (D1195)
-    LAST CI:           green on 80a8d331, all nine jobs -- linux,
+    LAST CI:           red on 04b8778b in linux-full, one hole missed and
+                       fixed by D1200; green before it on 80a8d331, all
+                       nine jobs -- linux,
                        linux-arm64, macos, windows, clang, threads, package,
                        linux-full and agree, the last being the whole gate
                        with every hole caught
@@ -846,6 +848,8 @@ the same workload.
    body on the machine's stack reads its arguments where the caller left
    them rather than storing each back: compiled `rules` 8.2% fewer cycles
    (D1198), and is not handed them as values at all, about 5% more (D1199).
+   A body whose jumps land inside an instruction is not carried, which CI
+   missed a hole for (D1200).
 
 ## Closed by measurement
 

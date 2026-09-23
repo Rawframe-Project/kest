@@ -41310,3 +41310,23 @@ every program in the tree both ways as before, and with `KC_` keeping every
 argument it refuses at once: `too many arguments to function 'kf_6';
 expected 4, have 15`.
 
+## D1200 — A body whose jumps land inside an instruction is not carried
+
+CI's whole gate on `04b8778b` missed one hole, "two instructions folded
+across something that points between them". It breaks the lowering so that
+two instructions are made one across a place a jump lands, and holds the
+program it writes to stopping in words: the jump lands inside the new
+instruction and the machine, reading whatever is there, is refused with
+K0604. After D1196 it crashed instead. The broken `landing` is carried into
+`main`, and a carried body is now laid out again before it is written, with
+every jump pointed at where its target instruction moved to. A target inside
+an instruction moved nowhere, and the jump was written as a distance
+backwards off the start of the code.
+
+Nothing this compiler writes jumps into the middle of an instruction; that
+is the thing the hole is about. So a body with a jump that lands anywhere but
+where an instruction starts is not carried -- it is called, and runs as the
+machine runs it -- and the hole is caught with K0604 again, run by hand.
+`control` and `rules` retire the same instructions as before, because no
+body a correct compiler writes is turned away.
+

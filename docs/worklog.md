@@ -41642,3 +41642,16 @@ See D1199.
 `rules` before and after, best of seven turn about; `check-c.sh` over the
 tree; `KC_` keeping everything, which `check-c.sh` refuses; and `make most`.
 
+## 2026-09-23, a body whose jumps land inside an instruction is not carried
+
+CI's whole gate missed "two instructions folded across something that
+points between them": since D1196 re-lays a carried body, a jump into the
+middle of an instruction was written as a jump off the code and the program
+crashed rather than stopping with K0604. Such a body is called rather than
+carried now, and the hole is caught.
+
+See D1200.
+
+**Runs:** the hole's program on the broken tree before and after, the
+instructions of `control` and `rules` for no carry lost, and `make most`.
+

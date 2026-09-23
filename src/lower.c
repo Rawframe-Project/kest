@@ -935,6 +935,8 @@ static const Operand *carried_operands(uint8_t op) {
 // Whether the function at `index` may be carried to a call of it from the
 // body being written: written already, by the same file, small, and made of
 // nothing but what `CARRIED` names.
+static uint16_t operand_at(const uint8_t *code, uint32_t at);
+
 static bool may_carry(const Lower *lower, uint16_t index) {
     if (!fusing() || lower->module->carrying_off ||
         index >= lower->next - 1 ||
@@ -965,6 +967,34 @@ static bool may_carry(const Lower *lower, uint16_t index) {
             return false;
         }
         at += said;
+    }
+    // And every jump in it landing where an instruction starts. A carried
+    // body is laid out again before it is written (D1196), and where a jump
+    // lands is found by where its instruction moved to: one landing inside an
+    // instruction lands nowhere that moved, and was carried as a jump off the
+    // end of the code rather than the body run as the machine would run it.
+    // Nothing this compiler writes lands inside an instruction; a fold that
+    // took one back across a landing would, and the machine is what says so.
+    bool starts[MOST_CARRIED + 1] = {false};
+    for (uint32_t at = 0; at < callee->code_count;
+         at += kest_op_wide(callee->code[at])) {
+        starts[at] = true;
+    }
+    starts[callee->code_count] = true;
+    for (uint32_t at = 0; at < callee->code_count;) {
+        const Operand *operands = carried_operands(callee->code[at]);
+        uint32_t wide = kest_op_wide(callee->code[at]);
+        uint32_t read = at + 1;
+        for (int o = 0; o < 3 && operands[o] != NO_OPERAND; o++) {
+            uint32_t lands = at + wide + operand_at(callee->code, read);
+            if (operands[o] == A_DISTANCE &&
+                callee->code[at] != KEST_OP_RETURN &&
+                (lands > callee->code_count || !starts[lands])) {
+                return false;
+            }
+            read += 2;
+        }
+        at += wide;
     }
     return true;
 }
