@@ -186,6 +186,7 @@ static inline void read_piece(KestValue *out, uint8_t kind,
     // it is is this. See D714. A truth is the third of them, and the same
     // byte. See D839.
     case KEST_L_U8:
+    case KEST_L_FLAGS8:
     case KEST_L_BOOL:
     case KEST_L_HELD: {
         uint8_t v;
@@ -193,12 +194,14 @@ static inline void read_piece(KestValue *out, uint8_t kind,
         out[0].integer = v;
         break;
     }
+    case KEST_L_FLAGS16:
     case KEST_L_U16: {
         uint16_t v;
         memcpy(&v, at, 2);
         out[0].integer = v;
         break;
     }
+    case KEST_L_FLAGS32:
     case KEST_L_U32: {
         uint32_t v;
         memcpy(&v, at, 4);
@@ -234,6 +237,7 @@ static inline void write_piece(unsigned char *at, uint8_t kind,
     }
     case KEST_L_I8:
     case KEST_L_U8:
+    case KEST_L_FLAGS8:
     case KEST_L_BOOL:
     case KEST_L_HELD: {
         uint8_t v = (uint8_t)from[0].integer;
@@ -241,12 +245,14 @@ static inline void write_piece(unsigned char *at, uint8_t kind,
         break;
     }
     case KEST_L_I16:
+    case KEST_L_FLAGS16:
     case KEST_L_U16: {
         uint16_t v = (uint16_t)from[0].integer;
         memcpy(at, &v, 2);
         break;
     }
     case KEST_L_I32:
+    case KEST_L_FLAGS32:
     case KEST_L_U32: {
         uint32_t v = (uint32_t)from[0].integer;
         memcpy(at, &v, 4);
@@ -367,6 +373,7 @@ static void unpack(KestValue *out, const KestLayout *layout,
             break;
         }
         case KEST_L_U8:
+        case KEST_L_FLAGS8:
         case KEST_L_BOOL:
         case KEST_L_HELD: {
             uint8_t v;
@@ -374,12 +381,14 @@ static void unpack(KestValue *out, const KestLayout *layout,
             out[put].integer = v;
             break;
         }
+        case KEST_L_FLAGS16:
         case KEST_L_U16: {
             uint16_t v;
             memcpy(&v, at, 2);
             out[put].integer = v;
             break;
         }
+        case KEST_L_FLAGS32:
         case KEST_L_U32: {
             uint32_t v;
             memcpy(&v, at, 4);
@@ -426,6 +435,7 @@ static void pack(unsigned char *to, const KestLayout *layout,
         }
         case KEST_L_I8:
         case KEST_L_U8:
+        case KEST_L_FLAGS8:
         case KEST_L_BOOL:
         case KEST_L_HELD: {
             uint8_t v = (uint8_t)from[took].integer;
@@ -433,12 +443,14 @@ static void pack(unsigned char *to, const KestLayout *layout,
             break;
         }
         case KEST_L_I16:
+        case KEST_L_FLAGS16:
         case KEST_L_U16: {
             uint16_t v = (uint16_t)from[took].integer;
             memcpy(at, &v, 2);
             break;
         }
         case KEST_L_I32:
+        case KEST_L_FLAGS32:
         case KEST_L_U32: {
             uint32_t v = (uint32_t)from[took].integer;
             memcpy(at, &v, 4);

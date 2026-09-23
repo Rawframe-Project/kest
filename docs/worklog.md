@@ -41283,3 +41283,17 @@ See D1175.
 **Runs:** `perf stat` over the five workloads, cycles turn about on `control`,
 `rules` and `kernel`, the instruction counts of three programs before and
 after, and `make most`.
+
+## 2026-09-23, a set of named bits moved at its own width
+
+A `flags` field in a struct kept in an array was moved as eight bytes, so it
+came back with the next field in its high bits and did not equal what was
+written. Found reading the walk for speed; the four piece movers in the
+machine and the one in the other backend had no case for a set, and agreed.
+They move one at its width now. F55.
+
+See D1176.
+
+**Runs:** two programs written for it, flat and beside a tag, in both engines
+before and after; `examples/flags.kest` on the tree before (29) and after (0);
+the two holes whose quotes the new cases moved, by hand; and `make most`.

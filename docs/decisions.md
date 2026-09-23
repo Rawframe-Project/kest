@@ -40609,3 +40609,26 @@ carriable, so the size was the only reason it was called.
   bytes, which was 1.7% of `control` before the carrying took the calls away.
 
 `control` is 0.98 times Luau's interpreter.
+
+## D1176 — A set of named bits moves at the width it was declared over
+
+Found reading the walk that moves a value holding a tag, for speed: the
+switch that reads a piece out of memory by its kind has a case for every
+width of number and none for the four kinds a `flags` type is (D897 gave
+them kinds of their own). A kind it has no case for is moved as a whole
+slot, which is right for a handle and a 64-bit number and wrong for a set
+over a `u8`, laid out as one byte: reading it took the seven bytes after it
+as well, and writing it wrote eight. A struct holding `state: State` and
+then `hp: i32`, pushed into an array and read back, had a `state` that was
+not the state written, because `hp` was in its high bits.
+
+The same four switches in the machine -- a piece read and written, flat and
+walked -- and the other backend's piece mover each had it, so both engines
+agreed on the wrong answer, which is why nothing that holds them to each
+other said anything. No example held a set in an array.
+
+The kinds for a set over 8, 16 and 32 bits are moved where the unsigned
+numbers of those widths are; one over 64 was already right.
+`examples/flags.kest` keeps three sets of three widths in a struct beside a
+tag and one in a flat struct, reads them back, writes one and reads it again;
+on the tree before it answers 29.

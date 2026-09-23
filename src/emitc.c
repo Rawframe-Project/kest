@@ -518,14 +518,17 @@ static void move_one(Walk *walk, uint8_t kind, uint32_t slot, uint32_t byte,
         width = "int32_t";
         break;
     case KEST_L_U8:
+    case KEST_L_FLAGS8:
     case KEST_L_BOOL:
     case KEST_L_HELD:
         width = "uint8_t";
         break;
     case KEST_L_U16:
+    case KEST_L_FLAGS16:
         width = "uint16_t";
         break;
     case KEST_L_U32:
+    case KEST_L_FLAGS32:
         width = "uint32_t";
         break;
     case KEST_L_F32:

@@ -243,7 +243,49 @@ fn main() -> i32 {
     if widest & Widest.Near != Widest() || farthest(widest) != 2 {
         return 28
     }
+    // A set kept in an array is a field in memory at the width it was
+    // declared over, and read back is what was written: the bytes after it
+    // belong to the next field, which a set read as a whole slot took for
+    // its own. Flat, and beside a tag, which moves by other steps.
+    let kept: [Kept] = array()
+    push(kept, Kept(State.Hurt, Middle.High, Wide.Third, 123456, Fate.Held(7)))
+    let back = kept[0]
+    if back.state != State.Hurt ||
+            back.middle != Middle.High ||
+            back.wide != Wide.Third ||
+            back.after != 123456 {
+        return 29
+    }
+    back.state = State.Armed
+    back.after = 99
+    kept[0] = back
+    if kept[0].state != State.Armed || kept[0].after != 99 {
+        return 30
+    }
+    let flat: [Flat] = array()
+    push(flat, Flat(State.Moving, 654321))
+    if flat[0].state != State.Moving || flat[0].after != 654321 {
+        return 31
+    }
 
     io.print("{state} is {count(state)} flags, and a handle is {handle}")
     return 0
+}
+
+enum Fate {
+    Free
+    Held(i32)
+}
+
+struct Kept {
+    state: State
+    middle: Middle
+    wide: Wide
+    after: i32
+    fate: Fate
+}
+
+struct Flat {
+    state: State
+    after: i32
 }

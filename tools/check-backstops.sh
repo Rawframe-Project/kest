@@ -14915,6 +14915,7 @@ bool kest_needs_of(""",
         # What reads an element of one piece, which a byte is: it goes
         # through `read_piece` rather than the walk over pieces since D1154.
         "from": r"""    case KEST_L_U8:
+    case KEST_L_FLAGS8:
     case KEST_L_BOOL:
     case KEST_L_HELD: {
         uint8_t v;
@@ -14923,6 +14924,7 @@ bool kest_needs_of(""",
         break;
     }""",
         "to": r"""    case KEST_L_U8:
+    case KEST_L_FLAGS8:
     case KEST_L_BOOL:
     case KEST_L_HELD: {
         int8_t v;
@@ -14944,6 +14946,7 @@ bool kest_needs_of(""",
         "file": "src/vm.c",
         "from": r"""        case KEST_L_I8:
         case KEST_L_U8:
+        case KEST_L_FLAGS8:
         case KEST_L_BOOL:
         case KEST_L_HELD: {
             uint8_t v = (uint8_t)from[took].integer;
@@ -14951,6 +14954,7 @@ bool kest_needs_of(""",
             break;""",
         "to": r"""        case KEST_L_I8:
         case KEST_L_U8:
+        case KEST_L_FLAGS8:
         case KEST_L_BOOL:
         case KEST_L_HELD: {
             uint8_t v = (uint8_t)(from[took].integer >> 8);
