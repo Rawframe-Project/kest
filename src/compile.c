@@ -3048,11 +3048,17 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
 
             // One test per position that names a case. A position that says
             // `else` tests nothing, so an arm of them tests nothing at all.
+            // Nor does the last arm: the checker refuses a `match` that does
+            // not answer every combination, and a tag is a case of its type
+            // wherever it came from -- a host's is asked at the crossing and
+            // one read out of memory where it is read -- so a run that got
+            // past every other arm is in this one. See D1192.
+            bool last = a + 1 == choose->arm_count;
             uint32_t nexts[8];
             uint32_t next_count = 0;
             bool unknown = false;
-            for (uint32_t p = 0; !blanket && p < arm->part_count && p < count;
-                 p++) {
+            for (uint32_t p = 0;
+                 !blanket && !last && p < arm->part_count && p < count; p++) {
                 const KestArmPart *part = &arm->parts[p];
                 if (part->name.length == 0) {
                     continue;
@@ -3113,7 +3119,10 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             compiler->depth--;
             compiler->local_count = arm_names;
 
-            if (leave_count < MAX_BREAKS) {
+            // And the last arm falls through to where the others meet, the
+            // way an `if`'s second arm does: a branch from it would land on
+            // the operation after itself.
+            if (!last && leave_count < MAX_BREAKS) {
                 leaves[leave_count++] = ir_go(compiler, expr->span);
             }
             for (uint32_t i = 0; i < next_count; i++) {

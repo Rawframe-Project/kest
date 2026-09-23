@@ -203,7 +203,8 @@ says why. The other was bulk text append and it is done.
   walk to any limit asks once where it begins whether its arrays are long
   enough, and `control` compiled retires 16% fewer (D1189; the hole its
   second copy of the guard hid is repointed in D1190). The loop built
-  without a landing mark on every label retires 1.5 to 4.4% fewer (D1191). `control` is 0.98 once its
+  without a landing mark on every label retires 1.5 to 4.4% fewer (D1191),
+  and the last arm of a `match` is written without a test (D1192). `control` is 0.98 once its
   rule is carried (D1175), and `rules` 0.99 once
   a value is moved a run of its pieces at a time (D1177) and an element is
   weighed against a constant in one instruction (D1178): every workload here

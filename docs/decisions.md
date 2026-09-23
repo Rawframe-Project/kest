@@ -41088,3 +41088,26 @@ box, so `kernel` and `rules` were taken again best of nine, run turn about:
 behind it there, by less. The front page stays the run D1190 took at
 `a60730d6`, which says the commit it was taken at.
 
+## D1192 — The last arm of a `match` tests nothing and falls through
+
+*measured*. A `match` over one enum was a test per arm: the tag against a
+case, and a jump to the next arm when it was not that one. The last arm was
+tested as well, and ended with a branch to the operation after itself --
+`jump 0` in the listing, one for every value the last arm answered.
+
+Neither can be taken. The checker refuses a `match` that leaves a combination
+unanswered (K0333, and the list of the missing ones), and a tag is a case of
+its type wherever it came from: a host's is refused at the crossing (K0636,
+K0650), and one read out of memory where it is read (K0651). So a run that got
+past every other arm is in the last one, and the compiler writes it without a
+test and without the branch, the way the second arm of an `if` falls through
+to where the two meet. Both backends read the one IR, so the release engine
+writes the same C without its dead third of the last `case`.
+
+`bench/rules` runs `worthOf` for every thing carried and `taskNumber` for
+every actor, both four arms. At the same tree before and after, best of five:
+2,880 M instructions against 2,869 M, and 1,147 M cycles against 1,137 M. The
+other four workloads have no `match` in their loops and moved by nothing.
+Written the other way on purpose -- the first arm untested -- `make fast`
+refuses with `examples/state.kest` and `examples/embed.kest`.
+

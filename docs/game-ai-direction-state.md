@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1191
+    CURRENT SHA:       (this commit) D1093-D1192
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, and it is ahead of
@@ -834,7 +834,8 @@ the same workload.
    16% fewer once a walk to a constant asks at its start whether its arrays
    are long enough (D1189; CI's one missed hole on it repointed, D1190).
    The loop built without GCC's landing mark on every label retires 1.5 to
-   4.4% fewer instructions on all five (D1191).
+   4.4% fewer instructions on all five (D1191), and the last arm of a
+   `match` tests nothing (D1192).
 
 ## Closed by measurement
 

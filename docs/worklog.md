@@ -41529,3 +41529,16 @@ See D1191.
 cycles, `kernel` and `rules` again best of nine turn about, `readelf -n` on
 both binaries for what they are marked with, and `make most`.
 
+## 2026-09-23, the last arm of a match tests nothing
+
+The checker refuses a `match` that does not answer everything and every tag
+is a case of its type, so the last arm is written without its test and
+without the branch to the operation after it. `rules` retires 0.4% fewer
+instructions; the other workloads have no `match` in a loop.
+
+See D1192.
+
+**Runs:** the five workloads before and after, best of five; the first arm
+left untested instead, which `make fast` refuses with two examples; and
+`make most`.
+
