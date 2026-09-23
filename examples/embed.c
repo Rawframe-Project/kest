@@ -115,7 +115,7 @@ enum { CREATE, SPAWN, STEP, ON_EVENTS, SILENCE, DAMAGE_OF, HURT_BY, WORST,
        // Added at the end on purpose: every name before this one keeps the
        // place it had, and a hole that breaks a machine's hold on the list it
        // was started from lands on the same entry it always did. See D1135.
-       HALF_WRITTEN,
+       HALF_WRITTEN, HEAL, HURT_AT,
        // What the list of names below has to be as long as. This host looked
        // each of them up into an array sized by the last name in this list,
        // so a name added after that one was a write past the end of it — this
@@ -1374,6 +1374,49 @@ static const char *no_deepest(KestReach reach) {
 static bool asks(Engine *engine, int32_t which) {
     return kest_call(engine->runtime, engine->entry[which], engine->frame,
                      sizeof(engine->frame) / sizeof(engine->frame[0]));
+}
+
+// The same rule `silence` is held to, for the narrowest shape a case has,
+// which the machine moves by a path of its own: a tag and one number. Asked
+// last, because ending a lend leaves a header spare and what a lend costs is
+// weighed before this. See D711 and D1197.
+static bool heals(Engine *engine) {
+    struct {
+        int32_t tag;
+        int32_t cut;
+    } hurts[2] = {{1, 7}, {0, 99}};
+    KestValue hurt = kest_borrow(engine->runtime, hurts, 2, "Hurt",
+                                 sizeof(hurts[0]));
+    engine->frame[0] = hurt;
+    engine->frame[1].integer = 0;
+    if (!asks(engine, HEAL)) {
+        kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+        return false;
+    }
+    if (hurts[0].tag != 0 || hurts[0].cut != 0) {
+        fprintf(stderr, "healed, a `Hurt` left tag %d over %d\n",
+                hurts[0].tag, hurts[0].cut);
+        return false;
+    }
+    engine->frame[0] = hurt;
+    engine->frame[1].integer = 1;
+    if (!asks(engine, HURT_AT)) {
+        kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+        return false;
+    }
+    if (engine->frame[0].integer != 0 || engine->frame[1].integer != 0) {
+        fprintf(stderr, "an `Unhurt` read back as %lld over %lld\n",
+                (long long)engine->frame[0].integer,
+                (long long)engine->frame[1].integer);
+        return false;
+    }
+    if (!kest_lend_ends(engine->runtime, hurt)) {
+        kest_report(engine->runtime, stderr, KEST_FORM_TEXT);
+        return false;
+    }
+    printf("healed: a case of eight bytes that carries nothing is nought "
+           "after its tag, in memory and in a frame\n");
+    return true;
 }
 
 static bool lends_bytes(Engine *engine) {
@@ -3272,7 +3315,10 @@ int main(int argc, char **argv) {
         {"doubled", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
         {"grows", {KEST_L_I32}, 1, {KEST_L_I32}, 1},
         {"weighed", {0}, 0, {KEST_L_I32}, 1},
-        {"halfWritten", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_I32}, 1}};
+        {"halfWritten", {KEST_L_WORD, KEST_L_I32}, 2, {KEST_L_I32}, 1},
+        {"heal", {KEST_L_WORD, KEST_L_I32}, 2, {0}, 0},
+        {"hurtAt", {KEST_L_WORD, KEST_L_I32}, 2,
+         {KEST_L_TAG, KEST_L_PAYLOAD}, 2}};
     _Static_assert(sizeof(wanted) / sizeof(wanted[0]) == ENTRIES,
                    "every name this host asks for has somewhere to be put");
     // And what walking the names costs a host in news, which is nothing. The
@@ -7667,6 +7713,9 @@ int main(int argc, char **argv) {
            (unsigned long long)pauses_heard.last.plots,
            (unsigned long long)pauses_heard.last.plot_bytes);
     kest_collected(engine.runtime, NULL, NULL);
+    if (!heals(&engine)) {
+        return 1;
+    }
 
     // And the other side of the answer: outside a call there is nothing
     // standing on the machine, so this is the free that happens. Nothing takes

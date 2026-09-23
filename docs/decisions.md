@@ -41217,3 +41217,39 @@ four have no such call in a loop and moved by nothing. Written into the slot
 after the right one on purpose, `make fast` refuses with
 `examples/locale.kest` and `examples/words.kest`.
 
+## D1197 — A tag and one slot is moved without a call, and a host holds it
+
+*measured*. Read for what it called, `walk_in` -- a value with a tag in it
+read out of memory into slots -- called `memset` through the procedure table
+for every such value: the payload slots after the tag are set to nought
+before the case's own steps fill them, a loop GCC turned into the call, and
+the commonest shape has one slot there. `walk_out` did the same the other
+way, `memset(at, 0, step->size)` with a size the compiler could not see.
+`bench/rules` reads and writes an `Item` and an `Actor`, each with a tag and
+one slot in it, several times an actor a round.
+
+A tag and one slot is now written as such: the one slot set to nought, and
+eight bytes cleared as eight. Everything else goes the way it went. At the
+same tree before and after, best of seven turn about, with the misses in the
+instruction cache read beside the cycles as D1193 says: `rules` 2,804 M
+instructions against 2,726 M and 1,068 M cycles against 1,051 M; `kernel`
+2,000 fewer misses and 1.5% fewer cycles at 0.3% fewer instructions; the
+other three level.
+
+Nothing held the nought itself for this shape. D711 says what a case does not
+carry is nought in the bytes and in the slots, and the one host that holds it
+lends an `Event`, which is wider than eight bytes and so never reached the
+new path: written wrong on purpose -- the eight bytes left as they were, or
+the slot left at one -- every example and `make most` passed, and `==` and
+`hash` cannot see it, because both read a case's own slots. So
+`examples/embed` lends a `Hurt` -- `Unhurt`, or `Cut(i32)` -- and holds both
+halves: `Unhurt` written over a `Cut` leaves nought where the number was, and
+an `Unhurt` read back over memory still holding a number is nought in the slot
+after the tag. The two wrong versions are refused by it with `healed, a
+\`Hurt\` left tag 0 over 7` and `an \`Unhurt\` read back as 0 over 1`. It is
+asked last, because ending a lend leaves a header spare, and asked where the
+others are it made a later lend cost nothing and that host's own weighing of
+what a lend costs refused. The hole "a case written over a wider one, keeping
+its bytes" quoted the clearing as one line; it quotes the wider branch now,
+which is the one an `Event` takes, and was run by hand and caught.
+

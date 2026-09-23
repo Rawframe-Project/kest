@@ -388,8 +388,15 @@ static void walk_in(KestValue *out, const KestMoving *walk, uint32_t first,
             int32_t tag;
             memcpy(&tag, at, 4);
             to[0].integer = tag;
-            for (uint16_t s = 1; s < step->slots; s++) {
-                to[s].integer = 0;
+            // A tag and one slot of what a case carries is the commonest
+            // shape there is, and a loop of one the compiler made into a
+            // call to `memset`. See D1197.
+            if (step->slots == 2) {
+                to[1].integer = 0;
+            } else {
+                for (uint16_t s = 1; s < step->slots; s++) {
+                    to[s].integer = 0;
+                }
             }
             if (tag >= 0 && (uint32_t)tag < step->case_count) {
                 const KestMoveRun *run =
@@ -485,7 +492,13 @@ static void walk_out(unsigned char *to_bytes, const KestMoving *walk,
             break;
         case KEST_MOVE_CASES: {
             int32_t tag = (int32_t)from[0].integer;
-            memset(at, 0, step->size);
+            // The same shape the other way: eight bytes, said as eight so
+            // that it is a store rather than a call. See D1197.
+            if (step->size == 8) {
+                memset(at, 0, 8);
+            } else {
+                memset(at, 0, step->size);
+            }
             memcpy(at, &tag, 4);
             if (tag >= 0 && (uint32_t)tag < step->case_count) {
                 const KestMoveRun *run =

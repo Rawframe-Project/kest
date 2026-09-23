@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1196
+    CURRENT SHA:       (this commit) D1093-D1197
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, and it is ahead of
@@ -840,7 +840,9 @@ the same workload.
    is read for instruction-cache misses too, because one variant of it was
    37% slower on `kernel` at the same instructions. A carried body's
    constant answer is written where it is going: `control` 1.6% fewer
-   instructions (D1196).
+   instructions (D1196). A tag and one slot is moved without a call to
+   `memset`: `rules` 2.8% fewer instructions, and `examples/embed` holds the
+   nought it writes at eight bytes, which nothing did (D1197).
 
 ## Closed by measurement
 

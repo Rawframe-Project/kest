@@ -12120,9 +12120,13 @@ static const Keyword KEYWORDS[] = {
         # what the program put there and what was there before it.
         "what": "a case written over a wider one, keeping its bytes",
         "file": "src/vm.c",
-        "from": """            memset(at, 0, step->size);
+        "from": """            } else {
+                memset(at, 0, step->size);
+            }
             memcpy(at, &tag, 4);""",
-        "to": """            memcpy(at, &tag, 4);""",
+        "to": """            } else {
+            }
+            memcpy(at, &tag, 4);""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "left 4 under its tag",

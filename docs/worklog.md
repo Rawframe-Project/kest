@@ -41600,3 +41600,17 @@ See D1196.
 wrong slot on purpose, which `make fast` refuses with two examples; and
 `make most`.
 
+## 2026-09-23, a tag and one slot moved without a call
+
+Both walks called `memset` for every value with a tag in it. A tag and one
+slot is set as one slot and eight bytes: `rules` 2.8% fewer instructions and
+1.6% fewer cycles. Nothing held the nought that clearing is for at eight
+bytes -- both wrong versions passed everything -- so `examples/embed` lends
+an eight-byte `Hurt` and holds it both ways.
+
+See D1197.
+
+**Runs:** the five workloads before and after, best of seven turn about,
+with instruction-cache misses; each walk written wrong, which the new host
+check refuses and nothing else did; and `make most`.
+

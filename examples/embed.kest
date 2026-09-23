@@ -943,3 +943,21 @@ fn halfWritten(rows: [Row], upto: i32) -> i32 no.alloc {
     }
     return len(rows)
 }
+
+// The narrowest shape a case has -- a tag and one number, eight bytes -- is
+// moved by a path of its own in the machine, so the rule `silence` is held to
+// is held here as well, both ways: what a case that carries nothing leaves in
+// the host's bytes, and what it leaves in the slots a host reads back. See
+// D711 and D1197.
+enum Hurt {
+    Unhurt
+    Cut(i32)
+}
+
+fn heal(hurts: [Hurt], at: i32) no.alloc {
+    hurts[at] = Hurt.Unhurt
+}
+
+fn hurtAt(hurts: [Hurt], at: i32) -> Hurt no.alloc {
+    return hurts[at]
+}
