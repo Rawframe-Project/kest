@@ -41542,3 +41542,20 @@ See D1192.
 left untested instead, which `make fast` refuses with two examples; and
 `make most`.
 
+## 2026-09-23, a scalar read where the instruction reading it is
+
+Every element read went through one out-of-line `read_piece` and its one
+switch. It is now written into every place that reads one, where the
+compiler can be told to, and an `i32` is read before the switch: the machine
+is 0.5 to 3.7% fewer cycles on all five workloads and under Luau's
+interpreter on `rules` by cycles. The `i32` read alone put `kernel` 37%
+slower through instruction-cache misses at the same instructions, so the
+loop's changes are read for those now too.
+
+See D1193.
+
+**Runs:** the five workloads best of seven turn about for the tree, each
+change alone and both, with instruction-cache misses beside the cycles; the
+`i32` read unsigned, which `make fast` refuses with four examples; and
+`make most`.
+

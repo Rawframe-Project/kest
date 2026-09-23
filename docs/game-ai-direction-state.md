@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1192
+    CURRENT SHA:       (this commit) D1093-D1193
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, and it is ahead of
@@ -835,7 +835,12 @@ the same workload.
    are long enough (D1189; CI's one missed hole on it repointed, D1190).
    The loop built without GCC's landing mark on every label retires 1.5 to
    4.4% fewer instructions on all five (D1191), and the last arm of a
-   `match` tests nothing (D1192).
+   `match` tests nothing (D1192). A scalar read where the instruction
+   reading it is, rather than through one out-of-line switch, is 0.5 to
+   3.7% fewer cycles on all five and puts `rules` under Luau's interpreter
+   by cycles, 1,075 M against 1,105-1,137 M (D1193); a change to the loop
+   is read for instruction-cache misses too, because one variant of it was
+   37% slower on `kernel` at the same instructions.
 
 ## Closed by measurement
 

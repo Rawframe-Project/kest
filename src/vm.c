@@ -161,8 +161,19 @@ static void pack(unsigned char *to, const KestLayout *layout,
 // a layout of one piece and walk it. Building one was nine per cent of
 // `bench/rules.kest`, whose elements carry tagged unions and so are moved by
 // their type rather than by a flat list of pieces. See D1028.
-static inline void read_piece(KestValue *out, uint8_t kind,
-                       const unsigned char *at) {
+//
+// And written into every place that reads one, where the compiler can be
+// told to: left to itself it made this one function the whole machine
+// called, so every element read in every instruction went through one call
+// and one switch, and which case came next was a guess about the whole
+// program rather than about the instruction reading it. See D1193.
+#if defined(__GNUC__)
+#define WHERE_IT_IS_READ __attribute__((always_inline))
+#else
+#define WHERE_IT_IS_READ
+#endif
+static inline WHERE_IT_IS_READ void read_piece(KestValue *out, uint8_t kind,
+                                               const unsigned char *at) {
     switch (kind) {
     case KEST_L_TEXT: {
         memcpy(&out[0], at, 8);
@@ -2106,6 +2117,15 @@ static bool values_equal(const KestType *type, const KestValue *a,
         /* of a run -- a number, a handle, a piece of text -- and is read   */ \
         /* here rather than through a call and a walk of one. See D1154.    */ \
         if ((layout)->count == 1 && !(layout)->tagged) {                       \
+            /* And an `i32`, which is what a count, a timer and an index   */ \
+            /* are, before the switch rather than as one of its cases.     */ \
+            /* See D1193.                                                  */ \
+            if ((layout)->pieces[0].kind == KEST_L_I32) {                      \
+                int32_t read_i32;                                              \
+                memcpy(&read_i32, (from) + (layout)->pieces[0].offset, 4);     \
+                (where)[0].integer = read_i32;                                 \
+                break;                                                         \
+            }                                                                  \
             read_piece((where), (layout)->pieces[0].kind,                      \
                        (from) + (layout)->pieces[0].offset);                   \
             break;                                                             \

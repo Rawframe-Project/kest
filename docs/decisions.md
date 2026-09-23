@@ -41111,3 +41111,44 @@ other four workloads have no `match` in their loops and moved by nothing.
 Written the other way on purpose -- the first arm untested -- `make fast`
 refuses with `examples/state.kest` and `examples/embed.kest`.
 
+## D1193 — A scalar is read where the instruction reading it is
+
+*measured*. Every instruction that reads one element of a run -- `index`,
+`index.ll`, the element weighed against a constant of D1178 -- read it through
+`read_piece`, which is `static inline` and which GCC compiled once, out of
+line: one call and one switch over the kind of the piece for the whole
+machine. Which case came next was then a guess about the whole program, and
+`rules` reads `i32`s, handles, text and bytes through it turn about. It had
+4.7% of that workload's branch misses.
+
+Two changes, measured apart and together. `read_piece` is written into every
+place that reads one, where the compiler can be told to
+(`__attribute__((always_inline))`, under `__GNUC__`; anything else is asked
+nothing), so each instruction has a switch of its own. And an `i32` -- a
+count, a timer, an index -- is read before the switch rather than as a case
+of it. Best of seven, turn about, at the same tree with only `vm.o` rebuilt:
+
+| workload | cycles before | after | instructions before | after |
+| --- | --- | --- | --- | --- |
+| kernel | 211.6 M | 209.2 M | 660.0 M | 659.9 M |
+| control | 330.0 M | 323.1 M | 764.3 M | 742.3 M |
+| graph | 32.6 M | 32.4 M | 91.0 M | 90.7 M |
+| words | 65.6 M | 63.7 M | 181.3 M | 180.8 M |
+| rules | 1,117 M | 1,075 M | 2,868 M | 2,801 M |
+
+Luau's interpreter took 1,105 M to 1,137 M cycles on `rules` over the same
+minutes, so the machine is under it on all five by this count; the front page
+is still the run D1190 took, at the commit it names.
+
+The `i32` read alone was the warning. `rules` was 2.5% fewer cycles with it,
+and `kernel` 37% more at the same instructions: 292 M against 212 M, with 8.0
+million misses in the instruction cache where there had been seven thousand.
+Nothing `kernel` runs had changed; where the compiler put the loop's code
+had, and two hot pieces of it began to evict each other. With both changes
+the misses are 8,234 and every workload is faster. So a change to the loop is
+read for `L1-icache-load-misses` as well as for cycles, on all five, because
+the cycles of one workload say nothing about where the code of another one
+landed. Read the other way -- the `i32` read unsigned -- `make fast` refuses
+with `examples/churn.kest`, `inventory.kest`, `ordering.kest` and
+`saving.kest`.
+
