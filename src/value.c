@@ -646,6 +646,156 @@ static const KestType *named_at(const KestType *type, uint16_t want,
     return NULL;
 }
 
+// How many slots moving a value takes, which is what the type walk the steps
+// below replaced answered as it went. See D1159.
+static uint16_t walked_slots(const KestType *type) {
+    if (type == NULL) {
+        return 1;
+    }
+    switch (type->tag) {
+    case KEST_T_STRUCT: {
+        uint16_t used = 0;
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            used = (uint16_t)(used + walked_slots(type->members[i].type));
+        }
+        return used;
+    }
+    case KEST_T_FIXED:
+        return (uint16_t)(type->count * walked_slots(type->element));
+    case KEST_T_OPTIONAL:
+        return (uint16_t)(walked_slots(type->element) + 1);
+    case KEST_T_ENUM:
+        return type->slots;
+    default:
+        return type->tag == KEST_T_TEXT ? 2 : 1;
+    }
+}
+
+// How many steps and how many case ranges a value's walk is, cases and all.
+static void walk_size(const KestType *type, uint32_t *steps, uint32_t *ranges) {
+    if (type == NULL) {
+        (*steps)++;
+        return;
+    }
+    switch (type->tag) {
+    case KEST_T_STRUCT:
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            walk_size(type->members[i].type, steps, ranges);
+        }
+        return;
+    case KEST_T_FIXED:
+        for (uint32_t i = 0; i < type->count; i++) {
+            walk_size(type->element, steps, ranges);
+        }
+        return;
+    case KEST_T_OPTIONAL:
+        walk_size(type->element, steps, ranges);
+        (*steps)++;
+        return;
+    case KEST_T_ENUM:
+        (*steps)++;
+        *ranges += type->case_count;
+        for (uint32_t c = 0; c < type->case_count; c++) {
+            for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
+                walk_size(type->cases[c].payload[p], steps, ranges);
+            }
+        }
+        return;
+    default:
+        (*steps)++;
+        return;
+    }
+}
+
+// The steps of one value at `slot` and `byte`, written from `n` on, with a
+// tag's cases left for the caller to write after them. Answers where the next
+// step goes.
+static uint32_t flatten(KestMoveStep *steps, uint32_t n, const KestType *type,
+                        uint16_t slot, uint32_t byte) {
+    if (type == NULL) {
+        steps[n] = (KestMoveStep){.kind = KEST_L_WORD, .slot = slot,
+                                  .byte = byte};
+        return n + 1;
+    }
+    switch (type->tag) {
+    case KEST_T_STRUCT:
+        for (uint32_t i = 0; i < type->member_count; i++) {
+            n = flatten(steps, n, type->members[i].type, slot,
+                        byte + type->members[i].byte_offset);
+            slot = (uint16_t)(slot + walked_slots(type->members[i].type));
+        }
+        return n;
+    case KEST_T_FIXED:
+        for (uint32_t i = 0; i < type->count; i++) {
+            n = flatten(steps, n, type->element, slot,
+                        byte + i * type->element->byte_size);
+            slot = (uint16_t)(slot + walked_slots(type->element));
+        }
+        return n;
+    case KEST_T_OPTIONAL:
+        n = flatten(steps, n, type->element, slot, byte);
+        steps[n] = (KestMoveStep){
+            .kind = KEST_L_HELD,
+            .slot = (uint16_t)(slot + walked_slots(type->element)),
+            .byte = byte + type->element->byte_size};
+        return n + 1;
+    case KEST_T_ENUM:
+        steps[n] = (KestMoveStep){.kind = KEST_MOVE_CASES,
+                                  .slot = slot,
+                                  .byte = byte,
+                                  .slots = type->slots,
+                                  .size = type->byte_size,
+                                  .case_count = type->case_count,
+                                  .type = type};
+        return n + 1;
+    default:
+        steps[n] = (KestMoveStep){.kind = kest_scalar_of(type), .slot = slot,
+                                  .byte = byte};
+        return n + 1;
+    }
+}
+
+// A tagged value's walk. The value's own steps come first; then, for every tag
+// among the steps so far in the order they were written, each of its cases as
+// a run of steps of its own -- which may hold tags, whose cases are written
+// when the walk reaches them. NULL for no memory.
+static const KestMoving *walk_of(KestArena *arena, const KestType *type) {
+    uint32_t total = 0;
+    uint32_t ranges = 0;
+    walk_size(type, &total, &ranges);
+    KestMoving *walk = KEST_ARENA_NEW(arena, KestMoving);
+    KestMoveStep *steps = KEST_ARENA_ARRAY(arena, KestMoveStep, total);
+    KestMoveRun *runs =
+        KEST_ARENA_ARRAY(arena, KestMoveRun, ranges == 0 ? 1 : ranges);
+    if (walk == NULL || steps == NULL || runs == NULL) {
+        return NULL;
+    }
+    uint32_t n = flatten(steps, 0, type, 0, 0);
+    walk->count = n;
+    uint32_t r = 0;
+    for (uint32_t i = 0; i < n; i++) {
+        if (steps[i].kind != KEST_MOVE_CASES) {
+            continue;
+        }
+        const KestType *chosen = steps[i].type;
+        steps[i].cases = r;
+        r += chosen->case_count;
+        for (uint32_t c = 0; c < chosen->case_count; c++) {
+            const KestVariantType *variant = &chosen->cases[c];
+            uint32_t first = n;
+            for (uint32_t p = 0; p < variant->payload_count; p++) {
+                n = flatten(steps, n, variant->payload[p],
+                            (uint16_t)(steps[i].slot + variant->offsets[p]),
+                            steps[i].byte + variant->byte_offsets[p]);
+            }
+            runs[steps[i].cases + c] = (KestMoveRun){first, n - first};
+        }
+    }
+    walk->steps = steps;
+    walk->ranges = runs;
+    return walk;
+}
+
 int32_t kest_module_layout(KestModule *module, const KestType *type) {
     for (uint32_t i = 0; i < module->layout_count; i++) {
         if (module->layout_types[i] == type) {
@@ -684,6 +834,13 @@ int32_t kest_module_layout(KestModule *module, const KestType *type) {
     layout->type = type;
     layout->tagged = holds_a_tag(type);
     layout->by_the_type = by_the_type(type);
+    layout->walk = NULL;
+    if (layout->tagged) {
+        layout->walk = walk_of(module->arena, type);
+        if (layout->walk == NULL) {
+            return -1;
+        }
+    }
     layout->size = type == NULL || type->byte_size == 0 ? 8 : type->byte_size;
     layout->align = type == NULL || type->byte_align == 0 ? 8 : type->byte_align;
     module->layout_types[module->layout_count] = type;

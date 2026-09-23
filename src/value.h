@@ -552,6 +552,38 @@ typedef struct {
     bool deterministic;
 } KestExtern;
 
+// A value holding a tag, written out as what moving it does: one step a
+// scalar, at the slot and the byte it is at, and one step a tag, which reads
+// the tag and then the steps of the case it names. Built once with the layout,
+// because a type walked every time an element moved was a third of what
+// `bench/rules.kest` spent. See D1159.
+#define KEST_MOVE_CASES 0xFF
+typedef struct {
+    // A `KEST_L_*` kind, or `KEST_MOVE_CASES`.
+    uint8_t kind;
+    uint16_t slot;
+    uint32_t byte;
+    // For a tag: how many slots and bytes the enum is, which case steps come
+    // first in the ranges, and how many cases there are.
+    uint16_t slots;
+    uint32_t size;
+    uint32_t cases;
+    uint32_t case_count;
+    const KestType *type;
+} KestMoveStep;
+
+typedef struct {
+    uint32_t first;
+    uint32_t count;
+} KestMoveRun;
+
+typedef struct {
+    const KestMoveStep *steps;
+    const KestMoveRun *ranges;
+    // How many of the steps are the value's own, rather than a case's.
+    uint32_t count;
+} KestMoving;
+
 typedef struct {
     KestArena *arena;
     // What the file that was named calls itself. A host writes `spawn` and

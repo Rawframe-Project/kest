@@ -2123,6 +2123,10 @@ LEFT_OUT = {
                                     "was written down rather than what it "
                                     "means and shows in the code the mark "
                                     "folds (D1156)",
+    ("KestLayout", "walk"): "the steps moving a value takes, written out once "
+                            "from the type the mark already folds and "
+                            "something the machine reads rather than part of "
+                            "a shape (D1159)",
     ("KestLayout", "by_the_type"): "whether what a host writes into this has "
                                    "to be read by its type, which is worked "
                                    "out from the type the mark already folds "

@@ -40101,3 +40101,36 @@ D1047's reason for not threading the dispatch stands.
 From here a change to the machine is weighed in cycles as well as instructions,
 the two binaries run turn about so that whatever else the box is doing falls on
 both.
+
+## D1159 — A value holding a tag is moved by steps written out once
+
+*measured*. With D1158 in, a third of what `bench/rules.kest` spent was two
+functions: `unpack_typed` at 20.6 per cent and `pack_typed` at 8.5, which move
+an element holding a tag between an array's bytes and the machine's slots.
+They walked the element's type every time -- a struct's members, a fixed
+run's elements, an optional's value and its byte, and for a tag the case it
+names -- asking at each level what kind of type it had. D1028 had taken one
+layer of that off; the walk itself stayed.
+
+Now the layout carries the walk written out when the layout is made: one step
+a scalar, at the slot and the byte it sits at, and one step a tag, which reads
+the tag and runs the steps written for the case it names. A case's steps may
+hold a tag of their own, and are written when the building reaches it, so
+nothing is walked twice and nothing recurses but a tag inside a case. What was
+true of the type walk is true of this one, and was kept on purpose: what a
+case does not carry is nought in the slots and nought in the bytes (D711), and
+a tag with no case behind it is said once, as the first one read (D710).
+
+| workload | instructions before | after | |
+| --- | --- | --- | --- |
+| rules | 4,323,535,849 | 3,613,611,042 | -16.4 % |
+| kernel | 1,109,182,943 | 1,109,149,312 | 0.0 % |
+| control | 1,159,555,513 | 1,160,295,113 | +0.1 % |
+| graph | 112,619,394 | 112,529,966 | -0.1 % |
+| words | 318,908,098 | 319,800,692 | +0.3 % |
+
+`rules` is 1.09 times Luau's interpreter in instructions, where it was 1.28.
+The other four hold no tag in an array and do not move. Every example and
+workload answers the same, fused and plain. The cycles are the box's to say and
+the box was at a load of forty-seven while this was measured, so they are
+said again when it is quiet, turn about with the build before.

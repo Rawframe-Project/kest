@@ -41022,3 +41022,19 @@ See D1158.
 **Runs:** best-of-seven cycles at `06fa618`, `77d6ba7` and here with `vm.c`
 built five ways, the two builds interleaved over all five workloads, `perf
 stat` of branch and cache misses, and `make most`.
+
+## 2026-09-23, a value holding a tag moved by steps
+
+A third of `rules` was the machine walking an element's type every time it
+moved one holding a tag. The layout now carries that walk written out once --
+a step a scalar and a step a tag, each tag's cases as runs of their own -- and
+the two functions that walked the type are gone. `rules` is 16.4 per cent
+fewer instructions and 1.09 times Luau's interpreter; nothing else moves. The
+two holes about tags were repointed at the walk and run by hand, and both are
+still caught.
+
+See D1159.
+
+**Runs:** every example and workload fused and plain, `perf record` of
+`rules`, `perf stat` instructions for the five against the build before, the
+two tag holes by hand, and `make most`.

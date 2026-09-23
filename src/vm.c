@@ -146,12 +146,6 @@ static void unpack(KestValue *out, const KestLayout *layout,
 static void pack(unsigned char *to, const KestLayout *layout,
                  const KestValue *from);
 
-// A value moved by what it is rather than by a list of pieces, which is what
-// a tagged union needs: the tag says which types the slots after it hold.
-static uint16_t unpack_typed(KestValue *out, const KestType *type,
-                             const unsigned char *from, TagRead *told);
-static uint16_t pack_typed(unsigned char *to, const KestType *type,
-                           const KestValue *from);
 
 // One scalar, read out of memory into slots and written back. It is the same
 // switch `unpack` and `pack` run over a piece, factored out so that all three
@@ -274,133 +268,64 @@ static inline void write_piece(unsigned char *at, uint8_t kind,
     }
 }
 
-static uint16_t move_scalar(KestValue *out, const KestType *type,
-                            const unsigned char *from, bool reading,
-                            unsigned char *to) {
-    // Nothing here is a tag: a scalar moved on its own is one piece of a
-    // width, and what a tag is is the piece that says which.
-    uint8_t kind = kest_scalar_of(type);
-    uint16_t wide = type != NULL && type->tag == KEST_T_TEXT ? 2 : 1;
-    if (reading) {
-        read_piece(out, kind, from);
-    } else {
-        write_piece(to, kind, out);
-    }
-    return wide;
-}
-
-static uint16_t unpack_typed(KestValue *out, const KestType *type,
-                             const unsigned char *from, TagRead *told) {
-    if (type == NULL) {
-        memcpy(&out[0], from, sizeof(KestValue));
-        return 1;
-    }
-    if (type->tag == KEST_T_STRUCT) {
-        uint16_t used = 0;
-        for (uint32_t i = 0; i < type->member_count; i++) {
-            used += unpack_typed(out + used, type->members[i].type,
-                                 from + type->members[i].byte_offset, told);
+// A value holding a tag, moved by the steps its layout was written out as:
+// every scalar where it sits, and for a tag, the tag and then the steps of the
+// case it names. What a case does not carry is nought in the slots and nought
+// in the bytes, so one value is one run of each whatever was there before.
+// See D711 and D1159.
+static void walk_in(KestValue *out, const KestMoving *walk, uint32_t first,
+                    uint32_t count, const unsigned char *from, TagRead *told) {
+    for (uint32_t i = first; i < first + count; i++) {
+        const KestMoveStep *step = &walk->steps[i];
+        if (step->kind != KEST_MOVE_CASES) {
+            read_piece(out + step->slot, step->kind, from + step->byte);
+            continue;
         }
-        return used;
-    }
-    if (type->tag == KEST_T_FIXED) {
-        uint16_t used = 0;
-        for (uint32_t i = 0; i < type->count; i++) {
-            used += unpack_typed(out + used, type->element,
-                                 from + i * type->element->byte_size, told);
-        }
-        return used;
-    }
-    if (type->tag == KEST_T_OPTIONAL) {
-        uint16_t used = unpack_typed(out, type->element, from, told);
-        uint8_t held;
-        memcpy(&held, from + type->element->byte_size, 1);
-        out[used].integer = held;
-        return (uint16_t)(used + 1);
-    }
-    if (type->tag == KEST_T_ENUM) {
         int32_t tag;
-        memcpy(&tag, from, 4);
-        out[0].integer = tag;
-        for (uint16_t s = 1; s < type->slots; s++) {
-            out[s].integer = 0;
+        memcpy(&tag, from + step->byte, 4);
+        out[step->slot].integer = tag;
+        for (uint16_t s = 1; s < step->slots; s++) {
+            out[step->slot + s].integer = 0;
         }
-        if (tag >= 0 && (uint32_t)tag < type->case_count) {
-            const KestVariantType *variant = &type->cases[tag];
-            for (uint32_t p = 0; p < variant->payload_count; p++) {
-                unpack_typed(out + variant->offsets[p], variant->payload[p],
-                             from + variant->byte_offsets[p], told);
-            }
+        if (tag >= 0 && (uint32_t)tag < step->case_count) {
+            const KestMoveRun *run = &walk->ranges[step->cases + (uint32_t)tag];
+            walk_in(out, walk, run->first, run->count, from, told);
         } else if (told != NULL && !told->wrong) {
             // The payload slots are left at nought above, which is what made
             // this readable at all; what it is not is a value of this type.
             // The first one found is the one said, because a run of them is
             // one mistake about one piece of memory said as many times as the
             // program looks at it.
-            told->type = type;
+            told->type = step->type;
             told->tag = tag;
             told->wrong = true;
         }
-        return type->slots;
     }
-    return move_scalar(out, type, from, true, NULL);
 }
 
-static uint16_t pack_typed(unsigned char *to, const KestType *type,
-                           const KestValue *from) {
-    if (type == NULL) {
-        memcpy(to, &from[0], sizeof(KestValue));
-        return 1;
-    }
-    if (type->tag == KEST_T_STRUCT) {
-        uint16_t used = 0;
-        for (uint32_t i = 0; i < type->member_count; i++) {
-            used += pack_typed(to + type->members[i].byte_offset,
-                               type->members[i].type, from + used);
+static void walk_out(unsigned char *to, const KestMoving *walk, uint32_t first,
+                     uint32_t count, const KestValue *from) {
+    for (uint32_t i = first; i < first + count; i++) {
+        const KestMoveStep *step = &walk->steps[i];
+        if (step->kind != KEST_MOVE_CASES) {
+            write_piece(to + step->byte, step->kind, from + step->slot);
+            continue;
         }
-        return used;
-    }
-    if (type->tag == KEST_T_FIXED) {
-        uint16_t used = 0;
-        for (uint32_t i = 0; i < type->count; i++) {
-            used += pack_typed(to + i * type->element->byte_size,
-                               type->element, from + used);
+        int32_t tag = (int32_t)from[step->slot].integer;
+        memset(to + step->byte, 0, step->size);
+        memcpy(to + step->byte, &tag, 4);
+        if (tag >= 0 && (uint32_t)tag < step->case_count) {
+            const KestMoveRun *run = &walk->ranges[step->cases + (uint32_t)tag];
+            walk_out(to, walk, run->first, run->count, from);
         }
-        return used;
     }
-    if (type->tag == KEST_T_OPTIONAL) {
-        uint16_t used = pack_typed(to, type->element, from);
-        uint8_t held = (uint8_t)from[used].integer;
-        memcpy(to + type->element->byte_size, &held, 1);
-        return (uint16_t)(used + 1);
-    }
-    if (type->tag == KEST_T_ENUM) {
-        int32_t tag = (int32_t)from[0].integer;
-        // What the case does not carry is written too, as nought. A tag says
-        // which of several readings the bytes beside it have, so a case
-        // written over a wider one used to leave the wider one's fields under
-        // the new tag — the same value, two different runs of bytes, depending
-        // on what the memory held a moment before. A host that reads by the
-        // tag never saw it; one that compares, hashes or writes out the bytes
-        // saw two values where the program had put one. See D711.
-        memset(to, 0, type->byte_size);
-        memcpy(to, &tag, 4);
-        if (tag >= 0 && (uint32_t)tag < type->case_count) {
-            const KestVariantType *variant = &type->cases[tag];
-            for (uint32_t p = 0; p < variant->payload_count; p++) {
-                pack_typed(to + variant->byte_offsets[p], variant->payload[p],
-                           from + variant->offsets[p]);
-            }
-        }
-        return type->slots;
-    }
-    return move_scalar((KestValue *)from, type, NULL, false, to);
 }
 
 static void unpack(KestValue *out, const KestLayout *layout,
                    const unsigned char *from, TagRead *told) {
     if (layout->tagged) {
-        unpack_typed(out, layout->type, from, told);
+        const KestMoving *walk = layout->walk;
+        walk_in(out, walk, 0, walk->count, from, told);
         return;
     }
     // A piece is not a slot: a piece of text is one piece and two slots, so
@@ -483,7 +408,8 @@ static void unpack(KestValue *out, const KestLayout *layout,
 static void pack(unsigned char *to, const KestLayout *layout,
                  const KestValue *from) {
     if (layout->tagged) {
-        pack_typed(to, layout->type, from);
+        const KestMoving *walk = layout->walk;
+        walk_out(to, walk, 0, walk->count, from);
         return;
     }
     // Written out for the reason the one above is. See D1028.

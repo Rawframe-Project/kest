@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1158
+    CURRENT SHA:       (this commit) D1093-D1159
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -767,13 +767,16 @@ the same workload.
    396, the same colony; a refusal names its diagnostic again. A reload at
    scale is 211 ms through bytes against 50 through lends, which is what the
    bytes library answers first.
-31. *(open, D1154-D1158)* **The machine against Luau's interpreter.**
+31. *(open, D1154-D1159)* **The machine against Luau's interpreter.**
    Measured again: behind by a sixth to double, `rules` furthest. Eight things
    off it so far, the last a small body carried to where it is called: `rules`
    is 27.2% fewer instructions and 1.28 times Luau's interpreter where it was
    1.76; `control` -13.6%, `words` -14.7%, `graph` -8.7%. Weighed in cycles,
    the machine's cases put at sixteen-byte boundaries took 8 to 25% more off,
-   and undid a third lost to where the compiler had put them (D1158).
+   and undid a third lost to where the compiler had put them (D1158). A
+   value holding a tag moved by steps written once rather than by its type
+   took `rules` to 3.61 thousand million instructions, 1.09 times Luau's
+   interpreter (D1159).
 
 ## Closed by measurement
 
