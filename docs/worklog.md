@@ -41559,3 +41559,14 @@ change alone and both, with instruction-cache misses beside the cycles; the
 `i32` read unsigned, which `make fast` refuses with four examples; and
 `make most`.
 
+## 2026-09-23, check-docs handed nothing says so
+
+`check-docs.sh` with no documents ended in a Python traceback. It refuses in
+the words the three checks that read a list use, and the gate hands it
+nothing beside them.
+
+See D1194.
+
+**Runs:** `check-docs.sh` with no arguments, `check-tables.sh`, and
+`make most`.
+

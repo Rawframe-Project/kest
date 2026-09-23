@@ -2879,7 +2879,7 @@ ask "tasks" tools/check-ai.sh
 # nought, which reads like a success; nothing in this tree is an empty list, so
 # what this stands for is a caller that lost its own. It is asked here because
 # nothing but the check itself can catch it.
-for tool in check-fmt.sh check-commands.sh check-c.sh; do
+for tool in check-fmt.sh check-commands.sh check-c.sh check-docs.sh; do
     if tools/"$tool" >"$scratch"/check-none 2>&1; then
         complain "$tool" "was given nothing and looked at nothing"
         sed 's/^/    /' "$scratch"/check-none | head -3
@@ -2900,7 +2900,7 @@ some other reason"
     sed 's/^/    /' "$scratch"/check-empty-said | head -4
 fi
 
-say "nothing" "a document with nothing in it, and three checks handed no files"
+say "nothing" "a document with nothing in it, and four checks handed no files"
 
 ask "lends" tools/check-lends.sh
 ask "documentation" tools/check-docs.sh docs/language.md \

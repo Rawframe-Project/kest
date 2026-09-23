@@ -24,6 +24,15 @@
 # unknown function. So every `error[Kxxxx]` and `warning[Kxxxx]` line in these
 # documents is held to a message that code is actually raised with.
 set -u
+
+# What this was given. Every sweep below reads the documents it is handed and
+# the first one it names is the reference, so a caller that lost its list met
+# a traceback from Python rather than a sentence about what was missing.
+if [ "$#" -eq 0 ]; then
+    echo "documentation: nothing was given to look at"
+    exit 1
+fi
+
 exec python3 - "$@" <<'PY'
 import atexit
 import glob

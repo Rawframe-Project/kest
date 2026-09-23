@@ -41152,3 +41152,13 @@ landed. Read the other way -- the `i32` read unsigned -- `make fast` refuses
 with `examples/churn.kest`, `inventory.kest`, `ordering.kest` and
 `saving.kest`.
 
+## D1194 — `check-docs.sh` handed nothing says so
+
+Run with no documents, `check-docs.sh` stopped in Python with `IndexError:
+list index out of range`: its sweeps read the first document it is handed as
+the reference, and nothing had asked what it does when it is handed none. The
+three checks that read a list of files each say `nothing was given to look
+at` and refuse, and the gate hands each of them nothing to see it said. This
+one says the same now, and is the fourth the gate hands nothing. It was found
+by calling it by hand without arguments while writing D1191.
+
