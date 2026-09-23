@@ -40541,3 +40541,36 @@ can read`.
   nearer the ceiling with the files it keeps, and the room's path on this
   machine tipped it over. It holds the code and the ceiling now, which is what
   it was written for (F48 was the same sentence meeting the same edge).
+
+## D1173 — A whole number written without `snprintf`, and a bit found at once
+
+`bench/words` was 1.15 times Luau's interpreter in instructions, and a profile
+with the callers in it said where: `snprintf` was 18.5% of the run. Every
+number put into text went through it, reading `%lld` every time to write a few
+digits. The rest was the heap: taking a place looked up the plot it had just
+chosen, through the index a walk uses to find a plot from an address, and
+marked what the place held twice; and giving a place back, and finding a free
+one in a plot with holes in it, stepped through a word of the bitmap a bit at a
+time.
+
+- `kest_write_whole` writes a whole number, signed or not, two digits at a
+  time from a table of the hundred pairs, and is what the machine's `text.i`
+  and `text.u`, `kest_text_of` (which the other backend's bodies call) and a
+  value written for `print` all use. `examples/numbers.kest` holds it to both
+  ends of an `i64`, the greatest `u64`, and either side of every power of ten
+  up to the eighteenth, positive and negative: a writer that took a two-digit
+  remainder as one digit answers 89.
+- A free place and a dead one are found with the lowest set bit of a word:
+  the bit on its own times a de Bruijn sequence leaves which it was in the top
+  six bits, and a table of sixty-four says which. Standard C, and the same
+  answer on every compiler, where a builtin would not be.
+- The place a plot hands out is marked with the kind asked for where it is
+  chosen, and the plot is handed back beside it.
+- Kept empty plots were tried first, on the reading that the plots made and
+  handed back every walk -- sixteen a round, one a width an array grew
+  through -- were the cost. Kept for ever they took nothing off, so that
+  was not it, and nothing of it is here.
+
+`words` 272.6 million instructions to 192.6, where Luau's interpreter is 238:
+0.81 times it, from 1.15. `agents`, the persistent world, 5.41 thousand
+million to 5.04. `kernel`, `control`, `graph` and `rules` do not move.

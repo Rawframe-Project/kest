@@ -181,7 +181,9 @@ says why. The other was bulk text append and it is done.
   were one byte going on a run at a time. `push` and `fit` take a whole piece
   of text for a run of bytes now, which is no new name and two instructions,
   and `words` went from 4.9 to 3.2 times a `g++ -O2` baseline on the work
-  (D1068).
+  (D1068). What was left after that was a number written through `snprintf`
+  and a heap stepping through its bitmaps a bit at a time, and without them
+  `words` is 0.81 times Luau's interpreter in instructions (D1173).
 - The dispatch loop, and what is left of it is smaller than it was written
   down as. The 48 to 92 per cent was the share of cycles *inside* the
   interpreter's loop, which is everything a program does and says nothing about

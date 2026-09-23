@@ -1801,13 +1801,8 @@ static size_t format_value(char *out, size_t room, const KestType *type,
     case KEST_T_BOOL:
         return put_text(out, room, slots[0].integer ? "true" : "false");
     case KEST_T_INT:
-        if (type->is_signed) {
-            snprintf(buffer, sizeof(buffer), "%lld",
-                     (long long)slots[0].integer);
-        } else {
-            snprintf(buffer, sizeof(buffer), "%llu",
-                     (unsigned long long)slots[0].integer);
-        }
+        kest_write_whole(buffer, (uint64_t)slots[0].integer,
+                         type->is_signed);
         return put_text(out, room, buffer);
     case KEST_T_FLOAT:
         kest_write_real(buffer, sizeof(buffer), slots[0].real,
@@ -4546,12 +4541,10 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_TEXT_B: {
             char buffer[64];
             int written;
-            if (instruction[0] == KEST_OP_TEXT_I) {
-                written = snprintf(buffer, sizeof(buffer), "%lld",
-                                   (long long)top[-1].integer);
-            } else if (instruction[0] == KEST_OP_TEXT_U) {
-                written = snprintf(buffer, sizeof(buffer), "%llu",
-                                   (unsigned long long)top[-1].integer);
+            if (instruction[0] == KEST_OP_TEXT_I ||
+                instruction[0] == KEST_OP_TEXT_U) {
+                written = kest_write_whole(buffer, (uint64_t)top[-1].integer,
+                                           instruction[0] == KEST_OP_TEXT_I);
             } else if (instruction[0] == KEST_OP_TEXT_F ||
                        instruction[0] == KEST_OP_TEXT_F32) {
                 written = kest_write_real(buffer, sizeof(buffer), top[-1].real,
@@ -9252,8 +9245,7 @@ bool kest_text_of(KestRuntime *rt, uint8_t how, KestValue value,
     int written;
     switch ((KestTextOf)how) {
     case KEST_TEXT_OF_UNSIGNED:
-        written = snprintf(buffer, sizeof(buffer), "%llu",
-                           (unsigned long long)value.integer);
+        written = kest_write_whole(buffer, (uint64_t)value.integer, false);
         break;
     case KEST_TEXT_OF_REAL:
     case KEST_TEXT_OF_NARROW:
@@ -9266,8 +9258,7 @@ bool kest_text_of(KestRuntime *rt, uint8_t how, KestValue value,
         break;
     case KEST_TEXT_OF_INT:
     default:
-        written = snprintf(buffer, sizeof(buffer), "%lld",
-                           (long long)value.integer);
+        written = kest_write_whole(buffer, (uint64_t)value.integer, true);
         break;
     }
     char *text = take(rt, NULL, (size_t)written + 1, KEST_GROUND_PLAIN);

@@ -54,6 +54,44 @@ int kest_write_real(char *buffer, size_t size, double value, bool narrow) {
     return written;
 }
 
+int kest_write_whole(char *buffer, uint64_t bits, bool is_signed) {
+    static const char PAIRS[] = "00010203040506070809"
+                                "10111213141516171819"
+                                "20212223242526272829"
+                                "30313233343536373839"
+                                "40414243444546474849"
+                                "50515253545556575859"
+                                "60616263646566676869"
+                                "70717273747576777879"
+                                "80818283848586878889"
+                                "90919293949596979899";
+    bool negative = is_signed && (int64_t)bits < 0;
+    // The magnitude of the least `i64` is one more than the greatest, and it
+    // is what nought minus it is in unsigned arithmetic.
+    uint64_t left = negative ? (uint64_t)0 - bits : bits;
+    char digits[KEST_WHOLE_ROOM];
+    int at = KEST_WHOLE_ROOM;
+    while (left >= 100) {
+        unsigned pair = (unsigned)(left % 100) * 2;
+        left /= 100;
+        digits[--at] = PAIRS[pair + 1];
+        digits[--at] = PAIRS[pair];
+    }
+    if (left >= 10) {
+        digits[--at] = PAIRS[left * 2 + 1];
+        digits[--at] = PAIRS[left * 2];
+    } else {
+        digits[--at] = (char)('0' + left);
+    }
+    if (negative) {
+        digits[--at] = '-';
+    }
+    int written = KEST_WHOLE_ROOM - at;
+    memcpy(buffer, digits + at, (size_t)written);
+    buffer[written] = '\0';
+    return written;
+}
+
 // What an array starts at. Everything an arena hands out and never takes back
 // is kept, including every size an array grew through, so a floor too low costs
 // the sizes under it and a floor too high costs the room over it. The module's

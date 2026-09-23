@@ -41237,3 +41237,19 @@ See D1172.
 **Runs:** `saving` released and run in an empty room, `examples/embed` with a
 program built from handed files, the two new holes by hand, the quote pass,
 and `make most`.
+
+## 2026-09-23, a number written as text without `snprintf`
+
+A profile of `bench/words` with its callers said `snprintf` was a fifth of it.
+A whole number is written two digits at a time now, and the heap marks a place
+with its kind where it chooses it and finds free and dead places by their
+lowest set bit rather than a bit at a time. `words` is 192.6 million
+instructions where it was 272.6, below Luau's interpreter's 238; the
+persistent world 5.04 thousand million where it was 5.41. Keeping empty plots
+between walks was tried first and took nothing off.
+
+See D1173.
+
+**Runs:** `perf record` with callers on `words`, `perf stat` over the six
+workloads before and after, `examples/numbers.kest` against a writer broken on
+purpose, and `make most`.

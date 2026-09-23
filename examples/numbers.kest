@@ -598,7 +598,37 @@ fn main() -> i32 {
             realAsRun(1.0e-300) % 1.0e300 != LEFT_OF_TINY {
         return 87
     }
+    // A whole number's digits at both of its ends and either side of every
+    // power of ten, which is where a writer that does two digits at a time
+    // can drop or double one. The powers are built by multiplying, and what
+    // they are held to by writing the noughts one at a time.
+    if "{SMALLEST}" != "-9223372036854775808" ||
+            "{HIGHEST}" != "9223372036854775807" ||
+            "{WIDEST}" != "18446744073709551615" {
+        return 88
+    }
+    let power: i64 = 1
+    let noughts = ""
+    for place in 0..19 {
+        if "{power}" != "1{noughts}" ||
+                "{-power}" != "-1{noughts}" ||
+                "{power - 1}" !=
+                        (if place == 0 -> "0" else -> "9{nines(place - 1)}") {
+            return 89
+        }
+        power = power * 10
+        noughts = "{noughts}0"
+    }
 
     io.print("every width wraps at its own end, and {NARROW} is one of them")
     return 0
+}
+
+// So many nines, written out one at a time.
+fn nines(count: i32) -> text {
+    let out = ""
+    for i in 0..count {
+        out = "{out}9"
+    }
+    return out
 }

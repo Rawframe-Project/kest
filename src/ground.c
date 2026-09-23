@@ -172,6 +172,20 @@ static KestGroundKind kind_of(const Plot *plot, uint32_t place) {
 static void holds_together(const KestGround *ground, const char *after);
 #endif
 
+// Which bit is the lowest one set in a word that has one: the lowest bit on its
+// own, multiplied by a sequence in which every run of six bits is different,
+// leaves which it was in the top six. Stepping a bit at a time was most of
+// what giving back and finding a place cost in a plot with a few places free.
+// See D1173.
+static uint32_t lowest_set(uint64_t word) {
+    static const uint8_t AT[64] = {
+        0,  1,  56, 2,  57, 49, 28, 3,  61, 58, 42, 50, 38, 29, 17, 4,
+        62, 47, 59, 36, 45, 43, 51, 22, 53, 39, 33, 30, 24, 18, 12, 5,
+        63, 55, 48, 27, 60, 41, 37, 16, 46, 35, 44, 21, 52, 32, 23, 11,
+        54, 26, 40, 15, 34, 20, 31, 10, 25, 14, 19, 9,  13, 8,  7,  6};
+    return AT[((word & ((uint64_t)0 - word)) * 0x03f79d71b4ca8b09u) >> 58];
+}
+
 static uint32_t place_of(const Plot *plot, const void *at) {
     size_t away = (size_t)((const unsigned char *)at - plot->data);
     return (uint32_t)(away / plot->stride);
@@ -510,16 +524,18 @@ static void joined_free(KestGround *ground, Plot *plot) {
 // set is stepped over whole, which is what makes finding a place in a plot
 // that is nearly full cost about what finding one in an empty plot costs.
 static uint32_t free_place(const Plot *plot, uint32_t from) {
-    uint32_t place = from;
-    while (place < plot->places) {
-        if (place % 64 == 0 && plot->used[place / 64] == ~(uint64_t)0) {
-            place += 64;
-            continue;
+    uint32_t word = from / 64;
+    // The places before `from` in its word are counted as taken, so a search
+    // from the middle of a word does not find one behind where it began.
+    uint64_t behind = from % 64 == 0 ? 0 : ~(uint64_t)0 >> (64 - from % 64);
+    while (word * 64 < plot->places) {
+        uint64_t free = ~(plot->used[word] | behind);
+        if (free != 0) {
+            uint32_t place = word * 64 + lowest_set(free);
+            return place < plot->places ? place : plot->places;
         }
-        if ((plot->used[place / 64] & ((uint64_t)1 << (place % 64))) == 0) {
-            return place;
-        }
-        place++;
+        behind = 0;
+        word++;
     }
     return plot->places;
 }
@@ -557,14 +573,14 @@ static void give_back(KestGround *ground, Plot *plot, uint32_t place) {
     joined_free(ground, plot);
 }
 
-static void *room_in_a_plot(KestGround *ground, size_t bytes);
+static void *room_in_a_plot(KestGround *ground, size_t bytes,
+                            KestGroundKind kind, Plot **held);
 
 void *kest_ground_take(KestGround *ground, size_t bytes,
                        KestGroundKind kind) {
-    void *at = room_in_a_plot(ground, bytes);
+    Plot *plot = NULL;
+    void *at = room_in_a_plot(ground, bytes, kind, &plot);
     if (at != NULL) {
-        Plot *plot = plot_holding(ground, at);
-        say_kind(plot, place_of(plot, at), kind);
         ground->counted.allocations++;
         ground->counted.asked += bytes;
         ground->counted.given += plot->stride;
@@ -587,7 +603,10 @@ KestGroundKind kest_ground_kind(const KestGround *ground, const void *at) {
     return kind_of(plot, place_of(plot, at));
 }
 
-static void *room_in_a_plot(KestGround *ground, size_t bytes) {
+// A place of at least `bytes`, marked as holding `kind`, and the plot it is
+// in: the one asking has no need to look up what this has just chosen.
+static void *room_in_a_plot(KestGround *ground, size_t bytes,
+                            KestGroundKind kind, Plot **held) {
     if (ground == NULL || bytes == 0) {
         return NULL;
     }
@@ -603,7 +622,7 @@ static void *room_in_a_plot(KestGround *ground, size_t bytes) {
         ground->refused = 0;
         ground->refused_by_ceiling = false;
         plot->used[0] = 1;
-        say_kind(plot, 0, KEST_GROUND_PLAIN);
+        say_kind(plot, 0, kind);
         plot->taken = 1;
         plot->reached = 1;
         ground->used += plot->stride;
@@ -615,6 +634,7 @@ static void *room_in_a_plot(KestGround *ground, size_t bytes) {
             give_back(ground, plot, 0);
             return NULL;
         }
+        *held = plot;
         return plot->data;
     }
     size_t which = 0;
@@ -669,7 +689,7 @@ static void *room_in_a_plot(KestGround *ground, size_t bytes) {
     ground->refused = 0;
     ground->refused_by_ceiling = false;
     plot->used[place / 64] |= (uint64_t)1 << (place % 64);
-    say_kind(plot, place, KEST_GROUND_PLAIN);
+    say_kind(plot, place, kind);
     plot->taken++;
     if (plot->taken == plot->places && plot->listed_free) {
         plot->listed_free = false;
@@ -685,6 +705,7 @@ static void *room_in_a_plot(KestGround *ground, size_t bytes) {
         give_back(ground, plot, place);
         return NULL;
     }
+    *held = plot;
     return at;
 }
 
@@ -805,11 +826,8 @@ void kest_ground_sweep(KestGround *ground) {
         for (uint32_t word = 0; word * 64 < plot->places; word++) {
             uint64_t dead = plot->used[word] & ~plot->marks[word];
             while (dead != 0) {
-                uint32_t bit = 0;
-                while ((dead & ((uint64_t)1 << bit)) == 0) {
-                    bit++;
-                }
-                dead &= ~((uint64_t)1 << bit);
+                uint32_t bit = lowest_set(dead);
+                dead &= dead - 1;
                 give_back(ground, plot, word * 64 + bit);
             }
             plot->marks[word] = 0;

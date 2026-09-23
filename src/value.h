@@ -885,6 +885,14 @@ const char *kest_reach_name(KestReach reach);
 // one, because `3` and `3.0` are not the same value in this language.
 int kest_write_real(char *buffer, size_t size, double value, bool narrow);
 
+// A whole number in decimal, signed or not, into a buffer of at least
+// `KEST_WHOLE_ROOM` bytes, ended with a nought; answers how many characters it
+// wrote before it. Written out rather than asked of `snprintf`, which reads a
+// format every time and was a fifth of what making text out of numbers cost.
+// See D1173.
+#define KEST_WHOLE_ROOM 24
+int kest_write_whole(char *buffer, uint64_t bits, bool is_signed);
+
 // A run of values the chunk holds, kept together and in order because what
 // reads them back is one copy, and shared with a run already there that is the
 // same. One value is a run of one: there used to be a door for that as well,
