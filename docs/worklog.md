@@ -41767,3 +41767,18 @@ See D1209.
 **Runs:** the trial with the search as written and written out, both
 engines, best of five, and the answer compared.
 
+## 2026-09-24, the fuzzer changes a program's numbers
+
+Of the 3,200 inputs the gate fuzzes, 40 compiled: the three-way fold was over
+forty programs. The fuzzer now replaces a standalone number, and half of the
+programs made from an example get only that; 309 compile and run, and the
+fold agrees over them. Two deliberate miscompilations were missed by the fold
+before and after, and are caught elsewhere.
+
+See D1210.
+
+**Runs:** the fuzzer's own counts over the gate's eight seeds before and
+after, the three-way fold on the tree, two broken transformations against
+the old and the new fuzzer and against `make most`, the time of a pass, and
+`make most`.
+

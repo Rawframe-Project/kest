@@ -41540,3 +41540,33 @@ one game's interpreted frame, where a game that wants it can write the walk
 out itself. The colony keeps the loop, because what it is for is finding out
 what Kest is like to write plainly.
 
+## D1210 — The fuzzer changes a program's numbers, so more of what it makes runs
+
+*measured*, and what it corrects is what a check was believed to hold. The
+gate folds what every fuzzed program answered three ways -- fused, with the
+lowering's fusions off, and with the optimizer off -- and D1015 calls that
+thousands of programs nobody wrote. Counted by the fuzzer's own line over the
+eight seeds the gate runs, 3,200 inputs: 3,160 refused and 40 compiled. The
+fold was over forty programs. Half of the inputs are pieces of the language
+strung together, which almost never parse; the other half are the examples
+with a byte changed, a run cut out or a piece put in, and each of those breaks
+what it touches.
+
+A fourth change now leaves a program a program: a number standing on its own
+replaced with another under a thousand -- on its own, because the digits of a
+name are not a number and `i32` made `i857` is no type. Half of the programs
+made from an example have only that done to them. Over the same eight seeds
+3,200 inputs are 2,891 refused and 309 compiled, and those run: 7.7 times as
+many programs in the fold. Fused, plain and bare still agree over all of
+them, which is D1192 to D1205 held against 309 programs rather than 40. The
+source fuzzing in the gate takes 15 s a pass where it took 7.
+
+What it did not do is written down beside it. Two transformations written
+wrong on purpose -- a whole number's `<` turned into `>` rather than `>=`
+(D1205's pass), and `>=` against a constant on the stack fused as `>` -- were
+missed by the fold with the old fuzzer and with the new one: both need a
+comparison that lands exactly on its constant, and a program made at random
+rarely has one. The first is caught by `examples/engine`; the second by
+`check-dead.sh`, because nothing emits `jump.false.ge.c` then. Neither by
+`make fast`.
+

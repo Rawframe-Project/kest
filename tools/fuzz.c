@@ -12,6 +12,7 @@
 // It is built and run under the sanitisers, because a release build answers a
 // read past the end of something with whatever was next and this is the one
 // place here where what comes next is chosen by a stranger.
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -116,9 +117,53 @@ static int fuzz_source(uint64_t seed, unsigned long many, const char *where) {
             // enough to reach anything new and a hundred is random bytes
             // again.
             uint32_t doings = (uint32_t)(next_number(&state) % 8) + 1;
+            // Half of them changed only in their numbers, which is a program
+            // that still reads as one and so reaches the compiler and the
+            // machine rather than the parser's refusal. See D1210.
+            bool gently = (next_number(&state) & 1) != 0;
             for (uint32_t i = 0; i < doings && used > 4; i++) {
                 size_t at = (size_t)(next_number(&state) % used);
-                switch (next_number(&state) % 3) {
+                switch (gently ? 3 : next_number(&state) % 4) {
+                case 3: {
+                    // A number changed to another, which is the one change
+                    // that mostly leaves a program a program: the three
+                    // above break what they touch, and of the inputs they
+                    // made one in eighty compiled, so the fold below was
+                    // over forty programs a gate. This one runs the same
+                    // program down another path. See D1210.
+                    // A number standing on its own, and not the digits of a
+                    // name: `i32` made `i857` is no type at all.
+                    size_t digit = at;
+                    while (digit < used &&
+                           (program[digit] < '0' || program[digit] > '9' ||
+                            (digit > 0 &&
+                             (isalnum((unsigned char)program[digit - 1]) ||
+                              program[digit - 1] == '_' ||
+                              program[digit - 1] == '.')))) {
+                        digit++;
+                    }
+                    size_t end = digit;
+                    while (end < used && program[end] >= '0' &&
+                           program[end] <= '9') {
+                        end++;
+                    }
+                    if (digit == end) {
+                        break;
+                    }
+                    char number[8];
+                    int wrote = snprintf(number, sizeof number, "%u",
+                                         (unsigned)(next_number(&state) %
+                                                    1000));
+                    size_t length = (size_t)wrote;
+                    if (used - (end - digit) + length >= sizeof(program) - 1) {
+                        break;
+                    }
+                    memmove(program + digit + length, program + end,
+                            used - end);
+                    memcpy(program + digit, number, length);
+                    used = used - (end - digit) + length;
+                    break;
+                }
                 case 0:
                     // A byte changed, which is what a typo is.
                     program[at] =
