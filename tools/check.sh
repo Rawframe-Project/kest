@@ -268,6 +268,24 @@ case "$said" in
     printf '%s\n' "$said" | sed 's/^/    /' | head -3
     ;;
 esac
+# And the same byte after eight that are plain, which the check steps over at
+# once rather than one at a time: what it steps over has to be what it would
+# have passed, and where it stops has to be where the byte is. See D1169.
+cat > "$gathered" <<'EOF'
+fn main() -> i32 {
+    let a: [u8] = array(20, u8(104))
+    a[10] = 255
+    return len(text(a))
+}
+EOF
+said=$(./kest run "$gathered" 2>&1 </dev/null)
+case "$said" in
+*K0604*"byte 10 begins no character"*) ;;
+*)
+    complain "returns" "a byte after eight plain ones is not the one refused"
+    printf '%s\n' "$said" | sed 's/^/    /' | head -3
+    ;;
+esac
 rm -f "$gathered"
 
 # And the nought the same way round: gathered into a run of bytes and asked to

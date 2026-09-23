@@ -791,7 +791,7 @@ the same workload.
    Luau's 1.006 (D1167). Arithmetic with a constant on its right took
    `control` ten per cent, to 1.08 times Luau's interpreter (D1168), and a
    search for text that looks for its first byte took `words` 12.4 per cent,
-   to 1.17 (D1169).
+   and a UTF-8 check over eight bytes at once 1.5 more, to 1.15 (D1169).
 32. *(open, D1161)* **Daslang in every mode it ships.** `graph`, `words` and
    `rules` written in Daslang, answering what the other two do, and its AOT
    measured with the LLVM its own build downloads: behind the release engine

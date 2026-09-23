@@ -40436,4 +40436,10 @@ is found where it starts. They answer the same on the tree before this.
 | --- | --- | --- | --- |
 | words | 316,980,104 | 277,587,978 | -12.4 % |
 
-`words` is 1.17 times Luau's interpreter in instructions, where it was 1.33.
+And the check that a run of bytes made into text is UTF-8 (D971), which `join`
+pays over everything it joins, steps over eight bytes at once when none of
+them has its top bit set, which is 1.5 per cent more: 273,533,763. The gate's
+`returns` row asks for a bad byte at 10 in a run of twenty, inside the second
+block of eight, to be refused as byte 10; a step that passed every block was
+watched being caught by it. `words` is 1.15 times Luau's interpreter in
+instructions, where it was 1.33.

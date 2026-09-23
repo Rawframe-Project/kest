@@ -1102,6 +1102,16 @@ static void check_text(const KestSource *source, KestDiags *diags) {
 bool kest_utf8_whole(const char *bytes, uint32_t length, uint32_t *bad) {
     uint32_t at = 0;
     while (at < length) {
+        // Eight bytes of which none has its top bit set are eight characters,
+        // which is most of any text a program makes. See D1169.
+        if (length - at >= 8) {
+            uint64_t eight;
+            memcpy(&eight, bytes + at, 8);
+            if ((eight & UINT64_C(0x8080808080808080)) == 0) {
+                at += 8;
+                continue;
+            }
+        }
         if ((unsigned char)bytes[at] < 0x80) {
             at++;
             continue;

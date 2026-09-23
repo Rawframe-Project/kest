@@ -41180,3 +41180,14 @@ See D1169.
 
 **Runs:** `examples/words.kest` on this engine, plain and the one before,
 `check-c.sh` over the tree, `words` by `perf stat`, and `make most`.
+
+## 2026-09-23, UTF-8 checked eight bytes at a time
+
+What a run of bytes made into text is checked for steps over eight plain bytes
+at once. The gate asks for a bad byte inside a clean second block to be refused
+where it is, and a step that passed every block was seen failing it.
+
+See D1169.
+
+**Runs:** the gate's program with the step broken and whole, `words` by `perf
+stat`, and `make most`.
