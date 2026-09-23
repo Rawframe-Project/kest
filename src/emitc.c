@@ -2755,14 +2755,20 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
         // Which arguments it reads where its caller left them, which is
         // decided before its head is written because its head is what says
         // so. See D1198 and D1199.
-        into->reads_frame = walk.on_the_stack;
+        // And one keeping its operands in locals reads them out of the frame
+        // too, when there are more of them than the registers a call has
+        // left after the three every body takes: past those, every value is
+        // a slot of the C stack the caller writes and this reads, and the
+        // caller has written them into the frame already or can. `walk` in
+        // the colony takes twenty-five. See D1207.
+        bool from_frame = walk.on_the_stack || body->param_slots > 3;
+        into->reads_frame = from_frame;
         into->in_frame = 0;
-        for (uint16_t p = 0; walk.on_the_stack && p < body->param_slots &&
-                             p < 32;
+        for (uint16_t p = 0; from_frame && p < body->param_slots && p < 32;
              p++) {
             Where param;
             at_frame(&walk, param, p);
-            if (param[0] == 'f') {
+            if (param[0] == 'f' || !walk.on_the_stack) {
                 into->in_frame |= 1u << p;
             }
         }
@@ -2814,11 +2820,16 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
         // store into the slot a store had just filled, and 10% of the cycles
         // of compiled `rules`. See D1198.
         for (uint16_t p = 0; p < body->param_slots; p++) {
-            if (!takes_value(into, true, p)) {
-                continue;
-            }
             Where param;
             at_frame(&walk, param, p);
+            if (!takes_value(into, true, p)) {
+                // Where the caller left it, into this body's own locals.
+                if (!walk.on_the_stack) {
+                    say(c, &into->wrote, "    %s = frame[%u];\n", param,
+                        (unsigned)p);
+                }
+                continue;
+            }
             say(c, &into->wrote, "    %s = a%u;\n", param, (unsigned)p);
         }
         declare_guards(&walk);

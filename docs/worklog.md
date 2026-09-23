@@ -41732,3 +41732,17 @@ See D1206.
 `check-c.sh` refusing the first; the colony's trial compiled both ways;
 `check-c.sh` over the tree; and `make most`.
 
+## 2026-09-23, a body with many arguments reads them out of the frame
+
+A compiled body keeping its operands in locals took every argument as a
+value, and `walk` in the colony takes twenty-five, most of them through the
+C stack after its caller had put them in the frame. With more than three it
+reads them out of the frame. The colony's trial compiled is 9.5% fewer
+cycles; the five workloads are level.
+
+See D1207.
+
+**Runs:** the colony's trial compiled before and after, best of seven turn
+about; the five workloads compiled the same way; `check-c.sh` over the tree;
+the callers' writes left out, which `check-c.sh` refuses; and `make most`.
+

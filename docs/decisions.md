@@ -41482,3 +41482,28 @@ written, compile under `-Wall -Wextra -Werror`, and answer what the machine
 answers. The colony's trial compiled is `94 of 94`, the same colony, and
 325.5 M instructions against 347.3 M.
 
+## D1207 — A body with many arguments reads them out of the frame, whatever it keeps them in
+
+*measured*. Compiled, the colony's trial spends a fifth of its instructions
+in `colony.step`, and a quarter of those on one line: the call to `walk`,
+which takes a `World` and a `Colonist` -- twenty-five slots. `walk` keeps its
+operands in locals (it reaches no heap), so D1198 and D1199 did not apply to
+it: it took all twenty-five as values, which past the three registers a call
+has left after `rt`, `frame` and `out` is twenty-two slots of the C stack
+written by the caller and read back by `walk`. The caller had spilled all
+twenty-five into the frame already.
+
+So a body in locals with more than three arguments reads them out of the
+frame too: `KA_n` says it does, which every caller already answers -- one on
+the machine's stack has them there, one in locals writes them there under
+`KA_n` -- its prologue copies them from `frame` into its own locals, and
+`KC_n` hands it none of them as values. A body with three or fewer still
+takes them as values, where they arrive in registers.
+
+The colony's trial compiled, best of seven turn about: 120.7 M cycles
+against 133.3 M, 308.8 M instructions against 325.5 M, the same colony. The
+five workloads are level; their calls with many arguments were the ones D1198
+had already reached. `check-c.sh` holds every program both ways as before,
+and with the callers in locals not writing the frame it refuses fifteen ways,
+`across.kest` answering 73 run by the machine and 1 compiled among them.
+

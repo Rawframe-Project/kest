@@ -227,7 +227,9 @@ says why. The other was bulk text append and it is done.
   question that jumps over a jump asks the other way, and the trial is 1.3
   to 3.2% fewer cycles (D1205). A body whose every way out is a `return` in a
   `match` is written as C, and `check-c.sh` holds its own programs whole
-  (D1206). `control` is 0.98 once its
+  (D1206). A body with more than three arguments reads them out of the frame
+  whatever it keeps them in, and the colony's trial compiled is 9.5% fewer
+  cycles (D1207). `control` is 0.98 once its
   rule is carried (D1175), and `rules` 0.99 once
   a value is moved a run of its pieces at a time (D1177) and an element is
   weighed against a constant in one instruction (D1178): every workload here
