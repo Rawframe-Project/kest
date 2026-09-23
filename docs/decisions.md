@@ -40443,3 +40443,17 @@ them has its top bit set, which is 1.5 per cent more: 273,533,763. The gate's
 block of eight, to be refused as byte 10; a step that passed every block was
 watched being caught by it. `words` is 1.15 times Luau's interpreter in
 instructions, where it was 1.33.
+
+## D1170 — A division says what it says about nought in one place
+
+*a miss CI saw*. D1168's divisions by a constant said `division by zero` in
+words of their own, beside the words the operand forms said, and the hole that
+rewords a running refusal under the table that names it rewords one place: the
+program it was caught by divides by a `let` the compiler knows is nought, which
+is a division by a constant now, and so said the other copy. Every whole-number
+division says it through one macro, and the hole rewords that.
+
+The same run missed the hole that stops `add.i.narrow` cutting what it added,
+because `big + 1` is `add.i.narrow.k` now. Its program adds two parameters
+instead, through a helper that is carried to where it is called, whose copied
+body keeps the plain instruction. Both were run by hand and caught.

@@ -4039,16 +4039,8 @@ for file in "$@"; do""",
         # names them is the only thing that has ever seen most of them.
         "what": "a running refusal reworded under the table that names it",
         "file": "src/vm.c",
-        "from": r"""        case KEST_OP_MOD_I: {
-            KestValue right = *--top;
-            KestValue left = *--top;
-            if (right.integer == 0) {
-                fail(vmp, frame, instruction, "K0601", "division by zero");""",
-        "to": r"""        case KEST_OP_MOD_I: {
-            KestValue right = *--top;
-            KestValue left = *--top;
-            if (right.integer == 0) {
-                fail(vmp, frame, instruction, "K0601", "divided by nought");""",
+        "from": """        fail(vmp, frame, instruction, "K0601", "division by zero");            \\""",
+        "to": """        fail(vmp, frame, instruction, "K0601", "divided by nought");           \\""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -7118,9 +7110,15 @@ fn main() -> i32 {
             break;""",
         "make": ["kest"],
         "program": "adding.kest",
-        "source": """fn main() -> i32 {
+        # Two parameters rather than a local and a written number, which is
+        # one instruction of its own since D1168.
+        "source": """fn plus(a: i32, b: i32) -> i32 {
+    return a + b
+}
+
+fn main() -> i32 {
     let big: i32 = 2147483647
-    if big + 1 != i32(0 - 2147483647) - 1 {
+    if plus(big, 1) != i32(0 - 2147483647) - 1 {
         return 300
     }
     return 0

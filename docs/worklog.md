@@ -41191,3 +41191,16 @@ See D1169.
 
 **Runs:** the gate's program with the step broken and whole, `words` by `perf
 stat`, and `make most`.
+
+## 2026-09-23, one refusal for a division by nought, and two holes past D1168
+
+CI on the constant arithmetic missed two holes: a refusal reworded in one of
+two copies of its words, and a cut taken out of an instruction the hole's
+program no longer ran. The words are one macro now and the program adds two
+parameters. Both run by hand and caught; the whole sweep is run here before the
+push.
+
+See D1170.
+
+**Runs:** the two holes by hand, the quote pass, the backstop sweep, and `make
+most`.

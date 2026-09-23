@@ -4863,13 +4863,19 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             BINARY_I(integer, (int64_t)((uint64_t)left.integer *
                                         (uint64_t)right.integer));
             break;
+// What every whole-number division says about a nought, said in one place:
+// the operand forms and the constant forms are one refusal. See D1170.
+#define BY_NOUGHT()                                                            \
+    do {                                                                       \
+        fail(vmp, frame, instruction, "K0601", "division by zero");            \
+        return false;                                                          \
+    } while (0)
         case KEST_OP_DIV_I:
         case KEST_OP_MOD_I: {
             KestValue right = *--top;
             KestValue left = *--top;
             if (right.integer == 0) {
-                fail(vmp, frame, instruction, "K0601", "division by zero");
-                return false;
+                BY_NOUGHT();
             }
             // The one pair of operands whose quotient does not fit, which on
             // most machines traps rather than wrapping.
@@ -4898,8 +4904,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 #define DIVIDED(QUOTIENT)                                                      \
     do {                                                                       \
         if (right == 0) {                                                      \
-            fail(vmp, frame, instruction, "K0601", "division by zero");        \
-            return false;                                                      \
+            BY_NOUGHT();                                                       \
         }                                                                      \
         (top++)->integer = left == INT64_MIN && right == -1                    \
                                ? ((QUOTIENT) ? INT64_MIN : 0)                  \
@@ -4981,8 +4986,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             KestValue right = *--top;
             KestValue left = *--top;
             if (right.integer == 0) {
-                fail(vmp, frame, instruction, "K0601", "division by zero");
-                return false;
+                BY_NOUGHT();
             }
             uint64_t a = (uint64_t)left.integer;
             uint64_t b = (uint64_t)right.integer;
