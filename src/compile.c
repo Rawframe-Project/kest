@@ -2590,6 +2590,17 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         }
         break;
     case KEST_EXPR_BINARY:
+        // Arithmetic on what is written down is worked out here rather than
+        // on every run: there is no negative literal, so every `0 - 1` in a
+        // body was two constants and a subtraction each time it ran. The
+        // folder answers what the machine answers, wrapping included, and
+        // does not work out a division by nought, so that stays a refusal
+        // where it runs. See D1160.
+        if (expr->type != NULL &&
+            (expr->type->tag == KEST_T_INT || expr->type->tag == KEST_T_FLOAT) &&
+            compile_folded(compiler, expr)) {
+            break;
+        }
         compile_binary(compiler, expr);
         break;
     case KEST_EXPR_CALL:

@@ -6554,8 +6554,10 @@ where it is written, and the compiler works out every constant, so what `emit`
 says is what `check` said and more. `asked` beside them is how many times the
 folder was asked and there was nothing to work out — a field of a local, a name that is not a constant. The compiler asks
 of anything that might be one, because asking is how it finds out, and the two
-numbers together say how much of that finding out answered: 97 of 346 for
-`examples/numbers.kest`.
+numbers together say how much of that finding out answered: 113 of 476 for
+`examples/numbers.kest`. Arithmetic is asked about too, since D1160: `0 - 1` is
+a value a frame does not pay for, and a language with no negative literal
+writes it everywhere a `-1` goes.
 
 Each file also carries a `mark`, and the object has one for the program: a
 number that moves when the bytes move, written as sixteen hexadecimal digits. It

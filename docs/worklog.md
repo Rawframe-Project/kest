@@ -41052,3 +41052,15 @@ third `if`. Each was put in by hand in a copy and seen caught.
 **Runs:** the four holes by hand against a copy of the tree with each put in,
 the programs against the tree as it is, and the quote pass of
 `check-backstops.sh`.
+
+## 2026-09-23, arithmetic on constants worked out where it is written
+
+`0 - 1` was two constants and a subtraction every time a body ran, and with no
+negative literal it is everywhere a `-1` is. The compiler asks the folder about
+arithmetic now, the way it already asked about a settled call, a field and an
+element. `rules` is 1.3 per cent fewer instructions.
+
+See D1160.
+
+**Runs:** every example with the optimizer, without it and plain, the five
+workloads fused and plain with `perf stat`, and `make most`.

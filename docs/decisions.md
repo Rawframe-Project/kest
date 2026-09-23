@@ -40134,3 +40134,24 @@ The other four hold no tag in an array and do not move. Every example and
 workload answers the same, fused and plain. The cycles are the box's to say and
 the box was at a load of forty-seven while this was measured, so they are
 said again when it is quiet, turn about with the build before.
+
+## D1160 — Arithmetic on what is written down is worked out where it is written
+
+*measured*. There is no negative literal, so `-1` is written `0 - 1`, and in a
+body that was two constants and a subtraction every time it ran: `rules` ran
+`const, const, sub` 1.16 million times over for nothing but the `-1`s in its
+arms. The compiler already asked the folder about a call whose answer is
+settled, a field and an element (D886, D675); it now asks about arithmetic of
+a number type too, and a sum of two things written down is one constant.
+
+What the folder answers is what the machine answers -- wrapping at the width,
+and the rest of D668 and D669 -- because that is the rule it was written under,
+and it does not work out a division by nought, so a program that divides by a
+nought written down still stops where it runs rather than failing to compile.
+Every example answers the same with the optimizer, without it and with the
+fusions off.
+
+`rules` runs 1.3 per cent fewer instructions; the others do not write
+arithmetic on constants in their loops and move by less than a quarter of one.
+The folder is asked 476 times for `examples/numbers.kest` rather than 346 and
+answers 113 rather than 97, which the reference says.
