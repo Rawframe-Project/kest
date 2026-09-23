@@ -656,6 +656,9 @@ fn main() -> i32 {
     if turnsAcrossTheMiddle(u64(9223372036854775806)) != 3 {
         return 101
     }
+    if besideAnIndex(3, edges, 2) != 7 {
+        return 102
+    }
 
     io.print("every width wraps at its own end, and {NARROW} is one of them")
     return 0
@@ -902,6 +905,14 @@ fn turnsAcrossTheMiddle(from: u64) -> i32 no.alloc {
         turns += 1
     }
     return turns
+}
+
+// Three locals side by side read in one instruction, the last two of them a
+// run and where in it: what is read out of the run is at the second and third
+// slots, and reading the first two as the run and the index is reading a
+// number as an array. See D1213.
+fn besideAnIndex(k: i32, xs: [i32], i: i32) -> i32 no.alloc {
+    return k + xs[i]
 }
 
 // So many nines, written out one at a time.

@@ -41810,3 +41810,17 @@ See D1212.
 **Runs:** the ten mutations against `make fast`, twice; the two holes over
 `examples/numbers.kest` and the reference's figure by hand; and `make most`.
 
+## 2026-09-24, the conditions on transformations taken out one at a time
+
+Seven conditions a transformation is allowed under, each removed alone:
+`make fast` refused two. One of the rest was a real shape nothing wrote --
+three locals side by side read as a run and an index -- and
+`examples/numbers.kest` writes it now; the others cannot be reached, and one
+was run to show it.
+
+See D1213.
+
+**Runs:** the seven against `make fast`; the two unsure shapes written as a
+program and run under their mutations; one branch made to abort over every
+file here; and `make most`.
+

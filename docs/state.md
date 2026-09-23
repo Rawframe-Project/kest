@@ -238,7 +238,9 @@ says why. The other was bulk text append and it is done.
   miscompilations (D1211). Ten fused forms put out of order one at a time
   are all refused by `make fast` once the float `continue` and the unsigned
   walk step are asked on their edges; the unsigned walk's step was signed
-  overflow in both engines, found by the sanitisers on it (D1212). `control` is 0.98 once its
+  overflow in both engines, found by the sanitisers on it (D1212). Seven
+  conditions on transformations taken out one at a time: one was a shape
+  nothing wrote and is held now, three cannot be reached (D1213). `control` is 0.98 once its
   rule is carried (D1175), and `rules` 0.99 once
   a value is moved a run of its pieces at a time (D1177) and an element is
   weighed against a constant in one instruction (D1178): every workload here

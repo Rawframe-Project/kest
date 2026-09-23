@@ -41637,3 +41637,38 @@ breaks it without quoting it -- a digit put in front of whatever it is -- and
 is caught by the words of the refusal rather than by the numbers. Run by
 hand, caught.
 
+## D1213 — The conditions a transformation is allowed under, taken out one at a time
+
+D1212 put fused instructions out of order; this puts out of order the
+conditions that say when a transformation may happen at all, which is where
+a mistake is a transformation made in a shape it was not written for. Seven
+taken out alone, the tree built, `make fast` run:
+
+- `x += k` fused only when `x` is what was read, in the path that fuses a
+  local-and-constant with the store: refused.
+- D1205's jump dropped only when nothing else lands on it: refused, by
+  `examples/scan.kest`.
+- `load.n` read as two locals only when it read two: **not refused**. Three
+  locals side by side of which the last two are a run and an index --
+  `k + xs[i]` with those three the first three slots -- is `load.n 0 3` and
+  an `index`, and read as two it indexes a number as an array. Nothing here
+  was written that way. `besideAnIndex` in `examples/numbers.kest` is; the
+  condition taken out, the machine stops with a fault and `make fast` refuses.
+- The same fusion of `x = y + k` on the other path: not refused, and not
+  reachable from anything here -- made to abort, it lowered every example,
+  library file and workload without being reached. A local and a constant are
+  one instruction with their arithmetic before a store is written, which is
+  the path above.
+- D1205 turning round only a comparison nothing else reads: not refused, and
+  it cannot be otherwise, a value in the IR being read exactly once.
+- D1205 leaving alone an `ask` that leaves a value (`if let`): not refused;
+  the binding is stored before anything the arm does, so such an `ask` is not
+  followed by a `go`, and a program written to make one did not.
+- D1196 folding only a `return` of one slot: not refused; a callee's answer
+  wider than one slot is not put into one slot, which is the only place it
+  folds.
+
+So one of the seven was a shape nothing wrote, and is held now; the three
+that stay unrefused are conditions no program can get past, and are kept
+because each says what the transformation assumes.
+

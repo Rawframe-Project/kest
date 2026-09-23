@@ -6618,7 +6618,7 @@ where it is written, and the compiler works out every constant, so what `emit`
 says is what `check` said and more. `asked` beside them is how many times the
 folder was asked and there was nothing to work out — a field of a local, a name that is not a constant. The compiler asks
 of anything that might be one, because asking is how it finds out, and the two
-numbers together say how much of that finding out answered: 114 of 532 for
+numbers together say how much of that finding out answered: 114 of 536 for
 `examples/numbers.kest`. Arithmetic is asked about too, since D1160: `0 - 1` is
 a value a frame does not pay for, and a language with no negative literal
 writes it everywhere a `-1` goes.
