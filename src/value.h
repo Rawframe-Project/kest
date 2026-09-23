@@ -575,6 +575,12 @@ typedef struct {
     // against what was emitted. See D058. Both of them, because both are
     // proved twice and the second proof reads what is written here. See D853.
     bool no_alloc;
+    // Whether nothing this body does can make an array shorter or take one
+    // away: no taking, emptying or resizing, no call through a value or into
+    // the host, and calls only to bodies that keep them too, compiled before
+    // it. What lets a walk that calls it be proved inside its array. Set by
+    // the compiler when the body is finished. See D1188.
+    bool keeps_runs;
     bool no_host;
     bool deterministic;
     // The same body, compiled by the host's compiler out of the C this

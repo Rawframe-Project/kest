@@ -40967,3 +40967,26 @@ unchanged. Of the element accesses the release engine writes, 2 of 5 in
 `kernel`, 15 of 40 in `rules` and 10 of 17 in `words` are proved;
 `control` indexes by a count up to a constant and `graph` walks references,
 so neither has one.
+
+## D1188 — A walk that calls a body that keeps its arrays is proved too
+
+*measured*. D1187 proved nothing in a walk with a call in it, because a body
+handed the array may take from it. Most calls in a walk are to bodies that do
+nothing of the sort -- `rules` walks a bag calling `worthOf`, which is a
+`match` -- so a body now says, when it is finished, whether it keeps runs: no
+taking, emptying or resizing, no call through a value or into the host, no
+working memory closed, and calls only to bodies compiled before it that keep
+them too. A walk whose calls are all to such bodies is proved as one with none
+in it. A body compiled after its caller, and the caller itself, are not known
+yet and are taken as not keeping them.
+
+`check-c.sh` writes a walk that calls a body that calls another that takes
+from the array, and holds both engines to refusing it the same way; with what
+a body calls left out of whether it keeps runs, the walk is proved and the
+release engine answers 21 where the machine refuses.
+
+Of the release engine's element accesses 19 of 40 in `rules` are proved where
+15 were, and 11 of 17 in `words`; each retires 0.6% fewer instructions, with
+the same answers. What compiling `lib/std/text.kest` costs is 207,604 bytes
+where it was 207,398, because a place in the IR carries whether it was proved
+(D1187).

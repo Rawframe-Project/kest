@@ -2091,6 +2091,9 @@ LEFT_OUT = {
     ("KestChunk", "wrote"): "the name with what tells one copy of a generic "
                             "from another taken off, which the name it was "
                             "taken from already says",
+    ("KestChunk", "keeps_runs"): "what the compiler proved about the body to "
+                                 "prove walks in its callers, which is in "
+                                 "the code those callers were compiled to",
     ("KestChunk", "source"): "where a chunk was written, which is not what runs",
     ("KestChunk", "declared"): "the same, for the declaration it came from",
     ("KestChunk", "origins"): "where each instruction was written",

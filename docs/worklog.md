@@ -41466,3 +41466,17 @@ the two shortening walks both ways with the proof as written and with it
 blind to calls and taking, every example compiled under the sanitisers, the
 hole whose quote moved by hand, and
 `make most`.
+
+## 2026-09-23, a walk that calls a body that keeps its arrays
+
+A body says when it is finished whether it keeps runs, and a walk whose calls
+are all to such bodies is proved inside its array too. `check-c.sh` holds a
+walk calling a body that calls one that takes from the array to the same
+refusal both ways, and catches the proof when a body's own calls are not
+looked at.
+
+See D1188.
+
+**Runs:** the three workloads it reaches compiled before and after with the same
+answers, the new program both ways with the proof as written and blind to what
+a body calls, and `make most`.

@@ -955,6 +955,33 @@ fn main() -> i32 {
     return total % 251
 }
 PROGRAM
+# And a walk that calls a body which only calls another: a call is proved
+# harmless when what it calls keeps runs, and this one calls a body that
+# takes from the array, so the walk proves nothing. See D1188.
+cat >"$work"/programs/handed.kest <<'PROGRAM'
+module handed
+
+fn shorten(xs: [i32]) {
+    remove(xs, 0)
+}
+
+fn through(xs: [i32]) {
+    shorten(xs)
+}
+
+fn main() -> i32 {
+    let xs: [i32] = array()
+    for i in 0..6 {
+        push(xs, i)
+    }
+    let total = 0
+    for x in xs {
+        total += x
+        through(xs)
+    }
+    return total % 251
+}
+PROGRAM
 cat >"$work"/programs/outside.kest <<'PROGRAM'
 module outside
 
@@ -1290,7 +1317,7 @@ done
 # traps on, or as one it quietly answers, would be a program that means
 # something else. Counted rather than assumed, because a program that stops is
 # one whose answer is the same either way for the wrong reason.
-for stopping in stopped shifted outside deep crossed runoff shrunk taken; do
+for stopping in stopped shifted outside deep crossed runoff shrunk taken handed; do
     stops=$(./kest run "$work"/programs/$stopping.kest 2>/dev/null </dev/null
             echo $?)
     if [ "$stops" -eq 0 ]; then

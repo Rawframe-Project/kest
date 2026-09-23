@@ -83,6 +83,9 @@ typedef struct {
     // one declaration, or one copy of a generic.
     KestIrProgram *ir;
     KestIrBody *body;
+    // The function whose body is being compiled, which is told when it is
+    // finished whether it keeps runs. See D1188.
+    KestChunk *compiling;
     // The values this walk has made and not yet read, innermost last. It is
     // the shape the tree has: what an expression makes is read by the
     // expression it is written inside.
@@ -3238,6 +3241,47 @@ static int32_t read_out_of(const KestIrBody *body, KestIrRef value) {
     return place->slot;
 }
 
+// Whether a call is to a body that keeps runs: compiled already, and doing
+// nothing that could make an array shorter. A body compiled later, and the
+// body being compiled, are not known yet and are taken as not. See D1188.
+static bool calls_a_keeper(const Compiler *compiler, const KestIrOp *op) {
+    const KestModule *module = compiler->module;
+    if (module == NULL || op->imm[0] >= module->count) {
+        return false;
+    }
+    const KestChunk *callee = module->functions[op->imm[0]];
+    return callee != NULL && callee != compiler->compiling &&
+           callee->keeps_runs;
+}
+
+// Whether the body just written keeps runs, for the calls of it written
+// after it.
+static bool keeps_runs(const Compiler *compiler) {
+    const KestIrBody *body = compiler->body;
+    for (uint32_t i = 0; i < body->op_count; i++) {
+        const KestIrOp *op = &body->ops[i];
+        switch ((KestIrKind)op->kind) {
+        case KEST_IR_CALL:
+            if (!calls_a_keeper(compiler, op)) {
+                return false;
+            }
+            break;
+        case KEST_IR_CALL_VALUE:
+        case KEST_IR_CALL_HOST:
+        case KEST_IR_FIT:
+        case KEST_IR_FIT_TEXT:
+        case KEST_IR_POP_LAST:
+        case KEST_IR_TAKE:
+        case KEST_IR_CLEAR:
+        case KEST_IR_REGION_CLOSE:
+            return false;
+        default:
+            break;
+        }
+    }
+    return true;
+}
+
 // Every element of the array in `held` read or written at the count in
 // `counter`, in a walk from `from` whose limit was that array's length when it
 // began and whose count starts at nought or more, proved to be inside the
@@ -3254,8 +3298,10 @@ static void prove_walk(Compiler *compiler, uint32_t from, uint16_t held,
     }
     for (uint32_t i = from; i < body->op_count; i++) {
         const KestIrOp *op = &body->ops[i];
+        if (op->kind == KEST_IR_CALL && !calls_a_keeper(compiler, op)) {
+            return;
+        }
         switch ((KestIrKind)op->kind) {
-        case KEST_IR_CALL:
         case KEST_IR_CALL_VALUE:
         case KEST_IR_CALL_HOST:
         case KEST_IR_FIT:
@@ -4267,6 +4313,7 @@ static bool open_body(Compiler *compiler, KestChunk *chunk,
     body->no_host = chunk->no_host;
     body->deterministic = chunk->deterministic;
     compiler->body = body;
+    compiler->compiling = chunk;
     // The stack of values this walk keeps is in the bodies' arena too, so a
     // body that has been let go takes it with it: what is left over from the
     // last one is a pointer into memory that has been handed back.
@@ -4307,6 +4354,9 @@ static bool close_body(Compiler *compiler, const KestBlock *block,
                            "what a `scratch { }` block makes is gone when it "
                            "ends: copy out a number, or make the thing outside "
                            "the block");
+    }
+    if (compiler->compiling != NULL && !compiler->ir->out_of_memory) {
+        compiler->compiling->keeps_runs = keeps_runs(compiler);
     }
     // Handed to the backend and let go. Nothing in it is read again, which is
     // what keeps one body's worth of memory alive rather than a program's.
