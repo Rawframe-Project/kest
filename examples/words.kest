@@ -112,6 +112,14 @@ fn beginning(words: [text], typed: text) -> [text] {
     return found
 }
 
+// Where `needle` is first found in `t` from `from` on, or minus one.
+fn foundAt(t: text, needle: text, from: i32) -> i32 {
+    if let at = find(t, needle, from) {
+        return at
+    }
+    return 0 - 1
+}
+
 fn main() -> i32 {
     let words = ["smith", "guard", "cook", "herald"]
 
@@ -266,6 +274,25 @@ fn main() -> i32 {
     }
     if widest != 196 {
         return 21
+    }
+
+    // Where a piece of text is found, at its edges: nothing to look for is
+    // found where the looking starts, a first byte that matches with the rest
+    // not following is passed over, a match that ends at the last byte is
+    // found, one that would run past it is not, and a match that overlaps the
+    // one before it is found where it starts. The search looks for the first
+    // byte and then compares the rest (D1169).
+    if foundAt("banana", "", 2) != 2 || foundAt("banana", "nab", 0) != 0 - 1 {
+        return 22
+    }
+    if foundAt("banana", "ana", 0) != 1 || foundAt("banana", "ana", 2) != 3 {
+        return 23
+    }
+    if foundAt("banana", "na", 5) != 0 - 1 || foundAt("banana", "a", 5) != 5 {
+        return 24
+    }
+    if foundAt("bananas", "nas", 0) != 4 || foundAt("aab", "ab", 0) != 1 {
+        return 25
     }
 
     io.print("by vowels: {text.join(words, " ")}")

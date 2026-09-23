@@ -504,6 +504,32 @@ typedef struct {
 // itself can open one a call deep, so this is a number met while running.
 #define MAX_KEPT 64
 
+// Where a piece of text is first found in another from a place on, or -1:
+// the one answer both engines give. The first byte is looked for with the C
+// library's own search and the rest compared where it lands, which is what
+// the byte-at-a-time walk it replaced spent most of `bench/words.kest` doing
+// by hand. See D1169.
+static int64_t found_at(const char *bytes, int64_t length, const char *needle,
+                        int64_t needle_length, int64_t from) {
+    if (needle_length == 0) {
+        return from;
+    }
+    const char *at = bytes + from;
+    const char *end = bytes + length;
+    while (end - at >= needle_length) {
+        const char *first =
+            memchr(at, needle[0], (size_t)(end - at - needle_length + 1));
+        if (first == NULL) {
+            return -1;
+        }
+        if (memcmp(first + 1, needle + 1, (size_t)(needle_length - 1)) == 0) {
+            return first - bytes;
+        }
+        at = first + 1;
+    }
+    return -1;
+}
+
 // What a piece of text is: bytes and how many. It is two slots wherever a
 // value lives, and this is the pair read out of them. See D964.
 typedef struct {
@@ -4774,21 +4800,14 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                      (long long)from, haystack.length);
                 return false;
             }
-            int64_t found = -1;
-            uint64_t read = 0;
-            for (uint64_t start = (uint64_t)from;
-                 found < 0 && start + needle.length <= haystack.length;
-                 start++) {
-                uint32_t i = 0;
-                while (i < needle.length &&
-                       haystack.bytes[start + i] == needle.bytes[i]) {
-                    i++;
-                }
-                read += i + 1;
-                if (i == needle.length) {
-                    found = (int64_t)start;
-                }
-            }
+            int64_t found = found_at(haystack.bytes, haystack.length,
+                                     needle.bytes, needle.length, from);
+            // What it read is as far as it had to go: to the end of what it
+            // found, or to the end of the text. See D1169.
+            uint64_t read =
+                (uint64_t)((found < 0 ? (int64_t)haystack.length
+                                      : found + (int64_t)needle.length) -
+                           from);
             (top++)->integer = found < 0 ? 0 : found;
             (top++)->integer = found >= 0;
             SPEND_WORK(read);
@@ -9164,17 +9183,7 @@ bool kest_text_find(KestRuntime *runtime, const char *bytes, int64_t length,
                               "bytes",
                               (long long)from, (unsigned)length);
     }
-    int64_t where_it_is = -1;
-    for (int64_t start = from;
-         where_it_is < 0 && start + needle_length <= length; start++) {
-        int64_t i = 0;
-        while (i < needle_length && bytes[start + i] == needle[i]) {
-            i++;
-        }
-        if (i == needle_length) {
-            where_it_is = start;
-        }
-    }
+    int64_t where_it_is = found_at(bytes, length, needle, needle_length, from);
     *at = where_it_is < 0 ? 0 : where_it_is;
     *found = where_it_is >= 0;
     return true;

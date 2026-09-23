@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1168
+    CURRENT SHA:       (this commit) D1093-D1169
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -772,7 +772,7 @@ the same workload.
    396, the same colony; a refusal names its diagnostic again. A reload at
    scale is 211 ms through bytes against 50 through lends, which is what the
    bytes library answers first.
-31. *(open, D1154-D1168)* **The machine against Luau's interpreter.**
+31. *(open, D1154-D1169)* **The machine against Luau's interpreter.**
    Measured again: behind by a sixth to double, `rules` furthest. Eight things
    off it so far, the last a small body carried to where it is called: `rules`
    is 27.2% fewer instructions and 1.28 times Luau's interpreter where it was
@@ -789,7 +789,9 @@ the same workload.
    interpreter in instructions (D1165, D1166), and an element read and written
    by a run and an index in place 7.8% more: 0.865 thousand million against
    Luau's 1.006 (D1167). Arithmetic with a constant on its right took
-   `control` ten per cent, to 1.08 times Luau's interpreter (D1168).
+   `control` ten per cent, to 1.08 times Luau's interpreter (D1168), and a
+   search for text that looks for its first byte took `words` 12.4 per cent,
+   to 1.17 (D1169).
 32. *(open, D1161)* **Daslang in every mode it ships.** `graph`, `words` and
    `rules` written in Daslang, answering what the other two do, and its AOT
    measured with the LLVM its own build downloads: behind the release engine

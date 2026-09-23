@@ -41167,3 +41167,16 @@ See D1168.
 plain, `perf stat` instructions and cycles turn about against the build before
 on three workloads and three variants, the two holes the figures moved run by
 hand, and `make most`.
+
+## 2026-09-23, text searched for by its first byte
+
+`find` tried every place and compared byte by byte, in both engines. One
+function for both now finds the first byte with `memchr` and compares the rest
+with `memcmp`; the budget is charged for how far the search read. `words` is
+12.4 per cent fewer instructions, and `examples/words.kest` holds the edges of
+a search, which the tree before answered the same way.
+
+See D1169.
+
+**Runs:** `examples/words.kest` on this engine, plain and the one before,
+`check-c.sh` over the tree, `words` by `perf stat`, and `make most`.

@@ -40410,3 +40410,30 @@ so fewer instructions did not make it fewer cycles. It is 1.08 times Luau's
 interpreter in instructions, where it was 1.20. The frame step the reference
 counts is thirty instructions; a hop of the instrument's loop, whose own work
 is `i % 64`, is four.
+
+## D1169 — Text is searched for by its first byte and then compared
+
+*measured*. `bench/words.kest` ran 2.5 million instructions of the machine for
+317 million of the host's, and most of the difference was one of them:
+`text.find` looked for a piece of text by trying every place in turn and
+comparing byte by byte, which is what `split` and `contains` do over a text of
+fifty thousand bytes. The compiled engine's `kest_text_find` did the same
+thing again in its own words.
+
+Both call one function now: the first byte of what is looked for is found with
+the C library's `memchr`, which reads many bytes at once, and the rest is
+compared with `memcmp` where it lands; a first byte that matches with the rest
+not following moves on one. What the machine charges a budget for (D950) is
+how far it read -- to the end of what it found, or to the end of the text --
+rather than a count of bytes compared that the search no longer makes.
+
+`examples/words.kest` holds the edges: nothing looked for is found where the
+looking starts, a first byte that matches alone is passed over, a match ending
+at the last byte is found and one that would run past it is not, and an overlap
+is found where it starts. They answer the same on the tree before this.
+
+| workload | before | after | |
+| --- | --- | --- | --- |
+| words | 316,980,104 | 277,587,978 | -12.4 % |
+
+`words` is 1.17 times Luau's interpreter in instructions, where it was 1.33.
