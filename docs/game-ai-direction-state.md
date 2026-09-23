@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1178
+    CURRENT SHA:       (this commit) D1093-D1179
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -815,12 +815,14 @@ the same workload.
    but what it is handed. Made by the installed command line and run in an
    empty room, it answers what the program answers; `saving` released is 713
    kilobytes and 13.1 million instructions against `kest run`'s 13.3.
-32. *(open, D1161)* **Daslang in every mode it ships.** `graph`, `words` and
+32. *(open, D1161, D1179)* **Daslang in every mode it ships.** `graph`, `words` and
    `rules` written in Daslang, answering what the other two do, and its AOT
    measured with the LLVM its own build downloads: behind the release engine
    on four workloads and 2.6 times ahead on `rules` (46 ms against 119). Its
    JIT is a whole second a process and is not a per-run row. `rules` compiled
-   is what is open.
+   is what is open: with its operands in C it is 2.14 times Daslang's AOT in
+   cycles where it was 2.55, 396 million against 185, and 2.6 times in
+   instructions, 685 million against 261 (D1179).
 
 ## Closed by measurement
 

@@ -1179,6 +1179,8 @@ fi
 # way, and is counted rather than passed over quietly.
 alike=0
 wants_a_host=0
+walked=0
+not_walked=0
 for file in "$@"; do
     if ! grep -q '^fn main(' "$file"; then
         continue
@@ -1214,6 +1216,31 @@ with what was written as C, or says something else" >>"$said"
         wrong=$((wrong + 1))
         continue
     fi
+    # And the C again walking the heap before every allocation, which is what
+    # finds a handle the collector's reach stops short of: a call to a body
+    # written after its caller once asked no room for the callee's frame, and
+    # what that frame held was given back at the next walk. The two examples
+    # that grow worlds are left out and counted, for the reason the gate's own
+    # walk leaves them out. The workloads under `bench` are worlds grown to be
+    # measured, which a walk at every allocation reads whole each time, and
+    # are not walked for the same reason. See D1179.
+    case "$file" in
+    examples/churn.kest | examples/holding.kest)
+        not_walked=$((not_walked + 1))
+        ;;
+    examples/*)
+        walked_said=$(KEST_LIB=lib/ KEST_WALK_EVERY=1 "$work"/one "$file" \
+                          2>&1 </dev/null)
+        walked_was=$?
+        if [ "$walked_was" -ne "$c_was" ] || [ "$walked_said" != "$c_said" ]; then
+            echo "    $file answers $c_was written as C and $walked_was \
+walking the heap before every allocation, or says something else" >>"$said"
+            wrong=$((wrong + 1))
+            continue
+        fi
+        walked=$((walked + 1))
+        ;;
+    esac
     alike=$((alike + 1))
 done
 
@@ -1232,6 +1259,13 @@ not stop" >>"$said"
     fi
 done
 
+# A walk before every allocation that walked nothing is a pass nobody took.
+if [ "$alike" -gt 0 ] && [ "$walked" -eq 0 ]; then
+    echo "    no program written as C was run walking the heap before every \
+allocation" >>"$said"
+    wrong=$((wrong + 1))
+fi
+
 if [ "$wrong" -ne 0 ]; then
     echo "$wrong thing(s) wrong with the C this backend wrote"
     cat "$said"
@@ -1239,5 +1273,7 @@ if [ "$wrong" -ne 0 ]; then
 fi
 echo "$written of $bodies body(s) over $compiled program(s) written as C the \
 host compiler takes, $both program(s) written here and $alike of this tree's \
-own run both ways for the same answer and the same words, $inside_said, and \
-$wants_a_host that ask the host for what a file this wrote does not provide"
+own run both ways for the same answer and the same words, $walked of those \
+again walking the heap before every allocation with $not_walked left out for \
+growing worlds, $inside_said, and $wants_a_host that ask the host for what a \
+file this wrote does not provide"

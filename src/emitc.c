@@ -161,6 +161,11 @@ typedef struct {
     uint32_t *depth;
     bool *known;
     bool *landed;
+    // Whether the operation being written stands on the machine's stack
+    // rather than in the body's own operands, and which operands the machine's
+    // stack holds the same value of already. See `in_memory` below.
+    bool in_memory;
+    bool *clean;
     uint32_t stack;
     uint32_t deepest;
     // Why this body is not being written, or NULL. The first reason is kept:
@@ -455,8 +460,8 @@ static bool calls_anything(const KestIrBody *body) {
 // of these and a shared one would name the last of them three times.
 typedef char Where[24];
 
-static void at_stack(Where into, uint32_t slot) {
-    snprintf(into, sizeof(Where), "s[%u]", slot);
+static void at_stack(const Walk *walk, Where into, uint32_t slot) {
+    snprintf(into, sizeof(Where), walk->in_memory ? "sf[%u]" : "s[%u]", slot);
 }
 
 // Where a body on the machine's stack keeps a slot. The collector walks the
@@ -485,14 +490,14 @@ static void move_one(Walk *walk, uint8_t kind, uint32_t slot, uint32_t byte,
     Text *out = &walk->into->wrote;
     Where held;
     Where beside;
-    at_stack(held, slot);
+    at_stack(walk, held, slot);
     const char *width = NULL;
     bool real = false;
     switch (kind) {
     case KEST_L_TEXT:
         // Two slots: what it is made of and how many bytes that is. The bytes
         // are the heap's and are carried rather than copied.
-        at_stack(beside, slot + 1);
+        at_stack(walk, beside, slot + 1);
         if (reading) {
             say(c, out,
                 "        memcpy(&%s, at + %u, 8);\n"
@@ -619,7 +624,7 @@ static uint16_t move_value(Walk *walk, const KestType *type, uint32_t slot,
         return type->tag == KEST_T_TEXT ? 2 : 1;
     }
     Where tag;
-    at_stack(tag, slot);
+    at_stack(walk, tag, slot);
     if (!reading) {
         // What the case does not carry is written as nought, because a tag
         // says which reading the bytes beside it have and a case written over
@@ -639,7 +644,7 @@ static uint16_t move_value(Walk *walk, const KestType *type, uint32_t slot,
             byte, tag);
         for (uint16_t piece = 1; piece < type->slots; piece++) {
             Where empty;
-            at_stack(empty, slot + piece);
+            at_stack(walk, empty, slot + piece);
             say(c, out, "            %s.integer = 0;\n", empty);
         }
         say(c, out, "            switch (tag) {\n");
@@ -835,7 +840,7 @@ static void write_const_at(Walk *walk, const KestIrOp *op, uint32_t index) {
     }
     say(c, out, "};\n");
     Where held;
-    at_stack(held, walk->stack - 1);
+    at_stack(walk, held, walk->stack - 1);
     say(c, &walk->into->wrote,
         "    {\n        int64_t which = %s.integer;\n"
         "        if (!kest_run_at(rt, which, %u, %u)) {\n"
@@ -843,7 +848,7 @@ static void write_const_at(Walk *walk, const KestIrOp *op, uint32_t index) {
         held, count, op->span.offset);
     for (uint32_t k = 0; k < stride; k++) {
         Where into;
-        at_stack(into, walk->stack - 1 + k);
+        at_stack(walk, into, walk->stack - 1 + k);
         say(c, &walk->into->wrote,
             "        %s = kr_%u_%u[which * %u + %u];\n", into, c->count - 1,
             index, stride, k);
@@ -867,7 +872,7 @@ static void write_const(Walk *walk, const KestIrOp *op) {
         // from a float from the bytes of a piece of text.
         uint8_t class = body->constant_classes[first + k];
         Where into;
-        at_stack(into, walk->stack + k);
+        at_stack(walk, into, walk->stack + k);
         // The bytes of a piece of text, written down as bytes. What the
         // constant holds is where they are in the process that compiled it,
         // which means nothing in another process -- so what goes into the
@@ -950,8 +955,8 @@ static bool write_elem(Walk *walk, const KestIrOp *op,
     }
     Where held;
     Where index;
-    at_stack(held, handle);
-    at_stack(index, handle + 1);
+    at_stack(walk, held, handle);
+    at_stack(walk, index, handle + 1);
     // Where the element is, worked out here rather than asked for. A run of
     // elements is a shape the header says (D1112), so the three things that
     // have to be true -- that the handle is a run, that the index is one of
@@ -1017,7 +1022,7 @@ static bool write_at(Walk *walk, const KestIrPlace *place, uint32_t value,
         return false;
     }
     Where held;
-    at_stack(held, address);
+    at_stack(walk, held, address);
     say(c, &walk->into->wrote,
         "    {\n        unsigned char *at = (unsigned char *)%s.object + %u;\n",
         held, (unsigned)place->offset);
@@ -1055,6 +1060,75 @@ static void write_branch(Walk *walk, uint32_t target, uint32_t leaving,
 // bookkeeping: every operand is a place in one array with a number worked out
 // while compiling, so the host's compiler sees plain locals rather than a
 // stack it has to follow.
+// Whether an operation is written on the machine's stack rather than on the
+// body's own operands. A body that can reach the heap keeps its operands in a
+// C array of its own, which the host's compiler may hold in registers because
+// nothing else can reach it, and writes them where the collector walks -- the
+// machine's stack, at the same place the machine would keep them -- before an
+// operation that can call into the library with one of their addresses or
+// reach the heap, and reads them back after it. The rest are arithmetic,
+// comparisons of numbers, locals, elements read and written where they are,
+// and branches, none of which does either. Operands kept on the machine's
+// stack throughout were stored and read again around every element written,
+// because a byte written through a pointer may be one of them as far as the
+// host's compiler can tell. See D1179.
+static bool in_memory(const Walk *walk, const KestIrOp *op) {
+    if (!walk->on_the_stack) {
+        return false;
+    }
+    switch ((KestIrKind)op->kind) {
+    case KEST_IR_CONST:
+    case KEST_IR_CONST_AT:
+    case KEST_IR_TRUE:
+    case KEST_IR_FALSE:
+    case KEST_IR_LOAD:
+    case KEST_IR_PUT:
+    case KEST_IR_MAKE:
+    case KEST_IR_MEET:
+    case KEST_IR_NOTHING:
+    case KEST_IR_PART:
+    case KEST_IR_TURN:
+    case KEST_IR_DROP:
+    case KEST_IR_ADD:
+    case KEST_IR_SUB:
+    case KEST_IR_MUL:
+    case KEST_IR_AND:
+    case KEST_IR_OR:
+    case KEST_IR_XOR:
+    case KEST_IR_DIV:
+    case KEST_IR_MOD:
+    case KEST_IR_NEG:
+    case KEST_IR_FLIP:
+    case KEST_IR_SHL:
+    case KEST_IR_SHR:
+    case KEST_IR_NARROW:
+    case KEST_IR_TO_FLOAT:
+    case KEST_IR_TO_WHOLE:
+    case KEST_IR_BITS:
+    case KEST_IR_NOT:
+    case KEST_IR_ADDR:
+    case KEST_IR_LEN:
+    case KEST_IR_TEXT_LEN:
+    case KEST_IR_GO:
+    case KEST_IR_ASK:
+    case KEST_IR_NEXT:
+    case KEST_IR_GIVE:
+        return false;
+    // Two runs of slots and two pieces of text are weighed by the library,
+    // which is handed where they are.
+    case KEST_IR_LT:
+    case KEST_IR_LE:
+    case KEST_IR_GT:
+    case KEST_IR_GE:
+    case KEST_IR_EQ:
+    case KEST_IR_NE:
+        return kest_is_a_run(op->type) ||
+               (op->type != NULL && op->type->tag == KEST_T_TEXT);
+    default:
+        return true;
+    }
+}
+
 static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
     const KestIrBody *body = walk->body;
     Text *out = &walk->into->wrote;
@@ -1082,7 +1156,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         break;
     case KEST_IR_TRUE:
     case KEST_IR_FALSE:
-        at_stack(first, base);
+        at_stack(walk, first, base);
         say(c, out, "    %s.integer = %d;\n", first,
             op->kind == KEST_IR_TRUE ? 1 : 0);
         break;
@@ -1120,14 +1194,14 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
                              "index");
                 break;
             }
-            at_stack(first, base);
+            at_stack(walk, first, base);
             say(c, out,
                 "    {\n        int64_t which = %s.integer;\n"
                 "        if (!kest_run_at(rt, which, %u, %u)) {\n"
                 "            return false;\n        }\n",
                 first, (unsigned)place->count, op->span.offset);
             for (uint16_t k = 0; k < place->stride; k++) {
-                at_stack(first, base + k);
+                at_stack(walk, first, base + k);
                 say(c, out,
                     "        %s = f[%u + which * %u];\n", first,
                     (unsigned)place->slot + k, (unsigned)place->stride);
@@ -1140,7 +1214,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             break;
         }
         for (uint16_t k = 0; k < place->slots; k++) {
-            at_stack(first, base + k);
+            at_stack(walk, first, base + k);
             at_frame(walk, second, (uint32_t)(place->slot + k));
             say(c, out, "    %s = %s;\n", first, second);
         }
@@ -1166,14 +1240,14 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
                              "index");
                 break;
             }
-            at_stack(first, base);
+            at_stack(walk, first, base);
             say(c, out,
                 "    {\n        int64_t which = %s.integer;\n"
                 "        if (!kest_run_at(rt, which, %u, %u)) {\n"
                 "            return false;\n        }\n",
                 first, (unsigned)place->count, op->span.offset);
             for (uint16_t k = 0; k < place->stride; k++) {
-                at_stack(second, base + 1 + k);
+                at_stack(walk, second, base + 1 + k);
                 say(c, out, "        f[%u + which * %u] = %s;\n",
                     (unsigned)place->slot + k, (unsigned)place->stride,
                     second);
@@ -1191,7 +1265,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         }
         for (uint16_t k = 0; k < place->slots; k++) {
             at_frame(walk, first, (uint32_t)(place->slot + k));
-            at_stack(second, base + k);
+            at_stack(walk, second, base + k);
             say(c, out, "    %s = %s;\n", first, second);
         }
         break;
@@ -1213,8 +1287,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             break;
         }
         for (uint32_t k = 0; k < wide && offset > 0; k++) {
-            at_stack(first, base + k);
-            at_stack(second, base + offset + k);
+            at_stack(walk, first, base + k);
+            at_stack(walk, second, base + offset + k);
             say(c, out, "    %s = %s;\n", first, second);
         }
         break;
@@ -1229,14 +1303,14 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         // one rather than reversed. The machine does it with a move; here it
         // is the same move written out, because the host's compiler can see
         // through assignments and cannot see through `memmove`.
-        at_stack(first, base + count - 1);
+        at_stack(walk, first, base + count - 1);
         say(c, out, "    {\n        KV turned = %s;\n", first);
         for (uint32_t k = count - 1; k > 0; k--) {
-            at_stack(first, base + k);
-            at_stack(second, base + k - 1);
+            at_stack(walk, first, base + k);
+            at_stack(walk, second, base + k - 1);
             say(c, out, "        %s = %s;\n", first, second);
         }
-        at_stack(first, base);
+        at_stack(walk, first, base);
         say(c, out, "        %s = turned;\n    }\n", first);
         break;
     }
@@ -1262,8 +1336,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
                 cannot(walk, "an ordering of something wider than a number");
                 break;
             }
-            at_stack(first, base);
-            at_stack(second, base + reads / 2);
+            at_stack(walk, first, base);
+            at_stack(walk, second, base + reads / 2);
             say(c, out,
                 "    %s.integer = %skest_value_same(rt, %u, &%s, &%s);\n",
                 first, op->kind == KEST_IR_NE ? "!" : "",
@@ -1288,10 +1362,10 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
                                  : op->kind == KEST_IR_LE ? "<="
                                  : op->kind == KEST_IR_GT ? ">"
                                                           : ">=";
-            at_stack(first, base);
-            at_stack(second, base + 1);
-            at_stack(third, base + 2);
-            at_stack(fourth, base + 3);
+            at_stack(walk, first, base);
+            at_stack(walk, second, base + 1);
+            at_stack(walk, third, base + 2);
+            at_stack(walk, fourth, base + 3);
             say(c, out,
                 "    %s.integer = kest_text_order(%s.text, %s.integer,\n"
                 "                                 %s.text, %s.integer,\n"
@@ -1304,9 +1378,9 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "arithmetic with no C");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base);
-        at_stack(third, base + 1);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base);
+        at_stack(walk, third, base + 1);
         say(c, out, "    ");
         say(c, out, how, first, second, third);
         say(c, out, "\n");
@@ -1318,9 +1392,9 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "arithmetic with no C");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base);
-        at_stack(third, base + 1);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base);
+        at_stack(walk, third, base + 1);
         if (kest_is_float(op->type)) {
             if (op->kind == KEST_IR_DIV) {
                 say(c, out, "    ");
@@ -1365,8 +1439,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "arithmetic with no C");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base);
         if (op->kind == KEST_IR_FLIP) {
             say(c, out, "    %s.integer = ~%s.integer;\n", first, second);
             break;
@@ -1388,9 +1462,9 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "arithmetic with no C");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base);
-        at_stack(third, base + 1);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base);
+        at_stack(walk, third, base + 1);
         // The machine says how far it was asked to shift, in those words,
         // and so does this: two engines that refuse the same program with
         // two sentences are two languages, and what holds them to one is a
@@ -1436,16 +1510,16 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             // A width a slot already holds, which is no cut at all.
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base);
         say(c, out, "    ");
         say(c, out, how, first, second);
         say(c, out, "\n");
         break;
     }
     case KEST_IR_TO_FLOAT:
-        at_stack(first, base);
-        at_stack(second, base);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base);
         say(c, out, "    %s.real = (double)%s%s.integer;\n", first,
             kest_is_unsigned(op->type) ? "(uint64_t)" : "", second);
         break;
@@ -1453,14 +1527,14 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         // Where a number outside the width stops is the library's answer, for
         // the reason the one above it is. See D669.
         c->wants_library = true;
-        at_stack(first, base);
-        at_stack(second, base);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base);
         say(c, out, "    %s.integer = kest_real_to_int(%u, %s.real);\n", first,
             (unsigned)op->imm[0], second);
         break;
     case KEST_IR_TO_F32:
-        at_stack(first, base);
-        at_stack(second, base);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base);
         say(c, out, "    %s.real = (double)(float)%s.real;\n", first, second);
         break;
     case KEST_IR_BITS:
@@ -1469,7 +1543,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         if (!kest_is_narrow(op->type)) {
             break;
         }
-        at_stack(first, base);
+        at_stack(walk, first, base);
         if (op->imm[0] == 0) {
             say(c, out,
                 "    {\n        float narrow = (float)%s.real;\n"
@@ -1487,8 +1561,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         }
         break;
     case KEST_IR_NOT:
-        at_stack(first, base);
-        at_stack(second, base);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base);
         say(c, out, "    %s.integer = !%s.integer;\n", first, second);
         break;
     case KEST_IR_ADDR: {
@@ -1503,8 +1577,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
                              "index");
                 break;
             }
-            at_stack(first, base);
-            at_stack(second, base + 1);
+            at_stack(walk, first, base);
+            at_stack(walk, second, base + 1);
             say(c, out,
                 "    {\n        int64_t which = %s.integer;\n"
                 "        if (!kest_run_at(rt, which, %u, %u)) {\n"
@@ -1523,8 +1597,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "an address of something other than one of a run");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base + 1);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base + 1);
         // The same four lines the read uses, for the same reason. See D1112.
         say(c, out,
             "    {\n        const KestRun *run = (const KestRun *)%s.object;\n"
@@ -1549,8 +1623,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a length of something other than a piece of text");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base + 1);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base + 1);
         say(c, out, "    %s.integer = %s.integer;\n", first, second);
         break;
     case KEST_IR_TEXT_AT: {
@@ -1561,9 +1635,9 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a byte of something other than a piece of text");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base + 1);
-        at_stack(third, base + 2);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base + 1);
+        at_stack(walk, third, base + 2);
         say(c, out,
             "    if (!kest_text_at(rt, %s.text, %s.integer, %s.integer, %u,\n"
             "                      &%s.integer)) {\n        return false;\n"
@@ -1582,7 +1656,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a walk over something other than a piece of text");
             break;
         }
-        at_stack(first, base);
+        at_stack(walk, first, base);
         at_frame(walk, held, op->imm[0]);
         at_frame(walk, second, op->imm[1]);
         say(c, out,
@@ -1600,9 +1674,9 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a cut of something other than a piece of text");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base + 1);
-        at_stack(third, base + 2);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base + 1);
+        at_stack(walk, third, base + 2);
         if (whole) {
             say(c, out,
                 "    if (!kest_text_rest(rt, %s.text, %s.integer, "
@@ -1613,7 +1687,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             break;
         }
         Where fourth;
-        at_stack(fourth, base + 3);
+        at_stack(walk, fourth, base + 3);
         say(c, out,
             "    if (!kest_text_cut(rt, %s.text, %s.integer, %s.integer,\n"
             "                       %s.integer, %u, &%s.text, "
@@ -1631,11 +1705,11 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a match of something other than a piece of text");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base + 1);
-        at_stack(third, base + 2);
-        at_stack(fourth, base + 3);
-        at_stack(fifth, base + 4);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base + 1);
+        at_stack(walk, third, base + 2);
+        at_stack(walk, fourth, base + 3);
+        at_stack(walk, fifth, base + 4);
         say(c, out,
             "    if (!kest_text_matches(rt, %s.text, %s.integer, %s.integer,"
             "\n"
@@ -1654,11 +1728,11 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a search of something other than a piece of text");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base + 1);
-        at_stack(third, base + 2);
-        at_stack(fourth, base + 3);
-        at_stack(fifth, base + 4);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base + 1);
+        at_stack(walk, third, base + 2);
+        at_stack(walk, fourth, base + 3);
+        at_stack(walk, fifth, base + 4);
         say(c, out,
             "    if (!kest_text_find(rt, %s.text, %s.integer, %s.text,\n"
             "                        %s.integer, %s.integer, %u,\n"
@@ -1679,7 +1753,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             break;
         }
         const KestType *of = op->type;
-        at_stack(first, base);
+        at_stack(walk, first, base);
         if (of != NULL &&
             (of->tag == KEST_T_FLAGS || of->tag == KEST_T_ENUM ||
              of->tag == KEST_T_OPTIONAL || of->tag == KEST_T_STRUCT ||
@@ -1715,7 +1789,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "text joined out of something other than pieces");
             break;
         }
-        at_stack(first, base);
+        at_stack(walk, first, base);
         say(c, out,
             "    if (!kest_text_join(rt, &%s, %u, %u, &%s)) {\n"
             "        return false;\n    }\n",
@@ -1729,7 +1803,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "text made of something other than a run of bytes");
             break;
         }
-        at_stack(first, base);
+        at_stack(walk, first, base);
         say(c, out,
             "    if (!kest_text_from(rt, %s, %u, &%s)) {\n"
             "        return false;\n    }\n",
@@ -1741,7 +1815,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a hash that leaves something other than a number");
             break;
         }
-        at_stack(first, base);
+        at_stack(walk, first, base);
         // A shape or a reference goes through the walk that knows what a
         // value is made of, because only part of a reference is hashed: the
         // place is the program's and the number above it is the process's
@@ -1753,7 +1827,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             break;
         }
         if (op->type != NULL && op->type->tag == KEST_T_TEXT) {
-            at_stack(second, base + 1);
+            at_stack(walk, second, base + 1);
             say(c, out, "    %s.integer = kest_text_hash(%s.text, "
                         "%s.integer);\n",
                 first, first, second);
@@ -1781,8 +1855,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a run of elements that leaves something else");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base + 1);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base + 1);
         say(c, out,
             "    if (!kest_array_new(rt, %u, %s.integer, %s%s, %u, &%s)) {\n"
             "        return false;\n    }\n",
@@ -1796,8 +1870,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "an append of something other than one thing");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base + 1);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base + 1);
         say(c, out,
             "    if (!kest_array_push(rt, %s, %u, &%s, %u)) {\n"
             "        return false;\n    }\n",
@@ -1811,8 +1885,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a fit of something other than one thing");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base + 1);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base + 1);
         say(c, out,
             "    if (!kest_array_fit(rt, %s, %u, &%s, %u, &%s.integer)) {\n"
             "        return false;\n    }\n",
@@ -1828,9 +1902,9 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "an append of something other than a piece of text");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base + 1);
-        at_stack(third, base + 2);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base + 1);
+        at_stack(walk, third, base + 2);
         if (fitting) {
             say(c, out,
                 "    if (!kest_array_fit_text(rt, %s, %s.text, %s.integer, "
@@ -1855,8 +1929,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "room made in something other than one thing");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base + 1);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base + 1);
         say(c, out,
             "    if (!kest_array_room(rt, %s, %u, %s.integer, %u)) {\n"
             "        return false;\n    }\n",
@@ -1868,7 +1942,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "everything taken out of something other than a run");
             break;
         }
-        at_stack(first, base);
+        at_stack(walk, first, base);
         say(c, out,
             "    if (!kest_array_clear(rt, %s, %u)) {\n"
             "        return false;\n    }\n",
@@ -1888,8 +1962,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a last one taken off something other than a run");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base + layout->slots);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base + layout->slots);
         say(c, out,
             "    {\n        unsigned char *at = NULL;\n"
             "        if (!kest_array_pop(rt, %s, %u, &at)) {\n"
@@ -1898,7 +1972,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             first, op->span.offset);
         for (uint16_t i = 0; i < layout->slots; i++) {
             Where empty;
-            at_stack(empty, base + i);
+            at_stack(walk, empty, base + i);
             say(c, out, "            %s.integer = 0;\n", empty);
         }
         say(c, out,
@@ -1926,7 +2000,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a run written out of something else");
             break;
         }
-        at_stack(first, base);
+        at_stack(walk, first, base);
         say(c, out,
             "    if (!kest_array_written(rt, %u, %u, &%s, %u, &%s)) {\n"
             "        return false;\n    }\n",
@@ -1947,8 +2021,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a take of something other than one of a run");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base + 1);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base + 1);
         // The element goes where the handle was, so the handle and the index
         // are held aside first: what takes it away needs both after the read.
         // Nothing here can reach the heap, so holding them is holding them.
@@ -1977,7 +2051,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a store made of something other than a count");
             break;
         }
-        at_stack(first, base);
+        at_stack(walk, first, base);
         say(c, out,
             "    if (!kest_store_new(rt, %u, %s.integer, %u, &%s)) {\n"
             "        return false;\n    }\n",
@@ -1991,8 +2065,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "an add of something other than one thing");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base + 1);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base + 1);
         say(c, out,
             "    if (!kest_store_add(rt, %s, %u, &%s, %u, &%s.integer)) {\n"
             "        return false;\n    }\n",
@@ -2007,8 +2081,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a read of something other than one place");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base + 1);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base + 1);
         say(c, out,
             "    if (!kest_store_get(rt, %s, %s.integer, %u, &%s, %u)) {\n"
             "        return false;\n    }\n",
@@ -2020,9 +2094,9 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a write of something other than one place");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base + 1);
-        at_stack(third, base + 2);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base + 1);
+        at_stack(walk, third, base + 2);
         say(c, out,
             "    {\n        bool was = false;\n"
             "        if (!kest_store_set(rt, %s, %s.integer, %u, &%s, %u, "
@@ -2038,8 +2112,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a removal of something other than one place");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base + 1);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base + 1);
         say(c, out,
             "    {\n        bool was = false;\n"
             "        if (!kest_store_remove(rt, %s, %s.integer, %u, &was)) {\n"
@@ -2053,7 +2127,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a count of something other than one store");
             break;
         }
-        at_stack(first, base);
+        at_stack(walk, first, base);
         say(c, out,
             "    if (!kest_store_count(rt, %s, %u, &%s.integer)) {\n"
             "        return false;\n    }\n",
@@ -2065,8 +2139,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a reference to something other than one place");
             break;
         }
-        at_stack(first, base);
-        at_stack(second, base + 1);
+        at_stack(walk, first, base);
+        at_stack(walk, second, base + 1);
         say(c, out,
             "    if (!kest_store_ref(rt, %s, %s.integer, %u, &%s.integer)) "
             "{\n        return false;\n    }\n",
@@ -2096,9 +2170,14 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a length of something other than one thing");
             break;
         }
-        at_stack(first, base);
-        say(c, out, "    if (!kest_elem_count(rt, %s, %u, &%s.integer)) {\n"
-                    "        return false;\n    }\n",
+        at_stack(walk, first, base);
+        // Through a number of its own rather than the operand's address, so
+        // the operands stay the body's own. See D1179.
+        say(c, out,
+            "    {\n        int64_t many;\n"
+            "        if (!kest_elem_count(rt, %s, %u, &many)) {\n"
+            "            return false;\n        }\n"
+            "        %s.integer = many;\n    }\n",
             first, op->span.offset, first);
         break;
     }
@@ -2128,7 +2207,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         // What it answers is whether it ran. A body that stopped has already
         // said so through the machine, so the caller gives back what it gave
         // back and nothing here writes a second message about it.
-        at_stack(first, base);
+        at_stack(walk, first, base);
         // Where the callee's own slots go on the machine's stack: above
         // everything this body is holding there. A body that keeps its
         // operands in locals holds nothing there, so the room it was given
@@ -2143,7 +2222,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         // them. One that keeps its operands in locals has nothing on the
         // machine's stack, so the room it was given for operands is where a
         // callee's frame goes.
-        snprintf(handed, sizeof(Where), walk->on_the_stack ? "s + %u" : "frame + %u",
+        snprintf(handed, sizeof(Where), walk->on_the_stack ? "sf + %u" : "frame + %u",
                  walk->on_the_stack ? base : walk->body->slot_count);
         // What `kest_native_room` did, written out: is there a frame to
         // spare, is there stack for what the callee wants, where the call is
@@ -2159,8 +2238,14 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a call to a body this was not given");
             break;
         }
-        uint32_t needs =
-            (uint32_t)callee->slot_count + (uint32_t)callee->stack_needed;
+        // How much of the machine's stack the callee's frame takes is known
+        // once the callee is lowered, which a body written after this one is
+        // not yet: it is named here and written at the top of the file,
+        // after every body is. A number read here was nought for every call
+        // forward, so the reach the collector walks to stopped below a frame
+        // it had to see. See D1179.
+        Where needs;
+        snprintf(needs, sizeof(Where), "KN_%u", which);
         if (carried_here(walk, which)) {
             // A body the machine carries into this one rather than calling it
             // is given no frame there, so it is given none here: nothing in
@@ -2169,17 +2254,17 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             // two numbers a host is told to find. See D1156.
             say(c, out,
                 "    {\n        KV *stands = %s;\n"
-                "        if (stands + %u > led.limit) {\n"
+                "        if (stands + %s > led.limit) {\n"
                 "            return kest_native_crowded(rt, %u, %u, false);\n"
                 "        }\n"
-                "        if (stands + %u > *led.reached) {\n"
-                "            *led.reached = stands + %u;\n"
+                "        if (stands + %s > *led.reached) {\n"
+                "            *led.reached = stands + %s;\n"
                 "        }\n"
                 "        bool went = kf_%u(rt, stands, %s%s",
                 handed, needs, which, op->span.offset, needs, needs, which,
                 leaves > 0 ? "&" : "", leaves > 0 ? first : "NULL");
             for (uint32_t k = 0; k < reads; k++) {
-                at_stack(second, base + k);
+                at_stack(walk, second, base + k);
                 say(c, out, ", %s", second);
             }
             say(c, out,
@@ -2196,7 +2281,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             "            return kest_native_crowded(rt, %u, %u, true);\n"
             "        }\n"
             "        KV *stands = %s;\n"
-            "        if (stands + %u > led.limit) {\n"
+            "        if (stands + %s > led.limit) {\n"
             "            return kest_native_crowded(rt, %u, %u, false);\n"
             "        }\n"
             "        led.calls[was].chunk = led.chunks[%u];\n"
@@ -2204,15 +2289,15 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             "        led.calls[was].base = stands;\n"
             "        led.calls[was].said_at = 0;\n"
             "        *led.many = was + 1;\n"
-            "        if (stands + %u > *led.reached) {\n"
-            "            *led.reached = stands + %u;\n"
+            "        if (stands + %s > *led.reached) {\n"
+            "            *led.reached = stands + %s;\n"
             "        }\n"
             "        bool went = kf_%u(rt, stands, %s%s",
             op->span.offset, which, op->span.offset, handed, needs, which,
             op->span.offset, which, needs, needs, which,
             leaves > 0 ? "&" : "", leaves > 0 ? first : "NULL");
         for (uint32_t k = 0; k < reads; k++) {
-            at_stack(second, base + k);
+            at_stack(walk, second, base + k);
             say(c, out, ", %s", second);
         }
         say(c, out,
@@ -2238,10 +2323,10 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
                          "other than what it read");
             break;
         }
-        at_stack(first, base + op->imm[0]);
+        at_stack(walk, first, base + op->imm[0]);
         say(c, out,
             "    {\n        KV what = %s;\n        uint16_t gave = 0;\n"
-            "        if (!kest_call_value(rt, what, s + %u, %u, %u, %u,\n"
+            "        if (!kest_call_value(rt, what, sf + %u, %u, %u, %u,\n"
             "                             &gave)) {\n"
             "            return false;\n        }\n    }\n",
             first, base, (unsigned)op->imm[0], (unsigned)op->imm[1],
@@ -2262,7 +2347,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             break;
         }
         say(c, out,
-            "    if (!kest_call_host(rt, %u, s + %u, %u, %u, %u)) {\n"
+            "    if (!kest_call_host(rt, %u, sf + %u, %u, %u, %u)) {\n"
             "        return false;\n    }\n",
             (unsigned)op->imm[0], base, (unsigned)op->imm[1],
             (unsigned)op->imm[2], op->span.offset);
@@ -2302,7 +2387,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             cannot(walk, "a branch reading something other than an answer");
             break;
         }
-        at_stack(first, walk->stack - 1);
+        at_stack(walk, first, walk->stack - 1);
         say(c, out, "    if (%s%s.integer) {\n        ", op->imm[1] != 0 ? "" : "!",
             first);
         write_branch(walk, op->target, base + leaves, op->span.offset);
@@ -2331,7 +2416,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             break;
         }
         for (uint32_t k = 0; k < count; k++) {
-            at_stack(first, base + k);
+            at_stack(walk, first, base + k);
             say(c, out, "    out[%u] = %s;\n", k, first);
         }
         say(c, out, "    return true;\n");
@@ -2483,6 +2568,14 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
         }
     }
     if (depths(&walk)) {
+        if (walk.on_the_stack) {
+            walk.clean = KEST_ARENA_ARRAY(c->scratch, bool, walk.deepest + 1);
+            if (walk.clean == NULL) {
+                c->out_of_memory = true;
+                return false;
+            }
+            memset(walk.clean, 0, sizeof(bool) * (walk.deepest + 1));
+        }
         write_head(c, &into->wrote, into, c->count - 1);
         say(c, &into->wrote, " {\n");
         if (walk.on_the_stack) {
@@ -2490,9 +2583,14 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
             // laid it out: the slots where the caller left the arguments, and
             // the operands above them. What that buys is that the collector
             // sees everything this body is holding, which a local is not.
+            // The operands are the body's own, and are written where the
+            // machine keeps them, above the slots, around what needs them
+            // there. See D1179.
             say(c, &into->wrote,
-                "    KV *f = frame;\n    KV *s = frame + %u;\n",
-                (unsigned)body->slot_count);
+                "    KV *f = frame;\n    KV *sf = frame + %u;\n"
+                "    KV s[%u];\n",
+                (unsigned)body->slot_count,
+                walk.deepest == 0 ? 1u : walk.deepest);
             // And the slots that hold nothing the collector looks for, in an
             // array of this body's own. See D1162.
             if (walk.slot_modes != NULL) {
@@ -2534,6 +2632,9 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
         if (walk.deepest > 0 || walk.on_the_stack) {
             say(c, &into->wrote, "    (void)s;\n");
         }
+        if (walk.on_the_stack) {
+            say(c, &into->wrote, "    (void)sf;\n");
+        }
         for (uint32_t i = 0; i < body->op_count && walk.why == NULL; i++) {
             if (!walk.known[i]) {
                 continue;
@@ -2542,7 +2643,34 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
                 say(c, &into->wrote, "L%u:;\n", i);
             }
             walk.stack = walk.depth[i];
+            walk.in_memory = in_memory(&walk, &body->ops[i]);
+            // What an operation reads away and leaves, which is which of the
+            // operands it writes: those from where its reads begin.
+            uint32_t reads = 0;
+            uint32_t leaves = 0;
+            moves(body, &body->ops[i], &reads, &leaves);
+            uint32_t from = walk.stack >= reads ? walk.stack - reads : 0;
+            // Where two ways of arriving meet, what the machine's stack
+            // holds is what one of them left, so nothing is taken as written.
+            if (walk.clean != NULL && walk.landed[i]) {
+                memset(walk.clean, 0, sizeof(bool) * (walk.deepest + 1));
+            }
+            for (uint32_t k = 0; walk.in_memory && k < walk.stack; k++) {
+                if (!walk.clean[k]) {
+                    say(c, &into->wrote, "    sf[%u] = s[%u];\n", k, k);
+                    walk.clean[k] = true;
+                }
+            }
             write_op(&walk, i, &body->ops[i]);
+            for (uint32_t k = from; walk.clean != NULL && k < walk.stack &&
+                                    k <= walk.deepest;
+                 k++) {
+                if (walk.in_memory) {
+                    say(c, &into->wrote, "    s[%u] = sf[%u];\n", k, k);
+                }
+                walk.clean[k] = walk.in_memory;
+            }
+            walk.in_memory = false;
             // And the same where an operation falls into the next with less
             // than the next is written for, which is the other end of what
             // `arrives` allows.
@@ -2912,6 +3040,21 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         }
         write_head(c, &file, &c->bodies[i], i);
         say(c, &file, ";\n");
+    }
+    say(c, &file, "\n");
+    // What the frame of each body takes on the machine's stack, which a call
+    // asks for room for and raises the collector's reach to. Written here
+    // rather than at the call, because by now every body is lowered and a
+    // call forward is answered the same as a call back. See D1179.
+    for (uint32_t i = 0; c->module != NULL && i < c->count &&
+                         i < c->module->count;
+         i++) {
+        const KestChunk *chunk = c->module->functions[i];
+        if (chunk == NULL) {
+            continue;
+        }
+        say(c, &file, "#define KN_%u %uu\n", i,
+            (unsigned)chunk->slot_count + (unsigned)chunk->stack_needed);
     }
     say(c, &file, "\n");
     // And what a body needs standing at the top of the file: a run of

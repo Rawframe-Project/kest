@@ -40687,3 +40687,49 @@ dispatches and an element pushed to be popped.
 `rules` 3,373 million instructions to 3,307, and 1.8% fewer cycles turn
 about: 0.994 times Luau's interpreter. All five workloads here now run fewer
 instructions than Luau's interpreter does. The instructions are 217.
+
+## D1179 — The release engine's operands in C, and room for a call forward
+
+`bench/rules` compiled was 2.6 times Daslang's AOT (D1161), and the C this
+backend writes said why: a body that can reach the heap kept its operands on
+the machine's stack, so every operand was a store and a load through a pointer
+the host's compiler has to assume any element written may point into. `restrict`
+on the two pointers was tried first and bought 2.4% on `rules` and nothing
+anywhere else, which is not worth a promise the compiler holds the file to.
+
+- A body's operands are a C array of its own now, which nothing else can reach,
+  and they are written to the machine's stack -- above the slots, where the
+  machine keeps them and the collector walks -- around the operations that
+  need them there: anything that calls into the library with an operand's
+  address or can reach the heap. Arithmetic, comparisons of numbers, locals,
+  elements read and written where they are, and branches are written on the
+  body's own. Only an operand changed since it was last written out is written
+  out, only what the operation wrote is read back, and where two ways arrive
+  every operand is taken as changed.
+- `len` reads the count into a number of its own rather than handing over an
+  operand's address.
+- Found while holding that: a call to a body lowered after its caller asked
+  for no room for the callee's frame. The size was read off the callee's chunk
+  while this body was written, and a body written later is not lowered yet, so
+  every call forward said nought; the reach the collector walks to stopped
+  below the callee's frame, and what the callee held there was given back at
+  the next walk. `examples/parse.kest` compiled answered 1 walking the heap
+  before every allocation, and so did the C the backend wrote before this
+  change. The size is a name now, written at the top of the file once every
+  body is lowered. F56.
+- `check-c.sh` runs every example it runs both ways again, compiled, walking
+  the heap before every allocation, and holds the answer and the words to the
+  ones before: with every size written as nought it answers 1 for
+  `examples/parse.kest`. The two examples that grow worlds and the workloads
+  under `bench` are left out, for the reason the machine's own walk leaves the
+  first two out. Under the sanitisers, every example that runs compiled
+  answers the same walking at every allocation; with the operands never
+  written out, three of them do not.
+
+Compiled, cycles as the middle of eleven and instructions, before and after:
+`kernel` 25% and 28% fewer, `control` 20% and 17%, `rules` 25% and 12%, `words`
+within the noise both ways, and `graph` 1.3% fewer instructions and 7% more
+cycles -- a store read back the moment the library wrote it, which is what the
+C before this read too, and on a workload of four milliseconds.
+Against Daslang's AOT on the same machine, `rules` compiled is 2.14 times its
+cycles where it was 2.55: 396 million against 185.

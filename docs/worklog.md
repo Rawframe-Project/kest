@@ -41327,3 +41327,22 @@ See D1178.
 **Runs:** the pair counts of `rules`, `perf stat` over the five workloads,
 cycles turn about on `rules` and `control`, `examples/numbers.kest` fused, plain
 and checked and against a comparison broken on purpose (90), and `make most`.
+
+## 2026-09-23, the release engine's operands in C
+
+A body the release engine writes kept its operands on the machine's stack, a
+store and a load through a pointer each. They are the body's own C array now,
+written out where the collector walks only around what needs them there.
+`kernel`, `control` and `rules` compiled are 20 to 25% fewer cycles. Holding it
+found F56: a call to a body lowered after its caller asked for no room for the
+callee's frame, so the collector could give back what the callee held; the
+size is written once every body is lowered, and `check-c.sh` runs every example
+compiled again walking the heap before every allocation.
+
+See D1179.
+
+**Runs:** the C for `rules` with `restrict` and without, every example compiled
+under the sanitisers walking at every allocation (before and after, and with
+the operands never written out), `check-c.sh` with every size written as nought
+(parse answers 1), the five workloads compiled before and after, and `make
+most`.
