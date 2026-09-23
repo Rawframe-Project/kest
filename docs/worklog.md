@@ -41038,3 +41038,17 @@ See D1159.
 **Runs:** every example and workload fused and plain, `perf record` of
 `rules`, `perf stat` instructions for the five against the build before, the
 two tag holes by hand, and `make most`.
+
+## 2026-09-23, four holes carrying and the fusions had moved
+
+CI's sweep on the carrying fix missed four holes. Three were programs whose
+calls are carried now, so the frame checks they aim at never ran: each callee
+takes a remainder, which keeps it a call. The fourth wanted the instruction
+count as it was before sixteen were added and now asks for the words without
+the number, and the walk that steps by the wrong widths had come to land on
+the end by luck once the fused pairs moved the bytes, so its program has a
+third `if`. Each was put in by hand in a copy and seen caught.
+
+**Runs:** the four holes by hand against a copy of the tree with each put in,
+the programs against the tree as it is, and the quote pass of
+`check-backstops.sh`.

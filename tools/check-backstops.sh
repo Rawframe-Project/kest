@@ -274,7 +274,9 @@ fn main() -> i32 {
         # Enough branching that a walk stepping wrongly cannot land back on
         # the end by luck, which a four instruction program can — and in a
         # body of its own, because a mis-step has to end somewhere that is not
-        # a `return` and `main` is short enough to land on one.
+        # a `return` and `main` is short enough to land on one. The third `if`
+        # is there because the pairs made one instruction in D1154 and D1155
+        # moved the bytes so that the two before it landed on the end.
         "source": """fn count(n: i32) -> i32 {
     let m = 0
     let i = 0
@@ -284,6 +286,9 @@ fn main() -> i32 {
         }
         if i == 4 {
             m += 100
+        }
+        if m > 1000 {
+            m -= 1
         }
         m += 1
         i += 1
@@ -2010,7 +2015,10 @@ tokens   what a token is and what it carries""",
                  r"""    {"stop", NONE}, {"stop.none", NONE},"""],
         "make": [],
         "tool": "tools/check-tables.sh",
-        "caught": "instructions: 167 kinds and 168 names",
+        # The words without the numbers: how many instructions there are moves
+        # with every one added, and a catch written with the count in it
+        # missed for as long as nobody ran the sweep after one was.
+        "caught": " kinds and ",
     },
     {
         # Two copies of a licence, which is what a thing that is installed on
@@ -6343,8 +6351,10 @@ fn main() -> i32 {
     c: i32
 }
 
+// A remainder keeps `first` a call rather than a body carried to where it is
+// called, so the three slots are read as a run in `main` (D1156).
 fn first(v: Three) -> i32 no.alloc {
-    return v.a
+    return v.a % 1000
 }
 
 fn main() -> i32 {
@@ -6376,8 +6386,10 @@ fn main() -> i32 {
         "program": "narrowing.kest",
         "source": """import std.text
 
+// A remainder keeps `narrow` a call, so what is put in its frame is asked
+// about where the frame changes hands (D1156).
 fn narrow(n: i8) -> i32 {
-    return i32(n)
+    return i32(n) % 1000
 }
 
 fn main() -> i32 {
