@@ -914,6 +914,47 @@ fn main() -> i32 {
     return total % 251
 }
 PROGRAM
+# Two walks whose element is not inside the array by the time it is read,
+# because the body made it shorter: once through a body it called and once
+# by taking from it where it stands. A walk the compiler proves inside its
+# array is read with nothing asked (D1187), so these are what says the proof
+# looks at the body: both engines have to refuse at the same place.
+cat >"$work"/programs/shrunk.kest <<'PROGRAM'
+module shrunk
+
+fn drop(xs: [i32]) {
+    remove(xs, len(xs) - 1)
+}
+
+fn main() -> i32 {
+    let xs: [i32] = array()
+    for i in 0..6 {
+        push(xs, i)
+    }
+    let total = 0
+    for x in xs {
+        total += x
+        drop(xs)
+    }
+    return total % 251
+}
+PROGRAM
+cat >"$work"/programs/taken.kest <<'PROGRAM'
+module taken
+
+fn main() -> i32 {
+    let ys: [i32] = array()
+    for i in 0..6 {
+        push(ys, i)
+    }
+    let total = 0
+    for at in 0..len(ys) {
+        total += ys[at]
+        remove(ys, 0)
+    }
+    return total % 251
+}
+PROGRAM
 cat >"$work"/programs/outside.kest <<'PROGRAM'
 module outside
 
@@ -1249,7 +1290,7 @@ done
 # traps on, or as one it quietly answers, would be a program that means
 # something else. Counted rather than assumed, because a program that stops is
 # one whose answer is the same either way for the wrong reason.
-for stopping in stopped shifted outside deep crossed runoff; do
+for stopping in stopped shifted outside deep crossed runoff shrunk taken; do
     stops=$(./kest run "$work"/programs/$stopping.kest 2>/dev/null </dev/null
             echo $?)
     if [ "$stops" -eq 0 ]; then

@@ -40932,3 +40932,38 @@ fewer, with the same answer; `kernel`, `control`, `graph` and `words` move by
 less than half a per cent. `check-c.sh` holds every program in the tree to the
 same answer both ways, compiled a second time walking the heap at every
 allocation.
+
+## D1187 — An element a walk counts through is proved inside its array
+
+*measured*. The guard in front of every element the release engine reads or
+writes -- what the handle is, and whether the index is inside it -- was 35% of
+its distance to `g++` on the workload D1141 read, and the report named the one
+piece a compiler can prove away: the element a walk counts through.
+
+- The compiler proves it where it compiles the walk. `for x in xs` reads
+  `xs` at the count out of two slots nothing can name, and `for i in
+  0..len(xs)`, counting from a whole number written down that is nought or
+  more, reads `xs[i]` at a count nothing names but the loop. Either way the
+  count is under how long the array was when the walk began, so an element
+  read or written at it is inside the array if nothing in the walk made the
+  array shorter or put another in its slot. What could is a call of any kind
+  -- a body handed the array may take from it --, taking, emptying and
+  resizing, closing working memory, and a store into either slot; a walk
+  holding any of those proves nothing. Growing is not among them: the bytes
+  may move, and every read asks the handle where they are now. The place is
+  marked `in_bounds`, and the release engine reads and writes a marked one
+  with neither question asked. The machine asks as it always did.
+- `check-c.sh` writes two walks whose element is past the end by the time it
+  is read, one shortening the array through a body it calls and one taking
+  from it where it stands, and holds both engines to refusing at the same
+  place with the same words. With calls and taking left out of what the proof
+  looks for, both are proved, and the release engine reads past the end and
+  answers 15 and 21 where the machine refuses. Every example compiled under
+  the sanitisers answers what it answers on the machine.
+
+Compiled, in instructions, before and after with the same answers: `kernel`
+104.4 million to 68.4, a third fewer; `rules` 638 to 571, a tenth; `words`
+unchanged. Of the element accesses the release engine writes, 2 of 5 in
+`kernel`, 15 of 40 in `rules` and 10 of 17 in `words` are proved;
+`control` indexes by a count up to a constant and `graph` walks references,
+so neither has one.

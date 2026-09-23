@@ -41449,3 +41449,20 @@ See D1186.
 
 **Runs:** the five workloads compiled before and after with the same answers,
 and `make most`.
+
+## 2026-09-23, an element a walk counts through, proved inside its array
+
+The compiler marks the element a `for x in xs` or a `for i in 0..len(xs)`
+reads or writes as inside the array when nothing in the walk can make the
+array shorter, and the release engine reads a marked one with no guard.
+Compiled `kernel` retires a third fewer instructions and `rules` a tenth.
+`check-c.sh` holds two walks that do shorten the array to being refused the
+same way by both engines, and catches the proof when it stops looking.
+
+See D1187.
+
+**Runs:** the five workloads compiled before and after with the same answers,
+the two shortening walks both ways with the proof as written and with it
+blind to calls and taking, every example compiled under the sanitisers, the
+hole whose quote moved by hand, and
+`make most`.

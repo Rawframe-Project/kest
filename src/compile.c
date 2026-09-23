@@ -3210,6 +3210,93 @@ static void compile_expr(Compiler *compiler, const KestExpr *expr) {
 
 static void compile_block(Compiler *compiler, const KestBlock *block);
 
+// The operation that left `value` behind, or NULL.
+static const KestIrOp *made_by(const KestIrBody *body, KestIrRef value) {
+    if (value == KEST_IR_NONE) {
+        return NULL;
+    }
+    for (uint32_t i = body->op_count; i > 0; i--) {
+        if (body->ops[i - 1].dest == value) {
+            return &body->ops[i - 1];
+        }
+    }
+    return NULL;
+}
+
+// The slot a value was read out of, when it is one slot read from the frame,
+// or -1.
+static int32_t read_out_of(const KestIrBody *body, KestIrRef value) {
+    const KestIrOp *op = made_by(body, value);
+    if (op == NULL || op->kind != KEST_IR_LOAD ||
+        op->place == KEST_IR_NO_PLACE) {
+        return -1;
+    }
+    const KestIrPlace *place = &body->places[op->place];
+    if (place->kind != KEST_IR_PLACE_SLOT || place->slots != 1) {
+        return -1;
+    }
+    return place->slot;
+}
+
+// Every element of the array in `held` read or written at the count in
+// `counter`, in a walk from `from` whose limit was that array's length when it
+// began and whose count starts at nought or more, proved to be inside the
+// array -- when nothing in the walk can make it shorter or put another array
+// in the slot. What could is a call of any kind, since a body handed the
+// array may take from it; taking, emptying and resizing; closing working
+// memory; and a store into either slot. Growing it is not: the bytes may move,
+// and every read asks the handle where they are. See D1187.
+static void prove_walk(Compiler *compiler, uint32_t from, uint16_t held,
+                       uint16_t counter) {
+    KestIrBody *body = compiler->body;
+    if (body == NULL || compiler->ir->out_of_memory) {
+        return;
+    }
+    for (uint32_t i = from; i < body->op_count; i++) {
+        const KestIrOp *op = &body->ops[i];
+        switch ((KestIrKind)op->kind) {
+        case KEST_IR_CALL:
+        case KEST_IR_CALL_VALUE:
+        case KEST_IR_CALL_HOST:
+        case KEST_IR_FIT:
+        case KEST_IR_FIT_TEXT:
+        case KEST_IR_POP_LAST:
+        case KEST_IR_TAKE:
+        case KEST_IR_CLEAR:
+        case KEST_IR_REGION_CLOSE:
+            return;
+        default:
+            break;
+        }
+        if (op->kind == KEST_IR_PUT && op->place != KEST_IR_NO_PLACE) {
+            const KestIrPlace *place = &body->places[op->place];
+            if ((place->kind == KEST_IR_PLACE_SLOT ||
+                 place->kind == KEST_IR_PLACE_RUN) &&
+                ((held >= place->slot && held < place->slot + place->slots) ||
+                 (counter >= place->slot &&
+                  counter < place->slot + place->slots) ||
+                 place->kind == KEST_IR_PLACE_RUN)) {
+                return;
+            }
+        }
+    }
+    for (uint32_t i = from; i < body->op_count; i++) {
+        const KestIrOp *op = &body->ops[i];
+        if ((op->kind != KEST_IR_LOAD && op->kind != KEST_IR_PUT &&
+             op->kind != KEST_IR_ADDR) ||
+            op->place == KEST_IR_NO_PLACE) {
+            continue;
+        }
+        KestIrPlace *place = &body->places[op->place];
+        if (place->kind == KEST_IR_PLACE_ELEM &&
+            place->type != NULL &&
+            read_out_of(body, place->base) == (int32_t)held &&
+            read_out_of(body, place->index) == (int32_t)counter) {
+            place->in_bounds = true;
+        }
+    }
+}
+
 static Loop *open_loop(Compiler *compiler, KestSpan span) {
     if (compiler->loop_count == MAX_LOOPS) {
         refuse(compiler, span, "K0502", "loops nest more than %d deep",
@@ -3592,6 +3679,19 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
 
             uint16_t end_slot = reserve_slot(compiler, 1);
             compile_expr(compiler, stmt->each->until);
+            // Whether the end is how long an array held in a slot is, and
+            // which slot: `0..len(xs)` counts through `xs`. See D1187.
+            int32_t measured = -1;
+            if (compiler->body != NULL && compiler->body->op_count >= 2 &&
+                compiler->body->ops[compiler->body->op_count - 1].kind ==
+                    KEST_IR_LEN &&
+                compiler->body->ops[compiler->body->op_count - 1].arg_count ==
+                    1) {
+                const KestIrOp *len =
+                    &compiler->body->ops[compiler->body->op_count - 1];
+                measured = read_out_of(
+                    compiler->body, compiler->body->args[len->first_arg]);
+            }
             stack_pop(compiler, 1);
             store_slots(compiler, end_slot, 1,
                         stmt->each->until->type, stmt->span);
@@ -3632,6 +3732,14 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
             }
 
             compile_block(compiler, &stmt->each->body);
+            // Counting from nought or more up to how long an array was, by a
+            // count nothing names but the loop: every element read at it is
+            // inside the array, if nothing in the walk made it shorter.
+            if (measured >= 0 && !stmt->each->name_written &&
+                written_index(compiler, stmt->each->sequence) >= 0) {
+                prove_walk(compiler, loop->start, (uint16_t)measured,
+                           index_slot);
+            }
             close_walk(compiler, loop, exit, walk, stmt->span);
 
             compiler->depth--;
@@ -3950,6 +4058,12 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
                     by_address ? NULL : bound, stmt->span);
 
         compile_block(compiler, &stmt->each->body);
+        // The element the walk reads each turn is inside the array it is
+        // walking, which is held where nothing can name it, if nothing in
+        // the walk made it shorter. See D1187.
+        if (!over_store && !over_text && sequence->tag == KEST_T_ARRAY) {
+            prove_walk(compiler, loop->start, walked_slot, index_slot);
+        }
 
         close_walk(compiler, loop, exit, walk, stmt->span);
 

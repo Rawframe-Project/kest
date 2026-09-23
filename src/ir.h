@@ -79,6 +79,11 @@ typedef struct {
     // HELD: the value, and how many slots of it there are.
     const KestValue *held;
     uint16_t held_slots;
+    // ELEM: proved to be inside the array, so neither what the handle is nor
+    // the bounds need asking where it is read or written. Set only for the
+    // element a walk counts through, where nothing in the walk can make the
+    // array shorter or name another. See D1187.
+    bool in_bounds;
     KestSpan span;
 } KestIrPlace;
 

@@ -982,19 +982,31 @@ static bool write_elem(Walk *walk, const KestIrOp *op,
     // written between the uses. The bounds are not invariant -- a `push` may
     // move the bytes and change the length -- and are the part that is
     // genuinely per-access. See D1141 and D1142.
-    say(c, out,
-        "    {\n        const KestRun *run = (const KestRun *)%s.object;\n"
-        "        int64_t which = %s.integer;\n"
-        "        unsigned char *at;\n"
-        "        if (run != NULL && run->what == KEST_RUN_IS &&\n"
-        "            (uint64_t)which < (uint64_t)run->length) {\n"
-        "            at = run->bytes + (size_t)which * run->stride + %u;\n"
-        "        } else {\n"
-        "            at = kest_elem_at(rt, %s, which, %u, %u);\n"
-        "            if (at == NULL) {\n                return false;\n"
-        "            }\n        }\n",
-        held, index, (unsigned)place->offset, held,
-        (unsigned)place->offset, op->span.offset);
+    //
+    // Where the compiler proved the element is inside the array -- one a
+    // walk counts through, where nothing in the walk makes the array shorter
+    // or names another -- neither question is asked. See D1187.
+    if (place->in_bounds) {
+        say(c, out,
+            "    {\n        const KestRun *run = (const KestRun *)%s.object;\n"
+            "        unsigned char *at = run->bytes +\n"
+            "            (size_t)%s.integer * run->stride + %u;\n",
+            held, index, (unsigned)place->offset);
+    } else {
+        say(c, out,
+            "    {\n        const KestRun *run = (const KestRun *)%s.object;\n"
+            "        int64_t which = %s.integer;\n"
+            "        unsigned char *at;\n"
+            "        if (run != NULL && run->what == KEST_RUN_IS &&\n"
+            "            (uint64_t)which < (uint64_t)run->length) {\n"
+            "            at = run->bytes + (size_t)which * run->stride + %u;\n"
+            "        } else {\n"
+            "            at = kest_elem_at(rt, %s, which, %u, %u);\n"
+            "            if (at == NULL) {\n                return false;\n"
+            "            }\n        }\n",
+            held, index, (unsigned)place->offset, held,
+            (unsigned)place->offset, op->span.offset);
+    }
     uint16_t moved = move_value(walk, layout->type, value, 0, reading,
                                 op->span.offset);
     say(c, out, "    }\n");
