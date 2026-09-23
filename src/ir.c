@@ -40,6 +40,7 @@ static const struct {
     [KEST_IR_TO_FLOAT] = {"to.float", KEST_IR_EFFECT_NONE},
     [KEST_IR_TO_WHOLE] = {"to.whole", KEST_IR_EFFECT_NONE},
     [KEST_IR_TO_F32] = {"to.f32", KEST_IR_EFFECT_NONE},
+    [KEST_IR_BITS] = {"bits", KEST_IR_EFFECT_NONE},
 
     [KEST_IR_LT] = {"lt", KEST_IR_EFFECT_NONE},
     [KEST_IR_LE] = {"le", KEST_IR_EFFECT_NONE},
@@ -941,6 +942,7 @@ static bool names_slots(const KestIrOp *op, uint16_t wide[2]) {
     case KEST_IR_TO_FLOAT:
     case KEST_IR_TO_WHOLE:
     case KEST_IR_TO_F32:
+    case KEST_IR_BITS:
     case KEST_IR_LT:
     case KEST_IR_LE:
     case KEST_IR_GT:

@@ -1460,6 +1460,29 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         at_stack(second, base);
         say(c, out, "    %s.real = (double)(float)%s.real;\n", first, second);
         break;
+    case KEST_IR_BITS:
+        // The machine's two instructions, written out; an `f64` and its bits
+        // are one slot read two ways. See D1171.
+        if (!kest_is_narrow(op->type)) {
+            break;
+        }
+        at_stack(first, base);
+        if (op->imm[0] == 0) {
+            say(c, out,
+                "    {\n        float narrow = (float)%s.real;\n"
+                "        uint32_t bits;\n"
+                "        memcpy(&bits, &narrow, sizeof bits);\n"
+                "        %s.integer = bits;\n    }\n",
+                first, first);
+        } else {
+            say(c, out,
+                "    {\n        uint32_t bits = (uint32_t)%s.integer;\n"
+                "        float narrow;\n"
+                "        memcpy(&narrow, &bits, sizeof narrow);\n"
+                "        %s.real = narrow;\n    }\n",
+                first, first);
+        }
+        break;
     case KEST_IR_NOT:
         at_stack(first, base);
         at_stack(second, base);

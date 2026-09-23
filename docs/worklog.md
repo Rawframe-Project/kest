@@ -41204,3 +41204,19 @@ See D1170.
 
 **Runs:** the two holes by hand, the quote pass, the backstop sweep, and `make
 most`.
+
+## 2026-09-23, a float as its bits, and `std.bytes`
+
+`bits(x)` and `float(b)` turn an `f32` or an `f64` into the bits it is made of
+and back, free for an `f64` and one instruction each way for an `f32` in both
+engines. `std.bytes` writes numbers, truths and text into a `[u8]` low byte
+first and reads them back, a read past the end answering nought and marking
+the reader short. `examples/saving.kest` writes every kind at the edges of its
+width and reads it back as itself, and `examples/held.kest` saves and restores
+through it with the same bytes as before.
+
+See D1171.
+
+**Runs:** `examples/saving.kest` fused, plain, checked and compiled, the two
+refusals from the corpus, `examples/embed` on the held program, the reference's
+new block, `check-costs.sh` with its new driver, and `make most`.

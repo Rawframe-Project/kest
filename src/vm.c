@@ -5062,6 +5062,20 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_TO_F32:
             top[-1].real = (double)(float)top[-1].real;
             break;
+        case KEST_OP_F32_BITS: {
+            float narrow = (float)top[-1].real;
+            uint32_t bits;
+            memcpy(&bits, &narrow, sizeof bits);
+            top[-1].integer = bits;
+            break;
+        }
+        case KEST_OP_BITS_F32: {
+            uint32_t bits = (uint32_t)top[-1].integer;
+            float narrow;
+            memcpy(&narrow, &bits, sizeof narrow);
+            top[-1].real = narrow;
+            break;
+        }
         case KEST_OP_F2I:
             // Where a number outside the width stops, which the type layer
             // works out for a constant as well: one answer, in one place. See

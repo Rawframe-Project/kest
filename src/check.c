@@ -584,9 +584,9 @@ static const char *takes_called(const char *name, uint32_t nth) {
 }
 
 static const char *const BUILTINS[] = {
-    "add", "array", "clear", "find",  "get",   "hash", "len", "matches",
-    "fit", "pop",   "push",   "remove", "rest", "room", "set", "slice",
-    "store",
+    "add", "array", "bits", "clear", "find",  "float", "get",   "hash",
+    "len", "matches", "fit", "pop",   "push",   "remove", "rest", "room",
+    "set", "slice", "store",
 };
 
 // The nearest thing a reader could have meant by a name that is not there: a
@@ -1925,6 +1925,56 @@ static KestType *check_builtin_here(Checker *checker, KestExpr *expr,
     // A number standing for a value. It applies exactly where `==` does, and
     // that is the whole rule: a type that compares has one and a type that
     // does not has neither.
+    // A float as the bits it is made of, and back: what a float written into
+    // bytes and read out of them has to be to come back as itself, which a
+    // conversion to a whole number is not. The width goes with it: an `f32`
+    // is thirty-two bits and an `f64` sixty-four. See D1171.
+    if (is_builtin(checker, expr, name, "bits")) {
+        uint32_t checked = check_arity(checker, expr, 1);
+        KestType *of = expr->call.arg_count > 0
+                           ? check_expr(checker, expr->call.args[0], NULL)
+                           : NULL;
+        for (uint32_t i = 1; i < expr->call.arg_count; i++) {
+            check_expr(checker, expr->call.args[i], NULL);
+        }
+        if (checked > 0 && of != NULL && !is_error(of)) {
+            if (of->tag == KEST_T_FLOAT) {
+                return builtin(checker, of->width == 32 ? "u32" : "u64");
+            }
+            report(checker, expr->call.args[0]->span, "K0310",
+                   "`bits` is what an `f32` or an `f64` is made of, found "
+                   "`%s`",
+                   type_name(checker, of));
+            kest_diags_suggest(checker->program->diags,
+                               "a whole number is its own bits: `u64(n)` "
+                               "is what it is as one without a sign");
+        }
+        return error_type(checker);
+    }
+    if (is_builtin(checker, expr, name, "float")) {
+        uint32_t checked = check_arity(checker, expr, 1);
+        KestType *of = expr->call.arg_count > 0
+                           ? check_expr(checker, expr->call.args[0], NULL)
+                           : NULL;
+        for (uint32_t i = 1; i < expr->call.arg_count; i++) {
+            check_expr(checker, expr->call.args[i], NULL);
+        }
+        if (checked > 0 && of != NULL && !is_error(of)) {
+            if (of->tag == KEST_T_INT && !of->is_signed &&
+                (of->width == 32 || of->width == 64)) {
+                return builtin(checker, of->width == 32 ? "f32" : "f64");
+            }
+            report(checker, expr->call.args[0]->span, "K0310",
+                   "`float` is the float a `u32` or a `u64` holds the bits "
+                   "of, found `%s`",
+                   type_name(checker, of));
+            kest_diags_suggest(checker->program->diags,
+                               "a number to be turned into a float is "
+                               "`f32(n)` or `f64(n)`");
+        }
+        return error_type(checker);
+    }
+
     if (is_builtin(checker, expr, name, "hash")) {
         uint32_t checked = check_arity(checker, expr, 1);
         for (uint32_t i = 0; i < expr->call.arg_count; i++) {

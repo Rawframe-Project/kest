@@ -1225,6 +1225,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"add.i.narrow.c", U16_U16}, {"add.i.narrow.k", U16_U16_U16},
     {"sub.i.narrow.c", U16_U16}, {"sub.i.narrow.k", U16_U16_U16},
     {"mul.i.narrow.c", U16_U16}, {"mul.i.narrow.k", U16_U16_U16},
+    {"f32.bits", NONE}, {"bits.f32", NONE},
     {"loop", BACK},
 {"next.less.i", WALK}, {"next.less.u", WALK},
     {"scratch", U16},      {"unscratch", U16},
@@ -1746,6 +1747,8 @@ static bool op_allocates(uint8_t op) {
     case KEST_OP_SUB_I_NARROW_K:
     case KEST_OP_MUL_I_NARROW_C:
     case KEST_OP_MUL_I_NARROW_K:
+    case KEST_OP_F32_BITS:
+    case KEST_OP_BITS_F32:
     case KEST_OP_ADD_I_NARROW_TO:
     case KEST_OP_SUB_I_NARROW_TO:
     case KEST_OP_ADD_F_TO:

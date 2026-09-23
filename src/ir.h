@@ -144,6 +144,10 @@ typedef enum {
     KEST_IR_TO_FLOAT,
     KEST_IR_TO_WHOLE,
     KEST_IR_TO_F32,
+    // A float as the bits it is made of, or the other way: `imm[0]` is
+    // nought for the bits and one for the float. Typed by the float. See
+    // D1171.
+    KEST_IR_BITS,
 
     // Answers. Typed by what was compared rather than by what comes back,
     // which is always a truth.

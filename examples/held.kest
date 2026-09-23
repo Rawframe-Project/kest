@@ -1,5 +1,7 @@
 module examples.held
 
+import std.bytes
+
 // The program a held machine runs, which is what a host keeping a world across
 // frames and reloads looks like from this side: a world made once, a step the
 // host calls with it, and the two functions a reload is made of -- `save`,
@@ -30,27 +32,22 @@ fn step(w: World) -> i32 no.alloc no.host deterministic {
     return w.turns[0]
 }
 
-// The turn first, a byte at a time low byte first, and then the cells.
+// The turn first, as `std.bytes` writes a number, and then the cells.
 fn save(w: World) -> [u8] no.host deterministic {
-    let bytes: [u8] = array()
-    let turn = w.turns[0]
-    for i in 0..4 {
-        push(bytes, u8(turn >> (i * 8)))
-    }
+    let out: [u8] = array()
+    bytes.putI32(out, w.turns[0])
     for i in 0..len(w.cells) {
-        push(bytes, w.cells[i])
+        bytes.putU8(out, w.cells[i])
     }
-    return bytes
+    return out
 }
 
-fn restore(bytes: [u8]) -> World no.host deterministic {
-    let turn = 0
-    for i in 0..4 {
-        turn = turn | (i32(bytes[i]) << (i * 8))
-    }
+fn restore(saved: [u8]) -> World no.host deterministic {
+    let r = bytes.reader(saved)
+    let turn = bytes.readI32(r)
     let cells: [u8] = array()
-    for i in 4..len(bytes) {
-        push(cells, bytes[i])
+    while bytes.left(r) > 0 {
+        push(cells, bytes.readU8(r))
     }
     return World(cells, array(1, turn))
 }

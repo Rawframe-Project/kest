@@ -714,6 +714,9 @@ that rounds to nothing is written without a sign in front of it.
 
 What is there: `std.io` says something, `std.math` names the host's arithmetic
 and writes what can be built out of it, `std.text` cuts and builds text,
+`std.bytes` writes numbers, truths and text into a run of bytes low byte first
+and reads them back -- a read past the end answers nought and marks the reader
+`bytes.short`, so a restore reads everything and asks once (D1171) --
 `std.sort` is told what comes first — `sort.by(items, sort.ascending)` —
 `std.sort` sorts with gaps rather than by plain insertion — in place, allocating
 nothing, recursing nowhere — because plain insertion is quadratic and four
@@ -1241,6 +1244,30 @@ terminated.
 fn isSpace(byte: u8) -> bool no.alloc {
     return byte == ' ' || byte == '\t' || byte == '\n' || byte == '\r'
 }
+```
+
+`bits(x)` is what an `f32` or an `f64` is made of: a `u32` or a `u64` holding
+the same bits. `float(b)` is the other way, from a `u32` to an `f32` and from a
+`u64` to an `f64`. A conversion is a different question -- `u32(1.5)` is one --
+and neither of these rounds anything, so a float written as its bits and read
+back is itself, which is what a save is for and what `std.bytes` writes floats
+as. See D1171.
+
+```kest
+module bitsof
+
+import std.io
+
+fn main() -> i32 {
+    let one: f32 = 1.0
+    let third: f64 = 1.0 / 3.0
+    io.print("{bits(one)} {float(bits(third)) == third}")
+    return 0
+}
+```
+
+```text
+1065353216 true
 ```
 
 `hash(x)` gives a `u64` standing for a value. It applies to exactly what `==`
@@ -6079,6 +6106,7 @@ here, is a check that fails.
 | `quests.kest` | characters that point at each other, cycles, and deletion |
 | `queue.kest` | what a shift costs, said on the call that shifts |
 | `rows.kest` | a struct holding a run of structs, which is what a host lends |
+| `saving.kest` | every kind of thing `std.bytes` writes, read back as itself, and a reader asked for more than there is |
 | `scan.kest` | the same line `parse` reads, read without reaching the heap |
 | `shapes.kest` | one body, one copy per set of types it is called with |
 | `slice/src/main.kest` | a colony, its rules, its save and its words at once: one project rather than one shape |

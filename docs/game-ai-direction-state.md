@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1170
+    CURRENT SHA:       (this commit) D1093-D1171
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -792,6 +792,13 @@ the same workload.
    `control` ten per cent, to 1.08 times Luau's interpreter (D1168), and a
    search for text that looks for its first byte took `words` 12.4 per cent,
    and a UTF-8 check over eight bytes at once 1.5 more, to 1.15 (D1169).
+33. *(done, D1171)* **`std.bytes`.** A byte writer and reader for saves,
+   reloads and records on disk, written in the language, and the two builtins
+   it needed: `bits(x)` and `float(b)`, a float as its bits and back, so a
+   float written and read is itself. `examples/held.kest` saves through it,
+   and so does the colony (its `df925d1`), a column at a time: five saves and
+   restores of forty thousand cells are 795 million instructions against the
+   hand-written save's 850, with every float exact.
 32. *(open, D1161)* **Daslang in every mode it ships.** `graph`, `words` and
    `rules` written in Daslang, answering what the other two do, and its AOT
    measured with the LLVM its own build downloads: behind the release engine

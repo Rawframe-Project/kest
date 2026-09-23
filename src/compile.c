@@ -1989,6 +1989,23 @@ static bool compile_builtin(Compiler *compiler, const KestExpr *expr,
         return true;
     }
 
+    // A float as its bits and back. The operation is typed by the float at
+    // either end, and carries which way it goes. See D1171.
+    if (kest_word_same("bits", name, length) ||
+        kest_word_same("float", name, length)) {
+        bool to_bits = kest_word_same("bits", name, length);
+        const KestType *real =
+            to_bits ? (expr->call.arg_count > 0 ? expr->call.args[0]->type
+                                                : NULL)
+                    : expr->type;
+        stack_pop(compiler, 1);
+        stack_push(compiler, 1);
+        uint32_t at = ir_emit(compiler, KEST_IR_BITS, real, 1, expr->type, 1,
+                              expr->span);
+        ir_carries(compiler, at, to_bits ? 0 : 1, 0, 0);
+        return true;
+    }
+
     if (kest_word_same("hash", name, length)) {
         const KestType *of =
             expr->call.arg_count > 0 ? expr->call.args[0]->type : NULL;

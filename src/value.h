@@ -381,6 +381,10 @@ typedef enum {
     KEST_OP_SUB_I_NARROW_K,
     KEST_OP_MUL_I_NARROW_C,
     KEST_OP_MUL_I_NARROW_K,
+    // An `f32` as its thirty-two bits and back: a slot holds one widened to
+    // an `f64`, so the two are a conversion each way. See D1171.
+    KEST_OP_F32_BITS,
+    KEST_OP_BITS_F32,
     KEST_OP_LOOP,        // u16 backward offset
     // The whole of a counted walk's turn: add one to the count, compare it
     // with the limit beside it, and go back while it is less. The test is at

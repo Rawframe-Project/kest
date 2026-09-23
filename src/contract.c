@@ -310,8 +310,10 @@ static void walk_expr(Graph *graph, Function *function, const KestExpr *expr) {
             } REACHES[] = {
                 {"add", "`add` grows what it is given"},
                 {"array", "`array()` makes something that can grow"},
+                {"bits", NULL},
                 {"clear", NULL},
                 {"find", NULL},
+                {"float", NULL},
                 // It writes where there is room and answers false where there
                 // is not, so it never reaches the heap. See D940.
                 {"fit", NULL},

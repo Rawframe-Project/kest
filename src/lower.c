@@ -792,6 +792,8 @@ static const struct {
     {KEST_OP_U2F, {NO_OPERAND}},
     {KEST_OP_F2I, {A_NUMBER}},
     {KEST_OP_TO_F32, {NO_OPERAND}},
+    {KEST_OP_F32_BITS, {NO_OPERAND}},
+    {KEST_OP_BITS_F32, {NO_OPERAND}},
     {KEST_OP_ADD_F, {NO_OPERAND}},
     {KEST_OP_SUB_F, {NO_OPERAND}},
     {KEST_OP_MUL_F, {NO_OPERAND}},
@@ -1500,6 +1502,16 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         return;
     case KEST_IR_TO_F32:
         emit(lower, KEST_OP_TO_F32, span);
+        return;
+    case KEST_IR_BITS:
+        // A slot holds an `f64` as the sixty-four bits it is, so an `f64` and
+        // its bits are the same slot read two ways and there is nothing to
+        // do. An `f32` is held widened, so it is narrowed and read as its
+        // thirty-two bits, and the other way. See D1171.
+        if (kest_is_narrow(op->type)) {
+            emit(lower, op->imm[0] == 0 ? KEST_OP_F32_BITS : KEST_OP_BITS_F32,
+                 span);
+        }
         return;
 
     case KEST_IR_LT:

@@ -40457,3 +40457,40 @@ The same run missed the hole that stops `add.i.narrow` cutting what it added,
 because `big + 1` is `add.i.narrow.k` now. Its program adds two parameters
 instead, through a helper that is carried to where it is called, whose copied
 body keeps the plain instruction. Both were run by hand and caught.
+
+## D1171 — A float as its bits, and `std.bytes`
+
+*owned*: the fifth thing the owner asked for, a byte writer and reader for
+saves, reloads and records on disk. What stood in the way was the language, not
+the library: nothing turned a float into the bits it is made of, so the colony
+wrote its floats as thousandths and a float written and read back was a
+different float.
+
+- `bits(x)` is an `f32` or an `f64` as a `u32` or a `u64` holding the same
+  bits, and `float(b)` is the other way. A conversion is another question and
+  neither of these rounds. An `f64` and its bits are one slot read two ways, so
+  both are nothing at all in either engine; an `f32` is held widened, so each
+  way is one instruction, `f32.bits` and `bits.f32`, and the same four lines of
+  C in the other backend. Anything else is `K0310`, with the conversion that
+  was probably meant as the fix.
+- `std.bytes` is written in the language: `putU8` to `putF64`, `putBool` and
+  `putText` add to the end of a `[u8]`, low byte first at each width, text as
+  its length in a `u32` and then its bytes; `reader` makes a `Reader` over a
+  run, and `readU8` to `readText` read it back in order. A read past the end
+  answers nought and marks the reader short, which `short` asks, so a restore
+  reads everything and asks once rather than wrapping every read in `if let`.
+- `examples/saving.kest` writes every kind at the edges of its width -- the
+  least `i32`, the greatest `u64`, a third as an `f32`, a number near the
+  smallest `f64`, text that is not ASCII, text that is empty -- and reads each
+  back as itself, and asks a reader for more than there is. It answers the
+  same fused, plain, under the build that checks itself and compiled.
+- A value at a time is a call a value, and a call that indexes an array is one
+  the lowering cannot carry (D1156): the colony's save written that way cost
+  1.8 times the hand-written one it replaced. So a world's columns go whole --
+  `putBytes`, `putI32s` and `putF32s`, and `readBytes`, `readI32s` and
+  `readF32s` back, the length first -- with room made for them before, and the
+  four bytes of a number written and read one line each rather than in a loop
+  of four. The colony's save and restore through it, five times over a world of
+  forty thousand cells, is 795 million instructions against the hand-written
+  one's 850, and every float in it comes back as itself where the old one came
+  back to the nearest thousandth.

@@ -1,0 +1,103 @@
+module examples.saving
+
+import std.bytes
+import std.io
+
+// A save written into bytes and read back out of them: every kind of thing
+// `std.bytes` writes, at the edges of its width, read back as itself, and a
+// reader asked for more than there is marking itself short rather than
+// stopping. See D1171.
+
+fn main() -> i32 {
+    let out: [u8] = array()
+    let third: f32 = 1.0 / 3.0
+    let tiny: f64 = 1.0 / 3.0e300
+    bytes.putU8(out, u8(255))
+    bytes.putBool(out, true)
+    bytes.putI32(out, 0 - 2147483647 - 1)
+    bytes.putU32(out, u32(4294967295))
+    bytes.putI64(out, i64(0) - 9223372036854775807)
+    bytes.putU64(out, u64(0) - u64(1))
+    bytes.putF32(out, third)
+    bytes.putF64(out, tiny)
+    bytes.putText(out, "hız")
+    bytes.putText(out, "")
+    if len(out) != 1 + 1 + 4 + 4 + 8 + 8 + 4 + 8 + 4 + 4 + 4 {
+        return 1
+    }
+
+    let r = bytes.reader(out)
+    if bytes.readU8(r) != u8(255) || !bytes.readBool(r) {
+        return 2
+    }
+    if bytes.readI32(r) != 0 - 2147483647 - 1 {
+        return 3
+    }
+    if bytes.readU32(r) != u32(4294967295) {
+        return 4
+    }
+    if bytes.readI64(r) != i64(0) - 9223372036854775807 {
+        return 5
+    }
+    if bytes.readU64(r) != u64(0) - u64(1) {
+        return 6
+    }
+    if bytes.readF32(r) != third || bytes.readF64(r) != tiny {
+        return 7
+    }
+    if bytes.readText(r) != "hız" || bytes.readText(r) != "" {
+        return 8
+    }
+    if bytes.left(r) != 0 || bytes.short(r) {
+        return 9
+    }
+
+    // Asked for more than there is: nought, and the reader says so.
+    if bytes.readI32(r) != 0 || !bytes.short(r) || bytes.left(r) != 0 {
+        return 10
+    }
+    let cut: [u8] = array()
+    bytes.putText(cut, "whole")
+    let half = bytes.reader(cut)
+    if bytes.readU8(half) != u8(5) ||
+            bytes.readText(half) != "" ||
+            !bytes.short(half) {
+        return 11
+    }
+
+    // And a whole run at once, which is what a world's columns are written
+    // as: one call a column rather than one a value.
+    let runs: [u8] = array()
+    bytes.putBytes(runs, [u8(1), u8(2), u8(250)])
+    bytes.putI32s(runs, [0 - 7, 0, 65536])
+    let grown: [f32] = [third, 0.5, 0.0 - 2.25]
+    bytes.putF32s(runs, grown)
+    let each = bytes.reader(runs)
+    let back = bytes.readBytes(each)
+    let whole = bytes.readI32s(each)
+    let reals = bytes.readF32s(each)
+    if len(back) != 3 ||
+            back[2] != u8(250) ||
+            len(whole) != 3 ||
+            whole[0] != 0 - 7 ||
+            whole[2] != 65536 {
+        return 12
+    }
+    if len(reals) != 3 ||
+            reals[0] != third ||
+            reals[2] != 0.0 - 2.25 ||
+            bytes.short(each) {
+        return 13
+    }
+    // A run that says it is longer than what is left is a run of none.
+    let lying: [u8] = array()
+    bytes.putU32(lying, u32(9))
+    bytes.putU8(lying, u8(1))
+    let told = bytes.reader(lying)
+    if len(bytes.readBytes(told)) != 0 || !bytes.short(told) {
+        return 14
+    }
+
+    io.print("{len(out)} bytes written and read back as themselves")
+    return 0
+}

@@ -180,6 +180,27 @@ fn work(n: i32) -> i32 {
     return 0 - 2
 }
 """,
+    # A save of so many records written and read back, which is what the
+    # module is for: twice the records is twice the bytes, and reading them
+    # back makes a piece of text for each. See D1171.
+    'bytes': """import std.bytes
+
+fn work(n: i32) -> i32 {
+    let out: [u8] = array()
+    for i in 0..n {
+        bytes.putI32(out, i)
+        bytes.putF64(out, f64(i) * 0.5)
+        bytes.putText(out, "record")
+    }
+    let r = bytes.reader(out)
+    let seen = 0
+    for i in 0..n {
+        seen += bytes.readI32(r) + len(bytes.readText(r))
+        seen += i32(bytes.readF64(r))
+    }
+    return seen - seen
+}
+""",
 }
 
 # And the ones that hand back a run of pieces rather than one. A command line
