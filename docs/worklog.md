@@ -41078,3 +41078,17 @@ See D1161.
 
 **Runs:** the three ports against the Kest and Luau answers, the seven-engine
 table by task clock, Daslang's JIT three ways, and `make most`.
+
+## 2026-09-23, a heap-reaching compiled body's plain slots kept in C
+
+The release engine kept every slot of a body that can reach the heap on the
+machine's stack, and the host's compiler read each back after every element
+write. Slots nothing a pointer names are C now: `rules` compiled is 3.8 per
+cent fewer instructions, `control` and `graph` 2. Keeping every slot twice was
+tried first and bought nothing.
+
+See D1162.
+
+**Runs:** `check-c.sh` over the tree, the five compiled workloads before and
+after by `perf stat`, `perf record` of compiled `rules` by source line, and
+`make most`.

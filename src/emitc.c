@@ -153,6 +153,11 @@ typedef struct {
     // the collector walks. See D1098.
     bool no_heap;
     bool on_the_stack;
+    // For a body on the machine's stack, which of its slots are kept in a C
+    // array of its own rather than on the machine's stack: `SLOT_LOOSE` or
+    // `SLOT_FRAME`. NULL for a body not on the machine's stack, whose slots
+    // are all C already. See D1162.
+    uint8_t *slot_modes;
     uint32_t *depth;
     bool *known;
     bool *landed;
@@ -168,8 +173,87 @@ typedef struct {
     char said[96];
 } Walk;
 
+// Where a slot of a body on the machine's stack is kept; see `at_frame` below
+// and D1162.
+enum { SLOT_FRAME, SLOT_LOOSE };
+
 // Whether the body being written had the one at `which` carried into it by
 // the lowering rather than calling it. See D1156.
+// Where each slot of a body on the machine's stack is kept. A slot is loose
+// -- a C variable and nothing else -- only when something says what it holds,
+// a name the body declared or a place it reads or writes, and nothing that
+// says so holds a pointer; and not when its place is handed out: a name that
+// holds where a value is, a run the body indexes while it runs, and the slots
+// a door writes through. NULL for no memory. See D1162.
+static void mark_frame(uint8_t *modes, uint32_t slots, uint32_t from,
+                       uint32_t many) {
+    for (uint32_t k = from; k < from + many && k < slots; k++) {
+        modes[k] = SLOT_FRAME;
+    }
+}
+
+static uint8_t *slot_modes(KestArena *scratch, const KestIrBody *body) {
+    uint32_t slots = body->slot_count;
+    uint8_t *modes = KEST_ARENA_ARRAY(scratch, uint8_t, slots == 0 ? 1 : slots);
+    bool *named = KEST_ARENA_ARRAY(scratch, bool, slots == 0 ? 1 : slots);
+    bool *held = KEST_ARENA_ARRAY(scratch, bool, slots == 0 ? 1 : slots);
+    if (modes == NULL || named == NULL || held == NULL) {
+        return NULL;
+    }
+    for (uint32_t i = 0; i < slots; i++) {
+        named[i] = false;
+        held[i] = false;
+    }
+    const KestType *which = NULL;
+    for (uint32_t n = 0; n < body->name_count; n++) {
+        const KestIrName *name = &body->names[n];
+        bool own = kest_type_holds_own(name->type, &which);
+        for (uint32_t k = name->slot;
+             k < (uint32_t)name->slot + name->slots && k < slots; k++) {
+            named[k] = true;
+            held[k] = held[k] || own;
+        }
+    }
+    for (uint32_t p = 0; p < body->place_count; p++) {
+        const KestIrPlace *place = &body->places[p];
+        if (place->kind != KEST_IR_PLACE_SLOT) {
+            continue;
+        }
+        bool own = kest_type_holds_own(place->type, &which);
+        for (uint32_t k = place->slot;
+             k < (uint32_t)place->slot + place->slots && k < slots; k++) {
+            named[k] = true;
+            held[k] = held[k] || own;
+        }
+    }
+    for (uint32_t i = 0; i < slots; i++) {
+        modes[i] = named[i] && !held[i] ? SLOT_LOOSE : SLOT_FRAME;
+    }
+    for (uint32_t n = 0; n < body->name_count; n++) {
+        if (body->names[n].by_address) {
+            mark_frame(modes, slots, body->names[n].slot,
+                       body->names[n].slots);
+        }
+    }
+    for (uint32_t p = 0; p < body->place_count; p++) {
+        const KestIrPlace *place = &body->places[p];
+        if (place->kind == KEST_IR_PLACE_RUN) {
+            mark_frame(modes, slots, place->slot,
+                       (uint32_t)place->count * place->stride);
+        }
+    }
+    for (uint32_t i = 0; i < body->op_count; i++) {
+        const KestIrOp *op = &body->ops[i];
+        if (op->kind == KEST_IR_SEEK_FROM || op->kind == KEST_IR_SEEK_NEXT) {
+            mark_frame(modes, slots, op->imm[1], 1);
+        } else if (op->kind == KEST_IR_REGION_OPEN ||
+                   op->kind == KEST_IR_REGION_CLOSE) {
+            mark_frame(modes, slots, op->imm[0], 1);
+        }
+    }
+    return modes;
+}
+
 static bool carried_here(const Walk *walk, uint32_t which) {
     const KestModule *module = walk->c->module;
     uint32_t caller = (uint32_t)(walk->into - walk->c->bodies);
@@ -375,8 +459,21 @@ static void at_stack(Where into, uint32_t slot) {
     snprintf(into, sizeof(Where), "s[%u]", slot);
 }
 
-static void at_frame(Where into, uint32_t slot) {
-    snprintf(into, sizeof(Where), "f[%u]", slot);
+// Where a body on the machine's stack keeps a slot. The collector walks the
+// machine's stack and nothing else, so a slot that may hold something it has
+// to see is kept there -- but a byte written anywhere through a pointer may,
+// as far as the host's compiler can tell, be one of the machine's slots, so a
+// slot kept there is read again after every element written. A slot that
+// holds nothing the collector looks for is kept in an array of the body's
+// own, which the host's compiler may hold in registers. Keeping every slot in
+// both, written through, was tried and bought nothing: what the reads saved,
+// the writes cost. See D1162.
+static void at_frame(const Walk *walk, Where into, uint32_t slot) {
+    snprintf(into, sizeof(Where),
+             walk->slot_modes != NULL && walk->slot_modes[slot] == SLOT_LOOSE
+                 ? "g[%u]"
+                 : "f[%u]",
+             slot);
 }
 
 // One scalar moved between memory and slots: the same switch the machine runs
@@ -1041,7 +1138,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         }
         for (uint16_t k = 0; k < place->slots; k++) {
             at_stack(first, base + k);
-            at_frame(second, (uint32_t)(place->slot + k));
+            at_frame(walk, second, (uint32_t)(place->slot + k));
             say(c, out, "    %s = %s;\n", first, second);
         }
         break;
@@ -1090,7 +1187,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             break;
         }
         for (uint16_t k = 0; k < place->slots; k++) {
-            at_frame(first, (uint32_t)(place->slot + k));
+            at_frame(walk, first, (uint32_t)(place->slot + k));
             at_stack(second, base + k);
             say(c, out, "    %s = %s;\n", first, second);
         }
@@ -1460,8 +1557,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             break;
         }
         at_stack(first, base);
-        at_frame(held, op->imm[0]);
-        at_frame(second, op->imm[1]);
+        at_frame(walk, held, op->imm[0]);
+        at_frame(walk, second, op->imm[1]);
         say(c, out,
             "    %s.integer = (unsigned char)%s.text[%s.integer];\n",
             first, held, second);
@@ -1956,8 +2053,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         // ones after go back while there is one, which is the same shape
         // every other walk has.
         bool first_one = op->kind == KEST_IR_SEEK_FROM;
-        at_frame(first, op->imm[0]);
-        at_frame(second, op->imm[1]);
+        at_frame(walk, first, op->imm[0]);
+        at_frame(walk, second, op->imm[1]);
         say(c, out,
             "    if (!kest_store_seek(rt, %s, %s.integer + %d, %u, "
             "&%s.integer)) {\n        return false;\n    }\n",
@@ -2156,7 +2253,7 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
                          "a block");
             break;
         }
-        at_frame(held, op->imm[0]);
+        at_frame(walk, held, op->imm[0]);
         if (op->kind == KEST_IR_REGION_OPEN) {
             say(c, out,
                 "    if (!kest_region_open(rt, %u, &%s.integer)) {\n"
@@ -2190,8 +2287,8 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         // machine has one instruction for it and this is the same three
         // things, which is what makes a loop here a loop the host's compiler
         // recognises.
-        at_frame(first, op->imm[0]);
-        at_frame(second, op->imm[1]);
+        at_frame(walk, first, op->imm[0]);
+        at_frame(walk, second, op->imm[1]);
         say(c, out, "    %s.integer += 1;\n", first);
         say(c, out, "    if (%s%s.integer %s %s%s.integer) {\n        ",
             kest_is_unsigned(op->type) ? "(uint64_t)" : "", first,
@@ -2352,6 +2449,13 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
 
     walk.no_heap = reaches_no_heap(c, body);
     walk.on_the_stack = !walk.no_heap;
+    if (walk.on_the_stack && body->slot_count > 0) {
+        walk.slot_modes = slot_modes(c->scratch, body);
+        if (walk.slot_modes == NULL) {
+            c->out_of_memory = true;
+            return false;
+        }
+    }
     if (depths(&walk)) {
         write_head(c, &into->wrote, into, c->count - 1);
         say(c, &into->wrote, " {\n");
@@ -2363,6 +2467,12 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
             say(c, &into->wrote,
                 "    KV *f = frame;\n    KV *s = frame + %u;\n",
                 (unsigned)body->slot_count);
+            // And the slots that hold nothing the collector looks for, in an
+            // array of this body's own. See D1162.
+            if (walk.slot_modes != NULL) {
+                say(c, &into->wrote, "    KV g[%u];\n    (void)g;\n",
+                    (unsigned)body->slot_count);
+            }
         } else {
             if (body->slot_count > 0) {
                 say(c, &into->wrote, "    KV f[%u];\n",
@@ -2383,8 +2493,9 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
                 "        return false;\n    }\n");
         }
         for (uint16_t p = 0; p < body->param_slots; p++) {
-            say(c, &into->wrote, "    f[%u] = a%u;\n", (unsigned)p,
-                (unsigned)p);
+            Where param;
+            at_frame(&walk, param, p);
+            say(c, &into->wrote, "    %s = a%u;\n", param, (unsigned)p);
         }
         // Said out loud rather than left to whether the body happens to read
         // them: a frame nothing reads is a warning in somebody else's build,

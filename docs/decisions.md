@@ -40198,3 +40198,42 @@ seconds, nearly all of it LLVM compiling; with its compiled-code cache warm and
 its module cache on it is 285 ms on `kernel` and 324 on `rules`, because its
 LLVM is loaded and set up on every run. It is a mode for a process that runs
 for a long time, and a per-run row of it would be a row about start-up.
+
+## D1162 — A body on the machine's stack keeps its plain slots in C
+
+*measured*. A body the release engine writes that can reach the heap keeps its
+slots on the machine's stack, because that is what the collector walks
+(D1098). What that cost was found reading `decide` in `bench/rules.kest`, 61
+per cent of the compiled run: every element written goes through a byte
+pointer, which as far as the host's compiler can tell may be any of the
+machine's slots, so every slot is read back from memory after every one -- the
+loop counter, the end it is weighed against, the running sum.
+
+A slot is kept in an array of the body's own when something says what it holds
+-- a name the body declared or a place it reads or writes -- and nothing that
+says so holds anything the collector looks for: text, an array, a store, a
+reference, a function value. The rest stay where the collector walks, and so
+do three kinds whose place is handed out: a name that holds where a value is, a
+run the body indexes while it runs, and a slot a door writes through. A slot
+two names share in turn, one holding text and one a number, stays on the
+machine's stack; nothing is guessed.
+
+Keeping every slot in both, read from the C copy and written through to the
+machine's, was built and measured before this and bought nothing -- 819.7
+million instructions against 817.8 -- because what the reads saved the writes
+cost. It is not here.
+
+| workload, compiled | before | after | |
+| --- | --- | --- | --- |
+| rules | 817,844,735 | 786,679,148 | -3.8 % |
+| control | 194,187,246 | 190,118,545 | -2.1 % |
+| graph | 31,662,804 | 30,974,730 | -2.2 % |
+| words | 255,542,870 | 255,126,731 | -0.2 % |
+| kernel | 149,444,162 | 149,372,064 | 0.0 % |
+
+`check-c.sh` holds all 2,104 bodies to compiling and 69 programs to answering
+the same both ways. Daslang's AOT is still 2.8 times fewer instructions on
+`rules`; this was the part of that the frame explained, and the rest is the
+elements themselves -- each one checked for what it is and where it ends on
+every read -- and the operand stack, which a call's arguments are handed over
+through and so cannot leave the machine's stack the same way.
