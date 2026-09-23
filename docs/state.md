@@ -230,7 +230,8 @@ says why. The other was bulk text append and it is done.
   (D1206). A body with more than three arguments reads them out of the frame
   whatever it keeps them in, and the colony's trial compiled is 9.5% fewer
   cycles (D1207). The sweep is 918 holes, said in `CLAUDE.md` as over nine
-  hundred (D1208). `control` is 0.98 once its
+  hundred (D1208). Writing out a small constant walk would buy the colony's
+  interpreted trial 5.7%, measured by hand and not built (D1209). `control` is 0.98 once its
   rule is carried (D1175), and `rules` 0.99 once
   a value is moved a run of its pieces at a time (D1177) and an element is
   weighed against a constant in one instruction (D1178): every workload here

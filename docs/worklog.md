@@ -41755,3 +41755,15 @@ See D1208.
 
 **Runs:** the holes counted in `tools/check-backstops.sh`, and `make most`.
 
+## 2026-09-24, what writing out a small constant walk would buy
+
+The colony's search written out once per neighbour by hand is 5.7% fewer
+cycles run by the machine and 1.7% compiled, the same colony. A compiler
+doing it would need three passes it has not got; it is not built, and the
+numbers are written down.
+
+See D1209.
+
+**Runs:** the trial with the search as written and written out, both
+engines, best of five, and the answer compared.
+

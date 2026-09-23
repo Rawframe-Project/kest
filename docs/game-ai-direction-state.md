@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1208
+    CURRENT SHA:       (this commit) D1093-D1209
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, and it is ahead of
@@ -875,4 +875,6 @@ fixed. Measured and not kept since (D1201): an element written from the stack
 with its run and index read in place (`store.elem.ll`), 2 to 3% slower on
 `control` and level on `rules`; and the loop marked `hot`, which answered a
 baseline rather than the tree. And a body carried from another file
-(D1204): the colony's trial 1.5% fewer instructions and no fewer cycles.
+(D1204): the colony's trial 1.5% fewer instructions and no fewer cycles. And writing out a small constant walk (D1209):
+measured by hand at 5.7% of the colony's interpreted trial and 1.7% compiled,
+and not built for three passes it would need.

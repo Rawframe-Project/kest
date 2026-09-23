@@ -41517,3 +41517,26 @@ says "over nine hundred" in both places now, which is true of the sweep today
 and stays true, because a hole goes only when what it is about goes. The
 number itself is what `check-backstops.sh` counts when it runs.
 
+## D1209 — What writing out a small constant walk would buy, measured before it is built
+
+*measured*. The colony's breadth-first search walks the four neighbours of a
+cell with `for way in 0..4`, and most of what a neighbour costs is the body
+asking which `way` it is: `let next = if way == 0 -> ... else -> if way == 1`,
+and `way == 0 && x == wide - 1 || way == 1 && x == 0`. Written out once per
+`way`, every one of those questions has an answer where it is asked. A
+compiler that did it would need three things this one has not got: writing
+the body out per value of the count, folding a comparison of two constants
+in the IR -- `kest_fold_const` folds only what names global constants -- and
+folding the branch that reads one.
+
+So the ceiling was measured before any of it: the search written out by hand
+in a copy of the colony, the four bodies with the questions answered and each
+`continue` the `if` around what came after it, the same colony at the end.
+Best of five: the machine 488.6 M cycles against 518.1 M and 1,152 M
+instructions against 1,230 M, 5.7% and 6.3%; the release engine 119.0 M
+against 121.0 M, 1.7%, the host's compiler having folded most of it already.
+None of the five workloads has such a walk. Not built: three passes for 6% of
+one game's interpreted frame, where a game that wants it can write the walk
+out itself. The colony keeps the loop, because what it is for is finding out
+what Kest is like to write plainly.
+
