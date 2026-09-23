@@ -40155,3 +40155,46 @@ fusions off.
 arithmetic on constants in their loops and move by less than a quarter of one.
 The folder is asked 476 times for `examples/numbers.kest` rather than 346 and
 answers 113 rather than 97, which the reference says.
+
+## D1161 — Daslang in every mode it ships, on every workload
+
+*measured*. Two of the five workloads had a Daslang version and three did not,
+and the AOT row the harness has carried since D1108 had never run: this box's
+daScript had no LLVM behind it, so `-exe` and `-jit` both refused, and the
+report named that as an evidence gap. Both halves are closed.
+
+- `bench/graph.das`, `bench/words.das` and `bench/rules.das`, each answering
+  what the Kest and the Luau ones answer. Each is written the way Daslang has
+  for the thing: a `variant` for what an item is and what an actor is doing, a
+  `bitfield` for its state, an actor changed where it stands, and the
+  library's own `join` and `split` for text, the way the Kest one uses its own.
+- Daslang's build downloads a prebuilt LLVM 22.1.5 with a pinned hash when the
+  system has none of that version; the same file, from the same release, with
+  the hash checked, is what its `lib/LLVM.dll` now is. The system's LLVM 21 is
+  missing C functions its bindings name.
+- `bench/run.sh` had two faults in those rows that nothing could see while
+  they refused. `-jit` writes compiled code into the directory it is run from
+  -- this tree -- and reads it back on the next run, so the best of five was
+  four runs that compiled nothing; it runs with `-jit-no-cache` now. And
+  `-exe -output x` writes `x.exe` on this system too, so the row looked for a
+  file that was never there; it looks for both.
+
+| workload | kest | kest, compiled | `luau -O2` | `luau --codegen` | daslang | daslang `-exe` |
+| --- | --- | --- | --- | --- | --- | --- |
+| kernel | 99.8 ms | 15.4 ms | 79.3 ms | 34.4 ms | 136.8 ms | 23.5 ms |
+| control | 119.9 ms | 16.2 ms | 90.7 ms | 37.3 ms | 134.1 ms | 18.9 ms |
+| graph | 12.3 ms | 2.8 ms | 11.6 ms | 8.1 ms | 60.8 ms | 20.1 ms |
+| words | 38.5 ms | 32.8 ms | 36.8 ms | 34.8 ms | 106.9 ms | 53.0 ms |
+| rules | 517.6 ms | 119.3 ms | 547.3 ms | 276.0 ms | 427.7 ms | 46.0 ms |
+
+Best of five by task clock, at a load of twenty-five to forty-seven. The
+release engine is ahead of Daslang's AOT on four and behind on `rules` by 2.6
+times, where it runs 819 million instructions against 279: that is the row an
+element holding a tag is read and written whole in, and it is what the release
+engine is measured on next.
+
+Daslang's `-jit` is not in the table. Without its cache a process is 8 to 10
+seconds, nearly all of it LLVM compiling; with its compiled-code cache warm and
+its module cache on it is 285 ms on `kernel` and 324 on `rules`, because its
+LLVM is loaded and set up on every run. It is a mode for a process that runs
+for a long time, and a per-run row of it would be a row about start-up.

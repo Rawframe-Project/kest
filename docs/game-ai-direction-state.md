@@ -6,14 +6,14 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1159
+    CURRENT SHA:       (this commit) D1093-D1161
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
                        workload is inside D1092's trigger against `g++` and
-                       ahead of Luau's native tier on four of the five
-                       workloads, and the kernel is 2.8 times `g++` where it
-                       was five. And the machine is measured rather than
+                       ahead of Luau's native tier on all five workloads and
+                       of daslang's AOT on four (D1161), and the kernel is 2.8
+                       times `g++` where it was five. And the machine is measured rather than
                        guessed at: the persistent-world reference program
                        runs 2.7 times fewer instructions since it stopped
                        working out where a refusal would be reported before
@@ -436,9 +436,10 @@ measured and not shown.
 
 `docs/report.md` answers the thirty questions section 35 asks (D1140). What it
 names as still weak: **no model has been run against the AI suite**, so the one
-claim the suite exists to settle has an instrument and no result; daslang's AOT
-is named and not measured; and readability is measured in tokens, which is a
-proxy. The highest-value next direction it names is running models against the
+claim the suite exists to settle has an instrument and no result; and
+readability is measured in tokens, which is a proxy. Daslang's AOT, which it
+named as unmeasured, is measured since D1161 and is ahead of the release engine
+on `rules`. The highest-value next direction it names is running models against the
 suite, and the second is reading the generated C against what `g++` writes for
 the same workload.
 
@@ -767,7 +768,7 @@ the same workload.
    396, the same colony; a refusal names its diagnostic again. A reload at
    scale is 211 ms through bytes against 50 through lends, which is what the
    bytes library answers first.
-31. *(open, D1154-D1159)* **The machine against Luau's interpreter.**
+31. *(open, D1154-D1160)* **The machine against Luau's interpreter.**
    Measured again: behind by a sixth to double, `rules` furthest. Eight things
    off it so far, the last a small body carried to where it is called: `rules`
    is 27.2% fewer instructions and 1.28 times Luau's interpreter where it was
@@ -776,7 +777,15 @@ the same workload.
    and undid a third lost to where the compiler had put them (D1158). A
    value holding a tag moved by steps written once rather than by its type
    took `rules` to 3.61 thousand million instructions, 1.09 times Luau's
-   interpreter (D1159).
+   interpreter (D1159), and arithmetic on constants worked out where it is
+   written to 3.56 (D1160). By task clock the machine is ahead of Luau's
+   interpreter on `rules` and about a third behind on `kernel` and `control`.
+32. *(open, D1161)* **Daslang in every mode it ships.** `graph`, `words` and
+   `rules` written in Daslang, answering what the other two do, and its AOT
+   measured with the LLVM its own build downloads: behind the release engine
+   on four workloads and 2.6 times ahead on `rules` (46 ms against 119). Its
+   JIT is a whole second a process and is not a per-run row. `rules` compiled
+   is what is open.
 
 ## Closed by measurement
 

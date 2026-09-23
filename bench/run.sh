@@ -132,15 +132,27 @@ for one in kernel control graph words rules; do
         # not the same measurement. It also keeps a directory of somebody
         # else's out of this tree. See D1118.
         run_it "$one" "daslang" "$KEST_DAS" -no-module-cache "bench/$one.das"
+        # And for the same reason without the JIT's own cache, which is a
+        # directory of compiled code written wherever it was run from -- this
+        # tree -- and read by every run after the first, so that the best of
+        # five was four runs that compiled nothing. See D1161.
         run_it "$one" "daslang -jit" "$KEST_DAS" -no-module-cache -jit \
-            "bench/$one.das"
+            -jit-no-cache "bench/$one.das"
         # And the one its documentation points at, named as what it is: the
         # compiler writing a binary rather than running the program. See
         # D1090's rule about naming the mode.
+        # What it writes is the name it was given with `.exe` after it, on
+        # this system as on the one the suffix is for, so the binary is looked
+        # for under both. See D1161.
         if "$KEST_DAS" -no-module-cache -exe \
                 -output "$built/$one.das.bin" "bench/$one.das" \
-                >/dev/null 2>&1 && [ -x "$built/$one.das.bin" ]; then
-            run_it "$one" "daslang -exe (AOT)" "$built/$one.das.bin"
+                >/dev/null 2>&1; then
+            for exe in "$built/$one.das.bin" "$built/$one.das.bin.exe"; do
+                if [ -x "$exe" ]; then
+                    run_it "$one" "daslang -exe (AOT)" "$exe"
+                    break
+                fi
+            done
         fi
     fi
 done

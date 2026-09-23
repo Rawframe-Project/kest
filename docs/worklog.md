@@ -41064,3 +41064,17 @@ See D1160.
 
 **Runs:** every example with the optimizer, without it and plain, the five
 workloads fused and plain with `perf stat`, and `make most`.
+
+## 2026-09-23, Daslang in every mode, on every workload
+
+Three workloads written in Daslang, answering what the other two do, and its
+AOT measured for the first time with the LLVM its own build downloads. The
+release engine is ahead of Daslang's AOT on four workloads and 2.6 times behind
+on `rules`; its JIT is a second of start-up a process. `bench/run.sh` had been
+reading a JIT cache it wrote into this tree and looking for an AOT binary under
+a name Daslang does not write; both are fixed.
+
+See D1161.
+
+**Runs:** the three ports against the Kest and Luau answers, the seven-engine
+table by task clock, Daslang's JIT three ways, and `make most`.
