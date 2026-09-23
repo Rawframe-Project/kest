@@ -6795,12 +6795,12 @@ fn main() -> i32 {
         # people and people read the sentence. See D886.
         "what": "a number the reference quotes that a run no longer says",
         "file": "docs/language.md",
-        "from": """numbers together say how much of that finding out answered: 97 of 346 for""",
-        "to": """numbers together say how much of that finding out answered: 97 of 330 for""",
+        "from": """numbers together say how much of that finding out answered: 113 of 476 for""",
+        "to": """numbers together say how much of that finding out answered: 113 of 330 for""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",
         "arguments": ["docs/language.md", "docs/decisions.md"],
-        "caught": "the reference says 97 of 330 were worked out for `examples/numbers.kest`",
+        "caught": "the reference says 113 of 330 were worked out for `examples/numbers.kest`",
     },
     {
         # A suggestion under somebody else's refusal. A suggestion goes to the
@@ -6976,8 +6976,10 @@ fn main() -> i32 {
         # instruction into the body it just returned from, and the machine
         # walks itself off its own stack within a few calls. Said as a ceiling
         # because that is the wall it hits first.
+        # A remainder keeps `twice` a call rather than a body carried to where
+        # it is called (D1156).
         "source": """fn twice(n: i32) -> i32 {
-    return n + n
+    return n % 100 + n % 100
 }
 
 fn main() -> i32 {
@@ -7012,9 +7014,29 @@ fn main() -> i32 {
 
         case KEST_OP_CALL_VALUE: {""",
         "make": ["kest"],
-        "tool": "tools/check-commands.sh",
-        "arguments": ["examples/math.kest"],
-        "caught": "a number written down did not read back as itself",
+        # A program of its own: the example this used to be asked of has its
+        # small functions carried to where they are called since D1156, and a
+        # body carried reads its own constants whatever a call does. `scaled`
+        # takes a remainder and stays a call, and what it reads in place of
+        # its own constants is `main`'s.
+        # The answer is a number rather than words, because what a machine
+        # with the wrong constants prints is whatever the wrong constant
+        # pointed at: `main` reads `1000` out of its own constants and adds
+        # what `scaled` made of `main`'s, which is nought.
+        "program": "constants.kest",
+        "source": """fn scaled(n: i32) -> i32 {
+    return n % 1000 * 7
+}
+
+fn main() -> i32 {
+    let got = scaled(6)
+    if got != 42 {
+        return 1000 + got
+    }
+    return 0
+}
+""",
+        "caught": "`main` answered 1000",
     },
     {
         # And the other half of the same: a callee left reading the slots of
@@ -7044,8 +7066,9 @@ fn main() -> i32 {
         "program": "calling.kest",
         "source": """import std.io
 
+// A remainder keeps `twice` a call (D1156).
 fn twice(n: i32) -> i32 {
-    return n * 2
+    return n % 1000 * 2
 }
 
 fn main() -> i32 {
@@ -14865,22 +14888,24 @@ bool kest_needs_of(""",
         # what it was going to answer with.
         "what": "a byte read out of a lend as though it were signed",
         "file": "src/vm.c",
-        "from": r"""        case KEST_L_U8:
-        case KEST_L_BOOL:
-        case KEST_L_HELD: {
-            uint8_t v;
-            memcpy(&v, at, 1);
-            out[put].integer = v;
-            break;
-        }""",
-        "to": r"""        case KEST_L_U8:
-        case KEST_L_BOOL:
-        case KEST_L_HELD: {
-            int8_t v;
-            memcpy(&v, at, 1);
-            out[put].integer = v;
-            break;
-        }""",
+        # What reads an element of one piece, which a byte is: it goes
+        # through `read_piece` rather than the walk over pieces since D1154.
+        "from": r"""    case KEST_L_U8:
+    case KEST_L_BOOL:
+    case KEST_L_HELD: {
+        uint8_t v;
+        memcpy(&v, at, 1);
+        out[0].integer = v;
+        break;
+    }""",
+        "to": r"""    case KEST_L_U8:
+    case KEST_L_BOOL:
+    case KEST_L_HELD: {
+        int8_t v;
+        memcpy(&v, at, 1);
+        out[0].integer = v;
+        break;
+    }""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "a batch read out of bytes came to",
