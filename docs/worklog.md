@@ -41570,3 +41570,19 @@ See D1194.
 **Runs:** `check-docs.sh` with no arguments, `check-tables.sh`, and
 `make most`.
 
+## 2026-09-23, the front page's runs spread through the sitting
+
+`bench/compare.sh` took a row's runs back to back, so one neighbour's half
+second fell on all of them: the same binary was 54 ms on `kernel` in one
+sitting and 74 in the next. A sitting is rounds over every row now, and two
+sittings agree. The front page, the charts and the report are fifteen rounds
+at `80a8d331`: the machine ahead of Luau's interpreter on all five, by 3 to
+25%, and the release engine ahead of Luau's native tier on all five and of
+daslang's AOT on four.
+
+See D1195.
+
+**Runs:** `bench/compare.sh` twice the old way and twice the new way, best
+of seven, then once best of fifteen for the table; `check-docs.sh` over the
+documents.
+

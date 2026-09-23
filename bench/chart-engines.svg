@@ -17,102 +17,102 @@
 <text x="28.0" y="118.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="bold" fill="#212529" text-anchor="start">kernel</text>
 <text x="94.0" y="118.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="normal" fill="#868e96" text-anchor="start">numbers in, numbers out</text>
 <text x="140.0" y="140.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="bold" fill="#212529" text-anchor="end">Kest</text>
-<rect x="150" y="128.0" width="253.0" height="14" rx="3" fill="#f76707"/>
-<text x="409.0" y="140.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">56.1 ms</text>
+<rect x="150" y="128.0" width="249.0" height="14" rx="3" fill="#f76707"/>
+<text x="405.0" y="140.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">53.4 ms</text>
 <text x="140.0" y="159.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="bold" fill="#212529" text-anchor="end">Kest, compiled</text>
-<rect x="150" y="147.0" width="35.5" height="14" rx="3" fill="#c2410c"/>
-<text x="191.5" y="159.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">7.9 ms</text>
+<rect x="150" y="147.0" width="35.3" height="14" rx="3" fill="#c2410c"/>
+<text x="191.3" y="159.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">7.6 ms</text>
 <text x="140.0" y="178.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="end">Luau</text>
-<rect x="150" y="166.0" width="321.6" height="14" rx="3" fill="#4dabf7"/>
-<text x="477.6" y="178.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">71.2 ms</text>
+<rect x="150" y="166.0" width="334.3" height="14" rx="3" fill="#4dabf7"/>
+<text x="490.3" y="178.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">71.7 ms</text>
 <text x="140.0" y="197.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="end">Luau, native</text>
-<rect x="150" y="185.0" width="133.0" height="14" rx="3" fill="#1864ab"/>
-<text x="289.0" y="197.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">29.5 ms</text>
+<rect x="150" y="185.0" width="137.3" height="14" rx="3" fill="#1864ab"/>
+<text x="293.3" y="197.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">29.4 ms</text>
 <text x="140.0" y="216.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="end">daslang</text>
 <rect x="150" y="204.0" width="500.0" height="14" rx="3" fill="#69db7c"/>
-<text x="656.0" y="216.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">111 ms</text>
+<text x="656.0" y="216.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">107 ms</text>
 <text x="140.0" y="235.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="end">daslang, AOT</text>
-<rect x="150" y="223.0" width="77.5" height="14" rx="3" fill="#2b8a3e"/>
-<text x="233.5" y="235.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">17.2 ms</text>
+<rect x="150" y="223.0" width="83.8" height="14" rx="3" fill="#2b8a3e"/>
+<text x="239.8" y="235.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">18.0 ms</text>
 <text x="28.0" y="278.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="bold" fill="#212529" text-anchor="start">control</text>
 <text x="103.0" y="278.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="normal" fill="#868e96" text-anchor="start">branches: a rule of behaviour</text>
 <text x="140.0" y="300.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="bold" fill="#212529" text-anchor="end">Kest</text>
-<rect x="150" y="288.0" width="344.3" height="14" rx="3" fill="#f76707"/>
-<text x="500.3" y="300.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">81.4 ms</text>
+<rect x="150" y="288.0" width="339.8" height="14" rx="3" fill="#f76707"/>
+<text x="495.8" y="300.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">80.1 ms</text>
 <text x="140.0" y="319.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="bold" fill="#212529" text-anchor="end">Kest, compiled</text>
-<rect x="150" y="307.0" width="43.8" height="14" rx="3" fill="#c2410c"/>
-<text x="199.8" y="319.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">10.3 ms</text>
+<rect x="150" y="307.0" width="46.8" height="14" rx="3" fill="#c2410c"/>
+<text x="202.8" y="319.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">11.0 ms</text>
 <text x="140.0" y="338.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="end">Luau</text>
-<rect x="150" y="326.0" width="367.4" height="14" rx="3" fill="#4dabf7"/>
-<text x="523.4" y="338.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">86.8 ms</text>
+<rect x="150" y="326.0" width="348.8" height="14" rx="3" fill="#4dabf7"/>
+<text x="504.8" y="338.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">82.2 ms</text>
 <text x="140.0" y="357.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="end">Luau, native</text>
-<rect x="150" y="345.0" width="153.6" height="14" rx="3" fill="#1864ab"/>
-<text x="309.6" y="357.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">36.3 ms</text>
+<rect x="150" y="345.0" width="145.1" height="14" rx="3" fill="#1864ab"/>
+<text x="301.1" y="357.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">34.2 ms</text>
 <text x="140.0" y="376.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="end">daslang</text>
 <rect x="150" y="364.0" width="500.0" height="14" rx="3" fill="#69db7c"/>
 <text x="656.0" y="376.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">118 ms</text>
 <text x="140.0" y="395.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="end">daslang, AOT</text>
-<rect x="150" y="383.0" width="79.0" height="14" rx="3" fill="#2b8a3e"/>
-<text x="235.0" y="395.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">18.7 ms</text>
+<rect x="150" y="383.0" width="79.7" height="14" rx="3" fill="#2b8a3e"/>
+<text x="235.7" y="395.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">18.8 ms</text>
 <text x="28.0" y="438.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="bold" fill="#212529" text-anchor="start">graph</text>
 <text x="85.0" y="438.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="normal" fill="#868e96" text-anchor="start">checked references</text>
 <text x="140.0" y="460.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="bold" fill="#212529" text-anchor="end">Kest</text>
-<rect x="150" y="448.0" width="76.4" height="14" rx="3" fill="#f76707"/>
-<text x="232.4" y="460.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">9.4 ms</text>
+<rect x="150" y="448.0" width="79.8" height="14" rx="3" fill="#f76707"/>
+<text x="235.8" y="460.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">9.2 ms</text>
 <text x="140.0" y="479.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="bold" fill="#212529" text-anchor="end">Kest, compiled</text>
-<rect x="150" y="467.0" width="28.1" height="14" rx="3" fill="#c2410c"/>
-<text x="184.1" y="479.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">3.5 ms</text>
+<rect x="150" y="467.0" width="31.8" height="14" rx="3" fill="#c2410c"/>
+<text x="187.8" y="479.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">3.7 ms</text>
 <text x="140.0" y="498.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="end">Luau</text>
-<rect x="150" y="486.0" width="91.5" height="14" rx="3" fill="#4dabf7"/>
-<text x="247.5" y="498.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">11.3 ms</text>
+<rect x="150" y="486.0" width="98.4" height="14" rx="3" fill="#4dabf7"/>
+<text x="254.4" y="498.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">11.4 ms</text>
 <text x="140.0" y="517.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="end">Luau, native</text>
-<rect x="150" y="505.0" width="67.2" height="14" rx="3" fill="#1864ab"/>
-<text x="223.2" y="517.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">8.3 ms</text>
+<rect x="150" y="505.0" width="68.6" height="14" rx="3" fill="#1864ab"/>
+<text x="224.6" y="517.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">7.9 ms</text>
 <text x="140.0" y="536.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="end">daslang</text>
 <rect x="150" y="524.0" width="500.0" height="14" rx="3" fill="#69db7c"/>
-<text x="656.0" y="536.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">61.6 ms</text>
+<text x="656.0" y="536.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">57.9 ms</text>
 <text x="140.0" y="555.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="end">daslang, AOT</text>
-<rect x="150" y="543.0" width="99.7" height="14" rx="3" fill="#2b8a3e"/>
-<text x="255.7" y="555.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">12.3 ms</text>
+<rect x="150" y="543.0" width="108.1" height="14" rx="3" fill="#2b8a3e"/>
+<text x="264.1" y="555.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">12.5 ms</text>
 <text x="28.0" y="598.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="bold" fill="#212529" text-anchor="start">words</text>
 <text x="85.0" y="598.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="normal" fill="#868e96" text-anchor="start">text made, joined, split, searched</text>
 <text x="140.0" y="620.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="bold" fill="#212529" text-anchor="end">Kest</text>
-<rect x="150" y="608.0" width="126.0" height="14" rx="3" fill="#f76707"/>
-<text x="282.0" y="620.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">18.7 ms</text>
+<rect x="150" y="608.0" width="121.5" height="14" rx="3" fill="#f76707"/>
+<text x="277.5" y="620.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">18.0 ms</text>
 <text x="140.0" y="639.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="bold" fill="#212529" text-anchor="end">Kest, compiled</text>
-<rect x="150" y="627.0" width="98.4" height="14" rx="3" fill="#c2410c"/>
-<text x="254.4" y="639.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">14.6 ms</text>
+<rect x="150" y="627.0" width="94.1" height="14" rx="3" fill="#c2410c"/>
+<text x="250.1" y="639.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">14.0 ms</text>
 <text x="140.0" y="658.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="end">Luau</text>
-<rect x="150" y="646.0" width="169.4" height="14" rx="3" fill="#4dabf7"/>
-<text x="325.4" y="658.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">25.2 ms</text>
+<rect x="150" y="646.0" width="159.0" height="14" rx="3" fill="#4dabf7"/>
+<text x="315.0" y="658.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">23.6 ms</text>
 <text x="140.0" y="677.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="end">Luau, native</text>
-<rect x="150" y="665.0" width="161.5" height="14" rx="3" fill="#1864ab"/>
-<text x="317.5" y="677.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">24.0 ms</text>
+<rect x="150" y="665.0" width="151.0" height="14" rx="3" fill="#1864ab"/>
+<text x="307.0" y="677.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">22.4 ms</text>
 <text x="140.0" y="696.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="end">daslang</text>
 <rect x="150" y="684.0" width="500.0" height="14" rx="3" fill="#69db7c"/>
-<text x="656.0" y="696.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">74.4 ms</text>
+<text x="656.0" y="696.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">74.2 ms</text>
 <text x="140.0" y="715.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="end">daslang, AOT</text>
-<rect x="150" y="703.0" width="248.1" height="14" rx="3" fill="#2b8a3e"/>
-<text x="404.1" y="715.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">36.9 ms</text>
+<rect x="150" y="703.0" width="246.0" height="14" rx="3" fill="#2b8a3e"/>
+<text x="402.0" y="715.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">36.5 ms</text>
 <text x="28.0" y="758.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="15" font-weight="bold" fill="#212529" text-anchor="start">rules</text>
 <text x="85.0" y="758.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="normal" fill="#868e96" text-anchor="start">a rules system over 4,000 actors</text>
 <text x="140.0" y="780.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="bold" fill="#212529" text-anchor="end">Kest</text>
-<rect x="150" y="768.0" width="435.4" height="14" rx="3" fill="#f76707"/>
-<text x="591.4" y="780.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">300 ms</text>
+<rect x="150" y="768.0" width="396.9" height="14" rx="3" fill="#f76707"/>
+<text x="552.9" y="780.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">271 ms</text>
 <text x="140.0" y="799.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="bold" fill="#212529" text-anchor="end">Kest, compiled</text>
-<rect x="150" y="787.0" width="81.7" height="14" rx="3" fill="#c2410c"/>
-<text x="237.7" y="799.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">56.3 ms</text>
+<rect x="150" y="787.0" width="79.4" height="14" rx="3" fill="#c2410c"/>
+<text x="235.4" y="799.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">54.2 ms</text>
 <text x="140.0" y="818.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="end">Luau</text>
-<rect x="150" y="806.0" width="416.7" height="14" rx="3" fill="#4dabf7"/>
-<text x="572.7" y="818.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">287 ms</text>
+<rect x="150" y="806.0" width="423.3" height="14" rx="3" fill="#4dabf7"/>
+<text x="579.3" y="818.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">289 ms</text>
 <text x="140.0" y="837.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="end">Luau, native</text>
-<rect x="150" y="825.0" width="217.3" height="14" rx="3" fill="#1864ab"/>
-<text x="373.3" y="837.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">150 ms</text>
+<rect x="150" y="825.0" width="216.1" height="14" rx="3" fill="#1864ab"/>
+<text x="372.1" y="837.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">148 ms</text>
 <text x="140.0" y="856.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="end">daslang</text>
 <rect x="150" y="844.0" width="500.0" height="14" rx="3" fill="#69db7c"/>
-<text x="656.0" y="856.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">345 ms</text>
+<text x="656.0" y="856.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">341 ms</text>
 <text x="140.0" y="875.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="end">daslang, AOT</text>
-<rect x="150" y="863.0" width="58.5" height="14" rx="3" fill="#2b8a3e"/>
-<text x="214.5" y="875.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">40.3 ms</text>
-<text x="430.0" y="1013.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="normal" fill="#868e96" text-anchor="middle">Measured 2026-09-23 at commit a60730d6 on AMD Ryzen 5 3600 6-Core Processor. Best of 7 by processor time; lower is better.</text>
+<rect x="150" y="863.0" width="59.3" height="14" rx="3" fill="#2b8a3e"/>
+<text x="215.3" y="875.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">40.5 ms</text>
+<text x="430.0" y="1013.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="normal" fill="#868e96" text-anchor="middle">Measured 2026-09-23 at commit 80a8d331 on AMD Ryzen 5 3600 6-Core Processor. Best of 15 by processor time; lower is better.</text>
 </svg>

@@ -9,7 +9,11 @@
 # instructions it retired, from `perf stat`, the best of several runs by time.
 # Wall-clock time on a machine somebody else is also using is mostly theirs;
 # processor time is this process's, and instructions are the same number on
-# any machine running the same binary. Everything a row does is in it: reading
+# any machine running the same binary. The runs of one row are not taken one
+# after another: a round runs every row once and the next round runs them all
+# again, so what a neighbour did for half a second falls on one run of many
+# rows rather than on every run of one. Taken back to back, the same binary
+# was 54 ms on `kernel` in one sitting and 74 in the next. See D1195. Everything a row does is in it: reading
 # the program, compiling it where that is what the engine does, and running
 # it. Building a binary ahead of time -- this language's release engine and
 # daslang's `-exe` -- is not, because it is not what a game does when it runs.
@@ -26,33 +30,6 @@ built=$(mktemp -d)
 trap 'rm -rf "$built"' EXIT
 out=${OUT:-bench/results.tsv}
 
-measure() {
-    # The run with the least processor time, and the instructions of that
-    # run. `perf` writes what it counted to the error stream, one line an
-    # event, fields split by commas.
-    workload=$1
-    engine=$2
-    shift 2
-    least=""
-    retired=""
-    i=0
-    while [ "$i" -lt "$best" ]; do
-        if ! counted=$(perf stat -x, -e task-clock,instructions:u "$@" \
-                           2>&1 >/dev/null </dev/null); then
-            echo "$workload $engine did not run" >&2
-            return
-        fi
-        took=$(printf '%s\n' "$counted" | awk -F, '$3 ~ /^task-clock/ { print $1 }')
-        count=$(printf '%s\n' "$counted" | awk -F, '$3 ~ /^instructions/ { print $1 }')
-        if [ -z "$least" ] || awk "BEGIN { exit !($took < $least) }"; then
-            least=$took
-            retired=$count
-        fi
-        i=$((i + 1))
-    done
-    printf '%s\t%s\t%.2f\t%s\n' "$workload" "$engine" "$least" "$retired" >>"$out"
-}
-
 commit=$(git rev-parse --short HEAD)
 {
     printf '# taken\t%s\n' "$(date -u +%Y-%m-%d)"
@@ -62,38 +39,97 @@ commit=$(git rev-parse --short HEAD)
     printf 'workload\tengine\tms\tinstructions\n'
 } >"$out"
 
+# A row is a workload, an engine and the command that runs it, kept one word
+# a line so that it runs as it was given rather than through a shell, which
+# would be measured with it.
+rows=0
+row() {
+    rows=$((rows + 1))
+    printf '%s\n%s\n' "$1" "$2" >"$built/row$rows.what"
+    shift 2
+    for word in "$@"; do
+        printf '%s\n' "$word"
+    done >"$built/row$rows.argv"
+    : >"$built/row$rows.took"
+}
+
+# One run of one row: the processor time and the instructions, a line added to
+# what that row has taken. `perf` writes what it counted to the error stream,
+# one line an event, fields split by commas.
+once() {
+    which=$1
+    set --
+    while IFS= read -r word; do
+        set -- "$@" "$word"
+    done <"$built/row$which.argv"
+    if ! counted=$(perf stat -x, -e task-clock,instructions:u "$@" \
+                       2>&1 >/dev/null </dev/null); then
+        echo failed >>"$built/row$which.took"
+        return
+    fi
+    took=$(printf '%s\n' "$counted" | awk -F, '$3 ~ /^task-clock/ { print $1 }')
+    count=$(printf '%s\n' "$counted" | awk -F, '$3 ~ /^instructions/ { print $1 }')
+    printf '%s %s\n' "$took" "$count" >>"$built/row$which.took"
+}
+
 for one in kernel control graph words rules; do
-    measure "$one" "Kest" "$kest" run "bench/$one.kest"
+    row "$one" "Kest" "$kest" run "bench/$one.kest"
     if "$kest" emit --c "bench/$one.kest" >"$built/$one.c" 2>/dev/null &&
             $cc -O2 -Iinclude -o "$built/$one" "$built/$one.c" libkest.a \
                 -lm 2>/dev/null; then
-        measure "$one" "Kest, compiled" "$built/$one" "bench/$one.kest"
+        row "$one" "Kest, compiled" "$built/$one" "bench/$one.kest"
     fi
     # And the floor, where `KEST_CPP` names a C++ compiler: not a guest
     # language and not on the charts, but what the report measures against.
     if [ -n "${KEST_CPP:-}" ] && [ -f "bench/$one.cpp" ] &&
             "$KEST_CPP" -O2 -o "$built/$one-cpp" "bench/$one.cpp" 2>/dev/null; then
-        measure "$one" "C++" "$built/$one-cpp"
+        row "$one" "C++" "$built/$one-cpp"
     fi
     if [ -n "${KEST_LUAU:-}" ] && [ -f "bench/$one.lua" ]; then
-        measure "$one" "Luau" "$KEST_LUAU" -O2 "bench/$one.lua"
-        measure "$one" "Luau, native" "$KEST_LUAU" -O2 --codegen \
-            "bench/$one.lua"
+        row "$one" "Luau" "$KEST_LUAU" -O2 "bench/$one.lua"
+        row "$one" "Luau, native" "$KEST_LUAU" -O2 --codegen "bench/$one.lua"
     fi
     if [ -n "${KEST_DAS:-}" ] && [ -f "bench/$one.das" ]; then
-        measure "$one" "daslang" "$KEST_DAS" -no-module-cache "bench/$one.das"
+        row "$one" "daslang" "$KEST_DAS" -no-module-cache "bench/$one.das"
         # It writes the name it was given with `.exe` after it on this system
         # as well, so both are looked for. See D1161.
         if "$KEST_DAS" -no-module-cache -exe -output "$built/$one.das.bin" \
                 "bench/$one.das" >/dev/null 2>&1; then
             for exe in "$built/$one.das.bin" "$built/$one.das.bin.exe"; do
                 if [ -x "$exe" ]; then
-                    measure "$one" "daslang, AOT" "$exe"
+                    row "$one" "daslang, AOT" "$exe"
                     break
                 fi
             done
         fi
     fi
+done
+
+round=0
+while [ "$round" -lt "$best" ]; do
+    ran=1
+    while [ "$ran" -le "$rows" ]; do
+        once "$ran"
+        ran=$((ran + 1))
+    done
+    round=$((round + 1))
+done
+
+# The run with the least processor time, and the instructions of that run; a
+# row one of whose runs failed is said and left out rather than answered by the
+# runs that did not.
+ran=1
+while [ "$ran" -le "$rows" ]; do
+    workload=$(sed -n 1p "$built/row$ran.what")
+    engine=$(sed -n 2p "$built/row$ran.what")
+    if grep -q '^failed$' "$built/row$ran.took"; then
+        echo "$workload $engine did not run" >&2
+    else
+        sort -n "$built/row$ran.took" | head -n 1 |
+            awk -v w="$workload" -v e="$engine" \
+                '{ printf "%s\t%s\t%.2f\t%s\n", w, e, $1, $2 }' >>"$out"
+    fi
+    ran=$((ran + 1))
 done
 
 python3 bench/chart.py "$out" bench

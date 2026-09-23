@@ -41162,3 +41162,31 @@ at` and refuse, and the gate hands each of them nothing to see it said. This
 one says the same now, and is the fourth the gate hands nothing. It was found
 by calling it by hand without arguments while writing D1191.
 
+## D1195 — The front page's runs are spread through the sitting, and taken again
+
+*measured*. `bench/compare.sh` took a row's runs one after another -- seven of
+Kest's `kernel`, then seven of the compiled one -- and a row's seven fitted in
+half a second. Whatever a neighbour on the machine did in that half second
+fell on all of them, and the best of seven was the best of one busy moment:
+the same binary, back to back at a load of four, was 53.9 ms on `kernel` in
+one sitting and 74.0 in the next, and Luau's interpreter was 36.7 ms on
+`words` in the first and 24.1 in the second.
+
+So a sitting is rounds: each round runs every row once, and the best of a
+row is taken over all the rounds. A neighbour's half second falls on one run
+each of a few rows, and the rows compared with each other were sampled
+through the same minutes. A row's command line is kept one word a line and
+run as it was given, not through a shell, which would be measured with it.
+Two sittings of seven rounds agreed where the old ones had not: `kernel`
+53.1 and 52.5 ms, `words` 19.7 and 18.7, `rules` 280.1 and 276.8 against
+Luau's 281.1 and 270.9.
+
+The front page, the charts and the report are one sitting of fifteen rounds
+at `80a8d331`, at a load of two to three. The machine is ahead of Luau's
+interpreter on all five: 0.75, 0.97, 0.81, 0.76 and 0.94 of its time on
+`kernel`, `control`, `graph`, `words` and `rules`, with 0.66 to 0.85 of its
+instructions. `control` and `rules` are thin enough that a busier machine can
+turn them round, and the report says so. The release engine is ahead of
+Luau's native tier by 1.6 to 3.9 times and of daslang's AOT on four, which is
+1.3 times it on `rules`.
+

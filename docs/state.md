@@ -194,7 +194,9 @@ says why. The other was bulk text append and it is done.
   Measured again as one run with the floor (D1184), and again on a quiet
   machine (D1190): 0.79, 0.94, 0.84, 0.74 and 1.04 of Luau's interpreter by
   processor time on `kernel`, `control`, `graph`, `words` and `rules` -- the
-  load had made `rules` look a quarter ahead -- and a fuzz campaign of 24,000
+  load had made `rules` look a quarter ahead -- and with a row's runs spread
+  through the sitting at `80a8d331`, 0.75, 0.97, 0.81, 0.76 and 0.94 (D1195),
+  and a fuzz campaign of 24,000
   runs found nothing; `control` retires 3.6% fewer since an element of one slot is
   written from a local in one instruction (D1185), and `rules` compiled 7%
   fewer since the release engine reads a run's length inline (D1186);

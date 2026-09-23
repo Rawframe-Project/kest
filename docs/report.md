@@ -58,20 +58,23 @@ direction's own work began.
 
 ## 6. Game-shaped runtime numbers
 
-Whole processes, best of seven by processor time, at `a60730d6` on 2026-09-23
-with `bench/compare.sh` (D1180), on the machine this was written on while
-nothing else was running on it -- a load of two, where the run before this one
-was taken at forty and put Luau's interpreter a third slower on `rules` than a
-quiet machine does. `bench/results.tsv` has the instructions each run retired
-beside it, which is the number that does not move with the load.
+Whole processes, best of fifteen by processor time, at `80a8d331` on
+2026-09-23 with `bench/compare.sh` (D1180), on the machine this was written on
+at a load of two to three. The runs of each row are spread through the sitting
+rather than taken together, because taken together one neighbour's half second
+fell on every run of a row: the same binary was 54 ms on `kernel` in one
+sitting and 74 in the next (D1195). A run taken at a load of forty once put
+Luau's interpreter a third slower on `rules` than a quiet machine does (D1190).
+`bench/results.tsv` has the instructions each run retired beside it, which is
+the number that does not move with the load.
 
 | workload | kest | **kest, compiled** | `g++ -O2` | `luau -O2` | `luau --codegen` | daslang | daslang `-exe` |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| kernel | 56.1 ms | **7.9 ms** | 5.6 ms | 71.2 ms | 29.5 ms | 110.8 ms | 17.2 ms |
-| control | 81.4 ms | **10.3 ms** | 5.0 ms | 86.8 ms | 36.3 ms | 118.2 ms | 18.7 ms |
-| graph | 9.4 ms | **3.5 ms** | 1.6 ms | 11.3 ms | 8.3 ms | 61.6 ms | 12.3 ms |
-| words | 18.7 ms | **14.6 ms** | 9.1 ms | 25.2 ms | 24.0 ms | 74.4 ms | 36.9 ms |
-| rules | 300.0 ms | **56.3 ms** | 40.0 ms | 287.1 ms | 149.8 ms | 344.5 ms | 40.3 ms |
+| kernel | 53.4 ms | **7.6 ms** | 5.6 ms | 71.7 ms | 29.5 ms | 107.3 ms | 18.0 ms |
+| control | 80.1 ms | **11.0 ms** | 5.0 ms | 82.2 ms | 34.2 ms | 117.9 ms | 18.8 ms |
+| graph | 9.2 ms | **3.7 ms** | 1.6 ms | 11.4 ms | 7.9 ms | 57.9 ms | 12.5 ms |
+| words | 18.0 ms | **14.0 ms** | 8.7 ms | 23.6 ms | 22.4 ms | 74.2 ms | 36.5 ms |
+| rules | 271.1 ms | **54.2 ms** | 38.2 ms | 289.1 ms | 147.6 ms | 341.5 ms | 40.5 ms |
 
 daslang's `-jit` is not a row: a process of it is 8 to 10 seconds with its
 compiled-code cache off, which is what every row here is run with, and 285 ms
@@ -79,9 +82,11 @@ on `kernel` with every cache it has warm -- its LLVM is loaded and set up on
 every run, so its JIT is a thing a long-running process pays once and not a
 per-run number (D1161). The first measurement, from before D1154, was `rules`
 909 ms on the machine and 122 compiled, `kernel` 127 and 27; what took the
-machine from there is D1154 to D1181, the last of which -- each instruction
-handing over to the next through a table of labels -- was a tenth of every
-workload's cycles.
+machine from there is D1154 to D1193: each instruction handing over to the
+next through a table of labels was a tenth of every workload's cycles
+(D1181), and a scalar read where the instruction reading it is rather than
+through one switch for the whole machine is what put it ahead on `rules`
+(D1193).
 
 And a frame of a real program, both engines, over sixty calls of
 `examples/slice` (D1124):
@@ -96,19 +101,20 @@ And a frame of a real program, both engines, over sixty calls of
 ## 7. Strongest competitor, and why
 
 **Two, one a tier.** Against the machine it is **Luau's interpreter**, and the
-machine is ahead of it on four of five -- `kernel` 56.1 ms against 71.2,
-`control` 81.4 against 86.8, `graph` 9.4 against 11.3, `words` 18.7 against
-25.2 -- and 4% behind on `rules`, 300.0 against 287.1. It retires fewer
-instructions than Luau's on all five, 10% fewer on `rules`; there Luau does
-more of its work a cycle. Daslang's interpreter is behind the machine on all
-five.
+machine is ahead of it on all five -- `kernel` 53.4 ms against 71.7,
+`control` 80.1 against 82.2, `graph` 9.2 against 11.4, `words` 18.0 against
+23.6, `rules` 271.1 against 289.1. It retires fewer instructions than Luau's
+on all five, 15% fewer on `rules`. `control` and `rules` are 3% and 6%, which
+is close enough that a busier machine has turned them round, and did: a run at
+a60730d6 had the machine 4% behind on `rules` (D1190). Daslang's interpreter is
+behind the machine on all five.
 
 Against the release engine it is **daslang's AOT**, which is its compiler
-writing a native binary the way this one writes C: 40.3 ms on `rules` against
-56.3, the one row where a guest language's shipping mode beats this one's, by
-1.4 times, where it was 2.6 (D1161, D1179, D1186 to D1189). On the other four
-the release engine is ahead of it -- 7.9 against 17.2, 10.3 against 18.7, 3.5
-against 12.3, 14.6 against 36.9 -- and ahead of Luau's native tier on all
+writing a native binary the way this one writes C: 40.5 ms on `rules` against
+54.2, the one row where a guest language's shipping mode beats this one's, by
+1.3 times, where it was 2.6 (D1161, D1179, D1186 to D1189). On the other four
+the release engine is ahead of it -- 7.6 against 18.0, 11.0 against 18.8, 3.7
+against 12.5, 14.0 against 36.5 -- and ahead of Luau's native tier on all
 five.
 
 `g++ -O2` is in the table as the floor rather than as a competitor: it is not a
@@ -117,13 +123,14 @@ guest language and nothing here is trying to replace it.
 ## 8. Where Kest wins
 
 - **Against Luau's native tier, on all five workloads**, compiled: `rules`
-  56.3 ms against 149.8, `kernel` 7.9 against 29.5, `control` 10.3 against
-  36.3, `graph` 3.5 against 8.3, `words` 14.6 against 24.0.
+  54.2 ms against 147.6, `kernel` 7.6 against 29.5, `control` 11.0 against
+  34.2, `graph` 3.7 against 7.9, `words` 14.0 against 22.4.
 - **Against daslang's AOT on four of five**: `kernel` by more than two times,
-  `control` by nearly two, `graph` by three and a half, and `words` by two and
-  a half.
-- **The machine against Luau's interpreter on four of five**, by a twentieth
-  to a quarter, and against daslang's interpreter on all five.
+  `control` by 1.7, `graph` by three and a third, and `words` by two and a
+  half.
+- **The machine against Luau's interpreter on all five**, by 3% on `control`,
+  6% on `rules` and a fifth to a quarter on the other three, and against
+  daslang's interpreter on all five.
 - **On what it refuses before running.** Contracts the compiler proves rather
   than conventions a reader keeps: `no.alloc`, `no.host` and `deterministic`
   are held at the line, and the paired suite counts one wrong answer refused
@@ -137,14 +144,16 @@ guest language and nothing here is trying to replace it.
 
 ## 9. Where Kest loses
 
-- **Daslang's AOT on `rules`, by 1.4×**: 40.3 ms against 56.3. The benchmark
+- **Daslang's AOT on `rules`, by 1.3×**: 40.5 ms against 54.2. The benchmark
   reads each actor out of its array and writes it back, because a struct is a
   value here, where the daslang version changes it where it stands; the copy
   is twelve slots each way on every call.
 - **`g++ -O2` is ahead on all five**: by 1.4× on `kernel` and `rules`, 1.6× on
-  `words`, and about 2× on `control` and `graph`.
-- **The machine against Luau's interpreter on `rules`**, by 4%, while it
-  retires 10% fewer instructions: Luau does more of each cycle's work.
+  `words`, and 2.2 to 2.3× on `control` and `graph`.
+- **The machine's lead over Luau's interpreter on `control` and `rules` is
+  thin**: 3% and 6%, where it retires 23% and 15% fewer instructions, so Luau
+  does more of each cycle's work; a run at a60730d6 had it 4% behind on
+  `rules` (D1190).
 - **On reading, where the work is straightforward shuffling of data known to be
   there**, Kest is a tenth to a quarter longer, because the types are written
   down: `nearby` 125 per hundred, `stale` 111.
@@ -447,12 +456,12 @@ honest and the spread is informative, but what would settle it is people.
 Against Luau with `--codegen`, which is the strongest relevant incumbent, the
 factual answer is three things and no more:
 
-**It is faster on gameplay-shaped work, with the numbers beside it.** 56.3 ms
-against 149.8 on the rules workload, 7.9 against 29.5 on the kernel, 10.3 against
-36.3 on control, 3.5 against 8.3 on the graph, 14.6 against 24.0 on the
-allocator-bound one; and its interpreter is ahead of Luau's interpreter on four
-of the five and 4% behind on the fifth. Daslang's AOT is the one thing in the
-table ahead of it on the rules, by 1.4 times, and behind it on the other four. A
+**It is faster on gameplay-shaped work, with the numbers beside it.** 54.2 ms
+against 147.6 on the rules workload, 7.6 against 29.5 on the kernel, 11.0 against
+34.2 on control, 3.7 against 7.9 on the graph, 14.0 against 22.4 on the
+allocator-bound one; and its interpreter is ahead of Luau's interpreter on all
+five, by 3% at the least. Daslang's AOT is the one thing in the table ahead of
+it on the rules, by 1.3 times, and behind it on the other four. A
 frame of a real program is 0.640 ms in the middle with a 0.893 ms p99, and the
 collector's longest pause on a program making 125,466 allocations is 0.23 ms.
 
@@ -467,12 +476,12 @@ one difference no amount of tuning on the other side closes.
 286 ms, a reload is under a millisecond, and a shipped build is C11 with no
 runtime code generation.
 
-**Where it is weak, it is weak in the open.** It is one and a half to two
-times `g++` and it is not trying to be C++; its interpreter is behind Luau's on
-the rules workload; a model run blind against its AI suite does no better in it
-than in Luau and spends more getting there; and daslang's AOT is 1.4 times
-faster on the rules. All four are written down here
-rather than left for somebody to find.
+**Where it is weak, it is weak in the open.** It is 1.4 to 2.3 times `g++`
+and it is not trying to be C++; its interpreter's lead over Luau's on the
+rules workload is 6% and has been a 4% deficit on a busier machine; a model
+run blind against its AI suite does no better in it than in Luau and spends
+more getting there; and daslang's AOT is 1.3 times faster on the rules. All
+four are written down here rather than left for somebody to find.
 
 **Is 30 still weak?** Partly, and in one place: the AI claim. The runtime
 claim, the contract claim and the loop claim each hold by something that runs
