@@ -41049,3 +41049,42 @@ lines again in the guarded walk's second branch, which comes first in
 `shorter.kest` rather than the `outside.kest` it names. It now quotes the
 plain guard with the line above it, which only that one has, and is caught
 with `outside.kest` again.
+
+## D1191 — The machine's loop is built without a landing mark on every label
+
+*measured*. Read instruction by instruction, the hottest of the machine's
+loop on `rules` began with `endbr64` -- one at the head of every case. It is
+what `-fcf-protection` puts wherever an indirect jump may land, and GCC on
+Ubuntu, which is what this tree and CI build with, turns it on unasked. The
+threaded dispatch of D1181 jumps indirectly to every case, so each
+instruction the machine ran paid for one that does nothing unless the
+processor is checking where jumps land. No Linux release asks a program's
+processor to: user-space indirect-branch tracking is not in the kernel, and
+what it does enforce, where the processor has it, is the shadow stack that
+guards returns.
+
+So `vm.c` is built with `-fcf-protection=return` where the compiler takes it:
+returns stay guarded, jumps go unmarked, and the other files are left as the
+compiler builds them. A compiler that does not know the option is asked
+nothing, the way D1158's alignment is asked. What it costs a host is the one
+property: a binary that links `libkest.a` is marked for the shadow stack and
+no longer for branch tracking, since the linker marks a binary with only what
+every object carries.
+
+Best of five, `kest run`, at the same tree with only `vm.o` rebuilt:
+
+| workload | instructions before | after | cycles before | after |
+| --- | --- | --- | --- | --- |
+| kernel | 676.6 M | 660.0 M | 210.7 M | 212.4 M |
+| control | 794.1 M | 764.3 M | 331.0 M | 331.4 M |
+| graph | 95.2 M | 91.0 M | 35.5 M | 32.8 M |
+| words | 184.3 M | 181.5 M | 69.1 M | 63.9 M |
+| rules | 2,977 M | 2,881 M | 1,195 M | 1,205 M |
+
+The instructions are 1.5 to 4.4% fewer on all five. The cycles are the shared
+box, so `kernel` and `rules` were taken again best of nine, run turn about:
+211.6 M against 211.2 M, and 1,184 M against 1,166 M. Luau's interpreter is
+1,105 M to 1,137 M on `rules` over the same minutes, so the machine is still
+behind it there, by less. The front page stays the run D1190 took at
+`a60730d6`, which says the commit it was taken at.
+

@@ -45,7 +45,16 @@ build/release/%.o: src/%.c | build/release
 # is built with its cases put there, by a compiler that can be asked to; one
 # that cannot is asked nothing rather than refused. See D1158.
 ALIGNED := $(shell $(CC) -falign-labels=16 -Werror -x c -c -o /dev/null /dev/null 2>/dev/null && echo -falign-labels=16)
-build/release/vm.o: TUNED := $(ALIGNED)
+
+# Where the compiler marks every place an indirect jump may land, which it
+# does by default on some systems, each of the loop's labels begins with an
+# instruction that does nothing unless the processor is told to check jumps
+# -- which no Linux tells a program to -- and the machine ran that instruction
+# once for every instruction it ran: 2 to 4% of what it retires. So the loop
+# is built with returns guarded and jumps not, by a compiler that can be asked
+# to. See D1191.
+UNMARKED := $(shell $(CC) -fcf-protection=return -Werror -x c -c -o /dev/null /dev/null 2>/dev/null && echo -fcf-protection=return)
+build/release/vm.o: TUNED := $(ALIGNED) $(UNMARKED)
 
 # Bytes the compiler was not written for, made from a seed. Built both ways:
 # the release one for a long campaign and the sanitised one for the gate's

@@ -41514,3 +41514,18 @@ See D1190.
 **Runs:** `bench/compare.sh` best of seven at a load of two, `rules` against
 Luau's interpreter best of nine twice, `check-docs.sh`, the repointed hole by
 hand, the quotation pass, and `make most`.
+
+## 2026-09-23, the machine's loop without a landing mark on every label
+
+Every case of the threaded loop began with the `endbr64` that GCC on Ubuntu
+puts wherever an indirect jump may land, and no Linux checks those. `vm.c` is
+built with `-fcf-protection=return` where the compiler takes it, which keeps
+returns guarded; the machine retires 1.5 to 4.4% fewer instructions on the
+five workloads, and `rules` is 1.5% fewer cycles best of nine.
+
+See D1191.
+
+**Runs:** the five workloads before and after, best of five, instructions and
+cycles, `kernel` and `rules` again best of nine turn about, `readelf -n` on
+both binaries for what they are marked with, and `make most`.
+
