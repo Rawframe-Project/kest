@@ -189,7 +189,8 @@ says why. The other was bulk text append and it is done.
   `control` is 0.98 once its rule is carried (D1175), and `rules` 0.99 once
   a value is moved a run of its pieces at a time (D1177) and an element is
   weighed against a constant in one instruction (D1178): every workload here
-  runs fewer instructions than Luau's interpreter.
+  runs fewer instructions than Luau's interpreter. Threaded dispatch, which
+  D1047 refused, took a tenth of the cycles off every workload (D1181).
 - The dispatch loop, and what is left of it is smaller than it was written
   down as. The 48 to 92 per cent was the share of cycles *inside* the
   interpreter's loop, which is everything a program does and says nothing about

@@ -46,6 +46,7 @@ another and is not named here is a check that fails.
 | D693 | D1041 | a field its module keeps to itself, so a library keeps an invariant |
 | D1017 | D1093 | the backend that decision said would not be built, built, and weighed |
 | D1067 | D1093 | the native question, answered by writing the C rather than by bounding it |
+| D1047 | D1181 | threaded dispatch taken where the compiler has it: a tenth of the cycles, not one to four per cent |
 
 ---
 
@@ -40766,3 +40767,37 @@ date and the commit it was taken at.
   D1172; it says what `--release` writes.
 
 Taken on 2026-09-23 at `b64a9519`.
+
+## D1181 — Every instruction hands over to the next itself
+
+*measured*. This supersedes D1047's refusal of threaded dispatch. D1047 weighed
+it by the indirect branch's mispredictions alone, one to four per cent, and
+refused a GNU extension in the one loop everything runs through for that. The
+front page put this machine an eighth behind Luau's interpreter on `control`
+and `rules` by the clock while it retired fewer instructions than Luau's on
+both (D1180), which is time spent somewhere a count of instructions does not
+see, and Luau's interpreter hands over through a table of labels.
+
+- Under GCC and clang, and not in the build that checks itself, every
+  instruction ends by recording where the next begins and jumping through a
+  table of the addresses of the handlers, `threaded`, rather than breaking to
+  the one switch at the top of the loop. The table has all 256 bytes, so
+  there is no bounds test in front of the jump; a byte no instruction is goes
+  to a handler that steps over it, as the switch did. Everywhere else -- MSVC,
+  and any compiler without `&&label` -- it is the switch, unchanged. The
+  handlers are not written twice: each `case` carries a label through
+  `THREADED`, and each ends in `NEXT`, which is the jump or `break`.
+- What it wins is not what D1047 measured. The jump back to the shared
+  dispatch, the bounds test and the table-offset arithmetic go, which is
+  10.5% of the instructions `control` retires, and each handler's jump is
+  predicted from where it is rather than from one place every instruction
+  shares.
+- Held both ways: the build that checks itself keeps the switch, and every
+  example is run under both builds and held to the same answer and the same
+  words; CI builds with MSVC, where it is the switch, and runs every example
+  there. The seven holes quoting a handler's label or its closing `break`
+  were repointed and each run by hand and caught.
+
+Cycles turn about against the tree before, best of five: `control` 14.7%
+fewer, `kernel` 12.4%, `graph` 13.1%, `rules` 11.1% and `words` 10.6%, with
+the same answers.

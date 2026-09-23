@@ -2796,8 +2796,8 @@ fn main() -> i32 {
         # D797.
         "what": "a builtin that reaches where the proof says it does not",
         "file": "src/vm.c",
-        "from": r"""        case KEST_OP_CLEAR: {""",
-        "to": r"""        case KEST_OP_CLEAR: {
+        "from": r"""        case KEST_OP_CLEAR: THREADED(KEST_OP_CLEAR) {""",
+        "to": r"""        case KEST_OP_CLEAR: THREADED(KEST_OP_CLEAR) {
             if (rt->heap != NULL && kest_arena_alloc(rt->heap, 64, 1) == NULL) {
                 no_room(vmp, frame, instruction, rt);
                 return false;
@@ -2816,7 +2816,7 @@ fn main() -> i32 {
         "what": "a rest that copies what it keeps",
         "file": "src/vm.c",
         "from": r"""            TEXT_ON(text.bytes + at, text.length - (uint32_t)at);
-            break;""",
+            NEXT;""",
         "to": r"""            {
                 uint32_t left = text.length - (uint32_t)at;
                 char *copy = kest_arena_alloc(rt->heap, left + 1, 1);
@@ -2828,7 +2828,7 @@ fn main() -> i32 {
                 copy[left] = '\0';
                 TEXT_ON(copy, left);
             }
-            break;""",
+            NEXT;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -7020,17 +7020,17 @@ fn main() -> i32 {
             mine = base;
             constants = callee->constants;
             top = base + callee->slot_count;
-            break;
+            NEXT;
         }
 
-        case KEST_OP_CALL_VALUE: {""",
+        case KEST_OP_CALL_VALUE: THREADED(KEST_OP_CALL_VALUE) {""",
         "to": """            ip = callee->code;
             mine = base;
             top = base + callee->slot_count;
-            break;
+            NEXT;
         }
 
-        case KEST_OP_CALL_VALUE: {""",
+        case KEST_OP_CALL_VALUE: THREADED(KEST_OP_CALL_VALUE) {""",
         "make": ["kest"],
         # A program of its own: the example this used to be asked of has its
         # small functions carried to where they are called since D1156, and a
@@ -7066,16 +7066,16 @@ fn main() -> i32 {
         "from": """            mine = base;
             constants = callee->constants;
             top = base + callee->slot_count;
-            break;
+            NEXT;
         }
 
-        case KEST_OP_CALL_VALUE: {""",
+        case KEST_OP_CALL_VALUE: THREADED(KEST_OP_CALL_VALUE) {""",
         "to": """            constants = callee->constants;
             top = base + callee->slot_count;
-            break;
+            NEXT;
         }
 
-        case KEST_OP_CALL_VALUE: {""",
+        case KEST_OP_CALL_VALUE: THREADED(KEST_OP_CALL_VALUE) {""",
         "make": ["kest"],
         # A program of its own rather than an example: a machine whose callee
         # stands on the caller's slots reads a count out of whatever was there,
@@ -7124,16 +7124,16 @@ fn main() -> i32 {
         # the width, in a slot the type says cannot hold it. See D868.
         "what": "an instruction that adds and says it cut what it added",
         "file": "src/vm.c",
-        "from": """        case KEST_OP_ADD_I_NARROW:
+        "from": """        case KEST_OP_ADD_I_NARROW: THREADED(KEST_OP_ADD_I_NARROW)
             BINARY_I(integer, (int64_t)((uint64_t)left.integer +
                                         (uint64_t)right.integer));
             top[-1].integer = kest_narrow_to(READ_U16(), top[-1].integer);
-            break;""",
-        "to": """        case KEST_OP_ADD_I_NARROW:
+            NEXT;""",
+        "to": """        case KEST_OP_ADD_I_NARROW: THREADED(KEST_OP_ADD_I_NARROW)
             BINARY_I(integer, (int64_t)((uint64_t)left.integer +
                                         (uint64_t)right.integer));
             (void)READ_U16();
-            break;""",
+            NEXT;""",
         "make": ["kest"],
         "program": "adding.kest",
         # Two parameters rather than a local and a written number, which is
@@ -12336,9 +12336,9 @@ static const Keyword KEYWORDS[] = {
         # machine holding the host to that promise, and this hole is about the
         # other net: a frame that keeps a byte a call and is only ever seen by
         # counting the heap on either side of a thousand of them.
-        "from": """        case KEST_OP_NEXT_LESS_I: {
+        "from": """        case KEST_OP_NEXT_LESS_I: THREADED(KEST_OP_NEXT_LESS_I) {
             uint16_t slot = READ_U16();""",
-        "to": """        case KEST_OP_NEXT_LESS_I: {
+        "to": """        case KEST_OP_NEXT_LESS_I: THREADED(KEST_OP_NEXT_LESS_I) {
             (void)kest_arena_alloc(rt->heap, 1, 1);
             uint16_t slot = READ_U16();""",
         "make": ["embed"],
@@ -14968,13 +14968,13 @@ bool kest_needs_of(""",
         # again for a byte read out of a name, so this says which by taking
         # the line above it as well.
         "from": r"""            (top++)->integer = (unsigned char)text.bytes[index];
-            break;
+            NEXT;
         }
-        case KEST_OP_TEXT_IN: {""",
+        case KEST_OP_TEXT_IN: THREADED(KEST_OP_TEXT_IN) {""",
         "to": r"""            (top++)->integer = text.bytes[index];
-            break;
+            NEXT;
         }
-        case KEST_OP_TEXT_IN: {""",
+        case KEST_OP_TEXT_IN: THREADED(KEST_OP_TEXT_IN) {""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/words.kest"],

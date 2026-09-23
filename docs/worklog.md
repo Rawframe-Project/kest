@@ -41363,3 +41363,19 @@ See D1180.
 **Runs:** `bench/compare.sh` with Luau and daslang, both charts rendered and
 read, every program and output on the page run, the C host compiled with
 `-Wall -Wextra` and run, `check-docs.sh`, and `make most`.
+
+## 2026-09-23, every instruction hands over to the next itself
+
+The machine was behind Luau's interpreter by the clock on two workloads while
+retiring fewer instructions. Under GCC and clang every instruction now jumps to
+the next through a table of handler addresses; the switch stays for every
+other compiler and for the build that checks itself. All five workloads run
+10.6 to 14.7% fewer cycles. The long fuzz campaign's 34 finds were all the
+fuzzer's binary being rebuilt under it; each of those seeds passes run again.
+
+See D1181.
+
+**Runs:** `perf stat` with frontend stalls, icache misses and kernel time
+against Luau, four compiler flags on the machine alone, cycles turn about on
+the five workloads, the seven repointed holes by hand, the campaign's seeds
+again, and `make most`.

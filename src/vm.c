@@ -15,6 +15,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Whether instructions hand over through a table of label addresses, which is
+// GCC's and clang's and not the standard's. See D1181.
+#if defined(__GNUC__) && !KEST_CHECKED
+#define KEST_THREADED 1
+#else
+#define KEST_THREADED 0
+#endif
+
 // What a host gets when it says nothing.
 // The two a host gets by saying nothing, which `kest.h` names so that a host
 // can say the same thing on purpose.
@@ -3531,6 +3539,21 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }                                                                      \
     } while (0)
 #define READ_BYTE() (*ip++)
+// How one instruction hands over to the next. Where the host's compiler can
+// take the address of a label, each jumps from its own end through a table;
+// everywhere else, and in the build that checks itself, which counts every
+// instruction at the top of the loop, it is the end of the switch. See D1181.
+#if KEST_THREADED
+#define THREADED(op) thread_##op:
+#define NEXT                                                                   \
+    do {                                                                       \
+        instruction = ip;                                                      \
+        goto *threaded[*ip++];                                                 \
+    } while (0)
+#else
+#define THREADED(op)
+#define NEXT break
+#endif
 // Through a function rather than a comma expression, because a comma inside a
 // subscript is a thing one of the two compilers this is built with warns
 // about wherever it appears -- and `module->layout_types[READ_U16()]` is
@@ -3593,8 +3616,236 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         (top++)->field = (expression);                                         \
     } while (0)
 
+#if KEST_THREADED
+    // Every instruction jumps to the next from its own end rather than from
+    // the one place at the top of the loop, so the host's compiler holds the
+    // frame and the constants in registers rather than a table address, and
+    // each jump is predicted from where it is. GCC and clang only; the switch
+    // below is the whole of it everywhere else. See D1181.
+    static const void *const threaded[256] = {
+        [KEST_OP_CONST] = &&thread_KEST_OP_CONST,
+        [KEST_OP_CONST_RUN] = &&thread_KEST_OP_CONST_RUN,
+        [KEST_OP_CONST_AT] = &&thread_KEST_OP_CONST_AT,
+        [KEST_OP_LOAD] = &&thread_KEST_OP_LOAD,
+        [KEST_OP_LOAD2] = &&thread_KEST_OP_LOAD2,
+        [KEST_OP_LOADK] = &&thread_KEST_OP_LOADK,
+        [KEST_OP_STORE] = &&thread_KEST_OP_STORE,
+        [KEST_OP_LOADN] = &&thread_KEST_OP_LOADN,
+        [KEST_OP_STOREN] = &&thread_KEST_OP_STOREN,
+        [KEST_OP_FIELD] = &&thread_KEST_OP_FIELD,
+        [KEST_OP_ARRAY] = &&thread_KEST_OP_ARRAY,
+        [KEST_OP_MAKE_ARRAY] = &&thread_KEST_OP_MAKE_ARRAY,
+        [KEST_OP_ROOM] = &&thread_KEST_OP_ROOM,
+        [KEST_OP_PUSH] = &&thread_KEST_OP_PUSH,
+        [KEST_OP_FIT] = &&thread_KEST_OP_FIT,
+        [KEST_OP_PUSH_TEXT] = &&thread_KEST_OP_PUSH_TEXT,
+        [KEST_OP_FIT_TEXT] = &&thread_KEST_OP_FIT_TEXT,
+        [KEST_OP_INDEX] = &&thread_KEST_OP_INDEX,
+        [KEST_OP_INDEX_LL] = &&thread_KEST_OP_INDEX_LL,
+        [KEST_OP_INDEX_TO] = &&thread_KEST_OP_INDEX_TO,
+        [KEST_OP_INDEX_TO_LL] = &&thread_KEST_OP_INDEX_TO_LL,
+        [KEST_OP_ELEM_FROM_LL] = &&thread_KEST_OP_ELEM_FROM_LL,
+        [KEST_OP_ELEM_FROM] = &&thread_KEST_OP_ELEM_FROM,
+        [KEST_OP_POP_LAST] = &&thread_KEST_OP_POP_LAST,
+        [KEST_OP_TAKE] = &&thread_KEST_OP_TAKE,
+        [KEST_OP_CLEAR] = &&thread_KEST_OP_CLEAR,
+        [KEST_OP_ELEM_ADDR] = &&thread_KEST_OP_ELEM_ADDR,
+        [KEST_OP_ELEM_AT] = &&thread_KEST_OP_ELEM_AT,
+        [KEST_OP_LOAD_SLOTS] = &&thread_KEST_OP_LOAD_SLOTS,
+        [KEST_OP_STORE_SLOTS] = &&thread_KEST_OP_STORE_SLOTS,
+        [KEST_OP_OFFSET_ADDR] = &&thread_KEST_OP_OFFSET_ADDR,
+        [KEST_OP_LOAD_AT] = &&thread_KEST_OP_LOAD_AT,
+        [KEST_OP_LOAD_ELEM] = &&thread_KEST_OP_LOAD_ELEM,
+        [KEST_OP_STORE_ELEM] = &&thread_KEST_OP_STORE_ELEM,
+        [KEST_OP_NEW_STORE] = &&thread_KEST_OP_NEW_STORE,
+        [KEST_OP_ADD] = &&thread_KEST_OP_ADD,
+        [KEST_OP_GET] = &&thread_KEST_OP_GET,
+        [KEST_OP_SET] = &&thread_KEST_OP_SET,
+        [KEST_OP_REMOVE] = &&thread_KEST_OP_REMOVE,
+        [KEST_OP_SEEK_FROM] = &&thread_KEST_OP_SEEK_FROM,
+        [KEST_OP_SEEK_NEXT] = &&thread_KEST_OP_SEEK_NEXT,
+        [KEST_OP_STORE_REF] = &&thread_KEST_OP_STORE_REF,
+        [KEST_OP_COUNT] = &&thread_KEST_OP_COUNT,
+        [KEST_OP_TEXT_FLAGS] = &&thread_KEST_OP_TEXT_FLAGS,
+        [KEST_OP_TEXT_VALUE] = &&thread_KEST_OP_TEXT_VALUE,
+        [KEST_OP_TEXT_I] = &&thread_KEST_OP_TEXT_I,
+        [KEST_OP_TEXT_U] = &&thread_KEST_OP_TEXT_U,
+        [KEST_OP_TEXT_F] = &&thread_KEST_OP_TEXT_F,
+        [KEST_OP_TEXT_F32] = &&thread_KEST_OP_TEXT_F32,
+        [KEST_OP_TEXT_B] = &&thread_KEST_OP_TEXT_B,
+        [KEST_OP_CONCAT] = &&thread_KEST_OP_CONCAT,
+        [KEST_OP_TEXT_FROM] = &&thread_KEST_OP_TEXT_FROM,
+        [KEST_OP_HASH_I] = &&thread_KEST_OP_HASH_I,
+        [KEST_OP_HASH_F] = &&thread_KEST_OP_HASH_F,
+        [KEST_OP_HASH_T] = &&thread_KEST_OP_HASH_T,
+        [KEST_OP_HASH_VALUE] = &&thread_KEST_OP_HASH_VALUE,
+        [KEST_OP_EQ_VALUE] = &&thread_KEST_OP_EQ_VALUE,
+        [KEST_OP_NE_VALUE] = &&thread_KEST_OP_NE_VALUE,
+        [KEST_OP_TEXT_LEN] = &&thread_KEST_OP_TEXT_LEN,
+        [KEST_OP_TEXT_AT] = &&thread_KEST_OP_TEXT_AT,
+        [KEST_OP_TEXT_IN] = &&thread_KEST_OP_TEXT_IN,
+        [KEST_OP_TEXT_SLICE] = &&thread_KEST_OP_TEXT_SLICE,
+        [KEST_OP_TEXT_REST] = &&thread_KEST_OP_TEXT_REST,
+        [KEST_OP_TEXT_MATCHES] = &&thread_KEST_OP_TEXT_MATCHES,
+        [KEST_OP_TEXT_FIND] = &&thread_KEST_OP_TEXT_FIND,
+        [KEST_OP_LEN] = &&thread_KEST_OP_LEN,
+        [KEST_OP_TRUE] = &&thread_KEST_OP_TRUE,
+        [KEST_OP_FALSE] = &&thread_KEST_OP_FALSE,
+        [KEST_OP_POP] = &&thread_KEST_OP_POP,
+        [KEST_OP_POPN] = &&thread_KEST_OP_POPN,
+        [KEST_OP_ROTATE] = &&thread_KEST_OP_ROTATE,
+        [KEST_OP_ADD_I] = &&thread_KEST_OP_ADD_I,
+        [KEST_OP_SUB_I] = &&thread_KEST_OP_SUB_I,
+        [KEST_OP_MUL_I] = &&thread_KEST_OP_MUL_I,
+        [KEST_OP_DIV_I] = &&thread_KEST_OP_DIV_I,
+        [KEST_OP_MOD_I] = &&thread_KEST_OP_MOD_I,
+        [KEST_OP_MOD_I_C] = &&thread_KEST_OP_MOD_I_C,
+        [KEST_OP_DIV_I_C] = &&thread_KEST_OP_DIV_I_C,
+        [KEST_OP_MOD_I_K] = &&thread_KEST_OP_MOD_I_K,
+        [KEST_OP_DIV_I_K] = &&thread_KEST_OP_DIV_I_K,
+        [KEST_OP_ADD_I_NARROW_C] = &&thread_KEST_OP_ADD_I_NARROW_C,
+        [KEST_OP_SUB_I_NARROW_C] = &&thread_KEST_OP_SUB_I_NARROW_C,
+        [KEST_OP_MUL_I_NARROW_C] = &&thread_KEST_OP_MUL_I_NARROW_C,
+        [KEST_OP_ADD_I_NARROW_K] = &&thread_KEST_OP_ADD_I_NARROW_K,
+        [KEST_OP_SUB_I_NARROW_K] = &&thread_KEST_OP_SUB_I_NARROW_K,
+        [KEST_OP_MUL_I_NARROW_K] = &&thread_KEST_OP_MUL_I_NARROW_K,
+        [KEST_OP_DIV_U] = &&thread_KEST_OP_DIV_U,
+        [KEST_OP_MOD_U] = &&thread_KEST_OP_MOD_U,
+        [KEST_OP_AND_I] = &&thread_KEST_OP_AND_I,
+        [KEST_OP_OR_I] = &&thread_KEST_OP_OR_I,
+        [KEST_OP_XOR_I] = &&thread_KEST_OP_XOR_I,
+        [KEST_OP_NOT_I] = &&thread_KEST_OP_NOT_I,
+        [KEST_OP_SHL] = &&thread_KEST_OP_SHL,
+        [KEST_OP_SHR_I] = &&thread_KEST_OP_SHR_I,
+        [KEST_OP_SHR_U] = &&thread_KEST_OP_SHR_U,
+        [KEST_OP_NEG_I] = &&thread_KEST_OP_NEG_I,
+        [KEST_OP_I2F] = &&thread_KEST_OP_I2F,
+        [KEST_OP_U2F] = &&thread_KEST_OP_U2F,
+        [KEST_OP_TO_F32] = &&thread_KEST_OP_TO_F32,
+        [KEST_OP_F32_BITS] = &&thread_KEST_OP_F32_BITS,
+        [KEST_OP_BITS_F32] = &&thread_KEST_OP_BITS_F32,
+        [KEST_OP_F2I] = &&thread_KEST_OP_F2I,
+        [KEST_OP_NARROW] = &&thread_KEST_OP_NARROW,
+        [KEST_OP_ADD_I_NARROW] = &&thread_KEST_OP_ADD_I_NARROW,
+        [KEST_OP_SUB_I_NARROW] = &&thread_KEST_OP_SUB_I_NARROW,
+        [KEST_OP_MUL_I_NARROW] = &&thread_KEST_OP_MUL_I_NARROW,
+        [KEST_OP_ADD_I_NARROW_TO] = &&thread_KEST_OP_ADD_I_NARROW_TO,
+        [KEST_OP_STORE_K] = &&thread_KEST_OP_STORE_K,
+        [KEST_OP_ADD_K_SELF] = &&thread_KEST_OP_ADD_K_SELF,
+        [KEST_OP_SUB_K_SELF] = &&thread_KEST_OP_SUB_K_SELF,
+        [KEST_OP_SUB_I_NARROW_TO] = &&thread_KEST_OP_SUB_I_NARROW_TO,
+        [KEST_OP_ADD_F_TO] = &&thread_KEST_OP_ADD_F_TO,
+        [KEST_OP_ADD_F_LL] = &&thread_KEST_OP_ADD_F_LL,
+        [KEST_OP_SUB_F_LL] = &&thread_KEST_OP_SUB_F_LL,
+        [KEST_OP_SUB_F_TO] = &&thread_KEST_OP_SUB_F_TO,
+        [KEST_OP_ADD_F] = &&thread_KEST_OP_ADD_F,
+        [KEST_OP_SUB_F] = &&thread_KEST_OP_SUB_F,
+        [KEST_OP_MUL_F] = &&thread_KEST_OP_MUL_F,
+        [KEST_OP_DIV_F] = &&thread_KEST_OP_DIV_F,
+        [KEST_OP_MOD_F] = &&thread_KEST_OP_MOD_F,
+        [KEST_OP_NEG_F] = &&thread_KEST_OP_NEG_F,
+        [KEST_OP_ADD_F32] = &&thread_KEST_OP_ADD_F32,
+        [KEST_OP_SUB_F32] = &&thread_KEST_OP_SUB_F32,
+        [KEST_OP_MUL_F32] = &&thread_KEST_OP_MUL_F32,
+        [KEST_OP_DIV_F32] = &&thread_KEST_OP_DIV_F32,
+        [KEST_OP_MOD_F32] = &&thread_KEST_OP_MOD_F32,
+        [KEST_OP_NEG_F32] = &&thread_KEST_OP_NEG_F32,
+        [KEST_OP_LT_I] = &&thread_KEST_OP_LT_I,
+        [KEST_OP_LE_I] = &&thread_KEST_OP_LE_I,
+        [KEST_OP_GT_I] = &&thread_KEST_OP_GT_I,
+        [KEST_OP_GE_I] = &&thread_KEST_OP_GE_I,
+        [KEST_OP_LT_U] = &&thread_KEST_OP_LT_U,
+        [KEST_OP_LE_U] = &&thread_KEST_OP_LE_U,
+        [KEST_OP_GT_U] = &&thread_KEST_OP_GT_U,
+        [KEST_OP_GE_U] = &&thread_KEST_OP_GE_U,
+        [KEST_OP_LT_F] = &&thread_KEST_OP_LT_F,
+        [KEST_OP_LE_F] = &&thread_KEST_OP_LE_F,
+        [KEST_OP_GT_F] = &&thread_KEST_OP_GT_F,
+        [KEST_OP_GE_F] = &&thread_KEST_OP_GE_F,
+        [KEST_OP_EQ_I] = &&thread_KEST_OP_EQ_I,
+        [KEST_OP_NE_I] = &&thread_KEST_OP_NE_I,
+        [KEST_OP_EQ_F] = &&thread_KEST_OP_EQ_F,
+        [KEST_OP_NE_F] = &&thread_KEST_OP_NE_F,
+        [KEST_OP_EQ_T] = &&thread_KEST_OP_EQ_T,
+        [KEST_OP_NE_T] = &&thread_KEST_OP_NE_T,
+        [KEST_OP_LT_T] = &&thread_KEST_OP_LT_T,
+        [KEST_OP_LE_T] = &&thread_KEST_OP_LE_T,
+        [KEST_OP_GT_T] = &&thread_KEST_OP_GT_T,
+        [KEST_OP_GE_T] = &&thread_KEST_OP_GE_T,
+        [KEST_OP_NOT] = &&thread_KEST_OP_NOT,
+        [KEST_OP_JUMP] = &&thread_KEST_OP_JUMP,
+        [KEST_OP_JUMP_FALSE] = &&thread_KEST_OP_JUMP_FALSE,
+        [KEST_OP_JUMP_TRUE] = &&thread_KEST_OP_JUMP_TRUE,
+        [KEST_OP_JUMP_FALSE_LT_E] = &&thread_KEST_OP_JUMP_FALSE_LT_E,
+        [KEST_OP_JUMP_FALSE_LE_E] = &&thread_KEST_OP_JUMP_FALSE_LE_E,
+        [KEST_OP_JUMP_FALSE_GT_E] = &&thread_KEST_OP_JUMP_FALSE_GT_E,
+        [KEST_OP_JUMP_FALSE_GE_E] = &&thread_KEST_OP_JUMP_FALSE_GE_E,
+        [KEST_OP_JUMP_FALSE_EQ_E] = &&thread_KEST_OP_JUMP_FALSE_EQ_E,
+        [KEST_OP_JUMP_FALSE_NE_E] = &&thread_KEST_OP_JUMP_FALSE_NE_E,
+        [KEST_OP_JUMP_FALSE_LT_C] = &&thread_KEST_OP_JUMP_FALSE_LT_C,
+        [KEST_OP_JUMP_FALSE_LE_C] = &&thread_KEST_OP_JUMP_FALSE_LE_C,
+        [KEST_OP_JUMP_FALSE_GT_C] = &&thread_KEST_OP_JUMP_FALSE_GT_C,
+        [KEST_OP_JUMP_FALSE_GE_C] = &&thread_KEST_OP_JUMP_FALSE_GE_C,
+        [KEST_OP_JUMP_FALSE_EQ_C] = &&thread_KEST_OP_JUMP_FALSE_EQ_C,
+        [KEST_OP_JUMP_FALSE_NE_C] = &&thread_KEST_OP_JUMP_FALSE_NE_C,
+        [KEST_OP_JUMP_FALSE_LT_FK] = &&thread_KEST_OP_JUMP_FALSE_LT_FK,
+        [KEST_OP_JUMP_FALSE_LE_FK] = &&thread_KEST_OP_JUMP_FALSE_LE_FK,
+        [KEST_OP_JUMP_FALSE_GT_FK] = &&thread_KEST_OP_JUMP_FALSE_GT_FK,
+        [KEST_OP_JUMP_FALSE_GE_FK] = &&thread_KEST_OP_JUMP_FALSE_GE_FK,
+        [KEST_OP_JUMP_FALSE_EQ_FK] = &&thread_KEST_OP_JUMP_FALSE_EQ_FK,
+        [KEST_OP_JUMP_FALSE_NE_FK] = &&thread_KEST_OP_JUMP_FALSE_NE_FK,
+        [KEST_OP_JUMP_TRUE_LT_FK] = &&thread_KEST_OP_JUMP_TRUE_LT_FK,
+        [KEST_OP_JUMP_TRUE_LE_FK] = &&thread_KEST_OP_JUMP_TRUE_LE_FK,
+        [KEST_OP_JUMP_TRUE_GT_FK] = &&thread_KEST_OP_JUMP_TRUE_GT_FK,
+        [KEST_OP_JUMP_TRUE_GE_FK] = &&thread_KEST_OP_JUMP_TRUE_GE_FK,
+        [KEST_OP_JUMP_TRUE_EQ_FK] = &&thread_KEST_OP_JUMP_TRUE_EQ_FK,
+        [KEST_OP_JUMP_TRUE_NE_FK] = &&thread_KEST_OP_JUMP_TRUE_NE_FK,
+        [KEST_OP_JUMP_FALSE_LT_K] = &&thread_KEST_OP_JUMP_FALSE_LT_K,
+        [KEST_OP_JUMP_FALSE_LE_K] = &&thread_KEST_OP_JUMP_FALSE_LE_K,
+        [KEST_OP_JUMP_FALSE_GT_K] = &&thread_KEST_OP_JUMP_FALSE_GT_K,
+        [KEST_OP_JUMP_FALSE_GE_K] = &&thread_KEST_OP_JUMP_FALSE_GE_K,
+        [KEST_OP_JUMP_FALSE_EQ_K] = &&thread_KEST_OP_JUMP_FALSE_EQ_K,
+        [KEST_OP_JUMP_FALSE_NE_K] = &&thread_KEST_OP_JUMP_FALSE_NE_K,
+        [KEST_OP_JUMP_FALSE_LT_I] = &&thread_KEST_OP_JUMP_FALSE_LT_I,
+        [KEST_OP_JUMP_FALSE_LE_I] = &&thread_KEST_OP_JUMP_FALSE_LE_I,
+        [KEST_OP_JUMP_FALSE_GT_I] = &&thread_KEST_OP_JUMP_FALSE_GT_I,
+        [KEST_OP_JUMP_FALSE_GE_I] = &&thread_KEST_OP_JUMP_FALSE_GE_I,
+        [KEST_OP_JUMP_FALSE_EQ_I] = &&thread_KEST_OP_JUMP_FALSE_EQ_I,
+        [KEST_OP_JUMP_FALSE_NE_I] = &&thread_KEST_OP_JUMP_FALSE_NE_I,
+        [KEST_OP_JUMP_TRUE_LT_I] = &&thread_KEST_OP_JUMP_TRUE_LT_I,
+        [KEST_OP_JUMP_TRUE_LE_I] = &&thread_KEST_OP_JUMP_TRUE_LE_I,
+        [KEST_OP_JUMP_TRUE_GT_I] = &&thread_KEST_OP_JUMP_TRUE_GT_I,
+        [KEST_OP_JUMP_TRUE_GE_I] = &&thread_KEST_OP_JUMP_TRUE_GE_I,
+        [KEST_OP_JUMP_TRUE_EQ_I] = &&thread_KEST_OP_JUMP_TRUE_EQ_I,
+        [KEST_OP_JUMP_TRUE_NE_I] = &&thread_KEST_OP_JUMP_TRUE_NE_I,
+        [KEST_OP_JUMP_FALSE_LT_F] = &&thread_KEST_OP_JUMP_FALSE_LT_F,
+        [KEST_OP_JUMP_FALSE_LE_F] = &&thread_KEST_OP_JUMP_FALSE_LE_F,
+        [KEST_OP_JUMP_FALSE_GT_F] = &&thread_KEST_OP_JUMP_FALSE_GT_F,
+        [KEST_OP_JUMP_FALSE_GE_F] = &&thread_KEST_OP_JUMP_FALSE_GE_F,
+        [KEST_OP_JUMP_FALSE_EQ_F] = &&thread_KEST_OP_JUMP_FALSE_EQ_F,
+        [KEST_OP_JUMP_FALSE_NE_F] = &&thread_KEST_OP_JUMP_FALSE_NE_F,
+        [KEST_OP_JUMP_TRUE_LT_F] = &&thread_KEST_OP_JUMP_TRUE_LT_F,
+        [KEST_OP_JUMP_TRUE_LE_F] = &&thread_KEST_OP_JUMP_TRUE_LE_F,
+        [KEST_OP_JUMP_TRUE_GT_F] = &&thread_KEST_OP_JUMP_TRUE_GT_F,
+        [KEST_OP_JUMP_TRUE_GE_F] = &&thread_KEST_OP_JUMP_TRUE_GE_F,
+        [KEST_OP_JUMP_TRUE_EQ_F] = &&thread_KEST_OP_JUMP_TRUE_EQ_F,
+        [KEST_OP_JUMP_TRUE_NE_F] = &&thread_KEST_OP_JUMP_TRUE_NE_F,
+        [KEST_OP_LOOP] = &&thread_KEST_OP_LOOP,
+        [KEST_OP_NEXT_LESS_I] = &&thread_KEST_OP_NEXT_LESS_I,
+        [KEST_OP_NEXT_LESS_U] = &&thread_KEST_OP_NEXT_LESS_U,
+        [KEST_OP_SCRATCH] = &&thread_KEST_OP_SCRATCH,
+        [KEST_OP_UNSCRATCH] = &&thread_KEST_OP_UNSCRATCH,
+        [KEST_OP_CALL] = &&thread_KEST_OP_CALL,
+        [KEST_OP_CALL_VALUE] = &&thread_KEST_OP_CALL_VALUE,
+        [KEST_OP_CALL_HOST] = &&thread_KEST_OP_CALL_HOST,
+        [KEST_OP_STOP] = &&thread_KEST_OP_STOP,
+        [KEST_OP_STOP + 1 ... 255] = &&thread_nothing,
+        [KEST_OP_RETURN] = &&thread_KEST_OP_RETURN,
+    };
+#endif
+    const uint8_t *instruction = ip;
     while (true) {
-        const uint8_t *instruction = ip;
+        instruction = ip;
 #if KEST_CHECKED
         if (rt->ran_checked != NULL) {
             rt->ran_checked[*instruction]++;
@@ -3652,7 +3903,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }
 #endif
         switch (READ_BYTE()) {
-        case KEST_OP_CONST: {
+        case KEST_OP_CONST: THREADED(KEST_OP_CONST) {
             uint16_t which = READ_U16();
 #if KEST_CHECKED
             if (!own_constants(vmp, frame, instruction, which + 1u)) {
@@ -3661,9 +3912,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 #endif
             MOVED(moved_held, sizeof(KestValue));
             *top++ = constants[which];
-            break;
+            NEXT;
         }
-        case KEST_OP_CONST_RUN: {
+        case KEST_OP_CONST_RUN: THREADED(KEST_OP_CONST_RUN) {
             uint16_t first = READ_U16();
             uint16_t count = READ_U16();
 #if KEST_CHECKED
@@ -3675,9 +3926,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             MOVED(moved_held, (uint64_t)count * sizeof(KestValue));
             memcpy(top, &constants[first], sizeof(KestValue) * count);
             top += count;
-            break;
+            NEXT;
         }
-        case KEST_OP_CONST_AT: {
+        case KEST_OP_CONST_AT: THREADED(KEST_OP_CONST_AT) {
             uint16_t first = READ_U16();
             uint16_t stride = READ_U16();
             uint16_t count = READ_U16();
@@ -3694,9 +3945,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                    &constants[first + (size_t)index * stride],
                    sizeof(KestValue) * stride);
             top += stride;
-            break;
+            NEXT;
         }
-        case KEST_OP_LOAD: {
+        case KEST_OP_LOAD: THREADED(KEST_OP_LOAD) {
             uint16_t slot = READ_U16();
 #if KEST_CHECKED
             if (!own_slots(vmp, frame, instruction, slot, slot + 1u)) {
@@ -3705,13 +3956,13 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 #endif
             MOVED(moved_loaded, sizeof(KestValue));
             *top++ = mine[slot];
-            break;
+            NEXT;
         }
         // The two pairs this machine runs most of, each as one instruction.
         // They do what the two they replace did, in the order they did it:
         // what is saved is a dispatch and a read of the next opcode, which
         // over a frame step is a quarter of everything. See D961.
-        case KEST_OP_LOAD2: {
+        case KEST_OP_LOAD2: THREADED(KEST_OP_LOAD2) {
             uint16_t first = READ_U16();
             uint16_t second = READ_U16();
 #if KEST_CHECKED
@@ -3723,9 +3974,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             MOVED(moved_loaded, 2 * sizeof(KestValue));
             *top++ = mine[first];
             *top++ = mine[second];
-            break;
+            NEXT;
         }
-        case KEST_OP_LOADK: {
+        case KEST_OP_LOADK: THREADED(KEST_OP_LOADK) {
             uint16_t slot = READ_U16();
             uint16_t which = READ_U16();
 #if KEST_CHECKED
@@ -3738,9 +3989,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             MOVED(moved_held, sizeof(KestValue));
             *top++ = mine[slot];
             *top++ = constants[which];
-            break;
+            NEXT;
         }
-        case KEST_OP_STORE: {
+        case KEST_OP_STORE: THREADED(KEST_OP_STORE) {
             uint16_t slot = READ_U16();
 #if KEST_CHECKED
             if (!own_slots(vmp, frame, instruction, slot, slot + 1u)) {
@@ -3749,9 +4000,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 #endif
             MOVED(moved_stored, sizeof(KestValue));
             mine[slot] = *--top;
-            break;
+            NEXT;
         }
-        case KEST_OP_LOADN: {
+        case KEST_OP_LOADN: THREADED(KEST_OP_LOADN) {
             uint16_t slot = READ_U16();
             uint16_t count = READ_U16();
 #if KEST_CHECKED
@@ -3769,9 +4020,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 top[i] = mine[slot + i];
             }
             top += count;
-            break;
+            NEXT;
         }
-        case KEST_OP_STOREN: {
+        case KEST_OP_STOREN: THREADED(KEST_OP_STOREN) {
             uint16_t slot = READ_U16();
             uint16_t count = READ_U16();
 #if KEST_CHECKED
@@ -3785,9 +4036,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 mine[slot + i] = top[i];
             }
             MOVED(moved_stored, (uint64_t)count * sizeof(KestValue));
-            break;
+            NEXT;
         }
-        case KEST_OP_FIELD: {
+        case KEST_OP_FIELD: THREADED(KEST_OP_FIELD) {
             uint16_t offset = READ_U16();
             uint16_t size = READ_U16();
             uint16_t total = READ_U16();
@@ -3795,9 +4046,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             MOVED(moved_shuffled, (uint64_t)size * sizeof(KestValue));
             memmove(value, value + offset, sizeof(KestValue) * size);
             top = value + size;
-            break;
+            NEXT;
         }
-        case KEST_OP_ARRAY: {
+        case KEST_OP_ARRAY: THREADED(KEST_OP_ARRAY) {
             uint16_t count = READ_U16();
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
@@ -3840,9 +4091,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                      top + (size_t)i * layout->slots);
             }
             (top++)->object = array;
-            break;
+            NEXT;
         }
-        case KEST_OP_MAKE_ARRAY: {
+        case KEST_OP_MAKE_ARRAY: THREADED(KEST_OP_MAKE_ARRAY) {
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
             const KestLayout *layout = &module->layouts[of_which];
@@ -3868,9 +4119,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             top++;
-            break;
+            NEXT;
         }
-        case KEST_OP_ROOM: {
+        case KEST_OP_ROOM: THREADED(KEST_OP_ROOM) {
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
             const KestLayout *layout = &module->layouts[of_which];
@@ -3933,9 +4184,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 array->bytes = grown;
                 array->capacity = capacity;
             }
-            break;
+            NEXT;
         }
-        case KEST_OP_PUSH: {
+        case KEST_OP_PUSH: THREADED(KEST_OP_PUSH) {
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
             const KestLayout *layout = &module->layouts[of_which];
@@ -3955,12 +4206,12 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             if (!grew) {
                 return false;
             }
-            break;
+            NEXT;
         }
         // The same append with the growth taken out. Where `push` would double
         // the block this answers false and writes nothing, so a body that was
         // given room can fill it under a promise to reach no heap. See D940.
-        case KEST_OP_FIT: {
+        case KEST_OP_FIT: THREADED(KEST_OP_FIT) {
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
             const KestLayout *layout = &module->layouts[of_which];
@@ -3984,7 +4235,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             array->length++;
             MOVED(moved_held, sizeof(KestValue));
             (top++)->integer = 1;
-            break;
+            NEXT;
         }
         // A whole piece of text onto a run of bytes. Text is its bytes
         // (D021), so this is the loop a program had to write taken into one
@@ -3992,7 +4243,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // than once a byte, and a `memcpy`. Building text a byte at a time was
         // eighty per cent of the instructions `bench/words.kest` ran. See
         // D1068.
-        case KEST_OP_PUSH_TEXT: {
+        case KEST_OP_PUSH_TEXT: THREADED(KEST_OP_PUSH_TEXT) {
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
             const KestLayout *layout = &module->layouts[of_which];
@@ -4041,12 +4292,12 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                        piece.length);
             }
             array->length = wanted;
-            break;
+            NEXT;
         }
         // The same with the growth taken out, which is what a body under a
         // promise can do: all of it fits or none of it goes in, because a
         // piece half written is a piece nobody can take back. See D940.
-        case KEST_OP_FIT_TEXT: {
+        case KEST_OP_FIT_TEXT: THREADED(KEST_OP_FIT_TEXT) {
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
             const KestLayout *layout = &module->layouts[of_which];
@@ -4073,9 +4324,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             array->length += piece.length;
             MOVED(moved_held, sizeof(KestValue));
             (top++)->integer = 1;
-            break;
+            NEXT;
         }
-        case KEST_OP_INDEX: {
+        case KEST_OP_INDEX: THREADED(KEST_OP_INDEX) {
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
             const KestLayout *layout = &module->layouts[of_which];
@@ -4086,11 +4337,11 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             READ_INTO(top, layout,
                       array->bytes + (size_t)index * array->stride);
             top += layout->slots;
-            break;
+            NEXT;
         }
         // `load2` and `index` as one. The run and the index are read out of
         // the slots they are in rather than pushed to be popped. See D1155.
-        case KEST_OP_INDEX_LL: {
+        case KEST_OP_INDEX_LL: THREADED(KEST_OP_INDEX_LL) {
             uint16_t holds = READ_U16();
             uint16_t at = READ_U16();
             uint16_t of_which = READ_U16();
@@ -4110,12 +4361,12 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             READ_INTO(top, layout,
                       array->bytes + (size_t)index * array->stride);
             top += layout->slots;
-            break;
+            NEXT;
         }
         // The two above, each with the move at the other end taken into it.
         // `index` unpacks a struct onto the stack and the store that follows
         // copies it off again; this writes it where it is going. See D1012.
-        case KEST_OP_INDEX_TO: {
+        case KEST_OP_INDEX_TO: THREADED(KEST_OP_INDEX_TO) {
             uint16_t of_which = READ_U16();
             uint16_t slot = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
@@ -4132,9 +4383,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 #endif
             READ_INTO(mine + slot, layout,
                       array->bytes + (size_t)index * array->stride);
-            break;
+            NEXT;
         }
-        case KEST_OP_INDEX_TO_LL: {
+        case KEST_OP_INDEX_TO_LL: THREADED(KEST_OP_INDEX_TO_LL) {
             uint16_t of_which = READ_U16();
             uint16_t slot = READ_U16();
             uint16_t holds = READ_U16();
@@ -4156,9 +4407,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             IN_ARRAY(index, array);
             READ_INTO(mine + slot, layout,
                       array->bytes + (size_t)index * array->stride);
-            break;
+            NEXT;
         }
-        case KEST_OP_ELEM_FROM_LL: {
+        case KEST_OP_ELEM_FROM_LL: THREADED(KEST_OP_ELEM_FROM_LL) {
             uint16_t offset = READ_U16();
             uint16_t of_which = READ_U16();
             uint16_t slot = READ_U16();
@@ -4182,9 +4433,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             IN_ARRAY(index, array);
             pack(array->bytes + (size_t)index * array->stride + offset, layout,
                  mine + slot);
-            break;
+            NEXT;
         }
-        case KEST_OP_ELEM_FROM: {
+        case KEST_OP_ELEM_FROM: THREADED(KEST_OP_ELEM_FROM) {
             uint16_t offset = READ_U16();
             uint16_t of_which = READ_U16();
             uint16_t slot = READ_U16();
@@ -4203,9 +4454,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             MOVED(moved_packed, layout->size);
             pack(array->bytes + (size_t)index * array->stride + offset, layout,
                  mine + slot);
-            break;
+            NEXT;
         }
-        case KEST_OP_POP_LAST: {
+        case KEST_OP_POP_LAST: THREADED(KEST_OP_POP_LAST) {
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
             const KestLayout *layout = &module->layouts[of_which];
@@ -4229,9 +4480,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                       array->bytes + (size_t)array->length * array->stride);
             top += layout->slots;
             (top++)->integer = 1;
-            break;
+            NEXT;
         }
-        case KEST_OP_TAKE: {
+        case KEST_OP_TAKE: THREADED(KEST_OP_TAKE) {
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
             const KestLayout *layout = &module->layouts[of_which];
@@ -4257,9 +4508,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                                    KEST_WHERE_RUNNING)) {
                 return false;
             }
-            break;
+            NEXT;
         }
-        case KEST_OP_CLEAR: {
+        case KEST_OP_CLEAR: THREADED(KEST_OP_CLEAR) {
             Array *array = (--top)->object;
             HOLD(array, KEST_IS_ARRAY, "an array");
             if (array->borrowed) {
@@ -4268,22 +4519,22 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             array->length = 0;
-            break;
+            NEXT;
         }
-        case KEST_OP_ELEM_ADDR: {
+        case KEST_OP_ELEM_ADDR: THREADED(KEST_OP_ELEM_ADDR) {
             READ_U16();
             int64_t index = (--top)->integer;
             Array *array = (--top)->object;
             HOLD(array, KEST_IS_ARRAY, "an array");
             IN_ARRAY(index, array);
             (top++)->object = array->bytes + (size_t)index * array->stride;
-            break;
+            NEXT;
         }
         // One of an array at a byte into it, with the array and the index
         // taken away: what `elem.addr` and the `load.at` after it did in two.
         // Reading a field of an element is what a frame does most, and it was
         // the one read of a place that cost two dispatches. See D1044.
-        case KEST_OP_ELEM_AT: {
+        case KEST_OP_ELEM_AT: THREADED(KEST_OP_ELEM_AT) {
             uint16_t offset = READ_U16();
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
@@ -4295,9 +4546,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             READ_INTO(top, layout,
                       array->bytes + (size_t)index * array->stride + offset);
             top += layout->slots;
-            break;
+            NEXT;
         }
-        case KEST_OP_LOAD_SLOTS: {
+        case KEST_OP_LOAD_SLOTS: THREADED(KEST_OP_LOAD_SLOTS) {
             uint16_t base = READ_U16();
             uint16_t stride = READ_U16();
             uint16_t count = READ_U16();
@@ -4313,9 +4564,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             memcpy(top, mine + base + (size_t)index * stride,
                    sizeof(KestValue) * stride);
             top += stride;
-            break;
+            NEXT;
         }
-        case KEST_OP_STORE_SLOTS: {
+        case KEST_OP_STORE_SLOTS: THREADED(KEST_OP_STORE_SLOTS) {
             uint16_t base = READ_U16();
             uint16_t stride = READ_U16();
             uint16_t count = READ_U16();
@@ -4332,18 +4583,18 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             MOVED(moved_stored, (uint64_t)stride * sizeof(KestValue));
             memcpy(mine + base + (size_t)index * stride, value,
                    sizeof(KestValue) * stride);
-            break;
+            NEXT;
         }
-        case KEST_OP_OFFSET_ADDR: {
+        case KEST_OP_OFFSET_ADDR: THREADED(KEST_OP_OFFSET_ADDR) {
             uint16_t stride = READ_U16();
             uint16_t count = READ_U16();
             int64_t index = (--top)->integer;
             unsigned char *at = (--top)->object;
             IN_RUN(index, count);
             (top++)->object = at + (size_t)index * stride;
-            break;
+            NEXT;
         }
-        case KEST_OP_LOAD_AT: {
+        case KEST_OP_LOAD_AT: THREADED(KEST_OP_LOAD_AT) {
             uint16_t offset = READ_U16();
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
@@ -4351,7 +4602,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             const unsigned char *at = (--top)->object;
             READ_INTO(top, layout, at + offset);
             top += layout->slots;
-            break;
+            NEXT;
         }
         // A place in an array, given as the array and the index rather than as
         // an address. `load.elem` leaves the two where they are, because a
@@ -4360,7 +4611,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // anything at all, including growing that very array -- which used to
         // move the block while an address into it sat on the stack, and the
         // write then went into memory nothing would read again. See D931.
-        case KEST_OP_LOAD_ELEM: {
+        case KEST_OP_LOAD_ELEM: THREADED(KEST_OP_LOAD_ELEM) {
             uint16_t offset = READ_U16();
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
@@ -4372,9 +4623,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             READ_INTO(top, layout,
                       array->bytes + (size_t)index * array->stride + offset);
             top += layout->slots;
-            break;
+            NEXT;
         }
-        case KEST_OP_STORE_ELEM: {
+        case KEST_OP_STORE_ELEM: THREADED(KEST_OP_STORE_ELEM) {
             uint16_t offset = READ_U16();
             uint16_t of_which = READ_U16();
             OF_THE_MODULE(of_which, module->layout_count, "a layout");
@@ -4388,9 +4639,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             MOVED(moved_packed, layout->size);
             pack(array->bytes + (size_t)index * array->stride + offset, layout,
                  value);
-            break;
+            NEXT;
         }
-        case KEST_OP_NEW_STORE: {
+        case KEST_OP_NEW_STORE: THREADED(KEST_OP_NEW_STORE) {
             int64_t room = (--top)->integer;
             SPEND_WORK(room < 0 ? 0 : (uint64_t)room);
             // The stride is the layout's, which the door reads: what the
@@ -4417,9 +4668,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             top++;
-            break;
+            NEXT;
         }
-        case KEST_OP_ADD: {
+        case KEST_OP_ADD: THREADED(KEST_OP_ADD) {
             uint16_t stride = READ_U16();
             top -= stride;
             KestValue *value = top;
@@ -4495,9 +4746,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                    sizeof(KestValue) * stride);
             (top++)->integer =
                 pack_ref(store->serials[index], index);
-            break;
+            NEXT;
         }
-        case KEST_OP_GET: {
+        case KEST_OP_GET: THREADED(KEST_OP_GET) {
             uint16_t stride = READ_U16();
             int64_t which = (--top)->integer;
             KestValue held = *--top;
@@ -4508,9 +4759,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             top += stride + 1;
-            break;
+            NEXT;
         }
-        case KEST_OP_SET: {
+        case KEST_OP_SET: THREADED(KEST_OP_SET) {
             uint16_t stride = READ_U16();
             top -= stride;
             KestValue *value = top;
@@ -4525,9 +4776,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             (top++)->integer = was;
-            break;
+            NEXT;
         }
-        case KEST_OP_REMOVE: {
+        case KEST_OP_REMOVE: THREADED(KEST_OP_REMOVE) {
             int64_t which = (--top)->integer;
             KestValue held = *--top;
             bool was = false;
@@ -4539,10 +4790,10 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             (top++)->integer = was;
-            break;
+            NEXT;
         }
-        case KEST_OP_SEEK_FROM:
-        case KEST_OP_SEEK_NEXT: {
+        case KEST_OP_SEEK_FROM: THREADED(KEST_OP_SEEK_FROM)
+        case KEST_OP_SEEK_NEXT: THREADED(KEST_OP_SEEK_NEXT) {
             bool first = *instruction == KEST_OP_SEEK_FROM;
             uint16_t which = READ_U16();
             uint16_t at = READ_U16();
@@ -4568,9 +4819,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 SPEND();
                 ip -= away;
             }
-            break;
+            NEXT;
         }
-        case KEST_OP_STORE_REF: {
+        case KEST_OP_STORE_REF: THREADED(KEST_OP_STORE_REF) {
             int64_t index = (--top)->integer;
             KestValue held = *--top;
             frame->ip = ip;
@@ -4581,9 +4832,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             top++;
-            break;
+            NEXT;
         }
-        case KEST_OP_COUNT: {
+        case KEST_OP_COUNT: THREADED(KEST_OP_COUNT) {
             frame->ip = ip;
             rt->asked_at = instruction;
             if (!kest_store_count(rt, top[-1],
@@ -4591,10 +4842,10 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                                   &top[-1].integer)) {
                 return false;
             }
-            break;
+            NEXT;
         }
-        case KEST_OP_TEXT_FLAGS:
-        case KEST_OP_TEXT_VALUE: {
+        case KEST_OP_TEXT_FLAGS: THREADED(KEST_OP_TEXT_FLAGS)
+        case KEST_OP_TEXT_VALUE: THREADED(KEST_OP_TEXT_VALUE) {
             // Written the way it is built. Every other value's text is the
             // source that makes it and these are no different; D035 says so
             // for a set of bits and D036 for the cases of an enum.
@@ -4614,13 +4865,13 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             format_value(text, length, type, top);
             text[length] = '\0';
             TEXT_ON(text, length);
-            break;
+            NEXT;
         }
-        case KEST_OP_TEXT_I:
-        case KEST_OP_TEXT_U:
-        case KEST_OP_TEXT_F:
-        case KEST_OP_TEXT_F32:
-        case KEST_OP_TEXT_B: {
+        case KEST_OP_TEXT_I: THREADED(KEST_OP_TEXT_I)
+        case KEST_OP_TEXT_U: THREADED(KEST_OP_TEXT_U)
+        case KEST_OP_TEXT_F: THREADED(KEST_OP_TEXT_F)
+        case KEST_OP_TEXT_F32: THREADED(KEST_OP_TEXT_F32)
+        case KEST_OP_TEXT_B: THREADED(KEST_OP_TEXT_B) {
             char buffer[64];
             int written;
             if (instruction[0] == KEST_OP_TEXT_I ||
@@ -4649,9 +4900,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             memcpy(text, buffer, (size_t)written + 1);
             top--;
             TEXT_ON(text, written);
-            break;
+            NEXT;
         }
-        case KEST_OP_CONCAT: {
+        case KEST_OP_CONCAT: THREADED(KEST_OP_CONCAT) {
             uint16_t count = READ_U16();
             top -= (uint32_t)count * 2;
             size_t length = 0;
@@ -4688,9 +4939,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             text[used] = '\0';
             TEXT_ON(text, used);
-            break;
+            NEXT;
         }
-        case KEST_OP_TEXT_FROM: {
+        case KEST_OP_TEXT_FROM: THREADED(KEST_OP_TEXT_FROM) {
             const Array *bytes = (--top)->object;
             HOLD(bytes, KEST_IS_ARRAY, "an array");
             SPEND_WORK(bytes->length);
@@ -4718,12 +4969,12 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             memcpy(text, bytes->bytes, bytes->length);
             text[bytes->length] = '\0';
             TEXT_ON(text, bytes->length);
-            break;
+            NEXT;
         }
         // One round of a mixer over the bits, which is what a table wants of
         // a number that is often small and often consecutive.
-        case KEST_OP_HASH_I:
-        case KEST_OP_HASH_F: {
+        case KEST_OP_HASH_I: THREADED(KEST_OP_HASH_I)
+        case KEST_OP_HASH_F: THREADED(KEST_OP_HASH_F) {
             uint64_t bits = (uint64_t)top[-1].integer;
             if (instruction[0] == KEST_OP_HASH_F && top[-1].real == 0.0) {
                 // Nought and minus nought are one value to `==`, so they are
@@ -4731,9 +4982,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 bits = 0;
             }
             top[-1].integer = (int64_t)kest_mix(bits);
-            break;
+            NEXT;
         }
-        case KEST_OP_HASH_T: {
+        case KEST_OP_HASH_T: THREADED(KEST_OP_HASH_T) {
             // FNV-1a over the bytes, because text is its bytes (D021) and two
             // pieces that compare equal are the same bytes.
             Said text = TEXT_OFF();
@@ -4744,33 +4995,33 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             (top++)->integer = (int64_t)bits;
             SPEND_WORK(text.length);
-            break;
+            NEXT;
         }
-        case KEST_OP_HASH_VALUE: {
+        case KEST_OP_HASH_VALUE: THREADED(KEST_OP_HASH_VALUE) {
             const KestType *type = module->layout_types[READ_U16()];
             top -= type->slots;
             uint64_t bits = kest_hash_value(type, top);
             (top++)->integer = (int64_t)bits;
-            break;
+            NEXT;
         }
-        case KEST_OP_EQ_VALUE:
-        case KEST_OP_NE_VALUE: {
+        case KEST_OP_EQ_VALUE: THREADED(KEST_OP_EQ_VALUE)
+        case KEST_OP_NE_VALUE: THREADED(KEST_OP_NE_VALUE) {
             const KestType *type = module->layout_types[READ_U16()];
             top -= type->slots;
             const KestValue *right = top;
             top -= type->slots;
             bool same = values_equal(type, top, right);
             (top++)->integer = instruction[0] == KEST_OP_EQ_VALUE ? same : !same;
-            break;
+            NEXT;
         }
-        case KEST_OP_TEXT_LEN: {
+        case KEST_OP_TEXT_LEN: THREADED(KEST_OP_TEXT_LEN) {
             // A read rather than a walk: how many bytes there are is part of
             // what a piece of text is. See D964.
             Said text = TEXT_OFF();
             (top++)->integer = (int64_t)text.length;
-            break;
+            NEXT;
         }
-        case KEST_OP_TEXT_AT: {
+        case KEST_OP_TEXT_AT: THREADED(KEST_OP_TEXT_AT) {
             int64_t index = (--top)->integer;
             Said text = TEXT_OFF();
             // How many bytes there are is part of the value, so a byte at a
@@ -4785,9 +5036,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             (top++)->integer = (unsigned char)text.bytes[index];
-            break;
+            NEXT;
         }
-        case KEST_OP_TEXT_IN: {
+        case KEST_OP_TEXT_IN: THREADED(KEST_OP_TEXT_IN) {
             const KestValue *held = &mine[READ_U16()];
             int64_t index = mine[READ_U16()].integer;
             Said text = said(held);
@@ -4810,9 +5061,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
 #endif
             (top++)->integer = (unsigned char)text.bytes[index];
-            break;
+            NEXT;
         }
-        case KEST_OP_TEXT_SLICE: {
+        case KEST_OP_TEXT_SLICE: THREADED(KEST_OP_TEXT_SLICE) {
             int64_t count = (--top)->integer;
             int64_t from = (--top)->integer;
             Said text = TEXT_OFF();
@@ -4829,9 +5080,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             TEXT_ON(text.bytes + from, count);
-            break;
+            NEXT;
         }
-        case KEST_OP_TEXT_REST: {
+        case KEST_OP_TEXT_REST: THREADED(KEST_OP_TEXT_REST) {
             int64_t at = (--top)->integer;
             Said text = TEXT_OFF();
             if (at < 0 || (uint64_t)at > text.length) {
@@ -4841,9 +5092,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             TEXT_ON(text.bytes + at, text.length - (uint32_t)at);
-            break;
+            NEXT;
         }
-        case KEST_OP_TEXT_MATCHES: {
+        case KEST_OP_TEXT_MATCHES: THREADED(KEST_OP_TEXT_MATCHES) {
             Said needle = TEXT_OFF();
             int64_t at = (--top)->integer;
             Said text = TEXT_OFF();
@@ -4861,9 +5112,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             (top++)->integer = same && read == needle.length;
             SPEND_WORK(read);
-            break;
+            NEXT;
         }
-        case KEST_OP_TEXT_FIND: {
+        case KEST_OP_TEXT_FIND: THREADED(KEST_OP_TEXT_FIND) {
             int64_t from = (--top)->integer;
             Said needle = TEXT_OFF();
             Said haystack = TEXT_OFF();
@@ -4886,28 +5137,28 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             (top++)->integer = found < 0 ? 0 : found;
             (top++)->integer = found >= 0;
             SPEND_WORK(read);
-            break;
+            NEXT;
         }
-        case KEST_OP_LEN: {
+        case KEST_OP_LEN: THREADED(KEST_OP_LEN) {
             const Array *array = top[-1].object;
             HOLD(array, KEST_IS_ARRAY, "an array");
             top[-1].integer = array->length;
-            break;
+            NEXT;
         }
-        case KEST_OP_TRUE:
+        case KEST_OP_TRUE: THREADED(KEST_OP_TRUE)
             (top++)->integer = 1;
-            break;
-        case KEST_OP_FALSE:
+            NEXT;
+        case KEST_OP_FALSE: THREADED(KEST_OP_FALSE)
             MOVED(moved_held, sizeof(KestValue));
             (top++)->integer = 0;
-            break;
-        case KEST_OP_POP:
+            NEXT;
+        case KEST_OP_POP: THREADED(KEST_OP_POP)
             top--;
-            break;
-        case KEST_OP_POPN:
+            NEXT;
+        case KEST_OP_POPN: THREADED(KEST_OP_POPN)
             top -= READ_U16();
-            break;
-        case KEST_OP_ROTATE: {
+            NEXT;
+        case KEST_OP_ROTATE: THREADED(KEST_OP_ROTATE) {
             // The last slot is the tag and belongs first, so the run is
             // rolled by one rather than reversed.
             uint16_t count = READ_U16();
@@ -4916,7 +5167,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             memmove(top - count + 1, top - count,
                     sizeof(KestValue) * (size_t)(count - 1));
             top[-count] = tag;
-            break;
+            NEXT;
         }
 
         // Worked out unsigned and read back signed. What this language says
@@ -4926,18 +5177,18 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         // purpose. The bits are the same either way on every machine this
         // targets; what changes is that the machine is now doing what it says.
         // See D667.
-        case KEST_OP_ADD_I:
+        case KEST_OP_ADD_I: THREADED(KEST_OP_ADD_I)
             BINARY_I(integer, (int64_t)((uint64_t)left.integer +
                                         (uint64_t)right.integer));
-            break;
-        case KEST_OP_SUB_I:
+            NEXT;
+        case KEST_OP_SUB_I: THREADED(KEST_OP_SUB_I)
             BINARY_I(integer, (int64_t)((uint64_t)left.integer -
                                         (uint64_t)right.integer));
-            break;
-        case KEST_OP_MUL_I:
+            NEXT;
+        case KEST_OP_MUL_I: THREADED(KEST_OP_MUL_I)
             BINARY_I(integer, (int64_t)((uint64_t)left.integer *
                                         (uint64_t)right.integer));
-            break;
+            NEXT;
 // What every whole-number division says about a nought, said in one place:
 // the operand forms and the constant forms are one refusal. See D1170.
 #define BY_NOUGHT()                                                            \
@@ -4945,8 +5196,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         fail(vmp, frame, instruction, "K0601", "division by zero");            \
         return false;                                                          \
     } while (0)
-        case KEST_OP_DIV_I:
-        case KEST_OP_MOD_I: {
+        case KEST_OP_DIV_I: THREADED(KEST_OP_DIV_I)
+        case KEST_OP_MOD_I: THREADED(KEST_OP_MOD_I) {
             KestValue right = *--top;
             KestValue left = *--top;
             if (right.integer == 0) {
@@ -4962,7 +5213,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             (top++)->integer = instruction[0] == KEST_OP_DIV_I
                                    ? left.integer / right.integer
                                    : left.integer % right.integer;
-            break;
+            NEXT;
         }
 // Whole-number arithmetic with a constant on its right, written out one case
 // an instruction so that each is the arithmetic and nothing deciding which it
@@ -4988,76 +5239,76 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
     } while (0)
 #define CUT(KIND, MADE)                                                        \
     ((top++)->integer = kest_narrow_to((KIND), (int64_t)(MADE)))
-        case KEST_OP_MOD_I_C:
+        case KEST_OP_MOD_I_C: THREADED(KEST_OP_MOD_I_C)
             BY_CONSTANT((--top)->integer, DIVIDED(false));
-            break;
-        case KEST_OP_DIV_I_C:
+            NEXT;
+        case KEST_OP_DIV_I_C: THREADED(KEST_OP_DIV_I_C)
             BY_CONSTANT((--top)->integer, DIVIDED(true));
-            break;
-        case KEST_OP_MOD_I_K: {
+            NEXT;
+        case KEST_OP_MOD_I_K: THREADED(KEST_OP_MOD_I_K) {
             uint16_t slot = READ_U16();
             OWN_SLOT(slot);
             MOVED(moved_loaded, sizeof(KestValue));
             BY_CONSTANT(mine[slot].integer, DIVIDED(false));
-            break;
+            NEXT;
         }
-        case KEST_OP_DIV_I_K: {
+        case KEST_OP_DIV_I_K: THREADED(KEST_OP_DIV_I_K) {
             uint16_t slot = READ_U16();
             OWN_SLOT(slot);
             MOVED(moved_loaded, sizeof(KestValue));
             BY_CONSTANT(mine[slot].integer, DIVIDED(true));
-            break;
+            NEXT;
         }
-        case KEST_OP_ADD_I_NARROW_C: {
+        case KEST_OP_ADD_I_NARROW_C: THREADED(KEST_OP_ADD_I_NARROW_C) {
             uint16_t kind = READ_U16();
             BY_CONSTANT((--top)->integer,
                         CUT(kind, (uint64_t)left + (uint64_t)right));
-            break;
+            NEXT;
         }
-        case KEST_OP_SUB_I_NARROW_C: {
+        case KEST_OP_SUB_I_NARROW_C: THREADED(KEST_OP_SUB_I_NARROW_C) {
             uint16_t kind = READ_U16();
             BY_CONSTANT((--top)->integer,
                         CUT(kind, (uint64_t)left - (uint64_t)right));
-            break;
+            NEXT;
         }
-        case KEST_OP_MUL_I_NARROW_C: {
+        case KEST_OP_MUL_I_NARROW_C: THREADED(KEST_OP_MUL_I_NARROW_C) {
             uint16_t kind = READ_U16();
             BY_CONSTANT((--top)->integer,
                         CUT(kind, (uint64_t)left * (uint64_t)right));
-            break;
+            NEXT;
         }
-        case KEST_OP_ADD_I_NARROW_K: {
+        case KEST_OP_ADD_I_NARROW_K: THREADED(KEST_OP_ADD_I_NARROW_K) {
             uint16_t kind = READ_U16();
             uint16_t slot = READ_U16();
             OWN_SLOT(slot);
             MOVED(moved_loaded, sizeof(KestValue));
             BY_CONSTANT(mine[slot].integer,
                         CUT(kind, (uint64_t)left + (uint64_t)right));
-            break;
+            NEXT;
         }
-        case KEST_OP_SUB_I_NARROW_K: {
+        case KEST_OP_SUB_I_NARROW_K: THREADED(KEST_OP_SUB_I_NARROW_K) {
             uint16_t kind = READ_U16();
             uint16_t slot = READ_U16();
             OWN_SLOT(slot);
             MOVED(moved_loaded, sizeof(KestValue));
             BY_CONSTANT(mine[slot].integer,
                         CUT(kind, (uint64_t)left - (uint64_t)right));
-            break;
+            NEXT;
         }
-        case KEST_OP_MUL_I_NARROW_K: {
+        case KEST_OP_MUL_I_NARROW_K: THREADED(KEST_OP_MUL_I_NARROW_K) {
             uint16_t kind = READ_U16();
             uint16_t slot = READ_U16();
             OWN_SLOT(slot);
             MOVED(moved_loaded, sizeof(KestValue));
             BY_CONSTANT(mine[slot].integer,
                         CUT(kind, (uint64_t)left * (uint64_t)right));
-            break;
+            NEXT;
         }
 #undef BY_CONSTANT
 #undef DIVIDED
 #undef CUT
-        case KEST_OP_DIV_U:
-        case KEST_OP_MOD_U: {
+        case KEST_OP_DIV_U: THREADED(KEST_OP_DIV_U)
+        case KEST_OP_MOD_U: THREADED(KEST_OP_MOD_U) {
             KestValue right = *--top;
             KestValue left = *--top;
             if (right.integer == 0) {
@@ -5067,28 +5318,28 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             uint64_t b = (uint64_t)right.integer;
             (top++)->integer =
                 (int64_t)(instruction[0] == KEST_OP_DIV_U ? a / b : a % b);
-            break;
+            NEXT;
         }
-        case KEST_OP_AND_I:
+        case KEST_OP_AND_I: THREADED(KEST_OP_AND_I)
             top--;
             top[-1].integer &= top[0].integer;
-            break;
-        case KEST_OP_OR_I:
+            NEXT;
+        case KEST_OP_OR_I: THREADED(KEST_OP_OR_I)
             top--;
             top[-1].integer |= top[0].integer;
-            break;
-        case KEST_OP_XOR_I:
+            NEXT;
+        case KEST_OP_XOR_I: THREADED(KEST_OP_XOR_I)
             top--;
             top[-1].integer ^= top[0].integer;
-            break;
-        case KEST_OP_NOT_I:
+            NEXT;
+        case KEST_OP_NOT_I: THREADED(KEST_OP_NOT_I)
             top[-1].integer = ~top[-1].integer;
-            break;
+            NEXT;
         // A shift is done in a slot and narrowed after, the same way every
         // other arithmetic is (D018). A count past the width of the slot has
         // no meaning in C, so it is answered here rather than left to the
         // machine: everything shifts out.
-        case KEST_OP_SHL: {
+        case KEST_OP_SHL: THREADED(KEST_OP_SHL) {
             int64_t by = (--top)->integer;
             if (by < 0) {
                 fail(vmp, frame, instruction, "K0604",
@@ -5097,9 +5348,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             top[-1].integer =
                 by >= 64 ? 0 : (int64_t)((uint64_t)top[-1].integer << by);
-            break;
+            NEXT;
         }
-        case KEST_OP_SHR_I: {
+        case KEST_OP_SHR_I: THREADED(KEST_OP_SHR_I) {
             int64_t by = (--top)->integer;
             if (by < 0) {
                 fail(vmp, frame, instruction, "K0604",
@@ -5110,9 +5361,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // stays negative however far it goes.
             int64_t value = top[-1].integer;
             top[-1].integer = by >= 64 ? (value < 0 ? -1 : 0) : value >> by;
-            break;
+            NEXT;
         }
-        case KEST_OP_SHR_U: {
+        case KEST_OP_SHR_U: THREADED(KEST_OP_SHR_U) {
             int64_t by = (--top)->integer;
             if (by < 0) {
                 fail(vmp, frame, instruction, "K0604",
@@ -5121,74 +5372,74 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             }
             uint64_t value = (uint64_t)top[-1].integer;
             top[-1].integer = by >= 64 ? 0 : (int64_t)(value >> by);
-            break;
+            NEXT;
         }
-        case KEST_OP_NEG_I:
+        case KEST_OP_NEG_I: THREADED(KEST_OP_NEG_I)
             // The smallest number negated is itself, which is what wrapping
             // says and what negating it signed would be undefined. See D667.
             top[-1].integer = (int64_t)(0 - (uint64_t)top[-1].integer);
-            break;
-        case KEST_OP_I2F:
+            NEXT;
+        case KEST_OP_I2F: THREADED(KEST_OP_I2F)
             top[-1].real = (double)top[-1].integer;
-            break;
-        case KEST_OP_U2F:
+            NEXT;
+        case KEST_OP_U2F: THREADED(KEST_OP_U2F)
             top[-1].real = (double)(uint64_t)top[-1].integer;
-            break;
-        case KEST_OP_TO_F32:
+            NEXT;
+        case KEST_OP_TO_F32: THREADED(KEST_OP_TO_F32)
             top[-1].real = (double)(float)top[-1].real;
-            break;
-        case KEST_OP_F32_BITS: {
+            NEXT;
+        case KEST_OP_F32_BITS: THREADED(KEST_OP_F32_BITS) {
             float narrow = (float)top[-1].real;
             uint32_t bits;
             memcpy(&bits, &narrow, sizeof bits);
             top[-1].integer = bits;
-            break;
+            NEXT;
         }
-        case KEST_OP_BITS_F32: {
+        case KEST_OP_BITS_F32: THREADED(KEST_OP_BITS_F32) {
             uint32_t bits = (uint32_t)top[-1].integer;
             float narrow;
             memcpy(&narrow, &bits, sizeof narrow);
             top[-1].real = narrow;
-            break;
+            NEXT;
         }
-        case KEST_OP_F2I:
+        case KEST_OP_F2I: THREADED(KEST_OP_F2I)
             // Where a number outside the width stops, which the type layer
             // works out for a constant as well: one answer, in one place. See
             // D669.
             top[-1].integer = kest_real_to_int(READ_U16(), top[-1].real);
-            break;
-        case KEST_OP_NARROW:
+            NEXT;
+        case KEST_OP_NARROW: THREADED(KEST_OP_NARROW)
             // Every integer in a slot is kept at its declared width, sign
             // extended or zero extended, so a comparison and a division do not
             // each need to know how wide it is.
             top[-1].integer = kest_narrow_to(READ_U16(), top[-1].integer);
-            break;
+            NEXT;
 
         // The same cut, arriving with the arithmetic that needed it. Written
         // out rather than falling through a shared macro because the whole
         // point of them is that there is one dispatch and one read of the
         // width between the operands and the answer. See D868.
-        case KEST_OP_ADD_I_NARROW:
+        case KEST_OP_ADD_I_NARROW: THREADED(KEST_OP_ADD_I_NARROW)
             BINARY_I(integer, (int64_t)((uint64_t)left.integer +
                                         (uint64_t)right.integer));
             top[-1].integer = kest_narrow_to(READ_U16(), top[-1].integer);
-            break;
-        case KEST_OP_SUB_I_NARROW:
+            NEXT;
+        case KEST_OP_SUB_I_NARROW: THREADED(KEST_OP_SUB_I_NARROW)
             BINARY_I(integer, (int64_t)((uint64_t)left.integer -
                                         (uint64_t)right.integer));
             top[-1].integer = kest_narrow_to(READ_U16(), top[-1].integer);
-            break;
-        case KEST_OP_MUL_I_NARROW:
+            NEXT;
+        case KEST_OP_MUL_I_NARROW: THREADED(KEST_OP_MUL_I_NARROW)
             BINARY_I(integer, (int64_t)((uint64_t)left.integer *
                                         (uint64_t)right.integer));
             top[-1].integer = kest_narrow_to(READ_U16(), top[-1].integer);
-            break;
+            NEXT;
 
         // The same four with the store they were feeding taken in. What goes
         // is the push and the pop between them, which is a dependency through
         // memory rather than two instructions standing beside each other.
         // See D1014.
-        case KEST_OP_ADD_I_NARROW_TO: {
+        case KEST_OP_ADD_I_NARROW_TO: THREADED(KEST_OP_ADD_I_NARROW_TO) {
             uint16_t kind = READ_U16();
             uint16_t slot = READ_U16();
             KestValue right = *--top;
@@ -5202,25 +5453,25 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             mine[slot].integer = kest_narrow_to(
                 kind, (int64_t)((uint64_t)left.integer +
                                 (uint64_t)right.integer));
-            break;
+            NEXT;
         }
         // A constant written into a local. See D1155.
-        case KEST_OP_STORE_K: {
+        case KEST_OP_STORE_K: THREADED(KEST_OP_STORE_K) {
             uint16_t slot = READ_U16();
             uint16_t which = READ_U16();
             OWN_SLOT_AND_CONSTANT(slot, which);
             MOVED(moved_held, sizeof(KestValue));
             MOVED(moved_stored, sizeof(KestValue));
             mine[slot] = constants[which];
-            break;
+            NEXT;
         }
         // A local moved by a constant where it is. See D1155.
         // One case for both ways round, which is measured rather than
         // preferred: the two written apart made `rules` five per cent slower
         // in cycles for fewer instructions, where the compiler put the rest
         // of the loop. See D1168.
-        case KEST_OP_ADD_K_SELF:
-        case KEST_OP_SUB_K_SELF: {
+        case KEST_OP_ADD_K_SELF: THREADED(KEST_OP_ADD_K_SELF)
+        case KEST_OP_SUB_K_SELF: THREADED(KEST_OP_SUB_K_SELF) {
             uint8_t which_way = *instruction;
             uint16_t kind = READ_U16();
             uint16_t slot = READ_U16();
@@ -5234,9 +5485,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             mine[slot].integer = kest_narrow_to(
                 kind, (int64_t)(which_way == KEST_OP_ADD_K_SELF ? was + by
                                                                : was - by));
-            break;
+            NEXT;
         }
-        case KEST_OP_SUB_I_NARROW_TO: {
+        case KEST_OP_SUB_I_NARROW_TO: THREADED(KEST_OP_SUB_I_NARROW_TO) {
             uint16_t kind = READ_U16();
             uint16_t slot = READ_U16();
             KestValue right = *--top;
@@ -5250,9 +5501,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             mine[slot].integer = kest_narrow_to(
                 kind, (int64_t)((uint64_t)left.integer -
                                 (uint64_t)right.integer));
-            break;
+            NEXT;
         }
-        case KEST_OP_ADD_F_TO: {
+        case KEST_OP_ADD_F_TO: THREADED(KEST_OP_ADD_F_TO) {
             uint16_t slot = READ_U16();
             KestValue right = *--top;
             KestValue left = *--top;
@@ -5263,7 +5514,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 #endif
             MOVED(moved_stored, sizeof(KestValue));
             mine[slot].real = left.real + right.real;
-            break;
+            NEXT;
         }
 // Two float locals made into a third, one case each way round. See D1166.
 #define TWO_LOCALS(OP)                                                         \
@@ -5278,14 +5529,14 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         MOVED(moved_stored, sizeof(KestValue));                                \
         mine[slot].real = mine[first].real OP mine[second].real;               \
     } while (0)
-        case KEST_OP_ADD_F_LL:
+        case KEST_OP_ADD_F_LL: THREADED(KEST_OP_ADD_F_LL)
             TWO_LOCALS(+);
-            break;
-        case KEST_OP_SUB_F_LL:
+            NEXT;
+        case KEST_OP_SUB_F_LL: THREADED(KEST_OP_SUB_F_LL)
             TWO_LOCALS(-);
-            break;
+            NEXT;
 #undef TWO_LOCALS
-        case KEST_OP_SUB_F_TO: {
+        case KEST_OP_SUB_F_TO: THREADED(KEST_OP_SUB_F_TO) {
             uint16_t slot = READ_U16();
             KestValue right = *--top;
             KestValue left = *--top;
@@ -5296,145 +5547,145 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
 #endif
             MOVED(moved_stored, sizeof(KestValue));
             mine[slot].real = left.real - right.real;
-            break;
+            NEXT;
         }
-        case KEST_OP_ADD_F:
+        case KEST_OP_ADD_F: THREADED(KEST_OP_ADD_F)
             BINARY_I(real, left.real + right.real);
-            break;
-        case KEST_OP_SUB_F:
+            NEXT;
+        case KEST_OP_SUB_F: THREADED(KEST_OP_SUB_F)
             BINARY_I(real, left.real - right.real);
-            break;
-        case KEST_OP_MUL_F:
+            NEXT;
+        case KEST_OP_MUL_F: THREADED(KEST_OP_MUL_F)
             BINARY_I(real, left.real * right.real);
-            break;
-        case KEST_OP_DIV_F:
+            NEXT;
+        case KEST_OP_DIV_F: THREADED(KEST_OP_DIV_F)
             BINARY_I(real, left.real / right.real);
-            break;
-        case KEST_OP_MOD_F:
+            NEXT;
+        case KEST_OP_MOD_F: THREADED(KEST_OP_MOD_F)
             // Nought on the right is not stopped here the way it is for a
             // whole number: the answer is what is not a number, which is what
             // `/` already gives beside it. See D776.
             BINARY_I(real, kest_left_over(left.real, right.real));
-            break;
-        case KEST_OP_NEG_F:
+            NEXT;
+        case KEST_OP_NEG_F: THREADED(KEST_OP_NEG_F)
             top[-1].real = -top[-1].real;
-            break;
+            NEXT;
 
-        case KEST_OP_ADD_F32:
+        case KEST_OP_ADD_F32: THREADED(KEST_OP_ADD_F32)
             BINARY_I(real, (double)((float)left.real + (float)right.real));
-            break;
-        case KEST_OP_SUB_F32:
+            NEXT;
+        case KEST_OP_SUB_F32: THREADED(KEST_OP_SUB_F32)
             BINARY_I(real, (double)((float)left.real - (float)right.real));
-            break;
-        case KEST_OP_MUL_F32:
+            NEXT;
+        case KEST_OP_MUL_F32: THREADED(KEST_OP_MUL_F32)
             BINARY_I(real, (double)((float)left.real * (float)right.real));
-            break;
-        case KEST_OP_DIV_F32:
+            NEXT;
+        case KEST_OP_DIV_F32: THREADED(KEST_OP_DIV_F32)
             BINARY_I(real, (double)((float)left.real / (float)right.real));
-            break;
-        case KEST_OP_MOD_F32:
+            NEXT;
+        case KEST_OP_MOD_F32: THREADED(KEST_OP_MOD_F32)
             BINARY_I(real, (double)(float)kest_left_over(
                                (double)(float)left.real,
                                (double)(float)right.real));
-            break;
-        case KEST_OP_NEG_F32:
+            NEXT;
+        case KEST_OP_NEG_F32: THREADED(KEST_OP_NEG_F32)
             top[-1].real = (double)(-(float)top[-1].real);
-            break;
+            NEXT;
 
-        case KEST_OP_LT_I:
+        case KEST_OP_LT_I: THREADED(KEST_OP_LT_I)
             BINARY_I(integer, left.integer < right.integer);
-            break;
-        case KEST_OP_LE_I:
+            NEXT;
+        case KEST_OP_LE_I: THREADED(KEST_OP_LE_I)
             BINARY_I(integer, left.integer <= right.integer);
-            break;
-        case KEST_OP_GT_I:
+            NEXT;
+        case KEST_OP_GT_I: THREADED(KEST_OP_GT_I)
             BINARY_I(integer, left.integer > right.integer);
-            break;
-        case KEST_OP_GE_I:
+            NEXT;
+        case KEST_OP_GE_I: THREADED(KEST_OP_GE_I)
             BINARY_I(integer, left.integer >= right.integer);
-            break;
-        case KEST_OP_LT_U:
+            NEXT;
+        case KEST_OP_LT_U: THREADED(KEST_OP_LT_U)
             BINARY_I(integer, (uint64_t)left.integer < (uint64_t)right.integer);
-            break;
-        case KEST_OP_LE_U:
+            NEXT;
+        case KEST_OP_LE_U: THREADED(KEST_OP_LE_U)
             BINARY_I(integer,
                      (uint64_t)left.integer <= (uint64_t)right.integer);
-            break;
-        case KEST_OP_GT_U:
+            NEXT;
+        case KEST_OP_GT_U: THREADED(KEST_OP_GT_U)
             BINARY_I(integer, (uint64_t)left.integer > (uint64_t)right.integer);
-            break;
-        case KEST_OP_GE_U:
+            NEXT;
+        case KEST_OP_GE_U: THREADED(KEST_OP_GE_U)
             BINARY_I(integer,
                      (uint64_t)left.integer >= (uint64_t)right.integer);
-            break;
-        case KEST_OP_LT_F:
+            NEXT;
+        case KEST_OP_LT_F: THREADED(KEST_OP_LT_F)
             BINARY_I(integer, left.real < right.real);
-            break;
-        case KEST_OP_LE_F:
+            NEXT;
+        case KEST_OP_LE_F: THREADED(KEST_OP_LE_F)
             BINARY_I(integer, left.real <= right.real);
-            break;
-        case KEST_OP_GT_F:
+            NEXT;
+        case KEST_OP_GT_F: THREADED(KEST_OP_GT_F)
             BINARY_I(integer, left.real > right.real);
-            break;
-        case KEST_OP_GE_F:
+            NEXT;
+        case KEST_OP_GE_F: THREADED(KEST_OP_GE_F)
             BINARY_I(integer, left.real >= right.real);
-            break;
+            NEXT;
 
-        case KEST_OP_EQ_I:
+        case KEST_OP_EQ_I: THREADED(KEST_OP_EQ_I)
             BINARY_I(integer, left.integer == right.integer);
-            break;
-        case KEST_OP_NE_I:
+            NEXT;
+        case KEST_OP_NE_I: THREADED(KEST_OP_NE_I)
             BINARY_I(integer, left.integer != right.integer);
-            break;
-        case KEST_OP_EQ_F:
+            NEXT;
+        case KEST_OP_EQ_F: THREADED(KEST_OP_EQ_F)
             BINARY_I(integer, left.real == right.real);
-            break;
-        case KEST_OP_NE_F:
+            NEXT;
+        case KEST_OP_NE_F: THREADED(KEST_OP_NE_F)
             BINARY_I(integer, left.real != right.real);
-            break;
-        case KEST_OP_EQ_T:
+            NEXT;
+        case KEST_OP_EQ_T: THREADED(KEST_OP_EQ_T)
             TEXT_ORDER(order == 0);
-            break;
-        case KEST_OP_NE_T:
+            NEXT;
+        case KEST_OP_NE_T: THREADED(KEST_OP_NE_T)
             TEXT_ORDER(order != 0);
-            break;
+            NEXT;
 
-        case KEST_OP_LT_T:
+        case KEST_OP_LT_T: THREADED(KEST_OP_LT_T)
             TEXT_ORDER(order < 0);
-            break;
-        case KEST_OP_LE_T:
+            NEXT;
+        case KEST_OP_LE_T: THREADED(KEST_OP_LE_T)
             TEXT_ORDER(order <= 0);
-            break;
-        case KEST_OP_GT_T:
+            NEXT;
+        case KEST_OP_GT_T: THREADED(KEST_OP_GT_T)
             TEXT_ORDER(order > 0);
-            break;
-        case KEST_OP_GE_T:
+            NEXT;
+        case KEST_OP_GE_T: THREADED(KEST_OP_GE_T)
             TEXT_ORDER(order >= 0);
-            break;
+            NEXT;
 
-        case KEST_OP_NOT:
+        case KEST_OP_NOT: THREADED(KEST_OP_NOT)
             top[-1].integer = !top[-1].integer;
-            break;
+            NEXT;
 
-        case KEST_OP_JUMP: {
+        case KEST_OP_JUMP: THREADED(KEST_OP_JUMP) {
             // Read the distance before moving, because the read moves too.
             uint16_t distance = READ_U16();
             ip += distance;
-            break;
+            NEXT;
         }
-        case KEST_OP_JUMP_FALSE: {
+        case KEST_OP_JUMP_FALSE: THREADED(KEST_OP_JUMP_FALSE) {
             uint16_t distance = READ_U16();
             if ((--top)->integer == 0) {
                 ip += distance;
             }
-            break;
+            NEXT;
         }
-        case KEST_OP_JUMP_TRUE: {
+        case KEST_OP_JUMP_TRUE: THREADED(KEST_OP_JUMP_TRUE) {
             uint16_t distance = READ_U16();
             if ((--top)->integer != 0) {
                 ip += distance;
             }
-            break;
+            NEXT;
         }
         // The compare and the branch in one. The operands are whole numbers
         // because that is the only pair the compiler fuses.
@@ -5520,42 +5771,42 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }                                                                      \
     } while (0)
 
-        case KEST_OP_JUMP_FALSE_LT_E:
+        case KEST_OP_JUMP_FALSE_LT_E: THREADED(KEST_OP_JUMP_FALSE_LT_E)
             JUMP_UNLESS_E(left < right);
-            break;
-        case KEST_OP_JUMP_FALSE_LE_E:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_LE_E: THREADED(KEST_OP_JUMP_FALSE_LE_E)
             JUMP_UNLESS_E(left <= right);
-            break;
-        case KEST_OP_JUMP_FALSE_GT_E:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_GT_E: THREADED(KEST_OP_JUMP_FALSE_GT_E)
             JUMP_UNLESS_E(left > right);
-            break;
-        case KEST_OP_JUMP_FALSE_GE_E:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_GE_E: THREADED(KEST_OP_JUMP_FALSE_GE_E)
             JUMP_UNLESS_E(left >= right);
-            break;
-        case KEST_OP_JUMP_FALSE_EQ_E:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_EQ_E: THREADED(KEST_OP_JUMP_FALSE_EQ_E)
             JUMP_UNLESS_E(left == right);
-            break;
-        case KEST_OP_JUMP_FALSE_NE_E:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_NE_E: THREADED(KEST_OP_JUMP_FALSE_NE_E)
             JUMP_UNLESS_E(left != right);
-            break;
-        case KEST_OP_JUMP_FALSE_LT_C:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_LT_C: THREADED(KEST_OP_JUMP_FALSE_LT_C)
             JUMP_UNLESS_C(left < right);
-            break;
-        case KEST_OP_JUMP_FALSE_LE_C:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_LE_C: THREADED(KEST_OP_JUMP_FALSE_LE_C)
             JUMP_UNLESS_C(left <= right);
-            break;
-        case KEST_OP_JUMP_FALSE_GT_C:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_GT_C: THREADED(KEST_OP_JUMP_FALSE_GT_C)
             JUMP_UNLESS_C(left > right);
-            break;
-        case KEST_OP_JUMP_FALSE_GE_C:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_GE_C: THREADED(KEST_OP_JUMP_FALSE_GE_C)
             JUMP_UNLESS_C(left >= right);
-            break;
-        case KEST_OP_JUMP_FALSE_EQ_C:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_EQ_C: THREADED(KEST_OP_JUMP_FALSE_EQ_C)
             JUMP_UNLESS_C(left == right);
-            break;
-        case KEST_OP_JUMP_FALSE_NE_C:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_NE_C: THREADED(KEST_OP_JUMP_FALSE_NE_C)
             JUMP_UNLESS_C(left != right);
-            break;
+            NEXT;
 // A float local against a constant and the jump, taken when the answer is
 // `taken`: the float jumps are written both ways round. See D1165.
 #define JUMP_ON_FK(taken, test)                                                \
@@ -5572,144 +5823,144 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             ip += distance;                                                    \
         }                                                                      \
     } while (0)
-        case KEST_OP_JUMP_FALSE_LT_FK:
+        case KEST_OP_JUMP_FALSE_LT_FK: THREADED(KEST_OP_JUMP_FALSE_LT_FK)
             JUMP_ON_FK(false, left < right);
-            break;
-        case KEST_OP_JUMP_FALSE_LE_FK:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_LE_FK: THREADED(KEST_OP_JUMP_FALSE_LE_FK)
             JUMP_ON_FK(false, left <= right);
-            break;
-        case KEST_OP_JUMP_FALSE_GT_FK:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_GT_FK: THREADED(KEST_OP_JUMP_FALSE_GT_FK)
             JUMP_ON_FK(false, left > right);
-            break;
-        case KEST_OP_JUMP_FALSE_GE_FK:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_GE_FK: THREADED(KEST_OP_JUMP_FALSE_GE_FK)
             JUMP_ON_FK(false, left >= right);
-            break;
-        case KEST_OP_JUMP_FALSE_EQ_FK:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_EQ_FK: THREADED(KEST_OP_JUMP_FALSE_EQ_FK)
             JUMP_ON_FK(false, left == right);
-            break;
-        case KEST_OP_JUMP_FALSE_NE_FK:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_NE_FK: THREADED(KEST_OP_JUMP_FALSE_NE_FK)
             JUMP_ON_FK(false, left != right);
-            break;
-        case KEST_OP_JUMP_TRUE_LT_FK:
+            NEXT;
+        case KEST_OP_JUMP_TRUE_LT_FK: THREADED(KEST_OP_JUMP_TRUE_LT_FK)
             JUMP_ON_FK(true, left < right);
-            break;
-        case KEST_OP_JUMP_TRUE_LE_FK:
+            NEXT;
+        case KEST_OP_JUMP_TRUE_LE_FK: THREADED(KEST_OP_JUMP_TRUE_LE_FK)
             JUMP_ON_FK(true, left <= right);
-            break;
-        case KEST_OP_JUMP_TRUE_GT_FK:
+            NEXT;
+        case KEST_OP_JUMP_TRUE_GT_FK: THREADED(KEST_OP_JUMP_TRUE_GT_FK)
             JUMP_ON_FK(true, left > right);
-            break;
-        case KEST_OP_JUMP_TRUE_GE_FK:
+            NEXT;
+        case KEST_OP_JUMP_TRUE_GE_FK: THREADED(KEST_OP_JUMP_TRUE_GE_FK)
             JUMP_ON_FK(true, left >= right);
-            break;
-        case KEST_OP_JUMP_TRUE_EQ_FK:
+            NEXT;
+        case KEST_OP_JUMP_TRUE_EQ_FK: THREADED(KEST_OP_JUMP_TRUE_EQ_FK)
             JUMP_ON_FK(true, left == right);
-            break;
-        case KEST_OP_JUMP_TRUE_NE_FK:
+            NEXT;
+        case KEST_OP_JUMP_TRUE_NE_FK: THREADED(KEST_OP_JUMP_TRUE_NE_FK)
             JUMP_ON_FK(true, left != right);
-            break;
+            NEXT;
 #undef JUMP_ON_FK
-        case KEST_OP_JUMP_FALSE_LT_K:
+        case KEST_OP_JUMP_FALSE_LT_K: THREADED(KEST_OP_JUMP_FALSE_LT_K)
             JUMP_UNLESS_K(left < right);
-            break;
-        case KEST_OP_JUMP_FALSE_LE_K:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_LE_K: THREADED(KEST_OP_JUMP_FALSE_LE_K)
             JUMP_UNLESS_K(left <= right);
-            break;
-        case KEST_OP_JUMP_FALSE_GT_K:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_GT_K: THREADED(KEST_OP_JUMP_FALSE_GT_K)
             JUMP_UNLESS_K(left > right);
-            break;
-        case KEST_OP_JUMP_FALSE_GE_K:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_GE_K: THREADED(KEST_OP_JUMP_FALSE_GE_K)
             JUMP_UNLESS_K(left >= right);
-            break;
-        case KEST_OP_JUMP_FALSE_EQ_K:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_EQ_K: THREADED(KEST_OP_JUMP_FALSE_EQ_K)
             JUMP_UNLESS_K(left == right);
-            break;
-        case KEST_OP_JUMP_FALSE_NE_K:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_NE_K: THREADED(KEST_OP_JUMP_FALSE_NE_K)
             JUMP_UNLESS_K(left != right);
-            break;
-        case KEST_OP_JUMP_FALSE_LT_I:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_LT_I: THREADED(KEST_OP_JUMP_FALSE_LT_I)
             JUMP_UNLESS(left.integer < right.integer);
-            break;
-        case KEST_OP_JUMP_FALSE_LE_I:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_LE_I: THREADED(KEST_OP_JUMP_FALSE_LE_I)
             JUMP_UNLESS(left.integer <= right.integer);
-            break;
-        case KEST_OP_JUMP_FALSE_GT_I:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_GT_I: THREADED(KEST_OP_JUMP_FALSE_GT_I)
             JUMP_UNLESS(left.integer > right.integer);
-            break;
-        case KEST_OP_JUMP_FALSE_GE_I:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_GE_I: THREADED(KEST_OP_JUMP_FALSE_GE_I)
             JUMP_UNLESS(left.integer >= right.integer);
-            break;
-        case KEST_OP_JUMP_FALSE_EQ_I:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_EQ_I: THREADED(KEST_OP_JUMP_FALSE_EQ_I)
             JUMP_UNLESS(left.integer == right.integer);
-            break;
-        case KEST_OP_JUMP_FALSE_NE_I:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_NE_I: THREADED(KEST_OP_JUMP_FALSE_NE_I)
             JUMP_UNLESS(left.integer != right.integer);
-            break;
-        case KEST_OP_JUMP_TRUE_LT_I:
+            NEXT;
+        case KEST_OP_JUMP_TRUE_LT_I: THREADED(KEST_OP_JUMP_TRUE_LT_I)
             JUMP_IF(left.integer < right.integer);
-            break;
-        case KEST_OP_JUMP_TRUE_LE_I:
+            NEXT;
+        case KEST_OP_JUMP_TRUE_LE_I: THREADED(KEST_OP_JUMP_TRUE_LE_I)
             JUMP_IF(left.integer <= right.integer);
-            break;
-        case KEST_OP_JUMP_TRUE_GT_I:
+            NEXT;
+        case KEST_OP_JUMP_TRUE_GT_I: THREADED(KEST_OP_JUMP_TRUE_GT_I)
             JUMP_IF(left.integer > right.integer);
-            break;
-        case KEST_OP_JUMP_TRUE_GE_I:
+            NEXT;
+        case KEST_OP_JUMP_TRUE_GE_I: THREADED(KEST_OP_JUMP_TRUE_GE_I)
             JUMP_IF(left.integer >= right.integer);
-            break;
-        case KEST_OP_JUMP_TRUE_EQ_I:
+            NEXT;
+        case KEST_OP_JUMP_TRUE_EQ_I: THREADED(KEST_OP_JUMP_TRUE_EQ_I)
             JUMP_IF(left.integer == right.integer);
-            break;
-        case KEST_OP_JUMP_TRUE_NE_I:
+            NEXT;
+        case KEST_OP_JUMP_TRUE_NE_I: THREADED(KEST_OP_JUMP_TRUE_NE_I)
             JUMP_IF(left.integer != right.integer);
-            break;
-        case KEST_OP_JUMP_FALSE_LT_F:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_LT_F: THREADED(KEST_OP_JUMP_FALSE_LT_F)
             JUMP_UNLESS(left.real < right.real);
-            break;
-        case KEST_OP_JUMP_FALSE_LE_F:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_LE_F: THREADED(KEST_OP_JUMP_FALSE_LE_F)
             JUMP_UNLESS(left.real <= right.real);
-            break;
-        case KEST_OP_JUMP_FALSE_GT_F:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_GT_F: THREADED(KEST_OP_JUMP_FALSE_GT_F)
             JUMP_UNLESS(left.real > right.real);
-            break;
-        case KEST_OP_JUMP_FALSE_GE_F:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_GE_F: THREADED(KEST_OP_JUMP_FALSE_GE_F)
             JUMP_UNLESS(left.real >= right.real);
-            break;
-        case KEST_OP_JUMP_FALSE_EQ_F:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_EQ_F: THREADED(KEST_OP_JUMP_FALSE_EQ_F)
             JUMP_UNLESS(left.real == right.real);
-            break;
-        case KEST_OP_JUMP_FALSE_NE_F:
+            NEXT;
+        case KEST_OP_JUMP_FALSE_NE_F: THREADED(KEST_OP_JUMP_FALSE_NE_F)
             JUMP_UNLESS(left.real != right.real);
-            break;
-        case KEST_OP_JUMP_TRUE_LT_F:
+            NEXT;
+        case KEST_OP_JUMP_TRUE_LT_F: THREADED(KEST_OP_JUMP_TRUE_LT_F)
             JUMP_IF(left.real < right.real);
-            break;
-        case KEST_OP_JUMP_TRUE_LE_F:
+            NEXT;
+        case KEST_OP_JUMP_TRUE_LE_F: THREADED(KEST_OP_JUMP_TRUE_LE_F)
             JUMP_IF(left.real <= right.real);
-            break;
-        case KEST_OP_JUMP_TRUE_GT_F:
+            NEXT;
+        case KEST_OP_JUMP_TRUE_GT_F: THREADED(KEST_OP_JUMP_TRUE_GT_F)
             JUMP_IF(left.real > right.real);
-            break;
-        case KEST_OP_JUMP_TRUE_GE_F:
+            NEXT;
+        case KEST_OP_JUMP_TRUE_GE_F: THREADED(KEST_OP_JUMP_TRUE_GE_F)
             JUMP_IF(left.real >= right.real);
-            break;
-        case KEST_OP_JUMP_TRUE_EQ_F:
+            NEXT;
+        case KEST_OP_JUMP_TRUE_EQ_F: THREADED(KEST_OP_JUMP_TRUE_EQ_F)
             JUMP_IF(left.real == right.real);
-            break;
-        case KEST_OP_JUMP_TRUE_NE_F:
+            NEXT;
+        case KEST_OP_JUMP_TRUE_NE_F: THREADED(KEST_OP_JUMP_TRUE_NE_F)
             JUMP_IF(left.real != right.real);
-            break;
+            NEXT;
 #undef JUMP_UNLESS
 #undef JUMP_IF
 
-        case KEST_OP_LOOP: {
+        case KEST_OP_LOOP: THREADED(KEST_OP_LOOP) {
             uint16_t distance = READ_U16();
             SPEND();
             ip -= distance;
-            break;
+            NEXT;
         }
 
-        case KEST_OP_NEXT_LESS_I: {
+        case KEST_OP_NEXT_LESS_I: THREADED(KEST_OP_NEXT_LESS_I) {
             uint16_t slot = READ_U16();
             uint16_t limit = READ_U16();
             uint16_t distance = READ_U16();
@@ -5723,10 +5974,10 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 SPEND();
                 ip -= distance;
             }
-            break;
+            NEXT;
         }
 
-        case KEST_OP_NEXT_LESS_U: {
+        case KEST_OP_NEXT_LESS_U: THREADED(KEST_OP_NEXT_LESS_U) {
             uint16_t slot = READ_U16();
             uint16_t limit = READ_U16();
             uint16_t distance = READ_U16();
@@ -5741,10 +5992,10 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 SPEND();
                 ip -= distance;
             }
-            break;
+            NEXT;
         }
 
-        case KEST_OP_SCRATCH: {
+        case KEST_OP_SCRATCH: THREADED(KEST_OP_SCRATCH) {
             uint16_t where = READ_U16();
             // The door both engines go through, so working memory is opened
             // one way and says one thing when it cannot be. See D1119.
@@ -5755,9 +6006,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             mine[where].integer = opened;
-            break;
+            NEXT;
         }
-        case KEST_OP_UNSCRATCH: {
+        case KEST_OP_UNSCRATCH: THREADED(KEST_OP_UNSCRATCH) {
             uint16_t where = READ_U16();
             frame->ip = ip;
             rt->asked_at = instruction;
@@ -5765,9 +6016,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                                    KEST_WHERE_RUNNING)) {
                 return false;
             }
-            break;
+            NEXT;
         }
-        case KEST_OP_CALL: {
+        case KEST_OP_CALL: THREADED(KEST_OP_CALL) {
             SPEND();
             uint16_t index = READ_U16();
             uint16_t argument_slots = READ_U16();
@@ -5906,10 +6157,10 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             mine = base;
             constants = callee->constants;
             top = base + callee->slot_count;
-            break;
+            NEXT;
         }
 
-        case KEST_OP_CALL_VALUE: {
+        case KEST_OP_CALL_VALUE: THREADED(KEST_OP_CALL_VALUE) {
             SPEND();
             uint16_t argument_slots = READ_U16();
             uint16_t coming_back = READ_U16();
@@ -5962,10 +6213,10 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             mine = base;
             constants = callee->constants;
             top = base + callee->slot_count;
-            break;
+            NEXT;
         }
 
-        case KEST_OP_CALL_HOST: {
+        case KEST_OP_CALL_HOST: THREADED(KEST_OP_CALL_HOST) {
             SPEND();
             uint16_t index = READ_U16();
             uint16_t argument_slots = READ_U16();
@@ -5998,14 +6249,14 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 return false;
             }
             top = base + result_slots;
-            break;
+            NEXT;
         }
 
         // A breakpoint. The machine stops where it is: the frame keeps the
         // instruction the byte was written over and where the operand stack
         // had got to, so `kest_resume` picks both up and carries on. Nothing
         // is unwound and nothing is said -- a stop is not a refusal. See D991.
-        case KEST_OP_STOP: {
+        case KEST_OP_STOP: THREADED(KEST_OP_STOP) {
             // Unless the run this is in is one the host made from inside a
             // call of its own. A stop keeps the frames where they are so that
             // `kest_resume` can carry on, and there is nothing to carry on
@@ -6032,7 +6283,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             return false;
         }
 
-        case KEST_OP_RETURN: {
+        case KEST_OP_RETURN: THREADED(KEST_OP_RETURN) {
             uint16_t count = READ_U16();
 #if KEST_CHECKED
             // And what a body leaves behind when it goes. The guard at the top
@@ -6119,13 +6370,20 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             mine = frame->base;
             constants = frame->chunk->constants;
             top = base + count;
-            break;
+            NEXT;
         }
+#if KEST_THREADED
+        // A byte no instruction is, which the switch would step over.
+        thread_nothing:
+            NEXT;
+#endif
         }
     }
 
 #undef SPEND
 #undef READ_BYTE
+#undef THREADED
+#undef NEXT
 #undef READ_U16
 #undef BINARY_I
 }

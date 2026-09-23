@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1180
+    CURRENT SHA:       (this commit) D1093-D1181
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -801,7 +801,8 @@ the same workload.
    element weighed against a constant in one instruction took it to 0.994
    (D1178). In instructions, against Luau's interpreter: `kernel` 0.77,
    `control` 0.96, `graph` 0.95, `words` 0.81, `rules` 0.99 -- all five under
-   it.
+   it. Instructions handing over through a table of labels took 10.6 to 14.7%
+   off every workload's cycles (D1181).
 33. *(done, D1171)* **`std.bytes`.** A byte writer and reader for saves,
    reloads and records on disk, written in the language, and the two builtins
    it needed: `bits(x)` and `float(b)`, a float as its bits and back, so a
