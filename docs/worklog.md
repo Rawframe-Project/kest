@@ -41108,3 +41108,15 @@ See D1163.
 **Runs:** every example with and without the walk, `examples/frame.kest` under
 the sanitised build before and after the fix, the gate's `examples` row, and
 `make most`.
+
+## 2026-09-23, a hole caught one run in 251 by chance
+
+CI missed the hole that hashes text by its address, which three local runs
+caught: the program it reads answers a total modulo 251 that the addresses
+feed into. It now asks whether a copy of the same words hashes the same, which
+the hole gets wrong every time.
+
+See D1164.
+
+**Runs:** the hole by hand five times, twice after the change, `check-c.sh`,
+and `make most`.

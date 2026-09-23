@@ -40265,3 +40265,19 @@ tens of thousands of things, and a walk at every allocation reads all of them
 every time, which is a minute each against a quarter of a second for the rest.
 The guard was watched failing on the tree before the fix, where it said
 `examples/frame.kest` answered differently and the sanitiser said where.
+
+## D1164 — A check that a hole reaches by chance is asked outright
+
+*a miss CI saw and three local runs did not*. The hole that makes the release
+engine hash a piece of text by its address rather than its bytes was caught by
+`check-c.sh`'s `words.kest` answering differently under the two engines -- but
+what that program answers is a total modulo 251, and with the hole in, part of
+the total is where three pieces of text happen to be, which moves from run to
+run. On CI's run of `5999564` the two totals came out the same, the hole was a
+miss, and the gate was red for a check that had done nothing wrong but be
+lucky.
+
+The program now asks the thing outright: the same words made again somewhere
+else hash the same, or it answers 200. With the hole in, a fresh copy is never
+where the constant is, so the two engines disagree every time. Run by hand
+twice with the hole in, and caught both times.

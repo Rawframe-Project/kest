@@ -451,6 +451,14 @@ fn label(which: i32) -> text no.alloc no.host deterministic {
 }
 
 fn main() -> i32 {
+    // The same words made again somewhere else hash the same, which is what
+    // a hash of text is. Asked outright rather than left to the total below,
+    // where a hash of where the text is rather than what it says comes out
+    // different by an amount that is whatever the addresses were -- and one
+    // run in 251 it came out the same. See D1164.
+    if hash(label(0)) != hash("{label(0)}") {
+        return 200
+    }
     let total: i64 = 0
     for i in 0..30 {
         let one = Tag(label(i % 3), i % 7)
