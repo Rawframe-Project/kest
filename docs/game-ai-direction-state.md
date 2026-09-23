@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1200
+    CURRENT SHA:       (this commit) D1093-D1201
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, and it is ahead of
@@ -15,14 +15,12 @@ reasoning; this holds the position.
                        interpreter on all five, by 3% on `control` and 6% on
                        `rules` at the least, and retires fewer instructions
                        on all five (D1195)
-    LAST CI:           red on 04b8778b in linux-full, one hole missed and
-                       fixed by D1200; green before it on 80a8d331, all
-                       nine jobs -- linux,
+    LAST CI:           green on 17f248a1, all nine jobs -- linux,
                        linux-arm64, macos, windows, clang, threads, package,
                        linux-full and agree, the last being the whole gate
                        with every hole caught
     LAST FAST GATE:    green
-    LAST FULL GATE:    CI's `linux-full` on 80a8d331, every hole caught
+    LAST FULL GATE:    CI's `linux-full` on 17f248a1, every hole caught
     STATUS:            GAME_AI_DIRECTION_COMPLETE, marked on a7769f0
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.
@@ -863,6 +861,9 @@ the same workload.
 
 ## Rejected so far
 
-Nothing yet. No mechanism from the direction documents has been adopted or
-ruled out; the first measurement said the clean algorithm was the problem, and
-that is what was fixed.
+No mechanism from the direction documents has been ruled out; the first
+measurement said the clean algorithm was the problem, and that is what was
+fixed. Measured and not kept since (D1201): an element written from the stack
+with its run and index read in place (`store.elem.ll`), 2 to 3% slower on
+`control` and level on `rules`; and the loop marked `hot`, which answered a
+baseline rather than the tree.

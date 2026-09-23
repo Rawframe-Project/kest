@@ -41655,3 +41655,17 @@ See D1200.
 **Runs:** the hole's program on the broken tree before and after, the
 instructions of `control` and `rules` for no carry lost, and `make most`.
 
+## 2026-09-23, two things measured and not kept
+
+`store.elem.ll` took `load2` off every element written from the stack and
+was 2 to 3% slower on `control` and level on `rules`; marking the loop `hot`
+answered a pathology in the instruction cache that turned out to be in the
+baseline rather than the tree. Neither is kept, and a baseline is now the
+commit built twice to the same bytes.
+
+See D1201.
+
+**Runs:** both changes best of nine turn about against the baseline and
+against the commit built from its own sources; the commit built twice and
+compared; `make fast` over each.
+

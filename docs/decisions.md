@@ -41330,3 +41330,33 @@ machine runs it -- and the hole is caught with K0604 again, run by hand.
 `control` and `rules` retire the same instructions as before, because no
 body a correct compiler writes is turned away.
 
+## D1201 — Two things measured and not kept, and a baseline that was not the tree
+
+*measured*, and what it corrects is a comparison. Two changes to the machine
+were written, held by `make fast`, and measured against a build of the tree
+taken by setting the working changes aside and building again:
+
+- `store.elem.ll`, an element written from the stack with its run and its
+  index read where they are, so `health[at] = ...` is not `load2` first. It
+  took one dispatch off each iteration of `control` and 2.3% of its
+  instructions, and 2 to 3% more cycles, best of nine turn about; `rules`,
+  1,051 M cycles against 1,052 M. Not kept: an instruction that is level on
+  one workload and slower on the other is an instruction nothing asked for.
+  Written first, it also skipped the load of the value itself when that value
+  was an element read -- `a[i] = a[j]` in `std.random.shuffle` -- and `make
+  fast` refused with eight examples before anything was measured.
+- The loop and the walks marked `hot`, so that the compiler puts them at the
+  front of the code. It was written because the baseline ran 8.7 million
+  misses in the instruction cache on `rules` where the tree had run a hundred
+  thousand. Not kept, because that baseline was not the tree: built again
+  from the committed sources it is the same bytes twice over (`fb231704`),
+  runs 98 thousand misses and 1,052 M cycles, and the `hot` build is 1.7%
+  slower than it on `rules` and 2.9% on `words`.
+
+The baseline that misled both was built while the working changes were set
+aside, by the same build that had just made objects from them, and linked
+something of each; nothing checked it against a build of the commit. A
+baseline is the commit's bytes, and whether it is can be asked in a second:
+built twice from the committed sources, the two are compared, and the one
+measured is the one they agree on.
+
