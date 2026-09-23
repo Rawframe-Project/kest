@@ -40847,3 +40847,32 @@ protocol is the second surface, and this is it.
   rule that the holes do not grow each of those five has one, and each was run
   by hand and caught. Eight holes quoting what moved -- a name in `lsp.c`, the
   host's streams in `main.c` -- were repointed and run by hand.
+
+## D1183 — Coroutines and a larger library, asked of the evidence and not built
+
+*measured*. The mission lists two things to build only where a need is shown:
+waiting and coroutines if the colony proves it needs them (B), and whatever the
+standard library is missing (C). Both were asked.
+
+**B.** A colonist's work in `/home/kest/colony` is more than one frame long --
+walk a route, then work at what it is standing beside for a while -- and it is
+written as data: a `Job` enum of nine cases, the route as a run of cells, and
+one timer, driven by a `step` of sixty lines that walks and then works. That
+is what a coroutine would write as two lines of sequential code with a wait
+between them. What it would cost is a frame in flight. A world is saved and
+restored (D1171), and a program is reloaded under a running world (D985): a
+job in data is saved, or dropped and chosen again as `restore` does, and is
+the same data under the new code; a suspended frame is the old code's
+instruction pointer, which a reload has nothing to point at and a save has
+nothing to write. Nothing in the colony is hard to write as data, and the one
+thing a coroutine would buy costs the two things the colony is built on. Not
+built.
+
+**C.** The thirty-six blind runs (D1148) made 182 calls into the standard
+library, into `io`, `text` and `table`, and every one was to a function the
+library has. The colony and the examples were read for a helper written twice
+that belongs in the library; the one written by hand is the colony's
+breadth-first search, whose queue is a run of cells made once and reused, which
+is the colony's and not a container anybody else asked for. Nothing was found
+that a program had to write because the library does not have it. Not built:
+the library grows when a program shows what it is missing, as `std.bytes` did.

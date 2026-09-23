@@ -124,7 +124,9 @@ carries the mission itself; this is what the tree has to show for it.
     13 concurrency                        done  D988
     14 the sandbox claim                  done  D981
     15 the standard library               small and said to be; D1171
-                                          adds bytes for saves
+                                          adds bytes for saves, and D1183
+                                          found nothing else a program
+                                          needed
     16 project and dependencies           done  D982
     17 tooling                            done  D976, D977, D979, D991,
                                           and D1182: the debugger in the

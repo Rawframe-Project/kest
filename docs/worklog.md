@@ -41401,3 +41401,15 @@ The README's table of tools says what `kest dap` is, beside `kest debug`.
 Part of D1182.
 
 **Runs:** `check-docs.sh`.
+
+## 2026-09-23, coroutines and the library, asked of the evidence
+
+The colony's multi-frame work is a job in data, which a save and a reload both
+depend on and a suspended frame would break; the blind runs never called a
+library function that is not there. Neither B nor C is built, and why is
+written down.
+
+See D1183.
+
+**Runs:** the colony's jobs, save and restore read; every library call in the
+thirty-six blind runs counted against the library.
