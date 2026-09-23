@@ -15,12 +15,12 @@ reasoning; this holds the position.
                        interpreter on all five, by 3% on `control` and 6% on
                        `rules` at the least, and retires fewer instructions
                        on all five (D1195)
-    LAST CI:           green on 627cecf9, all nine jobs -- linux,
+    LAST CI:           green on 80a8d331, all nine jobs -- linux,
                        linux-arm64, macos, windows, clang, threads, package,
                        linux-full and agree, the last being the whole gate
                        with every hole caught
     LAST FAST GATE:    green
-    LAST FULL GATE:    CI's `linux-full` on 627cecf9, every hole caught
+    LAST FULL GATE:    CI's `linux-full` on 80a8d331, every hole caught
     STATUS:            GAME_AI_DIRECTION_COMPLETE, marked on a7769f0
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.
