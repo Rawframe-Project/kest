@@ -41346,3 +41346,20 @@ under the sanitisers walking at every allocation (before and after, and with
 the operands never written out), `check-c.sh` with every size written as nought
 (parse answers 1), the five workloads compiled before and after, and `make
 most`.
+
+## 2026-09-23, a front page with the comparison drawn
+
+`bench/compare.sh` measures the five workloads in six modes across Kest, Luau
+and daslang by processor time and instructions, writes the table with the date,
+commit and machine, and `bench/chart.py` draws it as two SVG charts. The
+README is rewritten around them: a program and its output, why this language,
+the charts stamped with when and where, the compiler's own diagnostics, an
+embedding host that was compiled and run, and what this is not. `kest help`
+no longer says `build` has no artifact. The branch `slots-experiment`,
+363e2ede, six days old and the experiment D963 records, was deleted.
+
+See D1180.
+
+**Runs:** `bench/compare.sh` with Luau and daslang, both charts rendered and
+read, every program and output on the page run, the C host compiled with
+`-Wall -Wextra` and run, `check-docs.sh`, and `make most`.

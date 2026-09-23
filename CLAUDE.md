@@ -108,6 +108,14 @@ bench/             Four shapes of work and what each costs, in this language
                    machine, and the dispersion beside the middle is what says
                    how much of that there was. `make bench/measure` builds it.
                    See D1004.
+                   `bench/compare.sh` is what the front page shows: the
+                   five workloads in every mode of this language, Luau and
+                   daslang, by processor time and instructions, written to
+                   `bench/results.tsv` with the date, the commit and the
+                   machine, and drawn by `bench/chart.py` as
+                   `bench/chart-interpreters.svg` and
+                   `bench/chart-engines.svg`. A chart without when and at
+                   which commit is a number nobody can compare. See D1180.
                    `bench/tails.sh` is the third: `bench/measure` is generic
                    and a generated file belongs to one program, so this one
                    writes the C for whatever program it is given, builds the

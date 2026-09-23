@@ -1,0 +1,35 @@
+# taken	2026-09-23
+# commit	b64a9519
+# machine	AMD Ryzen 5 3600 6-Core Processor
+# best of	5
+workload	engine	ms	instructions
+kernel	Kest	78.64	773777224
+kernel	Kest, compiled	13.25	104380359
+kernel	Luau	77.73	999376586
+kernel	Luau, native	33.91	324696263
+kernel	daslang	135.83	863778241
+kernel	daslang, AOT	26.26	111194272
+control	Kest	129.77	921156032
+control	Kest, compiled	16.77	139153999
+control	Luau	116.22	961664641
+control	Luau, native	48.71	314392448
+control	daslang	155.11	715474527
+control	daslang, AOT	27.58	102166523
+graph	Kest	15.44	108687091
+graph	Kest, compiled	4.32	28698816
+graph	Luau	15.49	114291956
+graph	Luau, native	9.73	43451827
+graph	daslang	68.00	284357976
+graph	daslang, AOT	17.34	46201802
+words	Kest	23.69	186662792
+words	Kest, compiled	14.67	142817284
+words	Luau	28.98	233126540
+words	Luau, native	32.94	214112054
+words	daslang	100.74	367408008
+words	daslang, AOT	37.36	211940902
+rules	Kest	361.31	3288039700
+rules	Kest, compiled	70.64	686801649
+rules	Luau	319.94	3304243717
+rules	Luau, native	211.06	1276433212
+rules	daslang	371.48	2166596400
+rules	daslang, AOT	43.23	260603652

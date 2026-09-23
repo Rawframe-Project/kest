@@ -40733,3 +40733,36 @@ cycles -- a store read back the moment the library wrote it, which is what the
 C before this read too, and on a workload of four milliseconds.
 Against Daslang's AOT on the same machine, `rules` compiled is 2.14 times its
 cycles where it was 2.55: 396 million against 185.
+
+## D1180 — A front page that shows where this sits, and when it was measured
+
+*owned*: the owner asked for a front page like other languages have, with the
+comparison against Luau and daslang drawn rather than described, saying the
+date and the commit it was taken at.
+
+- `bench/compare.sh` runs the five workloads in six modes -- this language's
+  machine and its release engine, Luau interpreted and compiled to native code, daslang
+  interpreted and ahead of time -- and keeps, for each, the run with the least
+  processor time and the instructions that run retired. Processor time rather
+  than the wall clock, because the machine it was written on is shared and a
+  wall clock on it is mostly somebody else's; instructions beside it, because
+  they are the number that is the same on any machine running the same binary.
+  It writes `bench/results.tsv` with the date, the commit and the processor
+  at the top, and `bench/chart.py` draws two charts from that: the three
+  interpreters as a share of Luau's time, and every engine in every mode in
+  milliseconds. The charts are SVG written by hand, a hundred lines of
+  rectangles, rather than a dependency.
+- The README is rewritten around what a reader arriving from Luau or daslang
+  asks first: a program and what it prints, why this over those, the charts
+  with their date and commit, what the compiler catches -- in its own words, a
+  run of it pasted -- how a host embeds it, and what it is not. Every program
+  and every output on it was run to write it, and the claims about the charts
+  are read off the table: in instructions the machine is under Luau's
+  interpreter on all five; by processor time it is level on two, ahead on one
+  and an eighth behind on `control` and `rules`; the release engine is ahead of
+  Luau's native code on all five and of daslang's AOT on four, and 1.6 times
+  behind it on `rules`.
+- `kest help` said `build` makes no artifact, which stopped being true at
+  D1172; it says what `--release` writes.
+
+Taken on 2026-09-23 at `b64a9519`.
