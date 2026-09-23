@@ -41284,3 +41284,29 @@ no call with many arguments in a loop and are level. With the writes under
 answering 73 run by the machine and 1 compiled and `examples/chance.kest`
 stopping with a fault.
 
+## D1199 — An argument read in the frame is not handed over as a value
+
+*measured*. After D1198 a compiled body on the machine's stack read its
+arguments where its caller had left them, and was still handed every one of
+them as a value it then did not read: `decide`'s twelve went through six
+registers and six slots of the C stack on every call, and its wrapper read
+all twelve out of the frame to hand them back in. Taken out by hand from the
+generated file for `decide` alone, that was 3% of the cycles of compiled
+`rules`.
+
+So a body takes as values only the arguments it keeps outside its frame --
+in the locals of D1162, or all of them for a body in locals -- and its head
+and its prototype say so. A call is often written before the body it calls,
+so it names every argument and `KC_n`, written at the top of the file once
+every body is known, keeps the ones body `n` takes, each after a comma of its
+own so that keeping none leaves nothing. The wrapper the machine enters a
+body through hands over the same ones, and a body the machine runs for a
+written one takes all of them, because it writes them into the frame itself.
+
+Compiled `rules` against D1198 in the same sitting, best of seven turn about:
+195.7 M cycles against 185.8 M, at 516.2 M instructions against 514.7 M; no
+other workload calls a body with many arguments in a loop. `check-c.sh` holds
+every program in the tree both ways as before, and with `KC_` keeping every
+argument it refuses at once: `too many arguments to function 'kf_6';
+expected 4, have 15`.
+

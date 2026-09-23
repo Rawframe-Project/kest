@@ -41629,3 +41629,16 @@ first, for the ceiling; the five workloads compiled before and after, best
 of seven turn about; `check-c.sh` over the tree; the writes under `KA_` left
 out, which `check-c.sh` refuses three ways; and `make most`.
 
+## 2026-09-23, an argument read in the frame is not handed over
+
+A compiled body takes as values only the arguments it keeps outside the frame
+its caller left them in; calls name all of them and `KC_n` keeps the ones
+body `n` takes. Compiled `rules` is about 5% fewer cycles in the same
+sitting.
+
+See D1199.
+
+**Runs:** `decide`'s values taken out by hand for the ceiling; compiled
+`rules` before and after, best of seven turn about; `check-c.sh` over the
+tree; `KC_` keeping everything, which `check-c.sh` refuses; and `make most`.
+

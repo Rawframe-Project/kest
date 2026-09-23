@@ -45,6 +45,9 @@ typedef struct {
     // out of what it was called with, which every caller then leaves there.
     // See D1198.
     bool reads_frame;
+    // Which of its arguments, a bit each, it reads there -- and so is not
+    // handed as a value at all. See D1199.
+    uint32_t in_frame;
     // And, for one this backend did not write, whether anything it did write
     // calls it: such a body gets a C function of its own all the same, which
     // hands the call to the machine. See D1105.
@@ -2395,14 +2398,15 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
                 "        }\n",
                 handed, needs, which, op->span.offset, needs, needs);
             leave_arguments(walk, out, which, base, reads);
-            say(c, out, "        bool went = kf_%u(rt, stands, %s%s", which,
-                leaves > 0 ? "&" : "", leaves > 0 ? first : "NULL");
+            say(c, out, "        bool went = kf_%u(rt, stands, %s%s KC_%u(",
+                which, leaves > 0 ? "&" : "", leaves > 0 ? first : "NULL",
+                which);
             for (uint32_t k = 0; k < reads; k++) {
                 at_stack(walk, second, base + k);
-                say(c, out, ", %s", second);
+                say(c, out, "%s%s", k == 0 ? "" : ", ", second);
             }
             say(c, out,
-                ");\n        if (!went) {\n            return false;\n"
+                "));\n        if (!went) {\n            return false;\n"
                 "        }\n    }\n");
             break;
         }
@@ -2429,14 +2433,14 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
             op->span.offset, which, op->span.offset, handed, needs, which,
             op->span.offset, which, needs, needs);
         leave_arguments(walk, out, which, base, reads);
-        say(c, out, "        bool went = kf_%u(rt, stands, %s%s", which,
-            leaves > 0 ? "&" : "", leaves > 0 ? first : "NULL");
+        say(c, out, "        bool went = kf_%u(rt, stands, %s%s KC_%u(", which,
+            leaves > 0 ? "&" : "", leaves > 0 ? first : "NULL", which);
         for (uint32_t k = 0; k < reads; k++) {
             at_stack(walk, second, base + k);
-            say(c, out, ", %s", second);
+            say(c, out, "%s%s", k == 0 ? "" : ", ", second);
         }
         say(c, out,
-            ");\n        *led.many = was;\n"
+            "));\n        *led.many = was;\n"
             "        if (!went) {\n            return false;\n        }\n"
             "    }\n");
         break;
@@ -2583,12 +2587,24 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
 // collector walks the machine's stack and a local is not on it. Both are
 // called the same way, which is what lets a body be written before the ones
 // it calls. See D1098.
+// Whether an argument is handed to a body as a value. One the body reads in
+// the frame its caller left it in is not: handing it over as well was a copy
+// in every register and every stack slot a call passes through, for a value
+// nothing read. A body the machine runs for a written one takes all of them,
+// because it writes them into the frame itself. See D1199.
+static bool takes_value(const Body *body, bool as_written, uint16_t p) {
+    return !as_written || !body->reads_frame || p >= 32 ||
+           ((body->in_frame >> p) & 1u) == 0;
+}
+
 static void write_head(KestEmitC *c, Text *into, const Body *body,
-                       uint32_t which) {
+                       uint32_t which, bool as_written) {
     say(c, into, "static bool kf_%u(KestRuntime *rt, KV *frame, KV *out",
         which);
     for (uint16_t p = 0; p < body->params; p++) {
-        say(c, into, ", KV a%u", (unsigned)p);
+        if (takes_value(body, as_written, p)) {
+            say(c, into, ", KV a%u", (unsigned)p);
+        }
     }
     say(c, into, ")");
 }
@@ -2711,7 +2727,21 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
             }
             memset(walk.clean, 0, sizeof(bool) * (walk.deepest + 1));
         }
-        write_head(c, &into->wrote, into, c->count - 1);
+        // Which arguments it reads where its caller left them, which is
+        // decided before its head is written because its head is what says
+        // so. See D1198 and D1199.
+        into->reads_frame = walk.on_the_stack;
+        into->in_frame = 0;
+        for (uint16_t p = 0; walk.on_the_stack && p < body->param_slots &&
+                             p < 32;
+             p++) {
+            Where param;
+            at_frame(&walk, param, p);
+            if (param[0] == 'f') {
+                into->in_frame |= 1u << p;
+            }
+        }
+        write_head(c, &into->wrote, into, c->count - 1, true);
         say(c, &into->wrote, " {\n");
         if (walk.on_the_stack) {
             // On the machine's stack, laid out the way the machine would have
@@ -2758,14 +2788,12 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
         // slot is in that frame is read where it is. Written again, it was a
         // store into the slot a store had just filled, and 10% of the cycles
         // of compiled `rules`. See D1198.
-        into->reads_frame = walk.on_the_stack;
         for (uint16_t p = 0; p < body->param_slots; p++) {
-            Where param;
-            at_frame(&walk, param, p);
-            if (walk.on_the_stack && param[0] == 'f') {
-                say(c, &into->wrote, "    (void)a%u;\n", (unsigned)p);
+            if (!takes_value(into, true, p)) {
                 continue;
             }
+            Where param;
+            at_frame(&walk, param, p);
             say(c, &into->wrote, "    %s = a%u;\n", param, (unsigned)p);
         }
         declare_guards(&walk);
@@ -3187,7 +3215,7 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         if (!c->bodies[i].written && !c->bodies[i].handed_over) {
             continue;
         }
-        write_head(c, &file, &c->bodies[i], i);
+        write_head(c, &file, &c->bodies[i], i, c->bodies[i].written);
         say(c, &file, ";\n");
     }
     say(c, &file, "\n");
@@ -3215,6 +3243,25 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
             c->bodies[i].written && c->bodies[i].reads_frame ? 1u : 0u);
     }
     say(c, &file, "\n");
+    // And what a call hands over as values, out of every argument it has:
+    // a call is written before the body it calls may be, so it names them
+    // all and this keeps the ones the callee takes, each after a comma of
+    // its own so that keeping none leaves nothing. See D1199.
+    for (uint32_t i = 0; i < c->count; i++) {
+        const Body *body = &c->bodies[i];
+        say(c, &file, "#define KC_%u(", i);
+        for (uint16_t p = 0; p < body->params; p++) {
+            say(c, &file, "%sa%u", p == 0 ? "" : ", ", (unsigned)p);
+        }
+        say(c, &file, ")");
+        for (uint16_t p = 0; p < body->params; p++) {
+            if (takes_value(body, body->written, p)) {
+                say(c, &file, " , a%u", (unsigned)p);
+            }
+        }
+        say(c, &file, "\n");
+    }
+    say(c, &file, "\n");
     // And what a body needs standing at the top of the file: a run of
     // constants written into the program, which a body reads at an index and
     // cannot hold. See D1119.
@@ -3237,7 +3284,7 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         }
         say(c, &file, "// %s -- the machine runs this one\n",
             body->symbol == NULL ? "(no name)" : body->symbol);
-        write_head(c, &file, body, i);
+        write_head(c, &file, body, i, false);
         say(c, &file, " {\n");
         for (uint16_t p = 0; p < body->params; p++) {
             say(c, &file, "    frame[%u] = a%u;\n", (unsigned)p, (unsigned)p);
@@ -3296,7 +3343,9 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
             "    if (!kf_%u(rt, frame, %s",
             i, bound_so_far++, i, body->results > 0 ? "frame" : "NULL");
         for (uint16_t p = 0; p < body->params; p++) {
-            say(c, &file, ", frame[%u]", (unsigned)p);
+            if (takes_value(body, true, p)) {
+                say(c, &file, ", frame[%u]", (unsigned)p);
+            }
         }
         say(c, &file,
             ")) {\n        return false;\n    }\n    *gave = %u;\n"
