@@ -41718,3 +41718,17 @@ best of eleven turn about and the five workloads best of five, against the
 commit built twice to the same bytes; two wrong versions, one refused by
 `make fast` and one only by `make most`; and `make most`.
 
+## 2026-09-23, a body whose every way out is a return in a match is written
+
+The release engine handed `colony.work` to the machine because the jumps
+after its arms' returns land on something nothing reaches. Landings are what
+reached branches land on now. `check-c.sh` holds its own programs to being
+written whole, which it had only said, and writes `returns.kest` to hold
+this; the colony's trial compiles whole and retires 6% fewer instructions.
+
+See D1206.
+
+**Runs:** `returns.kest` against the backend before and after, with
+`check-c.sh` refusing the first; the colony's trial compiled both ways;
+`check-c.sh` over the tree; and `make most`.
+

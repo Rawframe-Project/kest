@@ -414,6 +414,24 @@ static bool depths(Walk *walk) {
             }
         }
     }
+    // What is landed on is what a branch the walk reached lands on. A branch
+    // after a `return` is one nothing reaches -- every arm of a `match` whose
+    // arms all return has one -- and what only such branches land on is not
+    // written, and neither are they, so it is not a label; one that was would
+    // be a label nothing jumps to. See D1206.
+    for (uint32_t i = 0; i < body->op_count; i++) {
+        walk->landed[i] = false;
+    }
+    for (uint32_t i = 0; i < body->op_count; i++) {
+        const KestIrOp *op = &body->ops[i];
+        if (walk->known[i] &&
+            (op->kind == KEST_IR_GO || op->kind == KEST_IR_ASK ||
+             op->kind == KEST_IR_NEXT || op->kind == KEST_IR_SEEK_FROM ||
+             op->kind == KEST_IR_SEEK_NEXT) &&
+            op->target < body->op_count) {
+            walk->landed[op->target] = true;
+        }
+    }
     // A branch landing where nothing arrives from above is a label this cannot
     // write, because what the stack holds there was never worked out.
     for (uint32_t i = 0; i < body->op_count; i++) {

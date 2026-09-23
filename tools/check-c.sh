@@ -1022,6 +1022,55 @@ fn main() -> i32 {
     return total % 251
 }
 PROGRAM
+# A body every way out of which is a `return` inside a `match`: the jump each
+# arm would have made past the others follows its `return` and is never
+# taken, and what it would have landed on is reached by nothing. The backend
+# refused a label only those land on, and handed `colony.work` and every body
+# of this to the machine. See D1206.
+cat >"$work"/programs/returns.kest <<'PROGRAM'
+module returns
+
+enum Job {
+    Idle
+    Chop(i32)
+    Sow(i32)
+}
+
+fn work(job: Job, worked: i32) -> i32 {
+    match job {
+        Idle {
+            return 0
+        }
+        Chop(c) {
+            if worked < 3 {
+                return 1
+            }
+            return c
+        }
+        Sow(c) {
+            return c + worked
+        }
+    }
+}
+
+fn main() -> i32 {
+    match Job.Chop(7) {
+        Idle {
+            return 1
+        }
+        Chop(c) {
+            if work(Job.Chop(c), 5) != 7 || work(Job.Sow(2), 3) != 5 ||
+                    work(Job.Idle, 9) != 0 {
+                return 2
+            }
+            return 0
+        }
+        Sow(c) {
+            return 3 + c
+        }
+    }
+}
+PROGRAM
 cat >"$work"/programs/outside.kest <<'PROGRAM'
 module outside
 
@@ -1072,6 +1121,23 @@ for file in "$work"/programs/*.kest; do
     if ! grep -q '^int main' "$work"/one.c; then
         {
             echo "    $name has no \`main\` written for it:"
+            grep '^// not written' "$work"/one.c | head -3 | sed 's/^/        /'
+        } >>"$said"
+        wrong=$((wrong + 1))
+        continue
+    fi
+    # And the whole of it: a `main` of its own over bodies the machine runs
+    # is the machine run twice. Two are written to be halves -- a number with
+    # no spelling in C, handed to the machine on purpose, which is what they
+    # hold the crossing to. See D1206.
+    whole=$(sed -n 's,^// \([0-9]*\) of \([0-9]*\) bodies written$,\1 \2,p' \
+            "$work"/one.c)
+    case "$name" in
+    across.kest | crossed.kest) whole="halves" ;;
+    esac
+    if [ "$whole" != "halves" ] && [ "${whole% *}" != "${whole#* }" ]; then
+        {
+            echo "    $name was not written whole: $whole"
             grep '^// not written' "$work"/one.c | head -3 | sed 's/^/        /'
         } >>"$said"
         wrong=$((wrong + 1))

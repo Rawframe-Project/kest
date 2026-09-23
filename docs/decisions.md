@@ -41456,3 +41456,29 @@ by every example and every fuzzed program run with it and without
 rather than `>=`, `make fast` passed and `make most` refused, with
 `examples/engine` finding its ring came back round in -8 steps.
 
+## D1206 — A body whose every way out is a `return` inside a `match` is written
+
+Compiled with the release engine, the colony's trial said `93 of 94 bodies
+written`: `colony.work` was handed to the machine with "a branch landing where
+nothing reaches". It is a statement `match` every arm of which returns, and
+each arm is followed by the jump past the others that the arm never makes. The
+depth walk never reaches those jumps, so it never reaches what they land on,
+and the check after it refused anything landed on and not reached -- counting
+jumps that are themselves never reached.
+
+What is landed on is now what a branch the walk reached lands on, rebuilt
+after the walk: a label only unreached jumps name is neither refused nor
+written, and neither are they. A reached branch landing where the walk never
+arrived is still refused, which is the case the check was for.
+
+Nothing held it. `check-c.sh` says of the programs it writes itself that each
+is written whole on purpose, and held that by `main` being written -- which
+it is, over bodies the machine runs. It holds `N of N bodies written` now,
+with the two programs written to be halves named beside the reason, and it
+writes one more: `returns.kest`, whose `main` and whose one other body are
+both such a `match`. Against the backend before this it refused with
+`returns.kest was not written whole: 0 of 2`; after it, both bodies are
+written, compile under `-Wall -Wextra -Werror`, and answer what the machine
+answers. The colony's trial compiled is `94 of 94`, the same colony, and
+325.5 M instructions against 347.3 M.
+
