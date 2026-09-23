@@ -71,6 +71,7 @@ __declspec(dllimport) int __stdcall QueryPerformanceFrequency(long long *rate);
 #include "lexer.h"
 #include "mem.h"
 #include "debug.h"
+#include "dap.h"
 #include "lsp.h"
 #include "project.h"
 #include "parser.h"
@@ -150,6 +151,9 @@ static void help(FILE *out) {
             "                    what is wrong, what a name is, where it was\n"
             "                    declared, what else names it, what a file\n"
             "                    declares and the one form\n"
+            "  dap               the debugger, driven by an editor over the\n"
+            "                    Debug Adapter Protocol on the standard\n"
+            "                    streams: breakpoints, steps, frames, locals\n"
             "  help              this, and `-h` and `--help` are it too\n"
             "\n"
             "options:\n"
@@ -577,7 +581,7 @@ static void math_atan2(KestValue *frame, KestRuntime *runtime, void *context) {
 static bool program_could_not_read = false;
 
 static void io_read(KestValue *frame, KestRuntime *runtime, void *context) {
-    (void)context;
+    FILE *from = context;
     size_t room = 4096;
     size_t held = 0;
     char *bytes = malloc(room);
@@ -587,7 +591,7 @@ static void io_read(KestValue *frame, KestRuntime *runtime, void *context) {
         return;
     }
     for (;;) {
-        size_t read = fread(bytes + held, 1, room - held, stdin);
+        size_t read = fread(bytes + held, 1, room - held, from);
         held += read;
         if (held < room) {
             break;
@@ -604,7 +608,7 @@ static void io_read(KestValue *frame, KestRuntime *runtime, void *context) {
         bytes = grown;
         room *= 2;
     }
-    if (ferror(stdin)) {
+    if (ferror(from)) {
         program_could_not_read = true;
         held = 0;
     }
@@ -796,7 +800,9 @@ static void engine_who(KestValue *frame, KestRuntime *runtime, void *context) {
     frame[1].integer = 0;
 }
 
-static KestHost *make_host(FILE *output) {
+// `input` is what `Io.read` reads, which is standard input for the command
+// line and nothing for the debug adapter, whose standard input is the protocol.
+static KestHost *make_host(FILE *output, FILE *input) {
     program_wrote_to = output;
     KestHost *host = kest_host_new();
     if (host == NULL) {
@@ -826,7 +832,7 @@ static KestHost *make_host(FILE *output) {
         !kest_host_bind(host, "Host.fileExists", os_file_exists, NULL) ||
         !kest_host_bind(host, "Host.argCount", os_arg_count, NULL) ||
         !kest_host_bind(host, "Host.arg", os_arg, NULL) ||
-        !kest_host_bind(host, "Io.read", io_read, NULL) ||
+        !kest_host_bind(host, "Io.read", io_read, input) ||
         !kest_host_bind(host, "Io.write", io_write, output)) {
         kest_host_free(host);
         return NULL;
@@ -2455,7 +2461,7 @@ static int run(const char *command, const char *executable, char **paths,
                 // above it otherwise, with nothing to say which line is which.
                 // `--json` has always done this; the words do it too. See
                 // D343.
-                KestHost *host = make_host(stderr);
+                KestHost *host = make_host(stderr, stdin);
                 KestLimits least = {0, 0, 0, 0};
                 KestRuntime *runtime =
                     host == NULL
@@ -2587,7 +2593,7 @@ static int run(const char *command, const char *executable, char **paths,
             // reader looks; `tick` answers with what a frame cost, and a
             // program writing into the middle of that is the same mixing as
             // above.
-            KestHost *host = make_host(json || ticking ? stderr : stdout);
+            KestHost *host = make_host(json || ticking ? stderr : stdout, stdin);
             if (host == NULL) {
                 kest_diags_say_one(stderr, json, KEST_STARVED_CODE,
                                    KEST_STARVED_SAYS);
@@ -3247,6 +3253,13 @@ int main(int argc, char **argv) {
     // which file it is about is what the editor says. See D977.
     if (strcmp(argv[1], "lsp") == 0) {
         return kest_lsp_serve(kest_library_path(NULL, argv[0]), stdin, stdout);
+    }
+    // The debugger an editor drives. What the program writes goes to the
+    // editor's console and what it reads is nothing, because both standard
+    // streams are the protocol. See D1182.
+    if (strcmp(argv[1], "dap") == 0) {
+        return kest_dap_serve(kest_library_path(NULL, argv[0]), make_host,
+                              stdin, stdout);
     }
 
     if (strcmp(argv[1], "help") == 0 || strcmp(argv[1], "-h") == 0 ||

@@ -4901,6 +4901,22 @@ returned through them, answering a number that was nothing. Nothing saw it for
 as long as this project has existed, because a call from outside starts its
 frames at the bottom and wrote over them. See D1079.
 
+The same debugger answers an editor. `kest dap` speaks the Debug Adapter
+Protocol on the standard streams, and the VS Code extension starts it for a
+`kest` launch or for *Kest: debug this file*: a breakpoint set in the gutter is
+a `break` at that line of that file, the call stack is `where` innermost first,
+the variables of a frame are what its body called its slots, and continue,
+step over, step into and step out are `continue`, `next`, `step`, and a step
+that carries on until the body it began in has returned. The editor names the
+program in its `launch` request, and it is built the way `kest debug` builds
+one, every call a call. What the program writes arrives on the editor's debug
+console rather than in the protocol, which is on the same stream, and what it
+reads is nothing, for the same reason; a program that does not compile is a
+launch that fails with the diagnostics on the console, and one that finishes
+says what `main` answered as its exit code. It cannot pause a program that is
+running, because the machine runs on the thread that answers the editor, and
+it says so when asked. See D1182.
+
 ## An editor
 
 `kest lsp` is this compiler answering an editor, over the standard streams and

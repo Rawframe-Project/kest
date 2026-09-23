@@ -587,8 +587,8 @@ fn main() -> i32 {
         # everything there was before D1129.
         "what": "an editor pointing one column past the mistake",
         "file": "src/lsp.c",
-        "from": r"""    sayf(out, "{\"start\":{\"line\":%u,\"character\":%u},", line, column);""",
-        "to": r"""    sayf(out, "{\"start\":{\"line\":%u,\"character\":%u},", line, column + 1);""",
+        "from": r"""    kest_wire_sayf(out, "{\"start\":{\"line\":%u,\"character\":%u},", line, column);""",
+        "to": r"""    kest_wire_sayf(out, "{\"start\":{\"line\":%u,\"character\":%u},", line, column + 1);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -4479,8 +4479,8 @@ for file in "$@"; do""",
         # The two streams are the one thing a command line is for.
         "what": "a program's writing sent where its refusals go",
         "file": "src/main.c",
-        "from": r"""            KestHost *host = make_host(json || ticking ? stderr : stdout);""",
-        "to": r"""            KestHost *host = make_host(stderr);""",
+        "from": r"""            KestHost *host = make_host(json || ticking ? stderr : stdout, stdin);""",
+        "to": r"""            KestHost *host = make_host(stderr, stdin);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -4928,8 +4928,8 @@ for file in "$@"; do""",
         "what": "what a program says under `call` written where the answer "
                 "goes",
         "file": "src/main.c",
-        "from": r"""                KestHost *host = make_host(stderr);""",
-        "to": r"""                KestHost *host = make_host(stdout);""",
+        "from": r"""                KestHost *host = make_host(stderr, stdin);""",
+        "to": r"""                KestHost *host = make_host(stdout, stdin);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -5244,11 +5244,11 @@ for file in "$@"; do""",
         # anything on its input.
         "what": "an empty stream read as one that would not be read",
         "file": "src/main.c",
-        "from": r"""    if (ferror(stdin)) {
+        "from": r"""    if (ferror(from)) {
         program_could_not_read = true;
         held = 0;
     }""",
-        "to": r"""    if (ferror(stdin) || held == 0) {
+        "to": r"""    if (ferror(from) || held == 0) {
         program_could_not_read = true;
         held = 0;
     }""",
@@ -9437,8 +9437,8 @@ fn main() -> i32 {
         # prints one line makes the answer two.
         "what": "a call that writes where its answer goes",
         "file": "src/main.c",
-        "from": """                KestHost *host = make_host(stderr);""",
-        "to": """                KestHost *host = make_host(stdout);""",
+        "from": """                KestHost *host = make_host(stderr, stdin);""",
+        "to": """                KestHost *host = make_host(stdout, stdin);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
@@ -10405,6 +10405,61 @@ fn main() -> i32 {
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
         "caught": "the workflow a reader starts with does not work",
+    },
+    {
+        # An editor's breakpoint put a line away from where it asked. The
+        # adapter is a new boundary and each thing an editor shows through it
+        # is held once and seen caught. See D1182.
+        "what": "an editor's breakpoint put on another line",
+        "file": "src/dap.c",
+        "from": r"""                   kest_debugger_break(&adapter->debugger, file, at) > 0;""",
+        "to": r"""                   kest_debugger_break(&adapter->debugger, file, at + 1) > 0;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "dap: an editor was not stopped at the line its breakpoint is on",
+    },
+    {
+        "what": "an editor shown the variables of another frame",
+        "file": "src/dap.c",
+        "from": r"""        uint32_t deep = frame - 1;""",
+        "to": r"""        uint32_t deep = 0;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "dap: a frame's variables were not what its body called its slots",
+    },
+    {
+        "what": "a program's writing kept from the editor's console",
+        "file": "src/dap.c",
+        "from": r"""    relay(adapter, adapter->wrote, &adapter->read_to, "stdout");""",
+        "to": r"""    (void)relay;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "dap: what the program wrote did not reach the editor's console",
+    },
+    {
+        "what": "a finished program's answer left out of its exit",
+        "file": "src/dap.c",
+        "from": r"""        adapter->exit_code = (int)adapter->debugger.answer[0].integer;""",
+        "to": r"""        (void)adapter->debugger.answer;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "dap: a finished program did not say what `main` answered",
+    },
+    {
+        "what": "a launch that cannot compile and says nothing",
+        "file": "src/dap.c",
+        "from": r"""    if (!kest_build_emit(adapter->build)) {
+        kest_build_report(adapter->build, diagnostics, KEST_FORM_TEXT);""",
+        "to": r"""    if (!kest_build_emit(adapter->build)) {
+        (void)diagnostics;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "dap: a program that does not compile was launched anyway, or said nothing about why",
     },
     {
         # A breakpoint this put in on somebody's behalf, written down as one
@@ -13788,8 +13843,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # reading one gets the other above it.
         "what": "a call that answers where the program is writing",
         "file": "src/main.c",
-        "from": """                KestHost *host = make_host(stderr);""",
-        "to": """                KestHost *host = make_host(stdout);""",
+        "from": """                KestHost *host = make_host(stderr, stdin);""",
+        "to": """                KestHost *host = make_host(stdout, stdin);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/world.kest"],
@@ -13801,8 +13856,8 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # says something every event says it between the rows.
         "what": "a frame's cost written into by the program",
         "file": "src/main.c",
-        "from": """            KestHost *host = make_host(json || ticking ? stderr : stdout);""",
-        "to": """            KestHost *host = make_host(json ? stderr : stdout);""",
+        "from": """            KestHost *host = make_host(json || ticking ? stderr : stdout, stdin);""",
+        "to": """            KestHost *host = make_host(json ? stderr : stdout, stdin);""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/world.kest"],
@@ -13830,7 +13885,7 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # same piece of text and the same answer.
         "what": "a read that failed and was handed over as nothing",
         "file": "src/main.c",
-        "from": """    if (ferror(stdin)) {
+        "from": """    if (ferror(from)) {
         program_could_not_read = true;
         held = 0;
     }""",

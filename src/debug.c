@@ -6,9 +6,8 @@
 #include "diag.h"
 #include "value.h"
 
-#define MOST_BREAKPOINTS 64
-
-typedef struct Debugger Debugger;
+typedef KestWritten Written;
+typedef KestDebugger Debugger;
 
 // The program as it was written, for as long as it takes to ask it something.
 // Everything that reads the code walks it an instruction at a time, and a walk
@@ -16,29 +15,6 @@ typedef struct Debugger Debugger;
 // one is and step into the middle of the next. See D991.
 static void as_it_was(Debugger *held);
 static void as_it_is(Debugger *held);
-
-// One byte written over, and what was there. A breakpoint costs the machine
-// nothing because it *is* the machine: the byte the debugger wrote is the one
-// instruction nothing compiles to, and putting the old one back is how the
-// machine carries on. See D991.
-typedef struct {
-    int32_t entry;
-    uint32_t at;
-    uint8_t was;
-    // Whether a person asked for it or this asked for it on their behalf. A
-    // step is a breakpoint at every line and they all go when the step ends.
-    bool asked_for;
-} Written;
-
-struct Debugger {
-    KestBuild *build;
-    KestRuntime *runtime;
-    FILE *out;
-    Written written[MOST_BREAKPOINTS];
-    uint32_t count;
-    bool running;
-    bool over;
-};
 
 // Which file a body came from, and where in it. Every answer this gives about
 // a place goes through here.
@@ -71,6 +47,9 @@ static uint32_t line_of(Debugger *held, int32_t entry, uint32_t offset) {
 // for one.
 static void say_where(Debugger *held, int32_t entry, uint32_t at,
                       const char *before) {
+    if (held->out == NULL) {
+        return;
+    }
     const KestSource *source = source_of(held, entry);
     as_it_was(held);
     int64_t from = kest_came_from(held->runtime, entry, at);
@@ -132,7 +111,7 @@ static void as_it_is(Debugger *held) {
 
 static bool write_one(Debugger *held, int32_t entry, uint32_t at,
                       bool asked_for) {
-    if (held->count == MOST_BREAKPOINTS || already_written(held, entry, at)) {
+    if (held->count == KEST_MOST_BREAKPOINTS || already_written(held, entry, at)) {
         return false;
     }
     uint32_t many = 0;
@@ -195,22 +174,28 @@ static void write_every_line(Debugger *held, int32_t entry) {
     as_it_is(held);
 }
 
-// What the machine did when it was let go. A stop is not a refusal, so the two
-// are told apart rather than both reported.
-static void carried_on(Debugger *held, bool went) {
+// What the machine did when it was let go, said to a person where there is
+// one. A stop is not a refusal, so the two are told apart rather than both
+// reported.
+static KestDebugState carried_on(Debugger *held, bool went) {
     if (kest_stopped(held->runtime) >= 0) {
         int32_t in = kest_stopped_in(held->runtime);
         int64_t at = kest_stopped(held->runtime);
         say_where(held, in, (uint32_t)at, "stopped at ");
-        return;
+        return KEST_DEBUG_STOPPED;
     }
     held->running = false;
     if (went) {
-        fprintf(held->out, "the program finished\n");
-    } else {
+        if (held->out != NULL) {
+            fprintf(held->out, "the program finished\n");
+        }
+        return KEST_DEBUG_FINISHED;
+    }
+    if (held->out != NULL) {
         kest_report(held->runtime, held->out, KEST_FORM_TEXT);
         fprintf(held->out, "the program stopped and did not finish\n");
     }
+    return KEST_DEBUG_FAILED;
 }
 
 // Let it go, having taken out the breakpoint it is standing on and put it back
@@ -297,15 +282,16 @@ static bool one_move(Debugger *held, bool into, Written *keeping,
         *keeping = came_out;
         *putting_back = true;
     }
-    *went = kest_resume(held->runtime, NULL, 0);
+    *went = kest_resume(held->runtime, held->answer, 8);
     take_the_steps_out(held);
     return kest_stopped(held->runtime) >= 0;
 }
 
-// To the next line. `into` stops wherever the machine goes; without it a call
-// is stepped over, which is done by carrying on while the machine is deeper
-// than it was.
-static void step_a_line(Debugger *held, bool into) {
+// To the next line. Into stops wherever the machine goes; over carries on
+// while the machine is deeper than it was, which steps over a call; out
+// carries on until it is shallower, which is the line after the call this
+// body was called from.
+static KestDebugState step_a_line(Debugger *held, KestStep how) {
     int32_t was_in = -1;
     uint32_t was_line = 0;
     uint32_t was_deep = 0;
@@ -317,18 +303,24 @@ static void step_a_line(Debugger *held, bool into) {
     // Bounded, because a step that could not find a line to stop at would
     // otherwise be a debugger that never comes back.
     for (uint32_t guard = 0; guard < 1000000; guard++) {
-        if (!one_move(held, into, &keeping, &putting_back, &went)) {
+        if (!one_move(held, how == KEST_STEP_INTO, &keeping, &putting_back,
+                      &went)) {
             if (putting_back) {
                 write_one(held, keeping.entry, keeping.at, true);
             }
-            carried_on(held, went);
-            return;
+            return carried_on(held, went);
         }
         int32_t in = -1;
         uint32_t line = 0;
         uint32_t deep = 0;
         standing(held, &in, &line, &deep);
-        if (!into && deep > was_deep) {
+        if (how == KEST_STEP_OUT) {
+            if (deep < was_deep) {
+                break;
+            }
+            continue;
+        }
+        if (how == KEST_STEP_OVER && deep > was_deep) {
             continue;
         }
         if (in == was_in && line == was_line && deep == was_deep) {
@@ -339,14 +331,14 @@ static void step_a_line(Debugger *held, bool into) {
     if (putting_back) {
         write_one(held, keeping.entry, keeping.at, true);
     }
-    carried_on(held, went);
+    return carried_on(held, went);
 }
 
 // Let it go to the next breakpoint a person asked for. One line of movement
 // first, because a breakpoint is the instruction that was there and standing
 // on one is standing on the instruction: it has to come out for the machine to
 // move, and it goes back the moment it has.
-static void let_it_go(Debugger *held) {
+static KestDebugState let_it_go(Debugger *held) {
     Written keeping = {0, 0, 0, false};
     bool putting_back = false;
     bool went = false;
@@ -355,8 +347,7 @@ static void let_it_go(Debugger *held) {
             if (putting_back) {
                 write_one(held, keeping.entry, keeping.at, true);
             }
-            carried_on(held, went);
-            return;
+            return carried_on(held, went);
         }
         if (putting_back) {
             write_one(held, keeping.entry, keeping.at, true);
@@ -371,14 +362,13 @@ static void let_it_go(Debugger *held) {
             // one instruction along: stop there rather than run past it.
             write_one(held, passing.entry, passing.at, passing.asked_for);
             if (passing.asked_for) {
-                carried_on(held, true);
-                return;
+                return carried_on(held, true);
             }
         }
     }
-    went = kest_resume(held->runtime, NULL, 0);
+    went = kest_resume(held->runtime, held->answer, 8);
     take_the_steps_out(held);
-    carried_on(held, went);
+    return carried_on(held, went);
 }
 
 static void say_frames(Debugger *held) {
@@ -399,26 +389,28 @@ static void say_frames(Debugger *held) {
 // What a slot holds, written the way this language writes a value. The kind
 // comes from the name the body gave the slot, which is what makes this more
 // than a number.
-static void say_value(Debugger *held, KestValue value, uint8_t kind) {
+static void value_of(char *into, size_t room, KestValue value, uint8_t kind) {
     switch (kind) {
     case KEST_L_F32:
     case KEST_L_F64:
-        fprintf(held->out, "%g", value.real);
+        snprintf(into, room, "%g", value.real);
         break;
     case KEST_L_BOOL:
-        fprintf(held->out, "%s", value.integer != 0 ? "true" : "false");
+        snprintf(into, room, "%s", value.integer != 0 ? "true" : "false");
         break;
     case KEST_L_TEXT:
-        if (value.text == NULL) {
-            fprintf(held->out, "\"\"");
-        } else {
-            fprintf(held->out, "\"%s\"", value.text);
-        }
+        snprintf(into, room, "\"%s\"", value.text == NULL ? "" : value.text);
         break;
     default:
-        fprintf(held->out, "%lld", (long long)value.integer);
+        snprintf(into, room, "%lld", (long long)value.integer);
         break;
     }
+}
+
+static void say_value(Debugger *held, KestValue value, uint8_t kind) {
+    char said[256];
+    value_of(said, sizeof(said), value, kind);
+    fputs(said, held->out);
 }
 
 static void say_locals(Debugger *held, const char *only) {
@@ -520,6 +512,113 @@ static bool break_at(Debugger *held, const char *in, uint32_t wanted) {
     return put > 0;
 }
 
+void kest_debugger_open(KestDebugger *held, KestBuild *build,
+                        KestRuntime *runtime, FILE *out) {
+    memset(held, 0, sizeof(*held));
+    held->build = build;
+    held->runtime = runtime;
+    held->out = out;
+}
+
+uint32_t kest_debugger_break(KestDebugger *held, const char *file,
+                             uint32_t line) {
+    uint32_t before = held->count;
+    break_at(held, file, line);
+    return held->count - before;
+}
+
+void kest_debugger_unbreak(KestDebugger *held, const char *file) {
+    const KestSource *root =
+        held->build->units.count > 0 ? &held->build->units.items[0].source
+                                     : NULL;
+    for (uint32_t i = held->count; i > 0; i--) {
+        const KestSource *came_from = source_of(held, held->written[i - 1].entry);
+        bool here = file == NULL
+                        ? came_from == root
+                        : came_from != NULL &&
+                              strstr(came_from->path, file) != NULL;
+        if (held->written[i - 1].asked_for && here) {
+            take_one_out(held, i - 1);
+        }
+    }
+}
+
+KestDebugState kest_debugger_run(KestDebugger *held, int32_t entry) {
+    held->running = true;
+    memset(held->answer, 0, sizeof(held->answer));
+    bool went = kest_call(held->runtime, entry, held->answer, 8);
+    return carried_on(held, went);
+}
+
+KestDebugState kest_debugger_continue(KestDebugger *held) {
+    return let_it_go(held);
+}
+
+KestDebugState kest_debugger_step(KestDebugger *held, KestStep how) {
+    return step_a_line(held, how);
+}
+
+uint32_t kest_debugger_frames(KestDebugger *held) {
+    return kest_frames_deep(held->runtime);
+}
+
+bool kest_debugger_frame(KestDebugger *held, uint32_t deep, const char **body,
+                         const char **path, uint32_t *line,
+                         uint32_t *column) {
+    if (deep >= kest_frames_deep(held->runtime)) {
+        return false;
+    }
+    int32_t in = kest_frame_in(held->runtime, deep);
+    int64_t at = kest_frame_ip(held->runtime, deep);
+    const KestSource *source = source_of(held, in);
+    as_it_was(held);
+    int64_t from = kest_came_from(held->runtime, in, at < 0 ? 0 : (uint32_t)at);
+    as_it_is(held);
+    *line = 0;
+    *column = 0;
+    if (from >= 0 && source != NULL) {
+        kest_source_locate(source, (uint32_t)from, line, column);
+    }
+    *path = source == NULL ? NULL : source->path;
+    *body = in >= 0 && (uint32_t)in < held->build->module.count
+                ? held->build->module.functions[in]->name
+                : NULL;
+    return true;
+}
+
+uint16_t kest_debugger_wide(KestDebugger *held, uint32_t deep) {
+    return kest_frame_wide(held->runtime, deep);
+}
+
+const char *kest_debugger_local(KestDebugger *held, uint32_t deep,
+                                uint16_t slot, char *value, size_t room,
+                                uint16_t *slots) {
+    uint8_t kind = KEST_L_WORD;
+    *slots = 1;
+    const char *name = kest_frame_name(held->runtime, deep, slot, slots, &kind);
+    if (name == NULL) {
+        return NULL;
+    }
+    KestValue held_there = {0};
+    if (!kest_frame_slot(held->runtime, deep, slot, &held_there)) {
+        return NULL;
+    }
+    // A slot that holds where the value is rather than the value. See D1081.
+    if (kest_frame_at_address(held->runtime, deep, slot)) {
+        snprintf(value, room, "at %p", held_there.object);
+    } else {
+        value_of(value, room, held_there, kind);
+    }
+    return name;
+}
+
+void kest_debugger_close(KestDebugger *held) {
+    // Everything written over, put back, so the program is the program again.
+    while (held->count > 0) {
+        take_one_out(held, held->count - 1);
+    }
+}
+
 static void help(FILE *out) {
     fputs("  break <line>   stop where that line is run\n"
           "  run            start the program\n"
@@ -535,10 +634,8 @@ static void help(FILE *out) {
 
 int kest_debug_serve(KestBuild *build, KestRuntime *runtime, const char *entry,
                      FILE *in, FILE *out) {
-    Debugger held = {0};
-    held.build = build;
-    held.runtime = runtime;
-    held.out = out;
+    Debugger held;
+    kest_debugger_open(&held, build, runtime, out);
 
     int32_t start = kest_entry(runtime, entry);
     if (start < 0) {
@@ -595,15 +692,12 @@ int kest_debug_serve(KestBuild *build, KestRuntime *runtime, const char *entry,
                 fprintf(out, "it is already running\n");
                 continue;
             }
-            held.running = true;
-            KestValue frame[8] = {{0}};
-            bool went = kest_call(runtime, start, frame, 8);
-            carried_on(&held, went);
+            kest_debugger_run(&held, start);
         } else if (strcmp(at, "continue") == 0 || strcmp(at, "c") == 0) {
             if (!held.running) {
                 fprintf(out, "nothing is running: `run` first\n");
             } else {
-                let_it_go(&held);
+                kest_debugger_continue(&held);
             }
         } else if (strcmp(at, "step") == 0 || strcmp(at, "s") == 0 ||
                    strcmp(at, "next") == 0 || strcmp(at, "n") == 0) {
@@ -611,7 +705,8 @@ int kest_debug_serve(KestBuild *build, KestRuntime *runtime, const char *entry,
                 fprintf(out, "nothing is running: `run` first\n");
                 continue;
             }
-            step_a_line(&held, at[0] == 's');
+            kest_debugger_step(&held, at[0] == 's' ? KEST_STEP_INTO
+                                                   : KEST_STEP_OVER);
         } else if (strcmp(at, "where") == 0 || strcmp(at, "w") == 0) {
             say_frames(&held);
         } else if (strcmp(at, "locals") == 0 || strcmp(at, "l") == 0) {
@@ -622,9 +717,6 @@ int kest_debug_serve(KestBuild *build, KestRuntime *runtime, const char *entry,
             fprintf(out, "`%s` is not a word here. `help` says what is.\n", at);
         }
     }
-    // Everything written over, put back, so the program is the program again.
-    while (held.count > 0) {
-        take_one_out(&held, held.count - 1);
-    }
+    kest_debugger_close(&held);
     return 0;
 }

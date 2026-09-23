@@ -5704,6 +5704,175 @@ it held the value"
     ;;
 esac
 
+# And the same debugger driven the way an editor drives it, over the Debug
+# Adapter Protocol: launched on a file, a breakpoint set on a line inside a
+# loop, the frames and a frame's variables asked for, stepped, carried on to the
+# end, and a file that does not compile launched too. What it holds is what an
+# editor shows: where it stopped, what a body called its slots, what the program
+# wrote, what `main` answered, and a launch that cannot run saying so. See
+# D1182.
+mkdir -p "$scratch"/adapting
+cat > "$scratch"/adapting/walk.kest <<'KEST'
+import std.io
+
+fn counted(upto: i32) -> i32 {
+    let total = 0
+    for i in 0..upto {
+        total += i
+    }
+    return total
+}
+
+fn main() -> i32 {
+    let a = counted(3)
+    io.print("a is {a}")
+    let b = counted(4)
+    return a + b - 5
+}
+KEST
+cat > "$scratch"/adapting/broken.kest <<'KEST'
+fn main() -> i32 {
+    return missing(1)
+}
+KEST
+adapted=$(timeout 300 python3 - "$kest" "$scratch"/adapting <<'PYEOF_DAP'
+import json
+import subprocess
+import sys
+
+command = sys.argv[1]
+room = sys.argv[2]
+
+
+def session(program, lines):
+    """Everything the adapter said over one launch, in the order it said it."""
+    adapter = subprocess.Popen([command, "dap"], stdin=subprocess.PIPE,
+                               stdout=subprocess.PIPE)
+    heard = []
+    counter = [0]
+
+    def ask(verb, arguments=None):
+        counter[0] += 1
+        body = json.dumps({"seq": counter[0], "type": "request",
+                           "command": verb,
+                           "arguments": arguments or {}}).encode()
+        adapter.stdin.write(b"Content-Length: %d\r\n\r\n" % len(body) + body)
+        adapter.stdin.flush()
+
+    def hear():
+        wanted = 0
+        while True:
+            header = adapter.stdout.readline()
+            if not header:
+                return None
+            if header in (b"\r\n", b"\n"):
+                break
+            if header.lower().startswith(b"content-length:"):
+                wanted = int(header.split(b":")[1])
+        message = json.loads(adapter.stdout.read(wanted))
+        heard.append(message)
+        return message
+
+    # What was waited for, or nothing once the program is over: a debugger
+    # that never stopped where it was asked to is a session that ends rather
+    # than one waited on for ever.
+    def until(kind, name):
+        while True:
+            message = hear()
+            if message is None:
+                return None
+            if message["type"] == kind and name in (message.get("command"),
+                                                    message.get("event")):
+                return message
+            if message.get("event") == "terminated":
+                return None
+
+    def leave():
+        ask("disconnect")
+        until("response", "disconnect")
+        adapter.wait(timeout=30)
+
+    ask("initialize", {"adapterID": "kest"})
+    until("event", "initialized")
+    ask("launch", {"program": program})
+    launched = until("response", "launch")
+    if launched is None or not launched["success"]:
+        leave()
+        return heard, None, None
+    ask("setBreakpoints", {"source": {"path": program},
+                           "breakpoints": [{"line": line} for line in lines]})
+    until("response", "setBreakpoints")
+    ask("configurationDone")
+    if until("event", "stopped") is None:
+        leave()
+        return heard, None, None
+    ask("stackTrace", {"threadId": 1})
+    frames = until("response", "stackTrace")
+    inner = frames["body"]["stackFrames"][0]["id"]
+    ask("variables", {"variablesReference": inner})
+    held = until("response", "variables")
+    ask("next", {"threadId": 1})
+    until("event", "stopped")
+    ask("setBreakpoints", {"source": {"path": program}, "breakpoints": []})
+    until("response", "setBreakpoints")
+    ask("continue", {"threadId": 1})
+    until("event", "terminated")
+    leave()
+    return heard, frames, held
+
+
+wrong = []
+heard, frames, held = session(room + "/walk.kest", [6])
+top = frames["body"]["stackFrames"][0] if frames else {}
+if top.get("line") != 6 or not top.get("name", "").startswith("counted"):
+    wrong.append("line")
+named = dict((one["name"], one["value"])
+             for one in (held["body"]["variables"] if held else []))
+if named.get("upto") != "3" or named.get("total") != "0":
+    wrong.append("slots")
+console = "".join(one["body"]["output"] for one in heard
+                  if one.get("event") == "output")
+if "a is 3" not in console:
+    wrong.append("console")
+ended = [one["body"]["exitCode"] for one in heard
+         if one.get("event") == "exited"]
+if ended != [4]:
+    wrong.append("answer")
+heard, frames, held = session(room + "/broken.kest", [2])
+launch = [one for one in heard if one.get("command") == "launch"]
+console = "".join(one["body"]["output"] for one in heard
+                  if one.get("event") == "output")
+if not launch or launch[0]["success"] or "K0306" not in console:
+    wrong.append("launched")
+sys.stdout.write(" ".join(wrong))
+PYEOF_DAP
+)
+case " $adapted " in
+*" line "*)
+    complain "dap: an editor was not stopped at the line its breakpoint is on"
+    ;;
+esac
+case " $adapted " in
+*" slots "*)
+    complain "dap: a frame's variables were not what its body called its slots"
+    ;;
+esac
+case " $adapted " in
+*" console "*)
+    complain "dap: what the program wrote did not reach the editor's console"
+    ;;
+esac
+case " $adapted " in
+*" answer "*)
+    complain "dap: a finished program did not say what \`main\` answered"
+    ;;
+esac
+case " $adapted " in
+*" launched "*)
+    complain "dap: a program that does not compile was launched anyway, or \
+said nothing about why"
+    ;;
+esac
 # The language server, driven the way an editor drives it: opened, asked what a
 # name is, asked where it was declared, asked what else names it, asked what the
 # file declares, asked for the one form, and then handed a buffer with a mistake

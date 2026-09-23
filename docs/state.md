@@ -126,7 +126,9 @@ carries the mission itself; this is what the tree has to show for it.
     15 the standard library               small and said to be; D1171
                                           adds bytes for saves
     16 project and dependencies           done  D982
-    17 tooling                            done  D976, D977, D979, D991
+    17 tooling                            done  D976, D977, D979, D991,
+                                          and D1182: the debugger in the
+                                          editor
     18 the editor                         done  D978
     19 packaging                          done  D986 (no amalgamation),
                                           D989, D1000: an archive on both

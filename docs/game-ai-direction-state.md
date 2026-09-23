@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1181
+    CURRENT SHA:       (this commit) D1093-D1182
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's 2,088 bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, the gameplay
@@ -816,6 +816,9 @@ the same workload.
    but what it is handed. Made by the installed command line and run in an
    empty room, it answers what the program answers; `saving` released is 713
    kilobytes and 13.1 million instructions against `kest run`'s 13.3.
+36. *(done, D1182)* **A debugger in the editor.** `kest dap`, the Debug
+   Adapter Protocol over the same debugger `kest debug` is, started by the
+   VS Code extension: breakpoints, frames, variables, stepping and output.
 35. *(done, D1180)* **The comparison, drawn.** `bench/compare.sh` and
    `bench/chart.py` put Kest, Luau and daslang in every mode on the front
    page, stamped with the date and commit they were taken at.

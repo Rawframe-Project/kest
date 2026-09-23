@@ -40805,3 +40805,45 @@ the same answers.
 Taken again with `bench/compare.sh` at `14e9ba96`, by processor time against
 Luau's interpreter: `kernel` 0.79, `control` 1.01, `graph` 0.81, `words` 0.75,
 `rules` 0.85. The front page and its charts are that run.
+
+## D1182 — The debugger an editor drives: `kest dap`
+
+*owned*: the fourth of the things the owner listed after the release binary,
+a debugger in the editor. D991 made `kest debug` a command line, one surface
+finished rather than two started, and the extension ran it in a terminal. The
+protocol is the second surface, and this is it.
+
+- `kest dap` speaks the Debug Adapter Protocol on the standard streams:
+  `initialize`, `launch` with the program named, `setBreakpoints` a file's list
+  at a time, `configurationDone`, `threads`, `stackTrace` innermost first,
+  `scopes`, `variables`, `continue`, `next`, `stepIn`, `stepOut`, `disconnect`
+  and `terminate`; anything else is answered as not done rather than left
+  unanswered, which is what an editor would wait on. It cannot pause a program
+  that is running, because the machine runs on the thread that answers.
+- It is the same debugger. `debug.c` is the part that stops, steps and reads,
+  answering with where it is and what happened rather than saying it, and
+  `kest debug` is words on top of that and says exactly what it said: the
+  session in `check-commands.sh` and one that also steps into a call answer
+  byte for byte what the tree before answered. Stepping out is new, and the
+  adapter's: carrying on until the body it began in has returned.
+- What the program writes goes to the editor's console as output events and
+  what it reads is nothing, because both standard streams are the protocol:
+  the command line's host is made with a file to write into and a file to read
+  from, standard ones for the command line and a temporary one each for the
+  adapter. What `main` answered is the exit code; a program that does not
+  compile is a launch that fails with its diagnostics on the console.
+- The language server and the adapter are two conversations in the same
+  words, so the words are one module, `wire`: a message framed by its length,
+  JSON read into a tree and JSON written into a buffer, taken out of `lsp.c`
+  unchanged and named for what they are.
+- The extension contributes a `kest` debugger that starts `kest dap`, puts
+  breakpoints in the gutter of a `.kest` file, and runs *Kest: debug this
+  file* as a debug session rather than a terminal.
+- `check-commands.sh` drives a whole session and holds what an editor shows:
+  the stop on the line of the breakpoint, a frame's variables being what its
+  body called its slots, the program's writing on the console, `main`'s answer
+  as the exit code, and a program that does not compile launched as a failure
+  that says why. The adapter is a new boundary, so under the exception to the
+  rule that the holes do not grow each of those five has one, and each was run
+  by hand and caught. Eight holes quoting what moved -- a name in `lsp.c`, the
+  host's streams in `main.c` -- were repointed and run by hand.

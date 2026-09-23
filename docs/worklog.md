@@ -41379,3 +41379,18 @@ See D1181.
 against Luau, four compiler flags on the machine alone, cycles turn about on
 the five workloads, the seven repointed holes by hand, the campaign's seeds
 again, and `make most`.
+
+## 2026-09-23, `kest dap`
+
+The debugger answers an editor: `kest dap` speaks the Debug Adapter Protocol,
+the VS Code extension starts it for a `kest` session, and breakpoints, the call
+stack, a frame's variables, stepping over, into and out, and the program's own
+writing all arrive in the editor. `debug.c` became the core both front ends
+use, with `kest debug` saying what it said before word for word, and the
+framing and JSON the language server had were moved into `wire` for both.
+
+See D1182.
+
+**Runs:** a whole session driven over the protocol, `kest debug` before and
+after compared byte for byte, the thirteen holes that moved or are new by hand,
+the quote pass, and `make most`.

@@ -1,7 +1,7 @@
 {
   "name": "kest",
   "displayName": "Kest",
-  "description": "Kest language support: syntax, diagnostics, go to definition, references, rename, hover, completion and the one form. Everything semantic comes from `kest lsp`, which is the compiler itself.",
+  "description": "Kest language support: syntax, diagnostics, go to definition, references, rename, hover, completion, the one form and a debugger. Everything semantic comes from `kest lsp` and `kest dap`, which are the compiler itself.",
   "version": "0.0.1",
   "publisher": "rawframe",
   "license": "MIT",
@@ -17,7 +17,9 @@
     "Formatters"
   ],
   "activationEvents": [
-    "onLanguage:kest"
+    "onLanguage:kest",
+    "onDebugResolve:kest",
+    "onDebugDynamicConfigurations:kest"
   ],
   "main": "./extension.js",
   "files": [
@@ -78,7 +80,54 @@
           "when": "editorLangId == kest"
         }
       ]
-    }
+    },
+    "breakpoints": [
+      {
+        "language": "kest"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "kest",
+        "label": "Kest",
+        "languages": [
+          "kest"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "program"
+            ],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "The `.kest` file whose `main` is run.",
+                "default": "${file}"
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "kest",
+            "request": "launch",
+            "name": "Kest: this file",
+            "program": "${file}"
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "Kest: launch",
+            "body": {
+              "type": "kest",
+              "request": "launch",
+              "name": "Kest: this file",
+              "program": "^\"\\${file}\""
+            }
+          }
+        ]
+      }
+    ]
   },
   "dependencies": {
     "vscode-languageclient": "^9.0.1"

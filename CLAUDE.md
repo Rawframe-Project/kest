@@ -166,7 +166,8 @@ bench/             Four shapes of work and what each costs, in this language
                    at: the gate reads rows rather than durations.
 editors/           What an editor needs, and nothing that parses Kest. The
                    VS Code extension is a grammar, a language configuration,
-                   snippets and a client that starts `kest lsp`; every
+                   snippets, a client that starts `kest lsp` and a debugger
+                   that starts `kest dap`; every
                    semantic answer comes from the compiler, because a second
                    parser in an editor is a second answer about what a file
                    means. `editors/linguist` is the metadata GitHub's language
@@ -1100,8 +1101,10 @@ compile  ast -> ir
 vm       bytecode execution
 build    the stages as one thing, which is what a host has
 held     a machine a host keeps across frames, and reloads under a world
+wire     what an editor's protocols are made of: framed messages and JSON
 lsp      the same build, answering an editor
 debug    the same machine, stopped and asked about
+dap      the same debugger, answering an editor's debug protocol
 main     CLI
 ```
 
