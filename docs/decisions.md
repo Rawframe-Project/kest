@@ -41848,3 +41848,16 @@ not come back in this one. The load and the store were forwarded and cost
 nearly nothing; the instructions were never the time. Not kept, and the half
 of D1220's sentence that named it is taken out of `state.md`.
 
+## D1224 — The colony's trial as a release binary
+
+*measured*. `kest build --release` (D1172) is held by
+the gate on programs in this tree. It had not been pointed at a game: the
+colony's trial is seven modules of its own, `std.bytes`, `std.io` and the
+rest, and a breadth-first search over a map. Built from a copy of the game,
+it wrote one binary; run from an empty directory with no `KEST_LIB`, it
+answered the colony `kest run` answers -- sixteen alive, 234 wood, 83 food,
+twenty fields, nine walls -- in 39 ms and 308.8 M instructions against the
+machine's 139 ms and 1,230 M. `strace` over it shows no file opened but the
+C library's own: the program is in the binary, and there is no library
+installed on this machine for it to have read from instead.
+

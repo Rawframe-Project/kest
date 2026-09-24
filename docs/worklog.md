@@ -41936,3 +41936,15 @@ See D1223.
 **Runs:** the split and the hand edit against the commit, best of eleven turn
 about, twice; `check-c.sh` over the tree with the split; `make most`.
 
+## 2026-09-24, the colony's trial as a release binary
+
+`kest build --release` over the colony's trial wrote one binary that ran from
+an empty directory, opened no file, and answered what `kest run` answers, in
+39 ms against 139.
+
+See D1224.
+
+**Runs:** the release built from a copy of the game, run with no source and
+no library path, traced with `strace`, and timed; the trial by the machine;
+and `make most`.
+
