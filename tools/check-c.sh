@@ -1071,6 +1071,83 @@ fn main() -> i32 {
     }
 }
 PROGRAM
+# A walk to an array's length is proved inside the array only where nothing in
+# it makes the array shorter or starts below nought, and each way of doing
+# either is a program here: a `pop` and a `clear` in the walk, a call through
+# a function value that pops, and a walk from minus one. Each stops at the
+# first element past what is there, run by the machine; with the proof made
+# where it may not be, the compiled walk reads what the bytes still hold.
+# Taken out one at a time, each condition was not refused by anything else.
+# See D1214.
+cat >"$work"/programs/popped.kest <<'PROGRAM'
+module popped
+
+fn main() -> i32 {
+    let xs: [i32] = array()
+    for i in 0..6 {
+        push(xs, i)
+    }
+    let total = 0
+    for at in 0..len(xs) {
+        total += xs[at]
+        pop(xs)
+    }
+    return total % 251
+}
+PROGRAM
+cat >"$work"/programs/cleared.kest <<'PROGRAM'
+module cleared
+
+fn main() -> i32 {
+    let xs: [i32] = array()
+    for i in 0..6 {
+        push(xs, i)
+    }
+    let total = 0
+    for at in 0..len(xs) {
+        total += xs[at]
+        clear(xs)
+    }
+    return total % 251
+}
+PROGRAM
+cat >"$work"/programs/throughvalue.kest <<'PROGRAM'
+module throughvalue
+
+fn dropLast(xs: [i32]) {
+    pop(xs)
+}
+
+fn main() -> i32 {
+    let xs: [i32] = array()
+    for i in 0..6 {
+        push(xs, i)
+    }
+    let shorten: fn([i32]) = dropLast
+    let total = 0
+    for at in 0..len(xs) {
+        total += xs[at]
+        shorten(xs)
+    }
+    return total % 251
+}
+PROGRAM
+cat >"$work"/programs/below.kest <<'PROGRAM'
+module below
+
+fn main() -> i32 {
+    let xs: [i32] = array()
+    for i in 0..6 {
+        push(xs, i)
+    }
+    let from = 0 - 1
+    let total = 0
+    for at in from..len(xs) {
+        total += xs[at]
+    }
+    return total % 251
+}
+PROGRAM
 cat >"$work"/programs/outside.kest <<'PROGRAM'
 module outside
 
@@ -1423,7 +1500,7 @@ done
 # traps on, or as one it quietly answers, would be a program that means
 # something else. Counted rather than assumed, because a program that stops is
 # one whose answer is the same either way for the wrong reason.
-for stopping in stopped shifted outside deep crossed runoff shrunk taken handed shorter swapped; do
+for stopping in stopped shifted outside deep crossed runoff shrunk taken handed shorter swapped popped cleared throughvalue below; do
     stops=$(./kest run "$work"/programs/$stopping.kest 2>/dev/null </dev/null
             echo $?)
     if [ "$stops" -eq 0 ]; then

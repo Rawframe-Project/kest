@@ -41672,3 +41672,35 @@ So one of the seven was a shape nothing wrote, and is held now; the three
 that stay unrefused are conditions no program can get past, and are kept
 because each says what the transformation assumes.
 
+## D1214 — The walk proofs' conditions taken out one at a time, and four walks nothing wrote
+
+D1187 to D1189 let the release engine read an element with no guard at all
+where a walk is proved to stay inside its array, so a condition wrongly
+dropped from those proofs is not a wrong answer but a read past the end of
+something. Twelve conditions were taken out one at a time, the compiler
+rebuilt, and `check-c.sh` run over the tree and its own programs. The first
+pass was wrong about two of them: it did not look at whether the mutant
+built, and the two that left a function nothing called did not, so the
+compiler tested was the one before. Run again with the build checked:
+
+- Caught already: a `remove` in the walk (`taken.kest`), a call to a body
+  that does not keep its arrays (`handed.kest`), a guarded walk taken as
+  proved outright (`handed.kest`), and the array's slot stored into inside
+  the walk (`swapped.kest`).
+- Not caught, and a program nobody had written: a `pop` in the walk, a
+  `clear` in it, a call through a function value that pops, and a walk
+  counting from minus one. `check-c.sh` writes each now -- `popped`,
+  `cleared`, `throughvalue` and `below` -- every one stopping at the first
+  element past the end when the machine runs it, and each is caught with its
+  condition taken out: the compiled walk answers 15 or 19 where the machine
+  stops.
+- Not caught, and not reachable by a program: `fit` in the walk (it only
+  grows, and every read asks the handle where the bytes are); a region closed
+  in the walk (what a region frees was made inside it, and a walk of an array
+  made inside a region is inside it too); a store into the count or into a
+  fixed run (the count is a slot no program names, and a fixed run's element
+  is bounds-checked where it is written).
+- Not caught, and reachable only through a host: a call into the host in the
+  walk. A host handed the array can call back in and shorten it. No program
+  here is a host, and the condition stays for that reason.
+

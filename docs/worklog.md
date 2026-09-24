@@ -41824,3 +41824,17 @@ See D1213.
 program and run under their mutations; one branch made to abort over every
 file here; and `make most`.
 
+## 2026-09-24, the walk proofs' conditions taken out one at a time
+
+Twelve conditions under which a walk is proved inside its array, each
+removed alone against `check-c.sh`. Four were caught; four were shapes
+nobody had written -- `pop`, `clear`, a call through a value, a walk from
+minus one -- and `check-c.sh` writes and catches each now; the rest cannot be
+reached from a program, one of them without a host.
+
+See D1214.
+
+**Runs:** the twelve against `check-c.sh`, again with the build checked; the
+four new programs run by the machine and under their mutations; and `make
+most`.
+
