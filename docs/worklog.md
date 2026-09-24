@@ -41880,3 +41880,14 @@ See D1218.
 hand; shifts past the width both ways; `check-c.sh` over the tree; D1212's
 overflow put back, refused; and `make most`.
 
+## 2026-09-24, the written programs under the sanitisers, not kept
+
+Over the programs `check-c.sh` writes, the sanitised build caught nothing
+the plain comparison had not caught first, and is not kept. `CLAUDE.md`'s
+description of the check says what it does now.
+
+See D1219.
+
+**Runs:** the extended check over the tree and with D1215's question off by
+one; `make most`.
+

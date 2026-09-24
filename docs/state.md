@@ -246,7 +246,8 @@ says why. The other was bulk text append and it is done.
   asked on its edge by `onepast.kest` (D1215). A second fuzz campaign, seeds
   4001 to 6000 over the day's changes, found nothing (D1216), and the
   three-way fold over 7,817 programs the new fuzzer made agreed (D1217).
-  `check-c.sh` runs the generated C under the sanitisers as well (D1218). `control` is 0.98 once its
+  `check-c.sh` runs the generated C under the sanitisers as well (D1218);
+  over its own written programs it caught nothing new and is not (D1219). `control` is 0.98 once its
   rule is carried (D1175), and `rules` 0.99 once
   a value is moved a run of its pieces at a time (D1177) and an element is
   weighed against a constant in one instruction (D1178): every workload here

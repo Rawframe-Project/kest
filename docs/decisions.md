@@ -41772,3 +41772,19 @@ programs -- and none reported, and a shift past the width, the other
 undefined arithmetic C has, answers the language's nought and minus one in
 both engines with the sanitisers watching.
 
+## D1219 — The sanitised pass over the written programs, not kept, and what `CLAUDE.md` says of the check
+
+D1218's sanitised build covers the tree's programs. Put over the programs
+`check-c.sh` writes itself as well -- the walks at the edges of their arrays
+-- it ran all thirty-three clean, and with D1215's question put back off by
+one it never ran at all: the plain comparison refused `onepast.kest` first,
+because a read past the end changes what the walk answers. What the
+sanitisers add is a program that answers right while doing something
+undefined, which is what `examples/numbers.kest` did and none of the written
+ones does. Not kept: seen catching nothing the plain run does not.
+
+And `CLAUDE.md`'s paragraph on `check-c.sh` said two of the written programs
+stop while they run, where sixteen do now, and nothing of their being held
+whole (D1206), of the walk before every allocation (D1179) or of the
+sanitisers (D1218). It says what the check does now, without a count.
+

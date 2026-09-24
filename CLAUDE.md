@@ -383,12 +383,21 @@ tools/             Build and development scripts. `make check` runs all of
                    it can write whole, and every program in the tree that
                    runs, which is where a fixture's blind spot shows -- the
                    first sweep of those caught a piece of text written into
-                   the C as the address it had in the compiling process. Two
-                   of the written ones stop while they are running, so that
+                   the C as the address it had in the compiling process. Many
+                   of the written ones stop while they are running -- walks
+                   at the edge of their arrays most of all, each the shape a
+                   proof the backend makes would be wrong about -- so that
                    what a program says when it goes wrong is held as well as
-                   what it says when it does not, and a program that asks the
-                   host for what a generated file does not provide is counted
-                   rather than passed over. And that the compiled half was
+                   what it says when it does not, and each written one is held
+                   to being written whole, the two written to be halves named
+                   beside the reason. A program that asks the host for what a
+                   generated file does not provide is counted rather than
+                   passed over. The tree's programs are run again walking the
+                   heap before every allocation, and again built under the
+                   sanitisers, because what this backend writes is C and a
+                   build that does not look answers C's undefined arithmetic
+                   with a number that can be the right one. And that the
+                   compiled half was
                    entered at all, which a file this backend writes counts for
                    itself: two engines that agree agree when one of them never
                    started. How much was left out is read back and held to
