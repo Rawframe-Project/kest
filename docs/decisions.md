@@ -41971,3 +41971,28 @@ a document beside the empty one it already hands it, and wants that line: the
 check before this change answered that document with the traceback and the
 gate's new lines refuse it. `docs/worklog.md` is not one of the documents the
 gate hands the check, and it reads through to its end now.
+
+## D1229 — A carried body's constant answer and its jump as one instruction, measured and not kept
+
+*measured*. A body carried into its caller (D1156) that answers a constant
+into the caller's local ends each such answer with `store.k` and a `jump`
+past the rest of the body (D1196). `bench/control.kest` is a decision tree
+carried into its loop, and it runs one of those pairs on nearly every turn:
+two dispatches where one would do. Built: `store.k.go` -- slot, constant,
+distance forward -- written by the carrying where the pair was, one entry in
+what a carried body may hold so that a body holding one is carried again, the
+machine's case beside `store.k`'s, and the name in the table the bytecode is
+printed and walked by. Thirteen of them in `control`, five each in `words`,
+`rules` and `agents`; every example and workload answered what the commit
+answers, fifty programs.
+
+Best of seven turn about against the commit built twice to the same bytes:
+`control` 0.77% fewer instructions and 0.04% more cycles. Everything else
+went the other way -- `words` 0.93% more instructions, `agents` 0.77%,
+`rules` 0.43%, the colony's trial 1.57%, and `graph` 0.65% with bytecode
+identical to the commit's. What `graph` says is where it went: one case more
+in the machine's loop and the compiler laid the whole loop out otherwise,
+which is D1168 again. Compiling the trial cost the same both ways, and a
+profile put the trial's 19 M more instructions in `run_body`. Not kept, and
+the list of what was measured and not kept in
+`docs/game-ai-direction-state.md` says so.

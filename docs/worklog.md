@@ -42000,3 +42000,17 @@ See D1228.
 
 **Runs:** the check over each document alone before and after; the gate's
 new lines against the check before and after; `make most`.
+
+## 2026-09-24, a constant answer and its jump as one instruction, not kept
+
+`store.k.go` fused the constant a carried body answers and the jump past its
+end. `control` retired 0.77% fewer instructions and no fewer cycles; every
+other workload and the colony's trial retired more, `graph` with the same
+bytecode -- the machine's loop compiled otherwise for one case more. Taken
+back out.
+
+See D1229.
+
+**Runs:** every example and workload both ways; the six workloads and the
+colony's trial best of seven turn about against the commit built twice to the
+same bytes; the trial's compile alone, and its run per function.
