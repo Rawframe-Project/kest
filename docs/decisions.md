@@ -42092,6 +42092,13 @@ ways -- written out, with the lowering's fusions off, and with `KEST_NOOPT`,
 which keeps every walk a walk -- by a sanitised fuzzer built from this tree.
 Nothing stopped and no fold differed.
 
+CI's `linux-full` on `29c51b41` was red on one hole: *what compiling costs
+written down and not measured* writes `136000 as a tree` into the reference
+and was held to a refusal quoting the figure beside it, `174952 checked`,
+which this change moved to 174968 -- the program grew by two pointers. The
+same fault D1212 took out of another hole: it is held now to the part it
+wrote, and run alone it is caught.
+
 ## D1232 — A tag whose cases carry the same pieces read without a `switch`
 
 *measured*. What is left between compiled `bench/rules.kest` and daslang's AOT

@@ -42058,3 +42058,13 @@ other five workloads against the commit's C, best of seven turn about; the
 colony's trial released; four breaks against `check-c.sh` over the tree, and
 the new `Mark` against the one it missed; the copies taken out by hand and
 measured; `make most`.
+
+## 2026-09-24, a hole held to a figure it did not write
+
+CI on `29c51b41` was red on one hole, which quoted the checked cost of
+`lib/std/text.kest` that D1231 moved by sixteen bytes. It is held to the part
+it writes now, and caught run alone.
+
+See D1231.
+
+**Runs:** the hole alone; `make most`.
