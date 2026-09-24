@@ -1450,6 +1450,19 @@ alike=0
 wants_a_host=0
 walked=0
 not_walked=0
+# And each again built under the sanitisers, where the host's compiler has
+# them: what this backend writes is C, and C's undefined arithmetic is a
+# wrapped number in a build that does not look and a report in one that does.
+# The count of an unsigned walk was one more than the top of `int64_t` in the
+# generated C and answered right for as long as nothing looked. See D1218.
+sanitised=0
+sanitisers=""
+printf 'int main(void) { return 0; }\n' >"$work"/probe.c
+if $cc -fsanitize=undefined,address -fno-sanitize-recover=undefined \
+        -o "$work"/probe "$work"/probe.c 2>/dev/null &&
+        "$work"/probe 2>/dev/null; then
+    sanitisers="-fsanitize=undefined,address -fno-sanitize-recover=undefined"
+fi
 for file in "$@"; do
     if ! grep -q '^fn main(' "$file"; then
         continue
@@ -1510,6 +1523,25 @@ walking the heap before every allocation, or says something else" >>"$said"
         walked=$((walked + 1))
         ;;
     esac
+    # shellcheck disable=SC2086
+    if [ -n "$sanitisers" ] &&
+            $cc -O1 -g $sanitisers -Iinclude -o "$work"/one-sane "$work"/one.c \
+                libkest.a -lm 2>/dev/null; then
+        sane_said=$(KEST_LIB=lib/ "$work"/one-sane "$file" 2>&1 </dev/null)
+        sane_was=$?
+        if [ "$sane_was" -ne "$c_was" ] || [ "$sane_said" != "$c_said" ]; then
+            {
+                echo "    $file answers $c_was written as C and $sane_was \
+under the sanitisers, or says something else:"
+                printf '%s\n' "$sane_said" |
+                    grep 'runtime error\|ERROR: AddressSanitizer' | head -2 |
+                    sed 's/^/        /'
+            } >>"$said"
+            wrong=$((wrong + 1))
+            continue
+        fi
+        sanitised=$((sanitised + 1))
+    fi
     alike=$((alike + 1))
 done
 
@@ -1544,5 +1576,5 @@ echo "$written of $bodies body(s) over $compiled program(s) written as C the \
 host compiler takes, $both program(s) written here and $alike of this tree's \
 own run both ways for the same answer and the same words, $walked of those \
 again walking the heap before every allocation with $not_walked left out for \
-growing worlds, $inside_said, and $wants_a_host that ask the host for what a \
-file this wrote does not provide"
+growing worlds, $sanitised again under the sanitisers, $inside_said, and \
+$wants_a_host that ask the host for what a file this wrote does not provide"

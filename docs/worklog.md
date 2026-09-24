@@ -41867,3 +41867,16 @@ See D1217.
 
 **Runs:** the two hundred seeds folded three ways, and `make most`.
 
+## 2026-09-24, what the release engine writes run under the sanitisers
+
+`check-c.sh` builds each program's generated C again under the undefined-
+behaviour and address sanitisers and holds it to the plain build's answer
+and words. All 43 are clean; D1212's generated overflow, put back, is refused
+with the sanitiser's report.
+
+See D1218.
+
+**Runs:** every example and workload's generated C under both sanitisers by
+hand; shifts past the width both ways; `check-c.sh` over the tree; D1212's
+overflow put back, refused; and `make most`.
+

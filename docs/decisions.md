@@ -41747,3 +41747,28 @@ on its edges. Eighty thousand inputs made 7,817 programs that compiled and
 ran, and the three folds agreed at every seed: 03:17 to 03:35. The gate's own
 eight seeds are 309 programs; this is twenty-five times that.
 
+## D1218 — What the release engine writes is run under the sanitisers too
+
+D1212 found the count of an unsigned walk stepped past the top of `int64_t`
+in the machine, by the sanitised build running an example -- and the same in
+the C the release engine writes, which `check-c.sh` had compiled and run and
+passed, because a build that does not look answers undefined arithmetic with
+a wrapped number, and that was the right number. Nothing in the gate built
+the generated C under a sanitiser; the one sanitised build here is the
+machine's.
+
+So `check-c.sh` builds each of the tree's programs a second time with
+`-fsanitize=undefined,address` and no recovery from the first, runs it, and
+holds it to the answer and the words of the plain build: a report of either
+kind is words the plain build did not say. It asks the host's compiler first
+and asks nothing of one without them. Over the tree it is 43 programs again,
+all clean, and the check takes about three minutes where it took under two.
+With D1212's `+= 1` put back into the generated C it refuses at once:
+`examples/numbers.kest answers 0 written as C and 1 under the sanitisers`,
+over `runtime error: signed integer overflow: 9223372036854775807 + 1`.
+
+The same sweep was run by hand first over every example and workload -- 48
+programs -- and none reported, and a shift past the width, the other
+undefined arithmetic C has, answers the language's nought and minus one in
+both engines with the sanitisers watching.
+
