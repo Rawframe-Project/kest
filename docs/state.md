@@ -181,7 +181,8 @@ in one sitting (D1210, D1217) -- and the release engine against the machine
 by `check-c.sh`, again under the sanitisers (D1218). Each fused form and each
 condition a transformation or a walk proof is allowed under was taken out one
 at a time, and each is refused by something that runs or written down as
-unreachable (D1211 to D1215). Two fuzz campaigns found nothing (D1181,
+unreachable (D1211 to D1215) -- the walk that calls the host by a host of
+`check-c.sh`'s own (D1221). Two fuzz campaigns found nothing (D1181,
 D1216).
 
 What is open, measured and named:
@@ -194,9 +195,6 @@ What is open, measured and named:
 - **A small constant walk is not written out.** The colony's search would be
   5.7% fewer cycles interpreted and 1.7% compiled; it needs three passes this
   compiler has not got (D1209).
-- **A walk that calls the host is not held by any program.** The walk proofs
-  refuse one, and no program here is a host that could show the refusal is
-  needed (D1214).
 
 The frame measurements -- a frame of `examples/slice` (D1124) and twenty
 thousand bodies a frame through `bench/frame` (D1123) -- and the edit loop's

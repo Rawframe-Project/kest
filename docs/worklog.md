@@ -41902,3 +41902,15 @@ See D1220.
 **Runs:** the figures read against D1203's table and the colony's
 measurements; `check-docs.sh`; and `make most`.
 
+## 2026-09-24, a walk that calls the host held by a host
+
+The one walk-proof condition nothing held -- a call into the host -- is held
+by a host `check-c.sh` builds: its door calls back and shortens the array
+being walked, both engines stop alike, and with the condition taken out the
+compiled walk reads past the end and is refused.
+
+See D1221.
+
+**Runs:** the host walk with the condition as written and taken out; and
+`make most`.
+

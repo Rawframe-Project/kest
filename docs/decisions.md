@@ -41803,3 +41803,18 @@ daslang, how that is held, and the three things measured and open -- compiled
 the host -- with the decisions for whoever wants the path. The file is 268
 lines where it was 342.
 
+## D1221 — A walk that calls the host is held by a host
+
+D1214 left one condition of the walk proofs unheld and said why: a walk that
+calls the host is not proved inside its array, because a host handed the
+array can call back in and shorten it, and no program here was a host. One
+is. `check-c.sh` already built a host of its own that runs one program both
+ways in one process and calls back into it (D1111); beside it now is a
+second, `walked.c`, over `hostwalk.kest` -- a walk to the length of an array
+that hands the array to `Host.shorten` every turn, whose door calls back into
+`hostwalk.dropLast` and pops it. Run by the machine and with the bodies this
+backend wrote, both stop at index three with the same words. With the host
+call taken out of the walk's conditions, the release engine read past the end
+and answered 21, and `check-c.sh` refuses: "a walk whose array the host
+shortens does not stop alike both ways: compiled 21 machine -1".
+

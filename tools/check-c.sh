@@ -1440,6 +1440,124 @@ calls back in, said \`$inside\` and came back $inside_was" >>"$said"
     esac
 fi
 
+# And a walk that hands its array to the host, whose door calls back into the
+# program and shortens it. The walk proofs refuse a walk that calls the host,
+# because a host handed an array can do exactly this, and only a host can
+# show that the refusal is needed: taken out, the release engine read past
+# the end and answered 21 where the machine stops at index three. Both runs
+# have to stop, alike. See D1221.
+cat >"$work"/hostwalk.kest <<'PROGRAM'
+module hostwalk
+
+extern fn Host.shorten(xs: [i32])
+
+fn dropLast(xs: [i32]) {
+    pop(xs)
+}
+
+fn main() -> i32 {
+    let xs: [i32] = array()
+    for i in 0..6 {
+        push(xs, i + 1)
+    }
+    let total = 0
+    for at in 0..len(xs) {
+        total += xs[at]
+        Host.shorten(xs)
+    }
+    return total % 251
+}
+PROGRAM
+cat >"$work"/walked.c <<'HOST'
+/* A walk that hands its array to the host, which calls back into the
+   program to shorten it: run once with the bodies this backend wrote and
+   once without, and the two held to stopping alike. */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "kest.h"
+
+bool kest_natives_here(KestRuntime *rt);
+
+static void shorten(KestValue *frame, KestRuntime *runtime, void *context) {
+    (void)context;
+    int32_t which = kest_entry(runtime, "hostwalk.dropLast");
+    if (which < 0) {
+        kest_native_failed(runtime, "there is no `dropLast`");
+        return;
+    }
+    KestValue handing[8];
+    memset(handing, 0, sizeof handing);
+    handing[0] = frame[0];
+    if (!kest_call(runtime, which, handing,
+                   sizeof handing / sizeof handing[0])) {
+        kest_native_failed(runtime, "the call back in did not run");
+    }
+}
+
+static int ran(const char *path, bool compiled) {
+    KestBuild *build = kest_build(path, getenv("KEST_LIB"), stderr,
+                                  KEST_FORM_TEXT, 0);
+    if (build == NULL) {
+        return -2;
+    }
+    KestHost *host = kest_host_new();
+    if (host == NULL || !kest_host_bind(host, "Host.shorten", shorten, NULL)) {
+        return -2;
+    }
+    KestRuntime *rt = kest_start(build, host, NULL);
+    kest_host_free(host);
+    if (rt == NULL || (compiled && !kest_natives_here(rt))) {
+        return -2;
+    }
+    int32_t which = kest_entry(rt, "hostwalk.main");
+    KestValue answer[8];
+    memset(answer, 0, sizeof answer);
+    bool went = which >= 0 &&
+                kest_call(rt, which, answer, sizeof answer / sizeof answer[0]);
+    if (!went) {
+        kest_report(rt, stdout, KEST_FORM_TEXT);
+    }
+    int said = went ? (int)answer[0].integer : -1;
+    kest_runtime_free(rt);
+    kest_build_free(build);
+    return said;
+}
+
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        return 2;
+    }
+    int with = ran(argv[1], true);
+    int without = ran(argv[1], false);
+    printf("compiled %d machine %d\n", with, without);
+    return 0;
+}
+HOST
+if ! ./kest emit --c "$work"/hostwalk.kest >"$work"/hostwalk.c 2>"$work"/why ||
+        ! $cc -O1 -Iinclude -DKEST_NO_MAIN -c -o "$work"/hostwalk.o \
+            "$work"/hostwalk.c 2>>"$work"/why ||
+        ! $cc -O1 -Iinclude -o "$work"/walked "$work"/walked.c \
+            "$work"/hostwalk.o libkest.a -lm 2>>"$work"/why; then
+    {
+        echo "    a host walking an array it shortens will not build:"
+        sed 's/^/        /' "$work"/why | head -5
+    } >>"$said"
+    wrong=$((wrong + 1))
+else
+    walked_out=$(KEST_LIB=lib/ "$work"/walked "$work"/hostwalk.kest 2>&1 \
+                     </dev/null)
+    case "$walked_out" in
+    *"outside an array"*"outside an array"*"compiled -1 machine -1"*) ;;
+    *)
+        echo "    a walk whose array the host shortens does not stop alike \
+both ways: $(printf '%s' "$walked_out" | tail -1)" >>"$said"
+        wrong=$((wrong + 1))
+        ;;
+    esac
+fi
+
 # And every program in this tree that runs, run both ways. The ones above are
 # written for this check and are what it can write; these are what somebody
 # wrote for another reason, which is where a fixture's blind spot shows. A
