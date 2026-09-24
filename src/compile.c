@@ -4179,7 +4179,18 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         if (loop == NULL) {
             break;
         }
-        Exits exit = compile_condition(compiler, stmt->loop.condition, opening);
+        // `while true` asks nothing: a loop written to be left by a `return`
+        // or a `break` is one whose condition is not a way out, and asking it
+        // anyway wrote a way out to the end of the body -- a `return` of
+        // nothing in a function that gives something, which no run reaches
+        // and the verifier, walking every path, cannot tell from one that
+        // does. See D1239.
+        Exits exit = {NULL, 0, 0};
+        if (opening || stmt->loop.condition == NULL ||
+            stmt->loop.condition->kind != KEST_EXPR_BOOL ||
+            !stmt->loop.condition->boolean) {
+            exit = compile_condition(compiler, stmt->loop.condition, opening);
+        }
 
         // `while let` leaves what the optional held below the tag the jump
         // consumed. The turn that ran binds it; the turn that stopped drops
