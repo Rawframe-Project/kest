@@ -41913,3 +41913,41 @@ summary says so rather than counting a pass. Each pragma taken out alone is
 refused, the GCC one by a GCC build and the clang one by a clang build:
 `fused.kest answers 0 run by the machine and 4363988038922010624 compiled as
 C with -O2 -mfma`. A hole holds the GCC half.
+
+## D1227 — A walk goes on into a tag's case rather than calling itself
+
+*measured*. The machine moves a value between slots and an array's bytes by
+its walk (D1159): a step a scalar or a run of them, and a step a tag, which
+read the tag and then called the walk again for the steps of the case it
+names. `walk_in` and `walk_out` were 19% of the machine's cycles on
+`bench/rules.kest`, and every `Actor` and every `Item` it moves holds one tag,
+so every move paid for a call.
+
+A step says its own slot and its own bytes, so the order of a walk's steps
+moves nothing. A walk is now built with its tags after its scalars, in each
+run -- the value's own and each case's -- and where the last step of a run is
+a tag, the walk goes on into that tag's case: the index goes back to the
+case's first step and the end becomes the case's end. A value with more than
+one tag calls itself for all but the last. The tag's nought is written
+before the case's steps either way, as it was.
+
+Best of seven turn about against the commit built twice to the same bytes,
+`bench/rules.kest` took 1,040.4 M cycles against 1,065.3 M (2.3% fewer) and
+2,647.9 M instructions against 2,727.6 M (2.9%); `kernel` 1.8% fewer cycles
+and 2.75% fewer instructions. `control` and `words` moved under 1% with the
+same instructions. `graph` was 2.3% more cycles with the same instructions,
+and at ten times its rounds 0.65% fewer: a fixed cost that does not grow
+with the work. `agents` moved within what its collector moves by itself --
+`plot_holding` counts 807 to 1,414 samples across runs of one binary.
+
+What holds it. Every example answers what it answered, and the release
+engine is held to the machine by `check-c.sh` as before. The going-on was
+taken out of each walk in turn, landing one step into the case, and
+`examples/embed.kest` and `examples/inventory.kest` answer otherwise. The
+call that is left was taken out the same way and nothing answered
+otherwise: no example held two tags in one value. `examples/inventory.kest`
+does now -- a `Slot` of three tags, the last carrying a tag ahead of a
+number, moved into an array, read out, changed and written back -- and the
+call taken out of either walk answers `37`. Which order the tags are built
+in is not held by anything that runs, because every order moves the same
+value; it is what the cycles above measure.

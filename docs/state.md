@@ -170,6 +170,8 @@ Where it stands, from the front page's table (D1203): `bench/compare.sh` at
   `CHANGELOG.md` says what changed since D1085 for a reader (D1225).
   A generated file keeps a multiply and an add two roundings wherever it is
   built, as the machine does (D1226).
+  The machine's walk over a value goes on into a tag's case rather than
+  calling itself: `rules` 2.3% fewer cycles, `kernel` 1.8% (D1227).
 
 How it got there is the decisions, and the ones that moved it most: the
 fused instructions (D1155 to D1178), bodies carried into their callers

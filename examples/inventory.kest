@@ -25,6 +25,22 @@ struct Item {
     price: i32
 }
 
+// What a hand holds, which is a kind and how many: a tag in a case, ahead of a
+// number.
+enum Hand {
+    Empty
+    Holding(Kind, i32)
+}
+
+// Three tags in one value, which is what a value's walk goes into more than
+// once rather than only at its end.
+struct Slot {
+    left: Kind
+    right: Kind
+    worn: Hand
+    count: i32
+}
+
 // A place on a map, and the shape of a key this table could not hold until
 // D874: a value laid out flat compares and hashes, so a struct is a key like
 // any other. A struct holding a `[T]` still is not, because what would be
@@ -375,6 +391,44 @@ fn main() -> i32 {
         return 36
     }
 
+    // Three tags side by side in one value, the last carrying a tag ahead of
+    // a number, put into a run, read out, changed and written back over
+    // another: each one reads out as it went in. See D1227.
+    let slots: [Slot] = array()
+    push(
+        slots,
+        Slot(Kind.Potion(3), Kind.Tool, Hand.Holding(Kind.Potion(7), 2), 5)
+    )
+    push(slots, Slot(Kind.Weapon, Kind.Potion(4), Hand.Empty, 6))
+    if weighed(slots[0]) != 13028705 || weighed(slots[1]) != 1140006 {
+        return 37
+    }
+    let first = slots[0]
+    first.count += 1
+    slots[1] = first
+    if weighed(slots[0]) != 13028705 || weighed(slots[1]) != 13028706 {
+        return 38
+    }
+
     io.print("{table.count(stock)} kinds carried, worth {total(stock, carried)}")
     return 0
+}
+
+// What a kind is worth to `weighed`, one number a kind and a strength.
+fn potency(kind: Kind) -> i32 no.alloc {
+    return match kind {
+        Weapon -> 1
+        Tool -> 2
+        Potion(strength) -> 10 + strength
+    }
+}
+
+// Every piece of a slot in a place of its own in one number.
+fn weighed(slot: Slot) -> i32 no.alloc {
+    let worn = match slot.worn {
+        Empty -> 0
+        Holding(what, many) -> potency(what) * 5 + many
+    }
+    return ((potency(slot.left) * 100 + potency(slot.right)) * 100 + worn) *
+        100 + slot.count
 }

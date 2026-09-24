@@ -340,7 +340,8 @@ static inline void write_piece(unsigned char *at, uint8_t kind,
 
 static void walk_in(KestValue *out, const KestMoving *walk, uint32_t first,
                     uint32_t count, const unsigned char *from, TagRead *told) {
-    for (uint32_t i = first; i < first + count; i++) {
+    uint32_t end = first + count;
+    for (uint32_t i = first; i < end; i++) {
         const KestMoveStep *step = &walk->steps[i];
         KestValue *to = out + step->slot;
         const unsigned char *at = from + step->byte;
@@ -401,6 +402,16 @@ static void walk_in(KestValue *out, const KestMoving *walk, uint32_t first,
             if (tag >= 0 && (uint32_t)tag < step->case_count) {
                 const KestMoveRun *run =
                     &walk->ranges[step->cases + (uint32_t)tag];
+                // A tag is written last among the steps of its run, so the
+                // last step is the commonest place for one, and there the
+                // walk goes on into the case rather than calling itself for
+                // it. A case's steps are written after the value's, so the
+                // step before them is one this walk has. See D1227.
+                if (i + 1 == end) {
+                    i = run->first - 1;
+                    end = run->first + run->count;
+                    continue;
+                }
                 walk_in(out, walk, run->first, run->count, from, told);
             } else if (told != NULL && !told->wrong) {
                 // The payload slots are left at nought above, which is what
@@ -452,7 +463,8 @@ static void walk_in(KestValue *out, const KestMoving *walk, uint32_t first,
 
 static void walk_out(unsigned char *to_bytes, const KestMoving *walk,
                      uint32_t first, uint32_t count, const KestValue *from_slots) {
-    for (uint32_t i = first; i < first + count; i++) {
+    uint32_t end = first + count;
+    for (uint32_t i = first; i < end; i++) {
         const KestMoveStep *step = &walk->steps[i];
         unsigned char *at = to_bytes + step->byte;
         const KestValue *from = from_slots + step->slot;
@@ -503,6 +515,11 @@ static void walk_out(unsigned char *to_bytes, const KestMoving *walk,
             if (tag >= 0 && (uint32_t)tag < step->case_count) {
                 const KestMoveRun *run =
                     &walk->ranges[step->cases + (uint32_t)tag];
+                if (i + 1 == end) {
+                    i = run->first - 1;
+                    end = run->first + run->count;
+                    continue;
+                }
                 walk_out(to_bytes, walk, run->first, run->count, from_slots);
             }
             break;

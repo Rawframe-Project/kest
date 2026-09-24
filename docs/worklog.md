@@ -41974,3 +41974,18 @@ with and without each pragma; the library built with `-mfma` against every
 example; the six workloads' machine code compared with and without the
 pragmas; `check-c.sh` under both compilers, and with each pragma taken out;
 the new hole alone; `make most`.
+
+## 2026-09-24, a walk goes on into a tag's case
+
+The machine's walk over a value called itself for every tag it met. Tags are
+built last in each run now and the walk goes on into the last one's case:
+`rules` 2.3% fewer cycles and 2.9% fewer instructions, `kernel` 1.8% and
+2.75%, the rest flat. `examples/inventory.kest` holds a value of three tags,
+which is the call that is left and which no example reached.
+
+See D1227.
+
+**Runs:** the commit built twice to the same bytes and measured turn about
+against the change on the six workloads, `graph` again at ten times its
+rounds, `agents` per function; each walk's going-on and each walk's call
+taken out against every example; `make most`.

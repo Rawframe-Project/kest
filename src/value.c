@@ -848,6 +848,25 @@ static uint32_t merged(KestMoveStep *steps, uint32_t first, uint32_t end) {
     return kept;
 }
 
+// The steps from `first` up to `end` with every tag after every scalar, in
+// the order each was in. A step says its own slot and its own bytes, so the
+// order moves nothing; what it buys is that the last step of a run is a tag
+// wherever there is one, and a walk goes on into that tag's case rather than
+// calling itself for it. See D1227.
+static void cases_last(KestMoveStep *steps, uint32_t first, uint32_t end) {
+    uint32_t kept = first;
+    for (uint32_t i = first; i < end; i++) {
+        if (steps[i].kind == KEST_MOVE_CASES) {
+            continue;
+        }
+        KestMoveStep step = steps[i];
+        for (uint32_t j = i; j > kept; j--) {
+            steps[j] = steps[j - 1];
+        }
+        steps[kept++] = step;
+    }
+}
+
 // A value's walk. The value's own steps come first; then, for every tag
 // among the steps so far in the order they were written, each of its cases as
 // a run of steps of its own -- which may hold tags, whose cases are written
@@ -864,6 +883,7 @@ static const KestMoving *walk_of(KestArena *arena, const KestType *type) {
         return NULL;
     }
     uint32_t n = merged(steps, 0, flatten(steps, 0, type, 0, 0));
+    cases_last(steps, 0, n);
     walk->count = n;
     uint32_t r = 0;
     for (uint32_t i = 0; i < n; i++) {
@@ -882,6 +902,7 @@ static const KestMoving *walk_of(KestArena *arena, const KestType *type) {
                             steps[i].byte + variant->byte_offsets[p]);
             }
             n = merged(steps, first, n);
+            cases_last(steps, first, n);
             runs[steps[i].cases + c] = (KestMoveRun){first, n - first};
         }
     }
