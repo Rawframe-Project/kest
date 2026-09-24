@@ -42014,3 +42014,14 @@ See D1229.
 **Runs:** every example and workload both ways; the six workloads and the
 colony's trial best of seven turn about against the commit built twice to the
 same bytes; the trial's compile alone, and its run per function.
+
+## 2026-09-24, the generated C held to the machine on arm64
+
+No CI job compiled a generated file on arm64, the one target where GCC fuses
+a multiply and an add with no flag. `linux-arm64` runs `check-c.sh` over the
+examples now.
+
+See D1230.
+
+**Runs:** `linux-full`'s log on `17136b50` for the fused build; `check-c.sh`
+over the examples here, timed; `make most`.

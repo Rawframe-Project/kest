@@ -41996,3 +41996,22 @@ which is D1168 again. Compiling the trial cost the same both ways, and a
 profile put the trial's 19 M more instructions in `run_body`. Not kept, and
 the list of what was measured and not kept in
 `docs/game-ai-direction-state.md` says so.
+
+## D1230 — The generated C held to the machine on arm64
+
+D1226 kept a multiply and an add two roundings in the C `kest emit --c`
+writes, and `check-c.sh` builds a program where fusing is live. On x86 that
+build has to be asked for with `-mfma`, and `linux-full` asks for it: its log
+on `17136b50` says `one built with -O2 -mfma where the host's compiler
+fuses`. On arm64 it is the build a host gets with no flag at all -- which is
+the case D1226 was about -- and no job ran `check-c.sh` there: `linux-arm64`
+runs `make fast`, the fuzzer, the conformance trace and the families, and
+none of them compiles a generated file.
+
+`linux-arm64` now runs `check-c.sh` over the examples: every body written as
+C and compiled, the thirty-three programs it writes, the examples run both
+ways, again under the sanitisers, and the multiply and the add built where
+the probe finds fusing live. There `-mfma` is not a flag GCC takes, so the
+probe goes on to no flag, which fuses; the summary it prints says which
+build it was, and the run that answers is where that is read. It is three
+minutes on this machine.

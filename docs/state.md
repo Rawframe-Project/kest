@@ -176,6 +176,7 @@ Where it stands, from the front page's table (D1203): `bench/compare.sh` at
   trial the same (D1227).
   A carried body's constant answer and its jump fused into one instruction
   was measured and not kept: one case more in the loop cost the others (D1229).
+  `linux-arm64` holds the generated C to the machine as well (D1230).
 
 How it got there is the decisions, and the ones that moved it most: the
 fused instructions (D1155 to D1178), bodies carried into their callers

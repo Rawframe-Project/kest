@@ -62,6 +62,12 @@ jobs:
         run: make fast
       - name: bytes it was not written for
         run: make fuzz
+      # The C the other backend writes, held to the machine here too: every
+      # arm64 has FMA and GCC fuses a multiply and an add by default, which
+      # is the build the generated file has to keep two roundings in, and
+      # `linux-full` can only ask for with `-mfma`. See D1230.
+      - name: the C the other backend writes
+        run: sh tools/check-c.sh examples/*.kest
       - name: conformance trace
         run: sh tools/conformance.sh ./kest linux-arm64.trace
       - uses: actions/upload-artifact@v4
