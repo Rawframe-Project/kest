@@ -41849,3 +41849,12 @@ See D1215.
 **Runs:** the question off by one against `check-c.sh` before and after the
 program; the program run both ways as written; and `make most`.
 
+## 2026-09-24, the second fuzz campaign
+
+Seeds 4001 to 6000, a thousand steps each, six boundaries and the source
+folded three ways, from `e145b363`: nothing found.
+
+See D1216.
+
+**Runs:** the campaign's log read to its end, and `make most`.
+

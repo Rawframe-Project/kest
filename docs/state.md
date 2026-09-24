@@ -243,7 +243,8 @@ says why. The other was bulk text append and it is done.
   nothing wrote and is held now, three cannot be reached (D1213). The walk
   proofs' twelve conditions the same way: four walks nobody wrote are
   `check-c.sh` programs now (D1214), and the guarded walk's question is
-  asked on its edge by `onepast.kest` (D1215). `control` is 0.98 once its
+  asked on its edge by `onepast.kest` (D1215). A second fuzz campaign, seeds
+  4001 to 6000 over the day's changes, found nothing (D1216). `control` is 0.98 once its
   rule is carried (D1175), and `rules` 0.99 once
   a value is moved a run of its pieces at a time (D1177) and an element is
   weighed against a constant in one instruction (D1178): every workload here

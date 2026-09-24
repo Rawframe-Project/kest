@@ -41721,3 +41721,17 @@ stop, and with the question off by one it is refused: "onepast.kest answers
 1 run by the machine and 15 compiled as C". With the question as written,
 both engines stop at index five with the same words.
 
+## D1216 — The second fuzz campaign, over the day's changes
+
+*measured*. The campaign D1181 finished was seeds one to four thousand at
+four thousand steps. A second ran from `e145b363`, after the interpreter's
+loop, `match`, carried bodies and the release engine's calls had changed
+(D1191 to D1201): seeds 4001 to 6000 at a thousand steps, each through the
+six boundaries, and each source seed folded three ways -- fused, with the
+lowering's fusions off, and with the optimizer off. It used a copy of the
+sanitised fuzzer kept outside the tree, which is what made the first
+campaign's thirty-four finds the fuzzer being rebuilt under it. Twelve
+thousand runs and six thousand folds, 21:12 to 02:45: no input stopped the
+compiler or the machine, and no fold differed. It ran the fuzzer as it was
+before D1210, so its source programs were the forty-in-three-thousand kind.
+
