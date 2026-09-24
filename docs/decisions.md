@@ -41954,3 +41954,20 @@ number, moved into an array, read out, changed and written back -- and the
 call taken out of either walk answers `37`. Which order the tags are built
 in is not held by anything that runs, because every order moves the same
 value; it is what the cycles above measure.
+
+## D1228 — A block marked `json` that is not one value is said, not a traceback
+
+`check-docs.sh` reads every block a document marks `json` and holds the
+names in it to what a run with `--json` writes. It read each block as one
+value, so handed `docs/worklog.md` -- which shows a run's output, one value a
+line, as `--json` writes it -- it ended in `JSONDecodeError: Extra data` and
+a Python traceback. That is F57's fault in another place: a check that
+cannot read what it is handed has to say so in a sentence at the line.
+
+A block is now one value or one value a line, and a block that is neither is
+said at its line -- `check-unjson.md:4: a block marked `json` that is not
+JSON, one value or one a line` -- and fails the check. The gate hands it such
+a document beside the empty one it already hands it, and wants that line: the
+check before this change answered that document with the traceback and the
+gate's new lines refuse it. `docs/worklog.md` is not one of the documents the
+gate hands the check, and it reads through to its end now.

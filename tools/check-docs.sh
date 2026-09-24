@@ -725,9 +725,26 @@ for path in sys.argv[1:]:
     text = open(path).read()
     for match in re.finditer(r'```json\n(.*?)```', text, re.S):
         at = text[:match.start()].count('\n') + 2
-        held = json.loads(match.group(1))
+        # One value, or one a line, which is what a run with `--json` writes;
+        # anything else is said at its line rather than ended in a traceback.
+        # See D1228.
+        try:
+            values = [json.loads(match.group(1))]
+        except ValueError:
+            try:
+                values = [json.loads(line)
+                          for line in match.group(1).splitlines()
+                          if line.strip()]
+            except ValueError as why:
+                print('%s:%u: a block marked `json` that is not JSON, one '
+                      'value or one a line: %s' % (path, at, why))
+                failed = 1
+                continue
         shown += 1
-        for name in sorted(keys_of(held, set())):
+        names = set()
+        for value in values:
+            keys_of(value, names)
+        for name in sorted(names):
             printed.add(name)
             if name not in names_written:
                 print('%s:%u: nothing writes `%s` into JSON' % (path, at, name))

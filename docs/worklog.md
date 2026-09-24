@@ -41989,3 +41989,14 @@ See D1227.
 against the change on the six workloads, `graph` again at ten times its
 rounds, `agents` per function, the colony's trial; each walk's going-on and
 each walk's call taken out against every example; `make most`.
+
+## 2026-09-24, a block that is not one value of JSON
+
+`check-docs.sh` handed the worklog ended in a traceback over a block of JSON
+lines. It reads a block as one value or one a line, says one that is neither
+at its line, and the gate holds it to that.
+
+See D1228.
+
+**Runs:** the check over each document alone before and after; the gate's
+new lines against the check before and after; `make most`.

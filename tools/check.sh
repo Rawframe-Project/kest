@@ -2900,7 +2900,21 @@ some other reason"
     sed 's/^/    /' "$scratch"/check-empty-said | head -4
 fi
 
-say "nothing" "a document with nothing in it, and four checks handed no files"
+# And a block marked `json` that is not JSON, which the check reading every
+# such block used to end in a Python traceback over: said at its line, as a
+# document's other faults are. See D1228.
+unjson="$scratch"/check-unjson.md
+printf '# A block\n\n```json\n{"said": 1\n```\n' >"$unjson"
+tools/check-docs.sh "$unjson" >"$scratch"/check-unjson-said 2>&1
+if ! grep -q "check-unjson.md:4: a block marked .json. that is not JSON" \
+        "$scratch"/check-unjson-said; then
+    complain "documentation" "a block marked json that is not JSON was not \
+said at its line"
+    sed 's/^/    /' "$scratch"/check-unjson-said | tail -4
+fi
+
+say "nothing" "a document with nothing in it, one with a block that is not \
+JSON, and four checks handed no files"
 
 ask "lends" tools/check-lends.sh
 ask "documentation" tools/check-docs.sh docs/language.md \
