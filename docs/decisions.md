@@ -41788,3 +41788,18 @@ stop while they run, where sixteen do now, and nothing of their being held
 whole (D1206), of the walk before every allocation (D1179) or of the
 sanitisers (D1218). It says what the check does now, without a count.
 
+## D1220 — `state.md`'s performance section said as where it stands
+
+`CLAUDE.md` asks `docs/state.md` to be short, current, and the one read for
+what to do next. Its section on the performance work after 1.0.0 had become
+the opposite: every decision from D1154 on appended to one sentence, and
+figures from before them left standing -- the release engine on `rules` at
+1.244 G instructions where it is 0.51 G, the dispatch loop's cost argued
+from D1047 after D1181 had taken threaded dispatch, "one thing is open" above
+a paragraph saying it was closed. The history is the worklog's and the
+decisions'; that section now says where each engine stands against Luau and
+daslang, how that is held, and the three things measured and open -- compiled
+`rules` against daslang's AOT, the small constant walk, and a walk that calls
+the host -- with the decisions for whoever wants the path. The file is 268
+lines where it was 342.
+

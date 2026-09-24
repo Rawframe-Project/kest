@@ -41891,3 +41891,14 @@ See D1219.
 **Runs:** the extended check over the tree and with D1215's question off by
 one; `make most`.
 
+## 2026-09-24, state.md's performance section said as where it stands
+
+The section had become every decision since D1154 in one sentence, with
+figures they had overtaken. It says where each engine stands, how that is
+held, and the three things open.
+
+See D1220.
+
+**Runs:** the figures read against D1203's table and the colony's
+measurements; `check-docs.sh`; and `make most`.
+

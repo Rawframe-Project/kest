@@ -151,195 +151,57 @@ carries the mission itself; this is what the tree has to show for it.
     27 the evaluation package             done: an hour's worth on the front
                                           page, and a release archive
 
-## The performance work after 1.0.0, and what is open
+## Performance: where it stands, and what is open
 
-A second mission ran after the tag and was reopened when its own completion
-turned out to be premature. What the tree has to show for it:
+Where it stands, from the front page's table (D1203): `bench/compare.sh` at
+`7769f7c1`, best of fifteen with each row's runs spread through the sitting.
 
-    the movement baseline       D1023: nine byte counters, held to the
-                                instruction histogram by the gate
-    the optimizer layer         D1024: verify, optimize, verify, lower;
-                                `KEST_NOOPT` turns it off; `KEST_IRSAY` says
-                                what it found
-    copy propagation            D1025: 3.3 % of the bytes `agents` moves and
-                                4.3 % of `rules`, and three candidates closed
-                                on their counts
-    compiling, by stage         D1026: nine stages, `KEST_SPENT=1`
-    what a collection costs     D1027: `kest_collected`, and the pause
-                                distribution the report had been printing a
-                                per-call total in place of
-    the runtime, measured       D1028: no layout or cache problem, and a
-                                third of `rules` in the element move path,
-                                changed -- 19 % fewer instructions
-    the boundary                D1029: what each way of crossing a frame
-                                crossed, and the round trip out and back
-    text, arrays and stores     D1030: closed on this language's own profile
-    the bounds checks           D1031: three quarters provable, which is
-                                three quarters of the nothing D1015 measured
-    what the heap is asked for  D1032: by width and by kind, and the
-                                crossing nothing counted
+- **The machine against Luau's interpreter**: 0.78, 0.96, 0.80, 0.75 and 0.96
+  of its time on `kernel`, `control`, `graph`, `words` and `rules`, at 0.66
+  to 0.83 of its instructions. `control` and `rules` are close enough that a
+  busy machine has turned them round (D1190), and the report says so.
+- **The release engine** (`kest emit --c`, `kest build --release`): 1.7 to
+  3.8 times Luau's native tier on all five, ahead of daslang's AOT on four,
+  1.17 times behind it on `rules`, and 1.2 to 2.2 times `g++ -O2`.
+- **A game**: the colony's trial, eighteen thousand frames, is 1,230 M
+  instructions run by the machine and 309 M compiled whole (D1204 to D1207).
 
-**One thing is open and named as open.** It is measured and not done, and it
-says why. The other was bulk text append and it is done.
+How it got there is the decisions, and the ones that moved it most: the
+fused instructions (D1155 to D1178), bodies carried into their callers
+(D1156, D1175), a value moved a run of pieces at a time (D1177), threaded
+dispatch (D1181), a scalar read where it is read (D1193); for the release
+engine, calls written out (D1122), walks proved inside their arrays (D1187 to
+D1189), and arguments read where the caller left them and carried bodies
+inlined (D1198 to D1202, D1207). What was measured and not kept is beside it
+in `docs/game-ai-direction-state.md`.
 
-- Bulk text append is **closed**. It was eighteen per cent of
-  `bench/words.kest` measured on the whole process and is more than half of it
-  measured on the work: eighty per cent of the instructions that workload ran
-  were one byte going on a run at a time. `push` and `fit` take a whole piece
-  of text for a run of bytes now, which is no new name and two instructions,
-  and `words` went from 4.9 to 3.2 times a `g++ -O2` baseline on the work
-  (D1068). What was left after that was a number written through `snprintf`
-  and a heap stepping through its bitmaps a bit at a time, and without them
-  `words` is 0.81 times Luau's interpreter in instructions (D1173).
-  Measured again as one run with the floor (D1184), and again on a quiet
-  machine (D1190): 0.79, 0.94, 0.84, 0.74 and 1.04 of Luau's interpreter by
-  processor time on `kernel`, `control`, `graph`, `words` and `rules` -- the
-  load had made `rules` look a quarter ahead -- and with a row's runs spread
-  through the sitting at `80a8d331`, 0.75, 0.97, 0.81, 0.76 and 0.94 (D1195),
-  and a fuzz campaign of 24,000
-  runs found nothing; `control` retires 3.6% fewer since an element of one slot is
-  written from a local in one instruction (D1185), and `rules` compiled 7%
-  fewer since the release engine reads a run's length inline (D1186);
-  an element a walk counts through is proved inside its array and read with
-  no guard compiled, `kernel` a third fewer and `rules` a tenth (D1187), and
-  a walk calling bodies that keep their arrays is proved too (D1188); a
-  walk to any limit asks once where it begins whether its arrays are long
-  enough, and `control` compiled retires 16% fewer (D1189; the hole its
-  second copy of the guard hid is repointed in D1190). The loop built
-  without a landing mark on every label retires 1.5 to 4.4% fewer (D1191),
-  and the last arm of a `match` is written without a test (D1192). A scalar
-  read where the instruction reading it is takes 0.5 to 3.7% of the cycles
-  off all five, and `rules` is under Luau's interpreter by cycles (D1193).
-  A carried body's constant answer is written into the slot it is going to,
-  and `control` retires 1.6% fewer (D1196). A tag and one slot is moved
-  without a call, `rules` 2.8% fewer, and a host holds the nought it writes
-  (D1197). A compiled body reads its arguments where its caller left them,
-  and compiled `rules` is 8.2% fewer cycles (D1198); it is not handed them
-  as values as well, about 5% more (D1199). A body whose jumps land inside
-  an instruction is called rather than carried, since re-laying it wrote a
-  jump off the code (D1200). An element written with its run and index read
-  in place, and the loop marked `hot`, were measured and not kept; a baseline
-  is the commit built twice to the same bytes (D1201). A carried body's C is
-  asked to be inlined, compiled `rules` 8% and `control` 15% fewer cycles
-  (D1202). Taken again at `7769f7c1`, compiled `rules` is 1.17 times
-  daslang's AOT (D1203). The colony's trial is 42% its breadth-first search;
-  carrying a helper across files saved no cycles and is not kept (D1204). A
-  question that jumps over a jump asks the other way, and the trial is 1.3
-  to 3.2% fewer cycles (D1205). A body whose every way out is a `return` in a
-  `match` is written as C, and `check-c.sh` holds its own programs whole
-  (D1206). A body with more than three arguments reads them out of the frame
-  whatever it keeps them in, and the colony's trial compiled is 9.5% fewer
-  cycles (D1207). The sweep is 918 holes, said in `CLAUDE.md` as over nine
-  hundred (D1208). Writing out a small constant walk would buy the colony's
-  interpreted trial 5.7%, measured by hand and not built (D1209). The gate's
-  fuzzed programs that compile went from 40 to 309 of 3,200 once the fuzzer
-  changes numbers (D1210). Every comparison is asked on its edge in every
-  fused form by `examples/numbers.kest`, which refuses both of D1210's
-  miscompilations (D1211). Ten fused forms put out of order one at a time
-  are all refused by `make fast` once the float `continue` and the unsigned
-  walk step are asked on their edges; the unsigned walk's step was signed
-  overflow in both engines, found by the sanitisers on it (D1212). Seven
-  conditions on transformations taken out one at a time: one was a shape
-  nothing wrote and is held now, three cannot be reached (D1213). The walk
-  proofs' twelve conditions the same way: four walks nobody wrote are
-  `check-c.sh` programs now (D1214), and the guarded walk's question is
-  asked on its edge by `onepast.kest` (D1215). A second fuzz campaign, seeds
-  4001 to 6000 over the day's changes, found nothing (D1216), and the
-  three-way fold over 7,817 programs the new fuzzer made agreed (D1217).
-  `check-c.sh` runs the generated C under the sanitisers as well (D1218);
-  over its own written programs it caught nothing new and is not (D1219). `control` is 0.98 once its
-  rule is carried (D1175), and `rules` 0.99 once
-  a value is moved a run of its pieces at a time (D1177) and an element is
-  weighed against a constant in one instruction (D1178): every workload here
-  runs fewer instructions than Luau's interpreter. Threaded dispatch, which
-  D1047 refused, took a tenth of the cycles off every workload (D1181).
-- The dispatch loop, and what is left of it is smaller than it was written
-  down as. The 48 to 92 per cent was the share of cycles *inside* the
-  interpreter's loop, which is everything a program does and says nothing about
-  dispatch. What a dispatch costs against what it dispatches is about one to
-  one, measured by turning the fusions off in the same binary: a quarter to two
-  fifths fewer dispatches buys 16 to 31 per cent of cycles. Mispredicting the
-  indirect branch costs 1 to 4 per cent, which is what threaded dispatch could
-  win and what a GNU extension in the hottest loop of an ISO C11 library would
-  cost. See D1047.
+How it is held: every transformation against the program without it -- the
+examples and the fuzzed programs fused, plain and bare, over 7,817 programs
+in one sitting (D1210, D1217) -- and the release engine against the machine
+by `check-c.sh`, again under the sanitisers (D1218). Each fused form and each
+condition a transformation or a walk proof is allowed under was taken out one
+at a time, and each is refused by something that runs or written down as
+unreachable (D1211 to D1215). Two fuzz campaigns found nothing (D1181,
+D1216).
 
-**And the aggregate copy is closed.** `let one = world[at]` … `world[at] = one`
-is 29 % of `bench/kernel.kest`'s cycles and writing the same program in place
-is **2.15 times slower**, so the copy form is the faster of the two spellings
-the language already has rather than a prison (D1038). The six `elem.addr` a
-body that D1038 named as the real opportunity were measured and are not one:
-holding the address saves a bounds check and a multiply and no instructions at
-all, against a gap of thirty-six million. What the gap is, is that reading the
-element once into slots makes every field operation after it a slot operation.
-What was real beside it is fixed: reading a field of an element cost two
-dispatches and is one now, which is 16.9 % of the place form's instructions and
-nothing at all to the benchmarks, none of which is written that way (D1044).
+What is open, measured and named:
 
-**And the native question is open again, and is being answered by building
-it.** D1017 and D1067 closed it twice on the reading that what a generated-C
-backend takes away is the dispatch and that the dispatch is not the gap. A
-gameplay-shaped workload measured against Luau's own native tier reopened it
-(D1090), and D1092 decided two engines: the machine for developing and C for
-shipping. That backend is in the tree — `kest emit --c`, every one of
-this tree's 2,088 bodies, held to answering what the machine answers by
-`tools/check-c.sh` — and on two scalar workloads it runs sixteen and
-twenty-three times fewer machine instructions than the machine does (D1093).
-The hybrid binary is there too (D1094): a chunk may carry a C function, a call
-enters it instead of the instructions, and a refusal inside it is reported at
-the same line with the same words. On `bench/control.kest` -- a real program
-with one writable body -- an actor-round costs 1,333 machine instructions
-interpreted and 1,144 with that body compiled. Elements followed (D1095), then tagged
-values and text (D1096, D1097), then bodies that reach the heap and the doors
-they need (D1098, D1099), then the world a game keeps — stores and the
-references into them (D1102) — and then text: put in order (D1103), and read, made and built in a
-buffer (D1104), after which `std.text` compiles whole. A body this backend
-cannot write no longer takes the chain above it with it: it is handed to the
-machine through a call of its own, and the machine writes its frame over the
-one the call already made (D1105); a call through a function value is written
-too (D1107), and so is the crossing into the host (D1108) and one of a
-fixed run of slots (D1109) -- which leaves seven bodies of two thousand and no
-family among them. **And the development loop is measured** (D1127): a reload costs 0.48 ms, of
-which 0.44 is building the program and 0.05 is everything else -- starting a
-machine, putting the world back, asking the doors, swapping. The reload path is
-a compile, and a compile has not moved across the backend era: 112,647 lines
-checked in 286 ms against D1088's 288, a million in 4,644 against 4,910.
-Timing it found the host asking for its doors after it had published, so an
-arity change ran the new program while saying the world was the one it was.
+- **Compiled `rules`, 1.17 times daslang's AOT.** What is left is the shape:
+  a struct read out of an array, handed to a body and written back is copied
+  where daslang's changes it in place, and a slot that held a handle once is
+  kept in the frame for the collector for the whole body, so an integer later
+  kept in it is a load and a store where it could be a register (D1203).
+- **A small constant walk is not written out.** The colony's search would be
+  5.7% fewer cycles interpreted and 1.7% compiled; it needs three passes this
+  compiler has not got (D1209).
+- **A walk that calls the host is not held by any program.** The walk proofs
+  refuse one, and no program here is a host that could show the refusal is
+  needed (D1214).
 
-**And the vertical slice is measured, both ways** (D1124): sixty calls of
-`examples/slice`, 1.613 ms in the middle by the machine against 0.640
-compiled, with the heap doing the same thing under both to the byte and the
-collector's longest pause 0.18 ms. Two and a half times, where a frame of
-arithmetic is nearly six -- an integrated program spends its time in the
-runtime.
-**And what a frame costs is measured, both ways** (D1123): twenty thousand
-bodies a frame, five hundred frames, the release engine at 306 µs in the
-middle and 403 at its worst against the machine's 1812 and 8168, with
-hand-written C at 63 and 97. The worst frame the release engine had is below
-the median frame the machine had, and over those five hundred frames there was
-one allocation and no walks — a frame that promised `no.alloc` cannot be
-interrupted by the collector.
-A call from one compiled body to another is written out rather than made
-through a door, which is 14% of the gameplay workload and 20% of the one that
-is mostly branches (D1122); what a call keeps is in the public header for
-that, held to the machine's own shape while it builds.
-On `bench/kernel.kest` the release engine runs a
-body-step in 65.5 machine instructions against the machine's 527 and Luau's
-native code generation at 158, with `g++ -O2` at 23 — the five times that
-workload cost against `g++` is 2.8 times since a run of elements stopped being
-read through a call (D1112); on `bench/rules.kest`,
-the gameplay workload, it runs the whole process in 1.244 G instructions
-against the machine's 6.254 G, Luau's native tier at 1.294 G and `g++ -O2` at
-0.429 G. **D1092's re-evaluation trigger was three times `bench/rules.cpp` and
-this is 2.9**, so the two-engine decision stands on a measurement rather than
-on an argument.
-
-**And the edit loop is measured** (D1100): `kest check` from a project's entry,
-from cold, is 7 ms for a real small project, 366 ms for 112,647 lines in 1,892
-files and 4.4 s for a million lines. A mistake costs no more than no mistake,
-one file on its own is milliseconds at any scale, and what `check` prints
-costs nothing measurable. So there is no daemon, no persistent session and no
-incremental state, and the number that would earn one is written down.
+The frame measurements -- a frame of `examples/slice` (D1124) and twenty
+thousand bodies a frame through `bench/frame` (D1123) -- and the edit loop's
+(D1100, D1127) were taken before most of the above and are quoted in the
+report as what they were.
 
 ## What the closeout shipped, and what it rests on
 
