@@ -42082,3 +42082,16 @@ See D1233.
 
 **Runs:** `check-docs.sh` over `SECURITY.md`, and over it with a command that
 is not one; `make most`.
+
+## 2026-09-24, what the machine trusts, against what the verifier checks
+
+Read side by side: the release machine trusts every slot, constant, function,
+extern and layout number an instruction carries, every jump, the operand depth
+and what a slot holds, and `text.in` reads without asking; the build that
+checks itself holds most of them while running and the verifier proves none.
+The verifier S3 builds is that table's first column.
+
+See D1234.
+
+**Runs:** the machine's `KEST_CHECKED` guards and `kest_module_prove` read
+line by line; `make most`.

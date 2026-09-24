@@ -190,6 +190,8 @@ attacker writes source; no memory error, nothing but the doors marked for it,
 everything bounded by counts, nothing of the process in a value, only the
 machine running it -- and a table of how far each promise is kept. Until the
 first three are, untrusted code belongs in another process or in Wasm (D1233).
+What the machine trusts and the verifier does not yet prove is listed in
+D1234, and is what the new verifier is built against.
 
 How it got there is the decisions, and the ones that moved it most: the
 fused instructions (D1155 to D1178), bodies carried into their callers

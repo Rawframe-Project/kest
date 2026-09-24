@@ -42194,3 +42194,41 @@ hands `SECURITY.md` to `check-docs.sh` with the other documents, so a command
 or a file it names is one that is there: written first asking for the version
 through a command the command line does not have, it was refused -- the
 command line does not answer to it -- and names `kest --version` now.
+
+## D1234 — What the machine takes on trust, against what the verifier checks
+
+*read*. The first promise in `SECURITY.md` (D1233) is that no source makes the
+machine touch memory it does not own. The machine reads every number in an
+instruction as the compiler meant it, and the build that checks itself
+(`KEST_CHECKED`) is where each of those readings is held to being true while
+running. Those guards are the list of what the release machine trusts, and
+`kest_module_prove` is what stands between the compiler and it. Read side by
+side:
+
+| What the machine trusts | Held while running, in the build that checks itself | Proved before running |
+| --- | --- | --- |
+| Every slot an instruction names is one of the body's (`own_slots`, D903) | yes | no |
+| Every constant it names is one the body was given (`own_constants`) | yes | no |
+| Every function, extern and layout it names is one the module has (`OF_THE_MODULE`, D905) | yes | no |
+| Every jump lands on the start of an instruction inside its body | no | no |
+| A body never goes deeper than the operand room it asked for (`stack_needed`) | yes | no |
+| A slot read as a handle holds a handle: `HOLD` reads the tag an object carries, so what it reads first is the slot as an address | the tag, in every build | no |
+| A walk over text reads its bytes without asking, because the length was taken before the first turn (`text.in`, D409) | yes | no |
+| Every instruction is one there is, each as wide as it says, and a body ends in a `return` (D057) | -- | yes, `K0406` |
+| No `return` gives back more than the declaration (D058) | -- | yes, `K0407` |
+| What a body promises -- `no.alloc`, `no.host`, `deterministic` -- is what it does | -- | yes, `K0405` |
+
+What the release engine writes as C is not on this list: code nobody trusts is
+not compiled that way (promise 5), and the untrusted profile will refuse it.
+
+So the verifier S3 builds, in the order the table has them: every slot,
+constant, function, extern and layout an instruction names is in range; every
+jump lands on an instruction start in its own body; the deepest the operand
+stack goes, worked out by walking every path, is within `stack_needed`; what
+each slot holds -- a number, a handle and of what, text, a function -- worked
+out along every path, so an instruction that reads a handle is only ever
+handed one; and `text.in` checks its index in the untrusted profile rather
+than trusting the walk, which costs a comparison and saves proving the walk.
+The first four are the structural half and are checked where each instruction
+is read; the fifth is the half that makes a compiler bug harmless rather than
+merely unlikely.
