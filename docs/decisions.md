@@ -41943,6 +41943,12 @@ The colony's trial is untouched by it: 1,230.5 M instructions both ways and
 cycles within half a percent, best of seven turn about, and the same world
 at its end -- what the game moves through its arrays holds no tag.
 
+And a campaign over it, since the machine's every move of a value with a tag
+in it is this walk: seeds 6001 to 6400 at a thousand steps through the six
+boundaries, the source folded three ways, by a sanitised fuzzer built at
+`bcc55b79`. Twenty-four hundred runs and eight hundred folds: nothing stopped
+and no fold differed.
+
 What holds it. Every example answers what it answered, and the release
 engine is held to the machine by `check-c.sh` as before. The going-on was
 taken out of each walk in turn, landing one step into the case, and
@@ -42015,3 +42021,73 @@ the probe finds fusing live. There `-mfma` is not a flag GCC takes, so the
 probe goes on to no flag, which fuses; the summary it prints says which
 build it was, and the run that answers is where that is read. It is three
 minutes on this machine.
+
+The first run, `linux-arm64` on `dbd9e6b3`, answered: `one built with -O2
+where the host's compiler fuses` -- no flag, fusing live, and the machine's
+bits -- beside 1,651 bodies written as C and compiled on arm64, the
+thirty-three written programs and thirty-eight of the examples run both ways
+for the same answer and the same words, and again under the sanitisers.
+
+## D1231 — A walk of few turns written out once a turn
+
+*measured*. D1209 measured by hand what writing the colony's neighbour walk
+out would buy -- `for way in 0..4`, where most of a turn is the body asking
+which `way` it is -- and named the three things it needed: the body written
+out per value of the count, a comparison of two known numbers worked out, and
+the branch that reads one settled. All three are in the compiler now, and
+where a program asks for none of them nothing it compiles changes.
+
+A `for` counting between two numbers the folder can work out, over one to
+four turns, whose body does not assign to the count, is compiled as a walk
+first. If that said nothing and is not large -- 400 operations at most -- it
+is taken back (every list a body holds is written onto the end, so taking back
+is setting the counts back) and compiled again as the body once a turn, the
+count in each a value the body holds (D887). While it is, the folder asks the
+body about a name before it asks the constants, and a truth the folder can
+work out is settled where it is asked: an `if` compiles only the arm that
+runs, a jump is always taken or not written, `&&` and `||` are settled by the
+half that settles them and left to the other half where it does not, and a
+truth handed on as a value is `true` or `false`. A `continue` lands at the end
+of its own turn and a `break` at the end of the last. `KEST_NOOPT` keeps every
+walk a walk, which is what the gate's program-by-program comparison and the
+fuzzer's three-way fold hold the written-out one to.
+
+What it would change and must not. Dropping an arm no turn takes drops what
+was in it, and one IR question refuses a program on what its body holds: a
+thing made inside `scratch { }` and kept past it (`K0507`, D966). So the
+written-out walk is kept only where it reads the same as the walk to every
+promise -- the same effects and the same callees -- and a walk that dropped a
+text made inside a block and kept outside is compiled as a walk and refused as
+written. `check-commands.sh` holds that case; with the comparison taken out,
+the program built. The promises themselves are decided over the source before
+anything is compiled (`contract.c`), and the proof over the chunk can only find
+more than the checker found, never less, so neither moves. A breakpoint on a
+line inside the body is written at every place a run of that line starts,
+which is every turn. The reference says what a written-out walk costs a
+budget: nothing, because nothing goes back.
+
+Measured against the commit built twice to the same bytes, best of seven turn
+about: the colony's trial run by the machine 487.3 M cycles against 514.0 M
+and 1,153.3 M instructions against 1,230.5 M -- 5.2% and 6.3%, the ceiling
+D1209 measured by hand -- with the same world at the end; compiled by
+`kest build --release`, 1.07% fewer instructions and the same cycles, which
+D1209 said too. None of the six workloads has such a walk and none of their
+bytecode moved. Fourteen examples' did, and every example and workload answers
+what the commit answers.
+
+Every piece was taken out or turned round in turn, the build checked each
+time, against every example: the count one past, a turn fewer, a settled jump
+the other way, a settled `if` compiling the other arm, a settled first half
+leaving the second out as a jump and as a value, a settled truth the other
+truth, a `continue` landing after the last turn, a `break` landing at the end
+of its own. The first and the turn fewer are caught by `examples/inline.kest`
+and the settled `if` by `examples/numbers.kest`; the other six were caught by
+nothing in the gate -- the colony's trial caught two of them -- so
+`examples/numbers.kest` has a walk of four turns now that asks each of those
+questions into its own place of one number, and every one of them is caught by
+it.
+
+And the fuzzer: seeds 7001 to 7300 at three hundred steps, each folded three
+ways -- written out, with the lowering's fusions off, and with `KEST_NOOPT`,
+which keeps every walk a walk -- by a sanitised fuzzer built from this tree.
+Nothing stopped and no fold differed.

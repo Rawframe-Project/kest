@@ -5366,6 +5366,13 @@ the same place. A `for` over a thousand costs 999 steps, because the thousandth
 turn does not go back; a `while` over a thousand costs 1000; and `f(50)` calling
 itself down to nought costs 51.
 
+A `for` whose count runs between two numbers written where it stands, over four
+turns or fewer, with a body that is not large and does not assign to the count,
+is compiled as its body written out once a turn, the count a value in each: `for way in 0..4` is the four neighbours of a cell, and every
+question the body asks about `way` is answered where it is asked. Nothing goes
+back, so its turns cost nothing; `KEST_NOOPT` compiles it as the walk it is
+written as, and both answer the same. See D1231.
+
 A machine that stops this way is not broken and is not finished. Its stack, its
 heap and everything the program built are where they were, so a host that gives
 it more through `kest_fuel_set` and calls again carries on. What it cannot do is
@@ -6420,7 +6427,7 @@ bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 577 lines:
-55860 bytes as tokens, 136241 as a tree, 174952 checked and 207604 compiled.
+55860 bytes as tokens, 136241 as a tree, 174968 checked and 207620 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree.
 
@@ -6437,7 +6444,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 20701 bytes, against the 207604 it costs to compile.
+file and 20701 bytes, against the 207620 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.
@@ -6625,7 +6632,7 @@ where it is written, and the compiler works out every constant, so what `emit`
 says is what `check` said and more. `asked` beside them is how many times the
 folder was asked and there was nothing to work out — a field of a local, a name that is not a constant. The compiler asks
 of anything that might be one, because asking is how it finds out, and the two
-numbers together say how much of that finding out answered: 114 of 536 for
+numbers together say how much of that finding out answered: 120 of 579 for
 `examples/numbers.kest`. Arithmetic is asked about too, since D1160: `0 - 1` is
 a value a frame does not pay for, and a language with no negative literal
 writes it everywhere a `-1` goes.

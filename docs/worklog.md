@@ -42025,3 +42025,20 @@ See D1230.
 
 **Runs:** `linux-full`'s log on `17136b50` for the fused build; `check-c.sh`
 over the examples here, timed; `make most`.
+
+## 2026-09-24, a walk of few turns written out once a turn
+
+`for way in 0..4` is compiled as its body written out once a turn where it is
+small, the count a value in each, with every question about it settled where
+it is asked. The colony's trial: 5.2% fewer cycles and 6.3% fewer
+instructions run by the machine, the release the same. D1209's open item is
+closed.
+
+See D1231.
+
+**Runs:** every example and workload against the commit built twice to the
+same bytes, with `KEST_NOOPT` too; the colony's trial run and released, best
+of seven turn about; each piece taken out in turn against every example and
+the trial; the escape and the promise that a dropped arm could hide, with the
+comparison taken out; three hundred seeds folded three ways; the campaign over
+D1227 read to its end; `make most`.

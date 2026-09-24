@@ -177,6 +177,8 @@ Where it stands, from the front page's table (D1203): `bench/compare.sh` at
   A carried body's constant answer and its jump fused into one instruction
   was measured and not kept: one case more in the loop cost the others (D1229).
   `linux-arm64` holds the generated C to the machine as well (D1230).
+  A walk of four turns or fewer is written out once a turn: the colony's
+  trial 5.2% fewer cycles run by the machine (D1231).
 
 How it got there is the decisions, and the ones that moved it most: the
 fused instructions (D1155 to D1178), bodies carried into their callers
@@ -204,9 +206,6 @@ What is open, measured and named:
   where daslang's changes it in place (D1203). A slot kept in the frame
   because it held a handle once was measured as the other half and is not:
   2% of the instructions and no cycles (D1223).
-- **A small constant walk is not written out.** The colony's search would be
-  5.7% fewer cycles interpreted and 1.7% compiled; it needs three passes this
-  compiler has not got (D1209).
 
 The frame measurements -- a frame of `examples/slice` (D1124) and twenty
 thousand bodies a frame through `bench/frame` (D1123) -- and the edit loop's

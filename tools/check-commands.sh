@@ -6220,7 +6220,9 @@ fi
 # does not own. And the fourth, which is not a thing getting out but a thing
 # outside getting bigger: the heap goes back where it was, so a world grown
 # inside a block was emptied by the end of it and nothing said so. See D966
-# and D972.
+# and D972. The last is a walk of two turns written out once a turn, where the
+# turn that keeps it is one neither turn takes: the walk is what is written,
+# and it is refused as written. See D1231.
 mkdir "$scratch"/keeping
 for leaving in \
     "gives back what the block made|fn made() -> text {\n    scratch {\n        return \"{1 + 1}\"\n    }\n}\n" \
@@ -6231,7 +6233,8 @@ for leaving in \
     "grows something that outlives the block|fn roomed() -> i32 {\n    let out: [i32] = array()\n    scratch {\n        room(out, 64)\n    }\n    return len(out)\n}\n" \
     "hands something that outlives the block to a call that may grow it|fn bigger(xs: [i32]) {\n    push(xs, 1)\n}\n\nfn called() -> i32 {\n    let out: [i32] = array()\n    scratch {\n        bigger(out)\n    }\n    return len(out)\n}\n" \
     "hands something that outlives the block to a call that may grow it|fn bigger(xs: [i32]) {\n    push(xs, 1)\n}\n\nfn valued() -> i32 {\n    let out: [i32] = array()\n    let doing: fn([i32]) = bigger\n    scratch {\n        doing(out)\n    }\n    return len(out)\n}\n" \
-    "hands something that outlives the block to a call that may grow it|fn bigger(xs: [i32]) {\n    push(xs, 1)\n}\n\nfn deferred(out: [i32]) -> i32 {\n    defer bigger(out)\n    scratch {\n        return len(out)\n    }\n}\n"; do
+    "hands something that outlives the block to a call that may grow it|fn bigger(xs: [i32]) {\n    push(xs, 1)\n}\n\nfn deferred(out: [i32]) -> i32 {\n    defer bigger(out)\n    scratch {\n        return len(out)\n    }\n}\n" \
+    "keeps what the block made in a name the block does not own|fn turned() -> i32 {\n    let name = \"\"\n    scratch {\n        for i in 0..2 {\n            if i == 5 {\n                name = \"{i}\"\n            }\n        }\n    }\n    return len(name)\n}\n"; do
     wanted_out=${leaving%%|*}
     written_out=${leaving#*|}
     # shellcheck disable=SC2059

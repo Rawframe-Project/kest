@@ -659,6 +659,15 @@ fn main() -> i32 {
     if besideAnIndex(3, edges, 2) != 7 {
         return 102
     }
+    // A walk of four turns, written out once a turn: every question about
+    // the count has its answer where it is asked, and what is not settled
+    // by it is still asked. See D1231.
+    if turnsWrittenOut(5) != 21110 {
+        return 103
+    }
+    if turnsWrittenOut(2) != 20010 {
+        return 104
+    }
 
     io.print("every width wraps at its own end, and {NARROW} is one of them")
     return 0
@@ -913,6 +922,39 @@ fn turnsAcrossTheMiddle(from: u64) -> i32 no.alloc {
 // number as an array. See D1213.
 fn besideAnIndex(k: i32, xs: [i32], i: i32) -> i32 no.alloc {
     return k + xs[i]
+}
+
+// A walk of few turns written where it stands, which the compiler writes out
+// once a turn with the count a value in each. A half of a question settled by
+// the count and a half that is not, the other way round, a settled truth
+// handed on as a value and one settled by either half, a `continue` in the
+// first turn and a `break` in the third: each of them answers into its own
+// place of the number. See D1231.
+fn turnsWrittenOut(x: i32) -> i32 no.alloc {
+    let total = 0
+    for way in 0..4 {
+        if x > 3 && way == 1 {
+            total += 1000
+        }
+        if way == 1 && x > 3 {
+            total += 100
+        }
+        total += weigh(way == 2, 10)
+        total += weigh(way == 3 || x > 100, 1)
+        if way == 0 {
+            continue
+        }
+        total += 10000
+        if way == 2 {
+            break
+        }
+    }
+    return total
+}
+
+// So much when it holds and nothing when it does not.
+fn weigh(holds: bool, by: i32) -> i32 no.alloc {
+    return if holds -> by else -> 0
 }
 
 // So many nines, written out one at a time.

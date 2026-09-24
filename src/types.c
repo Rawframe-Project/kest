@@ -824,6 +824,23 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
         program->fold_never = true;
         return false;
     case KEST_EXPR_NAME: {
+        // A name the body declared is the body's before it is a constant's,
+        // and worth something only where the body holds its value. See D1231.
+        if (program->held_name != NULL) {
+            const KestValue *value = NULL;
+            uint32_t slots = 0;
+            if (program->held_name(program->held_context,
+                                   kest_span_text(program->source, expr->span),
+                                   expr->span.length, &value, &slots)) {
+                if (value != NULL && slots == 1) {
+                    *out = value[0];
+                    return true;
+                }
+                *why = "a name the body keeps is not worked out where it is "
+                       "written";
+                return false;
+            }
+        }
         // A constant made of itself has no value to work out, which the depth
         // catches; this is only for a name that is not a constant at all.
         const KestExpr *written = constant_written(
@@ -1257,6 +1274,14 @@ static uint32_t fold_slots(KestProgram *program, const KestExpr *expr,
 
     if (expr->kind == KEST_EXPR_NAME && type != NULL &&
         (type->tag == KEST_T_STRUCT || type->tag == KEST_T_FIXED)) {
+        const KestValue *value = NULL;
+        uint32_t slots = 0;
+        if (program->held_name != NULL &&
+            program->held_name(program->held_context,
+                               kest_span_text(program->source, expr->span),
+                               expr->span.length, &value, &slots)) {
+            return 0;
+        }
         const KestExpr *written = constant_written(
             program, kest_span_text(program->source, expr->span),
             expr->span.length);

@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1230
+    CURRENT SHA:       (this commit) D1093-D1231
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, and it is ahead of
@@ -15,12 +15,12 @@ reasoning; this holds the position.
                        `rules`; the machine is ahead of Luau's interpreter
                        on all five, by 4% at the least, and retires fewer
                        instructions on all five (D1203)
-    LAST CI:           green on da7b8c2a, all nine jobs -- linux,
+    LAST CI:           green on dbd9e6b3, all nine jobs -- linux,
                        linux-arm64, macos, windows, clang, threads, package,
                        linux-full and agree, the last being the whole gate
                        with every hole caught
     LAST FAST GATE:    green
-    LAST FULL GATE:    CI's `linux-full` on da7b8c2a, every hole caught
+    LAST FULL GATE:    CI's `linux-full` on dbd9e6b3, every hole caught
     STATUS:            GAME_AI_DIRECTION_COMPLETE, marked on a7769f0
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.
@@ -877,7 +877,8 @@ with its run and index read in place (`store.elem.ll`), 2 to 3% slower on
 baseline rather than the tree. And a body carried from another file
 (D1204): the colony's trial 1.5% fewer instructions and no fewer cycles. And writing out a small constant walk (D1209):
 measured by hand at 5.7% of the colony's interpreted trial and 1.7% compiled,
-and not built for three passes it would need. And a constant a carried body
+and not built for three passes it would need -- built since, in D1231, at
+5.2% of the trial's cycles. And a constant a carried body
 answers and the jump past its end as one instruction (D1229): `control` 0.77%
 fewer instructions and no fewer cycles, and every other workload and the
 colony's trial more instructions for a loop the compiler laid out otherwise.

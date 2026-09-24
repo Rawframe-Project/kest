@@ -257,6 +257,13 @@ typedef struct {
     // out. Kept here because a fold is a walk and the answer is about the walk
     // rather than about any one step of it. See D673.
     bool fold_never;
+    // While a walk written out once a turn is being compiled, what a name the
+    // body declared is worth: true for a name the body has, with the value
+    // where it holds one and NULL where it does not. NULL otherwise, and then
+    // every name the folder reads is a constant's. See D1231.
+    bool (*held_name)(void *context, const char *name, uint32_t length,
+                      const KestValue **value, uint32_t *slots);
+    void *held_context;
     // The file being worked on, and the name its declarations live under.
     // Every name is registered under the whole of what the file calls itself,
     // `a.math.twice`, because two modules may share a last part and cannot

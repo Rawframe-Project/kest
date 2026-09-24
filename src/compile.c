@@ -146,6 +146,11 @@ typedef struct {
     // which is a slot fewer and is safe where nothing runs in between. See
     // D931.
     bool place_apart;
+
+    // How many walks written out once a turn this is inside. A name such a
+    // walk counts with is a value the body holds, so a question about it has
+    // an answer where it is asked. See D1231.
+    uint16_t unrolling;
 } Compiler;
 
 static void refuse(Compiler *compiler, KestSpan span, const char *code,
@@ -1628,6 +1633,79 @@ static bool compile_address(Compiler *compiler, const KestExpr *expr,
     return true;
 }
 
+// What the folder asks about a name while a walk is written out once a turn:
+// the innermost name the body declared by that spelling, and the value it
+// holds, if it holds one. See D1231.
+static bool held_by_body(void *context, const char *name, uint32_t length,
+                         const KestValue **value, uint32_t *slots) {
+    Compiler *compiler = context;
+    for (uint16_t i = compiler->local_count; i > 0; i--) {
+        const Local *local = &compiler->locals[i - 1];
+        if (kest_word_same(local->name, name, length)) {
+            *value = local->folded;
+            *slots = local->size;
+            return true;
+        }
+    }
+    return false;
+}
+
+// A fold asked for what it answers rather than as a value a body is given:
+// the counts the costs are read from are left as they were. See D1231.
+static bool fold_quietly(Compiler *compiler, const KestExpr *expr,
+                         KestValue *out) {
+    KestProgram *program = compiler->program;
+    uint32_t folds = program->folds;
+    uint32_t nothing = program->asked_for_nothing;
+    bool never = program->fold_never;
+    const char *why = NULL;
+    bool worked = kest_fold_const(program, expr, out, 1, &why, NULL) == 1;
+    program->folds = folds;
+    program->asked_for_nothing = nothing;
+    program->fold_never = never;
+    return worked;
+}
+
+// Whether a truth is settled where it is written, inside a walk written out
+// once a turn and nowhere else: `way == 0` in the turn where `way` is two.
+// `a && b` and `a || b` are settled by the half that settles them, and by the
+// other half where the first does not. See D1231.
+static bool known_truth(Compiler *compiler, const KestExpr *expr,
+                        bool *truth) {
+    if (compiler->unrolling == 0 || expr == NULL || expr->type == NULL ||
+        expr->type->tag != KEST_T_BOOL) {
+        return false;
+    }
+    if (expr->kind == KEST_EXPR_UNARY && expr->unary.op == KEST_TOK_BANG) {
+        bool turned;
+        if (!known_truth(compiler, expr->unary.operand, &turned)) {
+            return false;
+        }
+        *truth = !turned;
+        return true;
+    }
+    if (expr->kind == KEST_EXPR_BINARY &&
+        (expr->binary.op == KEST_TOK_AMPAMP ||
+         expr->binary.op == KEST_TOK_PIPEPIPE)) {
+        bool either = expr->binary.op == KEST_TOK_PIPEPIPE;
+        bool left;
+        if (!known_truth(compiler, expr->binary.left, &left)) {
+            return false;
+        }
+        if (left == either) {
+            *truth = left;
+            return true;
+        }
+        return known_truth(compiler, expr->binary.right, truth);
+    }
+    KestValue value = {0};
+    if (!fold_quietly(compiler, expr, &value)) {
+        return false;
+    }
+    *truth = value.integer != 0;
+    return true;
+}
+
 // A condition compiled for where it goes rather than for what it is. The
 // answer to `a || b` in the place a jump reads is never built: each half
 // jumps, so the `true` that was pushed and the jump over it are not there at
@@ -1637,6 +1715,14 @@ static bool compile_address(Compiler *compiler, const KestExpr *expr,
 // through is the other answer.
 static void branch_when(Compiler *compiler, const KestExpr *expr,
                         bool when_true, Exits *out) {
+    // Settled where it is written: a jump that is always taken, or none.
+    bool known;
+    if (known_truth(compiler, expr, &known)) {
+        if (known == when_true) {
+            take_exit(compiler, out, ir_go(compiler, expr->span));
+        }
+        return;
+    }
     if (expr != NULL && expr->kind == KEST_EXPR_UNARY &&
         expr->unary.op == KEST_TOK_BANG) {
         // Turning the question round is not an instruction here: it is asking
@@ -1648,6 +1734,13 @@ static void branch_when(Compiler *compiler, const KestExpr *expr,
         (expr->binary.op == KEST_TOK_PIPEPIPE ||
          expr->binary.op == KEST_TOK_AMPAMP)) {
         bool either = expr->binary.op == KEST_TOK_PIPEPIPE;
+        // A first half settled where it is written and not settling the
+        // whole leaves the whole to the second.
+        bool first;
+        if (known_truth(compiler, expr->binary.left, &first)) {
+            branch_when(compiler, expr->binary.right, when_true, out);
+            return;
+        }
         if (either == when_true) {
             // `a || b` leaving when true, or `a && b` leaving when false:
             // either half decides it on its own, so both leave the same way.
@@ -1700,6 +1793,14 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
     // Short circuiting is control flow, not an operator: the right side is
     // only reached when the left did not already decide the answer.
     if (op == KEST_TOK_AMPAMP || op == KEST_TOK_PIPEPIPE) {
+        // A first half settled where it is written that did not settle the
+        // whole -- `compile_expr` answers the whole where it did -- leaves the
+        // answer to the second. See D1231.
+        bool first;
+        if (known_truth(compiler, expr->binary.left, &first)) {
+            compile_expr(compiler, expr->binary.right);
+            return;
+        }
         compile_expr(compiler, expr->binary.left);
         if (op == KEST_TOK_PIPEPIPE) {
             ir_emit(compiler, KEST_IR_NOT, expr->type, 1, expr->type, 1, span);
@@ -2928,6 +3029,27 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         const KestBranch *branch = expr->branch;
         uint16_t gives = branch->gives ? value_slots(expr->type) : 0;
 
+        // A condition settled where it is written: the arm that runs is the
+        // only one compiled, and it leaves what the `if` would. See D1231.
+        bool settled;
+        if (branch->binding.length == 0 &&
+            known_truth(compiler, branch->condition, &settled)) {
+            if (settled) {
+                if (branch->then_value != NULL) {
+                    compile_expr(compiler, branch->then_value);
+                } else {
+                    compile_block(compiler, &branch->then_body);
+                }
+            } else if (branch->otherwise != NULL) {
+                compile_expr(compiler, branch->otherwise);
+            } else if (branch->else_value != NULL) {
+                compile_expr(compiler, branch->else_value);
+            } else if (branch->has_else) {
+                compile_block(compiler, &branch->else_body);
+            }
+            break;
+        }
+
         Exits otherwise =
             compile_condition(compiler, branch->condition,
                               branch->binding.length > 0);
@@ -3207,7 +3329,16 @@ static void compile_expr(Compiler *compiler, const KestExpr *expr) {
         return;
     }
     uint16_t before = compiler->stack_depth;
-    compile_expr_kind(compiler, expr);
+    // A truth settled where it is written, which is a question about the
+    // count of a walk written out once a turn, is that truth. See D1231.
+    bool settled;
+    if (known_truth(compiler, expr, &settled)) {
+        stack_push(compiler, 1);
+        ir_emit(compiler, settled ? KEST_IR_TRUE : KEST_IR_FALSE, expr->type,
+                0, expr->type, 1, expr->span);
+    } else {
+        compile_expr_kind(compiler, expr);
+    }
     // The checker decided this value stands where an optional is wanted, so
     // the tag goes after it.
     if (expr->wrapped) {
@@ -3526,6 +3657,339 @@ static void hold_empty(Compiler *compiler, const KestStmt *stmt,
                      "is disagree");
 }
 
+// `for i in from..to`, counted in a slot nobody can name, turn by turn.
+static void compile_count(Compiler *compiler, const KestStmt *stmt) {
+    uint16_t names = compiler->local_count;
+    uint16_t slots = compiler->next_slot;
+    compiler->depth++;
+
+    uint16_t end_slot = reserve_slot(compiler, 1);
+    compile_expr(compiler, stmt->each->until);
+    // Whether the end is how long an array held in a slot is, and
+    // which slot: `0..len(xs)` counts through `xs`. See D1187.
+    int32_t measured = -1;
+    if (compiler->body != NULL && compiler->body->op_count >= 2 &&
+        compiler->body->ops[compiler->body->op_count - 1].kind ==
+            KEST_IR_LEN &&
+        compiler->body->ops[compiler->body->op_count - 1].arg_count ==
+            1) {
+        const KestIrOp *len =
+            &compiler->body->ops[compiler->body->op_count - 1];
+        measured = read_out_of(
+            compiler->body, compiler->body->args[len->first_arg]);
+    }
+    stack_pop(compiler, 1);
+    store_slots(compiler, end_slot, 1,
+                stmt->each->until->type, stmt->span);
+
+    // The loop's own count stays where nobody can reach it and the
+    // name is a copy of it, the same way a walk of an array works, so
+    // assigning to that name cannot make the count go wrong.
+    uint16_t index_slot = reserve_slot(compiler, 1);
+    compile_expr(compiler, stmt->each->sequence);
+    stack_pop(compiler, 1);
+    store_slots(compiler, index_slot, 1, whole_type(compiler),
+                stmt->span);
+
+    Walk walk = {index_slot, end_slot, stmt->each->sequence->type,
+                 kest_is_unsigned(stmt->each->sequence->type), false,
+                 0};
+    uint32_t exit = open_walk(compiler, walk, stmt->span);
+
+    Loop *loop = open_loop(compiler, stmt->span);
+    if (loop == NULL) {
+        return;
+    }
+
+    // Where nothing assigns to it there is nothing to go wrong, and
+    // the name is the count rather than a copy of it: a load and a
+    // store off every turn, which for a loop whose body is small is
+    // most of what the turn was. The checker is what knows, because
+    // it is what resolved the name. See D866.
+    if (stmt->each->name_written) {
+        uint16_t counter = declare_local(compiler, stmt->each->name,
+                                         stmt->each->sequence->type);
+        stack_push(compiler, 1);
+        load_slots(compiler, index_slot, 1, NULL, stmt->span);
+        stack_pop(compiler, 1);
+        store_slots(compiler, counter, 1, NULL, stmt->span);
+    } else {
+        bind_local(compiler, stmt->each->name, index_slot, 1);
+    }
+
+    compile_block(compiler, &stmt->each->body);
+    // Counting from nought or more to a limit, by a count nothing names
+    // but the loop: every element read at it is inside its array when
+    // the array is as long as the limit -- which it is outright where
+    // the limit is its length -- if nothing in the walk made it
+    // shorter. See D1187 and D1189.
+    if (!stmt->each->name_written &&
+        written_index(compiler, stmt->each->sequence) >= 0) {
+        prove_walk(compiler, loop->start, measured, index_slot,
+                   end_slot);
+    }
+    close_walk(compiler, loop, exit, walk, stmt->span);
+
+    compiler->depth--;
+    compiler->local_count = names;
+    compiler->next_slot = slots;
+}
+
+// A walk written out once a turn is at most this many turns. Four is the
+// neighbours of a cell, which is the walk this is for. See D1231.
+#define MOST_UNROLLED 4
+// And its body at most this many operations as a walk, so what is written
+// out stays a small part of what the body around it is.
+#define MOST_UNROLLED_OPS 400
+
+// Where a body's writing stood, so that a walk compiled one way can be taken
+// back and compiled the other: everything in a body is a list written onto the
+// end, so taking back is setting the counts back.
+typedef struct {
+    uint32_t ops;
+    uint32_t args;
+    uint32_t values;
+    uint32_t places;
+    uint32_t names;
+    uint32_t constants;
+    uint32_t folded;
+    uint32_t folded_slots;
+    uint32_t stack_values;
+    uint32_t diags;
+    uint32_t errors;
+    uint16_t local_count;
+    uint16_t next_slot;
+    uint16_t stack_depth;
+    uint32_t depth;
+    uint32_t loop_count;
+} Written;
+
+static Written written_so_far(const Compiler *compiler) {
+    const KestIrBody *body = compiler->body;
+    return (Written){body->op_count,     body->arg_count,
+                     body->value_count,  body->place_count,
+                     body->name_count,   body->constant_count,
+                     body->folded,       body->folded_slots,
+                     compiler->value_count,
+                     compiler->program->diags->count,
+                     compiler->program->diags->error_count,
+                     compiler->local_count, compiler->next_slot,
+                     compiler->stack_depth, compiler->depth,
+                     compiler->loop_count};
+}
+
+static void take_back(Compiler *compiler, const Written *to) {
+    KestIrBody *body = compiler->body;
+    body->op_count = to->ops;
+    body->arg_count = to->args;
+    body->value_count = to->values;
+    body->place_count = to->places;
+    body->name_count = to->names;
+    body->constant_count = to->constants;
+    body->folded = to->folded;
+    body->folded_slots = to->folded_slots;
+    compiler->value_count = to->stack_values;
+    compiler->local_count = to->local_count;
+    compiler->next_slot = to->next_slot;
+    compiler->stack_depth = to->stack_depth;
+    compiler->depth = to->depth;
+    compiler->loop_count = to->loop_count;
+}
+
+// What a promise about a body reads of a run of its operations: every effect
+// any of them has, and every body and door any of them calls. Two runs that
+// read the same here are the same to every promise, so a walk written out
+// once a turn is kept only where it reads the same as the walk it was. See
+// D1231.
+typedef struct {
+    uint16_t effects;
+    uint32_t count;
+    bool overflowed;
+    uint32_t called[64];
+} Reaches;
+
+static void reaches_of(const KestIrBody *body, uint32_t from, uint32_t to,
+                       Reaches *out) {
+    memset(out, 0, sizeof *out);
+    for (uint32_t i = from; i < to; i++) {
+        const KestIrOp *op = &body->ops[i];
+        out->effects |= op->effects;
+        if (op->kind != KEST_IR_CALL && op->kind != KEST_IR_CALL_VALUE &&
+            op->kind != KEST_IR_CALL_HOST) {
+            continue;
+        }
+        uint32_t named = ((uint32_t)op->kind << 16) |
+                         (op->kind == KEST_IR_CALL_VALUE ? 0 : op->imm[0]);
+        bool had = false;
+        for (uint32_t c = 0; c < out->count; c++) {
+            had = had || out->called[c] == named;
+        }
+        if (had) {
+            continue;
+        }
+        if (out->count == sizeof out->called / sizeof out->called[0]) {
+            out->overflowed = true;
+            continue;
+        }
+        out->called[out->count++] = named;
+    }
+}
+
+static bool reach_alike(const Reaches *one, const Reaches *two) {
+    if (one->overflowed || two->overflowed || one->effects != two->effects ||
+        one->count != two->count) {
+        return false;
+    }
+    for (uint32_t i = 0; i < one->count; i++) {
+        bool found = false;
+        for (uint32_t j = 0; j < two->count; j++) {
+            found = found || one->called[i] == two->called[j];
+        }
+        if (!found) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// The count's first value and how many turns there are, when both are
+// written where the walk is and the turns are few. See D1231.
+static bool counted_turns(Compiler *compiler, const KestStmt *stmt,
+                          int64_t *first, uint32_t *turns) {
+    const KestType *counts = stmt->each->sequence->type;
+    if (compiler->body == NULL || stmt->each->name_written || counts == NULL ||
+        counts->tag != KEST_T_INT || counts->slots > 1) {
+        return false;
+    }
+    bool (*was)(void *, const char *, uint32_t, const KestValue **,
+                uint32_t *) = compiler->program->held_name;
+    void *was_context = compiler->program->held_context;
+    compiler->program->held_name = held_by_body;
+    compiler->program->held_context = compiler;
+    KestValue from = {0};
+    KestValue to = {0};
+    bool known = fold_quietly(compiler, stmt->each->sequence, &from) &&
+                 fold_quietly(compiler, stmt->each->until, &to);
+    compiler->program->held_name = was;
+    compiler->program->held_context = was_context;
+    if (!known) {
+        return false;
+    }
+    // Compared as the count's own kind of number, which is what the walk's
+    // test does.
+    if (kest_is_unsigned(counts)) {
+        uint64_t low = (uint64_t)from.integer;
+        uint64_t high = (uint64_t)to.integer;
+        if (high <= low || high - low > MOST_UNROLLED) {
+            return false;
+        }
+        *turns = (uint32_t)(high - low);
+    } else {
+        if (to.integer <= from.integer ||
+            (uint64_t)to.integer - (uint64_t)from.integer > MOST_UNROLLED) {
+            return false;
+        }
+        *turns = (uint32_t)((uint64_t)to.integer - (uint64_t)from.integer);
+    }
+    *first = from.integer;
+    return true;
+}
+
+// The walk written out once a turn: the body as many times as there are
+// turns, the count in each a value the body holds, a `continue` the end of
+// its own turn and a `break` the end of the last. Nothing goes round, so
+// nothing counts, tests or spends a step of a budget. See D1231.
+static void compile_unrolled(Compiler *compiler, const KestStmt *stmt,
+                             int64_t first, uint32_t turns) {
+    uint16_t names = compiler->local_count;
+    uint16_t slots = compiler->next_slot;
+    compiler->depth++;
+    bool (*was)(void *, const char *, uint32_t, const KestValue **,
+                uint32_t *) = compiler->program->held_name;
+    void *was_context = compiler->program->held_context;
+    compiler->program->held_name = held_by_body;
+    compiler->program->held_context = compiler;
+    compiler->unrolling++;
+
+    Loop *loop = open_loop(compiler, stmt->span);
+    if (loop != NULL) {
+        for (uint32_t turn = 0; turn < turns; turn++) {
+            KestValue *count =
+                KEST_ARENA_ARRAY(compiler->ir->arena, KestValue, 1);
+            if (count == NULL) {
+                compiler->out_of_memory = true;
+                break;
+            }
+            count->integer = (int64_t)((uint64_t)first + turn);
+            uint16_t turn_names = compiler->local_count;
+            compiler->depth++;
+            hold_local(compiler, stmt->each->name, stmt->each->sequence->type,
+                       count, 1);
+            compile_block(compiler, &stmt->each->body);
+            compiler->depth--;
+            compiler->local_count = turn_names;
+            land_continues(compiler, loop);
+            loop->continue_count = 0;
+        }
+        for (uint32_t i = 0; i < loop->break_count; i++) {
+            ir_lands(compiler, loop->breaks[i]);
+        }
+        compiler->loop_count--;
+    }
+
+    compiler->unrolling--;
+    compiler->program->held_name = was;
+    compiler->program->held_context = was_context;
+    compiler->depth--;
+    compiler->local_count = names;
+    compiler->next_slot = slots;
+}
+
+// `for i in from..to`. Compiled as a walk, and where the turns are few and
+// written where the walk is, compiled again written out once a turn and kept
+// that way if it says nothing the walk did not and reads the same to every
+// promise. `KEST_NOOPT` keeps every walk a walk, which is what the gate and
+// the fuzzer hold the written-out one to. See D1231.
+static void compile_counting(Compiler *compiler, const KestStmt *stmt) {
+    static int off = -1;
+    int64_t first = 0;
+    uint32_t turns = 0;
+    if (kest_ir_asked_off("KEST_NOOPT", &off) ||
+        !counted_turns(compiler, stmt, &first, &turns)) {
+        compile_count(compiler, stmt);
+        return;
+    }
+    Written before = written_so_far(compiler);
+    compile_count(compiler, stmt);
+    uint32_t walked_to = compiler->body->op_count;
+    if (compiler->out_of_memory ||
+        compiler->program->diags->count != before.diags ||
+        walked_to - before.ops > MOST_UNROLLED_OPS) {
+        return;
+    }
+    Reaches walked;
+    reaches_of(compiler->body, before.ops, walked_to, &walked);
+    uint16_t high_water = compiler->slot_high_water;
+
+    take_back(compiler, &before);
+    compile_unrolled(compiler, stmt, first, turns);
+    Reaches unrolled;
+    reaches_of(compiler->body, before.ops, compiler->body->op_count,
+               &unrolled);
+    if (!compiler->out_of_memory &&
+        compiler->program->diags->count == before.diags &&
+        reach_alike(&walked, &unrolled)) {
+        return;
+    }
+    take_back(compiler, &before);
+    compiler->program->diags->count = before.diags;
+    compiler->program->diags->error_count = before.errors;
+    compile_count(compiler, stmt);
+    if (compiler->slot_high_water < high_water) {
+        compiler->slot_high_water = high_water;
+    }
+}
+
 static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt);
 
 static void compile_stmt(Compiler *compiler, const KestStmt *stmt) {
@@ -3767,80 +4231,7 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         // a slot nobody can name, so a call in it happens once rather than
         // every turn.
         if (stmt->each->until != NULL) {
-            uint16_t names = compiler->local_count;
-            uint16_t slots = compiler->next_slot;
-            compiler->depth++;
-
-            uint16_t end_slot = reserve_slot(compiler, 1);
-            compile_expr(compiler, stmt->each->until);
-            // Whether the end is how long an array held in a slot is, and
-            // which slot: `0..len(xs)` counts through `xs`. See D1187.
-            int32_t measured = -1;
-            if (compiler->body != NULL && compiler->body->op_count >= 2 &&
-                compiler->body->ops[compiler->body->op_count - 1].kind ==
-                    KEST_IR_LEN &&
-                compiler->body->ops[compiler->body->op_count - 1].arg_count ==
-                    1) {
-                const KestIrOp *len =
-                    &compiler->body->ops[compiler->body->op_count - 1];
-                measured = read_out_of(
-                    compiler->body, compiler->body->args[len->first_arg]);
-            }
-            stack_pop(compiler, 1);
-            store_slots(compiler, end_slot, 1,
-                        stmt->each->until->type, stmt->span);
-
-            // The loop's own count stays where nobody can reach it and the
-            // name is a copy of it, the same way a walk of an array works, so
-            // assigning to that name cannot make the count go wrong.
-            uint16_t index_slot = reserve_slot(compiler, 1);
-            compile_expr(compiler, stmt->each->sequence);
-            stack_pop(compiler, 1);
-            store_slots(compiler, index_slot, 1, whole_type(compiler),
-                        stmt->span);
-
-            Walk walk = {index_slot, end_slot, stmt->each->sequence->type,
-                         kest_is_unsigned(stmt->each->sequence->type), false,
-                         0};
-            uint32_t exit = open_walk(compiler, walk, stmt->span);
-
-            Loop *loop = open_loop(compiler, stmt->span);
-            if (loop == NULL) {
-                break;
-            }
-
-            // Where nothing assigns to it there is nothing to go wrong, and
-            // the name is the count rather than a copy of it: a load and a
-            // store off every turn, which for a loop whose body is small is
-            // most of what the turn was. The checker is what knows, because
-            // it is what resolved the name. See D866.
-            if (stmt->each->name_written) {
-                uint16_t counter = declare_local(compiler, stmt->each->name,
-                                                 stmt->each->sequence->type);
-                stack_push(compiler, 1);
-                load_slots(compiler, index_slot, 1, NULL, stmt->span);
-                stack_pop(compiler, 1);
-                store_slots(compiler, counter, 1, NULL, stmt->span);
-            } else {
-                bind_local(compiler, stmt->each->name, index_slot, 1);
-            }
-
-            compile_block(compiler, &stmt->each->body);
-            // Counting from nought or more to a limit, by a count nothing names
-            // but the loop: every element read at it is inside its array when
-            // the array is as long as the limit -- which it is outright where
-            // the limit is its length -- if nothing in the walk made it
-            // shorter. See D1187 and D1189.
-            if (!stmt->each->name_written &&
-                written_index(compiler, stmt->each->sequence) >= 0) {
-                prove_walk(compiler, loop->start, measured, index_slot,
-                           end_slot);
-            }
-            close_walk(compiler, loop, exit, walk, stmt->span);
-
-            compiler->depth--;
-            compiler->local_count = names;
-            compiler->next_slot = slots;
+            compile_counting(compiler, stmt);
             break;
         }
 
