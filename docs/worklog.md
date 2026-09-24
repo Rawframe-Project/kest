@@ -41914,3 +41914,13 @@ See D1221.
 **Runs:** the host walk with the condition as written and taken out; and
 `make most`.
 
+## 2026-09-24, a green recorded that CI had not given
+
+The direction state was written as green on `c5848630` while its run was
+still going, and the push cancelled it. Corrected; the run on `2262acdc`
+carries the same commits.
+
+See D1222.
+
+**Runs:** `gh run view` on the cancelled run.
+

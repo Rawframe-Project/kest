@@ -41818,3 +41818,13 @@ call taken out of the walk's conditions, the release engine read past the end
 and answered 21, and `check-c.sh` refuses: "a walk whose array the host
 shortens does not stop alike both ways: compiled 21 machine -1".
 
+## D1222 — A green recorded that CI had not given
+
+`2262acdc` recorded CI as green on `c5848630` and was pushed. It was not: the
+run on `c5848630` was still in `linux-full` when the line was written, and
+the push itself cancelled it. What `c5848630` carried -- D1219's documents --
+is carried again by the run on `2262acdc`, so nothing went unchecked, but the
+line said something no run had said. It says what happened now. The rule
+D1149 sets is that a change is done once CI says the whole gate passed on it,
+and the line recording that is only written from a run that answered.
+
