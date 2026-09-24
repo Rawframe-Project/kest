@@ -41987,5 +41987,5 @@ See D1227.
 
 **Runs:** the commit built twice to the same bytes and measured turn about
 against the change on the six workloads, `graph` again at ten times its
-rounds, `agents` per function; each walk's going-on and each walk's call
-taken out against every example; `make most`.
+rounds, `agents` per function, the colony's trial; each walk's going-on and
+each walk's call taken out against every example; `make most`.

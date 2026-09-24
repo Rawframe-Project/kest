@@ -41939,6 +41939,9 @@ same instructions. `graph` was 2.3% more cycles with the same instructions,
 and at ten times its rounds 0.65% fewer: a fixed cost that does not grow
 with the work. `agents` moved within what its collector moves by itself --
 `plot_holding` counts 807 to 1,414 samples across runs of one binary.
+The colony's trial is untouched by it: 1,230.5 M instructions both ways and
+cycles within half a percent, best of seven turn about, and the same world
+at its end -- what the game moves through its arrays holds no tag.
 
 What holds it. Every example answers what it answered, and the release
 engine is held to the machine by `check-c.sh` as before. The going-on was
