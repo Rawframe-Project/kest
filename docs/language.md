@@ -2990,11 +2990,15 @@ the program asks for the capability `Io`
 
 **What this is and is not.** It is a boundary for code you wrote or code you
 trust to be cooperative, inside a host that decides what it may reach. It is
-**not** a sandbox for code that is trying to get out. A budget stops a program
-that will not stop and a heap ceiling stops one that grows, and neither of those
-is a threat model: running code you do not trust in your own process is a
-different product, and it is Wasm or another process rather than this. The
-reference says so here so that nobody reads the ceilings as a security claim.
+**not yet** a sandbox for code that is trying to get out. A budget stops a
+program that will not stop and a heap ceiling stops one that grows, and neither
+of those is a threat model. The threat model is `SECURITY.md`: what Kest is to
+promise for source nobody trusts -- no memory error, nothing but the doors
+marked for it, everything bounded by counts, nothing of the process in a value,
+and only the machine running it -- and how far each promise is kept today.
+Until the first three are kept, code you do not trust belongs in another
+process or in Wasm. The reference says so here so that nobody reads the
+ceilings as a security claim. See D1233.
 
 What the compiler itself is bounded by, for source somebody else wrote, is
 `--room` for the memory reading and compiling may take and the table below for

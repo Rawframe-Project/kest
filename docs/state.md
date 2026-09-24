@@ -182,6 +182,15 @@ Where it stands, from the front page's table (D1203): `bench/compare.sh` at
   A tag whose cases carry the same pieces is read without a `switch` in the
   generated C: compiled `rules` 1.8% fewer cycles (D1232).
 
+## Security: what is promised, and what is being built
+
+Kest is a boundary for cooperative code today and is being built into a
+sandbox for code nobody trusts. `SECURITY.md` is the threat model -- the
+attacker writes source; no memory error, nothing but the doors marked for it,
+everything bounded by counts, nothing of the process in a value, only the
+machine running it -- and a table of how far each promise is kept. Until the
+first three are, untrusted code belongs in another process or in Wasm (D1233).
+
 How it got there is the decisions, and the ones that moved it most: the
 fused instructions (D1155 to D1178), bodies carried into their callers
 (D1156, D1175), a value moved a run of pieces at a time (D1177), threaded

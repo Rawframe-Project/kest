@@ -42068,3 +42068,17 @@ it writes now, and caught run alone.
 See D1231.
 
 **Runs:** the hole alone; `make most`.
+
+## 2026-09-24, Kest is to be a sandbox
+
+The owner learned from his own engine that Kest disclaims being a sandbox, and
+wants it to be one. The neighbours were read -- Luau, Lua, daslang, and the
+platforms that run strangers' code -- and Kest takes Luau's side: a guarantee
+sized for the worst case, as a profile a host asks for. `SECURITY.md` is the
+threat model, where each promise stands and how to report; every "not a
+sandbox" says "not yet" and points at it.
+
+See D1233.
+
+**Runs:** `check-docs.sh` over `SECURITY.md`, and over it with a command that
+is not one; `make most`.

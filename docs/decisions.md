@@ -42146,3 +42146,51 @@ instructions: the host's compiler had taken the copies out already, and where
 the slots live is what costs. Not built. What is left is the shape itself --
 a body that works on an actor in its array's bytes rather than in slots --
 which is another engine and not a change to this one.
+
+## D1233 — Kest is to be a sandbox, and the threat model is written down
+
+*argued*. D981 said this is a boundary for cooperative code and that code
+trying to get out of a process is a different product; D1061 kept that
+sentence on the front page because the mission of the day listed "an
+adversarial sandbox" among the things not to imply. Neither was a finding that
+Kest cannot be one: nothing was tried and nothing failed. It was a promise
+not made because nothing proved it.
+
+That is changed here, for the reason the owner gave and the neighbours
+confirm. The largest part of what an embedded game language is asked to run is
+code nobody at the studio wrote -- mods, and the content players make -- and
+the engines Kest is for include ones that run it on a player's machine.
+Luau is the language chosen for that, because it is built for the worst case
+(a sandbox mode, no bytecode loading, a read-only environment, a written
+promise that no source causes a memory error, and a bounty behind it) while
+the engine chooses where code runs. Stock Lua gives the tools and no promise,
+and its C interpreter has had a sandbox escape through a crafted script and a
+parser over-read that reaches whatever compiles untrusted source. daslang is
+safe by default and claims no sandbox. The engines that trust no language move
+the code to their servers (Verse, Hytale) or into Wasm (Microsoft Flight
+Simulator). Kest takes Luau's side: the guarantee is sized for the worst case
+and is a profile a host asks for; a host running its own code keeps every
+engine and every speed it has now; where code runs is the host's to choose.
+
+Kest starts closer to it than Lua did: there is no ambient authority to take
+away (D981), no bytecode format to refuse, no pointer and no unchecked index,
+and budgets and ceilings already exist. What is missing is proof, and one
+bound.
+
+`SECURITY.md` is the threat model -- the attacker writes source and nothing
+else; five promises for that source; what is outside the model -- and a table
+of where each promise stands today and what is left, which is the order the
+work goes in: a verifier that checks every chunk against everything the
+machine trusts, what each slot holds included; doors marked as safe for code
+nobody trusts and a profile that binds nothing else; the compiler's work
+bounded by a count; an audit of what a value can say about the process; and
+the profile refusing a release build. It says how to report a vulnerability:
+privately, through GitHub's private vulnerability reporting.
+
+Every sentence that said "not a sandbox" -- the front page, `CLAUDE.md`, the
+reference where a reader meets the ceilings -- says "not yet" now and points
+at `SECURITY.md`, and none of them says more than the table does. The gate
+hands `SECURITY.md` to `check-docs.sh` with the other documents, so a command
+or a file it names is one that is there: written first asking for the version
+through a command the command line does not have, it was refused -- the
+command line does not answer to it -- and names `kest --version` now.

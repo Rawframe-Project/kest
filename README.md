@@ -311,10 +311,13 @@ a C embedding API of 108 doors; a standard library of ten modules written in
 Kest; and CI that builds and runs every example on Linux x86-64 and arm64,
 Windows and macOS, holding all four to the same bytes.
 
-What it is not: a systems language, an engine, a sandbox for code that is
-trying to get out, or a hard real-time system — there is a collector, and its
-pause is measured and written down. The standard library is small, and the
-language has not yet had a game shipped on it.
+What it is not: a systems language, an engine, or a hard real-time system —
+there is a collector, and its pause is measured and written down. **It is not
+yet a sandbox for code that is trying to get out**; being one is what it is
+being built toward, and [SECURITY.md](SECURITY.md) says the threat model, how
+far each promise in it is kept today, and how to report a vulnerability. The
+standard library is small, and the language has not yet had a game shipped on
+it.
 
 ## Documents
 

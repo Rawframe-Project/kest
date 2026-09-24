@@ -4,7 +4,9 @@ Kest is a small statically typed language for the gameplay and simulation half
 of a game, run by a bytecode virtual machine a native engine embeds. It is
 written in C11 with no dependency beyond libc. It is a guest language beside
 Daslang, Luau, Lua, AngelScript and Quirrel, and it is not a systems language,
-not an engine, not for hard real time, and not a sandbox. See D1061.
+not an engine and not for hard real time. It is not yet a sandbox for code
+that is trying to get out, and is being built into one: SECURITY.md is the
+threat model and where each promise stands. See D1061 and D1233.
 
 Three goals, in priority order when they conflict:
 
@@ -41,6 +43,7 @@ holds them to each other.
 | `docs/language.md` | Syntax and semantics reference, and the normative one: where it and the compiler disagree, one of them is a defect and this says which the answer is meant to be. It is what the checker, the compiler, the machine, the checks, the debugger, the determinism corpus and a host are all held to, and `check-docs.sh` holds every message, every option, every command, every library call and every figure in it to a run. See D994. |
 | `README.md` | The front page: what this is, how to build it, what runs. It is the one document written for somebody who has not read the others, so it says what the language does and points at the three below rather than repeating them. Held by `check-docs.sh` to naming files that are there, because a front page nothing reads is a front page nothing catches: this one said structs did not run yet for the length of the tree having them. |
 | `docs/state.md` | Where this is and what is known to be wrong: the defects reproduced against this tree, with the evidence named, and which phase of the work is open. Short, current, and the one read for what to do next. |
+| `SECURITY.md` | The threat model: what Kest is to promise for source nobody trusts, how far each promise is kept today, and how to report a vulnerability. Every sentence elsewhere that says what Kest is as a boundary points here and says no more than its table does. Held by `check-docs.sh` like the others. See D1233. |
 | `CHANGELOG.md` | What changed between one version and the next, for somebody who has a program written against the last one. It is not the worklog: the worklog is what was built and this is what a reader has to do about it. Newest first, one section a version, and a version with nothing a reader has to do about it says so. See D983. |
 | `docs/game-ai-direction-state.md` | Where the game-first / AI-native work is: the mission's start SHA, the reference machine, the baseline numbers, what has been measured, what is open in priority order, and what has been rejected. The documents it serves are in `/home/kest/mission/direction/`; their goals are binding and their proposed mechanisms are not. It is the operational position, not a diary: reasoning goes in `docs/decisions.md`. |
 | `docs/primer.md` | One page for somebody who knows Lua or Rust: what is different here, written from what people and models new to the language got wrong, every program on it run by `check-docs.sh` for its answer. It says what; `docs/language.md` says why and is the one that is normative. See D1150. |

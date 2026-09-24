@@ -2918,7 +2918,7 @@ JSON, and four checks handed no files"
 
 ask "lends" tools/check-lends.sh
 ask "documentation" tools/check-docs.sh docs/language.md \
-    docs/decisions.md CHANGELOG.md docs/primer.md
+    docs/decisions.md CHANGELOG.md docs/primer.md SECURITY.md
 ask "costs" tools/check-costs.sh
 ask "ceilings" tools/check-ceilings.sh
 
