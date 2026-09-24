@@ -15,12 +15,12 @@ reasoning; this holds the position.
                        `rules`; the machine is ahead of Luau's interpreter
                        on all five, by 4% at the least, and retires fewer
                        instructions on all five (D1203)
-    LAST CI:           green on 2262acdc, all nine jobs, which carries
-                       c5848630 -- whose own run was cancelled by a push
-                       made before it answered and was recorded as green for
-                       one commit (D1222)
+    LAST CI:           green on 1f0a45d1, all nine jobs -- linux,
+                       linux-arm64, macos, windows, clang, threads, package,
+                       linux-full and agree, the last being the whole gate
+                       with every hole caught
     LAST FAST GATE:    green
-    LAST FULL GATE:    CI's `linux-full` on 2262acdc, every hole caught
+    LAST FULL GATE:    CI's `linux-full` on 1f0a45d1, every hole caught
     STATUS:            GAME_AI_DIRECTION_COMPLETE, marked on a7769f0
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.
