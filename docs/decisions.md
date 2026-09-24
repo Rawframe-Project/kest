@@ -41704,3 +41704,20 @@ compiler tested was the one before. Run again with the build checked:
   walk. A host handed the array can call back in and shorten it. No program
   here is a host, and the condition stays for that reason.
 
+## D1215 — The one question a guarded walk asks, asked on its edge
+
+D1189's walk asks once where it begins whether the array it indexes is at
+least as long as the count's limit, and reads every element with no guard
+when it is. The question is `limit <= length`. Written wrong on purpose as
+`limit <= length + 1`, `check-c.sh` passed over every program here: its walk
+past the end, `shorter.kest`, counts to ten over five elements, which the
+question answers "no" to either way. A walk to exactly one past the end is
+the one the two tell apart -- the machine stops at index five, and the
+release engine with the question off by one reads the element after the last
+and answers 15.
+
+That walk is `onepast.kest` in `check-c.sh` now, among the programs that
+stop, and with the question off by one it is refused: "onepast.kest answers
+1 run by the machine and 15 compiled as C". With the question as written,
+both engines stop at index five with the same words.
+

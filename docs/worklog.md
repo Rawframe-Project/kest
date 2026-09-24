@@ -41838,3 +41838,14 @@ See D1214.
 four new programs run by the machine and under their mutations; and `make
 most`.
 
+## 2026-09-24, the guarded walk's question asked on its edge
+
+The one question a guarded walk asks -- is the array as long as the limit --
+written off by one passed `check-c.sh`, whose walk past the end is five
+elements past. `onepast.kest` walks one past, and refuses it.
+
+See D1215.
+
+**Runs:** the question off by one against `check-c.sh` before and after the
+program; the program run both ways as written; and `make most`.
+

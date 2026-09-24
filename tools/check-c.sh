@@ -1148,6 +1148,24 @@ fn main() -> i32 {
     return total % 251
 }
 PROGRAM
+# And the question D1189 asks where a walk begins, on its edge: a limit one
+# past the array's length. `shorter.kest` walks to ten over five, which a flag
+# off by one answers the same as the right one. See D1215.
+cat >"$work"/programs/onepast.kest <<'PROGRAM'
+module onepast
+
+fn main() -> i32 {
+    let xs: [i32] = array()
+    for i in 0..5 {
+        push(xs, i + 1)
+    }
+    let total = 0
+    for at in 0..6 {
+        total += xs[at]
+    }
+    return total % 251
+}
+PROGRAM
 cat >"$work"/programs/outside.kest <<'PROGRAM'
 module outside
 
@@ -1500,7 +1518,7 @@ done
 # traps on, or as one it quietly answers, would be a program that means
 # something else. Counted rather than assumed, because a program that stops is
 # one whose answer is the same either way for the wrong reason.
-for stopping in stopped shifted outside deep crossed runoff shrunk taken handed shorter swapped popped cleared throughvalue below; do
+for stopping in stopped shifted outside deep crossed runoff shrunk taken handed shorter swapped popped cleared throughvalue below onepast; do
     stops=$(./kest run "$work"/programs/$stopping.kest 2>/dev/null </dev/null
             echo $?)
     if [ "$stops" -eq 0 ]; then
