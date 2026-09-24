@@ -622,16 +622,18 @@ provide, and an engine has no standard input. What a module declares is what
 every host of it must have; what a host offers beyond that is between the host
 and the program that asks.
 
- `std.math` declares seven functions the host must
-provide: `Math.sqrt`,
-`Math.floor`, `Math.ceil`, `Math.sin`, `Math.cos`, `Math.pow` and
-`Math.atan2`. A program that imports it requires all seven, whether or not it
-reaches them, because the host may call any function in the program and nothing
-can be left out on the grounds that this program does not use it.
+ `std.math` declares three functions the host must
+provide: `Math.sqrt`, `Math.floor` and `Math.ceil`, each of which rounds the
+same way on every machine. A program that imports it requires all three,
+whether or not it reaches them, because the host may call any function in the
+program and nothing can be left out on the grounds that this program does not
+use it.
 
-Everything else in that module is written out of those: `tan` is a sine over a
-cosine, `asin` and `acos` are `atan2` and a square root, and `round`, `sign`
-and `lerp` are arithmetic.
+Everything else in that module is written in Kest: `sin`, `cos`, `atan2` and
+`pow` are fdlibm's algorithms carried over constant by constant, in
+`std.fdlibm`, `tan` is a
+sine over a cosine, `asin` and `acos` are `atan2` and a square root, and
+`round`, `sign` and `lerp` are arithmetic. See D1235.
 
 Everything there is written in both widths a program works in. A frame works in
 `f32` and a number is written in `f64`, and the `f32` one goes through the
@@ -2916,11 +2918,11 @@ company.** A foreign body is not here to be read, so what it declares is the
 only thing there is to go on — which is already how `no.alloc` works on one. An
 `extern` that writes `deterministic` may be called by a body that promises it;
 one that does not, may not. `std.math` declares `Math.sqrt`, `Math.floor` and
-`Math.ceil` that way and `Math.sin`, `Math.cos`, `Math.pow` and `Math.atan2`
-not, because IEEE 754 requires a square root to be correctly rounded and a
-floor and a ceiling to be exact, and requires nothing at all of a sine. So
-`math.sqrt` is `deterministic` and is not `no.host`, and a body that reaches it
-is the same.
+`Math.ceil` that way, because IEEE 754 requires a square root to be correctly
+rounded and a floor and a ceiling to be exact. It requires nothing at all of a
+sine, so `std.math` does not declare one: `math.sin` is written in Kest and is
+`deterministic` and `no.host` both, where `math.sqrt` is `deterministic` and is
+not `no.host`, and a body that reaches it is the same. See D1235.
 
 That is the one place the promise rests on somebody's word rather than on a
 proof, and it rests on it in the same direction `no.alloc` does. What a host
@@ -3489,9 +3491,9 @@ one way to do it: read a `u8`, widen it, and shift it into place.
 ```kest
 fn recordAt(raw: [u8], at: i32) -> i32 no.alloc {
     return i32(raw[at]) |
-        (i32(raw[at + 1]) << 8) |
-        (i32(raw[at + 2]) << 16) |
-        (i32(raw[at + 3]) << 24)
+        i32(raw[at + 1]) << 8 |
+        i32(raw[at + 2]) << 16 |
+        i32(raw[at + 3]) << 24
 }
 ```
 
@@ -4520,7 +4522,7 @@ keeping a replay or shipping a save writes down beside it. `kest --version`
 prints all four:
 
 ```
-kest 0.0.1, abi 4, json 4, profile kest-det 2
+kest 0.0.1, abi 4, json 4, profile kest-det 3
 ```
 
 The ABI number goes up when anything a host can see changes: arguments, what a
@@ -4593,7 +4595,7 @@ tool that matched it, which is what moved this number to 4: a declaration is
 written under its whole module now. See D1069. A tool reads the number first. A
 tool written for schema 4 reads schema 4 objects for the whole of 1.x.
 
-**A deterministic run.** `kest-det 2` is the profile `deterministic` is a
+**A deterministic run.** `kest-det 3` is the profile `deterministic` is a
 promise about. Its number goes up only when what a program can *observe* about
 arithmetic changes: which operations are in it, how each rounds, what is
 refused. A compiler that answers every one of them the same way is the same
@@ -4663,7 +4665,7 @@ entry src/main.kest
 source src
 tests tests
 kest 0.0.1
-profile kest-det 2
+profile kest-det 3
 ```
 
 `entry` is what `check`, `build` and `run` work on when no file is named, and
@@ -6023,11 +6025,11 @@ the compiler proves the way it proves the other two, and which a host asks about
 with `KEST_PROMISE_DETERMINISTIC` before it installs a step. The promise is what
 a reader and a host act on; the profile above is what it means.
 
-**What is rejected.** `Math.sin`, `Math.cos`, `Math.pow` and `Math.atan2` are
-whatever a host binds them to; for the command line that is the platform's libm,
-which is not required to round them correctly. Two platforms may differ in the
-last bit and then diverge. Clocks, files and the words a program was started with
-are outside it for the same reason: they are the host's.
+**What is rejected.** Clocks, files and the words a program was started with
+are outside it: they are the host's. `sin`, `cos`, `pow` and `atan2` were
+outside it too until profile 3, when they were the host's libm, which is not
+required to round them correctly; they are written in Kest now, out of
+additions, multiplications and divisions, and are inside it. See D1235.
 
 **Conformance.** `examples/determinism.kest` exercises every rule above —
 wrapping, narrowing, the crossings from float to whole number, how `f32` and
@@ -6073,12 +6075,14 @@ last one was not true until D1054, and a `deterministic` function that hashed
 a reference answered differently on the second machine of a run.
 
 **Is a simulation bitwise identical on two different platforms?** For everything
-above, yes. For four things, no, and they are all host doors: `Math.sin`,
-`Math.cos`, `Math.pow` and `Math.atan2` are whatever the host binds them to,
-which for the command line is the platform's libm, and libm is not required to
-round those correctly. Two platforms may differ in the last bit and then diverge.
-`Math.sqrt` does not have that problem — IEEE-754 requires it to be correctly
-rounded — and neither do `Math.floor` and `Math.ceil`.
+above, yes, and since profile 3 that includes `sin`, `cos`, `pow` and `atan2`:
+they are written in Kest, so each is the same sequence of additions,
+multiplications and divisions on every machine, and the two engines keep each
+of those a step of its own (D1226). Against glibc's they are within an ulp; a
+sine or a cosine past about 1.6 million is the same on every machine and
+further from the true one than that. `Math.sqrt` is correctly rounded by
+IEEE-754, and `Math.floor` and `Math.ceil` round nothing. `examples/determinism.kest`
+folds all of them and every platform's run is held to the same answer. See D1235.
 
 **The profile that rejects what does not qualify is written down and is a
 promise.** A step that has to be reproducible across machines writes
@@ -6636,7 +6640,7 @@ where it is written, and the compiler works out every constant, so what `emit`
 says is what `check` said and more. `asked` beside them is how many times the
 folder was asked and there was nothing to work out — a field of a local, a name that is not a constant. The compiler asks
 of anything that might be one, because asking is how it finds out, and the two
-numbers together say how much of that finding out answered: 120 of 579 for
+numbers together say how much of that finding out answered: 238 of 1106 for
 `examples/numbers.kest`. Arithmetic is asked about too, since D1160: `0 - 1` is
 a value a frame does not pay for, and a language with no negative literal
 writes it everywhere a `-1` goes.

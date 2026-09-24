@@ -42232,3 +42232,83 @@ than trusting the walk, which costs a comparison and saves proving the walk.
 The first four are the structural half and are checked where each instruction
 is read; the fifth is the half that makes a compiler bug harmless rather than
 merely unlikely.
+
+## D1235 — `sin`, `cos`, `pow` and `atan2` written in Kest, and inside the profile
+
+*measured*. `SECURITY.md` and the direction after D1233 make determinism half
+of what Kest is for, and the profile had a hole in the middle of it: `sin`,
+`cos`, `pow` and `atan2` were host doors bound to the platform's libm, which is
+not required to round them correctly, so a lockstep game could not turn
+anything and a `deterministic` function could not reach them at all. Every
+host binding its own libm cannot be made to agree; code written once in Kest
+can, because it is additions, multiplications and divisions, which IEEE-754
+rounds the same way everywhere, and the two engines keep each a step of its
+own (D1226).
+
+So they are written in Kest, in `std.fdlibm`, a module of their own in `f64`
+that `std.math` hands its functions on to in both widths -- a module written in
+two widths is held to both everywhere, and the pieces the algorithms are made
+of, the words of a double and the kernels, have one. They are fdlibm's
+algorithms as musl and FreeBSD carry them: for `sin` and `cos`, a reduction by quarter turns in three rounds
+of Cody and Waite and the two polynomials on the quarter turn; `atan` and its
+four reference points, and `atan2` around it; and `pow` as fdlibm writes it,
+the logarithm in two halves and the exponential after it. Every constant is
+the bits of the one in those sources, written `float(u64(0x...))` -- `bits`
+and `float` are worked out where a constant is written now, in the folder
+beside `len` and `hash`, since they round nothing -- and all sixty-seven were
+held to the decimals in the sources by a script before anything ran. Sun's
+notice is kept in the file. What was left out: musl's longer reduction for
+arguments past two to the twentieth quarter turns, so a sine past about 1.6
+million is the same on every machine and further from the true one than an
+ulp; and `pow`'s shortcut through `sqrt` for a power of a half, which would
+make it reach the host.
+
+Against glibc's, over 400,000 arguments from a thousandth to a million and
+every pair of 39 special ones -- signed noughts, infinities, what is not a
+number, negative numbers to whole powers -- none is more than an ulp away. The
+examples and the workloads answer what they answered. `examples/determinism.kest`
+has a part that folds the four at two thousand places and at the special ones,
+promising `deterministic` and `no.host`, which the compiler refused before;
+the machine, the C `kest emit --c` writes, that C built with `-mfma`,
+`KEST_NOOPT` and `KEST_PLAIN` all fold it to the same number, and every
+platform's run is held to it by the `agree` job. Three breaks were taken to
+it: a middle bit of one coefficient, the third round of the reduction left
+out, and a negation written as a subtraction from nought, which loses the sign
+of a nought; each makes the example answer another number and refuse.
+
+`asin` and `acos` ask `fdlibm.atan2` directly, in both widths: through
+`math.atan2`, `examples/physics.kest` was a chain of calls one deeper than any
+it ran, where `asin(2.0)` answers nothing before reaching it, and the gate
+holds what a program is told to find to what it uses (D813).
+
+The profile is `kest-det 3`, because what a program can observe about
+arithmetic changed: four functions are in it. `std.math` declares three doors,
+`Math.sqrt`, `Math.floor` and `Math.ceil`, and the command line and the host
+the C backend writes no longer bind the other four. `tan`, `asin` and `acos`
+are built out of them and are `deterministic` too.
+
+What it costs, a million `sin` and `cos` each: run by the machine, 3.29 G
+instructions against 1.23 G, about a thousand more a call, since the machine
+runs the algorithm where libm ran it native; compiled by the release engine,
+177 M cycles against 246 M, because it is compiled beside the program where it
+was a crossing into the host.
+
+## D1236 — The formatter asks the parser how tightly an operator holds
+
+*found*. Formatting `std.math` for D1235, `kest fmt` refused it as a fault in
+the formatter: it wrote `((high >> 1) | 0x20000000) + 0x00080000 + (k << 18)`
+as `high >> 1 | 0x20000000 + 0x00080000 + k << 18`, which is another program,
+and its own reading back caught it. The formatter kept a list of how tightly
+each operator holds beside the parser's, and put `|`, `^`, `&` and the shifts
+with `*` above `+`, where the parser puts them below it; so a bracket that
+kept a bitwise operator under `+` looked like one that changed nothing, and
+was dropped. `(a | b) + c` was refused the same way. Nothing was ever written
+wrong -- the reading back refuses what does not parse to the same program --
+but a valid program could not be formatted.
+
+The parser's list is `kest_binary_precedence` now and the formatter asks it:
+one list. Four files the old list formatted lose brackets that never changed
+anything -- `x ^ (x << 13)` is `x ^ x << 13` -- and each parses to the same
+tree before and after. `lib/std/math.kest` is the regression: the gate holds
+every file of the library to the one form, and the old formatter cannot write
+this one.

@@ -5,4 +5,4 @@ source src
 tests tests
 
 kest 0.0.1
-profile kest-det 2
+profile kest-det 3

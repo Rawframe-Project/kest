@@ -427,6 +427,27 @@ indirect-branch tracking, since a link marks only what every object carries.
 **What a host has to do:** nothing on Linux; a host that needs the other mark
 builds `vm.c` without that flag. See D1191.
 
+**`sin`, `cos`, `pow` and `atan2` are in the deterministic profile, and the
+profile is `kest-det 3`.** They are written in Kest now, fdlibm's algorithms
+constant by constant in a new module `std.fdlibm`, where they were host doors bound to the platform's libm;
+a `deterministic` function may call them, and they answer the same bits on
+every machine and in both engines, within an ulp of glibc's. `std.math`
+declares `Math.sqrt`, `Math.floor` and `Math.ceil` and nothing else. **What a
+program has to do:** nothing; a last bit may differ from what the platform's
+libm gave, which is the point. **What a host has to do:** nothing. A host that
+binds `Math.sin`, `Math.cos`, `Math.pow` or `Math.atan2` binds a name nothing
+declares, which costs nothing; a host keeping replays writes `kest-det 3` beside
+new ones, because a run under profile 2 and one under 3 are two runs. A
+constant may be written as its bits, `float(u64(0x...))`, since `bits` and
+`float` are worked out where they are written. See D1235.
+
+**`kest fmt` keeps the brackets a bitwise operator needs.** It had its own list
+of how tightly each operator holds, which put `|`, `^`, `&` and the shifts
+above `+`, and it refused to format `(a | b) + c` rather than write something
+else. It asks the parser's list now. **What a program has to do:** nothing; a
+file formatted before may lose brackets that never changed anything, as
+`x ^ (x << 13)` does. See D1236.
+
 ## 1.0.0 — 2026-09-18 (withdrawn 2026-09-19)
 
 The first version with a number that promises something. What 1.x promises is

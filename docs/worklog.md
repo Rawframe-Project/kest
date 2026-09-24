@@ -42095,3 +42095,20 @@ See D1234.
 
 **Runs:** the machine's `KEST_CHECKED` guards and `kest_module_prove` read
 line by line; `make most`.
+
+## 2026-09-24, the trigonometry in the profile, and the formatter's precedence
+
+`sin`, `cos`, `pow` and `atan2` are written in Kest, fdlibm's algorithms with
+every constant as its bits, within an ulp of glibc's and the same bits on
+every machine and in both engines; the profile is `kest-det 3`. Writing them
+found the formatter keeping its own list of operator precedence, wrong for the
+bitwise operators; it asks the parser's now.
+
+See D1235 and D1236.
+
+**Runs:** the sixty-seven constants against the sources' decimals; 400,000
+arguments and every pair of 39 special ones against glibc; the determinism
+example through the machine, the C, the C built with `-mfma`, `KEST_NOOPT` and
+`KEST_PLAIN`; three breaks against it; every example and workload against the
+commit; a million `sin` and `cos` in both engines; four reformatted files'
+trees before and after; `make most`.

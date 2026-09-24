@@ -1,5 +1,7 @@
 module std.math
 
+import std.fdlibm
+
 // Two functions may share a name when they take different things, so there is
 // one `min` rather than a `minInt` and a `minFloat`. Which is meant is settled
 // by what is passed, and nothing converts on its own, so `min(1, 2.0)` is not
@@ -7,20 +9,13 @@ module std.math
 //
 // What cannot be written in Kest is declared instead. A host that a program
 // using this module runs against has to provide these, and a program that
-// never reaches one never asks for it.
+// never reaches one never asks for it. All three are exact on every machine:
+// IEEE-754 rounds a square root correctly, and a floor and a ceiling round
+// nothing.
 
 extern fn Math.sqrt(value: f64) -> f64 no.alloc deterministic
 extern fn Math.floor(value: f64) -> f64 no.alloc deterministic
 extern fn Math.ceil(value: f64) -> f64 no.alloc deterministic
-extern fn Math.sin(value: f64) -> f64 no.alloc
-extern fn Math.cos(value: f64) -> f64 no.alloc
-extern fn Math.pow(base: f64, exponent: f64) -> f64 no.alloc
-
-// Where two numbers point, in radians from the positive `x` axis and between
-// -pi and pi. It is the one thing here that cannot be built out of the others:
-// a program turning towards something has a difference and wants an angle, and
-// working that out from `sin` and `cos` is working backwards.
-extern fn Math.atan2(y: f64, x: f64) -> f64 no.alloc
 
 fn min(a: i32, b: i32) -> i32 no.alloc no.host deterministic {
     return if a < b -> a else -> b
@@ -148,80 +143,94 @@ fn ceil(value: f32) -> f32 no.alloc deterministic {
     return f32(Math.ceil(f64(value)))
 }
 
-fn sin(value: f64) -> f64 no.alloc {
-    return Math.sin(value)
+// The sine, the cosine, where two numbers point and one number to the power of
+// another are `std.fdlibm`'s, written in Kest and inside the deterministic
+// profile, in both widths here. See D1235.
+fn sin(value: f64) -> f64 no.alloc no.host deterministic {
+    return fdlibm.sin(value)
 }
 
-fn sin(value: f32) -> f32 no.alloc {
-    return f32(Math.sin(f64(value)))
+fn cos(value: f64) -> f64 no.alloc no.host deterministic {
+    return fdlibm.cos(value)
 }
 
-fn cos(value: f64) -> f64 no.alloc {
-    return Math.cos(value)
+fn pow(base: f64, exponent: f64) -> f64 no.alloc no.host deterministic {
+    return fdlibm.pow(base, exponent)
 }
 
-fn cos(value: f32) -> f32 no.alloc {
-    return f32(Math.cos(f64(value)))
+// Where two numbers point, in radians from the positive `x` axis and between
+// -pi and pi. A program turning towards something has a difference and wants
+// an angle, and working that out from `sin` and `cos` is working backwards.
+fn atan2(y: f64, x: f64) -> f64 no.alloc no.host deterministic {
+    return fdlibm.atan2(y, x)
 }
 
-fn pow(base: f64, exponent: f64) -> f64 no.alloc {
-    return Math.pow(base, exponent)
+// The angle whose tangent is `value`, between -pi/2 and pi/2.
+fn atan(value: f64) -> f64 no.alloc no.host deterministic {
+    return fdlibm.atan(value)
 }
 
-fn pow(base: f32, exponent: f32) -> f32 no.alloc {
-    return f32(Math.pow(f64(base), f64(exponent)))
+fn atan(value: f32) -> f32 no.alloc no.host deterministic {
+    return f32(fdlibm.atan(f64(value)))
 }
 
-fn atan2(y: f64, x: f64) -> f64 no.alloc {
-    return Math.atan2(y, x)
+fn sin(value: f32) -> f32 no.alloc no.host deterministic {
+    return f32(sin(f64(value)))
 }
 
-fn atan2(y: f32, x: f32) -> f32 no.alloc {
-    return f32(Math.atan2(f64(y), f64(x)))
+fn cos(value: f32) -> f32 no.alloc no.host deterministic {
+    return f32(cos(f64(value)))
 }
 
-// Written here rather than declared, because they are what `atan2` and the
-// curves already asked for come to. A tangent is a sine over a cosine, and an
-// angle whose sine is `value` is where `value` and the other side point.
-fn tan(value: f64) -> f64 no.alloc {
-    return Math.sin(value) / Math.cos(value)
+fn pow(base: f32, exponent: f32) -> f32 no.alloc no.host deterministic {
+    return f32(pow(f64(base), f64(exponent)))
 }
 
-fn tan(value: f32) -> f32 no.alloc {
-    return f32(Math.sin(f64(value)) / Math.cos(f64(value)))
+fn atan2(y: f32, x: f32) -> f32 no.alloc no.host deterministic {
+    return f32(atan2(f64(y), f64(x)))
+}
+
+// A tangent is a sine over a cosine.
+fn tan(value: f64) -> f64 no.alloc no.host deterministic {
+    return sin(value) / cos(value)
+}
+
+fn tan(value: f32) -> f32 no.alloc no.host deterministic {
+    return f32(sin(f64(value)) / cos(f64(value)))
 }
 
 // Nothing outside -1 to 1 has an angle, and asking for one is a question with
 // no answer rather than a number to make up (D013).
-fn asin(value: f64) -> f64? no.alloc {
+fn asin(value: f64) -> f64? no.alloc deterministic {
     if value < 0.0 - 1.0 || value > 1.0 {
         return none
     }
-    return Math.atan2(value, Math.sqrt(1.0 - value * value))
+    return fdlibm.atan2(value, Math.sqrt(1.0 - value * value))
 }
 
-fn acos(value: f64) -> f64? no.alloc {
+fn acos(value: f64) -> f64? no.alloc deterministic {
     if value < 0.0 - 1.0 || value > 1.0 {
         return none
     }
-    return Math.atan2(Math.sqrt(1.0 - value * value), value)
+    return fdlibm.atan2(Math.sqrt(1.0 - value * value), value)
 }
 
-// And in the width a frame works in, through the `f64` ones, which is what
-// every other function here does. Nothing is here that gives nothing back
-// twice: what is outside -1 to 1 in one width is outside it in the other.
-fn asin(value: f32) -> f32? no.alloc {
-    if let angle = asin(f64(value)) {
-        return f32(angle)
+// And in the width a frame works in, widened and asked of the same
+// `atan2`. What is outside -1 to 1 in one width is outside it in the other.
+fn asin(value: f32) -> f32? no.alloc deterministic {
+    if value < 0.0 - 1.0 || value > 1.0 {
+        return none
     }
-    return none
+    let wide = f64(value)
+    return f32(fdlibm.atan2(wide, Math.sqrt(1.0 - wide * wide)))
 }
 
-fn acos(value: f32) -> f32? no.alloc {
-    if let angle = acos(f64(value)) {
-        return f32(angle)
+fn acos(value: f32) -> f32? no.alloc deterministic {
+    if value < 0.0 - 1.0 || value > 1.0 {
+        return none
     }
-    return none
+    let wide = f64(value)
+    return f32(fdlibm.atan2(Math.sqrt(1.0 - wide * wide), wide))
 }
 
 // The nearest whole number, with a half going up: `round(2.5)` is 3 and

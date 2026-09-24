@@ -10,4 +10,10 @@
 bool kest_parse(KestArena *arena, const KestSource *source, KestDiags *diags,
                 KestUnit *unit);
 
+// How tightly a binary operator holds its operands, higher holding tighter,
+// and nought for what is not one. The formatter asks this rather than keeping
+// a list of its own, because a formatter that thinks `|` holds tighter than
+// `+` drops the brackets that keep `(a | b) + c` what it says. See D1236.
+int kest_binary_precedence(KestTokenKind kind);
+
 #endif

@@ -536,34 +536,6 @@ static void math_ceil(KestValue *frame, KestRuntime *runtime, void *context) {
     frame[0].real = ceil(frame[0].real);
 }
 
-static void math_sin(KestValue *frame, KestRuntime *runtime, void *context) {
-    (void)runtime;
-    (void)context;
-    frame[0].real = sin(frame[0].real);
-}
-
-static void math_cos(KestValue *frame, KestRuntime *runtime, void *context) {
-    (void)runtime;
-    (void)context;
-    frame[0].real = cos(frame[0].real);
-}
-
-static void math_pow(KestValue *frame, KestRuntime *runtime, void *context) {
-    (void)runtime;
-    (void)context;
-    frame[0].real = pow(frame[0].real, frame[1].real);
-}
-
-// The angle of a direction, which is the one thing a program cannot build out
-// of the others: everything else `std.math` asks a host for is a rounding or a
-// curve it could approximate, and this is the one that turns two numbers into
-// where they point.
-static void math_atan2(KestValue *frame, KestRuntime *runtime, void *context) {
-    (void)runtime;
-    (void)context;
-    frame[0].real = atan2(frame[0].real, frame[1].real);
-}
-
 // Everything on the standard input, handed over as text. This is the command
 // line being a host: `std.io` does not declare it, because a declaration there
 // is a thing every host of every program that imports it has to provide, and
@@ -816,10 +788,6 @@ static KestHost *make_host(FILE *output, FILE *input) {
         !kest_host_bind(host, "Math.sqrt", math_sqrt, NULL) ||
         !kest_host_bind(host, "Math.floor", math_floor, NULL) ||
         !kest_host_bind(host, "Math.ceil", math_ceil, NULL) ||
-        !kest_host_bind(host, "Math.sin", math_sin, NULL) ||
-        !kest_host_bind(host, "Math.cos", math_cos, NULL) ||
-        !kest_host_bind(host, "Math.pow", math_pow, NULL) ||
-        !kest_host_bind(host, "Math.atan2", math_atan2, NULL) ||
         !kest_host_bind(host, "Engine.decide", engine_decide, NULL) ||
         !kest_host_bind(host, "Engine.name", engine_name, NULL) ||
         !kest_host_bind(host, "Engine.rank", engine_rank, NULL) ||

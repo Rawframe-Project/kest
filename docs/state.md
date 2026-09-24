@@ -193,6 +193,15 @@ first three are, untrusted code belongs in another process or in Wasm (D1233).
 What the machine trusts and the verifier does not yet prove is listed in
 D1234, and is what the new verifier is built against.
 
+## Determinism
+
+`sin`, `cos`, `pow` and `atan2` are written in Kest and inside the profile,
+which is `kest-det 3`: the same bits on every machine and in both engines,
+within an ulp of glibc's, held by `examples/determinism.kest` on every
+platform. In the interpreter a call costs about a thousand instructions more
+than libm's did; in a release build they are faster than the host door was
+(D1235). `kest fmt` asks the parser how tightly an operator holds (D1236).
+
 How it got there is the decisions, and the ones that moved it most: the
 fused instructions (D1155 to D1178), bodies carried into their callers
 (D1156, D1175), a value moved a run of pieces at a time (D1177), threaded

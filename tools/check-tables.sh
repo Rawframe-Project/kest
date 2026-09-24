@@ -2481,12 +2481,10 @@ SAME_SHAPE = {
         "that is not there",
     frozenset(("kest_build_read_bytes", "kest_build_read_mark")):
         "the same, for the two things a host asks about a file it read",
-    frozenset(("math_atan2", "math_pow")):
-        "two of the library's crossings that take two numbers, each handing "
-        "them to a different function of the C library",
-    frozenset(("math_ceil", "math_cos", "math_floor", "math_sin",
-               "math_sqrt")):
-        "and five that take one, the same way",
+    frozenset(("math_ceil", "math_floor", "math_sqrt")):
+        "the library's three crossings, each taking one number and handing "
+        "it to a different function of the C library: the three `std.math` "
+        "declares, because the rest of it is written in Kest (D1235)",
     frozenset(("place_room", "type_index_room")):
         "two of the three name indexes asking for room the same way: a table "
         "twice as big when it is half full, and every name put in again. They "

@@ -14721,8 +14721,8 @@ fn main() -> i32 {
         # held and is nothing.
         "what": "a group written down as one shape and not",
         "file": "tools/check-tables.sh",
-        "from": """    frozenset(("math_atan2", "math_pow")):""",
-        "to": """    frozenset(("math_atan2", "math_powered")):""",
+        "from": """    frozenset(("math_ceil", "math_floor", "math_sqrt")):""",
+        "to": """    frozenset(("math_ceil", "math_floor", "math_rooted")):""",
         "make": [],
         "tool": "tools/check-tables.sh",
         "arguments": [],
@@ -15896,7 +15896,7 @@ fn main() -> i32 {
         # three.
         "what": "a reference that prints another number than a run",
         "file": "docs/language.md",
-        "from": """kest 0.0.1, abi 4, json 4, profile kest-det 2""",
+        "from": """kest 0.0.1, abi 4, json 4, profile kest-det 3""",
         "to": """kest 0.0.1, abi 1, json 1, profile kest-det 1""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",

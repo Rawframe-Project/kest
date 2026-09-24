@@ -235,6 +235,20 @@ fn main() -> i32 {
     } else {
         return 8
     }
+    // And the other two ways an angle comes back: where a cosine points, and
+    // where a slope does, in both widths. A turn of a quarter is `atan(1.0)`
+    // times two, which is the same number `acos(0.0)` is.
+    if let square = math.acos(f64(0.0)) {
+        if math.abs(square - math.atan(f64(1.0)) * 2.0) > 0.0000001 {
+            return 7
+        }
+    } else {
+        return 8
+    }
+    let slope: f32 = 1.0
+    if math.abs(math.atan(slope) * 4.0 - 3.1415927) > 0.0001 {
+        return 7
+    }
     // Nothing outside -1 to 1 has an angle, which is a question with no
     // answer rather than a number made up to fill the gap.
     if math.asin(2.0) != none {

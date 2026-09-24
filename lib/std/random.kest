@@ -28,9 +28,9 @@ fn from(seed: u64) -> Source no.alloc no.host deterministic {
 
 fn next(s: Source) -> Source no.alloc no.host deterministic {
     let x = s.state
-    x = x ^ (x << 13)
-    x = x ^ (x >> 7)
-    x = x ^ (x << 17)
+    x = x ^ x << 13
+    x = x ^ x >> 7
+    x = x ^ x << 17
     return Source(x)
 }
 

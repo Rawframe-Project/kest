@@ -907,6 +907,42 @@ static bool fold(KestProgram *program, const KestExpr *expr, KestValue *out,
                 out->integer = (int64_t)kest_hash_value(what, held);
                 return true;
             }
+            // A float as its bits and the other way, which round nothing and
+            // are the same bits on every machine, so a constant may be written
+            // as the bits it is: a coefficient taken from somebody else's
+            // table is those bits and not whatever a decimal of it parses to.
+            // Each does what the machine's instruction does, a `u32` and an
+            // `f32` through a `float` the way `bits.f32` goes. See D1235.
+            if ((kest_word_same("float", called, length) ||
+                 kest_word_same("bits", called, length)) &&
+                expr->call.arg_count == 1) {
+                const KestType *what = expr->call.args[0]->type;
+                KestValue held = {0};
+                if (what == NULL ||
+                    !fold(program, expr->call.args[0], &held, depth + 1,
+                          why)) {
+                    return false;
+                }
+                bool narrow = what->slots == 1 &&
+                              (kest_scalar_of(what) == KEST_L_U32 ||
+                               kest_scalar_of(what) == KEST_L_F32);
+                if (!narrow) {
+                    *out = held;
+                    return true;
+                }
+                if (kest_word_same("float", called, length)) {
+                    uint32_t word = (uint32_t)held.integer;
+                    float single;
+                    memcpy(&single, &word, sizeof single);
+                    out->real = single;
+                } else {
+                    float single = (float)held.real;
+                    uint32_t word;
+                    memcpy(&word, &single, sizeof word);
+                    out->integer = word;
+                }
+                return true;
+            }
         }
         if (to == NULL || expr->call.arg_count != 1 ||
             (to->tag != KEST_T_INT && to->tag != KEST_T_FLOAT)) {

@@ -408,9 +408,9 @@ fn copied(raw: [u8]) -> text {
 // computer.
 fn recordAt(raw: [u8], at: i32) -> i32 no.alloc {
     return i32(raw[at]) |
-        (i32(raw[at + 1]) << 8) |
-        (i32(raw[at + 2]) << 16) |
-        (i32(raw[at + 3]) << 24)
+        i32(raw[at + 1]) << 8 |
+        i32(raw[at + 2]) << 16 |
+        i32(raw[at + 3]) << 24
 }
 
 fn totalOf(raw: [u8]) -> i32 no.alloc {

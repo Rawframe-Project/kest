@@ -129,9 +129,9 @@ fn take(r: Reader, many: i32) -> i32 no.alloc no.host deterministic {
 // The four bytes at `at`, low first, as one number.
 fn word(from: [u8], at: i32) -> u32 no.alloc no.host deterministic {
     return u32(from[at]) |
-        (u32(from[at + 1]) << u32(8)) |
-        (u32(from[at + 2]) << u32(16)) |
-        (u32(from[at + 3]) << u32(24))
+        u32(from[at + 1]) << u32(8) |
+        u32(from[at + 2]) << u32(16) |
+        u32(from[at + 3]) << u32(24)
 }
 
 fn readU8(r: Reader) -> u8 no.alloc no.host deterministic {
@@ -163,7 +163,7 @@ fn readU64(r: Reader) -> u64 no.alloc no.host deterministic {
     if at < 0 {
         return u64(0)
     }
-    return u64(word(r.bytes, at)) | (u64(word(r.bytes, at + 4)) << u64(32))
+    return u64(word(r.bytes, at)) | u64(word(r.bytes, at + 4)) << u64(32)
 }
 
 fn readI64(r: Reader) -> i64 no.alloc no.host deterministic {

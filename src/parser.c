@@ -1505,7 +1505,7 @@ static KestExpr *parse_unary(Parser *parser) {
 // place C is known to be wrong: `flags & MASK == 0` reads as one thing and
 // means another there. Shifts keep C's place, above the bitwise operators and
 // below the arithmetic, because `1 << n + 1` has never been the trap.
-static int binary_precedence(KestTokenKind kind) {
+int kest_binary_precedence(KestTokenKind kind) {
     switch (kind) {
     case KEST_TOK_PIPEPIPE:
         return 1;
@@ -1547,7 +1547,7 @@ static KestExpr *parse_binary(Parser *parser, int minimum) {
     }
 
     while (true) {
-        int precedence = binary_precedence(peek(parser).kind);
+        int precedence = kest_binary_precedence(peek(parser).kind);
         if (precedence == 0 || precedence < minimum) {
             return left;
         }

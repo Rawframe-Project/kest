@@ -319,26 +319,10 @@ static void print_type(Printer *printer, const KestTypeRef *type) {
     }
 }
 
+// The parser's, so the two cannot disagree about where brackets are needed.
+// See D1236.
 static int precedence_of(KestTokenKind op) {
-    switch (op) {
-    case KEST_TOK_PIPEPIPE:
-        return 1;
-    case KEST_TOK_AMPAMP:
-        return 2;
-    case KEST_TOK_EQEQ:
-    case KEST_TOK_BANGEQ:
-        return 3;
-    case KEST_TOK_LT:
-    case KEST_TOK_LTEQ:
-    case KEST_TOK_GT:
-    case KEST_TOK_GTEQ:
-        return 4;
-    case KEST_TOK_PLUS:
-    case KEST_TOK_MINUS:
-        return 5;
-    default:
-        return 6;
-    }
+    return kest_binary_precedence(op);
 }
 
 static void print_operator(Printer *printer, KestTokenKind op) {

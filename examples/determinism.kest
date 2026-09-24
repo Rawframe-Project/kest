@@ -16,12 +16,12 @@ import std.table
 // disagrees about at least one, and the parts are printed so a reader can see
 // which.
 //
-// What it does not cover is what the profile does not promise: `Math.sin`,
-// `cos`, `pow` and `atan2` are the host's and are outside it. What it does
-// cover, since D1060, is the four that are inside it and are also the host's:
-// `sqrt`, `floor`, `ceil` and the `round` built out of `floor`. See D941.
+// It covers, since D1060, the three that are inside the profile and are the
+// host's -- `sqrt`, `floor`, `ceil` -- and the `round` built out of `floor`
+// (D941); and, since D1235, `sin`, `cos`, `atan2` and `pow`, which are written
+// in Kest now rather than being the host's libm.
 
-const ANSWER: u64 = 12017043739776717972
+const ANSWER: u64 = 7524025571178616830
 
 struct Piece {
     name: text
@@ -284,6 +284,48 @@ fn rounded() -> u64 no.alloc deterministic {
     return mark
 }
 
+// The sine, the cosine, where two numbers point and one number to the power of
+// another, at two thousand places, as the bits they are. They were the host's
+// libm until D1235, which was not required to round them correctly, and a
+// function promising `deterministic` could not reach them at all.
+fn turned() -> u64 no.alloc no.host deterministic {
+    let mark = hash.start
+    let at: f64 = 0.0 - 50.0
+    for i in 0..2000 {
+        mark = hash.join(mark, bits(math.sin(at)))
+        mark = hash.join(mark, bits(math.cos(at)))
+        mark = hash.join(mark, bits(math.atan2(at, 3.0 - at * 0.5)))
+        mark = hash.join(mark, bits(math.pow(math.abs(at) + 0.25, at * 0.1)))
+        at = at + 0.0503
+    }
+    // And where the answer is a rule rather than a curve: a nought with a
+    // sign on it, which each of the four has to keep or turn the right way,
+    // infinity, what is not a number, and a negative number to a whole power,
+    // odd and even.
+    let big: f64 = 1.0e300
+    let infinite = big * big
+    let nought: f64 = 0.0
+    let edges: [f64; 8] = [
+        nought,
+        nought * (0.0 - 1.0),
+        infinite,
+        0.0 - infinite,
+        infinite - infinite,
+        0.0 - 2.0,
+        3.0,
+        0.5
+    ]
+    for x in edges {
+        mark = hash.join(mark, bits(math.sin(x)))
+        mark = hash.join(mark, bits(math.cos(x)))
+        for y in edges {
+            mark = hash.join(mark, bits(math.atan2(x, y)))
+            mark = hash.join(mark, bits(math.pow(x, y)))
+        }
+    }
+    return mark
+}
+
 fn main() -> i32 {
     let parts: [Piece] = array()
     push(parts, Piece("wrapping", wrapping()))
@@ -291,6 +333,7 @@ fn main() -> i32 {
     push(parts, Piece("crossings", crossings()))
     push(parts, Piece("rounding", rounding()))
     push(parts, Piece("rounded", rounded()))
+    push(parts, Piece("turned", turned()))
     push(parts, Piece("edges", edges()))
     push(parts, Piece("ordering", ordering()))
     push(parts, Piece("hashing", hashing()))
