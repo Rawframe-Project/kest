@@ -41828,3 +41828,23 @@ line said something no run had said. It says what happened now. The rule
 D1149 sets is that a change is done once CI says the whole gate passed on it,
 and the line recording that is only written from a run that answered.
 
+## D1223 — A reused slot split between the frame and a local, measured and not kept
+
+*measured*. D1220 named one half of what is left between compiled `rules` and
+daslang's AOT as a slot kept in the frame for the whole body because it held
+a handle once: `ready` in `decide` is slot 13, which the bag's array had in
+the walk before it, so every `ready += 1` in the cooldown loop was a load and
+a store of memory. Built: a slot the compiler reused, every access to it one
+slot wide and typed, not a parameter, not named by an operation's numbers,
+kept its handle in the frame and its number in a local of its own -- what the
+frame still held after the handle's scope is kept alive a little longer by a
+collector that reads the stack conservatively, which it does to anything
+above what was written. `check-c.sh` held every program both ways and under
+the sanitisers. It changed four lines of `decide` and nothing else in the
+file, and took 2% of the instructions: 509.7 M against 499.3 M. It took no
+cycles, best of eleven turn about -- 176.1 M against 173.3 M -- and neither
+did the same four lines changed by hand, whose 3.4% in an earlier sitting did
+not come back in this one. The load and the store were forwarded and cost
+nearly nothing; the instructions were never the time. Not kept, and the half
+of D1220's sentence that named it is taken out of `state.md`.
+

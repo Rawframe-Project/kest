@@ -189,9 +189,9 @@ What is open, measured and named:
 
 - **Compiled `rules`, 1.17 times daslang's AOT.** What is left is the shape:
   a struct read out of an array, handed to a body and written back is copied
-  where daslang's changes it in place, and a slot that held a handle once is
-  kept in the frame for the collector for the whole body, so an integer later
-  kept in it is a load and a store where it could be a register (D1203).
+  where daslang's changes it in place (D1203). A slot kept in the frame
+  because it held a handle once was measured as the other half and is not:
+  2% of the instructions and no cycles (D1223).
 - **A small constant walk is not written out.** The colony's search would be
   5.7% fewer cycles interpreted and 1.7% compiled; it needs three passes this
   compiler has not got (D1209).

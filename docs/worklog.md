@@ -41924,3 +41924,15 @@ See D1222.
 
 **Runs:** `gh run view` on the cancelled run.
 
+## 2026-09-24, a reused slot split, measured and not kept
+
+A slot held once as a handle and later as a number, split so the number is a
+local: 2% fewer instructions on compiled `rules` and no fewer cycles, and the
+same with the four lines changed by hand. Not kept; the open item in
+`state.md` no longer names it.
+
+See D1223.
+
+**Runs:** the split and the hand edit against the commit, best of eleven turn
+about, twice; `check-c.sh` over the tree with the split; `make most`.
+
