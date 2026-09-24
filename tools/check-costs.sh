@@ -1257,7 +1257,7 @@ def a_step_of(middle):
 # The machine's own list of what it can do, read where it is written: how much
 # of it a frame reaches is a fraction and needs both halves.
 instruction_names = some("the machine's instructions", re.findall(
-    r'\{"((?:[^"\\]|\\.)*)",\s*\w+\}',
+    r'\{"((?:[^"\\]|\\.)*)",\s*\w+(?:,\s*\{[^}]*\})?\}',
     re.search(r'INSTRUCTIONS\[\] = \{(.*?)\n\};',
               open(os.path.join('src', 'value.c')).read(), re.S).group(1)))
 

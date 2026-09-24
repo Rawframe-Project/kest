@@ -517,7 +517,7 @@ for name, (path, what) in sorted(declared_names.items()):
 table = re.search(r'INSTRUCTIONS\[\] = \{(.*?)\n\};',
                   open(os.path.join('src', 'value.c')).read(), re.S)
 instructions = some("the machine's instructions", [] if table is None else [
-    m[0] for m in re.findall(r'\{"((?:[^"\\]|\\.)*)",\s*(\w+)\}',
+    m[0] for m in re.findall(r'\{"((?:[^"\\]|\\.)*)",\s*(\w+)(?:,\s*\{[^}]*\})?\}',
                              table.group(1))])
 #
 # And run, which is the other half of the same sentence and was a claim rather

@@ -6025,6 +6025,13 @@ the compiler proves the way it proves the other two, and which a host asks about
 with `KEST_PROMISE_DETERMINISTIC` before it installs a step. The promise is what
 a reader and a host act on; the profile above is what it means.
 
+**What is not a number is one value.** `bits` answers `0x7FF8000000000000`
+for every value an `f64` holds that is not a number, and `0x7FC00000` for one
+in an `f32`, and `hash` hashes each as that: the sign and the payload of one
+are what the processor made -- x86 and arm64 make `inf - inf` with different
+signs -- and a program that could read them would answer differently on the
+two. See D1238.
+
 **What is rejected.** Clocks, files and the words a program was started with
 are outside it: they are the host's. `sin`, `cos`, `pow` and `atan2` were
 outside it too until profile 3, when they were the host's libm, which is not

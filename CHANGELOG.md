@@ -441,6 +441,14 @@ new ones, because a run under profile 2 and one under 3 are two runs. A
 constant may be written as its bits, `float(u64(0x...))`, since `bits` and
 `float` are worked out where they are written. See D1235.
 
+**What is not a number is one value as bits and as a hash.** `bits` of any
+value that is not a number is `0x7FF8000000000000`, or `0x7FC00000` for an
+`f32`, and `hash` hashes it as that, where each was whatever sign and payload
+the processor made. **What a program has to do:** nothing, unless it read the
+sign of a NaN through `bits`, which answered differently on x86 and arm64. A
+save `std.bytes` wrote with a NaN in it is the same on every machine now. See
+D1238.
+
 **`kest fmt` keeps the brackets a bitwise operator needs.** It had its own list
 of how tightly each operator holds, which put `|`, `^`, `&` and the shifts
 above `+`, and it refused to format `(a | b) + c` rather than write something

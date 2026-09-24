@@ -192,6 +192,9 @@ machine running it -- and a table of how far each promise is kept. Until the
 first three are, untrusted code belongs in another process or in Wasm (D1233).
 What the machine trusts and the verifier does not yet prove is listed in
 D1234, and is what the new verifier is built against.
+The verifier holds every slot, constant, function, door and layout an
+instruction names and every jump before a chunk runs (D1237); the operand
+stack's depth and what each slot holds are what is left of D1234's table.
 
 ## Determinism
 
@@ -201,6 +204,8 @@ within an ulp of glibc's, held by `examples/determinism.kest` on every
 platform. In the interpreter a call costs about a thousand instructions more
 than libm's did; in a release build they are faster than the host door was
 (D1235). `kest fmt` asks the parser how tightly an operator holds (D1236).
+What is not a number is one value as bits and as a hash, which x86 and arm64
+had told apart since `bits` was added (D1238).
 
 How it got there is the decisions, and the ones that moved it most: the
 fused instructions (D1155 to D1178), bodies carried into their callers

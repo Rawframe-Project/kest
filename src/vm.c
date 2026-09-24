@@ -3772,7 +3772,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         [KEST_OP_I2F] = &&thread_KEST_OP_I2F,
         [KEST_OP_U2F] = &&thread_KEST_OP_U2F,
         [KEST_OP_TO_F32] = &&thread_KEST_OP_TO_F32,
-        [KEST_OP_F32_BITS] = &&thread_KEST_OP_F32_BITS,
+        [KEST_OP_FLOAT_BITS] = &&thread_KEST_OP_FLOAT_BITS,
         [KEST_OP_BITS_F32] = &&thread_KEST_OP_BITS_F32,
         [KEST_OP_F2I] = &&thread_KEST_OP_F2I,
         [KEST_OP_NARROW] = &&thread_KEST_OP_NARROW,
@@ -5030,6 +5030,11 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 // Nought and minus nought are one value to `==`, so they are
                 // one value here.
                 bits = 0;
+            } else if (instruction[0] == KEST_OP_HASH_F &&
+                       top[-1].real != top[-1].real) {
+                // And every value that is not a number is one value, for the
+                // reason `float.bits` gives. See D1238.
+                bits = UINT64_C(0x7FF8000000000000);
             }
             top[-1].integer = (int64_t)kest_mix(bits);
             NEXT;
@@ -5438,11 +5443,23 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_TO_F32: THREADED(KEST_OP_TO_F32)
             top[-1].real = (double)(float)top[-1].real;
             NEXT;
-        case KEST_OP_F32_BITS: THREADED(KEST_OP_F32_BITS) {
-            float narrow = (float)top[-1].real;
-            uint32_t bits;
-            memcpy(&bits, &narrow, sizeof bits);
-            top[-1].integer = bits;
+        // A float as its bits. What is not a number is one value, whatever
+        // the processor that made it put in its sign and its payload: x86
+        // makes `inf - inf` with the sign set and arm64 without it, and a
+        // program that could read the difference would answer differently on
+        // the two. See D1238.
+        case KEST_OP_FLOAT_BITS: THREADED(KEST_OP_FLOAT_BITS) {
+            uint16_t width = READ_U16();
+            if (width == 32) {
+                float narrow = (float)top[-1].real;
+                uint32_t bits = UINT32_C(0x7FC00000);
+                if (narrow == narrow) {
+                    memcpy(&bits, &narrow, sizeof bits);
+                }
+                top[-1].integer = bits;
+            } else if (top[-1].real != top[-1].real) {
+                top[-1].integer = (int64_t)UINT64_C(0x7FF8000000000000);
+            }
             NEXT;
         }
         case KEST_OP_BITS_F32: THREADED(KEST_OP_BITS_F32) {

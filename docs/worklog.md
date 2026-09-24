@@ -42112,3 +42112,34 @@ example through the machine, the C, the C built with `-mfma`, `KEST_NOOPT` and
 `KEST_PLAIN`; three breaks against it; every example and workload against the
 commit; a million `sin` and `cos` in both engines; four reformatted files'
 trees before and after; `make most`.
+
+## 2026-09-24, the verifier holds every number an instruction carries
+
+Every instruction's numbers are written down beside its name as what they are,
+and the verifier holds each to it before a chunk runs: slots, constants,
+functions, doors, layouts, runs, and jumps landing on an instruction. A machine
+guarded while running instead was measured at 1.5 to 2.2 times the cycles.
+Five instructions naming a layout by an unchecked number were found reading
+the handlers. `tools/check-verifier.sh` changes one number at a time and the
+verifier refuses each; the gate runs it.
+
+See D1237.
+
+**Runs:** the machine built with its checked guards and no sanitisers, against
+the plain one on the five workloads; every example, workload and library file
+through the verifier; `tools/check-verifier.sh`, and each of the verifier's nine
+checks taken out in turn; the compiler's memory with the verifier's table given
+back; `make most`.
+
+## 2026-09-24, what is not a number is one value
+
+CI was red on arm64 and macOS at the determinism example: x86 and arm64 make
+`inf - inf` with different signs, and `bits` and `hash` could read which. Both
+answer one value for everything that is not a number now, in the machine, the
+generated C and the folder.
+
+See D1238.
+
+**Runs:** the two red jobs' logs; `bits` of a NaN on x86 before and after; the
+example through the machine, the C with `-mfma` and `KEST_NOOPT`; the three
+fixes taken out in turn; `make most`.

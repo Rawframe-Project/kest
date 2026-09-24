@@ -42312,3 +42312,92 @@ anything -- `x ^ (x << 13)` is `x ^ x << 13` -- and each parses to the same
 tree before and after. `lib/std/math.kest` is the regression: the gate holds
 every file of the library to the one form, and the old formatter cannot write
 this one.
+
+## D1237 — The verifier holds every number an instruction carries, and every jump
+
+*measured*. The first rows of D1234's table are what the machine reads without
+asking: a slot, a constant, a function, a door or a layout named by a number
+the compiler wrote, and where a jump lands. Two ways to hold them were weighed
+by running them. The build that checks itself holds most of them while running,
+and the machine built with those guards on and no sanitisers costs 1.47 to 2.16
+times the cycles on the five workloads -- `kernel` 94% more, `control` 82%,
+`graph` 105%, `words` 47%, `rules` 116%. Code nobody trusts cannot be made to
+run at half speed for its safety, so the other way is taken: a verifier that
+holds a chunk once, before it runs, and costs a running program nothing.
+
+What it holds each number to is written beside each instruction's name in
+`src/value.c`, one list: a slot of the body, a run of slots from the one before
+it, a constant, a run of constants, a function, a door of the host, a layout, a
+jump forward or back, or a number the instruction uses as it is -- a width, an
+offset, a count, a kind -- whose limits are the stack's and the layout's and
+are the next rows of the table. It could not be drafted out of `vm.c` by a
+script, because cases share a body and read their numbers inside macros; a
+draft that expanded the macros left 68 of 217 undecided, and those were read
+handler by handler. Reading them found five that name a layout by a number no
+build asked about, not even the one that checks itself: `text.flags`,
+`text.value`, `hash.value`, `eq.value` and `ne.value` read
+`module->layout_types[]` at whatever they carry. They are held now, with the
+rest.
+
+`kest_module_prove` marks where every instruction starts, then holds every
+number to what it is: a slot below the body's count, a constant below its
+constants', a function, a door or a layout below the module's, a run that
+ends inside what it runs over, `const.at` and the strided loads of slots to
+where they read last, and a jump forward or back to where an instruction
+starts inside the body. What is wrong is `K0408` for a number that names what
+is not there and `K0409` for a jump that lands where no instruction starts,
+said as a fault in the compiler. Every example, workload and library file is
+held.
+
+`tools/check-verifier.sh` is what shows it: a program compiled, then one number in one
+instruction changed to one it has not got -- a slot, a constant, a function, a
+door, a layout, a run of slots, a jump past the end, a jump one byte into the
+next instruction, a jump back past the start -- and the verifier asked. Nothing
+is run. All nine are refused with their code and the program as compiled is
+held; each of the nine checks taken out of the verifier in turn makes
+the check say which case was held, and the gate runs it. What is left of
+the first promise is the operand stack's depth, what each slot holds, and
+`text.in`, which D1234 named in that order.
+
+What proving costs a build is nothing it keeps: where each body's instructions
+start is marked for that body and the arena is rewound after it, so compiling
+`lib/std/text.kest` costs the 207,620 bytes the reference says, where keeping
+every body's table had put it at 211,060. Rewinding gives the bytes back and
+does not stop them being asked for: `examples/embed.c` builds a program inside
+exactly what it cost a moment before, and that build was refused 4,100 bytes
+short, because the table for the largest body was taken on top of everything
+the build keeps. So the table is a bit an instruction and sits on the stack for
+a body of up to 64 KB of code, which is every body in this tree by far, and
+only a larger one takes it from the arena.
+
+## D1238 — What is not a number is one value, as bits and as a hash
+
+*found by CI*. `ed4d2ea5` was red on `linux-arm64` and `macos`, and on both at
+`examples/determinism.kest`: the part D1235 added answered another number on
+arm64. Not the trigonometry -- every step of it is the same on every machine --
+but what the trigonometry answers at the special places: `inf - inf`, and
+`(x - x) / (x - x)` in `pow`, make a value that is not a number, and the
+processor chooses its sign. x86 makes it `0xFFF8000000000000`, with the sign
+set; arm64 makes it `0x7FF8000000000000`. `bits` has read a float as the bits
+it is since D1171, and `hash` of a float mixed its bits, so a `deterministic`
+function could read which processor it ran on, and `std.bytes`, which writes
+floats as their bits, wrote a save that differed between machines. The
+example is what found it, and it was open since D1171.
+
+What is not a number is one value now wherever a program can see its bits:
+`bits` answers `0x7FF8000000000000` for every one in an `f64` and `0x7FC00000`
+in an `f32`, whatever sign and payload it was made with, and `hash` hashes it
+as that. Nought and minus nought stay two values to `bits`, because they are
+two values; only `hash` has them as one, as `==` does. The machine's
+`f32.bits` is `float.bits` and takes the width, so an `f64` goes through an
+instruction on its way to its bits where it went through none, and one case
+of the machine's loop does both widths rather than a case being added
+(D1229). The C `kest emit --c` writes does the same, and so does the folder,
+where `bits(float(u64(...)))` of a payload is worked out before a machine.
+
+The example folds `bits` and `hash` of `inf - inf`, `bits` of a value that is
+not a number with a payload in it, and the same narrowed; the machine, the C
+built with `-mfma`, and `KEST_NOOPT` fold them alike, and on x86 each of the
+three -- the machine's `bits`, its `hash` and the folder's `bits` -- taken back
+out makes the example answer another number. The profile stays 3: it had not
+been published under any machine that answered it.

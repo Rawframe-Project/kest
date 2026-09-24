@@ -1039,6 +1039,14 @@ tools/             Build and development scripts. `make check` runs all of
                    unless something refuses it. No program here has two of a
                    name — every example is one module — so it writes the
                    program and the ten-line host that lends to it.
+                   `check-verifier.sh` holds the verifier to refusing what
+                   the machine would read without asking: a program is
+                   compiled, one number in one instruction is changed to a
+                   slot, a constant, a function, a door or a layout the
+                   program has not got, or a jump that lands where no
+                   instruction starts, and each has to be refused with its
+                   code while the program as compiled is held. Nothing is
+                   run. See D1237.
                    `check-commands.sh` holds every command to producing
                    something, because one that prints nothing looks the same
                    as one that works, and holds the two forms of `check`,

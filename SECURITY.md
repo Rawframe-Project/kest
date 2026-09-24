@@ -56,7 +56,7 @@ does.
 
 | Promise | Today | What is left |
 | --- | --- | --- |
-| 1. No memory error | The compiler and the machine are fuzzed over six boundaries under the sanitisers (D984, D1216, D1227); nothing has been found in the last two campaigns. Nothing proves it: the machine trusts what the compiler wrote. | A verifier that checks every chunk before it runs against everything the machine trusts, including what each slot holds, so a compiler bug cannot become a memory error. |
+| 1. No memory error | The compiler and the machine are fuzzed over six boundaries under the sanitisers (D984, D1216, D1227); nothing has been found in the last two campaigns. Every chunk is verified before it runs: every slot, constant, function, door and layout an instruction names is one the program has, and every jump lands on an instruction (D1237). | The verifier holding how deep the operand stack goes and what each slot holds, so an instruction that reads a handle is only ever handed one; and `text.in` asking in the untrusted profile. |
 | 2. Nothing but what was given | Every door is one the host bound (D981); `kest_build_capability` lists them in groups before anything is bound. | Doors marked as safe for untrusted code, and a profile in which nothing else can be bound. |
 | 3. Everything bounded | Steps, the heap, how much memory reading and compiling may take (`--room`), and how many of each thing a program may have (nesting, names, loops) are bounded. | The compiler's work, which nothing bounds today, as a count rather than a time; and all of them required rather than chosen in the untrusted profile. |
 | 4. Nothing of the process | A reference hashes by its place and not by its address (D1054). | An audit of every value a door or an instruction hands back. |

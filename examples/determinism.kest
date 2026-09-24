@@ -21,7 +21,7 @@ import std.table
 // (D941); and, since D1235, `sin`, `cos`, `atan2` and `pow`, which are written
 // in Kest now rather than being the host's libm.
 
-const ANSWER: u64 = 7524025571178616830
+const ANSWER: u64 = 8273604923899092262
 
 struct Piece {
     name: text
@@ -315,6 +315,14 @@ fn turned() -> u64 no.alloc no.host deterministic {
         3.0,
         0.5
     ]
+    // What is not a number is one value as bits and as a hash, whatever sign
+    // and payload the processor made it with: x86 makes `inf - inf` with the
+    // sign set and arm64 without it. See D1238.
+    let notNumber = infinite - infinite
+    mark = hash.join(mark, bits(notNumber))
+    mark = hash.join(mark, hash(notNumber))
+    mark = hash.join(mark, bits(float(u64(0x7FF0000000000001))))
+    mark = hash.join(mark, u64(bits(f32(notNumber))))
     for x in edges {
         mark = hash.join(mark, bits(math.sin(x)))
         mark = hash.join(mark, bits(math.cos(x)))

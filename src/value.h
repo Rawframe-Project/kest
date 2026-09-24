@@ -383,7 +383,11 @@ typedef enum {
     KEST_OP_MUL_I_NARROW_K,
     // An `f32` as its thirty-two bits and back: a slot holds one widened to
     // an `f64`, so the two are a conversion each way. See D1171.
-    KEST_OP_F32_BITS,
+    // A float as the bits it is, `u16` 32 or 64 for which width, and every
+    // value that is not a number as the one such value, because the sign and
+    // the payload of one are what the processor made and differ between
+    // machines. See D1238.
+    KEST_OP_FLOAT_BITS,
     KEST_OP_BITS_F32,
     // An element of a run read by a run and an index where they are, weighed
     // against a constant, and the jump: `index.ll`, `const` and one of the six

@@ -146,7 +146,7 @@ def report(what, kinds, wording, spell):
 ops = some("instructions", names(
     table('src/value.h', r'typedef enum \{(.*?)\} KestOp;'), 'KEST_OP_'))
 written = some("instruction names", [m[0] for m in re.findall(
-    r'\{"((?:[^"\\]|\\.)*)",\s*(\w+)\}',
+    r'\{"((?:[^"\\]|\\.)*)",\s*(\w+)(?:,\s*\{[^}]*\})?\}',
     table('src/value.c', r'INSTRUCTIONS\[\] = \{(.*?)\n\};'))])
 # `load.n` is spelled for a reader and `KEST_OP_LOADN` for a compiler, so the
 # marks between the words are not part of the comparison.

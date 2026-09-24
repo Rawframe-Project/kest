@@ -1261,7 +1261,7 @@ else:
         open('include/kest.h').read(), re.M)))
     machine = re.search(r'INSTRUCTIONS\[\] = \{(.*?)\n\};',
                         open(os.path.join('src', 'value.c')).read(), re.S)
-    opcodes = len(re.findall(r'\{"(?:[^"\\]|\\.)*",\s*\w+\}',
+    opcodes = len(re.findall(r'\{"(?:[^"\\]|\\.)*",\s*\w+(?:,\s*\{[^}]*\})?\}',
                              machine.group(1) if machine else ''))
     for what, pattern, counted in (
             ('doors', r'a C embedding API of (\d+) doors', doors),

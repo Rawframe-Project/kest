@@ -1,0 +1,201 @@
+#!/bin/sh
+# What the machine reads without asking, proved before it runs. A program is
+# compiled, then one number in one instruction is changed to one the program
+# has not got -- a slot, a constant, a function, a door of the host, a layout,
+# a run of slots, a jump past the end, a jump into the middle of the next
+# instruction, a jump back past the start -- and the verifier is asked about
+# the module. Each has to be refused with its code, `K0408` for a number that
+# names what is not there and `K0409` for a jump that lands where no
+# instruction starts, and the program as it was compiled has to be held.
+# Nothing is run: what is asked is only whether the verifier would let it.
+#
+# It reads the module a build made, so what it is written in is C against the
+# library's own headers as well as the public one, written here rather than
+# kept in `tools/` because it is this check's and nothing else's. See D1237.
+set -u
+cc=${CC:-cc}
+scratch=$(mktemp -d)
+trap 'rm -rf "$scratch"' EXIT
+cd "$(dirname "$0")/.." || exit 1
+
+if [ ! -f libkest.a ]; then
+    echo "the library is not built"
+    exit 1
+fi
+
+cat > "$scratch"/refuse.c <<'REFUSE'
+// The program `check-verifier.sh` builds and runs: chunks the verifier has to
+// refuse. A program is compiled, and then one
+// number in one instruction is changed to one the program does not have -- a
+// slot past the frame, a constant past the body's, a function, a door or a
+// layout past the module's, a jump that lands between two instructions or past
+// the end -- and `kest_module_prove` is asked about the module. Each has to be
+// refused with the code for what it is, and the program as it was compiled has
+// to be held. Nothing here runs a chunk: what is asked is only whether the
+// verifier would let it run. See D1237.
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "kest.h"
+#include "build.h"
+#include "value.h"
+
+static const char *PROGRAM =
+    "module refused\n"
+    "\n"
+    "import std.io\n"
+    "\n"
+    "struct Pair {\n"
+    "    a: i32\n"
+    "    b: i32\n"
+    "}\n"
+    "\n"
+    "fn deeper(n: i32) -> i32 {\n"
+    "    if n <= 0 {\n"
+    "        return 0\n"
+    "    }\n"
+    "    return 1 + deeper(n - 1)\n"
+    "}\n"
+    "\n"
+    "fn main() -> i32 {\n"
+    "    let xs: [Pair] = array()\n"
+    "    let n = 0\n"
+    "    while n < 40 {\n"
+    "        push(xs, Pair(n, n * 2))\n"
+    "        n += 3\n"
+    "    }\n"
+    "    let total = xs[1].b + deeper(3)\n"
+    "    io.print(\"{total}\")\n"
+    "    return total % 7\n"
+    "}\n";
+
+// Whether the module is held, and if not, whether what was said carries this
+// code.
+static bool refused_with(KestBuild *build, const char *code) {
+    KestDiags said;
+    kest_diags_init(&said, build->arena);
+    bool held = kest_module_prove(&build->module, build->arena, &said);
+    if (code == NULL) {
+        return held && said.error_count == 0;
+    }
+    for (uint32_t i = 0; i < said.count; i++) {
+        if (strcmp(said.items[i].code, code) == 0) {
+            return !held;
+        }
+    }
+    return false;
+}
+
+// The first instruction anywhere in the module carrying an operand of this
+// kind, as the chunk, where the instruction is and which operand.
+static bool first_with(KestModule *module, const char *named, uint32_t operand,
+                       KestChunk **in, uint32_t *at) {
+    for (uint32_t f = 0; f < module->count; f++) {
+        KestChunk *chunk = module->functions[f];
+        for (uint32_t i = 0; i < chunk->code_count;
+             i += kest_op_wide(chunk->code[i])) {
+            if (strcmp(kest_op_name(chunk->code[i]), named) == 0 &&
+                kest_op_wide(chunk->code[i]) >= 3 + 2 * operand) {
+                *in = chunk;
+                *at = i;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+typedef struct {
+    const char *what;
+    const char *op;
+    uint32_t operand;
+    uint16_t written;
+    const char *code;
+} Case;
+
+int main(int argc, char **argv) {
+    const char *where = argc > 1 ? argv[1] : "refused.kest";
+    FILE *out = fopen(where, "w");
+    if (out == NULL) {
+        fprintf(stderr, "refuse: cannot write %s\n", where);
+        return 2;
+    }
+    fputs(PROGRAM, out);
+    fclose(out);
+    KestBuild *build = kest_build(where, NULL, stderr, KEST_FORM_TEXT, 0);
+    remove(where);
+    if (build == NULL) {
+        fprintf(stderr, "refuse: the program did not compile\n");
+        return 2;
+    }
+    if (!refused_with(build, NULL)) {
+        printf("refuse: the program as it was compiled is not held\n");
+        return 1;
+    }
+    Case cases[] = {
+        {"a slot past the frame", "store", 0, 0xFFFF, "K0408"},
+        {"a constant past the body's", "const", 0, 0xFFFF, "K0408"},
+        {"a function past the module's", "call", 0, 0xFFFF, "K0408"},
+        {"a door past the module's", "call.host", 0, 0xFFFF, "K0408"},
+        {"a layout past the module's", "make.array", 0, 0xFFFF, "K0408"},
+        {"a run of slots past the frame", "load.n", 1, 0xFFFF, "K0408"},
+        {"a jump past the end", "jump.false.lt.k", 2, 0xFFFF, "K0409"},
+        {"a jump between two instructions", "jump.false.lt.k", 2, 1, "K0409"},
+        {"a jump back to before the body", "loop", 0, 0xFFFF, "K0409"},
+    };
+    uint32_t refused = 0;
+    uint32_t missed = 0;
+    for (size_t c = 0; c < sizeof(cases) / sizeof(cases[0]); c++) {
+        KestChunk *chunk = NULL;
+        uint32_t at = 0;
+        if (!first_with(&build->module, cases[c].op, cases[c].operand, &chunk,
+                        &at)) {
+            printf("refuse: no `%s` in the program for %s\n", cases[c].op,
+                   cases[c].what);
+            missed++;
+            continue;
+        }
+        uint32_t place = at + 1 + 2 * cases[c].operand;
+        uint8_t low = chunk->code[place];
+        uint8_t high = chunk->code[place + 1];
+        uint16_t written = cases[c].written;
+        if (written == 1) {
+            // Between two instructions: one byte further than it lands.
+            written = (uint16_t)((low | (high << 8)) + 1);
+        }
+        chunk->code[place] = (uint8_t)(written & 0xFF);
+        chunk->code[place + 1] = (uint8_t)(written >> 8);
+        if (refused_with(build, cases[c].code)) {
+            refused++;
+        } else {
+            printf("refuse: %s was held\n", cases[c].what);
+            missed++;
+        }
+        chunk->code[place] = low;
+        chunk->code[place + 1] = high;
+    }
+    if (!refused_with(build, NULL)) {
+        printf("refuse: the program as it was compiled is not held once "
+               "every case was put back\n");
+        missed++;
+    }
+    kest_build_free(build);
+    if (missed > 0) {
+        return 1;
+    }
+    printf("%u way(s) a chunk can name what it has not got, each refused, "
+           "and the program as it was compiled held\n",
+           refused);
+    return 0;
+}
+REFUSE
+
+if ! $cc -std=c11 -Wall -Wextra -Wshadow -Wconversion -Werror -O2 -Iinclude \
+        -Isrc -o "$scratch"/refuse "$scratch"/refuse.c libkest.a -lm \
+        2>"$scratch"/why; then
+    echo "the verifier's own test does not build:"
+    sed 's/^/    /' "$scratch"/why | head -5
+    exit 1
+fi
+"$scratch"/refuse "$scratch"/refused.kest
