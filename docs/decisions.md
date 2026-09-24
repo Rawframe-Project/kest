@@ -41735,3 +41735,15 @@ thousand runs and six thousand folds, 21:12 to 02:45: no input stopped the
 compiler or the machine, and no fold differed. It ran the fuzzer as it was
 before D1210, so its source programs were the forty-in-three-thousand kind.
 
+## D1217 — The three-way fold over two hundred seeds with the fuzzer that changes numbers
+
+*measured*. D1216's campaign ran the fuzzer from before D1210, whose source
+inputs were one in eighty a program that ran. With the fuzzer as it is now,
+seeds 100 to 299 at the gate's four hundred steps were folded three ways at
+`6cf9a368` -- fused, with the lowering's fusions off, and with the optimizer
+off -- so over the release engine's calls, the carried bodies' relocation,
+the question asked the other way and every fused form D1211 to D1215 held
+on its edges. Eighty thousand inputs made 7,817 programs that compiled and
+ran, and the three folds agreed at every seed: 03:17 to 03:35. The gate's own
+eight seeds are 309 programs; this is twenty-five times that.
+

@@ -41858,3 +41858,12 @@ See D1216.
 
 **Runs:** the campaign's log read to its end, and `make most`.
 
+## 2026-09-24, the three-way fold over two hundred seeds
+
+With the fuzzer that changes numbers, seeds 100 to 299 made 7,817 programs
+that ran, and fused, plain and bare agreed at every seed, at `6cf9a368`.
+
+See D1217.
+
+**Runs:** the two hundred seeds folded three ways, and `make most`.
+
