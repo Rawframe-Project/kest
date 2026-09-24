@@ -166,6 +166,7 @@ Where it stands, from the front page's table (D1203): `bench/compare.sh` at
 - **A game**: the colony's trial, eighteen thousand frames, is 1,230 M
   instructions run by the machine and 309 M compiled whole (D1204 to D1207),
   and ships as one binary that opens no file and answers alike (D1224).
+  `CHANGELOG.md` says what changed since D1085 for a reader (D1225).
 
 How it got there is the decisions, and the ones that moved it most: the
 fused instructions (D1155 to D1178), bodies carried into their callers

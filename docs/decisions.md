@@ -41861,3 +41861,19 @@ machine's 139 ms and 1,230 M. `strace` over it shows no file opened but the
 C library's own: the program is in the binary, and there is no library
 installed on this machine for it to have read from instead.
 
+## D1225 — What changed since the changelog was last written
+
+`CHANGELOG.md` is for somebody with a program or a host written against the
+last version, and it had not been written since `e458ee2c`, at D1085. What
+changed since for such a reader was asked of the tree rather than
+remembered: the public header only gained (the held doors, and what the
+release engine's generated files read), the library gained `std.bytes` and
+nothing else, one diagnostic is new (`K0663`, a release that cannot be made),
+and nothing was taken away. Six entries say what a reader has to do, which
+is nothing in each case: `bits`, `float` and `std.bytes`; a `flags` field
+narrower than eight bytes that read back wrong out of an array (D1176); the
+`u64` walk past the signed top (D1212); the second engine, `--release` and
+`kest dap`; the held doors; and the library's loop built without the jump
+marks, which changes how a host binary is marked (D1191). The version stays
+0.0.1: nothing here is a break a reader has to act on.
+

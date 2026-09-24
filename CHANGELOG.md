@@ -372,6 +372,34 @@ that was already written. See D1062.
 shape a `K0402` message tells a reader to write were missing the word, so a
 tool that compared shapes as text was comparing the wrong ones. See D1064.
 
+**A float can be written as its bits, and bytes read and written.**
+`bits(x)` is an `f32` or an `f64` as the `u32` or `u64` holding the same bits,
+and `float(b)` the other way; neither rounds. `std.bytes` writes numbers of
+every width, floats as their bits and text into a run of bytes, and reads them
+back, which is what a save or a record on disk is. **What a program has to
+do:** nothing. A function of its own called `bits` or `float` is still its own.
+See D1171.
+
+**A set of named bits in a struct reads back what was written.** A `flags`
+field narrower than eight bytes was moved as eight: a struct holding
+`state: State` and then `hp: i32`, put in an array and read back, had `hp` in
+the high bits of `state`. **What a program has to do:** nothing; one that read
+such a field out of an array before this read something else. See D1176.
+
+**A walk of `u64`s across the top of the signed range counts on.** Both
+engines stepped the count as a signed number, which C does not define past
+its top; this machine wrapped and answered right, and the step is unsigned
+arithmetic now. **What a program has to do:** nothing. See D1212.
+
+**A program has a second engine and one command to ship it.** `kest emit --c`
+writes the same bodies as C for the compiler a release is built with, held by
+the gate to answering what the machine answers, and `kest build --release`
+writes one binary that carries the program and runs with no source beside it.
+`kest dap` is the debugger an editor drives. **What a program has to do:**
+nothing. `--release` needs `kest.h` and `libkest.a` beside the command line,
+installed or in the tree, and says `K0663` when they are not there or the C
+compiler refuses. See D1092, D1172 and D1182.
+
 **What changed for a host.** The version, the JSON schema and the profile.
 **Kest 1.0.0 → 0.0.1. ABI 4, unchanged. JSON schema 3 → 4. Profile kest-det
 1 → 2.** The ABI does not move because everything added to the header since is
@@ -382,6 +410,22 @@ matched it. The profile moves for the reason D1060 gives and will not move
 back: it is the one of the four written into data that outlives the build.
 **What a tool has to do:** read `"schema"` first, as it always should have.
 See D1069.
+
+**A world a host keeps is eight doors.** `kest_held_*` builds a machine, keeps
+its world across frames, lends a frame at a time, watches the files the build
+read and reloads under the world it was holding, publishing only when that
+worked; what every host wrote for itself is in the library. **What a host has
+to do:** nothing; one that wrote its own can keep it. The header only gains,
+and the ABI stays 4. See D1151.
+
+**The library's loop is built with returns guarded and jumps unmarked.**
+Where the compiler takes it, `vm.c` is built with `-fcf-protection=return`:
+the machine ran an instruction that does nothing at the head of every one it
+ran, marking it as a place a jump may land, which no Linux checks. A binary
+linking `libkest.a` is marked for the shadow stack and no longer for
+indirect-branch tracking, since a link marks only what every object carries.
+**What a host has to do:** nothing on Linux; a host that needs the other mark
+builds `vm.c` without that flag. See D1191.
 
 ## 1.0.0 — 2026-09-18 (withdrawn 2026-09-19)
 

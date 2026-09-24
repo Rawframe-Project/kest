@@ -41948,3 +41948,14 @@ See D1224.
 no library path, traced with `strace`, and timed; the trial by the machine;
 and `make most`.
 
+## 2026-09-24, what changed since the changelog was last written
+
+The changelog stopped at D1085. What a reader with a program or a host has to
+know since -- measured against the tree: the header, the library, the codes
+-- is six entries, each saying there is nothing to do.
+
+See D1225.
+
+**Runs:** the header, the library and the diagnostic codes compared with
+`e458ee2c`; a program's own `bits` run; `check-docs.sh`; and `make most`.
+
