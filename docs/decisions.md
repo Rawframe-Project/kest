@@ -42366,9 +42366,9 @@ every body's table had put it at 211,060. Rewinding gives the bytes back and
 does not stop them being asked for: `examples/embed.c` builds a program inside
 exactly what it cost a moment before, and that build was refused 4,100 bytes
 short, because the table for the largest body was taken on top of everything
-the build keeps. So the table is a bit an instruction and sits on the stack for
-a body of up to 64 KB of code, which is every body in this tree by far, and
-only a larger one takes it from the arena.
+the build keeps. So the table is a bit an instruction, in an arena of the
+verifier's own sized once for the largest body, the way the bodies are lowered
+in an arena that is not the build's.
 
 ## D1238 — What is not a number is one value, as bits and as a hash
 
@@ -42401,3 +42401,76 @@ built with `-mfma`, and `KEST_NOOPT` fold them alike, and on x86 each of the
 three -- the machine's `bits`, its `hash` and the folder's `bits` -- taken back
 out makes the example answer another number. The profile stays 3: it had not
 been published under any machine that answered it.
+
+## D1239 — The verifier walks every path for how deep the operand stack is
+
+*measured*. The second row of D1234's table: the machine moves `top` without
+asking whether what an instruction takes is there, and a chunk that pops one
+more than it pushed reads the frame under it as an operand. S3 of the plan
+says the verifier proves it, once, before anything runs.
+
+`kest_op_stack` in `value.c` says, for every instruction, how many slots it
+takes off the stack and how many it puts back, read off the machine's handler
+for it: a layout's width where the handler reads a layout, a type's where it
+reads a type, what a callee's declaration gives back for a call. It is one
+`switch` over the instructions with no `default`, so an instruction added
+without a row stops the build. The verifier walks every path of a body from
+the first instruction with it, and refuses with `K0410` an instruction reached
+at two depths, one that takes more than is there, one that leaves more than
+the body was given room for, a `return` that is not exactly its declaration's
+width with nothing under it, a call handing a function another number of slots
+than it takes, and a body that runs off its end. What cannot be reached is not
+walked, because nothing runs it. A place is walked from once, so the walk is as
+long as the body.
+
+What says the rows are right is the machine. In the build that checks itself
+every frame carries the depth the table says the next instruction will find,
+in what the frame's other fields leave over so it is no bigger, and the machine
+holds it to where `top` is before every instruction, as `K0655` with a fault.
+Every example ran that way agrees with every row it reaches. Seen catching:
+`text.len` written as giving two slots is refused by the walk as `K0410` on
+`examples/words.kest` at build, and with the walk switched off, by the machine
+as `K0655` the first time it runs one. `tools/check-verifier.sh` has four more
+cases -- a `return` one slot short, a call handing another number of slots, a
+`concat` of more pieces than there are and one of none -- each `K0410`, and all
+four held with the walk taken out.
+
+One shape in the tree was refused, and it was the compiler's: `while true`
+asked its condition like any other, so a body ending in one -- which D1080
+lets a function that gives something end in -- had a way out of the loop to
+the `return` of nothing written at the end of every body. No run takes it,
+and a walk of every path cannot tell that from one that does. `while true`
+asks nothing now, which is also a `true` and a jump fewer every turn. The
+reference's own example of it and `check.sh`'s were what refused.
+
+Every other chunk in the tree was already this shape: no program, library
+module or example is refused. What is left of the first promise is what each
+slot holds and `text.in`, which is S3c and S3d.
+
+`check-backstops.sh` copies `SECURITY.md` into each hole's tree now: without
+it, a hole in the documents was caught by the document that was missing, and
+`ed4d2ea5`'s `linux-full` said so. With it there, the same hole was still
+missed, and that was a real one: `check-docs.sh` read the binary operators out
+of `binary_precedence`, which D1236 renamed `kest_binary_precedence` for the
+formatter to ask, and it had read none since -- the assignments and the unary
+operators were enough to make the list not empty. It reads the new name, and
+each of the three tables has to be read on its own. Three holes quoted the
+instruction table as it was before the verifier's column was written beside
+it, and quote it as it is. `check-verifier.sh` has a hole of its own: the
+verifier's question about a constant taken out, and the check naming the case
+that got through.
+
+Ten holes that miscompile on purpose -- a deferred call counted below its
+answer, two instructions folded across a jump into them, a layout, a constant
+and a run of slots named one past the end, a call handing over more than the
+body takes, a frame as wide as its arguments are many, a crossing taking back
+what its declaration does not give, a body coming back with something over,
+and an optional asked about against a nothing that was compiled too -- were
+caught by the machine's guards in
+the build that checks itself, and are caught by the verifier now, before
+anything runs. What they hold is the guard under it, so each takes the verifier out as
+well and the guard still says what it said. Doing that turned up a read of its
+own: the machine's new check asked `kest_op_stack` before the handler's guard
+had its turn, and the table read a layout by a number nothing had asked
+about. It asks about every layout and function it names first now.
+

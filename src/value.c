@@ -2239,29 +2239,398 @@ static int32_t breaks_in(const KestModule *module, uint32_t which,
 // says what was wrong into `said`, or answers NULL. A body whose instructions
 // cannot be told apart has already been refused by the walk above this, which
 // is what makes the table of where each one starts worth building. See D1237.
+const char *kest_op_stack(const KestModule *module, const KestChunk *chunk,
+                          uint32_t at, uint32_t *takes, uint32_t *gives) {
+    uint8_t op = chunk->code[at];
+    uint32_t u[5] = {0, 0, 0, 0, 0};
+    // A layout or a function this names is one there is before anything is
+    // read out of it: the verifier has asked by the time it gets here, and
+    // the machine that checks itself asks this before the handler's own
+    // guard has had its turn.
+    for (uint32_t k = 0; k < (kest_op_width(op) - 1) / 2 && k < 5; k++) {
+        u[k] = read_u16(chunk, at + 1 + 2 * k);
+        if ((INSTRUCTIONS[op].is[k] == IS_LAYOUT && u[k] >= module->layout_count) ||
+            (INSTRUCTIONS[op].is[k] == IS_FUNCTION && u[k] >= module->count)) {
+            return "names what the program has not got";
+        }
+    }
+    // What a layout operand holds, in slots: the machine reads it as the
+    // layout's width in one place and as the type's in another, and the two
+    // are the same number except for a type of no slots, which the layout
+    // counts as one.
+#define LAID(k) ((uint32_t)module->layouts[u[k]].slots)
+#define TYPED(k)                                                               \
+    (module->layout_types[u[k]] == NULL ? UINT32_MAX                           \
+                                        : (uint32_t)module->layout_types[u[k]]->slots)
+    uint32_t t = 0;
+    uint32_t g = 0;
+    switch ((KestOp)op) {
+    case KEST_OP_CONST:
+    case KEST_OP_LOAD:
+    case KEST_OP_TRUE:
+    case KEST_OP_FALSE:
+    case KEST_OP_TEXT_IN:
+    case KEST_OP_MOD_I_K:
+    case KEST_OP_DIV_I_K:
+    case KEST_OP_ADD_I_NARROW_K:
+    case KEST_OP_SUB_I_NARROW_K:
+    case KEST_OP_MUL_I_NARROW_K:
+        g = 1;
+        break;
+    case KEST_OP_LOAD2:
+    case KEST_OP_LOADK:
+        g = 2;
+        break;
+    case KEST_OP_CONST_RUN:
+    case KEST_OP_LOADN:
+        g = u[1];
+        break;
+    case KEST_OP_STOREN:
+        t = u[1];
+        break;
+    case KEST_OP_CONST_AT:
+    case KEST_OP_LOAD_SLOTS:
+        t = 1;
+        g = u[1];
+        break;
+    case KEST_OP_STORE_SLOTS:
+        t = u[1] + 1;
+        break;
+    case KEST_OP_STORE:
+    case KEST_OP_POP:
+    case KEST_OP_CLEAR:
+    case KEST_OP_JUMP_FALSE:
+    case KEST_OP_JUMP_TRUE:
+    case KEST_OP_JUMP_FALSE_LT_C:
+    case KEST_OP_JUMP_FALSE_LE_C:
+    case KEST_OP_JUMP_FALSE_GT_C:
+    case KEST_OP_JUMP_FALSE_GE_C:
+    case KEST_OP_JUMP_FALSE_EQ_C:
+    case KEST_OP_JUMP_FALSE_NE_C:
+        t = 1;
+        break;
+    case KEST_OP_POPN:
+        t = u[0];
+        break;
+    case KEST_OP_ROTATE:
+        t = u[0];
+        g = u[0];
+        break;
+    case KEST_OP_FIELD:
+        t = u[2];
+        g = u[1];
+        break;
+    case KEST_OP_ARRAY:
+        t = u[0] * LAID(1);
+        g = 1;
+        break;
+    case KEST_OP_MAKE_ARRAY:
+    case KEST_OP_FIT:
+        t = 1 + LAID(0);
+        g = 1;
+        break;
+    case KEST_OP_PUSH:
+        t = 1 + LAID(0);
+        break;
+    case KEST_OP_PUSH_TEXT:
+        t = 3;
+        break;
+    case KEST_OP_FIT_TEXT:
+        t = 3;
+        g = 1;
+        break;
+    case KEST_OP_ROOM:
+    case KEST_OP_INDEX_TO:
+    case KEST_OP_ELEM_FROM:
+    case KEST_OP_ADD_I_NARROW_TO:
+    case KEST_OP_SUB_I_NARROW_TO:
+    case KEST_OP_ADD_F_TO:
+    case KEST_OP_SUB_F_TO:
+    case KEST_OP_JUMP_FALSE_LT_I:
+    case KEST_OP_JUMP_FALSE_LE_I:
+    case KEST_OP_JUMP_FALSE_GT_I:
+    case KEST_OP_JUMP_FALSE_GE_I:
+    case KEST_OP_JUMP_FALSE_EQ_I:
+    case KEST_OP_JUMP_FALSE_NE_I:
+    case KEST_OP_JUMP_TRUE_LT_I:
+    case KEST_OP_JUMP_TRUE_LE_I:
+    case KEST_OP_JUMP_TRUE_GT_I:
+    case KEST_OP_JUMP_TRUE_GE_I:
+    case KEST_OP_JUMP_TRUE_EQ_I:
+    case KEST_OP_JUMP_TRUE_NE_I:
+    case KEST_OP_JUMP_FALSE_LT_F:
+    case KEST_OP_JUMP_FALSE_LE_F:
+    case KEST_OP_JUMP_FALSE_GT_F:
+    case KEST_OP_JUMP_FALSE_GE_F:
+    case KEST_OP_JUMP_FALSE_EQ_F:
+    case KEST_OP_JUMP_FALSE_NE_F:
+    case KEST_OP_JUMP_TRUE_LT_F:
+    case KEST_OP_JUMP_TRUE_LE_F:
+    case KEST_OP_JUMP_TRUE_GT_F:
+    case KEST_OP_JUMP_TRUE_GE_F:
+    case KEST_OP_JUMP_TRUE_EQ_F:
+    case KEST_OP_JUMP_TRUE_NE_F:
+        t = 2;
+        break;
+    case KEST_OP_INDEX:
+    case KEST_OP_TAKE:
+        t = 2;
+        g = LAID(0);
+        break;
+    case KEST_OP_ELEM_AT:
+        t = 2;
+        g = LAID(1);
+        break;
+    case KEST_OP_INDEX_LL:
+        g = LAID(2);
+        break;
+    case KEST_OP_POP_LAST:
+        t = 1;
+        g = LAID(0) + 1;
+        break;
+    case KEST_OP_ELEM_ADDR:
+    case KEST_OP_OFFSET_ADDR:
+    case KEST_OP_REMOVE:
+    case KEST_OP_STORE_REF:
+    case KEST_OP_ADD_I:
+    case KEST_OP_SUB_I:
+    case KEST_OP_MUL_I:
+    case KEST_OP_DIV_I:
+    case KEST_OP_MOD_I:
+    case KEST_OP_DIV_U:
+    case KEST_OP_MOD_U:
+    case KEST_OP_AND_I:
+    case KEST_OP_OR_I:
+    case KEST_OP_XOR_I:
+    case KEST_OP_SHL:
+    case KEST_OP_SHR_I:
+    case KEST_OP_SHR_U:
+    case KEST_OP_ADD_I_NARROW:
+    case KEST_OP_SUB_I_NARROW:
+    case KEST_OP_MUL_I_NARROW:
+    case KEST_OP_ADD_F:
+    case KEST_OP_SUB_F:
+    case KEST_OP_MUL_F:
+    case KEST_OP_DIV_F:
+    case KEST_OP_MOD_F:
+    case KEST_OP_ADD_F32:
+    case KEST_OP_SUB_F32:
+    case KEST_OP_MUL_F32:
+    case KEST_OP_DIV_F32:
+    case KEST_OP_MOD_F32:
+    case KEST_OP_LT_I:
+    case KEST_OP_LE_I:
+    case KEST_OP_GT_I:
+    case KEST_OP_GE_I:
+    case KEST_OP_LT_U:
+    case KEST_OP_LE_U:
+    case KEST_OP_GT_U:
+    case KEST_OP_GE_U:
+    case KEST_OP_LT_F:
+    case KEST_OP_LE_F:
+    case KEST_OP_GT_F:
+    case KEST_OP_GE_F:
+    case KEST_OP_EQ_I:
+    case KEST_OP_NE_I:
+    case KEST_OP_EQ_F:
+    case KEST_OP_NE_F:
+    case KEST_OP_HASH_T:
+    case KEST_OP_TEXT_LEN:
+        t = 2;
+        g = 1;
+        break;
+    case KEST_OP_LOAD_AT:
+        t = 1;
+        g = LAID(1);
+        break;
+    case KEST_OP_LOAD_ELEM:
+        t = 2;
+        g = 2 + LAID(1);
+        break;
+    case KEST_OP_STORE_ELEM:
+        t = 2 + LAID(1);
+        break;
+    case KEST_OP_LEN:
+    case KEST_OP_COUNT:
+    case KEST_OP_HASH_I:
+    case KEST_OP_HASH_F:
+    case KEST_OP_NEW_STORE:
+    case KEST_OP_NEG_I:
+    case KEST_OP_NOT_I:
+    case KEST_OP_NARROW:
+    case KEST_OP_I2F:
+    case KEST_OP_U2F:
+    case KEST_OP_F2I:
+    case KEST_OP_TO_F32:
+    case KEST_OP_NEG_F:
+    case KEST_OP_NEG_F32:
+    case KEST_OP_NOT:
+    case KEST_OP_MOD_I_C:
+    case KEST_OP_DIV_I_C:
+    case KEST_OP_ADD_I_NARROW_C:
+    case KEST_OP_SUB_I_NARROW_C:
+    case KEST_OP_MUL_I_NARROW_C:
+    case KEST_OP_FLOAT_BITS:
+    case KEST_OP_BITS_F32:
+        t = 1;
+        g = 1;
+        break;
+    case KEST_OP_TEXT_AT:
+        t = 3;
+        g = 1;
+        break;
+    case KEST_OP_TEXT_SLICE:
+        t = 4;
+        g = 2;
+        break;
+    case KEST_OP_TEXT_REST:
+        t = 3;
+        g = 2;
+        break;
+    case KEST_OP_TEXT_MATCHES:
+        t = 5;
+        g = 1;
+        break;
+    case KEST_OP_TEXT_FIND:
+        t = 5;
+        g = 2;
+        break;
+    case KEST_OP_TEXT_I:
+    case KEST_OP_TEXT_U:
+    case KEST_OP_TEXT_F:
+    case KEST_OP_TEXT_F32:
+    case KEST_OP_TEXT_B:
+    case KEST_OP_TEXT_FROM:
+        t = 1;
+        g = 2;
+        break;
+    case KEST_OP_TEXT_FLAGS:
+    case KEST_OP_TEXT_VALUE:
+        t = TYPED(0);
+        g = 2;
+        break;
+    case KEST_OP_CONCAT:
+        t = 2 * u[0];
+        g = 2;
+        break;
+    case KEST_OP_HASH_VALUE:
+        t = TYPED(0);
+        g = 1;
+        break;
+    case KEST_OP_EQ_VALUE:
+    case KEST_OP_NE_VALUE:
+        t = TYPED(0) == UINT32_MAX ? UINT32_MAX : 2 * TYPED(0);
+        g = 1;
+        break;
+    case KEST_OP_EQ_T:
+    case KEST_OP_NE_T:
+    case KEST_OP_LT_T:
+    case KEST_OP_LE_T:
+    case KEST_OP_GT_T:
+    case KEST_OP_GE_T:
+        t = 4;
+        g = 1;
+        break;
+    case KEST_OP_ADD:
+        t = u[0] + 1;
+        g = 1;
+        break;
+    case KEST_OP_GET:
+        t = 2;
+        g = u[0] + 1;
+        break;
+    case KEST_OP_SET:
+        t = u[0] + 2;
+        g = 1;
+        break;
+    case KEST_OP_SEEK_FROM:
+    case KEST_OP_SEEK_NEXT:
+    case KEST_OP_JUMP:
+    case KEST_OP_STORE_K:
+    case KEST_OP_ADD_K_SELF:
+    case KEST_OP_SUB_K_SELF:
+    case KEST_OP_JUMP_FALSE_LT_K:
+    case KEST_OP_JUMP_FALSE_LE_K:
+    case KEST_OP_JUMP_FALSE_GT_K:
+    case KEST_OP_JUMP_FALSE_GE_K:
+    case KEST_OP_JUMP_FALSE_EQ_K:
+    case KEST_OP_JUMP_FALSE_NE_K:
+    case KEST_OP_JUMP_FALSE_LT_FK:
+    case KEST_OP_JUMP_FALSE_LE_FK:
+    case KEST_OP_JUMP_FALSE_GT_FK:
+    case KEST_OP_JUMP_FALSE_GE_FK:
+    case KEST_OP_JUMP_FALSE_EQ_FK:
+    case KEST_OP_JUMP_FALSE_NE_FK:
+    case KEST_OP_JUMP_TRUE_LT_FK:
+    case KEST_OP_JUMP_TRUE_LE_FK:
+    case KEST_OP_JUMP_TRUE_GT_FK:
+    case KEST_OP_JUMP_TRUE_GE_FK:
+    case KEST_OP_JUMP_TRUE_EQ_FK:
+    case KEST_OP_JUMP_TRUE_NE_FK:
+    case KEST_OP_ADD_F_LL:
+    case KEST_OP_SUB_F_LL:
+    case KEST_OP_INDEX_TO_LL:
+    case KEST_OP_ELEM_FROM_LL:
+    case KEST_OP_JUMP_FALSE_LT_E:
+    case KEST_OP_JUMP_FALSE_LE_E:
+    case KEST_OP_JUMP_FALSE_GT_E:
+    case KEST_OP_JUMP_FALSE_GE_E:
+    case KEST_OP_JUMP_FALSE_EQ_E:
+    case KEST_OP_JUMP_FALSE_NE_E:
+    case KEST_OP_LOOP:
+    case KEST_OP_NEXT_LESS_I:
+    case KEST_OP_NEXT_LESS_U:
+    case KEST_OP_SCRATCH:
+    case KEST_OP_UNSCRATCH:
+    case KEST_OP_STOP:
+        break;
+    case KEST_OP_CALL: {
+        // What a call leaves is what the body it enters gives back, which is
+        // held to its declaration at every `return` it reaches; what it takes
+        // is held here, because the machine starts the callee's frame that
+        // many slots down and a frame that starts anywhere else reads the
+        // caller's values as its own arguments.
+        const KestChunk *callee = module->functions[u[0]];
+        if (u[1] != callee->param_slots) {
+            return "hands a function other than what it takes";
+        }
+        t = u[1];
+        g = callee->result_slots;
+        break;
+    }
+    case KEST_OP_CALL_VALUE:
+        // The function is a number only a run can know, so the machine holds
+        // the one it finds to taking and giving what this says.
+        t = u[0] + 1;
+        g = u[1];
+        break;
+    case KEST_OP_CALL_HOST:
+        t = u[1];
+        g = u[2];
+        break;
+    case KEST_OP_RETURN:
+        t = u[0];
+        break;
+    }
+#undef LAID
+#undef TYPED
+    if (t == UINT32_MAX) {
+        return "reads a value of a layout with no type";
+    }
+    *takes = t;
+    *gives = g;
+    return NULL;
+}
+
 static bool starts_at(const uint8_t *starts, uint32_t where) {
     return ((unsigned)starts[where / 8] >> (where % 8)) & 1u;
 }
 
 static const char *names_only_what_is_there(const KestModule *module,
                                             const KestChunk *chunk,
-                                            KestArena *arena, char *said,
+                                            uint8_t *starts, char *said,
                                             size_t room) {
-    // Where each instruction starts, a bit a byte: on the stack for a body of
-    // up to 64 KB of code, which is every body in this tree by a long way,
-    // because what proving takes out of a build's memory is what a build
-    // given exactly what it costs does not have. See D1237.
-    uint8_t near[8192];
-    uint8_t *starts = near;
-    size_t bytes = ((size_t)chunk->code_count + 8) / 8;
-    if (bytes > sizeof near) {
-        starts = kest_arena_alloc(arena, bytes, 1);
-        if (starts == NULL) {
-            snprintf(said, room, "could not be checked for want of memory");
-            return "K0408";
-        }
-    }
-    memset(starts, 0, bytes);
+    memset(starts, 0, ((size_t)chunk->code_count + 8) / 8);
     for (uint32_t at = 0; at < chunk->code_count; at += kest_op_width(chunk->code[at])) {
         starts[at / 8] = (uint8_t)(starts[at / 8] | (1u << (at % 8)));
     }
@@ -2359,6 +2728,119 @@ static const char *names_only_what_is_there(const KestModule *module,
     return NULL;
 }
 
+// Where the operand stack stands at every instruction a body can reach, by
+// walking every path from the first: an instruction is reached at one depth
+// or it is refused, never takes more than is there, never leaves more than the
+// body was given room for, and a `return` hands back exactly what the
+// declaration says with nothing under it. The machine moves `top` without
+// asking any of that, so this is what makes an operand an operand. What cannot
+// be reached is not walked, because nothing runs it. See D1239.
+static const char *stack_on_every_path(const KestModule *module,
+                                       const KestChunk *chunk,
+                                       uint16_t *depth, uint32_t *work,
+                                       char *said, size_t room) {
+    const uint16_t unknown = UINT16_MAX;
+    for (uint32_t at = 0; at < chunk->code_count; at++) {
+        depth[at] = unknown;
+    }
+    uint32_t waiting = 0;
+    if (chunk->code_count > 0) {
+        depth[0] = 0;
+        work[waiting++] = 0;
+    }
+    while (waiting > 0) {
+        uint32_t at = work[--waiting];
+        while (true) {
+            uint8_t op = chunk->code[at];
+            uint32_t wide = kest_op_width(op);
+            const Instruction *instruction = &INSTRUCTIONS[op];
+            uint32_t here = depth[at];
+            uint32_t takes = 0;
+            uint32_t gives = 0;
+            const char *why = kest_op_stack(module, chunk, at, &takes, &gives);
+            if (why != NULL) {
+                snprintf(said, room, "`%s` at %u %s", instruction->name, at,
+                         why);
+                return "K0410";
+            }
+            if (takes > here) {
+                snprintf(said, room,
+                         "`%s` at %u takes %u slot(s) and %u are there",
+                         instruction->name, at, takes, here);
+                return "K0410";
+            }
+            uint32_t after = here - takes + gives;
+            if (after > chunk->stack_needed) {
+                snprintf(said, room,
+                         "`%s` at %u leaves %u slot(s) where the body was "
+                         "given room for %u",
+                         instruction->name, at, after, chunk->stack_needed);
+                return "K0410";
+            }
+            if (op == KEST_OP_RETURN) {
+                if (here != takes || takes != chunk->result_slots) {
+                    snprintf(said, room,
+                             "`return` at %u gives back %u slot(s) of %u "
+                             "where the declaration gives %u",
+                             at, takes, here, chunk->result_slots);
+                    return "K0410";
+                }
+                break;
+            }
+            if (op == KEST_OP_STOP) {
+                break;
+            }
+            // Where it may go besides the next instruction, and whether the
+            // next is one of the places at all.
+            uint32_t lands = UINT32_MAX;
+            bool falls = op != KEST_OP_JUMP && op != KEST_OP_LOOP;
+            for (uint32_t k = 0; k < (wide - 1) / 2; k++) {
+                uint32_t value = read_u16(chunk, at + 1 + 2 * k);
+                if (instruction->is[k] == IS_FORWARD) {
+                    lands = at + wide + value;
+                } else if (instruction->is[k] == IS_BACKWARD) {
+                    lands = at + wide - value;
+                }
+            }
+            if (lands != UINT32_MAX) {
+                if (depth[lands] == unknown) {
+                    depth[lands] = (uint16_t)after;
+                    work[waiting++] = lands;
+                } else if (depth[lands] != after) {
+                    snprintf(said, room,
+                             "`%s` at %u arrives at %u with %u slot(s) where "
+                             "another way arrives with %u",
+                             instruction->name, at, lands, after,
+                             depth[lands]);
+                    return "K0410";
+                }
+            }
+            if (!falls) {
+                break;
+            }
+            uint32_t next = at + wide;
+            if (next >= chunk->code_count) {
+                snprintf(said, room, "`%s` at %u runs off the end",
+                         instruction->name, at);
+                return "K0410";
+            }
+            if (depth[next] != unknown) {
+                if (depth[next] != after) {
+                    snprintf(said, room,
+                             "`%s` at %u arrives at %u with %u slot(s) where "
+                             "another way arrives with %u",
+                             instruction->name, at, next, after, depth[next]);
+                    return "K0410";
+                }
+                break;
+            }
+            depth[next] = (uint16_t)after;
+            at = next;
+        }
+    }
+    return NULL;
+}
+
 bool kest_module_prove(const KestModule *module, KestArena *arena,
                        KestDiags *diags) {
     if (module->count == 0) {
@@ -2367,6 +2849,32 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
     uint8_t *state = kest_arena_alloc(arena, module->count, 1);
     if (state == NULL) {
         return false;
+    }
+
+    // What the walks below keep about one body -- where each instruction
+    // starts, the depth of the stack at each, and the places still to walk
+    // from -- sized for the largest body and in an arena of the verifier's
+    // own, given back at the end. It is not the build's, because what proving
+    // takes out of a build is what a build given exactly what it costs does
+    // not have: `examples/embed.c` builds a program inside what it cost a
+    // moment before, and was refused 4,100 bytes short. See D1237.
+    uint32_t largest = 1;
+    for (uint32_t i = 0; i < module->count; i++) {
+        if (module->functions[i]->code_count > largest) {
+            largest = module->functions[i]->code_count;
+        }
+    }
+    KestArena *scratch = kest_arena_new();
+    uint8_t *starts = NULL;
+    uint16_t *depth = NULL;
+    uint32_t *work = NULL;
+    if (scratch != NULL) {
+        starts = kest_arena_alloc(scratch, ((size_t)largest + 8) / 8, 1);
+        depth = KEST_ARENA_ARRAY(scratch, uint16_t, largest);
+        work = KEST_ARENA_ARRAY(scratch, uint32_t, largest);
+        if (depth == NULL || work == NULL) {
+            starts = NULL;
+        }
     }
 
     bool held = true;
@@ -2425,13 +2933,21 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
         // Every number an instruction carries names something that is there,
         // and every jump lands on an instruction. See D1237.
         if (wrong == NULL) {
-            // Where every instruction starts is worked out for this body and
-            // given back after it, so proving costs a build nothing it keeps.
-            char said[160];
-            KestMark before = kest_arena_mark(arena);
-            const char *code =
-                names_only_what_is_there(module, chunk, arena, said, sizeof said);
-            kest_arena_rewind(arena, before);
+            char said[200];
+            const char *code = NULL;
+            if (starts == NULL) {
+                snprintf(said, sizeof said,
+                         "could not be checked for want of memory");
+                code = "K0408";
+            }
+            if (code == NULL) {
+                code = names_only_what_is_there(module, chunk, starts, said,
+                                                sizeof said);
+            }
+            if (code == NULL) {
+                code = stack_on_every_path(module, chunk, depth, work, said,
+                                           sizeof said);
+            }
             if (code != NULL) {
                 KestSpan nowhere = {0, 0};
                 kest_diags_in(diags, chunk->source);
@@ -2498,6 +3014,7 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
             held = false;
         }
     }
+    kest_arena_free(scratch);
     return held;
 }
 

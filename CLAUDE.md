@@ -1044,9 +1044,12 @@ tools/             Build and development scripts. `make check` runs all of
                    compiled, one number in one instruction is changed to a
                    slot, a constant, a function, a door or a layout the
                    program has not got, or a jump that lands where no
-                   instruction starts, and each has to be refused with its
-                   code while the program as compiled is held. Nothing is
-                   run. See D1237.
+                   instruction starts, or a count that moves the operand
+                   stack wrong -- a `return` short, a call handing another
+                   number of slots, a `concat` of more pieces than there are
+                   or of none -- and each has to be refused with its code
+                   while the program as compiled is held. Nothing is run.
+                   See D1237 and D1239.
                    `check-commands.sh` holds every command to producing
                    something, because one that prints nothing looks the same
                    as one that works, and holds the two forms of `check`,

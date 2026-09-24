@@ -1302,6 +1302,12 @@ fn main() -> i32 {
         "to": r"""        close_regions(compiler, 0, true, stmt->span);
         stack_pop(compiler, size);
         run_deferred(compiler, 0, stmt->span);""",
+        # The verifier taken out as well: it refuses this before anything
+        # runs (D1237, D1239), and what this hole holds is the machine's own
+        # guard, which is the net under it.
+        "also": ["src/value.c", r"""        if (wrong == NULL) {
+            char said[200];""", r"""        if (false) {
+            char said[200];"""],
         "make": ["debug"],
         "binary": "kest-debug",
         "program": "deferring.kest",
@@ -1994,8 +2000,10 @@ tokens   what a token is and what it carries""",
         # something else.
         "what": "two instruction names in each other's places",
         "file": "src/value.c",
-        "from": r"""    {"call", U16_U16},     {"call.value", U16_U16},""",
-        "to": r"""    {"call.value", U16_U16},     {"call", U16_U16},""",
+        "from": r"""    {"call", U16_U16, {IS_FUNCTION, IS_NUMBER}},
+    {"call.value", U16_U16, {IS_NUMBER, IS_NUMBER}},""",
+        "to": r"""    {"call.value", U16_U16, {IS_NUMBER, IS_NUMBER}},
+    {"call", U16_U16, {IS_FUNCTION, IS_NUMBER}},""",
         "make": [],
         "tool": "tools/check-tables.sh",
         "caught": " is KEST_OP_CALL and is called ",
@@ -2011,8 +2019,8 @@ tokens   what a token is and what it carries""",
                    KEST_OP_STOP + 1,
                "every instruction has a name and nothing else does");""",
         "to": "",
-        "also": ["src/value.c", r"""    {"stop", NONE},""",
-                 r"""    {"stop", NONE}, {"stop.none", NONE},"""],
+        "also": ["src/value.c", r"""    {"stop", NONE, {}},""",
+                 r"""    {"stop", NONE, {}}, {"stop.none", NONE, {}},"""],
         "make": [],
         "tool": "tools/check-tables.sh",
         # The words without the numbers: how many instructions there are moves
@@ -2188,6 +2196,21 @@ yield""",
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/math.kest"],
         "caught": "run: a message holds 8 calls and this one showed 7",
+    },
+    {
+        # The verifier letting a constant past the end of a body through: the
+        # machine reads `constants[which]` without asking, so a chunk that
+        # names one it has not got reads whatever is after them. What says
+        # the check is worth having is the one question taken out of the
+        # verifier and the check saying which case was let through. See D1237.
+        "what": "a verifier that lets a constant past the body's through",
+        "file": "src/value.c",
+        "from": r"""                wrong = value < has ? NULL : "constant";""",
+        "to": r"""                wrong = NULL;""",
+        "make": ["libkest.a"],
+        "tool": "tools/check-verifier.sh",
+        "arguments": [],
+        "caught": "a constant past the body's was held",
     },
     {
         # The host this check writes, made not to build. A check that compiles
@@ -5745,6 +5768,12 @@ fn length(v: Vec2) -> f32 no.alloc deterministic {""",
         "file": "src/lower.c",
         "from": r"""    if (width == 0 || lower->last_at < lower->pointed_at ||""",
         "to": r"""    if (width == 0 ||""",
+        # The verifier taken out as well: it refuses this before anything
+        # runs (D1237, D1239), and what this hole holds is the machine's own
+        # guard, which is the net under it.
+        "also": ["src/value.c", r"""        if (wrong == NULL) {
+            char said[200];""", r"""        if (false) {
+            char said[200];"""],
         "make": ["kest"],
         "program": "landing.kest",
         "source": """fn add(a: i32, b: i32) -> i32 {
@@ -6307,6 +6336,12 @@ fn main() -> i32 {
         return 0;
     }
     return (uint16_t)(index + 1);""",
+        # The verifier taken out as well: it refuses this before anything
+        # runs (D1237, D1239), and what this hole holds is the machine's own
+        # guard, which is the net under it.
+        "also": ["src/value.c", r"""        if (wrong == NULL) {
+            char said[200];""", r"""        if (false) {
+            char said[200];"""],
         "make": ["debug"],
         "binary": "kest-debug",
         "program": "naming.kest",
@@ -6330,6 +6365,12 @@ fn main() -> i32 {
     emit_u16(lower, (uint16_t)index, origin);""",
         "to": r"""    emit(lower, count == 1 ? KEST_OP_CONST : KEST_OP_CONST_RUN, origin);
     emit_u16(lower, (uint16_t)(index + 1), origin);""",
+        # The verifier taken out as well: it refuses this before anything
+        # runs (D1237, D1239), and what this hole holds is the machine's own
+        # guard, which is the net under it.
+        "also": ["src/value.c", r"""        if (wrong == NULL) {
+            char said[200];""", r"""        if (false) {
+            char said[200];"""],
         "make": ["debug"],
         "binary": "kest-debug",
         "program": "reading.kest",
@@ -6360,6 +6401,12 @@ fn main() -> i32 {
     if (size != 1) {
         emit_u16(lower, (uint16_t)(size + 1), origin);
     }""",
+        # The verifier taken out as well: it refuses this before anything
+        # runs (D1237, D1239), and what this hole holds is the machine's own
+        # guard, which is the net under it.
+        "also": ["src/value.c", r"""        if (wrong == NULL) {
+            char said[200];""", r"""        if (false) {
+            char said[200];"""],
         "make": ["debug"],
         "binary": "kest-debug",
         "program": "reaching.kest",
@@ -6432,6 +6479,12 @@ fn main() -> i32 {
         "to": r"""        emit(lower, KEST_OP_CALL, span);
         emit_u16(lower, op->imm[0], span);
         emit_u16(lower, (uint16_t)(op->imm[1] + 1), span);""",
+        # The verifier taken out as well: it refuses this before anything
+        # runs (D1237, D1239), and what this hole holds is the machine's own
+        # guard, which is the net under it.
+        "also": ["src/value.c", r"""        if (wrong == NULL) {
+            char said[200];""", r"""        if (false) {
+            char said[200];"""],
         "make": ["debug"],
         "binary": "kest-debug",
         "program": "calling.kest",
@@ -6464,6 +6517,12 @@ fn main() -> i32 {
         emit_u16(lower, op->imm[0], span);
         emit_u16(lower, op->imm[1], span);
         emit_u16(lower, (uint16_t)(op->imm[2] + 1), span);""",
+        # The verifier taken out as well: it refuses this before anything
+        # runs (D1237, D1239), and what this hole holds is the machine's own
+        # guard, which is the net under it.
+        "also": ["src/value.c", r"""        if (wrong == NULL) {
+            char said[200];""", r"""        if (false) {
+            char said[200];"""],
         "make": ["debug"],
         "binary": "kest-debug",
         "program": "crossing.kest",
@@ -6495,6 +6554,12 @@ fn main() -> i32 {
         if (wide == 1) {
             return;
         }""",
+        # The verifier taken out as well: it refuses this before anything
+        # runs (D1237, D1239), and what this hole holds is the machine's own
+        # guard, which is the net under it.
+        "also": ["src/value.c", r"""        if (wrong == NULL) {
+            char said[200];""", r"""        if (false) {
+            char said[200];"""],
         "make": ["debug"],
         "binary": "kest-debug",
         "program": "leaking.kest",
@@ -8295,8 +8360,9 @@ const char *kest_scalar_name(uint8_t kind) {""",
         # says one thing and runs another from there on.
         "what": "an instruction with no name",
         "file": "src/value.c",
-        "from": '''    {"array", U16_U16},    {"make.array", U16},   {"push", U16},''',
-        "to": '''    {"array", U16_U16},    {"make.array", U16},''',
+        "from": '''    {"make.array", U16, {IS_LAYOUT}},
+    {"push", U16, {IS_LAYOUT}},''',
+        "to": '''    {"make.array", U16, {IS_LAYOUT}},''',
         "make": ["build/release/value.o"],
         "in_build": True,
         "caught": "every instruction has a name",
@@ -10114,6 +10180,12 @@ memory""",
         "to": r"""static bool close_body(Compiler *compiler, const KestBlock *block,
                        KestSpan declared) {
     compiler->body->param_slots = (uint16_t)compiler->local_count;""",
+        # The verifier taken out as well: it refuses this before anything
+        # runs (D1237, D1239), and what this hole holds is the machine's own
+        # guard, which is the net under it.
+        "also": ["src/value.c", r"""        if (wrong == NULL) {
+            char said[200];""", r"""        if (false) {
+            char said[200];"""],
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "needs a frame 1 wide and what it takes (3)",
@@ -14175,6 +14247,12 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "file": "src/compile.c",
         "from": """        if (held->type != NULL && held->type->tag == KEST_T_OPTIONAL) {""",
         "to": """        if (false) {""",
+        # The verifier taken out as well: it refuses this before anything
+        # runs (D1237, D1239), and what this hole holds is the machine's own
+        # guard, which is the net under it.
+        "also": ["src/value.c", r"""        if (wrong == NULL) {
+            char said[200];""", r"""        if (false) {
+            char said[200];"""],
         "make": ["kest"],
         "program": "asking.kest",
         "source": """import std.io
@@ -16551,8 +16629,11 @@ def put_out_of_order(hole):
         # LICENSE comes too: the extension carries a copy of it and
         # `check-tables.sh` holds the two to being the same bytes, so a copy
         # without the one at the root is a copy where that check cannot run.
+        # And SECURITY.md, which `check-docs.sh` holds like the others: a copy
+        # without it is one where every hole in the documents is caught by
+        # the document that is missing rather than by what the hole broke.
         for what in ("Makefile", "CLAUDE.md", "README.md", "CHANGELOG.md",
-                     "LICENSE"):
+                     "SECURITY.md", "LICENSE"):
             bring(what, os.path.join(work, what))
         # The times come with these: an archive that looks newer than the
         # objects in it is one nothing rebuilds.

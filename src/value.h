@@ -830,6 +830,15 @@ uint32_t kest_op_wide(uint8_t op);
 // what it ran from holding a second copy of the names. See D870.
 const char *kest_op_name(uint8_t op);
 
+// What the instruction at `at` takes off the operand stack and puts back on
+// it, in slots, read the way the machine's handler for it moves the top of
+// the stack. NULL when that can be said, and why not when it cannot: a call
+// handing a function something other than what it takes, or a value of a
+// layout with no type. The verifier walks every path with it, and the build
+// that checks itself holds it to what the machine moved. See D1239.
+const char *kest_op_stack(const KestModule *module, const KestChunk *chunk,
+                          uint32_t at, uint32_t *takes, uint32_t *gives);
+
 // Takes the last instruction back, which the compiler does when a comparison
 // turns out to be what a jump reads. `to` is where that instruction started.
 // It takes back the byte, where the next instruction is expected and where the

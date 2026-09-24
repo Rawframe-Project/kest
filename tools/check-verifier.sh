@@ -89,14 +89,17 @@ static bool refused_with(KestBuild *build, const char *code) {
 
 // The first instruction anywhere in the module carrying an operand of this
 // kind, as the chunk, where the instruction is and which operand.
+// One that carries nought is passed over when what is written is one fewer.
 static bool first_with(KestModule *module, const char *named, uint32_t operand,
-                       KestChunk **in, uint32_t *at) {
+                       bool counted, KestChunk **in, uint32_t *at) {
     for (uint32_t f = 0; f < module->count; f++) {
         KestChunk *chunk = module->functions[f];
         for (uint32_t i = 0; i < chunk->code_count;
              i += kest_op_wide(chunk->code[i])) {
             if (strcmp(kest_op_name(chunk->code[i]), named) == 0 &&
-                kest_op_wide(chunk->code[i]) >= 3 + 2 * operand) {
+                kest_op_wide(chunk->code[i]) >= 3 + 2 * operand &&
+                (!counted || chunk->code[i + 1 + 2 * operand] != 0 ||
+                 chunk->code[i + 2 + 2 * operand] != 0)) {
                 *in = chunk;
                 *at = i;
                 return true;
@@ -105,6 +108,9 @@ static bool first_with(KestModule *module, const char *named, uint32_t operand,
     }
     return false;
 }
+
+// What is written in place of a number that is one fewer than it was.
+#define FEWER 0xFFFE
 
 typedef struct {
     const char *what;
@@ -143,14 +149,22 @@ int main(int argc, char **argv) {
         {"a jump past the end", "jump.false.lt.k", 2, 0xFFFF, "K0409"},
         {"a jump between two instructions", "jump.false.lt.k", 2, 1, "K0409"},
         {"a jump back to before the body", "loop", 0, 0xFFFF, "K0409"},
+        {"a return one slot short of the declaration", "return", 0, FEWER,
+         "K0410"},
+        {"a call handing a function another number of slots", "call", 1,
+         0xFFFF, "K0410"},
+        {"a concat of more pieces than there are", "concat", 0, 0xFFFF,
+         "K0410"},
+        {"a concat of no pieces, leaving two slots nothing reads", "concat",
+         0, 0, "K0410"},
     };
     uint32_t refused = 0;
     uint32_t missed = 0;
     for (size_t c = 0; c < sizeof(cases) / sizeof(cases[0]); c++) {
         KestChunk *chunk = NULL;
         uint32_t at = 0;
-        if (!first_with(&build->module, cases[c].op, cases[c].operand, &chunk,
-                        &at)) {
+        if (!first_with(&build->module, cases[c].op, cases[c].operand,
+                        cases[c].written == FEWER, &chunk, &at)) {
             printf("refuse: no `%s` in the program for %s\n", cases[c].op,
                    cases[c].what);
             missed++;
@@ -163,6 +177,8 @@ int main(int argc, char **argv) {
         if (written == 1) {
             // Between two instructions: one byte further than it lands.
             written = (uint16_t)((low | (high << 8)) + 1);
+        } else if (written == FEWER) {
+            written = (uint16_t)((low | (high << 8)) - 1);
         }
         chunk->code[place] = (uint8_t)(written & 0xFF);
         chunk->code[place + 1] = (uint8_t)(written >> 8);
@@ -184,8 +200,9 @@ int main(int argc, char **argv) {
     if (missed > 0) {
         return 1;
     }
-    printf("%u way(s) a chunk can name what it has not got, each refused, "
-           "and the program as it was compiled held\n",
+    printf("%u way(s) a chunk can name what it has not got or move the "
+           "stack wrong, each refused, and the program as it was compiled "
+           "held\n",
            refused);
     return 0;
 }

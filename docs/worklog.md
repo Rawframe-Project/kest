@@ -42143,3 +42143,29 @@ See D1238.
 **Runs:** the two red jobs' logs; `bits` of a NaN on x86 before and after; the
 example through the machine, the C with `-mfma` and `KEST_NOOPT`; the three
 fixes taken out in turn; `make most`.
+
+## 2026-09-25, the verifier walks every path for the stack's depth
+
+Every instruction says what it takes off the operand stack and puts back, in
+one table read off the machine's handlers, and the verifier walks every path of
+every body with it: one depth at each instruction, nothing taken that is not
+there, never past the room the body was given, and every `return` exactly its
+declaration's width. The build that checks itself holds the table to what the
+machine moved before every instruction. The verifier's tables moved into an
+arena of its own, which is also what `examples/embed.c` refusing a build given
+exactly what it cost had turned up.
+
+The walk refused one shape the compiler wrote: `while true` asked its
+condition, so a body ending in one had a way to the `return` of nothing at its
+end. It asks nothing now. CI's `linux-full` on `ed4d2ea5` found the backstop
+copies missing `SECURITY.md`, and under that a real miss: `check-docs.sh` had
+not read the binary operators since D1236 renamed the table they are in.
+
+See D1239.
+
+**Runs:** every example under the build that checks itself, holding the table
+at every instruction; one row written wrong and caught by the walk at build and,
+with the walk off, by the machine; `tools/check-verifier.sh` with its four new
+cases, and again with the walk taken out; the five holes this touched, one at
+a time; `make fast`; `make most`; `make check`.
+
