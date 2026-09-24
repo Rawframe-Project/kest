@@ -70,6 +70,7 @@ reader who finds the same shape again should find the first one beside it.
 | F55 | a set of named bits kept in a struct in an array read the bytes after it as its own | a `flags` field is laid out at its declared width and was moved as a whole slot: eight bytes read, so `back.state != State.Hurt` held with `hp` in the high bits, and eight written. In both engines, flat and beside a tag. The kinds that say a set's width move at that width, and `examples/flags.kest` answers 29 on the tree before (D1176) |
 | F56 | the release engine could give back what a body called before it was compiled was holding | a call to a body lowered after its caller asked for no room for the callee's frame, so the reach the collector walks stopped below it: `examples/parse.kest` compiled answered 1 walking the heap before every allocation. The size is written once every body is lowered, and `check-c.sh` walks every example compiled at every allocation (D1179) |
 | F57 | `check-docs.sh` handed no documents ended in a Python traceback | `IndexError: list index out of range`, run by hand with no arguments. It refuses with `nothing was given to look at` like the three checks that read a list, and the gate hands it nothing beside them (D1194) |
+| F58 | a `deterministic` body compiled as C answered other bits than the machine where the target has FMA | GCC fuses a multiply and an add by default in its own dialect of C, which is how a host builds a generated file, and a fused one rounds once: `0.1 * 10.0 - 1.0` answered `5.55e-17` built with `-mfma` and `0` run. Every arm64 is such a target. The generated file turns fusing off for GCC and for a clang that heeds pragmas, and `check-c.sh` builds a program where fusing is live (D1226) |
 
 ## Read from the source rather than run
 
@@ -167,6 +168,8 @@ Where it stands, from the front page's table (D1203): `bench/compare.sh` at
   instructions run by the machine and 309 M compiled whole (D1204 to D1207),
   and ships as one binary that opens no file and answers alike (D1224).
   `CHANGELOG.md` says what changed since D1085 for a reader (D1225).
+  A generated file keeps a multiply and an add two roundings wherever it is
+  built, as the machine does (D1226).
 
 How it got there is the decisions, and the ones that moved it most: the
 fused instructions (D1155 to D1178), bodies carried into their callers

@@ -1282,6 +1282,77 @@ machine" >>"$said"
     both=$((both + 1))
 done
 
+# And a multiply and an add built where the host's compiler may fuse them.
+# The machine rounds twice; a compiler that fuses rounds once, and where the
+# target has FMA -- every arm64, and x86 told `-mfma` -- GCC fuses by default,
+# so a `deterministic` body answered other bits compiled than run. Clang fuses
+# across statements only when told to, and where it is told to heed the file's
+# pragmas that is the build that holds its half of the guard. A probe asks
+# whether fusing across statements is live here at all, the way the generated
+# C writes a multiply and an add, because a build that cannot fuse answers
+# alike for the wrong reason, and says so rather than passing. See D1226.
+fused_said="none built where the host's compiler fuses, which it does not here"
+cat >"$work"/probe.c <<'PROBE'
+#include <stdio.h>
+int main(void) {
+    volatile double x = 0.1, y = 10.0, z = -1.0;
+    double product = x * y;
+    double sum = product + z;
+    return sum != 0.0 ? 0 : 1;
+}
+PROBE
+fusing=""
+for flags in "-mfma" "-mfma -ffp-contract=fast-honor-pragmas" "" \
+        "-ffp-contract=fast-honor-pragmas"; do
+    # shellcheck disable=SC2086
+    if $cc -O2 $flags -o "$work"/probe "$work"/probe.c 2>/dev/null &&
+            "$work"/probe 2>/dev/null; then
+        fusing="-O2 $flags"
+        break
+    fi
+done
+if [ -n "$fusing" ]; then
+    cat >"$work"/fused.kest <<'PROGRAM'
+module fused
+
+import std.io
+
+fn muladd(x: f64, y: f64, z: f64) -> f64 no.alloc deterministic {
+    return x * y + z
+}
+
+fn main() -> i32 {
+    let xs: [f64] = array()
+    push(xs, 0.1)
+    push(xs, 10.0)
+    push(xs, 0.0 - 1.0)
+    io.print("{bits(muladd(xs[0], xs[1], xs[2]))}")
+    return 0
+}
+PROGRAM
+    ./kest emit --c "$work"/fused.kest >"$work"/fused.c 2>"$work"/why
+    # shellcheck disable=SC2086
+    if ! $cc $fusing -Iinclude -o "$work"/fused "$work"/fused.c libkest.a \
+            -lm 2>"$work"/why; then
+        {
+            echo "    fused.kest will not compile with $fusing:"
+            sed 's/^/        /' "$work"/why | head -5
+        } >>"$said"
+        wrong=$((wrong + 1))
+    else
+        machine_said=$(./kest run "$work"/fused.kest 2>&1 </dev/null)
+        c_said=$(KEST_LIB=lib/ "$work"/fused 2>&1 </dev/null)
+        if [ "$machine_said" != "$c_said" ]; then
+            echo "    fused.kest answers $machine_said run by the machine and \
+$c_said compiled as C with $fusing, where the compiler fuses a multiply and \
+an add" >>"$said"
+            wrong=$((wrong + 1))
+        fi
+        fused_said="one built with ${fusing% } where the host's compiler \
+fuses"
+    fi
+fi
+
 # And one program run both ways inside one process, by a host of its own. It
 # is the only thing here that holds the seam in the direction a game meets it:
 # a host that calls back into the program while a body the host's compiler
@@ -1694,5 +1765,6 @@ echo "$written of $bodies body(s) over $compiled program(s) written as C the \
 host compiler takes, $both program(s) written here and $alike of this tree's \
 own run both ways for the same answer and the same words, $walked of those \
 again walking the heap before every allocation with $not_walked left out for \
-growing worlds, $sanitised again under the sanitisers, $inside_said, and \
+growing worlds, $sanitised again under the sanitisers, $fused_said, \
+$inside_said, and \
 $wants_a_host that ask the host for what a file this wrote does not provide"

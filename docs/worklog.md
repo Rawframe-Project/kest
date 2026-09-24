@@ -41959,3 +41959,18 @@ See D1225.
 **Runs:** the header, the library and the diagnostic codes compared with
 `e458ee2c`; a program's own `bits` run; `check-docs.sh`; and `make most`.
 
+
+## 2026-09-24, a multiply and an add kept two roundings in the generated C
+
+A generated file built by a host with GCC where the target has FMA fused a
+multiply and an add, and a `deterministic` body answered `5.55e-17` where
+the machine answers `0`. The file turns fusing off itself now, and
+`check-c.sh` builds a program where fusing is live.
+
+See D1226.
+
+**Runs:** the program built with GCC and clang under each contraction mode,
+with and without each pragma; the library built with `-mfma` against every
+example; the six workloads' machine code compared with and without the
+pragmas; `check-c.sh` under both compilers, and with each pragma taken out;
+the new hole alone; `make most`.

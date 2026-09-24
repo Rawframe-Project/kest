@@ -16022,6 +16022,21 @@ kest 9.9.9""",
         "caught": "run by the machine and",
     },
     {
+        # A generated file that leaves the host's compiler free to fuse a
+        # multiply and an add. GCC does by default where the target has FMA,
+        # and a fused one rounds once where the machine rounds twice, so a
+        # `deterministic` body answers other bits compiled than run. What
+        # catches it is a program built where fusing is live. See D1226.
+        "what": "a multiply and an add left free to fuse",
+        "file": "src/emitc.c",
+        "from": r"""        "#pragma GCC optimize (""",
+        "to": r"""        "#define KEST_FUSED (""",
+        "make": ["kest"],
+        "tool": "tools/check-c.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "where the compiler fuses a multiply and an add",
+    },
+    {
         # A backend that writes every body, including the ones it has no C
         # for. Nothing about the file it produces says so -- an operation with
         # no C is simply not written, and what comes out compiles and is a

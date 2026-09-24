@@ -4714,6 +4714,13 @@ it runs where there is no source and no library at all, and every word after
 its own name is the program's. A release that cannot be made says why, as
 `K0663`. See D1172.
 
+A file `kest emit --c` wrote is built with whatever the host's compiler is
+told, and it keeps a multiply and an add two roundings itself, as the machine
+does: a compiler that fuses them where the target has FMA -- GCC does by
+default, and every arm64 has it -- rounds once and answers other bits from a
+`deterministic` body. The one build it cannot hold is clang told
+`-ffp-contract=fast`, which heeds nothing a file says. See D1226.
+
 **What that costs, measured.** Six hundred modules in six hundred and three
 files — a hundred and sixty-five kilobytes of Kest, ten times what anybody has
 written in it — compile in **67 milliseconds** and 8 megabytes, and a hundred

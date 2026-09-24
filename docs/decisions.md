@@ -41877,3 +41877,39 @@ narrower than eight bytes that read back wrong out of an array (D1176); the
 marks, which changes how a host binary is marked (D1191). The version stays
 0.0.1: nothing here is a break a reader has to act on.
 
+
+## D1226 — A multiply and an add stay two roundings in the generated C
+
+A `deterministic` body promises the same bits wherever it runs, and the
+release engine's C did not keep it. GCC fuses a multiply and an add into one
+FMA by default in its own dialect of C (`-ffp-contract=fast` is what `gnu17`
+means), a fused one rounds once where the machine rounds twice, and
+`muladd(0.1, 10.0, -1.0)` answered `0` run and `4363988038922010624` --
+`5.55e-17` -- in a generated file built `cc -O2 -mfma`. Every arm64 target
+has FMA, so there it needs no flag at all. `kest build --release` passes
+`-std=c11`, where GCC does not fuse, so what was exposed was the other way a
+generated file is built: `kest emit --c`, and a host's own compiler with
+its own flags. Clang fuses within one expression by default, and the
+generated C writes a multiply and an add as two statements, so a default
+clang build answered alike; `-ffp-contract=fast-honor-pragmas` fuses across
+them.
+
+The generated file now says so itself, after its includes: `#pragma GCC
+optimize ("fp-contract=off")` for GCC and `#pragma STDC FP_CONTRACT OFF` for
+clang. The library was built with `-mfma` too and has no fused instruction
+in it and no example that answers differently, so the machine was never
+exposed. The six workloads under `bench` compile to the same machine code
+with the pragmas as without, at `-O2` and at `-std=c11 -O2`, so nothing is
+paid for it on a target where nothing was fused. Clang told
+`-ffp-contract=fast` heeds no pragma at all; that is a build that asked for
+other arithmetic, as `-ffast-math` is, and the file's comment says so.
+
+`check-c.sh` builds a program where fusing is live. A probe asks the host's
+compiler whether a multiply and an add written as two statements fuse under
+`-mfma`, then `-mfma -ffp-contract=fast-honor-pragmas`, then with no flag
+and then the last alone, and builds `fused.kest` with the first that does.
+The build has to answer what the machine answers. Where nothing fuses the
+summary says so rather than counting a pass. Each pragma taken out alone is
+refused, the GCC one by a GCC build and the clang one by a clang build:
+`fused.kest answers 0 run by the machine and 4363988038922010624 compiled as
+C with -O2 -mfma`. A hole holds the GCC half.
