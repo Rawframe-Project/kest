@@ -42091,3 +42091,51 @@ And the fuzzer: seeds 7001 to 7300 at three hundred steps, each folded three
 ways -- written out, with the lowering's fusions off, and with `KEST_NOOPT`,
 which keeps every walk a walk -- by a sanitised fuzzer built from this tree.
 Nothing stopped and no fold differed.
+
+## D1232 — A tag whose cases carry the same pieces read without a `switch`
+
+*measured*. What is left between compiled `bench/rules.kest` and daslang's AOT
+is the shape (D1203): daslang's `decide` takes the actor as `var one : Actor`,
+a reference into the array, and changes it where it stands, and Kest's reads
+it out of the array into slots, hands the slots over and writes them back.
+Read line by line out of a profile of the generated C, `round` -- 18% of the
+run -- is a quarter reading the actor out, a quarter the ledger every call
+keeps for the collector and for what a refusal says, a quarter the slots
+copied to the callee and back, and the rest the call. Of the reading, a
+tenth was one line: the `switch` on `Task`'s tag, a jump nothing can guess
+where one actor's task is not the next one's.
+
+`Task` is `Nothing` or a number, and so is `Kind`: every case that carries
+something carries one `i32` in the same place. For a tag like that -- every
+carrying case the same pieces, each one slot wide and of the same kind, in
+the same places -- the C this backend writes moves the pieces whatever the tag
+and lets the tag choose, through a mask of which cases carry them, between
+the piece and nought: no jump. A tag with no case behind it is refused
+reading, in the words the `switch` said it in, and writes nothing but itself,
+as it did. Any other tag keeps its `switch`.
+
+Compiled `rules`, best of seven turn about against the C the commit writes:
+171.3 M cycles against 174.5 M, 1.81% fewer, for 2.23% more instructions --
+the jumps it missed were the time, not the instructions. The other five
+workloads compile to the same C, and the colony's trial released answers the
+same world in the same cycles.
+
+Taken out each way against `check-c.sh` over every example, library file and
+workload: no case carrying anything, and a piece written as nought, are each
+caught by `tagged.kest` and `bench/rules.kest`. Two cases carrying different
+kinds of number in the same place taken as the same was caught by nothing,
+so `tagged.kest` has a `Mark` that is a byte or a float now, read and written
+through an array, and it is caught -- 176 run by the machine and 232 compiled.
+A tag inside a case taken as a piece is refused anyway by the one-slot rule,
+which is what a tag carrying something is not, and a tag carrying nothing is
+its tag. A tag with no case behind it is not reached by anything in the gate,
+the `switch` before this or the mask after it: only memory a host laid out
+can hold one.
+
+And the quarter that is copies, measured by hand before building: the actor
+read straight into the callee's slots and the answer written straight into
+the local, in the generated C of `round`. 3.33% more cycles for 0.14% more
+instructions: the host's compiler had taken the copies out already, and where
+the slots live is what costs. Not built. What is left is the shape itself --
+a body that works on an actor in its array's bytes rather than in slots --
+which is another engine and not a change to this one.

@@ -489,6 +489,29 @@ struct Item {
     spare: f32?
 }
 
+// Two cases carrying something in the same place and not the same kind of
+// thing: a byte and a float are read as what their case says, not as the
+// other one. See D1232.
+enum Mark {
+    Scored(u8)
+    Weighed(f32)
+    Blank
+}
+
+fn marks(ms: [Mark]) -> i32 no.alloc no.host deterministic {
+    let total = 0
+    for at in 0..len(ms) {
+        total += match ms[at] {
+            Scored(n) -> i32(n)
+            Weighed(w) -> i32(w * 4.0)
+            Blank -> 7
+        }
+        ms[at] = if at % 2 == 0 -> Mark.Weighed(f32(at) + 0.5)
+            else -> Mark.Scored(u8(at * 3))
+    }
+    return total
+}
+
 fn worth(items: [Item], round: i32) -> i32 no.alloc no.host deterministic {
     let total = 0
     for at in 0..len(items) {
@@ -521,6 +544,18 @@ fn main() -> i32 {
     let total = 0
     for round in 0..5 {
         total += worth(items, round)
+    }
+    let ms: [Mark] = array()
+    for i in 0..9 {
+        push(
+            ms,
+            if i % 3 == 0 -> Mark.Blank
+                else -> if i % 3 == 1 -> Mark.Scored(u8(i))
+                else -> Mark.Weighed(f32(i) * 0.25)
+        )
+    }
+    for round in 0..3 {
+        total += marks(ms)
     }
     return i32((total % 251 + 251) % 251)
 }

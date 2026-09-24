@@ -42042,3 +42042,19 @@ of seven turn about; each piece taken out in turn against every example and
 the trial; the escape and the promise that a dropped arm could hide, with the
 comparison taken out; three hundred seeds folded three ways; the campaign over
 D1227 read to its end; `make most`.
+
+## 2026-09-24, a tag whose cases carry the same pieces read without a `switch`
+
+The C `kest emit --c` writes reads and writes a tag like `Task` -- nothing or
+a number -- through a mask rather than a `switch`: compiled `rules` 1.81%
+fewer cycles, the other workloads' C unchanged. The copies around the call
+were measured by hand and cost nothing to remove, so they stay; what is left
+of the gap to daslang is the shape.
+
+See D1232.
+
+**Runs:** a profile of the generated C by line; compiled `rules` and the
+other five workloads against the commit's C, best of seven turn about; the
+colony's trial released; four breaks against `check-c.sh` over the tree, and
+the new `Mark` against the one it missed; the copies taken out by hand and
+measured; `make most`.

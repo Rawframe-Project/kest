@@ -179,6 +179,8 @@ Where it stands, from the front page's table (D1203): `bench/compare.sh` at
   `linux-arm64` holds the generated C to the machine as well (D1230).
   A walk of four turns or fewer is written out once a turn: the colony's
   trial 5.2% fewer cycles run by the machine (D1231).
+  A tag whose cases carry the same pieces is read without a `switch` in the
+  generated C: compiled `rules` 1.8% fewer cycles (D1232).
 
 How it got there is the decisions, and the ones that moved it most: the
 fused instructions (D1155 to D1178), bodies carried into their callers
@@ -201,11 +203,14 @@ D1216).
 
 What is open, measured and named:
 
-- **Compiled `rules`, 1.17 times daslang's AOT.** What is left is the shape:
-  a struct read out of an array, handed to a body and written back is copied
-  where daslang's changes it in place (D1203). A slot kept in the frame
-  because it held a handle once was measured as the other half and is not:
-  2% of the instructions and no cycles (D1223).
+- **Compiled `rules`, 1.17 times daslang's AOT before D1232.** What is left
+  is the shape: a struct read out of an array, handed to a body and written
+  back is copied where daslang's changes it in place (D1203). A slot kept in
+  the frame because it held a handle once was measured as the other half and
+  is not: 2% of the instructions and no cycles (D1223). A tag read without a
+  jump took 1.8% of the cycles (D1232); the copies around the call were
+  measured by hand and cost nothing to remove, so what remains is a body
+  working on an actor in its array's bytes, which is another engine.
 
 The frame measurements -- a frame of `examples/slice` (D1124) and twenty
 thousand bodies a frame through `bench/frame` (D1123) -- and the edit loop's

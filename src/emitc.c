@@ -654,6 +654,108 @@ static uint16_t move_value(Walk *walk, const KestType *type, uint32_t slot,
     }
     Where tag;
     at_stack(walk, tag, slot);
+    // Every case that carries something carrying the same pieces in the same
+    // places, each one slot wide: the tag's `Task` and `Kind` in
+    // `bench/rules.kest`, whose cases are a number or nothing. Then the pieces
+    // are moved whatever the tag, and which cases carry them is a mask the tag
+    // reads rather than a `switch` it jumps through -- a jump nothing can
+    // guess where the tag is different from one element to the next. What a
+    // case does not carry is nought either way, and a tag with no case behind
+    // it is refused reading and writes nothing but itself, as the `switch`
+    // did. See D1232.
+    const KestVariantType *carrying = NULL;
+    uint64_t carries = 0;
+    bool uniform = type->case_count > 0 && type->case_count <= 63;
+    for (uint32_t which = 0; uniform && which < type->case_count; which++) {
+        const KestVariantType *variant = &type->cases[which];
+        if (variant->payload_count == 0) {
+            continue;
+        }
+        carries |= UINT64_C(1) << which;
+        if (carrying == NULL) {
+            carrying = variant;
+            for (uint32_t piece = 0; piece < variant->payload_count; piece++) {
+                const KestType *held = variant->payload[piece];
+                uniform = uniform && held != NULL &&
+                          held->tag != KEST_T_STRUCT &&
+                          held->tag != KEST_T_FIXED &&
+                          held->tag != KEST_T_OPTIONAL &&
+                          held->tag != KEST_T_ENUM &&
+                          held->tag != KEST_T_TEXT && held->slots <= 1;
+            }
+            continue;
+        }
+        uniform = uniform && variant->payload_count == carrying->payload_count;
+        for (uint32_t piece = 0; uniform && piece < variant->payload_count;
+             piece++) {
+            uniform = variant->payload[piece] == carrying->payload[piece] &&
+                      variant->offsets[piece] == carrying->offsets[piece] &&
+                      variant->byte_offsets[piece] ==
+                          carrying->byte_offsets[piece];
+        }
+    }
+    if (uniform && carrying != NULL) {
+        const char *written = kest_type_written(type);
+        if (reading) {
+            say(c, out,
+                "        {\n            int32_t tag;\n"
+                "            memcpy(&tag, at + %u, 4);\n"
+                "            %s.integer = tag;\n"
+                "            if ((uint32_t)tag >= %uu) {\n"
+                "                char said[96];\n"
+                "                snprintf(said, sizeof said,\n"
+                "                         \"`%s` here holds tag %%lld and has "
+                "no such case\",\n"
+                "                         (long long)tag);\n"
+                "                return kest_native_stopped(rt, %u, "
+                "\"K0651\", said);\n"
+                "            }\n",
+                byte, tag, (unsigned)type->case_count,
+                written == NULL ? "a value with a tag in it" : written,
+                where);
+        } else {
+            say(c, out,
+                "        memset(at + %u, 0, %u);\n"
+                "        {\n            int32_t tag = (int32_t)%s.integer;\n"
+                "            memcpy(at + %u, &tag, 4);\n",
+                byte, (unsigned)type->byte_size, tag, byte);
+        }
+        say(c, out,
+            "            bool carried = (uint32_t)tag < %uu && "
+            "((UINT64_C(0x%llx) >> tag) & 1u) != 0;\n",
+            (unsigned)type->case_count, (unsigned long long)carries);
+        bool filled[256] = {false};
+        for (uint32_t piece = 0; piece < carrying->payload_count; piece++) {
+            uint32_t at = slot + carrying->offsets[piece];
+            Where held;
+            at_stack(walk, held, at);
+            if (!reading) {
+                say(c, out, "            %s.integer = carried ? %s.integer : 0;\n",
+                    held, held);
+            }
+            move_one(walk, kest_scalar_of(carrying->payload[piece]), at,
+                     byte + carrying->byte_offsets[piece], reading);
+            if (reading) {
+                say(c, out, "            %s.integer = carried ? %s.integer : 0;\n",
+                    held, held);
+            }
+            if (carrying->offsets[piece] < 256) {
+                filled[carrying->offsets[piece]] = true;
+            }
+        }
+        if (reading) {
+            for (uint16_t piece = 1; piece < type->slots; piece++) {
+                if (piece < 256 && filled[piece]) {
+                    continue;
+                }
+                Where empty;
+                at_stack(walk, empty, slot + piece);
+                say(c, out, "            %s.integer = 0;\n", empty);
+            }
+        }
+        say(c, out, "        }\n");
+        return type->slots;
+    }
     if (!reading) {
         // What the case does not carry is written as nought, because a tag
         // says which reading the bytes beside it have and a case written over
