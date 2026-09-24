@@ -446,10 +446,15 @@ def under(what):
         re.findall(r'KEST_TOK_([A-Z_0-9]+)', body.group(1)))
 
 
-works = (under(r'static int binary_precedence\(KestTokenKind kind\) \{(.*?)\n\}')
-         | under(r'static bool is_assignment\(KestTokenKind kind\) \{(.*?)\n\}')
-         | under(r'static KestExpr \*parse_unary\(Parser \*parser\) \{(.*?)\n\}'))
-if not works or not spelt:
+# Each of the three on its own, because the union of three is not empty when
+# one of them is: the binary operators went missing from it for a day when the
+# parser's table was renamed for the formatter to ask (D1236), and the other
+# two were enough to say something had been read. See D1239.
+tables = [under(r'int kest_binary_precedence\(KestTokenKind kind\) \{(.*?)\n\}'),
+          under(r'static bool is_assignment\(KestTokenKind kind\) \{(.*?)\n\}'),
+          under(r'static KestExpr \*parse_unary\(Parser \*parser\) \{(.*?)\n\}')]
+works = set().union(*tables)
+if not all(tables) or not spelt:
     print('nothing here reads as the operators a program is written with')
     failed = 1
 # And every other kind of thing a program can be made of. An operator is one of
