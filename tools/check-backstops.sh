@@ -17533,9 +17533,12 @@ def put_out_of_order(hole):
         # that check fails for its own reasons and says nothing about the hole.
         # And `ai`, which is the tasks a model is given: `check-ai.sh` runs
         # them, so a copy without them is a copy where that check says nothing
-        # about the hole it was handed.
+        # about the hole it was handed. And `playground`, whose interface to
+        # the system `check-wasm.sh` runs every example through: the first
+        # run of the shares on runners of their own had a hole in it that
+        # could not find the file it was to break. See D1266.
         for what in ("src", "include", "lib", "tools", "docs", "editors",
-                     "bench", "ai"):
+                     "bench", "ai", "playground"):
             shutil.copytree(what, os.path.join(work, what),
                             copy_function=bring)
         # The two hosts are making into this one, so they are made rather than

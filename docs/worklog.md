@@ -42698,3 +42698,16 @@ because the example never drew a game in play -- it does now -- and
 `check-wasm.sh` read the colony's day half written by another check running
 it in the tree at the same time, `status 12` here and nought in the page; its
 runs are in a room of its own now.
+
+## 2026-09-25, the holes' copy takes the playground
+
+CI's third share of the holes was red on the playground's commit: each hole
+copies the directories the checks read, and `playground` was not one, so the
+hole that breaks the page's interface could not find it. The run by hand here
+copies the whole tree, which is why it was caught here. The copy takes it
+now.
+
+See D1266.
+
+**Runs:** the share's log; the third share of four here after the change,
+every hole caught; `check-tables.sh`.
