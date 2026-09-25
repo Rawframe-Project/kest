@@ -7,61 +7,17 @@ about the change, not what was built — `docs/worklog.md` is that, and
 
 What each number means and when it moves is in D983.
 
-## 0.0.1 — 2026-09-19
+## 0.0.2 — 2026-09-25
 
-**Kest is unstable again, on purpose.** The `1.0.0` below was published on
-2026-09-18 and withdrawn a day later. The tag and the GitHub release are gone;
-the history is not, and the section below is kept as the record of what was
-claimed.
-
-**What a reader with a program written against 1.0.0 has to do.** Nothing yet,
-and that is because there was nobody: each release asset had been downloaded
-once, by this project's own CI, and the repository had no forks. If you are the
-exception, the tree at `53a0771858a4d0b7770d0c48a15fdce4325e9292` is still in
-this history and still builds.
-
-**What to expect from here.** Nothing is frozen while this is `0.0.x`:
-semantics, syntax, the C ABI, the shape of the JSON, what `deterministic`
-covers, and what a reference is made of may all change. Every break is a
-decision in `docs/decisions.md` that says what it supersedes and why the old
-thing was worse, and this file says what to do about it.
-
-**Why it was withdrawn.** Two independent readings from outside the project
-found foundational things still worth changing before Kest pretends to be a
-stable language, and the first of them reproduced on the first try:
-
-- **A reference could name somebody else's object.** A reference carried which
-  world it came from, in sixteen bits of a count of the machines a process had
-  made. A count of sixteen bits comes round: the 65,537th machine was told it
-  was the first, and the first could still be standing. A world holding 7, 8, 9
-  handed its first reference to a world holding 1000, 1001, 1002 that had been
-  told it was the same world, and the second answered **1000**, with no
-  refusal. There is no world in a reference now and nothing to wrap. See D1033.
-- **A world ran out of identity in half a second.** The count that stamps
-  places was one machine's and twenty-four bits wide, so a world holding
-  exactly one thing — one in, one out — refused after 16,777,215 turns with a
-  live set of one. `bench/agents.kest` had five minutes and forty seconds in it
-  at sixty hertz. The count is the process's and forty bits now, which is
-  65,536 times further out. See D1034.
-
-**What changed for a program.** Nothing in the syntax and nothing in the
-library. A `ref<T>` is still one slot and no shape in any program got wider; a
-store costs thirteen bytes an entity more, because what a place is stamped with
-went from four bytes to eight. The ceiling on places handed out is
-`1099511627775` rather than `16777215`, and `K0630` still says so at the line
-that asked.
-
-**A module is the whole of what a file calls itself.** `import a.math` beside
-`import b.math` used to be refused for the whole program, so `render.math` and
-`physics.math` could not coexist even when no file wanted both. They can now.
-What a file writes is still the last part — `math.twice` — and which module
-that means is expanded through that file's own imports. **What a program has to
-do:** nothing, unless it reads names out of a tool. A chunk is compiled under
-the whole module, so `emit`, the profiler, the debugger and `check --json` say
-`std.text.upper#text` where they said `text.upper#text`, and every declaration
-in the JSON carries a `module` beside its name. A file reaching two modules
-that end in one word is now what `K0328` refuses, pointing at that file's two
-import lines. See D1039.
+**The first release since the withdrawal.** Everything below was made after
+`0.0.1` was declared, and each entry says what a program, a host or a tool has
+to do about it -- mostly nothing. The largest pieces: the verifier proves every
+chunk before a machine runs it and a machine for code nobody trusts takes only
+the doors opened to it (`SECURITY.md` says how far that is a sandbox);
+`sin`, `cos`, `pow` and `atan2` are deterministic; the language has vectors,
+`x.f(a)`, blocks, bodies that wait and walks over a struct's fields; the
+library builds as WebAssembly; and `kest doc`, a book and a one-sitting
+reference are the documents a newcomer starts with.
 
 **A struct field may be the module's own.** Written `own name: type`, it can
 only be named from inside the module that declared the shape. `std.table`'s
@@ -411,13 +367,6 @@ back: it is the one of the four written into data that outlives the build.
 **What a tool has to do:** read `"schema"` first, as it always should have.
 See D1069.
 
-**A world a host keeps is eight doors.** `kest_held_*` builds a machine, keeps
-its world across frames, lends a frame at a time, watches the files the build
-read and reloads under the world it was holding, publishing only when that
-worked; what every host wrote for itself is in the library. **What a host has
-to do:** nothing; one that wrote its own can keep it. The header only gains,
-and the ABI stays 4. See D1151.
-
 **The library's loop is built with returns guarded and jumps unmarked.**
 Where the compiler takes it, `vm.c` is built with `-fcf-protection=return`:
 the machine ran an instruction that does nothing at the head of every one it
@@ -542,6 +491,69 @@ above `+`, and it refused to format `(a | b) + c` rather than write something
 else. It asks the parser's list now. **What a program has to do:** nothing; a
 file formatted before may lose brackets that never changed anything, as
 `x ^ (x << 13)` does. See D1236.
+
+## 0.0.1 — 2026-09-19
+
+**Kest is unstable again, on purpose.** The `1.0.0` below was published on
+2026-09-18 and withdrawn a day later. The tag and the GitHub release are gone;
+the history is not, and the section below is kept as the record of what was
+claimed.
+
+**What a reader with a program written against 1.0.0 has to do.** Nothing yet,
+and that is because there was nobody: each release asset had been downloaded
+once, by this project's own CI, and the repository had no forks. If you are the
+exception, the tree at `53a0771858a4d0b7770d0c48a15fdce4325e9292` is still in
+this history and still builds.
+
+**What to expect from here.** Nothing is frozen while this is `0.0.x`:
+semantics, syntax, the C ABI, the shape of the JSON, what `deterministic`
+covers, and what a reference is made of may all change. Every break is a
+decision in `docs/decisions.md` that says what it supersedes and why the old
+thing was worse, and this file says what to do about it.
+
+**Why it was withdrawn.** Two independent readings from outside the project
+found foundational things still worth changing before Kest pretends to be a
+stable language, and the first of them reproduced on the first try:
+
+- **A reference could name somebody else's object.** A reference carried which
+  world it came from, in sixteen bits of a count of the machines a process had
+  made. A count of sixteen bits comes round: the 65,537th machine was told it
+  was the first, and the first could still be standing. A world holding 7, 8, 9
+  handed its first reference to a world holding 1000, 1001, 1002 that had been
+  told it was the same world, and the second answered **1000**, with no
+  refusal. There is no world in a reference now and nothing to wrap. See D1033.
+- **A world ran out of identity in half a second.** The count that stamps
+  places was one machine's and twenty-four bits wide, so a world holding
+  exactly one thing — one in, one out — refused after 16,777,215 turns with a
+  live set of one. `bench/agents.kest` had five minutes and forty seconds in it
+  at sixty hertz. The count is the process's and forty bits now, which is
+  65,536 times further out. See D1034.
+
+**What changed for a program.** Nothing in the syntax and nothing in the
+library. A `ref<T>` is still one slot and no shape in any program got wider; a
+store costs thirteen bytes an entity more, because what a place is stamped with
+went from four bytes to eight. The ceiling on places handed out is
+`1099511627775` rather than `16777215`, and `K0630` still says so at the line
+that asked.
+
+**A module is the whole of what a file calls itself.** `import a.math` beside
+`import b.math` used to be refused for the whole program, so `render.math` and
+`physics.math` could not coexist even when no file wanted both. They can now.
+What a file writes is still the last part — `math.twice` — and which module
+that means is expanded through that file's own imports. **What a program has to
+do:** nothing, unless it reads names out of a tool. A chunk is compiled under
+the whole module, so `emit`, the profiler, the debugger and `check --json` say
+`std.text.upper#text` where they said `text.upper#text`, and every declaration
+in the JSON carries a `module` beside its name. A file reaching two modules
+that end in one word is now what `K0328` refuses, pointing at that file's two
+import lines. See D1039.
+
+**A world a host keeps is eight doors.** `kest_held_*` builds a machine, keeps
+its world across frames, lends a frame at a time, watches the files the build
+read and reloads under the world it was holding, publishing only when that
+worked; what every host wrote for itself is in the library. **What a host has
+to do:** nothing; one that wrote its own can keep it. The header only gains,
+and the ABI stays 4. See D1151.
 
 ## 1.0.0 — 2026-09-18 (withdrawn 2026-09-19)
 

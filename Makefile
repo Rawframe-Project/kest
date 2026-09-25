@@ -276,6 +276,13 @@ release: kest libkest.a
 	@echo "the licence every file of it is under: LICENSE" \
 	    >> build/$(RELEASE)/VERSION
 	cd build && tar czf $(RELEASE).tar.gz $(RELEASE)
+	@# What changed, for the page a release is published on: this version's
+	@# section of the changelog and nothing else. A release with nothing to
+	@# say for itself is refused rather than published blank. See D1265.
+	awk '/^## /{on = ($$2 == "$(KEST_VERSION)")} on' CHANGELOG.md \
+	    > build/$(RELEASE).notes.md
+	@test -s build/$(RELEASE).notes.md || \
+	    (echo "CHANGELOG.md has no section for $(KEST_VERSION)" >&2; false)
 	@test -n "$(SHA256)" || \
 	    (echo "no sha256sum and no shasum: nothing here can write a \
 checksum" >&2; false)

@@ -42628,3 +42628,17 @@ See D1264.
 checked build, `KEST_NOOPT`, `KEST_PLAIN` and a release, the same each time;
 two refusals; a mistake in one copy said with the field named; a `no.alloc`
 body refused at a hole inside its walk; three holes by hand; `make most`.
+
+## 2026-09-25, 0.0.2 and the release page
+
+A release workflow: a tag makes a draft page with an archive for four
+platforms, their checksums, and the changelog's section as the notes, held to
+the tag being the version built. `make release` writes the notes and refuses
+a version with no section. The version is 0.0.2, and the changelog is split
+by `git blame` against the commit that declared 0.0.1.
+
+See D1265.
+
+**Runs:** `make release` here, the notes it wrote, one section and 485 lines;
+the workflow read as YAML; `check-docs.sh`; the six version holes by hand;
+`make most`.

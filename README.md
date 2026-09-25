@@ -10,7 +10,7 @@ runs.
 
 [![CI](https://github.com/Rawframe-Project/kest/actions/workflows/ci.yml/badge.svg)](https://github.com/Rawframe-Project/kest/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![Version](https://img.shields.io/badge/version-0.0.1-orange.svg)
+![Version](https://img.shields.io/badge/version-0.0.2-orange.svg)
 ![C11](https://img.shields.io/badge/C11-no%20dependencies-555.svg)
 
 [Quick start](#quick-start) ·
@@ -193,7 +193,14 @@ error[K0306]: unknown name `helth`
 
 ## Quick start
 
-All it needs is a C compiler.
+A release is an archive for Linux on x86-64 and on arm64, macOS on arm64 and
+Windows on x86-64, each with its checksum, on the
+[releases page](https://github.com/Rawframe-Project/kest/releases): unpack it
+anywhere, put its `bin` on the path, and `kest run` works with nothing else
+installed. What each release changed is its section of
+[CHANGELOG.md](CHANGELOG.md), which is also what the page says.
+
+From the source, all it needs is a C compiler.
 
 ```
 make
@@ -298,7 +305,7 @@ builds a host against it.
 
 ## Status
 
-Version 0.0.1. Unstable on purpose: this said `1.0.0` for a day in September
+Version 0.0.2. Unstable on purpose: this said `1.0.0` for a day in September
 2026 and withdrew it, because nobody outside the project had written a program
 in it yet. Nothing is frozen while it is `0.0.x`, and every break is a decision
 in [docs/decisions.md](docs/decisions.md) that says what it replaced and why.

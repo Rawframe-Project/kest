@@ -4792,7 +4792,7 @@ which edition of the language this compiler reads a program in, which a project
 names with its `edition` line. `kest --version` prints all five:
 
 ```
-kest 0.0.1, abi 4, json 4, profile kest-det 3, edition 2026
+kest 0.0.2, abi 4, json 4, profile kest-det 3, edition 2026
 ```
 
 The ABI number goes up when anything a host can see changes: arguments, what a
@@ -4831,7 +4831,7 @@ and `docs/rfcs/README.md` is the whole of the process.
 programs. The C ABI, the shape of the JSON and the standard library's shape are
 not frozen yet: each break is a decision that says what it supersedes and why
 the old thing was worse, and `CHANGELOG.md` says what a reader with a host or a
-tool has to do about it. This is `0.0.1`, and a `0.0.x` promises a host and a
+tool has to do about it. This is `0.0.2`, and a `0.0.x` promises a host and a
 tool nothing between one of them and the next: the C ABI may change, the shape
 of the JSON may change, and what a reference is made of may change — that one
 changed on the way to this sentence, and D1033 is why.
@@ -4854,7 +4854,7 @@ what. None of them is a promise yet.
 
 The rest of this section is what those promises **will** mean when this
 project offers them again, kept here because it is the design and not an
-aspiration. Read it as what stability would say, not as what `0.0.1` says.
+aspiration. Read it as what stability would say, not as what `0.0.2` says.
 
 **A program.** A program that checks under 1.x checks under every later 1.x.
 Syntax is added and not taken away; a keyword is added only where a program
@@ -4959,7 +4959,7 @@ project demo
 entry src/main.kest
 source src
 tests tests
-kest 0.0.1
+kest 0.0.2
 profile kest-det 3
 edition 2026
 ```

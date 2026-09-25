@@ -148,8 +148,9 @@ carries the mission itself; this is what the tree has to show for it.
     25 documentation                      done  D994
     26 versioning and release policy      done  D983, D998: four numbers and
                                           a rule for each. The version was
-                                          1.0.0 for a day and is 0.0.1
-                                          (D1035)
+                                          1.0.0 for a day and is 0.0.x
+                                          (D1035); 0.0.2 is the first
+                                          release of it (D1265)
     27 the evaluation package             done: an hour's worth on the front
                                           page, and a release archive
 
@@ -233,7 +234,9 @@ compiling a thousand modules from about 560 milliseconds to 225 (D1261), and a
 program is shipped as its source rather than as bytecode (D1262). A function
 may wait between frames and resume from its own struct and enum rather than
 from a kept frame (D1263), and walk a struct's fields while compiling, which
-is a save, a load and an inspector written once for every shape (D1264).
+is a save, a load and an inspector written once for every shape (D1264). A
+tag makes a draft release page with four platforms' archives and the
+changelog's notes, and this is 0.0.2 (D1265).
 
 ## Determinism
 

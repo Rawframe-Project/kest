@@ -43576,3 +43576,35 @@ one `read` a type and a walk each, lists it by name, and walks with
 with the optimizer and the fusions off, and as a release. Three holes are
 caught: every copy given the first field's place, a walk over what no name
 holds let through, and `continue` landing only after the last copy.
+
+## D1265 — 0.0.2, and the page a release is made on
+
+P5 asked for a release page: the packages, and notes on what changed. The
+packages were there -- CI builds an archive on Linux, macOS and Windows on
+every commit, unpacks it into an empty directory and builds a host against
+it -- and nothing turned a version into a page anybody could download from.
+
+`.github/workflows/release.yml` does, on a tag `v0.0.2`: an archive on Linux
+x86-64, Linux arm64, macOS arm64 and Windows x86-64, each checked against its
+checksum, and a page made of them with the changelog's section for that
+version as what it says. The tag is held to being the version the header
+builds, and a page that would say one version over archives of another is
+refused. The page is made as a **draft**: everything up to publishing is
+automatic, and publishing -- the one step that cannot be taken back, which
+this project learned with `1.0.0` -- is somebody deciding to. Run by hand
+(`workflow_dispatch`) it builds the archives and makes no page, which is how
+the pipeline is tried without a tag.
+
+`make release` writes the notes beside the archive, `awk` over `CHANGELOG.md`
+for the version's section, and refuses a version the changelog has nothing to
+say about: CI's `package` job runs it on every commit, so a version bumped
+without its section is a red run rather than a blank page.
+
+And this is `0.0.2`, which D983 says a release moves the version for. The
+changelog was one section, `0.0.1`, written into for a week after that
+version was declared; `git blame` says which of its entries were written after
+the commit that declared it (`b73b487d`), and those fifty-nine are `0.0.2`'s,
+under a paragraph saying what the largest of them are. The eight written with
+the declaration stay under `0.0.1`. The version is in the header, the front
+page, the reference's `--version` line and its manifest, the editor extension
+and six holes, and `check-docs.sh` holds every one of them to the run.
