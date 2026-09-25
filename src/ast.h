@@ -29,6 +29,9 @@ struct KestTypeRef {
     // `[f32; 16]`. Zero is `[f32]`, which is a handle to something that can
     // grow; a count makes it that many, laid out where it stands.
     KestSpan count;
+    // FN only: written `block(...)`, which a function takes and a value never
+    // is. See D1257.
+    bool block;
     // FN only. What the value promises, which is part of what it is. Two of
     // them, and a value promising more may go where one promising less is
     // wanted. See D853.
@@ -57,11 +60,15 @@ typedef enum {
     KEST_EXPR_TEXT,
     KEST_EXPR_MATCH,
     KEST_EXPR_IF,
+    // `|x| x * 2` and `|x| { total += x }`: a body handed to a function that
+    // takes a `block`, which runs where it was written. See D1257.
+    KEST_EXPR_BLOCK,
 } KestExprKind;
 
 typedef struct KestExpr KestExpr;
 typedef struct KestArm KestArm;
 typedef struct KestBranch KestBranch;
+typedef struct KestLambda KestLambda;
 
 // What a `match` is, whichever it is used as.
 typedef struct {
@@ -143,6 +150,8 @@ struct KestExpr {
         KestChoose *choose;
         // Out of line because it holds blocks, which are named below this.
         KestBranch *branch;
+        // And for the same reason.
+        KestLambda *lambda;
     };
 };
 
@@ -168,6 +177,19 @@ struct KestBranch {
     KestExpr *otherwise;
     bool has_else;
     bool gives;
+};
+
+// A block written where it is handed over: the names it gives what it is
+// called with, and either the value it gives or the statements it runs. It
+// runs in the frame it was written in, reading and writing that frame's
+// names, and goes nowhere else, which is what lets it be no more than code.
+// See D1257.
+struct KestLambda {
+    KestSpan *params;
+    uint32_t param_count;
+    // `|x| x * 2`. NULL for a body in braces, which gives nothing.
+    KestExpr *value;
+    KestBlock body;
 };
 
 

@@ -42472,3 +42472,22 @@ as WebAssembly goes to `PWD` first, the runner hands it over, and
 
 **Runs:** the CI log; colony as WebAssembly before and after, and where its
 file went; `check-wasm.sh`; the hole by hand; `make most`; the sweep.
+
+## 2026-09-25, blocks
+
+A function may take `body: block(T) -> R`, and a call hands it a block written
+there: `|x| value` or `|x| { ... }`. A function that takes one is written into
+every place it is called and the block into every place it is called inside,
+so a block reads and writes the caller's names with nothing captured, no heap
+and no new instruction; its body is held to the promises of where it is
+written. Every misuse is `K0367`. `examples/blocks.kest` shows it.
+
+See D1257.
+
+**Runs:** blocks in the machine, the checked build and a release, generic and
+not, returning from inside a loop, handed on, with names on both sides; every
+misuse, fifteen of them in `check-commands.sh`; promises across a block; the
+formatter over both shapes; eight holes by hand; `make fast`; `make most`; the
+sweep, where two holes left a tree that did not build -- a condition written
+out took the last reader of a name with it -- and were written to keep the
+name read and run again by hand, caught.

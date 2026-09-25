@@ -77,7 +77,7 @@ static void print_type(const KestTypeRef *type, const KestSource *source,
         fputc(']', out);
         break;
     case KEST_TYPE_FN:
-        fputs("fn(", out);
+        fputs(type->block ? "block(" : "fn(", out);
         for (uint32_t i = 0; i < type->arg_count; i++) {
             fputs(i == 0 ? "" : ", ", out);
             print_type(type->args[i], source, out);
@@ -178,6 +178,25 @@ static void print_expr(const KestExpr *expr, const KestSource *source,
         }
         fputc(')', out);
         break;
+    case KEST_EXPR_BLOCK: {
+        const KestLambda *lambda = expr->lambda;
+        fputs("(handed |", out);
+        for (uint32_t i = 0; i < lambda->param_count; i++) {
+            fputs(i == 0 ? "" : ", ", out);
+            print_span(source, lambda->params[i], out);
+        }
+        fputs("|", out);
+        if (lambda->value != NULL) {
+            fputc(' ', out);
+            print_expr(lambda->value, source, depth, out);
+        } else {
+            fputc('\n', out);
+            print_block(&lambda->body, source, depth + 1, out);
+            indent(out, depth);
+        }
+        fputc(')', out);
+        break;
+    }
     case KEST_EXPR_IF: {
         const KestBranch *branch = expr->branch;
         fputs("(if ", out);

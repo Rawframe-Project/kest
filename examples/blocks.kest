@@ -1,0 +1,92 @@
+module examples.blocks
+
+import std.io
+
+// A block is a body written where a function is called and handed to it:
+// `|x| x.health > floor` reads `floor` from here, and `|x| { total += x }`
+// writes `total` here. The function that takes one says so -- `block(T) ->
+// bool` -- and is written into every place it is called, so a block is code
+// in the frame it was written in: nothing is captured, nothing is kept, and
+// nothing reaches the heap. It is handed over and nothing else; see D1257.
+
+struct Npc {
+    name: text
+    health: i32
+}
+
+// The walk once, the thing done to each one wherever it is called.
+fn each<T>(xs: [T], body: block(T)) {
+    for x in xs {
+        body(x)
+    }
+}
+
+// A question asked of each one, which may end the walk early: `return` is
+// this function's, the block's answer is its value.
+fn firstWhere<T>(xs: [T], wanted: block(T) -> bool, otherwise: T) -> T {
+    for x in xs {
+        if wanted(x) {
+            return x
+        }
+    }
+    return otherwise
+}
+
+fn countWhere<T>(xs: [T], keep: block(T) -> bool) -> i32 no.alloc {
+    let n = 0
+    for x in xs {
+        if keep(x) {
+            n += 1
+        }
+    }
+    return n
+}
+
+// And a block handed on to another function that takes one.
+fn eachTwice<T>(xs: [T], body: block(T)) {
+    each(xs, body)
+    each(xs, body)
+}
+
+// Its own names are its own: `x` here is not the `x` where the block is
+// written, and the block sees that one.
+fn weigh(xs: [i32], weight: block(i32) -> i32) -> i32 no.alloc {
+    let total = 0
+    let x = 100
+    for one in xs {
+        total += weight(one)
+    }
+    return total + x - 100
+}
+
+fn main() -> i32 {
+    let npcs: [Npc] = array()
+    npcs.push(Npc("ann", 5))
+    npcs.push(Npc("bo", 0))
+    npcs.push(Npc("cy", 9))
+
+    let floor = 4
+    if npcs.firstWhere(|n| n.health > floor, Npc("none", -1)).name != "ann" {
+        return 1
+    }
+    if npcs.countWhere(|n| n.health > floor) != 2 {
+        return 2
+    }
+    let letters = 0
+    npcs.eachTwice(|n| {
+        letters += len(n.name)
+    })
+    if letters != 14 {
+        return 3
+    }
+    let xs: [i32] = array()
+    xs.push(1)
+    xs.push(2)
+    let total = 7
+    let x = 10
+    if weigh(xs, |one| one * x + total) != 44 {
+        return 4
+    }
+    io.print("blocks {letters}")
+    return 0
+}

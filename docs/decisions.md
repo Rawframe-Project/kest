@@ -48,6 +48,7 @@ another and is not named here is a check that fails.
 | D1067 | D1093 | the native question, answered by writing the C rather than by bounding it |
 | D1047 | D1181 | threaded dispatch taken where the compiler has it: a tenth of the cycles, not one to four per cent |
 | D409 | D1245 | the byte a walk over text is on is asked about in every build, not only the one that checks itself |
+| D1051 | D1257 | a block handed to a function where it is called, with the caller's names in reach and nothing captured; no closure is kept |
 
 ---
 
@@ -43262,3 +43263,48 @@ and one reached through a value's type from a module the file never asked for.
 Five holes: the field holding a function read as a method, the vectors with no
 module, the local taken for the function, the unimported module let through,
 and the refusal that did not say where it looked.
+
+## D1257 — A block is a body handed to a function where it is called
+
+*decided*, E3 of the plan and K9, and the part of D1051 that said this
+language is not getting anything like a closure. D1051 stands for what it was
+about: nothing is captured, nothing outlives the frame, and what to run later
+is a struct holding a function and what it needs. What it could not do is the
+commonest thing a game script does with a callback -- walk a run and do
+something to each one with the names of the caller in reach -- without writing
+the context out as a parameter every time.
+
+A block is `|x| value`, which gives a value, or `|x| { ... }`, which does
+something and gives nothing; `||` is one handed nothing. A function that takes
+one says so with `block(T) -> R` on a parameter, which is the one place the
+type may be written. A block is written as an argument to such a parameter and
+is nothing anywhere else; a block parameter is called, or handed to another
+function that takes one, and nothing else; a function that takes one is not a
+value, takes nothing from a host, and does not call itself. `return` in a
+block would leave a function the block is not written in, and is refused; a
+loop around where the block is written is not one it can `break` out of.
+`K0367` says each of those, and what `|x| total += x` needs is braces, which
+the parser says.
+
+It costs nothing to run because of how it is compiled. A function that takes a
+block has no body of its own in the module: every call of it is written into
+the caller -- what it is handed into slots of its own, its body compiled with
+its names bound to them, `return` a jump to the end with the answer where the
+call reads it and what the function opened closed on the way -- and every call
+of the block inside it is the block's body compiled there, in the file it was
+written in, with the types a generic's names stood for there, and with the
+function's names out of sight and the caller's in sight. A block handed on is
+the same block. So a generic function that takes one works per call as a copy
+does per set of types, and the verifier, the release engine and the promises
+see ordinary code: a block's body is judged by the promises of the body it is
+written in, and a call of a block in the function it is handed to is not a
+call through a value (`K0402`). Written into another file's function, the
+instructions say they are where the call is. Mutual calls between functions
+that take blocks are found where they are written in: more than sixteen deep is
+`K0367` at compile time.
+
+`examples/blocks.kest` walks, asks, counts, hands a block on, and has a
+function whose own `x` and `total` are not the ones its block reads; the
+machine, the checked build and a release answer the same. `check-commands.sh`
+holds fifteen refusals, including a `no.alloc` body whose block reaches the
+heap and the sixteen-deep one; eight holes are caught.

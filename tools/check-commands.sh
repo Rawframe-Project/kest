@@ -3892,6 +3892,21 @@ K0309|fn main() -> i32 {\n    let v = vec3(1.0, 2.0)\n    return 0\n}|`vec3` is 
 K0310|fn main() -> i32 {\n    let v = vec2(1.0, 2.0)\n    v += 2.0\n    return 0\n}|this assignment expects `vec2`, found `f32`
 K0307|struct Pot {\n    level: i32\n}\n\nfn main() -> i32 {\n    let p = Pot(1)\n    return p.fly(2)\n}|nothing called `fly` takes a `Pot` first
 K0307|fn main() -> i32 {\n    let v = vec3(3.0, 4.0, 0.0)\n    return i32(v.length())\n}|this file does not import `std.vec`
+K0367|fn main() -> i32 {\n    let f = \0174x\0174 x\n    return 0\n}|a block is handed to a function that takes one, and is nothing anywhere else
+K0367|fn each(xs: [i32], body: block(i32)) {\n    let g = body\n}\n\nfn main() -> i32 {\n    return 0\n}|`body` is a block, which is called or handed on and nothing else
+K0367|fn each(xs: [i32], body: block(i32)) {\n    for x in xs {\n        body(x)\n    }\n}\n\nfn main() -> i32 {\n    let xs: [i32] = array()\n    each(xs, \0174x\0174 {\n        return 1\n    })\n    return 0\n}|so `return` has nowhere to go
+K0313|fn each(xs: [i32], body: block(i32)) {\n    for x in xs {\n        body(x)\n    }\n}\n\nfn main() -> i32 {\n    let xs: [i32] = array()\n    for y in xs {\n        each(xs, \0174x\0174 {\n            break\n        })\n    }\n    return 0\n}|`break` is outside a loop
+K0367|fn each(xs: [i32], body: block(i32)) {\n    for x in xs {\n        body(x)\n    }\n}\n\nfn main() -> i32 {\n    let xs: [i32] = array()\n    each(xs, \0174x, y\0174 x)\n    return 0\n}|this block takes 2, and it is called with 1
+K0367|fn pick(keep: block(i32) -> bool) -> bool {\n    return keep(1)\n}\n\nfn main() -> i32 {\n    let a = pick(\0174x\0174 {\n        let y = x\n    })\n    return 0\n}|a block that gives `bool` gives it as `|x| value`
+K0367|fn pick(keep: block(i32) -> bool) -> bool {\n    return keep(1)\n}\n\nfn yes(x: i32) -> bool {\n    return true\n}\n\nfn main() -> i32 {\n    let a = pick(yes)\n    return 0\n}|a block is written where it is handed over, and this is `fn(i32) -> bool`
+K0367|fn down(n: i32, body: block(i32)) {\n    if n > 0 {\n        body(n)\n        down(n - 1, body)\n    }\n}\n\nfn main() -> i32 {\n    return 0\n}|so it cannot call itself
+K0367|fn main() -> i32 {\n    let f: block(i32) -> i32 = 1\n    return 0\n}|a block is what a function takes, and nothing else is one
+K0367|struct S {\n    f: block(i32)\n}\n\nfn main() -> i32 {\n    return 0\n}|a block is what a function takes, and nothing else is one
+K0367|extern fn Host.each(body: block(i32))\n\nfn main() -> i32 {\n    return 0\n}|a block is what a function takes, and nothing else is one
+K0367|fn each(xs: [i32], body: block(i32)) {\n    for x in xs {\n        body(x)\n    }\n}\n\nfn main() -> i32 {\n    let f = each\n    return 0\n}|`each` takes a block, so it is written into where it is called and is not a value
+K0201|fn each(xs: [i32], body: block(i32)) {\n    for x in xs {\n        body(x)\n    }\n}\n\nfn main() -> i32 {\n    let xs: [i32] = array()\n    let t = 0\n    each(xs, \0174x\0174 t += x)\n    return t\n}|a block written without braces gives a value, and this assigns one
+K0401|fn each(xs: [i32], body: block(i32)) no.alloc {\n    for x in xs {\n        body(x)\n    }\n}\n\nfn quiet(xs: [i32], ys: [i32]) -> i32 no.alloc {\n    each(xs, \0174x\0174 {\n        push(ys, x)\n    })\n    return len(ys)\n}\n\nfn main() -> i32 {\n    return 0\n}|this allocates, and `quiet` promises `no.alloc`
+K0367|fn pick(keep: block(i32) -> bool) -> bool {\n    return keep(1)\n}\n\nfn main() -> i32 {\n    let a = pick(3 > 2)\n    return 0\n}|a block is written where it is handed over, and this is `bool`
 K0327|struct Big {\n    cells: [i32; 20000]\n}\n\nfn take(b: Big) -> i32 {\n    return b.cells[0]\n}\n\nfn main() -> i32 {\n    return 0\n}|is 80000 bytes, and a value is at most 65535
 K0327|struct Big {\n    cells: [i64; 8000]\n    more: [i64; 8000]\n}\n\nfn take(b: Big) -> i64 {\n    return b.cells[0]\n}\n\nfn main() -> i32 {\n    return 0\n}|Big` is 128000 bytes, and a value is at most 65535
 K0327|enum Held {\n    Two([i64; 5000], [i64; 5000])\n    None\n}\n\nfn take(h: Held) -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}|Held` is 80008 bytes, and a value is at most 65535
@@ -4330,6 +4345,7 @@ K0301|check|import std.random\n\nfn roll(s: random.Sorce) -> i32 {\n    return 0
 K0301|check|import std.vec\n\nfn f(p: vec.Vec2) -> f32 {\n    return p.x\n}\n\nfn main() -> i32 {\n    return 0\n}|it is the language's own now: `vec2` is the same two `f32`s
 K0353|check|import std.vec\n\nfn main() -> i32 {\n    let a = vec2(1.0, 2.0)\n    let b = vec.add(a, a)\n    return 0\n}|the language adds vectors now: write `a + b`
 K0358|check|import std.io\n\nfn main() -> i32 {\n    return io\n}|is a module, and this wants a value
+K0367|run|fn there(n: i32, body: block(i32)) {\n    if n > 0 {\n        back(n - 1, body)\n    }\n}\n\nfn back(n: i32, body: block(i32)) {\n    body(n)\n    there(n, body)\n}\n\nfn main() -> i32 {\n    let t = 0\n    there(3, \0174x\0174 {\n        t += x\n    })\n    return t\n}|is written into itself more than 16 deep
 K0359|check|import std.vec\n\nfn area(v: vec) -> f32 {\n    return 1.0\n}\n\nfn main() -> i32 {\n    return 0\n}|is a module, and this wants a type
 K0359|check|import std.io\n\nfn say(v: io) {\n    return\n}\n\nfn main() -> i32 {\n    return 0\n}|`io` is a module, and this wants a type
 K0360|check|fn helper() -> i32 {\n    return 1\n}\n\nfn f(v: helper) -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}|is a function, and this wants a type

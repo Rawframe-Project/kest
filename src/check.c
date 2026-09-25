@@ -94,6 +94,16 @@ typedef struct {
     // it, so the line to point at is theirs.
     KestSpan asking;
     const KestSource *asking_source;
+    // Set while a block's body is checked, where `return` would leave a
+    // function that is not the one the block is written in. See D1257.
+    bool in_a_block;
+    // Set while an argument that is a block is checked, where a block the
+    // body was handed may be handed on. See D1257.
+    bool handing_a_block;
+    // The declaration whose body is being checked, which a function that
+    // takes a block may not call: it is written into where it is called, and
+    // written into itself it has no end. See D1257.
+    const KestDecl *function;
 } Checker;
 
 static KestType *check_expr(Checker *checker, KestExpr *expr,
@@ -926,10 +936,28 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
         kest_program_used(checker->program, checker->program->source,
                           expr->span, checker->program->source, local->span,
                           local->type, true);
+        // A block is called, or handed to what takes one, and is nothing
+        // else: held, it would outlive the frame it runs in. See D1257.
+        if (local->type != NULL && local->type->tag == KEST_T_FN &&
+            local->type->block && !checker->naming_callee &&
+            !checker->handing_a_block) {
+            report(checker, expr->span, "K0367",
+                   "`%.*s` is a block, which is called or handed on and "
+                   "nothing else",
+                   (int)length, name);
+            return error_type(checker);
+        }
         return local->type;
     }
 
     KestType *chosen = named_function(checker, name, length, expected);
+    if (chosen != NULL && kest_takes_a_block(chosen) && !checker->naming_callee) {
+        report(checker, expr->span, "K0367",
+               "`%.*s` takes a block, so it is written into where it is called "
+               "and is not a value",
+               (int)length, name);
+        return error_type(checker);
+    }
     if (chosen != NULL) {
         return chosen;
     }
@@ -939,6 +967,13 @@ static KestType *check_name(Checker *checker, KestExpr *expr,
         kest_program_used(checker->program, checker->program->source,
                           expr->span, global->source, global->span,
                           global->type, false);
+        if (!checker->naming_callee && kest_takes_a_block(global->type)) {
+            report(checker, expr->span, "K0367",
+                   "`%.*s` takes a block, so it is written into where it is "
+                   "called and is not a value",
+                   (int)length, name);
+            return error_type(checker);
+        }
         // A generic function is not one function, so there is nothing to
         // hand around: which copy would it be?
         if (!checker->naming_callee && global->type->tag == KEST_T_FN &&
@@ -3475,8 +3510,119 @@ static KestType *check_arguments(Checker *checker, KestExpr *expr,
     return answered;
 }
 
+static void check_block(Checker *checker, KestBlock *block);
+
+// What is handed to a `block` parameter: one written here, `|x| x * 2`, or a
+// block this body was handed, handed on. The block is checked where it is
+// written, in the frame it will run in, with its names standing for what the
+// function says it calls it with. See D1257.
+static KestType *check_block_argument(Checker *checker, KestExpr *argument,
+                                      const KestType *wanted) {
+    if (argument->kind == KEST_EXPR_NAME) {
+        bool was = checker->handing_a_block;
+        checker->handing_a_block = true;
+        KestType *given = check_expr(checker, argument, wanted);
+        checker->handing_a_block = was;
+        if (!is_error(given) && !(given->tag == KEST_T_FN && given->block)) {
+            report(checker, argument->span, "K0367",
+                   "a block is written where it is handed over, and this is "
+                   "`%s`",
+                   type_name(checker, given));
+            suggest(checker, "write it here: `|x| ...`");
+            return error_type(checker);
+        }
+        return given;
+    }
+    if (argument->kind != KEST_EXPR_BLOCK) {
+        KestType *given = check_expr(checker, argument, NULL);
+        if (!is_error(given)) {
+            report(checker, argument->span, "K0367",
+                   "a block is written where it is handed over, and this is "
+                   "`%s`",
+                   type_name(checker, given));
+            suggest(checker, "write it here: `|x| ...`");
+        }
+        return error_type(checker);
+    }
+    const KestLambda *lambda = argument->lambda;
+    if (lambda->param_count != wanted->param_count) {
+        report(checker, argument->span, "K0367",
+               "this block takes %u, and it is called with %u",
+               lambda->param_count, wanted->param_count);
+        return error_type(checker);
+    }
+    bool gives = wanted->result != NULL && wanted->result->tag != KEST_T_VOID;
+    if (gives && lambda->value == NULL) {
+        report(checker, argument->span, "K0367",
+               "a block that gives `%s` gives it as `|x| value`",
+               type_name(checker, wanted->result));
+        return error_type(checker);
+    }
+    uint32_t mark = checker->local_count;
+    checker->depth++;
+    for (uint32_t i = 0; i < lambda->param_count; i++) {
+        declare_local(checker, lambda->params[i], wanted->params[i]);
+    }
+    // A block runs inside whatever the function does with it, so a loop
+    // around where it is written is not one it can leave, and `return` is
+    // the function's, which the block is not.
+    bool was_in = checker->in_a_block;
+    uint32_t was_looping = checker->loop_depth;
+    checker->in_a_block = true;
+    checker->loop_depth = 0;
+    if (lambda->value != NULL) {
+        KestType *value =
+            check_expr(checker, lambda->value, gives ? wanted->result : NULL);
+        if (gives && !is_error(value) &&
+            !kest_type_equal(value, wanted->result)) {
+            expected_but(checker, lambda->value->span, wanted->result, value,
+                         "this block");
+        }
+    } else {
+        KestLambda *body = argument->lambda;
+        check_block(checker, &body->body);
+    }
+    checker->in_a_block = was_in;
+    checker->loop_depth = was_looping;
+    checker->depth--;
+    drop_locals(checker, mark);
+    argument->type = (KestType *)wanted;
+    return (KestType *)wanted;
+}
+
+// The declaration a function or a copy of one was written at.
+static const KestDecl *written_at(Checker *checker, const KestType *callee) {
+    KestProgram *program = checker->program;
+    if (callee->symbol == NULL) {
+        return NULL;
+    }
+    for (uint32_t i = 0; i < program->instance_count; i++) {
+        if (program->instances[i].symbol != NULL &&
+            strcmp(program->instances[i].symbol, callee->symbol) == 0) {
+            return program->instances[i].decl;
+        }
+    }
+    for (uint32_t i = 0; i < program->global_count; i++) {
+        const KestType *type = program->globals[i].type;
+        if (type != NULL && type->symbol != NULL &&
+            strcmp(type->symbol, callee->symbol) == 0) {
+            return program->globals[i].decl;
+        }
+    }
+    return NULL;
+}
+
 static KestType *arguments_checked(Checker *checker, KestExpr *expr,
                                    const KestType *callee) {
+    // A function that takes a block is written into where it is called, so
+    // one calling itself is one written into itself for ever. See D1257.
+    if (kest_takes_a_block(callee) && checker->function != NULL &&
+        written_at(checker, callee) == checker->function) {
+        report(checker, expr->span, "K0367",
+               "a function that takes a block is written into every place it "
+               "is called, so it cannot call itself");
+        suggest(checker, "walk what it works on with a loop instead");
+    }
     // A call through a value has no name and nowhere it was declared: the
     // shape is all there is to say. Everything else is a function somebody
     // wrote, and the line they wrote it on says what it takes and what each
@@ -3517,7 +3663,14 @@ static KestType *arguments_checked(Checker *checker, KestExpr *expr,
                            : callee->param_count;
     for (uint32_t i = 0; i < checked; i++) {
         KestType *argument =
-            check_expr(checker, expr->call.args[i], callee->params[i]);
+            callee->params[i] != NULL && callee->params[i]->block
+                ? check_block_argument(checker, expr->call.args[i],
+                                       callee->params[i])
+                : check_expr(checker, expr->call.args[i], callee->params[i]);
+        if (is_error(argument) && callee->params[i] != NULL &&
+            callee->params[i]->block) {
+            continue;
+        }
         if (!kest_type_equal(argument, callee->params[i])) {
             if (written == NULL) {
                 expected_but(checker, expr->call.args[i]->span,
@@ -4706,6 +4859,15 @@ static int64_t byte_of(Checker *checker, KestSpan span) {
 static KestType *check_expr_kind(Checker *checker, KestExpr *expr,
                                  const KestType *expected) {
     switch (expr->kind) {
+    // A block is handed to what takes one, which checks it there; anywhere
+    // else it is a value, which it is not. See D1257.
+    case KEST_EXPR_BLOCK:
+        report(checker, expr->span, "K0367",
+               "a block is handed to a function that takes one, and is "
+               "nothing anywhere else");
+        suggest(checker, "a function that takes one says so: `f: "
+                         "block(i32) -> i32`");
+        return error_type(checker);
     case KEST_EXPR_INT: {
         KestType *type = expected != NULL && expected->tag == KEST_T_INT
                              ? (KestType *)expected
@@ -5405,6 +5567,14 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
     }
 
     case KEST_STMT_RETURN: {
+        if (checker->in_a_block) {
+            report(checker, stmt->span, "K0367",
+                   "a block runs inside the function it is handed to, so "
+                   "`return` has nowhere to go");
+            suggest(checker, "a block that gives a value is written "
+                             "`|x| value`");
+            break;
+        }
         KestType *want = checker->result;
         if (stmt->result == NULL) {
             if (want != NULL && want->tag != KEST_T_VOID) {
@@ -5513,6 +5683,9 @@ static bool expr_leaves(const KestExpr *expr) {
     case KEST_EXPR_BOOL:
     case KEST_EXPR_NAME:
     case KEST_EXPR_NONE:
+    // A block's own `break` has no loop outside it to leave: it is refused
+    // there, and runs where it is called rather than where it is written.
+    case KEST_EXPR_BLOCK:
         return false;
     case KEST_EXPR_UNARY:
         return expr_leaves(expr->unary.operand);
@@ -5652,6 +5825,7 @@ static bool check_function(KestProgram *program, Checker *checker,
     checker->depth = 0;
     checker->loop_depth = 0;
     checker->result = signature->result;
+    checker->function = decl;
 
     for (uint32_t p = 0;
          p < decl->function.param_count && p < signature->param_count; p++) {

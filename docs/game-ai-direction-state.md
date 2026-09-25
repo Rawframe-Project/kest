@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1256
+    CURRENT SHA:       (this commit) D1093-D1257
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, and it is ahead of
@@ -21,7 +21,8 @@ reasoning; this holds the position.
                        with every hole caught
     LAST FAST GATE:    green
     LAST FULL GATE:    CI's `linux-full` on 8dfb947c, every hole caught; the
-                       sweep here on D1256, 948 holes, every one caught
+                       sweep here on D1257, 967 holes, every one caught
+                       (two by hand after their broken tree was mended)
     STATUS:            GAME_AI_DIRECTION_COMPLETE, marked on a7769f0
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.

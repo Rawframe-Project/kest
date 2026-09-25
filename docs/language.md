@@ -2651,6 +2651,41 @@ to follow and a `no.alloc` body cannot make, a rule for capturing out of a
 `scratch { }` block, a value with no name for a reload to match, and a shape
 the host boundary has none of. See D1051.
 
+**A block is a body handed to a function where it is called, and nothing
+else.** A function that takes one says so -- `body: block(T)`, `keep:
+block(T) -> bool` -- and a call hands it one written there: `|x| value` gives
+a value, and `|x| { ... }` does something and gives nothing. The block reads
+and writes the names where it is written, because it runs there:
+
+```kest
+fn each<T>(xs: [T], body: block(T)) {
+    for x in xs {
+        body(x)
+    }
+}
+
+fn sum(xs: [i32]) -> i32 {
+    let total = 0
+    each(xs, |x| {
+        total += x
+    })
+    return total
+}
+```
+
+That is not a closure. A function that takes a block is written into every
+place it is called, the way a copy of a generic is made for every set of
+types, and the block into every place that function calls it: its names are
+its own and the block's are the ones where it was written, nothing is
+captured, and nothing is on the heap, so a `no.alloc` body may hand one over
+and what the block does is held to that body's promises. What keeps it that is
+what a block may be: handed to a parameter and called or handed on there, and
+nothing else -- not a local's type, not a field's, not an answer, not held
+inside anything, not something a host takes, and a function that takes one is
+not a value and does not call itself. `return` in a block has nowhere to go and
+is refused, and `break` leaves only a loop inside it. With `x.f(a)` (D1256) a
+walk reads `npcs.firstWhere(|n| n.health > floor, none)`. See D1257.
+
 A function value is reached the way any other value is. Handed to a function,
 named by a `let`, held in a field, in an array, in a store — and called from
 wherever it is:
@@ -6278,6 +6313,7 @@ here, is a check that fails.
 | --- | --- |
 | `ants.kest` | a frame that walks an array of value structs and moves each one |
 | `borrow.kest` | what has to be given back on every way out of a function |
+| `blocks.kest` | a body handed to a function where it is called, reading and writing the names there |
 | `boxes.kest` | a shape that takes types, and a copy for every set of them |
 | `camera.kest` | `std.vec` and `std.math` where a camera follows something |
 | `carried.kest` | small bodies written where they are called, in every shape a carried body has to come out of right |

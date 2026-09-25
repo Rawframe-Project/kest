@@ -2744,6 +2744,116 @@ yield""",
         "caught": "wrote its day somewhere other than where it was run",
     },
     {
+        # A named function handed to a `block` parameter, as though it were code
+        # written there. See D1257.
+        "what": "a function value handed where a block is wanted",
+        "file": "src/check.c",
+        "from": r"""    if (argument->kind != KEST_EXPR_BLOCK) {
+        KestType *given = check_expr(checker, argument, NULL);""",
+        "to": r"""    if (false) {
+        KestType *given = check_expr(checker, argument, NULL);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "check: K0367 said",
+    },
+    {
+        # `block(...)` as a local's type, a field's, a host's parameter: a block
+        # that can be kept. See D1257.
+        "what": "a block type written anywhere",
+        "file": "src/types.c",
+        "from": r"""        if (ref->block && !block_here) {""",
+        "to": r"""        if (ref->block && !block_here && false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "check: K0367 said",
+    },
+    {
+        # `return` in a block, which would leave a function the block is not
+        # written in. See D1257.
+        "what": "a return inside a block",
+        "file": "src/check.c",
+        "from": r"""        if (checker->in_a_block) {
+            report(checker, stmt->span, "K0367",""",
+        "to": r"""        if (false) {
+            report(checker, stmt->span, "K0367",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "check: K0367 said",
+    },
+    {
+        # Written into itself for ever. See D1257.
+        "what": "a function that takes a block calling itself",
+        "file": "src/check.c",
+        "from": r"""    if (kest_takes_a_block(callee) && checker->function != NULL &&
+        written_at(checker, callee) == checker->function) {""",
+        "to": r"""    if (kest_takes_a_block(callee) && checker->function != NULL &&
+        written_at(checker, callee) == checker->function && false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "check: K0367 said",
+    },
+    {
+        # The function's names left in sight while a block runs: `x` in the block
+        # is the function's `x`. See D1257.
+        "what": "a block that sees the names of the function it is handed to",
+        "file": "src/compile.c",
+        "from": r"""        was_hidden[i] = compiler->locals[i].hidden;
+        compiler->locals[i].hidden = true;""",
+        "to": r"""        was_hidden[i] = compiler->locals[i].hidden;""",
+        "make": ["kest"],
+        "tool": "tools/fast.sh",
+        "arguments": [],
+        "caught": "examples/blocks.kest answered",
+    },
+    {
+        # `return` inside a function written into its caller, compiled as the
+        # caller's own. See D1257.
+        "what": "a function that takes a block returning out of its caller",
+        "file": "src/compile.c",
+        "from": r"""        if (here != NULL && compiler->local_count >= here->base &&
+            compiler->visible_floor == here->base) {""",
+        "to": r"""        if (false) {""",
+        "make": ["kest"],
+        "tool": "tools/fast.sh",
+        "arguments": [],
+        "caught": "examples/blocks.kest answered",
+    },
+    {
+        # A call of a block in the function it is handed to, read as a call
+        # through a value. See D1257.
+        "what": "a block's call judged as a call nothing promises about",
+        "file": "src/contract.c",
+        "from": r"""            !callee->type->block &&""",
+        "to": r"""            true &&""",
+        "make": ["kest"],
+        "tool": "tools/fast.sh",
+        "arguments": [],
+        "caught": "examples/blocks.kest answered",
+    },
+    {
+        # What a block does not walked as part of the body it is written in. See
+        # D1257.
+        "what": "a block's body left out of the promises of where it is written",
+        "file": "src/contract.c",
+        "from": r"""    case KEST_EXPR_BLOCK:
+        if (expr->lambda->value != NULL) {
+            walk_expr(graph, function, expr->lambda->value);
+        } else {
+            walk_block(graph, function, &expr->lambda->body);
+        }
+        break;""",
+        "to": r"""    case KEST_EXPR_BLOCK:
+        break;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "check: K0401 said",
+    },
+    {
         # Work counted and never run out of: a ceiling that is read and never
         # reached is a build that takes as long as the file makes it, which
         # is the thing a host that compiles what it was sent gave one to stop.
@@ -6068,8 +6178,8 @@ for file in "$@"; do""",
         # reads arguments that were never pushed and the process dies.
         "what": "a shape that takes a different number of things",
         "file": "src/types.c",
-        "from": """        if (a->param_count != b->param_count ||""",
-        "to": """        if (false ||""",
+        "from": """        if (a->block != b->block || a->param_count != b->param_count ||""",
+        "to": """        if (a->block != b->block || false ||""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
         "arguments": ["examples/words.kest"],

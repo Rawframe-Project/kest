@@ -441,6 +441,11 @@ new ones, because a run under profile 2 and one under 3 are two runs. A
 constant may be written as its bits, `float(u64(0x...))`, since `bits` and
 `float` are worked out where they are written. See D1235.
 
+**Blocks**: a function may take `body: block(T)`, and a call hands it one
+written there, `|x| x > floor` or `|x| { total += x }`, reading and writing
+the names where it is written. Nothing is captured or kept. **What a program has
+to do:** nothing. See D1257.
+
 **`x.f(a)` is `f(x, a)`**: `xs.len()`, `stock.get(k)` on a `table.Table`,
 `v.length()` on a vector. **What a program has to do:** nothing; every call it
 has means what it meant. See D1256.
