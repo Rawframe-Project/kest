@@ -42573,3 +42573,18 @@ reason beside them for being left out of the layout's mark, and what the
 compiler's own work costs had moved by the table's bytes -- which `make
 figures` wrote, the first figure it wrote that anybody had not broken on
 purpose.
+
+## 2026-09-25, the sweep builds what its holes read
+
+The first run of the gate as five jobs answered in twenty minutes where it had
+answered in forty-seven -- `most` in seven, the arm64 runner in sixteen where
+it had taken thirty-seven -- and every share of the holes was red: twenty-one
+holes missed, each because the check it breaks read `engine.o` and nothing had
+built it. On one runner the gate had built it before the sweep ran. The sweep
+now builds everything the gate builds before it asks anything, so a share of
+it stands on its own.
+
+See D1260.
+
+**Runs:** the four shares' logs, every miss the same line; a share here
+started from `make clean`; `make most`.

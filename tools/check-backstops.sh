@@ -17381,8 +17381,16 @@ if room < A_WORKER_WANTS * workers:
              A_WORKER_WANTS * workers // (1024 * 1024)))
     sys.exit(1)
 
+# Everything the gate builds before it asks anything, because some holes run a
+# check that reads what the gate built -- the engine's objects, the smallest
+# host -- and a sweep run on its own, which is what a share of it on a runner
+# of its own is, has nobody else to have built them. Twenty-one holes missed
+# on the first run of the shares, each saying `engine.o is not built`. See
+# D1260.
 built = subprocess.run(["make", "-s", "-j4", "kest", "embed", "debug",
-                        "embed-debug"],
+                        "embed-debug", "engine", "engine-debug", "least",
+                        "tools/inward", "tools/fuzz-debug", "bench/measure",
+                        "bench/frame"],
                        capture_output=True, text=True)
 if built.returncode != 0:
     print("the tree these are broken copies of does not build")

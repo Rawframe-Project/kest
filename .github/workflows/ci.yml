@@ -316,7 +316,6 @@ jobs:
       - name: every check put out of order, a share of them
         run: |
           mkdir -p /home/runner/kest-tmp
-          make -j
           KEST_HOLES_SHARE=${{ matrix.share }}/4 \
               TMPDIR=/home/runner/kest-tmp sh tools/check-backstops.sh
 
