@@ -251,7 +251,9 @@ from a kept frame (D1263), and walk a struct's fields while compiling, which
 is a save, a load and an inspector written once for every shape (D1264). A
 tag makes a draft release page with four platforms' archives and the
 changelog's notes, and this is 0.0.2 (D1265). The WebAssembly build runs in a
-page, held to the machine example by example (D1266).
+page, held to the machine example by example (D1266), and it is published.
+The Tetris clone brought over from LÖVE runs inside raylib, drawn by the
+engine through two doors, and CI plays it under a display nobody sees (D1269).
 
 ## Determinism
 

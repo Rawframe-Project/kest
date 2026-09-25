@@ -319,6 +319,36 @@ jobs:
           KEST_HOLES_SHARE=${{ matrix.share }}/4 \
               TMPDIR=/home/runner/kest-tmp sh tools/check-backstops.sh
 
+  # An engine hosting Kest: raylib built from its own source, the host built
+  # against it, and the game played by the program's own player under a
+  # display nobody sees, which has to end where it always ends and leave the
+  # screen it showed. See D1269.
+  raylib:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: raylib, and a display nobody sees
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q xvfb libx11-dev libxrandr-dev \
+              libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev
+          git clone -q --depth 1 --branch 5.5 \
+              https://github.com/raysan5/raylib.git "$RUNNER_TEMP/raylib"
+          make -C "$RUNNER_TEMP/raylib/src" PLATFORM=PLATFORM_DESKTOP -j
+      - name: the game, played by an engine
+        run: |
+          make -j
+          make raylib RAYLIB="$RUNNER_TEMP/raylib/src"
+          KEST_LIB=lib/ xvfb-run -a -s "-screen 0 800x700x24" \
+              examples/raylib/host --frames 1500 --shot tetromino.png | tee said
+          grep -q "1500 frame(s), score 3$" said
+          test -s tetromino.png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tetromino-under-raylib
+          path: tetromino.png
+
   windows:
     runs-on: windows-latest
     timeout-minutes: 20

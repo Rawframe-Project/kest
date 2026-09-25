@@ -1850,10 +1850,28 @@ $((without - refused)) could promise it and do not"
         sed -i "/$promise/! s/^\(fn \(main\|onEvent\|onEvents\)[( ][^{]*\) \
 {\$/\1 $promise {/" "$one"
     done
+    # Each file's own doors refused and not those of a file it imports: a
+    # program that imports another example is checked with it, and that
+    # one's `main` would be counted once for each file that reaches it. What
+    # says whose door it is, is the name the refusal gives it. See D1269.
     entered=0
     for one in $(find "$scratch"/side/examples -name '*.kest' | sort); do
-        entered=$((entered + $(./kest check "$one" 2>&1 </dev/null |
-            grep -c "^error\[K040[12]\].*promises \`$promise\`" || true)))
+        entered=$((entered + $(./kest check --json "$one" 2>/dev/null \
+            </dev/null | python3 -c '
+import json
+import sys
+
+import re
+
+said = json.load(sys.stdin)
+named = re.search(r"^module (\S+)", open(sys.argv[1]).read(), re.M)
+own = (named.group(1) + ".") if named else ""
+print(sum(1 for one in said.get("diagnostics", [])
+          if one.get("code") in ("K0401", "K0402")
+          and re.search("`%s(main|onEvent|onEvents)` promises `%s`"
+                        % (re.escape(own), sys.argv[2]),
+                        one.get("message", ""))))
+' "$one" "$promise")))
     done
     at_the_door=$(find examples -name '*.kest' -exec cat {} \; |
         grep '^fn \(main\|onEvent\|onEvents\)[( ]' | grep -vc "$promise" \

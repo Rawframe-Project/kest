@@ -1,0 +1,105 @@
+module examples.raylib.game
+
+import examples.tetromino
+
+// The Tetris clone in `examples/tetromino.kest`, driven by an engine rather
+// than by a player written in Kest: the host keeps the world between frames,
+// tells it which keys went down and came up, and draws what the program asks
+// it to. Drawing is two doors -- a box of a colour at a place on the board, and
+// a line of text -- and what the host does with them is the host's: this one is
+// raylib. What LÖVE's `love.draw` was, is `draw` here. See D1269.
+
+extern fn Screen.box(x: i32, y: i32, color: i32) no.alloc
+extern fn Screen.say(line: text, x: i32, y: i32) no.alloc
+
+// What the host keeps: the game in a run of one, a handle, so a frame changes
+// the game where the host is keeping it.
+struct World {
+    game: [tetromino.Game]
+}
+
+fn begin(seed: i32) -> World {
+    let started = tetromino.released(
+        tetromino.begin(u64(seed)),
+        tetromino.Key.Other
+    )
+    return World([started])
+}
+
+// The keys a host passes, one bit each, in the order `Key` declares them.
+fn keys() -> [tetromino.Key] {
+    return [
+        tetromino.Key.Left,
+        tetromino.Key.Right,
+        tetromino.Key.Up,
+        tetromino.Key.Q,
+        tetromino.Key.Down,
+        tetromino.Key.Space,
+        tetromino.Key.P,
+        tetromino.Key.Other
+    ]
+}
+
+fn draw(g: tetromino.Game) {
+    for x in 1..tetromino.BOARD_WIDTH + 1 {
+        for y in 1..tetromino.BOARD_HEIGHT + 1 {
+            if g.board[x][y] != tetromino.BLANK {
+                Screen.box(x - 1, y - 1, g.board[x][y])
+            }
+        }
+    }
+    if let piece = g.falling {
+        for x in 1..tetromino.TEMPLATE + 1 {
+            for y in 1..tetromino.TEMPLATE + 1 {
+                if tetromino.boxed(piece, x, y) && y + piece.y >= 1 {
+                    Screen.box(x + piece.x - 1, y + piece.y - 1, piece.color)
+                }
+            }
+        }
+    }
+    if g.state == tetromino.State.Over {
+        Screen.say("GAME OVER -- score {g.score}", 0, 0)
+    } else {
+        Screen.say("Score: {g.score}  Level: {g.level}", 0, 0)
+    }
+}
+
+// One frame: the keys that went down, the keys that came up, the time that
+// passed, and what it looks like now. Answers the score.
+fn frame(w: World, dt: f64, down: i32, up: i32) -> i32 {
+    let g = w.game[0]
+    let named = keys()
+    for bit in 0..len(named) {
+        if down & 1 << bit != 0 {
+            g = tetromino.pressed(g, named[bit])
+        }
+        if up & 1 << bit != 0 {
+            g = tetromino.released(g, named[bit])
+        }
+    }
+    g = tetromino.update(g, dt)
+    w.game[0] = g
+    draw(g)
+    return g.score
+}
+
+// A frame played by the player `examples/tetromino.kest` has: each piece moved
+// to where it lands lowest and dropped. What a host runs where nobody is at
+// the keyboard. Answers the score.
+fn played(w: World, dt: f64) -> i32 {
+    let g = w.game[0]
+    if let piece = g.falling {
+        let target = tetromino.column_for(g)
+        if target < piece.x {
+            g = tetromino.pressed(g, tetromino.Key.Left)
+        } else if target > piece.x {
+            g = tetromino.pressed(g, tetromino.Key.Right)
+        } else if piece.y >= 0 {
+            g = tetromino.pressed(g, tetromino.Key.Space)
+        }
+    }
+    g = tetromino.update(g, dt)
+    w.game[0] = g
+    draw(g)
+    return g.score
+}

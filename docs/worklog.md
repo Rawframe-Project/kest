@@ -42711,3 +42711,24 @@ See D1266.
 
 **Runs:** the share's log; the third share of four here after the change,
 every hole caught; `check-tables.sh`.
+
+## 2026-09-25, the Tetris clone inside raylib
+
+`examples/raylib/`: raylib keeps the loop, the keyboard and the drawing, and
+the game is the Tetris clone, kept between frames by `kest_held` and drawing
+through `Screen.box` and `Screen.say`. `make raylib RAYLIB=...` builds it; a
+`played` door lets the program's own player take the keys where nobody is at
+the keyboard. The first headless run dropped every piece where it spawned and
+was over in two hundred frames; its screenshot also landed at the root of the
+tree, because raylib writes a shot where the host was started, which the host
+says now. The playground is published, and runs `hello from kest` in Chrome
+from its address.
+
+See D1269.
+
+**Runs:** raylib 5.5 built from its source here; the host under Xvfb for 1500
+frames, `score 3`, and the screenshot read; the published playground in
+headless Chrome; `make most`, which refused once: the gate counts the
+refusals of every door a host enters in the examples, and the game imports
+the Tetris clone, so its `main` was counted twice. What is counted now is a
+refusal naming the file's own door.

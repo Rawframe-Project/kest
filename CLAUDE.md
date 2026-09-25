@@ -67,7 +67,12 @@ libkest.a          The language. `kest` is one host of it and
                    at a time, and reloads the program under a world it saved.
                    `make engine` and `make engine-debug` build it. It is read
                    by somebody writing a host; the other is read by somebody
-                   asking whether a door works.
+                   asking whether a door works. `examples/raylib/host.c` is
+                   the fourth and is a host inside an engine: raylib keeps the
+                   loop, the keyboard and the drawing, and the game is Kest,
+                   drawing through two doors. `make raylib RAYLIB=...` builds
+                   it against a raylib built from its own source, and CI plays
+                   it under a display nobody sees. See D1269.
 src/               Implementation. One module per .c/.h pair.
 docs/              The four documents above.
 lib/std/           The standard library, written in Kest and held to the

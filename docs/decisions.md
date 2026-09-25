@@ -43740,3 +43740,30 @@ holds it.
 What was not longer: `goto continue` is `continue`, `string.sub(s, x, x)` is
 `s[x - 1]`, a table of shapes keyed by a letter is an enum and a `match`, and
 `nil` is an optional.
+
+## D1269 — An engine hosting Kest: the Tetris clone under raylib
+
+T3 asked for an engine integration as a reference: a host that is an engine
+rather than a command line, shaped the way a game uses a scripting language.
+`examples/engine.c` is the shape of a host and draws nothing; what a reader
+asking "what does it look like in an engine" wants is the loop, the input and
+the drawing to be somebody else's library, and the game to be Kest.
+
+`examples/raylib/host.c` is that with raylib: raylib opens the window, keeps
+the loop at sixty frames a second, reads the keyboard and draws, and the game
+is `examples/raylib/game.kest` -- the Tetris clone D1268 brought over from
+LÖVE -- asked for one frame at a time. The world is kept between frames with
+`kest_held` (D1151), so a frame is `kest_held_call(held, "frame", ...)` with
+the time and the keys that went down and came up, and what the program draws
+it draws through two doors the host binds: `Screen.box(x, y, color)` and
+`Screen.say(line, x, y)`, which are `DrawRectangle` and `DrawText`. Nothing
+of raylib is in the program and nothing of the game is in the host; a
+different engine is a different forty lines of binding.
+
+`make raylib RAYLIB=...` builds it against a raylib built from its own source,
+and CI's `raylib` job does: raylib 5.5 from its repository, the host, and the
+game played for 1500 frames by the program's own player under a display
+nobody sees, which has to say `1500 frame(s), score 3` and leave a screenshot
+-- the one the job keeps. Here, the same under Xvfb: three lines cleared by
+frame 1500, the board drawn box by box through `Screen.box`, the score through
+`Screen.say`.

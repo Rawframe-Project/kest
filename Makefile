@@ -177,6 +177,20 @@ most: tools/check.sh
 check: tools/check.sh
 	@tools/check.sh
 
+# An engine hosting Kest: raylib draws, reads the keyboard and keeps the loop,
+# and the game is `examples/raylib/game.kest`. Not in any other target, for the
+# reason the coverage fuzzer is not: raylib is somebody else's, built from its
+# own source, and `RAYLIB` is where its `src` was built. CI's `raylib` job
+# builds it and plays the game under a display nobody sees. See D1269.
+RAYLIB ?=
+examples/raylib/host: examples/raylib/host.c libkest.a include/kest.h
+	@test -n "$(RAYLIB)" || \
+	    (echo "RAYLIB is the src directory raylib was built in" >&2; false)
+	$(CC) $(HOSTWARN) -O2 -Iinclude -I$(RAYLIB) -o $@ $< libkest.a \
+	    $(RAYLIB)/libraylib.a -lm -lpthread -ldl -lGL -lX11
+
+raylib: examples/raylib/host
+
 # The playground: the command line as WebAssembly, the page, the standard
 # library and a few examples, in one directory a web server hands out as it
 # is. `.github/workflows/pages.yml` publishes it. See D1266.
@@ -323,14 +337,14 @@ clean:
 	rm -rf build kest kest-debug libkest.a examples/embed \
 	    examples/embed-debug examples/engine examples/engine-debug \
 	    examples/least tools/inward tools/fuzz tools/fuzz-debug \
-	    tools/fuzz-cover kest.wasm \
+	    tools/fuzz-cover kest.wasm examples/raylib/host \
 	    bench/measure bench/frame \
 	    bench/control-cpp bench/graph-cpp bench/kernel-cpp bench/words-cpp \
 	    bench/rules-cpp \
 	    .jitted_scripts kest-colony-day.txt
 
 .PHONY: debug least embed embed-debug engine engine-debug fast most check figures \
-    playground \
+    playground raylib \
     time fuzz release install uninstall clean
 
 # A short campaign, which is what a gate can afford: eight seeds and four

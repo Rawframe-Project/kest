@@ -200,6 +200,10 @@ anywhere, put its `bin` on the path, and `kest run` works with nothing else
 installed. What each release changed is its section of
 [CHANGELOG.md](CHANGELOG.md), which is also what the page says.
 
+Or try it without installing anything, in the
+[playground](https://rawframe-project.github.io/kest/): the command line built as
+WebAssembly, running in the page.
+
 From the source, all it needs is a C compiler.
 
 ```
