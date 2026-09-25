@@ -42694,3 +42694,43 @@ proves what the machine used to trust -- every operand, every jump, the stack,
 what every slot holds, working memory, the two halves of text -- and the one
 read the proof could not reach asks.
 
+## D1246 — A machine for code nobody trusts
+
+*decided*, K2 of the plan. What a program can do is what the host bound
+(D981), which is the right door for a host running code it wrote and the wrong
+default for a host running code a player wrote: a host that binds a debugging
+door for itself hands it to every mod. The profile the plan asks for is s&box's
+access list said the way this project says things -- per door, by the host,
+before anything runs -- and Luau's safe environment's other half: the ceilings
+are not optional.
+
+`kest_host_open(host, name)` says a door already bound may be called by code
+nobody trusts, and `kest_host_opened` asks. `kest_start_untrusted(build, host,
+limits)` is `kest_start` with three things more:
+
+- every door the program asks for is one the host opened, or the start is
+  refused, by name, with `K0663` -- beside `K0606` for one nothing bound;
+- `limits` says how long it may run and how much heap it may have, or the
+  start is refused with `K0664` or `K0665`: nought is not read as no ceiling,
+  because the host that forgot is the host this is for;
+- it runs only what the verifier proved. A body the other backend wrote as C
+  and a host linked in is not entered, and the machine runs the instructions
+  it was proved from instead. The plan says the untrusted profile is the
+  interpreter and nothing else; this is where that is kept, in the three places
+  the machine enters a body.
+
+A new function rather than a field in `KestLimits`, because a field is a
+different struct to a host compiled against the last header, and three
+functions added are nothing to one.
+
+`examples/embed.c` starts its program untrusted four ways -- with no door
+opened, with no fuel ceiling, with no heap ceiling, and with every door opened
+and both ceilings -- and reads each refusal back by its code and what it names.
+`check-c.sh`'s host that links a program's C into itself runs it a third time,
+untrusted: the same answer, and the machine ran as many instructions as it
+does with no C at all where beside the C it ran none; with the machine's check
+taken out it runs the C and the check says so.
+
+What the profile does not do yet is S5's: a ceiling on compiling, which a
+program nobody trusts is compiled under on the player's machine.
+

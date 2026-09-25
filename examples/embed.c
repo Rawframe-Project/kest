@@ -6714,6 +6714,108 @@ int main(int argc, char **argv) {
     }
     printf("and refused the build under the two machines still standing\n");
 
+    // And the same program for a machine nobody trusts, which takes only the
+    // doors the host opened to it and has to be told how long it may run and
+    // how much heap it may have. Each refusal is read back from the build's
+    // report by its code and what it names. Here rather than beside the first start,
+    // because a machine started and freed there is one more counted before
+    // the build is asked how many are standing on it. See D1246.
+    {
+        // A host of its own, because the one above has the doors it bound
+        // for code it wrote, and this is a host saying which of them are for
+        // code nobody trusts.
+        KestHost *strict = kest_host_new();
+        static Decider strict_decider = {-1, 1, true, true, false, false,
+                                         DECIDER_MARK};
+        static bool strict_blaming = false;
+        if (strict == NULL ||
+            !kest_host_bind(strict, "Io.write", io_write, stdout) ||
+            !kest_host_bind(strict, "Engine.decide", engine_decide,
+                            &strict_decider) ||
+            !kest_host_bind(strict, "Engine.name", engine_name,
+                            &strict_decider) ||
+            !kest_host_bind(strict, "Engine.rank", engine_rank,
+                            &strict_decider) ||
+            !kest_host_bind(strict, "Engine.hurt", engine_hurt, NULL) ||
+            !kest_host_bind(strict, "Engine.blame", engine_blame,
+                            &strict_blaming) ||
+            !kest_host_bind(strict, "Engine.weigh", engine_weigh,
+                            &strict_decider) ||
+            !kest_host_bind(strict, "Engine.who", engine_who,
+                            &strict_decider)) {
+            fprintf(stderr, "a host for code nobody trusts could not be "
+                            "given its doors\n");
+            return 1;
+        }
+        KestLimits bounded = {0, 0, (size_t)1 << 22, UINT64_C(1) << 32};
+        KestLimits no_fuel = {0, 0, (size_t)1 << 22, 0};
+        KestLimits no_heap = {0, 0, 0, UINT64_C(1) << 32};
+        struct {
+            const KestLimits *limits;
+            const char *code;
+            const char *names;
+        } refusals[] = {
+            {&bounded, "K0663", "`Io.write`"},
+            {&no_fuel, "K0664", "how long it runs"},
+            {&no_heap, "K0665", "on its heap"},
+        };
+        for (size_t r = 0; r < sizeof(refusals) / sizeof(refusals[0]); r++) {
+            if (kest_start_untrusted(build, strict, refusals[r].limits) != NULL) {
+                fprintf(stderr, "a machine nobody trusts started without %s\n",
+                        refusals[r].code);
+                return 1;
+            }
+            FILE *heard = tmpfile();
+            if (heard == NULL) {
+                fprintf(stderr, "this host has nowhere to read a report "
+                                "back from\n");
+                return 1;
+            }
+            kest_build_report(build, heard, KEST_FORM_TEXT);
+            rewind(heard);
+            char line[512];
+            bool said = false;
+            while (fgets(line, sizeof(line), heard) != NULL) {
+                if (strstr(line, refusals[r].code) != NULL &&
+                    strstr(line, refusals[r].names) != NULL) {
+                    said = true;
+                }
+            }
+            fclose(heard);
+            if (!said) {
+                fprintf(stderr, "a machine nobody trusts was refused without "
+                                "saying %s about %s\n",
+                        refusals[r].code, refusals[r].names);
+                return 1;
+            }
+        }
+        const char *doors[] = {"Io.write",     "Engine.decide", "Engine.name",
+                               "Engine.rank",  "Engine.hurt",   "Engine.blame",
+                               "Engine.weigh", "Engine.who"};
+        for (size_t d = 0; d < sizeof(doors) / sizeof(doors[0]); d++) {
+            if (!kest_host_open(strict, doors[d]) ||
+                !kest_host_opened(strict, doors[d])) {
+                fprintf(stderr, "`%s` would not open\n", doors[d]);
+                return 1;
+            }
+        }
+        if (kest_host_open(strict, "Engine.nothing")) {
+            fprintf(stderr, "a door nothing bound was opened\n");
+            return 1;
+        }
+        KestRuntime *untrusted = kest_start_untrusted(build, strict, &bounded);
+        kest_host_free(strict);
+        if (untrusted == NULL || !kest_runtime_free(untrusted)) {
+            fprintf(stderr, "a machine nobody trusts did not start with "
+                            "every door open and both ceilings\n");
+            kest_build_report(build, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        printf("a machine nobody trusts is refused a door the host did not "
+               "open, and a start with no ceiling on its fuel or its heap, "
+               "and starts with every door open and both\n");
+    }
+
     // And what a machine that was never asked takes with it. What a host has
     // been told is the host's and the room it was written in goes back (D617);
     // what it was not told is the machine's, and a machine is freed with it. So

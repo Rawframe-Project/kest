@@ -9270,9 +9270,9 @@ fn main() -> i32 {
         "what": "a machine handed a walk of nothing",
         "file": "src/build.c",
         "from": """    KestRuntime *runtime = kest_runtime_new(own, &build->module, host, said,
-                                            limits, walk_it(build));""",
+                                            limits, walk_it(build), untrusted);""",
         "to": """    KestRuntime *runtime = kest_runtime_new(own, &build->module, host, said,
-                                            limits, &(KestWalk){0});""",
+                                            limits, &(KestWalk){0}, untrusted);""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "a host that said nothing was given",
@@ -10770,8 +10770,8 @@ fn main() -> i32 {
         # release and a half while the header had 88.
         "what": "the reference counting the doors for itself",
         "file": "docs/language.md",
-        "from": r"""The C API is 108 doors in 6 families: 48 for running""",
-        "to": r"""The C API is 108 doors in 6 families: 47 for running""",
+        "from": r"""The C API is 111 doors in 6 families: 51 for running""",
+        "to": r"""The C API is 111 doors in 6 families: 50 for running""",
         "make": [],
         "tool": "tools/check-tables.sh",
         "arguments": [],
@@ -13011,6 +13011,7 @@ bool kest_read_unit(KestArena *arena, KestDiags *diags, const char *path,""",
         "what": "a machine started from the first host anybody used",
         "file": "src/vm.c",
         "from": """    bool unbound = false;
+    rt->untrusted = untrusted;
     for (uint32_t i = 0; i < module->extern_count; i++) {""",
         "to": """    static const KestHost *ever = NULL;
     if (ever == NULL) {
@@ -13018,6 +13019,7 @@ bool kest_read_unit(KestArena *arena, KestDiags *diags, const char *path,""",
     }
     host = ever;
     bool unbound = false;
+    rt->untrusted = untrusted;
     for (uint32_t i = 0; i < module->extern_count; i++) {""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
@@ -16127,7 +16129,7 @@ kest 9.9.9""",
         # See D1037.
         "what": "a front page counting the doors for itself",
         "file": "README.md",
-        "from": """a C embedding API of 108 doors""",
+        "from": """a C embedding API of 111 doors""",
         "to": """a C embedding API of 88 doors""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",
@@ -16213,14 +16215,14 @@ kest 9.9.9""",
         # crossings. See D1094.
         "what": "compiled bodies that nothing ever enters",
         "file": "src/vm.c",
-        "from": r"""            if (callee->native != NULL) {
+        "from": r"""            if (callee->native != NULL && !rt->untrusted) {
                 frame = &rt->frames[rt->frame_count++];""",
         "to": r"""            if (callee->native != NULL && false) {
                 frame = &rt->frames[rt->frame_count++];""",
         # Both ways in, because a program whose every body was written enters
         # the C at its entry and never through a call.
         "also": ["src/vm.c",
-                 r"""        if (chunk->native != NULL) {
+                 r"""        if (chunk->native != NULL && !rt->untrusted) {
             KestValue *was_top = rt->running_top;""",
                  r"""        if (chunk->native != NULL && false) {
             KestValue *was_top = rt->running_top;"""],

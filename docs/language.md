@@ -3233,6 +3233,19 @@ of the same sentence: from its third frame on it stops asking the program and
 answers for itself, and what the world does says so without anything having
 been rebound.
 
+A host running code it did not write -- a mod, a player's script -- starts the
+machine with `kest_start_untrusted` rather than `kest_start`. It takes only the
+doors the host opened to such code with `kest_host_open` (and
+`kest_host_opened` asks whether one is), so a door a host bound for its own
+tools is not handed to every mod: a program asking for any other is refused by
+name, `K0663`, where a door nothing bound is `K0606`. It has to be given a
+ceiling on how long it runs and on its heap, and is refused `K0664` or `K0665`
+without one, because nought there is no ceiling and the host that forgot is the
+host this start is for. And it runs only the instructions the verifier proved:
+a body the other backend wrote as C and a host linked in is not entered. What
+this machine promises and how far each promise is kept is `SECURITY.md`. See
+D1246.
+
 What a host asks about itself is asked for the same way anything else is: an
 `extern` the program declares and the host binds. `examples/embed.kest` has
 `Engine.name` and asks it what it is running under, and the host beside it
@@ -4320,7 +4333,7 @@ than something written wrongly — that is where a host walks `kest_frame_gives`
 and lays the slots out itself, which it may do for a struct too when the way
 the language writes one is not the way it wants.
 
-The C API is 108 doors in 6 families: 48 for running a program, 18 for reading
+The C API is 111 doors in 6 families: 51 for running a program, 18 for reading
 what one is made of, 14 for watching what it cost, 13 for stopping one, 10 for
 its memory and 5 for steering it while it runs. A host that compiles, binds,
 sizes and calls needs 22 of them, which is what `examples/least.c` is; the rest

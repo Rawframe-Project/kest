@@ -947,8 +947,8 @@ bool kest_bound_from(KestBuild *build, const char *name, uint32_t frames,
     return true;
 }
 
-KestRuntime *kest_start(KestBuild *build, const KestHost *host,
-                        const KestLimits *limits) {
+static KestRuntime *start(KestBuild *build, const KestHost *host,
+                          const KestLimits *limits, bool untrusted) {
     // A build that is not there is the more likely of the two: `kest_build`
     // answers NULL for a program that did not compile, which is the first
     // thing a host meets, and the next line a host writes is this one. No
@@ -978,7 +978,7 @@ KestRuntime *kest_start(KestBuild *build, const KestHost *host,
     }
     kest_diags_init(said, own);
     KestRuntime *runtime = kest_runtime_new(own, &build->module, host, said,
-                                            limits, walk_it(build));
+                                            limits, walk_it(build), untrusted);
     if (runtime == NULL) {
         // A machine that never started has nothing to be asked, so what it
         // said on the way out is given to the build: that is what a host has
@@ -994,4 +994,43 @@ KestRuntime *kest_start(KestBuild *build, const KestHost *host,
         kest_arena_free(own);
     }
     return runtime;
+}
+
+KestRuntime *kest_start(KestBuild *build, const KestHost *host,
+                        const KestLimits *limits) {
+    return start(build, host, limits, false);
+}
+
+KestRuntime *kest_start_untrusted(KestBuild *build, const KestHost *host,
+                                  const KestLimits *limits) {
+    if (build == NULL || !build->compiled) {
+        return NULL;
+    }
+    // A program nobody trusts is one that may never end and may ask for
+    // everything, so what bounds it is not a default a host forgot to
+    // change: nought is refused here rather than read as no ceiling. Said to
+    // the build, as a start that fails says everything. See D1246.
+    bool bounded = true;
+    KestSpan nowhere = {0, 0};
+    if (limits == NULL || limits->fuel == 0) {
+        kest_diags_in(&build->diags, NULL);
+        kest_diags_add(&build->diags, KEST_SEVERITY_ERROR, "K0664", nowhere,
+                       "a machine for code nobody trusts is given no ceiling "
+                       "on how long it runs");
+        kest_diags_suggest(&build->diags, "put a number in `KestLimits.fuel`");
+        bounded = false;
+    }
+    if (limits == NULL || limits->heap_bytes == 0) {
+        kest_diags_in(&build->diags, NULL);
+        kest_diags_add(&build->diags, KEST_SEVERITY_ERROR, "K0665", nowhere,
+                       "a machine for code nobody trusts is given no ceiling "
+                       "on its heap");
+        kest_diags_suggest(&build->diags,
+                           "put a number in `KestLimits.heap_bytes`");
+        bounded = false;
+    }
+    if (!bounded) {
+        return NULL;
+    }
+    return start(build, host, limits, true);
 }

@@ -1730,6 +1730,16 @@ bool kest_host_bind(KestHost *host, const char *name, KestNative function,
 KestNative kest_host_find(const KestHost *host, const char *name,
                           void **context);
 
+// Says a door already bound may be called by code nobody trusts: a machine
+// started with `kest_start_untrusted` is refused a program that asks for any
+// door not said so, by name. What a door does with what it is handed is the
+// host's to get right -- this is the host saying it has. False for a name not
+// bound. See D1246.
+bool kest_host_open(KestHost *host, const char *name);
+
+// Whether a door is open to code nobody trusts.
+bool kest_host_opened(const KestHost *host, const char *name);
+
 // A compiled program, and everything it was compiled from. One of these is
 // what a host has instead of the stages there are.
 // Compiles a file and everything it imports. `library` is where `std` lives --
@@ -1952,6 +1962,18 @@ uint32_t kest_build_layout(const KestBuild *build, const char *name,
 // `kest_code_of`, D1071 and D1077.
 KestRuntime *kest_start(KestBuild *build, const KestHost *host,
                         const KestLimits *limits);
+
+// A machine for a program nobody trusts, which is `kest_start` with three
+// things more. Every door the program asks for has to be one the host opened
+// with `kest_host_open`. `limits` has to say how long it may run and how much
+// heap it may have -- nought for either is refused rather than read as no
+// ceiling. And it runs only what the verifier proved: a body the other backend
+// wrote as C and a host linked in is not entered, and the machine runs the
+// instructions it was proved from instead. Refused by name in the build's
+// report, like a door that is not bound. What this machine is to promise, and
+// how far each promise is kept, is SECURITY.md. See D1246.
+KestRuntime *kest_start_untrusted(KestBuild *build, const KestHost *host,
+                                  const KestLimits *limits);
 
 // After the call it was made for returns. A bound function that frees the
 // machine from inside one is refused and told, because the frames and the

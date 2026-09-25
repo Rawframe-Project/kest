@@ -42258,3 +42258,17 @@ and cycles turn about, asking inline, asking out of line, and not asking;
 `bench/words.kest`; the walk that measures a byte too long, against the release
 build; `make most`; the backstop sweep.
 
+## 2026-09-25, a machine for code nobody trusts
+
+`kest_host_open` marks a door a host bound as open to code nobody trusts, and
+`kest_start_untrusted` starts a machine that takes only those, refuses to start
+without a ceiling on its fuel and its heap, and never enters a body the other
+backend wrote.
+
+See D1246.
+
+**Runs:** `examples/embed.c` starting untrusted four ways and reading each
+refusal back; `check-c.sh`'s host running a program with its C linked in a
+third time, untrusted, counting the machine's own instructions, and again with
+the machine's check taken out; `make most`; the backstop sweep.
+

@@ -197,7 +197,10 @@ instruction names and every jump before a chunk runs (D1237), the operand
 stack's depth on every path (D1239), what every slot holds (D1242), and
 working memory held to its block (D1243), and the two halves of text held to
 one piece (D1244); `text.in` asks in every build (D1245), which closes
-D1234's table.
+D1234's table. A host starts a machine for code nobody trusts with
+`kest_start_untrusted`, which takes only the doors it opened and refuses to
+start without fuel and heap ceilings (D1246); compiling under a ceiling is
+next.
 
 ## Determinism
 

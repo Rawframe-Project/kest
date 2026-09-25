@@ -441,6 +441,14 @@ new ones, because a run under profile 2 and one under 3 are two runs. A
 constant may be written as its bits, `float(u64(0x...))`, since `bits` and
 `float` are worked out where they are written. See D1235.
 
+**A host can start a machine for code nobody trusts.** `kest_host_open` says a
+door the host bound may be called by it, and `kest_start_untrusted` starts a
+machine that is refused a program asking for any other door (`K0663`), is
+refused without a ceiling on its fuel (`K0664`) or its heap (`K0665`), and runs
+the verified instructions rather than any C a host linked in. **What a host
+has to do:** nothing, unless it runs code it did not write, in which case this
+is the start to use. See D1246 and SECURITY.md.
+
 **A release reads the text inside a constant optional.** A `text?` or an enum
 carrying text, worked out where it is written, went into a release as the
 address the text had while compiling, and a release that read it failed.

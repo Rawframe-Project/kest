@@ -219,6 +219,8 @@ FAMILY = {
  "kest_build_extern":"running","kest_build_capability":"running",
  "kest_extern_takes":"running","kest_extern_layout":"running","kest_extern_gives":"running",
  "kest_host_new":"running","kest_host_free":"running","kest_host_bind":"running",
+ "kest_host_open":"running","kest_host_opened":"running",
+ "kest_start_untrusted":"running",
  "kest_host_find":"running","kest_start":"running","kest_runtime_free":"running",
  "kest_entry":"running","kest_call":"running","kest_report":"running",
  "kest_needs":"running","kest_bound":"running","kest_needs_of":"running",

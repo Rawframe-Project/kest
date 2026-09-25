@@ -22,10 +22,13 @@ KestDiags *kest_runtime_said(KestRuntime *runtime);
 // machine does. Taking it from the build's arena instead is one bump pointer
 // written by every thread that starts a machine, which is what the reference
 // says a host may do. See D1071.
+//
+// A machine for code nobody trusts takes only the doors the host opened to it
+// and never enters a body the other backend wrote. See D1246.
 KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
                               const KestHost *host, KestDiags *diags,
                               const KestLimits *limits,
-                              const KestWalk *walked);
+                              const KestWalk *walked, bool untrusted);
 bool kest_runtime_free(KestRuntime *runtime);
 
 // The two doors a file this project's other backend wrote calls, and the only

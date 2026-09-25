@@ -1462,7 +1462,12 @@ static void asked_back(KestValue *frame, KestRuntime *runtime, void *context) {
     frame[0] = handing[0];
 }
 
-static int ran(const char *path, bool compiled) {
+// Once with the C, once without, and once with the C linked in and the machine
+// started for code nobody trusts, which runs what the verifier proved and not
+// what the host's compiler made of it: what says so is how many instructions
+// the machine itself ran, which the C does not add to. See D1246.
+static int ran(const char *path, bool compiled, bool untrusted,
+               unsigned long long *stepped) {
     KestBuild *build = kest_build(path, getenv("KEST_LIB"), stderr,
                                   KEST_FORM_TEXT, 0);
     if (build == NULL) {
@@ -1472,11 +1477,15 @@ static int ran(const char *path, bool compiled) {
     KestHost *host = kest_host_new();
     if (host == NULL ||
         !kest_host_bind(host, "Io.write", wrote_it, NULL) ||
-        !kest_host_bind(host, "Host.askedBack", asked_back, NULL)) {
+        !kest_host_bind(host, "Host.askedBack", asked_back, NULL) ||
+        !kest_host_open(host, "Io.write") ||
+        !kest_host_open(host, "Host.askedBack")) {
         fprintf(stderr, "no host\n");
         return -1;
     }
-    KestRuntime *rt = kest_start(build, host, NULL);
+    KestLimits bounded = {0, 0, (size_t)1 << 22, (uint64_t)1 << 32};
+    KestRuntime *rt = untrusted ? kest_start_untrusted(build, host, &bounded)
+                                : kest_start(build, host, NULL);
     kest_host_free(host);
     if (rt == NULL) {
         kest_build_report(build, stderr, KEST_FORM_TEXT);
@@ -1492,12 +1501,17 @@ static int ran(const char *path, bool compiled) {
     int32_t which = kest_entry(rt, "reentry.main");
     KestValue answer[8];
     memset(answer, 0, sizeof answer);
+    kest_count(rt, true);
     bool went = which >= 0 &&
                 kest_call(rt, which, answer,
                           sizeof answer / sizeof answer[0]);
     if (!went) {
         kest_report(rt, stderr, KEST_FORM_TEXT);
     }
+    KestCounted counted;
+    memset(&counted, 0, sizeof counted);
+    kest_counted(rt, &counted);
+    *stepped = (unsigned long long)counted.steps;
     int said = went ? (int)answer[0].integer : -1;
     kest_runtime_free(rt);
     kest_build_free(build);
@@ -1509,10 +1523,21 @@ int main(int argc, char **argv) {
         fprintf(stderr, "usage: twice <program>\n");
         return 2;
     }
-    int with = ran(argv[1], true);
-    int without = ran(argv[1], false);
-    printf("compiled %d machine %d\n", with, without);
-    return with == without && with >= 0 ? 0 : 1;
+    unsigned long long compiled_steps = 0;
+    unsigned long long machine_steps = 0;
+    unsigned long long untrusted_steps = 0;
+    int with = ran(argv[1], true, false, &compiled_steps);
+    int without = ran(argv[1], false, false, &machine_steps);
+    int distrusted = ran(argv[1], true, true, &untrusted_steps);
+    printf("compiled %d machine %d untrusted %d\n", with, without, distrusted);
+    printf("the machine ran %llu instruction(s) beside the C, %llu without it "
+           "and %llu for code nobody trusts with the C linked in\n",
+           compiled_steps, machine_steps, untrusted_steps);
+    return with == without && with == distrusted && with >= 0 &&
+                   untrusted_steps == machine_steps &&
+                   compiled_steps < untrusted_steps
+               ? 0
+               : 1;
 }
 HOST
 if ! ./kest emit --c "$work"/reentry.kest >"$work"/reentry.c 2>"$work"/why ||
@@ -1529,9 +1554,10 @@ else
     inside=$(KEST_LIB=lib/ "$work"/twice "$work"/reentry.kest 2>&1 </dev/null)
     inside_was=$?
     inside_said="one run both ways inside one process by a host of its own, \
-which calls back into the program from a body this backend wrote"
+which calls back into the program from a body this backend wrote, and a third \
+for code nobody trusts, which runs none of it"
     case "$inside" in
-    *"reentry 50"*"reentry 50"*"compiled 50 machine 50"*)
+    *"reentry 50"*"reentry 50"*"reentry 50"*"compiled 50 machine 50 untrusted 50"*)
         if [ "$inside_was" -ne 0 ]; then
             echo "    a host running one program both ways said the right \
 thing and came back $inside_was" >>"$said"
