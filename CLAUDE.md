@@ -1023,12 +1023,16 @@ tools/             Build and development scripts. `make check` runs all of
                    cutting the old one short.
                    `fuzz.c` is not a check and is not in the list above: it
                    is a program the gate runs, which makes inputs from a seed
-                   and hands them to one of the six boundaries somebody else's
-                   bytes arrive through -- what a program is written in, the
-                   handles a host hands over, the life of a lend, a reference
-                   into a world being changed underneath it, bytes handed over
-                   as text, and a program edited under a world that is already
-                   running. What it holds is that every one of them ends in an
+                   and hands them to one of the seven boundaries somebody
+                   else's bytes arrive through -- what a program is written
+                   in, the handles a host hands over, the life of a lend, a
+                   reference into a world being changed underneath it, bytes
+                   handed over as text, a program edited under a world that is
+                   already running, and instructions nobody's compiler wrote,
+                   handed to the verifier and run where it lets them through.
+                   `fuzz-cover.c` is the first of those fed by clang's
+                   libFuzzer, which keeps what reached new code; it is run as
+                   a campaign rather than in the gate (D1253). What it holds is that every one of them ends in an
                    answer or a refusal. A finding is a seed, a count and the
                    name of a boundary, which fits in a sentence, so there is no
                    corpus directory and nothing is written down. See D984 and
@@ -1356,7 +1360,7 @@ reload       the edits a reload has to have an answer for, each driven
              in the middle renumbers every one after it and nothing else
              about the shape moves
 fuzzing      bytes nothing here was written for, made from eight seeds and
-             handed to each of the six boundaries they arrive through, under
+             handed to each of the seven boundaries they arrive through, under
              the build that checks itself: every one of them an answer or a
              refusal — and the source ones again with the lowering's fusions
              turned off and again with the IR optimizer turned off, folding

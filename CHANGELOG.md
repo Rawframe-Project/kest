@@ -441,6 +441,11 @@ new ones, because a run under profile 2 and one under 3 are two runs. A
 constant may be written as its bits, `float(u64(0x...))`, since `bits` and
 `float` are worked out where they are written. See D1235.
 
+**The verifier refuses three more shapes of code nobody's compiler wrote**: a
+`rotate` of none, a `field` past its value (`K0410`), and a module it has
+already refused is not walked for its promises. **What a program or a host has
+to do:** nothing; no compiler here writes any of them. See D1253.
+
 **A project names its edition**, with `edition 2026` in `kest.project`, and a
 change that would break a program is made under a new one; the reference says
 what is promised. `kest --version` prints the edition as a fifth number, and

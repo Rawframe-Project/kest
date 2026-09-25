@@ -3037,7 +3037,7 @@ if [ ! -x tools/fuzz-debug ]; then
 else
     fuzzed=0
     fuzz_wrong=""
-    for what in source handles lends refs text migrate; do
+    for what in source handles lends refs text migrate chunks; do
         for seed in 1 2 3 4 5 6 7 8; do
             said=$(./tools/fuzz-debug "$seed" 400 "$scratch"/fuzz.kest \
                 "$what" 2>&1) || fuzz_wrong="$what at seed $seed stopped it"
@@ -3086,10 +3086,12 @@ the optimizer is turned off"
         complain "fuzzing" "bytes this compiler was not written for stopped \
 it: $fuzz_wrong"
     else
-        say "fuzzing" "$fuzzed input(s) made from eight seeds over six \
+        say "fuzzing" "$fuzzed input(s) made from eight seeds over seven \
 boundaries -- what a program is written in, the handles a host hands over, the \
 life of a lend, a reference into a world being changed underneath it, bytes \
-handed over as text, and a program edited under a world that is running -- \
+handed over as text, a program edited under a world that is running, and \
+instructions nobody's compiler wrote, handed to the verifier and run where it \
+let them through -- \
 every one of them an answer or a refusal, under a build that checks itself, \
 and the source ones answer the same folded over compiled the other way"
     fi

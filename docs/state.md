@@ -213,6 +213,10 @@ A program is read in the edition its project names, `2026` being the only one;
 a change that would break a program goes into a new edition, starts as a
 proposal in `docs/rfcs/`, and is warned about first (D1252).
 
+The verifier is fuzzed with instructions nobody's compiler wrote, which found
+three places it was wrong, and the source boundary by a fuzzer that keeps what
+reached new code (D1253).
+
 ## Determinism
 
 `sin`, `cos`, `pow` and `atan2` are written in Kest and inside the profile,

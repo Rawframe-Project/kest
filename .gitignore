@@ -8,6 +8,7 @@ examples/least
 tools/inward
 tools/fuzz
 tools/fuzz-debug
+tools/fuzz-cover
 /kest
 /kest-debug
 /kest-before

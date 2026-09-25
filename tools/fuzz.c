@@ -18,6 +18,11 @@
 #include <string.h>
 
 #include "kest.h"
+// And three of the library's own, for the one boundary here that is not a door:
+// what the verifier is handed. See D1253.
+#include "build.h"
+#include "value.h"
+#include "verify.h"
 
 // The one mixer this tree has, written out rather than reached for: a fuzzer
 // that depended on the library it is fuzzing would say nothing about a day the
@@ -887,6 +892,123 @@ static int fuzz_migrate(uint64_t seed, unsigned long many, const char *where) {
 // Which boundary to put through it. `source` is the one this file began as and
 // stays the one a run with nothing said gets, so every reader of this that was
 // written before the others is reading what it always read.
+// Instructions nobody's compiler wrote. A program is compiled, a few bytes of
+// one of its bodies are changed -- an instruction for another, an operand for
+// any number, a bit turned over -- and the verifier is asked about the module.
+// What this holds is the verifier's half of the first promise in
+// `SECURITY.md`: whatever it lets through, the machine runs without reading or
+// writing what it does not own. So a module the verifier refuses is an answer,
+// and one it lets through is run, under the sanitisers and with ceilings, and
+// has to answer or be refused in words the way anything else does. A report
+// from the sanitisers here is a chunk the verifier should have refused. See
+// D1253.
+static const char *const PROVEN[] = {
+    "examples/math.kest",   "examples/vectors.kest", "examples/boxes.kest",
+    "examples/words.kest",  "examples/tree.kest",    "examples/state.kest",
+    "examples/queue.kest",  "examples/player.kest",
+};
+
+// What the programs above write is not what is asked about, so it goes
+// nowhere; the door has to be there for a machine to start at all.
+static void written_nowhere(KestValue *frame, KestRuntime *runtime,
+                            void *context) {
+    (void)frame;
+    (void)runtime;
+    (void)context;
+}
+
+static int fuzz_chunks(uint64_t seed, unsigned long many, const char *where) {
+    (void)where;
+    KestHost *host = kest_host_new();
+    if (host == NULL ||
+        !kest_host_bind(host, "Io.write", written_nowhere, NULL)) {
+        fprintf(stderr, "fuzz: no host to start a machine with\n");
+        return 1;
+    }
+    unsigned long refused = 0;
+    unsigned long held = 0;
+    unsigned long ran = 0;
+    for (unsigned long round = 0; round < many; round++) {
+        uint64_t state = (seed << 20) + round + 1;
+        const char *which = PROVEN[next_number(&state) %
+                                   (sizeof(PROVEN) / sizeof(PROVEN[0]))];
+        KestBuild *build = kest_build(which, NULL, NULL, KEST_FORM_TEXT, 0);
+        if (build == NULL) {
+            fprintf(stderr, "fuzz: `%s` does not build, so there is nothing "
+                            "to break\n", which);
+            return 1;
+        }
+        KestModule *module = &build->module;
+        KestChunk *chunk = NULL;
+        for (int tries = 0; tries < 8 && chunk == NULL; tries++) {
+            KestChunk *one =
+                module->functions[next_number(&state) % module->count];
+            chunk = one->code_count > 2 ? one : NULL;
+        }
+        if (chunk == NULL) {
+            kest_build_free(build);
+            continue;
+        }
+        // Between one and four things done to it. The bytes are the chunk's
+        // own, so a change is made where the machine would read it.
+        uint32_t doings = (uint32_t)(next_number(&state) % 4) + 1;
+        for (uint32_t d = 0; d < doings; d++) {
+            uint32_t at = (uint32_t)(next_number(&state) % chunk->code_count);
+            switch (next_number(&state) % 4) {
+            case 0:
+                chunk->code[at] = (uint8_t)(next_number(&state) % KEST_OP_COUNT);
+                break;
+            case 1:
+                chunk->code[at] = (uint8_t)next_number(&state);
+                break;
+            case 2:
+                chunk->code[at] ^= (uint8_t)(1u << (next_number(&state) % 8));
+                break;
+            default: {
+                // An operand near what it was, which is where a verifier that
+                // checks against one number too many lets one through.
+                if (at + 1 < chunk->code_count) {
+                    uint16_t near = (uint16_t)(chunk->code[at] |
+                                               (chunk->code[at + 1] << 8));
+                    near = (uint16_t)(near + (next_number(&state) % 5) - 2);
+                    chunk->code[at] = (uint8_t)(near & 0xff);
+                    chunk->code[at + 1] = (uint8_t)(near >> 8);
+                }
+                break;
+            }
+            }
+        }
+        KestDiags said;
+        kest_diags_init(&said, build->arena);
+        if (!kest_module_prove(module, build->arena, &said)) {
+            refused++;
+            kest_build_free(build);
+            continue;
+        }
+        held++;
+        KestLimits bounded = {4096, 64, 4 * 1024 * 1024, 200000};
+        KestRuntime *runtime = kest_start(build, host, &bounded);
+        if (runtime != NULL) {
+            int32_t entry = kest_entry(runtime, "main");
+            if (entry >= 0) {
+                KestValue frame[16];
+                memset(frame, 0, sizeof frame);
+                kest_call(runtime, entry, frame,
+                          sizeof frame / sizeof frame[0]);
+                ran++;
+            }
+            kest_runtime_free(runtime);
+        }
+        kest_build_free(build);
+    }
+    kest_host_free(host);
+    printf("fuzz: %lu chunk(s) changed from seed %llu: %lu refused by the "
+           "verifier, %lu let through and %lu of those run, and none of them "
+           "stopped this\n",
+           many, (unsigned long long)seed, refused, held, ran);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     uint64_t seed = argc > 1 ? strtoull(argv[1], NULL, 10) : 1;
     unsigned long many = argc > 2 ? strtoul(argv[2], NULL, 10) : 200;
@@ -914,9 +1036,12 @@ int main(int argc, char **argv) {
     if (strcmp(what, "migrate") == 0) {
         return fuzz_migrate(seed, many, where);
     }
+    if (strcmp(what, "chunks") == 0) {
+        return fuzz_chunks(seed, many, where);
+    }
     fprintf(stderr,
             "fuzz: `%s` is not a boundary this puts anything through; they "
-            "are source, handles, lends, refs, text and migrate\n",
+            "are source, handles, lends, refs, text, migrate and chunks\n",
             what);
     return 2;
 }

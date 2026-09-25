@@ -1984,8 +1984,10 @@ if sorted(written_bold) != sorted(held_bold):
 # with how many inputs ended in a program or a refusal, which is a count of
 # what it did rather than a measurement of anything. Written down here rather
 # than left out quietly, because a name missing from a list and a name written
-# down as not belonging in it read the same from outside. See D984.
-NOT_AN_INSTRUMENT = ('tools/fuzz.c',)
+# down as not belonging in it read the same from outside. See D984. And
+# `fuzz-cover.c` for the same reason: it keeps inputs, and says nothing
+# measured. See D1253.
+NOT_AN_INSTRUMENT = ('tools/fuzz.c', 'tools/fuzz-cover.c')
 INSTRUMENTS = some("the instruments in `tools`", sorted(
     one for one in (glob.glob(os.path.join('tools', '*.kest')) +
                     glob.glob(os.path.join('tools', '*.c')))

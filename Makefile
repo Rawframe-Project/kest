@@ -61,11 +61,30 @@ build/release/vm.o: TUNED := $(ALIGNED) $(UNMARKED)
 # short one, because a read past the end of something is a report in the
 # second and whatever was next in the first. See D984.
 tools/fuzz: tools/fuzz.c libkest.a include/kest.h
-	$(CC) $(WARN) -O2 -Iinclude -o $@ tools/fuzz.c libkest.a -lm
+	$(CC) $(WARN) -O2 -Iinclude -Isrc -o $@ tools/fuzz.c libkest.a -lm
+
+# And one fed by a fuzzer that watches which branches each input reached,
+# which is clang's: the library built again with the sanitisers and the
+# coverage it asks for, in objects of its own. Not in any other target,
+# because a machine without clang builds everything else. See D1253.
+COVER_OBJ := $(SRC:src/%.c=build/cover/%.o)
+COVERFLAGS := -O1 -g -fsanitize=fuzzer-no-link,address,undefined
+
+build/cover/%.o: src/%.c | build/cover
+	clang -std=c11 -Wall -Wextra $(COVERFLAGS) -Iinclude \
+		-DKEST_LIB_DIR='"$(PREFIX)/lib/kest/"' -MMD -MP -c -o $@ $<
+
+build/cover:
+	mkdir -p $@
+
+tools/fuzz-cover: tools/fuzz-cover.c $(COVER_OBJ) include/kest.h
+	clang -std=c11 -Wall -Wextra -O1 -g \
+		-fsanitize=fuzzer,address,undefined -Iinclude -o $@ \
+		tools/fuzz-cover.c $(COVER_OBJ) -lm
 
 tools/fuzz-debug: tools/fuzz.c $(DEBUG_OBJ) include/kest.h
-	$(CC) $(HOSTWARN) -O0 -g -fsanitize=address,undefined -Iinclude -o $@ \
-		tools/fuzz.c $(DEBUG_OBJ) -lm
+	$(CC) $(HOSTWARN) -O0 -g -fsanitize=address,undefined -Iinclude -Isrc \
+		-o $@ tools/fuzz.c $(DEBUG_OBJ) -lm
 
 kest-debug: build/debug/main.o $(DEBUG_OBJ)
 	$(CC) -fsanitize=address,undefined -o $@ $^ -lm
@@ -250,6 +269,7 @@ clean:
 	rm -rf build kest kest-debug libkest.a examples/embed \
 	    examples/embed-debug examples/engine examples/engine-debug \
 	    examples/least tools/inward tools/fuzz tools/fuzz-debug \
+	    tools/fuzz-cover \
 	    bench/measure bench/frame \
 	    bench/control-cpp bench/graph-cpp bench/kernel-cpp bench/words-cpp \
 	    bench/rules-cpp \
@@ -262,7 +282,7 @@ clean:
 # hundred inputs each, sanitised. A longer one is the same command with other
 # numbers, and what a finding is is a seed and a count.
 fuzz: tools/fuzz-debug
-	@for what in source handles lends refs text migrate; do \
+	@for what in source handles lends refs text migrate chunks; do \
 	    for seed in 1 2 3 4 5 6 7 8; do \
 	        ./tools/fuzz-debug $$seed 400 build/fuzz.kest $$what || exit 1; \
 	    done; \
@@ -276,4 +296,4 @@ fuzz: tools/fuzz-debug
 -include $(RELEASE_OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) $(RACES_OBJ:.o=.d) \
     build/release/main.d \
     build/debug/main.d build/release/embed.d build/release/engine.d \
-    build/release/least.d
+    build/release/least.d $(COVER_OBJ:.o=.d)

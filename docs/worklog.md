@@ -42397,3 +42397,21 @@ See D1252.
 none, and a misspelt line, before and after; `kest new` with `--json` before a
 name; the retired names in a type and in a call; six holes by hand; `make most`;
 the sweep.
+
+## 2026-09-25, fuzzing that tries to break it
+
+`tools/fuzz-cover.c` feeds the source boundary from clang's libFuzzer, which
+keeps what reached new code, under the sanitisers and the ceilings a host
+compiling what it was sent gives. `tools/fuzz.c` has a seventh boundary,
+`chunks`: bytes of a compiled body changed and the module handed to the
+verifier, and what it lets through run. That found three places the verifier
+was wrong -- the promises walked over a module already refused, reading past a
+table; a `rotate` of none; a `field` past its value -- all refused now.
+`tools/oss-fuzz-build.sh` builds what OSS-Fuzz would run.
+
+See D1253.
+
+**Runs:** the `chunks` boundary at eight seeds before and after the first fix,
+and 200 seeds of 1,000 after the others; the coverage fuzzer for two hours on
+eight workers; the OSS-Fuzz build run from another directory; three holes by
+hand; `make most`; the sweep.

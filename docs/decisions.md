@@ -43062,3 +43062,58 @@ command now.
 Held by `check-commands.sh`: an unknown edition refused, a manifest with no
 edition read as `2026`, `kest new` writing the line, `doctor --json` saying a
 manifest it could not read, and the two retired names; six holes, one for each.
+
+## D1253 — Fuzzing that tries to break it
+
+*measured*, S6 of the plan: a fuzzer that tries to break the compiler and the
+machine rather than wander through them, long campaigns under the sanitisers,
+and what OSS-Fuzz would run.
+
+Two new ways in. The first is the source boundary fed by clang's libFuzzer,
+`tools/fuzz-cover.c`: the library built again with the sanitisers and the
+coverage libFuzzer watches (`make tools/fuzz-cover`), every input compiled
+with a ceiling of 64 MB and 20 million units of work (D1247, D1248) and run
+with a heap of 8 MB and 200,000 steps -- what a host compiling what it was sent
+gives. Random bytes and broken examples, which is what `tools/fuzz.c` hands
+over, rarely get past the parser; a fuzzer that keeps what reached new code gets
+to the checker, the compiler, the verifier and the machine. It is run as a
+campaign rather than in the gate, because what it finds depends on how long it
+ran. The first, eight workers for two hours from
+the 54 examples and library files: 3,081,365 inputs, 30,370 edges of this
+compiler reached, a corpus of about 36,000 inputs kept, and nothing found --
+no report from the sanitisers, no input over 30 seconds, none over 4 GB.
+
+The second is a seventh boundary in `tools/fuzz.c`, `chunks`: a program is
+compiled, one to four bytes of one of its bodies are changed -- an instruction
+for another, an operand for any number or for one near what it was, a bit
+turned over -- and the verifier is asked about the module. What it refuses is
+an answer; what it lets through is run, under the sanitisers and with ceilings,
+because that is `SECURITY.md`'s first promise from the verifier's side: what it
+lets through, the machine runs without reading or writing what it does not own.
+It is in the gate's campaign with the other six, eight seeds of 400.
+
+Its first run found the verifier itself reading past a table at every seed.
+When a module was refused for an instruction this machine has not got, the
+walk that proves the promises (`no.alloc`, `no.host`, `deterministic`) went on
+over it anyway, and asking an instruction that is not one how wide it is reads
+past the end of the table that says. A refused module is refused and nothing
+more is asked of it. Then a campaign of 100,000 found two more, at seeds 31 and
+43: a `rotate` of none rolled one fewer than none -- in the machine a `memmove`
+of the whole address space, in the verifier's own walk a loop of four billion
+-- and a `field` taking a piece past the end of the value it is taken out of
+reads what is above the top of the stack. Both are refused now, `K0410`, and the
+verifier's walk of kinds steps over both rather than following them.
+`check-verifier.sh` holds 20 ways now, two of them these. After the fixes, 200
+seeds of 1,000: 193,387 changed chunks refused, 6,613 let through, 4,608 of
+those run to an answer or a refusal, and nothing found.
+
+`tools/oss-fuzz-build.sh` is what OSS-Fuzz would build: the fuzzer from
+`$CC`, `$CFLAGS` and `$LIB_FUZZING_ENGINE`, the standard library beside it
+(which it finds there), and the examples and the library as a starting corpus.
+Applying is a project somebody answers for, with an address OSS-Fuzz writes to
+when it finds something, and that is not a thing this project gives from
+here; everything the application needs from the tree is in it.
+
+Three holes: the promises walked over a module already refused, caught by the
+sanitised fuzzer at the first seed; a rotation of none and a piece past its
+value let through, caught by `check-verifier.sh`.

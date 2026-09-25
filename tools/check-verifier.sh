@@ -52,6 +52,22 @@ static const char *PROGRAM =
     "    b: i32\n"
     "}\n"
     "\n"
+    "enum Shape {\n"
+    "    Dot\n"
+    "    Box(i32, i32)\n"
+    "}\n"
+    "\n"
+    "fn made(n: i32) -> Pair {\n"
+    "    return Pair(n, n + 1)\n"
+    "}\n"
+    "\n"
+    "fn wide(s: Shape) -> i32 {\n"
+    "    return match s {\n"
+    "        Dot -> 0\n"
+    "        Box(w, h) -> w * h\n"
+    "    }\n"
+    "}\n"
+    "\n"
     "fn pieces(n: i32) -> i32 {\n"
     "    let a = \"{n}ab\"\n"
     "    let b = \"{n}cde\"\n"
@@ -73,7 +89,8 @@ static const char *PROGRAM =
     "        n += 3\n"
     "    }\n"
     "    let p = xs[2]\n"
-    "    let total = xs[1].b + deeper(3) + p.a + p.b + pieces(1)\n"
+    "    let total = xs[1].b + deeper(3) + p.a + p.b + pieces(1) +\n"
+    "        wide(Shape.Box(2, 3)) + made(4).b\n"
     "    io.print(\"{total}\")\n"
     "    return total % 7\n"
     "}\n";
@@ -175,6 +192,9 @@ int main(int argc, char **argv) {
         {"a slot read before anything wrote it", "load.k", 0, 2, "K0411"},
         {"a number handed over as an array", "load.k", 0, 1, "K0411"},
         {"an array read as a number", "mod.i.k", 0, 0, "K0411"},
+        {"a rotation of none", "rotate", 0, 0, "K0410"},
+        {"a piece taken past the end of its value", "field", 0, 0xFFFF,
+         "K0410"},
     };
     uint32_t refused = 0;
     uint32_t missed = 0;
