@@ -925,19 +925,29 @@ static int fuzz_chunks(uint64_t seed, unsigned long many, const char *where) {
         fprintf(stderr, "fuzz: no host to start a machine with\n");
         return 1;
     }
+    // Each program is built once and its bytes are put back after every
+    // round. Neither the verifier nor the machine writes into a module, so a
+    // round sees the program as compiled with only its own changes in it --
+    // and building it again every round was most of what this boundary cost:
+    // thirty-three minutes on the arm64 runner, for rounds the verifier
+    // refused in a moment. See D1260.
+    enum { PROGRAMS = sizeof(PROVEN) / sizeof(PROVEN[0]) };
+    KestBuild *built[PROGRAMS];
+    for (size_t i = 0; i < PROGRAMS; i++) {
+        built[i] = kest_build(PROVEN[i], NULL, NULL, KEST_FORM_TEXT, 0);
+        if (built[i] == NULL) {
+            fprintf(stderr, "fuzz: `%s` does not build, so there is nothing "
+                            "to break\n", PROVEN[i]);
+            return 1;
+        }
+    }
     unsigned long refused = 0;
     unsigned long held = 0;
     unsigned long ran = 0;
-    for (unsigned long round = 0; round < many; round++) {
+    int status = 0;
+    for (unsigned long round = 0; round < many && status == 0; round++) {
         uint64_t state = (seed << 20) + round + 1;
-        const char *which = PROVEN[next_number(&state) %
-                                   (sizeof(PROVEN) / sizeof(PROVEN[0]))];
-        KestBuild *build = kest_build(which, NULL, NULL, KEST_FORM_TEXT, 0);
-        if (build == NULL) {
-            fprintf(stderr, "fuzz: `%s` does not build, so there is nothing "
-                            "to break\n", which);
-            return 1;
-        }
+        KestBuild *build = built[next_number(&state) % PROGRAMS];
         KestModule *module = &build->module;
         KestChunk *chunk = NULL;
         for (int tries = 0; tries < 8 && chunk == NULL; tries++) {
@@ -946,9 +956,18 @@ static int fuzz_chunks(uint64_t seed, unsigned long many, const char *where) {
             chunk = one->code_count > 2 ? one : NULL;
         }
         if (chunk == NULL) {
-            kest_build_free(build);
             continue;
         }
+        uint8_t *kept = malloc(chunk->code_count);
+        KestArena *scratch = kest_arena_new();
+        if (kept == NULL || scratch == NULL) {
+            free(kept);
+            kest_arena_free(scratch);
+            fprintf(stderr, "fuzz: no room to keep what a chunk was\n");
+            status = 1;
+            break;
+        }
+        memcpy(kept, chunk->code, chunk->code_count);
         // Between one and four things done to it. The bytes are the chunk's
         // own, so a change is made where the machine would read it.
         uint32_t doings = (uint32_t)(next_number(&state) % 4) + 1;
@@ -979,29 +998,36 @@ static int fuzz_chunks(uint64_t seed, unsigned long many, const char *where) {
             }
         }
         KestDiags said;
-        kest_diags_init(&said, build->arena);
-        if (!kest_module_prove(module, build->arena, &said)) {
+        kest_diags_init(&said, scratch);
+        if (!kest_module_prove(module, scratch, &said)) {
             refused++;
-            kest_build_free(build);
-            continue;
-        }
-        held++;
-        KestLimits bounded = {4096, 64, 4 * 1024 * 1024, 200000};
-        KestRuntime *runtime = kest_start(build, host, &bounded);
-        if (runtime != NULL) {
-            int32_t entry = kest_entry(runtime, "main");
-            if (entry >= 0) {
-                KestValue frame[16];
-                memset(frame, 0, sizeof frame);
-                kest_call(runtime, entry, frame,
-                          sizeof frame / sizeof frame[0]);
-                ran++;
+        } else {
+            held++;
+            KestLimits bounded = {4096, 64, 4 * 1024 * 1024, 200000};
+            KestRuntime *runtime = kest_start(build, host, &bounded);
+            if (runtime != NULL) {
+                int32_t entry = kest_entry(runtime, "main");
+                if (entry >= 0) {
+                    KestValue frame[16];
+                    memset(frame, 0, sizeof frame);
+                    kest_call(runtime, entry, frame,
+                              sizeof frame / sizeof frame[0]);
+                    ran++;
+                }
+                kest_runtime_free(runtime);
             }
-            kest_runtime_free(runtime);
         }
-        kest_build_free(build);
+        memcpy(chunk->code, kept, chunk->code_count);
+        free(kept);
+        kest_arena_free(scratch);
+    }
+    for (size_t i = 0; i < PROGRAMS; i++) {
+        kest_build_free(built[i]);
     }
     kest_host_free(host);
+    if (status != 0) {
+        return status;
+    }
     printf("fuzz: %lu chunk(s) changed from seed %llu: %lu refused by the "
            "verifier, %lu let through and %lu of those run, and none of them "
            "stopped this\n",

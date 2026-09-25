@@ -1599,13 +1599,51 @@ roomy_store = a_step_takes('housed(all, kept)', TOLD_STORE)
 # one that runs reads the one that is read, and a row somebody edits without
 # running anything is a gate that fails. The same rule D886 made for the one
 # number the reference quotes from a run, said about four. See D914.
+REFERENCE = open(os.path.join('docs', 'language.md')).read()
+# What a run says, written where the reference says it, when that is what was
+# asked for: `make figures` runs this with `KEST_FIGURES=write`. Every number
+# held below is measured here and written there, and a change that moves one on
+# purpose is a change that has to write it again -- which was a sentence edited
+# by hand, spelled out, for every figure that moved. Written from the same run
+# that holds it, a figure has one source. A paragraph whose shape changed -- an
+# instruction it names that a step no longer runs -- is still written by hand,
+# because what to say about that is not a number. See D1260.
+WRITING = os.environ.get("KEST_FIGURES") == "write"
+written_over = []
+WORDS = {value: word for word, value in FIGURES.items()}
+
+
+def in_words(number):
+    if number in WORDS:
+        return WORDS[number]
+    if 20 < number < 100:
+        return WORDS[number - number % 10] + '-' + WORDS[number % 10]
+    return None
+
+
+def figure(said_by, which_at, value, spelled=True, start=0):
+    """The run's number where the reference wrote one, when asked to write."""
+    if not WRITING or said_by is None or value is None:
+        return
+    word = in_words(value) if spelled else str(value)
+    if word is None:
+        return
+    written_over.append((start + said_by.start(which_at),
+                         start + said_by.end(which_at), word))
+
+
 WRITTEN_DOWN = {"a piece of text": text_frame, "an array": grown_frame,
                 "a table": keyed_frame, "a store": stored_frame}
-printed = dict(re.findall(
-    r"^\| (a piece of text|an array|a table|a store) \| (\d+) bytes an entity",
-    open(os.path.join('docs', 'language.md')).read(), re.M))
+printed = {}
+for row in re.finditer(
+        r"^\| (a piece of text|an array|a table|a store) \| (\d+) bytes an "
+        r"entity", REFERENCE, re.M):
+    printed[row.group(1)] = row.group(2)
+    figure(row, 2, WRITTEN_DOWN.get(row.group(1)), spelled=False)
 some("the table of what a container costs a frame", printed)
 for which in sorted(WRITTEN_DOWN):
+    if WRITING:
+        continue
     if which not in printed or int(printed[which]) != WRITTEN_DOWN[which]:
         print("costs: the reference says %s costs %s byte(s) an entity and a "
               "run says %s"
@@ -1663,7 +1701,6 @@ def named_in(half):
     return at_a_time
 
 
-REFERENCE = open(os.path.join('docs', 'language.md')).read()
 step_says = re.search(
     r'a frame step an entity is \*\*([a-z-]+) instructions\*\*,\s+of which'
     r'(.*?)—\s+([a-z-]+)\s+of\s+the\s+([a-z-]+),\s+near\s+enough.*?'
@@ -1679,7 +1716,23 @@ if step_says is not None and have_checked:
     moves_it = named_in(step_says.group(2))
     sums_it = named_in(step_says.group(6))
     at_a_time = dict(moves_it, **sums_it)
-    if (ran_it is None or not moves_it or not sums_it or
+    if ran_it is not None:
+        moved = sum(ran_it.get(op_name) or 0 for op_name in moves_it)
+        summed = sum(ran_it.get(op_name) or 0 for op_name in sums_it)
+        figure(step_says, 1, sum(ran_it.values()))
+        figure(step_says, 3, moved)
+        figure(step_says, 4, sum(ran_it.values()))
+        figure(step_says, 5, summed)
+        figure(step_says, 7, asked_it)
+        for which_at in (2, 6):
+            for named in re.finditer(
+                    r'([a-z-]+)(\s+(?:are\s+|is\s+)?`([a-z0-9._]+)`)',
+                    step_says.group(which_at)):
+                figure(named, 1, ran_it.get(named.group(3)),
+                       start=step_says.start(which_at))
+    if WRITING:
+        pass
+    elif (ran_it is None or not moves_it or not sums_it or
             in_figures(step_says.group(1)) != sum(ran_it.values()) or
             in_figures(step_says.group(4)) != sum(ran_it.values()) or
             in_figures(step_says.group(3)) != sum(how_many or 0
@@ -1726,7 +1779,14 @@ ran_ref = None
 if crossed_says is not None and have_checked:
     ran_here = what_a_step_of(CROSSED.replace('WHICH_ONE', 'ofInside'))[0]
     ran_out = what_a_step_of(CROSSED.replace('WHICH_ONE', 'ofCrossing'))[0]
-    if (ran_here is None or ran_out is None or
+    if ran_here is not None and ran_out is not None:
+        figure(crossed_says, 1, sum(ran_here.values()))
+        figure(crossed_says, 2, sum(ran_out.values()))
+        figure(crossed_says, 3,
+               sum(ran_here.values()) - sum(ran_out.values()))
+    if WRITING:
+        pass
+    elif (ran_here is None or ran_out is None or
             in_figures(crossed_says.group(1)) != sum(ran_here.values()) or
             in_figures(crossed_says.group(2)) != sum(ran_out.values()) or
             in_figures(crossed_says.group(3)) != (sum(ran_here.values()) -
@@ -1754,7 +1814,17 @@ if reading_says is not None and have_checked:
         'WHICH_ONE', 'throughIndexes(items)'))[0]
     ran_ref = what_a_step_of(READ_OF.replace(
         'WHICH_ONE', 'throughReferences(world, where)'))[0]
-    if (ran_hop is None or ran_index is None or ran_ref is None or
+    if ran_hop is not None and ran_index is not None and ran_ref is not None:
+        figure(reading_says, 1, sum(ran_hop.values()))
+        figure(reading_says, 2, sum(ran_index.values()))
+        figure(reading_says, 3, sum(ran_ref.values()))
+        figure(reading_says, 4,
+               sum(ran_index.values()) - sum(ran_hop.values()))
+        figure(reading_says, 5,
+               sum(ran_ref.values()) - sum(ran_hop.values()))
+    if WRITING:
+        pass
+    elif (ran_hop is None or ran_index is None or ran_ref is None or
             in_figures(reading_says.group(1)) != sum(ran_hop.values()) or
             in_figures(reading_says.group(2)) != sum(ran_index.values()) or
             in_figures(reading_says.group(3)) != sum(ran_ref.values()) or
@@ -1926,7 +1996,13 @@ if inward_says is not None and have_checked:
     if calling_host is not None:
         ran_in, asked_in = a_crossing_in(calling_host, 'inside', 'real')
         ran_turn, asked_turn = a_crossing_in(calling_host, 'many', 'whole')
-    if (ran_in is None or ran_turn is None or
+    figure(inward_says, 1, ran_in)
+    figure(inward_says, 2, asked_in)
+    figure(inward_says, 3, ran_turn)
+    figure(inward_says, 4, asked_turn)
+    if WRITING:
+        pass
+    elif (ran_in is None or ran_turn is None or
             in_figures(inward_says.group(1)) != ran_in or
             in_figures(inward_says.group(2)) != asked_in or
             in_figures(inward_says.group(3)) != ran_turn or
@@ -2363,7 +2439,11 @@ if COST_SAYS is not None and READ_SAYS is not None:
                   COST_SAYS.groups() + READ_SAYS.groups()]
     ran_costs = [lines_of, lexing, parsing, checking, compiling,
                  source_bytes, compiling]
-    if said_costs != ran_costs:
+    for which_at, value in enumerate(ran_costs[:5], 1):
+        figure(COST_SAYS, which_at, value, spelled=False)
+    for which_at, value in enumerate(ran_costs[5:], 1):
+        figure(READ_SAYS, which_at, value, spelled=False)
+    if said_costs != ran_costs and not WRITING:
         print("costs: the reference says `%s` is %s line(s) and %s bytes and "
               "costs %s as tokens, %s as a tree, %s checked and %s compiled, "
               "and a run says %s line(s), %s bytes, %s, %s, %s and %s"
@@ -2371,6 +2451,22 @@ if COST_SAYS is not None and READ_SAYS is not None:
                                     said_costs[1:5]) +
                  tuple(ran_costs[:1] + ran_costs[5:6] + ran_costs[1:5])))
         failed = 1
+
+if WRITING:
+    rewritten = REFERENCE
+    for starts, ends, word in sorted(set(written_over), reverse=True):
+        rewritten = rewritten[:starts] + word + rewritten[ends:]
+    if rewritten != REFERENCE:
+        with open(os.path.join('docs', 'language.md'), 'w') as out:
+            out.write(rewritten)
+    # What was done rather than what is wrong, and only when writing was
+    # asked for, so it is written out rather than printed: every `print`
+    # here is a complaint and `check-tables.sh` holds each to a hole.
+    sys.stdout.write("figures: %u written where the reference says what a "
+                     "run costs, %u of them changed\n"
+                     % (len(set(written_over)),
+                        sum(1 for starts, ends, word in set(written_over)
+                            if REFERENCE[starts:ends] != word)))
 
 if not failed:
     print("what the library costs grows the way it should: %u askings of the "

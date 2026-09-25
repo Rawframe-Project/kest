@@ -225,7 +225,10 @@ where it is called and compiled there, with nothing captured (D1257).
 documents have a short book whose programs the gate runs and a page on how the
 tree is built (D1258). `docs/compact.md` is the whole language in one sitting
 for a model, its programs run and its list of the library held to the
-library (D1259).
+library (D1259). CI's whole gate is five jobs with a twenty-minute budget
+each, the verifier's fuzzing no longer rebuilds its program every round, and
+`make figures` writes the figures a document quotes from the run that holds
+them (D1260).
 
 ## Determinism
 

@@ -177,6 +177,17 @@ most: tools/check.sh
 check: tools/check.sh
 	@tools/check.sh
 
+# Every figure a document quotes from a run, written there from a run: what a
+# frame step and a crossing run, what a container costs an entity, what the
+# compiler's own work costs, how many constants a program folds, and how many
+# doors and instructions the front page counts. A change that moves one on
+# purpose runs this rather than editing a sentence; the gate still holds every
+# one of them, so a figure nobody wrote again is a gate that fails. See D1260.
+figures: kest debug embed tools/inward
+	@KEST_FIGURES=write tools/check-costs.sh | grep '^figures'
+	@KEST_FIGURES=write tools/check-docs.sh docs/language.md \
+	    docs/decisions.md | grep '^figures'
+
 # One number: how long a frame step takes per entity. Not part of `check`,
 # because a duration is not a pass or a fail, and written down nowhere.
 time: kest tools/inward
@@ -292,7 +303,7 @@ clean:
 	    bench/rules-cpp \
 	    .jitted_scripts kest-colony-day.txt
 
-.PHONY: debug least embed embed-debug engine engine-debug fast most check \
+.PHONY: debug least embed embed-debug engine engine-debug fast most check figures \
     time fuzz release install uninstall clean
 
 # A short campaign, which is what a gate can afford: eight seeds and four

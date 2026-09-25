@@ -1464,7 +1464,11 @@ minutes and a hole at a time. See D944.
 frame step costs, what compiling costs, how many instructions there are. Those
 live in `tools/check-costs.sh` and `tools/check-tables.sh`, which take three
 seconds each and can be run on their own. Running the two of them before the
-gate turns an eighteen-minute round trip into six seconds.
+gate turns an eighteen-minute round trip into six seconds. And a figure that
+moved on purpose is written by `make figures`, which runs the two of them to
+write what a run says where a document says it rather than to hold one against
+the other: a figure with one source, and the gate still holding every one of
+them. See D1260.
 
 Seventy-three of the holes prove a sentence another hole already proves. They
 are left alone on purpose, and D990 is the inspection that says why: a hole is
@@ -1498,8 +1502,10 @@ other. Run it while something is being written; do not say a thing is done on
 it. `KEST_HOLES=no` is what the Makefile sets. See D1136.
 
 `make check` is the whole of it and takes about ten minutes — half an hour on a
-box somebody else is also using. CI's `linux-full` job runs it on every push,
-and that is where it is run: a change is pushed once `make most` passes here,
+box somebody else is also using. CI runs it on every push, as `most` and the
+four shares of `holes` at once (`KEST_HOLES_SHARE=2/4` is one share of the
+sweep), each with a budget of twenty minutes it fails past (D1260), and that
+is where it is run: a change is pushed once `make most` passes here,
 and is done once CI says the whole gate passed on that commit. It is run here
 only when CI cannot answer, or when what changed is the sweep itself. What that
 buys is half an hour a change; what it costs is a red CI run now and then that

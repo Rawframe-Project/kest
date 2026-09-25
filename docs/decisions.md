@@ -43379,3 +43379,61 @@ model to read it first. The blind suite itself was not run again for this:
 it is models started one a room, and this work is done under a rule of no
 agents, so what the page does to a run's tokens and success is not measured
 here.
+
+## D1260 — A gate with a budget, and figures written by the run that holds them
+
+Two costs had been growing without anybody choosing them: how long the gate
+takes to answer a push, and what it costs to change something a document
+quotes a number about.
+
+**The gate answered in forty-seven minutes, and the slowest thing in it was
+not the sweep.** Timed step by step on the last green run: `linux-full`, which
+was `make check` on one runner, took forty-seven minutes, and `linux-arm64`
+took thirty-seven -- thirty-three of them in `make fuzz`. That step took nine
+minutes the run before D1253 and thirty-three the run after, because the
+boundary D1253 added built the program it breaks again for every one of its
+3200 rounds, under the sanitisers, when nine in ten of those rounds are
+refused by the verifier in a moment. Neither the verifier nor the machine
+writes into a module, so each program is now built once and the bytes a
+round changed are put back after it. The eight seeds answer exactly what they
+answered before -- the same count refused, let through and run for each --
+and take 7.5 seconds here where they took 55.
+
+The whole gate is two jobs' worth of work, and it now runs as five jobs at
+once: `most`, which is `make most`, and four shares of `holes`, each a quarter
+of the sweep. `KEST_HOLES_SHARE=2/4` asks `check-backstops.sh` for every
+fourth hole from the second, and everything it reads about all the holes -- a
+quotation that moved, a quotation that is in two places, a check with no hole
+-- it still reads about all of them, because that costs a second. Together
+the five are `make check`. Every job in the workflow has a budget of twenty
+minutes and fails past it: a gate that takes longer every week is one somebody
+stops waiting for, and the budget is where that is seen rather than felt.
+
+**No hole is retired.** The plan asked for the repeating ones to go, so they
+were counted: 972 holes, 59 groups that share a check and the words it is
+caught by, and 51 of those groups sharing the file they break as well -- 66
+holes that could go by that reading. Read one by one, each of the 66 breaks a
+different place: five in `parser.c` caught by `K0201` are five refusals whose
+words say five different rules, three caught by `K0367` are three different
+misuses of a block. A hole is not its sentence (D990), and what each of those
+holds is that a place in the compiler has a line of the corpus asking for it.
+The seven groups that make exactly the same break are caught by different
+checks, and each is the hole that shows its check catching anything. What the
+plan wanted from retiring them was time, and sharing the sweep across four
+runners buys four times what retiring 66 of 972 would.
+
+**A figure is written by the run that holds it.** A number the reference
+quotes from a run is held to the run, and a change that moves one on purpose
+had to edit the sentence by hand -- spelled out, in the middle of a
+paragraph -- and push to find out whether it was right. `make figures` runs
+`check-costs.sh` and `check-docs.sh` with `KEST_FIGURES=write`, and then each
+writes the number its run measured where the document says it rather than
+holding one against the other: what a frame step, a turn, a hop, a read and a
+crossing run, what a container costs an entity, what the compiler's own work
+costs, how many constants a program folds, and how many doors and
+instructions the front page counts -- forty-one figures, one source each. The
+gate is unchanged: it still holds every one of them, so a figure nobody wrote
+again fails exactly as it did. Four figures changed by hand were each said by
+the gate and each written back to the byte by `make figures`. A paragraph
+whose shape changed -- an instruction it names that a step no longer runs --
+is still written by hand, because what to say about that is not a number.

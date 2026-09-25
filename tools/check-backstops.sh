@@ -37,6 +37,7 @@ import os
 import shutil
 import signal
 import subprocess
+import re
 import sys
 import tempfile
 import time
@@ -17634,10 +17635,26 @@ for hole in BREAKS:
                   "whichever is written first" % (hole["what"], found, where))
             failed = 1
 
+# A share of them, when a runner is given one: `KEST_HOLES_SHARE=2/4` puts
+# every fourth out of order starting at the second. CI runs the four shares on
+# four runners at once, because the sweep is most of what the gate costs and a
+# gate that answers in three quarters of an hour is a gate a change waits on.
+# What is read about every hole above is read about all of them whichever share
+# this is, because that costs a second. See D1260.
+share = os.environ.get("KEST_HOLES_SHARE", "1/1")
+shared = re.fullmatch(r"([1-9][0-9]*)/([1-9][0-9]*)", share)
+if shared is None or int(shared.group(1)) > int(shared.group(2)):
+    print("`KEST_HOLES_SHARE` is `%s`, and a share is a number of how many, "
+          "like `2/4`" % share)
+    sys.exit(1)
+this_share, shares = int(shared.group(1)), int(shared.group(2))
+chosen = [hole for at, hole in enumerate(BREAKS)
+          if at % shares == this_share - 1]
+
 caught = []
 with concurrent.futures.ThreadPoolExecutor(
         max_workers=os.cpu_count() or 1) as doing:
-    for said, went_wrong in doing.map(put_out_of_order, BREAKS):
+    for said, went_wrong in doing.map(put_out_of_order, chosen):
         if went_wrong:
             for line in said:
                 print(line)
@@ -17665,10 +17682,12 @@ if not failed:
     # it they are standing.
     hungriest = max(they_took, key=lambda what: they_took[what][0])
     slowest = max(they_took, key=lambda what: they_took[what][1])
-    print("every backstop catches what it is for, and of the %u that run "
+    print("every backstop%s catches what it is for, and of the %u that run "
           "something the hungriest, %s, took %uM of the %uM each is given, "
           "and the slowest, %s, %.1fs of the %us"
-          % (len(they_took), hungriest, they_took[hungriest][0] // 1024,
+          % ("" if shares == 1 else
+             " in share %u of %u" % (this_share, shares),
+             len(they_took), hungriest, they_took[hungriest][0] // 1024,
              SO_MUCH // 1024, slowest, they_took[slowest][1], A_WHILE))
 sys.exit(failed)
 PY

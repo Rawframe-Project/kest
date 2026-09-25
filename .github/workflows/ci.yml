@@ -17,6 +17,7 @@ concurrency:
 jobs:
   linux:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: build
@@ -54,6 +55,7 @@ jobs:
   # the four families cost, which nothing here can be argued into.
   linux-arm64:
     runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: build
@@ -65,7 +67,7 @@ jobs:
       # The C the other backend writes, held to the machine here too: every
       # arm64 has FMA and GCC fuses a multiply and an add by default, which
       # is the build the generated file has to keep two roundings in, and
-      # `linux-full` can only ask for with `-mfma`. See D1230.
+      # the gate on x86-64 can only ask for with `-mfma`. See D1230.
       - name: the C the other backend writes
         run: sh tools/check-c.sh examples/*.kest
       - name: conformance trace
@@ -86,6 +88,7 @@ jobs:
 
   macos:
     runs-on: macos-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: build
@@ -137,6 +140,7 @@ jobs:
   # running the same way. See D1020.
   clang:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: build and fast, under clang
@@ -147,6 +151,7 @@ jobs:
 
   threads:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: four machines of one build, under the thread sanitiser
@@ -231,6 +236,7 @@ jobs:
 
   package:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - name: an archive, unpacked and run
@@ -271,8 +277,15 @@ jobs:
           name: release-linux-x86-64
           path: build/kest-*.tar.gz*
 
-  linux-full:
+  # The whole gate, as two halves on five runners at once: everything but the
+  # holes on one, and the holes in four shares on four. Together they are
+  # `make check`, and apart they answer in a third of the time the one job
+  # took. Every job here has a budget, and one that runs past it fails:
+  # a gate that takes longer every week is a gate somebody stops waiting for,
+  # and the budget is where that is noticed. See D1260.
+  most:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       # What `check-wasm.sh` builds the library as WebAssembly with: a linker
@@ -283,11 +296,33 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y -q lld wasi-libc \
               "libclang-rt-$(clang --version | sed -n 's/.*clang version \([0-9]*\).*/\1/p' | head -1)-dev-wasm32"
-      - name: the whole gate
-        run: mkdir -p /home/runner/kest-tmp && TMPDIR=/home/runner/kest-tmp make check
+      - name: everything but the holes
+        run: mkdir -p /home/runner/kest-tmp && TMPDIR=/home/runner/kest-tmp make most
+
+  holes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        share: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - name: a WebAssembly toolchain
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q lld wasi-libc \
+              "libclang-rt-$(clang --version | sed -n 's/.*clang version \([0-9]*\).*/\1/p' | head -1)-dev-wasm32"
+      - name: every check put out of order, a share of them
+        run: |
+          mkdir -p /home/runner/kest-tmp
+          make -j
+          KEST_HOLES_SHARE=${{ matrix.share }}/4 \
+              TMPDIR=/home/runner/kest-tmp sh tools/check-backstops.sh
 
   windows:
     runs-on: windows-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
@@ -354,6 +389,7 @@ jobs:
   agree:
     needs: [linux, linux-arm64, windows, macos]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/download-artifact@v4
         with: { pattern: trace-*, merge-multiple: true }

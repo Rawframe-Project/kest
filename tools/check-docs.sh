@@ -1170,15 +1170,35 @@ for page in ('README.md', 'docs/language.md'):
 # forty-one, and nothing anywhere noticed, because a number in prose is read by
 # people and people read the sentence rather than the number. Asked of a run,
 # which is the only thing that knows. See D886.
-worked_out = some("the folder's answers the reference quotes", re.findall(
-    r'(\d+) of (\d+) for\s+`(examples/[\w.]+\.kest)`',
-    open('docs/language.md').read()))
-for answered, asked, about in worked_out:
+# `make figures` runs this with `KEST_FIGURES=write`, and then what a run says
+# is written where a document says it rather than held against it: a figure
+# with one source, and a change that moves one on purpose is a command rather
+# than a sentence edited by hand. See D1260.
+WRITING = os.environ.get("KEST_FIGURES") == "write"
+rewrites = {}
+
+
+def written_from_a_run(document, said_by, which_at, value):
+    if WRITING and value is not None:
+        rewrites.setdefault(document, set()).add(
+            (said_by.start(which_at), said_by.end(which_at), str(value)))
+
+
+the_reference = open('docs/language.md').read()
+quoted_folds = list(re.finditer(
+    r'(\d+) of (\d+) for\s+`(examples/[\w.]+\.kest)`', the_reference))
+worked_out = some("the folder's answers the reference quotes", quoted_folds)
+for quoted_at in worked_out:
+    answered, asked, about = quoted_at.groups()
     ran = subprocess.run(['./kest', 'emit', '--json', about],
                          capture_output=True, text=True,
                          stdin=subprocess.DEVNULL,
                          env=dict(os.environ, KEST_LIB='lib'))
     said = json.loads(ran.stdout) if ran.returncode == 0 else {}
+    written_from_a_run('docs/language.md', quoted_at, 1, said.get('folds'))
+    written_from_a_run('docs/language.md', quoted_at, 2, said.get('asked'))
+    if WRITING:
+        continue
     if (said.get('folds') != int(answered) or
             said.get('asked') != int(asked)):
         print("docs: the reference says %s of %s were worked out for `%s` and "
@@ -1281,6 +1301,10 @@ else:
             failed = 1
             continue
         quoted = re.search(pattern, front_page_text)
+        if quoted is not None:
+            written_from_a_run('README.md', quoted, 1, counted)
+        if WRITING:
+            continue
         if quoted is None or int(quoted.group(1)) != counted:
             print("docs: the front page says %s %s and this tree has %u"
                   % (quoted.group(1) if quoted else None, what, counted))
@@ -1366,6 +1390,23 @@ for path in sys.argv[1:]:
                      ', '.join(sorted(there)) or 'no such module'))
             failed = 1
         listed_modules += 1
+
+for document in sorted(rewrites):
+    before = open(document).read()
+    after = before
+    for starts, ends, run_said in sorted(rewrites[document], reverse=True):
+        after = after[:starts] + run_said + after[ends:]
+    if after != before:
+        with open(document, 'w') as out:
+            out.write(after)
+    # What was done rather than what is wrong, and only when writing was
+    # asked for, so it is written out rather than printed: every `print`
+    # here is a complaint and `check-tables.sh` holds each to a hole.
+    sys.stdout.write("figures: %u written into %s from a run, %u of them "
+                     "changed\n"
+                     % (len(rewrites[document]), document,
+                        sum(1 for starts, ends, run_said in rewrites[document]
+                            if before[starts:ends] != run_said)))
 
 if not failed:
     print('every documented block parses: %u, is in the one form, and checks '

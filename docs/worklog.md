@@ -42532,3 +42532,22 @@ See D1259.
 output changed and said at its line; the library list with a name added, a
 name dropped and a module dropped, each said; `ai/blind.sh make` for a room;
 the hole by hand; `make most`.
+
+## 2026-09-25, a gate with a budget, and figures written by a run
+
+`make fuzz` took thirty-three minutes on the arm64 runner, because the
+verifier boundary built its program again for each of 3200 rounds; it builds
+each once and puts the bytes back, and answers the same for all eight seeds.
+CI's whole gate is five jobs at once -- `most` and four shares of the sweep,
+`KEST_HOLES_SHARE=i/4` -- and every job has a twenty-minute budget. The
+repeating holes were counted and read, and none is a repeat. `make figures`
+writes every figure a document quotes from a run, from that run.
+
+See D1260.
+
+**Runs:** each CI job's steps timed from the API across the last twenty-five
+runs; the chunks boundary before and after, eight seeds, the same answers;
+`KEST_HOLES_SHARE=5/4` refused; the holes grouped by check, words and file;
+four figures broken, each said by the gate and written back to the byte by
+`make figures`; `make figures` on the tree, nothing changed; `check-tables.sh`;
+`make most`.
