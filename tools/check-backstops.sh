@@ -2854,6 +2854,55 @@ yield""",
         "caught": "check: K0401 said",
     },
     {
+        # What a declaration's comment says, left out of the words and kept in
+        # the JSON. See D1258.
+        "what": "a page that leaves out what a declaration is for",
+        "file": "src/doc.c",
+        "from": r"""            if (abouts[i][0] != '\0') {
+                fprintf(out, "\n%s\n", abouts[i]);""",
+        "to": r"""            if (false) {
+                fprintf(out, "\n%s\n", abouts[i]);""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/methods.kest"],
+        "caught": "doc examples/methods.kest: says one thing in words and another as JSON about",
+    },
+    {
+        # A comment a blank line away from a declaration read as being about it.
+        # See D1258.
+        "what": "a comment across a blank line taken for a declaration's",
+        "file": "src/doc.c",
+        "from": r"""    while (start > 0 && remarks->remarks[start - 1].line + 1 == wanted &&""",
+        "to": r"""    while (start > 0 && remarks->remarks[start - 1].line < wanted &&""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "doc: reads what a comment is about wrongly: '' is what the file says",
+    },
+    {
+        # A function said with its body, which is the file's business and not
+        # the caller's. See D1258.
+        "what": "a function written out with its body",
+        "file": "src/doc.c",
+        "from": r"""            span.length = (uint32_t)(body - text);""",
+        "to": r"""            span.length = span.length;""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "doc: reads what a comment is about wrongly: the functions are written",
+    },
+    {
+        # A file that checks, refused. See D1258.
+        "what": "a doc of a file that checks refused",
+        "file": "src/main.c",
+        "from": r"""        said = kest_read_unit(arena, &diags, path, &units) &&""",
+        "to": r"""        said = false && kest_read_unit(arena, &diags, path, &units) &&""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "doc: a file that checks was refused",
+    },
+    {
         # Work counted and never run out of: a ceiling that is read and never
         # reached is a build that takes as long as the file makes it, which
         # is the thing a host that compiles what it was sent gave one to stop.

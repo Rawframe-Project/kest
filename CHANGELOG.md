@@ -441,6 +441,11 @@ new ones, because a run under profile 2 and one under 3 are two runs. A
 constant may be written as its bits, `float(u64(0x...))`, since `bits` and
 `float` are worked out where they are written. See D1235.
 
+**`kest doc <file>`** writes what a file declares, each as it is written with
+the comment above it, as Markdown or with `--json`. **What a program has to
+do:** nothing. A tool that reads the command list from `help` finds one more.
+See D1258.
+
 **Blocks**: a function may take `body: block(T)`, and a call hands it one
 written there, `|x| x > floor` or `|x| { total += x }`, reading and writing
 the names where it is written. Nothing is captured or kept. **What a program has

@@ -221,6 +221,9 @@ doors turning an infinite float into a number (D1254). The library builds as
 WebAssembly and answers the same there, at 3 to 4 times the cost (D1255).
 `x.f(a)` is `f(x, a)` (D1256). A function may take a block, a body written
 where it is called and compiled there, with nothing captured (D1257).
+`kest doc` writes what a file declares with the comment above each, and the
+documents have a short book whose programs the gate runs and a page on how the
+tree is built (D1258).
 
 ## Determinism
 

@@ -712,7 +712,7 @@ for name, body in (('whole.kest', WHOLE), ('ticking.kest', TICKING),
     # `call` takes the name of a function as well, and `take` is the one every
     # one of these has nothing of except the crowded one, which has nine.
     for command in ('check', 'emit', 'run', 'fmt', 'lex', 'parse', 'tick',
-                    'call'):
+                    'call', 'doc'):
         command_line = ['./kest', command, path]
         if command == 'call':
             command_line.append('take')

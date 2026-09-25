@@ -43308,3 +43308,43 @@ function whose own `x` and `total` are not the ones its block reads; the
 machine, the checked build and a release answer the same. `check-commands.sh`
 holds fifteen refusals, including a `no.alloc` body whose block reaches the
 heap and the sixteen-deep one; eight holes are caught.
+
+## D1258 — `kest doc`, a book, and a page on how the tree is built
+
+The documents here were two kinds: the reference, which is normative and
+long, and the decisions, which are why and longer. Somebody arriving had the
+primer and then the whole of the reference, and somebody calling a module had
+to open the file. Three things were missing, and each is now held by a run
+rather than by being written carefully.
+
+`kest doc <file>` writes what a file declares for somebody who is going to
+call it: what the file calls itself and what it says about itself, then every
+declaration as it is written -- a function up to where its body starts, a
+shape or a constant whole -- with the comment written above it, as Markdown or
+with `--json`. The file is built first, so what is described is a program that
+checks. What a comment is about is decided by where it is and nothing else: on
+the lines directly above a declaration it is that declaration's; a blank line
+between says it is not; one at the end of a line is about that line; and the
+comments before the first declaration that belong to none of them are the
+file's. There is no doc-comment syntax, because every file here already writes
+its comments that way and a second kind of comment is a second thing to get
+wrong. A declaration nobody wrote about is said with nothing under it, because
+a generated sentence is a sentence nobody meant. It is a module of its own,
+`doc`, after `hostile` in the pipeline, and it reads the file again after the
+build, since a build keeps no tree once it has compiled one (D748).
+
+`check-commands.sh` asks `doc` of every file in the tree and holds the two
+forms to naming the same declarations with the same words, and holds a file
+written on the spot to what each of its comments is about: the file's two
+paragraphs, a comment above a shape, one across a blank line that is nobody's,
+one at the end of a line that is nobody's, and two functions written up to
+their bodies. Four holes are caught: a page that drops what a declaration is
+for, a comment across a blank line taken as a declaration's, a function
+written out with its body, and a file that checks refused.
+
+`docs/book.md` is the short way in: eleven chapters, each a thing and each a
+program with what it writes under it, which `check-docs.sh` compiles, runs and
+holds to those words the way it holds the reference's -- a changed output under
+chapter two was said at its line. `ARCHITECTURE.md` is a paragraph a module in
+the order a program goes through them, pointing at the decisions. Both are in
+`CLAUDE.md`'s table of documents, which is what lets them exist.

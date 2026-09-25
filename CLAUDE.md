@@ -48,6 +48,8 @@ holds them to each other.
 | `docs/game-ai-direction-state.md` | Where the game-first / AI-native work is: the mission's start SHA, the reference machine, the baseline numbers, what has been measured, what is open in priority order, and what has been rejected. The documents it serves are in `/home/kest/mission/direction/`; their goals are binding and their proposed mechanisms are not. It is the operational position, not a diary: reasoning goes in `docs/decisions.md`. |
 | `docs/primer.md` | One page for somebody who knows Lua or Rust: what is different here, written from what people and models new to the language got wrong, every program on it run by `check-docs.sh` for its answer. It says what; `docs/language.md` says why and is the one that is normative. See D1150. |
 | `docs/report.md` | The final report section 35 of the mission asks for: thirty answers, each held by a number this tree takes and can take again, and each place the record is thin saying so rather than filling it in. It is written once the criteria are met and kept true afterwards. See D1140. |
+| `docs/book.md` | The short way in: a chapter a thing, each a program with what it writes under it, run by `check-docs.sh` like the reference's. It teaches; `docs/language.md` is what it is held to. See D1258. |
+| `ARCHITECTURE.md` | How the tree is built: each module of the pipeline below in a paragraph, in the order a program goes through them, pointing at the decisions that say why. See D1258. |
 | `docs/worklog.md` | What was built, in order. Newest last. An entry is a heading, what was done and what it turned up, and a `**Runs:**` line saying what was run to believe it, which `check-docs.sh` holds. It is a record and not a queue: entries used to end with a `**Next:**` line that the next turn was given as its work, which made the last thing written the source of what happens next, and scope that comes from the last thing written is scope nobody chose. Those lines are left where they are and nothing reads them. What to do next comes from whoever is directing the work. |
 
 ## Layout
@@ -1154,6 +1156,7 @@ lsp      the same build, answering an editor
 debug    the same machine, stopped and asked about
 dap      the same debugger, answering an editor's debug protocol
 hostile  a file's doors, called with anything a program could hand them
+doc      what a file declares and says about each, for somebody calling it
 main     CLI
 ```
 

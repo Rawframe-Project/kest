@@ -42491,3 +42491,27 @@ formatter over both shapes; eight holes by hand; `make fast`; `make most`; the
 sweep, where two holes left a tree that did not build -- a condition written
 out took the last reader of a name with it -- and were written to keep the
 name read and run again by hand, caught.
+
+## 2026-09-25, kest doc, the book, the architecture page
+
+`kest doc <file>` writes what a file declares with the comment above each, as
+Markdown or JSON, in a new module `doc`. It first crashed on every file: a
+build frees its trees once compiled (D748), so the file is read again for its
+words. `docs/book.md` has eleven chapters, each a program the gate runs;
+`ARCHITECTURE.md` is a paragraph a module. `check-tables.sh` asked for
+`kest_span_text` where the module read a source at an offset itself, and for
+a hole behind every new sentence in `check-commands.sh`. The first of those
+missed twice: asked of `examples/math.kest`, whose declarations have no
+comment above them, a page that drops them loses nothing, so it is asked of
+`examples/methods.kest`, with the checked build the run before it reads. And
+`make most` refused three of the new sentences as never said: a sentence that
+is mostly the blanks a run fills in cannot be seen said by any hole, so each
+says what went wrong in words of its own and the names go in the blank.
+
+See D1258.
+
+**Runs:** `kest doc` over `examples/methods.kest` and `lib/std`, both forms; a
+file that does not check and no file at all; the attachment case against three
+broken copies of `doc.c`, each caught; the book with an output changed, said
+at its line; the reference's `--json` block against a run; `check-docs.sh`;
+`check-tables.sh`; four holes by hand; `make most`.

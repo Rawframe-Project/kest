@@ -4900,6 +4900,45 @@ with which check failed, which is what every example in this tree is, so there
 is no framework and no discovery. `kest doctor` is what somebody runs when
 something is wrong and they do not know what. See D982.
 
+## What a file says about itself
+
+A comment on the lines directly above a declaration is about that
+declaration, and the comments before the first declaration that are about
+none of them are about the file. `kest doc <file>` writes both for somebody
+who is going to call a module rather than read it: what the file calls itself
+and says about itself, then every declaration as it is written -- a function
+up to where its body starts, anything else whole -- with its comment under it,
+as Markdown. The file is built first, so what is described is a program that
+checks, and one that does not is refused in its own words.
+
+```kest
+module shop.shelf
+
+// A shop's shelves. Everything here is a value.
+
+struct Shelf {
+    count: i32
+}
+
+// One more on the shelf.
+fn fill(s: Shelf) -> Shelf {
+    return Shelf(s.count + 1)
+}
+```
+
+The words are the file's own. A blank line between a comment and a
+declaration says the comment is not about it, a comment at the end of a line
+is about that line, and a declaration nobody wrote a comment above is said
+with nothing under it rather than with something made up. With `--json` it is
+one object:
+
+```json
+{"module":"shop.shelf","file":"shop/shelf.kest","about":"A shop's shelves. Everything here is a value.","declarations":[{"kind":"struct","name":"Shelf","line":5,"written":"struct Shelf {\n    count: i32\n}","about":""},{"kind":"fn","name":"fill","line":10,"written":"fn fill(s: Shelf) -> Shelf","about":"One more on the shelf."}]}
+```
+
+`check-commands.sh` holds the two forms to naming the same declarations with
+the same words for every file in the tree. See D1258.
+
 ## What a run did
 
 `kest profile` runs a program and says what it cost, in counts:

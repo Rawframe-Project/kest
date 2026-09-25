@@ -70,6 +70,7 @@ __declspec(dllimport) int __stdcall QueryPerformanceFrequency(long long *rate);
 #include "kest.h"
 #include "ast.h"
 #include "build.h"
+#include "doc.h"
 #include "hostile.h"
 #include "diag.h"
 #include "lexer.h"
@@ -164,6 +165,9 @@ static void help(FILE *out) {
             "                    every call of every door it declares with\n"
             "                    what a program nobody trusts could hand it,\n"
             "                    for the host that binds them to run\n"
+            "  doc <file>        what the file declares, each as it is\n"
+            "                    written with the comment above it, as\n"
+            "                    Markdown for somebody who will call it\n"
             "  doctor [dir]      what this command line is, where it looks\n"
             "                    for the library, whether it found it, and\n"
             "                    what the project here says about itself\n"
@@ -2094,6 +2098,43 @@ static int write_hostile(const char *path, uint64_t seed, bool json) {
     return 0;
 }
 
+// What a file declares and what it says about each, for somebody who is going
+// to call it rather than read it. It is built first, so what is described is a
+// program that checks, and a file that does not is refused in its own words.
+// See D1258.
+static int write_doc(const char *executable, const char *path, bool json) {
+    if (path == NULL) {
+        return refused_at_the_words(json, "K0649", "`%s` needs a file", "doc");
+    }
+    KestBuild *build =
+        kest_build(path, kest_library_path(NULL, executable),
+                   json ? stdout : stderr,
+                   json ? KEST_FORM_JSON : KEST_FORM_TEXT, 0);
+    if (build == NULL) {
+        return 1;
+    }
+    kest_build_free(build);
+    // A build keeps no tree once it has compiled one, so the file is read
+    // again, on its own, for its words.
+    KestArena *arena = kest_arena_new();
+    KestDiags diags;
+    KestUnits units = {0};
+    bool said = false;
+    if (arena != NULL) {
+        kest_diags_init(&diags, arena);
+        said = kest_read_unit(arena, &diags, path, &units) &&
+               units.count > 0 &&
+               kest_doc(&units.items[0], arena, json, stdout);
+    }
+    kest_arena_free(arena);
+    if (!said) {
+        kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
+                           KEST_STARVED_SAYS);
+        return 1;
+    }
+    return 0;
+}
+
 static int make_project(const char *name, bool json) {
     if (name == NULL || name[0] == '\0') {
         refused_at_the_words(json, "K0649", "`new` needs a name");
@@ -3611,6 +3652,14 @@ int main(int argc, char **argv) {
     if (strcmp(argv[1], "hostile") == 0) {
         int status = write_hostile(path_count > 0 ? paths[0] : NULL,
                                    told_it ? (uint64_t)count : 1, json);
+        free(paths);
+        free(given);
+        return status;
+    }
+
+    if (strcmp(argv[1], "doc") == 0) {
+        int status =
+            write_doc(argv[0], path_count > 0 ? paths[0] : NULL, json);
         free(paths);
         free(given);
         return status;

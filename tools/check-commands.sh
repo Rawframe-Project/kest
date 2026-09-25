@@ -194,6 +194,76 @@ elif ! grep -q "declares nothing" "$scratch"/cmd-err; then
 fi
 rm -rf "$(dirname "$nothing")"
 
+# What `doc` says a comment is about. One on a line of its own above a
+# declaration is about it; a blank line between them says it is not, and one
+# at the end of a line is about that line; what comes before the first
+# declaration and is about none of them is what the file says about itself.
+# See D1258.
+mkdir -p "$scratch"/doc
+cat >"$scratch"/doc/shelf.kest <<'EOF_DOC'
+// A shop's shelves.
+//
+// Everything here is a value.
+
+// And a second paragraph.
+
+// What a shelf holds.
+struct Shelf {
+    count: i32 // how many
+}
+
+// Loose words, about nothing below them.
+
+fn fill(s: Shelf) -> Shelf { // never said
+    return Shelf(s.count + 1)
+}
+
+// Whether there is nothing on it.
+// Two lines of it.
+fn empty(s: Shelf) -> bool {
+    return s.count == 0
+}
+
+const LIMIT: i32 = 9 // how many fit
+fn full(s: Shelf) -> bool {
+    return s.count >= LIMIT
+}
+EOF_DOC
+if ! $kest doc --json "$scratch"/doc/shelf.kest >"$scratch"/doc/said \
+        2>&1 </dev/null; then
+    complain "doc: a file that checks was refused: $(head -1 "$scratch"/doc/said)"
+else
+    wrongly=$(python3 -c '
+import json
+import sys
+
+held = json.load(open(sys.argv[1]))
+wanted = {
+    "": "A shop\u0027s shelves.\n\nEverything here is a value.\n\n"
+        "And a second paragraph.",
+    "Shelf": "What a shelf holds.",
+    "fill": "",
+    "empty": "Whether there is nothing on it.\nTwo lines of it.",
+    "LIMIT": "",
+    "full": "",
+}
+said = {"": held["about"]}
+for one in held["declarations"]:
+    said[one["name"]] = one["about"]
+wrong = [repr(said.get(name)) + " is what " + (name or "the file") + " says"
+         for name in wanted if said.get(name) != wanted[name]]
+written = [one["written"] for one in held["declarations"]]
+if written[1:3] != ["fn fill(s: Shelf) -> Shelf",
+                    "fn empty(s: Shelf) -> bool"]:
+    wrong.append("the functions are written " + repr(written[1:3]))
+print("; ".join(wrong))
+' "$scratch"/doc/said)
+    if [ -n "$wrongly" ]; then
+        complain "doc: reads what a comment is about wrongly: $wrongly"
+    fi
+fi
+rm -rf "$scratch"/doc
+
 # One file, asked everything. What it says is what is wrong with it, so a
 # file that is right says nothing at all — which is what lets these run at
 # once and be read in order afterwards.
@@ -207,6 +277,42 @@ sweep_one() {
         # A file of nothing but generic functions has no bodies until a call
         # asks for one, and it says so rather than printing nothing.
         expect "$file" emit '^fn |^nothing to run'
+        # And what it offers a caller, said the same both ways: a heading for
+        # every declaration the JSON names, in the same order, with the same
+        # words under it. See D1258.
+        expect "$file" doc '^# `'
+        if "$kest" doc "$file" >"$scratch"/doc${mine:+-${mine##*/}}.md \
+                2>/dev/null </dev/null &&
+            "$kest" doc --json "$file" \
+                >"$scratch"/doc${mine:+-${mine##*/}}.json 2>/dev/null \
+                </dev/null; then
+            differs=$(python3 -c '
+import json
+import sys
+
+page = open(sys.argv[1]).read()
+held = json.load(open(sys.argv[2]))
+headings = [line[4:-1] for line in page.split("\n")
+            if line.startswith("## `") and line.endswith("`")]
+apart = []
+if headings != [one["name"] for one in held["declarations"]]:
+    apart.append("which declarations there are")
+for one in held["declarations"]:
+    if "```kest\n" + one["written"] + "\n```" not in page or \
+            one["about"] not in page:
+        apart.append("`%s`" % one["name"])
+if held["about"] not in page:
+    apart.append("the file")
+print(", ".join(apart))
+' "$scratch"/doc${mine:+-${mine##*/}}.md \
+                "$scratch"/doc${mine:+-${mine##*/}}.json)
+            if [ -n "$differs" ]; then
+                complain "doc $file: says one thing in words and another as \
+JSON about $differs"
+            fi
+        fi
+        rm -f "$scratch"/doc${mine:+-${mine##*/}}.md \
+            "$scratch"/doc${mine:+-${mine##*/}}.json
 
         # `call` needs the name of a function, and a list of them here would go
         # stale, so the file is asked: the first one it declares that takes
