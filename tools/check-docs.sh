@@ -1195,8 +1195,8 @@ for answered, asked, about in worked_out:
 version_said = subprocess.run(['./kest', '--version'], capture_output=True,
                               text=True, stdin=subprocess.DEVNULL,
                               env=dict(os.environ, KEST_LIB='lib'))
-numbered = re.match(r'kest (\S+), abi (\d+), json (\d+), profile (\S+) (\d+)',
-                    version_said.stdout.strip())
+numbered = re.match(r'kest (\S+), abi (\d+), json (\d+), profile (\S+) (\d+), '
+                    r'edition (\d+)', version_said.stdout.strip())
 metadata = 0
 if numbered is None:
     print("docs: `kest --version` said %r, which is not this being named and "
@@ -1205,6 +1205,7 @@ if numbered is None:
 else:
     this_version, this_abi, this_schema = numbered.group(1, 2, 3)
     this_profile, this_profiled = numbered.group(4, 5)
+    this_edition = numbered.group(6)
     # And the header the run was built from, because a run reading its own
     # constants back is not evidence that they are what anybody else compiles
     # against.
@@ -1215,6 +1216,8 @@ else:
         ('KEST_JSON_SCHEMA', this_schema),
         ('KEST_PROFILE_NAME', '"%s"' % this_profile),
         ('KEST_PROFILE_VERSION', this_profiled),
+        ('KEST_EDITION', this_edition),
+        ('KEST_EDITION_STRING', '"%s"' % this_edition),
     ]
     for constant_name, wanted_value in constants:
         defined = re.search(r'#define %s (\S+)' % constant_name, the_header)
@@ -1227,9 +1230,9 @@ else:
     # Every place a document prints the four together, and every place one
     # prints the version on its own: the front page's sentence, a manifest a
     # reader copies out, and the name of the archive a release is.
-    all_four = ('kest %s, abi %s, json %s, profile %s %s'
+    all_four = ('kest %s, abi %s, json %s, profile %s %s, edition %s'
                 % (this_version, this_abi, this_schema, this_profile,
-                   this_profiled))
+                   this_profiled, this_edition))
     for document in ('README.md', os.path.join('docs', 'language.md')):
         document_text = open(document).read()
         for printed_line in re.findall(r'^kest \d+\.\d+\.\d+, abi .*$',

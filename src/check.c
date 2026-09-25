@@ -3511,9 +3511,17 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
             report(checker, expr->field.name, "K0353",
                    "`%.*s` has nothing called `%.*s`", (int)owner.length,
                    module, (int)expr->field.name.length, member);
-            const char *nearest = nearest_under(checker, module, owner.length,
-                                                member, expr->field.name.length);
-            if (nearest != NULL) {
+            const char *instead =
+                kest_retired(checker->program, module, owner.length, member,
+                             expr->field.name.length);
+            const char *nearest =
+                instead != NULL ? NULL
+                                : nearest_under(checker, module, owner.length,
+                                                member,
+                                                expr->field.name.length);
+            if (instead != NULL) {
+                suggest(checker, "%s", instead);
+            } else if (nearest != NULL) {
                 suggest(checker, "did you mean `%s`?", nearest);
             }
             // And which `io` this is. A program read with a library that is

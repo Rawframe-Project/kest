@@ -51,6 +51,16 @@
 #define KEST_PROFILE_NAME "kest-det"
 #define KEST_PROFILE_VERSION 3
 
+// Which edition of the language a program is written in, which is a fifth
+// thing and the one a program chooses: a change that would stop a program
+// compiling, or make it mean something else, is made under a new edition, and
+// a project's `edition` line says which one it was written against. A project
+// that says none was written against the first, so what a manifest meant the
+// day it was written is what it means for good. This is the only edition
+// there is. See D1252.
+#define KEST_EDITION 2026
+#define KEST_EDITION_STRING "2026"
+
 // Every function declared here is called by one of the two hosts written
 // against it, so there is somewhere to look for each: `src/main.c` is a
 // command line — it compiles, runs, calls one function, ticks a program and

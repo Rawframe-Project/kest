@@ -43015,3 +43015,50 @@ working in the arena it was refused, which dies, and no arena ever refused.
 
 What a program has to do is in the CHANGELOG: `vec.Vec2` is `vec2`, and
 `vec.add(a, b)` is `a + b`.
+
+## D1252 — A program is read in the edition it was written in
+
+*decided*, P1 of the plan and K4. The promise the reference made was that
+`0.0.x` promises nothing, which was honest (D1035) and left a program with no
+way to say what it was written against. The plan's answer is Luau's: a written
+promise, a process for changing what it covers, and a warning before a break.
+
+A project's `kest.project` takes an `edition` line, `2026` being the only
+edition there is. One that names none was written against the first, so a
+manifest means what it meant the day it was written; one naming an edition
+this compiler has not got is refused rather than read as the nearest. `kest
+new` writes the line, `kest doctor` says it (and `edition` in its JSON), and
+`kest --version` prints it as the fifth number. It is cheap now and impossible
+later: a manifest written without the line before there were editions would
+otherwise mean whatever the compiler that read it meant.
+
+The promise, in the reference: a change that stops a program compiling or makes
+it mean something else is made under a new edition, and a later compiler reads
+a program in the edition it names. Every edition gets what cannot break a
+program -- syntax no program could have written before, a library function
+beside the ones there are, a warning -- and two things a program has no right
+to: a fix for a behaviour the reference said was otherwise, and a fix to what
+`SECURITY.md` promises about code nobody trusts. What a new edition refuses is
+warned about in the edition before it. The C ABI, the JSON and the library's
+shape are not in the promise yet, and say so.
+
+A change starts as a proposal in `docs/rfcs/`, written before the code, and a
+taken one becomes a decision here. `docs/rfcs/README.md` is the whole process:
+what changes, why, what it breaks and for whom, the edition, what else was
+weighed.
+
+And a break says what to do about itself. D1251 took `Vec2`, `Vec3`, `add`,
+`sub` and `scale` out of `std.vec`, before this promise; a program that names
+one is refused with what took its place -- "the language adds vectors now:
+write `a + b`" -- rather than with a spelling to try. `kest_retired` is the one
+table, asked where a name under a module is unknown and where a type is.
+
+On the way, two things the manifest's commands got wrong: `kest doctor --json`
+looked for a project in a directory called `--json`, found none, and said
+nothing was wrong with the one that was there, and `kest new --json name` made a
+project called `--json`. Both read what was named rather than the word after the
+command now.
+
+Held by `check-commands.sh`: an unknown edition refused, a manifest with no
+edition read as `2026`, `kest new` writing the line, `doctor --json` saying a
+manifest it could not read, and the two retired names; six holes, one for each.

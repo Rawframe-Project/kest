@@ -6,3 +6,4 @@ tests tests
 
 kest 0.0.1
 profile kest-det 3
+edition 2026

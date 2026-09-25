@@ -785,6 +785,13 @@ const char *kest_type_name(KestArena *arena, const KestType *type);
 // it cannot promise is short. See D1248.
 const char *kest_type_name_read(KestArena *arena, const KestType *type);
 
+// What a program writes instead of a name the library had and has not, said
+// as a sentence, or NULL for one it never had. `alias` is the word the file
+// wrote in front of it. See D1252.
+const char *kest_retired(KestProgram *program, const char *alias,
+                         size_t alias_length, const char *name,
+                         size_t length);
+
 // Prints what was resolved, for seeing what the checker built.
 // What the program holds, for a person. The file that was named is written out
 // in full and what it imported is a line each, because a reader came for the

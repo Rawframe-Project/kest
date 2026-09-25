@@ -42380,3 +42380,20 @@ build and two releases; the widening hole by hand; CI's red whole gate on
 allocations in turn with a preloaded `malloc`; every arena of four programs
 refused in turn, before and after the two fixes; five holes by hand;
 `make most`; the sweep.
+
+## 2026-09-25, editions and the written promise
+
+A project's manifest takes `edition 2026`, and one with none was written
+against it; an unknown edition is refused. `kest new` writes it, `doctor` and
+`--version` say it. The reference's promise is that a change that would break a
+program is made under a new edition and warned about in the one before, with a
+proposal in `docs/rfcs/` first; a library name that went says what took its
+place. `kest doctor --json` and `kest new --json` read the option as a path,
+which they do not any more.
+
+See D1252.
+
+**Runs:** `doctor` in text and JSON over a manifest with an unknown edition,
+none, and a misspelt line, before and after; `kest new` with `--json` before a
+name; the retired names in a type and in a call; six holes by hand; `make most`;
+the sweep.

@@ -2268,6 +2268,18 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     kest_import_reached(program, name, length);
     kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0301", ref->name,
                    "unknown type `%.*s`", (int)length, name);
+    // One the library had, which is not a spelling to guess at either: what
+    // took its place is known. See D1252.
+    const char *dot_at = memchr(name, '.', length);
+    const char *instead =
+        dot_at == NULL
+            ? NULL
+            : kest_retired(program, name, (size_t)(dot_at - name), dot_at + 1,
+                           length - (size_t)(dot_at - name) - 1);
+    if (instead != NULL) {
+        kest_diags_suggest(program->diags, "%s", instead);
+        return error_type(program);
+    }
     // And one this program has under a module this file has not asked for,
     // which is the same certainty a name of that kind is: not a spelling to
     // try, but the shape the reader has already written, in the file beside
@@ -2954,6 +2966,42 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
         return "?";
     }
     return buffer;
+}
+
+// What the library had and has not, and what a program writes instead. A name
+// that went is refused whatever happens -- what it was is not there to be
+// called -- and the refusal says what took its place, which is the promise a
+// break makes before there were editions to make it under. See D1252.
+typedef struct {
+    const char *module;
+    const char *name;
+    const char *instead;
+} Retired;
+
+static const Retired RETIRED[] = {
+    {"std.vec", "Vec2", "it is the language's own now: `vec2` is the same two "
+                        "`f32`s"},
+    {"std.vec", "Vec3", "it is the language's own now: `vec3` is the same "
+                        "three `f32`s"},
+    {"std.vec", "add", "the language adds vectors now: write `a + b`"},
+    {"std.vec", "sub", "the language takes vectors away now: write `a - b`"},
+    {"std.vec", "scale", "the language scales vectors now: write `v * k`"},
+};
+
+const char *kest_retired(KestProgram *program, const char *alias,
+                         size_t alias_length, const char *name,
+                         size_t length) {
+    const char *module = kest_module_for(program, alias, alias_length);
+    if (module == NULL) {
+        return NULL;
+    }
+    for (size_t i = 0; i < sizeof RETIRED / sizeof RETIRED[0]; i++) {
+        if (strcmp(RETIRED[i].module, module) == 0 &&
+            kest_word_same(RETIRED[i].name, name, length)) {
+            return RETIRED[i].instead;
+        }
+    }
+    return NULL;
 }
 
 // Named as far as a reader reads one. The name of a copy is as long as what it

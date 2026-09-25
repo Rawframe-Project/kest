@@ -209,6 +209,10 @@ and gives up the release engine's 1.4 to 9.9 times (D1249).
 time that answer the same bits in both engines (D1250), and `std.vec` is built
 on them (D1251).
 
+A program is read in the edition its project names, `2026` being the only one;
+a change that would break a program goes into a new edition, starts as a
+proposal in `docs/rfcs/`, and is warned about first (D1252).
+
 ## Determinism
 
 `sin`, `cos`, `pow` and `atan2` are written in Kest and inside the profile,

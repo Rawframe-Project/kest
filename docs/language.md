@@ -4580,11 +4580,12 @@ something else and nothing in C notices. `KEST_JSON_SCHEMA` is what shape the
 objects a command writes are in. `kest_profile` answers with the name and the
 number of the profile `deterministic` is a promise about — a promise about a
 named profile rather than about arithmetic in the abstract — which a host
-keeping a replay or shipping a save writes down beside it. `kest --version`
-prints all four:
+keeping a replay or shipping a save writes down beside it. `KEST_EDITION` is
+which edition of the language this compiler reads a program in, which a project
+names with its `edition` line. `kest --version` prints all five:
 
 ```
-kest 0.0.1, abi 4, json 4, profile kest-det 3
+kest 0.0.1, abi 4, json 4, profile kest-det 3, edition 2026
 ```
 
 The ABI number goes up when anything a host can see changes: arguments, what a
@@ -4592,14 +4593,41 @@ function answers, a struct's fields or their order, an enum's cases or their
 numbers, or what any of them mean. It does not go up for something added at the
 end, which a host built against the older number does not know about. See D974.
 
-### What 0.0.x promises, which is nothing
+### What is promised to a program, and how a change is made
 
-**Nothing is frozen.** This is `0.0.1`, and a `0.0.x` promises no program, no
-host and no tool anything between one of them and the next. Semantics may
-change, syntax may change, the C ABI may change, the shape of the JSON may
-change, what `deterministic` covers may change, and what a reference is made of
-may change — one of those changed on the way to this sentence, and D1033 is
-why.
+**A program is read in the edition it was written in.** A project says which
+with its `edition` line, and one that says none was written against the first,
+`2026`, so what a manifest meant the day it was written is what it means for
+good. From D1252 on, a change that would stop a program compiling, or make it
+mean something else, is made under a new edition: a later compiler reads a
+program in the edition it names, the way it read it before. What every edition
+gets is what cannot break a program -- syntax where no program could have
+written it before, a library function beside the ones there are, a warning --
+and two things a program has no right to: the fix for a behaviour this
+reference said was otherwise, and a fix to the promises `SECURITY.md` makes
+about code nobody trusts. Both are said in `CHANGELOG.md` as what they are.
+
+**A thing is warned about before it is taken away.** What a new edition refuses
+is warned about, with its own code and what to write instead, in the edition
+before it; nothing is refused in the edition a program names that was not
+refused there already. And a name that went before this promise says what took
+its place: `vec.add` is refused with `a + b` beside it.
+
+**A change starts as a proposal.** Syntax, what a program means, a library's
+shape, a door of the C API, a name in the JSON and the deterministic profile
+are changed by a proposal written before the code, in `docs/rfcs/`: what
+changes, why, what it breaks and for whom, what else was weighed, and which
+edition it is in. One that is taken becomes a decision in `docs/decisions.md`,
+and `docs/rfcs/README.md` is the whole of the process.
+
+**What still moves while this is `0.0.x`.** The promise above is about
+programs. The C ABI, the shape of the JSON and the standard library's shape are
+not frozen yet: each break is a decision that says what it supersedes and why
+the old thing was worse, and `CHANGELOG.md` says what a reader with a host or a
+tool has to do about it. This is `0.0.1`, and a `0.0.x` promises a host and a
+tool nothing between one of them and the next: the C ABI may change, the shape
+of the JSON may change, and what a reference is made of may change — that one
+changed on the way to this sentence, and D1033 is why.
 
 Kest said `1.0.0` on 2026-09-18 and withdrew it a day later. Nobody outside this
 project had written a program in it, two independent readings from outside found
@@ -4608,18 +4636,16 @@ anyone had leaned on it is a promise that costs its maker nothing and its future
 readers everything. The release and the tag are gone; the history is not, and
 D1035 says what was withdrawn and on what evidence.
 
-What replaces the promise while this is `0.0.x`: every break is a decision that
-says what it supersedes and why the old thing was worse, and `CHANGELOG.md`
-says what a reader with a program has to do about it. That is a record rather
-than a guarantee, and it is the honest thing to offer before there is anyone to
-guarantee it to.
+What a program is promised is the edition it names, which costs a program
+nothing to lean on: it is the words it was written in. What a host and a tool
+are promised waits for somebody leaning on them.
 
-**The four numbers are still four numbers**, and what each is *about* has not
-changed — they are the version, the C ABI, the shape of the JSON, and the
-deterministic profile, and D974 and D983 say which moves for what. What has
-changed is that none of them is a promise yet.
+**The numbers beside the edition are still four numbers**, and what each is
+*about* has not changed — they are the version, the C ABI, the shape of the
+JSON, and the deterministic profile, and D974 and D983 say which moves for
+what. None of them is a promise yet.
 
-The rest of this section is what those four promises **will** mean when this
+The rest of this section is what those promises **will** mean when this
 project offers them again, kept here because it is the design and not an
 aspiration. Read it as what stability would say, not as what `0.0.1` says.
 
@@ -4728,6 +4754,7 @@ source src
 tests tests
 kest 0.0.1
 profile kest-det 3
+edition 2026
 ```
 
 `entry` is what `check`, `build` and `run` work on when no file is named, and

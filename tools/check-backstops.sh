@@ -2460,6 +2460,85 @@ yield""",
         "caught": "killed it",
     },
     {
+        # An edition this compiler has not got read anyway: the words of a program
+        # written for it may mean something here they did not mean there. See
+        # D1252.
+        "what": "an edition nobody has read as the one there is",
+        "file": "src/project.c",
+        "from": r"""            if (strcmp(value, KEST_EDITION_STRING) != 0) {""",
+        "to": r"""            if (false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a project written in an edition nobody has was read anyway",
+    },
+    {
+        # A manifest that names no edition read as naming none, rather than the
+        # first, which is what it was written against. See D1252.
+        "what": "a project with no edition read as none",
+        "file": "src/project.c",
+        "from": r"""    project->edition = KEST_EDITION_STRING;""",
+        "to": r"""    project->edition = "";""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "a project that names no edition is not read as the first",
+    },
+    {
+        # `kest new` writing a manifest with no edition in it. See D1252.
+        "what": "a new project that names no edition",
+        "file": "src/project.c",
+        "from": r"""        "edition %s\n",""",
+        "to": r"""        "%.0s",""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "wrote a project that names no edition",
+    },
+    {
+        # `kest doctor --json` looking for a project in a directory called
+        # `--json`, finding none, and saying nothing was wrong. See D1252.
+        "what": "a doctor that looks for a project in its own option",
+        "file": "src/main.c",
+        "from": r"""        int status = look_over(argv[0], path_count > 0 ? paths[0] : "", json);""",
+        "to": r"""        int status = look_over(argv[0], argc > 2 ? argv[2] : "", json);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "read past a project it could not read",
+    },
+    {
+        # A name the library had, called by a program, answered with a spelling
+        # to try rather than with what took its place. See D1252.
+        "what": "a retired name called misspelt",
+        "file": "src/check.c",
+        "from": r"""            if (instead != NULL) {
+                suggest(checker, "%s", instead);
+            } else if (nearest != NULL) {""",
+        "to": r"""            if (nearest != NULL) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "check: K0353 said",
+    },
+    {
+        # The same written where a type goes. See D1252.
+        "what": "a retired type called unknown",
+        "file": "src/types.c",
+        "from": r"""    if (instead != NULL) {
+        kest_diags_suggest(program->diags, "%s", instead);
+        return error_type(program);
+    }""",
+        "to": r"""    if (false) {
+        kest_diags_suggest(program->diags, "%s", instead);
+        return error_type(program);
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "check: K0301 said",
+    },
+    {
         # Work counted and never run out of: a ceiling that is read and never
         # reached is a build that takes as long as the file makes it, which
         # is the thing a host that compiles what it was sent gave one to stop.
@@ -4271,9 +4350,9 @@ for file in "$@"; do""",
         # is not there.
         "what": "a version that says its name and refuses",
         "file": "src/main.c",
-        "from": r"""               (unsigned)KEST_JSON_SCHEMA, named, profile);
+        "from": r"""               (unsigned)KEST_EDITION);
         return 0;""",
-        "to": r"""               (unsigned)KEST_JSON_SCHEMA, named, profile);
+        "to": r"""               (unsigned)KEST_EDITION);
         return 1;""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
@@ -14120,9 +14199,10 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # rather than a person, and what a tool does with nothing is carry on.
         "what": "a version that says nothing",
         "file": "src/main.c",
-        "from": """        printf("kest %s%s, abi %u, json %u, profile %s %u\\n", kest_version(),
-               kest_checked() ? " checked" : "", kest_abi_version(),
-               (unsigned)KEST_JSON_SCHEMA, named, profile);
+        "from": """        printf("kest %s%s, abi %u, json %u, profile %s %u, edition %u\\n",
+               kest_version(), kest_checked() ? " checked" : "",
+               kest_abi_version(), (unsigned)KEST_JSON_SCHEMA, named, profile,
+               (unsigned)KEST_EDITION);
         return 0;""",
         "to": """        printf("%s", kest_checked() ? "" : "");
         (void)named;
@@ -16322,8 +16402,8 @@ fn main() -> i32 {
         # three.
         "what": "a reference that prints another number than a run",
         "file": "docs/language.md",
-        "from": """kest 0.0.1, abi 4, json 4, profile kest-det 3""",
-        "to": """kest 0.0.1, abi 1, json 1, profile kest-det 1""",
+        "from": """kest 0.0.1, abi 4, json 4, profile kest-det 3, edition 2026""",
+        "to": """kest 0.0.1, abi 1, json 1, profile kest-det 1, edition 2026""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",
         "arguments": ["docs/language.md", "docs/decisions.md"],

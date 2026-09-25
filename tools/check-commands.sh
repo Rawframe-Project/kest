@@ -4310,6 +4310,8 @@ K0306|check|import std.vec\n\nfn main() -> i32 {\n    let d = vec.dot(vec.Vec2(1
 K0306|check|fn main() -> i32 {\n    io.print("hi")\n    return 0\n}|is in the library
 K0301|check|fn area(v: vec.Vec2) -> f32 {\n    return v.x\n}\n\nfn main() -> i32 {\n    return 0\n}|is in the library
 K0301|check|import std.random\n\nfn roll(s: random.Sorce) -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}|did you mean `random.Source`
+K0301|check|import std.vec\n\nfn f(p: vec.Vec2) -> f32 {\n    return p.x\n}\n\nfn main() -> i32 {\n    return 0\n}|it is the language's own now: `vec2` is the same two `f32`s
+K0353|check|import std.vec\n\nfn main() -> i32 {\n    let a = vec2(1.0, 2.0)\n    let b = vec.add(a, a)\n    return 0\n}|the language adds vectors now: write `a + b`
 K0358|check|import std.io\n\nfn main() -> i32 {\n    return io\n}|is a module, and this wants a value
 K0359|check|import std.vec\n\nfn area(v: vec) -> f32 {\n    return 1.0\n}\n\nfn main() -> i32 {\n    return 0\n}|is a module, and this wants a type
 K0359|check|import std.io\n\nfn say(v: io) {\n    return\n}\n\nfn main() -> i32 {\n    return 0\n}|`io` is a module, and this wants a type
@@ -5481,7 +5483,37 @@ if [ -z "$wrong" ]; then
     *"says something this does not know"*) ;;
     *) wrong="a project with a line nothing knows is read anyway" ;;
     esac
+    # And the same asked for as JSON, which looked for a project in a
+    # directory called `--json` and said nothing was wrong. See D1252.
+    case "$(cd "$scratch"/projects && "$here/$kest" doctor --json 2>&1)" in
+    *'"projectSaid":"a project says something this does not know","wrong":true'*) ;;
+    *) wrong="\`kest doctor --json\` read past a project it could not read" ;;
+    esac
     rm -f "$scratch"/projects/kest.project
+fi
+if [ -z "$wrong" ]; then
+    # An edition this compiler has not got is refused rather than read as
+    # the nearest one, and a manifest that names none was written against
+    # the first: what it meant the day it was written is what it means. And
+    # `kest new` writes the line. See D1252.
+    printf 'project one\nentry src/main.kest\nedition 2099\n' \
+        > "$scratch"/projects/kest.project
+    case "$(cd "$scratch"/projects && "$here/$kest" doctor 2>&1)" in
+    *"says an edition this does not know"*) ;;
+    *) wrong="a project written in an edition nobody has was read anyway" ;;
+    esac
+    printf 'project one\nentry src/main.kest\n' \
+        > "$scratch"/projects/kest.project
+    case "$(cd "$scratch"/projects && "$here/$kest" doctor --json 2>&1)" in
+    *'"edition":"2026"'*) ;;
+    *) wrong="a project that names no edition is not read as the first" ;;
+    esac
+    rm -f "$scratch"/projects/kest.project
+    case "$(cat "$scratch"/projects/demo/kest.project)" in
+    *"
+edition 2026"*) ;;
+    *) wrong="\`kest new\` wrote a project that names no edition" ;;
+    esac
 fi
 if [ -z "$wrong" ]; then
     # And the way somebody who unpacked an archive runs it: `bin` on the path

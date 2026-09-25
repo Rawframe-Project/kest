@@ -441,6 +441,14 @@ new ones, because a run under profile 2 and one under 3 are two runs. A
 constant may be written as its bits, `float(u64(0x...))`, since `bits` and
 `float` are worked out where they are written. See D1235.
 
+**A project names its edition**, with `edition 2026` in `kest.project`, and a
+change that would break a program is made under a new one; the reference says
+what is promised. `kest --version` prints the edition as a fifth number, and
+`kest doctor --json` says it as `edition`. **What a project has to do:**
+nothing -- one without the line was written against `2026`. `kest doctor
+--json` reads the project it was pointed at now rather than looking in a
+directory called `--json`. See D1252.
+
 **`std.vec` is built on the language's vectors.** `vec.Vec2`, `vec.Vec3`,
 `vec.add`, `vec.sub` and `vec.scale` are gone; its other functions take
 `vec2`, `vec3` and `vec4`. **What a program has to do:** write `vec2` for

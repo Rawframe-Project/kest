@@ -2111,14 +2111,16 @@ static int look_over(const char *executable, const char *where, bool json) {
     bool wrong = false;
     if (json) {
         printf("{\"schema\":%u,\"version\":\"%s\",\"abi\":%u,\"json\":%u,"
-               "\"profile\":\"%s %u\",\"library\":",
+               "\"profile\":\"%s %u\",\"edition\":%u,\"library\":",
                (unsigned)KEST_JSON_SCHEMA, kest_version(), kest_abi_version(),
-               (unsigned)KEST_JSON_SCHEMA, named, profile);
+               (unsigned)KEST_JSON_SCHEMA, named, profile,
+               (unsigned)KEST_EDITION);
         kest_json_text(library, stdout);
     } else {
-        printf("kest %s%s, abi %u, json %u, profile %s %u\n", kest_version(),
-               kest_checked() ? " checked" : "", kest_abi_version(),
-               (unsigned)KEST_JSON_SCHEMA, named, profile);
+        printf("kest %s%s, abi %u, json %u, profile %s %u, edition %u\n",
+               kest_version(), kest_checked() ? " checked" : "",
+               kest_abi_version(), (unsigned)KEST_JSON_SCHEMA, named, profile,
+               (unsigned)KEST_EDITION);
         printf("library    %s\n", library);
     }
 
@@ -2177,6 +2179,8 @@ static int look_over(const char *executable, const char *where, bool json) {
             kest_json_text(project->needs_kest, stdout);
             printf(",\"profile\":");
             kest_json_text(project->profile, stdout);
+            printf(",\"edition\":");
+            kest_json_text(project->edition, stdout);
             printf(",\"sources\":[");
             for (uint32_t i = 0; i < project->source_count; i++) {
                 fputs(i == 0 ? "" : ",", stdout);
@@ -2187,8 +2191,8 @@ static int look_over(const char *executable, const char *where, bool json) {
             printf("project    %s, from %s\n", project->name, project->path);
             printf("entry      %s%s\n", project->entry,
                    entry_there ? "" : "  NOT there");
-            printf("written    against kest %s, profile %s\n",
-                   project->needs_kest, project->profile);
+            printf("written    against kest %s, profile %s, edition %s\n",
+                   project->needs_kest, project->profile, project->edition);
             for (uint32_t i = 0; i < project->source_count; i++) {
                 printf("source     %s\n", project->sources[i]);
             }
@@ -3241,11 +3245,13 @@ int main(int argc, char **argv) {
         // What a host and a tool have to agree with, said where a person and a
         // script both read it: the language's own version, the shape the doors
         // are in, the shape the JSON is in, and which deterministic profile
-        // this build holds `deterministic` to. Four numbers because they move
-        // for four different reasons. See D974.
-        printf("kest %s%s, abi %u, json %u, profile %s %u\n", kest_version(),
-               kest_checked() ? " checked" : "", kest_abi_version(),
-               (unsigned)KEST_JSON_SCHEMA, named, profile);
+        // this build holds `deterministic` to -- and the edition it reads a
+        // program in, which a project names. Five numbers because they move
+        // for five different reasons. See D974 and D1252.
+        printf("kest %s%s, abi %u, json %u, profile %s %u, edition %u\n",
+               kest_version(), kest_checked() ? " checked" : "",
+               kest_abi_version(), (unsigned)KEST_JSON_SCHEMA, named, profile,
+               (unsigned)KEST_EDITION);
         return 0;
     }
 
@@ -3501,14 +3507,20 @@ int main(int argc, char **argv) {
     // A project made, and a project looked over. Neither takes a file: `new`
     // takes a name and `doctor` takes a directory or nothing at all.
     if (strcmp(argv[1], "new") == 0) {
-        int status = make_project(argc > 2 ? argv[2] : NULL, json);
+        // What was named rather than the word after the command, which may
+        // be `--json`: the options are read wherever they are written, and a
+        // project called `--json` is a directory nobody meant. See D1252.
+        int status = make_project(path_count > 0 ? paths[0] : NULL, json);
         free(paths);
         free(given);
         return status;
     }
 
     if (strcmp(argv[1], "doctor") == 0) {
-        int status = look_over(argv[0], argc > 2 ? argv[2] : "", json);
+        // The same: `kest doctor --json` looked for a project in a directory
+        // called `--json`, found none, and said nothing was wrong with the
+        // one that was there. See D1252.
+        int status = look_over(argv[0], path_count > 0 ? paths[0] : "", json);
         free(paths);
         free(given);
         return status;

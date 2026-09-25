@@ -2920,7 +2920,8 @@ ask "lends" tools/check-lends.sh
 
 ask "verifier" tools/check-verifier.sh
 ask "documentation" tools/check-docs.sh docs/language.md \
-    docs/decisions.md CHANGELOG.md docs/primer.md SECURITY.md
+    docs/decisions.md CHANGELOG.md docs/primer.md SECURITY.md \
+    docs/rfcs/README.md
 ask "costs" tools/check-costs.sh
 ask "ceilings" tools/check-ceilings.sh
 ask "work" tools/check-work.sh
