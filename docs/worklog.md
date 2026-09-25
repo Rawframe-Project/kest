@@ -42288,3 +42288,16 @@ resident) and after (refused); three programs' costs before and after; a build
 given exactly its cost, the listing included; `examples/embed.c`; the ceiling
 ladders; `make most`; the backstop sweep.
 
+## 2026-09-25, a name MSVC reads as hiding a global
+
+CI on `4b96b619` (D1246) was red on Windows and nowhere else: the block that
+starts a machine nobody trusts in `examples/embed.c` read its report into a
+`FILE *heard`, and the file has a global of that name, which MSVC refuses
+(`C4459`, warnings as errors). The hosts are built here without `-Wshadow`, and
+GCC has no form of it for globals alone -- `-Wshadow=global` is every shadow,
+forty-five of them in that file -- so the Windows job is the net for this, and
+it caught it. Renamed.
+
+**Runs:** the Windows job's log; `examples/embed.c` rebuilt and run; the hosts
+compiled with `-Wshadow=global` to see what that flag would ask for.
+

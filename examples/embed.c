@@ -6765,23 +6765,23 @@ int main(int argc, char **argv) {
                         refusals[r].code);
                 return 1;
             }
-            FILE *heard = tmpfile();
-            if (heard == NULL) {
+            FILE *told = tmpfile();
+            if (told == NULL) {
                 fprintf(stderr, "this host has nowhere to read a report "
                                 "back from\n");
                 return 1;
             }
-            kest_build_report(build, heard, KEST_FORM_TEXT);
-            rewind(heard);
+            kest_build_report(build, told, KEST_FORM_TEXT);
+            rewind(told);
             char line[512];
             bool said = false;
-            while (fgets(line, sizeof(line), heard) != NULL) {
+            while (fgets(line, sizeof(line), told) != NULL) {
                 if (strstr(line, refusals[r].code) != NULL &&
                     strstr(line, refusals[r].names) != NULL) {
                     said = true;
                 }
             }
-            fclose(heard);
+            fclose(told);
             if (!said) {
                 fprintf(stderr, "a machine nobody trusts was refused without "
                                 "saying %s about %s\n",
