@@ -2223,7 +2223,13 @@ static KestType *resolve_named(KestProgram *program, const KestTypeRef *ref) {
     // unknown type and not a spelling to guess at. The same refusal the name
     // walk makes, about the same word, asked of the one place that knows what
     // a module is. See D739.
-    if (kest_module_named(program, name, length)) {
+    // Or a word the file imported, which is a module whatever has been
+    // registered under it yet: a signature is resolved before the functions
+    // of the modules it names are, so a module of functions and no types --
+    // `std.io`, and `std.vec` since D1251 -- was an unknown type here and a
+    // module in a body. See D1251.
+    if (kest_module_named(program, name, length) ||
+        kest_module_for(program, name, length) != NULL) {
         kest_diags_add(program->diags, KEST_SEVERITY_ERROR, "K0359", ref->name,
                        "`%.*s` is a module, and this wants a type", (int)length,
                        name);

@@ -11,7 +11,7 @@ import std.vec
 // of which knows about the others.
 
 struct Ant {
-    at: vec.Vec2
+    at: vec2
     heading: f32
 }
 
@@ -34,10 +34,7 @@ fn wrap(value: f32) -> f32 no.alloc {
 fn step(a: Ant, turn: f32) -> Ant no.alloc {
     let heading = a.heading + turn
     return Ant(
-        vec.Vec2(
-            wrap(a.at.x + math.cos(heading)),
-            wrap(a.at.y + math.sin(heading))
-        ),
+        vec2(wrap(a.at.x + math.cos(heading)), wrap(a.at.y + math.sin(heading))),
         heading
     )
 }
@@ -50,7 +47,7 @@ fn scatter(seed: u64) -> [Ant] {
         let x = random.fraction(source) * SIDE
         source = random.next(source)
         let y = random.fraction(source) * SIDE
-        push(ants, Ant(vec.Vec2(x, y), 0.0))
+        push(ants, Ant(vec2(x, y), 0.0))
     }
     return ants
 }
@@ -110,7 +107,7 @@ fn main() -> i32 {
         return 4
     }
 
-    let middle = vec.Vec2(SIDE / 2.0, SIDE / 2.0)
+    let middle = vec2(SIDE / 2.0, SIDE / 2.0)
     let far = 0.0
     for a in ants {
         let away = vec.distance(a.at, middle)

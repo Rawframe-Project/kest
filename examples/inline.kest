@@ -1,7 +1,6 @@
 module examples.inline
 
 import std.io
-import std.vec
 
 // `[f32; 4]` is four of them where it stands, not a handle to four elsewhere.
 // That is the difference between a struct this language can describe and one
@@ -39,8 +38,8 @@ fn largest(t: Transform) -> f32 no.alloc {
     return best
 }
 
-fn applied(t: Transform, v: vec.Vec2) -> vec.Vec2 no.alloc {
-    return vec.Vec2(t.m[0] * v.x + t.m[1] * v.y, t.m[2] * v.x + t.m[3] * v.y)
+fn applied(t: Transform, v: vec2) -> vec2 no.alloc {
+    return vec2(t.m[0] * v.x + t.m[1] * v.y, t.m[2] * v.x + t.m[3] * v.y)
 }
 
 fn main() -> i32 {
@@ -52,7 +51,7 @@ fn main() -> i32 {
         return 2
     }
 
-    let turned = applied(one, vec.Vec2(3.0, 4.0))
+    let turned = applied(one, vec2(3.0, 4.0))
     if turned.x != 3.0 || turned.y != 4.0 {
         return 3
     }

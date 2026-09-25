@@ -2934,7 +2934,7 @@ static KestType *check_call(Checker *checker, KestExpr *expr,
         if (handled) {
             // And what else the file calls by that name, when the language's
             // own refused. A file may declare `len` or `get` — this tree does
-            // it eight times, in `table`, `vec` and two examples — and what a
+            // it six times, in `table` and two examples — and what a
             // name of that kind means is settled by what it is handed: the
             // file's one for the shapes it takes, the language's for the rest.
             // So a call that fits neither is told what the language wanted and

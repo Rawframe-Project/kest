@@ -2353,6 +2353,37 @@ yield""",
         "caught": "check: K0309 said",
     },
     {
+        # A module of functions written where a type goes, read as a type
+        # nobody declared: a signature is resolved before the functions of the
+        # modules it names, so only a module with a type in it was known to be
+        # one there. See D1251.
+        "what": "a module of functions in a signature taken for an unknown type",
+        "file": "src/types.c",
+        "from": r"""    if (kest_module_named(program, name, length) ||
+        kest_module_for(program, name, length) != NULL) {""",
+        "to": r"""    if (kest_module_named(program, name, length)) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "check: K0359 said",
+    },
+    {
+        # A vector's arithmetic asked of the answer rather than of its sides:
+        # an answer given back where an optional is wanted has been widened
+        # to one, is no vector, and was compiled as one number times another
+        # -- the same wrong bits in both engines, so only the answer says so.
+        # See D1251.
+        "what": "a vector widened to an optional compiled as a number",
+        "file": "src/compile.c",
+        "from": r"""    if ((kest_is_vector(left_type) || kest_is_vector(right_type)) &&
+        op != KEST_TOK_EQEQ && op != KEST_TOK_BANGEQ) {""",
+        "to": r"""    if (kest_is_vector(expr->type)) {""",
+        "make": ["kest"],
+        "tool": "tools/fast.sh",
+        "arguments": [],
+        "caught": "examples/vectors.kest answered",
+    },
+    {
         # Work counted and never run out of: a ceiling that is read and never
         # reached is a build that takes as long as the file makes it, which
         # is the thing a host that compiles what it was sent gave one to stop.
@@ -5936,14 +5967,14 @@ total += held""",
         # being all promises and gains no program is one nothing weighs.
         "what": "a library module that reaches the heap and nothing weighs",
         "file": "lib/std/vec.kest",
-        "from": """fn length(v: Vec2) -> f32 no.alloc deterministic {""",
+        "from": """fn length(v: vec2) -> f32 no.alloc deterministic {""",
         "to": """fn spare(n: i32) -> [i32] {
     let out: [i32] = array()
     push(out, n)
     return out
 }
 
-fn length(v: Vec2) -> f32 no.alloc deterministic {""",
+fn length(v: vec2) -> f32 no.alloc deterministic {""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "caught": "what it costs, and not every",
@@ -7692,13 +7723,13 @@ fn clamp(value: i32, low: i32, high: i32) -> i32 no.alloc no.host deterministic 
         # constant nothing reads were watched, and a shape nothing holds was
         # not.
         "what": "a library shape nothing has ever held",
-        "file": "lib/std/vec.kest",
-        "from": """struct Vec2 {""",
+        "file": "lib/std/random.kest",
+        "from": """struct Source {""",
         "to": """struct Spare {
     n: i32
 }
 
-struct Vec2 {""",
+struct Source {""",
         "make": ["kest", "embed"],
         "tool": "tools/check-dead.sh",
         "caught": "so nothing has ever held one",
@@ -14726,7 +14757,8 @@ fn main() -> i32 {
         # other half of one mistake, and the two walks are two.
         "what": "a module named where a type goes, called unknown",
         "file": "src/types.c",
-        "from": """    if (kest_module_named(program, name, length)) {""",
+        "from": """    if (kest_module_named(program, name, length) ||
+        kest_module_for(program, name, length) != NULL) {""",
         "to": """    if (kest_module_named(program, name, 0)) {""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
@@ -15732,7 +15764,7 @@ fn main() -> i32 {
     },
     {
         # A dotted name copied out of the file rather than written back. A `.`
-        # carries on to the next line, so `vec.Vec2` may be written over two —
+        # carries on to the next line, so `random.Source` may be written over two —
         # and a name is one thing however it was typed. Copying the span put
         # the line break back in, and the one form is then two.
         "what": "a name copied with what a line break left in it",
@@ -15745,7 +15777,7 @@ fn main() -> i32 {
         print_span(printer, type->name);""",
         "make": ["kest"],
         "tool": "tools/check-fmt.sh",
-        "arguments": ["examples/world.kest"],
+        "arguments": ["examples/ants.kest"],
         "caught": "roughed up, it does not come back",
     },
     {

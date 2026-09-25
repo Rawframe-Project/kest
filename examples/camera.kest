@@ -14,8 +14,8 @@ import std.vec
 // same rules as a program, and a program is what runs it.
 
 struct Camera {
-    at: vec.Vec2
-    facing: vec.Vec2
+    at: vec2
+    facing: vec2
     zoom: f32
 }
 
@@ -25,8 +25,8 @@ const HALF: f32 = 10.0
 const NEAREST: f32 = 1.0
 const FURTHEST: f32 = 4.0
 
-fn inside(at: vec.Vec2) -> vec.Vec2 no.alloc {
-    return vec.Vec2(
+fn inside(at: vec2) -> vec2 no.alloc {
+    return vec2(
         math.clamp(at.x, 0.0 - HALF, HALF),
         math.clamp(at.y, 0.0 - HALF, HALF)
     )
@@ -35,10 +35,10 @@ fn inside(at: vec.Vec2) -> vec.Vec2 no.alloc {
 // Ease towards the target rather than snap to it, which is what `lerp` is for
 // and the reason a camera has any code at all. A camera that has arrived has
 // nowhere to point, so where it faces is kept from the frame before.
-fn follow(camera: Camera, target: vec.Vec2, amount: f32) -> Camera no.alloc {
+fn follow(camera: Camera, target: vec2, amount: f32) -> Camera no.alloc {
     let moved = inside(vec.lerp(camera.at, target, amount))
     let facing = camera.facing
-    if let towards = vec.direction(vec.sub(target, moved)) {
+    if let towards = vec.direction(target - moved) {
         facing = towards
     }
     return Camera(moved, facing, camera.zoom)
@@ -57,16 +57,16 @@ fn zoomTowards(camera: Camera, wanted: f32, amount: f32) -> Camera no.alloc {
 
 // In front of it or behind it, which is the sign of a dot product and most of
 // what a dot product is for in a frame.
-fn ahead(camera: Camera, what: vec.Vec2) -> bool no.alloc {
-    return vec.dot(camera.facing, vec.sub(what, camera.at)) > 0.0
+fn ahead(camera: Camera, what: vec2) -> bool no.alloc {
+    return vec.dot(camera.facing, what - camera.at) > 0.0
 }
 
 // Which side of where it faces something is: -1, 0 or 1, off the perpendicular
 // rather than off an angle, because an angle would cost a call to the host and
 // this is two multiplies.
-fn side(camera: Camera, what: vec.Vec2) -> i32 no.alloc {
+fn side(camera: Camera, what: vec2) -> i32 no.alloc {
     let across = vec.perpendicular(camera.facing)
-    let how = vec.dot(across, vec.sub(what, camera.at))
+    let how = vec.dot(across, what - camera.at)
     if math.abs(how) < 0.0001 {
         return 0
     }
@@ -75,7 +75,7 @@ fn side(camera: Camera, what: vec.Vec2) -> i32 no.alloc {
 
 // Which way to scroll on a grid of whole tiles: one column at a time, and
 // nothing when the target is already in the column the camera is in.
-fn scroll(camera: Camera, target: vec.Vec2) -> i32 no.alloc {
+fn scroll(camera: Camera, target: vec2) -> i32 no.alloc {
     return math.sign(i32(target.x) - i32(camera.at.x))
 }
 
@@ -88,8 +88,8 @@ fn heading(camera: Camera) -> f32 no.alloc {
 // How far it would have to turn to face something, which is the angle between
 // two directions and comes out of a dot product. Nothing outside -1 to 1 has
 // an angle, so `acos` answers with a question rather than a number.
-fn turn(camera: Camera, what: vec.Vec2) -> f32? no.alloc {
-    if let towards = vec.direction(vec.sub(what, camera.at)) {
+fn turn(camera: Camera, what: vec2) -> f32? no.alloc {
+    if let towards = vec.direction(what - camera.at) {
         if let angle = math.acos(math.clamp(
             vec.dot(camera.facing, towards),
             0.0 - 1.0,
@@ -103,13 +103,13 @@ fn turn(camera: Camera, what: vec.Vec2) -> f32? no.alloc {
 
 // How many frames of a given step it takes to get there, which rounds up
 // because the last one is a whole frame whatever is left of it.
-fn frames(camera: Camera, target: vec.Vec2, per: f32) -> i32 no.alloc {
+fn frames(camera: Camera, target: vec2, per: f32) -> i32 no.alloc {
     return i32(math.ceil(vec.distance(camera.at, target) / per))
 }
 
 fn main() -> i32 {
-    let start = Camera(vec.Vec2(0.0, 0.0), vec.Vec2(1.0, 0.0), 2.0)
-    let target = vec.Vec2(4.0, 0.0)
+    let start = Camera(vec2(0.0, 0.0), vec2(1.0, 0.0), 2.0)
+    let target = vec2(4.0, 0.0)
 
     // Half way is half way, and where it faces is a length of one.
     let once = follow(start, target, 0.5)
@@ -130,30 +130,30 @@ fn main() -> i32 {
     }
 
     // The room is smaller than the target, so the camera stops at the wall.
-    let outside = follow(start, vec.Vec2(50.0, 50.0), 1.0)
+    let outside = follow(start, vec2(50.0, 50.0), 1.0)
     if outside.at.x != HALF || outside.at.y != HALF {
         return 4
     }
 
-    if !ahead(once, vec.Vec2(9.0, 0.0)) {
+    if !ahead(once, vec2(9.0, 0.0)) {
         return 5
     }
-    if ahead(once, vec.Vec2(0.0 - 9.0, 0.0)) {
+    if ahead(once, vec2(0.0 - 9.0, 0.0)) {
         return 6
     }
 
-    if side(start, vec.Vec2(1.0, 1.0)) != 1 {
+    if side(start, vec2(1.0, 1.0)) != 1 {
         return 7
     }
-    if side(start, vec.Vec2(1.0, 0.0 - 1.0)) != 0 - 1 {
+    if side(start, vec2(1.0, 0.0 - 1.0)) != 0 - 1 {
         return 8
     }
-    if side(start, vec.Vec2(5.0, 0.0)) != 0 {
+    if side(start, vec2(5.0, 0.0)) != 0 {
         return 9
     }
 
     // Where it already is points nowhere, and nowhere is not a direction.
-    if vec.direction(vec.Vec2(0.0, 0.0)) != none {
+    if vec.direction(vec2(0.0, 0.0)) != none {
         return 10
     }
 
@@ -169,10 +169,10 @@ fn main() -> i32 {
     if scroll(start, target) != 1 {
         return 13
     }
-    if scroll(start, vec.Vec2(0.0 - 4.0, 0.0)) != 0 - 1 {
+    if scroll(start, vec2(0.0 - 4.0, 0.0)) != 0 - 1 {
         return 14
     }
-    if scroll(start, vec.Vec2(0.5, 0.0)) != 0 {
+    if scroll(start, vec2(0.5, 0.0)) != 0 {
         return 15
     }
 
@@ -181,21 +181,21 @@ fn main() -> i32 {
     if math.abs(heading(start)) > 0.0001 {
         return 18
     }
-    let sideways = Camera(vec.Vec2(0.0, 0.0), vec.Vec2(0.0, 1.0), 2.0)
+    let sideways = Camera(vec2(0.0, 0.0), vec2(0.0, 1.0), 2.0)
     if math.abs(heading(sideways) - 1.5707964) > 0.0001 {
         return 19
     }
 
     // A quarter turn to face what is directly to the side, nothing at all to
     // face what is straight ahead, and no answer for where it already is.
-    if let quarter = turn(start, vec.Vec2(0.0, 5.0)) {
+    if let quarter = turn(start, vec2(0.0, 5.0)) {
         if math.abs(quarter - 1.5707964) > 0.0001 {
             return 20
         }
     } else {
         return 21
     }
-    if let ahead = turn(start, vec.Vec2(5.0, 0.0)) {
+    if let ahead = turn(start, vec2(5.0, 0.0)) {
         if math.abs(ahead) > 0.0001 {
             return 22
         }

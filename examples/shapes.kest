@@ -6,7 +6,7 @@ import std.text
 import std.vec
 
 // One body, one copy per set of types it is called with. Nothing is boxed and
-// nothing carries a tag: a `[vec.Vec2]` walked by `firstOf` is the same two
+// nothing carries a tag: a `[vec2]` walked by `firstOf` is the same two
 // `f32` it always was, and the copy that walks it was compiled knowing that.
 //
 // The cost is copies. Two types called with means two bodies, which is what
@@ -30,7 +30,7 @@ fn count<T>(items: [T], keep: fn(T) -> bool no.alloc) -> i32 no.alloc {
 }
 
 // Building reaches the heap, so this one promises nothing and says so by not
-// promising. A copy is checked against its own types, so a `[vec.Vec2]` copy and a
+// promising. A copy is checked against its own types, so a `[vec2]` copy and a
 // `[text]` copy each get their own answer.
 fn kept<T>(items: [T], keep: fn(T) -> bool no.alloc) -> [T] {
     let out: [T] = array()
@@ -42,7 +42,7 @@ fn kept<T>(items: [T], keep: fn(T) -> bool no.alloc) -> [T] {
     return out
 }
 
-fn far(v: vec.Vec2) -> bool no.alloc {
+fn far(v: vec2) -> bool no.alloc {
     return v.x > 1.0
 }
 
@@ -50,7 +50,7 @@ fn far(v: vec.Vec2) -> bool no.alloc {
 // This language has none and does not want any (D1051): what a predicate needs
 // is a parameter, so a reader sees it, the promise can still be proved, and
 // there is nothing on the heap whose lifetime anybody has to think about.
-fn nearerTo(a: vec.Vec2, b: vec.Vec2, from: vec.Vec2) -> bool no.alloc no.host {
+fn nearerTo(a: vec2, b: vec2, from: vec2) -> bool no.alloc no.host {
     return vec.distanceSquared(a, from) < vec.distanceSquared(b, from)
 }
 
@@ -78,20 +78,20 @@ fn short(word: text) -> bool no.alloc {
     return len(word) < 5
 }
 
-fn nearer(a: vec.Vec2, b: vec.Vec2) -> bool no.alloc no.host {
+fn nearer(a: vec2, b: vec2) -> bool no.alloc no.host {
     return a.x < b.x
 }
 
 fn main() -> i32 {
-    let points: [vec.Vec2] = array()
-    push(points, vec.Vec2(3.0, 0.0))
-    push(points, vec.Vec2(0.5, 1.0))
-    push(points, vec.Vec2(2.0, 2.0))
+    let points: [vec2] = array()
+    push(points, vec2(3.0, 0.0))
+    push(points, vec2(0.5, 1.0))
+    push(points, vec2(2.0, 2.0))
 
-    if firstOf(points, vec.Vec2(9.0, 9.0)).x != 3.0 {
+    if firstOf(points, vec2(9.0, 9.0)).x != 3.0 {
         return 1
     }
-    if firstOf(kept(points, far), vec.Vec2(9.0, 9.0)).x != 3.0 {
+    if firstOf(kept(points, far), vec2(9.0, 9.0)).x != 3.0 {
         return 2
     }
     if count(points, far) != 2 {
@@ -114,8 +114,8 @@ fn main() -> i32 {
         return 6
     }
 
-    let empty: [vec.Vec2] = array()
-    if firstOf(empty, vec.Vec2(5.0, 5.0)).y != 5.0 {
+    let empty: [vec2] = array()
+    if firstOf(empty, vec2(5.0, 5.0)).y != 5.0 {
         return 7
     }
 
@@ -132,11 +132,11 @@ fn main() -> i32 {
     // And the same sort told something beside what it compares, which is where
     // a closure would have been: nearest to a point the caller picked, without
     // building an array of pairs to sort instead.
-    sort.byWith(points, vec.Vec2(9.0, 9.0), nearerTo)
+    sort.byWith(points, vec2(9.0, 9.0), nearerTo)
     if points[0].x != 2.0 {
         return 16
     }
-    sort.byWith(points, vec.Vec2(0.0, 0.0), nearerTo)
+    sort.byWith(points, vec2(0.0, 0.0), nearerTo)
     if points[0].x != 0.5 {
         return 17
     }

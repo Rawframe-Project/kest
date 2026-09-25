@@ -42943,3 +42943,50 @@ one and a number, a component read under another name (`xy`), and what
 `std.vec` becomes now that the arithmetic in it is the language's -- its
 `Vec2` and `Vec3` are the same bytes as `vec2` and `vec3`, and its functions
 are next.
+
+## D1251 — `std.vec` is built on the language's vectors
+
+*measured*, the rest of E1. D1250 gave the language `vec2`, `vec3` and `vec4`
+and their arithmetic; `std.vec` had its own `Vec2` and `Vec3` and did that
+arithmetic as `add`, `sub` and `scale`, because there were no operators. Two
+shapes of one thing is one too many, so `std.vec` keeps what is made of the
+arithmetic and gives up what the arithmetic is: `Vec2`, `Vec3`, `add`, `sub`
+and `scale` are gone, and `dot`, `lengthSquared`, `length`, `distanceSquared`,
+`distance`, `direction` and `lerp` take all three widths, with `cross` and
+`perpendicular` where there is one. Each is written with the operators, which
+are the same operations in the same order as the calls they replace -- `lerp`
+is `a + (b - a) * amount`, which was `add(a, scale(sub(b, a), amount))` -- so
+nothing answers another bit: the six examples that used the module answer what
+they answered, word for word, and `examples/vectors.kest` still answers its
+number.
+
+Moving it showed a diagnostic that was only right by luck. A module written
+where a type goes is `K0359`, "is a module, and this wants a type" -- when the
+module had a type in it. A signature is resolved before the functions of the
+modules it names, so a module of nothing but functions was an unknown type in a
+signature and a module in a body: `fn say(v: io)` said `K0301`. `std.vec` is
+such a module now and `check-commands.sh`'s case for it said so. A word the file
+imported is a module wherever it is written; `check-commands.sh` holds `io` as
+well, and a hole that takes the imported word out is caught.
+
+And the compiler was wrong in a way both engines agreed on. It asked whether
+the answer of an operator was a vector to decide to work it out a component at
+a time; an answer given back where an optional is wanted has been widened to
+one by the checker, is not a vector, and was compiled as one number times
+another. `direction` gives back `vec4?` and was answering nonsense in the
+machine and in a release alike, so `check-c.sh`, which asks the two to agree,
+had nothing to say; the build that checks itself refused it ("gives back
+something in slot 3 that no `f32` holds") the first time
+`examples/vectors.kest` called it. The sides say what the arithmetic is now,
+and the tag goes on after it the way it does after a call. The example folds
+every function of `std.vec` at every width into its number, which is
+12749663293315105001 in the machine, the checked build and gcc and clang
+releases with fused multiply-add, and a hole putting the old question back is
+caught by the example answering something else.
+
+The six examples that used the module answered what they answered before
+with that bug in them, so what they hold of `direction` is less than it looks;
+the number above is what holds it.
+
+What a program has to do is in the CHANGELOG: `vec.Vec2` is `vec2`, and
+`vec.add(a, b)` is `a + b`.

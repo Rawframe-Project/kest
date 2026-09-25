@@ -16,19 +16,19 @@ import std.vec
 // Four examples used to each write their own, which is what a library is for.
 
 struct Body {
-    position: vec.Vec3
-    velocity: vec.Vec3
+    position: vec3
+    velocity: vec3
 }
 
 const GRAVITY: f32 = -9.81
 
 fn accelerate(b: Body, dt: f32) -> Body no.alloc {
-    let pull = vec.Vec3(0.0, GRAVITY * dt, 0.0)
-    return Body(b.position, vec.add(b.velocity, pull))
+    let pull = vec3(0.0, GRAVITY * dt, 0.0)
+    return Body(b.position, b.velocity + pull)
 }
 
 fn integrate(b: Body, dt: f32) -> Body no.alloc {
-    return Body(vec.add(b.position, vec.scale(b.velocity, dt)), b.velocity)
+    return Body(b.position + b.velocity * dt, b.velocity)
 }
 
 fn step(b: Body, dt: f32) -> Body no.alloc {
@@ -41,20 +41,20 @@ fn step(b: Body, dt: f32) -> Body no.alloc {
 // step keeps the second the same whatever the step is. In `f32`, because that
 // is what a frame is in.
 fn damp(b: Body, keep: f32, dt: f32) -> Body no.alloc {
-    return Body(b.position, vec.scale(b.velocity, math.pow(keep, dt)))
+    return Body(b.position, b.velocity * math.pow(keep, dt))
 }
 
 // The normal of a face, which is what a cross product is for: two edges of a
 // triangle, and the direction standing off both of them. Three points in a
 // line have no face and no normal, which `direction` answers by giving
 // nothing rather than by handing back a zero (D013).
-fn normal(a: vec.Vec3, b: vec.Vec3, c: vec.Vec3) -> vec.Vec3? no.alloc {
-    return vec.direction(vec.cross(vec.sub(b, a), vec.sub(c, a)))
+fn normal(a: vec3, b: vec3, c: vec3) -> vec3? no.alloc {
+    return vec.direction(vec.cross(b - a, c - a))
 }
 
 // Moving into a face or away from it, which is the one thing a bounce has to
 // know before it is a bounce.
-fn into(b: Body, face: vec.Vec3) -> bool no.alloc {
+fn into(b: Body, face: vec3) -> bool no.alloc {
     return vec.dot(b.velocity, face) < 0.0
 }
 
@@ -87,7 +87,7 @@ fn bounced(at: f64, speed: f64, steps: i32) -> f64 no.alloc {
     return near * 100.0 + x
 }
 
-fn sameDirection(a: vec.Vec2, b: vec.Vec2) -> bool no.alloc {
+fn sameDirection(a: vec2, b: vec2) -> bool no.alloc {
     if let one = vec.direction(a) {
         if let two = vec.direction(b) {
             return one.x == two.x && one.y == two.y
@@ -97,7 +97,7 @@ fn sameDirection(a: vec.Vec2, b: vec.Vec2) -> bool no.alloc {
 }
 
 fn main() -> i32 {
-    let body = Body(vec.Vec3(0.0, 100.0, 0.0), vec.Vec3(1.0, 0.0, 0.0))
+    let body = Body(vec3(0.0, 100.0, 0.0), vec3(1.0, 0.0, 0.0))
     let dt = 0.01
 
     let current = body
@@ -117,57 +117,52 @@ fn main() -> i32 {
     // The three-dimensional halves of the same two, which nothing had run:
     // how far apart two points are, and the point a quarter of the way from
     // one to the other.
-    if math.abs(vec.distance(vec.Vec3(0.0, 0.0, 0.0), vec.Vec3(0.0, 3.0, 4.0)) -
-        5.0) > 0.0001 {
+    if math.abs(vec.distance(vec3(0.0, 0.0, 0.0), vec3(0.0, 3.0, 4.0)) - 5.0) > 0.0001 {
         return 12
     }
-    let quarter = vec.lerp(
-        vec.Vec3(0.0, 0.0, 0.0),
-        vec.Vec3(4.0, 8.0, 0.0),
-        0.25
-    )
+    let quarter = vec.lerp(vec3(0.0, 0.0, 0.0), vec3(4.0, 8.0, 0.0), 0.25)
     if quarter.x != 1.0 || quarter.y != 2.0 {
         return 13
     }
-    if math.abs(vec.length(vec.Vec3(3.0, 4.0, 0.0)) - 5.0) > 0.0001 {
+    if math.abs(vec.length(vec3(3.0, 4.0, 0.0)) - 5.0) > 0.0001 {
         return 4
     }
 
     // The cheap form of how far apart two things are, which is the question a
     // frame asks: which of two is nearer, and is it inside a radius. Both of
     // those order the same way without the square root.
-    let here = vec.Vec2(1.0, 1.0)
-    let near = vec.Vec2(2.0, 1.0)
-    let away = vec.Vec2(1.0, 5.0)
+    let here = vec2(1.0, 1.0)
+    let near = vec2(2.0, 1.0)
+    let away = vec2(1.0, 5.0)
     if vec.distanceSquared(here, near) != 1.0 {
         return 20
     }
     if vec.distanceSquared(here, away) != 16.0 {
         return 21
     }
-    let origin = vec.Vec3(0.0, 0.0, 0.0)
-    if vec.distanceSquared(origin, vec.Vec3(0.0, 3.0, 4.0)) != 25.0 {
+    let origin = vec3(0.0, 0.0, 0.0)
+    if vec.distanceSquared(origin, vec3(0.0, 3.0, 4.0)) != 25.0 {
         return 22
     }
 
     // Which side of one vector another is on, which is the whole of a cross in
     // two dimensions: nought when they lie along each other, and otherwise the
     // `z` the three-dimensional one would have given back.
-    if vec.cross(vec.Vec2(1.0, 0.0), vec.Vec2(0.0, 1.0)) != 1.0 {
+    if vec.cross(vec2(1.0, 0.0), vec2(0.0, 1.0)) != 1.0 {
         return 23
     }
-    if vec.cross(vec.Vec2(1.0, 0.0), vec.Vec2(0.0 - 1.0, 0.0)) != 0.0 {
+    if vec.cross(vec2(1.0, 0.0), vec2(0.0 - 1.0, 0.0)) != 0.0 {
         return 24
     }
-    let spun = vec.cross(vec.Vec3(1.0, 2.0, 0.0), vec.Vec3(3.0, 4.0, 0.0))
-    if spun.z != vec.cross(vec.Vec2(1.0, 2.0), vec.Vec2(3.0, 4.0)) {
+    let spun = vec.cross(vec3(1.0, 2.0, 0.0), vec3(3.0, 4.0, 0.0))
+    if spun.z != vec.cross(vec2(1.0, 2.0), vec2(3.0, 4.0)) {
         return 25
     }
 
     // And a length the width holds is a length this answers with: the square
     // of a vector of 1e20s is infinity, where the vector's own length is
     // 1.41e20 and an `f32` holds that without trouble.
-    let vast = vec.Vec2(100000000000000000000.0, 100000000000000000000.0)
+    let vast = vec2(100000000000000000000.0, 100000000000000000000.0)
     let across = vec.length(vast) / 100000000000000000000.0
     if !math.isNumber(vec.length(vast)) {
         return 31
@@ -183,25 +178,25 @@ fn main() -> i32 {
     // what squaring it lost: a vector of 1e20s came back as (0, 0), which is
     // not a direction and did not say so, and a vector of 1e-21s came back a
     // thousandth short of a length of one.
-    let same = vec.Vec2(1.0, 1.0)
+    let same = vec2(1.0, 1.0)
     if !sameDirection(
         same,
-        vec.Vec2(100000000000000000000.0, 100000000000000000000.0)
+        vec2(100000000000000000000.0, 100000000000000000000.0)
     ) {
         return 26
     }
     if !sameDirection(
         same,
-        vec.Vec2(0.000000000000000000001, 0.000000000000000000001)
+        vec2(0.000000000000000000001, 0.000000000000000000001)
     ) {
         return 27
     }
     // And a component no `f32` holds is not a direction at all.
     let most: f32 = 340282350000000000000000000000000000000.0
-    if vec.direction(vec.Vec2(most * 10.0, 1.0)) != none {
+    if vec.direction(vec2(most * 10.0, 1.0)) != none {
         return 28
     }
-    if let pointing = vec.direction(vec.Vec3(
+    if let pointing = vec.direction(vec3(
         100000000000000000000.0,
         0.0,
         100000000000000000000.0
@@ -273,12 +268,8 @@ fn main() -> i32 {
 
     // A triangle on the floor, walked the way it is wound: the normal stands
     // off it, and its length is one because a direction is a direction.
-    let corner = vec.Vec3(0.0, 0.0, 0.0)
-    if let up = normal(
-        corner,
-        vec.Vec3(0.0, 0.0, 1.0),
-        vec.Vec3(1.0, 0.0, 0.0)
-    ) {
+    let corner = vec3(0.0, 0.0, 0.0)
+    if let up = normal(corner, vec3(0.0, 0.0, 1.0), vec3(1.0, 0.0, 0.0)) {
         if up.x != 0.0 || up.y != 1.0 || up.z != 0.0 {
             return 10
         }
@@ -287,11 +278,7 @@ fn main() -> i32 {
     }
 
     // Wound the other way, the same triangle faces the other way.
-    if let down = normal(
-        corner,
-        vec.Vec3(1.0, 0.0, 0.0),
-        vec.Vec3(0.0, 0.0, 1.0)
-    ) {
+    if let down = normal(corner, vec3(1.0, 0.0, 0.0), vec3(0.0, 0.0, 1.0)) {
         if down.y != -1.0 {
             return 12
         }
@@ -300,22 +287,21 @@ fn main() -> i32 {
     }
 
     // Three points in a line are not a face.
-    if normal(corner, vec.Vec3(1.0, 0.0, 0.0), vec.Vec3(2.0, 0.0, 0.0)) !=
-            none {
+    if normal(corner, vec3(1.0, 0.0, 0.0), vec3(2.0, 0.0, 0.0)) != none {
         return 14
     }
 
-    let falling = Body(vec.Vec3(0.0, 1.0, 0.0), vec.Vec3(0.0, -1.0, 0.0))
-    if !into(falling, vec.Vec3(0.0, 1.0, 0.0)) {
+    let falling = Body(vec3(0.0, 1.0, 0.0), vec3(0.0, -1.0, 0.0))
+    if !into(falling, vec3(0.0, 1.0, 0.0)) {
         return 15
     }
-    if into(falling, vec.Vec3(0.0, -1.0, 0.0)) {
+    if into(falling, vec3(0.0, -1.0, 0.0)) {
         return 16
     }
 
     // Half the speed a second, asked for as one second and as two halves of
     // one, which is the whole reason the step is an exponent.
-    let moving = Body(vec.Vec3(0.0, 0.0, 0.0), vec.Vec3(1.0, 0.0, 0.0))
+    let moving = Body(vec3(0.0, 0.0, 0.0), vec3(1.0, 0.0, 0.0))
     if math.abs(damp(moving, 0.5, 1.0).velocity.x - 0.5) > 0.0001 {
         return 17
     }

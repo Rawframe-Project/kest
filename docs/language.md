@@ -118,9 +118,9 @@ it is written.
 ```kest
 let w = World(
     [
-        Enemy(Vec2(0.0, 0.0), 30),
-        Enemy(Vec2(1.0, 1.0), 40),
-        Enemy(Vec2(2.0, 2.0), 5)
+        Enemy(vec2(0.0, 0.0), 30),
+        Enemy(vec2(1.0, 1.0), 40),
+        Enemy(vec2(2.0, 2.0), 5)
     ],
     0
 )
@@ -394,8 +394,8 @@ A file may take one of the language's own names the same way. `len`, `get`,
 `set`, `find`, `add` and `remove` are written without a module in front, so a
 file that declares one of them is adding to what the name answers to rather than
 covering it: what the name means is settled by what it is handed, the file's one
-for the shapes it takes and the language's for the rest. `std.table` and
-`std.vec` each do it, and so do two of the examples. A call that fits neither is
+for the shapes it takes and the language's for the rest. `std.table` does it,
+and so do two of the examples. A call that fits neither is
 told what the language wanted and pointed at the other:
 
 ```
@@ -753,9 +753,10 @@ a count per thing promise `no.alloc` and still keep the count in a table. A
 program that does not know whether a key is there calls `table.refill` before
 the frame and `table.set` inside it, and keeps neither promise. See D1063.
 
-`std.vec` is two and three components of
-`f32`, and `std.random` gives numbers that look random out of a state the
-program holds.
+`std.vec` is what is built on the language's `vec2`, `vec3` and `vec4`: `dot`,
+`length`, `distance`, `direction`, `lerp`, and `cross` and `perpendicular`
+where there is one. `std.random` gives numbers that look random out of a state
+the program holds.
 
 `std.vec` answers for every vector whose answer an `f32` holds, which is not
 the same as every vector whose square it holds. `length`, `distance` and
@@ -1088,7 +1089,7 @@ brackets for a run, a text inside quoted because the bytes on their own do not
 say where a field ends:
 
 ```text
-Card("ace", 1, Vec2(0.5, 2.0))
+Card("ace", 1, vec2(0.5, 2.0))
 [1, 2, 3]
 Door.Named("side", 1.5)
 ```
@@ -1592,7 +1593,7 @@ and everywhere else it is what somebody called their field.
 Signatures declare types. Bodies infer them.
 
 ```kest
-fn scale(v: Vec3, k: f32) -> Vec3 {
+fn scale(v: vec3, k: f32) -> vec3 {
     // inferred f32
     let x = v.x * k
     return vec3(x, v.y * k, v.z * k)
@@ -1770,7 +1771,7 @@ first is fixed where it stands and the second is written another way.
 const WIDTH: i32 = 16
 const CELLS: i32 = WIDTH * 9
 const MASK: u8 = 1 << 3
-const ORIGIN: Vec2 = Vec2(0.0, 0.0)
+const ORIGIN: vec2 = vec2(0.0, 0.0)
 const WEIGHTS: [f32; 3] = [1.0, 0.5, 0.25]
 ```
 
@@ -1924,7 +1925,7 @@ ceiling on handouts rather than a ceiling on any one place: a program that has
 spent all of them is refused at the `add` that asked, with a message saying so,
 and stale stays stale for as long as the process runs.
 
-This split is why `Vec3` returned from a helper costs nothing: see D006.
+This split is why a `vec3` returned from a helper costs nothing: see D006.
 
 It is also the choice anything holding state has to make. A function is handed
 a value, so writing a field of one it was given changes this frame's copy and
@@ -2762,7 +2763,7 @@ about direction. So there is no order on a struct and no way to declare one —
 what sorts is told what comes first, and being told is a function value:
 
 ```kest
-fn nearer(a: vec.Vec2, b: vec.Vec2) -> bool no.alloc no.host {
+fn nearer(a: vec2, b: vec2) -> bool no.alloc no.host {
     return a.x < b.x
 }
 
@@ -3890,13 +3891,13 @@ host writing any.
 What goes in the frame is laid out the way a value sits on the stack, which is
 not the way it sits in memory: one slot a scalar, in the order the fields are
 declared, and a float is a double in a slot even where it is an `f32` in an
-array. So a `Vec2` is two slots and `away(a: Vec2, b: Vec2)` is four, which is
+array. So a `vec2` is two slots and `away(a: vec2, b: vec2)` is four, which is
 what `kest_frame_slots` says. That is D016's two layouts, and this is the other
 one: lending shares the host's bytes, calling copies scalars into slots.
 
 Where each argument starts is asked rather than counted. `kest_frame_takes`
 says how many there are and `kest_frame_at` says where the one at a position
-begins, so a host writes the second `Vec2` at what the program says rather than
+begins, so a host writes the second `vec2` at what the program says rather than
 at what the first one's fields add up to:
 
 ```c
@@ -6343,8 +6344,12 @@ other kind of thing that is not one:
 error[K0359]: `vec` is a module, and this wants a type
   |
 5 | fn area(v: vec) -> f32 {
-  |            ^^^ a module is a place to look and not a type: `vec.Vec2` is one of the names under it
+  |            ^^^
 ```
+
+A module of nothing but functions says nothing more, because a signature is
+read before the functions of the modules it names are; one with a type in it
+names the type.
 
 And the pair of the refusal above them both — a name for a value, written where
 a type goes:

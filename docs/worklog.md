@@ -42355,3 +42355,21 @@ See D1250.
 `gcc -O2`, `gcc -O2 -march=native` and `clang -O2 -march=native`; a million
 steps written three ways (vectors, `std.vec`'s calls, floats) under both
 engines; the refusals; four holes by hand; `make most`; the sweep.
+
+## 2026-09-25, `std.vec` on the language's vectors
+
+`std.vec` loses `Vec2`, `Vec3`, `add`, `sub` and `scale`, which the language
+has now, and its functions take `vec2`, `vec3` and `vec4`, written with the
+operators in the order the calls had. Six examples moved onto them answer what
+they answered. A module of only functions written where a type goes is said to
+be a module in a signature too, which it was only in a body. And the checked
+build found vector arithmetic widened to an optional compiled as a number, in
+both engines alike; the operator's sides decide now, and `examples/vectors.kest`
+folds all of `std.vec` into its number.
+
+See D1251.
+
+**Runs:** the six examples before and after, output compared; the module
+against a copy of the library before it went in; the module-as-type refusal for
+`vec` and `io`, and its hole by hand; the example in the machine, the checked
+build and two releases; the widening hole by hand; `make most`; the sweep.

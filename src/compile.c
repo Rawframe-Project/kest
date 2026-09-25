@@ -1909,11 +1909,17 @@ static void compile_binary(Compiler *compiler, const KestExpr *expr) {
     KestTokenKind op = expr->binary.op;
     KestSpan span = expr->span;
 
-    if (kest_is_vector(expr->type)) {
+    // Read off the sides rather than off the answer: an answer standing where
+    // an optional is wanted has been widened to one by the checker, and the
+    // tag goes on after it the way it does after a call. See D1251.
+    const KestType *left_type = expr->binary.left->type;
+    const KestType *right_type = expr->binary.right->type;
+    if ((kest_is_vector(left_type) || kest_is_vector(right_type)) &&
+        op != KEST_TOK_EQEQ && op != KEST_TOK_BANGEQ) {
         VectorSide left = vector_side(compiler, expr->binary.left);
         VectorSide right = vector_side(compiler, expr->binary.right);
-        vector_arith(compiler, arithmetic_of(op), left, right, expr->type,
-                     span);
+        vector_arith(compiler, arithmetic_of(op), left, right,
+                     kest_is_vector(left_type) ? left_type : right_type, span);
         return;
     }
 
@@ -2821,9 +2827,9 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         break;
     }
     case KEST_EXPR_UNARY:
-        if (kest_is_vector(expr->type)) {
-            vector_negated(compiler, expr->unary.operand, expr->type,
-                           expr->span);
+        if (kest_is_vector(expr->unary.operand->type)) {
+            vector_negated(compiler, expr->unary.operand,
+                           expr->unary.operand->type, expr->span);
             break;
         }
         compile_expr(compiler, expr->unary.operand);

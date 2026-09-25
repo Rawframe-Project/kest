@@ -441,6 +441,12 @@ new ones, because a run under profile 2 and one under 3 are two runs. A
 constant may be written as its bits, `float(u64(0x...))`, since `bits` and
 `float` are worked out where they are written. See D1235.
 
+**`std.vec` is built on the language's vectors.** `vec.Vec2`, `vec.Vec3`,
+`vec.add`, `vec.sub` and `vec.scale` are gone; its other functions take
+`vec2`, `vec3` and `vec4`. **What a program has to do:** write `vec2` for
+`vec.Vec2` and `vec3` for `vec.Vec3`, and `a + b`, `a - b` and `v * k` for the
+three calls; a host lending one lends the same bytes. See D1251.
+
 **`vec2`, `vec3` and `vec4` are the language's own**, with `+`, `-`, `*`
 and `/` a component at a time, `*` and `/` by an `f32`, and the four in
 place. **What a program has to do:** nothing, unless it declares something

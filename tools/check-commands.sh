@@ -4309,9 +4309,10 @@ K0310|check|fn len(xs: [i32]) -> i32 no.alloc {\n    return 99\n}\n\nfn main() -
 K0306|check|import std.vec\n\nfn main() -> i32 {\n    let d = vec.dot(vec.Vec2(1.0, 0.0), vec.Vec2(1.0, 0.0))\n    return i32(round(d))\n}|and this file does not import
 K0306|check|fn main() -> i32 {\n    io.print("hi")\n    return 0\n}|is in the library
 K0301|check|fn area(v: vec.Vec2) -> f32 {\n    return v.x\n}\n\nfn main() -> i32 {\n    return 0\n}|is in the library
-K0301|check|import std.vec\n\nfn area(v: vec.Vec9) -> f32 {\n    return v.x\n}\n\nfn main() -> i32 {\n    return 0\n}|did you mean `vec.Vec2`
+K0301|check|import std.random\n\nfn roll(s: random.Sorce) -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}|did you mean `random.Source`
 K0358|check|import std.io\n\nfn main() -> i32 {\n    return io\n}|is a module, and this wants a value
 K0359|check|import std.vec\n\nfn area(v: vec) -> f32 {\n    return 1.0\n}\n\nfn main() -> i32 {\n    return 0\n}|is a module, and this wants a type
+K0359|check|import std.io\n\nfn say(v: io) {\n    return\n}\n\nfn main() -> i32 {\n    return 0\n}|`io` is a module, and this wants a type
 K0360|check|fn helper() -> i32 {\n    return 1\n}\n\nfn f(v: helper) -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}|is a function, and this wants a type
 K0360|check|const SIZE: i32 = 4\n\nfn g(v: SIZE) -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}|a constant counts a run rather than naming one
 K0361|check|fn f<T>(x: T) -> i32 {\n    let n = T\n    return n\n}\n\nfn main() -> i32 {\n    return f(1)\n}|is a type name, and this wants a value

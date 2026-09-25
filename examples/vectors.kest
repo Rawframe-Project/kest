@@ -3,6 +3,7 @@ module examples.vectors
 import std.io
 import std.hash
 import std.random
+import std.vec
 
 // The language's own vectors: `vec2`, `vec3` and `vec4`, with `+`, `-`, `*`
 // and `/` a component at a time and `*` and `/` by one `f32`. Every answer
@@ -10,7 +11,7 @@ import std.random
 // component differently -- the machine against a release, one platform
 // against another -- answers another number and says which part. See D1250.
 
-const ANSWER: u64 = 9754798022078409604
+const ANSWER: u64 = 12749663293315105001
 
 const UP: vec3 = vec3(0.0, 1.0, 0.0)
 
@@ -104,6 +105,54 @@ fn run() -> u64 no.host {
     return m
 }
 
+// And what `std.vec` builds on them, at every width it has, over the same
+// numbers: a length, a distance and a direction divide before they square, so
+// each is a run of these operations and `sqrt`, and answers the same bits.
+fn library() -> u64 no.alloc deterministic {
+    let m = hash.start
+    let s = random.from(1251)
+    for i in 0..200 {
+        s = random.next(s)
+        let a = spread(s)
+        s = random.next(s)
+        let b = spread(s)
+        s = random.next(s)
+        let c = spread(s)
+        let p = vec4(a, b, c, a - b)
+        let q = vec4(c, a, b, b - c)
+        let two = vec2(a, b)
+        let three = vec3(a, b, c)
+        m = mark(
+            m,
+            vec4(
+                vec.dot(p, q),
+                vec.length(p),
+                vec.distance(p, q),
+                vec.distanceSquared(p, q)
+            )
+        )
+        m = mark(m, vec.lerp(p, q, 0.25))
+        if let d = vec.direction(p) {
+            m = mark(m, d)
+        }
+        m = mark(
+            m,
+            vec4(
+                vec.dot(two, two),
+                vec.length(two),
+                vec.distance(two, vec2(c, a)),
+                vec.cross(two, vec2(c, a))
+            )
+        )
+        let across = vec.cross(three, vec3(c, a, b))
+        m = mark(m, vec4(across.x, across.y, across.z, vec.length(three)))
+        if let d = vec.direction(three) {
+            m = mark(m, vec4(d.x, d.y, d.z, vec.distance(three, across)))
+        }
+    }
+    return m
+}
+
 fn main() -> i32 {
     let v = vec2(3.0, 4.0)
     if v * 2.0 != vec2(6.0, 8.0) || -v == v || v / v != vec2(1.0, 1.0) {
@@ -111,8 +160,8 @@ fn main() -> i32 {
         return 1
     }
     let all = hash.join(
-        hash.join(operators(), steps()),
-        hash.join(falling(), run())
+        library(),
+        hash.join(hash.join(operators(), steps()), hash.join(falling(), run()))
     )
     io.print("vectors {all}")
     if all != ANSWER {
@@ -120,6 +169,7 @@ fn main() -> i32 {
         io.print("in place {steps()}")
         io.print("falling {falling()}")
         io.print("in a run {run()}")
+        io.print("the library {library()}")
         return 2
     }
     return 0

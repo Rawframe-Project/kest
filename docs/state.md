@@ -206,8 +206,8 @@ Code nobody trusts runs on the machine alone, which costs it nothing of its own
 and gives up the release engine's 1.4 to 9.9 times (D1249).
 
 `vec2`, `vec3` and `vec4` are the language's, with operators a component at a
-time that answer the same bits in both engines (D1250); `std.vec` moving onto
-them is next.
+time that answer the same bits in both engines (D1250), and `std.vec` is built
+on them (D1251).
 
 ## Determinism
 
