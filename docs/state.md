@@ -201,9 +201,9 @@ D1234's table. A host starts a machine for code nobody trusts with
 `kest_start_untrusted`, which takes only the doors it opened and refuses to
 start without fuel and heap ceilings (D1246). Compiling stays inside the bytes
 a host gives it, every stage of it (D1247), and inside a count of work that is
-the same on every machine (`kest_build_within`, `--work`, `K0666`, D1248);
-saying that code nobody trusts runs in the interpreter, and measuring what
-that costs, is next.
+the same on every machine (`kest_build_within`, `--work`, `K0666`, D1248).
+Code nobody trusts runs on the machine alone, which costs it nothing of its own
+and gives up the release engine's 1.4 to 9.9 times (D1249).
 
 ## Determinism
 

@@ -42322,3 +42322,18 @@ before and after; the three oversized shapes against the committed compiler
 (accepted) and this one (refused); instruction counts on three examples against
 the committed tree; `tools/check-work.sh` and the six holes by hand;
 `examples/embed.c`; `make most`; the backstop sweep.
+
+## 2026-09-25, code nobody trusts runs on the machine
+
+The reference says a release is for code its author trusts, and `SECURITY.md`'s
+fifth promise says what holds it -- an untrusted start never enters C a host
+linked in (D1246) -- and what it costs. Measured with a host linking each bench
+workload's C, four ways: an untrusted machine runs what a trusted one with the
+same ceilings runs to within a tenth of a percent, the ceilings cost 3% of the
+instructions on `words` and nothing measurable elsewhere, and a release is 1.4
+to 9.9 times faster. S5 is done.
+
+See D1249.
+
+**Runs:** the five workloads four ways under `perf stat`, instructions once and
+cycles best of seven taken in turn; `make most`.

@@ -3246,6 +3246,14 @@ a body the other backend wrote as C and a host linked in is not entered. What
 this machine promises and how far each promise is kept is `SECURITY.md`. See
 D1246.
 
+What that costs is the machine, and nothing on top of it. Started untrusted
+with the same ceilings as a trusted machine, the five workloads in `bench` run
+the same instructions to within a tenth of a percent; what the ceilings cost
+is their own, 3% of the instructions and 4% of the cycles on `words`, which
+allocates, and 2% of the cycles or less on the rest. What it gives up is the release engine: against a release of the
+same program the machine takes 8.0 times the cycles on `kernel`, 9.9 on
+`control`, 2.9 on `graph`, 1.4 on `words` and 5.9 on `rules`. See D1249.
+
 What a host asks about itself is asked for the same way anything else is: an
 `extern` the program declares and the host binds. `examples/embed.kest` has
 `Engine.name` and asks it what it is running under, and the host beside it
@@ -4732,6 +4740,12 @@ It builds from what it carries through `kest_build_from` and reads no file, so
 it runs where there is no source and no library at all, and every word after
 its own name is the program's. A release that cannot be made says why, as
 `K0663`. See D1172.
+
+A release is for code its author trusts. What it runs is C the host's compiler
+made, and nothing proves that C the way the verifier proves instructions, so
+code nobody trusts is never built this way: it is compiled where it is to run
+and started with `kest_start_untrusted`, which runs the machine and does not
+enter a body a release linked in. See D1249 and `SECURITY.md`.
 
 A file `kest emit --c` wrote is built with whatever the host's compiler is
 told, and it keeps a multiply and an add two roundings itself, as the machine

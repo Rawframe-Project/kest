@@ -42835,3 +42835,48 @@ the host's to decide: a host compiling what it was sent gives one, as SECURITY.m
 says. What is left of S5 is the plan's last sentence -- code nobody trusts runs
 in the interpreter, a release does not compile it, and what that costs is
 measured.
+
+## D1249 — Code nobody trusts runs on the machine, and what that costs
+
+*measured*, the end of S5. The plan's last sentence for S5: the profile for code
+nobody trusts is the interpreter, `kest build --release` does not turn such code
+into native code and says so, and what the profile costs the interpreter is
+measured.
+
+The first half was built in D1246: a machine started with
+`kest_start_untrusted` never enters a body the release engine wrote as C, even
+one the host linked in, and `tools/check-c.sh` counts the instructions the
+machine itself ran to hold it. What was missing was the sentence where a reader
+of a release looks. The reference's section on `--release` says a release is for
+code its author trusts -- nothing proves the C the host's compiler made the way
+the verifier proves instructions -- and `SECURITY.md`'s fifth row says what
+enforces the promise and what it costs, where it said nothing enforced it.
+
+Measured with a host of thirty lines (kept out of the tree: it is this
+measurement's) linking each of the five workloads in `bench` as a release would,
+four ways -- the release's C, the machine with no ceilings, the machine with the
+ceilings an untrusted start has to be given (a 4 GB heap, 2^50 steps), and the
+machine started untrusted with no C linked. Instructions, then best of seven
+cycles taken in turn:
+
+| workload | untrusted against the same ceilings, trusted | the ceilings against none | the machine against a release (cycles) |
+| --- | --- | --- | --- |
+| kernel | +0.0005% | +0.00% | 7.98 |
+| control | -0.0000% | +0.00% | 9.85 |
+| graph | -0.0009% | +0.00% | 2.87 |
+| words | +0.08% | +3.28% | 1.43 |
+| rules | +0.02% | -0.02% | 5.90 |
+
+So the profile costs nothing of its own: the machine runs the same work whether
+it trusts the code or not, and the verifier that proves what it runs is paid in
+every build, at compile time (D1237-D1245). The ceilings cost what they cost
+anywhere, which on `words`, the workload that allocates, is 3% of the
+instructions for counting every allocation against the heap's. What the profile
+gives up is the release engine, by 1.4 to 9.9 times, and that is the price of
+running code nobody trusts on what the verifier proved. With C linked in and
+skipped, an untrusted machine runs 0.08% more instructions than without it on
+`rules`, for asking at each call whether to enter it.
+
+S5 is done: every ceiling an untrusted start needs is required (D1246), compiling
+is held to the bytes (D1247) and the work (D1248) a host gives it, and the code
+runs on the machine alone.
