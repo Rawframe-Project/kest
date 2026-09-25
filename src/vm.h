@@ -144,6 +144,12 @@ int64_t kest_text_order(const char *left, int64_t left_length,
 // and the check that runs both reads the words. See D1104.
 bool kest_text_at(KestRuntime *runtime, const char *bytes, int64_t length,
                   int64_t index, uint32_t where, int64_t *into);
+// And the byte a walk over text is on, which the walk took the length of
+// before its first turn: asked all the same, in the words the machine uses,
+// because the one read that did not ask is the one the verifier cannot prove
+// the place of. See D1245.
+bool kest_text_in(KestRuntime *runtime, const char *bytes, int64_t length,
+                  int64_t index, uint32_t where, int64_t *into);
 bool kest_text_cut(KestRuntime *runtime, const char *bytes, int64_t length,
                    int64_t from, int64_t count, uint32_t where,
                    const char **at, int64_t *many);

@@ -3005,12 +3005,18 @@ const char *kest_unsaid(void);""",
         # D789.
         "what": "a fault that stops saying it is a fault",
         "file": "src/vm.c",
-        "from": r"""                kest_diags_fault(vmp->diags,
-                                 "a walk over text takes its length before "
+        "from": r"""    kest_diags_fault(vmp->diags, "a walk over text takes its length before "
                                  "its first turn and reads without asking");""",
-        "to": r"""                kest_diags_suggest(vmp->diags,
-                                   "a walk over text takes its length before "
+        "to": r"""    kest_diags_suggest(vmp->diags, "a walk over text takes its length before "
                                    "its first turn and reads without asking");""",
+        # And the same words where the other backend's call says them, since
+        # D1245: two places saying a fault and one of them not is still a
+        # fault said.
+        "also": ["src/vm.c", r"""        kest_diags_fault(runtime->diags,
+                         "a walk over text takes its length before its first "
+                         "turn and reads without asking");""", r"""        kest_diags_suggest(runtime->diags,
+                           "a walk over text takes its length before its first "
+                           "turn and reads without asking");"""],
         "make": [],
         "tool": "tools/check-tables.sh",
         "caught": "nothing says whose mistake it is",
@@ -15188,9 +15194,11 @@ bool kest_needs_of(""",
         # sixty, and a walk over what a program typed goes on for ever.
         "what": "a byte read out of a name as though it were signed",
         "file": "src/vm.c",
-        "from": r"""#endif
+        "from": r"""                return walked_past(vmp, frame, instruction, index, text.length);
+            }
             (top++)->integer = (unsigned char)text.bytes[index];""",
-        "to": r"""#endif
+        "to": r"""                return walked_past(vmp, frame, instruction, index, text.length);
+            }
             (top++)->integer = text.bytes[index];""",
         "make": ["kest"],
         "tool": "tools/check-commands.sh",
@@ -15763,8 +15771,8 @@ fn main() -> i32 {
                     ir_emit(compiler, KEST_IR_ADD, whole_type(compiler), 2,
                             whole_type(compiler), 1, stmt->span);
                 }""",
-        "make": ["debug"],
-        "binary": "kest-debug",
+        # Asked of the build a program ships in, which asks since D1245.
+        "make": ["kest"],
         "program": "walked.kest",
         "source": """module walked
 

@@ -47,6 +47,7 @@ another and is not named here is a check that fails.
 | D1017 | D1093 | the backend that decision said would not be built, built, and weighed |
 | D1067 | D1093 | the native question, answered by writing the C rather than by bounding it |
 | D1047 | D1181 | threaded dispatch taken where the compiler has it: a tenth of the cycles, not one to four per cent |
+| D409 | D1245 | the byte a walk over text is on is asked about in every build, not only the one that checks itself |
 
 ---
 
@@ -42661,4 +42662,35 @@ text being made -- the payload is pushed and the tag rotated under it.
 
 What is left of the first promise is `text.in`, which reads a byte of text at
 an index nothing checks, in the build a program ships in.
+
+## D1245 — `text.in` asks, in every build
+
+*measured*, and supersedes the half of D409 that left the read unasked outside
+the build that checks itself. `text.in` reads the byte a walk over text is on,
+at an index in a slot, and asked nothing about it: the walk measured the text
+before its first turn, so the compiler knew the place was there. That is the
+compiler's word. The verifier proves what each slot holds and not what number
+it holds, so it cannot prove the place, and D1234 left this row for last with
+two ways to close it: ask in an untrusted profile only, or ask always.
+
+Always, because asking costs nothing that can be measured. A loop that reads
+a sixteen-digit number out of text two hundred thousand times -- `text.in` on
+every byte, the heaviest use of it there is -- runs 2.3% more instructions
+asking than not, once the refusal is a function of its own the loop jumps to
+rather than code inside the loop (3.4% with it inline), and 389.8 million
+cycles against 394.6 and 403.4 million not asking, measured turn about, best of
+five: the difference is inside what two runs of the same binary differ by.
+`bench/words.kest` ran 187.4 million instructions asking and 188.4 million
+not. So there is one machine, and no profile to ask for it.
+
+The other backend writes the read as a call to `kest_text_in`, which says what
+the machine says -- `K0645`, the same words and the same fault -- because two
+engines that put one failure differently are two languages (D1104). The hole
+that makes a walk measure one byte too long was caught by the build that checks
+itself; it is asked of the release build now, which catches it the same way.
+
+That is the last row of D1234's table that a program can reach: the verifier
+proves what the machine used to trust -- every operand, every jump, the stack,
+what every slot holds, working memory, the two halves of text -- and the one
+read the proof could not reach asks.
 

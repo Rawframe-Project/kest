@@ -1545,12 +1545,12 @@ A walk over text is a walk over what the name held when the walk began: the
 handle is taken and the length measured once, before the first turn, so a body
 that writes the name walks on over what it was given. It is the same rule D053
 wrote for an array, where a body that pushes cannot lengthen what it is
-walking. The byte itself is read without asking whether the place is there,
-which is the one read in this language that does not ask — and what makes that
-right is the measurement the walk did before it started. A build that checks
-itself asks anyway, and says `K0645` if a walk ever reads past what it
-measured, because nothing else could: the byte after a piece of text is a byte
-the arena handed out for something else.
+walking. The byte itself is still asked about -- the measurement is what makes
+the place right, and it is the compiler's word, which the verifier cannot
+prove -- and a walk that ever reads past what it measured stops with `K0645`,
+in every build and both engines: the byte after a piece of text is a byte the
+arena handed out for something else, and nothing else would notice. What
+asking costs is nothing that can be measured (D1245).
 
 Gathering the bytes reaches the heap, because the array grows; what it does not
 do is copy what is already gathered every time something is added, and the

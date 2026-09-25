@@ -3459,6 +3459,21 @@ static const KestChunk *the_function(const KestModule *module,
     return callee;
 }
 
+// A walk over text read past its end, said away from the loop that reads a
+// byte a turn, so the loop is the one compare. See D1245.
+#if defined(__GNUC__)
+__attribute__((cold, noinline))
+#endif
+static bool walked_past(Vm *vmp, Frame *frame, const uint8_t *instruction,
+                        int64_t index, uint32_t length) {
+    fail(vmp, frame, instruction, "K0645",
+         "a walk read byte %lld of text of %u bytes", (long long)index,
+         length);
+    kest_diags_fault(vmp->diags, "a walk over text takes its length before "
+                                 "its first turn and reads without asking");
+    return false;
+}
+
 // `entry` of -1 is a machine carrying on from where a debugger stopped it:
 // the frames are where they were, and the instruction and the operand stack
 // come out of the frame the stop wrote them into. See D991.
@@ -5141,24 +5156,9 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             const KestValue *held = &mine[READ_U16()];
             int64_t index = mine[READ_U16()].integer;
             Said text = said(held);
-#if KEST_CHECKED
-            // The one read in this language that does not ask. What makes it
-            // right is the walk: the handle was taken before the first turn
-            // and the length is part of it, so the place is there. A build
-            // that checks itself asks anyway, because nothing else can — a
-            // byte past the end of a piece of text is a byte the arena handed
-            // out for something else, so it is neither poisoned nor unmapped
-            // and the sanitisers see nothing. See D409.
-            if (index < 0 || (uint64_t)index >= text.length) {
-                fail(vmp, frame, instruction, "K0645",
-                     "a walk read byte %lld of text of %u bytes",
-                     (long long)index, text.length);
-                kest_diags_fault(vmp->diags,
-                                 "a walk over text takes its length before "
-                                 "its first turn and reads without asking");
-                return false;
+            if ((uint64_t)index >= text.length) {
+                return walked_past(vmp, frame, instruction, index, text.length);
             }
-#endif
             (top++)->integer = (unsigned char)text.bytes[index];
             NEXT;
         }
@@ -9633,6 +9633,24 @@ bool kest_text_at(KestRuntime *runtime, const char *bytes, int64_t length,
         return stopped_saying(runtime, where, "K0604",
                               "index %lld is outside text of %u bytes",
                               (long long)index, (unsigned)length);
+    }
+    *into = (unsigned char)bytes[index];
+    return true;
+}
+
+bool kest_text_in(KestRuntime *runtime, const char *bytes, int64_t length,
+                  int64_t index, uint32_t where, int64_t *into) {
+    if (runtime == NULL || into == NULL) {
+        return false;
+    }
+    if (index < 0 || index >= length) {
+        stopped_saying(runtime, where, "K0645",
+                       "a walk read byte %lld of text of %u bytes",
+                       (long long)index, (unsigned)length);
+        kest_diags_fault(runtime->diags,
+                         "a walk over text takes its length before its first "
+                         "turn and reads without asking");
+        return false;
     }
     *into = (unsigned char)bytes[index];
     return true;

@@ -42244,3 +42244,17 @@ before; `tools/check-verifier.sh` with a text and another's length made out of
 a `load.n`, refused, and held with the mark not asked about; `make most`; the
 backstop sweep.
 
+## 2026-09-25, text.in asks
+
+The byte a walk over text is on is asked about in every build and in the C the
+other backend writes, in the machine's words, because asking was measured at
+nothing a run can tell apart from not asking. It was the last read the machine
+made without asking and the verifier could not prove.
+
+See D1245.
+
+**Runs:** a number read out of text two hundred thousand times, instructions
+and cycles turn about, asking inline, asking out of line, and not asking;
+`bench/words.kest`; the walk that measures a byte too long, against the release
+build; `make most`; the backstop sweep.
+

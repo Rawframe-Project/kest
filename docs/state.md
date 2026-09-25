@@ -196,7 +196,8 @@ The verifier holds every slot, constant, function, door and layout an
 instruction names and every jump before a chunk runs (D1237), the operand
 stack's depth on every path (D1239), what every slot holds (D1242), and
 working memory held to its block (D1243), and the two halves of text held to
-one piece (D1244); `text.in` is what is left of D1234's table.
+one piece (D1244); `text.in` asks in every build (D1245), which closes
+D1234's table.
 
 ## Determinism
 
