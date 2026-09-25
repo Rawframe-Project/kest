@@ -2169,6 +2169,10 @@ LEFT_OUT = {
                                    "which is about the machine this ran on and "
                                    "not about what runs",
     ("KestModule", "capacity"): "room rather than what is in it",
+    ("KestModule", "places"): "where each function is by its name, which is "
+                              "the functions again in another order",
+    ("KestModule", "place_capacity"): "the same, room rather than what is in "
+                                      "it",
     ("KestModule", "extern_capacity"): "the same, for the externs",
     ("KestModule", "layout_capacity"): "the same, for the layouts",
     ("KestModule", "stamps"): "what a running world has handed out",

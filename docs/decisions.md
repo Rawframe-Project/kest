@@ -43437,3 +43437,58 @@ again fails exactly as it did. Four figures changed by hand were each said by
 the gate and each written back to the byte by `make figures`. A paragraph
 whose shape changed -- an instruction it names that a step no longer runs --
 is still written by hand, because what to say about that is not a number.
+
+## D1261 — A module finds a function by its name in one step
+
+Measuring K12 turned up that compiling a large program grew as the square of
+it. On projects `tools/make-project.py` writes -- a hundred, three hundred and
+a thousand modules, six to sixty-two thousand lines -- the stage that writes
+the IR took 5.6, 33 and 363 milliseconds: three times the modules cost six
+times as much and ten times cost sixty-five. A profile put the time in
+`kest_module_find`, which walked every function the module held for the name
+of each call being written, and `kest_module_add` did the same walk for every
+function registered.
+
+A module now keeps where each function is by its name, in a table beside the
+list: open-addressed, a place in the list plus one so that nought is empty,
+at least twice the size of the list, and made again at twice the size when it
+is not. Registering a function and finding one are a hash and a probe. The
+same stage now takes 3.7, 10 and 43 milliseconds, and the whole of compiling
+the thousand modules went from about 560 to about 225. Every file in
+`examples`, `lib/std` and `bench`, and the three-hundred-module project,
+compiles to the same code as before -- the same `codeMark` and the same count
+of functions from the compiler before this and after it, sixty-six of sixty-six.
+A name the table has not got is still looked for among a generic's copies the
+way it was, because that is a host asking and not the compiler.
+
+## D1262 — A program is shipped as its source
+
+K12 asked whether a program should be shipped as bytecode -- cached on the
+client, compiled and signed on a server, or handed over untrusted -- and said
+to measure first. What it would buy is two things: not compiling where the
+program runs, and fewer bytes to send.
+
+**Compiling where it runs costs a fraction of a second.** A thousand modules,
+sixty-two thousand lines, compile in about 225 milliseconds here after D1261,
+which is about 3.6 microseconds a line, and the slowest example or benchmark
+in this tree checks in about six milliseconds, process and all. A cache would
+save that once per launch and would be one more thing to key, invalidate and
+get wrong.
+
+**The source is the smaller thing to send.** Over every program in `examples`
+and `bench`, the source is 348115 bytes and 96600 compressed; the bytecode
+compiled from it is 245666 bytes of code, before constants and layouts. The
+bytecode holds the library functions each program calls as well, so the two
+are not the same program counted twice, but the direction is plain: what a
+compiler writes is not smaller than what it read once the source is
+compressed, and the source is what compresses.
+
+**And bytecode would be a format.** `kest emit` is unstable and unversioned
+on purpose (the reference says so), the verifier (S3) is what stands between
+bytecode and the machine, and shipping bytecode would make both a promise
+kept across versions and a second way in for code nobody trusts. The source
+goes through the compiler, the verifier and the promises every time; that is
+the one door there is.
+
+So nothing is built for K12: a program is shipped as its source, compiled
+where it runs, and `kest emit` stays a listing rather than a format.

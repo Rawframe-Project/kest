@@ -6674,7 +6674,7 @@ bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 577 lines:
-55860 bytes as tokens, 136241 as a tree, 176200 checked and 304465 compiled.
+55860 bytes as tokens, 136241 as a tree, 176216 checked and 304737 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree. Compiling counts what the bodies and the verifier worked in beside
 what the build keeps, at the most they held at once, because a build given that
@@ -6693,7 +6693,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 20701 bytes, against the 304465 it costs to compile.
+file and 20701 bytes, against the 304737 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.

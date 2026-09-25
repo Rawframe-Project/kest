@@ -228,7 +228,9 @@ for a model, its programs run and its list of the library held to the
 library (D1259). CI's whole gate is five jobs with a twenty-minute budget
 each, the verifier's fuzzing no longer rebuilds its program every round, and
 `make figures` writes the figures a document quotes from the run that holds
-them (D1260).
+them (D1260). A module finds a function by its name in one step, which took
+compiling a thousand modules from about 560 milliseconds to 225 (D1261), and a
+program is shipped as its source rather than as bytecode (D1262).
 
 ## Determinism
 

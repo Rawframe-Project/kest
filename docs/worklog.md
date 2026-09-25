@@ -42551,3 +42551,25 @@ runs; the chunks boundary before and after, eight seeds, the same answers;
 four figures broken, each said by the gate and written back to the byte by
 `make figures`; `make figures` on the tree, nothing changed; `check-tables.sh`;
 `make most`.
+
+## 2026-09-25, finding a function in one step, and shipping source
+
+Measuring K12 on generated projects showed compiling growing as the square of
+the program: writing the IR for a thousand modules took 363 milliseconds, all
+of it `kest_module_find` walking the list for every call. A module keeps a
+table of where each function is by name, and that stage takes 43. With that,
+K12 was measured and decided: a program compiles where it runs in a fraction
+of a second, its compressed source is smaller than its bytecode, and bytecode
+would be a format to version and a second door, so none is shipped.
+
+See D1261 and D1262.
+
+**Runs:** `KEST_SPENT` over projects of 100, 300 and 1000 modules before and
+after; `perf` over the largest; every example, library file and benchmark and
+the 300-module project compiled by the old and the new compiler, the same
+`codeMark` for all 66; source and bytecode sizes over `examples` and `bench`;
+`make fast`; `make most`, which refused twice: the table's two fields had no
+reason beside them for being left out of the layout's mark, and what the
+compiler's own work costs had moved by the table's bytes -- which `make
+figures` wrote, the first figure it wrote that anybody had not broken on
+purpose.
