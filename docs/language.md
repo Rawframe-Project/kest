@@ -3311,6 +3311,23 @@ is why it is written here rather than refused with a code. `examples/embed.c`
 starts a machine from a second host, asks it the same question it asked the
 first, and stops if the two answers are the same.
 
+### Asking a host's doors what they do with anything
+
+A door is the host's, and what reaches it is whatever a program put in the
+frame: the verifier holds a program to handing each door what the door declares,
+and a number declared is any number of that width. `kest hostile <file> [seed]`
+writes the file with a function after it for every call of every door it
+declares -- the ends of every width, floats that are not numbers, text of no
+length and of four thousand bytes and with a nought in it, every case of every
+enum -- as `hostile0`, `hostile1` and on, and `hostile` answers how many there
+are. A host builds that file, binds its doors the way it always does, calls each
+one, and runs it under its own sanitisers: a call has to answer, or be refused by
+the door in words through `kest_native_failed`. `tools/check-doors.sh` does that
+to the engine in this tree at eight seeds, and the first run found two of its
+doors turning an infinite float into a number. A door that answers what the
+program could not have made is refused by the machine all the same (`K0652`);
+what the machine cannot see is what the door did in C first. See D1254.
+
 ### What a host has to keep
 
 Most of what a host can get wrong is refused where it is done: a name bound

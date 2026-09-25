@@ -233,10 +233,19 @@ static const Decider *decided(void *context) {
 // `f32` out of three slots and writes its answer over the first of them. What
 // says those are the three it thinks they are is the layout, held against this
 // host's own `Point` piece by piece before anything is bound. See D699.
+//
+// A point from a program nobody trusts may be anywhere, infinity and what is
+// not a number included, and turning a sum an `i32` does not hold into one is
+// something C does not define: this answered the least `int64_t` there is,
+// which the machine refused as a number the program could not have made.
+// Refused here instead, in words. Found by `kest hostile`. See D1254.
 static void engine_rank(KestValue *frame, KestRuntime *runtime, void *context) {
-    (void)runtime;
     (void)context;
     double sum = frame[0].real + frame[1].real + frame[2].real;
+    if (!(sum >= -2147483648.0 && sum < 2147483648.0)) {
+        kest_native_failed(runtime, "a point with no rank");
+        return;
+    }
     frame[0].integer = (int64_t)sum;
 }
 
@@ -257,13 +266,22 @@ static void engine_hurt(KestValue *frame, KestRuntime *runtime, void *context) {
         kest_native_failed(runtime, "nothing here can be hurt");
         return;
     }
-    (void)runtime;
     (void)context;
     int64_t cost = 0;
     switch ((int32_t)frame[0].integer) {
-    case EVENT_MOVED:
-        cost = (int64_t)(frame[1].real + frame[2].real);
+    case EVENT_MOVED: {
+        // A move from a program nobody trusts may be any distance, infinity
+        // and what is not a number included, and a sum an `i32` does not hold
+        // is refused rather than turned into one, which C does not define.
+        // Found by `kest hostile`. See D1254.
+        double moved = frame[1].real + frame[2].real;
+        if (!(moved >= -2147483648.0 && moved < 2147483648.0)) {
+            kest_native_failed(runtime, "a move too far to cost anything");
+            return;
+        }
+        cost = (int64_t)moved;
         break;
+    }
     case EVENT_HIT:
     case EVENT_NAMED:
         cost = frame[1].integer;
@@ -3173,6 +3191,57 @@ int main(int argc, char **argv) {
     printf("a machine is %zu bytes and cost this build nothing at all, against "
            "the %zu of the walk it was handed\n",
            kest_runtime_cost(engine.runtime), one_walk);
+
+    // A program `kest hostile` wrote has one more function, which calls every
+    // door this host binds with what a program nobody trusts could hand it:
+    // numbers at the ends of their widths, floats that are not numbers, text
+    // of no length and of a great deal, every case of an enum. What a door
+    // does with those is this host's to get right, so this is the run that
+    // asks, and it is all this run does: the doors keep state of their own,
+    // and what the checks below read is what the program's own calls left in
+    // it. A door refusing what it was handed is an answer; what is looked for
+    // is a report from the sanitisers. See D1254.
+    int32_t hostile = kest_entry(engine.runtime, "hostile");
+    if (hostile >= 0) {
+        // The door that asks the program back asks it by the entry this host
+        // looks up for the machine it runs, which is set further down for the
+        // run below: without it, the first run of this found the door asking
+        // for a function at -1. See D1254.
+        decider.rule = kest_entry(engine.runtime, "rule");
+        KestValue answer[8];
+        memset(answer, 0, sizeof answer);
+        if (!kest_call(engine.runtime, hostile, answer,
+                       sizeof answer / sizeof answer[0])) {
+            kest_report(engine.runtime, stderr, KEST_FORM_TEXT);
+            return 1;
+        }
+        int64_t calls = answer[0].integer;
+        int64_t answered = 0;
+        int64_t refused = 0;
+        for (int64_t at = 0; at < calls; at++) {
+            char name[32];
+            snprintf(name, sizeof name, "hostile%lld", (long long)at);
+            int32_t one = kest_entry(engine.runtime, name);
+            memset(answer, 0, sizeof answer);
+            if (one >= 0 && kest_call(engine.runtime, one, answer,
+                                      sizeof answer / sizeof answer[0])) {
+                answered++;
+            } else {
+                // Refused in words, which is a door doing its job: said, so
+                // a reader sees which door and what it was handed.
+                kest_report(engine.runtime, stdout, KEST_FORM_TEXT);
+                refused++;
+            }
+        }
+        printf("hostile: %lld call(s) of the doors this host binds with what "
+               "a program nobody trusts could hand them, %lld answered and "
+               "%lld refused in words\n",
+               (long long)calls, (long long)answered, (long long)refused);
+        kest_runtime_free(engine.runtime);
+        kest_host_free(host);
+        kest_build_free(build);
+        return 0;
+    }
 
     // A second machine from the same build, which is what an engine has when
     // it runs two worlds side by side. They share the program they were

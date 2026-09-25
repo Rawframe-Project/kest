@@ -441,6 +441,12 @@ new ones, because a run under profile 2 and one under 3 are two runs. A
 constant may be written as its bits, `float(u64(0x...))`, since `bits` and
 `float` are worked out where they are written. See D1235.
 
+**`kest hostile` asks a host's doors what they do with anything**: it writes a
+program's file with every door it declares called with the ends of every width,
+floats that are not numbers and text of every length. **What a host has to
+do:** nothing; one that binds doors a program nobody trusts reaches runs it.
+See D1254.
+
 **The verifier refuses three more shapes of code nobody's compiler wrote**: a
 `rotate` of none, a `field` past its value (`K0410`), and a module it has
 already refused is not walked for its promises. **What a program or a host has

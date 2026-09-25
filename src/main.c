@@ -67,6 +67,7 @@ __declspec(dllimport) int __stdcall QueryPerformanceFrequency(long long *rate);
 #include "kest.h"
 #include "ast.h"
 #include "build.h"
+#include "hostile.h"
 #include "diag.h"
 #include "lexer.h"
 #include "mem.h"
@@ -155,6 +156,11 @@ static void help(FILE *out) {
             "  test <files>      run each one and read what it answered. A\n"
             "                    test here is a program that checks itself\n"
             "                    and answers with which check failed\n"
+            "  hostile <file> [seed]\n"
+            "                    the file, with a function after it for\n"
+            "                    every call of every door it declares with\n"
+            "                    what a program nobody trusts could hand it,\n"
+            "                    for the host that binds them to run\n"
             "  doctor [dir]      what this command line is, where it looks\n"
             "                    for the library, whether it found it, and\n"
             "                    what the project here says about itself\n"
@@ -1481,7 +1487,7 @@ static const char *result_text(KestRuntime *runtime, int32_t entry,
 // commands take what was four comparisons against a name spread through the
 // reading of the arguments.
 static bool takes_a_count(const char *command) {
-    return strcmp(command, "tick") == 0;
+    return strcmp(command, "tick") == 0 || strcmp(command, "hostile") == 0;
 }
 
 // The events a `tick` was given, written `4,5,6`, and how many there are.
@@ -2019,6 +2025,70 @@ static bool write_file(const char *path, const char *bytes, bool json) {
         refused_at_the_words(json, "K0701", "`%s` could not be written", path);
     }
     return wrote;
+}
+
+// The file named, with a function after it that calls every door it declares
+// with what a program nobody trusts could hand it, for the host that binds
+// those doors to build and run. What is written is a program: it is compiled
+// here before it is said, so what a host is handed is one that builds. The
+// seed is the count after the file. See D1254.
+static int write_hostile(const char *path, uint64_t seed, bool json) {
+    if (path == NULL) {
+        return refused_at_the_words(json, "K0649", "`hostile` needs a file");
+    }
+    KestBuild *build = kest_build(path, NULL, json ? stdout : stderr,
+                                  json ? KEST_FORM_JSON : KEST_FORM_TEXT, 0);
+    if (build == NULL) {
+        return 1;
+    }
+    FILE *file = fopen(path, "rb");
+    KestArena *arena = kest_arena_new();
+    if (file == NULL || arena == NULL) {
+        if (file != NULL) {
+            fclose(file);
+        }
+        kest_arena_free(arena);
+        kest_build_free(build);
+        return refused_at_the_words(json, "K0701", "cannot read `%s`", path);
+    }
+    size_t room = 1 << 16;
+    size_t used = 0;
+    char *source = kest_arena_alloc(arena, room, 1);
+    size_t got = 0;
+    while (source != NULL &&
+           (got = fread(source + used, 1, room - used, file)) > 0) {
+        used += got;
+        if (used == room) {
+            char *grown = kest_arena_alloc(arena, room * 2, 1);
+            if (grown != NULL) {
+                memcpy(grown, source, used);
+            }
+            source = grown;
+            room *= 2;
+        }
+    }
+    fclose(file);
+    uint32_t called = 0;
+    uint32_t passed = 0;
+    const char *calls = source == NULL
+                            ? NULL
+                            : kest_hostile_calls(build->program, arena, path,
+                                                 seed, 8, &called, &passed);
+    kest_build_free(build);
+    if (calls == NULL) {
+        kest_arena_free(arena);
+        kest_diags_say_one(json ? stdout : stderr, json, KEST_STARVED_CODE,
+                           KEST_STARVED_SAYS);
+        return 1;
+    }
+    fwrite(source, 1, used, stdout);
+    fputs(calls, stdout);
+    fprintf(stderr, "hostile: %u call(s) of the doors `%s` declares, from "
+                    "seed %llu, and %u door(s) taking what a program cannot "
+                    "make\n",
+            called, path, (unsigned long long)seed, passed);
+    kest_arena_free(arena);
+    return 0;
 }
 
 static int make_project(const char *name, bool json) {
@@ -3511,6 +3581,14 @@ int main(int argc, char **argv) {
         // be `--json`: the options are read wherever they are written, and a
         // project called `--json` is a directory nobody meant. See D1252.
         int status = make_project(path_count > 0 ? paths[0] : NULL, json);
+        free(paths);
+        free(given);
+        return status;
+    }
+
+    if (strcmp(argv[1], "hostile") == 0) {
+        int status = write_hostile(path_count > 0 ? paths[0] : NULL,
+                                   told_it ? (uint64_t)count : 1, json);
         free(paths);
         free(given);
         return status;

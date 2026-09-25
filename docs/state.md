@@ -215,7 +215,9 @@ proposal in `docs/rfcs/`, and is warned about first (D1252).
 
 The verifier is fuzzed with instructions nobody's compiler wrote, which found
 three places it was wrong, and the source boundary by a fuzzer that keeps what
-reached new code (D1253).
+reached new code (D1253). A host's doors are asked what they do with anything a
+program could hand them by `kest hostile`, which found two of the engine's
+doors turning an infinite float into a number (D1254).
 
 ## Determinism
 

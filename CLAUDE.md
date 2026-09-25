@@ -1063,6 +1063,13 @@ tools/             Build and development scripts. `make check` runs all of
                    seventeen rungs between nought and done, each in words; a
                    copy of a shape over two of the one before, as deep as the
                    file asks, has to count what doubles. See D1248.
+                   `check-doors.sh` holds a host's doors to what a program
+                   nobody trusts hands them: `kest hostile` writes every door
+                   `examples/embed.kest` declares called with the ends of
+                   every width, floats that are not numbers and text of every
+                   length, and the sanitised engine makes each call; each has
+                   to answer or be refused by the door in words, and some have
+                   to be refused. See D1254.
                    `check-commands.sh` holds every command to producing
                    something, because one that prints nothing looks the same
                    as one that works, and holds the two forms of `check`,
@@ -1142,6 +1149,7 @@ wire     what an editor's protocols are made of: framed messages and JSON
 lsp      the same build, answering an editor
 debug    the same machine, stopped and asked about
 dap      the same debugger, answering an editor's debug protocol
+hostile  a file's doors, called with anything a program could hand them
 main     CLI
 ```
 

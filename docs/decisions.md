@@ -43117,3 +43117,49 @@ here; everything the application needs from the tree is in it.
 Three holes: the promises walked over a module already refused, caught by the
 sanitised fuzzer at the first seed; a rotation of none and a piece past its
 value let through, caught by `check-verifier.sh`.
+
+## D1254 — What a host's doors do with anything
+
+*measured*, S7 of the plan: every door looked at as what a program nobody
+trusts reaches, and a tool a host runs to ask its own.
+
+What a door can be handed, by what it is. A handle -- an array, a store, what a
+host lent -- is asked at every library door that takes one whether this
+machine's heap handed it out: `kest_array_length`, `kest_keeps`, `kest_lets_go`,
+`kest_still_holds`, `kest_kept_where` and `kest_lend_ends` each do, and the
+`handles` boundary of `tools/fuzz.c` has put random words, near misses and
+another machine's handles through them since D984. A piece of text is two slots
+the verifier proved are one piece the machine made (D1244), valid UTF-8 because
+nothing in the language makes other bytes into text, possibly with a nought in
+it and possibly four thousand bytes long. What a door answers is read by the
+machine and refused if the program could not have made it (`K0652`). What is
+left is a number, which arrives as any value its width holds, and what a door
+does with it in C is the host's -- which is where the escapes the plan cites
+came from.
+
+So the tool is for that. `kest hostile <file> [seed]` writes the file with a
+function after it for every call of every door the file declares, eight each:
+the ends of every width, floats that are infinite and not numbers and the
+largest and smallest there are, text of no length, of four thousand bytes and
+with a nought in it, a case of every enum, optionals holding nothing. A door
+taking what a program cannot make out of nothing -- a reference, a store, a
+function -- is said about in a comment instead. Each call is a function of its
+own, `hostile0` and on, because a door that refuses refuses the call it was made
+from and every call after it still has to be made; `hostile` answers how many.
+The host builds that file, binds its doors the way it always does, and calls
+each.
+
+`examples/embed.c` does, when the program it is handed has `hostile` in it, and
+`tools/check-doors.sh` runs it under the sanitisers at eight seeds. The first
+run found two of its doors wrong. `Engine.rank` summed a point's three floats
+and turned the sum into an integer: a point at infinity was the least `int64_t`
+there is, which C does not define and the machine refused as an `i32` the
+program could not have made. `Engine.hurt` did the same with a move. Both
+refuse in words now. And the engine asked the program back, from inside
+`Engine.decide`, by an entry it looks up for the run after -- a function at
+`-1`, refused by the machine. The check holds that every call answers or is
+refused by the door itself (`K0662`), that nothing is said by the sanitisers,
+and that some calls are refused, since a run in which every door answered
+everything was handed nothing hard: 280 calls, 68 refused by the doors. Three
+holes: the rank door as it was, the entry not looked up, and floats that are
+always nought.

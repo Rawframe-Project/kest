@@ -2585,6 +2585,50 @@ yield""",
         "caught": "a piece taken past the end of its value was held",
     },
     {
+        # The engine's rank as it was: a point nobody trusts summed to infinity
+        # and turned into the least `int64_t`, which the machine refused as a
+        # number the program could not have made. See D1254.
+        "what": "a door that turns a sum it cannot hold into a number",
+        "file": "examples/embed.c",
+        "from": r"""    if (!(sum >= -2147483648.0 && sum < 2147483648.0)) {
+        kest_native_failed(runtime, "a point with no rank");
+        return;
+    }""",
+        "to": r"""    if (false) {
+        kest_native_failed(runtime, "a point with no rank");
+        return;
+    }""",
+        "make": ["kest", "embed-debug"],
+        "tool": "tools/check-doors.sh",
+        "arguments": [],
+        "caught": "a door answered what it should have refused",
+    },
+    {
+        # The engine asking the program back by the entry it looks up further
+        # down, before it has: a function at -1. See D1254.
+        "what": "a door that asks the program back by an entry it never looked up",
+        "file": "examples/embed.c",
+        "from": r"""        decider.rule = kest_entry(engine.runtime, "rule");
+        KestValue answer[8];""",
+        "to": r"""        KestValue answer[8];""",
+        "make": ["kest", "embed-debug"],
+        "tool": "tools/check-doors.sh",
+        "arguments": [],
+        "caught": "a door answered what it should have refused",
+    },
+    {
+        # Floats that are always nought: every door answers, and a run that
+        # refused nothing was not handed anything hard. See D1254.
+        "what": "hostile calls that hand over nothing hard",
+        "file": "src/hostile.c",
+        "from": r"""    uint64_t which = next(state) % 10;""",
+        "to": r"""    uint64_t which = 0 * next(state);""",
+        "make": ["kest", "embed-debug"],
+        "tool": "tools/check-doors.sh",
+        "arguments": [],
+        "caught": "so nothing hard was handed over",
+    },
+    {
         # Work counted and never run out of: a ceiling that is read and never
         # reached is a build that takes as long as the file makes it, which
         # is the thing a host that compiles what it was sent gave one to stop.
@@ -12546,7 +12590,7 @@ static const Keyword KEYWORDS[] = {
         # them disagreeing and nothing else.
         "what": "a host that reads one case of an event wrongly",
         "file": "examples/embed.c",
-        "from": """        cost = (int64_t)(frame[1].real + frame[2].real);""",
+        "from": """        cost = (int64_t)moved;""",
         "to": """        cost = 0;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",

@@ -42415,3 +42415,19 @@ See D1253.
 and 200 seeds of 1,000 after the others; the coverage fuzzer for two hours on
 eight workers; the OSS-Fuzz build run from another directory; three holes by
 hand; `make most`; the sweep.
+
+## 2026-09-25, a host's doors and anything
+
+`kest hostile <file> [seed]` writes a program's file with every door it
+declares called with the ends of every width, floats that are not numbers and
+text of every length, one function a call; the engine runs it when it is there,
+and `tools/check-doors.sh` does that under the sanitisers at eight seeds. It
+found two of the engine's doors turning an infinite float into a number and one
+asking the program back by an entry it had not looked up. The library's doors
+taking a handle all ask whose it is.
+
+See D1254.
+
+**Runs:** `kest hostile` on the engine's program at eight seeds, the engine
+under the sanitisers before and after the three fixes; the handle doors read;
+three holes by hand; `make most`; the sweep.
