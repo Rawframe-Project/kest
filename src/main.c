@@ -63,6 +63,9 @@ __declspec(dllimport) int __stdcall QueryPerformanceFrequency(long long *rate);
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
+#if defined(__wasi__)
+#include <unistd.h>
+#endif
 #include <string.h>
 #include "kest.h"
 #include "ast.h"
@@ -3304,6 +3307,17 @@ static int run_tests(const char *executable, char **paths, int path_count,
 
 int main(int argc, char **argv) {
     KEST_BYTES_OUT();
+#if defined(__wasi__)
+    // WebAssembly's system interface starts a module in `/`, so a path a
+    // program writes from where it was run -- `examples/colony.kest` saves a
+    // day beside itself -- was written at the root of the machine it ran on,
+    // and refused where that is nobody's to write. Where it was run from is
+    // what `PWD` says, which the runner hands over. See D1255.
+    const char *here = getenv("PWD");
+    if (here != NULL && here[0] == '/') {
+        chdir(here);
+    }
+#endif
     if (argc < 2) {
         // No words at all, so no form to answer in but the one a person
         // reads: `--json` is a word, and there are none.

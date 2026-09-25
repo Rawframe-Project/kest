@@ -14,7 +14,7 @@ import { argv, env } from 'node:process';
 
 const whole = (word) =>
     !isAbsolute(word) && existsSync(word) ? resolve(word) : word;
-const given = { ...env };
+const given = { ...env, PWD: process.cwd() };
 if (given.KEST_LIB !== undefined) {
     given.KEST_LIB = resolve(given.KEST_LIB) + '/';
 }

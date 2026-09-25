@@ -2728,6 +2728,22 @@ yield""",
         "caught": "check: K0307 said",
     },
     {
+        # The command line built as WebAssembly left in `/`: a file a program
+        # writes where it was run is written at the root of the machine, and
+        # refused where that is nobody's to write -- which it was on CI and
+        # was not here. See D1255.
+        "what": "a WebAssembly command line that forgets where it was run",
+        "file": "src/main.c",
+        "from": r"""    if (here != NULL && here[0] == '/') {
+        chdir(here);
+    }""",
+        "to": r"""    (void)here;""",
+        "make": ["kest"],
+        "tool": "tools/check-wasm.sh",
+        "arguments": [],
+        "caught": "wrote its day somewhere other than where it was run",
+    },
+    {
         # Work counted and never run out of: a ceiling that is read and never
         # reached is a build that takes as long as the file makes it, which
         # is the thing a host that compiles what it was sent gave one to stop.

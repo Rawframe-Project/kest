@@ -43211,6 +43211,14 @@ same way.
 Two holes: the address copied as eight bytes, and the file asked for where
 there is none; both are refused by the WebAssembly build under `-Werror`.
 
+CI's whole gate found what this machine could not: `examples/colony.kest`
+saves its day beside where it was run, a module under WebAssembly's system
+interface starts in `/`, and on a runner that is not the root user writing
+there is refused -- here it was written at the root of the machine and
+nothing said so. The command line built as WebAssembly starts where `PWD`
+says, which the runner hands over, and `check-wasm.sh` holds the day to being
+written where it was run; a hole taking that out is caught by it, as root.
+
 ## D1256 — `x.f(a)` is `f(x, a)`
 
 *decided*, E2 of the plan and K8. A game script is a chain of things done to one

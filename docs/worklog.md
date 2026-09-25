@@ -42460,3 +42460,15 @@ See D1256.
 **Runs:** method calls of every kind in the machine, the checked build and a
 release; a generic calling one in its body at two types; the three refusals and
 a two-module project; five holes by hand; `make fast`; `make most`; the sweep.
+
+## 2026-09-25, the WebAssembly command line starts where it was run
+
+CI's whole gate on `a573defb` (D1255) was red: `examples/colony.kest` answered
+11 as WebAssembly, because it saves a file beside where it was run and a module
+there starts in `/`, which a runner that is not root cannot write. Here, as
+root, it wrote `/kest-colony-day.txt` and said nothing. The command line built
+as WebAssembly goes to `PWD` first, the runner hands it over, and
+`check-wasm.sh` holds the file to being where it was run.
+
+**Runs:** the CI log; colony as WebAssembly before and after, and where its
+file went; `check-wasm.sh`; the hole by hand; `make most`; the sweep.
