@@ -43163,3 +43163,50 @@ and that some calls are refused, since a run in which every door answered
 everything was handed nothing hard: 280 calls, 68 refused by the doors. Three
 holes: the rank door as it was, the entry not looked up, and floats that are
 always nought.
+
+## D1255 — The machine built as WebAssembly
+
+*measured*, S8 of the plan. A host that wants a fault in the machine kept out of
+its own memory -- the reason MSFS moved its add-ons from DLLs to WebAssembly --
+builds the library as WebAssembly and runs it in a runtime. The plan's point is
+that this is worth most to a native client, where nothing else walls the
+machine off; in a browser the engine is already inside one.
+
+It builds. Every file of `src/` compiles for `wasm32-wasi` with clang and no
+warning, and links with WebAssembly's linker against the C library its system
+interface has, once two things it has not got are asked for honestly: a file
+that is nobody's (`tmpfile`), which every caller already did without when
+there was none, now `kest_scratch_file` answering nothing there; and running
+another program (`system`), which is how `--release` reaches the C compiler,
+now a release that cannot be made, said the way a compiler that is not there
+is said. `make kest.wasm` is the command line, run as `node
+tools/wasi-run.mjs kest.wasm run examples/math.kest` under Node's own
+implementation of the system interface.
+
+Building it found a fault in the machine that no other build could. The walk
+that finds what a world holds read an address out of a word with
+`memcpy(&what, ..., 8)`; where an address is four bytes, which it is on
+WebAssembly, that wrote four bytes past it on the stack. clang said so, and
+it is `sizeof what` now -- the same on every machine this was already built
+for.
+
+It is the same language there. `tools/check-wasm.sh` builds the library and the
+command line with `-Werror` and runs every example with a `main`, 43 of them,
+comparing what each says and the status it comes back with against the machine
+built here: all 43 agree, `examples/determinism.kest`'s profile answer and
+`examples/vectors.kest`'s bits among them. CI's whole-gate job installs the
+linker and the C library for it.
+
+What it costs, best of five with the start of each taken off (5 ms here, 40 ms
+there, most of it Node compiling a megabyte of WebAssembly): `kernel` 3.74
+times, `control` 3.12, `words` 3.78, `rules` 3.32, and `graph`, the shortest,
+6.33. The machine's instructions hand over through a table of label addresses
+where the compiler has them (D1181); WebAssembly has no jump to an address, so
+clang made that table one more `switch` around the real one, and the machine
+ran a third slower for it -- `rules` 1,479 ms against 891 with the plain
+`switch`, which it uses there now. What is left is Node's WebAssembly against
+a native build; a runtime that compiles ahead of time would be measured the
+same way.
+
+Two holes: the address copied as eight bytes, and the file asked for where
+there is none; both are refused by the WebAssembly build under `-Werror`.

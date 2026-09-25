@@ -47,6 +47,11 @@ the profile for code it does not trust.
    bytecode machine. `kest build --release` writes a program as C for the
    host's compiler, and that is never done with it.
 
+**A second wall.** A host that wants a fault in the machine kept out of its own
+memory builds the library as WebAssembly and runs it in a WebAssembly runtime;
+`tools/check-wasm.sh` holds every example to answering the same there, and D1255
+says what it costs.
+
 **Outside the model:** timing side channels; bugs in a host's own doors, which
 the host answers for (Kest will give it a way to fuzz them); a host that binds
 a door not marked as safe; and a door that was granted being used for what it

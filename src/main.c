@@ -2351,7 +2351,15 @@ static char *made_release(const char *executable, const char *program,
     snprintf(command, sizeof(command),
              "%s -std=c11 -O2 -I'%s' -o '%s' '%s' '%s' -lm", compiler, header,
              out, source, archive);
+    // A command line built as WebAssembly has no other program to run, so
+    // the C compiler a release is made with is out of its reach, and it says
+    // so the way a compiler that is not there is said. See D1255.
+#if defined(__wasi__)
+    int status = -1;
+    (void)wrote;
+#else
     int status = wrote && strchr(command, '\n') == NULL ? system(command) : -1;
+#endif
     remove(source);
     if (status != 0) {
         kest_diags_in(diags, NULL);

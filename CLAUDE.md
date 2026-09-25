@@ -1070,6 +1070,10 @@ tools/             Build and development scripts. `make check` runs all of
                    length, and the sanitised engine makes each call; each has
                    to answer or be refused by the door in words, and some have
                    to be refused. See D1254.
+                   `check-wasm.sh` builds the library and the command line as
+                   WebAssembly with no warning and runs every example by it
+                   under Node, for the same words and the same status as the
+                   machine built here. See D1255.
                    `check-commands.sh` holds every command to producing
                    something, because one that prints nothing looks the same
                    as one that works, and holds the two forms of `check`,

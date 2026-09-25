@@ -82,6 +82,23 @@ tools/fuzz-cover: tools/fuzz-cover.c $(COVER_OBJ) include/kest.h
 		-fsanitize=fuzzer,address,undefined -Iinclude -o $@ \
 		tools/fuzz-cover.c $(COVER_OBJ) -lm
 
+# The command line built as WebAssembly, run by `node tools/wasi-run.mjs
+# kest.wasm ...`: clang for the target, a WebAssembly linker and the C library
+# WebAssembly's system interface has. Not in any other target, for the reason
+# the coverage fuzzer is not. See D1255.
+WASM_OBJ := $(SRC:src/%.c=build/wasm/%.o) build/wasm/main.o
+WASMLD ?= $(shell command -v wasm-ld 2>/dev/null || ls /usr/bin/wasm-ld-* 2>/dev/null | sort -V | tail -1)
+
+build/wasm/%.o: src/%.c | build/wasm
+	clang --target=wasm32-wasi -std=c11 -O2 -Wall -Wextra -Werror \
+		-Iinclude -DKEST_LIB_DIR='"/lib/kest/"' -MMD -MP -c -o $@ $<
+
+build/wasm:
+	mkdir -p $@
+
+kest.wasm: $(WASM_OBJ)
+	clang --target=wasm32-wasi -O2 -fuse-ld=$(WASMLD) -o $@ $^ -lm
+
 tools/fuzz-debug: tools/fuzz.c $(DEBUG_OBJ) include/kest.h
 	$(CC) $(HOSTWARN) -O0 -g -fsanitize=address,undefined -Iinclude -Isrc \
 		-o $@ tools/fuzz.c $(DEBUG_OBJ) -lm
@@ -269,7 +286,7 @@ clean:
 	rm -rf build kest kest-debug libkest.a examples/embed \
 	    examples/embed-debug examples/engine examples/engine-debug \
 	    examples/least tools/inward tools/fuzz tools/fuzz-debug \
-	    tools/fuzz-cover \
+	    tools/fuzz-cover kest.wasm \
 	    bench/measure bench/frame \
 	    bench/control-cpp bench/graph-cpp bench/kernel-cpp bench/words-cpp \
 	    bench/rules-cpp \
@@ -296,4 +313,4 @@ fuzz: tools/fuzz-debug
 -include $(RELEASE_OBJ:.o=.d) $(DEBUG_OBJ:.o=.d) $(RACES_OBJ:.o=.d) \
     build/release/main.d \
     build/debug/main.d build/release/embed.d build/release/engine.d \
-    build/release/least.d $(COVER_OBJ:.o=.d)
+    build/release/least.d $(COVER_OBJ:.o=.d) $(WASM_OBJ:.o=.d)

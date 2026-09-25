@@ -275,6 +275,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # What `check-wasm.sh` builds the library as WebAssembly with: a linker
+      # for it and the C library WebAssembly's system interface has, beside
+      # the clang and the Node the image has. See D1255.
+      - name: a WebAssembly toolchain
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q lld wasi-libc \
+              "libclang-rt-$(clang --version | sed -n 's/.*clang version \([0-9]*\).*/\1/p' | head -1)-dev-wasm32"
       - name: the whole gate
         run: mkdir -p /home/runner/kest-tmp && TMPDIR=/home/runner/kest-tmp make check
 

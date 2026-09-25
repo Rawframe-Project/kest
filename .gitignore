@@ -19,3 +19,4 @@ bench/measure
 bench/frame
 kest-colony-day.txt
 .jitted_scripts/
+kest.wasm

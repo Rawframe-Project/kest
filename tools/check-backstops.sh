@@ -2629,6 +2629,34 @@ yield""",
         "caught": "so nothing hard was handed over",
     },
     {
+        # An address copied out of a word as eight bytes: where a pointer is
+        # four, which it is on WebAssembly, that writes past it. See D1255.
+        "what": "an address copied as eight bytes whatever an address is",
+        "file": "src/vm.c",
+        "from": r"""            memcpy(&what, bytes + at, sizeof what);""",
+        "to": r"""            memcpy(&what, bytes + at, 8);""",
+        "make": ["kest"],
+        "tool": "tools/check-wasm.sh",
+        "arguments": [],
+        "caught": "does not compile for WebAssembly",
+    },
+    {
+        # A file nobody's asked for where WebAssembly's system interface has
+        # none to give. See D1255.
+        "what": "a file nobody's asked for on WebAssembly",
+        "file": "src/diag.c",
+        "from": r"""#if defined(__wasi__)
+    return NULL;
+#else
+    return tmpfile();
+#endif""",
+        "to": r"""    return tmpfile();""",
+        "make": ["kest"],
+        "tool": "tools/check-wasm.sh",
+        "arguments": [],
+        "caught": "does not compile for WebAssembly",
+    },
+    {
         # Work counted and never run out of: a ceiling that is read and never
         # reached is a build that takes as long as the file makes it, which
         # is the thing a host that compiles what it was sent gave one to stop.

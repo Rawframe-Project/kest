@@ -42431,3 +42431,18 @@ See D1254.
 **Runs:** `kest hostile` on the engine's program at eight seeds, the engine
 under the sanitisers before and after the three fixes; the handle doors read;
 three holes by hand; `make most`; the sweep.
+
+## 2026-09-25, the machine as WebAssembly
+
+The library and the command line build for `wasm32-wasi` with no warning
+(`make kest.wasm`) and run under Node (`tools/wasi-run.mjs`); every example
+answers the same words and status there as here, which `tools/check-wasm.sh`
+holds. Building it found an address copied as eight bytes into four. It costs
+3.1 to 3.8 times the native machine, with the plain `switch` it dispatches
+with there, which was a third faster than the label table.
+
+See D1255.
+
+**Runs:** every source file compiled for wasm32 with warnings; the 43 examples
+both ways; the five bench workloads best of five both ways, with the label
+table and with the switch; two holes by hand; `make most`; the sweep.

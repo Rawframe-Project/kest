@@ -441,6 +441,11 @@ new ones, because a run under profile 2 and one under 3 are two runs. A
 constant may be written as its bits, `float(u64(0x...))`, since `bits` and
 `float` are worked out where they are written. See D1235.
 
+**The library builds as WebAssembly** (`make kest.wasm`), and every example
+answers the same there. **What a host has to do:** nothing; one that wants the
+machine walled off from its own memory runs it that way, at 3 to 4 times the
+cost. See D1255.
+
 **`kest hostile` asks a host's doors what they do with anything**: it writes a
 program's file with every door it declares called with the ends of every width,
 floats that are not numbers and text of every length. **What a host has to

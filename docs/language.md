@@ -5559,7 +5559,7 @@ than implied. This is that list and where each one is.
 
 ## What this has been run on
 
-Four platforms, two instruction sets and three compilers, every one of them
+Five platforms, three instruction sets and three compilers, every one of them
 built and run on every push, and every one held to writing the same bytes for
 every example in the tree:
 
@@ -5569,6 +5569,15 @@ every example in the tree:
 | Linux arm64 | GCC | the fast tier, the fuzzer, and the four families of workload |
 | macOS arm64 | clang | the fast tier, and the archive unpacked and run in a room of its own |
 | Windows x86-64 | MSVC | every example, and the archive unpacked and run in a room of its own |
+| WebAssembly (wasm32, WASI) | clang, run by Node | every example, for the same words and status as Linux x86-64 |
+
+The last is the library and the command line built as WebAssembly (`make
+kest.wasm`, run as `node tools/wasi-run.mjs kest.wasm run examples/math.kest`),
+which is the second wall a host can put round the machine: a fault in the
+machine built this way stays inside WebAssembly's memory rather than the
+host's. It costs 3.1 to 3.8 times the time of the machine built for the
+processor on four of the five workloads in `bench`, and 6.3 on the shortest,
+under Node's WebAssembly; the bits are the same. See D1255.
 
 Nothing else is claimed: this project does not call a thing that was never run a
 thing that works. What each of them writes for every example goes into one file
