@@ -40,6 +40,7 @@ cat > "$scratch"/refuse.c <<'REFUSE'
 #include "kest.h"
 #include "build.h"
 #include "value.h"
+#include "verify.h"
 
 static const char *PROGRAM =
     "module refused\n"

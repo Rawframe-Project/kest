@@ -778,12 +778,6 @@ bool kest_module_needs(const KestModule *module, KestArena *arena, int32_t only,
                        uint32_t *from_host_slots, uint32_t *from_host_frames,
                        KestNoLeast *reasons, KestReason *why);
 
-// Holds every `no.alloc` promise against the code that was emitted for it,
-// rather than against the tree it was checked on. Reports what it finds and
-// returns false when it found anything.
-bool kest_module_prove(const KestModule *module, KestArena *arena,
-                       KestDiags *diags);
-
 void kest_module_init(KestModule *module, KestArena *arena);
 KestChunk *kest_module_add(KestModule *module, const char *name);
 // The index of a function by name, or -1. Calls are resolved through this, so
@@ -838,6 +832,40 @@ const char *kest_op_name(uint8_t op);
 // that checks itself holds it to what the machine moved. See D1239.
 const char *kest_op_stack(const KestModule *module, const KestChunk *chunk,
                           uint32_t at, uint32_t *takes, uint32_t *gives);
+
+// What each number an instruction carries is, which is what the verifier holds
+// it to before anything runs: one of the body's slots or constants, one of the
+// module's functions, doors or layouts, a jump that lands on an instruction,
+// or a number the instruction uses as it is -- a width, an offset, a count --
+// whose limits are the stack's and the layout's. A run is a count read with
+// the operand before it: that many slots or constants from there. Written
+// beside each name, one list, because the machine reading a number and the
+// verifier knowing what it is are one fact. See D1237.
+typedef enum {
+    KEST_OPERAND_NUMBER,
+    KEST_OPERAND_SLOT,
+    KEST_OPERAND_SLOT_RUN,
+    KEST_OPERAND_CONSTANT,
+    KEST_OPERAND_CONSTANT_RUN,
+    KEST_OPERAND_FUNCTION,
+    KEST_OPERAND_EXTERN,
+    KEST_OPERAND_LAYOUT,
+    KEST_OPERAND_FORWARD,
+    KEST_OPERAND_BACKWARD,
+} KestOperand;
+
+// What the `k`th number an instruction carries is: nought counts from the
+// first. A number past the last it carries is a number.
+KestOperand kest_op_operand(uint8_t op, uint32_t k);
+
+// Whether an instruction reaches the heap. The list is the machine's, read off
+// the cases that call the allocator, and it is what makes a `no.alloc`
+// promise a property of what runs rather than of what was read.
+bool kest_op_allocates(uint8_t op);
+
+// The number an instruction carries at a byte of a chunk, read the way the
+// machine reads it.
+uint16_t kest_chunk_u16(const KestChunk *chunk, uint32_t offset);
 
 // Takes the last instruction back, which the compiler does when a comparison
 // turns out to be what a jump reads. `to` is where that instruction started.

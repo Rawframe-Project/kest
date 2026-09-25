@@ -42169,3 +42169,17 @@ with the walk off, by the machine; `tools/check-verifier.sh` with its four new
 cases, and again with the walk taken out; the five holes this touched, one at
 a time; `make fast`; `make most`; `make check`.
 
+## 2026-09-25, the verifier moves into verify.c
+
+The walks that prove a module safe to run -- the promises, the operands, the
+jumps and the stack -- moved from `value.c` into `src/verify.c`, which the
+pipeline names after `value`; `value.c` answers what an instruction is through
+four doors. It is the room the next part of the verifier, what every slot
+holds, is written in.
+
+See D1240.
+
+**Runs:** both builds; `make fast`; `tools/check-verifier.sh`;
+`tools/check-tables.sh` and `tools/check-dead.sh`; the twelve holes that quote
+what moved; `make most`.
+

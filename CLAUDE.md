@@ -1116,6 +1116,7 @@ types    type representation, declarations, name lookup
 check    function bodies against those declarations
 contract proves the `no.alloc` promises
 value    runtime values, the instruction set, the disassembler
+verify   what the machine may run without asking, proved before it runs
 fmt      ast -> the one form the language has
 ir       what a checked program means, written down once
 lower    ir -> bytecode

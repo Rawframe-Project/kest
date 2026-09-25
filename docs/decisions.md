@@ -42474,3 +42474,20 @@ own: the machine's new check asked `kest_op_stack` before the handler's guard
 had its turn, and the table read a layout by a number nothing had asked
 about. It asks about every layout and function it names first now.
 
+## D1240 — The verifier is a module of its own
+
+*decided*. What proves a module safe to run had grown inside `value.c` -- the
+promises held against the emitted code (D058, D853, D942), the operands and
+the jumps (D1237), the stack on every path (D1239) -- and the next piece, what
+every slot holds, is larger than all of them. `value.c` was 3,900 lines, the
+signal this project splits at is 600, and what the file is for is the values,
+the instruction set and the disassembler. So `src/verify.c` holds the walks
+and `kest_module_prove`, after `value` in the pipeline, and `value.c` keeps
+what is a fact about one instruction and answers it through four doors: what
+each number an instruction carries is (`kest_op_operand`, the column D1237
+wrote, whose names are the header's now), whether it reaches the heap
+(`kest_op_allocates`), a number read out of a chunk (`kest_chunk_u16`), and
+what it does to the stack (`kest_op_stack`, which the machine that checks
+itself asks as well). Nothing a walk decides moved: the twelve holes that
+quote it quote it where it is and are caught as they were.
+

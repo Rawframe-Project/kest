@@ -1305,7 +1305,7 @@ fn main() -> i32 {
         # The verifier taken out as well: it refuses this before anything
         # runs (D1237, D1239), and what this hole holds is the machine's own
         # guard, which is the net under it.
-        "also": ["src/value.c", r"""        if (wrong == NULL) {
+        "also": ["src/verify.c", r"""        if (wrong == NULL) {
             char said[200];""", r"""        if (false) {
             char said[200];"""],
         "make": ["debug"],
@@ -2204,7 +2204,7 @@ yield""",
         # the check is worth having is the one question taken out of the
         # verifier and the check saying which case was let through. See D1237.
         "what": "a verifier that lets a constant past the body's through",
-        "file": "src/value.c",
+        "file": "src/verify.c",
         "from": r"""                wrong = value < has ? NULL : "constant";""",
         "to": r"""                wrong = NULL;""",
         "make": ["libkest.a"],
@@ -5771,7 +5771,7 @@ fn length(v: Vec2) -> f32 no.alloc deterministic {""",
         # The verifier taken out as well: it refuses this before anything
         # runs (D1237, D1239), and what this hole holds is the machine's own
         # guard, which is the net under it.
-        "also": ["src/value.c", r"""        if (wrong == NULL) {
+        "also": ["src/verify.c", r"""        if (wrong == NULL) {
             char said[200];""", r"""        if (false) {
             char said[200];"""],
         "make": ["kest"],
@@ -6339,7 +6339,7 @@ fn main() -> i32 {
         # The verifier taken out as well: it refuses this before anything
         # runs (D1237, D1239), and what this hole holds is the machine's own
         # guard, which is the net under it.
-        "also": ["src/value.c", r"""        if (wrong == NULL) {
+        "also": ["src/verify.c", r"""        if (wrong == NULL) {
             char said[200];""", r"""        if (false) {
             char said[200];"""],
         "make": ["debug"],
@@ -6368,7 +6368,7 @@ fn main() -> i32 {
         # The verifier taken out as well: it refuses this before anything
         # runs (D1237, D1239), and what this hole holds is the machine's own
         # guard, which is the net under it.
-        "also": ["src/value.c", r"""        if (wrong == NULL) {
+        "also": ["src/verify.c", r"""        if (wrong == NULL) {
             char said[200];""", r"""        if (false) {
             char said[200];"""],
         "make": ["debug"],
@@ -6404,7 +6404,7 @@ fn main() -> i32 {
         # The verifier taken out as well: it refuses this before anything
         # runs (D1237, D1239), and what this hole holds is the machine's own
         # guard, which is the net under it.
-        "also": ["src/value.c", r"""        if (wrong == NULL) {
+        "also": ["src/verify.c", r"""        if (wrong == NULL) {
             char said[200];""", r"""        if (false) {
             char said[200];"""],
         "make": ["debug"],
@@ -6482,7 +6482,7 @@ fn main() -> i32 {
         # The verifier taken out as well: it refuses this before anything
         # runs (D1237, D1239), and what this hole holds is the machine's own
         # guard, which is the net under it.
-        "also": ["src/value.c", r"""        if (wrong == NULL) {
+        "also": ["src/verify.c", r"""        if (wrong == NULL) {
             char said[200];""", r"""        if (false) {
             char said[200];"""],
         "make": ["debug"],
@@ -6520,7 +6520,7 @@ fn main() -> i32 {
         # The verifier taken out as well: it refuses this before anything
         # runs (D1237, D1239), and what this hole holds is the machine's own
         # guard, which is the net under it.
-        "also": ["src/value.c", r"""        if (wrong == NULL) {
+        "also": ["src/verify.c", r"""        if (wrong == NULL) {
             char said[200];""", r"""        if (false) {
             char said[200];"""],
         "make": ["debug"],
@@ -6557,7 +6557,7 @@ fn main() -> i32 {
         # The verifier taken out as well: it refuses this before anything
         # runs (D1237, D1239), and what this hole holds is the machine's own
         # guard, which is the net under it.
-        "also": ["src/value.c", r"""        if (wrong == NULL) {
+        "also": ["src/verify.c", r"""        if (wrong == NULL) {
             char said[200];""", r"""        if (false) {
             char said[200];"""],
         "make": ["debug"],
@@ -10183,7 +10183,7 @@ memory""",
         # The verifier taken out as well: it refuses this before anything
         # runs (D1237, D1239), and what this hole holds is the machine's own
         # guard, which is the net under it.
-        "also": ["src/value.c", r"""        if (wrong == NULL) {
+        "also": ["src/verify.c", r"""        if (wrong == NULL) {
             char said[200];""", r"""        if (false) {
             char said[200];"""],
         "make": ["kest", "embed"],
@@ -14250,7 +14250,7 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         # The verifier taken out as well: it refuses this before anything
         # runs (D1237, D1239), and what this hole holds is the machine's own
         # guard, which is the net under it.
-        "also": ["src/value.c", r"""        if (wrong == NULL) {
+        "also": ["src/verify.c", r"""        if (wrong == NULL) {
             char said[200];""", r"""        if (false) {
             char said[200];"""],
         "make": ["kest"],
@@ -15726,7 +15726,7 @@ fn main() -> i32 {
         # ninth would have arrived in a sixth. There is one door now, and this
         # is what says nobody has gone round it.
         "what": "a fault that says what it is in its own words",
-        "file": "src/value.c",
+        "file": "src/verify.c",
         "from": """            kest_diags_fault(diags,
                              "an instruction is a different width from what "
                              "it says");""",
