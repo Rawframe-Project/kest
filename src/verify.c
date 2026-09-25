@@ -346,6 +346,13 @@ typedef uint64_t Kind;
 #define HOLDS_OF(kind) ((Holds)((kind) & 0xFFu))
 #define LAID_OF(kind) ((uint32_t)(((kind) >> 8) & 0xFFFFFFu))
 #define STEPPED(kind) ((uint32_t)((kind) >> 32))
+// What was made inside a block of working memory holds, in the top byte of
+// the top half, how many blocks deep it was made: text, its length, an array,
+// a store, and an enum's tag and what its cases carry, whose own counts -- the
+// cases a tag can be, which slot of a case -- are in the three bytes below.
+#define DEPTH_OF(kind) ((uint32_t)((kind) >> 56))
+#define BELOW_DEPTH(kind) (STEPPED(kind) & 0xFFFFFFu)
+#define ALL_CASES 0xFFFFFFu
 #define EXACTLY 0x800000u
 // And a function type nothing laid out says which with `NAMED` beside its
 // number among the types the walk has named.
@@ -383,6 +390,22 @@ static uint32_t enum_number(Verifying *v, const KestType *type) {
     return v->enum_count;
 }
 
+// Whether a kind holds something the heap was asked for, which a block of
+// working memory gives back when it closes.
+static bool made_on_the_heap(Holds holds) {
+    return holds == HOLDS_TEXT || holds == HOLDS_LENGTH ||
+           holds == HOLDS_ARRAY || holds == HOLDS_STORE ||
+           holds == HOLDS_TAG || holds == HOLDS_PAYLOAD;
+}
+
+// A kind made at least `depth` blocks deep.
+static Kind deeper_of(Kind kind, uint32_t depth) {
+    if (!made_on_the_heap(HOLDS_OF(kind)) || DEPTH_OF(kind) >= depth) {
+        return kind;
+    }
+    return (kind & ~((Kind)0xFFu << 56)) | ((Kind)(depth & 0xFFu) << 56);
+}
+
 static bool same_enum(const Verifying *v, uint32_t a, uint32_t b) {
     return a == b || (a != 0 && b != 0 && kest_type_equal(v->enums[a - 1],
                                                           v->enums[b - 1]));
@@ -407,6 +430,8 @@ typedef struct {
     Kind *laid;
     uint32_t laid_room;
     Kind *spare;
+    // How many blocks of working memory are open here.
+    uint32_t region;
     uint32_t at;
     const char *name;
     char *said;
@@ -580,15 +605,23 @@ static Kind joined(Verifying *v, Kind a, Kind b) {
         return HOLDS_NUMBER;
     }
     if (x == HOLDS_TAG && y == HOLDS_TAG && same_enum(v, LAID_OF(a), LAID_OF(b))) {
-        return KIND(HOLDS_TAG, LAID_OF(a)) |
-               ((Kind)(STEPPED(a) | STEPPED(b)) << 32);
+        return deeper_of(KIND(HOLDS_TAG, LAID_OF(a)) |
+                             ((Kind)(BELOW_DEPTH(a) | BELOW_DEPTH(b)) << 32),
+                         DEPTH_OF(a) > DEPTH_OF(b) ? DEPTH_OF(a) : DEPTH_OF(b));
+    }
+    // The same thing made at two depths is what was made deeper.
+    if (x == y && (x == HOLDS_TEXT || x == HOLDS_LENGTH ||
+                   (x == HOLDS_PAYLOAD && LAID_OF(a) == LAID_OF(b) &&
+                    BELOW_DEPTH(a) == BELOW_DEPTH(b)))) {
+        return deeper_of(a, DEPTH_OF(b));
     }
     if ((x == HOLDS_TAG && y == HOLDS_NUMBER) ||
         (x == HOLDS_NUMBER && y == HOLDS_TAG)) {
         return HOLDS_NUMBER;
     }
     if (x == y && (x == HOLDS_ARRAY || x == HOLDS_STORE)) {
-        return same_laid(module, LAID_OF(a), LAID_OF(b)) ? a : KIND(x, 0);
+        return deeper_of(same_laid(module, LAID_OF(a), LAID_OF(b)) ? a : KIND(x, 0),
+                         DEPTH_OF(a) > DEPTH_OF(b) ? DEPTH_OF(a) : DEPTH_OF(b));
     }
     if (x == HOLDS_ADDRESS && y == HOLDS_ADDRESS) {
         return KIND(HOLDS_ADDRESS, 0);
@@ -669,8 +702,8 @@ static void typed(Verifying *v, const KestType *type, Kind *into,
         // nought where a case does not reach it.
         uint32_t laid = flat ? 0u : enum_number(v, type);
         if (laid != 0 && type->slots > 1) {
-            uint32_t cases = type->case_count >= 32
-                                 ? 0xFFFFFFFFu
+            uint32_t cases = type->case_count >= 24
+                                 ? ALL_CASES
                                  : (uint32_t)((1u << type->case_count) - 1u);
             into[*at] = KIND(HOLDS_TAG, laid) | ((Kind)cases << 32);
             for (uint32_t k = 1; k < type->slots; k++) {
@@ -770,9 +803,9 @@ static bool field_of(const KestModule *module, const KestType *whole,
 }
 
 // Whether a tag that can be any of `cases` can be case `c`. Past the
-// thirty-second, only a tag that can be anything can be one.
+// twenty-fourth, only a tag that can be anything can be one.
 static bool case_in(uint32_t cases, uint32_t c) {
-    return c >= 32 ? cases == 0xFFFFFFFFu : ((cases >> c) & 1u) != 0;
+    return c >= 24 ? cases == ALL_CASES : ((cases >> c) & 1u) != 0;
 }
 
 // What each slot after an enum's tag holds where the tag says case `c`, into
@@ -817,17 +850,17 @@ static Kind resolved_as(Verifying *v, const Kind *now, uint32_t region,
         return kind;
     }
     uint32_t laid = LAID_OF(kind);
-    uint32_t k = STEPPED(kind);
+    uint32_t k = BELOW_DEPTH(kind);
     const KestType *type = laid == 0 ? NULL : v->enums[laid - 1];
     if (deep == 0 || type == NULL || type->tag != KEST_T_ENUM ||
         type->case_count == 0) {
         return HOLDS_ANY;
     }
-    uint32_t cases = 0xFFFFFFFFu;
+    uint32_t cases = ALL_CASES;
     if (pos >= region + k) {
         Kind tag = resolved_as(v, now, region, pos - k, now[pos - k], deep - 1);
         if (HOLDS_OF(tag) == HOLDS_TAG && same_enum(v, LAID_OF(tag), laid)) {
-            cases = STEPPED(tag);
+            cases = BELOW_DEPTH(tag);
         }
     }
     Kind all = HOLDS_JUNK;
@@ -843,6 +876,8 @@ static Kind resolved_as(Verifying *v, const Kind *now, uint32_t region,
     if (first) {
         return HOLDS_ANY;
     }
+    // What a case carries was made where the value it is part of was.
+    all = deeper_of(all, DEPTH_OF(kind));
     return resolved_as(v, now, region, pos, all, deep - 1);
 }
 
@@ -984,10 +1019,10 @@ static const char *fits_enum(Kinds *w, uint32_t laid, uint32_t pos) {
     uint32_t region = w->chunk->slot_count;
     Kind tag = w->now[pos];
     Holds is = HOLDS_OF(tag);
-    uint32_t cases = 0xFFFFFFFFu;
+    uint32_t cases = ALL_CASES;
     bool whole = false;
     if (is == HOLDS_TAG && same_enum(v, LAID_OF(tag), laid)) {
-        cases = STEPPED(tag);
+        cases = BELOW_DEPTH(tag);
         whole = true;
     } else if (is == HOLDS_ZERO) {
         cases = 1u;
@@ -1000,7 +1035,7 @@ static const char *fits_enum(Kinds *w, uint32_t laid, uint32_t pos) {
                      w->name, w->at, value);
             return "K0411";
         }
-        cases = value < 32 ? 1u << value : 0xFFFFFFFFu;
+        cases = value < 24 ? 1u << value : ALL_CASES;
     } else if (!will_do(v, tag, NEEDS_NUMBER, 0)) {
         return wrong_kind(w, "the tag at", pos, tag, NEEDS_NUMBER);
     }
@@ -1008,7 +1043,7 @@ static const char *fits_enum(Kinds *w, uint32_t laid, uint32_t pos) {
     bool as_it_was = whole;
     for (uint32_t k = 1; as_it_was && k < type->slots; k++) {
         Kind raw = w->now[pos + k];
-        as_it_was = HOLDS_OF(raw) == HOLDS_PAYLOAD && STEPPED(raw) == k &&
+        as_it_was = HOLDS_OF(raw) == HOLDS_PAYLOAD && BELOW_DEPTH(raw) == k &&
                     same_enum(v, LAID_OF(raw), laid);
     }
     if (as_it_was) {
@@ -1081,25 +1116,102 @@ static void carried_over(Kinds *w, uint32_t from, uint32_t from_region,
                          uint32_t to, uint32_t count) {
     for (uint32_t i = 0; i < count; i++) {
         Kind kind = w->now[from + i];
-        w->spare[i] = HOLDS_OF(kind) == HOLDS_PAYLOAD && STEPPED(kind) <= i
+        w->spare[i] = HOLDS_OF(kind) == HOLDS_PAYLOAD && BELOW_DEPTH(kind) <= i
                           ? kind
                           : resolved(w->v, w->now, from_region, from + i);
     }
     memcpy(w->now + to, w->spare, sizeof(Kind) * count);
 }
 
-static void push_laid(Kinds *w, uint32_t which) {
+// A value of a layout read out of something made `depth` blocks deep, which is
+// that deep too.
+static void push_laid_at(Kinds *w, uint32_t which, uint32_t depth) {
     uint32_t slots = laid_out(w->v, which, w->laid);
     for (uint32_t s = 0; s < slots; s++) {
-        push(w, w->laid[s]);
+        push(w, deeper_of(w->laid[s], depth));
     }
 }
 
-static void set_laid(Kinds *w, uint32_t which, uint32_t first) {
+static void set_laid_at(Kinds *w, uint32_t which, uint32_t first,
+                        uint32_t depth) {
     uint32_t slots = laid_out(w->v, which, w->laid);
     for (uint32_t s = 0; s < slots; s++) {
-        SLOT(w, first + s) = w->laid[s];
+        SLOT(w, first + s) = deeper_of(w->laid[s], depth);
     }
+}
+
+// What the heap hands out here: made as deep as the blocks of working memory
+// open around it.
+static void push_made(Kinds *w, Kind kind) {
+    push(w, deeper_of(kind, w->region));
+}
+
+// Whether a value of a layout can hold anything the heap hands out, which is
+// what can keep something past the block that made it.
+static bool can_keep(Kinds *w, uint32_t which) {
+    uint32_t slots = laid_out(w->v, which, w->laid);
+    for (uint32_t s = 0; s < slots; s++) {
+        Holds is = HOLDS_OF(w->laid[s]);
+        if (is == HOLDS_TEXT || is == HOLDS_ARRAY || is == HOLDS_STORE ||
+            is == HOLDS_PAYLOAD || is == HOLDS_ANY) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Whether the `count` slots below the top `n` hold nothing made deeper than
+// what they are written into, which outlives what was made inside it.
+static const char *kept_in(Kinds *w, Kind container, uint32_t n,
+                           uint32_t count) {
+    if (HOLDS_OF(container) == HOLDS_ZERO) {
+        return NULL;
+    }
+    for (uint32_t k = 0; k < count; k++) {
+        Kind has = resolved(w->v, w->now, w->chunk->slot_count,
+                            w->chunk->slot_count + w->depth - (n - k));
+        if (made_on_the_heap(HOLDS_OF(has)) &&
+            DEPTH_OF(has) > DEPTH_OF(container)) {
+            snprintf(w->said, w->room,
+                     "`%s` at %u keeps what a block of working memory %u deep "
+                     "made in something made %u deep, which outlives it",
+                     w->name, w->at, DEPTH_OF(has), DEPTH_OF(container));
+            return "K0411";
+        }
+    }
+    return NULL;
+}
+
+// Whether a call is handed something made in a block of working memory beside
+// something older that could keep it: what the body called does with what it
+// is handed is not this body's to know.
+static const char *handed_to_keep(Kinds *w, uint32_t n) {
+    uint32_t oldest_keeper = 0xFFu + 1u;
+    uint32_t deepest = 0;
+    for (uint32_t k = 1; k <= n; k++) {
+        Kind has = resolved(w->v, w->now, w->chunk->slot_count,
+                            w->chunk->slot_count + w->depth - k);
+        Holds is = HOLDS_OF(has);
+        if (!made_on_the_heap(is)) {
+            continue;
+        }
+        if (DEPTH_OF(has) > deepest) {
+            deepest = DEPTH_OF(has);
+        }
+        if ((is == HOLDS_ARRAY || is == HOLDS_STORE) &&
+            (LAID_OF(has) == 0 || can_keep(w, LAID_OF(has) - 1)) &&
+            DEPTH_OF(has) < oldest_keeper) {
+            oldest_keeper = DEPTH_OF(has);
+        }
+    }
+    if (deepest > oldest_keeper) {
+        snprintf(w->said, w->room,
+                 "`%s` at %u hands a call what a block of working memory %u "
+                 "deep made beside something made %u deep that could keep it",
+                 w->name, w->at, deepest, oldest_keeper);
+        return "K0411";
+    }
+    return NULL;
 }
 
 // A layout whose values are bytes and nothing else, which is what text is
@@ -1253,8 +1365,8 @@ static const char *simply(Kinds *w, const char *reads, const char *leaves) {
             push(w, HOLDS_NUMBER);
             break;
         case 't':
-            push(w, HOLDS_TEXT);
-            push(w, HOLDS_LENGTH);
+            push_made(w, HOLDS_TEXT);
+            push_made(w, HOLDS_LENGTH);
             break;
         default:
             break;
@@ -1395,7 +1507,7 @@ static const char *kinds_step(Kinds *w) {
             }
         }
         w->depth -= u[0] * slots;
-        push(w, KIND(HOLDS_ARRAY, u[1] + 1));
+        push_made(w, KIND(HOLDS_ARRAY, u[1] + 1));
         return NULL;
     }
     case KEST_OP_MAKE_ARRAY: {
@@ -1407,7 +1519,7 @@ static const char *kinds_step(Kinds *w) {
             return wrong;
         }
         w->depth -= slots + 1;
-        push(w, KIND(HOLDS_ARRAY, u[0] + 1));
+        push_made(w, KIND(HOLDS_ARRAY, u[0] + 1));
         return NULL;
     }
     case KEST_OP_PUSH:
@@ -1415,7 +1527,8 @@ static const char *kinds_step(Kinds *w) {
         uint32_t slots = module->layouts[u[0]].slots;
         if ((wrong = fits_top(w, u[0], slots)) != NULL ||
             (wrong = needs_top_of(w, slots + 1, NEEDS_ARRAY, u[0] + 1)) !=
-                NULL) {
+                NULL ||
+            (wrong = kept_in(w, FROM_TOP(w, slots + 1), slots, slots)) != NULL) {
             return wrong;
         }
         w->depth -= slots + 1;
@@ -1459,47 +1572,54 @@ static const char *kinds_step(Kinds *w) {
         forget_addresses(w);
         return NULL;
     case KEST_OP_INDEX:
-    case KEST_OP_TAKE:
+    case KEST_OP_TAKE: {
         if ((wrong = needs_top(w, 1, NEEDS_NUMBER)) != NULL ||
             (wrong = needs_top_of(w, 2, NEEDS_ARRAY, u[0] + 1)) != NULL) {
             return wrong;
         }
+        uint32_t made = DEPTH_OF(FROM_TOP(w, 2));
         w->depth -= 2;
         if ((KestOp)op == KEST_OP_TAKE) {
             forget_addresses(w);
         }
-        push_laid(w, u[0]);
+        push_laid_at(w, u[0], made);
         return NULL;
-    case KEST_OP_ELEM_AT:
+    }
+    case KEST_OP_ELEM_AT: {
         if ((wrong = needs_top(w, 1, NEEDS_NUMBER)) != NULL ||
             (wrong = needs_top(w, 2, NEEDS_ARRAY)) != NULL ||
             (wrong = element_field(w, FROM_TOP(w, 2), u[0], u[1])) != NULL) {
             return wrong;
         }
+        uint32_t made = DEPTH_OF(FROM_TOP(w, 2));
         w->depth -= 2;
-        push_laid(w, u[1]);
+        push_laid_at(w, u[1], made);
         return NULL;
+    }
     case KEST_OP_INDEX_LL:
         if ((wrong = needs_slot_of(w, u[0], NEEDS_ARRAY, u[2] + 1)) != NULL ||
             (wrong = needs_slot(w, u[1], NEEDS_NUMBER)) != NULL) {
             return wrong;
         }
-        push_laid(w, u[2]);
+        push_laid_at(w, u[2], DEPTH_OF(SLOT(w, u[0])));
         return NULL;
     case KEST_OP_INDEX_TO:
         if ((wrong = needs_top(w, 1, NEEDS_NUMBER)) != NULL ||
             (wrong = needs_top_of(w, 2, NEEDS_ARRAY, u[0] + 1)) != NULL) {
             return wrong;
         }
-        w->depth -= 2;
-        set_laid(w, u[0], u[1]);
+        {
+            uint32_t made = DEPTH_OF(FROM_TOP(w, 2));
+            w->depth -= 2;
+            set_laid_at(w, u[0], u[1], made);
+        }
         return NULL;
     case KEST_OP_INDEX_TO_LL:
         if ((wrong = needs_slot_of(w, u[2], NEEDS_ARRAY, u[0] + 1)) != NULL ||
             (wrong = needs_slot(w, u[3], NEEDS_NUMBER)) != NULL) {
             return wrong;
         }
-        set_laid(w, u[0], u[1]);
+        set_laid_at(w, u[0], u[1], DEPTH_OF(SLOT(w, u[2])));
         return NULL;
     case KEST_OP_ELEM_FROM:
         if ((wrong = needs_top(w, 1, NEEDS_NUMBER)) != NULL ||
@@ -1507,8 +1627,11 @@ static const char *kinds_step(Kinds *w) {
             (wrong = element_field(w, FROM_TOP(w, 2), u[0], u[1])) != NULL) {
             return wrong;
         }
-        w->depth -= 2;
-        set_laid(w, u[1], u[2]);
+        {
+            uint32_t made = DEPTH_OF(FROM_TOP(w, 2));
+            w->depth -= 2;
+            set_laid_at(w, u[1], u[2], made);
+        }
         return NULL;
     case KEST_OP_ELEM_FROM_LL:
         if ((wrong = needs_slot(w, u[3], NEEDS_ARRAY)) != NULL ||
@@ -1516,17 +1639,19 @@ static const char *kinds_step(Kinds *w) {
             (wrong = element_field(w, SLOT(w, u[3]), u[0], u[1])) != NULL) {
             return wrong;
         }
-        set_laid(w, u[1], u[2]);
+        set_laid_at(w, u[1], u[2], DEPTH_OF(SLOT(w, u[3])));
         return NULL;
-    case KEST_OP_POP_LAST:
+    case KEST_OP_POP_LAST: {
         if ((wrong = needs_top_of(w, 1, NEEDS_ARRAY, u[0] + 1)) != NULL) {
             return wrong;
         }
+        uint32_t made = DEPTH_OF(FROM_TOP(w, 1));
         w->depth--;
         forget_addresses(w);
-        push_laid(w, u[0]);
+        push_laid_at(w, u[0], made);
         push(w, HOLDS_NUMBER);
         return NULL;
+    }
     case KEST_OP_CLEAR:
         if ((wrong = simply(w, "h", "")) != NULL) {
             return wrong;
@@ -1579,7 +1704,7 @@ static const char *kinds_step(Kinds *w) {
             return "K0411";
         }
         w->depth--;
-        push_laid(w, u[1]);
+        push_laid_at(w, u[1], w->region);
         return NULL;
     }
     case KEST_OP_LOAD_ELEM:
@@ -1588,7 +1713,7 @@ static const char *kinds_step(Kinds *w) {
             (wrong = element_field(w, FROM_TOP(w, 2), u[0], u[1])) != NULL) {
             return wrong;
         }
-        push_laid(w, u[1]);
+        push_laid_at(w, u[1], DEPTH_OF(FROM_TOP(w, 2)));
         return NULL;
     case KEST_OP_STORE_ELEM: {
         uint32_t slots = module->layouts[u[1]].slots;
@@ -1596,7 +1721,8 @@ static const char *kinds_step(Kinds *w) {
             (wrong = needs_top(w, slots + 1, NEEDS_NUMBER)) != NULL ||
             (wrong = needs_top(w, slots + 2, NEEDS_ARRAY)) != NULL ||
             (wrong = element_field(w, FROM_TOP(w, slots + 2), u[0], u[1])) !=
-                NULL) {
+                NULL ||
+            (wrong = kept_in(w, FROM_TOP(w, slots + 2), slots, slots)) != NULL) {
             return wrong;
         }
         w->depth -= slots + 2;
@@ -1660,9 +1786,18 @@ static const char *kinds_step(Kinds *w) {
         push(w, HOLDS_NUMBER);
         return NULL;
     case KEST_OP_TEXT_SLICE:
-        return simply(w, "nnt", "t");
-    case KEST_OP_TEXT_REST:
-        return simply(w, "nt", "t");
+    case KEST_OP_TEXT_REST: {
+        // A cut of text is where the text was: as deep as what it cut.
+        bool slicing = (KestOp)op == KEST_OP_TEXT_SLICE;
+        uint32_t from = chunk->slot_count + w->depth - (slicing ? 4u : 3u);
+        uint32_t made = DEPTH_OF(resolved(v, w->now, chunk->slot_count, from));
+        if ((wrong = simply(w, slicing ? "nnt" : "nt", "t")) != NULL) {
+            return wrong;
+        }
+        FROM_TOP(w, 2) = deeper_of(HOLDS_TEXT, made);
+        FROM_TOP(w, 1) = deeper_of(HOLDS_LENGTH, made);
+        return NULL;
+    }
     case KEST_OP_TEXT_MATCHES:
         return simply(w, "tnt", "n");
     case KEST_OP_TEXT_FIND:
@@ -1680,8 +1815,8 @@ static const char *kinds_step(Kinds *w) {
             return wrong;
         }
         w->depth -= slots;
-        push(w, HOLDS_TEXT);
-        push(w, HOLDS_LENGTH);
+        push_made(w, HOLDS_TEXT);
+        push_made(w, HOLDS_LENGTH);
         return NULL;
     }
     case KEST_OP_CONCAT:
@@ -1692,8 +1827,8 @@ static const char *kinds_step(Kinds *w) {
             }
         }
         w->depth -= 2 * u[0];
-        push(w, HOLDS_TEXT);
-        push(w, HOLDS_LENGTH);
+        push_made(w, HOLDS_TEXT);
+        push_made(w, HOLDS_LENGTH);
         return NULL;
     case KEST_OP_HASH_VALUE: {
         uint32_t slots = module->layouts[u[0]].slots;
@@ -1729,8 +1864,8 @@ static const char *kinds_step(Kinds *w) {
             return "K0411";
         }
         w->depth--;
-        push(w, HOLDS_TEXT);
-        push(w, HOLDS_LENGTH);
+        push_made(w, HOLDS_TEXT);
+        push_made(w, HOLDS_LENGTH);
         return NULL;
     }
 
@@ -1739,7 +1874,7 @@ static const char *kinds_step(Kinds *w) {
             return wrong;
         }
         w->depth--;
-        push(w, KIND(HOLDS_STORE, u[1] + 1));
+        push_made(w, KIND(HOLDS_STORE, u[1] + 1));
         return NULL;
     case KEST_OP_ADD:
     case KEST_OP_SET: {
@@ -1760,7 +1895,8 @@ static const char *kinds_step(Kinds *w) {
                      w->name, w->at, u[0]);
             return "K0411";
         }
-        if (of != 0 && (wrong = fits_top(w, of - 1, u[0])) != NULL) {
+        if ((of != 0 && (wrong = fits_top(w, of - 1, u[0])) != NULL) ||
+            (wrong = kept_in(w, store, u[0], u[0])) != NULL) {
             return wrong;
         }
         if (!adding && (wrong = needs_top(w, u[0] + 1, NEEDS_NUMBER)) != NULL) {
@@ -1776,9 +1912,10 @@ static const char *kinds_step(Kinds *w) {
             return wrong;
         }
         uint32_t of = LAID_OF(FROM_TOP(w, 2));
+        uint32_t made = DEPTH_OF(FROM_TOP(w, 2));
         w->depth -= 2;
         if (of != 0 && module->layouts[of - 1].slots == u[0]) {
-            push_laid(w, of - 1);
+            push_laid_at(w, of - 1, made);
         } else {
             for (uint32_t k = 0; k < u[0]; k++) {
                 push(w, HOLDS_ANY);
@@ -2004,11 +2141,41 @@ static const char *kinds_step(Kinds *w) {
         SLOT(w, u[0]) = HOLDS_NUMBER;
         return NULL;
     case KEST_OP_SCRATCH:
+        if (w->region == 0xFFu) {
+            snprintf(w->said, w->room,
+                     "`%s` at %u opens more blocks of working memory than "
+                     "this can count",
+                     w->name, w->at);
+            return "K0411";
+        }
         SLOT(w, u[0]) = HOLDS_NUMBER;
+        w->region++;
         return NULL;
-    case KEST_OP_UNSCRATCH:
+    case KEST_OP_UNSCRATCH: {
+        // What the block made is given back: every slot holding any of it,
+        // or holding what cannot be told apart from it, holds nothing now.
+        if ((wrong = needs_slot(w, u[0], NEEDS_NUMBER)) != NULL) {
+            return wrong;
+        }
+        if (w->region == 0) {
+            snprintf(w->said, w->room,
+                     "`%s` at %u closes a block of working memory nothing "
+                     "opened",
+                     w->name, w->at);
+            return "K0411";
+        }
         forget_addresses(w);
-        return needs_slot(w, u[0], NEEDS_NUMBER);
+        uint32_t live = chunk->slot_count + w->depth;
+        for (uint32_t s = 0; s < live; s++) {
+            Holds is = HOLDS_OF(w->now[s]);
+            if (is == HOLDS_ANY ||
+                (made_on_the_heap(is) && DEPTH_OF(w->now[s]) >= w->region)) {
+                w->now[s] = HOLDS_JUNK;
+            }
+        }
+        w->region--;
+        return NULL;
+    }
 
     case KEST_OP_CALL: {
         const KestChunk *callee = module->functions[u[0]];
@@ -2020,13 +2187,16 @@ static const char *kinds_step(Kinds *w) {
             }
             n -= slots;
         }
+        if ((wrong = handed_to_keep(w, u[1])) != NULL) {
+            return wrong;
+        }
         bool handed = hands_over_a_handle(w, u[1]);
         w->depth -= u[1];
         if (handed) {
             forget_addresses(w);
         }
         if (callee->result_slots > 0) {
-            push_laid(w, callee->gives);
+            push_laid_at(w, callee->gives, w->region);
         }
         return NULL;
     }
@@ -2056,13 +2226,16 @@ static const char *kinds_step(Kinds *w) {
                 }
                 n -= module->layouts[callee->takes[p]].slots;
             }
+            if ((wrong = handed_to_keep(w, u[0] + 1)) != NULL) {
+                return wrong;
+            }
             bool handed = hands_over_a_handle(w, u[0] + 1);
             w->depth -= u[0] + 1;
             if (handed) {
                 forget_addresses(w);
             }
             if (callee->result_slots > 0) {
-                push_laid(w, callee->gives);
+                push_laid_at(w, callee->gives, w->region);
             }
             return NULL;
         }
@@ -2106,6 +2279,9 @@ static const char *kinds_step(Kinds *w) {
                      w->name, w->at, u[0], u[0] + 1 - n);
             return "K0411";
         }
+        if ((wrong = handed_to_keep(w, u[0] + 1)) != NULL) {
+            return wrong;
+        }
         bool handed = hands_over_a_handle(w, u[0] + 1);
         w->depth -= u[0] + 1;
         if (handed) {
@@ -2122,7 +2298,7 @@ static const char *kinds_step(Kinds *w) {
                 return "K0411";
             }
             for (uint32_t s = 0; s < at; s++) {
-                push(w, w->laid[s]);
+                push(w, deeper_of(w->laid[s], w->region));
             }
         }
         return NULL;
@@ -2143,7 +2319,7 @@ static const char *kinds_step(Kinds *w) {
             forget_addresses(w);
         }
         if (u[2] > 0 && door->gives_value) {
-            push_laid(w, door->gives);
+            push_laid_at(w, door->gives, w->region);
         } else {
             for (uint32_t k = 0; k < u[2]; k++) {
                 push(w, HOLDS_ANY);
@@ -2152,6 +2328,13 @@ static const char *kinds_step(Kinds *w) {
         return NULL;
     }
     case KEST_OP_RETURN:
+        if (w->region != 0) {
+            snprintf(w->said, w->room,
+                     "`%s` at %u leaves with %u block(s) of working memory "
+                     "open",
+                     w->name, w->at, w->region);
+            return "K0411";
+        }
         if (u[0] > 0) {
             return fits_top(w, chunk->gives, u[0]);
         }
@@ -2293,6 +2476,24 @@ static bool weighs_a_slot(const KestChunk *chunk, const uint8_t *lands,
     return true;
 }
 
+// Whether a way arriving at `place` has as many blocks of working memory open
+// as every way before it did.
+static const char *same_blocks(uint8_t *opened, uint32_t place,
+                               uint32_t region, Kinds *w) {
+    if (opened[place] == 0xFF) {
+        opened[place] = (uint8_t)region;
+        return NULL;
+    }
+    if (opened[place] == region) {
+        return NULL;
+    }
+    snprintf(w->said, w->room,
+             "`%s` at %u arrives at %u with %u block(s) of working memory "
+             "open where another way arrives with %u",
+             w->name, w->at, place, region, opened[place]);
+    return "K0411";
+}
+
 // What every slot holds at every instruction a body can reach, walked from
 // the first with what the declaration says the arguments are and nothing in
 // the rest, and folded where two ways meet. Every instruction's reading is
@@ -2313,8 +2514,11 @@ static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
     uint32_t *work = KEST_ARENA_ARRAY(scratch, uint32_t, count + 1);
     Kind *now = KEST_ARENA_ARRAY(scratch, Kind, wide);
     Kind *spare = KEST_ARENA_ARRAY(scratch, Kind, wide);
+    // How many blocks of working memory are open at each place two ways meet,
+    // which is one number or one way leaves a block the other never opened.
+    uint8_t *opened = kest_arena_alloc(scratch, count + 1, 1);
     if (kept == NULL || lands == NULL || queued == NULL || work == NULL ||
-        now == NULL || spare == NULL) {
+        now == NULL || spare == NULL || opened == NULL) {
         kest_arena_rewind(scratch, mark);
         snprintf(said, room, "could not be checked for want of memory");
         return "K0411";
@@ -2345,16 +2549,19 @@ static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
     bool starved = false;
     fold_into(v, kept, 0, now, chunk->slot_count, wide, chunk->slot_count,
               scratch, &starved);
+    memset(opened, 0xFF, count + 1);
+    opened[0] = 0;
     uint32_t waiting = 0;
     work[waiting++] = 0;
     queued[0] = 1;
     const char *wrong = NULL;
-    Kinds w = {module, v, chunk, now, 0, laid, laid_room, spare, 0, NULL, said,
-               room};
+    Kinds w = {module, v, chunk, now, 0, laid, laid_room, spare, 0, 0, NULL,
+               said, room};
     while (waiting > 0 && wrong == NULL && !starved) {
         uint32_t at = work[--waiting];
         queued[at] = 0;
         memcpy(now, kept[at], sizeof(Kind) * ((size_t)chunk->slot_count + depth[at]));
+        w.region = opened[at];
         // The instructions this run walked just before this one, newest
         // first, for reading a weighing that was not fused into one.
         uint32_t before[3] = {UINT32_MAX, UINT32_MAX, UINT32_MAX};
@@ -2397,15 +2604,16 @@ static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
                               &leaves_on_equal) &&
                 weighed < chunk->slot_count) {
                 Kind tag = resolved(v, now, 0, weighed);
-                if (HOLDS_OF(tag) == HOLDS_TAG && against >= 0 && against < 32) {
+                if (HOLDS_OF(tag) == HOLDS_TAG && against >= 0 && against < 24) {
                     tag_slot = weighed;
-                    equal = STEPPED(tag) & (1u << against);
-                    other = STEPPED(tag) & ~(1u << against);
+                    equal = BELOW_DEPTH(tag) & (1u << against);
+                    other = BELOW_DEPTH(tag) & ~(1u << against);
                 }
             }
             Kind weighed_tag = HOLDS_JUNK;
             if (tag_slot != UINT32_MAX) {
-                weighed_tag = resolved(v, now, 0, tag_slot) & 0xFFFFFFFFu;
+                weighed_tag = resolved(v, now, 0, tag_slot) &
+                              ~((Kind)ALL_CASES << 32);
                 now[tag_slot] =
                     weighed_tag | ((Kind)(leaves_on_equal ? equal : other) << 32);
             }
@@ -2416,6 +2624,10 @@ static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
                                  : is == KEST_OPERAND_BACKWARD ? at + size - value
                                                                : UINT32_MAX;
                 if (place != UINT32_MAX &&
+                    (wrong = same_blocks(opened, place, w.region, &w)) != NULL) {
+                    break;
+                }
+                if (place != UINT32_MAX &&
                     fold_into(v, kept, place, now,
                               (uint32_t)chunk->slot_count + depth[place], wide,
                               chunk->slot_count, scratch, &starved) &&
@@ -2424,7 +2636,7 @@ static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
                     work[waiting++] = place;
                 }
             }
-            if (op == KEST_OP_JUMP || op == KEST_OP_LOOP) {
+            if (wrong != NULL || op == KEST_OP_JUMP || op == KEST_OP_LOOP) {
                 break;
             }
             if (tag_slot != UINT32_MAX) {
@@ -2433,6 +2645,9 @@ static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
             }
             uint32_t next = at + size;
             if (lands[next]) {
+                if ((wrong = same_blocks(opened, next, w.region, &w)) != NULL) {
+                    break;
+                }
                 if (fold_into(v, kept, next, now,
                               (uint32_t)chunk->slot_count + depth[next], wide,
                               chunk->slot_count, scratch, &starved) &&

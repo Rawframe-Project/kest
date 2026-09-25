@@ -42597,3 +42597,37 @@ made inside `scratch { }` is not held past the block that gives it back, which
 the compiler refuses (D966) and the verifier does not yet prove; that the two
 slots of a piece of text are one piece of text's; and `text.in`.
 
+## D1243 — The verifier holds what a block of working memory made to the block
+
+*measured*. `scratch { }` gives back everything made inside it when it ends
+(D966). What the compiler proves about that it proves over the IR, with
+`kest_ir_escapes`, and refuses as `K0507` what would outlive the block. The
+verifier proved nothing about it: a handle or a piece of text the block made,
+held in a slot past the `unscratch` that gave its memory back, was a kind the
+verifier said was fine to read.
+
+What every slot holds now says how many blocks deep it was made. What the heap
+hands out -- text built, an array or a store made, what a call gives back --
+is as deep as the blocks open around it; a constant and an argument are made
+outside every block; a cut of text is as deep as what it cut; a value read out
+of an array, a store or an element is as deep as that. Where two ways meet,
+they have the same blocks open or the body is refused, as they have the same
+depth of stack. At `unscratch`, every slot holding something made that deep,
+or holding one of several things that could be, holds nothing any more, and
+reading it is refused. And three things are refused where they would keep
+what a block made past it, which are D966's: writing it into an array or a
+store made outside the block, handing it to a call beside something made
+outside that could keep it, and leaving the function with a block open. A
+crossing into the host may be handed anything, as D966 says.
+
+It is the net under the compiler's refusal, and two holes take that refusal
+out: a program that pushes a block's text into an array made before the block,
+and one that reads, after the block, a name the block wrote its text into.
+The verifier refuses both. Every program in the tree proves as before, in the
+three ways the gate compiles them, and the fuzzer's programs compile and
+answer exactly as they did.
+
+The depth is the top byte of the top half of a kind, which is why a tag now
+knows at most twenty-four of an enum's cases one by one and takes one of more
+as any of them.
+

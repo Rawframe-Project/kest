@@ -2204,6 +2204,49 @@ yield""",
         "caught": "run: a message holds 8 calls and this one showed 7",
     },
     {
+        # What a block of working memory made, kept in something older, with
+        # the compiler's own refusal of it taken out: the verifier is the net
+        # under that refusal, and holds what every slot was made inside
+        # before anything runs. See D1243.
+        "what": "a block's text kept in an array that outlives it",
+        "file": "src/compile.c",
+        "from": """    if (keeps != NULL) {
+        refuse(compiler, escaped, "K0507", "%s", keeps);""",
+        "to": """    if (keeps != NULL && false) {
+        refuse(compiler, escaped, "K0507", "%s", keeps);""",
+        "program": "kept.kest",
+        "source": """fn main() -> i32 {
+    let names: [text] = array()
+    scratch {
+        let made = "{len(names)}!"
+        push(names, made)
+    }
+    return len(names) - 1
+}
+""",
+        "caught": "keeps what a block of working memory 1 deep made",
+    },
+    {
+        # And read after the block gave it back, which is a name declared
+        # before the block holding what the block made.
+        "what": "a block's text read after the block gave it back",
+        "file": "src/compile.c",
+        "from": """    if (keeps != NULL) {
+        refuse(compiler, escaped, "K0507", "%s", keeps);""",
+        "to": """    if (keeps != NULL && false) {
+        refuse(compiler, escaped, "K0507", "%s", keeps);""",
+        "program": "read.kest",
+        "source": """fn main() -> i32 {
+    let kept = "x"
+    scratch {
+        kept = "{len(kept)}!"
+    }
+    return len(kept) - 2
+}
+""",
+        "caught": "holds nothing this body wrote",
+    },
+    {
         # The verifier letting a constant past the end of a body through: the
         # machine reads `constants[which]` without asking, so a chunk that
         # names one it has not got reads whatever is after them. What says

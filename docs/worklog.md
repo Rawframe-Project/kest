@@ -42217,3 +42217,17 @@ the walk taken out; the compiler's instructions to emit two programs before
 and after; the tasks a model is given; `make fast`; `make most`; the backstop
 sweep.
 
+## 2026-09-25, the verifier holds working memory to its block
+
+What every slot holds says how many `scratch { }` blocks deep it was made; a
+block's end makes everything it made unreadable, and keeping what a block made
+in something older, handing it to a call beside something that could keep it,
+or leaving with a block open is refused. The compiler refused all of that
+already; this is the proof over the code.
+
+See D1243.
+
+**Runs:** the tree in three compile modes; the fuzzer's eight seeds, answers
+as before; the compiler's own refusal taken out and two programs that keep a
+block's text, each refused by the verifier; `make most`.
+
