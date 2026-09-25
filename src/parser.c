@@ -1832,6 +1832,23 @@ static KestStmt *parse_statement(Parser *parser) {
                         start);
     }
 
+    // `wait Walking`: a word followed by a name is nothing else a statement can
+    // begin with, so this takes nobody's `wait`. See D1263.
+    if (is_word(parser, 0, "wait") &&
+        peek_at(parser, 1).kind == KEST_TOK_IDENT) {
+        advance(parser);
+        KestStmt *stmt = new_stmt(parser, KEST_STMT_WAIT,
+                                  span_between(start, current_span(parser)));
+        if (stmt == NULL) {
+            return NULL;
+        }
+        stmt->wait.name = current_span(parser);
+        stmt->wait.tag = 0;
+        stmt->wait.ordinal = 0;
+        advance(parser);
+        return stmt;
+    }
+
     // A word rather than a keyword: `scratch` followed by a brace is a thing
     // no other statement can be, and a keyword is paid for by everybody who
     // wanted the name. See the rule about words in `CLAUDE.md`.
@@ -2168,6 +2185,22 @@ static KestDecl *parse_function(Parser *parser, KestSpan start, bool is_extern) 
 
     if (match(parser, KEST_TOK_ARROW)) {
         decl->function.result = parse_type(parser);
+    }
+    // `resumes c.at` before the promises: a word, and one that means this
+    // only here, where nothing else can stand. See D1263.
+    if (!is_extern && is_word(parser, 0, "resumes") &&
+        peek_at(parser, 1).kind == KEST_TOK_IDENT) {
+        advance(parser);
+        decl->function.resumes = current_span(parser).offset + 1;
+        advance(parser);
+        if (!expect(parser, KEST_TOK_DOT)) {
+            suggest(parser, "a body resumes from a field of what it takes: "
+                            "`resumes c.at`");
+            return NULL;
+        }
+        if (!expect(parser, KEST_TOK_IDENT)) {
+            return NULL;
+        }
     }
     match_promises(parser, &decl->function.no_alloc,
                    &decl->function.no_host, &decl->function.deterministic);

@@ -1,0 +1,120 @@
+module examples.chores
+
+import std.io
+
+// A body that waits and carries on where it left off, from its own data. A
+// colonist walks a route and then works a shift, one step a frame: written as
+// a sequence with a `wait` where a frame ends, rather than as a state machine
+// by hand. Where it is waiting is a case of `ChoreAt` and everything it keeps
+// is a field of `Chore`, so a chore is a value: copied, compared, printed,
+// and started again from any place it could have been waiting at. See D1263.
+
+enum ChoreAt {
+    Start
+    Walking
+    Working
+    Resting
+    Done
+}
+
+struct Chore {
+    route: [i32]
+    next: i32
+    pos: i32
+    shift: i32
+    left: i32
+    at: ChoreAt
+}
+
+fn chore(route: [i32], shift: i32) -> Chore {
+    return Chore(route, 0, 0, shift, 0, ChoreAt.Start)
+}
+
+// One frame of it. Nothing but `c` is in reach of a `wait`, so what the next
+// frame needs is in `c` or it is gone.
+fn step(c: Chore, speed: i32) -> Chore resumes c.at no.alloc {
+    while c.next < len(c.route) {
+        if c.pos < c.route[c.next] {
+            c.pos += speed
+            if c.pos > c.route[c.next] {
+                c.pos = c.route[c.next]
+            }
+        } else {
+            c.next += 1
+        }
+        wait Walking
+    }
+    c.left = c.shift
+    while c.left > 0 {
+        c.left -= 1
+        if c.left == c.shift / 2 {
+            wait Resting
+        } else {
+            wait Working
+        }
+    }
+    c.at = ChoreAt.Done
+    return c
+}
+
+// Frames until it is done, counting where it waited.
+fn frames(from: Chore, speed: i32) -> i32 {
+    let c = from
+    let many = 0
+    while c.at != ChoreAt.Done {
+        c = step(c, speed)
+        many += 1
+    }
+    return many
+}
+
+fn main() -> i32 {
+    let c = chore([3, 5], 4)
+    let walked = 0
+    let worked = 0
+    let rested = 0
+    let turns = 0
+    while c.at != ChoreAt.Done && turns < 100 {
+        c = step(c, 2)
+        turns += 1
+        match c.at {
+            Walking {
+                walked += 1
+            }
+            Working {
+                worked += 1
+            }
+            Resting {
+                rested += 1
+            }
+            else {
+            }
+        }
+    }
+    if c.pos != 5 || c.next != 2 || c.left != 0 {
+        return 1
+    }
+    if walked != 5 || worked != 3 || rested != 1 || turns != 10 {
+        return 2
+    }
+    // Where a chore is, is data: one taken halfway is a value, and the rest of
+    // it from that value is the rest of the run it was taken from.
+    let halfway = step(step(step(chore([3, 5], 4), 2), 2), 2)
+    if halfway.at != ChoreAt.Walking || frames(halfway, 2) != 7 {
+        return 3
+    }
+    // And one written down as waiting somewhere is resumed from there: a
+    // save is its fields, and so is a chore read back from one.
+    let restored = Chore([3, 5], 2, 5, 4, 2, ChoreAt.Working)
+    let after = step(restored, 2)
+    if after.left != 1 || after.at != ChoreAt.Working {
+        return 4
+    }
+    // A case no `wait` names starts it again from the top.
+    let again = step(Chore([1], 0, 0, 2, 0, ChoreAt.Done), 1)
+    if again.at != ChoreAt.Walking || again.pos != 1 {
+        return 5
+    }
+    io.print("chores {turns} {halfway.at}")
+    return 0
+}

@@ -22,6 +22,9 @@ _Static_assert(MAX_EXTERNS <= (uint32_t)UINT16_MAX + 1,
 #define MAX_LOCALS 256
 #define MAX_LOOPS 16
 #define MAX_BREAKS 32
+// How many places one body can wait at. A case of an enum each, and an enum
+// with more than this many places to be in is a machine nobody can read.
+#define MOST_WAITS 64
 #define MAX_DEFERS 32
 // How many working-memory blocks may be open at once in one body. Nesting is
 // lexical, so this is a number a program can be refused for where it is
@@ -164,6 +167,17 @@ typedef struct {
     uint32_t expansion_depth;
     uint16_t visible_floor;
     KestSpan span_here;
+
+    // A body that resumes: the declaration, where what it resumes from is in
+    // the frame and how wide, the slot that says where it is waiting, and the
+    // branch the start of the body takes to each `wait`, by the order they
+    // are written in. See D1263.
+    const KestDecl *resuming;
+    uint16_t resume_slot;
+    uint16_t resume_size;
+    const KestType *resume_type;
+    uint16_t resume_tag_slot;
+    uint32_t resume_jumps[MOST_WAITS + 1];
 } Compiler;
 
 static void refuse(Compiler *compiler, KestSpan span, const char *code,
@@ -1374,6 +1388,8 @@ static bool reads_only_fields(Compiler *compiler, const KestBlock *block,
                 return false;
             }
             break;
+        case KEST_STMT_WAIT:
+            break;
         case KEST_STMT_DEFER:
             if (!expr_reads_only_fields(compiler, stmt->value, name, length,
                                         fields_are_fine)) {
@@ -1562,6 +1578,7 @@ static bool writes_no_arrays(Compiler *compiler, const KestBlock *block) {
             break;
         case KEST_STMT_BREAK:
         case KEST_STMT_CONTINUE:
+        case KEST_STMT_WAIT:
             break;
         }
     }
@@ -5169,6 +5186,35 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
         break;
     }
 
+    case KEST_STMT_WAIT: {
+        // Where it is waiting written into what it resumes from, that given
+        // back, and the next call's way in landed after it. Nothing else is
+        // in reach here -- the checker saw to that -- so nothing else has to
+        // be kept. See D1263.
+        if (compiler->resuming == NULL || stmt->wait.ordinal == 0 ||
+            stmt->wait.ordinal > MOST_WAITS) {
+            fault(compiler, stmt->span, "this waits in a body that does not "
+                                        "resume");
+            break;
+        }
+        KestValue tag = {0};
+        tag.integer = (int64_t)stmt->wait.tag;
+        emit_constant(compiler, tag, KEST_CONST_INT, whole_type(compiler),
+                      stmt->span);
+        stack_pop(compiler, 1);
+        store_slots(compiler, compiler->resume_tag_slot, 1,
+                    whole_type(compiler), stmt->span);
+        stack_push(compiler, compiler->resume_size);
+        load_slots(compiler, compiler->resume_slot, compiler->resume_size,
+                   compiler->resume_type, stmt->span);
+        stack_pop(compiler, compiler->resume_size);
+        uint32_t at = ir_emit(compiler, KEST_IR_GIVE, compiler->resume_type, 1,
+                              NULL, 0, stmt->span);
+        ir_carries(compiler, at, compiler->resume_size, 0, 0);
+        ir_lands(compiler, compiler->resume_jumps[stmt->wait.ordinal]);
+        break;
+    }
+
     case KEST_STMT_CONTINUE: {
         if (compiler->loop_count == 0) {
             break;
@@ -5359,9 +5405,114 @@ static bool open_body(Compiler *compiler, KestChunk *chunk,
     return true;
 }
 
+// Every `wait` in a body, by the order it was written in: what each is waiting
+// at, put where its number says. Nothing but a statement holds one, and the
+// statements are inside blocks, loops and the arms of an `if` or a `match`.
+static void waits_in_block(const KestBlock *block, uint32_t *tags,
+                           uint32_t *count);
+
+static void waits_in_expr(const KestExpr *expr, uint32_t *tags,
+                          uint32_t *count) {
+    if (expr == NULL) {
+        return;
+    }
+    if (expr->kind == KEST_EXPR_IF && expr->branch != NULL) {
+        waits_in_block(&expr->branch->then_body, tags, count);
+        waits_in_expr(expr->branch->otherwise, tags, count);
+        waits_in_block(&expr->branch->else_body, tags, count);
+    } else if (expr->kind == KEST_EXPR_MATCH && expr->choose != NULL) {
+        for (uint32_t a = 0; a < expr->choose->arm_count; a++) {
+            waits_in_block(&expr->choose->arms[a].body, tags, count);
+        }
+    }
+}
+
+static void waits_in_block(const KestBlock *block, uint32_t *tags,
+                           uint32_t *count) {
+    for (uint32_t i = 0; i < block->count; i++) {
+        const KestStmt *stmt = block->items[i];
+        switch (stmt->kind) {
+        case KEST_STMT_WAIT:
+            if (stmt->wait.ordinal > 0 && stmt->wait.ordinal <= MOST_WAITS) {
+                tags[stmt->wait.ordinal] = stmt->wait.tag;
+                if (stmt->wait.ordinal > *count) {
+                    *count = stmt->wait.ordinal;
+                }
+            }
+            break;
+        case KEST_STMT_WHILE:
+            waits_in_block(&stmt->loop.body, tags, count);
+            break;
+        case KEST_STMT_BLOCK:
+        case KEST_STMT_SCRATCH:
+            waits_in_block(&stmt->block, tags, count);
+            break;
+        case KEST_STMT_EXPR:
+            waits_in_expr(stmt->value, tags, count);
+            break;
+        case KEST_STMT_LET:
+        case KEST_STMT_ASSIGN:
+        case KEST_STMT_FOR:
+        case KEST_STMT_RETURN:
+        case KEST_STMT_BREAK:
+        case KEST_STMT_CONTINUE:
+        case KEST_STMT_DEFER:
+            break;
+        }
+    }
+}
+
+// The way into a body that resumes: what it resumes from says where it is
+// waiting, and each case a `wait` names is a branch to the line after that
+// `wait`. Any other case starts at the top. See D1263.
+static void resume_where_waiting(Compiler *compiler, const KestBlock *block) {
+    const KestDecl *decl = compiler->resuming;
+    KestSpan param = {0, 0};
+    KestSpan named = {0, 0};
+    kest_resumes_spans(compiler->program->source, decl, &param, &named);
+    Local *held = find_local(compiler, param);
+    if (held == NULL || held->type == NULL) {
+        fault(compiler, decl->name,
+              "this resumes from something the body was not handed");
+        return;
+    }
+    const KestMember *field =
+        find_member(held->type, span_text(compiler, named), named.length);
+    if (field == NULL) {
+        fault(compiler, decl->name,
+              "this resumes from a field the struct has not got");
+        return;
+    }
+    compiler->resume_slot = held->slot;
+    compiler->resume_size = held->size;
+    compiler->resume_type = held->type;
+    compiler->resume_tag_slot = (uint16_t)(held->slot + field->offset);
+    uint32_t tags[MOST_WAITS + 1] = {0};
+    uint32_t count = 0;
+    waits_in_block(block, tags, &count);
+    for (uint32_t w = 1; w <= count; w++) {
+        stack_push(compiler, 1);
+        load_slots(compiler, compiler->resume_tag_slot, 1,
+                   whole_type(compiler), named);
+        KestValue tag = {0};
+        tag.integer = (int64_t)tags[w];
+        emit_constant(compiler, tag, KEST_CONST_INT, whole_type(compiler),
+                      named);
+        stack_pop(compiler, 1);
+        ir_emit(compiler, KEST_IR_EQ, whole_type(compiler), 2,
+                truth_type(compiler), 1, named);
+        stack_pop(compiler, 1);
+        compiler->resume_jumps[w] =
+            ir_ask(compiler, true, named);
+    }
+}
+
 static bool close_body(Compiler *compiler, const KestBlock *block,
                        KestSpan declared) {
     compiler->body->param_slots = compiler->next_slot;
+    if (compiler->resuming != NULL) {
+        resume_where_waiting(compiler, block);
+    }
     compile_block(compiler, block);
     // Every body ends by giving something back, so that nothing runs off the
     // end of one.
@@ -5599,7 +5750,11 @@ bool kest_compile(KestProgram *program, const KestUnits *units,
                         : NULL;
                 declare_local(&compiler, decl->function.params[p]->name, type);
             }
-            if (!close_body(&compiler, &decl->function.body, decl->name)) {
+            compiler.resuming = decl->function.resumes > 0 ? decl : NULL;
+            bool closed =
+                close_body(&compiler, &decl->function.body, decl->name);
+            compiler.resuming = NULL;
+            if (!closed) {
                 return false;
             }
         }

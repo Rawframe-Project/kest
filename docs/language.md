@@ -2717,6 +2717,93 @@ way a literal does. An extern is called and not named: which function the host
 bound is settled when the program starts, so there is no value to hand around.
 Two function values do not compare, and one has no text.
 
+## A body that waits
+
+Something a game does over many frames -- walk a route and then work, patrol
+and look around at every post -- is a sequence with a pause where each frame
+ends. A function may be written that way: it says what it resumes from, and
+`wait` ends the call where it stands.
+
+```kest
+module patrol
+
+import std.io
+
+enum GuardAt {
+    Start
+    Walking
+    Looking
+    Done
+}
+
+struct Guard {
+    post: i32
+    posts: i32
+    looks: i32
+    at: GuardAt
+}
+
+fn watch(g: Guard) -> Guard resumes g.at {
+    while g.post < g.posts {
+        g.post += 1
+        wait Walking
+        g.looks = 2
+        while g.looks > 0 {
+            g.looks -= 1
+            wait Looking
+        }
+    }
+    g.at = GuardAt.Done
+    return g
+}
+
+fn main() -> i32 {
+    let g = Guard(0, 2, 0, GuardAt.Start)
+    while g.at != GuardAt.Done {
+        g = watch(g)
+        io.print("{g.at} at post {g.post}")
+    }
+    return 0
+}
+```
+
+```text
+GuardAt.Walking at post 1
+GuardAt.Looking at post 1
+GuardAt.Looking at post 1
+GuardAt.Walking at post 2
+GuardAt.Looking at post 2
+GuardAt.Looking at post 2
+GuardAt.Done at post 2
+```
+
+`resumes g.at` names a parameter the function is handed and gives back, and a
+field of it that is an enum. `wait Walking` sets that field to
+`GuardAt.Walking`, gives the parameter back, and the call is over; the next
+call finds `Walking` there and carries on from the line after that `wait`,
+inside whatever loop it was in. A case no `wait` names -- `Start`, `Done` --
+starts the body from the top.
+
+Nothing is kept but the parameter, and that is the rule that makes it data. A
+name a `let`, a `for`, an `if let` or a `match` arm made may not be in reach
+of a `wait`, because nothing would keep it for the next call; what the body
+wants afterwards it keeps in a field. So a `wait` is not inside a `for`, a
+body that resumes runs no `defer`, and no `scratch` block is open at one. Each
+`wait` names a case that carries nothing and no case is waited at twice, so a
+case is one place in the body. A block handed to a function cannot wait,
+because the function is not the body that resumes. Each of those is `K0368`.
+
+Where it is waiting is a case of the program's own enum and what it has is
+the fields of the program's own struct, so a body that waits is a value like
+any other: copied, compared, printed, hashed, laid out for a host the way a
+struct is, and saved and read back the way any struct is -- one written down
+as waiting at a case is resumed from there. Nothing is on the heap and no
+frame is kept, which is what D1183 refused a coroutine for: a suspended frame
+is an instruction pointer, which a save has nothing to write for and a reload
+has nothing to point at. `examples/chores.kest` walks, works and rests, takes
+a chore halfway and finishes it, and resumes one written down from its fields.
+See D1263.
+
 ## One body, many types
 
 A function may take types as well as values. A copy is compiled for each set
@@ -6357,6 +6444,7 @@ here, is a check that fails.
 | `camera.kest` | `std.vec` and `std.math` where a camera follows something |
 | `carried.kest` | small bodies written where they are called, in every shape a carried body has to come out of right |
 | `chance.kest` | numbers that look random, and two runs from one seed |
+| `chores.kest` | a body that waits between frames and carries on from its own data: walked, worked, taken halfway and resumed |
 | `colony.kest` | a world kept and worked on a day at a time, which is a program rather than a rule |
 | `churn.kest` | one round over a world whose live set never changes, written six ways, which is what memory costs |
 | `determinism.kest` | every rule the simulation profile promises, folded into one number |

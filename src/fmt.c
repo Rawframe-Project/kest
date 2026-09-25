@@ -810,6 +810,7 @@ static bool prints_flat(const KestStmt *stmt) {
         return !holds_a_body(stmt->value);
     case KEST_STMT_BREAK:
     case KEST_STMT_CONTINUE:
+    case KEST_STMT_WAIT:
         return true;
     case KEST_STMT_WHILE:
     case KEST_STMT_FOR:
@@ -919,6 +920,12 @@ static void print_stmt(Printer *printer, const KestStmt *stmt, bool bare) {
         put(printer, "continue\n");
         break;
 
+    case KEST_STMT_WAIT:
+        put(printer, "wait ");
+        print_span(printer, stmt->wait.name);
+        put_char(printer, '\n');
+        break;
+
     case KEST_STMT_SCRATCH:
     case KEST_STMT_BLOCK:
         put(printer, stmt->kind == KEST_STMT_SCRATCH ? "scratch {\n" : "{\n");
@@ -1014,6 +1021,14 @@ static void print_signature(Printer *printer, const KestDecl *decl) {
     if (decl->function.result != NULL) {
         put(printer, " -> ");
         print_type(printer, decl->function.result);
+    }
+    KestSpan resumed;
+    KestSpan resumed_field;
+    if (kest_resumes_spans(printer->source, decl, &resumed, &resumed_field)) {
+        put(printer, " resumes ");
+        print_span(printer, resumed);
+        put_char(printer, '.');
+        print_span(printer, resumed_field);
     }
     if (decl->function.no_alloc) {
         put(printer, " no.alloc");

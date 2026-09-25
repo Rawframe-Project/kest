@@ -2917,6 +2917,57 @@ yield""",
         "caught": "lists `std.io` as fly, print, write and the library has",
     },
     {
+        # A name in reach of a `wait`, let through: the next call carries on
+        # with a slot nothing kept. See D1263.
+        "what": "a name kept across a wait that nothing keeps",
+        "file": "src/check.c",
+        "from": r"""    if (checker->local_count > checker->resume_mark) {""",
+        "to": r"""    if (checker->local_count > checker->resume_mark && false) {""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "check: K0368 said",
+    },
+    {
+        # The way in sending the next call to the wrong `wait`. See D1263.
+        "what": "a body that resumes after the wrong wait",
+        "file": "src/compile.c",
+        "from": r"""        tag.integer = (int64_t)tags[w];""",
+        "to": r"""        tag.integer = (int64_t)tags[w] + 1;""",
+        "make": ["kest"],
+        "tool": "tools/fast.sh",
+        "arguments": [],
+        "caught": "examples/chores.kest answered",
+    },
+    {
+        # A `wait` that gives the parameter back without saying where it is
+        # waiting, so every call starts again. See D1263.
+        "what": "a wait that does not say where it waits",
+        "file": "src/compile.c",
+        "from": r"""        store_slots(compiler, compiler->resume_tag_slot, 1,
+                    whole_type(compiler), stmt->span);""",
+        "to": r"""        ir_emit(compiler, KEST_IR_DROP, whole_type(compiler), 1, NULL, 0,
+                stmt->span);""",
+        "make": ["kest"],
+        "tool": "tools/fast.sh",
+        "arguments": [],
+        "caught": "examples/chores.kest answered",
+    },
+    {
+        # The formatter losing what a body resumes from. See D1263.
+        "what": "a formatter that drops what a body resumes from",
+        "file": "src/fmt.c",
+        "from": r"""    if (kest_resumes_spans(printer->source, decl, &resumed, &resumed_field)) {
+        put(printer, " resumes ");""",
+        "to": r"""    if (false && kest_resumes_spans(printer->source, decl, &resumed,
+                                    &resumed_field)) {
+        put(printer, " resumes ");""",
+        "make": ["kest"],
+        "tool": "tools/check-fmt.sh",
+        "arguments": ["examples/chores.kest"],
+        "caught": "tree changed: examples/chores.kest",
+    },
+    {
         # Work counted and never run out of: a ceiling that is read and never
         # reached is a build that takes as long as the file makes it, which
         # is the thing a host that compiles what it was sent gave one to stop.

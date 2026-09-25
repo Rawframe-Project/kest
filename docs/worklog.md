@@ -42588,3 +42588,25 @@ See D1260.
 
 **Runs:** the four shares' logs, every miss the same line; a share here
 started from `make clean`; `make most`.
+
+## 2026-09-25, a body that waits
+
+`fn step(c: Chore, dt: f32) -> Chore resumes c.at` and `wait Walking`: a
+function that ends a call where it stands and carries on from there next time,
+keeping everything in the struct it is handed and where it is in an enum the
+program declares. The parser reads the two words, the checker holds fifteen
+rules as `K0368`, and the compiler writes a way in that branches to the line
+after each `wait` and a way out that writes the case and gives the struct
+back. `examples/chores.kest` walks, works, rests, is taken halfway and
+finished, and is resumed from fields written down.
+
+See D1263.
+
+**Runs:** the example in the machine, the checked build, `KEST_NOOPT`,
+`KEST_PLAIN` and a release, the same words each time; the reference's program
+and its output; fifteen refusals, each in its own words; the formatter over
+the example; four holes by hand; `make most`, which refused a declaration
+grown from 88 bytes to 104 for the two names of `resumes`: they are one offset
+now, in four bytes that were padding, and read back out of the source -- by
+the lexer, since `check-fmt.sh` roughed the example up with a line ended after
+the dot and a comment there, and a reading of the bytes lost the clause.

@@ -43492,3 +43492,48 @@ the one door there is.
 
 So nothing is built for K12: a program is shipped as its source, compiled
 where it runs, and `kest emit` stays a listing rather than a format.
+
+## D1263 — A body that waits, and resumes from its own data
+
+K10 asked for a generator that compiles to data, whose wait points are named,
+so that it can be saved and matched on reload; `docs/rfcs/0001-resumable-bodies.md`
+is the proposal, and this is it taken.
+
+A function may say `resumes c.at` after what it gives back: `c` is a struct it
+is handed and gives back, and `at` a field of it that is an enum the program
+declares. `wait Walking` sets `c.at` to that case and gives `c` back; the next
+call finds `Walking` there and carries on from the line after that `wait`,
+inside whatever loops it was in. A case no `wait` names starts the body from
+the top. `resumes` and `wait` are words, each meaning this only where nothing
+else can stand, so no program changes meaning.
+
+What makes it data is one rule: nothing but the parameter is kept across a
+`wait`. A name a `let`, a `for`, an `if let` or a `match` arm made may not be
+in reach of one, so a `wait` is not inside a `for`; a body that resumes runs no
+`defer`; no `scratch` block is open at a `wait`; a block handed to a function
+cannot wait; each `wait` names a case that carries nothing, and no case twice.
+Every one of those is `K0368`, fifteen of them in `check-commands.sh`. With
+that rule there is nothing to keep but the struct, so nothing is generated: no
+hidden fields, no frame, no enum the program did not write. The state is the
+program's own struct and the place is the program's own case.
+
+It is compiled as a way in and a way out. The way in reads the field and, for
+each `wait`, branches to the line after it when the field names its case; the
+way out writes the case, gives the parameter back, and is where that branch
+lands. The branches land inside loops, which the IR, the verifier, the
+optimizer, the lowering and the release engine all take as they are:
+`examples/chores.kest` answers the same in the machine, the checked build,
+with the optimizer and the fusions each turned off, and as a release.
+
+What a coroutine would have cost, D1183 said, is a frame in flight that a
+save has nothing to write for and a reload nothing to point at. Here a chore
+is a value: `examples/chores.kest` takes one halfway, finishes it from the
+copy and gets the rest of the run it was taken from, and builds one from
+written-down fields as waiting at `Working` and resumes it from there -- which
+is what a save read back is. A reload is the program's `save` and `restore`
+(D1151), which carry the field like any other; how the case is written into a
+save is the program's choice, and one written as its name is matched by name.
+
+Four holes are caught: a name kept across a `wait` let through, the way in
+sending a call to the wrong `wait`, a `wait` that does not write where it
+waits, and the formatter dropping `resumes`.

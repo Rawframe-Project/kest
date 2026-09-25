@@ -47,8 +47,8 @@ always, even for one statement. Conditions take no parentheses:
 
 The keywords: `break const continue defer else enum extern false fn for if
 import in let match module none return struct true while`. `flags`, `scratch`,
-`own`, `compares`, `orders` and `block` are words that mean something only
-where they stand and are names everywhere else.
+`own`, `compares`, `orders`, `block`, `resumes` and `wait` are words that
+mean something only where they stand and are names everywhere else.
 
 The one form is the formatter's: four spaces, a blank line between
 declarations, `kest fmt -w` writes it and `kest fmt --check` says which files
@@ -441,6 +441,15 @@ written; it cannot be kept, and `return` inside one is refused. `x.f(a)` is
 `f(x, a)`, looked for in the file, then in the module the value's type comes
 from, then among the builtins. Two functions may share a name when they take
 different things.
+
+## A body that waits
+
+`fn step(c: Chore, dt: f32) -> Chore resumes c.at` resumes from `c.at`, a
+field that is an enum the program declares. `wait Walking` sets `c.at` to
+`Walking`, gives `c` back and ends the call; the next call carries on from the
+line after it. A case no `wait` names starts from the top. Nothing but `c` is
+kept across a `wait`, so no `let` or `for` name may be in reach of one: what
+the body needs afterwards is a field of `c`. `examples/chores.kest` is one.
 
 ## Promises
 

@@ -232,6 +232,10 @@ typedef enum {
     // kept. See D966.
     KEST_STMT_SCRATCH,
     KEST_STMT_DEFER,
+    // `wait Walking` in a body that resumes: the field it resumes from is set
+    // to that case and the parameter is given back, and the next call carries
+    // on from the line after it. See D1263.
+    KEST_STMT_WAIT,
 } KestStmtKind;
 
 // What a `for` walks. `index` is zero length when the position was not asked
@@ -305,6 +309,15 @@ struct KestStmt {
         KestExpr *result;
         KestExpr *value;
         KestBlock block;
+        struct {
+            // The case, as written.
+            KestSpan name;
+            // Which case of the enum it is, and which of the body's waits,
+            // counted from one in the order they are written. Worked out by
+            // the checker; the compiler lands the next call on it.
+            uint32_t tag;
+            uint32_t ordinal;
+        } wait;
     };
 };
 
@@ -409,6 +422,13 @@ typedef struct {
             KestSpan receiver;
             KestField **params;
             uint32_t param_count;
+            // `resumes c.at`: where the `c` is, one past its offset so that
+            // nought is a function that does not wait. An offset rather than
+            // two spans because it sits in the four bytes after the count,
+            // which were padding, and a node widened is every node of every
+            // program widened; `kest_resumes_spans` reads the two names back
+            // out of the source. See D1263.
+            uint32_t resumes;
             // NULL when the function returns nothing.
             KestTypeRef *result;
             bool is_extern;
@@ -445,5 +465,10 @@ typedef struct {
 
 // Prints the tree as indented s-expressions, for seeing what the parser built.
 void kest_ast_dump(const KestUnit *unit, const KestSource *source, FILE *out);
+
+// The two names of a `resumes c.at` as spans of the source: the parameter and
+// the field. False for a function that does not wait. See D1263.
+bool kest_resumes_spans(const KestSource *source, const KestDecl *decl,
+                        KestSpan *param, KestSpan *field);
 
 #endif

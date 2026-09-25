@@ -1598,9 +1598,12 @@ and a colon -- so a field called `own` still works -- and `compares` and
 `<>`. The first three are coloured by the editor grammar and offered by the
 language server, because a reader meeting one where a declaration begins is
 meeting a declaration; the last two are neither, because a reader meeting
-`compares` at the start of a line is meeting somebody's function. The cost of a
-keyword is paid by every program that wanted the name, and it is paid every
-day, so it is worth being sure.
+`compares` at the start of a line is meeting somebody's function. `resumes`
+and `wait` make a body that waits, the first only after what a function gives
+back and the second only at the start of a statement followed by a name, and
+are neither, for the same reason (D1263). The cost of a keyword is paid by
+every program that wanted the name, and it is paid every day, so it is worth
+being sure.
 
 No word is kept back for a feature that does not exist. "Reserved for later" is
 a promise, and a language that makes one it is not keeping takes a name from

@@ -104,6 +104,15 @@ typedef struct {
     // takes a block may not call: it is written into where it is called, and
     // written into itself it has no end. See D1257.
     const KestDecl *function;
+    // A body that resumes: the enum whose cases it waits at, how many names
+    // were in reach when the body began -- the parameters, and nothing else
+    // may be in reach of a `wait` -- how many times each case is waited at,
+    // and how many `scratch` blocks are open. See D1263.
+    const KestType *resume_cases;
+    uint32_t resume_mark;
+    uint32_t *waited;
+    uint32_t waits;
+    uint32_t scratch_depth;
 } Checker;
 
 static KestType *check_expr(Checker *checker, KestExpr *expr,
@@ -5213,6 +5222,78 @@ static KestType *check_branch(Checker *checker, KestExpr *expr,
     return given;
 }
 
+// `wait Walking`: where the next call carries on from, which is a case of the
+// enum the body resumes from, one that carries nothing and is waited at once.
+// What is kept across it is the parameter and nothing else, so nothing else
+// may be in reach of it. See D1263.
+static void check_wait(Checker *checker, KestStmt *stmt) {
+    const KestType *cases = checker->resume_cases;
+    if (checker->in_a_block) {
+        report(checker, stmt->span, "K0368",
+               "a block cannot wait, because the body it is handed to is not "
+               "the one that resumes");
+        return;
+    }
+    if (cases == NULL) {
+        report(checker, stmt->span, "K0368",
+               "`wait` is written in a body that resumes");
+        kest_diags_suggest(checker->program->diags,
+                           "say what it resumes from after what it gives back: "
+                           "`fn step(c: Chore) -> Chore resumes c.at`");
+        return;
+    }
+    const char *written = span_text(checker, stmt->wait.name);
+    uint32_t tag = cases->case_count;
+    for (uint32_t i = 0; i < cases->case_count; i++) {
+        if (kest_word_same(cases->cases[i].name, written,
+                           stmt->wait.name.length)) {
+            tag = i;
+        }
+    }
+    const char *enum_name = type_name(checker, cases);
+    if (tag == cases->case_count) {
+        report(checker, stmt->wait.name, "K0368",
+               "`%.*s` is not a case of `%s`", (int)stmt->wait.name.length,
+               written, enum_name);
+        return;
+    }
+    cases->cases[tag].named = true;
+    if (cases->cases[tag].payload_count > 0) {
+        report(checker, stmt->wait.name, "K0368",
+               "`%.*s` carries something, and a body waits at a case that "
+               "carries nothing",
+               (int)stmt->wait.name.length, written);
+        return;
+    }
+    if (checker->waited != NULL && checker->waited[tag]++ > 0) {
+        report(checker, stmt->wait.name, "K0368",
+               "`%.*s` is waited at twice, and the next call would have two "
+               "places to carry on from",
+               (int)stmt->wait.name.length, written);
+        kest_diags_suggest(checker->program->diags,
+                           "give each `wait` a case of its own");
+        return;
+    }
+    if (checker->scratch_depth > 0) {
+        report(checker, stmt->span, "K0368",
+               "a `scratch` block is open at this `wait`, and it would give "
+               "back what the next call reads");
+        return;
+    }
+    if (checker->local_count > checker->resume_mark) {
+        const Local *reached = &checker->locals[checker->resume_mark];
+        report(checker, stmt->span, "K0368",
+               "`%.*s` is in reach of this `wait`, and nothing is kept across "
+               "one but what the body resumes from",
+               (int)reached->span.length, span_text(checker, reached->span));
+        kest_diags_suggest(checker->program->diags,
+                           "keep it in a field of what the body resumes from");
+        return;
+    }
+    stmt->wait.tag = tag;
+    stmt->wait.ordinal = ++checker->waits;
+}
+
 static void check_stmt(Checker *checker, KestStmt *stmt) {
     kest_diags_work(checker->program->diags, 1);
     switch (stmt->kind) {
@@ -5383,6 +5464,13 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
 
     case KEST_STMT_EXPR:
     case KEST_STMT_DEFER: {
+        // A body that resumes leaves at every `wait`, and what a `defer`
+        // would run there would run again on every call. See D1263.
+        if (stmt->kind == KEST_STMT_DEFER && checker->resume_cases != NULL) {
+            report(checker, stmt->span, "K0368",
+                   "a body that resumes runs no `defer`: it leaves at every "
+                   "`wait` and comes back to where it left");
+        }
         // A statement that is only an expression has to do something. A call
         // does — what it gives back may be worth ignoring — and an `if` or a
         // `match` whose arms are blocks does. Anything else works a value out
@@ -5604,8 +5692,17 @@ static void check_stmt(Checker *checker, KestStmt *stmt) {
         break;
 
     case KEST_STMT_SCRATCH:
+        checker->scratch_depth++;
+        check_block(checker, &stmt->block);
+        checker->scratch_depth--;
+        break;
+
     case KEST_STMT_BLOCK:
         check_block(checker, &stmt->block);
+        break;
+
+    case KEST_STMT_WAIT:
+        check_wait(checker, stmt);
         break;
     }
 }
@@ -5750,6 +5847,7 @@ static bool stmt_leaves(const KestStmt *stmt) {
     case KEST_STMT_BREAK:
         return true;
     case KEST_STMT_CONTINUE:
+    case KEST_STMT_WAIT:
         return false;
     case KEST_STMT_LET:
         return expr_leaves(stmt->let.value);
@@ -5809,12 +5907,86 @@ static bool stmt_returns(const KestStmt *stmt) {
     case KEST_STMT_BREAK:
     case KEST_STMT_CONTINUE:
     case KEST_STMT_DEFER:
+    case KEST_STMT_WAIT:
         return false;
     }
     return false;
 }
 
 static bool check_unit(KestProgram *program, KestUnit *unit);
+
+// `resumes c.at`, held to what it says: `c` is something the function takes, a
+// struct, and what it gives back; `at` is a field of it that is an enum. What
+// the body waits at is a case of that enum. Answers the enum, or NULL with the
+// reason said. See D1263.
+static const KestType *resumes_from(Checker *checker, const KestDecl *decl,
+                                    const KestType *signature) {
+    KestSpan param = {0, 0};
+    KestSpan field = {0, 0};
+    if (!kest_resumes_spans(checker->program->source, decl, &param, &field)) {
+        return NULL;
+    }
+    const char *param_name = span_text(checker, param);
+    const char *field_name = span_text(checker, field);
+    if (decl->type_param_count > 0) {
+        report(checker, param, "K0368",
+               "a body that resumes takes no types, because what it waits in "
+               "is one struct");
+        return NULL;
+    }
+    const KestType *held = NULL;
+    for (uint32_t p = 0;
+         p < decl->function.param_count && p < signature->param_count; p++) {
+        KestSpan name = decl->function.params[p]->name;
+        if (name.length == param.length &&
+            memcmp(span_text(checker, name), param_name, param.length) == 0) {
+            held = signature->params[p];
+        }
+    }
+    if (held == NULL) {
+        report(checker, param, "K0368",
+               "`%.*s` is not something `%.*s` takes",
+               (int)param.length, param_name, (int)decl->name.length,
+               span_text(checker, decl->name));
+        return NULL;
+    }
+    if (held->tag == KEST_T_ERROR) {
+        return NULL;
+    }
+    if (held->tag != KEST_T_STRUCT) {
+        report(checker, param, "K0368",
+               "a body resumes from a struct it is handed, and `%.*s` is `%s`",
+               (int)param.length, param_name, type_name(checker, held));
+        return NULL;
+    }
+    if (!kest_type_equal(signature->result, held)) {
+        report(checker, param, "K0368",
+               "`%.*s` resumes from `%.*s`, so it gives back a `%s`",
+               (int)decl->name.length, span_text(checker, decl->name),
+               (int)param.length, param_name, type_name(checker, held));
+        kest_diags_suggest(checker->program->diags,
+                           "a `wait` gives back what the body resumes from, "
+                           "and so does the end of it");
+        return NULL;
+    }
+    for (uint32_t m = 0; m < held->member_count; m++) {
+        if (!kest_word_same(held->members[m].name, field_name, field.length)) {
+            continue;
+        }
+        const KestType *cases = held->members[m].type;
+        if (cases == NULL || cases->tag != KEST_T_ENUM) {
+            report(checker, field, "K0368",
+                   "a body resumes from a field that is an enum, and `%.*s` "
+                   "is `%s`",
+                   (int)field.length, field_name, type_name(checker, cases));
+            return NULL;
+        }
+        return cases;
+    }
+    report(checker, field, "K0368", "`%s` has no field `%.*s`",
+           type_name(checker, held), (int)field.length, field_name);
+    return NULL;
+}
 
 // One body against one signature. A generic copy is the same thing with its
 // type names bound, which is what makes a copy not a special case.
@@ -5837,7 +6009,27 @@ static bool check_function(KestProgram *program, Checker *checker,
     }
 
     uint32_t body = checker->local_count;
+    checker->resume_cases = NULL;
+    checker->waited = NULL;
+    checker->waits = 0;
+    checker->scratch_depth = 0;
+    if (decl->function.resumes > 0) {
+        checker->resume_cases = resumes_from(checker, decl, signature);
+        checker->resume_mark = body;
+        if (checker->resume_cases != NULL) {
+            checker->waited = KEST_ARENA_ARRAY(
+                program->arena, uint32_t,
+                checker->resume_cases->case_count + 1);
+            if (checker->waited == NULL) {
+                checker->out_of_memory = true;
+                return false;
+            }
+            memset(checker->waited, 0,
+                   sizeof(uint32_t) * (checker->resume_cases->case_count + 1));
+        }
+    }
     check_block(checker, (KestBlock *)&decl->function.body);
+    checker->resume_cases = NULL;
     // What the body itself declared, which is the one scope nothing else
     // rewinds: a block inside it is dropped where it ends, and this is where
     // the outermost one does. See D726.
