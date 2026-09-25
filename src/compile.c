@@ -2637,7 +2637,7 @@ static void compile_call(Compiler *compiler, const KestExpr *expr) {
         callee->type != NULL && callee->type->tag == KEST_T_FN &&
         !callee->type->is_foreign &&
         (callee->type->symbol == NULL ||
-         (callee->kind == KEST_EXPR_NAME &&
+         (callee->kind == KEST_EXPR_NAME && !expr->call.method &&
           find_local(compiler, callee->span) != NULL));
     if (through_value) {
         compile_value_call(compiler, expr);

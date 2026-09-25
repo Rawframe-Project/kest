@@ -2657,6 +2657,77 @@ yield""",
         "caught": "does not compile for WebAssembly",
     },
     {
+        # `r.apply(3)` on a shape that holds `apply` read as `apply(r, 3)`, which
+        # nothing declares. See D1256.
+        "what": "a field holding a function called as a function taking the value",
+        "file": "src/check.c",
+        "from": r"""    if (is_error(object) || object->tag != KEST_T_STRUCT) {
+        return false;
+    }""",
+        "to": r"""    if (true) {
+        return false;
+    }""",
+        "make": ["kest"],
+        "tool": "tools/fast.sh",
+        "arguments": [],
+        "caught": "examples/methods.kest answered",
+    },
+    {
+        # `v.length()` on a `vec3` looked for nowhere but the file. See D1256.
+        "what": "the language's vectors with no module of their own",
+        "file": "src/check.c",
+        "from": r"""    if (kest_is_vector(type)) {
+        *module = "std.vec";
+        return strlen(*module);
+    }""",
+        "to": r"""    if (false) {
+        *module = "std.vec";
+        return strlen(*module);
+    }""",
+        "make": ["kest"],
+        "tool": "tools/fast.sh",
+        "arguments": [],
+        "caught": "examples/methods.kest answered",
+    },
+    {
+        # `p.fill(fill)` with a local called `fill` compiled as a call of the
+        # local. See D1256.
+        "what": "a local called for the function of its name",
+        "file": "src/compile.c",
+        "from": r"""         (callee->kind == KEST_EXPR_NAME && !expr->call.method &&""",
+        "to": r"""         (callee->kind == KEST_EXPR_NAME &&""",
+        "make": ["kest"],
+        "tool": "tools/fast.sh",
+        "arguments": [],
+        "caught": "examples/methods.kest answered",
+    },
+    {
+        # A value's type came from a module this file never asked for, and the
+        # function under it was called anyway. See D1256.
+        "what": "a function reached through a type's module the file did not import",
+        "file": "src/check.c",
+        "from": r"""            if (!kest_import_by_path(checker->program, places[at],
+                                     lengths[at])) {""",
+        "to": r"""            if (false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "was called anyway",
+    },
+    {
+        # What a value's type was looked for in, not said: a reader told only
+        # that nothing takes a `vec3` is not told to import `std.vec`. See D1256.
+        "what": "a method said as having nowhere to be looked",
+        "file": "src/check.c",
+        "from": r"""    } else if (!kest_import_by_path(checker->program, places[1],
+                                    lengths[1])) {""",
+        "to": r"""    } else if (false) {""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "check: K0307 said",
+    },
+    {
         # Work counted and never run out of: a ceiling that is read and never
         # reached is a build that takes as long as the file makes it, which
         # is the thing a host that compiles what it was sent gave one to stop.

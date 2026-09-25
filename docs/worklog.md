@@ -42446,3 +42446,17 @@ See D1255.
 **Runs:** every source file compiled for wasm32 with warnings; the 43 examples
 both ways; the five bench workloads best of five both ways, with the label
 table and with the switch; two holes by hand; `make most`; the sweep.
+
+## 2026-09-25, `x.f(a)` is `f(x, a)`
+
+A call written on a value is the call with the value in front: the function is
+the file's own, the module's the value's type came from (`std.vec` for vectors,
+`std.text` for text), or the language's, in that order. A chain reads left to
+right, a field holding a function is still called as one, and a local of the
+same name is not what is called. `examples/methods.kest` shows each.
+
+See D1256.
+
+**Runs:** method calls of every kind in the machine, the checked build and a
+release; a generic calling one in its body at two types; the three refusals and
+a two-module project; five holes by hand; `make fast`; `make most`; the sweep.

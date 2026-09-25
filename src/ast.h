@@ -114,6 +114,11 @@ struct KestExpr {
             KestExpr *callee;
             KestExpr **args;
             uint32_t arg_count;
+            // Written `x.f(a)` and read as `f(x, a)`: the checker moves `x` to
+            // the front of what is passed and names `f` by its own name, and
+            // this says so for everything after it, which would otherwise
+            // take a local called `f` for the function. See D1256.
+            bool method;
         } call;
         struct {
             KestExpr *object;

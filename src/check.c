@@ -2900,6 +2900,228 @@ static bool names_a_type(const KestExpr *expr) {
            expr->field.object->kind == KEST_EXPR_NAME;
 }
 
+// Whether `x.f(...)` is a function called on a value rather than a function
+// under a module, an extern under its host type or a case under its enum:
+// what the dotted chain starts from is a name this body holds, a constant, or
+// something worked out -- a call, an index -- and nothing that only names a
+// place. And not a field the value has, which is called as the value it is.
+// See D1256.
+static bool is_method_call(Checker *checker, const KestExpr *expr) {
+    const KestExpr *callee = expr->call.callee;
+    if (callee->kind != KEST_EXPR_FIELD) {
+        return false;
+    }
+    const KestExpr *root = callee->field.object;
+    while (root->kind == KEST_EXPR_FIELD || root->kind == KEST_EXPR_INDEX) {
+        root = root->kind == KEST_EXPR_FIELD ? root->field.object
+                                             : root->index.object;
+    }
+    if (root->kind != KEST_EXPR_NAME) {
+        // A call, a literal, anything worked out: a value.
+        return true;
+    }
+    const char *text = span_text(checker, root->span);
+    if (find_local(checker, text, root->span.length) != NULL) {
+        return true;
+    }
+    const KestSymbol *global =
+        kest_lookup_global(checker->program, text, root->span.length);
+    return global != NULL && global->is_const;
+}
+
+// Whether the value has a field of that name, which is a function held in the
+// value and called as one rather than a function taking the value: `r.apply(3)`
+// on a `Rule` that holds `apply`. Asked quietly, because the value is checked
+// again on the way that is taken. See D1256.
+static bool calls_a_field(Checker *checker, KestExpr *expr) {
+    const KestExpr *callee = expr->call.callee;
+    KestDiags *diags = checker->program->diags;
+    kest_diags_mute(diags, true);
+    KestType *object = check_expr(checker, callee->field.object, NULL);
+    kest_diags_mute(diags, false);
+    if (is_error(object) || object->tag != KEST_T_STRUCT) {
+        return false;
+    }
+    const char *name = span_text(checker, callee->field.name);
+    for (uint32_t i = 0; i < object->member_count; i++) {
+        if (kest_word_same(object->members[i].name, name,
+                           callee->field.name.length)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// The module a type was declared in, which is the other place a function
+// taking it is looked for: `t.get(k)` on a `table.Table` is `table.get(t, k)`.
+// A copy of a shape is looked for where the shape was declared. Two of the
+// language's own have a module that is theirs the same way: what is built on
+// the vectors is `std.vec`, and on text `std.text`.
+static size_t module_of(const KestType *type, const char **module) {
+    if (kest_is_vector(type)) {
+        *module = "std.vec";
+        return strlen(*module);
+    }
+    if (type != NULL && type->tag == KEST_T_TEXT) {
+        *module = "std.text";
+        return strlen(*module);
+    }
+    const KestType *named = type;
+    if (named != NULL && named->shape != NULL) {
+        named = named->shape;
+    }
+    if (named == NULL || named->name == NULL ||
+        (named->tag != KEST_T_STRUCT && named->tag != KEST_T_ENUM &&
+         named->tag != KEST_T_FLAGS)) {
+        return 0;
+    }
+    const char *end = strchr(named->name, '<');
+    size_t length = end == NULL ? strlen(named->name)
+                                : (size_t)(end - named->name);
+    while (length > 0 && named->name[length - 1] != '.') {
+        length--;
+    }
+    if (length == 0) {
+        return 0;
+    }
+    *module = named->name;
+    return length - 1;
+}
+
+// `x.f(a)` read as `f(x, a)`. The function is looked for where the file's own
+// are and where `x`'s type was declared, and taken if the first thing it takes
+// could be `x`; the language's own come last, so a module's `get` is the one a
+// value of that module's type means. What is checked after that is the call it
+// would have been written as. See D1256.
+static KestType *check_method(Checker *checker, KestExpr *expr,
+                              const KestType *expected) {
+    if (!expr->call.method) {
+        KestExpr *callee = expr->call.callee;
+        KestExpr **moved = KEST_ARENA_ARRAY(checker->program->arena,
+                                            KestExpr *,
+                                            expr->call.arg_count + 1);
+        KestExpr *named = KEST_ARENA_NEW(checker->program->arena, KestExpr);
+        if (moved == NULL || named == NULL) {
+            checker->out_of_memory = true;
+            return error_type(checker);
+        }
+        moved[0] = callee->field.object;
+        for (uint32_t i = 0; i < expr->call.arg_count; i++) {
+            moved[i + 1] = expr->call.args[i];
+        }
+        memset(named, 0, sizeof *named);
+        named->kind = KEST_EXPR_NAME;
+        named->span = callee->field.name;
+        expr->call.callee = named;
+        expr->call.args = moved;
+        expr->call.arg_count++;
+        expr->call.method = true;
+    }
+    KestType *object = check_expr(checker, expr->call.args[0], NULL);
+    if (is_error(object)) {
+        for (uint32_t i = 1; i < expr->call.arg_count; i++) {
+            check_expr(checker, expr->call.args[i], NULL);
+        }
+        return error_type(checker);
+    }
+    KestSpan name = expr->call.callee->span;
+    const char *text = span_text(checker, name);
+
+    KestSymbol *candidates[16];
+    uint32_t count = 0;
+    const char *places[2] = {checker->program->module, NULL};
+    size_t lengths[2] = {strlen(checker->program->module), 0};
+    lengths[1] = module_of(object, &places[1]);
+    for (int at = 0; at < 2; at++) {
+        // A file that names no module has its own functions under nothing.
+        if (places[at] == NULL || (at == 1 && lengths[1] == 0) ||
+            (at == 1 && lengths[1] == lengths[0] &&
+             strncmp(places[1], places[0], lengths[0]) == 0)) {
+            continue;
+        }
+        char joined[256];
+        int written = lengths[at] == 0
+                          ? snprintf(joined, sizeof joined, "%.*s",
+                                     (int)name.length, text)
+                          : snprintf(joined, sizeof joined, "%.*s.%.*s",
+                                     (int)lengths[at], places[at],
+                                     (int)name.length, text);
+        if (written <= 0 || (size_t)written >= sizeof joined) {
+            continue;
+        }
+        KestSymbol *found[16];
+        uint32_t there = kest_overloads(checker->program, joined,
+                                        (size_t)written, found, 16);
+        for (uint32_t i = 0; i < there && count < 16; i++) {
+            const KestType *takes = found[i]->type;
+            if (takes != NULL && takes->tag == KEST_T_FN &&
+                takes->param_count == expr->call.arg_count &&
+                could_take(object, takes->params[0])) {
+                candidates[count++] = found[i];
+            }
+        }
+        if (count > 0 && at == 1) {
+            // Reached through the module the type came from, which the file
+            // has to have asked for like any other name under it.
+            if (!kest_import_by_path(checker->program, places[at],
+                                     lengths[at])) {
+                report(checker, name, "K0325",
+                       "this file does not import `%.*s`", (int)lengths[at],
+                       places[at]);
+                suggest(checker, "`%.*s` is where `%s` takes a `%s`",
+                        (int)lengths[at], places[at], joined,
+                        type_name(checker, object));
+                return error_type(checker);
+            }
+        }
+        if (count > 0) {
+            break;
+        }
+    }
+    if (count > 1) {
+        return check_overloaded(checker, expr, candidates, count);
+    }
+    if (count == 1) {
+        candidates[0]->named = true;
+        KestType *callee = candidates[0]->type;
+        expr->call.callee->type = callee;
+        if (callee->type_param_count > 0) {
+            return check_generic(checker, expr, callee, expected);
+        }
+        return check_arguments(checker, expr, callee);
+    }
+    // The language's own, which take what they work on first too.
+    bool handled = false;
+    KestType *answered = check_builtin(checker, expr, expected, &handled);
+    if (handled) {
+        return answered;
+    }
+    report(checker, name, "K0307",
+           "nothing called `%.*s` takes a `%s` first", (int)name.length, text,
+           type_name(checker, object));
+    // Where it would have been looked for, and whether that is a module this
+    // file reads at all: one it did not import is one nothing was looked for
+    // in.
+    if (lengths[1] == 0) {
+        suggest(checker, "`x.f(a)` is `f(x, a)` for a function this file "
+                         "declares");
+    } else if (!kest_import_by_path(checker->program, places[1],
+                                    lengths[1])) {
+        suggest(checker, "`x.f(a)` is `f(x, a)` for a function this file or "
+                         "`%.*s` declares, and this file does not import "
+                         "`%.*s`",
+                (int)lengths[1], places[1], (int)lengths[1], places[1]);
+    } else {
+        suggest(checker, "`x.f(a)` is `f(x, a)` for a function this file or "
+                         "`%.*s` declares",
+                (int)lengths[1], places[1]);
+    }
+    for (uint32_t i = 1; i < expr->call.arg_count; i++) {
+        check_expr(checker, expr->call.args[i], NULL);
+    }
+    return error_type(checker);
+}
+
 // What else this file calls by a name, said beside a refusal about the other
 // one. The note is the same sentence a body that gives a name away is told
 // (D730), because it is the same situation one step out: two things answer to
@@ -2925,8 +3147,17 @@ static void note_the_other(Checker *checker, KestSpan where) {
                     "this file calls something else by that name");
 }
 
+static KestType *check_method(Checker *checker, KestExpr *expr,
+                              const KestType *expected);
+static bool is_method_call(Checker *checker, const KestExpr *expr);
+static bool calls_a_field(Checker *checker, KestExpr *expr);
+
 static KestType *check_call(Checker *checker, KestExpr *expr,
                             const KestType *expected) {
+    if (expr->call.method ||
+        (is_method_call(checker, expr) && !calls_a_field(checker, expr))) {
+        return check_method(checker, expr, expected);
+    }
     if (expr->call.callee->kind == KEST_EXPR_NAME) {
         bool handled = false;
         uint32_t said = checker->program->diags->count;
@@ -3578,13 +3809,13 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
         if (nearest != NULL) {
             suggest(checker, "did you mean `%s`?", nearest);
         } else {
-            // What somebody writes when they have met a language with
-            // methods. There are none here: a function takes what it works on
-            // like anything else.
+            // A function named where a field would be, without the brackets
+            // that call it: `x.f()` is `f(x)` (D1256), and `x.f` is nothing.
             const char *elsewhere = names_a_function(checker, expr->field.name);
             if (elsewhere != NULL) {
-                suggest(checker, "there are no methods here: write `%s(...)`",
-                        elsewhere);
+                suggest(checker, "`%s` is a function, and one is called: "
+                                 "`%s(...)`",
+                        elsewhere, elsewhere);
             }
         }
         return error_type(checker);
@@ -3615,8 +3846,8 @@ static KestType *check_field(Checker *checker, KestExpr *expr,
     }
     const char *elsewhere = names_a_function(checker, expr->field.name);
     if (elsewhere != NULL) {
-        suggest(checker, "there are no methods here: write `%s(...)`",
-                elsewhere);
+        suggest(checker, "`%s` is a function, and one is called: `%s(...)`",
+                elsewhere, elsewhere);
     }
     return error_type(checker);
 }

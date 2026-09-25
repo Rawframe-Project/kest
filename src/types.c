@@ -339,6 +339,26 @@ void kest_import_reached_by(KestProgram *program, const char *alias,
     }
 }
 
+bool kest_import_by_path(KestProgram *program, const char *module,
+                         size_t length) {
+    if (program->unit == NULL) {
+        return false;
+    }
+    // A file's own module is one it may always reach.
+    if (kest_word_same(program->module, module, length)) {
+        return true;
+    }
+    for (uint32_t i = 0; i < program->unit->import_count; i++) {
+        if (kest_word_same(program->unit->import_paths[i], module, length)) {
+            if (program->unit->import_reached != NULL) {
+                program->unit->import_reached[i] = true;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
 void kest_import_reached(KestProgram *program, const char *name,
                          size_t length) {
     const char *dot = memchr(name, '.', length);

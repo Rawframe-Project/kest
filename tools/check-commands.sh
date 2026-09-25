@@ -1076,6 +1076,21 @@ fn main() -> i32 {
     return 0
 }
 EOF
+# A value whose type came from a module this file did not ask for, calling a
+# function of that module as `x.f()`: the module is reached, and reaching one
+# is importing it. See D1256.
+mkdir -p "$crossing/shop"
+printf 'module shop.stock\n\nstruct Crate {\n    count: i32\n}\n\nfn more(c: Crate, by: i32) -> Crate {\n    return Crate(c.count + by)\n}\n' \
+    > "$crossing/shop/stock.kest"
+printf 'module shop.till\n\nimport shop.stock\n\nfn opening() -> stock.Crate {\n    return stock.Crate(3)\n}\n' \
+    > "$crossing/shop/till.kest"
+printf 'import shop.till\n\nfn main() -> i32 {\n    return till.opening().more(2).count - 5\n}\n' \
+    > "$crossing/selling.kest"
+case "$("$kest" check "$crossing/selling.kest" 2>&1 </dev/null)" in
+*"K0325"*"this file does not import \`shop.stock\`"*) ;;
+*) complain "a function reached through a value's type from a module this \
+file did not import was called anyway" ;;
+esac
 misspelt=$("$kest" check "$crossing/misspelt.kest" 2>&1 </dev/null)
 case "$misspelt" in
 *K0511*)
@@ -3875,6 +3890,8 @@ K0314|fn main() -> i32 {\n    let v = vec2(1.0, 2.0) * 2\n    return 0\n}|`*` do
 K0314|fn main() -> i32 {\n    let v = 2.0 - vec4(1.0, 2.0, 3.0, 4.0)\n    return 0\n}|`-` does not apply to `f32` and `vec4`
 K0309|fn main() -> i32 {\n    let v = vec3(1.0, 2.0)\n    return 0\n}|`vec3` is made of `x`, `y` and `z`
 K0310|fn main() -> i32 {\n    let v = vec2(1.0, 2.0)\n    v += 2.0\n    return 0\n}|this assignment expects `vec2`, found `f32`
+K0307|struct Pot {\n    level: i32\n}\n\nfn main() -> i32 {\n    let p = Pot(1)\n    return p.fly(2)\n}|nothing called `fly` takes a `Pot` first
+K0307|fn main() -> i32 {\n    let v = vec3(3.0, 4.0, 0.0)\n    return i32(v.length())\n}|this file does not import `std.vec`
 K0327|struct Big {\n    cells: [i32; 20000]\n}\n\nfn take(b: Big) -> i32 {\n    return b.cells[0]\n}\n\nfn main() -> i32 {\n    return 0\n}|is 80000 bytes, and a value is at most 65535
 K0327|struct Big {\n    cells: [i64; 8000]\n    more: [i64; 8000]\n}\n\nfn take(b: Big) -> i64 {\n    return b.cells[0]\n}\n\nfn main() -> i32 {\n    return 0\n}|Big` is 128000 bytes, and a value is at most 65535
 K0327|enum Held {\n    Two([i64; 5000], [i64; 5000])\n    None\n}\n\nfn take(h: Held) -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}|Held` is 80008 bytes, and a value is at most 65535

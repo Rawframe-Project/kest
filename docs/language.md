@@ -432,10 +432,18 @@ to hear about. When one of the two is the library's, the other is the one to
 rename, because `std` is the one name a program cannot use and the library is
 not the reader's to rename.
 
-There are no methods. A function takes what it works on like anything else, so
-`len(t)` and `text.upper(t)` are how those are written, and `t.upper()` is told
-what to write instead — the whole of the name, with the module in front of it
-when that is where the function is.
+A function takes what it works on like anything else, and `x.f(a)` is another
+way of writing `f(x, a)`: `xs.len()` is `len(xs)`, `t.get(k)` on a
+`table.Table` is `table.get(t, k)`, and `v.length()` on a `vec3` is
+`vec.length(v)`. The function is looked for first among the file's own, then in
+the module the value's type was declared in -- `std.vec` for the language's
+vectors and `std.text` for text -- and last among the language's own, and it is
+taken when the first thing it takes could be the value. There are no methods
+beyond that: nothing is declared inside a type, and a function found this way
+is the one `f(x, a)` would have called, so a chain of them reads left to
+right -- `Pot(1).fill(2).fill(3)`. A value's field that holds a function is
+called as that field, and a module the value's type came from has to be one
+the file imported. See D1256.
 
 There is no `print`. Saying something is the host's to do, and `std.io` is
 where a program asks for it:
@@ -6292,6 +6300,7 @@ here, is a check that fails.
 | `lines.kest` | a program that reads, and a host that has to provide the reading |
 | `locale.kest` | where text stops being this language's business and starts being a host's |
 | `lookup.kest` | a lookup that finds nothing, which is a value and not a crash |
+| `methods.kest` | `x.f(a)` as `f(x, a)`: the language's, a module's through its type, the file's own, a chain, and a field holding a function |
 | `math.kest` | a loop, a chain of `if`, and a function that answers with text |
 | `numbers.kest` | what a number does at the end of its range, at every width |
 | `parse.kest` | reading a line of fields out of the standard library |

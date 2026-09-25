@@ -441,6 +441,10 @@ new ones, because a run under profile 2 and one under 3 are two runs. A
 constant may be written as its bits, `float(u64(0x...))`, since `bits` and
 `float` are worked out where they are written. See D1235.
 
+**`x.f(a)` is `f(x, a)`**: `xs.len()`, `stock.get(k)` on a `table.Table`,
+`v.length()` on a vector. **What a program has to do:** nothing; every call it
+has means what it meant. See D1256.
+
 **The library builds as WebAssembly** (`make kest.wasm`), and every example
 answers the same there. **What a host has to do:** nothing; one that wants the
 machine walled off from its own memory runs it that way, at 3 to 4 times the

@@ -1,0 +1,84 @@
+module examples.methods
+
+import std.io
+import std.table
+import std.vec
+
+// `x.f(a)` is `f(x, a)`. The function is the file's own, or the module's the
+// value's type was declared in, or the language's, taken in that order when
+// the first thing it takes could be the value. Nothing is declared inside a
+// type, so a chain reads left to right and every link is a function anybody
+// could call the other way round. See D1256.
+
+struct Pot {
+    level: i32
+}
+
+// A shape holding a function is called as what it holds.
+struct Rule {
+    apply: fn(i32) -> i32
+}
+
+fn fill(p: Pot, by: i32) -> Pot no.alloc {
+    return Pot(p.level + by)
+}
+
+fn twice(n: i32) -> i32 no.alloc {
+    return n * 2
+}
+
+// And a generic, whose own body calls one this way too, so it is read again
+// for every set of types it is copied for.
+fn largest<T: orders>(xs: [T], start: T) -> T no.alloc {
+    let best = start
+    for x in xs {
+        if x > best {
+            best = x
+        }
+    }
+    return best
+}
+
+fn countOf<T>(xs: [T]) -> i32 no.alloc {
+    return xs.len()
+}
+
+fn main() -> i32 {
+    // The language's own.
+    let xs: [i32] = array()
+    xs.push(5)
+    xs.push(9)
+    if xs.len() != 2 {
+        return 1
+    }
+    // The module's, through its type.
+    let stock: table.Table<text, i32> = table.empty()
+    stock.set("apples", 7)
+    if stock.orElse("apples", 0) != 7 || stock.count() != 1 {
+        return 2
+    }
+    // `std.vec`'s, through the language's vectors.
+    let v = vec3(3.0, 4.0, 0.0)
+    if v.length() != 5.0 || v.dot(v) != 25.0 {
+        return 3
+    }
+    // The file's own, one after another.
+    if Pot(1).fill(2).fill(3).level != 6 {
+        return 4
+    }
+    if Rule(twice).apply(3) != 6 {
+        return 5
+    }
+    // A name this body holds is not the function that is called.
+    let fill = 4
+    if Pot(1).fill(fill).level != 5 {
+        return 7
+    }
+    let ys: [f32] = array()
+    ys.push(1.5)
+    if xs.largest(0) != 9 || ys.largest(0.0) != 1.5 || ys.countOf() != 1 {
+        return 6
+    }
+    io.print("methods {xs.len() + stock.count()}")
+    return 0
+}

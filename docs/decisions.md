@@ -43210,3 +43210,47 @@ same way.
 
 Two holes: the address copied as eight bytes, and the file asked for where
 there is none; both are refused by the WebAssembly build under `-Werror`.
+
+## D1256 — `x.f(a)` is `f(x, a)`
+
+*decided*, E2 of the plan and K8. A game script is a chain of things done to one
+value -- `stock.get(k)`, `v.length()`, `pot.fill(2).fill(3)` -- and the language
+made every one of them `table.get(stock, k)`, read inside out. What it gets is
+the plan's answer: another way of writing a call, and nothing declared inside a
+type. A function found this way is the one `f(x, a)` would have called, so what
+a reader has to know about it is what they already know about calls.
+
+Where `f` is looked for, and in what order: the file's own functions; then the
+module the value's type was declared in -- a copy of a generic shape where the
+shape was declared, `std.vec` for the language's vectors (D1250) and `std.text`
+for text; then the language's own (`len`, `push` and the rest). A candidate is
+taken when the first thing it takes could be the value, and more than one is
+settled by what else is passed, the way any call with several of one name is.
+The module's comes before the language's so that `stock.get(k)` on a
+`table.Table` is `table.get`, not the store's `get`. A module the value's type
+came from has to be one the file imported, as it would have to be to write the
+call the other way (`K0325`); one it did not import is said when nothing was
+found, since nothing was looked for in it.
+
+What is a method call and what is not is read off what the chain starts from:
+a name this body holds, a constant, or something worked out -- a call, an index,
+a literal -- is a value; a module, a type, an enum and a host type are places,
+and `io.print(x)`, `Event.Moved(1.0, 2.0)` and `Engine.decide(3)` mean what
+they meant. A value whose shape holds a function under that name calls the
+function it holds: `Rule(twice).apply(3)`.
+
+The checker moves the value to the front of what is passed and names the
+function by its own name, and marks the call as written this way; that mark is
+what keeps the compiler from taking a local of the same name for the function
+(`let fill = 4` beside `p.fill(fill)`), and what lets a generic's body, which is
+checked again for every copy, be read the second time in the shape the first
+time left it. `x.f` without the brackets is still nothing, and says the
+function is called with them.
+
+`examples/methods.kest` calls each kind, both engines and the checked build
+answer the same, and `check-commands.sh` holds the refusals: nothing taking
+the value first, a vector's function from a module the file did not import,
+and one reached through a value's type from a module the file never asked for.
+Five holes: the field holding a function read as a method, the vectors with no
+module, the local taken for the function, the unimported module let through,
+and the refusal that did not say where it looked.
