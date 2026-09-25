@@ -21,7 +21,7 @@ reasoning; this holds the position.
                        with every hole caught
     LAST FAST GATE:    green
     LAST FULL GATE:    CI's `linux-full` on 6b7f5288, every hole caught; the
-                       sweep here on D1251, 923 holes, every one caught
+                       sweep here on D1251, 928 holes, every one caught
     STATUS:            GAME_AI_DIRECTION_COMPLETE, marked on a7769f0
     REFERENCE MACHINE: the spare Linux box this repository is on --
                        12 cores, 62 GB, gcc, release build, warm page cache.

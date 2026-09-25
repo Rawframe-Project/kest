@@ -270,7 +270,33 @@ static void shrank(KestArena *arena, size_t lost) {
     }
 }
 
+#if KEST_CHECKED
+// And one arena, counted apart: taking an arena is asking the host for its
+// first block, and the refusals above are aimed at what an arena hands out,
+// so every stage that takes an arena of its own -- the verifier, the bodies,
+// a machine -- had never been seen told no. `KEST_REFUSE_ARENA=n` refuses the
+// n-th, in the build that checks itself only. See D1251.
+static uint64_t arenas_so_far;
+
+static bool refuse_this_arena(void) {
+    static uint64_t refuse_arena_at;
+    static bool asked;
+    if (!asked) {
+        const char *said = getenv("KEST_REFUSE_ARENA");
+        refuse_arena_at = said == NULL ? 0 : strtoull(said, NULL, 10);
+        asked = true;
+    }
+    arenas_so_far++;
+    return refuse_arena_at != 0 && arenas_so_far == refuse_arena_at;
+}
+#endif
+
 KestArena *kest_arena_new(void) {
+#if KEST_CHECKED
+    if (refuse_this_arena()) {
+        return NULL;
+    }
+#endif
     KestArena *arena = calloc(1, sizeof(KestArena));
     if (arena == NULL) {
         return NULL;

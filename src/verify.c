@@ -3,6 +3,10 @@
 #include <stdio.h>
 #include <string.h>
 
+// What a walk says when there was no room to take it in, which is a thing
+// about the machine and not about the chunk. See D1251.
+#define WANTED_ROOM "could not be checked for want of memory"
+
 // Which chunk first reaches the heap, following calls, or -1. `where` is left
 // at the instruction that does it.
 // Where a promise is broken in what was emitted, and which chunk it is in. The
@@ -2641,7 +2645,7 @@ static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
     if (kept == NULL || lands == NULL || queued == NULL || work == NULL ||
         now == NULL || spare == NULL || opened == NULL) {
         kest_arena_rewind(scratch, mark);
-        snprintf(said, room, "could not be checked for want of memory");
+        snprintf(said, room, WANTED_ROOM);
         return "K0411";
     }
     lands[0] = 1;
@@ -2793,7 +2797,7 @@ static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
         }
     }
     if (wrong == NULL && starved) {
-        snprintf(said, room, "could not be checked for want of memory");
+        snprintf(said, room, WANTED_ROOM);
         wrong = "K0411";
     }
     kest_arena_rewind(scratch, mark);
@@ -2911,7 +2915,7 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
             const char *code = NULL;
             if (starts == NULL) {
                 snprintf(said, sizeof said,
-                         "could not be checked for want of memory");
+                         WANTED_ROOM);
                 code = "K0408";
             }
             if (code == NULL) {
@@ -2930,8 +2934,17 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
                                                  sizeof said);
                 if (code != NULL && laid == NULL) {
                     snprintf(said, sizeof said,
-                             "could not be checked for want of memory");
+                             WANTED_ROOM);
                 }
+            }
+            // A walk that ran out of room found nothing wrong: it is said
+            // the way a build that runs out of room anywhere else is said,
+            // rather than as the compiler's fault in what it wrote. The
+            // chunk is not held all the same, since nothing proved it.
+            if (code != NULL && strcmp(said, WANTED_ROOM) == 0) {
+                kest_diags_starve(diags);
+                held = false;
+                code = NULL;
             }
             if (code != NULL) {
                 KestSpan nowhere = {0, 0};

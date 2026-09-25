@@ -42365,11 +42365,18 @@ they answered. A module of only functions written where a type goes is said to
 be a module in a signature too, which it was only in a body. And the checked
 build found vector arithmetic widened to an optional compiled as a number, in
 both engines alike; the operator's sides decide now, and `examples/vectors.kest`
-folds all of `std.vec` into its number.
+folds all of `std.vec` into its number. CI found the verifier saying it had run
+out of room as the compiler's fault; refusing every arena in turn, which is new
+in `check-ceilings.sh`, found the loader running out and saying nothing. Both
+starve the build now.
 
 See D1251.
 
 **Runs:** the six examples before and after, output compared; the module
 against a copy of the library before it went in; the module-as-type refusal for
 `vec` and `io`, and its hole by hand; the example in the machine, the checked
-build and two releases; the widening hole by hand; `make most`; the sweep.
+build and two releases; the widening hole by hand; CI's red whole gate on
+`f8b4129a` (`K0408` at a ceilings rung) reproduced by failing the process's
+allocations in turn with a preloaded `malloc`; every arena of four programs
+refused in turn, before and after the two fixes; five holes by hand;
+`make most`; the sweep.

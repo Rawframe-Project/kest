@@ -2384,6 +2384,82 @@ yield""",
         "caught": "examples/vectors.kest answered",
     },
     {
+        # The verifier out of room said as the compiler having written
+        # something wrong: a walk that could not be taken found nothing, and
+        # what ran out was the machine. CI found it by the address space a
+        # ladder rung left, on one machine and not another. See D1251.
+        "what": "a verifier out of room blaming the compiler",
+        "file": "src/verify.c",
+        "from": r"""            if (code != NULL && strcmp(said, WANTED_ROOM) == 0) {""",
+        "to": r"""            if (false && strcmp(said, WANTED_ROOM) == 0) {""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "was said as the compiler's own mistake",
+    },
+    {
+        # A build whose trees had nowhere to go, reading nothing and saying
+        # nothing: a run of it answered nought having run nothing. See D1251.
+        "what": "a build that read nothing and said nothing",
+        "file": "src/loader.c",
+        "from": r"""        kest_diags_starve(diags);
+        return false;
+    }
+    const char *root = directory_of(arena, paths[0]);""",
+        "to": r"""        return false;
+    }
+    const char *root = directory_of(arena, paths[0]);""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "came back 0 and named no refusal",
+    },
+    {
+        # A verifier with no room to prove anything in, letting everything
+        # through: the run answers what it answers, and nothing was proved.
+        # What says so is that the arena after it is still refused. See D1251.
+        "what": "a verifier with no room letting every chunk through",
+        "file": "src/verify.c",
+        "from": r"""    KestArena *scratch = kest_arena_new_under(arena);
+    uint8_t *starts = NULL;""",
+        "to": r"""    KestArena *scratch = kest_arena_new_under(arena);
+    if (scratch == NULL) {
+        return true;
+    }
+    uint8_t *starts = NULL;""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "so a stage went without the arena and said nothing",
+    },
+    {
+        # An arena asked for and never refused, which is the walk of arenas
+        # walking nothing: every rung answers what the whole run answers and
+        # the walk ends having refused none. See D1251.
+        "what": "an arena that is never refused when asked to be",
+        "file": "src/mem.c",
+        "from": r"""    return refuse_arena_at != 0 && arenas_so_far == refuse_arena_at;""",
+        "to": r"""    return refuse_arena_at != 0 && arenas_so_far == 0;""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "no arena of any program could be refused",
+    },
+    {
+        # The verifier's arena used without asking whether there was one: the
+        # first thing it keeps is written through nothing. See D1251.
+        "what": "a verifier that works in an arena it was refused",
+        "file": "src/verify.c",
+        "from": r"""    if (scratch != NULL) {
+        starts = kest_arena_alloc(scratch, ((size_t)largest + 8) / 8, 1);""",
+        "to": r"""    if (true) {
+        starts = kest_arena_alloc(scratch, ((size_t)largest + 8) / 8, 1);""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-ceilings.sh",
+        "arguments": [],
+        "caught": "killed it",
+    },
+    {
         # Work counted and never run out of: a ceiling that is read and never
         # reached is a build that takes as long as the file makes it, which
         # is the thing a host that compiles what it was sent gave one to stop.
@@ -8246,10 +8322,16 @@ K0307|struct P {\n    x: i32\n}\n\nfn main() -> i32 {\n    let p: P? = P(1)\n   
                                KEST_STARVED_CODE, KEST_STARVED_SAYS);""",
         "to": "",
         "also": ("src/mem.c",
-                 "KestArena *kest_arena_new(void) {\n"
-                 "    KestArena *arena = calloc(1, sizeof(KestArena));",
-                 "KestArena *kest_arena_new(void) {\n"
-                 "    KestArena *arena = NULL;"),
+                 "    KestArena *arena = calloc(1, sizeof(KestArena));\n"
+                 "    if (arena == NULL) {\n"
+                 "        return NULL;\n"
+                 "    }\n"
+                 "    arena->head = block_new(BLOCK_SIZE);",
+                 "    KestArena *arena = NULL;\n"
+                 "    if (arena == NULL) {\n"
+                 "        return NULL;\n"
+                 "    }\n"
+                 "    arena->head = block_new(BLOCK_SIZE);"),
         "make": ["kest"],
         "program": "unread.kest",
         "source": "fn main() -> i32 {\n    return 0\n}\n",

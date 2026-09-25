@@ -2089,6 +2089,72 @@ if [ $aimed -eq 0 ]; then
     failed=1
 fi
 
+# And every arena taken, refused in turn. Taking one is asking the host for its
+# first block, which none of the refusals above is aimed at, so each stage that
+# works in an arena of its own had never been seen told no -- and two of them
+# answered wrong: the verifier said the compiler had written something wrong,
+# and a build whose trees had nowhere to go read nothing, said nothing, and ran
+# as though it had run the program. Walked until one is refused that changes
+# nothing, and then past it, because an arena refused and quietly done without
+# is the thing this is looking for and looks the same as the end. See D1251.
+arenas=0
+for aimed_at in "run examples/vectors.kest" "emit examples/boxes.kest" \
+                "check lib/std/text.kest" "run examples/queue.kest"; do
+    how=${aimed_at%% *}
+    what=${aimed_at#* }
+    whole=$(./kest-debug "$how" "$what" 2>&1 </dev/null)
+    at_one=1
+    past=0
+    while [ $past -lt 3 ] && [ $at_one -le 64 ]; do
+        said=$(KEST_REFUSE_ARENA=$at_one ./kest-debug "$how" "$what" \
+               2>&1 </dev/null)
+        answered=$?
+        if [ $answered -eq 0 ] && [ "$said" = "$whole" ]; then
+            past=$((past + 1))
+            at_one=$((at_one + 1))
+            continue
+        fi
+        if [ $past -gt 0 ]; then
+            echo "ceilings: refusing arena $((at_one - past)) of" \
+                 "\`kest $how $what\` changed nothing it said, and one after" \
+                 "it did, so a stage went without the arena and said nothing"
+            failed=1
+            break
+        fi
+        arenas=$((arenas + 1))
+        case "$said" in
+        *AddressSanitizer*|*"Sanitizer:"*)
+            echo "ceilings: refusing arena $at_one of \`kest $how $what\`" \
+                 "killed it"
+            failed=1
+            ;;
+        *"error[K04"*)
+            echo "ceilings: refusing arena $at_one of \`kest $how $what\`" \
+                 "was said as the compiler's own mistake:" \
+                 "\`$(printf '%s' "$said" | grep -m1 'error\[K04' | cut -c1-70)\`"
+            failed=1
+            ;;
+        *"error[K0"*)
+            if [ $answered -ge 128 ] || [ $answered -eq 0 ]; then
+                echo "ceilings: refusing arena $at_one of" \
+                     "\`kest $how $what\` came back $answered"
+                failed=1
+            fi
+            ;;
+        *)
+            echo "ceilings: refusing arena $at_one of \`kest $how $what\`" \
+                 "came back $answered and named no refusal"
+            failed=1
+            ;;
+        esac
+        at_one=$((at_one + 1))
+    done
+done
+if [ $arenas -eq 0 ]; then
+    echo "ceilings: no arena of any program could be refused"
+    failed=1
+fi
+
 if [ $failed -eq 0 ]; then
     # What the ladder walked, said so that another machine reads the same
     # sentence with its own numbers: from where this program first runs down to
@@ -2121,6 +2187,8 @@ if [ $failed -eq 0 ]; then
          "reading six programs, two of them the machine's own life with the" \
          "compiler's share taken off the front, each of them a run that said" \
          "it had run out, said nothing else, and neither died nor answered as" \
-         "though nothing had happened"
+         "though nothing had happened, and $arenas arena(s) refused in turn" \
+         "over four ways of reading four programs, each said as having run" \
+         "out"
 fi
 exit $failed

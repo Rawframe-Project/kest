@@ -42988,5 +42988,30 @@ The six examples that used the module answered what they answered before
 with that bug in them, so what they hold of `direction` is less than it looks;
 the number above is what holds it.
 
+CI's whole gate on D1250 was red for a reason older than both. `check-ceilings.sh`
+lowers the address space a run may have until it refuses, and at the first rung
+that refused `examples/vectors.kest` it said `K0408` -- the verifier's "what the
+compiler wrote into an instruction and what the program holds disagree" --
+rather than that it had run out. The rung is where the process could not have
+one more block, which is this machine's layout and not the program's, so it
+did not come back here; failing the process's allocations one at a time with a
+preloaded `malloc` did, at two of about a hundred, and `examples/math.kest` did
+too. The verifier works in an arena of its own (D1247) and said "could not be
+checked for want of memory" under its own codes, as the compiler's fault. It
+starves the build now, which says `K0639` like any stage that runs out.
+
+None of the aimed refusals had found it because they refuse what an arena hands
+out, and taking an arena is asking for its first block, which nothing aimed at.
+The build that checks itself refuses the n-th arena taken when
+`KEST_REFUSE_ARENA` says so, and `check-ceilings.sh` refuses every arena of four
+programs in turn, 31 of them, holding each to being said as having run out.
+Walking them found a worse one: the loader keeps its trees in an arena, and a
+build that could not take it read nothing, said nothing, and `kest run` came
+back nought having run no program at all. It starves the build too. Five holes
+hold the walk: the verifier blaming the compiler again, the loader quiet again,
+a verifier with no room letting everything through, which answers what it
+answers and is caught because the arena after it is still refused, a verifier
+working in the arena it was refused, which dies, and no arena ever refused.
+
 What a program has to do is in the CHANGELOG: `vec.Vec2` is `vec2`, and
 `vec.add(a, b)` is `a + b`.
