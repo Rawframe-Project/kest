@@ -163,9 +163,11 @@ bool kest_build_emit(KestBuild *build) {
     // nought. See D845.
     // The bodies go in an arena of their own, the way the trees do and for the
     // same reason: a backend reads them and nothing after it does, so a build
-    // that is finished holds neither. See D748 and D962.
+    // that is finished holds neither. See D748 and D962. Taken under the
+    // build's, so what a host gave a build is what the bodies may have too,
+    // and what they held at their widest is what the build cost. See D1247.
     KestIrProgram ir;
-    KestArena *bodies = kest_arena_new();
+    KestArena *bodies = kest_arena_new_under(build->arena);
     KestLower *writes = bodies == NULL
                             ? NULL
                             : kest_lower_new(build->program, &build->module,
@@ -347,7 +349,10 @@ size_t kest_build_cost(const KestBuild *build) {
     // Nought for no build, which is the same answer as a build that has read
     // nothing: a host that was handed NULL asked about a thing that is not
     // there, and there is nothing for it to have cost.
-    return build == NULL ? 0 : kest_arena_used(build->arena);
+    // The most it held at once, with what the stages that work in memory of
+    // their own held beside it: a build given this much has room to do it
+    // again. See D1247.
+    return build == NULL ? 0 : kest_arena_widest(build->arena);
 }
 
 size_t kest_build_held(const KestBuild *build) {

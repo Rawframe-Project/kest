@@ -2268,6 +2268,10 @@ if read_bytes and types_made is not None and type_bytes:
     made_of = read_bytes + types_made * type_bytes
 
 holding = what_it_said('emit', LIBRARY, 'held')
+# And what compiling worked in beside the build and gave back as it went, which
+# is in what it cost and was never held, so it is not what a stage left behind
+# for nobody. See D1247.
+working = what_it_said('emit', LIBRARY, 'working')
 # And what a build that was checked and not compiled holds. It still has its
 # trees, because the compiler is one of the two stages that read one, and it has
 # given its tokens back all the same — which is the thing held here, because a
@@ -2277,8 +2281,8 @@ holding = what_it_said('emit', LIBRARY, 'held')
 # made, so which of them holds more is about the program.
 checked_holds = what_it_said('check', LIBRARY, 'held')
 given_back = None
-if holding is not None and compiling is not None:
-    given_back = compiling - holding
+if holding is not None and compiling is not None and working is not None:
+    given_back = compiling - working - holding
 if (given_back is None or given_back <= 0 or token_bytes is None or
         tokens_read is None or nodes is None or smallest is None or
         checked_holds is None or checking is None or

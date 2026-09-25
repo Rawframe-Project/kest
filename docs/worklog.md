@@ -42272,3 +42272,19 @@ refusal back; `check-c.sh`'s host running a program with its C linked in a
 third time, untrusted, counting the machine's own instructions, and again with
 the machine's check taken out; `make most`; the backstop sweep.
 
+## 2026-09-25, compiling stays inside its bytes
+
+The bodies' arena and the verifier's are taken under the build's, counted
+against its ceiling while they hold anything, and a build's cost is what it
+holds plus the most they held at once. A program with one wide body compiled
+under a fifth of what it took; it is refused now. The ceiling refusal says what
+was held when it refused, and `emit`'s listing refuses rather than leaving lines
+out.
+
+See D1247.
+
+**Runs:** one wide body under the build's old cost, before (compiled, 15.9 MB
+resident) and after (refused); three programs' costs before and after; a build
+given exactly its cost, the listing included; `examples/embed.c`; the ceiling
+ladders; `make most`; the backstop sweep.
+

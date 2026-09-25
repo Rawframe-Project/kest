@@ -91,6 +91,22 @@ static const char *const TICK_CALLS[] = {TICK_BULK, TICK_SINGLE, NULL};
 static const char *const EVERY_CALL[] = {KEST_MAIN, TICK_BULK, TICK_SINGLE,
                                          NULL};
 
+// The listing, which works out as it goes what the program needs -- and asks
+// the build's memory for the room to. A listing that ran out of it partway is
+// one that left lines out, so it is said the way a build that ran out is
+// said, rather than handed over short with nothing wrong. See D1247.
+static void listed(KestBuild *build, bool json) {
+    bool refused_before = kest_arena_refused_by_ceiling(build->arena);
+    if (json) {
+        kest_module_disassemble_json(&build->module, EVERY_CALL, stdout);
+    } else {
+        kest_module_disassemble(&build->module, EVERY_CALL, stdout);
+    }
+    if (!refused_before && kest_arena_refused_by_ceiling(build->arena)) {
+        kest_diags_starve(&build->diags);
+    }
+}
+
 
 // What the command does, written where a person asking for it will look:
 // standard output, and not an error.
@@ -1172,8 +1188,11 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                 // D640.
                 fputc('{', stdout);
                 kest_diags_write_json(&diags, stdout);
-                fprintf(stdout, ",\"cost\":%zu,\"held\":%zu,\"askings\":%zu",
+                fprintf(stdout,
+                        ",\"cost\":%zu,\"held\":%zu,\"working\":%zu,"
+                        "\"askings\":%zu",
                         kest_arena_used(arena), kest_arena_held(arena),
+                        kest_arena_most_beneath(arena),
                         kest_arena_askings(arena));
                 // And what a tree is made of, which is where most of that
                 // went: every expression, statement and declaration the parser
@@ -2399,8 +2418,7 @@ static int run(const char *command, const char *executable, char **paths,
                 if (written != NULL) {
                     fputs(written, stdout);
                 } else if (!writing_c) {
-                    kest_module_disassemble(&build->module, EVERY_CALL,
-                                            stdout);
+                    listed(build, false);
                 }
             }
             // In JSON it goes inside the object below, because a stream that
@@ -2811,8 +2829,10 @@ static int run(const char *command, const char *executable, char **paths,
         // about the compiler's own. Read here rather than at the end, because
         // writing what follows allocates too and a number that counted the
         // writing would grow with how much a tool asked to be told. See D572.
-        fprintf(stdout, ",\"cost\":%zu,\"held\":%zu,\"askings\":%zu",
+        fprintf(stdout,
+                ",\"cost\":%zu,\"held\":%zu,\"working\":%zu,\"askings\":%zu",
                 kest_build_cost(build), kest_build_held(build),
+                kest_arena_most_beneath(build->arena),
                 kest_arena_askings(build->arena));
         // And what of that cost was working values out where they are written,
         // which is a thing every stage after reading does some of: the checker
@@ -2928,7 +2948,7 @@ static int run(const char *command, const char *executable, char **paths,
             fprintf(stdout, ",\"codeMark\":\"%016llx\"",
                     (unsigned long long)kest_build_code_mark(build));
             fputc(',', stdout);
-            kest_module_disassemble_json(&build->module, EVERY_CALL, stdout);
+            listed(build, true);
             // And the same bodies as C, for a tool that asked for them. It is
             // a string rather than a stream of its own for the reason
             // everything else here is one: what a command says is one object.

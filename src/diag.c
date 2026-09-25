@@ -674,7 +674,12 @@ static const char *starved_says(const KestDiags *diags, char *room,
     if (!kest_arena_refused_by_ceiling(diags->arena)) {
         return KEST_STARVED_SAYS;
     }
-    size_t taken = kest_arena_used(diags->arena);
+    // What it held when it was refused, counting the stages that work in
+    // memory of their own under it, which may have given it back since.
+    size_t taken = kest_arena_refused_holding(diags->arena);
+    if (kest_arena_used(diags->arena) > taken) {
+        taken = kest_arena_used(diags->arena);
+    }
     size_t given = kest_arena_ceiling(diags->arena);
     // Reading a file happens in an arena of its own and is charged back in one
     // lump when it is done, so the charge that finishes a build can land above

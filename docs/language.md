@@ -6455,9 +6455,11 @@ bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 577 lines:
-55860 bytes as tokens, 136241 as a tree, 174968 checked and 207620 compiled.
+55860 bytes as tokens, 136241 as a tree, 174968 checked and 303224 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
-the tree.
+the tree. Compiling counts what the bodies and the verifier worked in beside
+what the build keeps, at the most they held at once, because a build given that
+many bytes has to have room to do it again (D1247).
 
 Those are bytes of memory on the machine this was read on, and they are held:
 `tools/check-costs.sh` measures all four over the same file and reads this
@@ -6472,7 +6474,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 20701 bytes, against the 207620 it costs to compile.
+file and 20701 bytes, against the 303224 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.
@@ -6516,7 +6518,7 @@ every optional and every run of something:
 
 ```json
 { "schema": 2, "diagnostics": [], "errors": 0, "cost": 41180, "held": 41180,
-  "askings": 5, "tokenBytes": 12, "tokenRoom": 256,
+  "working": 0, "askings": 5, "tokenBytes": 12, "tokenRoom": 256,
   "tokens": [], "comments": [] }
 ```
 
@@ -6527,7 +6529,7 @@ every optional and every run of something:
 
 ```json
 { "schema": 2, "diagnostics": [], "errors": 0, "cost": 178880, "held": 154304,
-  "askings": 380, "typesMade": 58, "typeBytes": 168 }
+  "working": 0, "askings": 380, "typesMade": 58, "typeBytes": 168 }
 ```
 
 `tokenBytes` is the same thing for a token, and the same reason: reading a file
@@ -6549,6 +6551,13 @@ against what was emitted. Both are read into arenas of their own and given back
 where the stage that reads them ends, which is about half of what compiling a
 program asks for. A ceiling refuses against `cost`, because what a host was
 asked for is the same number whether it was kept or not.
+
+`working` is the part of `cost` that is never held at all: what the stages that
+work in memory of their own beside the build -- the bodies a backend writes,
+the verifier's tables -- held at the most at once. They are counted against the
+ceiling while they hold anything and give it back as they go, so `emit` says a
+number here and `check` and `parse`, which run neither, say nought. See
+D1247.
 
 `askings` is how many times the arena was asked for anything, which tells a
 stage that keeps a lot from one that asks a lot. What an arena is asked for is a

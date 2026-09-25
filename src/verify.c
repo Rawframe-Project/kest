@@ -2801,17 +2801,18 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
     // What the walks below keep about one body -- where each instruction
     // starts, the depth of the stack at each, and the places still to walk
     // from -- sized for the largest body and in an arena of the verifier's
-    // own, given back at the end. It is not the build's, because what proving
-    // takes out of a build is what a build given exactly what it costs does
-    // not have: `examples/embed.c` builds a program inside what it cost a
-    // moment before, and was refused 4,100 bytes short. See D1237.
+    // own, given back at the end. Taken under the build's, so it is inside
+    // what the host gave the build, and what it held at its widest is part of
+    // what the build cost: `examples/embed.c` builds a program inside what it
+    // cost a moment before, and was refused 4,100 bytes short when proving
+    // took from the build's own. See D1237 and D1247.
     uint32_t largest = 1;
     for (uint32_t i = 0; i < module->count; i++) {
         if (module->functions[i]->code_count > largest) {
             largest = module->functions[i]->code_count;
         }
     }
-    KestArena *scratch = kest_arena_new();
+    KestArena *scratch = kest_arena_new_under(arena);
     uint8_t *starts = NULL;
     uint16_t *depth = NULL;
     uint32_t *work = NULL;

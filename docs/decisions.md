@@ -42734,3 +42734,46 @@ taken out it runs the C and the check says so.
 What the profile does not do yet is S5's: a ceiling on compiling, which a
 program nobody trusts is compiled under on the player's machine.
 
+## D1247 — Compiling stays inside the bytes a host gave it
+
+*measured*, S5 of the plan. A host compiles with a ceiling on how many bytes
+the build may take (`kest_build`'s last argument, `--room` on the command
+line), which is what a host compiling a player's script leans on. The build's
+own arena was held to it; the arena the bodies are lowered in (D962) and the
+verifier's (D1237) were each an arena of their own that nothing held, so a
+program with one wide body compiled under a ceiling five times smaller than
+what the process took: `--room` 3,104,274 bytes and 15.9 MB resident, the build
+saying it had cost 3,100,178.
+
+An arena can be taken under another now. What it holds is counted beside what
+the other holds, against the other's ceiling, while it holds it, and given back
+from that count when it rewinds or is freed. The bodies and the verifier are
+taken under the build. What a build costs is what it holds with, on top, the
+most the arenas under it held at once -- never less than the most the whole of
+it held, so a build given its cost has room to do it again, and still a number
+that grows with what is asked of the build afterwards, which `examples/embed.c`
+holds. The same wide program now costs 16,298,427 bytes and is refused under
+3,104,274 with `K0658`; `lib/std/text.kest` compiles for 303,224 where the
+reference said 207,620, and `examples/inventory.kest` for 1,771,217 where it
+said 1,487,965: the difference is what compiling took that nothing counted.
+
+The refusal said what the build held when a ceiling refused it, which was the
+build's own arena after the bodies had given theirs back: "65784 of the 117128
+bytes it was given, and wanted 140 more". It says what was held at the moment
+now, counting what was under it.
+
+And one silent answer the ladders found. `emit` lists what each function needs
+as it goes, in the build's memory; a build given room for compiling and not for
+the listing left those lines out and came back nought. A listing that runs out
+is said the way a build that runs out is said, as `K0658`.
+
+A tool reading `cost` and `held` had taken their difference to be what a stage
+left behind for nobody; the part of `cost` the bodies and the verifier worked in
+is never held at all, so the JSON says it as `working` and
+`check-costs.sh` takes it out before it asks what was given back -- the hole
+that keeps every tree after the last stage that reads one was not caught until
+it did.
+
+What is left of S5 is time: bytes bound what compiling holds and not how long
+it takes, and some of it can take longer than it holds.
+
