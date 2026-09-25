@@ -441,6 +441,12 @@ new ones, because a run under profile 2 and one under 3 are two runs. A
 constant may be written as its bits, `float(u64(0x...))`, since `bits` and
 `float` are worked out where they are written. See D1235.
 
+**A release reads the text inside a constant optional.** A `text?` or an enum
+carrying text, worked out where it is written, went into a release as the
+address the text had while compiling, and a release that read it failed.
+**What a program has to do:** nothing; rebuild a release that holds one. See
+D1241.
+
 **What is not a number is one value as bits and as a hash.** `bits` of any
 value that is not a number is `0x7FF8000000000000`, or `0x7FC00000` for an
 `f32`, and `hash` hashes it as that, where each was whatever sign and payload

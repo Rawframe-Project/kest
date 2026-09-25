@@ -42491,3 +42491,30 @@ what it does to the stack (`kest_op_stack`, which the machine that checks
 itself asks as well). Nothing a walk decides moved: the twelve holes that
 quote it quote it where it is and are caught as they were.
 
+## D1241 — Text inside a constant optional or enum is text
+
+*found*. Writing the verifier's reading of what a constant holds (S3c of the
+plan) found that the compiler said two constants were numbers when one was a
+piece of text: `value_classes`, which writes beside each slot of a value worked
+out where it is written what its bits are, knew structs, fixed runs and text,
+and wrote every other type as one whole number. An optional is its value and
+then the byte that says it is there, and an enum is a tag and then what its
+cases carry, so `let maybe: text? = "here"` was described as three numbers --
+and a struct holding an enum before a piece of text was described one slot
+short, every field after the enum one place out.
+
+The machine never reads the description; the other backend does. It writes a
+constant's text as text only where the description says one is and every
+other slot as the bits it holds, so the release engine of
+`examples/boxes.kest` carried `s[0].integer = 0x00005a579eba2b5c` -- the
+address "here" had in the compiling process -- where the machine had the text.
+Nothing read it, which is why every run agreed: the example asked whether the
+optional was there and never what it held. It asks now, and the release
+engine built before this answer is a segmentation fault; after it, nought. And
+the generated C was a different file on every build, which the determinism of
+a release is meant to rule out.
+
+`value_classes` describes an optional as its value and the byte, an enum as its
+tag and then the case the value's own tag names, a struct with nothing in it as
+one slot, and exactly as many slots as the type takes.
+

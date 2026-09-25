@@ -42183,3 +42183,17 @@ See D1240.
 `tools/check-tables.sh` and `tools/check-dead.sh`; the twelve holes that quote
 what moved; `make most`.
 
+## 2026-09-25, text inside a constant optional is text
+
+The description the compiler writes beside a constant said a `text?` worked
+out where it is written was three numbers, so the other backend wrote the
+text's address in the compiling process into the release's C. Found writing
+the verifier's reading of constants. Optionals and enums are described as what
+they hold, and `examples/boxes.kest` reads the text back.
+
+See D1241.
+
+**Runs:** `kest emit --c` of the example before and after, the address in the
+first; the example's release engine before (a segmentation fault) and after
+(nought); the machine; `make most`.
+

@@ -178,6 +178,16 @@ fn main() -> i32 {
     if !isThere(maybe) {
         return 30
     }
+    // And what it holds read back: an optional worked out where it is
+    // written is a constant, and the text inside one was written into the
+    // other backend's C as the address it had while compiling. See D1241.
+    if let word = maybe {
+        if word != "here" {
+            return 47
+        }
+    } else {
+        return 47
+    }
     let nothing: text? = none
     if isThere(nothing) {
         return 31
