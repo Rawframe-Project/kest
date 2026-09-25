@@ -10,7 +10,7 @@
 // path a read asks for is one of those or is not there. See D1172.
 static KestBuild *opened(const char *library, char **paths, int count,
                          const KestFile *handed, uint32_t handed_count,
-                         size_t room) {
+                         size_t room, uint64_t work) {
     // A build begins with nobody refused. What was refused before this one is
     // the last build's afternoon, and a host that compiles twice should not
     // have the first one's memory hold its tongue about the second. See D880.
@@ -32,6 +32,9 @@ static KestBuild *opened(const char *library, char **paths, int count,
     build->arena = arena;
     build->reported = 0;
     kest_diags_init(&build->diags, arena);
+    // Before anything is read, for the reason the ceiling on bytes is: what
+    // reading costs is the first thing counted. See D1248.
+    build->diags.work_given = work;
     kest_module_init(&build->module, arena);
     build->units.handed = handed;
     build->units.handed_count = handed_count;
@@ -43,7 +46,12 @@ static KestBuild *opened(const char *library, char **paths, int count,
 
 KestBuild *kest_build_open(const char *library, char **paths, int count,
                            size_t room) {
-    return opened(library, paths, count, NULL, 0, room);
+    return opened(library, paths, count, NULL, 0, room, 0);
+}
+
+KestBuild *kest_build_open_within(const char *library, char **paths, int count,
+                                  size_t room, uint64_t work) {
+    return opened(library, paths, count, NULL, 0, room, work);
 }
 
 void kest_build_clock(KestBuild *build, uint64_t (*now)(void *), void *context,
@@ -289,6 +297,14 @@ KestBuild *kest_build(const char *path, const char *library, FILE *errors,
                     room);
 }
 
+KestBuild *kest_build_within(const char *path, const char *library,
+                             FILE *errors, KestForm form, size_t room,
+                             uint64_t work) {
+    char *paths[1] = {(char *)path};
+    return finished(kest_build_open_within(library, paths, 1, room, work),
+                    errors, form, room);
+}
+
 KestBuild *kest_build_from(const KestFile *files, uint32_t count,
                            const char *library, FILE *errors, KestForm form,
                            size_t room) {
@@ -301,7 +317,7 @@ KestBuild *kest_build_from(const KestFile *files, uint32_t count,
     // A library a build was not told of is looked for on no disk: everything
     // it reads is what it was handed. See D1172.
     return finished(opened(library == NULL ? "" : library, paths, 1, files,
-                           count, room),
+                           count, room, 0),
                     errors, form, room);
 }
 
@@ -353,6 +369,11 @@ size_t kest_build_cost(const KestBuild *build) {
     // their own held beside it: a build given this much has room to do it
     // again. See D1247.
     return build == NULL ? 0 : kest_arena_widest(build->arena);
+}
+
+uint64_t kest_build_work(const KestBuild *build) {
+    // Nought for no build, for the reason the cost is.
+    return build == NULL ? 0 : build->diags.work_done;
 }
 
 size_t kest_build_held(const KestBuild *build) {

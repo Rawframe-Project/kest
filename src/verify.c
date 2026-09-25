@@ -374,6 +374,10 @@ typedef struct {
     const KestType **enums;
     uint32_t enum_count;
     uint32_t enum_room;
+    // What proving is counted against, beside everything else compiling
+    // does: a walk goes over a place once for every way into it that says
+    // something new, which is more than once. See D1248.
+    KestDiags *diags;
 } Verifying;
 
 // One more than the number of a type among the ones named so far, naming it
@@ -2679,6 +2683,11 @@ static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
         queued[at] = 0;
         memcpy(now, kept[at], sizeof(Kind) * ((size_t)chunk->slot_count + depth[at]));
         w.region = opened[at];
+        // Out of work is a build that stops, which it has already been told:
+        // what is left of this body is not walked.
+        if (!kest_diags_work(v->diags, 1)) {
+            break;
+        }
         // The instructions this run walked just before this one, newest
         // first, for reading a weighing that was not fused into one.
         uint32_t before[3] = {UINT32_MAX, UINT32_MAX, UINT32_MAX};
@@ -2688,6 +2697,9 @@ static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
             w.at = at;
             w.depth = depth[at];
             w.name = kest_op_name(op);
+            if (!kest_diags_work(v->diags, 1)) {
+                break;
+            }
             wrong = kinds_step(&w);
             if (wrong != NULL) {
                 break;
@@ -2831,7 +2843,7 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
         }
     }
     Kind *laid = scratch == NULL ? NULL : KEST_ARENA_ARRAY(scratch, Kind, widest);
-    Verifying verifying = {module, NULL, 0, 0};
+    Verifying verifying = {module, NULL, 0, 0, diags};
     if (scratch != NULL) {
         verifying.enums = KEST_ARENA_ARRAY(scratch, const KestType *, 256);
         verifying.enum_room = verifying.enums == NULL ? 0 : 256;
@@ -2847,6 +2859,8 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
     uint32_t known = (uint32_t)KEST_OP_STOP + 1;
     for (uint32_t i = 0; i < module->count; i++) {
         const KestChunk *chunk = module->functions[i];
+        // The walks below that go over a body once, counted once a body.
+        kest_diags_work(diags, chunk->code_count);
         uint32_t at = 0;
         uint8_t last = KEST_OP_RETURN;
         const char *wrong = NULL;

@@ -42301,3 +42301,24 @@ it caught it. Renamed.
 **Runs:** the Windows job's log; `examples/embed.c` rebuilt and run; the hosts
 compiled with `-Wshadow=global` to see what that flag would ask for.
 
+
+## 2026-09-25, compiling stays inside its work
+
+Every stage counts the work it does -- tokens, tree pieces made and checked,
+instructions laid down, the verifier's words and steps, the bytes of the names
+of generic copies -- and a build given a ceiling (`kest_build_within`,
+`--work`) stops where the count crosses it with `K0666`. `kest_build_work` and
+the JSON's `work` say what a build took. Walking the ceiling down found two
+things: a copy of a shape nested over itself doubles its name each level and
+nothing counted it, and a struct or enum past 65,535 bytes was laid out
+wrapped, which crashed the compiler sixteen levels deep. The names are counted;
+the shapes are refused with `K0327`, and the name in that message is cut short.
+
+See D1248.
+
+**Runs:** every example at its count, one under and seventeen rungs down, in the
+release and sanitised builds; the nested-copy files eight to twenty-two deep,
+before and after; the three oversized shapes against the committed compiler
+(accepted) and this one (refused); instruction counts on three examples against
+the committed tree; `tools/check-work.sh` and the six holes by hand;
+`examples/embed.c`; `make most`; the backstop sweep.

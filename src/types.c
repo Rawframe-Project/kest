@@ -2349,6 +2349,13 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
     for (uint32_t i = 0; i < count; i++) {
         room += strlen(kest_type_name(program->arena, args[i])) + 2;
     }
+    // And what writing it costs is counted, a unit a byte: a copy of a shape
+    // over two copies of the one before is a name twice as long, so the words
+    // that ask for twenty of them are a name of a million pieces, and the
+    // time it took was two seconds nothing counted. See D1248.
+    if (!kest_diags_work(program->diags, room)) {
+        return error_type(program);
+    }
     char *written = kest_arena_alloc(program->arena, room, 1);
     if (written == NULL) {
         return error_type(program);
@@ -2887,6 +2894,31 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
         return "?";
     }
     return buffer;
+}
+
+// Named as far as a reader reads one. The name of a copy is as long as what it
+// was made from, and a copy that is too big is one that holds too much: the
+// first refused for it was named in a hundred and eighty megabytes, and a
+// message that long is one nobody reads and a tool is choked by. Cut where a
+// character starts, so what is said is still text. See D1248.
+#define NAMED_AS_FAR_AS 120
+
+const char *kest_type_name_read(KestArena *arena, const KestType *type) {
+    const char *name = kest_type_name(arena, type);
+    if (strlen(name) <= NAMED_AS_FAR_AS) {
+        return name;
+    }
+    size_t cut = NAMED_AS_FAR_AS;
+    while (cut > 0 && ((unsigned char)name[cut] & 0xc0) == 0x80) {
+        cut--;
+    }
+    char *shorter = kest_arena_alloc(arena, cut + 4, 1);
+    if (shorter == NULL) {
+        return "?";
+    }
+    memcpy(shorter, name, cut);
+    memcpy(shorter + cut, "...", 4);
+    return shorter;
 }
 
 // A name to a slot, one byte at a time. Every name here is a name somebody
@@ -3550,9 +3582,32 @@ static bool refuse_cycle(KestProgram *program, KestType *type) {
     return false;
 }
 
+// What a shape that came out bigger than a value may be is refused where it
+// is declared, and it is one word from then on, the way that many of something
+// too big is: the rest of the file is still checked against a type with a
+// size. The sums are taken wider than a layout says one is so that the one
+// that crossed is seen rather than wrapped: two fields of 64000 bytes each
+// were a struct of 62464, and eight shapes each holding two of the one before
+// were one that wrote its layout past the end of where it was being written.
+// See D1248.
+static bool within_a_value(KestProgram *program, KestType *type,
+                           uint32_t bytes, uint32_t slots) {
+    if (bytes <= UINT16_MAX && slots <= UINT16_MAX) {
+        return true;
+    }
+    if (sized_within(program, bytes, slots, type->declared_in, type->span,
+                     kest_type_name_read(program->arena, type))) {
+        return true;
+    }
+    type->slots = 1;
+    type->byte_size = 8;
+    type->byte_align = 8;
+    return false;
+}
+
 static bool measure_struct(KestProgram *program, KestType *type) {
-    uint16_t offset = 0;
-    uint16_t bytes = 0;
+    uint32_t offset = 0;
+    uint32_t bytes = 0;
     uint16_t align = 1;
 
     for (uint32_t i = 0; i < type->member_count; i++) {
@@ -3560,8 +3615,8 @@ static bool measure_struct(KestProgram *program, KestType *type) {
         if (!measure_held(program, member, type)) {
             return refuse_cycle(program, type);
         }
-        type->members[i].offset = offset;
-        offset = (uint16_t)(offset + (member == NULL ? 1 : member->slots));
+        type->members[i].offset = (uint16_t)offset;
+        offset += member == NULL ? 1 : member->slots;
 
         // The bytes are laid out the way a C compiler would, so an array of
         // these can be the array the host already has.
@@ -3569,33 +3624,35 @@ static bool measure_struct(KestProgram *program, KestType *type) {
         uint16_t member_align = member == NULL || member->byte_align == 0
                                     ? 8
                                     : member->byte_align;
-        bytes = (uint16_t)((bytes + member_align - 1) / member_align *
-                           member_align);
-        type->members[i].byte_offset = bytes;
+        bytes = (bytes + member_align - 1) / member_align * member_align;
+        type->members[i].byte_offset = (uint16_t)bytes;
         bytes += member_size;
         if (member_align > align) {
             align = member_align;
         }
     }
 
-    type->slots = offset == 0 ? 1 : offset;
+    uint32_t size = bytes == 0 ? 1 : (bytes + align - 1) / align * align;
+    if (!within_a_value(program, type, size, offset)) {
+        return true;
+    }
+    type->slots = (uint16_t)(offset == 0 ? 1 : offset);
     type->byte_align = align;
-    type->byte_size =
-        (uint16_t)(bytes == 0 ? 1 : (bytes + align - 1) / align * align);
+    type->byte_size = (uint16_t)size;
     return true;
 }
 
 // An enum is a tag and whichever case's payload is widest, which is what a
 // tagged union is and why every case can be read for its tag alone.
 static bool measure_enum(KestProgram *program, KestType *type) {
-    uint16_t payload_slots = 0;
-    uint16_t payload_bytes = 0;
+    uint32_t payload_slots = 0;
+    uint32_t payload_bytes = 0;
     uint16_t align = 4;
 
     for (uint32_t c = 0; c < type->case_count; c++) {
         KestVariantType *variant = &type->cases[c];
-        uint16_t slots = 0;
-        uint16_t bytes = 0;
+        uint32_t slots = 0;
+        uint32_t bytes = 0;
         for (uint32_t p = 0; p < variant->payload_count; p++) {
             KestType *held = variant->payload[p];
             if (!measure_held(program, held, type)) {
@@ -3607,12 +3664,11 @@ static bool measure_enum(KestProgram *program, KestType *type) {
             if (held_align > align) {
                 align = held_align;
             }
-            variant->offsets[p] = slots;
-            slots = (uint16_t)(slots + (held == NULL ? 1 : held->slots));
-            bytes = (uint16_t)((bytes + held_align - 1) / held_align *
-                               held_align);
-            variant->byte_offsets[p] = bytes;
-            bytes = (uint16_t)(bytes + (held == NULL ? 8 : held->byte_size));
+            variant->offsets[p] = (uint16_t)slots;
+            slots += held == NULL ? 1 : held->slots;
+            bytes = (bytes + held_align - 1) / held_align * held_align;
+            variant->byte_offsets[p] = (uint16_t)bytes;
+            bytes += held == NULL ? 8 : held->byte_size;
         }
         if (slots > payload_slots) {
             payload_slots = slots;
@@ -3625,6 +3681,12 @@ static bool measure_enum(KestProgram *program, KestType *type) {
     // The tag is a four byte integer, so the payload starts wherever its own
     // alignment puts it after that.
     uint16_t start = (uint16_t)((4 + align - 1) / align * align);
+    uint32_t whole = start + payload_bytes;
+    if (!within_a_value(program, type,
+                        (whole + align - 1) / align * align,
+                        payload_slots + 1)) {
+        return true;
+    }
     for (uint32_t c = 0; c < type->case_count; c++) {
         for (uint32_t p = 0; p < type->cases[c].payload_count; p++) {
             type->cases[c].offsets[p] =
@@ -3636,8 +3698,7 @@ static bool measure_enum(KestProgram *program, KestType *type) {
 
     type->slots = (uint16_t)(payload_slots + 1);
     type->byte_align = align;
-    uint16_t total = (uint16_t)(start + payload_bytes);
-    type->byte_size = (uint16_t)((total + align - 1) / align * align);
+    type->byte_size = (uint16_t)((whole + align - 1) / align * align);
     return true;
 }
 

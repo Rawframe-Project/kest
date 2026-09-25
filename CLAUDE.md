@@ -1053,6 +1053,12 @@ tools/             Build and development scripts. `make check` runs all of
                    length -- and each has to be refused with its code while
                    the program as compiled is held. Nothing is run. See
                    D1237, D1239, D1242 and D1244.
+                   `check-work.sh` holds how long compiling may take: every
+                   example counts the same work twice, is let through at its
+                   own count and refused one unit under it, and is stopped at
+                   seventeen rungs between nought and done, each in words; a
+                   copy of a shape over two of the one before, as deep as the
+                   file asks, has to count what doubles. See D1248.
                    `check-commands.sh` holds every command to producing
                    something, because one that prints nothing looks the same
                    as one that works, and holds the two forms of `check`,

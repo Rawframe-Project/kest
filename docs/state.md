@@ -199,8 +199,11 @@ working memory held to its block (D1243), and the two halves of text held to
 one piece (D1244); `text.in` asks in every build (D1245), which closes
 D1234's table. A host starts a machine for code nobody trusts with
 `kest_start_untrusted`, which takes only the doors it opened and refuses to
-start without fuel and heap ceilings (D1246); compiling under a ceiling is
-next.
+start without fuel and heap ceilings (D1246). Compiling stays inside the bytes
+a host gives it, every stage of it (D1247), and inside a count of work that is
+the same on every machine (`kest_build_within`, `--work`, `K0666`, D1248);
+saying that code nobody trusts runs in the interpreter, and measuring what
+that costs, is next.
 
 ## Determinism
 

@@ -215,6 +215,7 @@ FAMILY = {
  # running: what a host that compiles a program, binds what it asks for, sizes
  # a machine and calls it needs.
  "kest_build":"running","kest_build_from":"running","kest_build_free":"running",
+ "kest_build_within":"running",
  "kest_build_report":"running",
  "kest_build_extern":"running","kest_build_capability":"running",
  "kest_extern_takes":"running","kest_extern_layout":"running","kest_extern_gives":"running",
@@ -251,6 +252,7 @@ FAMILY = {
  "kest_telemetry":"watching","kest_collected":"watching","kest_clock":"watching",
  "kest_count":"watching","kest_counted":"watching","kest_counted_entry":"watching",
  "kest_build_cost":"watching","kest_build_held":"watching","kest_runtime_cost":"watching",
+ "kest_build_work":"watching",
  # stopping: a debugger written by somebody else.
  "kest_break_byte":"stopping","kest_stopped":"stopping","kest_stopped_in":"stopping",
  "kest_resume":"stopping","kest_code_of":"stopping","kest_came_from":"stopping",

@@ -1766,6 +1766,25 @@ bool kest_host_opened(const KestHost *host, const char *name);
 KestBuild *kest_build(const char *path, const char *library, FILE *errors,
                       KestForm form, size_t room);
 
+// The same with a ceiling on the work compiling does as well as on the bytes
+// it asks for. `room` bounds how much a file can make this hold and `work`
+// bounds how long it can make it take: a unit is a word read, a piece of the
+// tree made or checked, an instruction laid down or walked over while it is
+// proved, so the count is the same on every machine and for every run of the
+// same files, and a ceiling that let one through lets it through again. Nought
+// is as much as it needs. A build that reaches the ceiling stops where it is
+// and is refused with K0666, which says how much it was given; the count one
+// that got through took is in `kest_build_work`. See D1248.
+KestBuild *kest_build_within(const char *path, const char *library,
+                             FILE *errors, KestForm form, size_t room,
+                             uint64_t work);
+
+// How many units of work compiling this took, whether it was given a ceiling
+// or not. The count is what `kest_build_within` is told, so a host that wants
+// a ceiling with room in it can measure what its own programs take and give
+// them a multiple.
+uint64_t kest_build_work(const KestBuild *build);
+
 // The same from files handed over rather than read: the first is the program
 // and the rest are what it imports, the library's among them, each where a
 // build would have found it -- a library's under `library`, the way

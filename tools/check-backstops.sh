@@ -580,6 +580,38 @@ fn main() -> i32 {
         "caught": "check: K0316 said",
     },
     {
+        # A struct measured in sixteen bits and never asked whether it fits:
+        # two fields of 64000 bytes were a struct of 62464, and a copy of a
+        # shape eight deep over two of the one before wrote its layout past
+        # the end of where it was being written. See D1248.
+        "what": "a struct too big for a value laid out anyway",
+        "file": "src/types.c",
+        "from": r"""    if (!within_a_value(program, type, size, offset)) {
+        return true;
+    }
+    type->slots = (uint16_t)(offset == 0 ? 1 : offset);""",
+        "to": r"""    type->slots = (uint16_t)(offset == 0 ? 1 : offset);""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "check: K0327 said",
+    },
+    {
+        # And an enum, whose widest case is what it is as big as. See D1248.
+        "what": "an enum too big for a value laid out anyway",
+        "file": "src/types.c",
+        "from": r"""    if (!within_a_value(program, type,
+                        (whole + align - 1) / align * align,
+                        payload_slots + 1)) {
+        return true;
+    }""",
+        "to": "",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "check: K0327 said",
+    },
+    {
         # An editor told where a mistake is, one column along from where the
         # command line says it is. The README's sentence is that `kest lsp` is
         # this compiler, so the two cannot differ; an editor that agreed about
@@ -2262,6 +2294,64 @@ yield""",
         "caught": "a constant past the body's was held",
     },
     {
+        # Work counted and never run out of: a ceiling that is read and never
+        # reached is a build that takes as long as the file makes it, which
+        # is the thing a host that compiles what it was sent gave one to stop.
+        # See D1248.
+        "what": "a work ceiling that is never reached",
+        "file": "src/diag.h",
+        "from": r"""    if (diags->work_given == 0 || diags->work_done <= diags->work_given) {""",
+        "to": r"""    if (true) {""",
+        "make": ["kest"],
+        "tool": "tools/check-work.sh",
+        "arguments": [],
+        "caught": "units came back 0 saying",
+    },
+    {
+        # The name of a copy built without being counted, which is what the
+        # count was before D1248: a copy of a copy of a copy doubles the name
+        # every level and the count grew by the same few units a level.
+        "what": "the name of a copy built without counting it",
+        "file": "src/types.c",
+        "from": r"""    if (!kest_diags_work(program->diags, room)) {
+        return error_type(program);
+    }
+    char *written = kest_arena_alloc(program->arena, room, 1);""",
+        "to": r"""    char *written = kest_arena_alloc(program->arena, room, 1);""",
+        "make": ["kest"],
+        "tool": "tools/check-work.sh",
+        "arguments": [],
+        "caught": "does not see what doubles",
+    },
+    {
+        # A build refused at its ceiling saying it took more than it was
+        # given: the unit that crossed was refused rather than done, and a
+        # host reading the count back to set the next ceiling reads one too
+        # many. See D1248.
+        "what": "a build refused at its ceiling saying it took more",
+        "file": "src/diag.c",
+        "from": r"""    diags->work_done = diags->work_given;
+    return false;""",
+        "to": r"""    return false;""",
+        "make": ["kest"],
+        "tool": "tools/check-work.sh",
+        "arguments": [],
+        "caught": "which is not what it was given",
+    },
+    {
+        # The words that ask for a ceiling read as a file: what the command
+        # line does not know is a file, so `--work` unread is a build with no
+        # ceiling and a file called `2000` it cannot find. See D1248.
+        "what": "`--work` not read",
+        "file": "src/main.c",
+        "from": r"""        } else if (strcmp(argv[i], "--work") == 0) {""",
+        "to": r"""        } else if (strcmp(argv[i], "--wrok") == 0) {""",
+        "make": ["kest"],
+        "tool": "tools/check-work.sh",
+        "arguments": [],
+        "caught": "said something else than with no ceiling",
+    },
+    {
         # The host this check writes, made not to build. A check that compiles
         # a host of its own says one thing when the host stops compiling and
         # another when the machine stops refusing, and both are worth telling
@@ -3659,9 +3749,11 @@ for file in "$@"; do""",
         "what": "what a build cost written under another name",
         "file": "src/main.c",
         "from": r"""        fprintf(stdout,
-                ",\"cost\":%zu,\"held\":%zu,\"working\":%zu,\"askings\":%zu",""",
+                ",\"cost\":%zu,\"held\":%zu,\"working\":%zu,\"askings\":%zu"
+                ",\"work\":%llu",""",
         "to": r"""        fprintf(stdout,
-                ",\"spent\":%zu,\"held\":%zu,\"working\":%zu,\"askings\":%zu",""",
+                ",\"spent\":%zu,\"held\":%zu,\"working\":%zu,\"askings\":%zu"
+                ",\"work\":%llu",""",
         "make": [],
         "tool": "tools/check-ceilings.sh",
         "arguments": [],
@@ -8793,13 +8885,15 @@ fn main() -> i32 {
         "file": "src/main.c",
         "from": """                fprintf(stdout,
                         ",\\"cost\\":%zu,\\"held\\":%zu,\\"working\\":%zu,"
-                        "\\"askings\\":%zu",
+                        "\\"askings\\":%zu,\\"work\\":%llu",
                         kest_arena_used(arena), kest_arena_held(arena),
                         kest_arena_most_beneath(arena),
-                        kest_arena_askings(arena));""",
+                        kest_arena_askings(arena),
+                        (unsigned long long)diags.work_done);""",
         "to": """                fprintf(stdout,
                         ",\\"cost\\":%u,\\"held\\":%u,\\"working\\":%u,"
-                        "\\"askings\\":%u", 0U, 0U, 0U, 1U);""",
+                        "\\"askings\\":%u,\\"work\\":%u", 0U, 0U, 0U, 1U,
+                        0U);""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
@@ -9845,13 +9939,17 @@ fn main() -> i32 {
         "what": "a run saying its own work cost nothing",
         "file": "src/main.c",
         "from": """        fprintf(stdout,
-                ",\\"cost\\":%zu,\\"held\\":%zu,\\"working\\":%zu,\\"askings\\":%zu",
+                ",\\"cost\\":%zu,\\"held\\":%zu,\\"working\\":%zu,\\"askings\\":%zu"
+                ",\\"work\\":%llu",
                 kest_build_cost(build), kest_build_held(build),
                 kest_arena_most_beneath(build->arena),
-                kest_arena_askings(build->arena));""",
+                kest_arena_askings(build->arena),
+                (unsigned long long)kest_build_work(build));""",
         "to": """        fprintf(stdout,
-                ",\\"cost\\":%zu,\\"held\\":%zu,\\"working\\":%zu,\\"askings\\":%zu",
-                (size_t)0, (size_t)0, (size_t)0, (size_t)1);""",
+                ",\\"cost\\":%zu,\\"held\\":%zu,\\"working\\":%zu,\\"askings\\":%zu"
+                ",\\"work\\":%llu",
+                (size_t)0, (size_t)0, (size_t)0, (size_t)1,
+                (unsigned long long)kest_build_work(build));""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
@@ -10776,8 +10874,8 @@ fn main() -> i32 {
         # release and a half while the header had 88.
         "what": "the reference counting the doors for itself",
         "file": "docs/language.md",
-        "from": r"""The C API is 111 doors in 6 families: 51 for running""",
-        "to": r"""The C API is 111 doors in 6 families: 50 for running""",
+        "from": r"""The C API is 113 doors in 6 families: 52 for running""",
+        "to": r"""The C API is 113 doors in 6 families: 51 for running""",
         "make": [],
         "tool": "tools/check-tables.sh",
         "arguments": [],
@@ -16135,7 +16233,7 @@ kest 9.9.9""",
         # See D1037.
         "what": "a front page counting the doors for itself",
         "file": "README.md",
-        "from": """a C embedding API of 111 doors""",
+        "from": """a C embedding API of 113 doors""",
         "to": """a C embedding API of 88 doors""",
         "make": ["kest"],
         "tool": "tools/check-docs.sh",

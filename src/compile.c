@@ -237,6 +237,7 @@ static void ir_leaves(Compiler *compiler, KestIrRef ref) {
 static uint32_t ir_emit(Compiler *compiler, KestIrKind kind,
                         const KestType *type, uint16_t takes,
                         const KestType *gives, uint16_t slots, KestSpan span) {
+    kest_diags_work(compiler->program->diags, 1);
     if (takes > compiler->value_count) {
         // Reading more than the body has made. The walk and this are out of
         // step, which is this project's mistake rather than the program's.

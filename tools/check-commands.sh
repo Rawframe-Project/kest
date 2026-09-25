@@ -3871,6 +3871,9 @@ K0327|fn main() -> i32 {\n    let xs: [i32] = array()\n    let n = i32(xs)\n    
 K0327|fn main() -> i32 {\n    let t = text(1)\n    return 0\n}|text is made from `[u8]`, found `i32`
 K0327|flags A: u8 {\n    One\n}\n\nfn main() -> i32 {\n    let n = u16(A.One)\n    return 0\n}|`A` is 8 bits, and `u16` is not
 K0327|struct Big {\n    cells: [i32; 20000]\n}\n\nfn take(b: Big) -> i32 {\n    return b.cells[0]\n}\n\nfn main() -> i32 {\n    return 0\n}|is 80000 bytes, and a value is at most 65535
+K0327|struct Big {\n    cells: [i64; 8000]\n    more: [i64; 8000]\n}\n\nfn take(b: Big) -> i64 {\n    return b.cells[0]\n}\n\nfn main() -> i32 {\n    return 0\n}|Big` is 128000 bytes, and a value is at most 65535
+K0327|enum Held {\n    Two([i64; 5000], [i64; 5000])\n    None\n}\n\nfn take(h: Held) -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}|Held` is 80008 bytes, and a value is at most 65535
+K0327|struct Pair<A, B> {\n    first: A\n    second: B\n}\n\nfn wide(x: Pair<Pair<[i64; 3000], [i64; 3000]>, Pair<[i64; 3000], [i64; 3000]>>) -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}|is 96000 bytes, and a value is at most 65535
 K0362|fn firstOf<T>(a: T) -> T {\n    return a\n}\n\nfn main() -> i32 {\n    let f = firstOf\n    return 0\n}|takes a type
 K0349|fn main<T>() -> i32 {\n    return 0\n}|is generic
 K0351|fn main() -> i32 {\n    let s: store<i32> = store(-1)\n    return 0\n}|cannot have room for

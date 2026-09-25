@@ -42777,3 +42777,61 @@ it did.
 What is left of S5 is time: bytes bound what compiling holds and not how long
 it takes, and some of it can take longer than it holds.
 
+
+## D1248 — Compiling stays inside the work a host gave it
+
+*measured*, S5 of the plan. D1247 bounded what compiling holds; this bounds how
+long it takes. The plan asked for the bound in units of work rather than
+seconds, so that a build stops at the same place on every machine and a ceiling
+that let a program through lets it through again.
+
+Every stage counts. A unit is a token read, an expression, statement or
+declaration made by the parser or checked by the checker, an instruction laid
+down, a word of a body the verifier is handed and every step of its walks, and
+a byte of the name of a copy of a generic. The count is in the build's
+diagnostics, beside the arena it already shares with every stage; a stage that
+crosses the ceiling caps that arena at one byte and starves the list, so every
+stage after it stops the way it stops when memory runs out, which each of them
+already does and says. What is said is `K0666`, "compiling this took all N
+units of work it was given", and what a refused build reports it took is what
+it was given. A host gives the ceiling through `kest_build_within` and reads the
+count back through `kest_build_work`; the command line takes `--work` and says
+`work` in its JSON. Nought is no ceiling, which is what every build had.
+
+The last unit is the one that found something. Counting what compiling does
+per thing written left one place where what compiling does is not in
+proportion to what is written: a copy of a shape over two copies of the one
+before is named twice as long as the last, and that name is built, hashed and
+compared every time the copy is asked for. Twenty-two of those in a file of
+1,296 bytes took 1.8 seconds and 184 MB and counted 1,301 units. The bytes of those
+names are counted now, and the same file counts 92,276,143 and stops inside a
+millisecond under a ceiling of a million.
+
+And a hole the same programs fell into. A struct and an enum were measured in
+sixteen bits and never asked whether they fit in a value, which a fixed array
+was: two fields of 64,000 bytes were a struct of 62,464, and a copy of `Pair`
+sixteen deep wrote its layout past the end of where it was being written --
+"double free or corruption" in the release build, a use-after-poison in the
+sanitised one. Both are measured in thirty-two bits now and refused with
+`K0327` where the shape is declared, the way that many of something too big
+is. The name the message gives is cut at a hundred and twenty bytes, and so
+is the one in the note that says which copy was asked for:
+`kest_type_name_read`.
+
+Measured: counting costs 1.0 to 1.1 % of the instructions `emit` takes on the
+three largest examples (43,464,810 to 43,943,749 for `numbers.kest`,
+23,598,217 to 23,839,582 for `embed.kest`, 25,536,208 to 25,789,724 for
+`churn.kest`, against the committed tree built twice to the same bytes).
+`tools/check-work.sh` holds the count to being one: every example counted the
+same twice, let through at its count and refused one under it, stopped at
+seventeen rungs between nought and done in words; and a copy doubling with
+each level has to count at least three times as much two levels deeper. Six
+holes put it and `check-commands.sh` out of order: the ceiling never reached,
+the names not counted, the count said past the ceiling, `--work` not read,
+and a struct and an enum laid out past a value.
+
+A build with no ceiling can still take as long as a file makes it, and that is
+the host's to decide: a host compiling what it was sent gives one, as SECURITY.md
+says. What is left of S5 is the plan's last sentence -- code nobody trusts runs
+in the interpreter, a release does not compile it, and what that costs is
+measured.

@@ -774,6 +774,10 @@ bool kest_type_holds_own(const KestType *type, const KestType **what);
 // The spelling used in diagnostics: `i32`, `[Player]`, `ref<Npc>?`.
 const char *kest_type_name(KestArena *arena, const KestType *type);
 
+// The same, cut where a reader stops reading, for a message that names a type
+// it cannot promise is short. See D1248.
+const char *kest_type_name_read(KestArena *arena, const KestType *type);
+
 // Prints what was resolved, for seeing what the checker built.
 // What the program holds, for a person. The file that was named is written out
 // in full and what it imported is a line each, because a reader came for the

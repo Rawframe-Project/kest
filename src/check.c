@@ -4536,6 +4536,9 @@ static KestType *check_expr(Checker *checker, KestExpr *expr,
     if (expr == NULL) {
         return error_type(checker);
     }
+    // Every copy of a generic is checked again, so what copies cost is
+    // counted here too. See D1248.
+    kest_diags_work(checker->program->diags, 1);
     KestType *type = check_expr_kind(checker, expr, expected);
 
     // A value standing where an optional is wanted becomes one. It is the
@@ -4734,6 +4737,7 @@ static KestType *check_branch(Checker *checker, KestExpr *expr,
 }
 
 static void check_stmt(Checker *checker, KestStmt *stmt) {
+    kest_diags_work(checker->program->diags, 1);
     switch (stmt->kind) {
     case KEST_STMT_LET: {
         KestType *declared = NULL;
@@ -5641,8 +5645,8 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
             }
             for (uint32_t b = 0; b < instance->count; b++) {
                 room += strlen(instance->names[b]) +
-                        strlen(kest_type_name(program->arena,
-                                              instance->bindings[b])) +
+                        strlen(kest_type_name_read(program->arena,
+                                                   instance->bindings[b])) +
                         strlen("`` is ``, and ");
             }
             char *which = kest_arena_alloc(program->arena, room, 1);
@@ -5655,7 +5659,8 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
                     which + used, room - used, "%s`%s` is `%s`",
                     b == 0 ? "" : (b + 1 == instance->count ? " and " : ", "),
                     instance->names[b],
-                    kest_type_name(program->arena, instance->bindings[b]));
+                    kest_type_name_read(program->arena,
+                                        instance->bindings[b]));
             }
             for (uint32_t d = before;
                  instance->site.length > 0 && d < program->diags->count; d++) {

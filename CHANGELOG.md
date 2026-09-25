@@ -441,6 +441,16 @@ new ones, because a run under profile 2 and one under 3 are two runs. A
 constant may be written as its bits, `float(u64(0x...))`, since `bits` and
 `float` are worked out where they are written. See D1235.
 
+**Compiling can be given a ceiling on its work.** `kest_build_within` takes
+one beside the ceiling on bytes, `--work` on the command line, and a build
+that reaches it is refused with `K0666`; `kest_build_work` and `work` in the
+JSON say what a build took, the same on every machine. **What a host has to
+do:** nothing, unless it compiles files it did not write, in which case it
+gives one. **A struct or enum bigger than 65,535 bytes is refused** with
+`K0327`, where it was laid out wrapped and could crash the compiler. **What a
+program has to do:** hold a shape that big through `[T]`; one that compiled
+before was already wrong. See D1248.
+
 **A host can start a machine for code nobody trusts.** `kest_host_open` says a
 door the host bound may be called by it, and `kest_start_untrusted` starts a
 machine that is refused a program asking for any other door (`K0663`), is

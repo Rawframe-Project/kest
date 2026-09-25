@@ -205,6 +205,12 @@ static void help(FILE *out) {
     "                    the heap it runs on. A number of bytes, or one\n"
     "                    with K, M or G after it. Without this it asks for\n"
     "                    whatever it needs\n"
+    "  --work <units>    the most work compiling may do, counted the same\n"
+    "                    on every machine: a word read, a piece of the\n"
+    "                    tree, an instruction laid down or proved. A\n"
+    "                    number, or one with K, M or G after it. --json\n"
+    "                    says what a build took. Without this it takes\n"
+    "                    as long as the program makes it\n"
     "  --               everything after this is the program's own, which\n"
     "                    `std.os` hands it. Nothing before it is\n"
     "  --fuel <steps>    the most steps run, tick and call may take, where\n"
@@ -1109,7 +1115,7 @@ typedef enum {
 // not depend on what it imports, and each is its own answer, so one that
 // cannot be read does not stop the rest.
 static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
-                    bool json, size_t room) {
+                    bool json, size_t room, uint64_t work) {
     int status = 0;
 
     for (int i = 0; i < count; i++) {
@@ -1127,6 +1133,8 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
 
         KestDiags diags;
         kest_diags_init(&diags, arena);
+        // And the whole of the work, for the same reason. See D1248.
+        diags.work_given = work;
         KestUnits units = {0};
         // `lex` answers with the tokens, so it reads the file and lexes it,
         // once. Parsing to reach a token stream is work nobody asked for, and
@@ -1190,10 +1198,11 @@ static int per_file(char **paths, int count, FileCommand what, FormatMode mode,
                 kest_diags_write_json(&diags, stdout);
                 fprintf(stdout,
                         ",\"cost\":%zu,\"held\":%zu,\"working\":%zu,"
-                        "\"askings\":%zu",
+                        "\"askings\":%zu,\"work\":%llu",
                         kest_arena_used(arena), kest_arena_held(arena),
                         kest_arena_most_beneath(arena),
-                        kest_arena_askings(arena));
+                        kest_arena_askings(arena),
+                        (unsigned long long)diags.work_done);
                 // And what a tree is made of, which is where most of that
                 // went: every expression, statement and declaration the parser
                 // made. A tool that has the cost and the count has what a node
@@ -1525,7 +1534,12 @@ static bool read_room(const char *text, size_t *room, bool json) {
 // the same scales, because a reader who has learnt one has learnt the other --
 // and a budget is the same kind of number: a ceiling somebody picked rather
 // than one the program asked for. See D921.
-static bool read_fuel(const char *text, uint64_t *fuel, bool json) {
+//
+// And how much work compiling may do, which is the same kind of number about
+// the compiler, so it is read by the same words with its own name in them.
+// See D1248.
+static bool read_fuel(const char *text, uint64_t *fuel, const char *of,
+                      bool json) {
     char *end = NULL;
     errno = 0;
     unsigned long long value = strtoull(text, &end, 10);
@@ -1554,9 +1568,9 @@ static bool read_fuel(const char *text, uint64_t *fuel, bool json) {
     if (end == text || *end != '\0' || errno == ERANGE || value == 0 ||
         value > UINT64_MAX / scale) {
         refused_at_the_words(json, "K0649",
-                             "`%s` is not a number of instructions; write one, "
+                             "`%s` is not a number of %s; write one, "
                              "or one with `K`, `M` or `G` after it",
-                             text);
+                             text, of);
         return false;
     }
     *fuel = (uint64_t)(value * scale);
@@ -2280,8 +2294,8 @@ static char *made_release(const char *executable, const char *program,
 
 static int run(const char *command, const char *executable, char **paths,
                int path_count, bool json, int32_t count, const int32_t *given,
-               bool reset, size_t room, uint64_t fuel, bool costing,
-               bool writing_c, bool releasing) {
+               bool reset, size_t room, uint64_t work, uint64_t fuel,
+               bool costing, bool writing_c, bool releasing) {
     // Asked once, because a compiler that asked the environment twice could
     // give two answers about one run.
     static int weighing = -1;
@@ -2291,12 +2305,9 @@ static int run(const char *command, const char *executable, char **paths,
     int64_t opened = weighing ? host_nanoseconds() : 0;
     // The binary a release made, once one has. See D1172.
     char *released = NULL;
-    KestBuild *build = kest_build_open(kest_library_path(NULL, executable),
-                                       paths,
-                                       strcmp(command, "call") == 0
-                                           ? 1
-                                           : path_count,
-                                       room);
+    KestBuild *build = kest_build_open_within(
+        kest_library_path(NULL, executable), paths,
+        strcmp(command, "call") == 0 ? 1 : path_count, room, work);
     if (build != NULL && weighing) {
         kest_build_clock(build, compiling_now, NULL,
                          (uint64_t)(host_nanoseconds() - opened));
@@ -2830,10 +2841,12 @@ static int run(const char *command, const char *executable, char **paths,
         // writing what follows allocates too and a number that counted the
         // writing would grow with how much a tool asked to be told. See D572.
         fprintf(stdout,
-                ",\"cost\":%zu,\"held\":%zu,\"working\":%zu,\"askings\":%zu",
+                ",\"cost\":%zu,\"held\":%zu,\"working\":%zu,\"askings\":%zu"
+                ",\"work\":%llu",
                 kest_build_cost(build), kest_build_held(build),
                 kest_arena_most_beneath(build->arena),
-                kest_arena_askings(build->arena));
+                kest_arena_askings(build->arena),
+                (unsigned long long)kest_build_work(build));
         // And what of that cost was working values out where they are written,
         // which is a thing every stage after reading does some of: the checker
         // asks about numbers a program wrote down, so that a count below
@@ -3170,7 +3183,7 @@ static uint32_t tests_under(const char *where, char ***into) {
 }
 
 static int run_tests(const char *executable, char **paths, int path_count,
-                     bool json, size_t room, uint64_t fuel) {
+                     bool json, size_t room, uint64_t work, uint64_t fuel) {
     int failed = 0;
     if (json) {
         printf("{\"schema\":%u,\"tests\":[", (unsigned)KEST_JSON_SCHEMA);
@@ -3180,7 +3193,7 @@ static int run_tests(const char *executable, char **paths, int path_count,
         // Each on its own, because a program that will not compile is one
         // program that will not compile and the rest still run.
         int status = run("run", executable, one, 1, false, 0, NULL, false,
-                         room, fuel, false, false, false);
+                         room, work, fuel, false, false, false);
         if (status != 0) {
             failed++;
         }
@@ -3269,6 +3282,9 @@ int main(int argc, char **argv) {
     // The most this command may ask the machine for, and nought for as much as
     // there is, which is what it has always asked for. See D843.
     size_t room = 0;
+    // And how much work compiling may do, nought for as much as it needs,
+    // which is what it has always been allowed. See D1248.
+    uint64_t work = 0;
     // And how many instructions it may run, nought for as many as it takes,
     // which is what this command has always allowed. See D921.
     uint64_t fuel = KEST_FUEL_UNLIMITED;
@@ -3333,7 +3349,20 @@ int main(int argc, char **argv) {
                                             "instruction(s), and there is "
                                             "nothing after it");
             }
-            if (!read_fuel(argv[++i], &fuel, json)) {
+            if (!read_fuel(argv[++i], &fuel, "instructions", json)) {
+                free(paths);
+                free(given);
+                return 1;
+            }
+        } else if (strcmp(argv[i], "--work") == 0) {
+            if (i + 1 >= argc) {
+                free(paths);
+                free(given);
+                return refused_at_the_words(json, "K0649",
+                                            "`--work` says how many units, "
+                                            "and there is nothing after it");
+            }
+            if (!read_fuel(argv[++i], &work, "units of work", json)) {
                 free(paths);
                 free(given);
                 return 1;
@@ -3414,7 +3443,8 @@ int main(int argc, char **argv) {
         FileCommand what = strcmp(argv[1], "fmt") == 0   ? FILE_FORMAT
                            : strcmp(argv[1], "lex") == 0 ? FILE_LEX
                                                          : FILE_PARSE;
-        int status = per_file(paths, path_count, what, mode, json, room);
+        int status =
+            per_file(paths, path_count, what, mode, json, room, work);
         free(paths);
         free(given);
         return status;
@@ -3455,9 +3485,9 @@ int main(int argc, char **argv) {
         if (status == 0) {
             status = found_count > 0
                          ? run_tests(argv[0], found, (int)found_count, json,
-                                     room, fuel)
+                                     room, work, fuel)
                          : run_tests(argv[0], paths, path_count, json, room,
-                                     fuel);
+                                     work, fuel);
         }
         for (uint32_t i = 0; i < found_count; i++) {
             free(found[i]);
@@ -3533,7 +3563,7 @@ int main(int argc, char **argv) {
         }
         int status =
             run(argv[1], argv[0], paths, path_count, json, count, given,
-                reset, room, fuel, costing, writing_c || releasing,
+                reset, room, work, fuel, costing, writing_c || releasing,
                 releasing);
         free(from_project);
         free(paths);

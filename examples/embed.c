@@ -2301,6 +2301,39 @@ int main(int argc, char **argv) {
                 first_build, kest_build_cost(read_again));
         return 1;
     }
+    // And how much work it took, which is a count rather than a time, so the
+    // second build took the same: a host compiling what it was sent gives a
+    // ceiling on this as well as on the bytes, and a build given exactly what
+    // it took is let through while one given a unit less is not. Refused
+    // quietly here, because what it says is the command line's to hold. See
+    // D1248.
+    {
+        uint64_t took = kest_build_work(build);
+        if (took == 0 || kest_build_work(read_again) != took) {
+            fprintf(stderr, "building it took %llu units of work and building "
+                            "it a second time took %llu\n",
+                    (unsigned long long)took,
+                    (unsigned long long)kest_build_work(read_again));
+            return 1;
+        }
+        KestBuild *just = kest_build_within(path, NULL, stderr,
+                                            KEST_FORM_TEXT, 0, took);
+        if (just == NULL || kest_build_work(just) != took) {
+            fprintf(stderr, "a build given the %llu units it takes was not "
+                            "let through\n",
+                    (unsigned long long)took);
+            return 1;
+        }
+        kest_build_free(just);
+        KestBuild *short_of = kest_build_within(path, NULL, NULL,
+                                                KEST_FORM_TEXT, 0, took - 1);
+        if (short_of != NULL) {
+            fprintf(stderr, "a build given %llu units, one short of what it "
+                            "takes, was let through\n",
+                    (unsigned long long)(took - 1));
+            return 1;
+        }
+    }
     // And the library named by this host rather than found, the way a host
     // with its own layout names it: a directory, with nothing after it.
     // `KEST_LIB` has always been read that way, and the same words handed

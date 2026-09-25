@@ -4333,8 +4333,8 @@ than something written wrongly — that is where a host walks `kest_frame_gives`
 and lays the slots out itself, which it may do for a struct too when the way
 the language writes one is not the way it wants.
 
-The C API is 111 doors in 6 families: 51 for running a program, 18 for reading
-what one is made of, 14 for watching what it cost, 13 for stopping one, 10 for
+The C API is 113 doors in 6 families: 52 for running a program, 18 for reading
+what one is made of, 15 for watching what it cost, 13 for stopping one, 10 for
 its memory and 5 for steering it while it runs. A host that compiles, binds,
 sizes and calls needs 22 of them, which is what `examples/least.c` is; the rest
 are there for hosts that want more, and every one of them is called by one of
@@ -5283,6 +5283,28 @@ Without `--room` there is no ceiling, which is what a command line has always
 had. The library itself takes the number rather than the words: a host says how
 much heap a machine may have in `KestLimits`, and a build is opened with a
 ceiling of its own.
+
+`--work` says how long compiling may take, counted rather than timed: a unit is
+a word read, a piece of the tree made or checked, an instruction laid down or
+walked over while it is proved, or a byte of the name of a copy of a generic.
+So the count is the same on every machine and for every run of the same files,
+and a number that let a program through lets it through again. It is written
+the way `--fuel` is, with `K`, `M` or `G` after it for thousands, millions and
+billions. A build that reaches it stops where it is and says how much it was
+given:
+
+```text
+error[K0666]: compiling this took all 4671 units of work it was given
+```
+
+What a build took is `work` in what `--json` says, so a ceiling with room in it
+is a multiple of what a program is seen to need. Most of what compiling does
+grows with what is written; a copy of a shape over two copies of the one before
+does not, since each is named twice as long as the last, and twenty-two of those
+in thirteen hundred bytes took two seconds and a hundred and eighty megabytes
+before anything counted them. A host compiling what it was sent gives both ceilings
+through `kest_build_within`, and reads what one took back with
+`kest_build_work`. Without `--work` there is no ceiling.
 
 ### What `no.alloc` is about
 
@@ -6455,7 +6477,7 @@ bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 577 lines:
-55860 bytes as tokens, 136241 as a tree, 174968 checked and 303224 compiled.
+55860 bytes as tokens, 136241 as a tree, 174984 checked and 303240 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree. Compiling counts what the bodies and the verifier worked in beside
 what the build keeps, at the most they held at once, because a build given that
@@ -6474,7 +6496,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 20701 bytes, against the 303224 it costs to compile.
+file and 20701 bytes, against the 303240 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.
@@ -6518,8 +6540,8 @@ every optional and every run of something:
 
 ```json
 { "schema": 2, "diagnostics": [], "errors": 0, "cost": 41180, "held": 41180,
-  "working": 0, "askings": 5, "tokenBytes": 12, "tokenRoom": 256,
-  "tokens": [], "comments": [] }
+  "working": 0, "askings": 5, "work": 2508, "tokenBytes": 12,
+  "tokenRoom": 256, "tokens": [], "comments": [] }
 ```
 
 ```json
@@ -6529,8 +6551,14 @@ every optional and every run of something:
 
 ```json
 { "schema": 2, "diagnostics": [], "errors": 0, "cost": 178880, "held": 154304,
-  "working": 0, "askings": 380, "typesMade": 58, "typeBytes": 168 }
+  "working": 0, "askings": 380, "work": 4939, "typesMade": 58,
+  "typeBytes": 168 }
 ```
+
+`work` is how much work reading, checking and compiling took, counted rather
+than timed: a token, a piece of the tree, an instruction, a step of the proof.
+It is the number `--work` is a ceiling on, and the same on every machine
+(D1248).
 
 `tokenBytes` is the same thing for a token, and the same reason: reading a file
 costs the file and the tokens made of it, and telling that from the sizes the

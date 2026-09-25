@@ -2923,6 +2923,7 @@ ask "documentation" tools/check-docs.sh docs/language.md \
     docs/decisions.md CHANGELOG.md docs/primer.md SECURITY.md
 ask "costs" tools/check-costs.sh
 ask "ceilings" tools/check-ceilings.sh
+ask "work" tools/check-work.sh
 
 # The sweep that puts every check out of order, and the one thing here that is
 # about the other checks rather than about this language: 899 holes, each a
