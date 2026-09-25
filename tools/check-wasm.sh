@@ -67,12 +67,18 @@ if [ ! -f kest-colony-day.txt ]; then
     failed=1
 fi
 rm -f kest-colony-day.txt
+# Each run in a room of this check's own: a program that writes a file where it
+# was run writes it there, and two checks running the colony in the tree at
+# once read each other's day half written -- `status 12` from the one here and
+# nought from the page, which has no disk to share. See D1268.
+mkdir -p "$scratch"/runs
 for program in examples/*.kest; do
     grep -q '^fn main(' "$program" || continue
-    native=$(./kest run "$program" 2>/dev/null </dev/null; echo "status $?")
-    inside=$(KEST_LIB="$here"/lib/ node tools/wasi-run.mjs \
-                 "$scratch"/kest.wasm run "$here/$program" \
-                 2>/dev/null </dev/null; echo "status $?")
+    native=$(cd "$scratch"/runs && KEST_LIB="$here"/lib/ "$here"/kest run \
+                 "$here/$program" 2>/dev/null </dev/null; echo "status $?")
+    inside=$(cd "$scratch"/runs && KEST_LIB="$here"/lib/ node \
+                 "$here"/tools/wasi-run.mjs "$scratch"/kest.wasm run \
+                 "$here/$program" 2>/dev/null </dev/null; echo "status $?")
     if [ "$native" != "$inside" ]; then
         echo "wasm: \`$program\` answered" \
              "\`$(printf '%s' "$inside" | tail -1)\` as WebAssembly and" \
@@ -93,7 +99,8 @@ paged=0
 for program in examples/*.kest; do
     grep -q '^fn main(' "$program" || continue
     grep -q '^import examples\.' "$program" && continue
-    native=$(./kest run "$program" 2>/dev/null </dev/null; echo "status $?")
+    native=$(cd "$scratch"/runs && KEST_LIB="$here"/lib/ "$here"/kest run \
+                 "$here/$program" 2>/dev/null </dev/null; echo "status $?")
     page=$(node tools/page-run.mjs "$scratch"/kest.wasm "$program" \
                2>/dev/null </dev/null; echo "status $?")
     if [ "$native" != "$page" ]; then

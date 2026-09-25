@@ -42677,3 +42677,24 @@ See D1267.
 five ports checked, formatted and with nothing said about them; `perf` over
 `life` and its instructions read out of `kest emit`; `make most`.
 
+## 2026-09-25, a Tetris clone brought over, and the fault it found
+
+`examples/tetromino.kest`: `love-tetronimo` (MIT, LÖVE, Lua) brought over and
+played to the end by a simple player. Its first run was `K0505`: an optional
+of a struct as a field of one was composed before the struct was measured and
+laid out one slot wide. `measure_held` now measures an optional where its
+element has just been measured, the way it does `[T; N]`. The places the port
+was longer than the Lua are in D1268 and `docs/state.md`.
+
+See D1268.
+
+**Runs:** the port in the machine, the checked build, `KEST_NOOPT`,
+`KEST_PLAIN` and a release; one frame drawn; the fault shrunk to four lines
+and refused by the commit the mission started on as well; every example,
+library file and benchmark compiled before and after the fix to the same
+`codeMark`, seventy-two of them; `make fast`; `make most`, which refused
+twice: `check-costs.sh` found `draw` asking for stack no run of it used,
+because the example never drew a game in play -- it does now -- and
+`check-wasm.sh` read the colony's day half written by another check running
+it in the tree at the same time, `status 12` here and nought in the page; its
+runs are in a room of its own now.

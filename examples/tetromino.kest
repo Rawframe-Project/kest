@@ -1,0 +1,625 @@
+module examples.tetromino
+
+import std.io
+import std.random
+
+// A game somebody else wrote, brought over: `love-tetronimo`, a Tetris clone
+// for LÖVE by Przemysław Bądaruk (MIT License, Copyright (c) 2023; the notice
+// is at the end of this file). Its `love.keypressed`, `love.keyreleased`,
+// `love.update` and `love.draw` are the four functions below that take a
+// `Game`, and what LÖVE's clock and random numbers were is the game's own: a
+// time it is handed a frame at a time and a seeded source. What it draws is
+// the board as text. What was hard to bring over is written where it was, and
+// in D1268. See D1268.
+
+const BOARD_WIDTH: i32 = 10
+const BOARD_HEIGHT: i32 = 20
+const TEMPLATE: i32 = 5
+const FPS: f64 = 25.0
+const MOVE_SIDEWAYS_FREQ: f64 = 0.15
+const MOVE_DOWN_FREQ: f64 = 0.1
+const BLANK: i32 = 0
+const COLORS: i32 = 4
+
+enum Shape {
+    S
+    Z
+    J
+    L
+    I
+    O
+    T
+}
+
+enum State {
+    Menu
+    Paused
+    Playing
+    Over
+}
+
+enum Key {
+    Left
+    Right
+    Up
+    Q
+    Down
+    Space
+    P
+    Other
+}
+
+struct Piece {
+    shape: Shape
+    rotation: i32
+    x: i32
+    y: i32
+    color: i32
+}
+
+// The board is columns of rows, counted from one as the Lua one is, so the
+// arithmetic on where a box lands is the same arithmetic. Row nought is never
+// written and is read as blank, which is what `board[x][0]` was in Lua: nil.
+struct Game {
+    state: State
+    board: [[i32]]
+    falling: Piece?
+    next: Piece
+    score: i32
+    level: i32
+    fall_freq: f64
+    now: f64
+    last_move_down: f64
+    last_move_sideways: f64
+    last_fall: f64
+    moving_down: bool
+    moving_left: bool
+    moving_right: bool
+    accumulated: f64
+    source: random.Source
+}
+
+// The templates, as the Lua writes them: five rows of five, `O` a box.
+fn templates(shape: Shape) -> [[text]] {
+    return match shape {
+        S ->
+            [
+                [".....", ".....", "..OO.", ".OO..", "....."],
+                [".....", "..O..", "..OO.", "...O.", "....."]
+            ]
+        Z ->
+            [
+                [".....", ".....", ".OO..", "..OO.", "....."],
+                [".....", "..O..", ".OO..", ".O...", "....."]
+            ]
+        I ->
+            [
+                ["..O..", "..O..", "..O..", "..O..", "....."],
+                [".....", ".....", "OOOO.", ".....", "....."]
+            ]
+        O -> [[".....", ".....", ".OO..", ".OO..", "....."]]
+        J ->
+            [
+                [".....", ".O...", ".OOO.", ".....", "....."],
+                [".....", "..OO.", "..O..", "..O..", "....."],
+                [".....", ".....", ".OOO.", "...O.", "....."],
+                [".....", "..O..", "..O..", ".OO..", "....."]
+            ]
+        L ->
+            [
+                [".....", "...O.", ".OOO.", ".....", "....."],
+                [".....", "..O..", "..O..", "..OO.", "....."],
+                [".....", ".....", ".OOO.", ".O...", "....."],
+                [".....", ".OO..", "..O..", "..O..", "....."]
+            ]
+        T ->
+            [
+                [".....", "..O..", ".OOO.", ".....", "....."],
+                [".....", "..O..", "..OO.", "..O..", "....."],
+                [".....", ".....", ".OOO.", "..O..", "....."],
+                [".....", "..O..", ".OO..", "..O..", "....."]
+            ]
+    }
+}
+
+// Whether the template has a box at column `x`, row `y`, both from one.
+fn boxed(piece: Piece, x: i32, y: i32) -> bool {
+    return templates(piece.shape)[piece.rotation - 1][y - 1][x - 1] == 'O'
+}
+
+fn blank_board() -> [[i32]] {
+    let columns: [[i32]] = array()
+    for x in 0..BOARD_WIDTH + 1 {
+        push(columns, array(BOARD_HEIGHT + 1, BLANK))
+    }
+    return columns
+}
+
+fn level_and_freq(g: Game) -> Game {
+    let after = g
+    after.level = g.score / 10 + 1
+    after.fall_freq = 0.27 - f64(after.level) * 0.02
+    return after
+}
+
+fn new_piece(g: Game) -> Game {
+    let after = g
+    let shapes = [Shape.S, Shape.Z, Shape.J, Shape.L, Shape.I, Shape.O, Shape.T]
+    after.source = random.next(after.source)
+    let shape = shapes[random.below(after.source, len(shapes))]
+    after.source = random.next(after.source)
+    let rotation = random.below(after.source, len(templates(shape))) + 1
+    after.source = random.next(after.source)
+    let color = random.below(after.source, COLORS) + 1
+    after.next = Piece(
+        shape,
+        rotation,
+        BOARD_WIDTH / 2 - TEMPLATE / 2,
+        -2,
+        color
+    )
+    return after
+}
+
+fn on_board(x: i32, y: i32) -> bool {
+    return x >= 1 && x <= BOARD_WIDTH && y <= BOARD_HEIGHT
+}
+
+fn valid(g: Game, adj_x: i32, adj_y: i32) -> bool {
+    if let piece = g.falling {
+        for x in 1..TEMPLATE + 1 {
+            for y in 1..TEMPLATE + 1 {
+                let above = y + piece.y + adj_y < 1
+                if above || !boxed(piece, x, y) {
+                    continue
+                }
+                if !on_board(x + piece.x + adj_x, y + piece.y + adj_y) {
+                    return false
+                }
+                if g.board[x + piece.x + adj_x][y + piece.y + adj_y] != BLANK {
+                    return false
+                }
+            }
+        }
+        return true
+    }
+    return false
+}
+
+fn add_to_board(g: Game) {
+    if let piece = g.falling {
+        for x in 1..TEMPLATE + 1 {
+            for y in 1..TEMPLATE + 1 {
+                if boxed(piece, x, y) && y + piece.y >= 1 {
+                    g.board[x + piece.x][y + piece.y] = piece.color
+                }
+            }
+        }
+    }
+}
+
+fn complete(board: [[i32]], y: i32) -> bool {
+    for x in 1..BOARD_WIDTH + 1 {
+        if board[x][y] == BLANK {
+            return false
+        }
+    }
+    return true
+}
+
+fn remove_complete_lines(board: [[i32]]) -> i32 {
+    let removed = 0
+    let y = BOARD_HEIGHT
+    while y >= 1 {
+        if complete(board, y) {
+            let pull = y
+            while pull >= 1 {
+                for x in 1..BOARD_WIDTH + 1 {
+                    board[x][pull] = if pull == 1 -> BLANK
+                        else -> board[x][pull - 1]
+                }
+                pull -= 1
+            }
+            removed += 1
+        } else {
+            y -= 1
+        }
+    }
+    return removed
+}
+
+// `love.keypressed`.
+fn pressed(g: Game, key: Key) -> Game {
+    let after = g
+    if after.state != State.Playing {
+        return after
+    }
+    if let piece = after.falling {
+        let moved = piece
+        match key {
+            Left {
+                if valid(after, -1, 0) {
+                    moved.x -= 1
+                    after.moving_left = true
+                    after.moving_right = false
+                    after.last_move_sideways = after.now
+                }
+            }
+            Right {
+                if valid(after, 1, 0) {
+                    moved.x += 1
+                    after.moving_left = false
+                    after.moving_right = true
+                    after.last_move_sideways = after.now
+                }
+            }
+            Up {
+                moved.rotation += 1
+                if moved.rotation > len(templates(moved.shape)) {
+                    moved.rotation = 1
+                }
+            }
+            Q {
+                moved.rotation -= 1
+                if moved.rotation < 1 {
+                    moved.rotation = len(templates(moved.shape))
+                }
+            }
+            Down {
+                after.moving_down = true
+                if valid(after, 0, 1) {
+                    moved.y += 1
+                    after.last_move_down = after.now
+                }
+            }
+            Space {
+                after.moving_down = false
+                after.moving_left = false
+                after.moving_right = false
+                let drop = 0
+                for i in 1..BOARD_HEIGHT + 1 {
+                    if !valid(after, 0, i) {
+                        break
+                    }
+                    drop = i
+                }
+                moved.y += drop
+            }
+            else {
+            }
+        }
+        let tried = after
+        tried.falling = moved
+        // A rotation that does not fit is undone, the way the Lua undoes it.
+        if valid(tried, 0, 0) {
+            after = tried
+        }
+    }
+    return after
+}
+
+// `love.keyreleased`.
+fn released(g: Game, key: Key) -> Game {
+    let after = g
+    match after.state {
+        Menu {
+            after.state = State.Playing
+            after.board = blank_board()
+            after.last_move_down = after.now
+            after.last_move_sideways = after.now
+            after.last_fall = after.now
+            after.moving_down = false
+            after.moving_left = false
+            after.moving_right = false
+            after.score = 0
+            after = level_and_freq(after)
+            after = new_piece(after)
+            after.falling = after.next
+            after = new_piece(after)
+            after.accumulated = 0.0
+        }
+        Playing {
+            if key == Key.P {
+                after.state = State.Paused
+            } else if key == Key.Left {
+                after.moving_left = false
+            } else if key == Key.Right {
+                after.moving_right = false
+            } else if key == Key.Down {
+                after.moving_down = false
+            }
+        }
+        Paused {
+            if key == Key.P {
+                after.state = State.Playing
+                after.last_fall = after.now
+                after.last_move_down = after.now
+                after.last_move_sideways = after.now
+                after.accumulated = 0.0
+            }
+        }
+        Over {
+            after.state = State.Menu
+        }
+    }
+    return after
+}
+
+// `love.update`: the clock moves by `dt` whatever state the game is in, which
+// is what LÖVE's did, and the game steps at twenty-five a second.
+fn update(g: Game, dt: f64) -> Game {
+    let after = g
+    after.now += dt
+    if after.state != State.Playing {
+        return after
+    }
+    after.accumulated += dt
+    if after.accumulated < 1.0 / FPS {
+        return after
+    }
+    after.accumulated -= 1.0 / FPS
+    if after.falling == none {
+        after.falling = after.next
+        after = new_piece(after)
+        after.last_fall = after.now
+    }
+    if !valid(after, 0, 0) {
+        after.state = State.Over
+        return after
+    }
+    if let piece = after.falling {
+        let moved = piece
+        if (after.moving_left || after.moving_right) &&
+                after.now - after.last_move_sideways > MOVE_SIDEWAYS_FREQ {
+            if after.moving_left && valid(after, -1, 0) {
+                moved.x -= 1
+            } else if after.moving_right && valid(after, 1, 0) {
+                moved.x += 1
+            }
+            after.last_move_sideways = after.now
+        }
+        after.falling = moved
+        if after.moving_down &&
+                after.now - after.last_move_down > MOVE_DOWN_FREQ &&
+                valid(after, 0, 1) {
+            moved.y += 1
+            after.last_move_down = after.now
+        }
+        after.falling = moved
+        if after.now - after.last_fall > after.fall_freq {
+            if !valid(after, 0, 1) {
+                add_to_board(after)
+                after.score += remove_complete_lines(after.board)
+                after = level_and_freq(after)
+                after.falling = none
+            } else {
+                moved.y += 1
+                after.falling = moved
+                after.last_fall = after.now
+            }
+        }
+    }
+    return after
+}
+
+// `love.draw`, as text: the board with the falling piece on it, a box as the
+// number of its colour, and a line for the score and the level.
+fn draw(g: Game) -> text {
+    let out: [u8] = array()
+    match g.state {
+        Menu {
+            push(out, "Tetromino\nPress a key to play.\n")
+        }
+        Paused {
+            push(out, "PAUSED\n")
+        }
+        Over {
+            push(out, "GAME OVER\nYour score: {g.score}\n")
+        }
+        Playing {
+            for y in 1..BOARD_HEIGHT + 1 {
+                for x in 1..BOARD_WIDTH + 1 {
+                    let color = g.board[x][y]
+                    if let piece = g.falling {
+                        let at_x = x - piece.x
+                        let at_y = y - piece.y
+                        if at_x >= 1 &&
+                                at_x <= TEMPLATE &&
+                                at_y >= 1 &&
+                                at_y <= TEMPLATE &&
+                                boxed(piece, at_x, at_y) {
+                            color = piece.color
+                        }
+                    }
+                    push(out, if color == BLANK -> '.' else -> u8(color) + '0')
+                }
+                push(out, '\n')
+            }
+            push(out, "Score: {g.score} Level: {g.level}\n")
+        }
+    }
+    return text(out)
+}
+
+fn begin(seed: u64) -> Game {
+    let first = Piece(Shape.O, 1, 3, -2, 1)
+    return Game(
+        State.Menu,
+        blank_board(),
+        none,
+        first,
+        0,
+        0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        false,
+        false,
+        false,
+        0.0,
+        random.from(seed)
+    )
+}
+
+// The player: for every piece, the column that leaves the fewest holes under
+// the stack, which is somebody who knows how to play rather than somebody
+// pressing keys at random -- enough of a player to clear lines.
+fn column_for(g: Game) -> i32 {
+    if let piece = g.falling {
+        let best = piece.x
+        let best_height = BOARD_HEIGHT + 100
+        for to in -2..BOARD_WIDTH {
+            let tried = g
+            let moved = piece
+            moved.x = to
+            tried.falling = moved
+            if !valid(tried, 0, 0) {
+                continue
+            }
+            let drop = 0
+            while valid(tried, 0, drop + 1) {
+                drop += 1
+            }
+            // How high the top of the piece would land: lower is better.
+            let landed = BOARD_HEIGHT - (moved.y + drop)
+            if landed < best_height {
+                best_height = landed
+                best = to
+            }
+        }
+        return best
+    }
+    return 0
+}
+
+fn frames(g: Game, many: i32) -> Game {
+    let after = g
+    for i in 0..many {
+        after = update(after, 1.0 / FPS)
+    }
+    return after
+}
+
+fn main() -> i32 {
+    let g = begin(u64(2023))
+    if draw(g) != "Tetromino\nPress a key to play.\n" {
+        return 1
+    }
+    g = released(g, Key.Other)
+    if g.state != State.Playing || g.falling == none || g.level != 1 {
+        return 2
+    }
+    // What a frame of play looks like: a line a row and one for the score.
+    let lines_drawn = 0
+    for b in draw(g) {
+        if b == '\n' {
+            lines_drawn += 1
+        }
+    }
+    if lines_drawn != BOARD_HEIGHT + 1 {
+        return 9
+    }
+    // A piece is moved and turned, and a move off the board is refused.
+    if let before = g.falling {
+        let turned = pressed(g, Key.Up)
+        if let after = turned.falling {
+            if before.shape != Shape.O &&
+                    after.rotation == before.rotation &&
+                    len(templates(before.shape)) > 1 {
+                return 3
+            }
+        }
+        let far = g
+        for i in 0..20 {
+            far = pressed(far, Key.Left)
+        }
+        if let left = far.falling {
+            if left.x > before.x || valid(far, -1, 0) {
+                return 4
+            }
+        }
+    }
+    // Pausing stops the fall and the clock carries on.
+    let paused = released(g, Key.P)
+    let later = frames(paused, 50)
+    if later.state != State.Paused || later.now <= g.now {
+        return 5
+    }
+    if let still = later.falling {
+        if let was = g.falling {
+            if still != was {
+                return 5
+            }
+        }
+    }
+    // A thousand pieces played by somebody who puts each where it lands
+    // lowest, each dropped with the space bar.
+    let pieces = 0
+    let lines = 0
+    while g.state == State.Playing && pieces < 1000 {
+        let target = column_for(g)
+        if let piece = g.falling {
+            let key = if target < piece.x -> Key.Left else -> Key.Right
+            let steps = if target < piece.x -> piece.x - target
+                else -> target - piece.x
+            for i in 0..steps {
+                g = pressed(g, key)
+            }
+        }
+        g = pressed(g, Key.Space)
+        let before = g.score
+        while g.falling != none && g.state == State.Playing {
+            g = frames(g, 1)
+        }
+        lines += g.score - before
+        pieces += 1
+        g = frames(g, 1)
+    }
+    if pieces < 20 || lines == 0 || g.score != lines {
+        return 6
+    }
+    // The board it ended on is a board: every box a colour.
+    for x in 1..BOARD_WIDTH + 1 {
+        for y in 1..BOARD_HEIGHT + 1 {
+            if g.board[x][y] < 0 || g.board[x][y] > COLORS {
+                return 7
+            }
+        }
+    }
+    if g.state == State.Over {
+        let over = draw(g)
+        g = released(g, Key.Other)
+        if g.state != State.Menu || over != "GAME OVER\nYour score: {lines}\n" {
+            return 8
+        }
+    }
+    io.print("tetromino {pieces} pieces, {lines} lines")
+    return 0
+}
+
+// The notice the original is under, which a copy of a substantial part of it
+// carries:
+//
+// MIT License
+//
+// Copyright (c) 2023 Przemysław Bądaruk
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to
+// deal in the Software without restriction, including without limitation the
+// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+// sell copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+// IN THE SOFTWARE.

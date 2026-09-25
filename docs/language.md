@@ -6542,6 +6542,7 @@ here, is a check that fails.
 | `slice/src/main.kest` | a colony, its rules, its save and its words at once: one project rather than one shape |
 | `slice/tests/rounds.kest` | what `kest test` runs, which is a program that answers nought |
 | `state.kest` | a thing that is one of several, and a `match` that leaves none out |
+| `tetromino.kest` | a Tetris clone somebody else wrote for LÖVE in Lua, brought over and played to the end by a player that drops every piece where it lands lowest |
 | `tree.kest` | an enum whose case holds the type it belongs to |
 | `vectors.kest` | the language's vectors and their operators, folded into one number by their bits |
 | `words.kest` | text as its bytes, with no character type anywhere |

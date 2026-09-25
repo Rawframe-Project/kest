@@ -191,6 +191,11 @@ Where it stands, from the front page's table (D1203): `bench/compare.sh` at
   platform's, a sort by a function handed over is 1.7 times Luau's, and a
   float narrowed into a sixteen-bit run in the release engine is 2.6 times
   Luau's native tier.
+- **A game brought over from Lua** (D1268) found a fault in the compiler and
+  three places the language made it longer than the Lua: a struct's state is
+  given back from every handler (`g = pressed(g, key)`), two optionals do not
+  compare, and a run of floats filled with `0.0` under a type that says `f64`
+  is refused.
 
 ## Security: what is promised, and what is being built
 

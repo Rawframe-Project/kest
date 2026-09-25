@@ -43692,3 +43692,51 @@ Where the time goes, read rather than guessed:
 These are the open performance items in `docs/state.md`, each with the
 program that shows it. Nothing here is in the gate: a duration is not a pass
 or a fail.
+
+## D1268 — A game somebody else wrote, brought over, and the fault it found
+
+T2 asked for a real game from somewhere else brought over to Kest, with
+nobody using the language to say where it hurts, so that where the port got
+stuck is the list. `examples/tetromino.kest` is `love-tetronimo`, a Tetris
+clone for LÖVE by Przemysław Bądaruk, six hundred lines of Lua under the MIT
+licence, whose notice the file carries. `love.keypressed`,
+`love.keyreleased`, `love.update` and `love.draw` are four functions over a
+`Game`; LÖVE's clock is a time the game is handed a frame at a time, its
+random numbers a seeded `std.random` source, and what it draws is the board as
+text. The example plays it to the end with a player that drops every piece
+where it lands lowest -- fifty-two pieces and five lines from its seed -- and
+holds the moves, the rotation, a pause, the board and the game over to what
+the Lua does. It answers the same in the machine, the checked build, with the
+optimizer and the fusions off, and as a release.
+
+**The fault.** The first run of it was refused with `K0505`: the two halves of
+the compiler disagreed about a program. `if let piece = g.falling`, where
+`falling` is a `Piece?` field of a struct, read one slot where the type said
+three. An optional is composed when a field is resolved, which is before the
+struct it holds is measured, so `Piece?` was a tag beside nothing: one slot,
+and a struct holding one was laid out one slot wide. `[T; N]` had the same
+order and was measured again where its element had just been
+(`measure_held`); an optional was not. It is now, the same way. It had been
+so since before this mission -- the commit it started on refuses the same
+four-line program -- and no program in the tree held an optional of a struct
+as a field of one declared after it, which is why nothing had said so. Every
+example, library file and benchmark compiles to the same code as before, and
+the programs this changes are the ones that were refused; the example is what
+holds it.
+
+**What was longer than the Lua**, which is the list T2 was for:
+
+- A game's state is a struct, so every handler hands it back:
+  `g = pressed(g, key)`, and inside each one `let after = g ... return after`.
+  That is the value rule working as meant (K0346), and it is a line per
+  handler that Lua's tables did not need.
+- Two optionals do not compare (`later.falling != g.falling` is `K0314`), so
+  the test asks what each holds with two `if let`s.
+- A run of floats filled where it is made, `let row: [f64] = array(n, 0.0)`,
+  is refused: the fill's literal is an `f32` and does not take the element
+  type the binding says. `f64(0.0)` is what was written. `bench/luau/` met
+  the same one (D1267).
+
+What was not longer: `goto continue` is `continue`, `string.sub(s, x, x)` is
+`s[x - 1]`, a table of shapes keyed by a letter is an enum and a `match`, and
+`nil` is an optional.
