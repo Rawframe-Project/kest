@@ -2968,6 +2968,43 @@ yield""",
         "caught": "tree changed: examples/chores.kest",
     },
     {
+        # Every copy of a walk over fields given the first field's place, so
+        # writing a field writes another. See D1264.
+        "what": "a walk over fields that writes the first field every time",
+        "file": "src/compile.c",
+        "from": r"""        bind_local(compiler, each->name, (uint16_t)(base + member->offset),""",
+        "to": r"""        bind_local(compiler, each->name, (uint16_t)(base + 0 * member->offset),""",
+        "make": ["kest"],
+        "tool": "tools/fast.sh",
+        "arguments": [],
+        "caught": "examples/records.kest answered",
+    },
+    {
+        # A walk over what no name holds, let through: the writes go nowhere.
+        # See D1264.
+        "what": "a walk over fields of something no name holds",
+        "file": "src/check.c",
+        "from": r"""    if (!names_a_place(walked)) {""",
+        "to": r"""    if (!names_a_place(walked) && false) {""",
+        "make": ["kest", "debug"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "check: K0369 said",
+    },
+    {
+        # A `continue` in one copy landed again at the end of every copy after
+        # it, so it skips the fields it should have gone on to. See D1264.
+        "what": "a continue in a walk over fields that skips the rest",
+        "file": "src/compile.c",
+        "from": r"""        loop->continue_count = 0;
+        compile_block(compiler, &each->body.items[m]->block);""",
+        "to": r"""        compile_block(compiler, &each->body.items[m]->block);""",
+        "make": ["kest"],
+        "tool": "tools/fast.sh",
+        "arguments": [],
+        "caught": "examples/records.kest answered",
+    },
+    {
         # Work counted and never run out of: a ceiling that is read and never
         # reached is a build that takes as long as the file makes it, which
         # is the thing a host that compiles what it was sent gave one to stop.

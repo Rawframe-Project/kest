@@ -2804,6 +2804,66 @@ has nothing to point at. `examples/chores.kest` walks, works and rests, takes
 a chore halfway and finishes it, and resumes one written down from its fields.
 See D1263.
 
+## A walk over a struct's fields
+
+`for name, value in fields(x)` walks the fields of the struct `x` and is
+written out while compiling, once a field, in the order they are declared: in
+each copy `name` is the field's name as text and `value` is the field itself,
+with its own type. Writing `value` writes that field of `x`.
+
+```kest
+module inspect
+
+import std.io
+
+struct Where {
+    x: f32
+    y: f32
+}
+
+struct Npc {
+    name: text
+    hunger: i32
+    at: Where
+}
+
+fn main() -> i32 {
+    let n = Npc("ann", 3, Where(1.5, 2.0))
+    for name, value in fields(n) {
+        io.print("{name}: {value}")
+    }
+    for part in fields(n.at) {
+        part = part * 2.0
+    }
+    io.print("{n.at}")
+    return 0
+}
+```
+
+```text
+name: ann
+hunger: 3
+at: Where(1.5, 2.0)
+Where(3.0, 4.0)
+```
+
+Each copy is checked and compiled on its own, with `value` the type of its
+field, so a call inside it is chosen for that type -- `put(out, value)` is the
+`put` that takes an `i32` for an `i32` field and the one that takes text for a
+text field -- and what is refused in one copy is said with a note naming the
+field it was the copy for. `for value in fields(x)` is the walk without the
+names. `continue` goes on to the next field and `break` leaves the walk.
+
+That is reflection aimed at two things and no more: a save and a load written
+once for every shape, and what an inspector shows. Nothing is kept at run
+time, nothing is a value of no particular type, and no code is written by
+code. `x` is a name the body holds, or a field of one, because a field written
+in the walk is written there; `fields` of anything else, or of what is not a
+struct, is `K0369`. A file that can reach a `fields` of its own calls that
+one, the way a file's own `len` is its own. `examples/records.kest` writes a
+settler to bytes and reads it back with one `put` and one `read` a type, and
+lists it by name. See D1264.
+
 ## One body, many types
 
 A function may take types as well as values. A copy is compiled for each set
@@ -6468,6 +6528,7 @@ here, is a check that fails.
 | `numbers.kest` | what a number does at the end of its range, at every width |
 | `parse.kest` | reading a line of fields out of the standard library |
 | `ordering.kest` | what a sort, a table and a number written into text promise, over inputs nobody chose |
+| `records.kest` | a save, a load and an inspector written once for every shape, by walking a struct's fields while compiling |
 | `registry.kest` | the same store and reference asked of assets naming what they are built from, which is not a game |
 | `physics.kest` | helpers that take and return vectors, called from a hot path |
 | `pieces.kest` | text built a piece at a time, which is built as bytes |

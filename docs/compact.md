@@ -451,6 +451,15 @@ line after it. A case no `wait` names starts from the top. Nothing but `c` is
 kept across a `wait`, so no `let` or `for` name may be in reach of one: what
 the body needs afterwards is a field of `c`. `examples/chores.kest` is one.
 
+## A walk over a struct's fields
+
+`for name, value in fields(x)` is written out while compiling, once a field of
+the struct `x`: `name` is the field's name as text, `value` the field itself
+with its own type, and writing `value` writes that field of `x`. Each copy is
+checked for its field's type, so `put(out, value)` picks the `put` for that
+type. It is how a save, a load and an inspector are written once for every
+shape; `examples/records.kest` is one.
+
 ## Promises
 
 `no.alloc` (reaches no heap), `no.host` (calls nothing of the host's) and

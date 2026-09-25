@@ -43537,3 +43537,42 @@ save is the program's choice, and one written as its name is matched by name.
 Four holes are caught: a name kept across a `wait` let through, the way in
 sending a call to the wrong `wait`, a `wait` that does not write where it
 waits, and the formatter dropping `resumes`.
+
+## D1264 — A walk over a struct's fields, written out while compiling
+
+K11 said no macros, and reflection aimed at saving, loading and inspecting;
+`docs/rfcs/0002-fields.md` is the proposal, and this is it taken.
+
+`for name, value in fields(x)` walks the fields of the struct `x` and is
+written out while compiling, once a field in the order they are declared: in
+each copy `name` is the field's name as text and `value` is the field itself,
+with its own type, where it stands in `x` -- so writing it writes `x`. Each
+copy is checked and compiled on its own, and a call in it is chosen for that
+copy's type: `put(out, value)` is the `put` that takes an `i32` in the copy
+for an `i32` field and the one that takes text in the copy for a text field.
+What one copy is refused for is said with a note naming the field. `continue`
+goes on to the next field and `break` leaves the walk. `x` is a name the body
+holds or a field of one, and `fields` of anything else or of what is not a
+struct is `K0369`. A file that can reach a `fields` of its own calls that,
+so nothing that compiles today means something else.
+
+A tree is where the checker writes what each thing turned out to be, and the
+copies are of one body with its names standing for different types -- so each
+copy has a tree of its own, and the tree comes from the one copy of the body
+there already is: the source. `kest_parse_block_again` reads the body's span
+again with `kest_lex_again`, which lexes a piece of the file the way the file
+is read (the lexer's range door reads the inside of a hole), and the checker
+puts the copies where the body was, a block each. Everything after the
+checker -- the promises, the compiler, the verifier, the release engine --
+then sees ordinary blocks: a `no.alloc` function with a hole in its walk is
+refused where the hole is. The compiler binds `value` to the field's slots
+inside `x` and `name` to a piece of text, and lands `continue` at the end of
+each copy.
+
+`examples/records.kest` saves a settler with text, a whole number, a truth, a
+struct and a `u64` in it to bytes and reads it back equal, with one `put` and
+one `read` a type and a walk each, lists it by name, and walks with
+`continue` and `break`; it answers the same in the machine, the checked build,
+with the optimizer and the fusions off, and as a release. Three holes are
+caught: every copy given the first field's place, a walk over what no name
+holds let through, and `continue` landing only after the last copy.

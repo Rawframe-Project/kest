@@ -1,0 +1,143 @@
+module examples.records
+
+import std.bytes
+import std.io
+
+// A save and a load written once for every shape, by walking a struct's fields
+// while compiling: `for name, value in fields(s)` is written out once a field,
+// `value` is that field of `s` with its own type, and `name` is its name. So
+// `put(out, value)` is the `put` for that field's type, and a field added to
+// `Settler` is saved and loaded with nothing else written. See D1264.
+
+struct Where {
+    x: f32
+    y: f32
+}
+
+struct Settler {
+    name: text
+    hunger: i32
+    awake: bool
+    at: Where
+    born: u64
+}
+
+fn put(out: [u8], value: i32) {
+    bytes.putI32(out, value)
+}
+
+fn put(out: [u8], value: f32) {
+    bytes.putF32(out, value)
+}
+
+fn put(out: [u8], value: bool) {
+    bytes.putBool(out, value)
+}
+
+fn put(out: [u8], value: u64) {
+    bytes.putU64(out, value)
+}
+
+fn put(out: [u8], value: text) {
+    bytes.putText(out, value)
+}
+
+// A field that is a struct is walked the same way, one level down.
+fn put(out: [u8], value: Where) {
+    for part in fields(value) {
+        put(out, part)
+    }
+}
+
+fn read(from: bytes.Reader, like: i32) -> i32 {
+    return bytes.readI32(from)
+}
+
+fn read(from: bytes.Reader, like: f32) -> f32 {
+    return bytes.readF32(from)
+}
+
+fn read(from: bytes.Reader, like: bool) -> bool {
+    return bytes.readBool(from)
+}
+
+fn read(from: bytes.Reader, like: u64) -> u64 {
+    return bytes.readU64(from)
+}
+
+fn read(from: bytes.Reader, like: text) -> text {
+    return bytes.readText(from)
+}
+
+// Writing `part` writes that field of `got`, which is what a load is.
+fn read(from: bytes.Reader, like: Where) -> Where {
+    let got = like
+    for part in fields(got) {
+        part = read(from, part)
+    }
+    return got
+}
+
+fn saved(s: Settler) -> [u8] {
+    let out: [u8] = array()
+    for value in fields(s) {
+        put(out, value)
+    }
+    return out
+}
+
+fn loaded(data: [u8]) -> Settler {
+    let from = bytes.reader(data)
+    let s = Settler("", 0, false, Where(0.0, 0.0), u64(0))
+    for value in fields(s) {
+        value = read(from, value)
+    }
+    return s
+}
+
+// And what an inspector shows: every field by its name.
+fn described(s: Settler) -> [text] {
+    let lines: [text] = array()
+    for name, value in fields(s) {
+        push(lines, "{name}: {value}")
+    }
+    return lines
+}
+
+fn main() -> i32 {
+    let ann = Settler("ann", 3, true, Where(1.5, -2.0), u64(1234567890123))
+    let data = saved(ann)
+    // Four bytes and three of name, four of hunger, one of awake, four and
+    // four of where, eight of born.
+    if len(data) != 28 {
+        return 1
+    }
+    let back = loaded(data)
+    if back != ann {
+        return 2
+    }
+    let lines = described(back)
+    if len(lines) != 5 ||
+            lines[0] != "name: ann" ||
+            lines[3] != "at: Where(1.5, -2.0)" {
+        return 3
+    }
+    // `continue` goes on to the next field, and `break` leaves the walk.
+    let counted = 0
+    for name, value in fields(ann) {
+        if name == "hunger" {
+            continue
+        }
+        counted += 1
+        if name == "at" {
+            break
+        }
+    }
+    if counted != 3 {
+        return 4
+    }
+    for line in lines {
+        io.print(line)
+    }
+    return 0
+}

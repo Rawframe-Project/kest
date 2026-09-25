@@ -42610,3 +42610,21 @@ grown from 88 bytes to 104 for the two names of `resumes`: they are one offset
 now, in four bytes that were padding, and read back out of the source -- by
 the lexer, since `check-fmt.sh` roughed the example up with a line ended after
 the dot and a comment there, and a reading of the bytes lost the clause.
+
+## 2026-09-25, a walk over a struct's fields
+
+`for name, value in fields(x)`: written out while compiling, once a field,
+each copy read again from the source (`kest_parse_block_again`, over a new
+`kest_lex_again`) and checked with `value` the field's own type, so overloads
+are chosen per field. The compiler binds `value` to the field where it stands
+and `name` to its name. `examples/records.kest` is a save, a load and an
+inspector written once. Writing it overwrote `examples/saving.kest`, which is
+`std.bytes`'s own example, before the reference's table said there was one by
+that name.
+
+See D1264.
+
+**Runs:** the example and a walk over a field of a struct in the machine, the
+checked build, `KEST_NOOPT`, `KEST_PLAIN` and a release, the same each time;
+two refusals; a mistake in one copy said with the field named; a `no.alloc`
+body refused at a hole inside its walk; three holes by hand; `make most`.

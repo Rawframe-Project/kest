@@ -232,7 +232,8 @@ them (D1260). A module finds a function by its name in one step, which took
 compiling a thousand modules from about 560 milliseconds to 225 (D1261), and a
 program is shipped as its source rather than as bytecode (D1262). A function
 may wait between frames and resume from its own struct and enum rather than
-from a kept frame (D1263).
+from a kept frame (D1263), and walk a struct's fields while compiling, which
+is a save, a load and an inspector written once for every shape (D1264).
 
 ## Determinism
 

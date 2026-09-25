@@ -441,6 +441,11 @@ new ones, because a run under profile 2 and one under 3 are two runs. A
 constant may be written as its bits, `float(u64(0x...))`, since `bits` and
 `float` are worked out where they are written. See D1235.
 
+**A walk over a struct's fields**: `for name, value in fields(x)` is written
+out while compiling, once a field, with `value` the field itself in its own
+type. **What a program has to do:** nothing; a file with a `fields` of its own
+keeps calling it. See D1264.
+
 **A body that waits**: `fn step(c: Chore) -> Chore resumes c.at` and `wait
 Walking` end a call where it stands, and the next call carries on from there;
 everything it keeps is in `c` and where it waits is a case of the program's
