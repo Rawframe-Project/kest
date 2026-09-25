@@ -52,6 +52,12 @@ static const char *PROGRAM =
     "    b: i32\n"
     "}\n"
     "\n"
+    "fn pieces(n: i32) -> i32 {\n"
+    "    let a = \"{n}ab\"\n"
+    "    let b = \"{n}cde\"\n"
+    "    return len(a) + len(b)\n"
+    "}\n"
+    "\n"
     "fn deeper(n: i32) -> i32 {\n"
     "    if n <= 0 {\n"
     "        return 0\n"
@@ -67,7 +73,7 @@ static const char *PROGRAM =
     "        n += 3\n"
     "    }\n"
     "    let p = xs[2]\n"
-    "    let total = xs[1].b + deeper(3) + p.a + p.b\n"
+    "    let total = xs[1].b + deeper(3) + p.a + p.b + pieces(1)\n"
     "    io.print(\"{total}\")\n"
     "    return total % 7\n"
     "}\n";
@@ -204,6 +210,53 @@ int main(int argc, char **argv) {
         }
         chunk->code[place] = low;
         chunk->code[place + 1] = high;
+    }
+    // A piece of text and another piece's length, side by side and each
+    // what it says it is: `load.n` of the first text's two slots made a
+    // `load2` of its text and the second text's length, which is as wide.
+    {
+        KestChunk *chunk = NULL;
+        uint32_t at = 0;
+        uint8_t load2 = 0;
+        while (load2 < 255 && strcmp(kest_op_name(load2), "load2") != 0) {
+            load2++;
+        }
+        for (uint32_t f = 0; chunk == NULL && f < build->module.count; f++) {
+            KestChunk *one = build->module.functions[f];
+            if (strstr(one->name, "pieces") == NULL) {
+                continue;
+            }
+            for (uint32_t i = 0; i < one->code_count;
+                 i += kest_op_wide(one->code[i])) {
+                if (strcmp(kest_op_name(one->code[i]), "load.n") == 0 &&
+                    one->code[i + 3] == 2 && one->code[i + 4] == 0) {
+                    chunk = one;
+                    at = i;
+                    break;
+                }
+            }
+        }
+        if (chunk == NULL) {
+            printf("refuse: no text loaded whole for a piece and another's "
+                   "length\n");
+            missed++;
+        } else {
+            uint8_t was[5];
+            memcpy(was, chunk->code + at, 5);
+            uint32_t first = (uint32_t)(was[1] | (was[2] << 8));
+            uint32_t other = first + 3;
+            chunk->code[at] = load2;
+            chunk->code[at + 3] = (uint8_t)(other & 0xFF);
+            chunk->code[at + 4] = (uint8_t)(other >> 8);
+            if (refused_with(build, "K0411")) {
+                refused++;
+            } else {
+                printf("refuse: a piece of text and another's length was "
+                       "held\n");
+                missed++;
+            }
+            memcpy(chunk->code + at, was, 5);
+        }
     }
     if (!refused_with(build, NULL)) {
         printf("refuse: the program as it was compiled is not held once "

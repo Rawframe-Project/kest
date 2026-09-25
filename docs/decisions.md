@@ -42631,3 +42631,34 @@ The depth is the top byte of the top half of a kind, which is why a tag now
 knows at most twenty-four of an enum's cases one by one and takes one of more
 as any of them.
 
+## D1244 — The two slots of a piece of text are one piece's
+
+*measured*. A piece of text is two slots, where it is and how long it is, and
+every instruction that reads text reads the two as one: the length is how far
+it reads from where the text is. D1242 proved each slot held text or a length.
+It did not prove they were the same piece's, and a length read beside another
+piece's text is a read past the end of that text.
+
+Text and its length are marked as one piece where they were made together --
+by an instruction that makes text, by a constant beside its own length, out of
+a value's layout -- and stay marked only while they move together. A slot
+moved on its own loses the mark; a run of slots moved at once keeps it for the
+pairs inside the run and loses it for a half at either end; `rotate`, which
+moves the top slot under the rest, keeps it for everything that moved up
+together. Where two ways meet a piece is one piece only where it was on both.
+Every instruction that reads text, every value written into memory or handed
+over, and `text.in`'s two slots, are held to a text and its length that are
+one piece's -- or a length of nought, which reads nothing wherever the text
+is -- and refused with `K0411` otherwise.
+
+`check-verifier.sh` rewrites the `load.n` of one piece of text's two slots as a
+`load2` of its text and another piece's length, the same width and each slot
+what it says it is, and the verifier refuses it; with the mark not asked about
+it would not. Every program in the tree proves as before, and the fuzzer's
+programs compile and answer as they did. One mistake on the way: `rotate`
+first took the mark off what it moved up, which refused every enum carrying
+text being made -- the payload is pushed and the tag rotated under it.
+
+What is left of the first promise is `text.in`, which reads a byte of text at
+an index nothing checks, in the build a program ships in.
+

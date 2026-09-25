@@ -42231,3 +42231,16 @@ See D1243.
 as before; the compiler's own refusal taken out and two programs that keep a
 block's text, each refused by the verifier; `make most`.
 
+## 2026-09-25, a piece of text's two slots are one piece's
+
+Text and its length are marked as one piece where they are made together and
+while they move together, and every reading of text is held to that. A length
+beside another piece's text is refused.
+
+See D1244.
+
+**Runs:** the tree in three compile modes; the fuzzer's eight seeds, answers as
+before; `tools/check-verifier.sh` with a text and another's length made out of
+a `load.n`, refused, and held with the mark not asked about; `make most`; the
+backstop sweep.
+

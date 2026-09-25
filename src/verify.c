@@ -353,6 +353,13 @@ typedef uint64_t Kind;
 #define DEPTH_OF(kind) ((uint32_t)((kind) >> 56))
 #define BELOW_DEPTH(kind) (STEPPED(kind) & 0xFFFFFFu)
 #define ALL_CASES 0xFFFFFFu
+// Where a piece of text is and how long it is, with `PAIRED` beside each where
+// the two are one piece's: the length in the slot after the text, both marked,
+// and marked only where both were made or moved together. A slot moved on its
+// own, or a run cut between the two, is no longer marked.
+#define PAIRED 1u
+#define TEXT_KIND KIND(HOLDS_TEXT, PAIRED)
+#define LENGTH_KIND KIND(HOLDS_LENGTH, PAIRED)
 #define EXACTLY 0x800000u
 // And a function type nothing laid out says which with `NAMED` beside its
 // number among the types the walk has named.
@@ -609,10 +616,14 @@ static Kind joined(Verifying *v, Kind a, Kind b) {
                              ((Kind)(BELOW_DEPTH(a) | BELOW_DEPTH(b)) << 32),
                          DEPTH_OF(a) > DEPTH_OF(b) ? DEPTH_OF(a) : DEPTH_OF(b));
     }
-    // The same thing made at two depths is what was made deeper.
-    if (x == y && (x == HOLDS_TEXT || x == HOLDS_LENGTH ||
-                   (x == HOLDS_PAYLOAD && LAID_OF(a) == LAID_OF(b) &&
-                    BELOW_DEPTH(a) == BELOW_DEPTH(b)))) {
+    // The same thing made at two depths is what was made deeper, and text
+    // is one piece only where it was one piece on both ways.
+    if (x == y && (x == HOLDS_TEXT || x == HOLDS_LENGTH)) {
+        return deeper_of(KIND(x, LAID_OF(a) & LAID_OF(b) & PAIRED),
+                         DEPTH_OF(a) > DEPTH_OF(b) ? DEPTH_OF(a) : DEPTH_OF(b));
+    }
+    if (x == y && x == HOLDS_PAYLOAD && LAID_OF(a) == LAID_OF(b) &&
+        BELOW_DEPTH(a) == BELOW_DEPTH(b)) {
         return deeper_of(a, DEPTH_OF(b));
     }
     if ((x == HOLDS_TAG && y == HOLDS_NUMBER) ||
@@ -662,8 +673,8 @@ static void typed(Verifying *v, const KestType *type, Kind *into,
         }
         return;
     case KEST_T_TEXT:
-        into[(*at)++] = HOLDS_TEXT;
-        into[(*at)++] = HOLDS_LENGTH;
+        into[(*at)++] = TEXT_KIND;
+        into[(*at)++] = LENGTH_KIND;
         return;
     case KEST_T_ARRAY:
         into[(*at)++] = KIND(HOLDS_ARRAY, laid_for(module, type->element));
@@ -950,6 +961,36 @@ static const char *wrong_kind(Kinds *w, const char *where, uint32_t which,
     return "K0411";
 }
 
+// Whether a slot holding text and the slot after it are one piece of text:
+// made or moved together, or a length of nought, which reads nothing wherever
+// the text is.
+static bool one_piece(Kind text, Kind length) {
+    Holds t = HOLDS_OF(text);
+    Holds l = HOLDS_OF(length);
+    if (l == HOLDS_ZERO) {
+        return t == HOLDS_ZERO || t == HOLDS_TEXT;
+    }
+    return t == HOLDS_TEXT && l == HOLDS_LENGTH && (LAID_OF(text) & PAIRED) &&
+           (LAID_OF(length) & PAIRED);
+}
+
+static const char *not_one_piece(Kinds *w, uint32_t where) {
+    snprintf(w->said, w->room,
+             "`%s` at %u reads text and a length at %u that are not one "
+             "piece's",
+             w->name, w->at, where);
+    return "K0411";
+}
+
+// A slot moved on its own is not half of a piece any more.
+static Kind alone(Kind kind) {
+    Holds is = HOLDS_OF(kind);
+    if (is == HOLDS_TEXT || is == HOLDS_LENGTH) {
+        return kind & ~((Kind)PAIRED << 8);
+    }
+    return kind;
+}
+
 static const char *needs_top_of(Kinds *w, uint32_t n, Needs wants,
                                 uint32_t of) {
     Kind has = resolved(w->v, w->now, w->chunk->slot_count,
@@ -1076,6 +1117,10 @@ static const char *fits_enum(Kinds *w, uint32_t laid, uint32_t pos) {
                 return wrong_kind(w, "what a case carries at", pos + k, has,
                                   wants);
             }
+            if (HOLDS_OF(want) == HOLDS_TEXT && k < payload &&
+                !one_piece(has, resolved(v, w->now, region, pos + k + 1))) {
+                return not_one_piece(w, pos + k);
+            }
         }
     }
     return NULL;
@@ -1105,6 +1150,12 @@ static const char *fits_top(Kinds *w, uint32_t which, uint32_t n_from_top) {
         if (wrong != NULL) {
             return wrong;
         }
+        if (HOLDS_OF(laid) == HOLDS_TEXT && s + 1 < slots &&
+            !one_piece(resolved(w->v, w->now, w->chunk->slot_count, base + s),
+                       resolved(w->v, w->now, w->chunk->slot_count,
+                                base + s + 1))) {
+            return not_one_piece(w, base + s);
+        }
     }
     return NULL;
 }
@@ -1119,6 +1170,14 @@ static void carried_over(Kinds *w, uint32_t from, uint32_t from_region,
         w->spare[i] = HOLDS_OF(kind) == HOLDS_PAYLOAD && BELOW_DEPTH(kind) <= i
                           ? kind
                           : resolved(w->v, w->now, from_region, from + i);
+    }
+    // Text whose length did not come along, and a length whose text did not,
+    // are halves of nothing where they land.
+    if (count > 0 && HOLDS_OF(w->spare[0]) == HOLDS_LENGTH) {
+        w->spare[0] = alone(w->spare[0]);
+    }
+    if (count > 0 && HOLDS_OF(w->spare[count - 1]) == HOLDS_TEXT) {
+        w->spare[count - 1] = alone(w->spare[count - 1]);
     }
     memcpy(w->now + to, w->spare, sizeof(Kind) * count);
 }
@@ -1328,6 +1387,26 @@ static Kind constant_holds(const KestModule *module, const KestChunk *chunk,
     return HOLDS_NUMBER;
 }
 
+// What slot `i` of a run of `count` constants from `first` holds: a piece of
+// text beside its own length, which the constant after it is, is one piece.
+static Kind constant_run_holds(const KestModule *module, const KestChunk *chunk,
+                               uint32_t first, uint32_t count, uint32_t i) {
+    Kind kind = constant_holds(module, chunk, first + i);
+    uint32_t at = first + i;
+    if (HOLDS_OF(kind) == HOLDS_TEXT && i + 1 < count &&
+        at + 1 < chunk->constant_count &&
+        chunk->constant_classes[at + 1] == KEST_CONST_INT) {
+        return kind | ((Kind)PAIRED << 8);
+    }
+    if (i > 0 && at < chunk->constant_count &&
+        chunk->constant_classes[at] == KEST_CONST_INT &&
+        chunk->constant_classes[at - 1] == KEST_CONST_TEXT &&
+        HOLDS_OF(kind) == HOLDS_LENGTH) {
+        return kind | ((Kind)PAIRED << 8);
+    }
+    return kind;
+}
+
 // Simple instructions, as what they read from the top down and what they
 // leave from the bottom up, one letter a slot: `n` a number, `t` text and its
 // length (two slots), `h` an array, `s` a store, `a` an address.
@@ -1350,6 +1429,14 @@ static const char *simply(Kinds *w, const char *reads, const char *leaves) {
             if (wrong == NULL) {
                 wrong = needs_top(w, n++, NEEDS_TEXT);
             }
+            if (wrong == NULL) {
+                uint32_t at = w->chunk->slot_count + w->depth - n + 1;
+                if (!one_piece(resolved(w->v, w->now, w->chunk->slot_count, at),
+                               resolved(w->v, w->now, w->chunk->slot_count,
+                                        at + 1))) {
+                    wrong = not_one_piece(w, at);
+                }
+            }
             break;
         default:
             break;
@@ -1365,8 +1452,8 @@ static const char *simply(Kinds *w, const char *reads, const char *leaves) {
             push(w, HOLDS_NUMBER);
             break;
         case 't':
-            push_made(w, HOLDS_TEXT);
-            push_made(w, HOLDS_LENGTH);
+            push_made(w, TEXT_KIND);
+            push_made(w, LENGTH_KIND);
             break;
         default:
             break;
@@ -1394,7 +1481,7 @@ static const char *kinds_step(Kinds *w) {
         return NULL;
     case KEST_OP_CONST_RUN:
         for (uint32_t i = 0; i < u[1]; i++) {
-            push(w, constant_holds(module, chunk, u[0] + i));
+            push(w, constant_run_holds(module, chunk, u[0], u[1], i));
         }
         return NULL;
     case KEST_OP_CONST_AT: {
@@ -1403,10 +1490,11 @@ static const char *kinds_step(Kinds *w) {
         }
         w->depth--;
         for (uint32_t k = 0; k < u[1]; k++) {
-            Kind all = constant_holds(module, chunk, u[0] + k);
+            Kind all = constant_run_holds(module, chunk, u[0], u[1], k);
             for (uint32_t row = 1; row < u[2]; row++) {
                 all = joined(v, all,
-                             constant_holds(module, chunk, u[0] + row * u[1] + k));
+                             constant_run_holds(module, chunk,
+                                                u[0] + row * u[1], u[1], k));
             }
             push(w, all);
         }
@@ -1416,21 +1504,27 @@ static const char *kinds_step(Kinds *w) {
         if ((wrong = needs_slot(w, u[0], NEEDS_ANYTHING)) != NULL) {
             return wrong;
         }
-        push(w, resolved(v, w->now, 0, u[0]));
+        push(w, alone(resolved(v, w->now, 0, u[0])));
         return NULL;
     case KEST_OP_LOAD2:
         if ((wrong = needs_slot(w, u[0], NEEDS_ANYTHING)) != NULL ||
             (wrong = needs_slot(w, u[1], NEEDS_ANYTHING)) != NULL) {
             return wrong;
         }
-        push(w, resolved(v, w->now, 0, u[0]));
-        push(w, resolved(v, w->now, 0, u[1]));
+        // Two slots side by side are what they were side by side.
+        if (u[1] == u[0] + 1) {
+            push(w, resolved(v, w->now, 0, u[0]));
+            push(w, resolved(v, w->now, 0, u[1]));
+        } else {
+            push(w, alone(resolved(v, w->now, 0, u[0])));
+            push(w, alone(resolved(v, w->now, 0, u[1])));
+        }
         return NULL;
     case KEST_OP_LOADK:
         if ((wrong = needs_slot(w, u[0], NEEDS_ANYTHING)) != NULL) {
             return wrong;
         }
-        push(w, resolved(v, w->now, 0, u[0]));
+        push(w, alone(resolved(v, w->now, 0, u[0])));
         push(w, constant_holds(module, chunk, u[1]));
         return NULL;
     case KEST_OP_LOADN:
@@ -1446,8 +1540,8 @@ static const char *kinds_step(Kinds *w) {
         if ((wrong = needs_top(w, 1, NEEDS_ANYTHING)) != NULL) {
             return wrong;
         }
-        SLOT(w, u[0]) = resolved(v, w->now, chunk->slot_count,
-                                 chunk->slot_count + w->depth - 1);
+        SLOT(w, u[0]) = alone(resolved(v, w->now, chunk->slot_count,
+                                       chunk->slot_count + w->depth - 1));
         w->depth--;
         return NULL;
     case KEST_OP_STOREN:
@@ -1484,6 +1578,20 @@ static const char *kinds_step(Kinds *w) {
             w->now[base + i] = w->now[base + i - 1];
         }
         w->now[base] = tag;
+        // Everything else moved up together and is beside what it was beside.
+        // The one moved to the bottom is beside nothing it was; the one it
+        // lands on left what was under it; the one it came from under lost
+        // what was above.
+        if (u[0] > 1) {
+            w->now[base] = alone(w->now[base]);
+            if (HOLDS_OF(w->now[base + 1]) == HOLDS_LENGTH) {
+                w->now[base + 1] = alone(w->now[base + 1]);
+            }
+            uint32_t top = chunk->slot_count + w->depth - 1;
+            if (HOLDS_OF(w->now[top]) == HOLDS_TEXT) {
+                w->now[top] = alone(w->now[top]);
+            }
+        }
         return NULL;
     }
     case KEST_OP_POP:
@@ -1783,6 +1891,10 @@ static const char *kinds_step(Kinds *w) {
             (wrong = needs_slot(w, u[1], NEEDS_NUMBER)) != NULL) {
             return wrong;
         }
+        if (!one_piece(resolved(v, w->now, 0, u[0]),
+                       resolved(v, w->now, 0, u[0] + 1))) {
+            return not_one_piece(w, u[0]);
+        }
         push(w, HOLDS_NUMBER);
         return NULL;
     case KEST_OP_TEXT_SLICE:
@@ -1794,8 +1906,8 @@ static const char *kinds_step(Kinds *w) {
         if ((wrong = simply(w, slicing ? "nnt" : "nt", "t")) != NULL) {
             return wrong;
         }
-        FROM_TOP(w, 2) = deeper_of(HOLDS_TEXT, made);
-        FROM_TOP(w, 1) = deeper_of(HOLDS_LENGTH, made);
+        FROM_TOP(w, 2) = deeper_of(TEXT_KIND, made);
+        FROM_TOP(w, 1) = deeper_of(LENGTH_KIND, made);
         return NULL;
     }
     case KEST_OP_TEXT_MATCHES:
@@ -1815,8 +1927,8 @@ static const char *kinds_step(Kinds *w) {
             return wrong;
         }
         w->depth -= slots;
-        push_made(w, HOLDS_TEXT);
-        push_made(w, HOLDS_LENGTH);
+        push_made(w, TEXT_KIND);
+        push_made(w, LENGTH_KIND);
         return NULL;
     }
     case KEST_OP_CONCAT:
@@ -1825,10 +1937,15 @@ static const char *kinds_step(Kinds *w) {
                 (wrong = needs_top(w, 2 * i + 2, NEEDS_TEXT)) != NULL) {
                 return wrong;
             }
+            uint32_t at = chunk->slot_count + w->depth - (2 * i + 2);
+            if (!one_piece(resolved(v, w->now, chunk->slot_count, at),
+                           resolved(v, w->now, chunk->slot_count, at + 1))) {
+                return not_one_piece(w, at);
+            }
         }
         w->depth -= 2 * u[0];
-        push_made(w, HOLDS_TEXT);
-        push_made(w, HOLDS_LENGTH);
+        push_made(w, TEXT_KIND);
+        push_made(w, LENGTH_KIND);
         return NULL;
     case KEST_OP_HASH_VALUE: {
         uint32_t slots = module->layouts[u[0]].slots;
@@ -1864,8 +1981,8 @@ static const char *kinds_step(Kinds *w) {
             return "K0411";
         }
         w->depth--;
-        push_made(w, HOLDS_TEXT);
-        push_made(w, HOLDS_LENGTH);
+        push_made(w, TEXT_KIND);
+        push_made(w, LENGTH_KIND);
         return NULL;
     }
 
