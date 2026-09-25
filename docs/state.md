@@ -236,7 +236,8 @@ may wait between frames and resume from its own struct and enum rather than
 from a kept frame (D1263), and walk a struct's fields while compiling, which
 is a save, a load and an inspector written once for every shape (D1264). A
 tag makes a draft release page with four platforms' archives and the
-changelog's notes, and this is 0.0.2 (D1265).
+changelog's notes, and this is 0.0.2 (D1265). The WebAssembly build runs in a
+page, held to the machine example by example (D1266).
 
 ## Determinism
 

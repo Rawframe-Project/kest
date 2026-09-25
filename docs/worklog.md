@@ -42642,3 +42642,20 @@ See D1265.
 **Runs:** `make release` here, the notes it wrote, one section and 485 lines;
 the workflow read as YAML; `check-docs.sh`; the six version holes by hand;
 `make most`.
+
+## 2026-09-25, a playground
+
+`playground/`: the command line as WebAssembly in a page, with a system
+interface of its own for the browser, files in memory and nothing else.
+`make playground` assembles it with the library and six programs,
+`tools/page-run.mjs` runs a program through the same interface under Node,
+and `check-wasm.sh` holds forty-five examples run that way to the machine.
+`pages.yml` publishes it. The first page was put in the tree while `make
+most` was running, and the gate's walk of the tree said a run had left a file
+there; it was moved out until the run was done.
+
+See D1266.
+
+**Runs:** every example natively and through the page's interface; the page
+in headless Chrome, served from `make playground`'s directory, `hello from
+kest`; `check-wasm.sh`; the hole by hand; `make most`.

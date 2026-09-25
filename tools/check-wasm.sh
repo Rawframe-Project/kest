@@ -86,9 +86,32 @@ if [ $same -eq 0 ]; then
     echo "wasm: no example was run both ways"
     failed=1
 fi
+# And the page: the same module under the system interface the playground
+# gives it in a browser, which is not Node's, over every example that is one
+# file -- what somebody types into the page is one file. See D1266.
+paged=0
+for program in examples/*.kest; do
+    grep -q '^fn main(' "$program" || continue
+    grep -q '^import examples\.' "$program" && continue
+    native=$(./kest run "$program" 2>/dev/null </dev/null; echo "status $?")
+    page=$(node tools/page-run.mjs "$scratch"/kest.wasm "$program" \
+               2>/dev/null </dev/null; echo "status $?")
+    if [ "$native" != "$page" ]; then
+        echo "wasm: \`$program\` answered" \
+             "\`$(printf '%s' "$page" | tail -1)\` in the playground and" \
+             "\`$(printf '%s' "$native" | tail -1)\` here"
+        failed=1
+    else
+        paged=$((paged + 1))
+    fi
+done
+if [ $paged -eq 0 ]; then
+    echo "wasm: no example was run in the playground"
+    failed=1
+fi
 if [ $failed -eq 0 ]; then
     echo "the library and the command line build as WebAssembly with no" \
          "warning, and $same example(s) run by it say the same words and" \
-         "come back the same as here"
+         "come back the same as here, $paged of them in the playground too"
 fi
 exit $failed

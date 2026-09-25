@@ -43608,3 +43608,32 @@ under a paragraph saying what the largest of them are. The eight written with
 the declaration stay under `0.0.1`. The version is in the header, the front
 page, the reference's `--version` line and its manifest, the editor extension
 and six holes, and `check-docs.sh` holds every one of them to the run.
+
+## D1266 — A playground, which is the WebAssembly build in a page
+
+T1 asked for a way to try the language without installing anything. D1255
+had already built the command line as WebAssembly and held it to the machine
+under Node's own system interface; what a browser lacks is that interface.
+
+`playground/wasi.js` is one written for a page: the twenty-one calls the
+module imports, over a file system that is a map of paths to bytes held in
+memory, a clock, the two streams, and nothing else -- no network, no other
+process and nothing of the reader's machine, which is the boundary a page
+wants and the one `SECURITY.md` asks of a host. `playground/index.html` and
+`main.js` are a box to type in and three buttons: Run, which is `kest run`
+with a budget of two hundred million steps so a program that never stops is
+told so rather than holding the page; Check; and Format, which writes the one
+form back into the box. The standard library and six programs to start from
+come with it, and `#run` in the address runs what is in the box.
+
+What holds it is that the interface is a module Node can load as well as a
+browser: `tools/page-run.mjs` runs a program through it exactly as the page
+does, and `check-wasm.sh` runs every example that is one file that way and
+holds each to the machine built here, the same words and the same status --
+forty-five of them. One hole is caught: the page losing a byte of what a
+program writes. The page itself was run in Chrome with no display here, from
+`make playground`'s directory, and said `hello from kest`.
+
+`.github/workflows/pages.yml` builds it on every push to `main`, runs
+`check-wasm.sh` over it, and publishes the directory as the repository's
+pages site.

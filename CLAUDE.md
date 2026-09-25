@@ -170,6 +170,14 @@ bench/             Four shapes of work and what each costs, in this language
                    beside the loop. `QUICKLY=1` is the smallest scale that
                    still fills every row, which is what `make check` runs it
                    at: the gate reads rows rather than durations.
+playground/        The page somebody tries the language in without installing
+                   anything: the command line built as WebAssembly, a system
+                   interface for it written for a browser -- files held in
+                   memory, a clock and the two streams -- and a box to type in.
+                   `make playground` assembles it and `pages.yml` publishes it;
+                   `check-wasm.sh` runs every one-file example through the
+                   page's interface under Node and holds it to the machine.
+                   See D1266.
 editors/           What an editor needs, and nothing that parses Kest. The
                    VS Code extension is a grammar, a language configuration,
                    snippets, a client that starts `kest lsp` and a debugger

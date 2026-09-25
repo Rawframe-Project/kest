@@ -1,0 +1,54 @@
+name: playground
+
+# The playground published: the command line built as WebAssembly with the
+# page around it, on every push to `main` after the same page has been held to
+# the machine by `check-wasm.sh`. Nothing in it runs anywhere but the reader's
+# browser. See D1266.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: a WebAssembly toolchain
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q lld wasi-libc \
+              "libclang-rt-$(clang --version | sed -n 's/.*clang version \([0-9]*\).*/\1/p' | head -1)-dev-wasm32"
+      - name: the page, and the page held to the machine
+        run: |
+          make -j
+          make playground
+          mkdir -p /home/runner/kest-tmp
+          TMPDIR=/home/runner/kest-tmp sh tools/check-wasm.sh
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/playground
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

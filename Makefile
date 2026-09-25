@@ -177,6 +177,25 @@ most: tools/check.sh
 check: tools/check.sh
 	@tools/check.sh
 
+# The playground: the command line as WebAssembly, the page, the standard
+# library and a few examples, in one directory a web server hands out as it
+# is. `.github/workflows/pages.yml` publishes it. See D1266.
+PLAYED := chores records blocks vectors methods
+playground: kest.wasm playground/index.html playground/main.js \
+            playground/wasi.js
+	rm -rf build/playground
+	mkdir -p build/playground
+	cp playground/index.html playground/main.js playground/wasi.js \
+	    kest.wasm build/playground/
+	python3 -c 'import json, glob, os, sys; \
+	json.dump({os.path.basename(f): open(f).read() \
+	    for f in sorted(glob.glob("lib/std/*.kest"))}, \
+	    open("build/playground/std.json", "w")); \
+	json.dump(dict([("hello", "import std.io\n\nfn main() -> i32 {\n    io.print(\"hello from kest\")\n    return 0\n}\n")] + \
+	    [(n, open("examples/%s.kest" % n).read()) for n in sys.argv[1:]]), \
+	    open("build/playground/examples.json", "w"))' $(PLAYED)
+	@echo "wrote build/playground"
+
 # Every figure a document quotes from a run, written there from a run: what a
 # frame step and a crossing run, what a container costs an entity, what the
 # compiler's own work costs, how many constants a program folds, and how many
@@ -311,6 +330,7 @@ clean:
 	    .jitted_scripts kest-colony-day.txt
 
 .PHONY: debug least embed embed-debug engine engine-debug fast most check figures \
+    playground \
     time fuzz release install uninstall clean
 
 # A short campaign, which is what a gate can afford: eight seeds and four

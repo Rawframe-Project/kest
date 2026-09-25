@@ -3005,6 +3005,21 @@ yield""",
         "caught": "examples/records.kest answered",
     },
     {
+        # The page's own system interface losing a byte of what a program
+        # says: a playground that answers something else than the machine.
+        # See D1266.
+        "what": "a playground that says something else than the machine",
+        "file": "playground/wasi.js",
+        "from": r"""                if (fd === 1) {
+                    out.push(piece);""",
+        "to": r"""                if (fd === 1) {
+                    out.push(piece.subarray(1));""",
+        "make": ["kest"],
+        "tool": "tools/check-wasm.sh",
+        "arguments": [],
+        "caught": "in the playground and",
+    },
+    {
         # Work counted and never run out of: a ceiling that is read and never
         # reached is a build that takes as long as the file makes it, which
         # is the thing a host that compiles what it was sent gave one to stop.
