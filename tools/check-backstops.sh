@@ -1303,7 +1303,7 @@ fn main() -> i32 {
         stack_pop(compiler, size);
         run_deferred(compiler, 0, stmt->span);""",
         # The verifier taken out as well: it refuses this before anything
-        # runs (D1237, D1239), and what this hole holds is the machine's own
+        # runs (D1237, D1239, D1242), and what this hole holds is the machine's own
         # guard, which is the net under it.
         "also": ["src/verify.c", r"""        if (wrong == NULL) {
             char said[200];""", r"""        if (false) {
@@ -1616,6 +1616,12 @@ fn main() -> i32 {
     which.integer = index;""",
         "to": """    KestValue which = {0};
     which.integer = index + 1000;""",
+        # The verifier taken out as well: it refuses this before anything
+        # runs (D1237, D1239, D1242), and what this hole holds is the machine's own
+        # guard, which is the net under it.
+        "also": ["src/verify.c", r"""        if (wrong == NULL) {
+            char said[200];""", r"""        if (false) {
+            char said[200];"""],
         "make": ["kest"],
         "program": "calling.kest",
         "source": """fn one(n: i32) -> i32 {
@@ -5573,6 +5579,12 @@ fn main() -> i32 {
         return (a->tag == KEST_T_ARRAY && b->tag == KEST_T_STORE) ||
                (a->tag == KEST_T_STORE && b->tag == KEST_T_ARRAY);
     }""",
+        # The verifier taken out as well: it refuses this before anything
+        # runs (D1237, D1239, D1242), and what this hole holds is the machine's own
+        # guard, which is the net under it.
+        "also": ["src/verify.c", r"""        if (wrong == NULL) {
+            char said[200];""", r"""        if (false) {
+            char said[200];"""],
         "program": "handles.kest",
         # The machine keeps a tag on every handle it hands out, and reads it
         # before it follows one. Nothing a program can write reaches that
@@ -5769,7 +5781,7 @@ fn length(v: Vec2) -> f32 no.alloc deterministic {""",
         "from": r"""    if (width == 0 || lower->last_at < lower->pointed_at ||""",
         "to": r"""    if (width == 0 ||""",
         # The verifier taken out as well: it refuses this before anything
-        # runs (D1237, D1239), and what this hole holds is the machine's own
+        # runs (D1237, D1239, D1242), and what this hole holds is the machine's own
         # guard, which is the net under it.
         "also": ["src/verify.c", r"""        if (wrong == NULL) {
             char said[200];""", r"""        if (false) {
@@ -6337,7 +6349,7 @@ fn main() -> i32 {
     }
     return (uint16_t)(index + 1);""",
         # The verifier taken out as well: it refuses this before anything
-        # runs (D1237, D1239), and what this hole holds is the machine's own
+        # runs (D1237, D1239, D1242), and what this hole holds is the machine's own
         # guard, which is the net under it.
         "also": ["src/verify.c", r"""        if (wrong == NULL) {
             char said[200];""", r"""        if (false) {
@@ -6366,7 +6378,7 @@ fn main() -> i32 {
         "to": r"""    emit(lower, count == 1 ? KEST_OP_CONST : KEST_OP_CONST_RUN, origin);
     emit_u16(lower, (uint16_t)(index + 1), origin);""",
         # The verifier taken out as well: it refuses this before anything
-        # runs (D1237, D1239), and what this hole holds is the machine's own
+        # runs (D1237, D1239, D1242), and what this hole holds is the machine's own
         # guard, which is the net under it.
         "also": ["src/verify.c", r"""        if (wrong == NULL) {
             char said[200];""", r"""        if (false) {
@@ -6402,7 +6414,7 @@ fn main() -> i32 {
         emit_u16(lower, (uint16_t)(size + 1), origin);
     }""",
         # The verifier taken out as well: it refuses this before anything
-        # runs (D1237, D1239), and what this hole holds is the machine's own
+        # runs (D1237, D1239, D1242), and what this hole holds is the machine's own
         # guard, which is the net under it.
         "also": ["src/verify.c", r"""        if (wrong == NULL) {
             char said[200];""", r"""        if (false) {
@@ -6480,7 +6492,7 @@ fn main() -> i32 {
         emit_u16(lower, op->imm[0], span);
         emit_u16(lower, (uint16_t)(op->imm[1] + 1), span);""",
         # The verifier taken out as well: it refuses this before anything
-        # runs (D1237, D1239), and what this hole holds is the machine's own
+        # runs (D1237, D1239, D1242), and what this hole holds is the machine's own
         # guard, which is the net under it.
         "also": ["src/verify.c", r"""        if (wrong == NULL) {
             char said[200];""", r"""        if (false) {
@@ -6518,7 +6530,7 @@ fn main() -> i32 {
         emit_u16(lower, op->imm[1], span);
         emit_u16(lower, (uint16_t)(op->imm[2] + 1), span);""",
         # The verifier taken out as well: it refuses this before anything
-        # runs (D1237, D1239), and what this hole holds is the machine's own
+        # runs (D1237, D1239, D1242), and what this hole holds is the machine's own
         # guard, which is the net under it.
         "also": ["src/verify.c", r"""        if (wrong == NULL) {
             char said[200];""", r"""        if (false) {
@@ -6555,7 +6567,7 @@ fn main() -> i32 {
             return;
         }""",
         # The verifier taken out as well: it refuses this before anything
-        # runs (D1237, D1239), and what this hole holds is the machine's own
+        # runs (D1237, D1239, D1242), and what this hole holds is the machine's own
         # guard, which is the net under it.
         "also": ["src/verify.c", r"""        if (wrong == NULL) {
             char said[200];""", r"""        if (false) {
@@ -10181,7 +10193,7 @@ memory""",
                        KestSpan declared) {
     compiler->body->param_slots = (uint16_t)compiler->local_count;""",
         # The verifier taken out as well: it refuses this before anything
-        # runs (D1237, D1239), and what this hole holds is the machine's own
+        # runs (D1237, D1239, D1242), and what this hole holds is the machine's own
         # guard, which is the net under it.
         "also": ["src/verify.c", r"""        if (wrong == NULL) {
             char said[200];""", r"""        if (false) {
@@ -12217,6 +12229,12 @@ static const Keyword KEYWORDS[] = {
         KestValue zero = {0};""",
         "to": """        uint16_t size = value_slots(expr->type);
         KestValue zero = {1};""",
+        # The verifier taken out as well: it refuses this before anything
+        # runs (D1237, D1239, D1242), and what this hole holds is the machine's own
+        # guard, which is the net under it.
+        "also": ["src/verify.c", r"""        if (wrong == NULL) {
+            char said[200];""", r"""        if (false) {
+            char said[200];"""],
         "make": ["kest", "embed"],
         "host": "examples/embed",
         "caught": "under a flag that says",
@@ -14248,7 +14266,7 @@ trap 'rm -rf "$scratch"/work' EXIT""",
         "from": """        if (held->type != NULL && held->type->tag == KEST_T_OPTIONAL) {""",
         "to": """        if (false) {""",
         # The verifier taken out as well: it refuses this before anything
-        # runs (D1237, D1239), and what this hole holds is the machine's own
+        # runs (D1237, D1239, D1242), and what this hole holds is the machine's own
         # guard, which is the net under it.
         "also": ["src/verify.c", r"""        if (wrong == NULL) {
             char said[200];""", r"""        if (false) {

@@ -42197,3 +42197,23 @@ See D1241.
 first; the example's release engine before (a segmentation fault) and after
 (nought); the machine; `make most`.
 
+## 2026-09-25, the verifier proves what every slot holds
+
+Every path of every body is walked with what each slot holds -- a number, text
+and its length, an array or a store of a layout, an address, a function of a
+type, an enum's tag and what its cases carry -- and an instruction that reads
+a slot as something it does not hold is refused with `K0411`. Function values
+are constants of their own class now, and a call through one is held to what
+the function takes and gives. Enum payloads are read through their tag, which
+a `match` narrows.
+
+See D1242.
+
+**Runs:** every example, workload, library module and instrument, compiled
+plainly, with `KEST_NOOPT` and with `KEST_PLAIN`; the fuzzer's eight seeds on
+the source boundary against the commit before, the same programs compiled and
+the same answers; `tools/check-verifier.sh` with its three new cases and with
+the walk taken out; the compiler's instructions to emit two programs before
+and after; the tasks a model is given; `make fast`; `make most`; the backstop
+sweep.
+

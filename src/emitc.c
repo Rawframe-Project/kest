@@ -962,7 +962,9 @@ static void write_const_at(Walk *walk, const KestIrOp *op, uint32_t index) {
             say(c, out, "    { .real = %a },\n", value.real);
             continue;
         }
-        if (class != KEST_CONST_INT) {
+        // A function value is which function it is, the number the machine
+        // calls through as well.
+        if (class != KEST_CONST_INT && class != KEST_CONST_FN) {
             cannot(walk, "a value this backend has no spelling for");
             return;
         }
@@ -1055,7 +1057,7 @@ static void write_const(Walk *walk, const KestIrOp *op) {
                 value.real);
             continue;
         }
-        if (class != KEST_CONST_INT) {
+        if (class != KEST_CONST_INT && class != KEST_CONST_FN) {
             cannot(walk, "a value this backend has no spelling for");
             return;
         }

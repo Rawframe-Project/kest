@@ -854,7 +854,7 @@ static bool compile_function_value(Compiler *compiler, const KestExpr *expr) {
     compiler->module->functions[index]->as_value = true;
     KestValue which = {0};
     which.integer = index;
-    emit_constant(compiler, which, KEST_CONST_INT, expr->type, expr->span);
+    emit_constant(compiler, which, KEST_CONST_FN, expr->type, expr->span);
     return true;
 }
 
@@ -909,9 +909,10 @@ static void value_classes(const KestType *type, const KestValue *values,
         *at = tag_at + type->slots;
         return;
     }
-    classes[(*at)++] = type != NULL && type->tag == KEST_T_FLOAT
-                           ? KEST_CONST_FLOAT
-                           : KEST_CONST_INT;
+    classes[(*at)++] = type == NULL                ? KEST_CONST_INT
+                       : type->tag == KEST_T_FLOAT ? KEST_CONST_FLOAT
+                       : type->tag == KEST_T_FN    ? KEST_CONST_FN
+                                                   : KEST_CONST_INT;
 }
 
 // The run put in the chunk beside the code, with what each of its slots means

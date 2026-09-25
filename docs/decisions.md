@@ -42518,3 +42518,82 @@ a release is meant to rule out.
 tag and then the case the value's own tag names, a struct with nothing in it as
 one slot, and exactly as many slots as the type takes.
 
+## D1242 — The verifier proves what every slot holds
+
+*measured*. The last structural row of D1234's table: a slot is eight bytes
+the machine reads as a number, as where a piece of text is and how long, as a
+handle, as an address or as which function to call, by whichever instruction
+reads it, and nothing beside the value says which. A chunk that reads a number
+as a handle reads memory at an address the program chose. S3 of the plan says
+the verifier proves it once, before anything runs, rather than a machine
+checking it at every read (measured in D1237 at 1.5 to 2.2 times the cycles).
+
+`verify.c` walks every path of every body with what each slot holds: nothing
+this body wrote (what the last frame left, which may be an address, so reading
+one is refused), nought, a number, text and the length beside it, an array or
+a store of a layout, an address inside an element of one, a function of a
+type, and an enum's tag with which of its cases it can be and what those cases
+carry. The arguments are what the declaration says; every instruction is
+read the way its handler reads its operands; two ways into one place are
+folded into what either could hold; and what cannot be said is one of several
+things, which may be moved and never read as any of them. It found three
+things on the way:
+
+- the compiler described a constant `text?` or enum as numbers (D1241), which
+  is what the verifier reads to know a constant is text;
+- a function value was a whole number in the constants too. It is
+  `KEST_CONST_FN` now, the disassembler names the function, the other backend
+  writes it as the number it is -- its check that a constant is one it can
+  spell is what said the class was new -- and a call through a value hands
+  over and takes back what that function, or every function the value can be
+  where two ways meet, or the function type a field or an argument was
+  declared as, takes and gives;
+- `push`, `index` and the rest read an array's memory by the layout their
+  operand names and the machine never asks whether that is what the array was
+  made of, so a handle's kind carries its element's layout, and an instruction
+  reading a field in place is held to the element having that field there. An
+  address stepped along a run inside an element (`offset.addr`) says the step
+  and the count, and what is read through it has to be inside such a run.
+
+An enum or a function type inside a struct has no layout of its own, so the
+walk names the types it meets and a tag or a function value says which by
+that name.
+
+An enum's cases share their slots, a piece of text in one where another has a
+number, so what a case carries is read through its tag: a tag knows which
+cases it can be, a `match` that weighs it against a case -- fused into one
+instruction, or `load`, `const`, `eq.i` and a jump where fusing is off -- is
+that case on one way and not it on the other, and a slot of what a case
+carries is what every case its tag can still be carries there. A slot a case
+carries nothing in is a number and never text or a handle, which every value
+of the enum made anywhere is held to. An address is forgotten wherever the
+array under it could have moved: an instruction that grows or empties one, a
+block of working memory given back, a call handed anything that may reach one.
+
+Every body of every example, workload, library module and instrument is
+proved, compiled the three ways the gate compiles them, and the fuzzer's 3,200
+programs compile and answer exactly what they did before. `check-verifier.sh`
+has three more cases -- a slot read before anything wrote it, a number handed
+over as an array, an array read as a number -- each `K0411`, and each held
+with the walk taken out. What proving costs is compiling: 7% more
+instructions to emit `examples/inventory.kest`, 12% for `bench/agents.kest`.
+
+The backstop sweep turned up two more. Three holes aimed at the machine's
+guards -- a function value that stands for nothing, an array used as a store,
+an empty optional with something under its flag -- are refused by the walk now
+before anything runs, and take the verifier out to hold the guard, as ten did
+in D1239. And the hole that takes the verifier's question about a constant out
+made the walk read the constants past their end: every read the walk makes is
+one the walk before it asked about, and a constant it was not told about is
+read as nothing now rather than out of the chunk. Looking at what else it had
+not been told: four instructions write a value of a layout into the frame from
+a slot, and `text.in` reads two, and D1237 asked only whether the first slot
+was there. The machine asks how far they reach in the build that checks itself
+and nowhere else. The verifier asks it now (`K0408`), and
+`check-verifier.sh` writes an element into the last slot of a frame to see it.
+
+What is left of the first promise is not structural: that a handle or text
+made inside `scratch { }` is not held past the block that gives it back, which
+the compiler refuses (D966) and the verifier does not yet prove; that the two
+slots of a piece of text are one piece of text's; and `text.in`.
+

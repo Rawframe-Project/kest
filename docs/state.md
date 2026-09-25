@@ -193,9 +193,10 @@ first three are, untrusted code belongs in another process or in Wasm (D1233).
 What the machine trusts and the verifier does not yet prove is listed in
 D1234, and is what the new verifier is built against.
 The verifier holds every slot, constant, function, door and layout an
-instruction names and every jump before a chunk runs (D1237), and the operand
-stack's depth on every path (D1239); what each slot holds and `text.in` are
-what is left of D1234's table.
+instruction names and every jump before a chunk runs (D1237), the operand
+stack's depth on every path (D1239), and what every slot holds (D1242);
+working memory, the two halves of text, and `text.in` are what is left of
+D1234's table.
 
 ## Determinism
 

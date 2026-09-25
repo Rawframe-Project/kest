@@ -66,7 +66,8 @@ static const char *PROGRAM =
     "        push(xs, Pair(n, n * 2))\n"
     "        n += 3\n"
     "    }\n"
-    "    let total = xs[1].b + deeper(3)\n"
+    "    let p = xs[2]\n"
+    "    let total = xs[1].b + deeper(3) + p.a + p.b\n"
     "    io.print(\"{total}\")\n"
     "    return total % 7\n"
     "}\n";
@@ -110,8 +111,12 @@ static bool first_with(KestModule *module, const char *named, uint32_t operand,
     return false;
 }
 
-// What is written in place of a number that is one fewer than it was.
+// What is written in place of a number that is one fewer than it was, and in
+// place of a jump one byte further than it lands.
 #define FEWER 0xFFFE
+#define BETWEEN 0xFFFD
+// And in place of a slot, the last one the body has.
+#define LAST 0xFFFC
 
 typedef struct {
     const char *what;
@@ -148,7 +153,8 @@ int main(int argc, char **argv) {
         {"a layout past the module's", "make.array", 0, 0xFFFF, "K0408"},
         {"a run of slots past the frame", "load.n", 1, 0xFFFF, "K0408"},
         {"a jump past the end", "jump.false.lt.k", 2, 0xFFFF, "K0409"},
-        {"a jump between two instructions", "jump.false.lt.k", 2, 1, "K0409"},
+        {"a jump between two instructions", "jump.false.lt.k", 2, BETWEEN,
+         "K0409"},
         {"a jump back to before the body", "loop", 0, 0xFFFF, "K0409"},
         {"a return one slot short of the declaration", "return", 0, FEWER,
          "K0410"},
@@ -158,6 +164,11 @@ int main(int argc, char **argv) {
          "K0410"},
         {"a concat of no pieces, leaving two slots nothing reads", "concat",
          0, 0, "K0410"},
+        {"an element written past the end of the frame", "index.to", 1, LAST,
+         "K0408"},
+        {"a slot read before anything wrote it", "load.k", 0, 2, "K0411"},
+        {"a number handed over as an array", "load.k", 0, 1, "K0411"},
+        {"an array read as a number", "mod.i.k", 0, 0, "K0411"},
     };
     uint32_t refused = 0;
     uint32_t missed = 0;
@@ -175,11 +186,13 @@ int main(int argc, char **argv) {
         uint8_t low = chunk->code[place];
         uint8_t high = chunk->code[place + 1];
         uint16_t written = cases[c].written;
-        if (written == 1) {
+        if (written == BETWEEN) {
             // Between two instructions: one byte further than it lands.
             written = (uint16_t)((low | (high << 8)) + 1);
         } else if (written == FEWER) {
             written = (uint16_t)((low | (high << 8)) - 1);
+        } else if (written == LAST) {
+            written = (uint16_t)(chunk->slot_count - 1);
         }
         chunk->code[place] = (uint8_t)(written & 0xFF);
         chunk->code[place + 1] = (uint8_t)(written >> 8);
@@ -201,9 +214,9 @@ int main(int argc, char **argv) {
     if (missed > 0) {
         return 1;
     }
-    printf("%u way(s) a chunk can name what it has not got or move the "
-           "stack wrong, each refused, and the program as it was compiled "
-           "held\n",
+    printf("%u way(s) a chunk can name what it has not got, move the stack "
+           "wrong or read a slot as what it does not hold, each refused, and "
+           "the program as it was compiled held\n",
            refused);
     return 0;
 }
