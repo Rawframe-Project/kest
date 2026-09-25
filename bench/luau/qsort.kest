@@ -1,0 +1,162 @@
+module bench.luau.qsort
+
+import std.io
+import std.os
+import std.sort
+
+// Luau's own `bench/tests/qsort.lua` in Kest: twelve names sorted ten thousand
+// times, by a quicksort with a random pivot, then backwards by a selection
+// sort, then forwards again, each held to a copy the library sorted. The
+// order is a function handed over, as it is in Luau. See D1267.
+
+fn before(a: text, b: text) -> bool no.alloc no.host {
+    return a < b
+}
+
+fn after(a: text, b: text) -> bool no.alloc no.host {
+    return a > b
+}
+
+// The random pivot, from a state kept in a run of one so every call below
+// moves the same one.
+fn pick(state: [u64], range: i32) -> i32 {
+    let s = state[0]
+    s = s ^ s << u64(13)
+    s = s ^ s >> u64(7)
+    s = s ^ s << u64(17)
+    state[0] = s
+    return i32(s % u64(range))
+}
+
+fn quick(x: [text], l: i32, u: i32, f: fn(text, text) -> bool no.alloc no.host, state: [u64]) {
+    if l < u {
+        let m = pick(state, u - l + 1) + l
+        let held = x[l]
+        x[l] = x[m]
+        x[m] = held
+        let t = x[l]
+        m = l
+        let i = l + 1
+        while i <= u {
+            if f(x[i], t) {
+                m += 1
+                let swapped = x[m]
+                x[m] = x[i]
+                x[i] = swapped
+            }
+            i += 1
+        }
+        let last = x[l]
+        x[l] = x[m]
+        x[m] = last
+        quick(x, l, m - 1, f, state)
+        quick(x, m + 1, u, f, state)
+    }
+}
+
+fn selection(x: [text], n: i32, f: fn(text, text) -> bool no.alloc no.host) {
+    let i = 0
+    while i < n {
+        let m = i
+        let j = i + 1
+        while j < n {
+            if f(x[j], x[m]) {
+                m = j
+            }
+            j += 1
+        }
+        let held = x[i]
+        x[i] = x[m]
+        x[m] = held
+        i += 1
+    }
+}
+
+fn sorts(x: [text], state: [u64]) -> bool {
+    let clone: [text] = array()
+    for one in x {
+        push(clone, one)
+    }
+    sort.by(clone, sort.ascending)
+    let n = len(x)
+    quick(x, 0, n - 1, before, state)
+    for i in 0..n {
+        if x[i] != clone[i] {
+            return false
+        }
+    }
+    selection(x, n, after)
+    for i in 0..n {
+        if x[i] != clone[n - 1 - i] {
+            return false
+        }
+    }
+    quick(x, 0, n - 1, before, state)
+    for i in 0..n {
+        if x[i] != clone[i] {
+            return false
+        }
+    }
+    return true
+}
+
+fn test() -> f64 {
+    let x: [text] = array()
+    for name in [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec"
+    ] {
+        push(x, name)
+    }
+    let state = array(1, u64(88172645463325252))
+    let began = os.now()
+    for loops in 0..10000 {
+        if !sorts(x, state) {
+            return 0.0 - 1.0
+        }
+    }
+    return f64(os.now() - began) / 1000.0
+}
+
+fn said(name: text, times: [f64]) {
+    sort.by(times, sort.ascending)
+    let line: [u8] = array()
+    push(line, "|><|{name}")
+    for i in 0..20 {
+        push(line, "|><|{times[i]}")
+    }
+    push(line, "||_||")
+    io.print(text(line))
+}
+
+fn main() -> i32 {
+    // Without `time` it does the work once and says whether it came out
+    // right, which is what the gate asks of every program here: the same
+    // words from the machine and from the release engine, which a duration
+    // never is.
+    let timing = false
+    if let first = os.arg(0) {
+        timing = first == "time"
+    }
+    if !timing {
+        let took = test()
+        io.print(if took >= 0.0 -> "qsort ran" else -> "qsort went wrong")
+        return if took >= 0.0 -> 0 else -> 1
+    }
+    let times: [f64] = array()
+    for run in 0..24 {
+        push(times, test())
+    }
+    said("qsort", times)
+    return 0
+}

@@ -149,6 +149,11 @@ bench/             Four shapes of work and what each costs, in this language
                    *frame* costs rather than what a program costs, which is
                    the question a frame budget asks -- the middle, the tails
                    and the worst of them. See D1123.
+                   `bench/luau.sh` is the other side of that choice: Luau's
+                   own benchmarks, from its own repository and run by its own
+                   harness, beside `bench/luau/`, the same work written in
+                   Kest and timed the same way. The workloads above are this
+                   project's; these are somebody else's. See D1267.
                    `bench/rules.kest` is the third and is
                    mostly branches: what somebody carries, what they have been
                    asked to do, what they may do again yet, and the rules that

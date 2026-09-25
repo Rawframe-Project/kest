@@ -42659,3 +42659,21 @@ See D1266.
 **Runs:** every example natively and through the page's interface; the page
 in headless Chrome, served from `make playground`'s directory, `hello from
 kest`; `check-wasm.sh`; the hole by hand; `make most`.
+
+## 2026-09-25, Luau's own benchmarks
+
+Five of the tests in Luau's `bench/tests` written in Kest under `bench/luau/`,
+the same sizes and the same way of timing, and `bench/luau.sh` running both.
+The machine is behind Luau's interpreter on four of five and level on
+`pcmmix`; the release engine is ahead of Luau's native tier on four. Writing
+them turned up that `let row: [f64] = array(n, 0.0)` is refused -- the fill's
+literal does not take the element type the binding says -- and profiling them
+said where the machine loses: a cell of a run of runs is three instructions,
+and the sine is Kest's own.
+
+See D1267.
+
+**Runs:** `bench/luau.sh` three sittings on the idle reference machine; the
+five ports checked, formatted and with nothing said about them; `perf` over
+`life` and its instructions read out of `kest emit`; `make most`.
+

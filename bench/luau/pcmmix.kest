@@ -1,0 +1,70 @@
+module bench.luau.pcmmix
+
+import std.io
+import std.os
+import std.random
+import std.sort
+
+// Luau's own `bench/tests/pcmmix.lua` in Kest: two stereo buffers of a hundred
+// thousand sixteen-bit samples mixed into a third, made inside what is timed as
+// Luau's is. A buffer of sixteen-bit numbers is a `[i16]` here. See D1267.
+
+const SAMPLES: i32 = 100000
+
+fn test(one: [i16], two: [i16]) -> f64 {
+    let before = os.now()
+    let mix = array(SAMPLES * 2, i16(0))
+    for i in 0..SAMPLES {
+        let s1l = f64(one[i * 2])
+        let s1r = f64(one[i * 2 + 1])
+        let s2l = f64(two[i * 2])
+        let s2r = f64(two[i * 2 + 1])
+        let left = s1l + s2l - s1l * s2l / 32768.0
+        let right = s1r + s2r - s1r * s2r / 32768.0
+        mix[i * 2] = i16(left)
+        mix[i * 2 + 1] = i16(right)
+    }
+    return f64(os.now() - before) / 1000.0
+}
+
+fn said(name: text, times: [f64]) {
+    sort.by(times, sort.ascending)
+    let line: [u8] = array()
+    push(line, "|><|{name}")
+    for i in 0..20 {
+        push(line, "|><|{times[i]}")
+    }
+    push(line, "||_||")
+    io.print(text(line))
+}
+
+fn main() -> i32 {
+    let source = random.from(u64(7))
+    let one = array(SAMPLES * 2, i16(0))
+    let two = array(SAMPLES * 2, i16(0))
+    for i in 0..SAMPLES * 2 {
+        source = random.next(source)
+        one[i] = i16(random.between(source, -32768, 32767))
+        source = random.next(source)
+        two[i] = i16(random.between(source, -32768, 32767))
+    }
+    // Without `time` it does the work once and says whether it came out
+    // right, which is what the gate asks of every program here: the same
+    // words from the machine and from the release engine, which a duration
+    // never is.
+    let timing = false
+    if let first = os.arg(0) {
+        timing = first == "time"
+    }
+    if !timing {
+        let took = test(one, two)
+        io.print(if took >= 0.0 -> "pcmmix ran" else -> "pcmmix went wrong")
+        return if took >= 0.0 -> 0 else -> 1
+    }
+    let times: [f64] = array()
+    for run in 0..24 {
+        push(times, test(one, two))
+    }
+    said("pcmmix", times)
+    return 0
+}

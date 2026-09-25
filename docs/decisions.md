@@ -43637,3 +43637,58 @@ program writes. The page itself was run in Chrome with no display here, from
 `.github/workflows/pages.yml` builds it on every push to `main`, runs
 `check-wasm.sh` over it, and publishes the directory as the repository's
 pages site.
+
+## D1267 — Luau's own benchmarks, beside the same work in Kest
+
+*measured*. T4 asked for a benchmark nobody here chose. The five workloads
+under `bench` are this project's, and a language measured only on the work it
+picked for itself has been measured on its strengths. Luau's repository keeps
+its own suite, `bench/tests`, run by its own `bench_support.lua`: each test
+times one section twenty-four times, throws away the four slowest, and prints
+the rest.
+
+Five of them are written in Kest under `bench/luau/` -- `matrixmult`,
+`pcmmix`, `trig`, `qsort` and `life` -- with the same sizes, the same section
+timed and the same way of saying it -- a duration when handed `time`, and
+otherwise the work done once and whether it came out right; the others lean on
+coroutines (`sieve`)
+or run to hundreds of lines of one program's classes (`chess`), and a port
+that changes the algorithm measures the port. `bench/luau.sh` runs Luau's
+originals where they live and the Kest ones here, and prints the middle of
+each: Luau's interpreter at `-O2`, its native tier (its code generator), this
+language's machine, and its release engine. On the reference machine, idle,
+three sittings (milliseconds, the last sitting; the others agreed to within a
+tenth except Luau's `life`, 62 to 78):
+
+| test | luau -O2 | luau native | kest | kest release |
+| --- | --- | --- | --- | --- |
+| life | 78.1 | 20.9 | 95.6 | 18.7 |
+| matrixmult | 17.0 | 7.4 | 23.2 | 3.9 |
+| pcmmix | 7.4 | 0.56 | 7.4 | 1.5 |
+| qsort | 72.2 | 48.3 | 123.9 | 40.1 |
+| trig | 19.8 | 7.3 | 94.8 | 16.3 |
+
+**The machine is behind Luau's interpreter on four of these and level on the
+fifth**, which is the other way round from the front page's five workloads,
+where it is ahead on all five (D1203). The release engine is ahead of Luau's
+native tier on four and 2.6 times behind it on `pcmmix`. Both are true, and
+the front page's claim is about the front page's workloads; this is written
+down so that it is not read as more than that.
+
+Where the time goes, read rather than guessed:
+
+- **A cell of a run of runs.** `life` reads `cells[y][x]` eight times a cell;
+  each is `index.ll` for the row, `load` for the column and `index` for the
+  cell -- three dispatches where one fused instruction would do.
+- **A sine.** `trig` is five times Luau's interpreter because `math.sin` and
+  `math.cos` here are fdlibm written in Kest (D1235), the same bits on every
+  machine, where Luau calls the platform's. The release engine is 2.2 times
+  Luau's native tier on it for the same reason.
+- **A sort by a function handed over.** `qsort` calls its order through a
+  function value and swaps text, and is 1.7 times Luau's interpreter.
+- **A float narrowed into a run of sixteen-bit numbers**, in the release
+  engine: `pcmmix` is 2.6 times Luau's native tier there.
+
+These are the open performance items in `docs/state.md`, each with the
+program that shows it. Nothing here is in the gate: a duration is not a pass
+or a fail.

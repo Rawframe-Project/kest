@@ -1,0 +1,77 @@
+module bench.luau.matrixmult
+
+import std.io
+import std.os
+import std.random
+import std.sort
+
+// Luau's own `bench/tests/matrixmult.lua`, the same work written in Kest: a
+// hundred by a hundred of random numbers multiplied by itself, the multiply
+// timed and nothing else, twenty-four times, the four slowest thrown away, and
+// each time said the way Luau's `bench_support.lua` says one. See D1267.
+
+fn mmul(a: [[f64]], b: [[f64]]) -> [[f64]] {
+    let rows = len(a)
+    let columns = len(b[0])
+    let result: [[f64]] = array()
+    for i in 0..rows {
+        let row = array(columns, f64(0.0))
+        for j in 0..columns {
+            let sum: f64 = 0.0
+            for k in 0..columns {
+                sum += a[i][k] * b[k][j]
+            }
+            row[j] = sum
+        }
+        push(result, row)
+    }
+    return result
+}
+
+fn test(source: random.Source) -> f64 {
+    let n = 100
+    let from = source
+    let matrix: [[f64]] = array()
+    for i in 0..n {
+        let row = array(n, f64(0.0))
+        for k in 0..n {
+            from = random.next(from)
+            row[k] = f64(random.fraction(from))
+        }
+        push(matrix, row)
+    }
+    let before = os.now()
+    let made = mmul(matrix, matrix)
+    let took = f64(os.now() - before) / 1000.0
+    return if len(made) == n -> took else -> 0.0 - 1.0
+}
+
+fn main() -> i32 {
+    // Without `time` it does the work once and says whether it came out
+    // right, which is what the gate asks of every program here: the same
+    // words from the machine and from the release engine, which a duration
+    // never is.
+    let timing = false
+    if let first = os.arg(0) {
+        timing = first == "time"
+    }
+    if !timing {
+        let took = test(random.from(u64(1)))
+        io.print(if took >= 0.0 -> "matrixmult ran"
+            else -> "matrixmult went wrong")
+        return if took >= 0.0 -> 0 else -> 1
+    }
+    let times: [f64] = array()
+    for run in 0..24 {
+        push(times, test(random.from(u64(run + 1))))
+    }
+    sort.by(times, sort.ascending)
+    let said: [u8] = array()
+    push(said, "|><|matrixmult")
+    for i in 0..20 {
+        push(said, "|><|{times[i]}")
+    }
+    push(said, "||_||")
+    io.print(text(said))
+    return 0
+}

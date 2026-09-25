@@ -1,0 +1,94 @@
+module bench.luau.trig
+
+import std.io
+import std.math
+import std.os
+import std.sort
+
+// Luau's own `bench/tests/trig.lua` in Kest: forty cubed transforms, each a
+// rotation worked out from sines and cosines and written as sixteen numbers.
+// A sine here is the library's own, the same bits on every machine, where
+// Luau's is the platform's. See D1267.
+
+fn update(matrix: [f64], amount: i32, offset: f64, scale: f64, time: f64) {
+    let i = 0
+    for x in 0..amount {
+        for y in 0..amount {
+            for z in 0..amount {
+                let tx = offset - f64(x)
+                let ty = offset - f64(y)
+                let tz = offset - f64(z)
+                let rx = f64(0.0)
+                let ry = math.sin(f64(x) / 4.0 + time) +
+                    math.sin(f64(y) / 4.0 + time) +
+                    math.sin(f64(z) / 4.0 + time)
+                let rz = ry * 2.0
+                let ch = math.cos(rx)
+                let sh = math.sin(rx)
+                let ca = math.cos(ry)
+                let sa = math.sin(ry)
+                let cb = math.cos(rz)
+                let sb = math.sin(rz)
+                let at = i * 16
+                matrix[at] = ch * ca * scale
+                matrix[at + 1] = (sh * sb - ch * sa * cb) * scale
+                matrix[at + 2] = (ch * sa * sb + sh * cb) * scale
+                matrix[at + 3] = 0.0
+                matrix[at + 4] = sa * scale
+                matrix[at + 5] = ca * cb * scale
+                matrix[at + 6] = (0.0 - ca * sb) * scale
+                matrix[at + 7] = 0.0
+                matrix[at + 8] = (0.0 - sh * ca) * scale
+                matrix[at + 9] = (sh * sa * cb + ch * sb) * scale
+                matrix[at + 10] = (0.0 - sh * sa * sb + ch * cb) * scale
+                matrix[at + 11] = 0.0
+                matrix[at + 12] = tx
+                matrix[at + 13] = ty
+                matrix[at + 14] = tz
+                matrix[at + 15] = 1.0
+                i += 1
+            }
+        }
+    }
+}
+
+fn test() -> f64 {
+    let n = 40
+    let matrix = array(n * n * n * 16, f64(0.0))
+    let before = os.now()
+    update(matrix, n, f64(0 - n) / 2.0, 0.5, 1.0 / 60.0)
+    return f64(os.now() - before) / 1000.0
+}
+
+fn said(name: text, times: [f64]) {
+    sort.by(times, sort.ascending)
+    let line: [u8] = array()
+    push(line, "|><|{name}")
+    for i in 0..20 {
+        push(line, "|><|{times[i]}")
+    }
+    push(line, "||_||")
+    io.print(text(line))
+}
+
+fn main() -> i32 {
+    // Without `time` it does the work once and says whether it came out
+    // right, which is what the gate asks of every program here: the same
+    // words from the machine and from the release engine, which a duration
+    // never is.
+    let timing = false
+    if let first = os.arg(0) {
+        timing = first == "time"
+    }
+    if !timing {
+        let took = test()
+        io.print(if took >= 0.0 -> "trig ran" else -> "trig went wrong")
+        return if took >= 0.0 -> 0 else -> 1
+    }
+    let times: [f64] = array()
+    for run in 0..24 {
+        push(times, test())
+    }
+    said("trig", times)
+    return 0
+}

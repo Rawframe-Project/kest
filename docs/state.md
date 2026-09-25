@@ -182,6 +182,15 @@ Where it stands, from the front page's table (D1203): `bench/compare.sh` at
   trial 5.2% fewer cycles run by the machine (D1231).
   A tag whose cases carry the same pieces is read without a `switch` in the
   generated C: compiled `rules` 1.8% fewer cycles (D1232).
+- **On Luau's own benchmarks** (D1267), which this project did not choose:
+  the machine is behind Luau's interpreter on four of five and level on the
+  fifth, and the release engine is ahead of Luau's native tier on four and
+  2.6 times behind it on `pcmmix`. What is open, from reading where the time
+  went: a cell of a run of runs (`cells[y][x]`) is three instructions, a sine
+  worked out in Kest for the same bits everywhere is five times the
+  platform's, a sort by a function handed over is 1.7 times Luau's, and a
+  float narrowed into a sixteen-bit run in the release engine is 2.6 times
+  Luau's native tier.
 
 ## Security: what is promised, and what is being built
 
