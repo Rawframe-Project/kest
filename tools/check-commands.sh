@@ -3870,6 +3870,11 @@ K0327|enum Door {\n    Shut\n    Open\n}\n\nfn main() -> i32 {\n    let d = Door
 K0327|fn main() -> i32 {\n    let xs: [i32] = array()\n    let n = i32(xs)\n    return n\n}|there is no `i32` for `[i32]`
 K0327|fn main() -> i32 {\n    let t = text(1)\n    return 0\n}|text is made from `[u8]`, found `i32`
 K0327|flags A: u8 {\n    One\n}\n\nfn main() -> i32 {\n    let n = u16(A.One)\n    return 0\n}|`A` is 8 bits, and `u16` is not
+K0314|fn main() -> i32 {\n    let v = vec2(1.0, 2.0) + vec3(1.0, 2.0, 3.0)\n    return 0\n}|`+` does not apply to `vec2` and `vec3`
+K0314|fn main() -> i32 {\n    let v = vec2(1.0, 2.0) * 2\n    return 0\n}|`*` does not apply to `vec2` and `i32`
+K0314|fn main() -> i32 {\n    let v = 2.0 - vec4(1.0, 2.0, 3.0, 4.0)\n    return 0\n}|`-` does not apply to `f32` and `vec4`
+K0309|fn main() -> i32 {\n    let v = vec3(1.0, 2.0)\n    return 0\n}|`vec3` is made of `x`, `y` and `z`
+K0310|fn main() -> i32 {\n    let v = vec2(1.0, 2.0)\n    v += 2.0\n    return 0\n}|this assignment expects `vec2`, found `f32`
 K0327|struct Big {\n    cells: [i32; 20000]\n}\n\nfn take(b: Big) -> i32 {\n    return b.cells[0]\n}\n\nfn main() -> i32 {\n    return 0\n}|is 80000 bytes, and a value is at most 65535
 K0327|struct Big {\n    cells: [i64; 8000]\n    more: [i64; 8000]\n}\n\nfn take(b: Big) -> i64 {\n    return b.cells[0]\n}\n\nfn main() -> i32 {\n    return 0\n}|Big` is 128000 bytes, and a value is at most 65535
 K0327|enum Held {\n    Two([i64; 5000], [i64; 5000])\n    None\n}\n\nfn take(h: Held) -> i32 {\n    return 0\n}\n\nfn main() -> i32 {\n    return 0\n}|Held` is 80008 bytes, and a value is at most 65535

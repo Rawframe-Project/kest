@@ -1,0 +1,126 @@
+module examples.vectors
+
+import std.io
+import std.hash
+import std.random
+
+// The language's own vectors: `vec2`, `vec3` and `vec4`, with `+`, `-`, `*`
+// and `/` a component at a time and `*` and `/` by one `f32`. Every answer
+// here is folded into one number by its bits, so a machine that rounds one
+// component differently -- the machine against a release, one platform
+// against another -- answers another number and says which part. See D1250.
+
+const ANSWER: u64 = 9754798022078409604
+
+const UP: vec3 = vec3(0.0, 1.0, 0.0)
+
+struct Body {
+    at: vec3
+    speed: vec3
+}
+
+fn mark(m: u64, v: vec4) -> u64 no.alloc no.host deterministic {
+    let with = hash.join(m, u64(bits(v.x)))
+    with = hash.join(with, u64(bits(v.y)))
+    with = hash.join(with, u64(bits(v.z)))
+    return hash.join(with, u64(bits(v.w)))
+}
+
+fn spread(s: random.Source) -> f32 no.alloc no.host deterministic {
+    return random.fraction(s) * 200.0 - 100.0
+}
+
+// Every operator on every width, over numbers nobody chose.
+fn operators() -> u64 no.alloc no.host deterministic {
+    let m = hash.start
+    let s = random.from(1250)
+    for i in 0..500 {
+        s = random.next(s)
+        let a = spread(s)
+        s = random.next(s)
+        let b = spread(s)
+        s = random.next(s)
+        let c = spread(s)
+        s = random.next(s)
+        let d = spread(s)
+        let p = vec4(a, b, c, d)
+        let q = vec4(d, c, b, a) * 0.75
+        m = mark(m, p + q)
+        m = mark(m, p - q)
+        m = mark(m, p * q)
+        m = mark(m, p / q)
+        m = mark(m, -p * 3.0 + q / 7.0)
+        m = mark(m, 0.5 / p)
+        let two = vec2(a, b) * vec2(c, d) - vec2(d, a) / 3.0
+        m = mark(m, vec4(two.x, two.y, 0.0, 0.0))
+        let three = vec3(a, b, c) * d + UP
+        m = mark(m, vec4(three.x, three.y, three.z, 0.0))
+    }
+    return m
+}
+
+// And written in place, which is the same arithmetic on what is there.
+fn steps() -> u64 no.alloc no.host deterministic {
+    let v = vec3(1.0, 2.0, 3.0)
+    v += vec3(0.1, 0.2, 0.3)
+    v -= UP
+    v *= 1.5
+    v /= vec3(3.0, 7.0, 11.0)
+    v *= vec3(-1.0, 2.0, -3.0)
+    v /= 0.3
+    return mark(hash.start, vec4(v.x, v.y, v.z, 0.0))
+}
+
+fn fall(b: Body, dt: f32) -> Body no.alloc no.host deterministic {
+    return Body(b.at + b.speed * dt, b.speed - UP * (9.81 * dt))
+}
+
+// A body thrown and falling for a second and a half, a sixtieth at a time.
+fn falling() -> u64 no.alloc no.host deterministic {
+    let b = Body(vec3(0.0, 1.0, 0.0), vec3(2.0, 5.0, -0.5))
+    for frame in 0..90 {
+        b = fall(b, 1.0 / 60.0)
+    }
+    return mark(
+        mark(hash.start, vec4(b.at.x, b.at.y, b.at.z, 0.0)),
+        vec4(b.speed.x, b.speed.y, b.speed.z, 0.0)
+    )
+}
+
+// Held in a run and written through an index, which reads the one that is
+// there and writes the one worked out.
+fn run() -> u64 no.host {
+    let points: [vec2] = array()
+    for i in 0..16 {
+        push(points, vec2(f32(i), f32(i * i)) / 4.0)
+    }
+    for i in 1..16 {
+        points[i] += points[i - 1] * 0.5
+    }
+    let m = hash.start
+    for p in points {
+        m = mark(m, vec4(p.x, p.y, 0.0, 0.0))
+    }
+    return m
+}
+
+fn main() -> i32 {
+    let v = vec2(3.0, 4.0)
+    if v * 2.0 != vec2(6.0, 8.0) || -v == v || v / v != vec2(1.0, 1.0) {
+        io.print("a vector's arithmetic is wrong where it is written down")
+        return 1
+    }
+    let all = hash.join(
+        hash.join(operators(), steps()),
+        hash.join(falling(), run())
+    )
+    io.print("vectors {all}")
+    if all != ANSWER {
+        io.print("the operators {operators()}")
+        io.print("in place {steps()}")
+        io.print("falling {falling()}")
+        io.print("in a run {run()}")
+        return 2
+    }
+    return 0
+}

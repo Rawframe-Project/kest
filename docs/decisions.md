@@ -42880,3 +42880,66 @@ skipped, an untrusted machine runs 0.08% more instructions than without it on
 S5 is done: every ceiling an untrusted start needs is required (D1246), compiling
 is held to the bytes (D1247) and the work (D1248) a host gives it, and the code
 runs on the machine alone.
+
+## D1250 — The language's own vectors
+
+*measured*, E1 of the plan, and K7: vectors are the language's, with
+operators, and no program gets to give anything else an operator.
+
+`vec2`, `vec3` and `vec4` are registered beside the numbers, as structs of two,
+three and four `f32` named `x`, `y`, `z` and `w`. A struct is what they are
+everywhere after the checker: built by naming them, read and written a
+component at a time, compared with `==` the way D874 compares any struct, laid
+out as C lays out that many floats so a host lends what it has, carried by the
+verifier's kinds as numbers. What they have that a declared struct has not is
+`+`, `-`, `*` and `/` a component at a time between two of one width, `*` and
+`/` between one and an `f32` on either side, a minus in front, and the four in
+place (`+=` and the rest). Nothing else takes an operator, and nothing a
+program writes can give one: a symbol means one thing, and on a vector that
+thing is done to each component. A float written beside a vector is an `f32`,
+the way `2.0 * dt` is `dt`'s type.
+
+The compiler writes each component as the one `f32` operation it would be
+written out as. That is the whole of the promise that both engines answer the
+same bits: a vector adds where its components add, so what holds `f32`
+arithmetic to one rounding each -- the machine, and D1226 in the C a release is
+-- holds a vector. `examples/vectors.kest` folds three thousand results of every
+operator on every width, a body falling for ninety frames and a run written
+through its index into one number by their bits; the machine, a release built
+with `gcc -O2`, one with `gcc -O2 -march=native` and one with `clang -O2
+-march=native` -- the last two where the processor has fused multiply-add --
+and the build that checks itself all answer 9754798022078409604, and
+`check-c.sh` runs it both ways. On every platform CI builds on, the example
+answers that number or says which part it did not.
+
+What it costs. The first compiler put both sides of every operation into slots
+of their own and read each component back, and the machine paid for the copy:
+a million steps of `at += speed * 0.001` and `speed += pull` were 634 million
+instructions against 262 million for the same arithmetic written out on six
+`f32`s. A side that is already a name's is read where it is now -- an
+expression cannot write a name, since assigning is a statement and an arm that
+gives a value gives an expression -- and the same loop is 449 million. Through
+`std.vec`'s functions on its own struct, which is what a program wrote before
+this, it is 799 million. A release answers 7.46 million for the vectors
+against 7.45 for the floats written out and 110 million for `std.vec`'s calls,
+which are not carried out of their file.
+
+A vector built with the wrong number of components said so with a note
+pointing at where it was declared, which for a type nobody declared was the
+first line of the file being read; it says what the vector is made of instead.
+
+Four holes put it out of order: the number a vector is scaled by read as a
+vector, `+=` doing `+` whatever was written, two widths added as one, and that
+note. The first two are caught by the examples answering nought -- both engines
+agree on a wrong vector, so `check-c.sh`, which asks them to agree, does not --
+the others by `check-commands.sh`'s five refusals. Registering the vectors
+looked `f32` up by name, which the build that checks itself holds to be in the
+index; with the index broken the program could not start and said it had run
+out of memory instead of naming the name, so `f32` is taken from what was
+registered.
+
+Not in it yet, and each a decision of its own: a vector made out of a smaller
+one and a number, a component read under another name (`xy`), and what
+`std.vec` becomes now that the arithmetic in it is the language's -- its
+`Vec2` and `Vec3` are the same bytes as `vec2` and `vec3`, and its functions
+are next.

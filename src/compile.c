@@ -1815,9 +1815,107 @@ static Exits compile_condition(Compiler *compiler, const KestExpr *expr,
     return out;
 }
 
+// Where one side of a vector's arithmetic is read from: the slots it is
+// already in, or slots of its own it was put in. Either a vector of the width
+// worked out, or one `f32` that stands for every component.
+typedef struct {
+    uint16_t slot;
+    const KestType *type;
+} VectorSide;
+
+// The value on top of the stack, put into slots of its own.
+static VectorSide vector_kept(Compiler *compiler, const KestType *type,
+                              KestSpan span) {
+    VectorSide kept = {0, type};
+    uint16_t wide = value_slots(type);
+    kept.slot = reserve_slot(compiler, wide);
+    stack_pop(compiler, wide);
+    store_slots(compiler, kept.slot, wide, type, span);
+    return kept;
+}
+
+// One side, read where it is when it is a name's -- the copy a vector's
+// arithmetic would make is most of what it would cost the machine -- and
+// worked out into slots of its own when it is not. A name read where it is is
+// read after the other side is worked out, and that is the same value: an
+// expression cannot write a name, because assigning is a statement, an arm
+// that gives a value gives an expression, and a call reaches nothing of the
+// caller's frame.
+static VectorSide vector_side(Compiler *compiler, const KestExpr *side) {
+    VectorSide found = {0, side->type};
+    uint16_t size = 0;
+    if (resolve_place(compiler, side, &found.slot, &size)) {
+        return found;
+    }
+    compile_expr(compiler, side);
+    return vector_kept(compiler, side->type, side->span);
+}
+
+// Arithmetic on a vector, a component at a time: each component is one `f32`
+// operation on what the two sides hold there, the same instruction the same
+// two numbers get anywhere else -- so a vector rounds where its components
+// would, in the machine and in C alike, and nothing proves it but what proves
+// the rest. What is left is one value of `whole`. See D1250.
+static void vector_arith(Compiler *compiler, KestIrKind does, VectorSide left,
+                         VectorSide right, const KestType *whole,
+                         KestSpan span) {
+    const VectorSide sides[2] = {left, right};
+    const KestType *number = whole->members[0].type;
+    uint16_t count = (uint16_t)whole->member_count;
+    for (uint16_t i = 0; i < count; i++) {
+        for (int side = 0; side < 2; side++) {
+            uint16_t which = kest_is_vector(sides[side].type) ? i : 0;
+            stack_push(compiler, 1);
+            load_slots(compiler, (uint16_t)(sides[side].slot + which), 1,
+                       number, span);
+        }
+        stack_pop(compiler, 1);
+        ir_emit(compiler, does, number, 2, number, 1, span);
+    }
+    ir_emit(compiler, KEST_IR_MAKE, whole, count, whole, count, span);
+}
+
+// And turned round, which is each component turned round.
+static void vector_negated(Compiler *compiler, const KestExpr *operand,
+                           const KestType *whole, KestSpan span) {
+    VectorSide at = vector_side(compiler, operand);
+    uint16_t count = (uint16_t)whole->member_count;
+    const KestType *number = whole->members[0].type;
+    for (uint16_t i = 0; i < count; i++) {
+        stack_push(compiler, 1);
+        load_slots(compiler, (uint16_t)(at.slot + i), 1, number, span);
+        ir_emit(compiler, KEST_IR_NEG, number, 1, number, 1, span);
+    }
+    ir_emit(compiler, KEST_IR_MAKE, whole, count, whole, count, span);
+}
+
+static KestIrKind arithmetic_of(KestTokenKind op) {
+    switch (op) {
+    case KEST_TOK_PLUS:
+    case KEST_TOK_PLUSEQ:
+        return KEST_IR_ADD;
+    case KEST_TOK_MINUS:
+    case KEST_TOK_MINUSEQ:
+        return KEST_IR_SUB;
+    case KEST_TOK_STAR:
+    case KEST_TOK_STAREQ:
+        return KEST_IR_MUL;
+    default:
+        return KEST_IR_DIV;
+    }
+}
+
 static void compile_binary(Compiler *compiler, const KestExpr *expr) {
     KestTokenKind op = expr->binary.op;
     KestSpan span = expr->span;
+
+    if (kest_is_vector(expr->type)) {
+        VectorSide left = vector_side(compiler, expr->binary.left);
+        VectorSide right = vector_side(compiler, expr->binary.right);
+        vector_arith(compiler, arithmetic_of(op), left, right, expr->type,
+                     span);
+        return;
+    }
 
     // Short circuiting is control flow, not an operator: the right side is
     // only reached when the left did not already decide the answer.
@@ -2723,6 +2821,11 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         break;
     }
     case KEST_EXPR_UNARY:
+        if (kest_is_vector(expr->type)) {
+            vector_negated(compiler, expr->unary.operand, expr->type,
+                           expr->span);
+            break;
+        }
         compile_expr(compiler, expr->unary.operand);
         if (expr->unary.op == KEST_TOK_BANG) {
             ir_emit(compiler, KEST_IR_NOT, expr->type, 1, expr->type, 1,
@@ -4120,29 +4223,48 @@ static void compile_stmt_kind(Compiler *compiler, const KestStmt *stmt) {
                 break;
             }
         }
-        if (stmt->assign.op != KEST_TOK_EQ) {
+        // A vector is read whole and worked out a component at a time, which
+        // is what its operators are anywhere. See D1250.
+        bool stepping_vector = stmt->assign.op != KEST_TOK_EQ &&
+                               kest_is_vector(target->type);
+        uint16_t read = stepping_vector ? size : 1;
+        // In slots, it is read where it is.
+        bool read_in_place = stepping_vector && in_slots;
+        if (stmt->assign.op != KEST_TOK_EQ && !read_in_place) {
             // The operator applies to what is there, so the target is read
             // before it is written. Through an address that means keeping a
             // second copy of it, because storing consumes one.
             if (in_slots) {
-                stack_push(compiler, 1);
-                load_slots(compiler, slot, 1, target->type, stmt->span);
+                stack_push(compiler, read);
+                load_slots(compiler, slot, read, target->type, stmt->span);
             } else {
                 // The place stays where it is and the read is made from it,
                 // because the write below wants it again.
-                stack_push(compiler, 1);
+                stack_push(compiler, read);
                 uint32_t where = elem_place(compiler, ir_top(compiler, 1),
                                             ir_top(compiler, 0), offset,
                                             target->type, stmt->span);
                 uint32_t at = ir_emit(compiler, KEST_IR_LOAD, target->type, 0,
-                                      target->type, 1, stmt->span);
+                                      target->type, read, stmt->span);
                 ir_place_of(compiler, at, where);
             }
         }
 
-        compile_expr(compiler, stmt->assign.value);
+        if (stepping_vector) {
+            VectorSide was = {slot, target->type};
+            if (!read_in_place) {
+                was = vector_kept(compiler, target->type, stmt->span);
+            }
+            VectorSide by = vector_side(compiler, stmt->assign.value);
+            vector_arith(compiler, arithmetic_of(stmt->assign.op), was, by,
+                         target->type, stmt->span);
+        } else {
+            compile_expr(compiler, stmt->assign.value);
+        }
 
-        if (stmt->assign.op != KEST_TOK_EQ) {
+        if (stepping_vector) {
+            // Worked out above.
+        } else if (stmt->assign.op != KEST_TOK_EQ) {
             stack_pop(compiler, 1);
             KestIrKind does = KEST_IR_DIV;
             switch (stmt->assign.op) {

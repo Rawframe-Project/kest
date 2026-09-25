@@ -178,6 +178,9 @@ struct KestType {
     bool no_host;
     bool deterministic;
     bool is_foreign;
+    // STRUCT only: one of the language's own `vec2`, `vec3` and `vec4`, which
+    // have operators a struct a program declares has not. See D1250.
+    bool vector;
 };
 
 typedef struct KestInstance KestInstance;
@@ -611,6 +614,10 @@ const char *kest_nearest_member(const KestType *type, const char *name,
 // moved, a constant folded and a value compiled would have rounded differently
 // and the same program would have answered two ways. See D768.
 bool kest_is_narrow(const KestType *type);
+
+// One of the language's `vec2`, `vec3` and `vec4`, which are structs with
+// operators. See D1250.
+bool kest_is_vector(const KestType *type);
 
 // And whether it is a whole number with no sign, which decides which way a
 // comparison, a shift and a widening go. Two bodies for that as well.

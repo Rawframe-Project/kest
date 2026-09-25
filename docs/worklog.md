@@ -42337,3 +42337,21 @@ See D1249.
 
 **Runs:** the five workloads four ways under `perf stat`, instructions once and
 cycles best of seven taken in turn; `make most`.
+
+## 2026-09-25, the language's own vectors
+
+`vec2`, `vec3` and `vec4` are registered beside the numbers as structs of `f32`,
+with `+`, `-`, `*`, `/`, a minus in front and the four in place, a component at
+a time, and `*` and `/` by one `f32` on either side. Each component is one `f32`
+operation, so the machine and a release answer the same bits:
+`examples/vectors.kest` folds three thousand of them into one number and the
+machine, three release builds (two of them with fused multiply-add on the
+processor) and the checked build answer it. A side that is already a name's is
+read where it is, which took a loop from 634 to 449 million instructions.
+
+See D1250.
+
+**Runs:** the example in the machine, the checked build and releases from
+`gcc -O2`, `gcc -O2 -march=native` and `clang -O2 -march=native`; a million
+steps written three ways (vectors, `std.vec`'s calls, floats) under both
+engines; the refusals; four holes by hand; `make most`; the sweep.

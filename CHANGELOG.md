@@ -441,6 +441,14 @@ new ones, because a run under profile 2 and one under 3 are two runs. A
 constant may be written as its bits, `float(u64(0x...))`, since `bits` and
 `float` are worked out where they are written. See D1235.
 
+**`vec2`, `vec3` and `vec4` are the language's own**, with `+`, `-`, `*`
+and `/` a component at a time, `*` and `/` by an `f32`, and the four in
+place. **What a program has to do:** nothing, unless it declares something
+named `vec2`, `vec3` or `vec4`: a type of that name is refused as declared
+twice, the way one named `f32` is, and a function of that name is not what
+naming it calls. `std.vec`'s `Vec2` and `Vec3` still work and are the same
+bytes. See D1250.
+
 **Compiling can be given a ceiling on its work.** `kest_build_within` takes
 one beside the ceiling on bytes, `--work` on the command line, and a build
 that reaches it is refused with `K0666`; `kest_build_work` and `work` in the

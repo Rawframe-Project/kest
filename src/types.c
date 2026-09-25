@@ -640,6 +640,53 @@ static bool add_primitive(KestProgram *program, const char *name,
     return register_type(program, type, name);
 }
 
+// Two, three and four `f32`s, which is what a position, a colour and a
+// direction are in every engine a program here is written beside. The language
+// has them rather than a library because it gives them operators, and it gives
+// only these operators: `+`, `-`, `*` and `/` a component at a time, and `*`
+// and `/` by one `f32` as well, the way a shading language does. A symbol
+// still means one thing -- the same arithmetic on each component -- and nothing
+// a program declares can give one another meaning. Each is a struct like any
+// other once it is made, laid out as a C struct of those floats, so a host
+// lends the bytes it already has and `std.vec`'s shapes are the same bytes.
+// See D1250.
+static bool add_vector(KestProgram *program, const char *name,
+                       uint16_t count) {
+    static const char *const AXES[4] = {"x", "y", "z", "w"};
+    // Out of what was registered rather than looked up by name: the index is
+    // what the build that checks itself holds to every name put in it, and
+    // this is asked while the primitives are still going in.
+    KestType *number = NULL;
+    for (uint32_t i = 0; i < program->type_count; i++) {
+        if (kest_is_narrow(program->types[i])) {
+            number = program->types[i];
+        }
+    }
+    KestType *type = new_type(program, KEST_T_STRUCT);
+    if (number == NULL || type == NULL) {
+        return false;
+    }
+    type->members = KEST_ARENA_ARRAY(program->arena, KestMember, count);
+    if (type->members == NULL) {
+        return false;
+    }
+    for (uint16_t i = 0; i < count; i++) {
+        memset(&type->members[i], 0, sizeof type->members[i]);
+        type->members[i].name = AXES[i];
+        type->members[i].type = number;
+        type->members[i].offset = i;
+        type->members[i].byte_offset = (uint16_t)(i * 4);
+    }
+    type->member_count = count;
+    type->slots = count;
+    type->byte_size = (uint16_t)(count * 4);
+    type->byte_align = 4;
+    type->vector = true;
+    // Nothing declared it, so nothing is told nothing names it.
+    type->named = true;
+    return register_type(program, type, name);
+}
+
 static bool add_primitives(KestProgram *program) {
     return add_primitive(program, "void", KEST_T_VOID, 0, false) &&
            add_primitive(program, "bool", KEST_T_BOOL, 1, false) &&
@@ -653,7 +700,9 @@ static bool add_primitives(KestProgram *program) {
            add_primitive(program, "u32", KEST_T_INT, 32, false) &&
            add_primitive(program, "u64", KEST_T_INT, 64, false) &&
            add_primitive(program, "f32", KEST_T_FLOAT, 32, false) &&
-           add_primitive(program, "f64", KEST_T_FLOAT, 64, false);
+           add_primitive(program, "f64", KEST_T_FLOAT, 64, false) &&
+           add_vector(program, "vec2", 2) && add_vector(program, "vec3", 3) &&
+           add_vector(program, "vec4", 4);
 }
 
 // Levenshtein distance, capped: anything past `limit` is not a suggestion
@@ -750,6 +799,11 @@ static const KestExpr *constant_written(KestProgram *program, const char *name,
 // `f32` rounds where `f64` does not, which is part of what the type means.
 bool kest_is_narrow(const KestType *type) {
     return type != NULL && type->tag == KEST_T_FLOAT && type->width == 32;
+}
+
+// Set on the three structs the language registers and on nothing else.
+bool kest_is_vector(const KestType *type) {
+    return type != NULL && type->vector;
 }
 
 bool kest_is_unsigned(const KestType *type) {
@@ -5080,8 +5134,10 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
     for (uint32_t i = 0; i < program->type_count; i++) {
         const KestType *type = program->types[i];
         // A shape is not a type and has no layout, and neither has a copy
-        // made with a name that is still standing for itself.
-        if (type->type_param_count > 0 || mentions_param(type)) {
+        // made with a name that is still standing for itself. A vector is the
+        // language's, the way a number is, and no file declared it.
+        if (type->type_param_count > 0 || mentions_param(type) ||
+            type->vector) {
             continue;
         }
         if (type->name != NULL &&

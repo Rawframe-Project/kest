@@ -2294,6 +2294,65 @@ yield""",
         "caught": "a constant past the body's was held",
     },
     {
+        # A vector scaled by one number read as though the number were a
+        # vector too: every component after the first is whatever is in the
+        # slots after the number's. See D1250.
+        "what": "the number a vector is scaled by read as a vector",
+        "file": "src/compile.c",
+        "from": r"""            uint16_t which = kest_is_vector(sides[side].type) ? i : 0;""",
+        "to": r"""            uint16_t which = i;""",
+        "make": ["kest"],
+        "tool": "tools/fast.sh",
+        "arguments": [],
+        "caught": "examples/vectors.kest answered",
+    },
+    {
+        # `+=` on a vector worked out and never read back from where it is:
+        # the new value is written over what the step was taken from, and
+        # the operation is the one `=` would be. See D1250.
+        "what": "a vector stepped in place by what was assigned rather than by the step",
+        "file": "src/compile.c",
+        "from": r"""            vector_arith(compiler, arithmetic_of(stmt->assign.op), was, by,
+                         target->type, stmt->span);""",
+        "to": r"""            vector_arith(compiler, KEST_IR_ADD, was, by, target->type,
+                         stmt->span);""",
+        "make": ["kest"],
+        "tool": "tools/fast.sh",
+        "arguments": [],
+        "caught": "examples/vectors.kest answered",
+    },
+    {
+        # Two vectors of two widths added as though they were one: what the
+        # narrower has not got is read past its end. See D1250.
+        "what": "a vector added to one of another width",
+        "file": "src/check.c",
+        "from": r"""    if (kest_is_vector(left) && kest_type_equal(left, right)) {
+        return left;
+    }""",
+        "to": r"""    if (kest_is_vector(left) && kest_is_vector(right)) {
+        return left;
+    }""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "check: K0314 said",
+    },
+    {
+        # A vector built with too few components, told where it was declared:
+        # nobody declared it, and the note pointed at the first line of the
+        # file being read. See D1250.
+        "what": "a vector's components said by pointing at nothing",
+        "file": "src/check.c",
+        "from": r"""        if (kest_is_vector(type)) {
+            suggest(checker, "`%s` is made of `%s`", type->name,""",
+        "to": r"""        if (false) {
+            suggest(checker, "`%s` is made of `%s`", type->name,""",
+        "make": ["kest"],
+        "tool": "tools/check-commands.sh",
+        "arguments": ["examples/math.kest"],
+        "caught": "check: K0309 said",
+    },
+    {
         # Work counted and never run out of: a ceiling that is read and never
         # reached is a build that takes as long as the file makes it, which
         # is the thing a host that compiles what it was sent gave one to stop.
@@ -3894,9 +3953,9 @@ for file in "$@"; do""",
         # could tell them about. See D520.
         "what": "a primitive in the table and in no document",
         "file": "src/types.c",
-        "from": r"""           add_primitive(program, "f64", KEST_T_FLOAT, 64, false);""",
+        "from": r"""           add_primitive(program, "f64", KEST_T_FLOAT, 64, false) &&""",
         "to": r"""           add_primitive(program, "f64", KEST_T_FLOAT, 64, false) &&
-           add_primitive(program, "f16", KEST_T_FLOAT, 16, false);""",
+           add_primitive(program, "f16", KEST_T_FLOAT, 16, false) &&""",
         "make": ["kest"],
         "tool": "tools/check-tables.sh",
         "arguments": [],
@@ -3907,8 +3966,8 @@ for file in "$@"; do""",
         # is a reader refused for writing what they were told to write.
         "what": "a primitive in a document and in no table",
         "file": "docs/language.md",
-        "from": r"""Primitives: `i8 i16 i32 i64`, `u8 u16 u32 u64`, `f32 f64`, `bool`, `text`.""",
-        "to": r"""Primitives: `i8 i16 i32 i64`, `u8 u16 u32 u64`, `f32 f64 f128`, `bool`, `text`.""",
+        "from": r"""Primitives: `i8 i16 i32 i64`, `u8 u16 u32 u64`, `f32 f64`, `bool`, `text`, `vec2 vec3 vec4`.""",
+        "to": r"""Primitives: `i8 i16 i32 i64`, `u8 u16 u32 u64`, `f32 f64 f128`, `bool`, `text`, `vec2 vec3 vec4`.""",
         "make": [],
         "tool": "tools/check-tables.sh",
         "arguments": [],
@@ -3920,8 +3979,8 @@ for file in "$@"; do""",
         # D519 took away.
         "what": "the one type there is no way to write, offered",
         "file": "docs/language.md",
-        "from": r"""Primitives: `i8 i16 i32 i64`, `u8 u16 u32 u64`, `f32 f64`, `bool`, `text`.""",
-        "to": r"""Primitives: `i8 i16 i32 i64`, `u8 u16 u32 u64`, `f32 f64`, `bool`, `text`, `void`.""",
+        "from": r"""Primitives: `i8 i16 i32 i64`, `u8 u16 u32 u64`, `f32 f64`, `bool`, `text`, `vec2 vec3 vec4`.""",
+        "to": r"""Primitives: `i8 i16 i32 i64`, `u8 u16 u32 u64`, `f32 f64`, `bool`, `text`, `vec2 vec3 vec4`, `void`.""",
         "make": [],
         "tool": "tools/check-tables.sh",
         "arguments": [],

@@ -1599,7 +1599,47 @@ fn scale(v: Vec3, k: f32) -> Vec3 {
 }
 ```
 
-Primitives: `i8 i16 i32 i64`, `u8 u16 u32 u64`, `f32 f64`, `bool`, `text`.
+Primitives: `i8 i16 i32 i64`, `u8 u16 u32 u64`, `f32 f64`, `bool`, `text`, `vec2 vec3 vec4`.
+
+### Vectors
+
+`vec2`, `vec3` and `vec4` are two, three and four `f32`s, named `x`, `y`, `z`
+and `w`, made by naming them and read and written a component at a time the
+way a struct's fields are. They are the one place the language gives a type
+operators it did not already have, and it gives these four and no others: `+`,
+`-`, `*` and `/` between two vectors of one width, a component at a time, and
+`*` and `/` between a vector and one `f32`, on either side, which is every
+component and that number. A minus in front of one turns each component
+round, `==` and `!=` compare every component, and `+=`, `-=`, `*=` and `/=` are the same operators
+written in place.
+
+```kest
+struct Body {
+    at: vec3
+    speed: vec3
+}
+
+fn fall(b: Body, dt: f32) -> Body no.alloc no.host deterministic {
+    let down = vec3(0.0, -9.81, 0.0)
+    return Body(b.at + b.speed * dt, b.speed + down * dt)
+}
+```
+
+Each component is the one `f32` operation it would be written out, so a vector
+rounds where its components would: the machine and a release answer the same
+bits, whatever the host's compiler does with a multiply beside an add, and
+inside `deterministic` a vector is as settled as a number. `examples/vectors.kest`
+folds a few thousand of them into one number by their bits and holds it.
+
+What there is not is a meaning a program chooses: a struct a program declares
+has no `+`, and nothing a program writes gives a vector another one. A symbol
+means one thing everywhere it is written, and on a vector that thing is done
+to each component. A vector is laid out as a C struct of its floats -- `vec3`
+is twelve bytes, aligned to four -- so a host lends the positions it already
+has. Two things a shading language has and this does not yet: a vector made
+out of a smaller one and a number, and a component read by any other name.
+What is built on the operators -- `dot`, `length`, `cross`, `direction` -- is
+`std.vec`. See D1250.
 
 Naming a number type makes one, the same way naming a struct does:
 
@@ -6216,6 +6256,7 @@ here, is a check that fails.
 | `slice/tests/rounds.kest` | what `kest test` runs, which is a program that answers nought |
 | `state.kest` | a thing that is one of several, and a `match` that leaves none out |
 | `tree.kest` | an enum whose case holds the type it belongs to |
+| `vectors.kest` | the language's vectors and their operators, folded into one number by their bits |
 | `words.kest` | text as its bytes, with no character type anywhere |
 | `world.kest` | what a struct is and what an array is, in one program |
 
@@ -6491,7 +6532,7 @@ bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 577 lines:
-55860 bytes as tokens, 136241 as a tree, 174984 checked and 303240 compiled.
+55860 bytes as tokens, 136241 as a tree, 176200 checked and 304465 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree. Compiling counts what the bodies and the verifier worked in beside
 what the build keeps, at the most they held at once, because a build given that
@@ -6510,7 +6551,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 20701 bytes, against the 303240 it costs to compile.
+file and 20701 bytes, against the 304465 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.

@@ -205,6 +205,10 @@ the same on every machine (`kest_build_within`, `--work`, `K0666`, D1248).
 Code nobody trusts runs on the machine alone, which costs it nothing of its own
 and gives up the release engine's 1.4 to 9.9 times (D1249).
 
+`vec2`, `vec3` and `vec4` are the language's, with operators a component at a
+time that answer the same bits in both engines (D1250); `std.vec` moving onto
+them is next.
+
 ## Determinism
 
 `sin`, `cos`, `pow` and `atan2` are written in Kest and inside the profile,
