@@ -2903,6 +2903,19 @@ yield""",
         "caught": "doc: a file that checks was refused",
     },
     {
+        # A name a page says the library has, and the library has not got.
+        # See D1259.
+        "what": "a page that lists a library function the library has not got",
+        "file": "docs/compact.md",
+        "from": r"""- `std.io` -- print, write""",
+        "to": r"""- `std.io` -- print, write, fly""",
+        "make": ["kest", "embed"],
+        "tool": "tools/check-docs.sh",
+        "arguments": ["docs/language.md", "docs/decisions.md",
+                      "docs/compact.md"],
+        "caught": "lists `std.io` as fly, print, write and the library has",
+    },
+    {
         # Work counted and never run out of: a ceiling that is read and never
         # reached is a build that takes as long as the file makes it, which
         # is the thing a host that compiles what it was sent gave one to stop.

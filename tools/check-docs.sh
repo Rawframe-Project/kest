@@ -1337,6 +1337,36 @@ else:
                  this_version))
         failed = 1
 
+# A page that lists the standard library by name lists all of it and nothing
+# else: a module per line, `- `std.x` -- one, two`, and its names are the
+# functions that module declares. A list is what a reader who is not going to
+# open the library believes is there, so a name the library lost is a call
+# that will not resolve and a name it gained is one nobody is told about. See
+# D1259.
+LIBRARY = {}
+for where in glob.glob('lib/std/*.kest'):
+    module = 'std.' + os.path.basename(where)[:-5]
+    LIBRARY[module] = set(re.findall(r'^fn (\w+)', open(where).read(), re.M))
+listed_modules = 0
+for path in sys.argv[1:]:
+    page = open(path).read()
+    entries = re.findall(r'^- `(std\.\w+)` -- ((?:.|\n  )*)', page, re.M)
+    if not entries:
+        continue
+    listed = {}
+    for module, names in entries:
+        names = names.replace('\n  ', ' ').split(';')[0]
+        listed[module] = set(one.strip() for one in names.split(','))
+    for module in sorted(set(LIBRARY) | set(listed)):
+        said = listed.get(module, set())
+        there = LIBRARY.get(module, set())
+        if said != there:
+            print('%s: lists `%s` as %s and the library has %s'
+                  % (path, module, ', '.join(sorted(said)) or 'nothing',
+                     ', '.join(sorted(there)) or 'no such module'))
+            failed = 1
+        listed_modules += 1
+
 if not failed:
     print('every documented block parses: %u, is in the one form, and checks '
           'and compiles where it stands on its own: %u of %u, the other %u '

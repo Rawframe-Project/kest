@@ -43348,3 +43348,34 @@ holds to those words the way it holds the reference's -- a changed output under
 chapter two was said at its line. `ARCHITECTURE.md` is a paragraph a module in
 the order a program goes through them, pointing at the decisions. Both are in
 `CLAUDE.md`'s table of documents, which is what lets them exist.
+
+## D1259 — The whole language in one sitting
+
+Every Kest run of D1148's blind suite said the reference is long and searched
+it rather than read it, and that was most of what a Kest run cost in tokens
+over a Luau one. The reference is long because it says why, and it should: it
+is what the compiler is held to. What was missing is the other document, the
+one a model reads before it writes a line.
+
+`docs/compact.md` is that: what a file is, the lines and the words, the types
+and what converts, the operators, declarations, values against handles,
+control, enums and `match`, optionals, the builtins as a table, generics,
+function values and blocks, the promises, tables, sorting and random numbers,
+text, a frame with `defer` and `scratch`, tests and projects, the host, the
+standard library by name, and what newcomers got wrong with the words the
+compiler says back. It is about an eighteenth of the reference by bytes. Every
+program in it is compiled and run by `check-docs.sh` and held to what is
+written under it, every block is in the one form, and every message it quotes
+is one a run says; a changed output was said at its line.
+
+What it can go stale on that the reference cannot is a list, so the list is
+held: a page that lists the standard library a module a line has to list every
+module and every function each declares, and nothing else. Three ways of
+breaking that were said -- a name added, a name dropped, a module dropped --
+and one hole is caught.
+
+`ai/blind.sh` puts it in every Kest room beside the reference and tells the
+model to read it first. The blind suite itself was not run again for this:
+it is models started one a room, and this work is done under a rule of no
+agents, so what the page does to a run's tokens and success is not measured
+here.

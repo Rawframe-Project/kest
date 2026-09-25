@@ -8,8 +8,8 @@
 #
 # `make` writes one room a run -- `<task>-<kest|luau>-<n>` -- with `ask.md`,
 # the scaffold under the name the checks import it by, and for Kest the
-# reference and the standard library's source, which is what a newcomer to it
-# has. The right answer, the wrong one and the tests stay here. Each room gets
+# reference, the one-sitting version of it (D1259) and the standard library's
+# source, which is what a newcomer to it has. The right answer, the wrong one and the tests stay here. Each room gets
 # an `INSTRUCTIONS.md` that says what to do, where, with which tools and what to
 # report; what reads it is a model started on its own, one a room, and starting
 # them is whoever runs this and not this script. `score` hands every answer to
@@ -45,14 +45,15 @@ make)
             mkdir -p "$room/reference/std"
             cp "$one/ask.md" "$room/"
             cp "$one/kest/start.kest" "$room/$task.kest"
-            cp "$here/docs/language.md" "$room/reference/"
+            cp "$here/docs/language.md" "$here/docs/compact.md" \
+                "$room/reference/"
             cp "$here"/lib/std/*.kest "$room/reference/std/"
             cat > "$room/INSTRUCTIONS.md" <<EOF
 You are doing a small programming task. Your working directory is $room. Everything you need is in it:
 
 - $room/ask.md -- the task.
 - $room/$task.kest -- the file to finish. It is written in Kest, a statically typed language for game logic. The shapes, names and signatures already in it belong to the task and must not change.
-- $room/reference/language.md -- the language reference. $room/reference/std/ -- the source of the standard library.
+- $room/reference/compact.md -- the whole language in one sitting; read it first. $room/reference/language.md -- the full reference, which decides where the two differ. $room/reference/std/ -- the source of the standard library.
 
 Tools: \`$here/kest check FILE\` checks a file; \`$here/kest run FILE\` runs a file that has \`fn main() -> i32\`; \`$here/kest help\` lists the rest. You may write scratch files of your own inside $room, for example a test program $room/try.kest beginning \`module try\` and \`import $task\`.
 

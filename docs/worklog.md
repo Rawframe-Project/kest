@@ -42515,3 +42515,20 @@ file that does not check and no file at all; the attachment case against three
 broken copies of `doc.c`, each caught; the book with an output changed, said
 at its line; the reference's `--json` block against a run; `check-docs.sh`;
 `check-tables.sh`; four holes by hand; `make most`.
+
+## 2026-09-25, the whole language in one sitting
+
+`docs/compact.md`: the language on one page for a model, every program run
+and held to its output, every message quoted one a run says, and the standard
+library listed a module a line and held to the library by `check-docs.sh`.
+`ai/blind.sh` puts it in every Kest room. Writing it turned up that
+`sort.by` wants `no.host` as well as `no.alloc` of what it is handed, and that
+a float literal is `f32` wherever nothing asks for an `f64`, which the page
+says.
+
+See D1259.
+
+**Runs:** every program on the page by hand and through `check-docs.sh`; an
+output changed and said at its line; the library list with a name added, a
+name dropped and a module dropped, each said; `ai/blind.sh make` for a room;
+the hole by hand; `make most`.

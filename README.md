@@ -325,6 +325,7 @@ it.
 - [docs/language.md](docs/language.md) — the reference, and the normative one.
 - [docs/book.md](docs/book.md) — the short way in, a chapter a thing, every program in it run.
 - [docs/primer.md](docs/primer.md) — one page for somebody who knows Lua or Rust.
+- [docs/compact.md](docs/compact.md) — the whole language in one sitting, for a model or anybody in a hurry.
 - [ARCHITECTURE.md](ARCHITECTURE.md) — how the compiler and the machine are built, a paragraph a module.
 - [docs/decisions.md](docs/decisions.md) — every decision and why, with the measurements behind it.
 - [CHANGELOG.md](CHANGELOG.md) — what a program written against the last version has to do.

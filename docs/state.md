@@ -223,7 +223,9 @@ WebAssembly and answers the same there, at 3 to 4 times the cost (D1255).
 where it is called and compiled there, with nothing captured (D1257).
 `kest doc` writes what a file declares with the comment above each, and the
 documents have a short book whose programs the gate runs and a page on how the
-tree is built (D1258).
+tree is built (D1258). `docs/compact.md` is the whole language in one sitting
+for a model, its programs run and its list of the library held to the
+library (D1259).
 
 ## Determinism
 
