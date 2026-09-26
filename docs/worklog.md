@@ -42732,3 +42732,16 @@ headless Chrome; `make most`, which refused once: the gate counts the
 refusals of every door a host enters in the examples, and the game imports
 the Tetris clone, so its `main` was counted twice. What is counted now is a
 refusal naming the file's own door.
+
+## 2026-09-26, 0.0.2 published
+
+The owner said to publish. The changelog's `0.0.2` section was written before
+the last day's work, so it now says what a reader of the release has to know
+of it: the optional-of-a-struct fix, the playground and the two examples. The
+tag `v0.0.2` makes the draft page (D1265), and publishing it is the step the
+owner took.
+
+See D1265.
+
+**Runs:** `check-docs.sh`; `make most`; CI on the commit; the release
+workflow on the tag, and the page read back.

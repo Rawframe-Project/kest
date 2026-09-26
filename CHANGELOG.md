@@ -16,8 +16,25 @@ chunk before a machine runs it and a machine for code nobody trusts takes only
 the doors opened to it (`SECURITY.md` says how far that is a sandbox);
 `sin`, `cos`, `pow` and `atan2` are deterministic; the language has vectors,
 `x.f(a)`, blocks, bodies that wait and walks over a struct's fields; the
-library builds as WebAssembly; and `kest doc`, a book and a one-sitting
-reference are the documents a newcomer starts with.
+library builds as WebAssembly and runs in a page anybody can open; a game
+brought over from LÖVE runs inside raylib; and `kest doc`, a book and a
+one-sitting reference are the documents a newcomer starts with.
+
+**A struct holding an optional of another struct compiles.** `falling: Piece?`
+as a field was laid out one slot wide when `Piece` was declared before the
+struct holding it, and `if let` on the field was refused with `K0505` -- the
+compiler saying it disagreed with itself. **What a program has to do:**
+nothing; one that was refused that way compiles now, and no program that
+compiled before compiles to anything else. See D1268.
+
+**The playground.** <https://rawframe-project.github.io/kest/> is the command
+line built as WebAssembly in a page: type a program, run it, check it, format
+it, with nothing installed. **What a program has to do:** nothing. See D1266.
+
+**Two examples a host writer reads.** `examples/tetromino.kest` is a Tetris
+clone brought over from LÖVE, and `examples/raylib/` runs it inside raylib,
+drawing through two doors the engine binds. **What a host has to do:**
+nothing; they are there to be copied. See D1268 and D1269.
 
 **A struct field may be the module's own.** Written `own name: type`, it can
 only be named from inside the module that declared the shape. `std.table`'s
