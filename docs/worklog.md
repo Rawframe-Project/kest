@@ -42751,3 +42751,16 @@ archive is there: the Windows step ran `tools\build.bat` and then
 without `call` never gives control back, so there was no zip. They are two
 steps, as they are in CI, and the tag was moved to that commit; no page had
 been made.
+
+## 2026-09-26, the Tetris clone in examples/tetris, and a Windows zip
+
+The playable half of the Tetris clone moved from `examples/raylib/` to
+`examples/tetris/` and `make raylib` is `make tetris`; the rules stay in
+`examples/tetromino.kest`, which the gate runs. The host finds the library in
+`lib/` where it is started. CI's `tetris-windows` job builds the game with MSVC
+against raylib's own release and zips it with the game's files and the keys.
+
+See D1270.
+
+**Runs:** the host here under Xvfb with no `KEST_LIB`; `check-docs.sh`;
+`check-tables.sh`; `make most`; the Windows job on CI.

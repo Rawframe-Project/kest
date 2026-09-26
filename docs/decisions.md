@@ -43749,9 +43749,9 @@ rather than a command line, shaped the way a game uses a scripting language.
 asking "what does it look like in an engine" wants is the loop, the input and
 the drawing to be somebody else's library, and the game to be Kest.
 
-`examples/raylib/host.c` is that with raylib: raylib opens the window, keeps
+`examples/tetris/host.c` (examples/raylib until D1270) is that with raylib: raylib opens the window, keeps
 the loop at sixty frames a second, reads the keyboard and draws, and the game
-is `examples/raylib/game.kest` -- the Tetris clone D1268 brought over from
+is `examples/tetris/game.kest` -- the Tetris clone D1268 brought over from
 LÖVE -- asked for one frame at a time. The world is kept between frames with
 `kest_held` (D1151), so a frame is `kest_held_call(held, "frame", ...)` with
 the time and the keys that went down and came up, and what the program draws
@@ -43760,10 +43760,30 @@ it draws through two doors the host binds: `Screen.box(x, y, color)` and
 of raylib is in the program and nothing of the game is in the host; a
 different engine is a different forty lines of binding.
 
-`make raylib RAYLIB=...` builds it against a raylib built from its own source,
-and CI's `raylib` job does: raylib 5.5 from its repository, the host, and the
+`make tetris RAYLIB=...` builds it against a raylib built from its own source,
+and CI's `tetris` job does: raylib 5.5 from its repository, the host, and the
 game played for 1500 frames by the program's own player under a display
 nobody sees, which has to say `1500 frame(s), score 3` and leave a screenshot
 -- the one the job keeps. Here, the same under Xvfb: three lines cleared by
 frame 1500, the board drawn box by box through `Screen.box`, the score through
 `Screen.say`.
+
+## D1270 — The Tetris clone in a folder of its own, and a zip for Windows
+
+The owner asked to play the game on Windows, and whether it would not be
+better in one folder. It would: `examples/` is the language's corpus, fifty
+programs that each check themselves, and a game somebody wants to play is
+found more easily as a folder. So what is played -- the host and the program
+the engine drives -- is `examples/tetris/`, where D1269 put it under
+examples/raylib, and `make tetris` builds it. The rules of the game stay in
+`examples/tetromino.kest` beside the other examples, because that is where the
+gate runs every program for its answer and that program is the one that holds
+what the Lua did and the fault D1268 found.
+
+CI's `tetris-windows` job makes the zip a Windows player unpacks: raylib's own
+MSVC build from its release, the library and the host compiled together with
+the runtime raylib was built with (`/MD`, which `tools\build.bat` does not
+use), and the game's files beside `tetris.exe`, with a README of the keys. The
+host now reads the library from `lib/` where it was started when `KEST_LIB`
+says nothing, which is where the zip puts it. It is built and not played there:
+a hosted Windows runner has no OpenGL 3.3 to open a window with.

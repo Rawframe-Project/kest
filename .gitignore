@@ -20,4 +20,4 @@ bench/frame
 kest-colony-day.txt
 .jitted_scripts/
 kest.wasm
-examples/raylib/host
+examples/tetris/host

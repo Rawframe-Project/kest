@@ -1,12 +1,12 @@
 // A game engine hosting Kest: raylib opens the window, reads the keyboard and
-// draws, and the game is `examples/raylib/game.kest`, which is the Tetris
+// draws, and the game is `examples/tetris/game.kest`, which is the Tetris
 // clone in `examples/tetromino.kest` with two doors to draw through. The world
 // is kept between frames by `kest_held`, so a frame is a call with the world in
 // front of it, and the program's drawing is two functions this host binds.
 // It is the shape a host has in an engine rather than a list of doors: the
 // loop is the engine's, and the program is asked for one frame at a time.
 //
-//   make raylib RAYLIB=path/to/raylib && examples/raylib/host
+//   make tetris RAYLIB=path/to/raylib && examples/tetris/host
 //
 // `--frames N --shot out.png` plays N frames with the program's own player at
 // the keys, and writes what the window showed at the end, which is how this is
@@ -111,8 +111,14 @@ int main(int argc, char **argv) {
         fprintf(stderr, "no host to run the game with\n");
         return 1;
     }
+    // The library where `KEST_LIB` says, or `lib/` where the game was
+    // started, which is where the Windows zip puts it beside the program.
+    const char *library = getenv("KEST_LIB");
+    if (library == NULL || library[0] == '\0') {
+        library = "lib/";
+    }
     KestHeld *held =
-        kest_held_new("examples/raylib/game.kest", NULL, host, stderr);
+        kest_held_new("examples/tetris/game.kest", library, host, stderr);
     KestValue seed = {.integer = 2023};
     if (held == NULL || !kest_held_begin(held, "begin", &seed, 1)) {
         fprintf(stderr, "the game did not start\n");

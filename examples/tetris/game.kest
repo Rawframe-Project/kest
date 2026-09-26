@@ -1,4 +1,4 @@
-module examples.raylib.game
+module examples.tetris.game
 
 import examples.tetromino
 

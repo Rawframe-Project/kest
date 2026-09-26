@@ -32,7 +32,7 @@ line built as WebAssembly in a page: type a program, run it, check it, format
 it, with nothing installed. **What a program has to do:** nothing. See D1266.
 
 **Two examples a host writer reads.** `examples/tetromino.kest` is a Tetris
-clone brought over from LÖVE, and `examples/raylib/` runs it inside raylib,
+clone brought over from LÖVE, and `examples/tetris/` runs it inside raylib,
 drawing through two doors the engine binds. **What a host has to do:**
 nothing; they are there to be copied. See D1268 and D1269.
 
