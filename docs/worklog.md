@@ -42745,3 +42745,9 @@ See D1265.
 
 **Runs:** `check-docs.sh`; `make most`; CI on the commit; the release
 workflow on the tag, and the page read back.
+The first tag's page job was refused by its own check that every platform's
+archive is there: the Windows step ran `tools\build.bat` and then
+`tools\package.bat` as two lines of one `cmd` step, and a batch file started
+without `call` never gives control back, so there was no zip. They are two
+steps, as they are in CI, and the tag was moved to that commit; no page had
+been made.

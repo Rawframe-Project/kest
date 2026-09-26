@@ -44,11 +44,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: ilammy/msvc-dev-cmd@v1
+      # Two steps rather than two lines: a batch file run from cmd without
+      # `call` hands control over and never comes back, so the second line of
+      # one step is never reached. That is how the first tag made no archive
+      # for Windows. See D1265.
+      - name: the build
+        shell: cmd
+        run: tools\build.bat
       - name: an archive
         shell: cmd
-        run: |
-          tools\build.bat
-          tools\package.bat
+        run: tools\package.bat
       - uses: actions/upload-artifact@v4
         with:
           name: release-windows
