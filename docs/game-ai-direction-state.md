@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1270
+    CURRENT SHA:       (this commit) D1093-D1271
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, and it is ahead of
@@ -15,17 +15,20 @@ reasoning; this holds the position.
                        `rules`; the machine is ahead of Luau's interpreter
                        on all five, by 4% at the least, and retires fewer
                        instructions on all five (D1203)
-    LAST CI:           green on 070484fb, every job -- linux,
-                       linux-arm64, macos, windows, clang, threads, package,
-                       most, the four shares of the holes and agree -- in
-                       sixteen minutes where one runner took forty-eight
+    LAST CI:           green on 35515fd9 (run 36224063374), every job --
+                       linux, linux-arm64, macos, windows, clang, threads,
+                       package, most, the four shares of the holes, tetris,
+                       tetris-windows and agree; the playground deployed
+                       from the same commit (run 36224063367)
     LAST FAST GATE:    green
-    LAST FULL GATE:    CI's `most` and four `holes` shares on 070484fb,
+    LAST FULL GATE:    CI's `most` and four `holes` shares on 35515fd9,
                        every hole caught
     STATUS:            GAME_AI_DIRECTION_COMPLETE, marked on a7769f0
-    REFERENCE MACHINE: the spare Linux box this repository is on --
-                       12 cores, 62 GB, gcc, release build, warm page cache.
-                       Every number below was taken on it.
+    REFERENCE MACHINE: the spare Linux box this repository was on until
+                       2026-09-26 -- 12 cores, 62 GB, gcc, release build,
+                       warm page cache. Every number below was taken on it.
+                       The repository is on a 24-core box now, and nothing
+                       has been measured on it yet.
 
 ## What the owner is asking for
 

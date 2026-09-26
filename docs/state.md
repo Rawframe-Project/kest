@@ -255,6 +255,8 @@ page, held to the machine example by example (D1266), and it is published.
 The Tetris clone brought over from LÖVE runs inside raylib, drawn by the
 engine through two doors, and CI plays it under a display nobody sees (D1269);
 it is `examples/tetris/`, and CI builds a zip of it for Windows (D1270).
+The gate's `races` check says when the thread sanitiser could not start
+rather than calling that a race (D1271).
 
 ## Determinism
 

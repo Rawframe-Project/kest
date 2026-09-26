@@ -43787,3 +43787,22 @@ use), and the game's files beside `tetris.exe`, with a README of the keys. The
 host now reads the library from `lib/` where it was started when `KEST_LIB`
 says nothing, which is where the zip puts it. It is built and not played there:
 a hosted Windows runner has no OpenGL 3.3 to open a window with.
+
+## D1271 — A sanitiser that cannot start is not a race it saw
+
+*measured*: the gate's first run on a new machine.
+
+The repository moved to a machine whose kernel spreads a process over 32 bits
+of address space, and the thread sanitiser of the clang there knows of fewer:
+it stops before the program's first line with `unexpected memory mapping`.
+The `races` section read any output naming the sanitiser as a race and said
+that two machines of one build had reached the same memory, which nothing had
+watched. It now runs the watcher once more under `setarch -R`, which takes the
+spreading off for that one process, and if the sanitiser still cannot start it
+says that and fails: a check that could not run is not a pass.
+
+Both ways were run. `make most` on the new machine: the second run watched the
+four machines and passed where the first had said there was a race. The same
+gate in a worktree with a `setarch` standing in that leaves the spreading on:
+`the thread sanitiser could not start on this machine, so two machines of one
+build were not watched`, and the gate failed.

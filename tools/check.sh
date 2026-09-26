@@ -1371,7 +1371,21 @@ elif ! cc -std=c11 -Wall -Wextra -Werror -O1 -g -fsanitize=thread \
     sed 's/^/    /' "$scratch"/check-why | head -3
 else
     said=$(TSAN_OPTIONS=halt_on_error=1 "$races" "$races".kest 2>&1)
-    if [ "${said#*ThreadSanitizer}" != "$said" ]; then
+    # A kernel that spreads a process over more of its address space than
+    # this sanitiser knows of stops it before the program's first line, with
+    # a word about the mapping and nothing about the program. Run once more
+    # with the spreading taken off for this one process, and if the sanitiser
+    # still cannot start, say that rather than that it saw a race.
+    if [ "${said#*unexpected memory mapping}" != "$said" ] &&
+            command -v setarch >/dev/null; then
+        said=$(TSAN_OPTIONS=halt_on_error=1 setarch "$(uname -m)" -R \
+            "$races" "$races".kest 2>&1)
+    fi
+    if [ "${said#*unexpected memory mapping}" != "$said" ]; then
+        complain "races" "the thread sanitiser could not start on this \
+machine, so two machines of one build were not watched"
+        printf '%s\n' "$said" | sed 's/^/    /' | head -3
+    elif [ "${said#*ThreadSanitizer}" != "$said" ]; then
         complain "races" "the thread sanitiser saw two machines of one build \
 reach the same memory"
         printf '%s\n' "$said" | sed 's/^/    /' | head -6

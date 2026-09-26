@@ -42764,3 +42764,21 @@ See D1270.
 
 **Runs:** the host here under Xvfb with no `KEST_LIB`; `check-docs.sh`;
 `check-tables.sh`; `make most`; the Windows job on CI.
+
+## 2026-09-26, SECURITY.md's first promise, and a new machine
+
+The first promise's row in SECURITY.md still said the fuzzing of S6 and the
+door audit of S7 were left; both were done as D1253 and D1254, and the row says
+what D1254 does now. The repository moved to a new 24-core machine; the state
+file says the numbers in it were taken on the old one. CI was green on
+35515fd9, the Windows zip job included.
+
+The gate's first run there found two things about the machine and one about
+the gate. WebAssembly wanted clang's wasm32 runtime and `wasi-libc`, which were
+installed. The thread sanitiser could not start under that kernel's address
+spreading, and `races` said it had seen a race; it retries under `setarch -R`
+now and says so when the sanitiser cannot start. See D1271.
+
+**Runs:** `make most` on the new machine, red on `races` and then green; the
+same gate with a `setarch` that does nothing, which says the sanitiser could
+not start and fails.
