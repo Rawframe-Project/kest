@@ -6516,11 +6516,15 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             // hundred steps took all three hundred and the call inside it was
             // refused after fifty. Put back here and taken again below, so
             // the number a reentrant call reads is the number that is left.
-            // See D929.
+            // See D929. A machine with no budget has nothing to put back,
+            // and the slice is only how soon it looks for a host asking it
+            // to stop, which is the same thousand instructions either side
+            // of a crossing: taking another after every one was a call a
+            // crossing. See D1285.
             if (rt->fuel_bounded) {
                 rt->fuel_left += slice;
+                slice = 0;
             }
-            slice = 0;
             // And the crossing itself, which is the door a body the host's
             // compiler compiled goes through as well: everything the boundary
             // asks is asked in one place, and both engines cross the same
