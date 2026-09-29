@@ -654,6 +654,12 @@ fn spelled(t: Tag, n: i32, f: f64, g: f32, b: bool, u: u32) -> text {
     return "{t} {n} {f} {g} {b} {u}"
 }
 
+// A number on its own in a hole is made into text alone, where one beside
+// other pieces is written into the join (D1277): both ways, and both signs.
+fn alone(n: i32) -> text {
+    return "{n}"
+}
+
 fn bytes(what: text, room: i32) -> i32 {
     let out: [u8] = array()
     room(out, room)
@@ -692,6 +698,7 @@ fn main() -> i32 {
     total += len(headed("a line with no heading on it"))
     total += spaces(line)
     total += len(spelled(Tag("thing", 4), -7, 0.5, 1.25, true, 9))
+    total += len(alone(-12)) + len(alone(345))
     total += bytes("ab", 4)
     total += bytes("ab", 64)
     total += drained([1, 2, 3, 4])

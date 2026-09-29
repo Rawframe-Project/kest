@@ -7141,7 +7141,7 @@ anywhere, and it is why the gate holds""",
         "make": ["kest"],
         "tool": "tools/check-costs.sh",
         "arguments": [],
-        "caught": "a piece of text costs 32 byte(s) an entity and a run says 0",
+        "caught": "a piece of text costs 16 byte(s) an entity and a run says 0",
     },
     {
         # A count of what the build that checks itself asked that says nought
@@ -9378,10 +9378,10 @@ const char *kest_scalar_name(uint8_t kind) {""",
 
 fn main() -> i32 {
     let many: [i32] = array()
-    for i in 0..40000 {
+    for i in 0..400000 {
         push(many, i)
     }
-    return len(many) - 40000
+    return len(many) - 400000
 }
 """,
         "caught": "its plots gave away",
