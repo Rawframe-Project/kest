@@ -44003,3 +44003,41 @@ less in them; the Luau chart's heading was too.
 The one claim the front page makes and does not measure -- that a model
 writes working Kest more often than working Luau -- is said to be unmeasured
 there, until the blind trial runs.
+
+## D1276 — What a reload costs is compiling, and compiling asked the same small questions slowly
+
+D1275 said a reload of the Tetris clone was five times Lua's because a reload
+builds the standard library again. It is not: a program that imports the same
+two modules and does nothing reloads in 0.14 ms of the 1.4 on the dev server.
+The rest is compiling the game's own 625 lines, so a reload and the long
+program of D1273 are one question -- what compiling a line costs -- and the
+profile of a reload has no stage above a quarter of it and no function above
+a twentieth. What it did have was the same few questions asked slowly
+everywhere:
+
+- Whether a name is a word measured the whole of the name and then called a
+  function to do it, where nearly every answer is no and is known at the first
+  byte. `kest_word_same` is a byte at a time now, written in `diag.h` so it is
+  folded into its eighty-seven callers; `check-tables.sh` reads headers for the
+  place it is and knows this shape of asking as well as the old one.
+- The lexer held every name against all twenty-one keywords. The list is in
+  alphabetical order, so a name is done with it past its own first letter; a
+  keyword put out of order is read as a name, which a program with `let break
+  = 3` in it was shown doing, and the gate's `keywords` row refuses.
+- A qualified name was made with `snprintf` for nearly every name a body uses;
+  it is two copies.
+- A file was walked three times for its mark and its lines; the mark and the
+  count are one walk, because the mark waits on a multiplication and a
+  comparison beside it is free.
+- The verifier walked the newest place it had queued first, which reaches the
+  head of a loop before what flows into it has arrived and walks the loop again
+  for each. Nearest the start first: tetromino's 1,189 instructions took 2,106
+  steps and take 1,607. What it proves does not change -- the walk ends where
+  nothing changes, whichever way it got there -- and a slot that is what it was
+  last time is no longer joined with itself.
+
+Instructions retired for 300 reloads of the clone, before and after: 4,006
+million and 2,886, 28% fewer; the long program of 107,135 lines, 1,327 million
+and 1,135, 14% fewer. What is left is a flat profile across every stage, which
+is the shape of a compiler that does eight things to every line, and is
+where the next of it is.

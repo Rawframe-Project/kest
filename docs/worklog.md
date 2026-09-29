@@ -42854,3 +42854,18 @@ wider than their chart. See D1275.
 **Runs:** `bench/compare.sh` best of fifteen, `bench/hosts.sh` and
 `bench/compile.sh` best of five, and `bench/luau.sh`, on the benchmark
 machine; every chart drawn again and looked at; `make most`.
+
+## 2026-09-29, a reload is compiling, and compiling a line cheaper
+
+The first of the weak sides the benchmarks showed. A reload of the Tetris
+clone is not the library built again, as D1275 said, but the game's own lines
+compiled: 0.14 ms of 1.4 is the library. The profile is flat, and what it had
+was small questions asked slowly everywhere -- whether a name is a word, which
+keyword a name is, a qualified name printed rather than copied, a file walked
+three times, and the verifier walking loops again for want of an order. 28%
+fewer instructions a reload, 14% fewer over the long program. See D1276.
+
+**Runs:** a host reloading the clone 300 times under `perf stat` and `perf
+record`, before and after each change; the verifier's steps counted in a
+copy; a keyword list put out of order in a copy, taking `break` as a name; the
+repointed word hole caught by hand in a copy; `make most`.

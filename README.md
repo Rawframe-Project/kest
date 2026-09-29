@@ -220,8 +220,9 @@ same twenty thousand bodies, and every engine answering the same sum.
   times less than daslang. A generic taken 3,200 ways is 103 ms, against 1.1 s
   for Rust and 2.7 s for C++.
 - **Reloading the Tetris clone is 2.5 ms in Kest and 0.5 ms in Lua,** because
-  a reload builds the standard library it imports again as well. Well inside a
-  frame, and five times what Lua does.
+  a reload checks, proves and compiles every line of the game again, where Lua
+  reads it into its instructions. Well inside a frame, and five times what Lua
+  does.
 
 ### Somebody else's benchmarks
 
