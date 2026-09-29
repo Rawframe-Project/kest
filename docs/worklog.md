@@ -42886,3 +42886,17 @@ collection floor at four sizes over `words`, `graph` and `rules`; every width
 of number, the least `i64` and seventeen pieces written both ways and with
 `KEST_NOOPT`; `check-c.sh` over those and two examples; `check-verifier.sh`
 with the two new cases; `make figures`; `make most`.
+
+## 2026-09-29, a division in 32 bits
+
+The third weak side: `control` behind Luau's interpreter on the benchmark
+machine and not on the dev server. Seven builds of the machine on that machine
+said it was not how the loop was built. It was `%` asked in 64 bits, which
+costs twice what a 32-bit division does on that core. The machine asks it in
+32 bits where both sides fit and are not negative: `control` 133.6 ms to
+101.3 there. See D1278.
+
+**Runs:** seven builds of `vm.c` on the benchmark machine (align 16, 32, none,
+`-fno-gcse`, `-O3`, `-march=haswell`, clang) over the five workloads, best of
+nine; the change built there and timed against the build before it, best of
+nine; cycles on the dev server before and after, best of six; `make most`.

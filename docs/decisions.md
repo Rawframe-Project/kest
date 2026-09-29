@@ -44055,7 +44055,10 @@ of them garbage. `concat.i` is `concat` told which of its pieces are signed
 whole numbers -- one bit each, sixteen pieces at the most -- and those stay a
 number in one slot until the join writes them straight into the text it makes.
 The machine and the compiled bodies join through the same two functions, so
-the two engines cannot write a number two ways. The compiler hands a number to
+the two engines cannot write a number two ways. A number on its own in a hole,
+`"{n}"`, is `text.i` and nothing after it, where it was `text.i` and a join of
+one piece that copied what it had just made; which keeps `text.i` an
+instruction the examples run, as `check-dead.sh` holds every one to being. The compiler hands a number to
 the join as it is only where the optimizer is on; `KEST_NOOPT` makes it a text
 first, which is the other half the gate compares every program against. The
 verifier holds each piece to its bit: `check-verifier.sh` says a piece past the
@@ -44081,3 +44084,29 @@ says, as it always was.
 Together: `bench/words` from 185 million instructions to 125, a third fewer.
 What is left is split into pieces and a call a piece to `text.starts`, which is
 the interpreter's own cost, a step at a time.
+
+## D1278 — A division asked in 32 bits where both sides fit
+
+D1275 found the machine 3% behind Luau's interpreter on `bench/control` on the
+benchmark machine, an Intel core of Haswell's generation, where it was a
+quarter ahead of it on the dev server's Ryzen; and 1.41 times behind LuaJIT's
+interpreter there, where on the Ryzen the two take the same cycles. Building
+the machine seven ways on that machine -- labels aligned to 16, 32 or not at
+all, without global subexpression elimination, at `-O3`, for Haswell, and with
+clang -- moved `control` between 126 and 137 ms and never near LuaJIT's 92, so
+it was not how the loop was built but something it did.
+
+What `control` does three times a turn is `%`, and the machine asked every one
+of them in 64 bits. A 64-bit division is 40 to 90 cycles on that core and a
+32-bit one about 25; on a Ryzen both are quick, which is why the dev server
+never showed it, and the release engine never paid it because the host's
+compiler turns a division by a number it can see into a multiplication. LuaJIT
+divides in floating point. The machine now asks a division in 32 bits wherever
+both sides are nought or more and fit, which is the same answer; a negative
+side, or a wide one, is asked as it was. The test is one comparison of the two
+sides or'd together, and on the Ryzen `control` is no slower for it.
+
+On the benchmark machine, best of nine: `control` 133.6 ms to 101.3, `rules`
+418 to 392, `kernel` 82 to 81. LuaJIT's interpreter is still quicker on
+`control`; what is left is the division itself, which a divisor written in the
+program could be spared as the release engine is spared it.
