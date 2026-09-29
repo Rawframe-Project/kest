@@ -44313,3 +44313,17 @@ behind LuaJIT's compiled code.
 What is left of the crossing is the checks it makes for the host, each
 of which says what a host did wrong (D1108, D1272), and the promise a host
 function makes about the heap, which is asked on both sides of it.
+
+## D1286 — A hole goes with the read it was about
+
+D1253 found the promises walking a module the verifier had refused, and an
+instruction this machine has not got read past the end of the table of
+widths; a hole took out the early return and was caught by the sanitiser. D1284
+put the table in `value.h` and gave it one answer for a byte that is no
+instruction -- one byte wide, called `?`, carrying numbers -- so the read the
+hole was caught by is not one there is any more, and CI's first share of the
+holes said it missed on `cfb6551b`. What the early return is for now is not
+saying things about code nobody will run, and a module the verifier refused
+is refused whatever else is said about it, so there is nothing left for a
+hole to show going wrong. It goes, the way CLAUDE.md says a hole goes when
+what it is about goes; the early return stays.

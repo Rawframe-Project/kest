@@ -43004,3 +43004,14 @@ D1285.
 running two thousand frames of `churn`, each under `perf stat` and `perf
 record` before and after; `make fast`; `check-tables.sh`, `check-costs.sh`,
 `check-dead.sh`.
+
+## 2026-09-29, a hole goes with the read it was about
+
+CI's first share of the holes missed "the promises walked over code that
+cannot be walked" on `cfb6551b`: it was caught by the sanitiser reading past
+the table of widths, and D1284 made that table answer for every byte. The hole
+is taken out and the comment over the early return says what it is for now.
+See D1286.
+
+**Runs:** the CI log of run 36572377691; `check-backstops.sh` read for stale
+quotations; `make fast`.
