@@ -44215,3 +44215,34 @@ and carries no compiler would need a form of a compiled program that is read
 back, which this has not got: bytecode is not a format anything reads, and
 the verifier that would hold one to what the machine may run (D1237) is the
 half of that which exists.
+
+## D1283 — A compiled `while` hears the host asking it to stop
+
+The front page said Kest's release engine does not stop at all. A compiled
+body spends no budget (D1094), which is what makes it quick, and it did not
+read `kest_cancel` either, so a `while true` in a program built with
+`--release` held its thread until the process ended, whatever the host asked.
+
+A body the other backend writes now counts the turns of every loop that
+closes with a `goto` backwards from a `while`, in a local of its own, and every
+1024 turns reads the word `kest_cancel` stores. Set, it says `K0660` where it
+was, as the machine does, and gives back to its caller. Three things decide
+the shape, each measured on `bench/` with the release engine:
+
+- A `for` over a range or over what a store holds is not asked. It ends by
+  itself, and it is where a frame spends its time: a check a turn there cost
+  `bench/kernel` a quarter of its cycles. A loop that never ends is a `while`.
+- The count is a local rather than a place in the machine, because a count
+  whose address is handed anywhere is one the host's compiler keeps in memory
+  and reloads.
+- The word is read with a volatile load rather than asked of a function. A
+  call inside a loop is one the host's compiler has to assume writes
+  anything, so it keeps nothing it read out of memory across the loop:
+  asking a function every 1024 turns cost `bench/graph` 23% of its cycles,
+  and the load costs it 1%. What it calls, once it is told, is on the way
+  out of the loop and costs nothing.
+
+`control`, `kernel` and `rules` run the same instructions as before. A
+compiled body reads the host's word with a delay of at most 1024 turns of one
+`while`, and `check-c.sh` holds that a program spinning in `while true` is
+stopped from another thread in both engines, with the same words.

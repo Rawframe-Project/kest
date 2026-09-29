@@ -176,10 +176,11 @@ same twenty thousand bodies, and every engine answering the same sum.
 </p>
 
 - A budget costs Kest's machine nothing it can measure, where Lua's hook costs
-  2.4 times the frame. A runaway stops in 16 µs once the host asks. **Kest's
-  release engine does not stop at all, and neither does LuaJIT's compiled
-  code:** compiled bodies spend no budget by design, and a machine running
-  code nobody trusts never enters them (see [SECURITY.md](SECURITY.md)).
+  2.4 times the frame. A runaway stops in 16 µs once the host asks. Kest's
+  release engine spends no budget by design, and hears the host asking at the
+  back of every `while`, which costs a frame nothing; a machine running code
+  nobody trusts never enters it (see [SECURITY.md](SECURITY.md)). **LuaJIT's
+  compiled code does not stop at all.**
 
 <p align="center">
   <img src="bench/chart-tails.svg" alt="Middle, worst in a hundred and worst frame of a world that makes garbage" width="820">

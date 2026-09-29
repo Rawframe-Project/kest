@@ -42946,3 +42946,20 @@ links every engine's host with. See D1282.
 stripped; the library built in sections and the same host with and without
 `--gc-sections`; the five workloads' instructions before and after; `make
 fast`; `make most`.
+
+## 2026-09-29, a compiled `while` hears the host
+
+The seventh weak side: the release engine did not stop at all. A body written
+as C now counts the turns of a `while` in a local and, every 1024 of them,
+reads the word `kest_cancel` stores, saying `K0660` where it was when it is
+set. The first version asked a function and cost `bench/graph` 23% of its
+cycles, because a call in a loop is a call the host's compiler assumes writes
+everything; a volatile load of the word costs it 1%, and counted loops are not
+asked at all. `check-c.sh` stops a `while true` from another thread in both
+engines, and was seen saying the loop never came back with the count taken
+out. See D1283.
+
+**Runs:** `perf stat` of `control`, `graph`, `kernel` and `rules` built as
+release engines before and after, twenty runs each for `graph`; `check-c.sh`
+over the gate's files, and again with the count taken out of `emitc.c`; `make
+fast`.
