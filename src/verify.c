@@ -2516,7 +2516,11 @@ static bool fold_into(Verifying *v, Kind **kept, uint32_t place,
         uint32_t region = s < frame ? 0 : frame;
         Kind was = kept[place][s];
         Kind is = now[s];
-        if (was != is && HOLDS_OF(was) == HOLDS_PAYLOAD) {
+        // Most of a frame is what it was the last time this place was met.
+        if (was == is) {
+            continue;
+        }
+        if (HOLDS_OF(was) == HOLDS_PAYLOAD) {
             was = resolved(v, kept[place], region, s);
         }
         if (was != is && HOLDS_OF(is) == HOLDS_PAYLOAD) {
@@ -2651,6 +2655,45 @@ static const char *same_blocks(uint8_t *opened, uint32_t place,
 // the rest, and folded where two ways meet. Every instruction's reading is
 // held to what it reads; `depth` is where the stack stands at each, which the
 // walk before this one proved. See D1242.
+// The places still to walk, nearest the start first. A walk that takes the
+// newest place first reaches the head of a loop before everything that flows
+// into it has, and walks the loop again for each; nearest first walks what
+// comes before a place before the place, so a body is walked about once.
+// Tetromino's 1,189 instructions took 2,106 steps the other way and 1,607
+// this way. The order is what it costs and not what it proves: the walk ends
+// where everything has stopped changing, whichever way it got there. See
+// D1276.
+static void place_push(uint32_t *work, uint32_t *waiting, uint32_t place) {
+    uint32_t at = (*waiting)++;
+    while (at > 0 && work[(at - 1) / 2] > place) {
+        work[at] = work[(at - 1) / 2];
+        at = (at - 1) / 2;
+    }
+    work[at] = place;
+}
+
+static uint32_t place_pop(uint32_t *work, uint32_t *waiting) {
+    uint32_t first = work[0];
+    uint32_t last = work[--(*waiting)];
+    uint32_t at = 0;
+    for (;;) {
+        uint32_t child = 2 * at + 1;
+        if (child >= *waiting) {
+            break;
+        }
+        if (child + 1 < *waiting && work[child + 1] < work[child]) {
+            child++;
+        }
+        if (work[child] >= last) {
+            break;
+        }
+        work[at] = work[child];
+        at = child;
+    }
+    work[at] = last;
+    return first;
+}
+
 static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
                                        const uint16_t *depth, Kind *laid,
                                        uint32_t laid_room,
@@ -2704,13 +2747,13 @@ static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
     memset(opened, 0xFF, count + 1);
     opened[0] = 0;
     uint32_t waiting = 0;
-    work[waiting++] = 0;
+    place_push(work, &waiting, 0);
     queued[0] = 1;
     const char *wrong = NULL;
     Kinds w = {module, v, chunk, now, 0, laid, laid_room, spare, 0, 0, NULL,
                said, room};
     while (waiting > 0 && wrong == NULL && !starved) {
-        uint32_t at = work[--waiting];
+        uint32_t at = place_pop(work, &waiting);
         queued[at] = 0;
         memcpy(now, kept[at], sizeof(Kind) * ((size_t)chunk->slot_count + depth[at]));
         w.region = opened[at];
@@ -2793,7 +2836,7 @@ static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
                               chunk->slot_count, scratch, &starved) &&
                     !queued[place]) {
                     queued[place] = 1;
-                    work[waiting++] = place;
+                    place_push(work, &waiting, place);
                 }
             }
             if (wrong != NULL || op == KEST_OP_JUMP || op == KEST_OP_LOOP) {
@@ -2813,7 +2856,7 @@ static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
                               chunk->slot_count, scratch, &starved) &&
                     !queued[next]) {
                     queued[next] = 1;
-                    work[waiting++] = next;
+                    place_push(work, &waiting, next);
                 }
                 break;
             }
