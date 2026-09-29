@@ -1094,8 +1094,12 @@ typedef struct KestRuntime Vm;
 
 // How much may be taken before a walk of what can still be reached is worth
 // doing. Under this a program that makes almost nothing would walk on every
-// other allocation, and what it would find is nothing.
-#define WALK_FLOOR (256u * 1024u)
+// other allocation, and what it would find is nothing. A megabyte rather than
+// the quarter it was: `bench/words` holds a fifth of one and walked it every
+// quarter, which was a tenth of what it ran, and a game's heap is megabytes
+// before its first frame. A host that sets a ceiling is walked for at the
+// ceiling whatever this says. See D1277.
+#define WALK_FLOOR (1024u * 1024u)
 
 // What sits in front of the elements of an array, so that a walk that met
 // those elements without meeting the header can still read them. An address of
