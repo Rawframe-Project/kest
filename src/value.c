@@ -1364,6 +1364,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"text.flags", U16, {IS_LAYOUT}},
     {"text.value", U16, {IS_LAYOUT}},
     {"concat", U16, {IS_NUMBER}},
+    {"concat.i", U16_U16, {IS_NUMBER, IS_NUMBER}},
     {"hash.i", NONE, {}},
     {"hash.f", NONE, {}},
     {"hash.t", NONE, {}},
@@ -2022,6 +2023,7 @@ bool kest_op_allocates(uint8_t op) {
     case KEST_OP_TEXT_FLAGS:
     case KEST_OP_TEXT_VALUE:
     case KEST_OP_CONCAT:
+    case KEST_OP_CONCAT_I:
     case KEST_OP_TEXT_FROM:
         return true;
     case KEST_OP_CONST:
@@ -2234,6 +2236,14 @@ bool kest_op_allocates(uint8_t op) {
         return false;
     }
     return false;
+}
+
+uint32_t kest_pieces_numbered(uint32_t which) {
+    uint32_t many = 0;
+    for (; which != 0; which &= which - 1) {
+        many++;
+    }
+    return many;
 }
 
 const char *kest_op_stack(const KestModule *module, const KestChunk *chunk,
@@ -2508,6 +2518,14 @@ const char *kest_op_stack(const KestModule *module, const KestChunk *chunk,
         break;
     case KEST_OP_CONCAT:
         t = 2 * u[0];
+        g = 2;
+        break;
+    case KEST_OP_CONCAT_I:
+        if (u[0] > KEST_NUMBERED_MOST || (u[1] >> u[0]) != 0) {
+            return "joins more pieces than it can say which are numbers, or "
+                   "says one past the last is";
+        }
+        t = 2 * u[0] - kest_pieces_numbered(u[1]);
         g = 2;
         break;
     case KEST_OP_HASH_VALUE:

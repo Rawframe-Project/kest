@@ -1982,6 +1982,40 @@ static const char *kinds_step(Kinds *w) {
         push_made(w, TEXT_KIND);
         push_made(w, LENGTH_KIND);
         return NULL;
+    // The same, with a piece a number in one slot where its bit is set; the
+    // top of the stack is the last piece. See D1277.
+    case KEST_OP_CONCAT_I: {
+        if (u[0] > KEST_NUMBERED_MOST || (u[1] >> u[0]) != 0) {
+            snprintf(w->said, w->room,
+                     "`%s` at %u says which of %u pieces are numbers in %u",
+                     w->name, w->at, u[0], u[1]);
+            return "K0411";
+        }
+        uint32_t down = 0;
+        for (uint32_t i = u[0]; i-- > 0;) {
+            if ((u[1] >> i) & 1u) {
+                if ((wrong = needs_top(w, down + 1, NEEDS_NUMBER)) != NULL) {
+                    return wrong;
+                }
+                down += 1;
+                continue;
+            }
+            if ((wrong = needs_top(w, down + 1, NEEDS_LENGTH)) != NULL ||
+                (wrong = needs_top(w, down + 2, NEEDS_TEXT)) != NULL) {
+                return wrong;
+            }
+            uint32_t at = chunk->slot_count + w->depth - (down + 2);
+            if (!one_piece(resolved(v, w->now, chunk->slot_count, at),
+                           resolved(v, w->now, chunk->slot_count, at + 1))) {
+                return not_one_piece(w, at);
+            }
+            down += 2;
+        }
+        w->depth -= down;
+        push_made(w, TEXT_KIND);
+        push_made(w, LENGTH_KIND);
+        return NULL;
+    }
     case KEST_OP_HASH_VALUE: {
         uint32_t slots = module->layouts[u[0]].slots;
         if ((wrong = fits_top(w, u[0], slots)) != NULL) {

@@ -191,7 +191,8 @@ bool kest_text_of_value(KestRuntime *runtime, uint16_t layout,
                         const KestValue *slots, uint32_t where,
                         KestValue *into);
 bool kest_text_join(KestRuntime *runtime, const KestValue *pieces,
-                    uint16_t count, uint32_t where, KestValue *into);
+                    uint16_t count, uint16_t which, uint32_t where,
+                    KestValue *into);
 bool kest_text_from(KestRuntime *runtime, KestValue handle, uint32_t where,
                     KestValue *into);
 

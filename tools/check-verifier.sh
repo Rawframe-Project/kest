@@ -71,7 +71,8 @@ static const char *PROGRAM =
     "fn pieces(n: i32) -> i32 {\n"
     "    let a = \"{n}ab\"\n"
     "    let b = \"{n}cde\"\n"
-    "    return len(a) + len(b)\n"
+    "    let c = \"{a}{b}\"\n"
+    "    return len(a) + len(b) + len(c)\n"
     "}\n"
     "\n"
     "fn deeper(n: i32) -> i32 {\n"
@@ -187,6 +188,12 @@ int main(int argc, char **argv) {
          "K0410"},
         {"a concat of no pieces, leaving two slots nothing reads", "concat",
          0, 0, "K0410"},
+        // The first `concat.i` is `"{n}ab"`: a number and then a piece of
+        // text, which is `1` in what it says about them. See D1277.
+        {"a concat.i saying a piece past the last is a number", "concat.i", 1,
+         0xFFFF, "K0410"},
+        {"a concat.i reading a piece of text as a number", "concat.i", 1, 2,
+         "K0411"},
         {"an element written past the end of the frame", "index.to", 1, LAST,
          "K0408"},
         {"a slot read before anything wrote it", "load.k", 0, 2, "K0411"},

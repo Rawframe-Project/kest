@@ -3523,6 +3523,18 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
     }
 
     case KEST_EXPR_TEXT: {
+        // A signed whole number is handed to the join as it is and written
+        // into the text being made, rather than made into a text of its own
+        // first and copied: three numbers in one line of a log were four
+        // pieces of text made and three thrown away. Sixteen pieces is as
+        // many as the join can say this about. `KEST_NOOPT` makes every
+        // number a text first, which is what the gate holds this to. See
+        // D1277.
+        static int plain = -1;
+        bool numbers_in = !kest_ir_asked_off("KEST_NOOPT", &plain) &&
+                          expr->text.count <= KEST_NUMBERED_MOST;
+        uint16_t which = 0;
+        uint16_t numbered = 0;
         for (uint32_t i = 0; i < expr->text.count; i++) {
             const KestTextPart *part = &expr->text.parts[i];
             if (part->value == NULL) {
@@ -3536,6 +3548,12 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             compile_expr(compiler, part->value);
             const KestType *type = part->value->type;
             if (type == NULL || type->tag == KEST_T_TEXT) {
+                continue;
+            }
+            if (numbers_in && type->tag == KEST_T_INT &&
+                !kest_is_unsigned(type) && value_slots(type) == 1) {
+                which |= (uint16_t)(1u << i);
+                numbered++;
                 continue;
             }
             // A set of bits is written the way it is built, so the names it
@@ -3558,12 +3576,12 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
                 ir_carries(compiler, written, layout_of(compiler, type), 0, 0);
             }
         }
-        stack_pop(compiler, (uint16_t)(expr->text.count * 2));
+        stack_pop(compiler, (uint16_t)(expr->text.count * 2 - numbered));
         stack_push(compiler, 2);
         uint32_t joined = ir_emit(compiler, KEST_IR_TEXT_JOIN, expr->type,
                                   (uint16_t)expr->text.count, expr->type, 2,
                                   expr->span);
-        ir_carries(compiler, joined, (uint16_t)expr->text.count, 0, 0);
+        ir_carries(compiler, joined, (uint16_t)expr->text.count, which, 0);
         break;
     }
 

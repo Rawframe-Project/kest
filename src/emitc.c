@@ -2055,15 +2055,23 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
     case KEST_IR_TEXT_JOIN: {
         // Pieces joined into one. Two slots each, in the order they are
         // written, and what comes back sits where the first of them was.
-        if (reads != (uint32_t)op->imm[0] * 2 || leaves != 2) {
+        // A piece whose bit is set in the second number is a signed whole
+        // number in one slot, written into the text rather than before it.
+        // See D1277.
+        if (op->imm[0] > KEST_NUMBERED_MOST ||
+            ((uint32_t)op->imm[1] >> op->imm[0]) != 0 ||
+            reads != (uint32_t)op->imm[0] * 2 -
+                         kest_pieces_numbered(op->imm[1]) ||
+            leaves != 2) {
             cannot(walk, "text joined out of something other than pieces");
             break;
         }
         at_stack(walk, first, base);
         say(c, out,
-            "    if (!kest_text_join(rt, &%s, %u, %u, &%s)) {\n"
+            "    if (!kest_text_join(rt, &%s, %u, %u, %u, &%s)) {\n"
             "        return false;\n    }\n",
-            first, (unsigned)op->imm[0], op->span.offset, first);
+            first, (unsigned)op->imm[0], (unsigned)op->imm[1],
+            op->span.offset, first);
         break;
     }
     case KEST_IR_TEXT_FROM: {
@@ -3352,8 +3360,8 @@ const char *kest_emitc_done(KestEmitC *c, const char *entry,
         "                        const KestValue *slots, uint32_t where,\n"
         "                        KestValue *into);\n"
         "bool kest_text_join(KestRuntime *runtime, const KestValue *pieces,\n"
-        "                    uint16_t count, uint32_t where, "
-        "KestValue *into);\n"
+        "                    uint16_t count, uint16_t which, uint32_t where,\n"
+        "                    KestValue *into);\n"
         "bool kest_text_from(KestRuntime *runtime, KestValue handle,\n"
         "                    uint32_t where, KestValue *into);\n"
         "bool kest_array_fit(KestRuntime *runtime, KestValue handle,\n"

@@ -668,6 +668,56 @@ static Said said(const KestValue *slots) {
     return out;
 }
 
+// What `concat.i` joins, measured before there is anywhere to put it: each
+// number written out once and kept here until it is copied, so a number in a
+// piece of text costs the text it is in and no text of its own. The pieces
+// are in the order they are written, a number in one slot and text in two.
+// The machine and the compiled bodies both join through these. See D1277.
+typedef struct {
+    char digits[KEST_NUMBERED_MOST][KEST_WHOLE_ROOM];
+    uint8_t written[KEST_NUMBERED_MOST];
+} Numbered;
+
+static size_t numbered_length(const KestValue *pieces, uint16_t count,
+                              uint16_t which, Numbered *numbers) {
+    size_t length = 0;
+    uint32_t at = 0;
+    for (uint16_t i = 0; i < count; i++) {
+        if (i < KEST_NUMBERED_MOST && (((uint32_t)which >> i) & 1u)) {
+            int written = kest_write_whole(numbers->digits[i],
+                                           (uint64_t)pieces[at].integer, true);
+            numbers->written[i] = (uint8_t)written;
+            length += (size_t)written;
+            at += 1;
+        } else {
+            length += (size_t)pieces[at + 1].integer;
+            at += 2;
+        }
+    }
+    return length;
+}
+
+static size_t numbered_copy(char *text, const KestValue *pieces,
+                            uint16_t count, uint16_t which,
+                            const Numbered *numbers) {
+    size_t used = 0;
+    uint32_t at = 0;
+    for (uint16_t i = 0; i < count; i++) {
+        if (i < KEST_NUMBERED_MOST && (((uint32_t)which >> i) & 1u)) {
+            memcpy(text + used, numbers->digits[i], numbers->written[i]);
+            used += numbers->written[i];
+            at += 1;
+        } else {
+            size_t many = (size_t)pieces[at + 1].integer;
+            memcpy(text + used, pieces[at].text, many);
+            used += many;
+            at += 2;
+        }
+    }
+    text[used] = '\0';
+    return used;
+}
+
 typedef struct {
     const KestChunk *chunk;
     const uint8_t *ip;
@@ -3761,6 +3811,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         [KEST_OP_TEXT_F32] = &&thread_KEST_OP_TEXT_F32,
         [KEST_OP_TEXT_B] = &&thread_KEST_OP_TEXT_B,
         [KEST_OP_CONCAT] = &&thread_KEST_OP_CONCAT,
+        [KEST_OP_CONCAT_I] = &&thread_KEST_OP_CONCAT_I,
         [KEST_OP_TEXT_FROM] = &&thread_KEST_OP_TEXT_FROM,
         [KEST_OP_HASH_I] = &&thread_KEST_OP_HASH_I,
         [KEST_OP_HASH_F] = &&thread_KEST_OP_HASH_F,
@@ -5055,6 +5106,34 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                 used += piece.length;
             }
             text[used] = '\0';
+            TEXT_ON(text, used);
+            NEXT;
+        }
+        case KEST_OP_CONCAT_I: THREADED(KEST_OP_CONCAT_I) {
+            uint16_t count = READ_U16();
+            uint16_t which = READ_U16();
+            uint32_t slots = 2u * count - kest_pieces_numbered(which);
+            top -= slots;
+            Numbered numbers;
+            size_t length = numbered_length(top, count, which, &numbers);
+            if (length > (size_t)MAX_COUNTED) {
+                fail(vmp, frame, instruction, "K0630",
+                     "this text would hold %zu, which is more than `len` can "
+                     "count",
+                     length);
+                return false;
+            }
+            SPEND_WORK(length);
+            char *text = take(rt, top + slots, length + 1, KEST_GROUND_PLAIN);
+            if (text == NULL) {
+                no_room(vmp, frame, instruction, rt);
+                kest_diags_suggest(vmp->diags,
+                                   "it was joining text into %zu bytes",
+                                   length);
+                return false;
+            }
+            size_t used = numbered_copy(text, top, count, which, &numbers);
+            MOVED(moved_text, used);
             TEXT_ON(text, used);
             NEXT;
         }
@@ -9868,14 +9947,12 @@ bool kest_text_of_value(KestRuntime *rt, uint16_t layout,
 }
 
 bool kest_text_join(KestRuntime *rt, const KestValue *pieces, uint16_t count,
-                    uint32_t where, KestValue *into) {
+                    uint16_t which, uint32_t where, KestValue *into) {
     if (rt == NULL || (pieces == NULL && count != 0) || into == NULL) {
         return false;
     }
-    size_t length = 0;
-    for (uint16_t i = 0; i < count; i++) {
-        length += (size_t)pieces[(uint32_t)i * 2 + 1].integer;
-    }
+    Numbered numbers;
+    size_t length = numbered_length(pieces, count, which, &numbers);
     // The same ceiling an array has, and text is where a program reaches it
     // without meaning to: two of these joined is a new one as long as both.
     if (length > (size_t)MAX_COUNTED) {
@@ -9891,14 +9968,8 @@ bool kest_text_join(KestRuntime *rt, const KestValue *pieces, uint16_t count,
                            length);
         return false;
     }
-    size_t used = 0;
-    for (uint16_t i = 0; i < count; i++) {
-        size_t many = (size_t)pieces[(uint32_t)i * 2 + 1].integer;
-        MOVED(moved_text, many);
-        memcpy(text + used, pieces[(uint32_t)i * 2].text, many);
-        used += many;
-    }
-    text[used] = '\0';
+    size_t used = numbered_copy(text, pieces, count, which, &numbers);
+    MOVED(moved_text, used);
     text_lands(into, text, used);
     return true;
 }

@@ -1743,6 +1743,12 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         return;
     }
     case KEST_IR_TEXT_JOIN:
+        if (op->imm[1] != 0) {
+            emit(lower, KEST_OP_CONCAT_I, span);
+            emit_u16(lower, op->imm[0], span);
+            emit_u16(lower, op->imm[1], span);
+            return;
+        }
         emit(lower, KEST_OP_CONCAT, span);
         emit_u16(lower, op->imm[0], span);
         return;

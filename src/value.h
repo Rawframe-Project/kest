@@ -127,6 +127,11 @@ typedef enum {
     // way the three beside it were in D874. See D876.
     KEST_OP_TEXT_VALUE,
     KEST_OP_CONCAT,     // u16 count
+    // u16 count, u16 which: the same, where each piece whose bit is set in
+    // `which` is a signed whole number in one slot rather than text in two,
+    // written into what is joined rather than into a text of its own first.
+    // Sixteen pieces at the most. See D1277.
+    KEST_OP_CONCAT_I,
     // A number standing for a value, over exactly what `==` applies to.
     KEST_OP_HASH_I,
     KEST_OP_HASH_F,
@@ -844,6 +849,12 @@ const char *kest_op_name(uint8_t op);
 // that checks itself holds it to what the machine moved. See D1239.
 const char *kest_op_stack(const KestModule *module, const KestChunk *chunk,
                           uint32_t at, uint32_t *takes, uint32_t *gives);
+
+// How many of the pieces `concat.i` joins are numbers rather than text: the
+// bits set in what it says. It says it for sixteen pieces at the most, and a
+// piece past the last one said about is not a piece. See D1277.
+#define KEST_NUMBERED_MOST 16u
+uint32_t kest_pieces_numbered(uint32_t which);
 
 // What each number an instruction carries is, which is what the verifier holds
 // it to before anything runs: one of the body's slots or constants, one of the
