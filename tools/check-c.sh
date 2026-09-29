@@ -1583,6 +1583,135 @@ calls back in, said \`$inside\` and came back $inside_was" >>"$said"
     esac
 fi
 
+# And a loop that never ends, stopped by its host from another thread, in
+# both engines. A compiled body spends no budget (D1094), so what reaches one
+# is `kest_cancel`, which a body written as C asks after at the back of every
+# `while` (D1283): the host runs it compiled and then on the machine, gives the
+# stop a thread of its own, and holds each run to coming back refused with
+# `K0660`. An alarm is what says a run that never came back.
+stopped_said="no loop that never ends was stopped"
+cat >"$work"/spinning.kest <<'PROGRAM'
+module spinning
+
+fn spin(start: i32) -> i32 {
+    let n = start
+    while true {
+        n = n % 1000 + 1
+    }
+    return n
+}
+
+fn main() -> i32 {
+    return spin(1) - spin(1)
+}
+PROGRAM
+cat >"$work"/stopper.c <<'HOST'
+#define _POSIX_C_SOURCE 200809L
+#include "kest.h"
+
+#include <pthread.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
+
+bool kest_natives_here(KestRuntime *runtime);
+
+static void *asking(void *runtime) {
+    struct timespec wait = {0, 50L * 1000L * 1000L};
+    nanosleep(&wait, NULL);
+    kest_cancel(runtime);
+    return NULL;
+}
+
+static void never(int signal) {
+    (void)signal;
+    static const char said[] = "a loop its host asked to stop never came back\n";
+    if (write(2, said, sizeof said - 1) < 0) {
+        _exit(4);
+    }
+    _exit(3);
+}
+
+static int stopped(const char *path, bool compiled) {
+    KestBuild *build = kest_build(path, getenv("KEST_LIB"), stderr,
+                                  KEST_FORM_TEXT, 0);
+    KestHost *host = kest_host_new();
+    KestRuntime *rt =
+        build == NULL || host == NULL ? NULL : kest_start(build, host, NULL);
+    kest_host_free(host);
+    if (rt == NULL || (compiled && !kest_natives_here(rt))) {
+        fprintf(stderr, "no machine\n");
+        return 2;
+    }
+    int32_t which = kest_entry(rt, "spinning.spin");
+    KestValue slots[4];
+    memset(slots, 0, sizeof slots);
+    slots[0].integer = 1;
+    pthread_t thread;
+    if (which < 0 || pthread_create(&thread, NULL, asking, rt) != 0) {
+        return 2;
+    }
+    alarm(20);
+    bool went = kest_call(rt, which, slots, 4);
+    alarm(0);
+    pthread_join(thread, NULL);
+    printf("%s %s\n", compiled ? "compiled" : "machine",
+           went ? "came back" : "stopped");
+    fflush(stdout);
+    if (!went) {
+        kest_report(rt, stdout, KEST_FORM_TEXT);
+    }
+    kest_runtime_free(rt);
+    kest_build_free(build);
+    return went ? 1 : 0;
+}
+
+int main(int argc, char **argv) {
+    if (argc < 2) {
+        fprintf(stderr, "usage: stopper <program>\n");
+        return 2;
+    }
+    signal(SIGALRM, never);
+    int compiled = stopped(argv[1], true);
+    int machine = stopped(argv[1], false);
+    return compiled == 0 && machine == 0 ? 0 : 1;
+}
+HOST
+if ! ./kest emit --c "$work"/spinning.kest >"$work"/spinning.c 2>"$work"/why ||
+        ! $cc -O1 -Iinclude -DKEST_NO_MAIN -c -o "$work"/spinning.o \
+            "$work"/spinning.c 2>>"$work"/why ||
+        ! $cc -O1 -Iinclude -o "$work"/stopper "$work"/stopper.c \
+            "$work"/spinning.o libkest.a -lm -lpthread 2>>"$work"/why; then
+    {
+        echo "    a host stopping a loop will not build against the C this wrote:"
+        sed 's/^/        /' "$work"/why | head -5
+    } >>"$said"
+    wrong=$((wrong + 1))
+else
+    stopping=$(KEST_LIB=lib/ "$work"/stopper "$work"/spinning.kest 2>&1 </dev/null)
+    stopping_was=$?
+    case "$stopping" in
+    "compiled stopped"*K0660*"machine stopped"*K0660*)
+        stopped_said="a loop that never ends stopped by its host from another \
+thread in both engines"
+        if [ "$stopping_was" -ne 0 ]; then
+            echo "    a host stopping a loop both ways came back \
+$stopping_was" >>"$said"
+            wrong=$((wrong + 1))
+        fi
+        ;;
+    *)
+        echo "    a loop that never ends, stopped by its host, said \
+\`$(printf '%s' "$stopping" | head -3 | tr '\n' ' ')\` and came back \
+$stopping_was" >>"$said"
+        wrong=$((wrong + 1))
+        ;;
+    esac
+fi
+
 # And a walk that hands its array to the host, whose door calls back into the
 # program and shortens it. The walk proofs refuse a walk that calls the host,
 # because a host handed an array can do exactly this, and only a host can
@@ -1838,5 +1967,5 @@ host compiler takes, $both program(s) written here and $alike of this tree's \
 own run both ways for the same answer and the same words, $walked of those \
 again walking the heap before every allocation with $not_walked left out for \
 growing worlds, $sanitised again under the sanitisers, $fused_said, \
-$inside_said, and \
+$inside_said, $stopped_said, and \
 $wants_a_host that ask the host for what a file this wrote does not provide"
