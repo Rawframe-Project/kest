@@ -27,6 +27,10 @@ COLOURS = {
     "LuaJIT": "#a61e4d",
     "QuickJS": "#fab005",
     "C": "#adb5bd",
+    "C++": "#868e96",
+    "Kest, walked between frames": "#ffa94d",
+    "Lua 5.4, generational": "#d0bfff",
+    "Rust": "#0ca678",
     "daslang": "#69db7c",
     "daslang, AOT": "#2b8a3e",
 }
@@ -54,7 +58,8 @@ def read(path):
             if fields[0] == "workload" or len(fields) != 4:
                 continue
             rows.setdefault(fields[0], {})[fields[1]] = (
-                float(fields[2]), int(fields[3]))
+                float(fields[2]),
+                int(fields[3]) if fields[3].isdigit() else None)
     return stamp, rows
 
 
@@ -84,12 +89,17 @@ def text(x, y, said, size=13, weight="normal", fill="#212529",
             % (x, y, FONT, size, weight, fill, anchor, escape(said)))
 
 
-def footer(stamp, width, y, by="by processor time; lower is better"):
-    said = ("Measured %s at commit %s on %s%s. Best of %s %s."
+def footer(stamp, width, y, by="by processor time; lower is better",
+           how=None):
+    """When, where and how busy, and how a number was chosen from its runs:
+    `Best of N` and `by`, or `how` where that is not what was done."""
+    chosen = how if how is not None else "Best of %s %s" % (
+        stamp.get("best of", "?"), by)
+    said = ("Measured %s at commit %s on %s%s. %s."
             % (stamp.get("taken", "?"), stamp.get("commit", "?"),
                stamp.get("machine", "?"),
                ", load %s" % stamp["load"] if "load" in stamp else "",
-               stamp.get("best of", "?"), by))
+               chosen))
     return text(width / 2, y, said, size=11, fill="#868e96", anchor="middle")
 
 
@@ -118,7 +128,7 @@ def svg(width, height, parts):
 
 
 def interpreters(stamp, rows):
-    """Each workload's time for the three interpreters, as a share of Luau's."""
+    """Each workload's time for the interpreters, as a share of Luau's."""
     engines = [e for e in INTERPRETERS
                if any(e in rows[w] for w in rows)]
     width = 860
@@ -293,6 +303,269 @@ def frame_budget(stamp, rows):
     return svg(width, height, parts)
 
 
+def milliseconds(value):
+    return "%.1f ms" % value if value < 100 else "{:,} ms".format(int(value))
+
+
+def compiling(stamp, rows, hosts):
+    """What getting a program ready to run costs, three ways."""
+    width = 860
+    parts = [text(28, 38, "From source to running", size=20, weight="bold"),
+             text(28, 62, "Milliseconds of processor time to read, check and "
+                  "compile a program until its first line runs; lower is "
+                  "better.", size=13, fill="#495057")]
+    y = 76
+    long = [(e, rows["long"][e]) for e in
+            ["Kest", "Luau", "Lua 5.4", "LuaJIT", "QuickJS", "daslang"]
+            if e in rows.get("long", {})]
+    if long:
+        y = panel(parts, y, "A long program",
+                  "%s lines of functions with a loop, a branch and a call "
+                  "each; Kest checks every type in it, the Luas and QuickJS "
+                  "check none" % "{:,}".format(int(stamp.get("lines", 0))),
+                  long, max(v for _, v in long) * 1.15, milliseconds)
+    copies = [(e, rows["copies"][e]) for e in
+              ["Kest", "C++", "Rust", "daslang"]
+              if e in rows.get("copies", {})]
+    if copies:
+        y = panel(parts, y, "One generic, %s copies"
+                  % "{:,}".format(int(stamp.get("copies", 0))),
+                  "a function over a type parameter called with that many "
+                  "shapes of its own, where each language writes a copy per "
+                  "type; C++ and Rust compiled to an object",
+                  copies, max(v for _, v in copies) * 1.15, milliseconds)
+    reload = [(e, hosts["reload"][e] / 1e6) for e in
+              ["Kest", "Lua 5.4", "LuaJIT, interpreted", "LuaJIT"]
+              if e in hosts.get("reload", {})]
+    if reload:
+        y = panel(parts, y, "Reloading the Tetris clone",
+                  "the same game in each language made ready to run again "
+                  "from its source, the middle of 31: Kest rebuilds it and "
+                  "its library and starts a machine, Lua loads its chunk",
+                  reload,
+                  max(v for _, v in reload) * 1.15, milliseconds)
+    height = y + 30
+    parts.append(footer(stamp, width, height - 18))
+    return svg(width, height, parts)
+
+
+def kilobytes(value):
+    if value >= 1024 * 1024:
+        return "%.1f MB" % (value / (1024 * 1024))
+    return "%.0f KB" % (value / 1024)
+
+
+def footprint(stamp, rows):
+    """What an engine costs a game before it runs anything."""
+    width = 860
+    parts = [text(28, 38, "What an engine costs before it runs anything",
+                  size=20, weight="bold"),
+             text(28, 62, "Bytes; lower is better.", size=13,
+                  fill="#495057")]
+    y = 76
+    size = [(e, rows["size"][e]) for e in
+            ["Kest", "Lua 5.4", "LuaJIT", "Luau", "Luau, native", "QuickJS"]
+            if e in rows.get("size", {})]
+    if size:
+        y = panel(parts, y, "Added to a game's executable",
+                  "each engine linked into a host the way a game links it, "
+                  "stripped, less the same host with no engine; Kest's "
+                  "carries its compiler and checker", size,
+                  max(v for _, v in size) * 1.15, kilobytes)
+    memory = [(e, rows["memory"][e]) for e in
+              ["Kest", "Lua 5.4", "LuaJIT", "Luau", "QuickJS"]
+              if e in rows.get("memory", {})]
+    if memory:
+        y = panel(parts, y, "A machine holding a program",
+                  "one engine state with the frame program loaded and "
+                  "nothing run yet, as each engine counts its own memory",
+                  memory, max(v for _, v in memory) * 1.15, kilobytes)
+    height = y + 30
+    parts.append(footer(stamp, width, height - 18, by="runs"))
+    return svg(width, height, parts)
+
+
+TAILED = ["Kest", "Kest, walked between frames", "Luau", "Luau, native",
+          "Lua 5.4", "Lua 5.4, generational", "LuaJIT, interpreted", "LuaJIT",
+          "QuickJS"]
+
+
+def tails(stamp, rows):
+    """The frames of a world that makes garbage: the middle, the ninety-ninth
+    in a hundred and the worst, which is where a collector shows."""
+    width = 860
+    parts = [text(28, 38, "Frames of a world that makes garbage", size=20,
+                  weight="bold"),
+             text(28, 62, "5,000 things with a name and tags each, all moved "
+                  "and 250 made anew every frame, 5,000 frames; milliseconds "
+                  "a frame, lower is better.", size=13, fill="#495057")]
+    y = 76
+    everything = [rows[m][e] / 1e6 for m in ("churn50", "churn99", "churnmax")
+                  for e in TAILED if e in rows.get(m, {})]
+    if not everything:
+        return None
+    most = max(everything) * 1.15
+    for measure, title, about in (
+            ("churn50", "The middle frame", "what most frames cost"),
+            ("churn99", "The worst frame in a hundred",
+             "what a collector's work adds when it lands in a frame"),
+            ("churnmax", "The worst frame",
+             "the one frame a player sees stutter; Kest walks the heap "
+             "all at once, the Luas a little at a time")):
+        found = [(e, rows[measure][e] / 1e6) for e in TAILED
+                 if e in rows.get(measure, {})]
+        y = panel(parts, y, title, about, found, most,
+                  lambda v: "%.2f ms" % v)
+    height = y + 30
+    parts.append(footer(stamp, width, height - 18,
+                        by="runs by the monotonic clock"))
+    return svg(width, height, parts)
+
+
+def luau_own(stamp, rows):
+    """Luau's own benchmarks, from its own repository and timed its own way,
+    beside the same work written in Kest."""
+    width = 860
+    parts = [text(28, 38, "Luau's own benchmarks", size=20, weight="bold"),
+             text(28, 62, "Five tests from Luau's repository, run by its own "
+                  "harness, beside the same work written in Kest and timed "
+                  "the same way; milliseconds, lower is better.", size=13,
+                  fill="#495057")]
+    about = {
+        "life": "Conway's life on a grid of cells",
+        "matrixmult": "multiplying matrices of numbers",
+        "pcmmix": "mixing sound into a run of 16-bit samples",
+        "qsort": "sorting, with a comparison handed in",
+        "trig": "sines and cosines in a transform",
+    }
+    y = 76
+    for test in ["life", "matrixmult", "pcmmix", "qsort", "trig"]:
+        found = [(e, rows[test][e]) for e in
+                 ["Kest", "Kest, compiled", "Luau", "Luau, native"]
+                 if e in rows.get(test, {})]
+        if not found:
+            continue
+        y = panel(parts, y, test, about[test], found,
+                  max(v for _, v in found) * 1.15, milliseconds)
+    height = y + 30
+    parts.append(footer(stamp, width, height - 18,
+                        how="The middle of twenty runs each, as Luau's "
+                        "harness takes it"))
+    return svg(width, height, parts)
+
+
+def sandbox(stamp, rows):
+    """What being able to stop a program costs, and how soon it stops."""
+    width = 860
+    parts = [text(28, 38, "Running code nobody trusts", size=20,
+                  weight="bold"),
+             text(28, 62, "What each engine's way of stopping a program "
+                  "costs a frame, and how soon a program that has got away "
+                  "stops once its host asks.", size=13, fill="#495057")]
+    y = 76
+    costs = [(e, rows["budget"][e] / rows["frame"][e]) for e in EMBEDDED
+             if e in rows.get("budget", {}) and e in rows.get("frame", {})]
+    if costs:
+        y = panel(parts, y, "A frame with a budget on it",
+                  "the frame's time with the engine's budget, hook or "
+                  "interrupt set and never asked, over its time without; "
+                  "1.00 is free", costs, max(v for _, v in costs) * 1.15,
+                  lambda v: "%.2f×" % v)
+    stops = [(e, rows["stop"][e] / 1000) for e in EMBEDDED
+             if e in rows.get("stop", {})]
+    if stops:
+        stopped = [v for _, v in stops if v > 0]
+        most = (max(stopped) if stopped else 1.0) * 1.3
+        parts.append(text(28, y + 22, "Stopping a loop that never ends",
+                          size=15, weight="bold"))
+        parts.append(text(28, y + 40, "microseconds from another thread "
+                          "asking to the call coming back, the middle of "
+                          "eleven; a compiled Kest body and LuaJIT's "
+                          "compiled code are not stopped at all",
+                          size=11, fill="#868e96"))
+        y += 52
+        left, span = 190, 520
+        for engine, value in stops:
+            parts.append(text(left - 10, y + 12, engine, size=12,
+                              anchor="end", weight="bold"
+                              if engine.startswith("Kest") else "normal"))
+            if value > 0:
+                bar = max(span * value / most, 1.5)
+                parts.append("<rect x=\"%d\" y=\"%.1f\" width=\"%.1f\" "
+                             "height=\"14\" rx=\"3\" fill=\"%s\"/>"
+                             % (left, y, bar, COLOURS.get(engine, "#868e96")))
+                parts.append(text(left + bar + 6, y + 12, "%.1f µs" % value,
+                                  size=12))
+            else:
+                parts.append(text(left, y + 12, "does not stop", size=12,
+                                  fill="#c92a2a", weight="bold"))
+            y += 19
+        y += 18
+    height = y + 30
+    parts.append(footer(stamp, width, height - 18,
+                        by="runs by the monotonic clock"))
+    return svg(width, height, parts)
+
+
+def scaling(stamp, rows):
+    """How a frame's work scales when every thread runs a world of its own."""
+    width = 860
+    counts = sorted(int(m[len("threads"):]) for m in rows
+                    if m.startswith("threads"))
+    engines = [e for e in ["C"] + EMBEDDED
+               if counts and
+               all(e in rows.get("threads%d" % n, {}) for n in counts)]
+    if not engines:
+        return None
+    parts = [text(28, 38, "Worlds side by side", size=20, weight="bold"),
+             text(28, 62, "A machine or a state a thread, each moving bodies "
+                  "of its own: how many times one thread's work they do "
+                  "together.", size=13, fill="#495057")]
+    left, top, plot_w, plot_h = 70, 96, 560, 320
+    most_x = counts[-1]
+    speed = {e: [rows["threads1"][e] / rows["threads%d" % n][e]
+                 for n in counts] for e in engines}
+    most_y = max(max(v) for v in speed.values())
+    most_y = max(most_y, 4) * 1.1
+
+    def at(n, v):
+        return (left + plot_w * n / most_x, top + plot_h - plot_h * v / most_y)
+    for tick in range(0, int(most_y) + 1, 2 if most_y < 10 else 4):
+        _, ty = at(0, tick)
+        parts.append("<line x1=\"%d\" y1=\"%.1f\" x2=\"%d\" y2=\"%.1f\" "
+                     "stroke=\"#e9ecef\"/>" % (left, ty, left + plot_w, ty))
+        parts.append(text(left - 8, ty + 4, "%d×" % tick, size=11,
+                          fill="#868e96", anchor="end"))
+    for n in counts:
+        tx, _ = at(n, 0)
+        parts.append(text(tx, top + plot_h + 18, str(n), size=11,
+                          fill="#868e96", anchor="middle"))
+    parts.append(text(left + plot_w / 2, top + plot_h + 36, "threads",
+                      size=12, fill="#495057", anchor="middle"))
+    for engine in engines:
+        points = " ".join("%.1f,%.1f" % at(n, v)
+                          for n, v in zip(counts, speed[engine]))
+        parts.append("<polyline points=\"%s\" fill=\"none\" "
+                     "stroke=\"%s\" stroke-width=\"%s\"/>"
+                     % (points, COLOURS.get(engine, "#868e96"),
+                        "3" if engine.startswith("Kest") else "2"))
+    key_y = top
+    for engine in engines:
+        parts.append("<rect x=\"%d\" y=\"%.1f\" width=\"12\" height=\"12\" "
+                     "rx=\"2\" fill=\"%s\"/>"
+                     % (left + plot_w + 24, key_y - 10,
+                        COLOURS.get(engine, "#868e96")))
+        parts.append(text(left + plot_w + 42, key_y, "%s  %.1f×"
+                          % (engine, speed[engine][-1]), size=12,
+                          weight="bold" if engine.startswith("Kest")
+                          else "normal"))
+        key_y += 20
+    height = top + plot_h + 80
+    parts.append(footer(stamp, width, height - 18,
+                        by="runs by the monotonic clock"))
+    return svg(width, height, parts)
+
+
 def main():
     stamp, rows = read(sys.argv[1])
     where = sys.argv[2]
@@ -302,14 +575,39 @@ def main():
         out.write(everything(stamp, rows))
     # The charts drawn from the tables the other scripts write, each where
     # that script has been run.
-    try:
-        stamp, rows = read_measures(where + "/hosts.tsv")
-    except FileNotFoundError:
-        return
-    with open(where + "/chart-crossing.svg", "w") as out:
-        out.write(crossing(stamp, rows))
-    with open(where + "/chart-frame.svg", "w") as out:
-        out.write(frame_budget(stamp, rows))
+    tables = {}
+    for name in ("hosts", "compile", "luau"):
+        try:
+            tables[name] = read_measures(where + "/" + name + ".tsv")
+        except FileNotFoundError:
+            pass
+    if "hosts" in tables:
+        stamp, rows = tables["hosts"]
+        with open(where + "/chart-crossing.svg", "w") as out:
+            out.write(crossing(stamp, rows))
+        with open(where + "/chart-frame.svg", "w") as out:
+            out.write(frame_budget(stamp, rows))
+        with open(where + "/chart-footprint.svg", "w") as out:
+            out.write(footprint(stamp, rows))
+        with open(where + "/chart-sandbox.svg", "w") as out:
+            out.write(sandbox(stamp, rows))
+        drawn = scaling(stamp, rows)
+        if drawn is not None:
+            with open(where + "/chart-threads.svg", "w") as out:
+                out.write(drawn)
+        drawn = tails(stamp, rows)
+        if drawn is not None:
+            with open(where + "/chart-tails.svg", "w") as out:
+                out.write(drawn)
+    if "luau" in tables:
+        stamp, rows = tables["luau"]
+        with open(where + "/chart-luau.svg", "w") as out:
+            out.write(luau_own(stamp, rows))
+    if "compile" in tables:
+        stamp, rows = tables["compile"]
+        hosts = tables.get("hosts", ({}, {}))[1]
+        with open(where + "/chart-compile.svg", "w") as out:
+            out.write(compiling(stamp, rows, hosts))
 
 
 if __name__ == "__main__":

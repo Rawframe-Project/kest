@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="496" viewBox="0 0 860 496">
+<rect width="100%" height="100%" rx="10" fill="#ffffff"/>
+<text x="28.0" y="38.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="20" font-weight="bold" fill="#212529" text-anchor="start">Worlds side by side</text>
+<text x="28.0" y="62.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="13" font-weight="normal" fill="#495057" text-anchor="start">A machine or a state a thread, each moving bodies of its own: how many times one thread's work they do together.</text>
+<line x1="70" y1="416.0" x2="630" y2="416.0" stroke="#e9ecef"/>
+<text x="62.0" y="420.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="normal" fill="#868e96" text-anchor="end">0×</text>
+<line x1="70" y1="321.1" x2="630" y2="321.1" stroke="#e9ecef"/>
+<text x="62.0" y="325.1" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="normal" fill="#868e96" text-anchor="end">4×</text>
+<line x1="70" y1="226.3" x2="630" y2="226.3" stroke="#e9ecef"/>
+<text x="62.0" y="230.3" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="normal" fill="#868e96" text-anchor="end">8×</text>
+<line x1="70" y1="131.4" x2="630" y2="131.4" stroke="#e9ecef"/>
+<text x="62.0" y="135.4" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="normal" fill="#868e96" text-anchor="end">12×</text>
+<text x="93.3" y="434.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="normal" fill="#868e96" text-anchor="middle">1</text>
+<text x="116.7" y="434.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="normal" fill="#868e96" text-anchor="middle">2</text>
+<text x="163.3" y="434.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="normal" fill="#868e96" text-anchor="middle">4</text>
+<text x="256.7" y="434.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="normal" fill="#868e96" text-anchor="middle">8</text>
+<text x="350.0" y="434.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="normal" fill="#868e96" text-anchor="middle">12</text>
+<text x="443.3" y="434.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="normal" fill="#868e96" text-anchor="middle">16</text>
+<text x="630.0" y="434.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="normal" fill="#868e96" text-anchor="middle">24</text>
+<text x="350.0" y="452.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#495057" text-anchor="middle">threads</text>
+<polyline points="93.3,392.3 116.7,364.7 163.3,349.2 256.7,299.9 350.0,239.6 443.3,273.7 630.0,269.0" fill="none" stroke="#adb5bd" stroke-width="2"/>
+<polyline points="93.3,392.3 116.7,368.9 163.3,322.8 256.7,311.8 350.0,268.3 443.3,227.0 630.0,221.0" fill="none" stroke="#f76707" stroke-width="3"/>
+<polyline points="93.3,392.3 116.7,369.1 163.3,323.4 256.7,313.6 350.0,278.1 443.3,297.4 630.0,251.2" fill="none" stroke="#c2410c" stroke-width="3"/>
+<polyline points="93.3,392.3 116.7,369.0 163.3,320.5 256.7,296.9 350.0,246.0 443.3,201.1 630.0,197.3" fill="none" stroke="#4dabf7" stroke-width="2"/>
+<polyline points="93.3,392.3 116.7,371.5 163.3,335.3 256.7,308.6 350.0,246.1 443.3,228.8 630.0,223.4" fill="none" stroke="#1864ab" stroke-width="2"/>
+<polyline points="93.3,392.3 116.7,377.7 163.3,324.5 256.7,268.0 350.0,263.9 443.3,232.6 630.0,194.6" fill="none" stroke="#b197fc" stroke-width="2"/>
+<polyline points="93.3,392.3 116.7,368.6 163.3,329.1 256.7,299.3 350.0,244.4 443.3,203.0 630.0,184.5" fill="none" stroke="#f783ac" stroke-width="2"/>
+<polyline points="93.3,392.3 116.7,345.1 163.3,269.1 256.7,233.1 350.0,205.0 443.3,158.9 630.0,187.4" fill="none" stroke="#a61e4d" stroke-width="2"/>
+<polyline points="93.3,392.3 116.7,369.6 163.3,324.4 256.7,255.4 350.0,226.9 443.3,186.4 630.0,125.1" fill="none" stroke="#fab005" stroke-width="2"/>
+<rect x="654" y="86.0" width="12" height="12" rx="2" fill="#adb5bd"/>
+<text x="672.0" y="96.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">C  6.2×</text>
+<rect x="654" y="106.0" width="12" height="12" rx="2" fill="#f76707"/>
+<text x="672.0" y="116.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="bold" fill="#212529" text-anchor="start">Kest  8.2×</text>
+<rect x="654" y="126.0" width="12" height="12" rx="2" fill="#c2410c"/>
+<text x="672.0" y="136.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="bold" fill="#212529" text-anchor="start">Kest, compiled  7.0×</text>
+<rect x="654" y="146.0" width="12" height="12" rx="2" fill="#4dabf7"/>
+<text x="672.0" y="156.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">Luau  9.2×</text>
+<rect x="654" y="166.0" width="12" height="12" rx="2" fill="#1864ab"/>
+<text x="672.0" y="176.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">Luau, native  8.1×</text>
+<rect x="654" y="186.0" width="12" height="12" rx="2" fill="#b197fc"/>
+<text x="672.0" y="196.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">Lua 5.4  9.3×</text>
+<rect x="654" y="206.0" width="12" height="12" rx="2" fill="#f783ac"/>
+<text x="672.0" y="216.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">LuaJIT, interpreted  9.8×</text>
+<rect x="654" y="226.0" width="12" height="12" rx="2" fill="#a61e4d"/>
+<text x="672.0" y="236.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">LuaJIT  9.6×</text>
+<rect x="654" y="246.0" width="12" height="12" rx="2" fill="#fab005"/>
+<text x="672.0" y="256.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="12" font-weight="normal" fill="#212529" text-anchor="start">QuickJS  12.3×</text>
+<text x="430.0" y="478.0" font-family="-apple-system,Segoe UI,Helvetica,Arial,sans-serif" font-size="11" font-weight="normal" fill="#868e96" text-anchor="middle">Measured 2026-09-29 at commit 06602b86 on AMD Ryzen 9 5900X 12-Core Processor, load 1.68. Best of 1 runs by the monotonic clock.</text>
+</svg>

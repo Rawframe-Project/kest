@@ -1,0 +1,25 @@
+module bench.determinism.sim
+
+import std.io
+import std.math
+
+// A few numbers pushed through the functions a game's movement is made of --
+// a sine, a cosine, an angle, a power and a square root -- a hundred thousand
+// times, each step feeding the next, so that one bit different anywhere is a
+// different answer at the end. `sim.lua` and `sim.js` are the same steps.
+// `bench/determinism.sh` runs each on every machine CI has and writes down
+// whether one language answered the same everywhere. See D1274.
+fn main() -> i32 {
+    let x: f64 = 0.5
+    let y: f64 = 1.25
+    let z: f64 = 0.0
+    for i in 0..100000 {
+        let a = math.sin(x * 1.7 + y)
+        let b = math.cos(y * 0.3 - x)
+        x = a * b + 0.001 * f64(i % 17)
+        y = math.atan2(x, y + 1.1) + math.sqrt(math.abs(x) + 0.5)
+        z = z * 0.5 + math.pow(math.abs(y) + 0.5, 1.3)
+    }
+    io.print("{x} {y} {z}")
+    return 0
+}

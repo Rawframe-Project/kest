@@ -61,3 +61,12 @@ function asks(times) {
     }
     return sum;
 }
+
+// A program that has got away: a loop that never ends.
+function spin(start) {
+    let n = start;
+    while (true) {
+        n += 1;
+    }
+    return n;
+}

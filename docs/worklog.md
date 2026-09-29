@@ -42805,3 +42805,37 @@ fit; a layout says once that nothing can fail to, and a call a body went from
 **Runs:** `bench/compare.sh` with every comparator, best of fifteen;
 `bench/hosts.sh`, best of five; `perf record` on a host calling a program and
 a program calling a host, before and after; `make most`.
+
+## 2026-09-29, compiling, reloading, what an engine weighs, and a frame's worst
+
+Four more of the kinds of benchmark the owner chose. `bench/compile.sh` and
+`bench/compile/write.py` time the same long program in every language and one
+generic taken 3,200 ways in the ones that copy per type; the first run found
+half of compiling a long file was a walk of every declaration for every name a
+body folded, and it is gone: 372 ms to 118 over a hundred thousand lines. The
+hosts reload the Tetris clone in Lua and Kest, weigh what each engine adds to
+an executable and what a machine holding a program costs, and time every frame
+of a world that makes garbage. See D1273.
+
+**Runs:** `bench/compile.sh`; `bench/hosts.sh`; `perf record` over the long
+program before and after; `make most`.
+
+## 2026-09-29, the same answer everywhere, what stopping costs, and threads
+
+The rest of the benchmark kinds the owner chose that the tree can measure by
+itself. Luau's own tests are drawn as a chart. `bench/determinism/` is one
+simulation in Kest, Lua and JavaScript, and `determinism.yml` runs it on the
+four machines CI has and puts the answers side by side. Every host measures
+what its engine's way of stopping a program costs a frame and how soon a
+runaway stops, and runs its frame on as many threads as the machine has. The
+harness found `kest_natives_here` binds a build rather than a machine, and the
+backend was found writing a function that can run off its end for a body that
+ends in a loop; it ends with a stop now and `check-c.sh` refuses the other.
+See D1274.
+
+The measurements move to the machine the owner gave for them
+(141.95.67.229), because the dev server runs another project's CI.
+
+**Runs:** `bench/hosts.sh`; `bench/determinism.sh` here; the C written for
+`bench/hosts/bodies.kest` before and after the change under
+`-Werror=return-type`; `make most`.

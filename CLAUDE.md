@@ -137,7 +137,28 @@ bench/             Four shapes of work and what each costs, in this language
                    way and how many bodies fit in a 60 fps frame are written
                    to `bench/hosts.tsv` and drawn as
                    `bench/chart-crossing.svg` and `bench/chart-frame.svg`.
-                   See D1272.
+                   See D1272. The same hosts reload the Tetris clone as it was
+                   written in Lua (`bench/hosts/tetromino.lua`, under its
+                   licence) beside Kest rebuilding its own, weigh what each
+                   engine adds to an executable and what a machine holding a
+                   program costs (`bench/chart-footprint.svg`), and time every
+                   frame of a world that makes garbage, `churn`, for the
+                   middle, the ninety-ninth and the worst
+                   (`bench/chart-tails.svg`). `bench/compile.sh` writes the
+                   same long program in every language, and one generic taken
+                   3,200 ways in the ones that copy per type, with
+                   `bench/compile/write.py`, and times each from source to
+                   running (`bench/chart-compile.svg`). See D1273. Every
+                   host also measures what its engine's way of stopping a
+                   program costs a frame and how soon a runaway stops
+                   (`bench/chart-sandbox.svg`), and runs its frame on as many
+                   threads as the machine has (`bench/chart-threads.svg`);
+                   `bench/luau.sh` writes `bench/luau.tsv` for
+                   `bench/chart-luau.svg`; and `bench/determinism.sh` is what
+                   `.github/workflows/determinism.yml` runs on every machine
+                   CI has, the same simulation in Kest, Lua and JavaScript,
+                   to say whether each language answers the same everywhere.
+                   See D1274.
                    `bench/tails.sh` is the third: `bench/measure` is generic
                    and a generated file belongs to one program, so this one
                    writes the C for whatever program it is given, builds the

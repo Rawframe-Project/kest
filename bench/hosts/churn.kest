@@ -1,0 +1,55 @@
+module bench.hosts.churn
+
+// A world whose frames make garbage: five thousand things, each with a name
+// and a run of tags on the heap, every one moved every frame and some of them
+// replaced by new ones, so what is alive stays the same size and what was
+// made and let go piles up. What `bench/hosts` times with it is every frame
+// rather than a sum of them -- the middle, the ninety-ninth and the worst --
+// which is where a collector shows. `churn.lua` and `churn.js` are the same
+// world. See D1273.
+
+struct Thing {
+    id: i64
+    name: text
+    x: f64
+    dx: f64
+    tags: [i64]
+}
+
+struct World {
+    things: [Thing]
+    next: [i64]
+}
+
+fn made(id: i64) -> Thing {
+    let tags: [i64] = array(4, id)
+    return Thing(id, "thing {id}", f64(id % 100), 1.0 + f64(id % 3), tags)
+}
+
+fn begin(many: i64) -> World {
+    let things: [Thing] = array()
+    for i in 0..many {
+        push(things, made(i))
+    }
+    return World(things, array(1, many))
+}
+
+// One frame: every thing moved, and `replaced` of them made again.
+fn frame(w: World, replaced: i64) -> f64 {
+    let sum: f64 = 0.0
+    for at in 0..len(w.things) {
+        let t = w.things[at]
+        t.x += t.dx
+        if t.x > 100.0 {
+            t.x -= 100.0
+        }
+        w.things[at] = t
+        sum += t.x + f64(len(t.name)) + f64(t.tags[0] % 7)
+    }
+    for k in 0..replaced {
+        let id = w.next[0]
+        w.next[0] = id + 1
+        w.things[i32(id % i64(len(w.things)))] = made(id)
+    }
+    return sum
+}

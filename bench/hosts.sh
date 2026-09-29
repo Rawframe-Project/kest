@@ -40,6 +40,11 @@ quiet() {
 
 cc=${CC:-cc}
 cxx=${CXX:-c++}
+# The Tetris clone as it was written in Lua, which the Lua hosts reload the way
+# Kest's host rebuilds `examples/tetromino.kest`. Luau cannot read it: it is
+# written with `goto`.
+game=bench/hosts/tetromino.lua
+churn=bench/hosts/churn.lua
 hosts=""
 ./kest emit --c bench/hosts/bodies.kest >"$room/bodies-native.c"
 $cc -O2 -DKEST_NO_MAIN -Iinclude -Ibench/hosts -o "$room/kest" \
@@ -48,30 +53,68 @@ hosts="$room/kest"
 if [ -n "${KEST_LUA_SRC:-}" ]; then
     $cc -O2 -Ibench/hosts -I"$KEST_LUA_SRC/src" -o "$room/lua" \
         bench/hosts/lua.c "$KEST_LUA_SRC/src/liblua.a" -lm -ldl
-    hosts="$hosts|$room/lua;Lua 5.4;bench/hosts/bodies.lua"
+    hosts="$hosts|$room/lua;Lua 5.4;bench/hosts/bodies.lua;--game;$game"
+    hosts="$hosts;--churn;$churn"
+    hosts="$hosts|$room/lua;Lua 5.4, generational;bench/hosts/bodies.lua"
+    hosts="$hosts;--generational;--churn;$churn"
 fi
 if [ -n "${KEST_LUAJIT_SRC:-}" ]; then
     $cc -O2 -DLUAJIT -Ibench/hosts -I"$KEST_LUAJIT_SRC/src" -o "$room/luajit" \
         bench/hosts/lua.c "$KEST_LUAJIT_SRC/src/libluajit.a" -lm -ldl
-    hosts="$hosts|$room/luajit;LuaJIT, interpreted;bench/hosts/bodies.lua;off"
-    hosts="$hosts|$room/luajit;LuaJIT;bench/hosts/bodies.lua"
+    hosts="$hosts|$room/luajit;LuaJIT, interpreted;bench/hosts/bodies.lua"
+    hosts="$hosts;--off;--game;$game;--churn;$churn"
+    hosts="$hosts|$room/luajit;LuaJIT;bench/hosts/bodies.lua;--game;$game"
+    hosts="$hosts;--churn;$churn"
 fi
 if [ -n "${KEST_LUAU_SRC:-}" ]; then
     u=$KEST_LUAU_SRC
-    $cxx -O2 -std=c++17 -Ibench/hosts -I"$u/VM/include" \
-        -I"$u/Compiler/include" -I"$u/CodeGen/include" -o "$room/luau" \
-        bench/hosts/luau.cpp "$u/build/libLuau.CodeGen.a" \
-        "$u/build/libLuau.Compiler.a" "$u/build/libLuau.Bytecode.a" \
-        "$u/build/libLuau.Ast.a" "$u/build/libLuau.VM.a" \
-        "$u/build/libLuau.Common.a" -lm
-    hosts="$hosts|$room/luau;Luau;bench/hosts/bodies.lua"
-    hosts="$hosts|$room/luau;Luau, native;bench/hosts/bodies.lua;native"
+    luau="-O2 -std=c++17 -Ibench/hosts -I$u/VM/include -I$u/Compiler/include"
+    luau_libs="$u/build/libLuau.Compiler.a $u/build/libLuau.Bytecode.a"
+    luau_libs="$luau_libs $u/build/libLuau.Ast.a $u/build/libLuau.VM.a"
+    luau_libs="$luau_libs $u/build/libLuau.Common.a -lm"
+    $cxx $luau -o "$room/luau" bench/hosts/luau.cpp $luau_libs
+    $cxx $luau -DNATIVE -I"$u/CodeGen/include" -o "$room/luau-native" \
+        bench/hosts/luau.cpp "$u/build/libLuau.CodeGen.a" $luau_libs
+    hosts="$hosts|$room/luau;Luau;bench/hosts/bodies.lua;--churn;$churn"
+    hosts="$hosts|$room/luau-native;Luau, native;bench/hosts/bodies.lua"
+    hosts="$hosts;--native;--churn;$churn"
 fi
 if [ -n "${KEST_QJS_SRC:-}" ]; then
     $cc -O2 -Ibench/hosts -I"$KEST_QJS_SRC" -o "$room/quickjs" \
         bench/hosts/quickjs.c "$KEST_QJS_SRC/build/libqjs.a" -lm -lpthread
-    hosts="$hosts|$room/quickjs;bench/hosts/bodies.js"
+    hosts="$hosts|$room/quickjs;bench/hosts/bodies.js;bench/hosts/churn.js"
 fi
+
+# What each engine adds to a game's executable: its host stripped, less the
+# same host with no engine in it. Every host is its engine's library linked the
+# way a game links it, and the bench code in each is the same few kilobytes the
+# floor has too.
+cat >"$room/floor.c" <<'EOF'
+#include "common.h"
+int main(void) {
+    floor_frames("C");
+    return 0;
+}
+EOF
+$cc -O2 -Ibench/hosts -o "$room/floor" "$room/floor.c"
+weigh() {
+    strip -o "$room/weighed" "$1"
+    echo $(($(wc -c <"$room/weighed") - $(wc -c <"$room/floor.stripped")))
+}
+strip -o "$room/floor.stripped" "$room/floor"
+{
+    printf 'Kest\tsize\t%s\t0\n' "$(weigh "$room/kest")"
+    [ -x "$room/lua" ] &&
+        printf 'Lua 5.4\tsize\t%s\t0\n' "$(weigh "$room/lua")"
+    [ -x "$room/luajit" ] &&
+        printf 'LuaJIT\tsize\t%s\t0\n' "$(weigh "$room/luajit")"
+    [ -x "$room/luau" ] &&
+        printf 'Luau\tsize\t%s\t0\n' "$(weigh "$room/luau")"
+    [ -x "$room/luau-native" ] &&
+        printf 'Luau, native\tsize\t%s\t0\n' "$(weigh "$room/luau-native")"
+    [ -x "$room/quickjs" ] &&
+        printf 'QuickJS\tsize\t%s\t0\n' "$(weigh "$room/quickjs")"
+} >"$room/runs"
 
 quiet
 {
@@ -88,17 +131,15 @@ quiet
 # on one run of many hosts rather than on every run of one.
 round=0
 while [ "$round" -lt "$best" ]; do
-    printf '%s\n' "$hosts" | tr '|' '\n' | while IFS=';' read -r host a b c; do
-        [ -n "$host" ] || continue
-        if [ -z "$a" ]; then
-            "$host"
-        elif [ -z "$b" ]; then
-            "$host" "$a"
-        elif [ -z "$c" ]; then
-            "$host" "$a" "$b"
-        else
-            "$host" "$a" "$b" "$c"
-        fi
+    printf '%s\n' "$hosts" | tr '|' '\n' | while IFS= read -r line; do
+        [ -n "$line" ] || continue
+        # One host and its words, split on `;` and nowhere else: an engine
+        # name has spaces in it.
+        old=$IFS
+        IFS=';'
+        set -- $line
+        IFS=$old
+        "$@"
     done >>"$room/runs"
     round=$((round + 1))
 done

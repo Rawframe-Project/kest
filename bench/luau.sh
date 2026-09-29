@@ -9,7 +9,9 @@
 # language's machine, and its release engine. Each Kest one says a duration only
 # when it is handed `time`; without it it does the work once and says whether it
 # came out right, which is all the gate asks of it. Not part of the gate: a
-# duration is not a pass or a fail. See D1267.
+# duration is not a pass or a fail. See D1267. The same table is written to
+# `bench/luau.tsv` with when, where and how busy, for `bench/chart.py` to draw
+# as `bench/chart-luau.svg` (D1274).
 #
 #   KEST_LUAU=path/to/luau LUAU_BENCH=path/to/luau/bench sh bench/luau.sh
 set -u
@@ -25,6 +27,15 @@ middle() {
     tr '|' '\n' | grep -E '^[0-9.]+$' | sort -g |
         awk '{ at[NR] = $1 } END { if (NR) print at[int((NR + 1) / 2)] }'
 }
+out=${OUT:-$here/bench/luau.tsv}
+{
+    printf '# taken\t%s\n' "$(date -u +%Y-%m-%d)"
+    printf '# commit\t%s\n' "$(cd "$here" && git rev-parse --short HEAD)"
+    printf '# machine\t%s\n' \
+        "$(awk -F': ' '/^model name/ { print $2; exit }' /proc/cpuinfo)"
+    printf '# load\t%s\n' "$(cut -d' ' -f1 /proc/loadavg)"
+    printf 'engine\tmeasure\tms\tanswer\n'
+} >"$out"
 printf 'test\tluau -O2\tluau --codegen\tkest\tkest release\n'
 for program in "$here"/bench/luau/*.kest; do
     name=$(basename "$program" .kest)
@@ -38,4 +49,9 @@ for program in "$here"/bench/luau/*.kest; do
     release=$("$room/$name" time | middle)
     printf '%s\t%s\t%s\t%s\t%s\n' "$name" "$interpreted" "$native" \
         "$machine" "$release"
+    printf 'Luau\t%s\t%s\t0\nLuau, native\t%s\t%s\t0\n' "$name" \
+        "$interpreted" "$name" "$native" >>"$out"
+    printf 'Kest\t%s\t%s\t0\nKest, compiled\t%s\t%s\t0\n' "$name" \
+        "$machine" "$name" "$release" >>"$out"
 done
+python3 "$here"/bench/chart.py "$here"/bench/results.tsv "$here"/bench

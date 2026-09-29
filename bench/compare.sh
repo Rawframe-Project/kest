@@ -40,6 +40,21 @@ commit=$(git rev-parse --short HEAD)
     printf 'workload\tengine\tms\tinstructions\n'
 } >"$out"
 
+# A machine somebody else is using says what they were doing as much as what
+# this was, so wait a while for it to be quiet, and write down how busy it was.
+quiet() {
+    waited=0
+    while [ "$waited" -lt "${QUIET_WAIT:-600}" ]; do
+        busy=$(cut -d' ' -f1 /proc/loadavg)
+        if awk -v b="$busy" -v q="${QUIET_LOAD:-2}" 'BEGIN { exit !(b < q) }'
+        then
+            return
+        fi
+        sleep 10
+        waited=$((waited + 10))
+    done
+}
+
 # A row is a workload, an engine and the command that runs it, kept one word
 # a line so that it runs as it was given rather than through a shell, which
 # would be measured with it.
@@ -69,7 +84,10 @@ once() {
         return
     fi
     took=$(printf '%s\n' "$counted" | awk -F, '$3 ~ /^task-clock/ { print $1 }')
-    count=$(printf '%s\n' "$counted" | awk -F, '$3 ~ /^instructions/ { print $1 }')
+    # A machine that is somebody's virtual one has no counter for what was
+    # retired, and says so; the row says `-` rather than a word in a number.
+    count=$(printf '%s\n' "$counted" |
+        awk -F, '$3 ~ /^instructions/ { print ($1 ~ /^[0-9]+$/ ? $1 : "-") }')
     printf '%s %s\n' "$took" "$count" >>"$built/row$which.took"
 }
 
@@ -120,6 +138,7 @@ for one in kernel control graph words rules; do
     fi
 done
 
+quiet
 round=0
 while [ "$round" -lt "$best" ]; do
     ran=1

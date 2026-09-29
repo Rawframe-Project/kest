@@ -1,0 +1,18 @@
+# taken	2026-09-29
+# commit	06602b86
+# machine	AMD Ryzen 9 5900X 12-Core Processor
+# load	5.72
+# best of	3
+# lines	107135
+# copies	3200
+engine	measure	ms	answer
+Kest	long	111.12	0
+Luau	long	97.56	0
+Lua 5.4	long	24.05	0
+LuaJIT	long	24.15	0
+QuickJS	long	181.56	0
+daslang	long	1915.07	0
+Kest	copies	52.03	0
+C++	copies	1064.95	0
+Rust	copies	353.18	0
+daslang	copies	1104.49	0

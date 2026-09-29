@@ -65,3 +65,14 @@ fn asks(times: i64) -> i64 no.alloc {
     }
     return sum
 }
+
+// A program that has got away: a loop that never ends, which is what a host
+// running code it did not write has to be able to stop, and how soon after it
+// asks. `start` is the host's, so nothing about it is known while compiling.
+fn spin(start: i64) -> i64 no.alloc no.host {
+    let n = start
+    while true {
+        n += 1
+    }
+    return n
+}

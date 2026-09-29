@@ -200,6 +200,19 @@ Where it stands, from the front page's table (D1203): `bench/compare.sh` at
   program with a body in 34.5 (Lua 5.4 74, LuaJIT 44, Luau 72). What is open:
   those three workloads against LuaJIT's compiler, and `rules` against
   daslang's AOT, 1.46 times on this processor.
+- **Compiling, reloading, weight and a frame's worst** (D1273): a hundred
+  thousand lines to running in 118 ms (Lua 31, Luau 137); 3,200 generic
+  copies in 55 ms (Rust 418, C++ 1,166); the Tetris clone rebuilt in 1.3 to
+  2.3 ms against 0.25 for Lua loading its chunk, which is what is open there;
+  668 KB added to an executable and 25 KB a machine; and the worst of 5,000
+  frames of a world making garbage 0.45 ms against 0.66 to 2.02 elsewhere.
+- **Stopping, threads, and the same answer everywhere** (D1274): Kest's
+  budget costs a frame nothing and a runaway stops microseconds after it is
+  asked, where Lua 5.4's hook costs 2.2 times; a compiled Kest body, like
+  LuaJIT's compiled code, is not stopped at all, which is why code nobody
+  trusts never runs one. Machines of one build scale across threads as the
+  Luas' states do. Whether each language answers the same on every machine is
+  `determinism.yml`'s to say.
 - **A game brought over from Lua** (D1268) found a fault in the compiler and
   three places the language made it longer than the Lua: a struct's state is
   given back from every handler (`g = pressed(g, key)`), two optionals do not

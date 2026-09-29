@@ -6,7 +6,7 @@
 -- `buffer`, which was measured at four times the cost of its own tables (166
 -- against 42 ns a body); so for both of them the bodies are the program's own
 -- tables, filled once, and the host hands over nothing but the call. That is
--- the cheaper frame -- nothing is written back to the host -- and it is theirs.
+-- the cheaper frame -- nothing is written back to the host -- and theirs.
 -- See D1272.
 
 local function moved(x, y, dx, dy, wall)
@@ -90,4 +90,13 @@ function asks(times)
         sum = add(sum, at)
     end
     return sum
+end
+
+-- A program that has got away: a loop that never ends.
+function spin(start)
+    local n = start
+    while true do
+        n = n + 1
+    end
+    return n
 end

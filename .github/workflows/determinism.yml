@@ -1,0 +1,118 @@
+name: determinism
+
+# Whether a language answers the same on every machine: `bench/determinism/sim`
+# in Kest, Lua 5.4, LuaJIT, Luau and JavaScript, on each of the four machines
+# CI has, and the answers put side by side in one table. It is run when asked
+# and when what it runs changes, because it measures languages rather than
+# holding this one to anything the gate does not already hold it to. See
+# D1274.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'bench/determinism/**'
+      - 'bench/determinism.sh'
+      - '.github/workflows/determinism.yml'
+
+jobs:
+  unix:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            platform: linux-x86_64
+            luau: luau-ubuntu.zip
+          - runner: ubuntu-24.04-arm
+            platform: linux-arm64
+            luau: ''
+          - runner: macos-latest
+            platform: macos-arm64
+            luau: luau-macos.zip
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Kest, and the comparators built from their own source
+        run: |
+          make -j kest
+          curl -sL https://www.lua.org/ftp/lua-5.4.9.tar.gz | tar xz
+          make -C lua-5.4.9 -j "$( [ "$(uname)" = Darwin ] && echo macosx || echo linux )" >/dev/null
+          git clone -q https://github.com/LuaJIT/LuaJIT.git luajit
+          make -C luajit -j >/dev/null
+          if [ -n "${{ matrix.luau }}" ]; then
+            curl -sL -o luau.zip https://github.com/luau-lang/luau/releases/download/0.740/${{ matrix.luau }}
+            unzip -q luau.zip -d luau-bin
+          fi
+      - name: the answers
+        run: |
+          export KEST_LIB=lib/
+          PLATFORM=${{ matrix.platform }} KEST=./kest \
+            LUA=lua-5.4.9/src/lua LUAJIT=luajit/src/luajit \
+            LUAU=$( [ -x luau-bin/luau ] && echo luau-bin/luau ) NODE=node \
+            OUT=answers-${{ matrix.platform }}.tsv sh bench/determinism.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: answers-${{ matrix.platform }}
+          path: answers-${{ matrix.platform }}.tsv
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Kest
+        shell: cmd
+        run: tools\build.bat
+      - name: Lua 5.4 and LuaJIT from their own source, and Luau's release
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri https://www.lua.org/ftp/lua-5.4.9.tar.gz -OutFile lua.tar.gz
+          tar xzf lua.tar.gz
+          $sources = Get-ChildItem lua-5.4.9\src\*.c |
+            Where-Object Name -ne 'luac.c' | ForEach-Object FullName
+          cl /nologo /O2 /MD $sources /Fe:lua.exe
+          if ($LASTEXITCODE -ne 0) { throw "Lua would not build" }
+          git clone -q https://github.com/LuaJIT/LuaJIT.git luajit
+          Push-Location luajit\src
+          cmd /c msvcbuild.bat
+          if ($LASTEXITCODE -ne 0) { throw "LuaJIT would not build" }
+          Pop-Location
+          Invoke-WebRequest -Uri https://github.com/luau-lang/luau/releases/download/0.740/luau-windows.zip -OutFile luau.zip
+          Expand-Archive luau.zip -DestinationPath luau-bin
+      - name: the answers
+        shell: bash
+        run: |
+          export KEST_LIB=lib/
+          PLATFORM=windows-x86_64 KEST=./build/win/kest.exe LUA=./lua.exe \
+            LUAJIT=./luajit/src/luajit.exe LUAU=./luau-bin/luau.exe NODE=node \
+            OUT=answers-windows-x86_64.tsv sh bench/determinism.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: answers-windows-x86_64
+          path: answers-windows-x86_64.tsv
+
+  table:
+    needs: [unix, windows]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: answers-*
+          merge-multiple: true
+      - name: side by side
+        run: |
+          {
+            printf '# taken\t%s\n' "$(date -u +%Y-%m-%d)"
+            printf '# commit\t%s\n' "${GITHUB_SHA::8}"
+            printf 'engine\tplatform\tanswer\n'
+            cat answers-*.tsv
+          } > determinism.tsv
+          cat determinism.tsv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: determinism
+          path: determinism.tsv

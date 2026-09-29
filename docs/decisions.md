@@ -43868,3 +43868,106 @@ program, walked every piece of every argument to see it fit its width
 (`any_value`, in what the two flags above it leave over, so the header's shape
 does not move), and a call a body went from 40.6 ns to 33.6, of which two
 thirds is now the body itself.
+
+## D1273 — Compiling, reloading, what an engine weighs, and a frame's worst
+
+*measured*, the next four of the kinds the owner chose (D1272), each drawn from
+a table a script writes and none of them in the gate.
+
+**From source to running.** `bench/compile/write.py` writes the same program in
+every language here -- functions of a loop, a branch and a call, a hundred
+thousand lines of them -- and a generic taken 3,200 ways, in the languages that
+write a copy per type: Kest, C++, Rust and daslang. `bench/compile.sh` times
+each engine's own command line from source to the first line of `main`. The
+first run said Kest took 372 ms over the long program against Lua's 31, and
+`perf` said half of it was `constant_in_file`: folding a body asks of every
+name in it whether it is a constant, and a name that was not a global was
+looked for by walking every declaration in the file -- seven thousand of them,
+once for every `a`, `b` and `k`. The file's constants are gathered once now,
+and the walk is over those: 372 ms to 118, where Luau takes 137, QuickJS 220
+and daslang 2,181. The Luas check nothing and take 31 to 34. The 3,200 copies
+take Kest 55 ms, Rust 418 to an object, C++ 1,166 and daslang 1,378.
+
+**Reloading the same game.** The Tetris clone as it was written for LÖVE is in
+`bench/hosts/tetromino.lua`, unchanged and under its licence, and the Lua hosts
+load it into a running state the way a LÖVE hot-reloader does -- a font and
+the time are all its top level asks of LÖVE -- beside Kest building
+`examples/tetromino.kest` with the library it imports and starting a machine
+on it. 0.25 ms for Lua 5.4 and 0.21 for LuaJIT against 1.3 to 2.3 for Kest,
+which checks the program and compiles its library again every time: `perf`
+has nothing above 6% in it, so what would move it is not compiling the library
+twice, which is a cache and not a fix. Luau cannot read the file, which uses
+`goto`.
+
+**What an engine weighs.** Each host stripped, less the same host with no
+engine in it: Kest adds 668 KB to an executable with its compiler and checker
+in it, Lua 5.4 252, LuaJIT 552, Luau 987 and 1.7 MB with its native tier,
+QuickJS 1.1 MB. A machine holding the frame program before it has run is 25 KB
+in Kest -- sized from the program itself (`kest_needs`) it is the same to a
+hundred bytes -- 26 in Lua 5.4, 55 in LuaJIT, 51 in Luau and 100 in QuickJS,
+each as the engine counts its own memory.
+
+**A frame's worst.** `bench/hosts/churn.{kest,lua,js}` is a world that makes
+garbage: five thousand things with a name and tags each, every one moved every
+frame and 250 made anew, 5,000 frames each timed, every engine answering the
+same sum. Kest's collector walks everything reachable at once where Lua's walk
+a little at a time, and the question was what that does to a frame. The middle
+frame is 0.20 ms in Kest, 0.07 in LuaJIT and 0.18 to 0.68 elsewhere; the worst
+in a hundred is 0.43, against 0.43 to 1.60; the worst is 0.45, and every other
+engine's is longer, from 0.66 (Luau's native tier) to 2.02 (Lua 5.4's
+generational collector). Walking after every frame instead, as a host can,
+costs the middle frame twice and buys nothing at the tail on this world, and
+that row is drawn too.
+
+## D1274 — Whether a language answers the same everywhere, what stopping costs, and worlds side by side
+
+*measured*, the last of the kinds the owner chose (D1272, D1273) that a
+repository can measure by itself; the fifth, what a model writes, waits for the
+blind trial.
+
+**Luau's own benchmarks as a chart.** `bench/luau.sh` writes what it prints to
+`bench/luau.tsv` as well, and `bench/chart-luau.svg` draws the five tests from
+Luau's repository beside the same work in Kest (D1267).
+
+**The same answer everywhere.** `bench/determinism/sim.{kest,lua,js}` pushes a
+few numbers through a sine, a cosine, an angle, a power and a square root a
+hundred thousand times, each step feeding the next, and prints them to
+seventeen digits. `.github/workflows/determinism.yml` runs it in Kest, Lua 5.4
+and LuaJIT built from their source, Luau's release and Node on each of the four
+machines CI has and puts the answers side by side in one table. Kest answers
+with its own `sin` and `pow`, which are the profile's (D941); the Luas answer
+with the platform's C library, and here, on glibc, all three agree with each
+other and none with Kest or Node. Whether each agrees with itself on the other
+three machines is what the workflow says.
+
+**What stopping costs.** Every host measures its frame again with the engine's
+way of stopping a program set and never asked -- Kest's budget, a count hook
+every thousand instructions in Lua, Luau's interrupt, QuickJS's handler -- and
+then times a loop that never ends being stopped from another thread, in a
+process of its own given three seconds. On the dev server: Kest's budget costs
+the frame nothing (1.01 times) and a runaway stops 2.5 to 5 µs after it is
+asked; Lua 5.4's hook costs 2.2 times, because a hook sends every instruction
+down the slow path, and stops in 1.3 µs; Luau's interrupt costs 1.04 to 1.08
+and stops in 4 to 5 µs, native code included; QuickJS costs nothing and stops
+in 23 to 50 µs. Two do not stop at all: LuaJIT's compiled code, which calls no
+hook, and a body Kest's release engine wrote, which spends no budget (D1094)
+-- which is why a machine for code nobody trusts never enters one (D1246).
+Both are drawn as not stopping rather than left out.
+
+**Worlds side by side.** Every host runs the frame on one thread, two, four and
+on up to as many as the machine has, a machine or a state each, and says how
+many times one thread's work they do together. Kest's machines share one build
+and nothing else, and scale as the Luas' separate states do. That found one
+thing about the harness rather than the language: the bodies the other backend
+wrote are bound to a build, not to a machine, so every machine a build starts
+after `kest_natives_here` runs them; the machine and the compiled bodies are
+measured on two builds of the one program.
+
+**What it found in the backend.** `spin` ends in a loop and its `return` is
+never reached, so the C written for it ended in a `goto` with no `return` after
+it, which the host's compiler warns about and nothing here asked it to refuse.
+The body now ends with the machine's own `K0655` stop where the last operation
+written is not a `return`, which no body in the tree but `spin` needs, and
+`check-c.sh` compiles every program's C with `-Werror=return-type`: the C this
+tree wrote for `bench/hosts/bodies.kest` before the change is refused by it and
+the C it writes now is not.
