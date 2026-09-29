@@ -1429,6 +1429,8 @@ static const Instruction INSTRUCTIONS[] = {
     {"div.f32", NONE, {}},
     {"mod.f32", NONE, {}},
     {"neg.f32", NONE, {}},
+    {"sin.f", NONE, {}},
+    {"cos.f", NONE, {}},
     {"lt.i", NONE, {}},
     {"le.i", NONE, {}},
     {"gt.i", NONE, {}},
@@ -2138,6 +2140,8 @@ bool kest_op_allocates(uint8_t op) {
     case KEST_OP_DIV_F32:
     case KEST_OP_MOD_F32:
     case KEST_OP_NEG_F32:
+    case KEST_OP_SIN_F:
+    case KEST_OP_COS_F:
     case KEST_OP_LT_I:
     case KEST_OP_LE_I:
     case KEST_OP_GT_I:
@@ -2471,6 +2475,8 @@ const char *kest_op_stack(const KestModule *module, const KestChunk *chunk,
     case KEST_OP_TO_F32:
     case KEST_OP_NEG_F:
     case KEST_OP_NEG_F32:
+    case KEST_OP_SIN_F:
+    case KEST_OP_COS_F:
     case KEST_OP_NOT:
     case KEST_OP_MOD_I_C:
     case KEST_OP_DIV_I_C:
@@ -3536,4 +3542,140 @@ void kest_module_disassemble(const KestModule *module,
             offset = disassemble_one(module, chunk, offset, out);
         }
     }
+}
+
+// `std.fdlibm`'s sine and cosine, from `lib/std/fdlibm.kest` a line at a time:
+// each expression here is the one written there, bracketed the way that one
+// parses, because a sum taken in another order is another rounding. A multiply
+// and an add stay two roundings however the host's compiler would have them,
+// as they are in the machine and in the C the other backend writes (D1226).
+// See D1279.
+#if defined(__clang__)
+#pragma STDC FP_CONTRACT OFF
+#elif defined(__GNUC__)
+#pragma GCC optimize("fp-contract=off")
+#elif defined(_MSC_VER)
+#pragma fp_contract(off)
+#endif
+
+static uint64_t bits_of(double value) {
+    uint64_t bits;
+    memcpy(&bits, &value, sizeof bits);
+    return bits;
+}
+
+static double of_bits(uint64_t bits) {
+    double value;
+    memcpy(&value, &bits, sizeof value);
+    return value;
+}
+
+static uint32_t high_word(double value) {
+    return (uint32_t)(bits_of(value) >> 32);
+}
+
+static double negated(double value) {
+    return of_bits(bits_of(value) ^ UINT64_C(0x8000000000000000));
+}
+
+static double sine_kernel(double x, double y, bool with_tail) {
+    double s1 = of_bits(UINT64_C(0xBFC5555555555549));
+    double s2 = of_bits(UINT64_C(0x3F8111111110F8A6));
+    double s3 = of_bits(UINT64_C(0xBF2A01A019C161D5));
+    double s4 = of_bits(UINT64_C(0x3EC71DE357B1FE7D));
+    double s5 = of_bits(UINT64_C(0xBE5AE5E68A2B9CEB));
+    double s6 = of_bits(UINT64_C(0x3DE5D93A5ACFD57C));
+    double z = x * x;
+    double w = z * z;
+    double r = (s2 + z * (s3 + z * s4)) + (z * w) * (s5 + z * s6);
+    double v = z * x;
+    if (!with_tail) {
+        return x + v * (s1 + z * r);
+    }
+    return x - (((z * (0.5 * y - v * r)) - y) - v * s1);
+}
+
+static double cosine_kernel(double x, double y) {
+    double c1 = of_bits(UINT64_C(0x3FA555555555554C));
+    double c2 = of_bits(UINT64_C(0xBF56C16C16C15177));
+    double c3 = of_bits(UINT64_C(0x3EFA01A019CB1590));
+    double c4 = of_bits(UINT64_C(0xBE927E4F809C52AD));
+    double c5 = of_bits(UINT64_C(0x3E21EE9EBDB4B1C4));
+    double c6 = of_bits(UINT64_C(0xBDA8FAE9BE8838D4));
+    double z = x * x;
+    double w = z * z;
+    double r = z * (c1 + z * (c2 + z * c3)) + (w * w) * (c4 + z * (c5 + z * c6));
+    double hz = 0.5 * z;
+    double v = 1.0 - hz;
+    return v + (((1.0 - v) - hz) + (z * r - x * y));
+}
+
+typedef struct {
+    double head;
+    double tail;
+    int32_t quarter;
+} Reduced;
+
+static Reduced reduced(double x) {
+    double to_int = of_bits(UINT64_C(0x4338000000000000));
+    double inv_pio2 = of_bits(UINT64_C(0x3FE45F306DC9C883));
+    double pio2_1 = of_bits(UINT64_C(0x3FF921FB54400000));
+    double pio2_2 = of_bits(UINT64_C(0x3DD0B4611A600000));
+    double pio2_2t = of_bits(UINT64_C(0x3BA3198A2E037073));
+    double pio2_3 = of_bits(UINT64_C(0x3BA3198A2E000000));
+    double pio2_3t = of_bits(UINT64_C(0x397B839A252049C1));
+    double turns = (x * inv_pio2 + to_int) - to_int;
+    int32_t quarter = 0;
+    if (of_bits(bits_of(turns) & UINT64_C(0x7FFFFFFFFFFFFFFF)) < 4.0e18) {
+        quarter = (int32_t)((int64_t)turns & 3);
+    }
+    double t = x - turns * pio2_1;
+    double w = turns * pio2_2;
+    double r = t - w;
+    w = turns * pio2_2t - ((t - r) - w);
+    t = r;
+    w = turns * pio2_3;
+    r = t - w;
+    w = turns * pio2_3t - ((t - r) - w);
+    Reduced out;
+    out.head = r - w;
+    out.tail = (r - out.head) - w;
+    out.quarter = quarter;
+    return out;
+}
+
+double kest_fdlibm_sin(double value) {
+    uint32_t high = high_word(value) & 0x7fffffffu;
+    if (high <= 0x3fe921fbu) {
+        if (high < 0x3e500000u) {
+            return value;
+        }
+        return sine_kernel(value, 0.0, false);
+    }
+    if (high >= 0x7ff00000u) {
+        return value - value;
+    }
+    Reduced r = reduced(value);
+    return r.quarter == 0   ? sine_kernel(r.head, r.tail, true)
+           : r.quarter == 1 ? cosine_kernel(r.head, r.tail)
+           : r.quarter == 2 ? negated(sine_kernel(r.head, r.tail, true))
+                            : negated(cosine_kernel(r.head, r.tail));
+}
+
+double kest_fdlibm_cos(double value) {
+    uint32_t high = high_word(value) & 0x7fffffffu;
+    if (high <= 0x3fe921fbu) {
+        if (high < 0x3e46a09eu) {
+            return 1.0;
+        }
+        return cosine_kernel(value, 0.0);
+    }
+    if (high >= 0x7ff00000u) {
+        return value - value;
+    }
+    Reduced r = reduced(value);
+    return r.quarter == 0   ? cosine_kernel(r.head, r.tail)
+           : r.quarter == 1 ? negated(sine_kernel(r.head, r.tail, true))
+           : r.quarter == 2 ? negated(cosine_kernel(r.head, r.tail))
+                            : sine_kernel(r.head, r.tail, true);
 }

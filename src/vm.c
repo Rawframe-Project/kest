@@ -3909,6 +3909,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         [KEST_OP_DIV_F32] = &&thread_KEST_OP_DIV_F32,
         [KEST_OP_MOD_F32] = &&thread_KEST_OP_MOD_F32,
         [KEST_OP_NEG_F32] = &&thread_KEST_OP_NEG_F32,
+        [KEST_OP_SIN_F] = &&thread_KEST_OP_SIN_F,
+        [KEST_OP_COS_F] = &&thread_KEST_OP_COS_F,
         [KEST_OP_LT_I] = &&thread_KEST_OP_LT_I,
         [KEST_OP_LE_I] = &&thread_KEST_OP_LE_I,
         [KEST_OP_GT_I] = &&thread_KEST_OP_GT_I,
@@ -5807,6 +5809,12 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             NEXT;
         case KEST_OP_NEG_F32: THREADED(KEST_OP_NEG_F32)
             top[-1].real = (double)(-(float)top[-1].real);
+            NEXT;
+        case KEST_OP_SIN_F: THREADED(KEST_OP_SIN_F)
+            top[-1].real = kest_fdlibm_sin(top[-1].real);
+            NEXT;
+        case KEST_OP_COS_F: THREADED(KEST_OP_COS_F)
+            top[-1].real = kest_fdlibm_cos(top[-1].real);
             NEXT;
 
         case KEST_OP_LT_I: THREADED(KEST_OP_LT_I)

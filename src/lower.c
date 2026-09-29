@@ -838,6 +838,8 @@ static const struct {
     {KEST_OP_MUL_F32, {NO_OPERAND}},
     {KEST_OP_DIV_F32, {NO_OPERAND}},
     {KEST_OP_NEG_F32, {NO_OPERAND}},
+    {KEST_OP_SIN_F, {NO_OPERAND}},
+    {KEST_OP_COS_F, {NO_OPERAND}},
     {KEST_OP_LT_I, {NO_OPERAND}},
     {KEST_OP_LE_I, {NO_OPERAND}},
     {KEST_OP_GT_I, {NO_OPERAND}},
@@ -936,6 +938,30 @@ static const Operand *carried_operands(uint8_t op) {
 // body being written: written already, by the same file, small, and made of
 // nothing but what `CARRIED` names.
 static uint16_t operand_at(const uint8_t *code, uint32_t at);
+
+// The instruction that answers a call of the function at `index` where the
+// machine has one -- the sine and the cosine, which `std.math` hands to
+// `std.fdlibm` -- and nought where it does not. A call of either was a call,
+// a call inside it and a hundred instructions of the library's walked a step
+// at a time; the machine answers the same bits in one. Off with the other
+// fusions, and for a build that is going to be profiled, which counts calls
+// as they were written. See D1279.
+static uint8_t answered_here(const Lower *lower, uint16_t index) {
+    if (!fusing() || lower->module->carrying_off ||
+        index >= lower->module->count) {
+        return 0;
+    }
+    const char *name = lower->module->functions[index]->name;
+    if (strcmp(name, "std.fdlibm.sin#f64") == 0 ||
+        strcmp(name, "std.math.sin#f64") == 0) {
+        return KEST_OP_SIN_F;
+    }
+    if (strcmp(name, "std.fdlibm.cos#f64") == 0 ||
+        strcmp(name, "std.math.cos#f64") == 0) {
+        return KEST_OP_COS_F;
+    }
+    return 0;
+}
 
 static bool may_carry(const Lower *lower, uint16_t index) {
     if (!fusing() || lower->module->carrying_off ||
@@ -1851,6 +1877,10 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         return;
 
     case KEST_IR_CALL:
+        if (answered_here(lower, op->imm[0]) != 0) {
+            emit(lower, answered_here(lower, op->imm[0]), span);
+            return;
+        }
         if (may_carry(lower, op->imm[0])) {
             uint16_t slot = 0;
             bool one = index + 2 < lower->body->op_count &&

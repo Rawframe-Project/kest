@@ -2176,6 +2176,8 @@ static const char *kinds_step(Kinds *w) {
     case KEST_OP_TO_F32:
     case KEST_OP_NEG_F:
     case KEST_OP_NEG_F32:
+    case KEST_OP_SIN_F:
+    case KEST_OP_COS_F:
     case KEST_OP_NOT:
     case KEST_OP_HASH_I:
     case KEST_OP_HASH_F:

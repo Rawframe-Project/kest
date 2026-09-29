@@ -250,6 +250,11 @@ typedef enum {
     KEST_OP_DIV_F32,
     KEST_OP_MOD_F32,
     KEST_OP_NEG_F32,
+    // The sine and the cosine of the number on top, answered the way
+    // `std.fdlibm` answers them, bit for bit, where a call to either was
+    // written. See D1279.
+    KEST_OP_SIN_F,
+    KEST_OP_COS_F,
 
     KEST_OP_LT_I,
     KEST_OP_LE_I,
@@ -855,6 +860,13 @@ const char *kest_op_stack(const KestModule *module, const KestChunk *chunk,
 // piece past the last one said about is not a piece. See D1277.
 #define KEST_NUMBERED_MOST 16u
 uint32_t kest_pieces_numbered(uint32_t which);
+
+// `std.fdlibm`'s sine and cosine written again in C, the same operations in
+// the same order on the same constants, for the two instructions above: what
+// the library answers is what these answer, which `examples/determinism.kest`
+// holds with the library itself run beside them. See D1279.
+double kest_fdlibm_sin(double value);
+double kest_fdlibm_cos(double value);
 
 // What each number an instruction carries is, which is what the verifier holds
 // it to before anything runs: one of the body's slots or constants, one of the
