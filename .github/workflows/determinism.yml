@@ -39,6 +39,10 @@ jobs:
           curl -sL https://www.lua.org/ftp/lua-5.4.9.tar.gz | tar xz
           make -C lua-5.4.9 -j "$( [ "$(uname)" = Darwin ] && echo macosx || echo linux )" >/dev/null
           git clone -q https://github.com/LuaJIT/LuaJIT.git luajit
+          # LuaJIT's makefile will not guess which macOS it is building for.
+          if [ "$(uname)" = Darwin ]; then
+            export MACOSX_DEPLOYMENT_TARGET=$(sw_vers -productVersion | cut -d. -f1-2)
+          fi
           make -C luajit -j >/dev/null
           if [ -n "${{ matrix.luau }}" ]; then
             curl -sL -o luau.zip https://github.com/luau-lang/luau/releases/download/0.740/${{ matrix.luau }}
