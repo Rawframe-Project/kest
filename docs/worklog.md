@@ -42900,3 +42900,18 @@ costs twice what a 32-bit division does on that core. The machine asks it in
 `-fno-gcse`, `-O3`, `-march=haswell`, clang) over the five workloads, best of
 nine; the change built there and timed against the build before it, best of
 nine; cycles on the dev server before and after, best of six; `make most`.
+
+## 2026-09-29, the sine and the cosine as instructions
+
+The first of Luau's tests the machine lost badly: `trig`, five times Luau's
+interpreter, because a deterministic sine was a hundred instructions of Kest.
+`sin.f` and `cos.f` answer what `std.fdlibm` answers, in C written from it a
+line at a time, and the lowering writes them where either was called. The
+determinism example folds 2,400 more sines and cosines at the ends a sweep did
+not reach, with the answer taken from the library first. See D1279.
+
+**Runs:** `bench/luau/trig` under `perf stat` with the instructions and with
+`KEST_PLAIN`; `examples/determinism.kest` both ways and through `check-c.sh`;
+a sine dropping its tail in one quarter, in a copy, answering another number;
+`make figures`; `make fast`; `check-tables.sh`, `check-dead.sh`,
+`check-costs.sh`, `check-verifier.sh`; `make most`.

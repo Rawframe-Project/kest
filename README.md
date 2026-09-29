@@ -442,7 +442,7 @@ What is there today: whole numbers and floats at every width with defined
 wrapping, `text`, structs, fixed runs, arrays, `store<T>` and `ref<T>`, enums
 that carry values, sets of named bits, optionals, functions as values,
 generics compiled a copy per type, `defer`, `match`, `scratch { }` working
-memory the compiler proves nothing escapes; a bytecode VM of 218 instructions;
+memory the compiler proves nothing escapes; a bytecode VM of 220 instructions;
 a C embedding API of 113 doors; a standard library of eleven modules written in
 Kest; and CI that builds and runs every example on Linux x86-64 and arm64,
 Windows and macOS, holding all four to the same bytes.

@@ -44110,3 +44110,36 @@ On the benchmark machine, best of nine: `control` 133.6 ms to 101.3, `rules`
 418 to 392, `kernel` 82 to 81. LuaJIT's interpreter is still quicker on
 `control`; what is left is the division itself, which a divisor written in the
 program could be spared as the release engine is spared it.
+
+## D1279 — The sine and the cosine are instructions of the machine
+
+On Luau's own `trig` the machine was five times Luau's interpreter, and D1275
+said why: Luau asks the platform's C library for a sine, and Kest works one out
+in `std.fdlibm`, in Kest, so every machine gets the same bits (D1235). That is
+five calls and about a hundred instructions walked a step at a time for every
+sine, against one call into C.
+
+The machine has two instructions now, `sin.f` and `cos.f`, which answer what
+`std.fdlibm.sin` and `std.fdlibm.cos` answer. `kest_fdlibm_sin` and
+`kest_fdlibm_cos` are the library's functions written again in C a line at a
+time -- the same operations in the same order on the same constants, each sum
+bracketed the way the Kest one parses -- under the pragma that keeps a multiply
+and an add two roundings, which the C the other backend writes carries for the
+same reason (D1226), and MSVC's form of it for the Windows build. The lowering
+writes one where a call of `std.math.sin`, `std.math.cos` or either of the
+library's was written, with the other fusions: `KEST_PLAIN` calls the library,
+and so does a build that is going to be profiled, which counts calls as they
+were written. The other backend compiles the library itself, as it did.
+
+The library stays what says what a sine is; the instructions are held to it.
+`examples/determinism.kest` folded two thousand sines and cosines between -50
+and 50 and the edges; it folds 2,400 more now -- under a hundred-millionth,
+around a million, around a hundred million billion, and past four billion
+billion, where the quarter is no longer known -- taken with the library before
+the instructions existed, which moved its answer to 1130490413983204738. The
+gate runs every example with the fusions and without them, and every example
+on every machine CI has, so the instructions and the library answer the same
+2,400 and 2,000 on each. A sine that drops its tail in one quarter was put in
+by hand and the example answered another number.
+
+`bench/luau/trig`: 1,237 million instructions to 254.
