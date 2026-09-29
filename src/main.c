@@ -2470,7 +2470,9 @@ static int run(const char *command, const char *executable, char **paths,
     // body each as it is made: a build told afterwards would have nothing
     // left to read.
     if (writing_c) {
-        kest_build_writes_c(build, true);
+        static const KestCWriter WRITES_C = {kest_emitc_new, kest_emitc_body,
+                                             kest_emitc_done};
+        kest_build_writes_c(build, &WRITES_C);
     }
     if (releasing) {
         kest_build_carries_sources(build);
