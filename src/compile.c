@@ -4552,8 +4552,14 @@ static void compile_counting(Compiler *compiler, const KestStmt *stmt) {
         return;
     }
     take_back(compiler, &before);
-    compiler->program->diags->count = before.diags;
-    compiler->program->diags->error_count = before.errors;
+    // What the unrolled form said is taken back with it, unless it was that
+    // the build ran out: that is said once, by the stage that ran out, and a
+    // count taken back under it was a build that stopped half way and
+    // answered as though it had compiled. See D1284.
+    if (!compiler->program->diags->starved) {
+        compiler->program->diags->count = before.diags;
+        compiler->program->diags->error_count = before.errors;
+    }
     compile_count(compiler, stmt);
     if (compiler->slot_high_water < high_water) {
         compiler->slot_high_water = high_water;
