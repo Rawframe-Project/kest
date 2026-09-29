@@ -42915,3 +42915,20 @@ not reach, with the answer taken from the library first. See D1279.
 a sine dropping its tail in one quarter, in a copy, answering another number;
 `make figures`; `make fast`; `check-tables.sh`, `check-dead.sh`,
 `check-costs.sh`, `check-verifier.sh`; `make most`.
+
+## 2026-09-29, Luau's tests: a conversion, an index by a local, two locals weighed
+
+The rest of Luau's tests. `pcmmix` compiled narrowed each sample through a
+call; the generated C converts a number inside the width itself and asks the
+library for the ends (D1280), and what is left is element checks in the loop,
+written down as the next thing a compiler of loops would take. `matrixmult`,
+`life` and `qsort` in the machine: `index.l` for the second half of
+`cells[y][x]`, `index.ll` for an element of any width with a store after it
+taken in as `index.to.ll`, and `jump.false.lt.ll` and `.le.ll` for
+`while i < n` (D1281).
+
+**Runs:** `kest build --release` of `pcmmix` timed before and after, and its
+generated C by hand with typed stores; `perf annotate` of the compiled body;
+`KEST_DEEP=1` counts of what `qsort` ran; the Luau tests and the five workloads
+under `perf stat`; `make figures`; `make fast`; `check-tables.sh`,
+`check-dead.sh`, `check-costs.sh`, `check-verifier.sh`; `make most`.

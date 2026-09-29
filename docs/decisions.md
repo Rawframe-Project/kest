@@ -44143,3 +44143,47 @@ on every machine CI has, so the instructions and the library answer the same
 by hand and the example answered another number.
 
 `bench/luau/trig`: 1,237 million instructions to 254.
+
+## D1280 — A conversion inside the width is written where it is
+
+On Luau's `pcmmix` the release engine was twice Luau's native tier. Two samples
+a turn are narrowed from a float to sixteen bits, and each was a call of
+`kest_real_to_int`, which says where a number outside the width stops (D669)
+and, for one inside it, converts it as C does. The generated C now writes that
+middle case itself -- `v > low && v < high ? (int64_t)v : kest_real_to_int(...)`
+with the width's two ends as literals from `kest_real_bounds` -- and asks the
+library for the ends, for what is not a number and for a `u64`, which is
+converted another way. It is the library's case, not a third copy of the rule:
+the bounds come from the same table and the comparison is the one the library
+makes. `pcmmix` compiled: 1.36 ms to 1.28 on the dev server.
+
+What is left of the gap is not the conversion. The loop is 109 instructions a
+sample at 1.7 a cycle, where Luau's native code is some forty: every element
+read and written checks the run it is in, its kind and its length, and reads
+where the run's bytes are, again, and a typed store in place of `memcpy` changed
+nothing, so it is not the compiler losing track of what a store could touch.
+Taking those checks out of the loop is a compiler of loops, which this backend
+is not yet.
+
+## D1281 — An index by a local, an element of any width, and two locals weighed
+
+On Luau's `matrixmult`, `life` and `qsort` the machine was 1.2 to 1.4 times
+Luau's interpreter. Counting what each ran said where:
+
+- `a[i][k]` read the outer run with `index.ll` and then the inner one with
+  `load` and `index`, two dispatches for the second half of every `cells[y][x]`.
+  `index.l` is the two: the run on the stack, the index read out of its slot.
+- `index.ll`, the run and the index both locals, was held to elements of one
+  slot, because an element of more is usually stored next and `index.to` takes
+  the store (D1155). A piece of text handed to a comparison is not stored, and
+  every comparison a sort makes read its two with `load2` and `index`. It takes
+  an element of any width now, and a store that follows it is taken into it as
+  `index.to.ll`, so the store keeps what it had.
+- `while i < n` was `load2` and `jump.false.lt.i`. `jump.false.lt.ll` and
+  `jump.false.le.ll` weigh two locals where they are.
+
+Each is a fusion, off with the others under `KEST_PLAIN`, which the gate runs
+every example both ways against; the count of bytes the machine says it loaded
+is held to what these read, a slot for `index.l` and two for the two jumps.
+Instructions, before and after: `matrixmult` 337 million to 298, `life` 1,164
+to 1,080, `qsort` 1,301 to 1,199, `rules` 2,667 to 2,612.
