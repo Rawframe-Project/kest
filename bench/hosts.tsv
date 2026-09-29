@@ -1,7 +1,7 @@
 # taken	2026-09-29
-# commit	a5310c3c
+# commit	32b73d91
 # machine	Intel Core Processor (Haswell, no TSX)
-# load	1.11
+# load	0.98
 # best of	5
 engine	measure	ns	answer
 Kest	size	557088.00	0
@@ -10,118 +10,118 @@ LuaJIT	size	569440.00	0
 Luau	size	998040.00	0
 Luau, native	size	1714856.00	0
 QuickJS	size	1196136.00	0
-C	frame	3.14	2902674
+C	frame	3.13	2902674
 Kest	memory	26833.00	0
-Kest	frame	71.42	2902674
-Kest	budget	70.40	2902674
-Kest	body	74.31	2902674
-Kest	ask	26.90	499999500000
-Kest, compiled	frame	5.13	2902674
-Kest, compiled	budget	5.13	2902674
-Kest, compiled	body	46.39	2902674
-Kest, compiled	ask	17.44	499999500000
-C	threads1	3.27	1612939
-C	threads2	1.73	1612939
-C	threads4	1.14	1612939
-C	threads8	0.77	1612939
-Kest	threads1	67.37	1612939
-Kest	threads2	35.80	1612939
-Kest	threads4	18.59	1612939
-Kest	threads8	11.69	1612939
-Kest, compiled	threads1	5.61	1612939
-Kest, compiled	threads2	3.03	1612939
-Kest, compiled	threads4	1.55	1612939
-Kest, compiled	threads8	1.23	1612939
-Kest	stop	17391.00	0
-Kest, compiled	stop	11771.00	0
-Kest	reload	1689306.00	0
-Kest	churn50	382785.00	331681
-Kest	churn99	1150520.00	331681
-Kest	churnmax	2299383.00	331681
-Kest, walked between frames	churn50	1001928.00	331681
-Kest, walked between frames	churn99	1737945.00	331681
-Kest, walked between frames	churnmax	2300129.00	331681
+Kest	frame	71.59	2902674
+Kest	budget	71.18	2902674
+Kest	body	74.72	2902674
+Kest	ask	27.63	499999500000
+Kest, compiled	frame	5.12	2902674
+Kest, compiled	budget	5.12	2902674
+Kest, compiled	body	46.28	2902674
+Kest, compiled	ask	16.94	499999500000
+C	threads1	3.35	1612939
+C	threads2	1.71	1612939
+C	threads4	0.95	1612939
+C	threads8	0.82	1612939
+Kest	threads1	66.89	1612939
+Kest	threads2	34.11	1612939
+Kest	threads4	18.30	1612939
+Kest	threads8	9.89	1612939
+Kest, compiled	threads1	5.20	1612939
+Kest, compiled	threads2	2.86	1612939
+Kest, compiled	threads4	1.56	1612939
+Kest, compiled	threads8	1.16	1612939
+Kest	stop	15035.00	0
+Kest, compiled	stop	10724.00	0
+Kest	reload	1695610.00	0
+Kest	churn50	381187.00	331681
+Kest	churn99	1147468.00	331681
+Kest	churnmax	1932663.00	331681
+Kest, walked between frames	churn50	983840.00	331681
+Kest, walked between frames	churn99	1703131.00	331681
+Kest, walked between frames	churnmax	2503524.00	331681
 Lua 5.4	memory	26855.00	0
-Lua 5.4	frame	145.93	2902674
-Lua 5.4	budget	299.09	2902674
-Lua 5.4	body	156.59	2902674
-Lua 5.4	ask	37.15	499999500000
-Lua 5.4	reload	528751.00	0
-Lua 5.4	churn50	1238895.00	331681
-Lua 5.4	churn99	4976285.00	331681
-Lua 5.4	churnmax	8602528.00	331681
-Lua 5.4	stop	13305.00	0
-Lua 5.4	threads1	150.27	1612939
-Lua 5.4	threads2	90.05	1612939
-Lua 5.4	threads4	43.26	1612939
-Lua 5.4	threads8	23.97	1612939
-Lua 5.4, generational	churn50	1218356.00	331681
-Lua 5.4, generational	churn99	5978120.00	331681
-Lua 5.4, generational	churnmax	11166159.00	331681
+Lua 5.4	frame	139.10	2902674
+Lua 5.4	budget	312.90	2902674
+Lua 5.4	body	157.41	2902674
+Lua 5.4	ask	34.25	499999500000
+Lua 5.4	reload	474250.00	0
+Lua 5.4	churn50	1152654.00	331681
+Lua 5.4	churn99	4461286.00	331681
+Lua 5.4	churnmax	7581339.00	331681
+Lua 5.4	stop	12651.00	0
+Lua 5.4	threads1	139.80	1612939
+Lua 5.4	threads2	79.32	1612939
+Lua 5.4	threads4	41.29	1612939
+Lua 5.4	threads8	22.87	1612939
+Lua 5.4, generational	churn50	1159780.00	331681
+Lua 5.4, generational	churn99	5151683.00	331681
+Lua 5.4, generational	churnmax	10735849.00	331681
 LuaJIT, interpreted	memory	57016.00	0
-LuaJIT, interpreted	frame	82.82	2902674
-LuaJIT, interpreted	budget	111.23	2902674
-LuaJIT, interpreted	body	120.35	2902674
-LuaJIT, interpreted	ask	25.52	499999500000
-LuaJIT, interpreted	reload	485491.00	0
-LuaJIT, interpreted	churn50	519315.00	331681
-LuaJIT, interpreted	churn99	2331307.00	331681
-LuaJIT, interpreted	churnmax	4027533.00	331681
-LuaJIT, interpreted	stop	24571.00	0
-LuaJIT, interpreted	threads1	85.46	1612939
-LuaJIT, interpreted	threads2	45.72	1612939
-LuaJIT, interpreted	threads4	25.81	1612939
-LuaJIT, interpreted	threads8	12.95	1612939
+LuaJIT, interpreted	frame	83.66	2902674
+LuaJIT, interpreted	budget	113.53	2902674
+LuaJIT, interpreted	body	123.82	2902674
+LuaJIT, interpreted	ask	25.20	499999500000
+LuaJIT, interpreted	reload	482993.00	0
+LuaJIT, interpreted	churn50	509736.00	331681
+LuaJIT, interpreted	churn99	2452862.00	331681
+LuaJIT, interpreted	churnmax	4354460.00	331681
+LuaJIT, interpreted	stop	24148.00	0
+LuaJIT, interpreted	threads1	85.65	1612939
+LuaJIT, interpreted	threads2	47.99	1612939
+LuaJIT, interpreted	threads4	24.36	1612939
+LuaJIT, interpreted	threads8	16.47	1612939
 LuaJIT	memory	57016.00	0
-LuaJIT	frame	3.29	2902674
-LuaJIT	budget	3.29	2902674
-LuaJIT	body	87.56	2902674
-LuaJIT	ask	26.33	499999500000
-LuaJIT	reload	404663.00	0
-LuaJIT	churn50	208290.00	331681
-LuaJIT	churn99	1792752.00	331681
-LuaJIT	churnmax	3557381.00	331681
+LuaJIT	frame	3.35	2902674
+LuaJIT	budget	3.31	2902674
+LuaJIT	body	87.11	2902674
+LuaJIT	ask	27.83	499999500000
+LuaJIT	reload	399099.00	0
+LuaJIT	churn50	195803.00	331681
+LuaJIT	churn99	1686256.00	331681
+LuaJIT	churnmax	2819528.00	331681
 LuaJIT	stop	0.00	0
-LuaJIT	threads1	4.00	1612939
-LuaJIT	threads2	2.04	1612939
-LuaJIT	threads4	1.33	1612939
-LuaJIT	threads8	1.12	1612939
+LuaJIT	threads1	3.95	1612939
+LuaJIT	threads2	1.99	1612939
+LuaJIT	threads4	1.24	1612939
+LuaJIT	threads8	1.07	1612939
 Luau	memory	52563.00	0
-Luau	frame	95.60	2902674
-Luau	budget	94.74	2902674
-Luau	body	166.75	2902674
-Luau	ask	28.70	499999500000
-Luau	churn50	682833.00	331681
-Luau	churn99	1801308.00	331681
-Luau	churnmax	3062238.00	331681
-Luau	stop	42329.00	0
-Luau	threads1	102.47	1612939
-Luau	threads2	49.41	1612939
-Luau	threads4	29.06	1612939
-Luau	threads8	17.94	1612939
+Luau	frame	93.19	2902674
+Luau	budget	100.14	2902674
+Luau	body	172.55	2902674
+Luau	ask	30.83	499999500000
+Luau	churn50	684765.00	331681
+Luau	churn99	1802949.00	331681
+Luau	churnmax	3080822.00	331681
+Luau	stop	37584.00	0
+Luau	threads1	93.70	1612939
+Luau	threads2	51.02	1612939
+Luau	threads4	26.98	1612939
+Luau	threads8	16.71	1612939
 Luau, native	memory	52563.00	0
-Luau, native	frame	43.05	2902674
-Luau, native	budget	43.70	2902674
-Luau, native	body	135.78	2902674
-Luau, native	ask	27.69	499999500000
-Luau, native	churn50	403889.00	331681
-Luau, native	churn99	1317612.00	331681
-Luau, native	churnmax	2294839.00	331681
-Luau, native	stop	45296.00	0
-Luau, native	threads1	44.84	1612939
-Luau, native	threads2	23.09	1612939
-Luau, native	threads4	12.86	1612939
-Luau, native	threads8	6.97	1612939
+Luau, native	frame	41.68	2902674
+Luau, native	budget	43.74	2902674
+Luau, native	body	136.38	2902674
+Luau, native	ask	28.88	499999500000
+Luau, native	churn50	421075.00	331681
+Luau, native	churn99	1302514.00	331681
+Luau, native	churnmax	2269831.00	331681
+Luau, native	stop	45329.00	0
+Luau, native	threads1	45.02	1612939
+Luau, native	threads2	22.38	1612939
+Luau, native	threads4	11.84	1612939
+Luau, native	threads8	7.50	1612939
 QuickJS	memory	102800.00	0
-QuickJS	frame	626.25	2902674
-QuickJS	budget	558.47	2902674
-QuickJS	body	860.23	2902674
-QuickJS	ask	80.07	499999500000
-QuickJS	churn50	1215584.00	331681
-QuickJS	churn99	2315668.00	331681
-QuickJS	churnmax	3708675.00	331681
-QuickJS	stop	86307.00	0
-QuickJS	threads1	601.23	1612939
-QuickJS	threads2	314.52	1612939
-QuickJS	threads4	154.14	1612939
-QuickJS	threads8	90.99	1612939
+QuickJS	frame	551.21	2902674
+QuickJS	budget	559.51	2902674
+QuickJS	body	845.30	2902674
+QuickJS	ask	72.18	499999500000
+QuickJS	churn50	1213308.00	331681
+QuickJS	churn99	2034237.00	331681
+QuickJS	churnmax	3359886.00	331681
+QuickJS	stop	66864.00	0
+QuickJS	threads1	564.01	1612939
+QuickJS	threads2	299.60	1612939
+QuickJS	threads4	164.44	1612939
+QuickJS	threads8	91.76	1612939

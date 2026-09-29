@@ -1,18 +1,18 @@
 # taken	2026-09-29
-# commit	a5310c3c
+# commit	32b73d91
 # machine	Intel Core Processor (Haswell, no TSX)
-# load	1.28
+# load	1.32
 # best of	5
 # lines	107135
 # copies	3200
 engine	measure	ms	answer
-Kest	long	217.34	0
-Luau	long	292.69	0
-Lua 5.4	long	62.79	0
-LuaJIT	long	53.80	0
-QuickJS	long	425.35	0
-daslang	long	4955.12	0
-Kest	copies	84.37	0
-C++	copies	2728.11	0
-Rust	copies	1108.85	0
-daslang	copies	6031.86	0
+Kest	long	211.09	0
+Luau	long	276.47	0
+Lua 5.4	long	55.20	0
+LuaJIT	long	51.21	0
+QuickJS	long	409.44	0
+daslang	long	4769.91	0
+Kest	copies	80.07	0
+C++	copies	2499.71	0
+Rust	copies	1032.01	0
+daslang	copies	5864.70	0
