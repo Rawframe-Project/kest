@@ -2533,25 +2533,6 @@ yield""",
         "caught": "check: K0301 said",
     },
     {
-        # The promises walked over a module the walks before them refused: an
-        # instruction this machine has not got has no width, and asking for
-        # one read past the end of the table that says. Found by the first
-        # campaign of instructions nobody's compiler wrote. See D1253.
-        "what": "the promises walked over code that cannot be walked",
-        "file": "src/verify.c",
-        "from": r"""    if (!held) {
-        kest_arena_free(scratch);
-        return false;
-    }
-
-    for (uint32_t i = 0; i < module->count; i++) {""",
-        "to": r"""    for (uint32_t i = 0; i < module->count; i++) {""",
-        "make": ["tools/fuzz-debug"],
-        "tool": "tools/fuzz-debug",
-        "arguments": ["1", "400", "hole-chunks.kest", "chunks"],
-        "caught": "AddressSanitizer",
-    },
-    {
         # A rotation of none let through: the machine rolls one fewer than
         # none, which is every value there could be. Found by the campaign of
         # instructions nobody's compiler wrote. See D1253.

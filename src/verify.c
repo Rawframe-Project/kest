@@ -3105,10 +3105,11 @@ bool kest_module_prove(const KestModule *module, KestArena *arena,
     }
 
     // The promises are walked over code the walks above proved can be
-    // walked: an instruction this machine has not got has no width, and a
-    // walk that asked it for one read past the end of the table that says.
-    // A module refused above is refused, and nothing more is asked of it.
-    // See D1253.
+    // walked. A module refused above is refused, and nothing more is asked
+    // of it: what the promises would say about it is about code nobody will
+    // run. An instruction this machine has not got was once read past the
+    // end of the table of widths here; the table answers one for it now.
+    // See D1253 and D1286.
     if (!held) {
         kest_arena_free(scratch);
         return false;
