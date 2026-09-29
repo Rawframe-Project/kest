@@ -1751,6 +1751,43 @@ uint64_t kest_mix(uint64_t bits) {
     return bits;
 }
 
+bool kest_real_bounds(uint16_t scalar, double *low, double *high) {
+    if (scalar == KEST_L_U64) {
+        return false;
+    }
+    *low = -9223372036854775808.0;
+    *high = 9223372036854775807.0;
+    switch (scalar) {
+    case KEST_L_I8:
+        *low = -128.0;
+        *high = 127.0;
+        break;
+    case KEST_L_I16:
+        *low = -32768.0;
+        *high = 32767.0;
+        break;
+    case KEST_L_I32:
+        *low = -2147483648.0;
+        *high = 2147483647.0;
+        break;
+    case KEST_L_U8:
+        *low = 0.0;
+        *high = 255.0;
+        break;
+    case KEST_L_U16:
+        *low = 0.0;
+        *high = 65535.0;
+        break;
+    case KEST_L_U32:
+        *low = 0.0;
+        *high = 4294967295.0;
+        break;
+    default:
+        break;
+    }
+    return true;
+}
+
 int64_t kest_real_to_int(uint16_t scalar, double value) {
     // C leaves a value outside the range undefined. This does not: it stops at
     // the end, which is the answer every reader expects and the only one that

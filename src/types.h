@@ -767,6 +767,12 @@ static inline int64_t kest_narrow_to(uint16_t scalar, int64_t value) {
 
 int64_t kest_real_to_int(uint16_t scalar, double value);
 
+// Where `kest_real_to_int` stops for a width: a number strictly between the
+// two is converted as C converts it, which is that function's middle case, and
+// the other backend writes that case where it is used. False for a `u64`,
+// which is converted another way. See D1280.
+bool kest_real_bounds(uint16_t scalar, double *low, double *high);
+
 // What an expression is worth, worked out where it is written, in as many slots
 // as the value takes. Nought when it is not worked out here, and then `why`
 // says what stopped it and `never` says which of the two kinds of stop it was:

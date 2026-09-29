@@ -1779,15 +1779,31 @@ static void write_op(Walk *walk, uint32_t index, const KestIrOp *op) {
         say(c, out, "    %s.real = (double)%s%s.integer;\n", first,
             kest_is_unsigned(op->type) ? "(uint64_t)" : "", second);
         break;
-    case KEST_IR_TO_WHOLE:
+    case KEST_IR_TO_WHOLE: {
         // Where a number outside the width stops is the library's answer, for
-        // the reason the one above it is. See D669.
+        // the reason the one above it is. See D669. A number strictly inside
+        // the width is the library's middle case, which is C's own
+        // conversion, so that one is written here and only the ends, what is
+        // not a number and a `u64` are asked of the library: a sample mixed
+        // into sixteen bits was a call a sample. See D1280.
         c->wants_library = true;
         at_stack(walk, first, base);
         at_stack(walk, second, base);
+        double low = 0.0;
+        double high = 0.0;
+        if (kest_real_bounds((uint16_t)op->imm[0], &low, &high)) {
+            say(c, out,
+                "    %s.integer = %s.real > %a && %s.real < %a\n"
+                "                     ? (int64_t)%s.real\n"
+                "                     : kest_real_to_int(%u, %s.real);\n",
+                first, second, low, second, high, second,
+                (unsigned)op->imm[0], second);
+            break;
+        }
         say(c, out, "    %s.integer = kest_real_to_int(%u, %s.real);\n", first,
             (unsigned)op->imm[0], second);
         break;
+    }
     case KEST_IR_TO_F32:
         at_stack(walk, first, base);
         at_stack(walk, second, base);
