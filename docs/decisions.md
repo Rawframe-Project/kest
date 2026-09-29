@@ -44288,3 +44288,28 @@ and the count of errors with it, so the refusal was printed and the build
 answered as though it had compiled. What the attempt said is taken back
 unless it was that the build ran out. Every example walked in three hundred
 steps from nought to its whole count is refused at every one of them.
+
+## D1285 — A crossing keeps its slice, and words are moved as words
+
+The eighth weak side was two small ones. A program calling its host took 27.7
+ns a call on the benchmark machine against LuaJIT's interpreter's 24.2, and
+the middle frame of `churn` was 482 µs, level with Luau's native code and
+behind LuaJIT's compiled code.
+
+- A crossing gave its slice of steps back and took a new one at the next
+  instruction, whether or not there was a budget to give it back to. With
+  none, a slice is only how soon a machine looks for a host asking it to
+  stop, which is a thousand instructions on either side of a crossing (D869),
+  so it is kept. A budget is given back as before (D929). The loop of
+  `asks` in `bench/hosts/bodies.kest`: 264 instructions a call to 253.
+- A shape is moved into and out of memory by a walk of steps, and steps of
+  one kind next to each other were one step (D1177). Every kind that is
+  words copied as they are -- a whole number or a real of sixty-four bits,
+  a reference, a function, a piece of text as its two -- is one kind to
+  that folding now, so `churn`'s thing of a number, a name, two reals and
+  its tags is one copy of six words where it was four steps. The frame:
+  3.47 million instructions to 3.13.
+
+What is left of the crossing is the checks it makes for the host, each
+of which says what a host did wrong (D1108, D1272), and the promise a host
+function makes about the heap, which is asked on both sides of it.

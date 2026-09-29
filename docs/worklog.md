@@ -42990,3 +42990,17 @@ hundred budgets from nought to its count, before and after; `check-dead.sh`
 with a table declared that nothing makes; `make figures`; `make fast`;
 `check-tables.sh`, `check-dead.sh`, `check-work.sh`, `check-verifier.sh`,
 `check-costs.sh`.
+
+## 2026-09-29, a crossing keeps its slice, and words are moved as words
+
+The eighth weak side. A host crossing with no budget gave its slice of steps
+back and took another at the next instruction: kept now, 264 instructions a
+call in `asks` to 253. And every kind moved as words copied as they are is one
+kind to the folding of a shape's walk, so `churn`'s thing is one copy of six
+words rather than four steps: 3.47 million instructions a frame to 3.13. See
+D1285.
+
+**Runs:** a twenty-line host calling `asks` twenty million times and one
+running two thousand frames of `churn`, each under `perf stat` and `perf
+record` before and after; `make fast`; `check-tables.sh`, `check-costs.sh`,
+`check-dead.sh`.
