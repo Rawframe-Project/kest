@@ -389,6 +389,12 @@ typedef struct {
     // file `box` is and reading what it declares — which is what this is for
     // and the only thing it is used for. See D681.
     const KestUnits *files;
+    // The constants each of those files declares, found once a file: a body
+    // being folded asks whether every name in it is one, and walking a file of
+    // seven thousand functions for each was half of compiling it. NULL until
+    // a file is first asked about. See D1273.
+    const KestDecl ***file_constants;
+    uint32_t *file_constant_counts;
     const char **counted;
     uint32_t counted_count;
     uint32_t counted_capacity;
