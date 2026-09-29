@@ -35,7 +35,14 @@ libkest.a: $(RELEASE_OBJ)
 	ar rcs $@ $^
 
 build/release/%.o: src/%.c | build/release
-	$(CC) $(WARN) -O2 $(TUNED) -Iinclude -DKEST_LIB_DIR='"$(PREFIX)/lib/kest/"' -MMD -MP -c -o $@ $<
+	$(CC) $(WARN) -O2 $(TUNED) $(SECTIONED) -Iinclude -DKEST_LIB_DIR='"$(PREFIX)/lib/kest/"' -MMD -MP -c -o $@ $<
+
+# Every function and every table in a section of its own, so that a game
+# linking the library with `--gc-sections` carries what it calls and not the
+# language server, the formatter and the half of the checker its host never
+# reaches: a host that builds, starts and calls is two fifths smaller. By a
+# compiler that can be asked to, the way the two below are. See D1282.
+SECTIONED := $(shell $(CC) -ffunction-sections -fdata-sections -Werror -x c -c -o /dev/null /dev/null 2>/dev/null && echo -ffunction-sections -fdata-sections)
 
 # The machine's loop is one `switch` over every instruction, and how fast it
 # runs turned out to hang on where the compiler happened to put each case: a

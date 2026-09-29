@@ -39,6 +39,10 @@ quiet() {
 }
 
 cc=${CC:-cc}
+# Every host linked the way a game that cares what it ships links: what
+# nothing reaches is left out, for every engine alike. The library here is
+# built in sections so that there is something to leave out. See D1282.
+linked=-Wl,--gc-sections
 cxx=${CXX:-c++}
 # The Tetris clone as it was written in Lua, which the Lua hosts reload the way
 # Kest's host rebuilds `examples/tetromino.kest`. Luau cannot read it: it is
@@ -47,11 +51,11 @@ game=bench/hosts/tetromino.lua
 churn=bench/hosts/churn.lua
 hosts=""
 ./kest emit --c bench/hosts/bodies.kest >"$room/bodies-native.c"
-$cc -O2 -DKEST_NO_MAIN -Iinclude -Ibench/hosts -o "$room/kest" \
+$cc -O2 $linked -DKEST_NO_MAIN -Iinclude -Ibench/hosts -o "$room/kest" \
     bench/hosts/kest.c "$room/bodies-native.c" libkest.a -lm
 hosts="$room/kest"
 if [ -n "${KEST_LUA_SRC:-}" ]; then
-    $cc -O2 -Ibench/hosts -I"$KEST_LUA_SRC/src" -o "$room/lua" \
+    $cc -O2 $linked -Ibench/hosts -I"$KEST_LUA_SRC/src" -o "$room/lua" \
         bench/hosts/lua.c "$KEST_LUA_SRC/src/liblua.a" -lm -ldl
     hosts="$hosts|$room/lua;Lua 5.4;bench/hosts/bodies.lua;--game;$game"
     hosts="$hosts;--churn;$churn"
@@ -59,7 +63,7 @@ if [ -n "${KEST_LUA_SRC:-}" ]; then
     hosts="$hosts;--generational;--churn;$churn"
 fi
 if [ -n "${KEST_LUAJIT_SRC:-}" ]; then
-    $cc -O2 -DLUAJIT -Ibench/hosts -I"$KEST_LUAJIT_SRC/src" -o "$room/luajit" \
+    $cc -O2 $linked -DLUAJIT -Ibench/hosts -I"$KEST_LUAJIT_SRC/src" -o "$room/luajit" \
         bench/hosts/lua.c "$KEST_LUAJIT_SRC/src/libluajit.a" -lm -ldl
     hosts="$hosts|$room/luajit;LuaJIT, interpreted;bench/hosts/bodies.lua"
     hosts="$hosts;--off;--game;$game;--churn;$churn"
@@ -72,15 +76,15 @@ if [ -n "${KEST_LUAU_SRC:-}" ]; then
     luau_libs="$u/build/libLuau.Compiler.a $u/build/libLuau.Bytecode.a"
     luau_libs="$luau_libs $u/build/libLuau.Ast.a $u/build/libLuau.VM.a"
     luau_libs="$luau_libs $u/build/libLuau.Common.a -lm"
-    $cxx $luau -o "$room/luau" bench/hosts/luau.cpp $luau_libs
-    $cxx $luau -DNATIVE -I"$u/CodeGen/include" -o "$room/luau-native" \
+    $cxx $luau $linked -o "$room/luau" bench/hosts/luau.cpp $luau_libs
+    $cxx $luau $linked -DNATIVE -I"$u/CodeGen/include" -o "$room/luau-native" \
         bench/hosts/luau.cpp "$u/build/libLuau.CodeGen.a" $luau_libs
     hosts="$hosts|$room/luau;Luau;bench/hosts/bodies.lua;--churn;$churn"
     hosts="$hosts|$room/luau-native;Luau, native;bench/hosts/bodies.lua"
     hosts="$hosts;--native;--churn;$churn"
 fi
 if [ -n "${KEST_QJS_SRC:-}" ]; then
-    $cc -O2 -Ibench/hosts -I"$KEST_QJS_SRC" -o "$room/quickjs" \
+    $cc -O2 $linked -Ibench/hosts -I"$KEST_QJS_SRC" -o "$room/quickjs" \
         bench/hosts/quickjs.c "$KEST_QJS_SRC/build/libqjs.a" -lm -lpthread
     hosts="$hosts|$room/quickjs;bench/hosts/bodies.js;bench/hosts/churn.js"
 fi
@@ -96,7 +100,7 @@ int main(void) {
     return 0;
 }
 EOF
-$cc -O2 -Ibench/hosts -o "$room/floor" "$room/floor.c"
+$cc -O2 $linked -Ibench/hosts -o "$room/floor" "$room/floor.c"
 weigh() {
     strip -o "$room/weighed" "$1"
     echo $(($(wc -c <"$room/weighed") - $(wc -c <"$room/floor.stripped")))
