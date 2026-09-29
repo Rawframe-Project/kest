@@ -44356,3 +44356,50 @@ with and without D1283's count, run on that machine one after the other
 answered 69-74 ms with it and 74-81 without, so it is read as the machine
 rather than as the change. The interpreted frame of `bench/hosts` read 71.4
 ns against 65.9, and retires 3% fewer instructions than it did.
+
+## D1288 — An index worked out of the count, and a walk that stands still
+
+Two of what D1287 left open were the release engine's loops: `pcmmix` 1.75
+times Luau's native tier and `kernel` 1.42 times LuaJIT's compiler. Both loops
+read an element of an array every turn, and both paid for it in memory: a
+write into an element is a write through `unsigned char *`, which the host's
+compiler has to assume may be the array's own header or the frame, so where
+the elements were, how far apart they sat, how long the array was and which
+array the slot held were read again after every one.
+
+- **An index worked out of the count.** D1189 asks once, where a walk
+  begins, whether an array is at least as long as the walk's limit, and then
+  an element read at the count is not asked about. `pcmmix` reads at
+  `i * 2` and `i * 2 + 1`, which it did not know. An index that is the count
+  times a small whole number and plus another, with nothing between but
+  cutting to thirty-two bits or more, is known now: the question is whether
+  the last turn's index is inside the array and fits in thirty-one bits, so
+  that nothing it was worked out through was cut.
+- **A walk that stands still.** A walk that calls nothing, reaches no heap
+  and moves nothing a handle points at leaves every array where it was, so
+  where an array's elements are and how far apart is read into two locals
+  where the walk begins, for every element the walk reads at its count --
+  proved in bounds or guarded -- and a write through a byte pointer cannot
+  touch a local. It is read where the walk goes back to and only there: a
+  walk whose every turn leaves has nowhere it begins again, and reads as
+  before.
+- **What a whole number leaves over.** `kernel` builds its world with
+  `f % 1000.0`, and D776's remainder doubles and halves the divisor to be
+  exact without `fmod`. Two whole numbers under two to the fifty-third leave
+  over what a whole number's `%` does, which every double under that holds
+  exactly; that is asked first. Twenty million pairs of every kind held
+  against libm's `fmod` in a host of its own came out the same bit for bit,
+  and the same pairs against a copy that dropped the sign did not;
+  `examples/numbers.kest` holds the sign, the nought from below and the last
+  whole number.
+
+On the benchmark machine the release engine's `pcmmix` went from 2.1 ms to
+1.6 (Luau's native tier 1.23) and `kernel` from 11.8 to 9.6 in the middle of
+sixty runs (LuaJIT's compiler 8.3). Here, `pcmmix` 17% fewer instructions and
+20% fewer cycles, `kernel` 12% fewer instructions. `check-c.sh` writes three
+programs for it: an array read at `at * 2` and `at * 2 + 1` to its last
+element, one an element short that both engines refuse at the fifth turn in
+the same words -- a guard that let one index too many through answered 20
+where the machine refused -- and a walk that grows the array it writes, which
+is not still: a copy that called every walk still answered 42 where the
+machine answered 132.

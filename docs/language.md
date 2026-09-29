@@ -6824,7 +6824,7 @@ bytes reading and checking the program took, and after `emit` how many that and
 compiling it took. `lex` and `parse` say it too, and they stop where they stop —
 at the tokens and at the tree — so the four numbers beside each other are what
 each stage of reading a file costs. For `lib/std/text.kest`, which is 588 lines:
-59204 bytes as tokens, 141405 as a tree, 179540 checked and 308828 compiled.
+59204 bytes as tokens, 141405 as a tree, 179540 checked and 310812 compiled.
 Most of what a check costs is the reading under it, and most of the reading is
 the tree. Compiling counts what the bodies and the verifier worked in beside
 what the build keeps, at the most they held at once, because a build given that
@@ -6843,7 +6843,7 @@ on its own has nothing to divide it by: a program of four lines that imports the
 library costs what the library costs, and a tool dividing by the file somebody
 named would call it fifteen times dearer a byte than it is. Only the compiler
 knows which files it read, so it says them. For `lib/std/text.kest` that is one
-file and 21085 bytes, against the 308828 it costs to compile.
+file and 21085 bytes, against the 310812 it costs to compile.
 
 Four things get called identity, and they are four different questions. What a
 `check` listing answers is the second of them.
@@ -7044,7 +7044,7 @@ where it is written, and the compiler works out every constant, so what `emit`
 says is what `check` said and more. `asked` beside them is how many times the
 folder was asked and there was nothing to work out — a field of a local, a name that is not a constant. The compiler asks
 of anything that might be one, because asking is how it finds out, and the two
-numbers together say how much of that finding out answered: 238 of 1046 for
+numbers together say how much of that finding out answered: 238 of 1057 for
 `examples/numbers.kest`. Arithmetic is asked about too, since D1160: `0 - 1` is
 a value a frame does not pay for, and a language with no negative literal
 writes it everywhere a `-1` goes.

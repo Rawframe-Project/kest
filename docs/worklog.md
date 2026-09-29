@@ -43028,3 +43028,23 @@ builds on the same machine said it was the machine. See D1287.
 compiled `qsort` built with and without the count of D1283 and run in turn
 there; the interpreted frame of `bench/hosts` under `perf stat` here against
 the library at `1adf22bc`.
+
+## 2026-09-29, an index worked out of the count, and a walk that stands still
+
+Round two of the weak sides, the release engine's loops. The guard a walk asks
+where it begins knows `i * k + c` now; a walk that calls, allocates and moves
+nothing reads where its arrays' elements are into locals once; and a remainder
+of two whole-number floats is a whole number's remainder. `pcmmix` compiled
+2.1 to 1.6 ms and `kernel` 11.8 to 9.6 ms on the benchmark machine. The first
+version read the locals at the label a walk goes back to and read them in a
+walk that never goes back, which has no such label: `check-c.sh` crashed on
+seven programs, and the reading is tied to the walk's own head now. See D1288.
+
+**Runs:** `kest emit --c` of `pcmmix` and `kernel` read before and after;
+both built as release engines by the compiler at `a5310c3c` and at this one,
+under `perf stat` here and timed on the benchmark machine; a host comparing
+twenty million remainders with libm's `fmod`, and the same with the sign
+dropped; `check-c.sh` over the gate's files, and its three new programs
+against a copy with the guard one too wide and one with every walk still;
+`make figures`; `make fast`; `check-tables.sh`, `check-costs.sh`,
+`check-dead.sh`, `check-verifier.sh`.
