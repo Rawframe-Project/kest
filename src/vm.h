@@ -303,4 +303,14 @@ bool kest_call_host(KestRuntime *runtime, uint16_t index, KestValue *base,
 bool kest_native_stopped(KestRuntime *runtime, uint32_t offset,
                          const char *code, const char *message);
 
+// The word that says whether the host has asked the machine to stop, read by a
+// body written in C every `KEST_TURNS_ASKED` times it goes round a `while`,
+// with a count of its own in between that nothing outside the body can see, so
+// it stays where the host's compiler put it rather than in memory. A body that
+// reads it set says what the machine says when it is asked -- `K0660`, where
+// it was -- through `kest_native_stopped`. A compiled body spends no budget
+// (D1094); this is the host's `kest_cancel` reaching one, which a loop that
+// never ends was otherwise out of reach of. See D1283.
+const volatile int *kest_native_asking(KestRuntime *runtime);
+
 #endif

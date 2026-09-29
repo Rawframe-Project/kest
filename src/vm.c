@@ -10098,6 +10098,20 @@ bool kest_native_stopped(KestRuntime *runtime, uint32_t offset,
     return false;
 }
 
+const volatile int *kest_native_asking(KestRuntime *runtime) {
+    static const volatile int never = 0;
+    if (runtime == NULL) {
+        return &never;
+    }
+    // The word `kest_cancel` stores, read by a compiled body as a plain
+    // volatile load: a call there would be a call inside the loop, which the
+    // host's compiler has to assume writes anything, and it cost
+    // `bench/graph` a fifth of its cycles in loads it could no longer hoist.
+    // An `atomic_int` that is lock-free is an `int` on every compiler this is
+    // built with, and a stale read is one more round of 1024 turns.
+    return (const volatile int *)(uintptr_t)&runtime->cancel_asked;
+}
+
 void kest_collected(KestRuntime *runtime,
                     void (*told)(const KestPause *pause, void *context),
                     void *context) {

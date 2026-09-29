@@ -1610,6 +1610,11 @@ uint64_t kest_fuel_left(const KestRuntime *runtime);
 // and the machine stops the way it stops for fuel, with everything it built
 // intact and a refusal that says which of the two it was.
 //
+// A body the release engine wrote as C spends no budget, and hears this at the
+// back of every `while` it goes round, once in 1024 turns: a `for` over a range
+// or over what a store holds ends by itself and is not asked, because that is
+// where a frame spends its time. See D1283.
+//
 // It is one store of one word, so a host may call it from a signal handler or
 // from another thread while the machine runs. What it may not do is free the
 // machine from there: stopping is a message and freeing is a change.

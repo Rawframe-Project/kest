@@ -867,6 +867,10 @@ const char *kest_op_stack(const KestModule *module, const KestChunk *chunk,
 // bits set in what it says. It says it for sixteen pieces at the most, and a
 // piece past the last one said about is not a piece. See D1277.
 #define KEST_NUMBERED_MOST 16u
+
+// How many times a body written in C goes round its loops between asking the
+// machine whether the host wants it to stop: `kest_native_asking`. See D1283.
+#define KEST_TURNS_ASKED 1024u
 uint32_t kest_pieces_numbered(uint32_t which);
 
 // `std.fdlibm`'s sine and cosine written again in C, the same operations in
