@@ -3530,8 +3530,12 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
         // many as the join can say this about. `KEST_NOOPT` makes every
         // number a text first, which is what the gate holds this to. See
         // D1277.
+        //
+        // A number on its own is `text.i` and nothing after it: joining one
+        // piece is a copy of a text nobody else holds.
         static int plain = -1;
-        bool numbers_in = !kest_ir_asked_off("KEST_NOOPT", &plain) &&
+        bool optimizing = !kest_ir_asked_off("KEST_NOOPT", &plain);
+        bool numbers_in = optimizing && expr->text.count > 1 &&
                           expr->text.count <= KEST_NUMBERED_MOST;
         uint16_t which = 0;
         uint16_t numbered = 0;
@@ -3575,6 +3579,12 @@ static void compile_expr_kind(Compiler *compiler, const KestExpr *expr) {
             if (laid_out) {
                 ir_carries(compiler, written, layout_of(compiler, type), 0, 0);
             }
+        }
+        if (optimizing && expr->text.count == 1 &&
+            expr->text.parts[0].value != NULL &&
+            expr->text.parts[0].value->type != NULL &&
+            expr->text.parts[0].value->type->tag != KEST_T_TEXT) {
+            break;
         }
         stack_pop(compiler, (uint16_t)(expr->text.count * 2 - numbered));
         stack_push(compiler, 2);
