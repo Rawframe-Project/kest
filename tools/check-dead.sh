@@ -78,6 +78,11 @@ for header in sorted(os.listdir("src")) + ["../include/kest.h"]:
     text = re.sub(r"//[^\n]*", "", text)
     for name in re.findall(r"\b(kest_[a-z_0-9]+)\s*\(", text):
         declared.setdefault(name, os.path.normpath(path))
+    # And a table a header reads rather than calls, which an object makes
+    # the way it makes a function. See D1284.
+    for name in re.findall(r"\bextern [^;(){}]*?\b(kest_[a-z_0-9]+)\s*;",
+                           text):
+        declared.setdefault(name, os.path.normpath(path))
     for name in re.findall(r"static inline [^;{}]*?\b(kest_[a-z_0-9]+)\s*\(",
                            text):
         in_headers[name] = os.path.normpath(path)

@@ -845,15 +845,6 @@ int32_t kest_module_entry(const KestModule *module, const char *name);
 // a chunk with nothing in it. See D751.
 uint32_t kest_chunk_origin(const KestChunk *chunk, uint32_t offset);
 
-// How many bytes the instruction at a byte is, which is how a walk of the code
-// finds where the next one starts. Nought for a byte that is no instruction.
-uint32_t kest_op_wide(uint8_t op);
-
-// What an instruction is called. The list of them is `value.c`'s and this is
-// the one way anything else asks it, which is what keeps a machine that says
-// what it ran from holding a second copy of the names. See D870.
-const char *kest_op_name(uint8_t op);
-
 // What the instruction at `at` takes off the operand stack and puts back on
 // it, in slots, read the way the machine's handler for it moves the top of
 // the stack. NULL when that can be said, and why not when it cannot: a call
@@ -867,11 +858,11 @@ const char *kest_op_stack(const KestModule *module, const KestChunk *chunk,
 // bits set in what it says. It says it for sixteen pieces at the most, and a
 // piece past the last one said about is not a piece. See D1277.
 #define KEST_NUMBERED_MOST 16u
-
-// How many times a body written in C goes round its loops between asking the
-// machine whether the host wants it to stop: `kest_native_asking`. See D1283.
-#define KEST_TURNS_ASKED 1024u
 uint32_t kest_pieces_numbered(uint32_t which);
+
+// How many times a body written in C goes round a `while` between reading
+// whether the host wants it to stop: `kest_native_asking`. See D1283.
+#define KEST_TURNS_ASKED 1024u
 
 // `std.fdlibm`'s sine and cosine written again in C, the same operations in
 // the same order on the same constants, for the two instructions above: what
@@ -901,9 +892,35 @@ typedef enum {
     KEST_OPERAND_BACKWARD,
 } KestOperand;
 
-// What the `k`th number an instruction carries is: nought counts from the
-// first. A number past the last it carries is a number.
-KestOperand kest_op_operand(uint8_t op, uint32_t k);
+// One row of the table of instructions, which is `value.c`'s: what it is
+// called, its shape -- the low four bits of which are how many bytes it takes
+// -- and what each number it carries is. The table is read here rather than
+// asked through a call a field, because the verifier, the lowering and the
+// proofs read a row for every instruction of every body, and a call each was
+// a tenth of the verifier's time. See D1284.
+typedef struct {
+    const char *name;
+    uint8_t shape;
+    uint8_t is[5];
+} KestInstruction;
+extern const KestInstruction *const kest_instructions;
+
+// How many bytes the instruction at a byte is, which is how a walk of the code
+// finds where the next one starts. One for a byte that is no instruction, so a
+// walk over what the verifier has not yet read still ends. D057's bug was a
+// second answer to this question that had a jump seven bytes wide, which is
+// why this is the only one.
+static inline uint32_t kest_op_wide(uint8_t op) {
+    return op <= KEST_OP_STOP ? (uint32_t)(kest_instructions[op].shape & 15u)
+                              : 1u;
+}
+
+// What an instruction is called. The list of them is `value.c`'s and this is
+// the one way anything else asks it, which is what keeps a machine that says
+// what it ran from holding a second copy of the names. See D870.
+static inline const char *kest_op_name(uint8_t op) {
+    return op <= KEST_OP_STOP ? kest_instructions[op].name : "?";
+}
 
 // Whether an instruction reaches the heap. The list is the machine's, read off
 // the cases that call the allocator, and it is what makes a `no.alloc`
@@ -912,7 +929,9 @@ bool kest_op_allocates(uint8_t op);
 
 // The number an instruction carries at a byte of a chunk, read the way the
 // machine reads it.
-uint16_t kest_chunk_u16(const KestChunk *chunk, uint32_t offset);
+static inline uint16_t kest_chunk_u16(const KestChunk *chunk, uint32_t offset) {
+    return (uint16_t)(chunk->code[offset] | (chunk->code[offset + 1] << 8));
+}
 
 // Takes the last instruction back, which the compiler does when a comparison
 // turns out to be what a jump reads. `to` is where that instruction started.

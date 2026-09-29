@@ -62,6 +62,14 @@ static bool starts_at(const uint8_t *starts, uint32_t where) {
     return ((unsigned)starts[where / 8] >> (where % 8)) & 1u;
 }
 
+// What the `k`th number an instruction carries is: nought counts from the
+// first. A number past the last it carries is a number.
+static KestOperand operand_of(uint8_t op, uint32_t k) {
+    return op <= KEST_OP_STOP && k < 5
+               ? (KestOperand)kest_instructions[op].is[k]
+               : KEST_OPERAND_NUMBER;
+}
+
 // Whether every number every instruction of a body carries is one the body or
 // the module has, and every jump lands where an instruction starts: what the
 // machine reads without asking, proved before it runs. Answers the code and
@@ -85,7 +93,7 @@ static const char *names_only_what_is_there(const KestModule *module,
             uint32_t value = kest_chunk_u16(chunk, at + 1 + 2 * k);
             const char *wrong = NULL;
             uint32_t has = 0;
-            switch (kest_op_operand(op, k)) {
+            switch (operand_of(op, k)) {
             case KEST_OPERAND_NUMBER:
                 break;
             case KEST_OPERAND_SLOT:
@@ -141,8 +149,8 @@ static const char *names_only_what_is_there(const KestModule *module,
                 snprintf(said, room,
                          "`%s` at %u names %s %u of the %u there are",
                          name, at, wrong,
-                         kest_op_operand(op, k) == KEST_OPERAND_SLOT_RUN ||
-                                 kest_op_operand(op, k) == KEST_OPERAND_CONSTANT_RUN
+                         operand_of(op, k) == KEST_OPERAND_SLOT_RUN ||
+                                 operand_of(op, k) == KEST_OPERAND_CONSTANT_RUN
                              ? previous + value
                              : value,
                          has);
@@ -279,9 +287,9 @@ static const char *stack_on_every_path(const KestModule *module,
             bool falls = op != KEST_OP_JUMP && op != KEST_OP_LOOP;
             for (uint32_t k = 0; k < (wide - 1) / 2; k++) {
                 uint32_t value = kest_chunk_u16(chunk, at + 1 + 2 * k);
-                if (kest_op_operand(op, k) == KEST_OPERAND_FORWARD) {
+                if (operand_of(op, k) == KEST_OPERAND_FORWARD) {
                     lands = at + wide + value;
-                } else if (kest_op_operand(op, k) == KEST_OPERAND_BACKWARD) {
+                } else if (operand_of(op, k) == KEST_OPERAND_BACKWARD) {
                     lands = at + wide - value;
                 }
             }
@@ -2776,7 +2784,7 @@ static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
         uint32_t size = kest_op_wide(op);
         for (uint32_t k = 0; k < (size - 1) / 2; k++) {
             uint32_t value = kest_chunk_u16(chunk, at + 1 + 2 * k);
-            KestOperand is = kest_op_operand(op, k);
+            KestOperand is = operand_of(op, k);
             if (is == KEST_OPERAND_FORWARD) {
                 lands[at + size + value] = 1;
             } else if (is == KEST_OPERAND_BACKWARD) {
@@ -2874,7 +2882,7 @@ static const char *holds_on_every_path(Verifying *v, const KestChunk *chunk,
             }
             for (uint32_t k = 0; k < (size - 1) / 2; k++) {
                 uint32_t value = kest_chunk_u16(chunk, at + 1 + 2 * k);
-                KestOperand is = kest_op_operand(op, k);
+                KestOperand is = operand_of(op, k);
                 uint32_t place = is == KEST_OPERAND_FORWARD    ? at + size + value
                                  : is == KEST_OPERAND_BACKWARD ? at + size - value
                                                                : UINT32_MAX;

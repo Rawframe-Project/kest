@@ -260,17 +260,10 @@ fn main() -> i32 {
     {
         "what": "a jump that says it is a different width",
         "file": "src/value.c",
-        "from": """    case U16:
-    case JUMP:
-    case BACK:
-        // A jump carries how far as one number, printed as a place to make it
-        // readable. It is the same two bytes.
-        return 3;""",
-        "to": """    case U16:
-        return 3;
-    case JUMP:
-    case BACK:
-        return 5;""",
+        "from": """    JUMP = 0x13,
+    BACK = 0x23,""",
+        "to": """    JUMP = 0x45,
+    BACK = 0x55,""",
         "program": "jumping.kest",
         # Enough branching that a walk stepping wrongly cannot land back on
         # the end by luck, which a four instruction program can — and in a

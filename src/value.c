@@ -1081,8 +1081,6 @@ void kest_module_extern_shape(KestModule *module, uint32_t at, uint16_t *takes,
     module->externs[at].gives_value = gives_value;
 }
 
-static uint32_t kest_op_width(uint8_t op);
-
 bool kest_chunk_emit(KestModule *module, KestChunk *chunk, uint8_t byte,
                      uint32_t origin) {
     if (chunk->code_count == chunk->code_capacity) {
@@ -1114,7 +1112,7 @@ bool kest_chunk_emit(KestModule *module, KestChunk *chunk, uint8_t byte,
             chunk->origin_capacity = capacity;
         }
         chunk->origins[chunk->origin_count++] = origin;
-        chunk->next_instruction += kest_op_width(byte);
+        chunk->next_instruction += kest_op_wide(byte);
     }
     chunk->code[chunk->code_count++] = byte;
     return true;
@@ -1138,10 +1136,6 @@ void kest_chunk_take_back(KestChunk *chunk, uint32_t to) {
     }
 }
 
-uint32_t kest_op_wide(uint8_t op) {
-    return kest_op_width(op);
-}
-
 uint32_t kest_chunk_origin(const KestChunk *chunk, uint32_t offset) {
     // Walked rather than looked up: a table of where every instruction starts
     // would be the thing this is for getting rid of. What reads one is a
@@ -1153,7 +1147,7 @@ uint32_t kest_chunk_origin(const KestChunk *chunk, uint32_t offset) {
     uint32_t at = 0;
     uint32_t which = 0;
     while (at < chunk->code_count && which < chunk->origin_count) {
-        uint32_t width = kest_op_width(chunk->code[at]);
+        uint32_t width = kest_op_wide(chunk->code[at]);
         if (offset < at + width) {
             return chunk->origins[which];
         }
@@ -1279,25 +1273,28 @@ uint32_t kest_chunk_constant_run(KestModule *module, KestChunk *chunk,
     return first;
 }
 
+// A shape's low four bits are how many bytes an instruction of it takes, which
+// is how `kest_op_wide` reads a width out of a row without a switch; the bits
+// above them tell apart shapes of one width.
 typedef enum {
-    NONE,
-    U16,
-    U16_U16,
-    U16_U16_U16,
-    JUMP,
-    BACK,
-    WALK,
-    FIND,
-    FIND_BACK,
+    NONE = 1,
+    U16 = 3,
+    U16_U16 = 5,
+    U16_U16_U16 = 7,
+    JUMP = 0x13,
+    BACK = 0x23,
+    WALK = 0x17,
+    FIND = 0x27,
+    FIND_BACK = 0x37,
     // A constant and then a forward jump, which is five bytes.
-    WEIGH,
+    WEIGH = 0x15,
     // Four and five numbers: an element moved by a run and an index read
     // where they are. See D1167.
-    U16_X4,
-    U16_X5,
+    U16_X4 = 9,
+    U16_X5 = 11,
     // An element by a run and an index, a constant, and a forward jump,
     // which is eleven bytes. See D1178.
-    WEIGH_ELEMENT,
+    WEIGH_ELEMENT = 0x1B,
 } Operands;
 
 // The table below is written in the header's names for what an operand is,
@@ -1313,11 +1310,7 @@ typedef enum {
 #define IS_FORWARD KEST_OPERAND_FORWARD
 #define IS_BACKWARD KEST_OPERAND_BACKWARD
 
-typedef struct {
-    const char *name;
-    Operands operands;
-    KestOperand is[5];
-} Instruction;
+typedef KestInstruction Instruction;
 
 static const Instruction INSTRUCTIONS[] = {
     {"const", U16, {IS_CONSTANT}},
@@ -1551,55 +1544,10 @@ _Static_assert(sizeof(INSTRUCTIONS) / sizeof(INSTRUCTIONS[0]) ==
                    KEST_OP_STOP + 1,
                "every instruction has a name and nothing else does");
 
-const char *kest_op_name(uint8_t op) {
-    return op <= KEST_OP_STOP ? INSTRUCTIONS[op].name : "?";
-}
-
-KestOperand kest_op_operand(uint8_t op, uint32_t k) {
-    uint32_t known = (uint32_t)(sizeof(INSTRUCTIONS) / sizeof(INSTRUCTIONS[0]));
-    return op < known && k < 5 ? INSTRUCTIONS[op].is[k] : KEST_OPERAND_NUMBER;
-}
+const KestInstruction *const kest_instructions = INSTRUCTIONS;
 
 static uint16_t read_u16(const KestChunk *chunk, uint32_t offset) {
-    return (uint16_t)(chunk->code[offset] | (chunk->code[offset + 1] << 8));
-}
-
-uint16_t kest_chunk_u16(const KestChunk *chunk, uint32_t offset) {
-    return read_u16(chunk, offset);
-}
-
-// How many bytes an instruction takes. This is the only place that knows, so
-// a walk that prints and a walk that does not cannot come apart: D057's bug
-// was a second answer to this question that had a jump seven bytes wide.
-// How many bytes an instruction takes. Everything in this file that walks a
-// chunk asks this and nothing works it out for itself, because two answers is
-// how a walk goes out of step with the code. Nothing outside walks one; the
-// day something does, this stops being static rather than being copied.
-static uint32_t kest_op_width(uint8_t op) {
-    switch (INSTRUCTIONS[op].operands) {
-    case NONE:
-        return 1;
-    case U16:
-    case JUMP:
-    case BACK:
-        // A jump carries how far as one number, printed as a place to make it
-        // readable. It is the same two bytes.
-        return 3;
-    case U16_U16:
-    case WEIGH:
-        return 5;
-    case U16_U16_U16:
-    case WALK:
-    case FIND:
-    case FIND_BACK:
-        return 7;
-    case U16_X4:
-        return 9;
-    case U16_X5:
-    case WEIGH_ELEMENT:
-        return 11;
-    }
-    return 1;
+    return kest_chunk_u16(chunk, offset);
 }
 
 // The deepest run of frames a call can make, and the slots those frames take
@@ -1788,7 +1736,7 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
                 }
                 return false;
             }
-            at += kest_op_width(op);
+            at += kest_op_wide(op);
             continue;
         }
         if (op == KEST_OP_CALL_HOST) {
@@ -1800,7 +1748,7 @@ static bool measure_chunk(const KestModule *module, uint32_t which,
                             reasons, why, &sums, true)) {
             return false;
         }
-        at += kest_op_width(op);
+        at += kest_op_wide(op);
     }
     // And the bodies carried here rather than called: the other backend
     // still calls them, above this body's own slots, and neither engine gives
@@ -1875,7 +1823,7 @@ static void cycle_walk(const KestModule *module, uint32_t which, uint8_t *state,
                            depth + 1);
             }
         }
-        at += kest_op_width(op);
+        at += kest_op_wide(op);
     }
     state[which] = 2;
 }
@@ -1887,7 +1835,7 @@ static bool calls_a_host(const KestChunk *chunk) {
         if (chunk->code[at] == KEST_OP_CALL_HOST) {
             return true;
         }
-        at += kest_op_width(chunk->code[at]);
+        at += kest_op_wide(chunk->code[at]);
     }
     return false;
 }
@@ -1949,7 +1897,7 @@ void kest_module_cycles(const KestModule *module, KestArena *arena,
                     continue;
                 }
                 for (uint32_t at = 0; at < one->code_count;
-                     at += kest_op_width(one->code[at])) {
+                     at += kest_op_wide(one->code[at])) {
                     uint8_t op = one->code[at];
                     uint32_t first = module->count;
                     uint32_t last = module->count;
@@ -2264,7 +2212,7 @@ const char *kest_op_stack(const KestModule *module, const KestChunk *chunk,
     // read out of it: the verifier has asked by the time it gets here, and
     // the machine that checks itself asks this before the handler's own
     // guard has had its turn.
-    for (uint32_t k = 0; k < (kest_op_width(op) - 1) / 2 && k < 5; k++) {
+    for (uint32_t k = 0; k < (kest_op_wide(op) - 1) / 2 && k < 5; k++) {
         u[k] = read_u16(chunk, at + 1 + 2 * k);
         if ((INSTRUCTIONS[op].is[k] == IS_LAYOUT && u[k] >= module->layout_count) ||
             (INSTRUCTIONS[op].is[k] == IS_FUNCTION && u[k] >= module->count)) {
@@ -2784,7 +2732,7 @@ static uint32_t disassemble_one(const KestModule *module,
     fprintf(out, "  %04u  %-16s%s", offset, instruction->name,
             strlen(instruction->name) >= 16 ? " " : "");
 
-    switch (instruction->operands) {
+    switch ((Operands)instruction->shape) {
     case NONE:
         fputc('\n', out);
         break;
@@ -2883,7 +2831,7 @@ static uint32_t disassemble_one(const KestModule *module,
                 offset + 11 + read_u16(chunk, offset + 9));
         break;
     }
-    return offset + kest_op_width(op);
+    return offset + kest_op_wide(op);
 }
 
 static const char *const SCALARS[] = {"i8",  "i16", "i32",     "i64",
@@ -3392,13 +3340,13 @@ void kest_module_disassemble_json(const KestModule *module,
             fputs(",\"operands\":[", out);
             // How many numbers follow is the width and nothing else, so this
             // cannot come apart from what a walk of the code steps by.
-            uint32_t count = (kest_op_width(op) - 1) / 2;
+            uint32_t count = (kest_op_wide(op) - 1) / 2;
             for (uint32_t k = 0; k < count; k++) {
                 fprintf(out, "%s%u", k == 0 ? "" : ",",
                         read_u16(chunk, offset + 1 + k * 2));
             }
             fputs("]}", out);
-            offset += kest_op_width(op);
+            offset += kest_op_wide(op);
         }
         fputs("]}", out);
     }
