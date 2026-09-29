@@ -668,6 +668,19 @@ fn main() -> i32 {
     if turnsWrittenOut(2) != 20010 {
         return 104
     }
+    // Two whole numbers leave over what a whole number's `%` does, with the
+    // sign of the one divided -- a nought from below is the nought below --
+    // up to the last whole number a float holds exactly. See D1288.
+    if realAsRun(-7.0) % 3.0 != -1.0 || realAsRun(7.0) % -3.0 != 1.0 {
+        return 105
+    }
+    if 1.0 / (realAsRun(-6.0) % 3.0) > 0.0 {
+        return 106
+    }
+    if realAsRun(9007199254740991.0) % 1000.0 != 991.0 ||
+            realAsRun(9007199254740992.0) % 1000.0 != 992.0 {
+        return 107
+    }
 
     io.print("every width wraps at its own end, and {NARROW} is one of them")
     return 0
