@@ -661,6 +661,23 @@ typedef struct {
     uint32_t length;
 } Said;
 
+// A quotient or a remainder of two whole numbers, neither of them the pair
+// whose quotient does not fit and the right one not nought. Where both are
+// nought or more and fit in 32 bits it is asked in 32 bits, which is the same
+// answer: a 64-bit division is 40 to 90 cycles on an Intel core of Haswell's
+// age and a 32-bit one about 25, and `bench/control` does three a turn. The
+// host's compiler writes the same thing for a divisor it can see, which is
+// why the other backend never paid it. See D1278.
+static inline int64_t divided(int64_t left, int64_t right, bool quotient) {
+    if (((uint64_t)left | (uint64_t)right) <= UINT32_MAX) {
+        uint32_t narrow_left = (uint32_t)left;
+        uint32_t narrow_right = (uint32_t)right;
+        return quotient ? (int64_t)(narrow_left / narrow_right)
+                        : (int64_t)(narrow_left % narrow_right);
+    }
+    return quotient ? left / right : left % right;
+}
+
 static Said said(const KestValue *slots) {
     Said out;
     out.bytes = slots[0].text;
@@ -5400,9 +5417,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
                     instruction[0] == KEST_OP_DIV_I ? INT64_MIN : 0;
                 break;
             }
-            (top++)->integer = instruction[0] == KEST_OP_DIV_I
-                                   ? left.integer / right.integer
-                                   : left.integer % right.integer;
+            (top++)->integer = divided(left.integer, right.integer,
+                                       instruction[0] == KEST_OP_DIV_I);
             NEXT;
         }
 // Whole-number arithmetic with a constant on its right, written out one case
@@ -5424,8 +5440,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         }                                                                      \
         (top++)->integer = left == INT64_MIN && right == -1                    \
                                ? ((QUOTIENT) ? INT64_MIN : 0)                  \
-                           : (QUOTIENT) ? left / right                         \
-                                        : left % right;                        \
+                               : divided(left, right, (QUOTIENT));             \
     } while (0)
 #define CUT(KIND, MADE)                                                        \
     ((top++)->integer = kest_narrow_to((KIND), (int64_t)(MADE)))
