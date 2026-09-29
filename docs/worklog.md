@@ -43048,3 +43048,16 @@ dropped; `check-c.sh` over the gate's files, and its three new programs
 against a copy with the guard one too wide and one with every walk still;
 `make figures`; `make fast`; `check-tables.sh`, `check-costs.sh`,
 `check-dead.sh`, `check-verifier.sh`.
+
+## 2026-09-29, a reload is left a compile
+
+Measured what a reload of the Tetris clone is made of and tried two ways of
+taking some of it off: the lexer's loops over names and indentation in a local
+(0.3%, left out) and a reload with the proof switched off, which is the most
+that skipping the proof of an unchanged body could buy (23%, not bought,
+because what a body's proof reads is more than its bytes). See D1289.
+
+**Runs:** a host rebuilding the clone four hundred times under `perf stat`
+and `perf record` with frame pointers, against one rebuilding an empty
+program with the same imports; the same host linked with the lexer change and
+with the proof switched off in a copy.

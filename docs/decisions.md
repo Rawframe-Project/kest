@@ -44403,3 +44403,33 @@ the same words -- a guard that let one index too many through answered 20
 where the machine refused -- and a walk that grows the array it writes, which
 is not still: a copy that called every walk still answered 42 where the
 machine answered 132.
+
+## D1289 — A reload is left a compile
+
+D1287 left a reload three times what Lua takes to load its chunk: 1.7 ms
+against 0.5 on the benchmark machine, for the Tetris clone's 625 lines and
+the 124 of the library it imports. What it is made of, here: a program with
+the same imports and an empty `main` is 0.19 ms of it, and the game's own
+lines the rest -- reading them 22%, checking them 18%, compiling them 33% and
+proving what was compiled 27% of the instructions. No function is a tenth of
+it. Two ways of taking something off were measured and neither is taken.
+
+- The lexer's two loops that run over every byte -- a name, and the spaces
+  that indent a line -- written against a local rather than asking where the
+  file ends at every byte: 0.3% of a reload, which is not worth the second
+  way of reading a byte.
+- The proof skipped for a body the build being replaced had already proved,
+  where the two are the same bytes: a reload with no proof at all is 23%
+  quicker, which is the most this could buy, for an edit of one function
+  under `kest_held_reload`. It is not bought. What a body's proof reads is
+  the body and every function, layout, door and constant it names, and a
+  body that compares equal while one of those moved is a body the machine
+  runs unproved -- which is the one thing the verifier is there to make
+  impossible (D1237, SECURITY.md).
+
+What would make a reload what Lua's is, is compiling only what an edit
+changed, which is a compiler that knows what every body was made from:
+which layouts, constants and copies of a generic it registered and in which
+order, and which bodies it carried into which callers (D1156). That is a
+design of its own and not a change to this one, and 1.7 ms is a tenth of a
+frame at sixty a second.
