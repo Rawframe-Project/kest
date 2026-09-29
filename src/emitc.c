@@ -3023,6 +3023,23 @@ bool kest_emitc_body(void *writing, const KestIrBody *body) {
                     body->ops[i].span.offset);
             }
         }
+        // A body whose last written operation goes back to an earlier one --
+        // a loop that never ends, which is a program, with the `return` after
+        // it never reached and so never written -- runs off the end of
+        // nothing, and the host's compiler is told so rather than asked to
+        // prove it: without this a function that gives back a value ends with
+        // no `return`, which it warns about. Nothing arrives here. See D1274.
+        uint32_t last = body->op_count;
+        while (last > 0 && !walk.known[last - 1]) {
+            last--;
+        }
+        if (walk.why == NULL &&
+            (last == 0 || body->ops[last - 1].kind != KEST_IR_GIVE)) {
+            say(c, &into->wrote,
+                "    return kest_native_stopped(rt, %u, \"K0655\",\n"
+                "        \"a body ran past its end\");\n",
+                last == 0 ? 0 : body->ops[last - 1].span.offset);
+        }
         say(c, &into->wrote, "}\n\n");
     }
     if (c->out_of_memory) {

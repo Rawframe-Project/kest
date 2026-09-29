@@ -54,8 +54,12 @@ written" >>"$said"
     fi
     written=$((written + ${counted% *}))
     bodies=$((bodies + ${counted#* }))
-    if $cc -O1 -Iinclude -c -o "$work"/wrote.o "$work"/wrote.c \
-            2>"$work"/why; then
+    # A function that says it gives back a value and can run off its end is
+    # one the host's compiler only warns about, and what it gives back then is
+    # whatever was in a register: refused here, where the one program in the
+    # tree that ends in a loop is. See D1274.
+    if $cc -O1 -Werror=return-type -Iinclude -c -o "$work"/wrote.o \
+            "$work"/wrote.c 2>"$work"/why; then
         compiled=$((compiled + 1))
         continue
     fi
