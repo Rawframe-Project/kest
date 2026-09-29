@@ -191,6 +191,15 @@ Where it stands, from the front page's table (D1203): `bench/compare.sh` at
   platform's, a sort by a function handed over is 1.7 times Luau's, and a
   float narrowed into a sixteen-bit run in the release engine is 2.6 times
   Luau's native tier.
+- **Beside Lua 5.4 and LuaJIT** (D1272): the machine is ahead of Lua 5.4 on
+  all five by 1.4 to 2 times and of LuaJIT's interpreter on three, behind it
+  by 11% on `control` and 16% on `words`; the release engine is ahead of
+  LuaJIT's compiler on `control` and `rules` and behind it by 1.25 to 1.41
+  times on the other three. Through each engine's own C API, a program calls
+  its host in 14.6 ns (Lua 5.4 18, LuaJIT 13, Luau 15) and a host calls the
+  program with a body in 34.5 (Lua 5.4 74, LuaJIT 44, Luau 72). What is open:
+  those three workloads against LuaJIT's compiler, and `rules` against
+  daslang's AOT, 1.46 times on this processor.
 - **A game brought over from Lua** (D1268) found a fault in the compiler and
   three places the language made it longer than the Lua: a struct's state is
   given back from every handler (`g = pressed(g, key)`), two optionals do not

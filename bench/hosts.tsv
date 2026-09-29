@@ -1,0 +1,31 @@
+# taken	2026-09-29
+# commit	70e7e4e6
+# machine	AMD Ryzen 9 5900X 12-Core Processor
+# load	1.96
+# best of	5
+engine	measure	ns	answer
+C	frame	1.37	2902674
+Kest	frame	30.60	2902674
+Kest	body	34.54	2902674
+Kest	ask	14.63	499999500000
+Kest, compiled	frame	2.50	2902674
+Kest, compiled	body	24.62	2902674
+Kest, compiled	ask	9.21	499999500000
+Lua 5.4	frame	75.92	2902674
+Lua 5.4	body	73.96	2902674
+Lua 5.4	ask	17.59	499999500000
+LuaJIT, interpreted	frame	40.96	2902674
+LuaJIT, interpreted	body	60.34	2902674
+LuaJIT, interpreted	ask	11.78	499999500000
+LuaJIT	frame	2.03	2902674
+LuaJIT	body	44.32	2902674
+LuaJIT	ask	13.29	499999500000
+Luau	frame	40.94	2902674
+Luau	body	71.85	2902674
+Luau	ask	15.15	499999500000
+Luau, native	frame	22.86	2902674
+Luau, native	body	70.95	2902674
+Luau, native	ask	15.14	499999500000
+QuickJS	frame	310.00	2902674
+QuickJS	body	495.99	2902674
+QuickJS	ask	42.77	499999500000

@@ -108,43 +108,49 @@ designer changes every day. What it brings to that seat:
 
 ## Performance
 
-Five workloads, each written in Kest, Luau and daslang to answer the same
-checksum, and run by every engine in every mode it ships.
+Five workloads, each written in Kest, Luau, Lua and daslang to answer the same
+checksum, and run by every engine in every mode it ships: Kest's machine and
+its release engine, Luau's interpreter and native tier, Lua 5.4, LuaJIT with
+its compiler and with it switched off, and daslang interpreted and compiled
+ahead of time.
 
 <p align="center">
-  <img src="bench/chart-interpreters.svg" alt="Interpreters: Kest, Luau and daslang, time as a share of Luau's" width="820">
+  <img src="bench/chart-interpreters.svg" alt="Interpreters: Kest, Luau, Lua 5.4, LuaJIT's interpreter and daslang, time as a share of Luau's" width="820">
 </p>
 
 <p align="center">
   <img src="bench/chart-engines.svg" alt="Every engine in every mode, milliseconds per workload" width="820">
 </p>
 
-> **Measured on 2026-09-23 at commit
-> [`7769f7c1`](https://github.com/Rawframe-Project/kest/commit/7769f7c1),**
-> on an AMD Ryzen 5 3600 running Linux: Kest 0.0.1, Luau `-O2` and
-> `--codegen`, and daslang both interpreted and compiled ahead of time with
-> `-exe`. Best of fifteen by processor time for the whole process, the runs
-> of every row spread through the sitting rather than taken together, on a
-> machine with a load of four; lower is better. The raw numbers, with
-> the instructions each run retired, are in
-> [bench/results.tsv](bench/results.tsv).
+> **Measured on 2026-09-29 at commit
+> [`70e7e4e6`](https://github.com/Rawframe-Project/kest/commit/70e7e4e6),**
+> on an AMD Ryzen 9 5900X running Linux: Kest 0.0.2, Luau 0.740 `-O2` and
+> `--codegen`, Lua 5.4.9, LuaJIT 2.1 with `-joff` and without, and daslang
+> both interpreted and compiled ahead of time with `-exe`. Best of fifteen by
+> processor time for the whole process, the runs of every row spread through
+> the sitting rather than taken together, on a machine somebody else's CI was
+> also using; lower is better. The raw numbers, with the instructions each run
+> retired, are in [bench/results.tsv](bench/results.tsv).
 
 How to read it, honestly:
 
-- **Interpreters.** On the clock Kest's is ahead of Luau's on all five — by
-  4% on `control` and `rules` and 20 to 25% on the other three — and it
-  retires fewer instructions than Luau's on all five, from 0.66× on `kernel`
-  to 0.83× on `rules`. `control` and `rules` are close enough that a busy
-  machine can turn them round. Against daslang's interpreter it is ahead
-  everywhere.
+- **Interpreters.** Kest's is ahead of Luau's on all five, by 3% on `rules`
+  and 24 to 29% on the other four, ahead of Lua 5.4's by 1.4 to 2 times,
+  and ahead of daslang's everywhere. LuaJIT's interpreter is the one it does
+  not always beat: Kest is ahead on `kernel`, `graph` and `rules`, and behind
+  by 11% on `control` and 16% on `words`.
 - **Compiled.** Kest's release engine is ahead of Luau's native code on all
-  five, by 1.7 to 3.8×, and ahead of daslang's AOT on four. daslang's AOT
-  still wins `rules`, by about 1.2×.
+  five, by 1.7 to 4.7 times, and ahead of daslang's AOT on four; daslang's
+  AOT wins `rules`, by 1.46 times. Against LuaJIT's compiler it is ahead on
+  `control` and `rules` and behind on `kernel`, `graph` and `words`, by 1.25
+  to 1.41 times -- a compiler that watches the program run against one that
+  wrote C before it did.
 - **Reproduce it** on your own machine with
-  `KEST_LUAU=path/to/luau KEST_DAS=path/to/daslang sh bench/compare.sh`,
-  which rewrites the table and both charts and stamps them with the date and
-  the commit. Every workload is in [bench](bench), beside its Luau and daslang
-  twins.
+  `KEST_LUAU=path/to/luau KEST_LUA=path/to/lua KEST_LUAJIT=path/to/luajit
+  KEST_DAS=path/to/daslang sh bench/compare.sh`, which rewrites the table and
+  the charts and stamps them with the date, the commit and how busy the
+  machine was. Every workload is in [bench](bench), beside its Luau, Lua and
+  daslang twins.
 
 ## Caught before it runs
 

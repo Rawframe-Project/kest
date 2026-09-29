@@ -1,0 +1,67 @@
+module bench.hosts.bodies
+
+// What every engine in `bench/hosts` is asked to do, in Kest: the frame of
+// `bench/frame.kest` over bodies of four `f64`, because that is what a number
+// is in the languages this one is measured beside, so every engine does the
+// same arithmetic and answers the same sum. `bodies.lua` and `bodies.js` are
+// the same three functions. The hosts that call them are the ones with the
+// clock in them. See D1272.
+
+struct Body {
+    x: f64
+    y: f64
+    dx: f64
+    dy: f64
+}
+
+// What the host provides: two numbers added. A call of it is the cost of a
+// program asking its host for something and nothing else.
+extern fn Host.add(a: i64, b: i64) -> i64 no.alloc
+
+// One body moved, bouncing off the walls at nought and `wall`.
+fn moved(body: Body, wall: f64) -> Body no.alloc no.host deterministic {
+    body.x += body.dx
+    body.y += body.dy
+    if body.x < 0.0 {
+        body.x = 0.0 - body.x
+        body.dx = 0.0 - body.dx
+    } else if body.x > wall {
+        body.x = wall - (body.x - wall)
+        body.dx = 0.0 - body.dx
+    }
+    if body.y < 0.0 {
+        body.y = 0.0 - body.y
+        body.dy = 0.0 - body.dy
+    } else if body.y > wall {
+        body.y = wall - (body.y - wall)
+        body.dy = 0.0 - body.dy
+    }
+    return body
+}
+
+// A frame with one crossing: the host's bodies lent where they stand, every
+// one moved, and the sum of where they are answered.
+fn step(world: [Body], wall: f64) -> f64 no.alloc no.host deterministic {
+    let sum: f64 = 0.0
+    for at in 0..len(world) {
+        let one = moved(world[at], wall)
+        world[at] = one
+        sum += one.x + one.y
+    }
+    return sum
+}
+
+// A frame with a crossing a body: the host calls this once for each and reads
+// the body back.
+fn one(body: Body, wall: f64) -> Body no.alloc no.host deterministic {
+    return moved(body, wall)
+}
+
+// The other direction: `times` calls of the host, one after another.
+fn asks(times: i64) -> i64 no.alloc {
+    let sum: i64 = 0
+    for at in 0..times {
+        sum = Host.add(sum, at)
+    }
+    return sum
+}

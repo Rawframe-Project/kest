@@ -43806,3 +43806,65 @@ four machines and passed where the first had said there was a race. The same
 gate in a worktree with a `setarch` standing in that leaves the spreading on:
 `the thread sanitiser could not start on this machine, so two machines of one
 build were not watched`, and the gate failed.
+
+## D1272 — Lua 5.4 and LuaJIT beside the rest, and what crossing into each engine costs
+
+*measured*, on the machine this repository moved to (a Ryzen 9 5900X shared
+with another project's CI, which is why every table now says how busy it was).
+
+The owner asked for the front page's benchmarks to be widened, and chose every
+kind offered. This is the first two: the comparators a game programmer knows
+best, and the boundary.
+
+**Lua 5.4 and LuaJIT.** `bench/compare.sh` runs Lua 5.4.9, and LuaJIT 2.1 with
+its compiler and with it switched off (`-joff`), which is its interpreter. Four
+of the five workloads are Lua every Lua reads; `rules.lua` is Luau's dialect --
+types, `+=`, `table.create`, `if` as an expression, a table walked without
+`ipairs`, backquoted text, `bit32` -- so it has two twins, `rules.lua54.lua`
+and `rules.luajit.lua`, each that file written the way the other Lua has it and
+nothing else changed, and each answering `rules 108175838` as Luau does. Luau
+keeps `rules.lua`, whose types its native tier reads. At 70e7e4e6, best of
+fifteen by processor time: Kest's interpreter is ahead of Lua 5.4's by 1.4 to
+2 times on all five, and ahead of LuaJIT's interpreter on `kernel`, `graph` and
+`rules` and behind it by 11% on `control` and 16% on `words`. The release
+engine is ahead of LuaJIT's compiler on `control` and `rules` and behind it by
+1.25 to 1.41 times on the other three. daslang's AOT now wins `rules` by 1.46
+times where it was 1.17 on the old machine; that is the gap D1232 left, read on
+another processor. Luau's own benchmarks cannot join them: they are written in
+Luau's dialect and only `life` runs unchanged under Lua 5.4 and LuaJIT, so they
+stay Luau beside Kest (D1267).
+
+**The boundary.** `bench/hosts/` is one host per engine -- Kest, Lua 5.4 and
+LuaJIT (one host, two builds), Luau with and without its native tier, and
+QuickJS -- each driving its engine's own C API over the same work:
+`bench/frame.kest`'s bodies as four `f64`, twenty thousand of them, because that
+is what a number is in every other language here, so every engine does the same
+arithmetic and answers the same sum (2902674), and a run whose engines answer
+differently is refused. Three measures: a frame with one call (bodies that fit
+in 16.7 ms), a call a body (four numbers and the wall in, four back), and the
+program calling a host function a million times. The frame is over wherever
+each engine keeps bodies fastest, which is not the same place, and that is said
+rather than hidden: Kest lends the host's own memory and LuaJIT reaches it
+through its FFI, so both write the host's bodies; Lua 5.4 cannot reach it, and
+Luau can only through a `buffer`, measured at 166 ns a body against 42 for its
+own tables, so both of those work on tables of their own and write nothing
+back, which is the cheaper frame. LuaJIT with its compiler off reads an FFI
+field fifty times slower than a table's, so its interpreter row uses tables
+too. QuickJS reads the host's run through an `ArrayBuffer` on it.
+
+**What it found.** A program calling its host cost 42.7 ns in Kest's machine
+against 12 to 18 in every Lua, the one row where Kest was the slowest bar but
+QuickJS. `perf` said where: a sixth of it was `kest_chunk_origin` walking the
+body's code to turn the crossing's instruction into a source offset, written on
+the frame in case something under the host failed and wanted to say where it
+was called from (D1094). The machine's own frame already has its instruction
+pointer just past the crossing, and a frame saying nought is read from there,
+so the machine's frame is left saying nought and only a compiled body's, which
+is handed the place, writes it. Another sixth was `handed_well` walking the
+type of what the host answered, which for a sixty-four-bit number is nothing
+to walk. Together: 42.7 ns to 14.3. The other direction, a host calling the
+program, walked every piece of every argument to see it fit its width
+(D836) -- five `f64` that fit whatever they hold; a layout now says so once
+(`any_value`, in what the two flags above it leave over, so the header's shape
+does not move), and a call a body went from 40.6 ns to 33.6, of which two
+thirds is now the body itself.

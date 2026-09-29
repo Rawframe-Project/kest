@@ -1,5 +1,5 @@
 #!/bin/sh
-# The five workloads against the two languages beside this one, in every mode
+# The five workloads against the languages beside this one, in every mode
 # each of them ships, written down where the front page reads them: a table in
 # `bench/results.tsv`, with the date, the commit and the machine it was taken
 # on, and the charts `bench/chart.py` draws from it. Not part of `make check`,
@@ -18,9 +18,9 @@
 # it. Building a binary ahead of time -- this language's release engine and
 # daslang's `-exe` -- is not, because it is not what a game does when it runs.
 #
-# `KEST_LUAU` and `KEST_DAS` say where the comparators are, and `KEST_CPP` a
-# C++ compiler for the floor; a row whose engine is not there is left out
-# rather than guessed. See D1180.
+# `KEST_LUAU`, `KEST_LUA`, `KEST_LUAJIT` and `KEST_DAS` say where the
+# comparators are, and `KEST_CPP` a C++ compiler for the floor; a row whose
+# engine is not there is left out rather than guessed. See D1180 and D1272.
 set -eu
 
 kest=${KEST:-./kest}
@@ -35,6 +35,7 @@ commit=$(git rev-parse --short HEAD)
     printf '# taken\t%s\n' "$(date -u +%Y-%m-%d)"
     printf '# commit\t%s\n' "$commit"
     printf '# machine\t%s\n' "$(awk -F': ' '/^model name/ { print $2; exit }' /proc/cpuinfo)"
+    printf '# load\t%s\n' "$(cut -d' ' -f1 /proc/loadavg)"
     printf '# best of\t%s\n' "$best"
     printf 'workload\tengine\tms\tinstructions\n'
 } >"$out"
@@ -88,6 +89,20 @@ for one in kernel control graph words rules; do
     if [ -n "${KEST_LUAU:-}" ] && [ -f "bench/$one.lua" ]; then
         row "$one" "Luau" "$KEST_LUAU" -O2 "bench/$one.lua"
         row "$one" "Luau, native" "$KEST_LUAU" -O2 --codegen "bench/$one.lua"
+    fi
+    # Lua itself, and LuaJIT both with its compiler and with it switched off,
+    # which is its interpreter. A workload written in Luau's own dialect has a
+    # twin in each of theirs beside it; the rest are Lua every Lua reads.
+    lua54=bench/$one.lua
+    luajit=bench/$one.lua
+    [ -f "bench/$one.lua54.lua" ] && lua54=bench/$one.lua54.lua
+    [ -f "bench/$one.luajit.lua" ] && luajit=bench/$one.luajit.lua
+    if [ -n "${KEST_LUA:-}" ] && [ -f "bench/$one.lua" ]; then
+        row "$one" "Lua 5.4" "$KEST_LUA" "$lua54"
+    fi
+    if [ -n "${KEST_LUAJIT:-}" ] && [ -f "bench/$one.lua" ]; then
+        row "$one" "LuaJIT, interpreted" "$KEST_LUAJIT" -joff "$luajit"
+        row "$one" "LuaJIT" "$KEST_LUAJIT" "$luajit"
     fi
     if [ -n "${KEST_DAS:-}" ] && [ -f "bench/$one.das" ]; then
         row "$one" "daslang" "$KEST_DAS" -no-module-cache "bench/$one.das"

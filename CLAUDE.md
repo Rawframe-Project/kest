@@ -89,7 +89,7 @@ examples/          .kest programs that must keep working. Each one checks
                    language has and no example is written that way, so
                    `check.sh` runs one of its own.
 bench/             Four shapes of work and what each costs, in this language
-                   and in the two beside it. Not part of `make check`: a
+                   and in the ones beside it. Not part of `make check`: a
                    duration is not a pass or a fail. It is here to catch a
                    change that made something slower and to say where this
                    language sits, which is a thing to know rather than a thing
@@ -120,13 +120,24 @@ bench/             Four shapes of work and what each costs, in this language
                    how much of that there was. `make bench/measure` builds it.
                    See D1004.
                    `bench/compare.sh` is what the front page shows: the
-                   five workloads in every mode of this language, Luau and
-                   daslang, by processor time and instructions, written to
-                   `bench/results.tsv` with the date, the commit and the
-                   machine, and drawn by `bench/chart.py` as
+                   five workloads in every mode of this language, Luau,
+                   Lua 5.4, LuaJIT and daslang, by processor time and
+                   instructions, written to `bench/results.tsv` with the
+                   date, the commit, the machine and how busy it was, and
+                   drawn by `bench/chart.py` as
                    `bench/chart-interpreters.svg` and
                    `bench/chart-engines.svg`. A chart without when and at
                    which commit is a number nobody can compare. See D1180.
+                   `bench/hosts.sh` is the embedding side of the same page:
+                   `bench/hosts/` is one host per engine, each driving its
+                   engine's own C API over the same frame of twenty thousand
+                   bodies -- one call a frame, one call a body, and the
+                   program calling its host a million times -- and every
+                   engine answering the same sum. What a crossing costs each
+                   way and how many bodies fit in a 60 fps frame are written
+                   to `bench/hosts.tsv` and drawn as
+                   `bench/chart-crossing.svg` and `bench/chart-frame.svg`.
+                   See D1272.
                    `bench/tails.sh` is the third: `bench/measure` is generic
                    and a generated file belongs to one program, so this one
                    writes the C for whatever program it is given, builds the

@@ -42782,3 +42782,26 @@ now and says so when the sanitiser cannot start. See D1271.
 **Runs:** `make most` on the new machine, red on `races` and then green; the
 same gate with a `setarch` that does nothing, which says the sanitiser could
 not start and fails.
+
+## 2026-09-29, Lua 5.4 and LuaJIT on the front page, and the cost of a crossing
+
+The owner asked for the benchmarks to be widened and chose every kind offered;
+this is the first two. `bench/compare.sh` runs Lua 5.4.9 and LuaJIT 2.1 with
+and without its compiler beside Luau and daslang, `rules` has a twin in each
+Lua dialect answering what Luau's does, and the charts draw nine engines. The
+comparators are built from source in `/home/kest/sprint/cmp`, never in the
+tree.
+
+`bench/hosts/` drives each engine's own C API over one frame of twenty
+thousand bodies: one call a frame, one call a body, and a million calls of the
+host. It found the one row where Kest was the slowest bar but QuickJS: a
+program calling its host, 42.7 ns against 12 to 18 in every Lua. Two sixths of
+that were a walk of the body's code to write a place nobody reads unless
+something fails, and a walk of an `i64` answer's type; both are gone, and it is
+14.3 ns. A host calling the program walked five `f64` arguments to see they
+fit; a layout says once that nothing can fail to, and a call a body went from
+40.6 ns to 33.6. See D1272.
+
+**Runs:** `bench/compare.sh` with every comparator, best of fifteen;
+`bench/hosts.sh`, best of five; `perf record` on a host calling a program and
+a program calling a host, before and after; `make most`.
