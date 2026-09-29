@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1276
+    CURRENT SHA:       (this commit) D1093-D1287
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, and it is ahead of
@@ -15,14 +15,15 @@ reasoning; this holds the position.
                        `rules`; the machine is ahead of Luau's interpreter
                        on all five, by 4% at the least, and retires fewer
                        instructions on all five (D1203)
-    LAST CI:           green on 1adf22bc (run 36556890504), every job --
+    LAST CI:           green on b582346c (run 36574571790), every job --
                        linux, linux-arm64, macos, windows, clang, threads,
                        package, most, the four shares of the holes, tetris,
-                       tetris-windows and agree; determinism (run
-                       36556890692) and the playground (run 36556890667)
-                       from the same commit
+                       tetris-windows and agree; the playground (run
+                       36574571752) from the same commit, and determinism
+                       (run 36572419349) on cfb6551b, after the sine and
+                       cosine became instructions
     LAST FAST GATE:    green
-    LAST FULL GATE:    CI's `most` and four `holes` shares on 1adf22bc,
+    LAST FULL GATE:    CI's `most` and four `holes` shares on b582346c,
                        every hole caught
     STATUS:            GAME_AI_DIRECTION_COMPLETE, marked on a7769f0
     REFERENCE MACHINE: the spare Linux box this repository was on until

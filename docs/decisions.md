@@ -44327,3 +44327,32 @@ saying things about code nobody will run, and a module the verifier refused
 is refused whatever else is said about it, so there is nothing left for a
 hole to show going wrong. It goes, the way CLAUDE.md says a hole goes when
 what it is about goes; the early return stays.
+
+## D1287 — The front page retaken after the weak sides
+
+D1275 drew the front page at `598bd134`, and what it showed was taken as a
+list of what to fix: a reload, text, `control` in the machine, Luau's own
+tests, what a host carries, compiling, a compiled body nobody could stop,
+and two small ones (D1276-D1286). Every chart is retaken on the same machine
+at `a5310c3c`, the tree those ended at, the way D1275 took them.
+
+What moved, on the benchmark machine: `words` in the machine 29.5 ms to 20.0,
+ahead of LuaJIT's interpreter, and compiled 22.3 to 14.5; `control` in the
+machine 129 to 101, ahead of Luau's interpreter and 1.12 times behind
+LuaJIT's; `trig` in the machine 164 to 41; the long program 300 ms to 217,
+ahead of Luau; a reload 2.5 ms to 1.7; what the engine adds to an executable
+692 KB to 544; `churn`'s middle frame 482 µs to 383; and a compiled body
+stopped in 12 µs, where it did not stop before.
+
+What did not, and is written in `docs/state.md` as open: a reload is still
+three times Lua loading a chunk, because it is a compile; `control` behind
+LuaJIT's interpreter; `kernel` behind LuaJIT's compiler; `pcmmix` compiled,
+whose loop keeps its element checks; and `trig` compiled, which is a sine
+worked out for the same bits on every machine against the platform's own.
+Compiled `qsort` read 67.9 ms before and 77.4 after, and 72.2 when
+`bench/luau.sh` was run again an hour later, with the machine's other work
+moving every number here by a tenth from run to run; the two builds of it,
+with and without D1283's count, run on that machine one after the other
+answered 69-74 ms with it and 74-81 without, so it is read as the machine
+rather than as the change. The interpreted frame of `bench/hosts` read 71.4
+ns against 65.9, and retires 3% fewer instructions than it did.

@@ -43015,3 +43015,16 @@ See D1286.
 
 **Runs:** the CI log of run 36572377691; `check-backstops.sh` read for stale
 quotations; `make fast`.
+
+## 2026-09-29, the front page retaken after the weak sides
+
+Every chart retaken on the benchmark machine at `a5310c3c` with
+`measure.sh`, and the README's notes and `docs/state.md` written from the new
+tables. The eight weak sides moved as D1287 says; what is left open is written
+in `docs/state.md`. Compiled `qsort` read slower, and an A/B of the two
+builds on the same machine said it was the machine. See D1287.
+
+**Runs:** `measure.sh` on the benchmark machine; `bench/luau.sh` again there;
+compiled `qsort` built with and without the count of D1283 and run in turn
+there; the interpreted frame of `bench/hosts` under `perf stat` here against
+the library at `1adf22bc`.
