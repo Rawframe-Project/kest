@@ -42869,3 +42869,20 @@ fewer instructions a reload, 14% fewer over the long program. See D1276.
 record`, before and after each change; the verifier's steps counted in a
 copy; a keyword list put out of order in a copy, taking `break` as a name; the
 repointed word hole caught by hand in a copy; `make most`.
+
+## 2026-09-29, a number written into its text, `join` measured first
+
+The second weak side: `bench/words`. Its steps were not the cost; what each did
+was. A number in a piece of text is written straight into the text with
+`concat.i` rather than made into a text of its own and copied, `join` gives its
+run the room it will need once and pushes each piece where it is, and a walk of
+the heap waits for a megabyte rather than a quarter. 185 million instructions
+to 125. See D1277.
+
+**Runs:** `bench/words` split into its format, join and split halves, each
+under `perf stat` and `perf record`; a copy of the machine with number texts
+kept off the heap, to see what the fusion could buy before writing it; the
+collection floor at four sizes over `words`, `graph` and `rules`; every width
+of number, the least `i64` and seventeen pieces written both ways and with
+`KEST_NOOPT`; `check-c.sh` over those and two examples; `check-verifier.sh`
+with the two new cases; `make figures`; `make most`.

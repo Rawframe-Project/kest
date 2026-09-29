@@ -44041,3 +44041,43 @@ million and 2,886, 28% fewer; the long program of 107,135 lines, 1,327 million
 and 1,135, 14% fewer. What is left is a flat profile across every stage, which
 is the shape of a compiler that does eight things to every line, and is
 where the next of it is.
+
+## D1277 — A number in a piece of text is written into it, `join` is measured first, and a walk waits for a megabyte
+
+`bench/words` is the workload the machine loses to LuaJIT's interpreter by the
+most, and its instructions are not dispatch: 338 thousand steps retire 185
+million instructions, five hundred and more a step. They were in three places.
+
+**A number in a piece of text.** `"item {i} of {MANY} in round {round}"` made
+each number a text of its own with `text.i`, then joined the seven pieces with
+`concat` into an eighth and let the three go: four allocations a line and three
+of them garbage. `concat.i` is `concat` told which of its pieces are signed
+whole numbers -- one bit each, sixteen pieces at the most -- and those stay a
+number in one slot until the join writes them straight into the text it makes.
+The machine and the compiled bodies join through the same two functions, so
+the two engines cannot write a number two ways. The compiler hands a number to
+the join as it is only where the optimizer is on; `KEST_NOOPT` makes it a text
+first, which is the other half the gate compares every program against. The
+verifier holds each piece to its bit: `check-verifier.sh` says a piece past the
+last is a number and is refused `K0410`, and swaps which piece is the number,
+which reads a piece of text as one, and is refused `K0411`. Formatting forty
+thousand of those lines: 77 million instructions to 49. A program whose frame
+makes one line an entity keeps 16 bytes an entity rather than 32, which the
+reference's table says.
+
+**`join`.** `std.text.join` pushed every piece through `append`, a call each,
+into a run that doubled and was copied as it went. It adds up what it will
+hold, gives the run that much room with `room`, and pushes each piece where it
+is: twenty joins of two thousand pieces, 31 million instructions to 22.
+
+**When a walk is worth it.** A walk of what can be reached waited for a
+quarter of a megabyte to be taken. `bench/words` holds a fifth of a megabyte
+and walked it every quarter, which was a tenth of what it ran; at a megabyte it
+is gone, and `graph` and `rules` do not move. A megabyte is nothing to a game
+and is the room a program is taken to want before its first walk, not room it
+is given: a host that sets a ceiling is walked for at the ceiling whatever this
+says, as it always was.
+
+Together: `bench/words` from 185 million instructions to 125, a third fewer.
+What is left is split into pieces and a call a piece to `text.starts`, which is
+the interpreter's own cost, a step at a time.
