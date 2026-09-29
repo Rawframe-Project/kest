@@ -43971,3 +43971,35 @@ written is not a `return`, which no body in the tree but `spin` needs, and
 `check-c.sh` compiles every program's C with `-Werror=return-type`: the C this
 tree wrote for `bench/hosts/bodies.kest` before the change is refused by it and
 the C it writes now is not.
+
+## D1275 — The front page's numbers from a machine of their own
+
+Every chart on the front page is now taken on one machine given for it -- an
+Intel Haswell virtual machine with eight processors -- in one sitting at
+`598bd134`, by `bench/compare.sh`, `bench/hosts.sh`, `bench/compile.sh` and
+`bench/luau.sh` one after another, and the README's Performance section draws
+all eleven charts with what each says and where Kest is behind. The figures
+D1272 to D1274 quote were taken on the dev server, which runs another project's
+CI, and stay what they were: a record of what was measured there, not what the
+front page says.
+
+What moved between the two machines is itself worth writing down, because a
+reader of either would take it for the language:
+
+- The machine is 3% behind Luau's interpreter on `control` here, where it was
+  24 to 29% ahead on the Ryzen; on the other four it is 19 to 33% ahead. Behind
+  LuaJIT's interpreter on `control` and `words` by 1.41 and 1.36 times, where
+  it was 11% and 16%. Nothing here has said why yet; it is what is open
+  in the machine.
+- A program calling its host is 27.7 ns here, level with LuaJIT's compiled code
+  and behind its interpreter at 24.2; the release engine's 18.1 is the least.
+- This machine has no instruction counters, so `bench/results.tsv` has a `-`
+  where a count was, and the load it answered while the numbers were taken was
+  1.1 to 1.4 rather than nought.
+
+Two footers were longer than the chart they were under and `chart.py` says
+less in them; the Luau chart's heading was too.
+
+The one claim the front page makes and does not measure -- that a model
+writes working Kest more often than working Luau -- is said to be unmeasured
+there, until the blind trial runs.

@@ -6,7 +6,7 @@ and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 
     MISSION START SHA: e458ee2c5387b7181c08cbe5e530a0c75f6d3812
-    CURRENT SHA:       (this commit) D1093-D1274
+    CURRENT SHA:       (this commit) D1093-D1275
     PHASE:             B — the release engine, and it is whole: every one of
                        this tree's bodies is written as C (D1119),
                        `bench/rules.kest` compiles entire, and it is ahead of
@@ -27,8 +27,11 @@ reasoning; this holds the position.
     REFERENCE MACHINE: the spare Linux box this repository was on until
                        2026-09-26 -- 12 cores, 62 GB, gcc, release build,
                        warm page cache. Every number below was taken on it.
-                       The repository is on a 24-core box now, and nothing
-                       has been measured on it yet.
+                       The repository is on a 24-core box now. The front
+                       page's charts are taken on a machine of their own,
+                       an eight-processor Haswell virtual machine (D1275),
+                       where the machine is 3% behind Luau's interpreter on
+                       `control`.
 
 ## What the owner is asking for
 

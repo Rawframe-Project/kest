@@ -36,7 +36,10 @@ jobs:
       - name: Kest, and the comparators built from their own source
         run: |
           make -j kest
-          curl -sL https://www.lua.org/ftp/lua-5.4.9.tar.gz | tar xz
+          # Asked again when the far end drops the connection, which it did.
+          curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 \
+            -o lua.tar.gz https://www.lua.org/ftp/lua-5.4.9.tar.gz
+          tar xzf lua.tar.gz
           make -C lua-5.4.9 -j "$( [ "$(uname)" = Darwin ] && echo macosx || echo linux )" >/dev/null
           git clone -q https://github.com/LuaJIT/LuaJIT.git luajit
           # LuaJIT's makefile will not guess which macOS it is building for.
@@ -45,7 +48,8 @@ jobs:
           fi
           make -C luajit -j >/dev/null
           if [ -n "${{ matrix.luau }}" ]; then
-            curl -sL -o luau.zip https://github.com/luau-lang/luau/releases/download/0.740/${{ matrix.luau }}
+            curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 \
+              -o luau.zip https://github.com/luau-lang/luau/releases/download/0.740/${{ matrix.luau }}
             unzip -q luau.zip -d luau-bin
           fi
       - name: the answers
@@ -72,7 +76,8 @@ jobs:
       - name: Lua 5.4 and LuaJIT from their own source, and Luau's release
         shell: pwsh
         run: |
-          Invoke-WebRequest -Uri https://www.lua.org/ftp/lua-5.4.9.tar.gz -OutFile lua.tar.gz
+          Invoke-WebRequest -Uri https://www.lua.org/ftp/lua-5.4.9.tar.gz -OutFile lua.tar.gz `
+            -MaximumRetryCount 5 -RetryIntervalSec 10
           tar xzf lua.tar.gz
           $sources = Get-ChildItem lua-5.4.9\src\*.c |
             Where-Object Name -ne 'luac.c' | ForEach-Object FullName
@@ -83,7 +88,8 @@ jobs:
           cmd /c msvcbuild.bat
           if ($LASTEXITCODE -ne 0) { throw "LuaJIT would not build" }
           Pop-Location
-          Invoke-WebRequest -Uri https://github.com/luau-lang/luau/releases/download/0.740/luau-windows.zip -OutFile luau.zip
+          Invoke-WebRequest -Uri https://github.com/luau-lang/luau/releases/download/0.740/luau-windows.zip -OutFile luau.zip `
+            -MaximumRetryCount 5 -RetryIntervalSec 10
           Expand-Archive luau.zip -DestinationPath luau-bin
       - name: the answers
         shell: bash

@@ -1,55 +1,56 @@
 # taken	2026-09-29
-# commit	70e7e4e6
-# machine	AMD Ryzen 9 5900X 12-Core Processor
+# commit	598bd134
+# machine	Intel Core Processor (Haswell, no TSX)
+# load	1.38
 # best of	15
 workload	engine	ms	instructions
-kernel	Kest	39.40	661498649
-kernel	Kest, compiled	5.57	67976827
-kernel	C++	3.03	47308964
-kernel	Luau	55.52	971090262
-kernel	Luau, native	25.95	324914287
-kernel	Lua 5.4	73.50	1229641462
-kernel	LuaJIT, interpreted	44.45	776588036
-kernel	LuaJIT	3.96	54677955
-kernel	daslang	81.30	898658497
-kernel	daslang, AOT	13.54	113495486
-control	Kest	48.81	733544570
-control	Kest, compiled	6.99	106820588
-control	C++	3.39	53139408
-control	Luau	66.71	936649027
-control	Luau, native	26.59	307609696
-control	Lua 5.4	68.01	1092610999
-control	LuaJIT, interpreted	44.07	639869785
-control	LuaJIT	9.05	126370689
-control	daslang	80.89	744680160
-control	daslang, AOT	13.81	104457347
-graph	Kest	6.32	92251825
-graph	Kest, compiled	3.18	30304367
-graph	C++	1.24	8561377
-graph	Luau	8.37	112085340
-graph	Luau, native	6.83	44289174
-graph	Lua 5.4	12.33	220682163
-graph	LuaJIT, interpreted	8.62	109044040
-graph	LuaJIT	2.55	14417793
-graph	daslang	41.44	298709975
-graph	daslang, AOT	10.17	48522980
-words	Kest	12.91	186956394
-words	Kest, compiled	9.95	146147290
-words	C++	6.49	87593785
-words	Luau	17.16	232010887
-words	Luau, native	16.89	214012344
-words	Lua 5.4	23.34	335170696
-words	LuaJIT, interpreted	11.13	134673335
-words	LuaJIT	7.50	70666540
-words	daslang	53.51	391338797
-words	daslang, AOT	24.44	227552178
-rules	Kest	203.67	2667186738
-rules	Kest, compiled	40.05	525366089
-rules	C++	35.69	583021507
-rules	Luau	209.86	3254550422
-rules	Luau, native	122.26	1273456614
-rules	Lua 5.4	367.87	5564057966
-rules	LuaJIT, interpreted	214.74	2813182229
-rules	LuaJIT	95.41	978428472
-rules	daslang	254.34	2253126520
-rules	daslang, AOT	27.50	265855363
+kernel	Kest	82.11	-
+kernel	Kest, compiled	11.74	-
+kernel	C++	9.38	-
+kernel	Luau	123.03	-
+kernel	Luau, native	46.72	-
+kernel	Lua 5.4	120.07	-
+kernel	LuaJIT, interpreted	97.57	-
+kernel	LuaJIT	8.57	-
+kernel	daslang	169.96	-
+kernel	daslang, AOT	30.96	-
+control	Kest	129.32	-
+control	Kest, compiled	16.83	-
+control	C++	7.79	-
+control	Luau	125.56	-
+control	Luau, native	48.33	-
+control	Lua 5.4	165.17	-
+control	LuaJIT, interpreted	91.47	-
+control	LuaJIT	20.67	-
+control	daslang	165.92	-
+control	daslang, AOT	29.46	-
+graph	Kest	13.01	-
+graph	Kest, compiled	4.34	-
+graph	C++	2.39	-
+graph	Luau	16.39	-
+graph	Luau, native	11.41	-
+graph	Lua 5.4	27.65	-
+graph	LuaJIT, interpreted	15.56	-
+graph	LuaJIT	4.40	-
+graph	daslang	93.41	-
+graph	daslang, AOT	20.43	-
+words	Kest	29.53	-
+words	Kest, compiled	22.29	-
+words	C++	11.56	-
+words	Luau	37.58	-
+words	Luau, native	36.93	-
+words	Lua 5.4	47.90	-
+words	LuaJIT, interpreted	21.73	-
+words	LuaJIT	13.67	-
+words	daslang	116.32	-
+words	daslang, AOT	53.98	-
+rules	Kest	406.66	-
+rules	Kest, compiled	83.93	-
+rules	C++	66.09	-
+rules	Luau	499.30	-
+rules	Luau, native	225.86	-
+rules	Lua 5.4	885.38	-
+rules	LuaJIT, interpreted	434.70	-
+rules	LuaJIT	200.22	-
+rules	daslang	458.44	-
+rules	daslang, AOT	59.82	-

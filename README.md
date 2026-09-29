@@ -108,11 +108,24 @@ designer changes every day. What it brings to that seat:
 
 ## Performance
 
+Every number here was taken on one machine in one sitting: an Intel Haswell
+virtual machine with eight processors running Linux, at commit
+[`598bd134`](https://github.com/Rawframe-Project/kest/commit/598bd134) on
+2026-09-29, with Kest 0.0.2, Luau 0.740 (`-O2`, and `--codegen` for its native
+tier), Lua 5.4.9, LuaJIT 2.1 with its compiler on and off, QuickJS-ng, and
+daslang interpreted and compiled ahead of time. The machine was not idle --
+it answered a load of 1.1 to 1.4 while the numbers were taken -- and it has no
+instruction counters, so the tables have a `-` where a quiet machine would
+have a count. Each chart says when, where and how a number was chosen from its
+runs; every table is in [bench](bench) beside the programs, in every language,
+that made it.
+
+### Running a program
+
 Five workloads, each written in Kest, Luau, Lua and daslang to answer the same
-checksum, and run by every engine in every mode it ships: Kest's machine and
-its release engine, Luau's interpreter and native tier, Lua 5.4, LuaJIT with
-its compiler and with it switched off, and daslang interpreted and compiled
-ahead of time.
+checksum, and run by every engine in every mode it ships. Best of fifteen by
+processor time for the whole process, the runs of every row spread through the
+sitting rather than taken together.
 
 <p align="center">
   <img src="bench/chart-interpreters.svg" alt="Interpreters: Kest, Luau, Lua 5.4, LuaJIT's interpreter and daslang, time as a share of Luau's" width="820">
@@ -122,35 +135,139 @@ ahead of time.
   <img src="bench/chart-engines.svg" alt="Every engine in every mode, milliseconds per workload" width="820">
 </p>
 
-> **Measured on 2026-09-29 at commit
-> [`70e7e4e6`](https://github.com/Rawframe-Project/kest/commit/70e7e4e6),**
-> on an AMD Ryzen 9 5900X running Linux: Kest 0.0.2, Luau 0.740 `-O2` and
-> `--codegen`, Lua 5.4.9, LuaJIT 2.1 with `-joff` and without, and daslang
-> both interpreted and compiled ahead of time with `-exe`. Best of fifteen by
-> processor time for the whole process, the runs of every row spread through
-> the sitting rather than taken together, on a machine somebody else's CI was
-> also using; lower is better. The raw numbers, with the instructions each run
-> retired, are in [bench/results.tsv](bench/results.tsv).
-
-How to read it, honestly:
-
-- **Interpreters.** Kest's is ahead of Luau's on all five, by 3% on `rules`
-  and 24 to 29% on the other four, ahead of Lua 5.4's by 1.4 to 2 times,
-  and ahead of daslang's everywhere. LuaJIT's interpreter is the one it does
-  not always beat: Kest is ahead on `kernel`, `graph` and `rules`, and behind
-  by 11% on `control` and 16% on `words`.
+- **Interpreters.** Kest's is ahead of Luau's on four of the five, by 19 to
+  33%, and 3% behind it on `control`. It is ahead of Lua 5.4's on all five, by
+  1.3 to 2.2 times, and of daslang's everywhere. LuaJIT's interpreter is the
+  one it does not always beat: Kest is ahead on `kernel`, `graph` and `rules`,
+  and behind by 1.41 times on `control` and 1.36 on `words`.
 - **Compiled.** Kest's release engine is ahead of Luau's native code on all
-  five, by 1.7 to 4.7 times, and ahead of daslang's AOT on four; daslang's
-  AOT wins `rules`, by 1.46 times. Against LuaJIT's compiler it is ahead on
-  `control` and `rules` and behind on `kernel`, `graph` and `words`, by 1.25
-  to 1.41 times -- a compiler that watches the program run against one that
+  five, by 1.7 to 4 times, and of daslang's AOT on four; daslang's wins
+  `rules`, by 1.4 times. Against LuaJIT's compiler it is ahead on `control`
+  and `rules`, level on `graph`, and behind on `kernel` by 1.36 times and on
+  `words` by 1.63 -- a compiler that watches the program run against one that
   wrote C before it did.
-- **Reproduce it** on your own machine with
-  `KEST_LUAU=path/to/luau KEST_LUA=path/to/lua KEST_LUAJIT=path/to/luajit
-  KEST_DAS=path/to/daslang sh bench/compare.sh`, which rewrites the table and
-  the charts and stamps them with the date, the commit and how busy the
-  machine was. Every workload is in [bench](bench), beside its Luau, Lua and
-  daslang twins.
+
+### Inside an engine
+
+What a game pays is mostly not a whole process: it is a host calling into a
+program and back, many times a frame. [bench/hosts](bench/hosts) is one host
+per engine, each driving its engine through the engine's own C API over the
+same twenty thousand bodies, and every engine answering the same sum.
+
+<p align="center">
+  <img src="bench/chart-crossing.svg" alt="Nanoseconds for one crossing each way through each engine's C API" width="820">
+</p>
+
+<p align="center">
+  <img src="bench/chart-frame.svg" alt="How many bodies fit in a 60 fps frame in each engine" width="820">
+</p>
+
+- A host calling a program is cheaper in Kest than in any other engine here,
+  interpreted as well as compiled. A program calling its host is cheapest in
+  Kest's release engine, at 18 ns; its machine, at 28, is level with LuaJIT's
+  compiled code and behind LuaJIT's interpreter, at 24. In a frame, its
+  interpreter moves
+  more bodies than Luau's, Lua's or LuaJIT's interpreter; compiled it moves 3.3
+  million where LuaJIT's compiler moves 5.1 million, and C with nothing
+  crossing 5.3 million.
+
+<p align="center">
+  <img src="bench/chart-sandbox.svg" alt="What a budget costs a frame, and how soon a runaway loop stops, in each engine" width="820">
+</p>
+
+- A budget costs Kest's machine nothing it can measure, where Lua's hook costs
+  2.4 times the frame. A runaway stops in 16 µs once the host asks. **Kest's
+  release engine does not stop at all, and neither does LuaJIT's compiled
+  code:** compiled bodies spend no budget by design, and a machine running
+  code nobody trusts never enters them (see [SECURITY.md](SECURITY.md)).
+
+<p align="center">
+  <img src="bench/chart-tails.svg" alt="Middle, worst in a hundred and worst frame of a world that makes garbage" width="820">
+</p>
+
+- A world of 5,000 things that makes garbage every frame: Kest has the lowest
+  worst frame in a hundred and the lowest worst frame of all, where Lua's
+  incremental and generational collectors reach 8 and 11 ms. Its middle frame
+  is behind LuaJIT's compiler and level with Luau's native tier. Walking the
+  heap between frames rather than when it fills costs Kest its middle frame.
+
+<p align="center">
+  <img src="bench/chart-threads.svg" alt="How many times one thread's work each engine does on one to eight threads" width="820">
+</p>
+
+- A machine a thread, each with a world of its own: Kest's interpreter does
+  6.1 times the work on eight threads. This is how well each engine keeps out
+  of its own way, not how fast it is: C itself gains 4 times and LuaJIT's
+  compiled code 3.7, because the quicker a frame is, the sooner eight threads
+  are sharing what the machine's memory can hand them.
+
+<p align="center">
+  <img src="bench/chart-footprint.svg" alt="Bytes each engine adds to an executable, and what a machine holding a program costs" width="820">
+</p>
+
+- Kest adds 692 KB to a game, because the compiler and the checker come with
+  it; Lua adds 260 KB. A machine holding the frame program is 27 KB, about what
+  a Lua state is.
+
+### Before it runs
+
+<p align="center">
+  <img src="bench/chart-compile.svg" alt="Milliseconds to take a long program and a generic used 3,200 ways from source to running, and to reload the Tetris clone" width="820">
+</p>
+
+- A program of 107,135 lines is ready in 300 ms: about what Luau takes, six
+  times what Lua and LuaJIT take -- which check no types -- and seventeen
+  times less than daslang. A generic taken 3,200 ways is 103 ms, against 1.1 s
+  for Rust and 2.7 s for C++.
+- **Reloading the Tetris clone is 2.5 ms in Kest and 0.5 ms in Lua,** because
+  a reload builds the standard library it imports again as well. Well inside a
+  frame, and five times what Lua does.
+
+### Somebody else's benchmarks
+
+<p align="center">
+  <img src="bench/chart-luau.svg" alt="Luau's own five benchmarks beside the same work in Kest" width="820">
+</p>
+
+- These are Luau's choice rather than this project's, timed by Luau's own
+  harness. Kest's interpreter is behind Luau's on all five, by 1.1 to 1.4 times
+  on four of them and by five times on `trig`: Kest works its sines and
+  cosines out in its own library, so every machine gets the same bits (below),
+  where Luau asks the C library for them. Compiled, Kest is ahead of Luau's native
+  tier on `life`, `matrixmult` and `qsort`, and behind on `pcmmix` and `trig`.
+
+### The same answer everywhere
+
+<p align="center">
+  <img src="bench/chart-determinism.svg" alt="The same simulation's answer on four platforms in Kest, Lua 5.4, LuaJIT, Luau and JavaScript" width="820">
+</p>
+
+- A lockstep game or a replay needs every player's machine to compute the same
+  world. [.github/workflows/determinism.yml](.github/workflows/determinism.yml)
+  runs one simulation of floating point and the maths library on the four
+  machines CI has: Kest answers one number on all four, and every other
+  language here answers three, because each asks the system's own maths
+  library.
+
+### Not measured yet
+
+Whether a model writes working Kest more often than it writes working Luau is
+the one claim here a program cannot measure. The tasks are in [ai](ai); the
+blind trial that answers it has not been run.
+
+### Reproduce it
+
+Each script leaves out an engine it is not told where to find, and rewrites
+its table and charts with the date, the commit and how busy the machine was:
+
+```
+KEST_LUAU=luau KEST_LUA=lua KEST_LUAJIT=luajit KEST_DAS=daslang sh bench/compare.sh
+KEST_LUA_SRC=lua-5.4.9 KEST_LUAJIT_SRC=luajit KEST_LUAU_SRC=luau \
+    KEST_QJS_SRC=quickjs sh bench/hosts.sh
+KEST_LUAU=luau KEST_LUA=lua KEST_LUAJIT=luajit KEST_QJS=qjs KEST_DAS=daslang \
+    KEST_CXX=g++ KEST_RUSTC=rustc sh bench/compile.sh
+KEST_LUAU=luau LUAU_BENCH=luau/bench sh bench/luau.sh
+```
 
 ## Caught before it runs
 

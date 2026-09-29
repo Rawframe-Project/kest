@@ -272,8 +272,7 @@ def crossing(stamp, rows):
         most = max(v for _, v in found) * 1.15
         y = panel(parts, y, title, about, found, most, nanoseconds)
     height = y + 30
-    parts.append(footer(stamp, width, height - 18, by=MIDDLE + "; lower is "
-                        "better"))
+    parts.append(footer(stamp, width, height - 18, by=MIDDLE))
     return svg(width, height, parts)
 
 
@@ -298,8 +297,7 @@ def frame_budget(stamp, rows):
               "C is the same arithmetic with nothing crossing, the floor "
               "every engine is read against", found, most, bodies)
     height = y + 30
-    parts.append(footer(stamp, width, height - 18, by=MIDDLE + "; higher is "
-                        "better"))
+    parts.append(footer(stamp, width, height - 18, by=MIDDLE))
     return svg(width, height, parts)
 
 
@@ -428,8 +426,8 @@ def luau_own(stamp, rows):
     width = 860
     parts = [text(28, 38, "Luau's own benchmarks", size=20, weight="bold"),
              text(28, 62, "Five tests from Luau's repository, run by its own "
-                  "harness, beside the same work written in Kest and timed "
-                  "the same way; milliseconds, lower is better.", size=13,
+                  "harness, beside the same work in Kest; milliseconds, "
+                  "lower is better.", size=13,
                   fill="#495057")]
     about = {
         "life": "Conway's life on a grid of cells",
@@ -566,6 +564,81 @@ def scaling(stamp, rows):
     return svg(width, height, parts)
 
 
+def same_everywhere(path):
+    """One simulation's answers from every machine CI has, a language a row:
+    the same letter is the same answer, and one letter across a row is a
+    language that answers the same everywhere."""
+    stamp = {}
+    answers = {}
+    platforms = []
+    with open(path) as table:
+        for line in table:
+            line = line.rstrip("\n")
+            if line.startswith("# "):
+                key, _, value = line[2:].partition("\t")
+                stamp[key] = value
+                continue
+            fields = line.split("\t")
+            if fields[0] == "engine" or len(fields) != 3:
+                continue
+            engine, platform, answer = fields
+            answers.setdefault(engine, {})[platform] = answer
+            if platform not in platforms:
+                platforms.append(platform)
+    width = 860
+    left, cell = 200, 118
+    engines = [e for e in ["Kest", "Lua 5.4", "LuaJIT", "Luau",
+                           "JavaScript (Node)"] if e in answers]
+    parts = [text(28, 38, "The same answer everywhere", size=20,
+                  weight="bold"),
+             text(28, 62, "100,000 steps through sin, cos, atan2, pow and "
+                  "sqrt, printed to 17 digits on each machine CI has; the "
+                  "same letter is the same answer.", size=13,
+                  fill="#495057")]
+    shades = ["#d3f9d8", "#ffe3e3", "#fff3bf", "#e5dbff", "#d0ebff"]
+    top = 100
+    for p, platform in enumerate(platforms):
+        parts.append(text(left + cell * p + cell / 2, top, platform, size=12,
+                          weight="bold", anchor="middle"))
+    parts.append(text(left + cell * len(platforms) + 50, top, "answers",
+                      size=12, weight="bold", anchor="middle"))
+    y = top + 14
+    for engine in engines:
+        seen = []
+        parts.append(text(left - 12, y + 25, engine, size=13, anchor="end",
+                          weight="bold" if engine == "Kest" else "normal"))
+        for p, platform in enumerate(platforms):
+            x = left + cell * p + 6
+            answer = answers[engine].get(platform)
+            if answer is None:
+                parts.append(text(x + (cell - 12) / 2, y + 25, "not built",
+                                  size=11, fill="#adb5bd", anchor="middle"))
+                continue
+            if answer not in seen:
+                seen.append(answer)
+            which = seen.index(answer)
+            parts.append("<rect x=\"%.1f\" y=\"%.1f\" width=\"%d\" "
+                         "height=\"36\" rx=\"4\" fill=\"%s\"/>"
+                         % (x, y + 4, cell - 12, shades[which % len(shades)]))
+            parts.append(text(x + (cell - 12) / 2, y + 27, "ABCDE"[which % 5],
+                              size=15, weight="bold", anchor="middle"))
+        many = len(seen)
+        parts.append(text(left + cell * len(platforms) + 50, y + 27,
+                          "1, the same" if many == 1 else "%d different" % many,
+                          size=13, weight="bold",
+                          fill="#2b8a3e" if many == 1 else "#c92a2a",
+                          anchor="middle"))
+        y += 46
+    height = y + 50
+    parts.append(text(width / 2, height - 18,
+                      "Measured %s at commit %s by .github/workflows/"
+                      "determinism.yml. Luau publishes no build for Linux on "
+                      "arm64." % (stamp.get("taken", "?"),
+                                  stamp.get("commit", "?")),
+                      size=11, fill="#868e96", anchor="middle"))
+    return svg(width, height, parts)
+
+
 def main():
     stamp, rows = read(sys.argv[1])
     where = sys.argv[2]
@@ -599,6 +672,13 @@ def main():
         if drawn is not None:
             with open(where + "/chart-tails.svg", "w") as out:
                 out.write(drawn)
+    try:
+        drawn = same_everywhere(where + "/determinism.tsv")
+    except FileNotFoundError:
+        drawn = None
+    if drawn is not None:
+        with open(where + "/chart-determinism.svg", "w") as out:
+            out.write(drawn)
     if "luau" in tables:
         stamp, rows = tables["luau"]
         with open(where + "/chart-luau.svg", "w") as out:

@@ -42839,3 +42839,18 @@ The measurements move to the machine the owner gave for them
 **Runs:** `bench/hosts.sh`; `bench/determinism.sh` here; the C written for
 `bench/hosts/bodies.kest` before and after the change under
 `-Werror=return-type`; `make most`.
+
+## 2026-09-29, the front page's numbers from a machine of their own
+
+Every benchmark the front page draws was run on the machine given for it, at
+`598bd134`, and the README's Performance section now draws all eleven charts
+-- running a program, crossing, a frame, stopping, garbage, threads, weight,
+compiling and reloading, Luau's own tests, and the same answer everywhere --
+each with where Kest is behind: `control` against Luau's interpreter,
+`control` and `words` against LuaJIT's, a reload five times Lua's, and two
+compiled engines that do not stop. Two chart footers and a heading were
+wider than their chart. See D1275.
+
+**Runs:** `bench/compare.sh` best of fifteen, `bench/hosts.sh` and
+`bench/compile.sh` best of five, and `bench/luau.sh`, on the benchmark
+machine; every chart drawn again and looked at; `make most`.
