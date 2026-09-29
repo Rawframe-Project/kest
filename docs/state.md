@@ -182,40 +182,38 @@ Where it stands, from the front page's table (D1203): `bench/compare.sh` at
   trial 5.2% fewer cycles run by the machine (D1231).
   A tag whose cases carry the same pieces is read without a `switch` in the
   generated C: compiled `rules` 1.8% fewer cycles (D1232).
-- **On Luau's own benchmarks** (D1267, retaken in D1275 and after the weak
-  sides were taken, D1276-D1286, at `a5310c3c`), which this project did not
-  choose: the machine is ahead of Luau's interpreter on `life` and behind it
-  on the other four by 1.13 to 1.3 times; `trig` went from five times behind
-  to 1.15 once a sine and a cosine became instructions (D1279). The release
-  engine is ahead of Luau's native tier on `life` and `matrixmult`, level on
-  `qsort`, and behind on `pcmmix` (1.75 times: element checks in the loop)
-  and `trig` (2.1 times: a sine worked out for the same bits everywhere
-  against the platform's).
-- **Beside Lua 5.4 and LuaJIT** (D1272, retaken at `a5310c3c`): the machine is
-  ahead of Luau's interpreter on all five by 17 to 47%, of Lua 5.4 by 1.45 to
-  2.4 times, and of LuaJIT's interpreter on four, behind it by 1.12 times on
+- **On Luau's own benchmarks** (D1267, retaken after the weak sides were
+  taken, D1276-D1289, at `32b73d91`), which this project did not choose: the
+  machine is behind Luau's interpreter on all five by 1.1 to 1.3 times;
+  `trig` went from five times behind to 1.1 once a sine and a cosine became
+  instructions (D1279). The release engine is ahead of Luau's native tier on
+  `life` and `matrixmult`, level on `qsort`, and behind on `pcmmix` (1.12
+  times) and `trig` (twice: a sine worked out for the same bits everywhere
+  against the platform's, which is the price of those bits).
+- **Beside Lua 5.4 and LuaJIT** (D1272, retaken at `32b73d91`): the machine is
+  ahead of Luau's interpreter on all five by 19 to 47%, of Lua 5.4 by 1.5 to
+  2.4 times, and of LuaJIT's interpreter on four, behind it by 1.15 times on
   `control`; the release engine is ahead of LuaJIT's compiler on `control`
-  and `rules`, level on `graph`, and behind by 1.06 times on `words` and 1.42
-  on `kernel`, and behind daslang's AOT on `rules` by 1.25. Through each
-  engine's own C API a program calls its host in 26.9 ns (17.4 compiled;
-  LuaJIT's interpreter 25.5, Luau 28.7, Lua 5.4 37.2) and a host calls the
-  program with a body in 74.3 (Luau 167, Lua 5.4 157, LuaJIT 87.6). What is
-  open: `control` against LuaJIT's interpreter, and `kernel` against its
-  compiler.
+  and `rules`, level on `graph`, within 7% on `kernel` and `words` (D1288),
+  and behind daslang's AOT on `rules` by 1.3. Through each engine's own C API
+  a program calls its host in 27.6 ns (16.9 compiled; LuaJIT's interpreter
+  25.2, Luau's native tier 28.9, Lua 5.4 34.3) and a host calls the program
+  with a body in 74.7 (Luau's native tier 136, Lua 5.4 157, LuaJIT 87.1).
+  What is open: `control` against LuaJIT's interpreter.
 - **Compiling, reloading, weight and a frame's worst** (D1273, D1276, D1282,
-  D1284, D1285): 107,135 lines to running in 217 ms (Luau 293, Lua 63,
-  daslang 4,955); 3,200 generic copies in 84 ms (Rust 1,109, C++ 2,728); the
+  D1284, D1285, D1289): 107,135 lines to running in 211 ms (Luau 276, Lua 55,
+  daslang 4,770); 3,200 generic copies in 80 ms (Rust 1,032, C++ 2,500); the
   Tetris clone rebuilt in 1.7 ms against 0.5 for Lua loading its chunk, which
-  is what is open there; 544 KB added to an executable linked with
-  `-Wl,--gc-sections` (Lua 260, LuaJIT 556) and 26 KB a machine; and of a
-  world making garbage, a middle frame of 383 µs, behind only LuaJIT's
-  compiler, and the worst frame in a hundred 1.15 ms, the least of every
-  engine here.
+  is what is open there and what D1289 says would close it; 544 KB added to
+  an executable linked with `-Wl,--gc-sections` (Lua 260, LuaJIT 556) and 26
+  KB a machine; and of a world making garbage, a middle frame of 381 µs,
+  behind only LuaJIT's compiler, and the worst frame in a hundred and the
+  worst of all, 1.15 and 1.93 ms, the least of every engine here.
 - **Stopping, threads, and the same answer everywhere** (D1274, D1283): Kest's
-  budget costs a frame nothing and a runaway stops 17 µs after it is asked,
-  where Lua 5.4's hook costs twice the frame; a compiled Kest body hears the
-  host at the back of every `while` and stops in 12 µs, where LuaJIT's
-  compiled code is not stopped at all. Eight machines of one build do 5.8
+  budget costs a frame nothing and a runaway stops 15 µs after it is asked,
+  where Lua 5.4's hook costs 2.2 times the frame; a compiled Kest body hears
+  the host at the back of every `while` and stops in 11 µs, where LuaJIT's
+  compiled code is not stopped at all. Eight machines of one build do 6.8
   times one's work. On the four machines CI has, Kest answers one number and
   Lua 5.4, LuaJIT, Luau and JavaScript three each.
 - **A game brought over from Lua** (D1268) found a fault in the compiler and

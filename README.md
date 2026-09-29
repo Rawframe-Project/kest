@@ -110,11 +110,11 @@ designer changes every day. What it brings to that seat:
 
 Every number here was taken on one machine in one sitting: an Intel Haswell
 virtual machine with eight processors running Linux, at commit
-[`a5310c3c`](https://github.com/Rawframe-Project/kest/commit/a5310c3c) on
+[`32b73d91`](https://github.com/Rawframe-Project/kest/commit/32b73d91) on
 2026-09-29, with Kest 0.0.2, Luau 0.740 (`-O2`, and `--codegen` for its native
 tier), Lua 5.4.9, LuaJIT 2.1 with its compiler on and off, QuickJS-ng, and
 daslang interpreted and compiled ahead of time. The machine was not idle --
-it answered a load of 1.1 to 1.3 while the numbers were taken -- and it has no
+it answered a load of 1.0 to 1.3 while the numbers were taken -- and it has no
 instruction counters, so the tables have a `-` where a quiet machine would
 have a count. Each chart says when, where and how a number was chosen from its
 runs; every table is in [bench](bench) beside the programs, in every language,
@@ -135,16 +135,16 @@ sitting rather than taken together.
   <img src="bench/chart-engines.svg" alt="Every engine in every mode, milliseconds per workload" width="820">
 </p>
 
-- **Interpreters.** Kest's is ahead of Luau's on all five, by 17 to 47%, of
-  Lua 5.4's by 1.45 to 2.4 times, and of daslang's everywhere. LuaJIT's
+- **Interpreters.** Kest's is ahead of Luau's on all five, by 19 to 47%, of
+  Lua 5.4's by 1.5 to 2.4 times, and of daslang's everywhere. LuaJIT's
   interpreter is the one it does not always beat: Kest is ahead on four and
-  behind by 1.12 times on `control`.
+  behind by 1.15 times on `control`.
 - **Compiled.** Kest's release engine is ahead of Luau's native code on all
-  five, by 2.5 to 4 times, and of daslang's AOT on four; daslang's wins
-  `rules`, by 1.25 times. Against LuaJIT's compiler it is ahead on `control`
-  and `rules`, level on `graph`, and behind on `words` by 1.06 times and on
-  `kernel` by 1.42 -- a compiler that watches the program run against one that
-  wrote C before it did.
+  five, by 2.4 to 5.2 times, and of daslang's AOT on four; daslang's wins
+  `rules`, by 1.3 times. Against LuaJIT's compiler it is ahead on `control`
+  and `rules`, level on `graph`, and within 7% on `kernel` and `words` -- a
+  compiler that watches the program run against one that wrote C before it
+  did.
 
 ### Inside an engine
 
@@ -163,8 +163,8 @@ same twenty thousand bodies, and every engine answering the same sum.
 
 - A host calling a program is cheaper in Kest than in any other engine here,
   interpreted as well as compiled. A program calling its host is cheapest in
-  Kest's release engine, at 17 ns; its machine, at 27, is level with LuaJIT's
-  compiled code and behind LuaJIT's interpreter, at 25.5. In a frame, its
+  Kest's release engine, at 17 ns; its machine, at 28, is level with LuaJIT's
+  compiled code and behind LuaJIT's interpreter, at 25. In a frame, its
   interpreter moves more bodies than Luau's, Lua's or LuaJIT's interpreter;
   compiled it moves 3.2 million where LuaJIT's compiler moves 5 million, and C
   with nothing crossing 5.3 million.
@@ -174,9 +174,9 @@ same twenty thousand bodies, and every engine answering the same sum.
 </p>
 
 - A budget costs Kest's machine nothing it can measure, where Lua's hook costs
-  twice the frame. A runaway stops in 17 µs once the host asks. Kest's release
-  engine spends no budget by design, and hears the host asking at the back of
-  every `while`, in 12 µs, which costs a frame nothing; a machine running code
+  2.2 times the frame. A runaway stops in 15 µs once the host asks. Kest's
+  release engine spends no budget by design, and hears the host asking at the
+  back of every `while`, in 11 µs, which costs a frame nothing; a machine running code
   nobody trusts never enters it (see [SECURITY.md](SECURITY.md)). **LuaJIT's
   compiled code does not stop at all.**
 
@@ -185,9 +185,9 @@ same twenty thousand bodies, and every engine answering the same sum.
 </p>
 
 - A world of 5,000 things that makes garbage every frame: Kest has the lowest
-  worst frame in a hundred, and a worst frame of all level with Luau's native
-  tier's, where Lua's incremental and generational collectors reach 8.6 and 11
-  ms. Its middle frame is ahead of every engine but LuaJIT's compiler. Walking
+  worst frame in a hundred and the lowest worst frame of all, where Lua's
+  incremental and generational collectors reach 7.6 and 10.7 ms. Its middle
+  frame is ahead of every engine but LuaJIT's compiler. Walking
   the heap between frames rather than when it fills costs Kest its middle
   frame.
 
@@ -196,9 +196,9 @@ same twenty thousand bodies, and every engine answering the same sum.
 </p>
 
 - A machine a thread, each with a world of its own: Kest's interpreter does
-  5.8 times the work on eight threads. This is how well each engine keeps out
-  of its own way, not how fast it is: C itself gains 4.3 times and LuaJIT's
-  compiled code 3.6, because the quicker a frame is, the sooner eight threads
+  6.8 times the work on eight threads. This is how well each engine keeps out
+  of its own way, not how fast it is: C itself gains 4.1 times and LuaJIT's
+  compiled code 3.7, because the quicker a frame is, the sooner eight threads
   are sharing what the machine's memory can hand them.
 
 <p align="center">
@@ -215,14 +215,14 @@ same twenty thousand bodies, and every engine answering the same sum.
   <img src="bench/chart-compile.svg" alt="Milliseconds to take a long program and a generic used 3,200 ways from source to running, and to reload the Tetris clone" width="820">
 </p>
 
-- A program of 107,135 lines is ready in 217 ms: less than Luau's 293, four
+- A program of 107,135 lines is ready in 211 ms: less than Luau's 276, four
   times what Lua and LuaJIT take -- which check no types -- and twenty-three
-  times less than daslang. A generic taken 3,200 ways is 84 ms, against 1.1 s
-  for Rust and 2.7 s for C++.
+  times less than daslang. A generic taken 3,200 ways is 80 ms, against 1 s
+  for Rust and 2.5 s for C++.
 - **Reloading the Tetris clone is 1.7 ms in Kest and 0.5 ms in Lua,** because
   a reload checks, proves and compiles every line of the game again, where Lua
-  reads it into its instructions. Well inside a frame, and three times what
-  Lua does.
+  reads it into its instructions. Well inside a frame, and three and a half
+  times what Lua does.
 
 ### Somebody else's benchmarks
 
@@ -231,12 +231,12 @@ same twenty thousand bodies, and every engine answering the same sum.
 </p>
 
 - These are Luau's choice rather than this project's, timed by Luau's own
-  harness. Kest's interpreter is ahead of Luau's on `life` and behind it on
-  the other four, by 1.13 to 1.3 times. Kest works its sines and cosines out
-  the same way on every machine, so every machine gets the same bits (below),
-  where Luau asks the C library for them. Compiled, Kest is ahead of Luau's
-  native tier on `life` and `matrixmult`, level on `qsort`, and behind on
-  `pcmmix` by 1.75 times and on `trig` by 2.1.
+  harness. Kest's interpreter is behind Luau's on all five, by 1.1 to 1.3
+  times. Kest works its sines and cosines out the same way on every machine,
+  so every machine gets the same bits (below), where Luau asks the C library
+  for them. Compiled, Kest is ahead of Luau's native tier on `life` and
+  `matrixmult`, level on `qsort`, and behind on `pcmmix` by 1.12 times and on
+  `trig` by twice, the price of those bits.
 
 ### The same answer everywhere
 

@@ -43061,3 +43061,14 @@ because what a body's proof reads is more than its bytes). See D1289.
 and `perf record` with frame pointers, against one rebuilding an empty
 program with the same imports; the same host linked with the lexer change and
 with the proof switched off in a copy.
+
+## 2026-09-29, the front page retaken after the release engine's loops
+
+Every chart retaken on the benchmark machine at `32b73d91`, after D1288: the
+release engine's `kernel` 11.8 ms to 9.0 (LuaJIT's compiler 8.6) and `pcmmix`
+2.2 to 1.7 (Luau's native tier 1.5 this sitting). The README's notes and
+`docs/state.md` are written from the new tables; everything else moved by
+what a sitting on that machine moves a number.
+
+**Runs:** `measure.sh` on the benchmark machine; the tables and charts it
+wrote fetched and read against the ones at `a5310c3c`.
