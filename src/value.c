@@ -865,22 +865,50 @@ static uint32_t bytes_apart(uint8_t kind) {
     }
 }
 
+// How many words of eight bytes a kind is moved as, a slot each, by a copy
+// that does not look at what they hold: nought for a kind that is converted
+// on the way. A piece of text is two.
+static uint32_t words_of(uint8_t kind) {
+    switch (kind) {
+    case KEST_L_TEXT:
+        return 2;
+    case KEST_L_I64:
+    case KEST_L_U64:
+    case KEST_L_F64:
+    case KEST_L_WORD:
+    case KEST_L_FLAGS64:
+    case KEST_L_FN:
+    case KEST_L_REF:
+        return 1;
+    default:
+        return 0;
+    }
+}
+
 // The steps from `first` up to `end` with every step that carries on the run
 // before it -- the same kind, the next slot and the next bytes -- folded into
-// that run. Answers where the steps end now.
+// that run. Every kind that is words copied as they are is one kind here, so
+// a shape of a number, a piece of text, two reals and a reference laid end to
+// end is one copy of six words rather than four steps of a walk, which was a
+// sixth of a frame that moves a store of them. Answers where the steps end
+// now. See D1285.
 static uint32_t merged(KestMoveStep *steps, uint32_t first, uint32_t end) {
     uint32_t kept = first;
     for (uint32_t i = first; i < end; i++) {
         KestMoveStep step = steps[i];
-        step.many = 1;
+        uint32_t words = words_of(step.kind);
+        if (words > 0) {
+            step.kind = KEST_L_WORD;
+        }
+        step.many = (uint16_t)(words > 0 ? words : 1u);
         if (kept > first && step.kind != KEST_MOVE_CASES) {
             KestMoveStep *run = &steps[kept - 1];
             uint32_t apart = bytes_apart(step.kind);
-            uint32_t slots_apart = step.kind == KEST_L_TEXT ? 2u : 1u;
-            if (run->kind == step.kind && run->many < UINT16_MAX &&
+            if (run->kind == step.kind &&
+                run->many + step.many <= UINT16_MAX &&
                 step.byte == run->byte + run->many * apart &&
-                step.slot == run->slot + run->many * slots_apart) {
-                run->many++;
+                step.slot == run->slot + run->many) {
+                run->many = (uint16_t)(run->many + step.many);
                 continue;
             }
         }
