@@ -44246,3 +44246,45 @@ the shape, each measured on `bench/` with the release engine:
 compiled body reads the host's word with a delay of at most 1024 turns of one
 `while`, and `check-c.sh` holds that a program spinning in `while true` is
 stopped from another thread in both engines, with the same words.
+
+## D1284 — What compiling asked a table for a row at a time
+
+The sixth weak side: a program of 107,135 lines, the one `bench/compile.sh`
+writes, took Kest 300 milliseconds from source to running on the benchmark
+machine and Lua 52. A profile of it here is flat -- no function is a tenth of
+it -- and what it is made of is the stages this compiler has and Lua has not:
+a checker, three proofs of three promises, a tree written down as IR, a
+lowering, and a verifier. What could be taken off without taking a stage away
+was four places that asked the same question again for every piece of work:
+
+- The table of instructions was behind calls. The verifier, the lowering and
+  the walks that measure a body asked `value.c` for an instruction's width,
+  its name and what each number it carries is, one call a field, for every
+  instruction of every body. The row's type is in `value.h` now and the
+  three are read inline, with the width the low four bits of the row's
+  shape rather than a switch over it.
+- The three promises each walked every body and typed every copy of a
+  generic again, to find calls that are the same calls whichever promise is
+  asked about. `no.alloc` walks, and keeps what each body calls and every
+  call it makes through a value; `no.host` and `deterministic` read that and
+  judge the calls through a value against their own promise. The walk also
+  asked for the function a call names twice.
+- The lowering asked whether a body may be carried into its caller at every
+  call to it, by looking each instruction of the body up in the table of
+  what a carried body may hold from the top. It is looked up by instruction
+  now, in an index the lowering makes once.
+- The lexer walked the keywords from the top to the run under a name's first
+  letter; it halves its way there.
+
+The long program: 1,108.6 million instructions to 1,000.9, and 11% fewer
+cycles; the one generic taken 3,200 ways: 557.3 million to 515.7. What every
+file in the tree says under `check --json` is the same apart from the
+compiler's own counts of its work, which went down.
+
+Fewer units of work moved where `check-work.sh`'s rungs land, and one landed
+in a window nobody had stood in: a build that ran out of work while it tried
+a counted loop written out turn by turn took back what the attempt had said,
+and the count of errors with it, so the refusal was printed and the build
+answered as though it had compiled. What the attempt said is taken back
+unless it was that the build ran out. Every example walked in three hundred
+steps from nought to its whole count is refused at every one of them.

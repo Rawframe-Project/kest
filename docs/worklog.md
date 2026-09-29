@@ -42963,3 +42963,30 @@ out. See D1283.
 release engines before and after, twenty runs each for `graph`; `check-c.sh`
 over the gate's files, and again with the count taken out of `emitc.c`; `make
 fast`.
+
+## 2026-09-29, what compiling asked a table for a row at a time
+
+The sixth weak side, compile speed, round two. The profile of the long
+program is flat; four places asked the same question once per piece of work.
+The instruction table is read inline from `value.h`, the promises `no.host`
+and `deterministic` read the graph `no.alloc` walked instead of walking every
+body and typing every copy again, the lowering finds what a carried body may
+hold by instruction rather than from the top of the table, and the lexer
+halves its way to the keywords under a letter. Long program 1,108.6M to
+1,000.9M instructions, 11% fewer cycles; copies 557.3M to 515.7M. Two holes
+quoted the code they break as it was and were repointed, and each was seen
+caught. The rungs of `check-work.sh` moved with the counts and one landed
+where an unrolled loop that ran out of work took its refusal back with the
+rest of what it said: `examples/ordering.kest` given 16,028 units printed
+`K0666` and answered nought, and the build at `bf9621e6` did the same between
+17,325 and 17,535. The refusal is kept now.
+
+**Runs:** `perf record` with and without frame pointers over `kest run` of the
+long program; `perf stat` of it and of the copies against the build at
+`bf9621e6`; `check --json` over every `.kest` in the tree and in the scratch
+directory with both builds, compared with the work counts left out; the two
+repointed holes applied in a copy by hand; every example compiled under three
+hundred budgets from nought to its count, before and after; `check-dead.sh`
+with a table declared that nothing makes; `make figures`; `make fast`;
+`check-tables.sh`, `check-dead.sh`, `check-work.sh`, `check-verifier.sh`,
+`check-costs.sh`.
