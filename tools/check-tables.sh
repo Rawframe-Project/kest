@@ -2140,6 +2140,11 @@ LEFT_OUT = {
                                    "out from the type the mark already folds "
                                    "and is a thing about reading a value "
                                    "rather than part of one",
+    ("KestLayout", "any_value"): "whether nothing a host writes into this can "
+                                 "be wrong, which is worked out from the "
+                                 "pieces the mark already folds and is a "
+                                 "thing about reading a value rather than "
+                                 "part of one (D1272)",
     ("KestChunk", "native"): "which engine runs this body, which is a thing "
                              "about how a program was built rather than part "
                              "of what it means: the same program with a body "

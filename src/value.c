@@ -995,6 +995,13 @@ int32_t kest_module_layout(KestModule *module, const KestType *type) {
     layout->type = type;
     layout->tagged = holds_a_tag(type);
     layout->by_the_type = by_the_type(type);
+    layout->any_value = !layout->by_the_type && layout->count > 0;
+    for (uint16_t p = 0; p < layout->count; p++) {
+        uint8_t kind = pieces[p].kind;
+        if (kind != KEST_L_I64 && kind != KEST_L_U64 && kind != KEST_L_F64) {
+            layout->any_value = false;
+        }
+    }
     // Every value is moved by its walk, a tag or none: what used to be a loop
     // over the pieces moved one piece a turn of a switch, which was most of
     // what reading a struct out of an array cost. See D1177.

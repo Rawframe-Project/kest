@@ -317,6 +317,11 @@ typedef struct {
     // width can say. The machine reads this rather than looking at the pieces
     // every call. See D840.
     bool by_the_type;
+    // The machine's own: nothing a host can write into this is a value the
+    // program could not have made -- every piece is sixty-four bits of a
+    // number -- so a call handing one over has nothing to look at. It sits in
+    // what the two above leave over. See D1272.
+    bool any_value;
     // The machine's own: a value written out once as the runs of reads and
     // writes moving one takes, so moving one is a walk of that rather than of
     // its type or of its pieces. Nothing a host reads. See D1159 and D1177.

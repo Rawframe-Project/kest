@@ -8439,6 +8439,10 @@ bool kest_call(KestRuntime *runtime, int32_t entry, KestValue *frame,
         // Read off the layout rather than off its pieces: what has to be
         // walked is a thing about the type, and the type does not change
         // between calls. See D840.
+        if (layout->any_value) {
+            at += layout->slots;
+            continue;
+        }
         if (!layout->by_the_type) {
             // Nothing in it a walk would read, and one thing a look will: a
             // slot holds sixty-four bits and a `u8` holds eight, so a host
@@ -8725,8 +8729,13 @@ bool kest_call_host(KestRuntime *rt, uint16_t index, KestValue *base,
     // Where the crossing is written, on the frame making it. A host may call
     // back in from inside this and what it calls may fail, and then every
     // frame under it says where it made its call -- which a body the host's
-    // compiler compiled has no instruction pointer to answer with. See D1094.
-    frame->said_at = where_asked(rt, where).offset;
+    // compiler compiled has no instruction pointer to answer with, so it is
+    // handed the place and it is kept. The machine's own frame has its
+    // instruction pointer just past this crossing already, and a frame
+    // saying nought is read from there, so the walk that turns an instruction
+    // into a place is left to the one crossing in millions that fails: it was
+    // a sixth of what every crossing cost. See D1094 and D1272.
+    frame->said_at = where == KEST_WHERE_RUNNING ? 0 : where;
     // Read only where the machine holds itself to the declaration, which is
     // the build that checks itself. Named here so that a release build does
     // not have to be told twice that it is a number nobody read.
@@ -8875,7 +8884,16 @@ bool kest_call_host(KestRuntime *rt, uint16_t index, KestValue *base,
     // beforehand: the tag is decided inside the call. This is the one moment
     // it can be said, which is what makes it the machine's to say, the same
     // as the promise above. See D706.
-    if (module->externs[index].gives_value) {
+    // A number sixty-four bits wide is one whatever the host wrote, so there
+    // is nothing in it to walk: the walk below was a sixth of what a crossing
+    // answering one cost. See D1272.
+    const KestType *gives =
+        module->externs[index].gives_value
+            ? module->layouts[module->externs[index].gives].type
+            : NULL;
+    bool anything = gives != NULL && gives->width == 64 &&
+                    (gives->tag == KEST_T_INT || gives->tag == KEST_T_FLOAT);
+    if (module->externs[index].gives_value && !anything) {
         const KestLayout *answers =
             &module->layouts[module->externs[index].gives];
         // Everything in what came back, read the way the door reads what a
