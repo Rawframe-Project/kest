@@ -1339,6 +1339,7 @@ static const Instruction INSTRUCTIONS[] = {
     {"room", U16, {IS_LAYOUT}},
     {"index", U16, {IS_LAYOUT}},
     {"index.ll", U16_U16_U16, {IS_SLOT, IS_SLOT, IS_LAYOUT}},
+    {"index.l", U16_U16, {IS_SLOT, IS_LAYOUT}},
     {"pop.last", U16, {IS_LAYOUT}},
     {"take", U16, {IS_LAYOUT}},
     {"clear", NONE, {}},
@@ -1490,6 +1491,8 @@ static const Instruction INSTRUCTIONS[] = {
     {"jump.false.ge.k", FIND, {IS_SLOT, IS_CONSTANT, IS_FORWARD}},
     {"jump.false.eq.k", FIND, {IS_SLOT, IS_CONSTANT, IS_FORWARD}},
     {"jump.false.ne.k", FIND, {IS_SLOT, IS_CONSTANT, IS_FORWARD}},
+    {"jump.false.lt.ll", FIND, {IS_SLOT, IS_SLOT, IS_FORWARD}},
+    {"jump.false.le.ll", FIND, {IS_SLOT, IS_SLOT, IS_FORWARD}},
     {"jump.false.lt.c", WEIGH, {IS_CONSTANT, IS_FORWARD}},
     {"jump.false.le.c", WEIGH, {IS_CONSTANT, IS_FORWARD}},
     {"jump.false.gt.c", WEIGH, {IS_CONSTANT, IS_FORWARD}},
@@ -2040,6 +2043,7 @@ bool kest_op_allocates(uint8_t op) {
     case KEST_OP_FIELD:
     case KEST_OP_INDEX:
     case KEST_OP_INDEX_LL:
+    case KEST_OP_INDEX_L:
     case KEST_OP_POP_LAST:
     case KEST_OP_TAKE:
     case KEST_OP_CLEAR:
@@ -2195,6 +2199,8 @@ bool kest_op_allocates(uint8_t op) {
     case KEST_OP_STORE_K:
     case KEST_OP_ADD_K_SELF:
     case KEST_OP_SUB_K_SELF:
+    case KEST_OP_JUMP_FALSE_LT_LL:
+    case KEST_OP_JUMP_FALSE_LE_LL:
     case KEST_OP_JUMP_FALSE_LT_K:
     case KEST_OP_JUMP_FALSE_LE_K:
     case KEST_OP_JUMP_FALSE_GT_K:
@@ -2395,6 +2401,10 @@ const char *kest_op_stack(const KestModule *module, const KestChunk *chunk,
     case KEST_OP_INDEX_LL:
         g = LAID(2);
         break;
+    case KEST_OP_INDEX_L:
+        t = 1;
+        g = LAID(1);
+        break;
     case KEST_OP_POP_LAST:
         t = 1;
         g = LAID(0) + 1;
@@ -2570,6 +2580,8 @@ const char *kest_op_stack(const KestModule *module, const KestChunk *chunk,
     case KEST_OP_STORE_K:
     case KEST_OP_ADD_K_SELF:
     case KEST_OP_SUB_K_SELF:
+    case KEST_OP_JUMP_FALSE_LT_LL:
+    case KEST_OP_JUMP_FALSE_LE_LL:
     case KEST_OP_JUMP_FALSE_LT_K:
     case KEST_OP_JUMP_FALSE_LE_K:
     case KEST_OP_JUMP_FALSE_GT_K:

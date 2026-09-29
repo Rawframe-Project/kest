@@ -1746,6 +1746,16 @@ static const char *kinds_step(Kinds *w) {
         }
         push_laid_at(w, u[2], DEPTH_OF(SLOT(w, u[0])));
         return NULL;
+    case KEST_OP_INDEX_L: {
+        if ((wrong = needs_slot(w, u[0], NEEDS_NUMBER)) != NULL ||
+            (wrong = needs_top_of(w, 1, NEEDS_ARRAY, u[1] + 1)) != NULL) {
+            return wrong;
+        }
+        uint32_t made = DEPTH_OF(FROM_TOP(w, 1));
+        w->depth -= 1;
+        push_laid_at(w, u[1], made);
+        return NULL;
+    }
     case KEST_OP_INDEX_TO:
         if ((wrong = needs_top(w, 1, NEEDS_NUMBER)) != NULL ||
             (wrong = needs_top_of(w, 2, NEEDS_ARRAY, u[0] + 1)) != NULL) {
@@ -2298,6 +2308,12 @@ static const char *kinds_step(Kinds *w) {
     case KEST_OP_JUMP_TRUE_EQ_FK:
     case KEST_OP_JUMP_TRUE_NE_FK:
         return needs_slot(w, u[0], NEEDS_NUMBER);
+    case KEST_OP_JUMP_FALSE_LT_LL:
+    case KEST_OP_JUMP_FALSE_LE_LL:
+        if ((wrong = needs_slot(w, u[0], NEEDS_NUMBER)) != NULL) {
+            return wrong;
+        }
+        return needs_slot(w, u[1], NEEDS_NUMBER);
     case KEST_OP_JUMP_FALSE_LT_E:
     case KEST_OP_JUMP_FALSE_LE_E:
     case KEST_OP_JUMP_FALSE_GT_E:

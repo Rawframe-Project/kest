@@ -249,9 +249,45 @@ static uint8_t arithmetic_before(const Lower *lower, uint16_t *kind) {
 static bool two_locals_before(const Lower *lower, uint16_t *first,
                               uint16_t *second);
 
+// Whether the last thing written was `index.ll` of an element this many slots
+// wide, and what it read. The store after it takes it whole. See D1281.
+static bool index_ll_before(const Lower *lower, uint16_t size, uint16_t *holds,
+                            uint16_t *at, uint16_t *layout) {
+    if (lower->last_op != KEST_OP_INDEX_LL ||
+        lower->last_at < lower->pointed_at ||
+        lower->last_at + 7 != lower->chunk->code_count) {
+        return false;
+    }
+    const uint8_t *code = lower->chunk->code + lower->last_at;
+    uint16_t which = (uint16_t)(code[5] | ((uint16_t)code[6] << 8));
+    if (which >= lower->module->layout_count ||
+        lower->module->layouts[which].slots != size) {
+        return false;
+    }
+    *holds = (uint16_t)(code[1] | ((uint16_t)code[2] << 8));
+    *at = (uint16_t)(code[3] | ((uint16_t)code[4] << 8));
+    *layout = which;
+    return true;
+}
+
 static void emit_store(Lower *lower, uint16_t slot, uint16_t size,
                        KestSpan origin) {
     uint16_t layout = 0;
+    uint16_t read_from = 0;
+    uint16_t read_at = 0;
+    if (size != 1 && fusing() &&
+        index_ll_before(lower, size, &read_from, &read_at, &layout)) {
+        take_back(lower);
+        emit(lower, KEST_OP_INDEX_TO_LL, origin);
+        emit_u16(lower, layout, origin);
+        emit_u16(lower, slot, origin);
+        emit_u16(lower, read_from, origin);
+        emit_u16(lower, read_at, origin);
+        if (size + 2u > lower->chunk->fused_slots) {
+            lower->chunk->fused_slots = (uint16_t)(size + 2u);
+        }
+        return;
+    }
     if (size != 1 && fusing() && index_before(lower, size, &layout)) {
         take_back(lower);
         // And the run and the index it was read by, where both are locals
@@ -891,6 +927,8 @@ static const struct {
     {KEST_OP_JUMP_FALSE_GE_K, {A_SLOT, A_CONSTANT, A_DISTANCE}},
     {KEST_OP_JUMP_FALSE_EQ_K, {A_SLOT, A_CONSTANT, A_DISTANCE}},
     {KEST_OP_JUMP_FALSE_NE_K, {A_SLOT, A_CONSTANT, A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_LT_LL, {A_SLOT, A_SLOT, A_DISTANCE}},
+    {KEST_OP_JUMP_FALSE_LE_LL, {A_SLOT, A_SLOT, A_DISTANCE}},
     {KEST_OP_JUMP_FALSE_LT_C, {A_CONSTANT, A_DISTANCE}},
     {KEST_OP_JUMP_FALSE_LE_C, {A_CONSTANT, A_DISTANCE}},
     {KEST_OP_JUMP_FALSE_GT_C, {A_CONSTANT, A_DISTANCE}},
@@ -1381,11 +1419,13 @@ static void read_place(Lower *lower, const KestIrOp *op) {
         {
             uint16_t holds = 0;
             uint16_t at = 0;
-            // One slot an element only: a struct read this way is stored
-            // next, and `index.to` takes that store into the read, which
-            // is worth more than this. See D1155.
+            // An element of any width: one of more than a slot that is
+            // stored next is taken into the store as `index.to.ll` there,
+            // which is what this used to stand aside for (D1155), and one
+            // that is not -- a piece of text handed to a call, as every
+            // comparison a sort makes is -- was `load2` and `index`. See
+            // D1281.
             if (fusing() && place->layout < lower->module->layout_count &&
-                lower->module->layouts[place->layout].slots == 1 &&
                 two_locals_before(lower, &holds, &at)) {
                 // The two slots `load2` pushed are never on the stack now.
                 if (lower->chunk->fused_slots < 2) {
@@ -1394,6 +1434,20 @@ static void read_place(Lower *lower, const KestIrOp *op) {
                 take_back(lower);
                 emit(lower, KEST_OP_INDEX_LL, op->span);
                 emit_u16(lower, holds, op->span);
+                emit_u16(lower, at, op->span);
+                emit_u16(lower, place->layout, op->span);
+                return;
+            }
+            // And by a local alone, where the run is what came before it:
+            // the second half of every `cells[y][x]`. See D1281.
+            if (fusing() && place->layout < lower->module->layout_count &&
+                lower->module->layouts[place->layout].slots == 1 &&
+                one_operand_before(lower, KEST_OP_LOAD, &at)) {
+                if (lower->chunk->fused_slots < 1) {
+                    lower->chunk->fused_slots = 1;
+                }
+                take_back(lower);
+                emit(lower, KEST_OP_INDEX_L, op->span);
                 emit_u16(lower, at, op->span);
                 emit_u16(lower, place->layout, op->span);
                 return;
@@ -1930,7 +1984,21 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         uint8_t against = fusing() ? weighed(jump, true) : 0;
         uint16_t slot = 0;
         uint16_t which = 0;
-        if (against != 0 && local_and_constant_before(lower, &slot, &which)) {
+        // Two locals: every `while i < n`, and every `<=`. See D1281.
+        uint8_t locals = !fusing()                          ? 0
+                         : jump == KEST_OP_JUMP_FALSE_LT_I ? KEST_OP_JUMP_FALSE_LT_LL
+                         : jump == KEST_OP_JUMP_FALSE_LE_I ? KEST_OP_JUMP_FALSE_LE_LL
+                                                           : 0;
+        if (locals != 0 && two_locals_before(lower, &slot, &which)) {
+            if (lower->chunk->fused_slots < 2) {
+                lower->chunk->fused_slots = 2;
+            }
+            take_back(lower);
+            emit(lower, locals, span);
+            emit_u16(lower, slot, span);
+            emit_u16(lower, which, span);
+        } else if (against != 0 &&
+                   local_and_constant_before(lower, &slot, &which)) {
             // The two values `load.k` pushed are never on the stack now, so
             // the compiler's reckoning may be two more than this body goes:
             // said as slack, the way D1012 says it, rather than taken off a

@@ -3389,6 +3389,9 @@ else:
             + slots * ran.get("load.k", 0) + slots * weighs_local
             + slots * moves_self
             + 2 * slots * (ran.get("index.ll", 0) + weighs_element)
+            + slots * ran.get("index.l", 0)
+            + 2 * slots * (ran.get("jump.false.lt.ll", 0)
+                           + ran.get("jump.false.le.ll", 0))
             + slots * works_local
             + 2 * slots * (ran.get("add.f.ll", 0) + ran.get("sub.f.ll", 0)
                            + ran.get("index.to.ll", 0)

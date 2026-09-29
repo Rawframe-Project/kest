@@ -68,6 +68,10 @@ typedef enum {
     // `load2` and then `index` was two dispatches for every `xs[i]` in a loop.
     // See D1155.
     KEST_OP_INDEX_LL,   // u16 run's slot, u16 index's slot, u16 layout
+    // And by an index a local holds out of a run on the stack, which is
+    // what the second half of `cells[y][x]` is: `load` and then `index`.
+    // See D1281.
+    KEST_OP_INDEX_L,    // u16 index's slot, u16 layout
     KEST_OP_POP_LAST,   // u16 layout, leaves an optional
     KEST_OP_TAKE,       // u16 layout, shifts what is after it down
     KEST_OP_CLEAR,
@@ -340,6 +344,10 @@ typedef enum {
     KEST_OP_JUMP_FALSE_GE_K,
     KEST_OP_JUMP_FALSE_EQ_K,
     KEST_OP_JUMP_FALSE_NE_K,
+    // Two locals weighed against each other, and the jump: `load2` and then
+    // `jump.false.lt.i`, which is every `while i < n`. See D1281.
+    KEST_OP_JUMP_FALSE_LT_LL, // u16 slot, u16 slot, u16 forward offset
+    KEST_OP_JUMP_FALSE_LE_LL,
     // And what is on the stack weighed against a constant: `const` and then
     // one of the six whole-number jumps, which is every `xs[i] > 0` and every
     // answer of a call compared with a written number. See D1155.

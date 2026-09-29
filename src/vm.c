@@ -3800,6 +3800,7 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         [KEST_OP_FIT_TEXT] = &&thread_KEST_OP_FIT_TEXT,
         [KEST_OP_INDEX] = &&thread_KEST_OP_INDEX,
         [KEST_OP_INDEX_LL] = &&thread_KEST_OP_INDEX_LL,
+        [KEST_OP_INDEX_L] = &&thread_KEST_OP_INDEX_L,
         [KEST_OP_INDEX_TO] = &&thread_KEST_OP_INDEX_TO,
         [KEST_OP_INDEX_TO_LL] = &&thread_KEST_OP_INDEX_TO_LL,
         [KEST_OP_ELEM_FROM_LL] = &&thread_KEST_OP_ELEM_FROM_LL,
@@ -3967,6 +3968,8 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         [KEST_OP_JUMP_FALSE_GE_K] = &&thread_KEST_OP_JUMP_FALSE_GE_K,
         [KEST_OP_JUMP_FALSE_EQ_K] = &&thread_KEST_OP_JUMP_FALSE_EQ_K,
         [KEST_OP_JUMP_FALSE_NE_K] = &&thread_KEST_OP_JUMP_FALSE_NE_K,
+        [KEST_OP_JUMP_FALSE_LT_LL] = &&thread_KEST_OP_JUMP_FALSE_LT_LL,
+        [KEST_OP_JUMP_FALSE_LE_LL] = &&thread_KEST_OP_JUMP_FALSE_LE_LL,
         [KEST_OP_JUMP_FALSE_LT_I] = &&thread_KEST_OP_JUMP_FALSE_LT_I,
         [KEST_OP_JUMP_FALSE_LE_I] = &&thread_KEST_OP_JUMP_FALSE_LE_I,
         [KEST_OP_JUMP_FALSE_GT_I] = &&thread_KEST_OP_JUMP_FALSE_GT_I,
@@ -4547,6 +4550,29 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
             const KestLayout *layout = &module->layouts[of_which];
             int64_t index = mine[at].integer;
             const Array *array = mine[holds].object;
+            HOLD(array, KEST_IS_ARRAY, "an array");
+            IN_ARRAY(index, array);
+            READ_INTO(top, layout,
+                      array->bytes + (size_t)index * array->stride);
+            top += layout->slots;
+            NEXT;
+        }
+        // `load` and `index` as one: the run is on the stack, where the
+        // index before it left it, and the index is read out of its slot.
+        // See D1281.
+        case KEST_OP_INDEX_L: THREADED(KEST_OP_INDEX_L) {
+            uint16_t at = READ_U16();
+            uint16_t of_which = READ_U16();
+            OF_THE_MODULE(of_which, module->layout_count, "a layout");
+#if KEST_CHECKED
+            if (!own_slots(vmp, frame, instruction, at, at + 1u)) {
+                return false;
+            }
+#endif
+            MOVED(moved_loaded, sizeof(KestValue));
+            const KestLayout *layout = &module->layouts[of_which];
+            int64_t index = mine[at].integer;
+            const Array *array = (--top)->object;
             HOLD(array, KEST_IS_ARRAY, "an array");
             IN_ARRAY(index, array);
             READ_INTO(top, layout,
@@ -6103,6 +6129,28 @@ static bool run_body(KestRuntime *rt, int32_t entry, uint16_t arg_slots,
         case KEST_OP_JUMP_FALSE_NE_K: THREADED(KEST_OP_JUMP_FALSE_NE_K)
             JUMP_UNLESS_K(left != right);
             NEXT;
+        // Two locals, each read where it is. See D1281.
+#define JUMP_UNLESS_LL(test)                                                   \
+    do {                                                                       \
+        uint16_t first = READ_U16();                                           \
+        uint16_t second = READ_U16();                                          \
+        uint16_t distance = READ_U16();                                        \
+        OWN_SLOT(first);                                                       \
+        OWN_SLOT(second);                                                      \
+        MOVED(moved_loaded, 2 * sizeof(KestValue));                            \
+        int64_t left = mine[first].integer;                                    \
+        int64_t right = mine[second].integer;                                  \
+        if (!(test)) {                                                         \
+            ip += distance;                                                    \
+        }                                                                      \
+    } while (0)
+        case KEST_OP_JUMP_FALSE_LT_LL: THREADED(KEST_OP_JUMP_FALSE_LT_LL)
+            JUMP_UNLESS_LL(left < right);
+            NEXT;
+        case KEST_OP_JUMP_FALSE_LE_LL: THREADED(KEST_OP_JUMP_FALSE_LE_LL)
+            JUMP_UNLESS_LL(left <= right);
+            NEXT;
+#undef JUMP_UNLESS_LL
         case KEST_OP_JUMP_FALSE_LT_I: THREADED(KEST_OP_JUMP_FALSE_LT_I)
             JUMP_UNLESS(left.integer < right.integer);
             NEXT;
