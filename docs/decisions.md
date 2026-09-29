@@ -44202,11 +44202,11 @@ calls pulled out of `libkest.a` said two things it did not need to carry.
   never names it, and the linker leaves it out.
 - Whatever the objects it did need held and it did not call. The library is
   built with every function and table in a section of its own, by a compiler
-  that can be asked to, so a game that links with `--gc-sections` keeps what
+  that can be asked to, so a game that links with `-Wl,--gc-sections` keeps what
   it calls and not the rest of the file each is in.
 
 A host of twenty lines that builds, starts and calls, stripped: 706,728 bytes,
-624,800 without the backend, and 432,280 linked with `--gc-sections`, two
+624,800 without the backend, and 432,280 linked with `-Wl,--gc-sections`, two
 fifths less. `bench/hosts.sh` links every engine's host that way, and the
 floor, because it is how a game that weighs what it ships links, and it is the
 same for every engine. What is left is the compiler and the checker a build
