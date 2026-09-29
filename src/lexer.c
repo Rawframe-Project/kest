@@ -582,8 +582,17 @@ static KestToken scan_ident(KestLexer *lexer, uint32_t start) {
 
     size_t length = lexer->offset - start;
     const char *text = lexer->source->text + start;
+    // The list is in the order of the alphabet, so a name is done with it at
+    // the first keyword past its own first letter: nearly every name is not a
+    // keyword and was being held against all of them. A keyword out of order
+    // would be read as a name, which the gate's `keywords` row refuses. See
+    // D1276.
     for (size_t i = 0; i < sizeof(KEYWORDS) / sizeof(KEYWORDS[0]); i++) {
-        if (kest_word_same(KEYWORDS[i].text, text, length)) {
+        if (KEYWORDS[i].text[0] > text[0]) {
+            break;
+        }
+        if (KEYWORDS[i].text[0] == text[0] &&
+            kest_word_same(KEYWORDS[i].text, text, length)) {
             return make(lexer, KEYWORDS[i].kind, start);
         }
     }

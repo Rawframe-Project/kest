@@ -135,7 +135,13 @@ static const char *under_alias(KestProgram *program, const char *name,
             return NULL;
         }
     }
-    snprintf(out, room, "%s.%.*s", program->module, (int)length, name);
+    // Copied rather than printed: this is asked for nearly every name a body
+    // uses, and formatting it was a twentieth of a build. See D1276.
+    size_t head = needed - length - 2;
+    memcpy(out, program->module, head);
+    out[head] = '.';
+    memcpy(out + head + 1, name, length);
+    out[head + 1 + length] = '\0';
     return out;
 }
 

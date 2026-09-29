@@ -2625,14 +2625,24 @@ for body_path in sorted(glob.glob(os.path.join("src", "*.c"))):
 # reader was going to notice anyway. `kest_under_module` is not caught and
 # should not be: `strlen(whole) > length + 1` asks whether one name begins with
 # another, which is a different question and stays written out. See D775.
+#
+# `kest_word_same` is now itself the other way of asking -- a byte at a time,
+# stopping at the first that differs or at the name's nought -- and is written
+# in the header so it is folded into whoever asks, so headers are read as well
+# and that shape is looked for beside the first. See D1276.
 WORD_BY_HAND = {
-    "src/diag.c": "`kest_word_same` is the one place, and this is it",
+    "src/diag.h": "`kest_word_same` is the one place, and this is it",
 }
 
 word_by_hand = {}
-for word_path in sorted(glob.glob(os.path.join("src", "*.c"))):
+for word_path in sorted(glob.glob(os.path.join("src", "*.c")) +
+                        glob.glob(os.path.join("src", "*.h"))):
     word_lines = open(word_path).read().split("\n")
     for word_at, word_line in enumerate(word_lines, 1):
+        if re.search(r"\w+\[\w+\] == '\\0' \|\| \w+\[\w+\] != \w+\[\w+\]",
+                     word_line):
+            word_by_hand.setdefault(word_path, []).append(word_at)
+            continue
         if "memcmp(" not in word_line:
             continue
         word_near = "\n".join(word_lines[max(0, word_at - 3):word_at + 2])
