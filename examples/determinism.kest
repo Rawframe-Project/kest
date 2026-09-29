@@ -21,7 +21,7 @@ import std.table
 // (D941); and, since D1235, `sin`, `cos`, `atan2` and `pow`, which are written
 // in Kest now rather than being the host's libm.
 
-const ANSWER: u64 = 8273604923899092262
+const ANSWER: u64 = 1130490413983204738
 
 struct Piece {
     name: text
@@ -297,6 +297,24 @@ fn turned() -> u64 no.alloc no.host deterministic {
         mark = hash.join(mark, bits(math.atan2(at, 3.0 - at * 0.5)))
         mark = hash.join(mark, bits(math.pow(math.abs(at) + 0.25, at * 0.1)))
         at = at + 0.0503
+    }
+    // And the sine and the cosine where a sweep of fifty either way never
+    // goes: under a hundred-millionth, where each is its first term, a
+    // million turns out, a hundred million billion out, where a quarter
+    // turn is taken off in three pieces, and past four billion billion,
+    // where which quarter it is is no longer known. The machine answers
+    // these two with instructions of its own, and this is what holds those
+    // to the library. See D1279.
+    for i in 0..300 {
+        let k = f64(i)
+        mark = hash.join(mark, bits(math.sin(1.0e-9 * k)))
+        mark = hash.join(mark, bits(math.cos(1.0e-9 * k)))
+        mark = hash.join(mark, bits(math.sin(1.0e6 * k + 0.3)))
+        mark = hash.join(mark, bits(math.cos(1.0e6 * k + 0.3)))
+        mark = hash.join(mark, bits(math.sin(1.0e17 * k + 7.0)))
+        mark = hash.join(mark, bits(math.cos(1.0e17 * k + 7.0)))
+        mark = hash.join(mark, bits(math.sin(0.0 - 1.0e19 * k)))
+        mark = hash.join(mark, bits(math.cos(0.0 - 1.0e19 * k)))
     }
     // And where the answer is a rule rather than a curve: a nought with a
     // sign on it, which each of the four has to keep or turn the right way,
