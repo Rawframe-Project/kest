@@ -44187,3 +44187,31 @@ every example both ways against; the count of bytes the machine says it loaded
 is held to what these read, a slot for `index.l` and two for the two jumps.
 Instructions, before and after: `matrixmult` 337 million to 298, `life` 1,164
 to 1,080, `qsort` 1,301 to 1,199, `rules` 2,667 to 2,612.
+
+## D1282 — What a host carries is what it calls
+
+Kest added 692 KB to a game's executable on the front page, where Lua adds 260
+and LuaJIT 556. Most of that is the compiler, which a host that builds from
+source carries by design; but a map of what a host that builds, starts and
+calls pulled out of `libkest.a` said two things it did not need to carry.
+
+- The other backend. `build.c` named `kest_emitc_new`, so every host linked
+  the eighty kilobytes that write C, and only the command line ever asks for
+  C. The writer is handed in now, as the three doors `emitc.h` has, by
+  whoever asks: `kest_build_writes_c(build, &writer)`. A host that never asks
+  never names it, and the linker leaves it out.
+- Whatever the objects it did need held and it did not call. The library is
+  built with every function and table in a section of its own, by a compiler
+  that can be asked to, so a game that links with `--gc-sections` keeps what
+  it calls and not the rest of the file each is in.
+
+A host of twenty lines that builds, starts and calls, stripped: 706,728 bytes,
+624,800 without the backend, and 432,280 linked with `--gc-sections`, two
+fifths less. `bench/hosts.sh` links every engine's host that way, and the
+floor, because it is how a game that weighs what it ships links, and it is the
+same for every engine. What is left is the compiler and the checker a build
+from source is, and the machine. A host that ships programs already compiled
+and carries no compiler would need a form of a compiled program that is read
+back, which this has not got: bytecode is not a format anything reads, and
+the verifier that would hold one to what the machine may run (D1237) is the
+half of that which exists.

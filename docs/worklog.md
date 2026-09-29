@@ -42932,3 +42932,17 @@ generated C by hand with typed stores; `perf annotate` of the compiled body;
 `KEST_DEEP=1` counts of what `qsort` ran; the Luau tests and the five workloads
 under `perf stat`; `make figures`; `make fast`; `check-tables.sh`,
 `check-dead.sh`, `check-costs.sh`, `check-verifier.sh`; `make most`.
+
+## 2026-09-29, what a host carries is what it calls
+
+The fifth weak side, size. A map of what a small host links said it carried
+the C backend for nothing, and whole objects for the few functions it calls.
+The backend is handed into a build by whoever asks for C, and the library is
+built in sections: a host that builds, starts and calls went from 706,728
+bytes stripped to 432,280 with `--gc-sections`, which `bench/hosts.sh` now
+links every engine's host with. See D1282.
+
+**Runs:** a twenty-line host linked with `-Wl,-Map` before and after, and
+stripped; the library built in sections and the same host with and without
+`--gc-sections`; the five workloads' instructions before and after; `make
+fast`; `make most`.
