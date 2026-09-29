@@ -1212,6 +1212,65 @@ fn main() -> i32 {
     return total % 251
 }
 PROGRAM
+# An index worked out of the count, `at * 2 + 1`, which the question D1288
+# asks where a walk begins answers for the last turn's index: an array that
+# holds every one of them, and one a single element short, which both engines
+# refuse at the fifth turn in the same words.
+cat >"$work"/programs/pairs.kest <<'PROGRAM'
+module pairs
+
+fn main() -> i32 {
+    let xs: [i32] = array()
+    for i in 0..10 {
+        push(xs, i + 1)
+    }
+    let total = 0
+    for at in 0..5 {
+        total += xs[at * 2] * 3 + xs[at * 2 + 1]
+    }
+    return total % 251
+}
+PROGRAM
+cat >"$work"/programs/pairpast.kest <<'PROGRAM'
+module pairpast
+
+fn main() -> i32 {
+    let xs: [i32] = array()
+    for i in 0..9 {
+        push(xs, i + 1)
+    }
+    let total = 0
+    for at in 0..5 {
+        total += xs[at * 2 + 1]
+    }
+    return total % 251
+}
+PROGRAM
+# And a walk that grows the array it writes: the bytes move under it, so where
+# they are is not read once where the walk begins. A walk that read it there
+# writes where the array was, and the sum after it is of where it is. See
+# D1288.
+cat >"$work"/programs/growing.kest <<'PROGRAM'
+module growing
+
+fn main() -> i32 {
+    let xs: [i32] = array()
+    for i in 0..4 {
+        push(xs, i + 1)
+    }
+    for at in 0..len(xs) {
+        for more in 0..64 {
+            push(xs, more)
+        }
+        xs[at] = xs[at] * 10
+    }
+    let total = 0
+    for x in xs {
+        total += x
+    }
+    return total % 251
+}
+PROGRAM
 cat >"$work"/programs/outside.kest <<'PROGRAM'
 module outside
 
