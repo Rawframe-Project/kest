@@ -12,7 +12,9 @@ runs.
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 ![Version](https://img.shields.io/badge/version-0.0.2-orange.svg)
 ![C11](https://img.shields.io/badge/C11-no%20dependencies-555.svg)
+[![Playground](https://img.shields.io/badge/try%20it-in%20the%20browser-E0612B.svg)](https://rawframe-project.github.io/kest/)
 
+**[Try it in the browser](https://rawframe-project.github.io/kest/)** ·
 [Quick start](#quick-start) ·
 [Why Kest](#why-kest) ·
 [Performance](#performance) ·
