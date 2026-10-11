@@ -4589,8 +4589,8 @@ than something written wrongly — that is where a host walks `kest_frame_gives`
 and lays the slots out itself, which it may do for a struct too when the way
 the language writes one is not the way it wants.
 
-The C API is 113 doors in 6 families: 52 for running a program, 18 for reading
-what one is made of, 15 for watching what it cost, 13 for stopping one, 10 for
+The C API is 116 doors in 6 families: 52 for running a program, 18 for reading
+what one is made of, 15 for watching what it cost, 16 for stopping one, 10 for
 its memory and 5 for steering it while it runs. A host that compiles, binds,
 sizes and calls needs 22 of them, which is what `examples/least.c` is; the rest
 are there for hosts that want more, and every one of them is called by one of
@@ -5216,7 +5216,7 @@ stopped frames' memory back; the machine read it again on the way out of the
 breakpoint. What a host may do to a stopped
 machine is look at it, let it carry on, and free it. See D1078.
 
-A host does all of this itself through ten doors. `kest_break_byte` is the byte
+A host does all of this itself through the doors below. `kest_break_byte` is the byte
 to write, which is the instruction nothing compiles to: a host cannot work it
 out, because the public header does not hand out the instruction set and should
 not, so the machine says which byte it is rather than a host writing the number
@@ -5224,6 +5224,14 @@ down and finding that it moved. `kest_code_of` hands over the
 bytes a body was compiled to, which is what a breakpoint is written into;
 `kest_came_from` says where in the source the instruction at a byte came from,
 which is what makes a breakpoint at a line a breakpoint at an instruction.
+It walks the body from its start, so it is asked with the bytes a host wrote
+over put back. `kest_entry_source` is the file a body was written in and
+`kest_locate` turns an offset in it into the line and column every message
+says, so a host shows a line and finds the instructions of one by walking a
+body. `kest_next_at` is where the next instruction starts, which is how a host
+steps past the breakpoint it is standing on and writes it back after; it
+answers -1 at a breakpoint, because only the host knows what was under it.
+See D1290.
 `kest_stopped` says how far into a body the machine stopped and `kest_stopped_in`
 says which body — both answer -1 for a machine that is running or finished, so
 a host tells a stop from a refusal by asking rather than by reading the report.

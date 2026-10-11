@@ -44433,3 +44433,36 @@ which layouts, constants and copies of a generic it registered and in which
 order, and which bodies it carried into which callers (D1156). That is a
 design of its own and not a change to this one, and 1.7 ms is a tenth of a
 frame at sixty a second.
+
+## D1290 — A host's debugger is told where an instruction is in a file
+
+The engine embedding Kest builds a debugger of its own for the machines it
+starts, through the public header and nothing else, and could not turn a
+place in a body into a place in a file: what `kest debug` reads for that is
+the build's module and `kest_source_locate`, both inside. So it could show no
+line, put no breakpoint on one and step none. Three doors:
+
+- `kest_entry_source`: the path of the file a body was compiled from, which is
+  what every message about that body already names.
+- `kest_locate`: an offset `kest_came_from` answered, as a line and a column
+  counted from one, the column in characters. It is the search every message
+  is located with, over lines the build counted when it read the file.
+- `kest_next_at`: where the instruction after one starts. Stepping past the
+  breakpoint a machine stands on is taking it out, writing one at the next
+  instruction, carrying on and writing the first back; without this a host
+  could not find the next instruction, so a breakpoint it took out stayed out
+  until its call ended. It answers -1 where a breakpoint is written, because
+  the byte is one wide and only the host knows the width of what it wrote
+  over: a width read through one is the middle of an instruction.
+
+What was asked as a fourth, the instructions a line was compiled to, is not a
+door. It is a walk of a body with the two above, which is what `kest debug`
+does, and answering it inside would be the table of where every instruction
+starts that D751 took out. `kest_came_from` says now what was true and unsaid:
+it walks from the start of the body, so it is asked with the host's
+breakpoints put back.
+
+*Argued*, and held by `examples/embed`, which stops at a breakpoint in
+`doubled`, is told line 923 of `embed.kest`, is told -1 for the next
+instruction while the breakpoint is in and a place inside the body once it is
+out.

@@ -7652,6 +7652,40 @@ int main(int argc, char **argv) {
             fprintf(stderr, "a stopped machine cannot say where it is\n");
             return 1;
         }
+        // And where that is as a file and a line, which is what a host's
+        // debugger shows a person and puts a breakpoint on. `doubled` is
+        // written on line 922 and its one statement on the line after. See
+        // D1290.
+        uint32_t line = 0;
+        uint32_t column = 0;
+        const char *file = kest_entry_source(watched, doubled);
+        if (file == NULL || strstr(file, "embed.kest") == NULL ||
+            !kest_locate(watched, doubled,
+                         (uint32_t)kest_came_from(watched, doubled, 0), &line,
+                         &column) ||
+            line != 923 || kest_entry_source(watched, -1) != NULL ||
+            kest_locate(watched, doubled, UINT32_MAX, &line, &column)) {
+            fprintf(stderr, "a stopped machine said the wrong place: %s:%u\n",
+                    file == NULL ? "?" : file, line);
+            return 1;
+        }
+        // Where the next instruction starts is not something a breakpoint
+        // can say, because the byte under it is one wide and the instruction
+        // it was written over is not: so the machine says nothing rather than
+        // the middle of an instruction, until the byte is put back.
+        if (kest_next_at(watched, doubled, 0) != -1) {
+            fprintf(stderr, "a breakpoint was read as an instruction\n");
+            return 1;
+        }
+        code[0] = was;
+        int64_t next = kest_next_at(watched, doubled, 0);
+        code[0] = kest_break_byte();
+        if (next <= 0 || next > (int64_t)many ||
+            kest_came_from(watched, doubled, (uint32_t)next) < 0) {
+            fprintf(stderr, "the instruction after the first is at %lld\n",
+                    (long long)next);
+            return 1;
+        }
         uint16_t slots = 0;
         uint8_t kind = 0;
         const char *called = kest_frame_name(watched, 0, 0, &slots, &kind);

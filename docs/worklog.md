@@ -43072,3 +43072,18 @@ what a sitting on that machine moves a number.
 
 **Runs:** `measure.sh` on the benchmark machine; the tables and charts it
 wrote fetched and read against the ones at `a5310c3c`.
+
+## 2026-10-11, a host's debugger told where an instruction is in a file
+
+Three doors for a host writing a debugger of its own: the file a body came
+from, an offset in it as a line and a column, and where the next instruction
+starts. Asked for by the engine that embeds Kest, which could put no
+breakpoint on a line and step none. See D1290.
+
+Turned up while reading what a host would do with a frame's locals: `kest
+debug` asked for `locals` before a body has written a text it names reads
+whatever the stack held there as an address and dies. Fixed by the next
+change.
+
+**Runs:** `examples/embed` with its breakpoint section asking the three;
+`make most`.
