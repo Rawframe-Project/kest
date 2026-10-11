@@ -260,6 +260,7 @@ FAMILY = {
  "kest_frame_slot":"stopping","kest_frame_name":"stopping","kest_frame_wide":"stopping",
  "kest_frame_at_address":"stopping",
  "kest_entry_source":"stopping","kest_locate":"stopping","kest_next_at":"stopping",
+ "kest_frame_written":"stopping","kest_frame_text":"stopping",
  # reading: what a program and a build are made of, for a tool.
  "kest_version":"reading","kest_abi_version":"reading","kest_profile":"reading",
  "kest_checked":"reading",

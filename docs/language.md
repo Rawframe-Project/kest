@@ -4589,8 +4589,8 @@ than something written wrongly — that is where a host walks `kest_frame_gives`
 and lays the slots out itself, which it may do for a struct too when the way
 the language writes one is not the way it wants.
 
-The C API is 116 doors in 6 families: 52 for running a program, 18 for reading
-what one is made of, 15 for watching what it cost, 16 for stopping one, 10 for
+The C API is 118 doors in 6 families: 52 for running a program, 18 for reading
+what one is made of, 15 for watching what it cost, 18 for stopping one, 10 for
 its memory and 5 for steering it while it runs. A host that compiles, binds,
 sizes and calls needs 22 of them, which is what `examples/least.c` is; the rest
 are there for hosts that want more, and every one of them is called by one of
@@ -5232,6 +5232,16 @@ body. `kest_next_at` is where the next instruction starts, which is how a host
 steps past the breakpoint it is standing on and writes it back after; it
 answers -1 at a breakpoint, because only the host knows what was under it.
 See D1290.
+
+A name is the body's for the whole of the body, and a local the body has not
+reached yet holds what the frame before it left there, which may be an
+address. `kest_frame_written` says whether the body has written a slot on
+every way to where the frame stands, and `kest_frame_text` hands over the text
+in a slot only where that is one piece of text on every way: both are the
+walk the verifier proved the body with before it ran, made again for the
+asking, so neither follows a slot that is not text as an address. The debugger
+says `not written yet` for the first kind of slot, where it used to read one as
+text and die. See D1291.
 `kest_stopped` says how far into a body the machine stopped and `kest_stopped_in`
 says which body — both answer -1 for a machine that is running or finished, so
 a host tells a stop from a refusal by asking rather than by reading the report.

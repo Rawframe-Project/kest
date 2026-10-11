@@ -43087,3 +43087,16 @@ change.
 
 **Runs:** `examples/embed` with its breakpoint section asking the three;
 `make most`.
+
+## 2026-10-11, a stopped frame's locals read through the proof
+
+`kest debug` died on `locals` at a line before a text local was written: it
+read the number the frame before had left as where the text is. The verifier
+already proves what every slot holds at every instruction, "nothing written"
+included, so two doors ask it again for one body: `kest_frame_written` and
+`kest_frame_text`. The debugger and the adapter read locals through them and
+say `not written yet`. The engine's debugger asked for the same thing. See
+D1291.
+
+**Runs:** the twenty-line program under `kest debug` before and after;
+`examples/embed`; `check-commands.sh`; `make most`.

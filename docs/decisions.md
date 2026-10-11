@@ -44466,3 +44466,44 @@ breakpoints put back.
 `doubled`, is told line 923 of `embed.kest`, is told -1 for the next
 instruction while the breakpoint is in and a place inside the body once it is
 out.
+
+## D1291 — A stopped frame's locals are read through the proof
+
+A name is the body's for the whole of the body, and a local the body has not
+reached yet holds what the frame before it left. `kest debug` read every named
+slot by the kind its name said: asked for `locals` at a line before a piece of
+text was written, it read the number another function had left there as where
+the text is and died. Reproduced in twenty lines, and the engine embedding
+Kest raised the same thing about its own debugger -- one serving somebody
+else, where following such a slot reads the server's memory and says where it
+is.
+
+Two ways to answer were weighed. The compiler could write down where in the
+code each name starts being written and stops, which is a range carried
+through the optimizer and the lowering for every name. Or a read could check
+that a slot points into memory the machine holds, which is half a guard: a
+slot a scope reused holds a number where the name says text. Neither was
+taken. The verifier already proves, for every slot at every instruction a body
+can reach, what the slot holds on every way there, with "nothing this body
+wrote" as one of the answers (D1242), and every instruction that reads text is
+held to it. So the answer is that walk, made again for one body when a host
+asks:
+
+- `kest_frame_written`: whether the slot holds anything this body wrote on
+  every way to where the frame stands.
+- `kest_frame_text`: the bytes and the length, where the slot and the one after
+  it are one piece of text on every way there, or nought; NULL elsewhere.
+
+What it costs is one body proved again for each question, at a breakpoint,
+where nothing is counting. What it asks of a host is the body as it was
+compiled: a breakpoint byte is an instruction nothing compiles to, the walk
+meets it and the answer is nothing rather than a guess, so the host asks with
+the bytes it wrote put back, as `kest debug` does. A slot a loop writes on the
+second time round and not the first is not written at the head of the loop,
+which is the truth about the first time round.
+
+`kest debug` and `kest dap` read locals through the two now and say `not
+written yet` for the first kind of slot. *Argued*, and held by a debugging
+session in `check-commands.sh` stopped before the text is written and after,
+and by `examples/embed`, which is told nothing is written while its breakpoint
+is in and that `n` is written and not text once it is out.

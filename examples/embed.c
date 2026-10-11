@@ -7677,9 +7677,25 @@ int main(int argc, char **argv) {
             fprintf(stderr, "a breakpoint was read as an instruction\n");
             return 1;
         }
+        // Whether a slot is written is the proof's answer, and what it proved
+        // is the body as compiled: with a breakpoint in it, nothing is said
+        // to be written, and a number is never handed over as text. See
+        // D1291.
+        uint32_t text_length = 0;
+        if (kest_frame_written(watched, 0, 0)) {
+            fprintf(stderr, "a body with a breakpoint in it was answered for\n");
+            return 1;
+        }
         code[0] = was;
+        bool n_written = kest_frame_written(watched, 0, 0);
+        const char *n_as_text = kest_frame_text(watched, 0, 0, &text_length);
         int64_t next = kest_next_at(watched, doubled, 0);
         code[0] = kest_break_byte();
+        if (!n_written || n_as_text != NULL || text_length != 0) {
+            fprintf(stderr, "a number handed in was said not to be written, or "
+                            "to be text\n");
+            return 1;
+        }
         if (next <= 0 || next > (int64_t)many ||
             kest_came_from(watched, doubled, (uint32_t)next) < 0) {
             fprintf(stderr, "the instruction after the first is at %lld\n",

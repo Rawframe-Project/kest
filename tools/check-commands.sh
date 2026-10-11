@@ -5848,6 +5848,56 @@ if [ -z "$debug_wrong" ]; then
         debug_wrong="a program that had been debugged does not run"
     fi
 fi
+# And a local the body has not reached yet, which holds whatever the frame
+# before it left: `other` leaves numbers where `later` keeps `s`, so `locals`
+# at line 11 read a number as where a piece of text is and the debugger died
+# on it. A slot is said only where the proof says the body wrote it, and text
+# only where it says the two slots are one piece. See D1291.
+cat > "$scratch"/stopping/early.kest <<'KEST'
+import std.io
+
+fn other() -> i64 {
+    let a: i64 = 123456
+    let b: i64 = 7
+    let c: i64 = a * b
+    return a + b + c
+}
+
+fn later(n: i64) -> i64 {
+    let k: i64 = n + 1
+    let s = "seen {n} here"
+    io.print(s)
+    return k
+}
+
+fn main() -> i32 {
+    let x = other()
+    if later(x) != 987656 {
+        return 1
+    }
+    return 0
+}
+KEST
+cat > "$scratch"/stopping/early-asking <<'STOPPING'
+break 11
+run
+locals
+next
+next
+locals
+continue
+quit
+STOPPING
+"$kest" debug "$scratch"/stopping/early.kest \
+    <"$scratch"/stopping/early-asking >"$scratch"/stopping/early-said 2>&1
+if [ -z "$debug_wrong" ]; then
+    case "$(cat "$scratch"/stopping/early-said)" in
+    *"s "*"not written yet"*"s "*'"seen 987655 here"'*"the program finished"*)
+        ;;
+    *) debug_wrong="a local the body had not written yet was read as what the \
+frame before it left" ;;
+    esac
+fi
 if [ -n "$debug_wrong" ]; then
     complain "debug: a machine stopped and asked about: $debug_wrong"
     sed 's/^/    /' "$scratch"/stopping/said | head -8
