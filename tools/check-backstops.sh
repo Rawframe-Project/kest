@@ -339,7 +339,9 @@ fn main() -> i32 {
         # double and an `f32` holds less, so this is the one of the three
         # widths a program can tell without counting: it compares what the
         # host wrote against its own `f32` literal and finds them apart, and
-        # nothing said why. See D838.
+        # nothing said why. See D838. The same look weighs an answer of
+        # numbers before the walk does, so a host answering one is where this
+        # is met first. See D1292.
         "what": "a float wider than the width it is kept at, written in",
         "file": "src/vm.c",
         "from": r"""    case KEST_L_F32:
@@ -350,7 +352,7 @@ fn main() -> i32 {
                (double)(float)given_as.real != given_as.real;""",
         "make": ["kest", "embed"],
         "host": "examples/embed",
-        "caught": "holds was written into a frame",
+        "caught": "a number no `f32` holds was",
     },
     {
         # And the same answered with, which is the walk rather than the look:
