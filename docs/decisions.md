@@ -44507,3 +44507,27 @@ written yet` for the first kind of slot. *Argued*, and held by a debugging
 session in `check-commands.sh` stopped before the text is written and after,
 and by `examples/embed`, which is told nothing is written while its breakpoint
 is in and that `n` is written and not text once it is out.
+
+## D1292 — An answer of numbers is weighed by its pieces
+
+The engine embedding Kest measured a scan of 7,000 blocks through two doors a
+block, one answering a `u32` and one a shape of two `u32` and two `u8`, and
+found the walk that reads what a crossing answered with the largest part of
+the crossing. Here, the same two doors answering 14,000 times from the
+interpreter: 504 instructions a crossing, and `handed_well` 38% of the
+profile.
+
+What the walk reads beyond each number's width is text, handles, a tag's case
+and a set's bits, and a layout already says whether it holds any of those
+(D840). The arguments a host hands in were weighed by their pieces for that
+reason; what a crossing answered with was walked by its type whatever it was.
+It is weighed by its pieces now where the layout holds none of them, in the
+loop the arguments use. A piece that does not fit is handed to the walk, so
+the answers refused and the words refusing them are the walk's: the flat loop
+is as strict as the walk about every number, so where it passes, the walk
+would have.
+
+*Measured* on the development machine, 28 million crossings from a host
+written for it: 504 instructions a crossing to 349, 40 ns to 26.
+`examples/embed` still refuses an `f32` no `f32` holds through the new path,
+with the walk's message.

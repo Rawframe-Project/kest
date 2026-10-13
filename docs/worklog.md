@@ -43100,3 +43100,14 @@ D1291.
 
 **Runs:** the twenty-line program under `kest debug` before and after;
 `examples/embed`; `check-commands.sh`; `make most`.
+
+## 2026-10-13, an answer of numbers weighed by its pieces
+
+A crossing that answers a shape of numbers checks them with a flat loop over
+the layout's pieces and walks the type only when one does not fit. 504
+instructions a crossing to 349. The engine embedding Kest measured the walk as
+the largest part of its scans through doors. See D1292.
+
+**Runs:** a host of two doors answering a `u32` and a four-field shape 14,000
+times a call, under `perf stat` and `perf record`, before and after;
+`examples/embed`; `make most`.
