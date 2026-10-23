@@ -1,7 +1,7 @@
 # Where the game-first / AI-native work is
 
 This is the operational state for the mission in
-`/home/kest/mission/direction/`. It is read first by whatever resumes the work
+`/home/rawframe-project/kest/notes/mission/direction/`. It is read first by whatever resumes the work
 and written before every invocation ends. `docs/decisions.md` holds the
 reasoning; this holds the position.
 

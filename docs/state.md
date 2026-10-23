@@ -98,7 +98,7 @@ a run with a decision knows which is which.
 
 ## Phases
 
-The completion mission's sections, and which are answered. `/home/kest/mission/`
+The completion mission's sections, and which are answered. `/home/rawframe-project/kest/notes/mission/`
 carries the mission itself; this is what the tree has to show for it.
 
     0  baseline and regression truth      done: fast, the focused
