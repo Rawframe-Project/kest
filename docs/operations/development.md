@@ -16,6 +16,7 @@ A preset configures a build into `out/<preset>`, and everything it makes lands t
 | `linux-gcc` | GCC 14, plus the ThreadSanitizer objects |
 | `linux-clang` | Clang 20, plus the libFuzzer target and the WebAssembly playground |
 | `linux-arm64` | GCC 14 on arm64, where every processor fuses a multiply and an add |
+| `linux-arm64-fuzz` | the same build, for the seeded fuzzer that CI runs on arm64 on `main` and at night |
 | `macos-clang` | Apple Clang |
 | `windows-msvc` | MSVC through Visual Studio: the release build and the hosts |
 | `release` | the release build with the sources, documentation and editor extension installed, for `cpack` |

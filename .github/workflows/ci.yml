@@ -132,10 +132,10 @@ jobs:
 
   # Every cell builds with warnings as errors and runs its test preset: the
   # Linux GCC cell the whole gate but what the Linux Clang cell runs, which is
-  # the C backend, the doors, WebAssembly and the fuzzers; arm64 the seeded
-  # fuzzer and the C backend, where every processor fuses a multiply and an
-  # add; every Unix cell the fast tests; and every cell the conformance trace
-  # every platform has to print byte for byte.
+  # the C backend, the doors, WebAssembly and the fuzzers; arm64 the C backend,
+  # where every processor fuses a multiply and an add; every Unix cell the fast
+  # tests; and every cell the conformance trace every platform has to print
+  # byte for byte.
   build:
     needs: changes
     if: needs.changes.outputs.code == 'true'
@@ -154,6 +154,20 @@ jobs:
     with:
       preset: ${{ matrix.preset }}
       runner: ${{ matrix.runner || 'ubuntu-24.04' }}
+
+  # The seeded fuzzer under the checking build on arm64, on main and at night
+  # rather than on a pull request: it takes ten minutes on that runner, and the
+  # same inputs run on every pull request in the Linux Clang cell.
+  build-main:
+    needs: changes
+    if: github.event_name != 'pull_request' && needs.changes.outputs.code == 'true'
+    uses: Rawframe-Project/.github/.github/workflows/cpp.yml@bf59dbcd696369b51a9831145fb3b60f3bc71280 # v0.0.26
+    permissions:
+      contents: read
+    with:
+      preset: linux-arm64-fuzz
+      runner: ubuntu-24.04-arm
+      timeout: 30
 
   # The release archive on every platform, unpacked into a room of its own and
   # used the way somebody who downloaded it would: the binary asked what it
@@ -312,7 +326,7 @@ jobs:
   # changes job skipped counting as passed.
   required:
     if: always()
-    needs: [changes, zizmor, site, fuzz, build, package, games, tetris-windows]
+    needs: [changes, zizmor, site, fuzz, build, build-main, package, games, tetris-windows]
     permissions: {}
     runs-on: ubuntu-latest
     timeout-minutes: 2

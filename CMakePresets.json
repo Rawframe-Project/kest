@@ -61,6 +61,11 @@
       }
     },
     {
+      "name": "linux-arm64-fuzz",
+      "displayName": "The linux-arm64 build, for the seeded fuzzer on main and at night",
+      "inherits": "linux-arm64"
+    },
+    {
       "name": "macos-clang",
       "displayName": "Apple Clang, with the checking build",
       "inherits": "unix",
@@ -107,6 +112,10 @@
     {
       "name": "linux-arm64",
       "configurePreset": "linux-arm64"
+    },
+    {
+      "name": "linux-arm64-fuzz",
+      "configurePreset": "linux-arm64-fuzz"
     },
     {
       "name": "macos-clang",
@@ -177,7 +186,17 @@
       "configurePreset": "linux-arm64",
       "filter": {
         "include": {
-          "name": "^(conformance|fast|regressions|backend|fuzzing)$"
+          "name": "^(conformance|fast|regressions|backend)$"
+        }
+      }
+    },
+    {
+      "name": "linux-arm64-fuzz",
+      "inherits": "base",
+      "configurePreset": "linux-arm64-fuzz",
+      "filter": {
+        "include": {
+          "name": "^fuzzing$"
         }
       }
     },
