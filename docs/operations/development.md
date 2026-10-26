@@ -4,7 +4,7 @@ Setting up, building, running one check, and the conventions of the source.
 
 ## Toolchain
 
-A C11 compiler and `make`; that is all the library and the command line need. The checks also use `python3`, `clang` (for the libFuzzer target and the WebAssembly build), `lld`, `wasi-libc` and clang's WebAssembly runtime library, and Node (to run the WebAssembly build). The raylib games need raylib 5.5 built from source and X11 and OpenGL headers.
+A C11 compiler and `make`; that is all the library and the command line need. The checks also use `python3`, `clang` (for the libFuzzer target and the WebAssembly build), `lld`, `wasi-libc` and clang's WebAssembly runtime library, and Node (to run the WebAssembly build). The raylib games need raylib 5.5 built from source and X11 and OpenGL headers. The documentation site needs Python's `markdown` package; the CI image has every one of these.
 
 On Windows the build is `tools\build.bat` from a Developer Command Prompt; the Makefile is for Linux and macOS.
 
@@ -19,6 +19,7 @@ On Windows the build is `tools\build.bat` from a Developer Command Prompt; the M
 | `make least engine embed` | the example hosts; `embed-debug` and `engine-debug` are the sanitized ones |
 | `make tetris RAYLIB=<raylib/src>` and `make colony RAYLIB=<raylib/src>` | the raylib games |
 | `make playground` | the browser playground in `build/playground` |
+| `python3 tools/build_site.py` | the documentation site in `_site/docs`, with the standard library reference, `llms.txt` and `llms-full.txt`; `pages.yml` publishes it beside the playground |
 | `make install PREFIX=...`, `make uninstall` | install and remove |
 | `make release` | the release archive and its checksum, see [Release](release.md) |
 | `make clean` | removes everything built |

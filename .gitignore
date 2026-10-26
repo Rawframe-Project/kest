@@ -22,3 +22,5 @@ kest-settlement-day.txt
 kest.wasm
 examples/tetris/host
 examples/colony/colony
+_site/
+out/

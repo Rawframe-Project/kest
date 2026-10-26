@@ -5,6 +5,7 @@ A small, fast, statically typed language for the gameplay half of a game, run by
 [![CI](https://github.com/Rawframe-Project/kest/actions/workflows/ci.yml/badge.svg)](https://github.com/Rawframe-Project/kest/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/github/license/Rawframe-Project/kest)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/Rawframe-Project/kest)](https://github.com/Rawframe-Project/kest/releases)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/Rawframe-Project/kest/badge)](https://scorecard.dev/viewer/?uri=github.com/Rawframe-Project/kest)
 
 Kest sits where Luau, daslang, Lua and AngelScript sit: inside an engine, running the rules, the AI, the quests and the simulation a designer changes every day. It is one C11 library with nothing beneath it but libc, and a compiler that proves what the code promises before it runs.
 
@@ -78,7 +79,7 @@ make
 ./kest new game && cd game && ../kest run
 ```
 
-On Windows, run `tools\build.bat` from a Developer Command Prompt and use `build\win\kest.exe`. Each release on the [releases page](https://github.com/Rawframe-Project/kest/releases) has an archive for every platform below with its checksum; unpack it anywhere and put its `bin` on the path. The [playground](https://rawframe-project.github.io/kest/) runs the command line in the browser.
+On Windows, run `tools\build.bat` from a Developer Command Prompt and use `build\win\kest.exe`. Each release on the [releases page](https://github.com/Rawframe-Project/kest/releases) has an archive for every platform below, checksummed in `SHA256SUMS` and attested; unpack it anywhere and put its `bin` on the path. The [playground](https://rawframe-project.github.io/kest/) runs the command line in the browser.
 
 A host builds a program, starts a machine and calls into it:
 
@@ -117,10 +118,11 @@ Measured on one 8-processor machine against Luau, Lua 5.4, LuaJIT, QuickJS-ng an
 
 ## Status
 
-Kest is at version 0.0.x and nothing is frozen: a release can change the language, and the [changelog](CHANGELOG.md) says what a program has to do about it. It is not a systems language, an engine or a hard real-time system. It is being built into a sandbox for code nobody trusts, and [Running untrusted code](docs/user/untrusted-code.md) says how far each promise is kept today and how to report a vulnerability.
+Before 1.0.0 nothing is frozen: a release can change the language, and the [changelog](CHANGELOG.md) says what a program has to do about it. It is not a systems language, an engine or a hard real-time system. It is being built into a sandbox for code nobody trusts, and [Running untrusted code](docs/user/untrusted-code.md) says how far each promise is kept today and how to report a vulnerability.
 
 ## Documentation
 
+- [The documentation site](https://rawframe-project.github.io/kest/docs/), with the standard library reference, and [llms.txt](https://rawframe-project.github.io/kest/llms.txt) and [llms-full.txt](https://rawframe-project.github.io/kest/llms-full.txt) for a model.
 - [Documentation index](docs/README.md): using the language, embedding it, and how it works.
 - [Getting started](docs/user/getting-started.md) and [Coming from Lua or Rust](docs/user/coming-from-lua-or-rust.md).
 - [How it works](docs/internals/overview.md) and [how to develop it](docs/operations/development.md).

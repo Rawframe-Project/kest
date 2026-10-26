@@ -1,24 +1,135 @@
-name: kest
+# Continuous integration: the pull request check, and the full check on main
+# and every night, which fuzzes longer. docs/operations/checks.md explains each
+# job; `required` is the one check the ruleset asks for.
+name: ci
 
 on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "7 0 * * *"
+  # A dispatch runs the night's checks, its fuzzing included.
   workflow_dispatch:
+    inputs:
+      fuzz-seconds:
+        description: Seconds the libFuzzer target runs (the night's run is 600)
+        type: number
+        default: 600
 
-# One run of this at a time, and a push that arrives while one is going cancels
-# it. The whole gate is ten minutes of one runner, so a run of commits stacks
-# up behind itself and the newest -- the one anybody is waiting on -- is the
-# one that waits longest. What matters is whether `main` is good now.
+# A new push to a pull request cancels its running CI; runs on main get a
+# group of their own, so they are never cancelled.
 concurrency:
-  group: kest-${{ github.ref }}
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: true
 
-permissions:
-  contents: read
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
+  # Whether anything beyond documentation changed; the builds skip when not.
+  # docs/user is not documentation only here: tools/check_guide.py runs every
+  # program on those pages.
+  changes:
+    uses: Rawframe-Project/.github/.github/workflows/changes.yml@56543e92d01e59abdb4299c4824a0c1facdc08ce # v0.0.25
+    permissions:
+      pull-requests: read
+    with:
+      docs: '^(docs/(internals|operations)/|docs/README\.md$|\.github/ISSUE_TEMPLATE/)|^[A-Z]+\.md$'
+
+  zizmor:
+    uses: Rawframe-Project/.github/.github/workflows/zizmor.yml@56543e92d01e59abdb4299c4824a0c1facdc08ce # v0.0.25
+    permissions:
+      contents: read
+
+  # The documentation site builds: every page, the standard library reference
+  # `kest doc` writes, llms.txt and llms-full.txt. In the CI image, which has
+  # the markdown package.
+  site:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    container:
+      image: ghcr.io/rawframe-project/ci-cpp:2026.10.7@sha256:08c846597243dc000c83d6c008d078a8c3fabf8633d83963d46c0e6d02c2577e
+      options: --init
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: The site
+        run: |
+          make -j kest
+          python3 tools/build_site.py
+
+  # The libFuzzer target over the source boundary, through the family's
+  # tools/fuzz_target.sh, which prints neither the seed nor a finding's input.
+  # A pull request fuzzes a minute from the committed programs alone; the
+  # night fuzzes longer from the corpus the nights before kept, minimizes it
+  # and saves it from main. Nothing of a corpus or a finding is uploaded.
+  fuzz:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    container:
+      image: ghcr.io/rawframe-project/ci-cpp:2026.10.7@sha256:08c846597243dc000c83d6c008d078a8c3fabf8633d83963d46c0e6d02c2577e
+      options: --init
+    permissions:
+      contents: read
+    env:
+      NIGHT: ${{ github.event_name != 'pull_request' }}
+      SECONDS_EACH: ${{ github.event_name == 'pull_request' && 60 || inputs.fuzz-seconds || 600 }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - name: The target
+        run: make -j tools/fuzz-cover
+      - if: github.event_name != 'pull_request'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: out/fuzz-corpus
+          key: fuzz-corpus-${{ github.run_id }}
+          restore-keys: fuzz-corpus-
+      - name: Fuzz
+        run: |
+          mkdir -p out/fuzz-corpus/fuzz-cover out/fuzz-seeds
+          # The committed programs are the floor of every corpus.
+          find examples lib/std test -name '*.kest' -exec cp {} out/fuzz-seeds/ \;
+          test -n "$(ls out/fuzz-seeds)"
+          # The script prints only that it found something; the kind and the
+          # sanitizer's report, never the input, are in its report file.
+          rm -rf out/fuzz-reports
+          status=0
+          tools/fuzz_target.sh tools/fuzz-cover out/fuzz-corpus/fuzz-cover \
+            out/fuzz-seeds -max_total_time="$SECONDS_EACH" -rss_limit_mb=4096 \
+            -timeout=25 || status=$?
+          cat out/fuzz-reports/*.txt 2>/dev/null || true
+          exit "$status"
+      - if: github.event_name != 'pull_request'
+        name: Minimize the corpus
+        run: |
+          mkdir -p out/fuzz-corpus/merged
+          tools/fuzz-cover -merge=1 out/fuzz-corpus/merged \
+            out/fuzz-corpus/fuzz-cover >out/fuzz-merge.log 2>&1
+          rm -rf out/fuzz-corpus/fuzz-cover
+          mv out/fuzz-corpus/merged out/fuzz-corpus/fuzz-cover
+          echo "$(ls out/fuzz-corpus/fuzz-cover | wc -l) input(s) kept"
+      - if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: out/fuzz-corpus
+          key: fuzz-corpus-${{ github.run_id }}
+
   linux:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -59,6 +170,10 @@ jobs:
   # bytes as the one taken on x86-64 -- which the `agree` job holds -- and what
   # the four families cost, which nothing here can be argued into.
   linux-arm64:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    permissions:
+      contents: read
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 20
     steps:
@@ -94,6 +209,10 @@ jobs:
           path: linux-arm64.families
 
   macos:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    permissions:
+      contents: read
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
@@ -148,6 +267,10 @@ jobs:
   # compiler disagreement shows, and the rest of the gate is the same source
   # running the same way. See D1020.
   clang:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -161,6 +284,10 @@ jobs:
           make fast CC=clang
 
   threads:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -248,6 +375,10 @@ jobs:
           /tmp/two
 
   package:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -294,6 +425,10 @@ jobs:
 
   # The whole gate on one runner, with a budget: one that runs past it fails.
   check:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -316,6 +451,10 @@ jobs:
   # display nobody sees, which has to end where it always ends and leave the
   # screen it showed. See D1269.
   tetris:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -357,6 +496,10 @@ jobs:
   # rather than played: a hosted Windows runner has no OpenGL 3.3 to open a
   # window with. See D1270.
   tetris-windows:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    permissions:
+      contents: read
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
@@ -404,6 +547,10 @@ jobs:
           path: kest-tetris-windows-x86_64.zip
 
   windows:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    permissions:
+      contents: read
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
@@ -412,7 +559,7 @@ jobs:
           persist-credentials: false
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       - name: build
-        shell: cmd
+        shell: cmd # zizmor: ignore[misfeature] a batch file runs where it was written to run
         run: tools\build.bat
       - name: examples
         shell: bash
@@ -421,7 +568,7 @@ jobs:
           sh tools/conformance.sh ./build/win/kest.exe windows-x86-64.trace
           cat windows-x86-64.trace
       - name: an archive, unpacked and run
-        shell: cmd
+        shell: cmd # zizmor: ignore[misfeature] a batch file runs where it was written to run
         run: tools\package.bat
       # Unpacked into a room of its own and used the way somebody who
       # downloaded it would: the binary asked what it is, a program it has
@@ -473,6 +620,7 @@ jobs:
 
   agree:
     needs: [linux, linux-arm64, windows, macos]
+    permissions: {}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -487,11 +635,13 @@ jobs:
           diff -u linux-x86-64.trace linux-arm64.trace \
             && echo "the two instruction sets said the same thing"
 
-  # The one check the ruleset requires: every job above passed.
+  # The one check the ruleset requires: every job above passed, a job the
+  # changes job skipped counting as passed.
   required:
     if: always()
-    needs: [linux, linux-arm64, macos, clang, threads, package, check, tetris,
-            tetris-windows, windows, agree]
+    needs: [changes, zizmor, site, fuzz, linux, linux-arm64, macos, clang,
+            threads, package, check, tetris, tetris-windows, windows, agree]
+    permissions: {}
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:

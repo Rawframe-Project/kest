@@ -51,10 +51,10 @@ rem The one thing here that is not a copy. Written the way the other platform
 rem writes it -- the hash, two spaces, the name -- so that one reader reads
 rem both.
 powershell -NoProfile -Command ^
-  "Compress-Archive -Force -Path 'build\%NAME%' -DestinationPath 'build\%NAME%.zip'" ^
+  "$ErrorActionPreference = 'Stop'; Compress-Archive -Force -Path 'build\%NAME%' -DestinationPath 'build\%NAME%.zip'" ^
   || exit /b 1
 powershell -NoProfile -Command ^
-  "$h = (Get-FileHash -Algorithm SHA256 'build\%NAME%.zip').Hash.ToLower();" ^
+  "$ErrorActionPreference = 'Stop'; $h = (Get-FileHash -Algorithm SHA256 'build\%NAME%.zip').Hash.ToLower();" ^
   "Set-Content -NoNewline -Encoding ascii 'build\%NAME%.zip.sha256' ($h + '  %NAME%.zip' + [char]10)" ^
   || exit /b 1
 

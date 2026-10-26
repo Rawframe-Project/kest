@@ -9,7 +9,7 @@
 - [Functions](user/functions.md): overloading, generics, function values, blocks and bodies that wait.
 - [Promises](user/promises.md): `no.alloc`, `no.host` and `deterministic`, and how the compiler proves them.
 - [Determinism](user/determinism.md): the profile, and what makes a program compute the same world everywhere.
-- [Standard library](user/standard-library.md).
+- [Standard library](user/standard-library.md), and the [reference](https://rawframe-project.github.io/kest/docs/std.html) `kest doc` writes for every module.
 - [Embedding](user/embedding.md): a host, the C API, doors and machines.
 - [Host memory](user/host-memory.md): lending, worlds across frames, and reloading a running game.
 - [Running untrusted code](user/untrusted-code.md): ceilings, budgets and what a host must keep for itself.

@@ -14,11 +14,16 @@ on:
       - 'bench/determinism.sh'
       - '.github/workflows/determinism.yml'
 
-permissions:
-  contents: read
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   unix:
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -70,6 +75,8 @@ jobs:
           path: answers-${{ matrix.platform }}.tsv
 
   windows:
+    permissions:
+      contents: read
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
@@ -78,7 +85,7 @@ jobs:
           persist-credentials: false
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       - name: Kest
-        shell: cmd
+        shell: cmd # zizmor: ignore[misfeature] a batch file runs where it was written to run
         run: tools\build.bat
       - name: Lua 5.4 and LuaJIT from their own source, and Luau's release
         shell: pwsh
@@ -111,6 +118,8 @@ jobs:
           path: answers-windows-x86_64.tsv
 
   table:
+    permissions:
+      contents: read
     needs: [unix, windows]
     if: always()
     runs-on: ubuntu-latest

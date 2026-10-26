@@ -19,6 +19,7 @@ make check                  # the whole gate: what "it passes" means (several mi
 make fuzz                   # the seeded fuzzer, short, sanitized
 sh tools/check-verifier.sh  # any one check, from the root after make
 python3 tools/check_guide.py   # every example in docs/user checked and run
+python3 tools/build_site.py    # the documentation site, llms.txt and llms-full.txt, in _site (needs markdown)
 make kest-debug && ./kest-debug run file.kest   # the checking, sanitized build
 ```
 
@@ -27,10 +28,10 @@ Run `make check`, `make fuzz`, long fuzzing and every benchmark through the work
 ## Ways to hurt yourself
 
 - **Killing by pattern.** Never `pkill -f`, `pgrep | kill` or `kill` a PID found by matching a name or path: other sessions build, fuzz and run hosts named `kest`, `fuzz` and `engine` on the same machine. Kill only a PID you started.
-- **Endless fuzzing.** `tools/fuzz-cover` is libFuzzer and runs until it finds something. Always pass `-max_total_time`, and stop what you started. Never print a seed's input or upload a corpus or crash from CI.
+- **Endless fuzzing.** `tools/fuzz-cover` is libFuzzer and runs until it finds something. Always pass `-max_total_time`, and stop what you started. CI runs it only through `tools/fuzz_target.sh`, which prints neither the seed nor a finding's input; never print one, upload a corpus or a crash, or restore the corpus cache on a pull request.
 - **Running the games headless and forgetting them.** `tetris` and `colony` under Xvfb take `--frames`; always pass it.
 - **Files a run writes.** `examples/settlement.kest` writes `kest-settlement-day.txt` in the current directory. Every check works in a scratch directory under `TMPDIR` and gives it back; the gate's `room` and `tree` steps fail when anything is left behind or a built file is committed.
-- **Two copies held to each other.** `editors/vscode/LICENSE` is the same bytes as `LICENSE`. `bench/hosts/tetromino.lua` is a third party's file kept unchanged under its own license.
+- **Copies held to their source.** `editors/vscode/LICENSE` is the same bytes as `LICENSE`. `bench/hosts/tetromino.lua` is a third party's file kept unchanged under its own license. `tools/fuzz_target.sh` is the organization's copy from its `.github` repository: change it there first.
 - **Benchmark results.** `bench/*.tsv` and `bench/chart-*.svg` are regenerated only when a release changes them, on a quiet machine; never commit a sitting taken on a busy one.
 
 ## Invariants
@@ -40,11 +41,11 @@ Run `make check`, `make fuzz`, long fuzzing and every benchmark through the work
 - **Instructions.** An instruction is one row in `src/value.c` (operands, stack effect, whether it reaches the heap or the host). The verifier, the promise proof, the disassembler and the C backend read that row; never special-case an opcode elsewhere.
 - **Diagnostics.** Every diagnostic has a stable code (`K01xx` lexer, `K02xx` parser, `K03xx` types and bodies, `K04xx` promises, `K05xx` what the compiler cannot emit, `K06xx` running and the command line, `K07xx` reading). A code is never reused for another meaning, and every code is asked for by a check that makes it happen; `check-tables.sh` refuses one nothing asks for. A compiler fault is said only through `kest_diags_fault`. Never stop at the first error.
 - **Limits.** Every limit is a named constant with a diagnostic that says the number; `tools/check-ceilings.sh` reaches each one.
-- **Versions.** In `include/kest.h`: `KEST_ABI_VERSION` moves when anything a compiled host could see changes; `KEST_JSON_SCHEMA` when a JSON field changes meaning, is removed, or is added to a list a reader was told was complete; `KEST_PROFILE_VERSION` when anything a deterministic program observes changes; `KEST_EDITION` when the language changes in a way an existing program notices. Each move is named in the changelog. The library version is changed only by the release process.
+- **Versions.** In `include/kest.h`: `KEST_ABI_VERSION` moves when anything a compiled host could see changes; `KEST_JSON_SCHEMA` when a JSON field changes meaning, is removed, or is added to a list a reader was told was complete; `KEST_PROFILE_VERSION` when anything a deterministic program observes changes; `KEST_EDITION` when the language changes in a way an existing program notices. Each move is named in the changelog. The library version (`KEST_VERSION_*` between the release-please markers, and `editors/vscode/package.json`) is changed only by release-please.
 - **Determinism.** Arithmetic, NaN spelling, hashing and iteration order are the language's, implemented once and shared by the folder, the machine and the C backend. Mathematics is Kest in `lib/std/fdlibm.kest`; only `sqrt`, `floor` and `ceil` are host doors. Nothing a program reads comes from an address, a clock or the environment.
 - **No global mutable state** except the process-wide reference stamp counter. Every module hangs off a context the caller owns.
 - **Public API.** A host includes `include/kest.h` and nothing else; it compiles as strict C11 on its own (`tools/check-header.sh`). Every door says when it refuses and what it writes into the report, is called from `examples/embed.c`, and `tools/check-dead.sh` holds every declared function to existing and being called from outside its file.
-- **Workflows.** Every action is pinned by commit SHA with its version in a comment, and each workflow and job declares the least `permissions` it needs. The `required` job in `ci.yml` needs every other job; a new job is added to its `needs`.
+- **Workflows.** Every action is pinned by commit SHA with its version in a comment. Every workflow sets `permissions: {}` and `defaults.run.shell: bash` (`scorecard.yml` excepted, which Scorecard requires) and grants each job the least it needs; event data reaches a script only through `env`. The `required` job in `ci.yml` needs every other job; a new job is added to its `needs`. `zizmor` audits them on every pull request.
 
 ## C conventions
 

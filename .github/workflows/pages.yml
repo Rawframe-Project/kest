@@ -1,16 +1,20 @@
-name: playground
+# Publishes the site: the playground (the command line built as WebAssembly
+# with the page around it, held to the machine by check-wasm.sh first) at the
+# root, and the documentation, the standard library reference, llms.txt and
+# llms-full.txt that tools/build_site.py writes. Built in the CI image, which
+# has the WebAssembly toolchain, Node and the markdown package.
+name: pages
 
-# The playground published: the command line built as WebAssembly with the
-# page around it, on every push to `main` after the same page has been held to
-# the machine by `check-wasm.sh`. Nothing in it runs anywhere but the reader's
-# browser. See D1266.
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
 
 concurrency:
   group: pages
@@ -18,34 +22,38 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
+    container:
+      image: ghcr.io/rawframe-project/ci-cpp:2026.10.7@sha256:08c846597243dc000c83d6c008d078a8c3fabf8633d83963d46c0e6d02c2577e
+      options: --init
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
-      - name: a WebAssembly toolchain
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q lld wasi-libc \
-              "libclang-rt-$(clang --version | sed -n 's/.*clang version \([0-9]*\).*/\1/p' | head -1)-dev-wasm32"
-      - name: the page, and the page held to the machine
+      - name: The playground, held to the machine
         run: |
           make -j
           make playground
-          mkdir -p /home/runner/kest-tmp
-          TMPDIR=/home/runner/kest-tmp sh tools/check-wasm.sh
+          sh tools/check-wasm.sh
+      - name: The site
+        run: |
+          python3 tools/build_site.py
+          cp -r build/playground/. _site/
+          test -f _site/index.html && test -f _site/llms.txt
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:
-          path: build/playground
+          path: _site
 
   deploy:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     permissions:
       pages: write
       id-token: write
-    timeout-minutes: 20
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

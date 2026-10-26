@@ -4,7 +4,7 @@ Kest is a statically typed language for the gameplay half of a game: rules, AI, 
 
 ## Getting the command line
 
-**From a release.** Each release on the [releases page](https://github.com/Rawframe-Project/kest/releases) carries an archive for Linux on x86-64 and arm64, macOS on arm64 and Windows on x86-64, with a checksum beside each. Unpack it anywhere and put its `bin` directory on the path. The archive holds the command line, the header, the static library, the standard library and the VS Code extension; nothing else needs to be installed.
+**From a release.** Each release on the [releases page](https://github.com/Rawframe-Project/kest/releases) carries an archive for Linux on x86-64 and arm64, macOS on arm64 and Windows on x86-64, with every file's checksum in `SHA256SUMS` and a build provenance attestation (`gh attestation verify <file> -R Rawframe-Project/kest`). Unpack it anywhere and put its `bin` directory on the path. The archive holds the command line, the header, the static library, the standard library and the VS Code extension; nothing else needs to be installed.
 
 **In the browser.** The [playground](https://rawframe-project.github.io/kest/) runs the command line built as WebAssembly inside the page.
 

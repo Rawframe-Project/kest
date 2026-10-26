@@ -1,108 +1,154 @@
 name: release
 
-# A tag `v0.0.2` makes the page a release is: the archive for every platform
-# CI builds one on, each with its checksum, and the changelog's section for
-# that version as what the page says. It is made as a draft -- the one step
-# left is somebody publishing it, which is the step that cannot be taken
-# back. `workflow_dispatch` builds the archives and makes no page, which is how
-# the pipeline is tried without a tag. See D1265.
+# release-please keeps a draft release pull request open from the
+# conventional commits on main. Merging it tags vX.Y.Z and creates the GitHub
+# release; the archives job then builds the archive for every platform at the
+# tag, and the assets job adds the source archive, writes the checksums and an
+# SBOM, attests where all of it was built, and attaches it to the release.
+# docs/operations/release.md has the steps.
+
 on:
   push:
-    tags: ['v*']
+    branches: [main]
+  # Runs again by hand after a failed push run, without a new commit.
   workflow_dispatch:
 
-permissions:
-  contents: read
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
-  unix:
+  release-please:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # Both steps act with the app token, so github.token needs no permissions here.
+    permissions: {}
+    outputs:
+      created: ${{ steps.release.outputs.release_created }}
+      tag: ${{ steps.release.outputs.tag_name }}
+    steps:
+      # The Rawframe Release app's token, not github.token, so the release pull
+      # request runs CI: GitHub starts no workflows for pull requests github.token opens.
+      - id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          # Only what release-please uses: the release commit and tag, the
+          # release pull request, and its labels.
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+      - id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ steps.app.outputs.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  # The archive a user unpacks, built on each platform at the tag: the command
+  # line, the library, the header, the standard library, the sources and the
+  # VS Code extension.
+  archives:
+    needs: release-please
+    if: needs.release-please.outputs.created == 'true'
     strategy:
       fail-fast: true
       matrix:
-        runner: [ubuntu-latest, ubuntu-24.04-arm, macos-latest]
+        runner: [ubuntu-24.04, ubuntu-24.04-arm, macos-latest, windows-latest]
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          ref: ${{ needs.release-please.outputs.tag }}
           persist-credentials: false
-      - name: an archive, and the notes for it
+      # The tag says which version it is and the header says which version is
+      # built; an archive that disagrees with its tag is refused.
+      - name: The tag is the version the header says
+        env:
+          TAG: ${{ needs.release-please.outputs.tag }}
+        run: |
+          built=$(sed -n 's/^#define KEST_VERSION_STRING "\(.*\)"$/\1/p' include/kest.h)
+          if [ "v$built" != "$TAG" ]; then
+            echo "::error::the tag is $TAG and kest.h says $built"
+            exit 1
+          fi
+      - if: runner.os != 'Windows'
+        name: The archive
         run: |
           make -j
           make release
-          cd build
-          if command -v sha256sum >/dev/null; then
-            sha256sum -c kest-*.tar.gz.sha256
-          else
-            shasum -a 256 -c kest-*.tar.gz.sha256
-          fi
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: release-${{ matrix.runner }}
-          path: |
-            build/kest-*.tar.gz*
-            build/kest-*.notes.md
-
-  windows:
-    runs-on: windows-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          persist-credentials: false
-      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
+      - if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       # Two steps rather than two lines: a batch file run from cmd without
-      # `call` hands control over and never comes back, so the second line of
-      # one step is never reached. That is how the first tag made no archive
-      # for Windows. See D1265.
-      - name: the build
-        shell: cmd
+      # `call` hands control over and never comes back.
+      - if: runner.os == 'Windows'
+        name: The build
+        shell: cmd # zizmor: ignore[misfeature] a batch file runs where it was written to run
         run: tools\build.bat
-      - name: an archive
-        shell: cmd
+      - if: runner.os == 'Windows'
+        name: The archive
+        shell: cmd # zizmor: ignore[misfeature] a batch file runs where it was written to run
         run: tools\package.bat
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: release-windows
-          path: build/kest-*-windows-x86_64.zip*
+          name: archive-${{ matrix.runner }}
+          path: |
+            build/kest-*.tar.gz
+            build/kest-*.zip
+          if-no-files-found: error
 
-  page:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [unix, windows]
+  assets:
+    needs: [release-please, archives]
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          ref: ${{ needs.release-please.outputs.tag }}
           persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: release-*
+          pattern: archive-*
           merge-multiple: true
-          path: out
-      # The tag says which version it is and the header says which version
-      # was built, and a page that disagrees with its archives is refused.
-      - name: the tag is the version that was built
+          path: dist
+      # The tagged tree as well, which GitHub's own source archives are not
+      # promised to keep byte-stable; this one is checksummed and attested.
+      - name: The source archive
+        env:
+          TAG: ${{ needs.release-please.outputs.tag }}
         run: |
-          built=$(sed -n 's/^#define KEST_VERSION_STRING "\(.*\)"$/\1/p' \
-            include/kest.h)
-          if [ "v$built" != "$GITHUB_REF_NAME" ]; then
-            echo "the tag is $GITHUB_REF_NAME and this builds $built"
-            exit 1
-          fi
-          ls out
-          test -n "$(ls out/kest-"$built"-*.tar.gz)"
-          test -n "$(ls out/kest-"$built"-windows-x86_64.zip)"
-      - name: a draft page
+          git archive --format=tar.gz --prefix="kest-${TAG#v}-source/" \
+            -o "dist/kest-${TAG#v}-source.tar.gz" HEAD
+          ls dist
+          test "$(ls dist/*.tar.gz dist/*.zip | wc -l)" -eq 5
+      # Without a source name syft names the document after its path, ".".
+      - uses: anchore/sbom-action@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+        env:
+          SYFT_SOURCE_NAME: ${{ github.event.repository.name }}
+          SYFT_SOURCE_VERSION: ${{ needs.release-please.outputs.tag }}
+        with:
+          path: .
+          format: spdx-json
+          output-file: dist/sbom.spdx.json
+          upload-artifact: false
+          upload-release-assets: false
+      - name: Checksums
+        run: cd dist && sha256sum * > SHA256SUMS
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/*
+      - name: Attach to the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          built=${GITHUB_REF_NAME#v}
-          notes=$(ls out/kest-"$built"-linux-x86_64.notes.md)
-          gh release create "$GITHUB_REF_NAME" --draft \
-            --title "Kest $built" --notes-file "$notes" \
-            out/kest-"$built"-*.tar.gz out/kest-"$built"-*.tar.gz.sha256 \
-            out/kest-"$built"-windows-x86_64.zip \
-            out/kest-"$built"-windows-x86_64.zip.sha256
+          TAG: ${{ needs.release-please.outputs.tag }}
+        run: gh release upload "$TAG" dist/* --clobber
