@@ -277,13 +277,8 @@ jobs:
           name: release-linux-x86-64
           path: build/kest-*.tar.gz*
 
-  # The whole gate, as two halves on five runners at once: everything but the
-  # holes on one, and the holes in four shares on four. Together they are
-  # `make check`, and apart they answer in a third of the time the one job
-  # took. Every job here has a budget, and one that runs past it fails:
-  # a gate that takes longer every week is a gate somebody stops waiting for,
-  # and the budget is where that is noticed. See D1260.
-  most:
+  # The whole gate on one runner, with a budget: one that runs past it fails.
+  check:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -296,28 +291,8 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y -q lld wasi-libc \
               "libclang-rt-$(clang --version | sed -n 's/.*clang version \([0-9]*\).*/\1/p' | head -1)-dev-wasm32"
-      - name: everything but the holes
-        run: mkdir -p /home/runner/kest-tmp && TMPDIR=/home/runner/kest-tmp make most
-
-  holes:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        share: [1, 2, 3, 4]
-    steps:
-      - uses: actions/checkout@v4
-      - name: a WebAssembly toolchain
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q lld wasi-libc \
-              "libclang-rt-$(clang --version | sed -n 's/.*clang version \([0-9]*\).*/\1/p' | head -1)-dev-wasm32"
-      - name: every check put out of order, a share of them
-        run: |
-          mkdir -p /home/runner/kest-tmp
-          KEST_HOLES_SHARE=${{ matrix.share }}/4 \
-              TMPDIR=/home/runner/kest-tmp sh tools/check-backstops.sh
+      - name: the whole gate
+        run: mkdir -p /home/runner/kest-tmp && TMPDIR=/home/runner/kest-tmp make check
 
   # An engine hosting Kest: raylib built from its own source, the host built
   # against it, and the game played by the program's own player under a
@@ -344,6 +319,14 @@ jobs:
               examples/tetris/host --frames 1500 --shot tetromino.png | tee said
           grep -q "1500 frame(s), score 3$" said
           test -s tetromino.png
+      - name: the colony, its rules run both ways
+        run: |
+          make colony RAYLIB="$RUNNER_TEMP/raylib/src"
+          for native in 0 1; do
+            xvfb-run -a -s "-screen 0 1024x768x24" \
+                examples/colony/colony --frames 600 --native "$native" | tee said
+            grep -q "^600 frames: people" said
+          done
       - uses: actions/upload-artifact@v4
         with:
           name: tetromino-under-raylib
@@ -480,3 +463,20 @@ jobs:
             && echo "linux and macos said the same thing"
           diff -u linux-x86-64.trace linux-arm64.trace \
             && echo "the two instruction sets said the same thing"
+
+  # The one check the ruleset requires: every job above passed.
+  required:
+    if: always()
+    needs: [linux, linux-arm64, macos, clang, threads, package, check, tetris,
+            tetris-windows, windows, agree]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: every job passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "$RESULTS"
+          for r in $RESULTS; do
+            case "$r" in success | skipped) ;; *) exit 1 ;; esac
+          done

@@ -315,9 +315,27 @@ LOWERED = ("elements an array or a store holds",
            "places in one store",
            "names a program asks the host for")
 
-table = re.search(r"## What there is a most of(.*?)\n```",
-                  open(os.path.join(WHERE, "docs/language.md")).read(), re.S)
-rows = re.findall(r"\n\| (\d+) \| ([^|]+) \|", table.group(1))
+# The limits a program can run into, each the number a message says and what
+# it counts. The compiler's and the machine's own defines are held to the
+# numbers below, and every row is met by a program.
+rows = [
+    ("256", "names in a function, counting its parameters"),
+    ("16", "loops one inside another"),
+    ("128", "expressions one inside another"),
+    ("32", "`break`s in one loop, and 32 `continue`s"),
+    ("32", "`defer`s in a function"),
+    ("65535", "bytes of code a jump reaches, or a loop reaches back"),
+    ("8", "`scratch { }` blocks one inside another in one body"),
+    ("64", "`scratch { }` blocks one machine holds open at once"),
+    ("8", "things one `match` chooses between at once"),
+    ("256", "combinations one `match` answers, before it needs an `else`"),
+    ("65535", "elements a `[T; N]` holds, and at least one"),
+    ("65536", "names a program asks the host for"),
+    ("2147483647", "elements an array or a store holds, and bytes in text"),
+    ("16777215", "places in one store"),
+    ("1099511627775", "times a process hands out a place, counting the ones "
+                      "taken back"),
+]
 failed = 0
 for number, what in rows:
     if any(lowered in what for lowered in LOWERED):

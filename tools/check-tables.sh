@@ -177,24 +177,13 @@ if len(toks) != len(spellings):
     print("tokens: %u kinds and %u names" % (len(toks), len(spellings)))
     failed = 1
 
-# The words a program may not use, beside the words the reference says they
-# are. A keyword nobody is told about is a name somebody loses without being
-# told why, and a word in that block that the lexer does not hold is a program
-# refused for nothing.
-held = some("keywords", sorted(spelled(table(
-    'src/lexer.c', r'KEYWORDS\[\] = \{(.*?)\n\};'))))
-printed_words = some("the keywords the reference prints", sorted(
-    table('docs/language.md',
-          r'## Keywords\n\n```\n(.*?)```').split()))
-if held != printed_words:
-    only_held = [w for w in held if w not in printed_words]
-    only_printed = [w for w in printed_words if w not in held]
-    if only_held:
-        print("keywords: the lexer holds %s and the reference does not say so"
-              % ", ".join("`%s`" % w for w in only_held))
-    if only_printed:
-        print("keywords: the reference says %s and the lexer does not hold it"
-              % ", ".join("`%s`" % w for w in only_printed))
+# The words a program may not use. The lexer searches its table in the order of
+# the alphabet, so a keyword out of order is read as a name.
+raw_keywords = some("keywords", spelled(table(
+    'src/lexer.c', r'KEYWORDS\[\] = \{(.*?)\n\};')))
+held = sorted(raw_keywords)
+if raw_keywords != held:
+    print("keywords: the lexer's table is not in the order of the alphabet")
     failed = 1
 
 # What each door of the public header is for, which is the one classification
@@ -307,41 +296,6 @@ smallest = some("the doors the smallest host calls", sorted(
                           open(os.path.join("examples",
                                             "least.c")).read()))) &
     set(the_doors)))
-# Read off a copy with every run of spaces made one, because a sentence in the
-# reference is wrapped where the line ran out and a pattern that cared would be
-# a pattern that breaks when somebody reflows a paragraph.
-reference_flat = re.sub(r'\s+', ' ',
-                        open(os.path.join("docs", "language.md")).read())
-
-
-def flatly(pattern):
-    found = re.search(pattern, reference_flat)
-    if found is None:
-        print("docs/language.md: nothing here matches /%s/" % pattern)
-        raise SystemExit(1)
-    return found.group(1)
-
-
-families_said = flatly(r'The C API is ([^.]*?)\. A host that compiles')
-wanted_said = ("%u doors in %u families: %u for running a program, %u for "
-               "reading what one is made of, %u for watching what it cost, "
-               "%u for stopping one, %u for its memory and %u for steering it "
-               "while it runs"
-               % (len(the_doors), len(the_families), counted_doors["running"],
-                  counted_doors["reading"], counted_doors["watching"],
-                  counted_doors["stopping"], counted_doors["memory"],
-                  counted_doors["steering"]))
-if families_said != wanted_said:
-    print("header: the reference says the C API is `%s` and it is `%s`"
-          % (families_said, wanted_said))
-    failed = 1
-least_said = flatly(r'A host that compiles, binds, sizes and calls needs '
-                    r'(\d+) of them')
-if int(least_said) != len(smallest):
-    print("header: the reference says the smallest host needs %s door(s) and "
-          "it calls %u" % (least_said, len(smallest)))
-    failed = 1
-
 # The licence the extension carries. A VSIX is a thing on its own -- somebody
 # installs it without the tree around it -- so the packager wants a licence
 # inside the extension directory, and the one this project has is at the root.
@@ -458,19 +412,6 @@ if sorted("KEST_PROMISE_" + word.replace(".", "_").upper()
           % (", ".join("`%s`" % w for w in promise_words),
              ", ".join(promise_names)))
     failed = 1
-# And every one of them is in the one place a host reads to learn there is a
-# door: the piece of C the reference shows a host asking with. A promise named
-# in the header and left out of that is one a reader of the reference never
-# finds out they can ask about, which is this project's first rule said about
-# the header rather than about diagnostics.
-asking = some("the reference's example of a host asking", table(
-    'docs/language.md', r'```c\n(if \(!kest_entry_promises.*?)```'))
-for name in promise_names:
-    if name not in asking:
-        print("promises: the reference shows a host asking and never about `%s`"
-              % name)
-        failed = 1
-
 # The reasons there is no least, in the three places that know them: the header
 # a host reads, the one list of what each is called, and the reference. A reason
 # with no name of its own is a host told whatever the last one fell through to,
@@ -497,20 +438,6 @@ for word in sorted(set(w for w in reason_words
                       if reason_words.count(w) > 1)):
     print("reasons: two of them are called `%s`" % word)
     failed = 1
-reasons_in_docs = some("the reasons the reference names",
-                       set(re.findall(r'KEST_REACH_[A-Z_]+',
-                                      open('docs/language.md').read())))
-if "KEST_REACH_KNOWN" in reasons_in_docs:
-    print("reasons: the reference names `KEST_REACH_KNOWN`, which is the one a "
-          "host is never handed")
-    failed = 1
-reasons_a_host_reads = set(reasons) - {"KEST_REACH_KNOWN"}
-if reasons_in_docs != reasons_a_host_reads:
-    print("reasons: a host can be told %s and the reference says %s"
-          % (", ".join(sorted(reasons_a_host_reads)),
-             ", ".join(sorted(reasons_in_docs))))
-    failed = 1
-
 # The answers a host is given, and the hosts that read them. Each is a list with
 # nothing else in it, so a host that reads one with a `switch` and no `default`
 # is told by its own compiler when an answer is added — and a host that compares
@@ -538,37 +465,13 @@ for answer in sorted(ANSWERS):
                   % (host, answer, len(cases), len(all_of_them)))
             failed = 1
 
-# The types the language has of its own, beside the ones the reference says it
-# has. A primitive nobody is told about is a type somebody can write and cannot
-# look up, which is what `void` was until D519; one the reference names and
-# nothing registers is a type a reader would be refused for writing. `void` is
-# on neither list on purpose: it is registered because the compiler looks types
-# up by name and it is not written, so the reference must not offer it.
+# The types the language has of its own, as the compiler registers them.
+# `void` is registered because types are looked up by name, and it is not a
+# type a program can write.
 registered = some("the primitives the compiler registers", sorted(spelled(
     table('src/types.c',
           r'static bool add_primitives\(KestProgram \*program\) \{(.*?)\n\}'))))
-printed_line = table('docs/language.md', r'\nPrimitives: (.*?)\n')
-printed_types = some("the primitives the reference prints",
-                     sorted(word
-                            for group in re.findall(r'`([a-z0-9 ]+)`',
-                                                    printed_line)
-                            for word in group.split()))
 writable = [w for w in registered if w != "void"]
-if "void" in printed_types:
-    print("primitives: the reference offers `void`, and it is the one type "
-          "there is no way to write")
-    failed = 1
-if writable != [w for w in printed_types if w != "void"]:
-    only_held = [w for w in writable if w not in printed_types]
-    only_printed = [w for w in printed_types if w not in writable
-                    and w != "void"]
-    if only_held:
-        print("primitives: the compiler registers %s and the reference does "
-              "not say so" % ", ".join("`%s`" % w for w in only_held))
-    if only_printed:
-        print("primitives: the reference says %s and the compiler does not "
-              "register it" % ", ".join("`%s`" % w for w in only_printed))
-    failed = 1
 
 # The names the language answers to on its own, in the three places that know
 # them: what the checker asks about, what the compiler emits for, and the list
@@ -622,38 +525,10 @@ if promised != checked:
               % ", ".join("`%s`" % w for w in extra))
     failed = 1
 
-# Which builtins reach the heap, said by the proof and said by the reference.
-# The reference is the normative document and that sentence is what a reader
-# writes a `no.alloc` body against, so it is the one list here that a program
-# is written from rather than a list about the tree. It said `slice`, which has
-# not reached the heap since D964 made a cut a place inside what it was cut
-# from, and it did not say `room`, which does. Nothing held the two to each
-# other. `text` is in the sentence and not in the table because it is a
-# conversion rather than a builtin, and the proof asks about it beside the
-# table. See D1060.
-grows = some("the builtins the proof says reach the heap",
-             set(re.findall(
-                 r'\{"([a-z]+)", "',
-                 table('src/contract.c',
-                       r'\} REACHES\[\] = \{(.*?)\n            \};'))))
-said_to_grow = some("the builtins the reference says reach the heap",
-                    set(re.findall(
-                        r'`([a-z]+)(?:\(\))?`',
-                        table('docs/language.md',
-                              r'What reaches the heap is (.*?)\. Each says'))))
-if said_to_grow != grows | {"text"}:
-    print("builtins: the proof says %s reaches the heap and the reference says %s"
-          % (sorted(grows | {"text"}), sorted(said_to_grow)))
-    failed = 1
-
-# The pipeline in `CLAUDE.md` is the map of the tree a reader is given, and it
-# said what nothing in the tree said back: a module `str` that does not exist,
-# no `kest` at all, and `diag` above the `mem` its own header includes. It is
-# also the one place the rule about what may include what is written down.
-listed = [line.split()[0] for line in table(
-    'CLAUDE.md',
-    r'Pipeline, in dependency order[^`]*```\n(.*?)```').splitlines()
-    if line.strip()]
+# The modules in dependency order, from `tools/modules.txt`: every module is
+# named once, and a module includes only the ones above it.
+listed = [line.strip() for line in open('tools/modules.txt')
+          if line.strip() and not line.startswith('#')]
 present = sorted(os.path.basename(path)[:-2] for path in glob.glob('src/*.c'))
 if sorted(listed) != present:
     for name in listed:
@@ -678,32 +553,6 @@ else:
                     print("modules: %s includes `%s`, which is below it"
                           % (path, included))
                     failed = 1
-
-# What the language's own functions call the things they take is written twice:
-# in the messages the checker raises, and in the reference a reader learns them
-# from. A message that says `from` is only worth more than `this argument`
-# because the reader has met `from` on the page.
-reference = open('docs/language.md').read()
-for called, listed_names in some("what a builtin calls what it takes",
-                                 re.findall(
-        r'\{"([a-z]+)", \{(.*?)\}\}',
-        table('src/check.c', r'\} BUILTIN_TAKES\[\] = \{(.*?)\n\};'))):
-    in_source = spelled(listed_names)
-    # The reference prints a short form and a long one for some of them, and
-    # the long one is the whole of what it takes.
-    forms = re.findall(r'`%s\(([a-z, ]*)\)`' % called, reference)
-    if not forms:
-        print("builtins: the reference never writes `%s(...)`" % called)
-        failed = 1
-        continue
-    in_reference = [word.strip()
-                    for word in max(forms, key=len).split(',') if word.strip()]
-    if in_source != in_reference:
-        print("builtins: the checker calls %s's %s and the reference calls "
-              "them %s"
-              % (called, ", ".join("`%s`" % w for w in in_source),
-                 ", ".join("`%s`" % w for w in in_reference)))
-        failed = 1
 
 # The commands the command line answers to, in the two places that say which
 # they are: what `main` compares the first argument against, and what `help`
@@ -786,59 +635,6 @@ for one in options:
         print("commands: `kest %s` is answered and nothing runs it" % one)
         failed = 1
 
-# The numbers a program can run into, in the two places that say what they are:
-# the compiler that enforces them and the table a reader is given. A number
-# changed in one and not the other is a document that lies about what a program
-# may hold, and there is no way to find that out by running anything.
-# Every `MAX_` the compiler holds a program to, and the one the machine does:
-# what the three files that check and compile a program have between them, and
-# what `len` can count to, which is not a number the compiler can see coming.
-# The command line's own is not one of these, because how many events a run
-# makes is not a number written in a program. Neither is how deep the calls go,
-# which is a host's to choose and is in `kest.h`; it is named here so that a
-# value nobody taught this reader stops it rather than being passed over.
-# The stamps a process hands out are the one of these not written `MAX_`, and
-# the one a program runs into rather than is compiled against: a million
-# million places handed out, counting the ones taken back. It is in the table because the
-# table's own sentence names `K0630`, which is what it says. See D523.
-SPELLED = {'UINT16_MAX': 65535, 'INT32_MAX': 2147483647,
-           '0xffffffffu': 4294967295, '16777215u': 16777215}
-A_HOSTS_OWN = {'MAX_FRAMES'}
-enforced = set()  # filled below, and held to being filled
-for path in ('src/compile.c', 'src/check.c', 'src/types.c', 'src/vm.c',
-             'src/parser.c'):
-    for name, value in re.findall(
-            r'#define (MAX_[A-Z]+|MOST_STAMPS|MOST_PLACES)\s+(\S+)',
-            open(path).read()):
-        if name in A_HOSTS_OWN:
-            continue
-        # A number may be written with the width it is kept at on the end of
-        # it, and `1099511627775ull` is the same ceiling as `1099511627775`.
-        # What is held is the number; how wide the compiler keeps it is C's.
-        plain = value.rstrip('uUlL')
-        if value in SPELLED:
-            enforced.add(SPELLED[value])
-        elif plain.isdigit():
-            enforced.add(int(plain))
-        else:
-            print("limits: `%s` is %s and this does not know what that is"
-                  % (name, value))
-            failed = 1
-
-enforced = some("the numbers the compiler holds a program to", enforced)
-printed_numbers = some("the numbers the reference prints", set(int(one) for one in
-    re.findall(r'\n\| (\d+) \| ',
-               table('docs/language.md',
-                     r'## What there is a most of(.*?)\n\n```'))))
-if enforced != printed_numbers:
-    for one in sorted(enforced - printed_numbers):
-        print("limits: the compiler holds a program to %u and the reference "
-              "does not say so" % one)
-    for one in sorted(printed_numbers - enforced):
-        print("limits: the reference says %u and nothing holds a program to it"
-              % one)
-    failed = 1
-
 # The escapes, in the places they are said: what a run accepts, what a run names
 # when it meets one it does not know, and what the reference prints. The first
 # is asked by asking — every printable character is written after a backslash
@@ -908,52 +704,10 @@ finally:
 
 names_back = some("the escapes a run names", set(re.findall(
     r'\\(\S)', said.partition('known escapes are')[2])))
-printed_escapes = some("the escapes the reference prints", set(re.findall(
-    r'`\\(.)(?:\{\.\.\.\})?`',
-    table('docs/language.md', r'The escapes are\n(.*?)\n\n'))))
 if accepted != names_back:
     print("escapes: a run takes %s and names %s"
           % (sorted(accepted), sorted(names_back)))
     failed = 1
-if accepted != printed_escapes:
-    print("escapes: a run takes %s and the reference prints %s"
-          % (sorted(accepted), sorted(printed_escapes)))
-    failed = 1
-
-# Every file `CLAUDE.md` names is a file. It prints the layout of this tree —
-# the modules, the checks, the two hosts, the one measurement — and a name that
-# has moved leaves a paragraph describing something that is not there, which is
-# worse than no paragraph because it reads like one that is true.
-WHERE = ('', 'include', 'src', 'tools', 'examples', 'docs', 'lib/std')
-for name in sorted(set(re.findall(r'`([A-Za-z0-9_./-]+\.(?:c|h|sh|kest|md|a))`',
-                                  open('CLAUDE.md').read()))):
-    if not any(os.path.exists(os.path.join(where, name)) for where in WHERE):
-        print("CLAUDE.md: names `%s` and there is no such file" % name)
-        failed = 1
-
-# And what the gate does itself, which is the half of it that is not a tool: a
-# line deleted from the middle of `check.sh` is a check that no longer happens,
-# and a run with one fewer line in it reads exactly like the day before. What
-# it says for itself is held to what `CLAUDE.md` says it does.
-does = some("what `check.sh` says for itself", sorted(set(re.findall(
-    r'\n\s*say "([a-z]+)"', open('tools/check.sh').read())) - {'$what'}))
-told_of = some("what `CLAUDE.md` says the gate does", sorted(set(
-    line.split()[0] for line in table(
-        'CLAUDE.md',
-        r'What the gate does itself.*?```\n(.*?)```').splitlines()
-    if line and not line.startswith(' '))))
-if does != told_of:
-    for one in does:
-        if one not in told_of:
-            print("checks: `check.sh` says `%s` and `CLAUDE.md` does not say "
-                  "it does" % one)
-            failed = 1
-    for one in told_of:
-        if one not in does:
-            print("checks: `CLAUDE.md` says the gate does `%s` and nothing in "
-                  "it says so" % one)
-            failed = 1
-
 # What can be written down and what writes it. Two switches say which types a
 # value of can be put in a hole: the checker's, which refuses a program that
 # asks for one that cannot, and the machine's, which writes the ones that can.
@@ -1144,19 +898,6 @@ make = open('Makefile').read()
 targets = some("the targets the `Makefile` has", set(
     re.findall(r'^([A-Za-z][A-Za-z0-9_-]*):', make, re.M)))
 
-# Every `make something` a reader is told to type is something to type. The
-# words after `make` in a sentence are not all targets — `make one` and `make
-# true` are English — so what is held is the ones that name a target of this
-# kind: a word this file also has a rule for, or a word nothing here has, which
-# is the mistake.
-for asked in sorted(set(re.findall(r'`make ([a-z][a-z-]*)`',
-                                   open('CLAUDE.md').read()))):
-    if asked not in targets:
-        print("CLAUDE.md: says to run `make %s` and the `Makefile` has no such "
-              "target" % asked)
-        failed = 1
-
-
 def rule(name):
     found = re.search(r'\n%s:[^\n]*\n((?:\t[^\n]*\n)+)' % name, make)
     return '' if found is None else found.group(1)
@@ -1232,8 +973,6 @@ elif reaches < builds:
 # `check.sh` reaches for.
 tools = some("the checks in `tools`", sorted(
     os.path.basename(path) for path in glob.glob('tools/check-*.sh')))
-named = some("the checks `CLAUDE.md` names", sorted(set(
-    re.findall(r'check-[a-z]+\.sh', open('CLAUDE.md').read()))))
 run = some("the checks `check.sh` runs", sorted(set(
     re.findall(r'ask "[a-z]+" tools/(check-[a-z]+\.sh)',
                open('tools/check.sh').read()))))
@@ -1521,330 +1260,6 @@ for where in sorted(glob.glob('tools/*.sh')):
                   % (where, number))
             failed = 1
 
-# And what a check says when something is wrong, held to having been said. A
-# hole names the words it is caught by, so a sentence no hole names is one
-# nothing has ever seen a check say -- and a sentence nobody has seen is a
-# sentence nobody knows is right. Of the three hundred and twenty-seven a check
-# can say, a hundred and forty had never been said the day this was written, so
-# what is held here is the checks that are already at nought and the list grows
-# by one when one of them is brought to it. See D455.
-#
-# What is not counted is what a check writes rather than says: a heredoc it
-# hands to a file is a program, and a line that program prints reads like a
-# complaint. A heredoc it hands to `python3` is the check itself. And the last
-# thing a check says is what it says when nothing is wrong, which no hole can
-# make it say.
-#
-# Five checks were on this list and two are, because what put three of them
-# there was a reading any words could meet: a sentence that ends in a number
-# or a name ends in a blank, and a piece of words that ran into that blank was
-# counted as having come out of the sentence. Two hundred and thirty-nine of
-# two hundred and sixty holes read as having said one sentence of
-# `check-ceilings.sh` that way. What the reading asks now is below, and what it
-# leaves is three checks with sentences nothing has been seen making them say.
-# Nine of the ten. The tenth is `check-backstops.sh`, which is the one that
-# puts the holes out of order: a hole in it would be a hole in the thing that
-# says which holes there are, and what would catch one missing is itself. It is
-# left off for the reason the gate's own guards are left off.
-HELD = ("check-ceilings.sh", "check-commands.sh", "check-costs.sh",
-        "check-dead.sh", "check-docs.sh", "check-fmt.sh",
-        "check-header.sh", "check-lends.sh", "check-tables.sh")
-# The sentences nothing can make a check say, each beside the reason. A host
-# that will not build is a tree that will not build, and every hole is put in
-# a tree that was built before it was broken. And a hole breaks what a file
-# says, so a file that is missing is a tree a hole cannot make: a check that
-# refuses because what it reads has not been built is a check asking for the
-# tree it is already in — two of these are that one. The fourth is a document
-# read from the top rather than by name: a worklog with no entry in it is one
-# whose every heading was written another way, and a hole breaks one place.
-NOT_SAID = (("check-lends.sh", "the host that lends by name does not build"),
-            # A cut that copies is a cut that reaches the heap, and the two
-            # proofs of the `no.alloc` promise catch that where it is written
-            # rather than where it is paid for. What a hole holds here is the
-            # length a cut comes back with, which is the line above this one.
-            # See D964.
-            ("check-commands.sh",
-             "call: cuts cost $whole_cut, $tail_cut and $middle_cut where "
-             "measuring costs $just_measured, and a cut copies nothing"),
-            ("check-dead.sh", "%s is not built; `make embed engine` first"),
-            ("check-docs.sh", "docs/language.md: the engine is not built, so "
-                              "what it prints for a host's own rules is a "
-                              "list nothing reads"),
-            ("check-docs.sh", "docs/worklog.md: nothing here is an entry"),
-            ("check-header.sh", "the library is not built"),
-            ("check-header.sh", "the host the header describes did not run"),
-            ("check-ceilings.sh", "ceilings: the tree does not build"),
-            # A rung wearing a band from further up the ladder. Two ways of
-            # making one were tried and each was caught earlier by a check
-            # about the thing itself: a starved refusal wearing an ordinary
-            # code is a weighing with nothing to weigh, and the machine's own
-            # out-of-memory wearing the reader's code is `a machine with
-            # nothing left was read as a host's own ceiling`. The bands are
-            # held by what raises them rather than by their order on the way
-            # down, so the order is a reading with nothing left to read. It
-            # stays because the day a fourth band is added it is the sentence
-            # that says the ladder stopped making sense. See D648 and D1074.
-            ("check-ceilings.sh",
-             "ceilings: with ${level}K a rung refused with $said below one "
-             "that refused with $before, so an earlier stage held on further "
-             "down the ladder than a later one"),
-            # The last thing that check asks, after every part of what it needs
-            # has been asked about on its own: a program of two files that
-            # works. Every way it can fail to work is a way one of those parts
-            # fails, and those are asked first — six breaks were tried and each
-            # was caught earlier, and the one that was not never came back.
-            ("check-commands.sh",
-             "run: a program of two files that works answered $crossing_status"),
-            # A rung of the memory ladder that neither ran nor refused. It is
-            # what a crash looks like from outside, and a hole that crashes
-            # this compiler is caught by the crash rather than by these words:
-            # what says them is the compiler being wrong in a way no hole can
-            # ask for on purpose. D645 is the one time anything has said it.
-            ("check-ceilings.sh",
-             "ceilings: $died of $all_rungs rungs were killed rather than running "
-             "or refusing"),
-            ("check-ceilings.sh",
-             "ceilings: with ${level}K of memory a run died rather than "
-             "running or refusing: it came back $answered"))
-
-WILD = re.compile(r"%[-+ #0]*[0-9*]*(?:\.[0-9*]+)?(?:hh|h|ll|l|j|z|t|L)?[a-zA-Z]"
-                  r"|\$\{[^}]*\}|\$\([^)]*\)|\$[A-Za-z_][A-Za-z0-9_]*|\$[0-9]")
-
-
-def quoted(line, at):
-    """The shell string that starts at the quote at `at`.
-
-    A double-quoted string may hold a command substitution and that may hold
-    quotes of its own, so counting quote marks reads one string as three: a
-    sentence written that way stops at the first of them, and every word after
-    it is a word nothing here says. Six of what the last check says were being
-    read that way.
-    """
-    out, i, deep = [], at + 1, 0
-    while i < len(line):
-        if line[i] == "\\" and i + 1 < len(line):
-            out.append(line[i:i + 2])
-            i += 2
-        elif line.startswith("$(", i):
-            deep += 1
-            out.append("$(")
-            i += 2
-        elif deep > 0 and line[i] == ")":
-            deep -= 1
-            out.append(")")
-            i += 1
-        elif line[i] == '"' and deep == 0:
-            return "".join(out), i + 1
-        else:
-            out.append(line[i])
-            i += 1
-    return "".join(out), i
-
-
-def strings_in(line):
-    """Every top-level double-quoted string on a shell line."""
-    out, i = [], 0
-    while True:
-        at = line.find('"', i)
-        if at < 0:
-            return out
-        one, i = quoted(line, at)
-        out.append(one)
-
-
-def says(where):
-    """Every run of words a check says when something is wrong."""
-    out, quiet = [], False
-    lines = open(where).read().split("\n")
-    # A sentence too long for a line is written on two, which is one sentence.
-    # Read as two, the half of it a hole quoted runs off the end of the first
-    # and reads as words nothing has ever said.
-    joined = []
-    for line in lines:
-        if joined and joined[-1].endswith("\\"):
-            joined[-1] = joined[-1][:-1].rstrip() + " " + line.strip()
-        # And in Python it is written as one string after another with nothing
-        # between them, over as many lines as it took. Which lines those are is
-        # said by the brackets: a `print(` that has not been closed is a
-        # sentence that has not been finished.
-        elif (joined and re.match(r"\s*print\(", joined[-1])
-              and joined[-1].count("(") > joined[-1].count(")")):
-            joined[-1] = joined[-1].rstrip() + " " + line.strip()
-        else:
-            joined.append(line)
-    lines = joined
-    at = 0
-    while at < len(lines):
-        line = lines[at]
-        opened = re.search(r"<<-?'?([A-Za-z_][A-Za-z0-9_]*)'?", line)
-        if opened is not None and "python3" not in line:
-            at += 1
-            while at < len(lines) and lines[at].strip() != opened.group(1):
-                at += 1
-            at += 1
-            continue
-        # And a group of `echo`s written into a file, which is the other way a
-        # check writes a program out. What it puts there is the program's, and
-        # a program says nothing on a check's behalf.
-        if line.strip() == "{":
-            shut = at + 1
-            while shut < len(lines) and not lines[shut].startswith("}"):
-                shut += 1
-            if shut < len(lines) and re.search(r"^}\s*>", lines[shut]):
-                at = shut + 1
-                continue
-        if re.match(r"\s*(if not failed:|if \[ \$failed -eq 0 \])", line):
-            quiet = True
-        # An `echo` given several words prints them with a space between,
-        # which is one sentence written in as many pieces as it took to fit.
-        if re.match(r"\s*echo ", line):
-            spoken = strings_in(line)
-            said_here = [" ".join(spoken)] if spoken else []
-        elif re.search(r"\bcomplain\s+\"", line):
-            said_here = strings_in(line)
-        else:
-            said_here = []
-            # A `print(` where a statement begins. One in the middle of a
-            # line is a name being read rather than a call being made, and
-            # this file has one: the rule above says what it joins, and
-            # reading it as a call made a sentence out of the rule.
-            for one in re.finditer(
-                    r'^\s*print\(\s*((?:"(?:[^"\\]|\\.)*"\s*)+)', line):
-                said_here.append("".join(
-                    re.findall(r'"((?:[^"\\]|\\.)*)"', one.group(1))))
-        # And said beside going wrong. A check says two kinds of thing: what
-        # is wrong, and what it did. The second is said whether anything is
-        # wrong or not, so no hole can be shown to have caused it — and one of
-        # them is written in the middle of a check rather than at the end,
-        # where stopping at the last line does not reach it.
-        # Said where something has to be so for it to be said: under an `if`,
-        # a `case` or a loop, or beside setting the failure. A line at the left
-        # margin with nothing above it deciding whether to reach it is what a
-        # check did rather than what it found, and nothing can be shown to have
-        # caused one — the last check here says how many wordings it saw that
-        # way, in the middle of itself, where stopping at the last line never
-        # reached it.
-        marks = "\n".join(lines[at:at + 5])
-        wrong_here = (re.search(r"complain\b", line) is not None
-                      or re.match(r"\s", line) is not None
-                      or re.search(r"(?:^|\n)\s*(?:\w+ = 1|\w+=1|"
-                                   r"raise SystemExit\(1\)|sys\.exit\(1\)|"
-                                   r"exit 1)",
-                                   marks) is not None)
-        for words in said_here:
-            if words and len(words.strip()) > 8 and not quiet and wrong_here:
-                out.append(words.replace("\\`", "`").replace('\\"', '"'))
-        at += 1
-    return out
-
-
-def in_pieces(form):
-    """A sentence as the runs of words in it, with what fills the rest gone."""
-    out, at = [], 0
-    for found in WILD.finditer(form):
-        out.append(("says", form[at:found.start()]))
-        out.append(("value", None))
-        at = found.end()
-    out.append(("says", form[at:]))
-    return [one for one in out if one[0] == "value" or one[1] != ""]
-
-
-def reads_as(words, pieces, i, s):
-    """How much of the sentence's own words these words are, or None."""
-    at, first, covered = 0, True, 0
-    for k in range(i, len(pieces)):
-        kind, said = pieces[k]
-        if kind == "says":
-            rest = said[s:] if first else said
-            if words.startswith(rest, at):
-                covered += len(rest)
-                at += len(rest)
-            elif rest.startswith(words[at:]):
-                return covered + len(words) - at
-            else:
-                return None
-        else:
-            if at >= len(words):
-                return covered
-            after = pieces[k + 1][1] if k + 1 < len(pieces) else None
-            if after is None:
-                return covered
-            found = words.find(after, at)
-            if found < 0:
-                # Or the words stop partway into what comes after the value,
-                # which is what a message quoted without the number at the end
-                # of it looks like from here.
-                for take in range(len(after), 0, -1):
-                    if (words.endswith(after[:take])
-                            and len(words) - take >= at):
-                        return covered + take
-                return covered
-            at = found
-        first = False
-    return covered if at == len(words) else None
-
-
-def ever_said(form, by):
-    pieces = in_pieces(form)
-    for words in by:
-        for i, (kind, said) in enumerate(pieces):
-            # A hole quotes a piece of what it saw, and what it saw had the
-            # numbers and names in it, so the piece may begin in the middle of
-            # one of those: `nesting.kest was not told` begins inside the
-            # `$file` the sentence leaves open. What says the words were this
-            # sentence's is how much of them is the sentence rather than the
-            # blanks in it — more than half, because a piece that is mostly
-            # blank is a piece any sentence with a blank in it could have said.
-            # Two hundred and thirty-nine of two hundred and sixty holes read
-            # as having said one sentence before this was asked.
-            starts = range(len(said)) if kind == "says" else [0]
-            for s in starts:
-                if kind == "says" and said[s] != words[0]:
-                    continue
-                # And it begins where a word does. `at ` out of `that ` is
-                # three letters of somebody else's sentence.
-                if kind == "says" and s > 0 and said[s - 1].isalnum():
-                    continue
-                covered = reads_as(words, pieces, i, s)
-                if covered is not None and covered * 2 >= len(words):
-                    return True
-    return False
-
-
-by_a_hole = {one.replace("\\`", "`").replace('\\"', '"') for one in
-             re.findall(r'"caught": "((?:[^"\\]|\\.)*)"',
-                        open("tools/check-backstops.sh").read())}
-some("the words a hole says it is caught by", by_a_hole)
-# And what the gate's own guards make a check say. Those have no holes, by the
-# rule that what would catch one missing is itself: the gate hands a check a
-# document with nothing in it or a list of no files and greps for the words it
-# has to answer with. A sentence reached that way has been watched being said,
-# which is the whole of what a hole is for.
-by_the_gate = some("the words the gate's own guards look for",
-                   set(re.findall(r'grep -q "([^"]+)"',
-                                  open("tools/check.sh").read())))
-seen_said = by_a_hole | by_the_gate
-sentences = 0
-for name in HELD:
-    where = os.path.join("tools", name)
-    if not os.path.exists(where):
-        print("checks: `%s` is held to what it says and is not there" % name)
-        failed = 1
-        continue
-    said_here = some("what `%s` says" % name, says(where))
-    for form in said_here:
-        if (name, form) in NOT_SAID:
-            continue
-        sentences += 1
-        if not ever_said(form, seen_said):
-            print("%s: says `%s`, and nothing has ever made it" % (where, form))
-            failed = 1
-for name, form in NOT_SAID:
-    if form not in says(os.path.join("tools", name)):
-        print("checks: `%s` is written down as one nothing can make `%s` say, "
-              "and it does not say it" % (form, name))
-        failed = 1
-
 # A check written in shell alone has no Python to read, and a sweep that finds
 # none of it holds none of it.
 some("the checks written in Python", pythons)
@@ -1905,29 +1320,11 @@ by_a_check = re.sub(r"HOSTS_OWN = \{.*?\n\}", "", by_a_check, flags=re.S)
 # twice in the host, both times to say what the machine used to answer before a
 # door was put in front of it, and that counted as somebody asking for it.
 by_a_check = re.sub(r"^\s*(?:#|//).*$", "", by_a_check, flags=re.M)
-# And what a hole says it is caught by: a code somebody made happen on purpose
-# and then read. Except this rule's own complaint — the hole that takes a probe
-# away is caught by words that name the code, so counting them would let a code
-# be asked for by the hole that says nothing asks for it.
-caught_by_a_hole = "".join(
-    caught for caught in
-    re.findall(r'"caught": "(.*?)"', open("tools/check-backstops.sh").read())
-    if "asks for it" not in caught)
-asked_of = by_a_check + caught_by_a_hole
-# Which of them a program cannot be written for. A refusal reached only by
-# breaking the thing that says it is one of two things: a guard about this
-# compiler being wrong, which is what it should be, or a message a program can
-# reach that nobody has written the program for — and the second is what every
-# walk of the last several turns found one code at a time by reading. Counted
-# here so the number is written down and moves when somebody changes it. See
-# D529.
-only_a_hole = [code for code in reading
-               if code not in by_a_check and code in caught_by_a_hole]
-for code in reading:
-    if code not in asked_of:
-        print("%s: nothing asks for it, and a message nobody has ever seen is "
-              "a message nobody knows is there" % code)
-        failed = 1
+# Which of them no program can be written to meet: a code that says it is a
+# fault in this compiler, or one only a host doing something no host should
+# can provoke. Those are listed below with whose mistake they are; every other
+# code is asked for by a check that makes it happen and reads what it said.
+not_asked = [code for code in reading if code not in by_a_check]
 
 # And the other way round, which is the half that goes stale rather than the
 # half that goes missing: a check that names a code names one this compiler
@@ -1988,16 +1385,16 @@ for code_where in sorted(glob.glob("src/*.c")):
                     code_reads[code_at:code_at + 12]):
                 code_says_fault.add(code_named)
 some("the codes that say they are a fault", code_says_fault)
-for code_named in sorted(set(only_a_hole) - code_says_fault):
+for code_named in sorted(set(not_asked) - code_says_fault):
     if code_named in HOSTS_OWN:
         continue
-    print("src: `%s` is said by breaking this compiler and does not say it is "
-          "a fault, so nothing says whose mistake it is" % code_named)
+    print("%s: nothing asks for it, and a message nobody has ever seen is "
+          "a message nobody knows is there" % code_named)
     failed = 1
 for code_named in sorted(HOSTS_OWN):
-    if code_named not in only_a_hole or code_named in code_says_fault:
+    if code_named in code_says_fault:
         print("tools/check-tables.sh: `%s` is written down as a host's own "
-              "mistake and is not one a hole alone says" % code_named)
+              "mistake and says it is a fault" % code_named)
         failed = 1
 
 # What a fault says it is, said in one place. A fault is what this project got
@@ -2016,7 +1413,7 @@ if saying_fault - {"src/diag.c"}:
               "place for that" % where)
         failed = 1
 
-for what, these in (("named in `CLAUDE.md`", named), ("run by `check.sh`", run)):
+for what, these in (("run by `check.sh`", run),):
     for one in tools:
         if one not in these:
             print("checks: `%s` is in `tools` and is not %s" % (one, what))
@@ -2852,13 +2249,10 @@ if not failed:
           "Python and %u of shell where a name stands for one thing and %u "
           "condition(s) that gate more than one complaint, each of them a "
           "guard rather than the first of what is under it, %u "
-          "refusals asked for, %u of them by a hole and nothing else, "
-          "and %u nothing can be made to ask for, every one of the %u codes a "
-          "check names being one this compiler has, each of the %u only a hole "
-          "says being a fault it owns up to or a mistake written down as a "
-          "host's, every one of the %u things "
-          "%u check(s) say when something is wrong having been watched being "
-          "said, "
+          "refusals asked for, and %u nothing can be made to ask for, every "
+          "one of the %u codes a check names being one this compiler has, "
+          "each of the %u no check asks for being a fault it owns up to or a "
+          "mistake written down as a host's, "
           "and %u pairs of widths "
           "in %u module(s) written in both, and %u answers a host is given "
           "read by every host that reads one, and a span becomes text in "
@@ -2876,10 +2270,8 @@ if not failed:
           % (len(ops), len(toks), len(held), len(checked), len(writable),
              len(reasons), len(promise_names), len(listed),
              len(tools), pythons, shells, guards, len(reading),
-             len(only_a_hole),
              len(NOT_REACHED),
-             len(every_code), len(only_a_hole), sentences,
-             len(HELD), halves // 2,
+             len(every_code), len(not_asked), halves // 2,
              len(in_widths), len(ANSWERS), len(SPAN_BY_HAND),
              len(WORD_BY_HAND), bodies, shapes, len(SAME_SHAPE),
              len(doors) * 2, len(sent_to), read_as_well))

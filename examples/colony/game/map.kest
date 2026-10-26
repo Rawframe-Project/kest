@@ -1,0 +1,83 @@
+module game.map
+
+import std.random
+
+// The ground a colony stands on: one byte a cell for what is there, and the
+// cells are numbered row by row so that a place is one number and a
+// neighbour is one addition away.
+
+const GRASS: u8 = 0
+const TREE: u8 = 1
+const ROCK: u8 = 2
+const WATER: u8 = 3
+const WALL: u8 = 4
+const FIELD: u8 = 5
+const STOCK: u8 = 6
+
+// What a person may walk over. A tree, a rock, water and a wall are in the
+// way; a field and the stockpile are not.
+fn open(tile: u8) -> bool no.alloc no.host deterministic {
+    return tile == GRASS || tile == FIELD || tile == STOCK
+}
+
+struct Ground {
+    wide: i32
+    high: i32
+    tiles: [u8]
+}
+
+fn cell(g: Ground, x: i32, y: i32) -> i32 no.alloc no.host deterministic {
+    return y * g.wide + x
+}
+
+fn inside(g: Ground, x: i32, y: i32) -> bool no.alloc no.host deterministic {
+    return x >= 0 && y >= 0 && x < g.wide && y < g.high
+}
+
+// Ground made from a seed, the same ground from the same seed on every
+// machine. Blobs of forest, rock and water dropped on grass, then a clearing
+// in the middle with the stockpile in it, because a colony has to start
+// somewhere it can stand.
+fn made(seed: u64, wide: i32, high: i32) -> Ground {
+    let tiles = array(wide * high, GRASS)
+    let g = Ground(wide, high, tiles)
+    let s = random.from(seed)
+    let blobs = wide * high / 60
+    for i in 0..blobs {
+        s = random.next(s)
+        let x = random.below(s, wide)
+        s = random.next(s)
+        let y = random.below(s, high)
+        s = random.next(s)
+        let roll = random.below(s, 100)
+        let what = if roll < 60 -> TREE
+            else -> if roll < 85 -> ROCK else -> WATER
+        s = random.next(s)
+        let reach = 1 + random.below(s, 3)
+        for dy in 0 - reach..reach + 1 {
+            for dx in 0 - reach..reach + 1 {
+                if dx * dx + dy * dy > reach * reach {
+                    continue
+                }
+                if inside(g, x + dx, y + dy) {
+                    tiles[cell(g, x + dx, y + dy)] = what
+                }
+            }
+        }
+    }
+    let cx = wide / 2
+    let cy = high / 2
+    for dy in -6..7 {
+        for dx in -8..9 {
+            if inside(g, cx + dx, cy + dy) {
+                tiles[cell(g, cx + dx, cy + dy)] = GRASS
+            }
+        }
+    }
+    for dy in -1..2 {
+        for dx in -1..2 {
+            tiles[cell(g, cx + dx, cy + dy)] = STOCK
+        }
+    }
+    return g
+}

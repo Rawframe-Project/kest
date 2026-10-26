@@ -171,14 +171,6 @@ engine-debug: examples/engine-debug
 fast: tools/fast.sh
 	@tools/fast.sh
 
-# Everything but the sweep that puts every check out of order, which is most
-# of what the whole gate costs and the one check in it that is about the other
-# checks rather than about this language. The tier between a tenth of a second
-# and half an hour: run it while something is being written, and `check`
-# before saying it is done. See D1136.
-most: tools/check.sh
-	@KEST_HOLES=no tools/check.sh
-
 # Everything, so that "it passes" is a command rather than a claim. Minutes.
 # Run at a milestone and before saying something is done, not after every edit.
 check: tools/check.sh
@@ -198,6 +190,24 @@ examples/tetris/host: examples/tetris/host.c libkest.a include/kest.h
 
 tetris: examples/tetris/host
 
+# The colony: a game whose rules are `examples/colony/game/*.kest`, drawn by a
+# raylib host that reloads them under a running world. The rules are also
+# written as C, which the host binds with `--native 1`. Built like `tetris`,
+# from where `RAYLIB` built raylib, and run from the root of this tree.
+build/colony/native.o: examples/colony/game/*.kest kest include/kest.h
+	@mkdir -p build/colony
+	./kest emit --c examples/colony/game/colony.kest > build/colony/native.c
+	$(CC) -O2 -Iinclude -DKEST_NO_MAIN -c -o $@ build/colony/native.c
+
+examples/colony/colony: examples/colony/host/colony.c build/colony/native.o \
+                        libkest.a include/kest.h
+	@test -n "$(RAYLIB)" || \
+	    (echo "RAYLIB is the src directory raylib was built in" >&2; false)
+	$(CC) $(HOSTWARN) -O2 -Iinclude -I$(RAYLIB) -o $@ $< build/colony/native.o \
+	    libkest.a $(RAYLIB)/libraylib.a -lm -lpthread -ldl -lrt -lGL -lX11
+
+colony: examples/colony/colony
+
 # The playground: the command line as WebAssembly, the page, the standard
 # library and a few examples, in one directory a web server hands out as it
 # is. `.github/workflows/pages.yml` publishes it. See D1266.
@@ -216,17 +226,6 @@ playground: kest.wasm playground/index.html playground/main.js \
 	    [(n, open("examples/%s.kest" % n).read()) for n in sys.argv[1:]]), \
 	    open("build/playground/examples.json", "w"))' $(PLAYED)
 	@echo "wrote build/playground"
-
-# Every figure a document quotes from a run, written there from a run: what a
-# frame step and a crossing run, what a container costs an entity, what the
-# compiler's own work costs, how many constants a program folds, and how many
-# doors and instructions the front page counts. A change that moves one on
-# purpose runs this rather than editing a sentence; the gate still holds every
-# one of them, so a figure nobody wrote again is a gate that fails. See D1260.
-figures: kest debug embed tools/inward
-	@KEST_FIGURES=write tools/check-costs.sh | grep '^figures'
-	@KEST_FIGURES=write tools/check-docs.sh docs/language.md \
-	    docs/decisions.md | grep '^figures'
 
 # One number: how long a frame step takes per entity. Not part of `check`,
 # because a duration is not a pass or a fail, and written down nowhere.
@@ -311,7 +310,7 @@ release: kest libkest.a
 	    >> build/$(RELEASE)/VERSION
 	@echo "what it is and how to build a host against it: README.md" \
 	    >> build/$(RELEASE)/VERSION
-	@echo "what changed: CHANGELOG.md. what it means: docs/language.md" \
+	@echo "what changed: CHANGELOG.md. how to use it: docs/README.md" \
 	    >> build/$(RELEASE)/VERSION
 	@echo "the licence every file of it is under: LICENSE" \
 	    >> build/$(RELEASE)/VERSION
@@ -344,14 +343,14 @@ clean:
 	rm -rf build kest kest-debug libkest.a examples/embed \
 	    examples/embed-debug examples/engine examples/engine-debug \
 	    examples/least tools/inward tools/fuzz tools/fuzz-debug \
-	    tools/fuzz-cover kest.wasm examples/tetris/host \
+	    tools/fuzz-cover kest.wasm examples/tetris/host examples/colony/colony \
 	    bench/measure bench/frame \
 	    bench/control-cpp bench/graph-cpp bench/kernel-cpp bench/words-cpp \
 	    bench/rules-cpp \
-	    .jitted_scripts kest-colony-day.txt
+	    .jitted_scripts kest-settlement-day.txt
 
-.PHONY: debug least embed embed-debug engine engine-debug fast most check figures \
-    playground tetris \
+.PHONY: debug least embed embed-debug engine engine-debug fast check \
+    playground tetris colony \
     time fuzz release install uninstall clean
 
 # A short campaign, which is what a gate can afford: eight seeds and four
