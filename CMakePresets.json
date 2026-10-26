@@ -154,7 +154,7 @@
       "configurePreset": "linux-gcc",
       "filter": {
         "exclude": {
-          "name": "^(backend|doors|fuzzing)$"
+          "name": "^(backend|doors|fuzzing|wasm)$"
         }
       }
     },
@@ -174,7 +174,7 @@
       "configurePreset": "linux-arm64",
       "filter": {
         "include": {
-          "name": "^(conformance|fast|regressions|backend)$"
+          "name": "^(conformance|fast|regressions|backend|fuzzing)$"
         }
       }
     },

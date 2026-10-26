@@ -132,9 +132,10 @@ jobs:
 
   # Every cell builds with warnings as errors and runs its test preset: the
   # Linux GCC cell the whole gate but what the Linux Clang cell runs, which is
-  # the C backend, the doors, WebAssembly and the fuzzers, arm64 the C backend where every
-  # processor fuses a multiply and an add, every Unix cell the fast tests, and
-  # every cell the conformance trace every platform has to print byte for byte.
+  # the C backend, the doors, WebAssembly and the fuzzers; arm64 the seeded
+  # fuzzer and the C backend, where every processor fuses a multiply and an
+  # add; every Unix cell the fast tests; and every cell the conformance trace
+  # every platform has to print byte for byte.
   build:
     needs: changes
     if: needs.changes.outputs.code == 'true'

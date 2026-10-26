@@ -1,6 +1,7 @@
 # The gate as ctest tests. Each runs from the root of the tree against this
-# build (KEST_BUILD), and every check under tools/ runs through tools/ask.sh,
-# which holds it to saying what it did or why it refused. Labels pick a tier:
+# build (KEST_BUILD), building its hosts with this build's compiler (CC), and
+# every check under tools/ runs through tools/ask.sh, which holds it to saying
+# what it did or why it refused. Labels pick a tier:
 #   fast    the loop while writing a change: the fast tier, the guide, the
 #           regression programs and the conformance trace
 #   gate    the gate's own steps and every check in tools/
@@ -13,7 +14,7 @@ function(kest_test name label)
   add_test(NAME ${name} COMMAND ${ARGN} WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
   set_tests_properties(${name} PROPERTIES
     LABELS "${label}"
-    ENVIRONMENT "KEST_BUILD=${PROJECT_BINARY_DIR}")
+    ENVIRONMENT "KEST_BUILD=${PROJECT_BINARY_DIR};CC=${CMAKE_C_COMPILER}")
 endfunction()
 
 # A check under tools/, asked the way the gate asks one.
@@ -55,6 +56,6 @@ if(KEST_CHECKED)
   kest_check(doors gate ${KEST_SH} tools/check-doors.sh)
   kest_check(fuzzing gate ${KEST_SH} tools/check-fuzz.sh)
 endif()
-if(KEST_WASM)
-  kest_check(wasm gate ${KEST_SH} tools/check-wasm.sh)
-endif()
+# WebAssembly builds its own module from the sources with clang and wasi-libc,
+# so every gate asks it, as the Makefile's did; KEST_WASM is the playground.
+kest_check(wasm gate ${KEST_SH} tools/check-wasm.sh)

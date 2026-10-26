@@ -410,7 +410,7 @@ int main(int argc, char **argv) {
     return 0;
 }
 EOF
-if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$asking" "$asking.c"         $build_dir/libkest.a -lm 2>"$scratch"/check-why; then
+if ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude -o "$asking" "$asking.c"         $build_dir/libkest.a -lm 2>"$scratch"/check-why; then
     complain "asking" "the host that asks before calling does not build"
     sed 's/^/    /' "$scratch"/check-why | head -3
 elif ! asked=$("$asking" "$asking.kest" 2>/dev/null); then
@@ -626,7 +626,7 @@ int main(int argc, char **argv) {
     return 0;
 }
 EOF
-if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$identity" "$identity.c" \
+if ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude -o "$identity" "$identity.c" \
         $build_dir/libkest.a -lm 2>"$scratch"/check-why; then
     complain "identity" "the host that asks what a reference names does not build"
     sed 's/^/    /' "$scratch"/check-why | head -3
@@ -1122,7 +1122,7 @@ int main(int argc, char **argv) {
 }
 #endif
 EOF
-if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$threads" "$threads".c \
+if ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude -o "$threads" "$threads".c \
         $build_dir/libkest.a -lm 2>"$scratch"/check-why; then
     complain "threads" "the host that runs two machines at once does not build"
     sed 's/^/    /' "$scratch"/check-why | head -3
@@ -1344,14 +1344,14 @@ int main(int argc, char **argv) {
 }
 EOF
 printf 'int main(void) { return 0; }\n' > "$scratch"/watching.c
-if ! cc -fsanitize=thread -o "$scratch"/watching "$scratch"/watching.c \
+if ! ${CC:-cc} -fsanitize=thread -o "$scratch"/watching "$scratch"/watching.c \
         2>/dev/null; then
     say "races" "this compiler cannot watch threads, so two machines of one \
 build were not watched"
 elif [ ! -f $build_dir/build/races/vm.o ]; then
     say "races" "this build has no objects for the thread sanitiser \
 (KEST_RACES), so two machines of one build were not watched"
-elif ! cc -std=c11 -Wall -Wextra -Werror -O1 -g -fsanitize=thread \
+elif ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -O1 -g -fsanitize=thread \
         -Iinclude -o "$races" "$races".c $build_dir/build/races/*.o -lm -lpthread \
         2>"$scratch"/check-why; then
     complain "races" "the host that watches two machines does not build"
@@ -1494,7 +1494,7 @@ int main(int argc, char **argv) {
     return 0;
 }
 EOF
-if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$sharing" "$sharing".c \
+if ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude -o "$sharing" "$sharing".c \
         $build_dir/libkest.a -lm 2>"$scratch"/check-why; then
     complain "sharing" "the host that debugs one machine of two does not build"
     sed 's/^/    /' "$scratch"/check-why | head -3
@@ -1615,7 +1615,7 @@ int main(int argc, char **argv) {
     return 0;
 }
 EOF
-if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$stopped" "$stopped".c \
+if ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude -o "$stopped" "$stopped".c \
         $build_dir/libkest.a -lm 2>"$scratch"/check-why; then
     complain "stopped" "the host that asks a stopped machine for its heap \
 does not build"

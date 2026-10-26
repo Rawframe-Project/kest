@@ -98,7 +98,7 @@ int main(int argc, char **argv) {
     return 0;
 }
 EOF
-if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$naming.host" \
+if ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude -o "$naming.host" \
         "$naming.c" $build_dir/libkest.a -lm 2>"$scratch"/why; then
     complain "the host that lends by name does not build"
     sed 's/^/    /' "$scratch"/why | head -3
@@ -265,7 +265,7 @@ int main(int argc, char **argv) {
     return 0;
 }
 EOF
-if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$holding.host" \
+if ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude -o "$holding.host" \
         "$holding.c" $build_dir/libkest.a -lm 2>"$scratch"/why; then
     complain "the host that lends what the machine keeps does not build"
     sed 's/^/    /' "$scratch"/why | head -3
