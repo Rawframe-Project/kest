@@ -442,9 +442,12 @@ static void emit_constant(Lower *lower, uint16_t first, uint16_t count,
         fault(lower, origin, "this reads a value the body has not got");
         return;
     }
-    uint32_t index = kest_chunk_constant_run(
-        lower->module, lower->chunk, body->constants + first,
-        body->constant_classes + first, count);
+    // A body with no constants has no arrays to take an offset from, and an
+    // empty run reads nothing from them.
+    const KestValue *values = count == 0 ? NULL : body->constants + first;
+    const uint8_t *classes = count == 0 ? NULL : body->constant_classes + first;
+    uint32_t index = kest_chunk_constant_run(lower->module, lower->chunk,
+                                             values, classes, count);
     if (lower->module->out_of_room) {
         lower->out_of_memory = true;
         return;
