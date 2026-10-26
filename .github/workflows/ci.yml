@@ -553,10 +553,8 @@ jobs:
           persist-credentials: false
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       - name: build
-        shell: pwsh
-        run: |
-          & tools\build.bat
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        shell: cmd # zizmor: ignore[misfeature] a batch file runs where it was written to run
+        run: tools\build.bat
       - name: examples
         shell: bash
         run: |
@@ -564,10 +562,8 @@ jobs:
           sh tools/conformance.sh ./build/win/kest.exe windows-x86-64.trace
           cat windows-x86-64.trace
       - name: an archive, unpacked and run
-        shell: pwsh
-        run: |
-          & tools\package.bat
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+        shell: cmd # zizmor: ignore[misfeature] a batch file runs where it was written to run
+        run: tools\package.bat
       # Unpacked into a room of its own and used the way somebody who
       # downloaded it would: the binary asked what it is, a program it has
       # never seen run through it, and a host compiled against the header and
