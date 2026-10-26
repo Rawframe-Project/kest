@@ -277,9 +277,13 @@ static uint32_t ir_emit(Compiler *compiler, KestIrKind kind,
         takes = (uint16_t)compiler->value_count;
     }
     compiler->value_count -= takes;
-    uint32_t at = kest_ir_op(compiler->ir, compiler->body, kind, type,
-                             compiler->values + compiler->value_count, takes,
-                             span);
+    // An operation that reads nothing may come before anything was made, when
+    // there is no stack yet, and an offset from a null pointer is undefined
+    // even when it is nought.
+    const KestIrRef *reads =
+        takes == 0 ? NULL : compiler->values + compiler->value_count;
+    uint32_t at = kest_ir_op(compiler->ir, compiler->body, kind, type, reads,
+                             takes, span);
     if (compiler->ir->out_of_memory) {
         compiler->out_of_memory = true;
         return at;
