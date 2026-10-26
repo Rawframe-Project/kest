@@ -1,0 +1,3 @@
+# The trace every platform has to print byte for byte, kept with LF endings in
+# every checkout, Windows' included, so it is compared with the bytes it holds.
+test/conformance.trace text eol=lf

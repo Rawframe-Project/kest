@@ -69,7 +69,7 @@ static long long in_nanoseconds(void) {
 }
 #else
 static long long in_nanoseconds(void) {
-    return (long long)clock() * (1000000000LL / CLOCKS_PER_SEC);
+    return (long long)clock() * (1000000000LL / (long long)CLOCKS_PER_SEC);
 }
 #endif
 

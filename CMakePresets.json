@@ -27,8 +27,11 @@
     },
     {
       "name": "dev",
-      "displayName": "This machine's compiler: the release build, the checking build and every host",
-      "inherits": "unix"
+      "displayName": "This machine's compiler: the release build, the checking build, the ThreadSanitizer objects and every host",
+      "inherits": "unix",
+      "cacheVariables": {
+        "KEST_RACES": "ON"
+      }
     },
     {
       "name": "linux-gcc",

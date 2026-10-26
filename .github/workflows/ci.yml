@@ -204,7 +204,8 @@ jobs:
               '    return 0;' \
               '}' > host.c
           if [ "$RUNNER_OS" = Windows ]; then
-            cl /nologo /std:c11 /Iinclude host.c lib/kest.lib /Fe:host.exe
+            # Dashes rather than slashes: Git Bash reads a slash as a path.
+            cl -nologo -std:c11 -Iinclude host.c lib/kest.lib -Fe:host.exe
             ./host.exe
           else
             cc -std=c11 -Wall -Wextra -Werror -Iinclude -o host host.c lib/libkest.a -lm

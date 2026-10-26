@@ -12,7 +12,7 @@ A preset configures a build into `out/<preset>`, and everything it makes lands t
 
 | Preset | Builds |
 | --- | --- |
-| `dev` | this machine's compiler: the release build, the checking build and every host |
+| `dev` | this machine's compiler: the release build, the checking build, the ThreadSanitizer objects and every host |
 | `linux-gcc` | GCC 14, plus the ThreadSanitizer objects |
 | `linux-clang` | Clang 20, plus the libFuzzer target and the WebAssembly playground |
 | `linux-arm64` | GCC 14 on arm64, where every processor fuses a multiply and an add |

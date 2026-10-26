@@ -104,7 +104,7 @@ static void back(KestValue *frame, KestRuntime *runtime, void *context) {
    microseconds, which is fine for a round of thirty thousand of them and no
    use at all for one call — which is why a round is what is timed. */
 static long long in_microseconds(void) {
-    return (long long)clock() * 1000000 / CLOCKS_PER_SEC;
+    return (long long)clock() * 1000000 / (long long)CLOCKS_PER_SEC;
 }
 
 int main(void) {
