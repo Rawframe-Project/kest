@@ -101,9 +101,15 @@ jobs:
           # The committed programs are the floor of every corpus.
           find examples lib/std test -name '*.kest' -exec cp {} out/fuzz-seeds/ \;
           test -n "$(ls out/fuzz-seeds)"
+          # The script prints only that it found something; the kind and the
+          # sanitizer's report, never the input, are in its report file.
+          rm -rf out/fuzz-reports
+          status=0
           tools/fuzz_target.sh tools/fuzz-cover out/fuzz-corpus/fuzz-cover \
             out/fuzz-seeds -max_total_time="$SECONDS_EACH" -rss_limit_mb=4096 \
-            -timeout=25
+            -timeout=25 || status=$?
+          cat out/fuzz-reports/*.txt 2>/dev/null || true
+          exit "$status"
       - if: github.event_name != 'pull_request'
         name: Minimize the corpus
         run: |

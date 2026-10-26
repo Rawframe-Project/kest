@@ -55,7 +55,7 @@ Each check prints one summary line when it passes; anything else is a failure wi
 | `agree` | the four conformance traces are identical |
 | `required` | passes when every job above passed or was skipped by `changes`; the ruleset requires this and the pull request title check |
 
-Every workflow sets `permissions: {}` and grants each job what it needs, runs its steps in bash unless a step names another shell, checks out without keeping credentials, and pins every action by commit SHA; Dependabot moves the pins weekly.
+Every workflow sets `permissions: {}` and grants each job what it needs, runs its steps in bash unless a step names another shell (`scorecard.yml` sets no default shell, which Scorecard's publishing rejects), checks out without keeping credentials, and pins every action by commit SHA; Dependabot moves the pins weekly.
 
 Other workflows:
 
