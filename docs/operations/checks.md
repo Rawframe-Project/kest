@@ -35,10 +35,14 @@ Each check prints one summary line when it passes; anything else is a failure wi
 
 ## CI
 
-`.github/workflows/ci.yml` runs on every pull request and on `main`:
+`.github/workflows/ci.yml` runs on every pull request, on every push to `main`, and every night at 00:07 UTC. A new push to a pull request cancels its running CI; runs on `main` are never cancelled.
 
 | Job | Runs |
 | --- | --- |
+| `changes` | decides whether anything beyond documentation changed; the jobs below it skip when nothing did. `docs/user` counts as code, since `check_guide.py` runs its programs |
+| `zizmor` | audits every workflow |
+| `site` | builds the documentation site with `tools/build_site.py`, in the CI image |
+| `fuzz` | the libFuzzer target through `tools/fuzz_target.sh`: a minute on a pull request, from the committed programs only; ten minutes on `main` and at night, from the kept corpus, which is then minimized and saved from `main` |
 | `linux` | build, `make fast`, `make fuzz`, the conformance trace, and what the workload families cost |
 | `linux-arm64` | the same on arm64 hardware, plus the C backend over every example |
 | `macos` | build, `make fast`, the conformance trace, and the archive unpacked and used |
@@ -49,10 +53,20 @@ Each check prints one summary line when it passes; anything else is a failure wi
 | `check` | `make check` |
 | `tetris`, `tetris-windows` | the raylib hosts built and played under Xvfb, and the colony run both ways; the Windows zip built |
 | `agree` | the four conformance traces are identical |
-| `required` | passes when every job above passed; the ruleset requires this and the pull request title check |
+| `required` | passes when every job above passed or was skipped by `changes`; the ruleset requires this and the pull request title check |
 
-`pr-title.yml` checks the pull request title against the scopes in `AGENTS.md`. `determinism.yml` (run by hand, or when its files change) compares one simulation across languages and platforms; `pages.yml` publishes the playground.
+Every workflow sets `permissions: {}` and grants each job what it needs, runs its steps in bash unless a step names another shell, checks out without keeping credentials, and pins every action by commit SHA; Dependabot moves the pins weekly.
+
+Other workflows:
+
+- `pr-title.yml` checks the pull request title against the scopes in `AGENTS.md`.
+- `pr-gate.yml` closes a pull request from outside the organization unless it closes an issue labeled `accepted`.
+- `codeql.yml` analyzes the C sources on every pull request, on `main` and weekly.
+- `scorecard.yml` grades the repository's supply chain weekly for the README badge.
+- `release.yml` keeps the release pull request and builds a release's files, see [Release](release.md).
+- `pages.yml` publishes the playground and the documentation site from `main`.
+- `determinism.yml` (run by hand, or when its files change) compares one simulation across languages and platforms.
 
 ## Fuzzing
 
-`tools/fuzz.c` is deterministic from a seed: `tools/fuzz-debug <seed> <count> <file> <target>` replays exactly the same inputs on any machine, so a finding is a seed and a count. Targets: `source` (bytes and source assembled from language pieces), `handles`, `lends`, `refs`, `text`, `migrate` (a world carried between program versions) and `chunks` (compiled bytecode with one operand changed, handed to the verifier and run where it is accepted). `tools/fuzz-cover.c` is a libFuzzer target over the source boundary that keeps inputs reaching new code (`make tools/fuzz-cover`, then `tools/fuzz-cover corpus/ -max_total_time=60`). `tools/oss-fuzz-build.sh` builds it the way OSS-Fuzz does. Every input runs with ceilings on compile memory, work, heap and fuel; a finding is anything other than a program or a diagnostic. A finding becomes a program in `test/regress` or `test/refused`.
+`tools/fuzz.c` is deterministic from a seed: `tools/fuzz-debug <seed> <count> <file> <target>` replays exactly the same inputs on any machine, so a finding is a seed and a count. Targets: `source` (bytes and source assembled from language pieces), `handles`, `lends`, `refs`, `text`, `migrate` (a world carried between program versions) and `chunks` (compiled bytecode with one operand changed, handed to the verifier and run where it is accepted). `tools/fuzz-cover.c` is a libFuzzer target over the source boundary that keeps inputs reaching new code (`make tools/fuzz-cover`, then `tools/fuzz-cover corpus/ -max_total_time=60`). `tools/fuzz_target.sh` is how CI runs it: with a fresh seed it does not print, writing what it finds and its log under `out/`, and saying only which kind of finding it was and the sanitizer's report, never the input. `tools/oss-fuzz-build.sh` builds it the way OSS-Fuzz does. Every input runs with ceilings on compile memory, work, heap and fuel; a finding is anything other than a program or a diagnostic. A finding becomes a program in `test/regress` or `test/refused`.

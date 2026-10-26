@@ -26,7 +26,7 @@ kest 0.0.1, abi 4, json 4, profile kest-det 3, edition 2026
 
 ## What hosts and tools are promised
 
-While the version is `0.0.x`, nothing a host or a tool reads is frozen. The C API, the JSON and the shape of the standard library may change between any two releases, and each change says in the changelog what a host or tool has to do about it. The numbers still tell a host which shape it has:
+Before 1.0.0, nothing a host or a tool reads is frozen. The C API, the JSON and the shape of the standard library may change between any two releases, and each change says in the changelog what a host or tool has to do about it. The numbers still tell a host which shape it has:
 
 - A host compares `KEST_ABI_VERSION` with `kest_abi_version()` before calling anything and stops when they differ. The ABI number goes up whenever anything a host can see changes: a function's arguments or answer, a struct's fields or their order, an enum's cases or their numbers, or what any of them mean. It does not go up for something added at the end, which an older host never sees.
 - A tool reads `schema` first. It goes up when a field changes meaning, is removed, or is added to a list that was said to be complete, and not when a field is added beside the others.

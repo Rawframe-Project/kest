@@ -52,4 +52,4 @@ The rules the language is built on, and the alternatives that were weighed and r
 
 ## Editions
 
-A change that would break a program, or change what it means, is made under a new edition, warned about in the edition before it, and a project names its edition in its manifest. The edition is the one compatibility promise made to programs while the version is `0.0.x`; the C API, the JSON and the library shape still move, each move named in the changelog. Retired library names are kept in a table in `src/types.c` so a program using one is told what replaced it.
+A change that would break a program, or change what it means, is made under a new edition, warned about in the edition before it, and a project names its edition in its manifest. The edition is the one compatibility promise made to programs before 1.0.0; the C API, the JSON and the library shape still move, each move named in the changelog. Retired library names are kept in a table in `src/types.c` so a program using one is told what replaced it.

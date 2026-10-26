@@ -4,7 +4,9 @@ How a version is numbered, what a release contains, and how one is made.
 
 ## Versions
 
-The version is in `include/kest.h` (`KEST_VERSION_MAJOR`, `MINOR`, `PATCH` and `KEST_VERSION_STRING`) and `kest --version` prints it. Beside it, four numbers move on their own, each named in the changelog when it moves:
+The version is in `include/kest.h` (`KEST_VERSION_MAJOR`, `MINOR`, `PATCH` and `KEST_VERSION_STRING`), and `kest --version` prints it. release-please moves the four between their markers, and the version in `editors/vscode/package.json` with them; nothing else changes them. Before 1.0.0 a change that breaks a program or a host carries `!` in its pull request title and a `BREAKING CHANGE:` footer, and release-please makes it a minor release.
+
+Four numbers beside the version move on their own, each named in the changelog when it moves:
 
 | Number | Moves when |
 | --- | --- |
@@ -15,15 +17,22 @@ The version is in `include/kest.h` (`KEST_VERSION_MAJOR`, `MINOR`, `PATCH` and `
 
 ## What a release contains
 
-`make release` writes `build/kest-<version>-<os>-<arch>.tar.gz` and its `.sha256`: `bin/kest`, `lib/libkest.a`, `include/kest.h`, the standard library in `lib/kest`, the sources, the VS Code extension, the documentation, `README.md`, `CHANGELOG.md`, `LICENSE` and a `VERSION` file naming the platform. `bin/kest` finds the library beside it, so the archive works wherever it is unpacked. It also writes the changelog's section for that version as the release notes, and refuses when there is none. On Windows `tools\package.bat` makes the zip after `tools\build.bat`.
+| File | Is |
+| --- | --- |
+| `kest-<version>-linux-x86_64.tar.gz`, `-linux-aarch64`, `-darwin-arm64` | `make release` on each platform: `bin/kest`, `lib/libkest.a`, `include/kest.h`, the standard library in `lib/kest`, the sources, the VS Code extension, the documentation, `README.md`, `CHANGELOG.md`, `LICENSE` and a `VERSION` file. `bin/kest` finds the library beside it, so the archive works wherever it is unpacked. |
+| `kest-<version>-windows-x86_64.zip` | the same for Windows, from `tools\build.bat` and `tools\package.bat` |
+| `kest-<version>-source.tar.gz` | the tagged tree |
+| `SHA256SUMS` | the checksum of every file above |
+| `sbom.spdx.json` | the SPDX software bill of materials |
+
+Every file carries a build provenance attestation: `gh attestation verify <file> -R Rawframe-Project/kest` says it was built by this repository's release workflow.
 
 ## Making one
 
-1. The changelog has a section for the version, saying what a reader with a program written against the last one has to do.
-2. The version in `kest.h` is the one being released, and `make check` passes on that commit.
-3. A tag `v<version>` runs `.github/workflows/release.yml`: an archive for Linux x86-64 and arm64, macOS arm64 and Windows x86-64, each checked against its checksum; the tag held to the version that was built; and a draft release page with the notes and every archive.
-4. Publishing the draft is the one step that cannot be taken back, and is done by hand.
+`.github/workflows/release.yml` runs on every push to `main`:
 
-`workflow_dispatch` on the release workflow builds the archives without a page, to try the pipeline without a tag.
+1. release-please keeps a draft release pull request open from the conventional commits on `main`, with the version moved and a changelog entry written from the pull request titles.
+2. Before it is merged, the entry in `CHANGELOG.md` and the notes in the pull request's body (between release-please's `---` lines) are rewritten into what changed for someone using Kest, grouped as Added, Changed, Fixed, Removed and Security. release-please publishes the release notes from the body. Anything else landing on `main` rewrites both, so this is the last change before the merge. The manager checks that the tag does not exist yet.
+3. Merging it tags `v<version>` and publishes the GitHub release. The archives job then builds an archive on Linux x86-64 and arm64, macOS arm64 and Windows x86-64 at the tag, each refused if the tag and `kest.h` disagree, and the assets job adds the source archive, `SHA256SUMS`, the SBOM and the attestation, and attaches them.
 
-The move to release-please, with `SHA256SUMS`, an SBOM and build attestation on every release, is the next step of the repository's move to the organization standard; this page changes with it.
+The workflow runs again by hand (`workflow_dispatch`) after a failed run, without a new commit.
