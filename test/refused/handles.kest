@@ -1,0 +1,17 @@
+// Refused with K0310. Guards against a handle used as something it is not.
+
+module test.refused.handles
+
+struct Npc {
+    n: i32
+}
+
+fn count(world: store<Npc>) -> i32 no.alloc {
+    return len(world)
+}
+
+fn main() -> i32 {
+    let xs: [Npc] = array()
+    push(xs, Npc(1))
+    return count(xs)
+}

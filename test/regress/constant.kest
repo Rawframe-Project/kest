@@ -1,0 +1,9 @@
+// Guards against a constant that cannot be worked out, refused by nobody.
+
+module test.regress.constant
+
+const LIMIT: i32 = 10
+
+fn main() -> i32 {
+    return LIMIT - 10
+}

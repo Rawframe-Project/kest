@@ -1,0 +1,19 @@
+// Guards against a block inside brackets whose lines run together.
+
+module test.regress.blocks
+
+import std.math
+
+enum Door {
+    Shut
+    Open(i32)
+}
+
+fn main() -> i32 {
+    let d = Door.Open(3)
+    let held = math.clamp(match d {
+        Shut -> 1
+        Open(w) -> w
+    }, 0, 5)
+    return held - 3
+}

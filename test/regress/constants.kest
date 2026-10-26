@@ -1,0 +1,15 @@
+// Guards against a callee left reading the constants of whoever called it.
+
+module test.regress.constants
+
+fn scaled(n: i32) -> i32 {
+    return n % 1000 * 7
+}
+
+fn main() -> i32 {
+    let got = scaled(6)
+    if got != 42 {
+        return 1000 + got
+    }
+    return 0
+}

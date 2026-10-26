@@ -7,12 +7,12 @@
 # language there. See D1255.
 set -u
 scratch=$(mktemp -d)
-# And a day `examples/colony.kest` left at the root of the machine, which a
+# And a day `examples/settlement.kest` left at the root of the machine, which a
 # build that forgets where it was run writes as whoever may write there: this
 # run's to take away, and only if this run put it there. See D1255.
 at_the_root=false
-[ -e /kest-colony-day.txt ] && at_the_root=true
-trap 'rm -rf "$scratch"; [ "$at_the_root" = false ] && rm -f /kest-colony-day.txt' EXIT
+[ -e /kest-settlement-day.txt ] && at_the_root=true
+trap 'rm -rf "$scratch"; [ "$at_the_root" = false ] && rm -f /kest-settlement-day.txt' EXIT
 cd "$(dirname "$0")/.." || exit 1
 here=$(pwd)
 
@@ -58,15 +58,15 @@ same=0
 # machine, written as whoever ran it and refused where that is nobody's to
 # write, so the one run that could tell the two apart is the file being where
 # it was run. See D1255.
-rm -f kest-colony-day.txt
+rm -f kest-settlement-day.txt
 KEST_LIB="$here"/lib/ node tools/wasi-run.mjs "$scratch"/kest.wasm run \
-    examples/colony.kest >/dev/null 2>&1 </dev/null
-if [ ! -f kest-colony-day.txt ]; then
-    echo "wasm: \`examples/colony.kest\` wrote its day somewhere other than" \
+    examples/settlement.kest >/dev/null 2>&1 </dev/null
+if [ ! -f kest-settlement-day.txt ]; then
+    echo "wasm: \`examples/settlement.kest\` wrote its day somewhere other than" \
          "where it was run"
     failed=1
 fi
-rm -f kest-colony-day.txt
+rm -f kest-settlement-day.txt
 # Each run in a room of this check's own: a program that writes a file where it
 # was run writes it there, and two checks running the colony in the tree at
 # once read each other's day half written -- `status 12` from the one here and

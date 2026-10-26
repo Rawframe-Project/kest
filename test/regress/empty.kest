@@ -1,0 +1,21 @@
+// Guards against a struct with nothing in it built as no slots.
+
+module test.regress.empty
+
+import std.io
+
+struct Nothing {
+}
+
+fn after(e: Nothing, n: i32, m: i32) -> i32 no.alloc {
+    return m
+}
+
+fn main() -> i32 {
+    let answer = after(Nothing(), 3, 4)
+    io.print("the second number after nothing is {answer}")
+    if answer != 4 {
+        return 1
+    }
+    return 0
+}

@@ -1,0 +1,20 @@
+// Guards against a run of slots read past the names a body has.
+
+module test.regress.reaching
+
+struct Three {
+    a: i32
+    b: i32
+    c: i32
+}
+
+// A remainder keeps `first` a call rather than a body carried to where it is
+// called, so the three slots are read as a run in `main`.
+fn first(v: Three) -> i32 no.alloc {
+    return v.a % 1000
+}
+
+fn main() -> i32 {
+    let made = Three(len("a"), len("bb"), len("ccc"))
+    return first(made) - 1
+}

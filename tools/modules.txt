@@ -1,0 +1,31 @@
+# The modules of src, in dependency order: a module includes only the modules
+# above it. tools/check-tables.sh holds src to this list.
+kest
+mem
+ground
+diag
+lexer
+ast
+parser
+project
+loader
+types
+check
+contract
+value
+verify
+fmt
+ir
+lower
+emitc
+compile
+vm
+build
+held
+wire
+lsp
+debug
+dap
+hostile
+doc
+main

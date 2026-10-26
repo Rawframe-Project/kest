@@ -1,0 +1,9 @@
+// Guards against a layout named past the ones a program has.
+
+module test.regress.naming
+
+fn main() -> i32 {
+    let made: [i32] = array()
+    push(made, 7)
+    return made[0] - 7
+}

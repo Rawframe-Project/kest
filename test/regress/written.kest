@@ -1,0 +1,12 @@
+// Guards against a name that is written taken for one that is not.
+
+module test.regress.written
+
+import std.io
+
+fn main() -> i32 {
+    let n = 1
+    n = 2
+    io.print("{n}")
+    return n - 2
+}

@@ -1,0 +1,15 @@
+// Guards against a copy that reads one element past a block.
+
+module test.regress.growing
+
+fn main() -> i32 {
+    let xs: [i32] = array()
+    let ys: [i32] = array()
+    let i = 0
+    while i < 40 {
+        push(xs, i)
+        push(ys, i)
+        i += 1
+    }
+    return len(xs) - 40
+}

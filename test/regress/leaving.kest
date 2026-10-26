@@ -1,0 +1,9 @@
+// Guards against a statement that leaves a slot behind.
+
+module test.regress.leaving
+
+fn main() -> i32 {
+    let n = 1
+    n = 2
+    return n - 2
+}

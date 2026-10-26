@@ -33,7 +33,7 @@ count=$(printf '%s\n' "$sources" | grep -c .)
 
 # What is in the tree before any of this runs. A program that writes a file
 # beside whatever is running it leaves it in the repository, and
-# `examples/colony.kest` wrote `kest-colony-day.txt` into the root of this one
+# `examples/settlement.kest` wrote `kest-settlement-day.txt` into the root of this one
 # for as long as anybody had run it -- past a walk that asks what a compiler
 # made and a walk that asks whether a name has a space in it, because it is
 # neither. What catches the next one is the difference between the tree now
@@ -52,18 +52,12 @@ instruments=$(find tools -name '*.kest' | sort)
 # backend that writes C can write.
 workloads=$(find bench -name '*.kest' | sort)
 
-# And the tasks a model is given, which are held to the one form and to
-# nothing else here: a scaffold that does not run and a wrong answer that does
-# the wrong thing are what they are for, so the sweeps that ask a file to run
-# and to answer nought are not asked of them. `check-ai.sh` is.
-tasks=$(find ai -name '*.kest' | sort)
 
 # And what those lists are, because everything below is a sweep over them: a
 # list that came back empty is every check in this file passing without reading
 # a file. There is no number here to hold them to — a count is the thing that
 # goes stale — but there is a floor, and the floor is one.
-if [ -z "$sources" ] || [ -z "$instruments" ] || [ -z "$workloads" ] ||
-        [ -z "$tasks" ]; then
+if [ -z "$sources" ] || [ -z "$instruments" ] || [ -z "$workloads" ]; then
     printf 'check: nothing was found to check; this is not a tree with a\n'
     printf '       language in it\n'
     exit 1
@@ -1752,14 +1746,11 @@ keyword_program() {
         printf 'fn main() -> i32 {\n    for %s in [1, 2] {\n        return 1\n    }\n    return 0\n}\n' "$1" ;;
     esac
 }
-# Read where the lexer's own list is read from, which is held beside the lexer
-# by `check-tables.sh`: a word held and not printed there is a word this would
-# never try.
-keywords=$(awk '/^## Keywords$/ {inside = 1; next}
-                inside && /^```$/ {fence++; next}
-                inside && fence == 1' docs/language.md)
+# Read out of the lexer's own table, so a word added there is a word tried here.
+keywords=$(sed -n '/^static const Keyword KEYWORDS\[\] = {$/,/^};$/p' src/lexer.c |
+           grep -o '{"[a-z]*"' | tr -d '{"')
 if [ -z "$keywords" ]; then
-    complain "keywords" "the reference prints no keywords, so none were tried"
+    complain "keywords" "the lexer's table was not found, so no keyword was tried"
 fi
 kept="$scratch"/check-keyword.kest
 tried=0
@@ -2896,7 +2887,7 @@ heard() {
 }
 
 # shellcheck disable=SC2086
-ask "formatting" tools/check-fmt.sh $sources $instruments $tasks
+ask "formatting" tools/check-fmt.sh $sources $instruments
 # shellcheck disable=SC2086
 ask "commands" tools/check-commands.sh $sources
 ask "tables" tools/check-tables.sh
@@ -2904,18 +2895,12 @@ ask "header" tools/check-header.sh
 ask "declarations" tools/check-dead.sh
 # shellcheck disable=SC2086
 ask "backend" tools/check-c.sh $sources $workloads
-ask "tasks" tools/check-ai.sh
-# And the same check over a document with nothing in it, which is what every
-# pattern in it finding nothing looks like from outside. A check that reads
-# documents with patterns passes when the patterns stop matching, unless it
-# refuses to read nothing; this is where that is asked, because no document in
-# this tree is empty and none of them can be made so to ask it.
 # And the checks that read what they are handed, handed nothing. Every sweep in
 # one of those runs no times over an empty list and the count it prints is
 # nought, which reads like a success; nothing in this tree is an empty list, so
 # what this stands for is a caller that lost its own. It is asked here because
 # nothing but the check itself can catch it.
-for tool in check-fmt.sh check-commands.sh check-c.sh check-docs.sh; do
+for tool in check-fmt.sh check-commands.sh check-c.sh; do
     if tools/"$tool" >"$scratch"/check-none 2>&1; then
         complain "$tool" "was given nothing and looked at nothing"
         sed 's/^/    /' "$scratch"/check-none | head -3
@@ -2924,62 +2909,18 @@ for tool in check-fmt.sh check-commands.sh check-c.sh check-docs.sh; do
         sed 's/^/    /' "$scratch"/check-none | head -3
     fi
 done
-
-empty="$scratch"/check-empty.md
-: > "$empty"
-if tools/check-docs.sh "$empty" >"$scratch"/check-empty-said 2>&1; then
-    complain "documentation" "a document with nothing in it was read and held"
-    sed 's/^/    /' "$scratch"/check-empty-said | head -4
-elif ! grep -q "is where this reads it from" "$scratch"/check-empty-said; then
-    complain "documentation" "a document with nothing in it was refused for \
-some other reason"
-    sed 's/^/    /' "$scratch"/check-empty-said | head -4
-fi
-
-# And a block marked `json` that is not JSON, which the check reading every
-# such block used to end in a Python traceback over: said at its line, as a
-# document's other faults are. See D1228.
-unjson="$scratch"/check-unjson.md
-printf '# A block\n\n```json\n{"said": 1\n```\n' >"$unjson"
-tools/check-docs.sh "$unjson" >"$scratch"/check-unjson-said 2>&1
-if ! grep -q "check-unjson.md:4: a block marked .json. that is not JSON" \
-        "$scratch"/check-unjson-said; then
-    complain "documentation" "a block marked json that is not JSON was not \
-said at its line"
-    sed 's/^/    /' "$scratch"/check-unjson-said | tail -4
-fi
-
-say "nothing" "a document with nothing in it, one with a block that is not \
-JSON, and four checks handed no files"
+say "nothing" "three checks handed no files"
 
 ask "lends" tools/check-lends.sh
+ask "regressions" tools/check-regress.sh
 
 ask "verifier" tools/check-verifier.sh
-ask "documentation" tools/check-docs.sh docs/language.md \
-    docs/decisions.md CHANGELOG.md docs/primer.md SECURITY.md \
-    docs/rfcs/README.md docs/book.md ARCHITECTURE.md \
-    docs/compact.md
+ask "guide" tools/check_guide.py
 ask "costs" tools/check-costs.sh
 ask "ceilings" tools/check-ceilings.sh
 ask "work" tools/check-work.sh
 ask "doors" tools/check-doors.sh
 ask "wasm" tools/check-wasm.sh
-
-# The sweep that puts every check out of order, and the one thing here that is
-# about the other checks rather than about this language: 899 holes, each a
-# tree of its own with a build in it. It is most of what this gate costs --
-# every other tool it runs finishes inside forty seconds between them, and
-# this one takes half an hour on a loaded box. So `make most` leaves it out
-# and says so at the end, which is the tier between a tenth of a second and
-# half an hour that was missing. What it is right to leave out of is a run
-# while something is being written; what it is not right to leave out of is
-# saying a thing is done, and the last line is what keeps those apart.
-# See D1136.
-if [ "${KEST_HOLES:-yes}" = no ]; then
-    say "backstops" "left out, because \`make most\` is everything else"
-else
-    ask "backstops" tools/check-backstops.sh
-fi
 
 wait
 heard
@@ -3443,11 +3384,6 @@ fi
 
 if [ $failed -eq 0 ]; then
     echo
-    if [ "${KEST_HOLES:-yes}" = no ]; then
-        echo "everything but the holes passes. \`make check\` is the whole \
-of it."
-    else
-        echo "everything passes"
-    fi
+    echo "everything passes"
 fi
 exit $failed

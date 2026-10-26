@@ -1,0 +1,16 @@
+// Guards against a call putting in a frame what the body does not hold.
+
+module test.regress.narrowing
+
+import std.text
+
+// A remainder keeps `narrow` a call, so what is put in its frame is asked
+// about where the frame changes hands.
+fn narrow(n: i8) -> i32 {
+    return i32(n) % 1000
+}
+
+fn main() -> i32 {
+    let wide = len(text.repeat("a", 300))
+    return narrow(i8(wide)) - 44
+}

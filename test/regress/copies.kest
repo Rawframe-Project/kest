@@ -1,0 +1,28 @@
+// Guards against two copies of a generic compiled under one name.
+
+module test.regress.copies
+
+struct AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOne {
+    n: i32
+}
+
+struct AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAATwo {
+    n: f32
+    m: f32
+}
+
+fn held<T>(v: T) -> T {
+    return v
+}
+
+fn main() -> i32 {
+    let a = held(AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOne(3))
+    let b = held(AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAATwo(1.5, 2.5))
+    if a.n != 3 {
+        return 1
+    }
+    if b.m != 2.5 {
+        return 2
+    }
+    return 0
+}

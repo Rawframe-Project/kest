@@ -388,7 +388,7 @@ for symbol, where in sorted(made.items()):
         failed = 1
 
 # And a name the prefix says is public on a function only one object can see.
-# `CLAUDE.md` says an internal function is plain snake_case, and the reason is
+# `AGENTS.md` says an internal function is plain snake_case, and the reason is
 # this: a reader looking for where `kest_something` is declared finds nothing
 # and cannot tell a private name from a declaration that went missing.
 for symbol, where in sorted(inside.items()):

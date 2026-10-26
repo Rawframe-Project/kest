@@ -17,7 +17,8 @@ libkest.a
 bench/*-cpp
 bench/measure
 bench/frame
-kest-colony-day.txt
+kest-settlement-day.txt
 .jitted_scripts/
 kest.wasm
 examples/tetris/host
+examples/colony/colony

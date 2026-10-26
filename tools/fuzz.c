@@ -82,7 +82,7 @@ static char *seed_program(const char *path, size_t *length) {
 }
 
 static const char *const SEEDS[] = {
-    "examples/math.kest",     "examples/colony.kest",
+    "examples/math.kest",     "examples/settlement.kest",
     "examples/boxes.kest",    "examples/inventory.kest",
     "examples/frame.kest",    "lib/std/text.kest",
     "lib/std/table.kest",     "examples/registry.kest",

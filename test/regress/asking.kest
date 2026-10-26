@@ -1,0 +1,21 @@
+// Guards against an optional against nothing, with the nothing compiled too.
+
+module test.regress.asking
+
+import std.io
+
+fn holds(x: i32?) -> i32 {
+    let spare = 41
+    if x != none {
+        return spare + 1
+    }
+    return spare
+}
+
+fn main() -> i32 {
+    if holds(7) - holds(none) != 1 {
+        io.print("asking about nothing left the stack one along")
+        return 1
+    }
+    return 0
+}

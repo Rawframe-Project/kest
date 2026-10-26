@@ -1,0 +1,9 @@
+// Guards against a constant read past the ones a body was given.
+
+module test.regress.reading
+
+import std.text
+
+fn main() -> i32 {
+    return len(text.repeat("a", 3)) - 3
+}

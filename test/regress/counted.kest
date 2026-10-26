@@ -1,0 +1,19 @@
+// Guards against a table that counts a pair nothing can find.
+
+module test.regress.counted
+
+import std.io
+import std.table
+import std.math
+
+fn main() -> i32 {
+    let t: table.Table<f32, i32> = table.empty()
+    table.set(t, math.sqrt(0.0 - 1.0), 1)
+    for at in 0..table.count(t) {
+        if !table.has(t, table.keyAt(t, at)) {
+            io.print("a table counts a pair nothing can find")
+            return 1
+        }
+    }
+    return 0
+}

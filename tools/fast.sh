@@ -34,8 +34,7 @@ say build "release and the other host"
 
 # Every example, run for the answer it is written to give. An example checks
 # itself and answers with which of its own checks failed, so a number here is a
-# line in that file. This is the language's own coverage: the examples are what
-# `docs/language.md` says each rule is run by.
+# line in that file. This is the language's own coverage.
 # A file with a `main` is a program and has to run; one without is what a host
 # drives, and there is nothing here to drive it with. Which it is is read from
 # the file, because a program the command line cannot start says why it could
@@ -77,7 +76,7 @@ say library "$resolved file(s) resolve"
 # reads, and found the same way: this said `examples/*.kest lib/std/*.kest
 # tools/*.kest` and a task file out of form went unseen here and stopped a gate
 # thirty minutes later, which is the opposite of what a fast gate is for.
-if ! ./kest fmt --check $(find examples lib tools ai -name '*.kest' | sort) \
+if ! ./kest fmt --check $(find examples lib test tools -name '*.kest' | sort) \
         >"$scratch"/formed 2>&1 </dev/null; then
     say formatting "these are not in the one form:"
     cat "$scratch"/formed
@@ -209,6 +208,16 @@ if ! ./examples/embed >"$scratch"/crossed 2>&1 </dev/null; then
     failed=1
 else
     say embedding "the other host ran its program"
+fi
+
+# The user documentation's programs, each checked and run for what the page
+# says it prints. A page a reader copies from is a page that has to work.
+if ! python3 tools/check_guide.py >"$scratch"/guide 2>&1 </dev/null; then
+    say guide "a program in docs/user does not do what its page says"
+    tail -20 "$scratch"/guide
+    failed=1
+else
+    say guide "every program in docs/user does what its page says"
 fi
 
 if [ "$failed" -ne 0 ]; then

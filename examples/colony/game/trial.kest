@@ -1,0 +1,130 @@
+module game.trial
+
+import std.io
+import game.colony
+import game.map
+
+// The colony run without anything drawing it: orders given the way a player
+// would give them, five simulated minutes at sixty frames a second, and what
+// came of it checked. It answers with which check failed, the way every
+// example in the language's own tree does.
+
+const FPS: f32 = 60.0
+
+fn main() -> i32 {
+    let w = colony.begin(7, 96, 64, 8)
+    let cx = 48
+    let cy = 32
+    // Chop everything in a wide square round the camp, a field to the east,
+    // and a short wall to the west.
+    let chops = colony.order(
+        w,
+        i32(colony.CHOP),
+        cx - 24,
+        cy - 16,
+        cx + 24,
+        cy + 16
+    )
+    let sown = colony.order(w, i32(colony.SOW), cx + 3, cy - 2, cx + 6, cy + 2)
+    let walls = colony.order(
+        w,
+        i32(colony.BUILD),
+        cx - 6,
+        cy - 4,
+        cx - 6,
+        cy + 4
+    )
+    if chops <= 0 || sown <= 0 || walls <= 0 {
+        return 1
+    }
+    let alive = 0
+    let frames = i32(FPS) * 300
+    for f in 0..frames {
+        alive = colony.step(w, 1.0 / FPS)
+    }
+    let counts: [i32] = array(colony.COUNTS, 0)
+    colony.tally(w, counts)
+    let fields = 0
+    let built = 0
+    let trees = 0
+    for c in 0..len(w.ground.tiles) {
+        let t = w.ground.tiles[c]
+        if t == map.FIELD {
+            fields += 1
+        }
+        if t == map.WALL {
+            built += 1
+        }
+        if t == map.TREE {
+            trees += 1
+        }
+    }
+    io.print("alive {alive} born {counts[colony.BORN]} died {counts[colony.DIED]} wood {counts[colony.STORED_WOOD]} food {counts[colony.STORED_FOOD]} fields {fields} walls {built} trees {trees} of {chops} marked")
+    if alive <= 0 {
+        return 2
+    }
+    if counts[colony.STORED_WOOD] + built <= 4 {
+        return 3
+    }
+    if fields <= 0 {
+        return 4
+    }
+    if built <= 0 {
+        return 5
+    }
+    // Written as bytes and made again: the same ground, the same people, the
+    // same stores -- which is what a reload carries over.
+    // A third of the way to ripe is no number of thousandths, so it is what
+    // says whether a float came back as itself.
+    w.ripe[0] = 1.0 / 3.0
+    let back = colony.restore(colony.save(w))
+    let again: [i32] = array(colony.COUNTS, 0)
+    colony.tally(back, again)
+    let alike = 0
+    for c in 0..len(w.ground.tiles) {
+        if back.ground.tiles[c] == w.ground.tiles[c] &&
+                back.items[c] == w.items[c] &&
+                back.marks[c] == w.marks[c] {
+            alike += 1
+        }
+    }
+    if alike != len(w.ground.tiles) {
+        return 6
+    }
+    if again[colony.STORED_WOOD] != counts[colony.STORED_WOOD] ||
+            again[colony.STORED_FOOD] != counts[colony.STORED_FOOD] {
+        return 7
+    }
+    let people = 0
+    for r in back.people {
+        people += 1
+    }
+    if people != alive {
+        return 8
+    }
+    // What grows comes back as itself rather than to the nearest thousandth:
+    // a float is written as its bits.
+    for c in 0..len(w.ripe) {
+        if back.ripe[c] != w.ripe[c] {
+            return 11
+        }
+    }
+    // And everybody stands where they stood, in the order they were saved.
+    let stood: [f32] = array()
+    for r in w.people {
+        if let one = get(w.people, r) {
+            push(stood, one.x)
+            push(stood, one.y)
+        }
+    }
+    let at = 0
+    for r in back.people {
+        if let one = get(back.people, r) {
+            if one.x != stood[at] || one.y != stood[at + 1] {
+                return 10
+            }
+            at += 2
+        }
+    }
+    return 0
+}

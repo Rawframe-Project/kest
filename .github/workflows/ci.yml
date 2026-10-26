@@ -14,12 +14,17 @@ concurrency:
   group: kest-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   linux:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: build
         run: make -j
       - name: fast
@@ -28,7 +33,7 @@ jobs:
         run: make fuzz
       - name: conformance trace
         run: sh tools/conformance.sh ./kest linux-x86-64.trace
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: trace-linux-x86-64
           path: linux-x86-64.trace
@@ -42,7 +47,7 @@ jobs:
           make bench/measure bench/frame
           SAMPLES=10 ROUNDS=20000 sh bench/families.sh \
             | tee linux-x86-64.families
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: families-linux-x86-64
           path: linux-x86-64.families
@@ -57,7 +62,9 @@ jobs:
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: build
         run: make -j
       - name: fast
@@ -72,7 +79,7 @@ jobs:
         run: sh tools/check-c.sh examples/*.kest
       - name: conformance trace
         run: sh tools/conformance.sh ./kest linux-arm64.trace
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: trace-linux-arm64
           path: linux-arm64.trace
@@ -81,7 +88,7 @@ jobs:
           make bench/measure bench/frame
           SAMPLES=10 ROUNDS=20000 sh bench/families.sh \
             | tee linux-arm64.families
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: families-linux-arm64
           path: linux-arm64.families
@@ -90,14 +97,16 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: build
         run: make -j
       - name: fast
         run: make fast
       - name: conformance trace
         run: sh tools/conformance.sh ./kest macos-arm64.trace
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: trace-macos-arm64
           path: macos-arm64.trace
@@ -126,7 +135,7 @@ jobs:
           cc -std=c11 -Wall -Wextra -Werror -Iinclude -o host host.c \
               lib/libkest.a -lm
           ./host
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-macos-arm64
           path: build/kest-*.tar.gz*
@@ -142,7 +151,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: build and fast, under clang
         run: |
           clang --version
@@ -153,7 +164,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: four machines of one build, under the thread sanitiser
         run: |
           make -j kest libkest.a
@@ -238,7 +251,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: an archive, unpacked and run
         run: |
           make -j
@@ -272,22 +287,19 @@ jobs:
           cc -std=c11 -Wall -Wextra -Werror -Iinclude -o host host.c \
               lib/libkest.a -lm
           ./host
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-linux-x86-64
           path: build/kest-*.tar.gz*
 
-  # The whole gate, as two halves on five runners at once: everything but the
-  # holes on one, and the holes in four shares on four. Together they are
-  # `make check`, and apart they answer in a third of the time the one job
-  # took. Every job here has a budget, and one that runs past it fails:
-  # a gate that takes longer every week is a gate somebody stops waiting for,
-  # and the budget is where that is noticed. See D1260.
-  most:
+  # The whole gate on one runner, with a budget: one that runs past it fails.
+  check:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       # What `check-wasm.sh` builds the library as WebAssembly with: a linker
       # for it and the C library WebAssembly's system interface has, beside
       # the clang and the Node the image has. See D1255.
@@ -296,28 +308,8 @@ jobs:
           sudo apt-get update -q
           sudo apt-get install -y -q lld wasi-libc \
               "libclang-rt-$(clang --version | sed -n 's/.*clang version \([0-9]*\).*/\1/p' | head -1)-dev-wasm32"
-      - name: everything but the holes
-        run: mkdir -p /home/runner/kest-tmp && TMPDIR=/home/runner/kest-tmp make most
-
-  holes:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        share: [1, 2, 3, 4]
-    steps:
-      - uses: actions/checkout@v4
-      - name: a WebAssembly toolchain
-        run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q lld wasi-libc \
-              "libclang-rt-$(clang --version | sed -n 's/.*clang version \([0-9]*\).*/\1/p' | head -1)-dev-wasm32"
-      - name: every check put out of order, a share of them
-        run: |
-          mkdir -p /home/runner/kest-tmp
-          KEST_HOLES_SHARE=${{ matrix.share }}/4 \
-              TMPDIR=/home/runner/kest-tmp sh tools/check-backstops.sh
+      - name: the whole gate
+        run: mkdir -p /home/runner/kest-tmp && TMPDIR=/home/runner/kest-tmp make check
 
   # An engine hosting Kest: raylib built from its own source, the host built
   # against it, and the game played by the program's own player under a
@@ -327,7 +319,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: raylib, and a display nobody sees
         run: |
           sudo apt-get update -q
@@ -344,7 +338,15 @@ jobs:
               examples/tetris/host --frames 1500 --shot tetromino.png | tee said
           grep -q "1500 frame(s), score 3$" said
           test -s tetromino.png
-      - uses: actions/upload-artifact@v4
+      - name: the colony, its rules run both ways
+        run: |
+          make colony RAYLIB="$RUNNER_TEMP/raylib/src"
+          for native in 0 1; do
+            xvfb-run -a -s "-screen 0 1024x768x24" \
+                examples/colony/colony --frames 600 --native "$native" | tee said
+            grep -q "^600 frames: people" said
+          done
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: tetromino-under-raylib
           path: tetromino.png
@@ -358,8 +360,10 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       - name: raylib as its own release built it for MSVC
         shell: pwsh
         run: |
@@ -394,7 +398,7 @@ jobs:
             'The game is examples\tetromino.kest and examples\tetris\game.kest:',
             'edit them and run it again.')
           Compress-Archive -Path $out -DestinationPath "$out.zip"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: kest-tetris-windows-x86_64
           path: kest-tetris-windows-x86_64.zip
@@ -403,8 +407,10 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       - name: build
         shell: cmd
         run: tools\build.bat
@@ -456,11 +462,11 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "a host would not build against the archive" }
           .\host.exe
           if ($LASTEXITCODE -ne 0) { throw "a host built against the archive would not run" }
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: trace-windows-x86-64
           path: windows-x86-64.trace
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: release-windows-x86-64
           path: build/kest-*-windows-x86_64.zip*
@@ -470,7 +476,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: { pattern: trace-*, merge-multiple: true }
       - name: every platform says the same thing
         run: |
@@ -480,3 +486,20 @@ jobs:
             && echo "linux and macos said the same thing"
           diff -u linux-x86-64.trace linux-arm64.trace \
             && echo "the two instruction sets said the same thing"
+
+  # The one check the ruleset requires: every job above passed.
+  required:
+    if: always()
+    needs: [linux, linux-arm64, macos, clang, threads, package, check, tetris,
+            tetris-windows, windows, agree]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: every job passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "$RESULTS"
+          for r in $RESULTS; do
+            case "$r" in success | skipped) ;; *) exit 1 ;; esac
+          done

@@ -1,0 +1,23 @@
+// Guards against a promise refused where none was wanted.
+
+module test.regress.wanted
+
+fn long(word: text) -> bool no.alloc {
+    return len(word) > 4
+}
+
+fn howMany(items: [text], keep: fn(text) -> bool) -> i32 {
+    let found = 0
+    for one in items {
+        if keep(one) {
+            found += 1
+        }
+    }
+    return found
+}
+
+fn main() -> i32 {
+    let words: [text] = array()
+    push(words, "herald")
+    return howMany(words, long) - 1
+}

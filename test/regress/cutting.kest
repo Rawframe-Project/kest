@@ -1,0 +1,19 @@
+// Guards against a cut the promise does not count.
+
+module test.regress.cutting
+
+import std.text
+
+fn counted(word: text) -> i32 no.alloc {
+    let n = 0
+    for i in 0..text.chars(word) {
+        if let one = text.charAt(word, i) {
+            n += len(one)
+        }
+    }
+    return n
+}
+
+fn main() -> i32 {
+    return counted("kest") - 4
+}

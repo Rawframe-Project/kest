@@ -1,0 +1,11 @@
+// Guards against a `return` wider than the function gives back.
+
+module test.regress.returning
+
+fn twice(n: i32) -> i32 {
+    return n * 2
+}
+
+fn main() -> i32 {
+    return twice(2) - 4
+}

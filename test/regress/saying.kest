@@ -1,0 +1,10 @@
+// Guards against a host that allocates under a promise made for it.
+
+module test.regress.saying
+
+import std.io
+
+fn main() -> i32 {
+    io.print("hello")
+    return 0
+}

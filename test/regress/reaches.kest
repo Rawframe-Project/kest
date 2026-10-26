@@ -1,0 +1,10 @@
+// Guards against a measurement of where a host is called from that is short.
+
+module test.regress.reaches
+
+import std.io
+
+fn main() -> i32 {
+    io.print("into the host and back")
+    return 0
+}

@@ -1,0 +1,17 @@
+// Refused with K0310. Guards against a promise that does not survive being handed over.
+
+module test.refused.handed
+
+fn grows(n: i32) -> i32 {
+    let made: [i32] = array()
+    push(made, n)
+    return len(made)
+}
+
+fn careful(f: fn(i32) -> i32 no.alloc, n: i32) -> i32 no.alloc {
+    return f(n)
+}
+
+fn main() -> i32 {
+    return careful(grows, 1) - 1
+}

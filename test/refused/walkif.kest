@@ -1,0 +1,16 @@
+// Refused with K0401. Guards against a tree walk that does not look inside an `if`.
+
+module test.refused.walkif
+
+fn quiet(n: i32) -> i32 no.alloc {
+    if n > 0 {
+        let made: [i32] = array()
+        push(made, n)
+        return len(made)
+    }
+    return 0
+}
+
+fn main() -> i32 {
+    return quiet(1) - 1
+}

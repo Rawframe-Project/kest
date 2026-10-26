@@ -14,6 +14,9 @@ on:
       - 'bench/determinism.sh'
       - '.github/workflows/determinism.yml'
 
+permissions:
+  contents: read
+
 jobs:
   unix:
     strategy:
@@ -32,7 +35,9 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       - name: Kest, and the comparators built from their own source
         run: |
           make -j kest
@@ -59,7 +64,7 @@ jobs:
             LUA=lua-5.4.9/src/lua LUAJIT=luajit/src/luajit \
             LUAU=$( [ -x luau-bin/luau ] && echo luau-bin/luau ) NODE=node \
             OUT=answers-${{ matrix.platform }}.tsv sh bench/determinism.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: answers-${{ matrix.platform }}
           path: answers-${{ matrix.platform }}.tsv
@@ -68,8 +73,10 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       - name: Kest
         shell: cmd
         run: tools\build.bat
@@ -98,7 +105,7 @@ jobs:
           PLATFORM=windows-x86_64 KEST=./build/win/kest.exe LUA=./lua.exe \
             LUAJIT=./luajit/src/luajit.exe LUAU=./luau-bin/luau.exe NODE=node \
             OUT=answers-windows-x86_64.tsv sh bench/determinism.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: answers-windows-x86_64
           path: answers-windows-x86_64.tsv
@@ -109,7 +116,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: answers-*
           merge-multiple: true
@@ -122,7 +129,7 @@ jobs:
             cat answers-*.tsv
           } > determinism.tsv
           cat determinism.tsv
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: determinism
           path: determinism.tsv

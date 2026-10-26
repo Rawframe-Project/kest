@@ -1,0 +1,15 @@
+// Guards against one of a run read at the width it is about to become.
+
+module test.regress.picked
+
+import std.random
+
+fn main() -> i32 {
+    let xs: [i32] = array()
+    push(xs, 11)
+    let s = random.from(7)
+    if let got = random.one(s, xs) {
+        return got - 11
+    }
+    return 1
+}

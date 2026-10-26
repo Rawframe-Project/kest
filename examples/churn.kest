@@ -5,7 +5,7 @@ import std.table
 import std.os
 import std.text
 
-// The second memory workload. `colony.kest` is a world that is kept and worked
+// The second memory workload. `settlement.kest` is a world that is kept and worked
 // on; this one is the same question asked of the things a world holds rather
 // than of the world: text replaced in live entries, arrays replaced in live
 // entries, identities deleted and made again, cycles held throughout, and all

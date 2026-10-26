@@ -1,0 +1,11 @@
+// Refused with K0317. Guards against a checker that lets through what the compiler cannot emit.
+
+module test.refused.walking
+
+fn main() -> i32 {
+    let n = 3
+    for x in n {
+        return 1
+    }
+    return 0
+}

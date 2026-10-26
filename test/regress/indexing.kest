@@ -1,0 +1,13 @@
+// Guards against a name index that does not hold every name.
+
+module test.regress.indexing
+
+struct Point {
+    x: i32
+    y: i32
+}
+
+fn main() -> i32 {
+    let p = Point(1, 2)
+    return p.x + p.y - 3
+}

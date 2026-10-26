@@ -1,0 +1,17 @@
+// Refused with K0401. Guards against a tree walk that forgets the calls it made.
+
+module test.refused.walkcall
+
+fn grows() -> i32 {
+    let a: [i32] = array()
+    push(a, 1)
+    return len(a)
+}
+
+fn quiet() -> i32 no.alloc {
+    return grows() - 1
+}
+
+fn main() -> i32 {
+    return quiet()
+}

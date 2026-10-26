@@ -1,0 +1,15 @@
+// Guards against a call worked out as though it built what it gives back.
+
+module test.regress.builtcall
+
+import std.io
+import std.random
+
+fn main() -> i32 {
+    let held = random.next(random.from(5))
+    if random.number(held) != random.number(random.next(random.from(5))) {
+        io.print("a call was taken for the shape it gives back")
+        return 1
+    }
+    return 0
+}

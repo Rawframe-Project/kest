@@ -44,7 +44,7 @@ copy /y LICENSE "%DIR%\" >nul || exit /b 1
 echo windows-x86_64>> "%DIR%\VERSION"
 echo unpack it anywhere; bin\kest.exe finds lib\kest beside it>> "%DIR%\VERSION"
 echo what it is and how to build a host against it: README.md>> "%DIR%\VERSION"
-echo what changed: CHANGELOG.md. what it means: docs\language.md>> "%DIR%\VERSION"
+echo what changed: CHANGELOG.md. how to use it: docs\README.md>> "%DIR%\VERSION"
 echo the licence every file of it is under: LICENSE>> "%DIR%\VERSION"
 
 rem The one thing here that is not a copy. Written the way the other platform
