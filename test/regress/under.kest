@@ -1,0 +1,12 @@
+// Guards against a count taken below nothing.
+
+module test.regress.under
+
+fn side(n: i32) -> i32 {
+    return n
+}
+
+fn main() -> i32 {
+    side(1)
+    return 0
+}

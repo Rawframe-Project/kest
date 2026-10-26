@@ -1,0 +1,11 @@
+// Guards against a call handing over more slots than the body takes.
+
+module test.regress.overhanded
+
+fn counted(a: i32, b: i32) -> i32 {
+    return a % 100 + b
+}
+
+fn main() -> i32 {
+    return counted(1, 2) - 3
+}

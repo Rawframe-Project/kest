@@ -1,0 +1,14 @@
+// Guards against a cut that loses the piece after the last separator.
+
+module test.regress.cut
+
+import std.io
+import std.text
+
+fn main() -> i32 {
+    if text.join(text.split("a,b,", ","), ",") != "a,b," {
+        io.print("a cut and a join are not two halves of one thing")
+        return 1
+    }
+    return 0
+}

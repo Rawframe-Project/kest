@@ -1,0 +1,14 @@
+// Guards against a signed division left one past the top of its width.
+
+module test.regress.dividing
+
+fn main() -> i32 {
+    let least: i32 = i32(0 - 2147483647) - 1
+    let minus: i32 = 0 - 1
+    let shrinking = least
+    shrinking /= minus
+    if shrinking < 0 {
+        return 0
+    }
+    return 300
+}

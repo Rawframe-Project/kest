@@ -1,0 +1,42 @@
+// Guards against a `continue` that does not give back what the turn took.
+
+module test.regress.skipping
+
+fn take(slots: [bool]) -> i32 no.alloc {
+    for i in 0..len(slots) {
+        if slots[i] {
+            slots[i] = false
+            return i
+        }
+    }
+    return 0 - 1
+}
+
+fn give(slots: [bool], which: i32) no.alloc {
+    if which >= 0 {
+        slots[which] = true
+    }
+}
+
+fn free(slots: [bool]) -> i32 no.alloc {
+    let n = 0
+    for s in slots {
+        if s {
+            n += 1
+        }
+    }
+    return n
+}
+
+fn main() -> i32 {
+    let slots = array(4, true)
+    let values = [1, 2, 9, 3]
+    for v in values {
+        let held = take(slots)
+        defer give(slots, held)
+        if v == 2 {
+            continue
+        }
+    }
+    return free(slots) - 4
+}

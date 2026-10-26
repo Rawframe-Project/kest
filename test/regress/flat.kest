@@ -1,0 +1,23 @@
+// Guards against a struct that stops being a value laid out flat.
+
+module test.regress.flat
+
+struct Pair {
+    one: i32
+    two: i32
+}
+
+fn main() -> i32 {
+    let a = Pair(1, 2)
+    let b = Pair(1, 3)
+    if a != a {
+        return 300
+    }
+    if a == b {
+        return 301
+    }
+    if hash(a) != hash(a) || hash(a) == hash(b) {
+        return 302
+    }
+    return 0
+}

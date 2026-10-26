@@ -1,0 +1,26 @@
+// Guards against a jump that says it is a different width.
+
+module test.regress.jumping
+
+fn count(n: i32) -> i32 {
+    let m = 0
+    let i = 0
+    while i < n {
+        if i == 2 {
+            m += 10
+        }
+        if i == 4 {
+            m += 100
+        }
+        if m > 1000 {
+            m -= 1
+        }
+        m += 1
+        i += 1
+    }
+    return m
+}
+
+fn main() -> i32 {
+    return count(6) - 116
+}

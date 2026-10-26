@@ -1,0 +1,15 @@
+// Guards against a place held apart inside another place.
+
+module test.regress.nesting
+
+struct Holder {
+    cools: [i32]
+    n: i32
+}
+
+fn main() -> i32 {
+    let hs: [Holder] = array()
+    push(hs, Holder(array(4, 0), 1))
+    hs[0].cools[1] = 7
+    return hs[0].cools[1] - 7
+}

@@ -68,3 +68,4 @@ Every check script runs on its own from the root of the tree after `make`. On th
 - **A door of the C API:** declare it in `kest.h` with a comment saying when it refuses and what it writes into the report, call it from `examples/embed.c`, and bump `KEST_ABI_VERSION` if anything a host could already see changed.
 - **A standard library function:** write it in Kest in `lib/std`, with the promises it can make, and in both widths where the module has both.
 - **An example:** a program that checks itself and answers 0, under `examples/`, in the one form.
+- **A fixed defect:** a program that shows it, with a comment naming the defect, in `test/regress` (it checks itself and answers 0) or `test/refused` (its first line is `// Refused with K0000.` with the code); `tools/check-regress.sh` runs them.

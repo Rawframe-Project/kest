@@ -78,15 +78,15 @@ C11, `-Wall -Wextra -Wshadow -Wconversion -Werror` for the library; `.clang-form
 Follow the [repository standard's Tests section](https://github.com/Rawframe-Project/.github/blob/main/docs/repository-standard.md#tests); in this repository:
 
 - An example under `examples/` checks its own answers and returns 0, or the number of the check that failed. `make check` runs every example under the release build, the sanitized build, the heap walked at every allocation, `KEST_PLAIN=1` and `KEST_NOOPT=1`, and compiled to C, and holds every run to the same output.
-- A defect gets a program that shows it: an example, a case in the check of its area, or a program a check writes on the spot. Do not add checks that break the tree on purpose to see another check catch it.
+- A defect gets a program that shows it, with a comment naming the defect: a self-checking program in `test/regress`, or one in `test/refused` whose first line names the code it is refused with. `tools/check-regress.sh` runs each under both builds, the heap walked at every allocation, `KEST_PLAIN`, `KEST_NOOPT` and compiled to C. A case that needs a host or a command goes in the check of its area. Do not add checks that break the tree on purpose to see another check catch it.
 - A new diagnostic needs the program that makes it happen, in the check of its area (usually `tools/check-commands.sh`).
-- A fuzz finding is a seed, a count and a target; reduce the input and add it as a program to the check of its area.
+- A fuzz finding is a seed, a count and a target; reduce the input and add it to `test/regress` or `test/refused`.
 - Every `kest` block in `docs/user` checks with nothing to say; a block followed by a `text` block runs and prints exactly that; every C host on those pages builds. `tools/check_guide.py` enforces it.
 - An optimization shows in an instruction count (`KEST_DEEP=1` under `kest-debug`) or a benchmark, and changes no output under any switch.
 
 ## Documentation
 
-Follow the [repository standard's Documentation section](https://github.com/Rawframe-Project/.github/blob/main/docs/repository-standard.md#documentation). A change in what a program or a host may write or rely on updates its page of `docs/user/` in the same pull request, and a change in how a part works updates its page of `docs/internals/`. Nothing is recorded anywhere else: no decision log, no worklog, no numbered decisions in comments.
+Follow the [repository standard's Documentation section](https://github.com/Rawframe-Project/.github/blob/main/docs/repository-standard.md#documentation). A change in what a program or a host may write or rely on updates its page of `docs/user/` in the same pull request, and a change in how a part works updates its page of `docs/internals/`. Nothing is recorded anywhere else: no decision or progress journals, no numbered decisions in comments.
 
 ## Pull requests
 

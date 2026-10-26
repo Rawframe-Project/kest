@@ -1,0 +1,11 @@
+// Guards against a name declared and not put where names are looked up.
+
+module test.regress.unfound
+
+fn one() -> i32 {
+    return 1
+}
+
+fn main() -> i32 {
+    return one() - 1
+}

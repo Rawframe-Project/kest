@@ -65,4 +65,4 @@ The IR is the one statement of what a program means. The bytecode machine and th
 
 ## Where things are tested
 
-Each example in `examples/` and each module in `lib/std` checks itself and answers 0. `tools/check.sh` runs them under both engines, the sanitizers and WebAssembly, runs every command over every file, asks for every diagnostic code, and drives the fuzzers. See [Checks](../operations/checks.md).
+Each example in `examples/` and each module in `lib/std` checks itself and answers 0, and `test/` holds a program for each defect that once escaped. `tools/check.sh` runs them under both engines, the sanitizers and WebAssembly, runs every command over every file, asks for every diagnostic code, and drives the fuzzers. See [Checks](../operations/checks.md).

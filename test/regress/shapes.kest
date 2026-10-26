@@ -1,0 +1,35 @@
+// Guards against two copies of a shape that are one type.
+
+module test.regress.shapes
+
+struct AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOne {
+    n: i32
+}
+
+struct AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAATwo {
+    x: f32
+    y: f32
+}
+
+struct Box<T> {
+    held: T
+    tag: i32
+}
+
+fn main() -> i32 {
+    let a: Box<AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOne> = Box(
+        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOne(3),
+        1
+    )
+    let b: Box<AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAATwo> = Box(
+        AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAATwo(1.5, 2.5),
+        2
+    )
+    if a.held.n != 3 {
+        return 1
+    }
+    if b.held.y != 2.5 {
+        return 2
+    }
+    return 0
+}

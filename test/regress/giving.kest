@@ -1,0 +1,13 @@
+// Guards against a body giving back what its declaration does not hold.
+
+module test.regress.giving
+
+import std.text
+
+fn narrowed() -> i8 {
+    return i8(len(text.repeat("a", 300)))
+}
+
+fn main() -> i32 {
+    return i32(narrowed()) - 44
+}

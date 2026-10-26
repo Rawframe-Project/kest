@@ -1,0 +1,13 @@
+// Refused with K0507. Guards against a block's text kept in an array that outlives it.
+
+module test.refused.kept
+
+fn main() -> i32 {
+    let names: [text] = array()
+    scratch {
+        let made = "{len(names)}!"
+        push(names, made)
+    }
+
+    return len(names) - 1
+}

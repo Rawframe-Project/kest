@@ -1,0 +1,12 @@
+// Refused with K0507. Guards against a block's text read after the block gave it back.
+
+module test.refused.read
+
+fn main() -> i32 {
+    let kept = "x"
+    scratch {
+        kept = "{len(kept)}!"
+    }
+
+    return len(kept) - 2
+}

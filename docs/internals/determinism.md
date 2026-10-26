@@ -15,7 +15,7 @@ Every operation whose result could differ by platform or compiler is either defi
 
 ## Mathematics in Kest
 
-`sin`, `cos`, `pow`, `atan` and `atan2` are fdlibm's algorithms written in Kest, constant by constant, in `lib/std/fdlibm.kest`, so they are the same sequence of additions, multiplications and divisions everywhere. `tan` is a sine over a cosine; `asin` and `acos` are built from `atan2` and a square root. Against glibc they agree to within an ulp for ordinary arguments; past about 1.6 million a sine is the same on every machine and further from the true value. Only `sqrt`, `floor` and `ceil` are host doors, declared `deterministic` because IEEE 754 requires them to be correctly rounded and exact. Before this, the four were the host's libm and outside the profile; moving them into Kest is what profile 3 changed.
+`sin`, `cos`, `pow`, `atan` and `atan2` are fdlibm's algorithms written in Kest, constant by constant, in `lib/std/fdlibm.kest`, so they are the same sequence of additions, multiplications and divisions everywhere. `tan` is a sine over a cosine; `asin` and `acos` are built from `atan2` and a square root. Against glibc they agree to within an ulp for ordinary arguments; past about 1.6 million a sine is the same on every machine and further from the true value. Only `sqrt`, `floor` and `ceil` are host doors, declared `deterministic` because IEEE 754 requires them to be correctly rounded and exact. Which functions are Kest and which are host doors is part of the profile: moving one across is a change of the profile number.
 
 ## Order and hashing
 

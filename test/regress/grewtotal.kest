@@ -1,0 +1,11 @@
+// Guards against a total of what is held that is not the sum of it.
+
+module test.regress.grewtotal
+
+fn main() -> i32 {
+    let many: [i32] = array()
+    for i in 0..400000 {
+        push(many, i)
+    }
+    return len(many) - 400000
+}

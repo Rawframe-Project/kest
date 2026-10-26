@@ -1,0 +1,15 @@
+// Guards against two instructions folded across something that points between them.
+
+module test.regress.landing
+
+fn add(a: i32, b: i32) -> i32 {
+    return a + b
+}
+
+fn landing(x: i32, y: i32, yes: bool) -> i32 {
+    return add(if yes -> x else -> x, y)
+}
+
+fn main() -> i32 {
+    return landing(3, 4, true) - 7
+}

@@ -1,0 +1,11 @@
+// Guards against an index that names a place there is no name at.
+
+module test.regress.declared
+
+fn one() -> i32 {
+    return 1
+}
+
+fn main() -> i32 {
+    return one() - 1
+}

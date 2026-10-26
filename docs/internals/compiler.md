@@ -4,7 +4,7 @@
 
 ## IR
 
-[`src/ir.h`](../../src/ir.h) is the one statement of what a program means, so that more than one backend reads the same answer. It used to be that the compiler walked the checked tree and wrote stack instructions as it went; then the tree was the only statement of what a program does, and anything else (a second backend, a question about where a value came from) had to resolve names again.
+[`src/ir.h`](../../src/ir.h) is the one statement of what a program means, so that more than one backend reads the same answer. The bytecode lowering and the C backend both read it, and so does any question about where a value came from, so none of them resolves names again or walks the checked tree for meaning.
 
 A body is one concrete function: a generic has one body per set of types. It is a list of operations, each reading the values on top and leaving one; values are consumed innermost first, in the order a walk of the tree makes them, which is what lets a stack backend need no scratch slots. Three things it is not:
 

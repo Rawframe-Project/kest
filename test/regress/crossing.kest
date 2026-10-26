@@ -1,0 +1,10 @@
+// Guards against a crossing taking back what the declaration does not give.
+
+module test.regress.crossing
+
+import std.io
+
+fn main() -> i32 {
+    io.print("hello")
+    return 0
+}

@@ -1,0 +1,16 @@
+// Guards against a struct with nothing in it worked out as no slots.
+
+module test.regress.emptyconst
+
+struct Nothing {
+}
+
+const NOWT: Nothing = Nothing()
+
+fn after(e: Nothing, n: i32) -> i32 no.alloc {
+    return n
+}
+
+fn main() -> i32 {
+    return after(NOWT, 0)
+}

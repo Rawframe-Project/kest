@@ -20,10 +20,10 @@ One read cannot be placed by the walk: a `for` over text reads a byte at a posit
 
 ## For the debugger
 
-The same walk answers what a stopped frame may show. `kest_frame_written` asks whether the body has written a slot on every path to where the frame stands, and `kest_frame_text` hands over a slot's text only where it is one piece of text on every path. Both walk the body again for the asking, in an arena that is given back, so a debugger never follows a slot that is not text as an address. Before this, `locals` read whatever a not-yet-written slot held as text, and crashed.
+The same walk answers what a stopped frame may show. `kest_frame_written` asks whether the body has written a slot on every path to where the frame stands, and `kest_frame_text` hands over a slot's text only where it is one piece of text on every path. Both walk the body again for the asking, in an arena that is given back, so a debugger never follows a slot that is not text as an address. `locals` shows a slot not yet written as `not written yet` and a slot that is not one piece of text on every path as `text, not one piece here`, rather than reading either.
 
 ## How it is tested
 
-The verifier is fuzzed with bytecode no compiler wrote: `tools/fuzz.c`'s `chunks` target compiles a program, changes one number in one instruction, and requires the verifier either to refuse it or the machine to run it safely under the sanitizers. `tools/check-verifier.sh` changes each kind of operand in turn (a slot, a constant, a function, a door, a layout, a run of slots, a jump past the end, into the middle of an instruction, back past the start) and requires each refusal with its code. That fuzzing found three places the verifier was wrong, now fixed.
+The verifier is fuzzed with bytecode no compiler wrote: `tools/fuzz.c`'s `chunks` target compiles a program, changes one number in one instruction, and requires the verifier either to refuse it or the machine to run it safely under the sanitizers. `tools/check-verifier.sh` changes each kind of operand in turn (a slot, a constant, a function, a door, a layout, a run of slots, a jump past the end, into the middle of an instruction, back past the start) and requires each refusal with its code.
 
 The cost is measured as compile work and memory: the verifier's tables live in an arena taken under the build's and given back as it goes, so it is bounded by the same `--room` and `--work` ceilings as the rest of compiling.

@@ -1,0 +1,15 @@
+// Guards against a function value that stands for nothing.
+
+module test.regress.nothingcalled
+
+fn one(n: i32) -> i32 {
+    return n
+}
+
+fn through(f: fn(i32) -> i32, n: i32) -> i32 {
+    return f(n)
+}
+
+fn main() -> i32 {
+    return through(one, 1) - 1
+}

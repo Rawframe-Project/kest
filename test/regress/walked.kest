@@ -1,0 +1,13 @@
+// Guards against a walk that reads a byte past what it measured.
+
+module test.regress.walked
+
+fn main() -> i32 {
+    let count = 0
+    for byte in "abcdef" {
+        if byte != u8(0) {
+            count += 1
+        }
+    }
+    return count - 6
+}

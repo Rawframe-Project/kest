@@ -1,0 +1,15 @@
+// Guards against an instruction that adds and says it cut what it added.
+
+module test.regress.adding
+
+fn plus(a: i32, b: i32) -> i32 {
+    return a + b
+}
+
+fn main() -> i32 {
+    let big: i32 = 2147483647
+    if plus(big, 1) != i32(0 - 2147483647) - 1 {
+        return 300
+    }
+    return 0
+}

@@ -76,7 +76,7 @@ say library "$resolved file(s) resolve"
 # reads, and found the same way: this said `examples/*.kest lib/std/*.kest
 # tools/*.kest` and a task file out of form went unseen here and stopped a gate
 # thirty minutes later, which is the opposite of what a fast gate is for.
-if ! ./kest fmt --check $(find examples lib tools -name '*.kest' | sort) \
+if ! ./kest fmt --check $(find examples lib test tools -name '*.kest' | sort) \
         >"$scratch"/formed 2>&1 </dev/null; then
     say formatting "these are not in the one form:"
     cat "$scratch"/formed

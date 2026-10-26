@@ -2912,6 +2912,7 @@ done
 say "nothing" "three checks handed no files"
 
 ask "lends" tools/check-lends.sh
+ask "regressions" tools/check-regress.sh
 
 ask "verifier" tools/check-verifier.sh
 ask "guide" tools/check_guide.py

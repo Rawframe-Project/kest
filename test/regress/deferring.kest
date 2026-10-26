@@ -1,0 +1,21 @@
+// Guards against a deferred call counted below the answer it runs above.
+
+module test.regress.deferring
+
+fn give(xs: [bool], which: i32) no.alloc {
+    if which >= 0 {
+        xs[which] = true
+    }
+}
+
+fn measure(xs: [bool], value: i32) -> i32 no.alloc {
+    let held = 0
+    defer give(xs, held)
+    return value * 2
+}
+
+fn main() -> i32 {
+    let xs: [bool] = array()
+    push(xs, false)
+    return measure(xs, 3) - 6
+}

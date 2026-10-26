@@ -1,0 +1,13 @@
+// Guards against a machine that stops saying where a frame had got to.
+
+module test.regress.whereframe
+
+fn twice(n: i32) -> i32 {
+    return n % 100 + n % 100
+}
+
+fn main() -> i32 {
+    let a = twice(3)
+    let b = twice(4)
+    return a + b - 14
+}

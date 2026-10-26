@@ -1,0 +1,491 @@
+// Guards against an arena whose blocks fall outside what it says they do.
+
+module test.regress.grewarena
+
+fn made0(n: i32) -> i32 {
+    return n + 0
+}
+
+fn made1(n: i32) -> i32 {
+    return n + 1
+}
+
+fn made2(n: i32) -> i32 {
+    return n + 2
+}
+
+fn made3(n: i32) -> i32 {
+    return n + 3
+}
+
+fn made4(n: i32) -> i32 {
+    return n + 4
+}
+
+fn made5(n: i32) -> i32 {
+    return n + 5
+}
+
+fn made6(n: i32) -> i32 {
+    return n + 6
+}
+
+fn made7(n: i32) -> i32 {
+    return n + 7
+}
+
+fn made8(n: i32) -> i32 {
+    return n + 8
+}
+
+fn made9(n: i32) -> i32 {
+    return n + 9
+}
+
+fn made10(n: i32) -> i32 {
+    return n + 10
+}
+
+fn made11(n: i32) -> i32 {
+    return n + 11
+}
+
+fn made12(n: i32) -> i32 {
+    return n + 12
+}
+
+fn made13(n: i32) -> i32 {
+    return n + 13
+}
+
+fn made14(n: i32) -> i32 {
+    return n + 14
+}
+
+fn made15(n: i32) -> i32 {
+    return n + 15
+}
+
+fn made16(n: i32) -> i32 {
+    return n + 16
+}
+
+fn made17(n: i32) -> i32 {
+    return n + 17
+}
+
+fn made18(n: i32) -> i32 {
+    return n + 18
+}
+
+fn made19(n: i32) -> i32 {
+    return n + 19
+}
+
+fn made20(n: i32) -> i32 {
+    return n + 20
+}
+
+fn made21(n: i32) -> i32 {
+    return n + 21
+}
+
+fn made22(n: i32) -> i32 {
+    return n + 22
+}
+
+fn made23(n: i32) -> i32 {
+    return n + 23
+}
+
+fn made24(n: i32) -> i32 {
+    return n + 24
+}
+
+fn made25(n: i32) -> i32 {
+    return n + 25
+}
+
+fn made26(n: i32) -> i32 {
+    return n + 26
+}
+
+fn made27(n: i32) -> i32 {
+    return n + 27
+}
+
+fn made28(n: i32) -> i32 {
+    return n + 28
+}
+
+fn made29(n: i32) -> i32 {
+    return n + 29
+}
+
+fn made30(n: i32) -> i32 {
+    return n + 30
+}
+
+fn made31(n: i32) -> i32 {
+    return n + 31
+}
+
+fn made32(n: i32) -> i32 {
+    return n + 32
+}
+
+fn made33(n: i32) -> i32 {
+    return n + 33
+}
+
+fn made34(n: i32) -> i32 {
+    return n + 34
+}
+
+fn made35(n: i32) -> i32 {
+    return n + 35
+}
+
+fn made36(n: i32) -> i32 {
+    return n + 36
+}
+
+fn made37(n: i32) -> i32 {
+    return n + 37
+}
+
+fn made38(n: i32) -> i32 {
+    return n + 38
+}
+
+fn made39(n: i32) -> i32 {
+    return n + 39
+}
+
+fn made40(n: i32) -> i32 {
+    return n + 40
+}
+
+fn made41(n: i32) -> i32 {
+    return n + 41
+}
+
+fn made42(n: i32) -> i32 {
+    return n + 42
+}
+
+fn made43(n: i32) -> i32 {
+    return n + 43
+}
+
+fn made44(n: i32) -> i32 {
+    return n + 44
+}
+
+fn made45(n: i32) -> i32 {
+    return n + 45
+}
+
+fn made46(n: i32) -> i32 {
+    return n + 46
+}
+
+fn made47(n: i32) -> i32 {
+    return n + 47
+}
+
+fn made48(n: i32) -> i32 {
+    return n + 48
+}
+
+fn made49(n: i32) -> i32 {
+    return n + 49
+}
+
+fn made50(n: i32) -> i32 {
+    return n + 50
+}
+
+fn made51(n: i32) -> i32 {
+    return n + 51
+}
+
+fn made52(n: i32) -> i32 {
+    return n + 52
+}
+
+fn made53(n: i32) -> i32 {
+    return n + 53
+}
+
+fn made54(n: i32) -> i32 {
+    return n + 54
+}
+
+fn made55(n: i32) -> i32 {
+    return n + 55
+}
+
+fn made56(n: i32) -> i32 {
+    return n + 56
+}
+
+fn made57(n: i32) -> i32 {
+    return n + 57
+}
+
+fn made58(n: i32) -> i32 {
+    return n + 58
+}
+
+fn made59(n: i32) -> i32 {
+    return n + 59
+}
+
+fn made60(n: i32) -> i32 {
+    return n + 60
+}
+
+fn made61(n: i32) -> i32 {
+    return n + 61
+}
+
+fn made62(n: i32) -> i32 {
+    return n + 62
+}
+
+fn made63(n: i32) -> i32 {
+    return n + 63
+}
+
+fn made64(n: i32) -> i32 {
+    return n + 64
+}
+
+fn made65(n: i32) -> i32 {
+    return n + 65
+}
+
+fn made66(n: i32) -> i32 {
+    return n + 66
+}
+
+fn made67(n: i32) -> i32 {
+    return n + 67
+}
+
+fn made68(n: i32) -> i32 {
+    return n + 68
+}
+
+fn made69(n: i32) -> i32 {
+    return n + 69
+}
+
+fn made70(n: i32) -> i32 {
+    return n + 70
+}
+
+fn made71(n: i32) -> i32 {
+    return n + 71
+}
+
+fn made72(n: i32) -> i32 {
+    return n + 72
+}
+
+fn made73(n: i32) -> i32 {
+    return n + 73
+}
+
+fn made74(n: i32) -> i32 {
+    return n + 74
+}
+
+fn made75(n: i32) -> i32 {
+    return n + 75
+}
+
+fn made76(n: i32) -> i32 {
+    return n + 76
+}
+
+fn made77(n: i32) -> i32 {
+    return n + 77
+}
+
+fn made78(n: i32) -> i32 {
+    return n + 78
+}
+
+fn made79(n: i32) -> i32 {
+    return n + 79
+}
+
+fn made80(n: i32) -> i32 {
+    return n + 80
+}
+
+fn made81(n: i32) -> i32 {
+    return n + 81
+}
+
+fn made82(n: i32) -> i32 {
+    return n + 82
+}
+
+fn made83(n: i32) -> i32 {
+    return n + 83
+}
+
+fn made84(n: i32) -> i32 {
+    return n + 84
+}
+
+fn made85(n: i32) -> i32 {
+    return n + 85
+}
+
+fn made86(n: i32) -> i32 {
+    return n + 86
+}
+
+fn made87(n: i32) -> i32 {
+    return n + 87
+}
+
+fn made88(n: i32) -> i32 {
+    return n + 88
+}
+
+fn made89(n: i32) -> i32 {
+    return n + 89
+}
+
+fn made90(n: i32) -> i32 {
+    return n + 90
+}
+
+fn made91(n: i32) -> i32 {
+    return n + 91
+}
+
+fn made92(n: i32) -> i32 {
+    return n + 92
+}
+
+fn made93(n: i32) -> i32 {
+    return n + 93
+}
+
+fn made94(n: i32) -> i32 {
+    return n + 94
+}
+
+fn made95(n: i32) -> i32 {
+    return n + 95
+}
+
+fn made96(n: i32) -> i32 {
+    return n + 96
+}
+
+fn made97(n: i32) -> i32 {
+    return n + 97
+}
+
+fn made98(n: i32) -> i32 {
+    return n + 98
+}
+
+fn made99(n: i32) -> i32 {
+    return n + 99
+}
+
+fn made100(n: i32) -> i32 {
+    return n + 100
+}
+
+fn made101(n: i32) -> i32 {
+    return n + 101
+}
+
+fn made102(n: i32) -> i32 {
+    return n + 102
+}
+
+fn made103(n: i32) -> i32 {
+    return n + 103
+}
+
+fn made104(n: i32) -> i32 {
+    return n + 104
+}
+
+fn made105(n: i32) -> i32 {
+    return n + 105
+}
+
+fn made106(n: i32) -> i32 {
+    return n + 106
+}
+
+fn made107(n: i32) -> i32 {
+    return n + 107
+}
+
+fn made108(n: i32) -> i32 {
+    return n + 108
+}
+
+fn made109(n: i32) -> i32 {
+    return n + 109
+}
+
+fn made110(n: i32) -> i32 {
+    return n + 110
+}
+
+fn made111(n: i32) -> i32 {
+    return n + 111
+}
+
+fn made112(n: i32) -> i32 {
+    return n + 112
+}
+
+fn made113(n: i32) -> i32 {
+    return n + 113
+}
+
+fn made114(n: i32) -> i32 {
+    return n + 114
+}
+
+fn made115(n: i32) -> i32 {
+    return n + 115
+}
+
+fn made116(n: i32) -> i32 {
+    return n + 116
+}
+
+fn made117(n: i32) -> i32 {
+    return n + 117
+}
+
+fn made118(n: i32) -> i32 {
+    return n + 118
+}
+
+fn made119(n: i32) -> i32 {
+    return n + 119
+}
+
+fn main() -> i32 {
+    let many: [i32] = array()
+    for i in 0..40000 {
+        push(many, i)
+    }
+    return len(many) - 40000 + made0(0)
+}
