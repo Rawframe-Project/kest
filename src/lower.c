@@ -1570,9 +1570,15 @@ static void lower_op(Lower *lower, uint32_t index, const KestIrOp *op) {
         emit_constant(lower, op->imm[0], op->imm[1], span);
         return;
     case KEST_IR_CONST_AT: {
-        uint32_t first = kest_chunk_constant_run(
-            lower->module, lower->chunk, lower->body->constants + op->imm[0],
-            lower->body->constant_classes + op->imm[0], op->imm[2] * op->imm[1]);
+        // As in emit_constant: an empty run takes no offset from arrays a
+        // body with no constants does not have.
+        uint32_t many = (uint32_t)op->imm[2] * op->imm[1];
+        const KestValue *values =
+            many == 0 ? NULL : lower->body->constants + op->imm[0];
+        const uint8_t *classes =
+            many == 0 ? NULL : lower->body->constant_classes + op->imm[0];
+        uint32_t first = kest_chunk_constant_run(lower->module, lower->chunk,
+                                                 values, classes, many);
         if (lower->module->out_of_room) {
             lower->out_of_memory = true;
             return;
