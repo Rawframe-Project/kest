@@ -22,14 +22,18 @@ import sys
 import shutil
 import tempfile
 
-OBJECTS = "build/release"
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+BUILD_DIR = os.path.abspath(os.environ.get('KEST_BUILD', 'out/dev'))
+
+OBJECTS = os.path.join(BUILD_DIR, "build/release")
 # And the build that checks itself, which is the same sources with one more
 # thing turned on. A name the machine calls only inside `#if KEST_CHECKED` is
 # in no release object and is still called: reading one build and calling it
 # the tree was what said `kest_op_name` was declared and not there. Both are
 # read for what they make and what they ask for; which host calls what is still
 # read out of the release ones, because there is one of each there. See D870.
-CHECKED = "build/debug"
+CHECKED = os.path.join(BUILD_DIR, "build/debug")
 # The hosts. A tool that quietly skips one is a tool that says the public
 # header is used when nothing has looked. Three of them: the command line, the
 # one that asks every door, and the engine that drives a world. See D949.
@@ -60,7 +64,7 @@ def symbols(path):
 
 for host in HOSTS:
     if not os.path.exists(os.path.join(OBJECTS, host)):
-        print("%s is not built; `make embed engine` first" % host)
+        print("%s is not built in %s; build it with cmake first" % (host, OBJECTS))
         sys.exit(1)
 
 declared = {}
@@ -302,7 +306,7 @@ try:
     program = os.path.join(room, "dividing.kest")
     open(program, "w").write(WRITTEN)
     wrote = os.path.join(room, "wrote.c")
-    writing = subprocess.run(["./kest", "emit", "--c", program],
+    writing = subprocess.run([os.path.join(BUILD_DIR, 'kest'), "emit", "--c", program],
                              capture_output=True, text=True)
     open(wrote, "w").write(writing.stdout)
     object_of_it = os.path.join(room, "wrote.o")
@@ -432,7 +436,7 @@ for name in sorted(leaned_on):
 # functions called `min` is the one that was meant. `check --json` says `named`
 # for each, which is what the checker settled while it resolved the file.
 def said_of(path):
-    ran = subprocess.run(['./kest', 'check', '--json', path],
+    ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'check', '--json', path],
                          capture_output=True, text=True,
                          stdin=subprocess.DEVNULL)
     if not ran.stdout.strip():
@@ -536,17 +540,17 @@ instructions = some("the machine's instructions", [] if table is None else [
 emitted = set()
 walked = set()
 held = set()
-counting = os.path.exists('./kest-debug')
+counting = os.path.exists(os.path.join(BUILD_DIR, 'kest-debug'))
 for path in sorted(glob.glob('examples/*.kest')):
     if counting:
-        went = subprocess.run(['./kest-debug', 'run', path],
+        went = subprocess.run([os.path.join(BUILD_DIR, 'kest-debug'), 'run', path],
                               capture_output=True, text=True,
                               stdin=subprocess.DEVNULL,
                               env=dict(os.environ, KEST_DEEP='1'))
         for line in went.stderr.splitlines():
             if line.startswith('ran '):
                 walked.add(line.split()[1])
-    ran = subprocess.run(['./kest', 'emit', path], capture_output=True,
+    ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'emit', path], capture_output=True,
                          text=True, stdin=subprocess.DEVNULL)
     if ran.returncode != 0:
         print("%s: `emit` would not write it out" % path)
@@ -625,7 +629,7 @@ for name in sorted(held - set(kinds)):
 # legitimately does. See D782.
 WIDEST_NODE = {"expression": 48, "statement": 48, "declaration": 88}
 
-node_said = subprocess.run(['./kest', 'parse', 'examples/words.kest', '--json'],
+node_said = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'parse', 'examples/words.kest', '--json'],
                            capture_output=True, text=True,
                            stdin=subprocess.DEVNULL)
 node_bytes = ({} if node_said.returncode != 0
@@ -648,7 +652,7 @@ if True:
 of_told = 0
 of_untold = 0
 for of_path in sorted(glob.glob(os.path.join('examples', '*.kest'))):
-    of_ran = subprocess.run(['./kest', 'emit', of_path, '--json'],
+    of_ran = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'emit', of_path, '--json'],
                             capture_output=True, text=True,
                             stdin=subprocess.DEVNULL)
     if of_ran.returncode != 0:

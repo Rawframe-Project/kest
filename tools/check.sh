@@ -7,6 +7,12 @@
 # Nothing here takes a list of files. A list is the thing that goes stale.
 set -u
 
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+build_dir=${KEST_BUILD:-out/dev}
+case $build_dir in /*) ;; *) build_dir=$(pwd)/$build_dir ;; esac
+export KEST_BUILD="$build_dir"
+
 # A scratch of this run's own. Two of these run at once when the backstops put
 # one out of order while another is being asked, and fixed names in `/tmp` are
 # two runs writing to one file.
@@ -37,9 +43,8 @@ count=$(printf '%s\n' "$sources" | grep -c .)
 # for as long as anybody had run it -- past a walk that asks what a compiler
 # made and a walk that asks whether a name has a space in it, because it is
 # neither. What catches the next one is the difference between the tree now
-# and the tree afterwards. `build` is left out because the gate fills it, and
-# it is what `make clean` takes away first. See D1134.
-tree_before=$(find . -type f -not -path './build/*' -not -path './.git/*' |
+# and the tree afterwards. `out` is left out because the builds fill it.
+tree_before=$(find . -type f -not -path './out/*' -not -path './.git/*' |
               sort)
 
 # Kest under `tools` is an instrument rather than a program: it is held to
@@ -63,32 +68,20 @@ if [ -z "$sources" ] || [ -z "$instruments" ] || [ -z "$workloads" ]; then
     exit 1
 fi
 
-# Built twice, because the two are different programs: the release one is what
-# ships and the debug one is what says whether it was right.
-if ! make >/dev/null 2>"$scratch"/check-why; then
-    complain "build" "the library does not build"
-    sed 's/^/    /' "$scratch"/check-why | head -10
-    exit 1
-fi
-if ! make debug embed embed-debug engine engine-debug least tools/inward \
-        tools/fuzz-debug bench/measure bench/frame \
-        >/dev/null \
-        2>"$scratch"/check-why; then
-    complain "build" "the sanitised build does not build"
-    sed 's/^/    /' "$scratch"/check-why | head -10
-    exit 1
-fi
-# And that what was built answers. A build that made no binary, or one that
-# cannot start, is every check below this reporting its own confusing failure —
-# a probe that passes when a command fails would pass for the wrong reason, and
-# `make` saying nothing is not the same as there being something to run.
-for built in ./kest ./kest-debug ./examples/embed ./examples/embed-debug ./examples/engine ./examples/engine-debug ./examples/least ./tools/inward ./bench/measure ./bench/frame; do
+# Built by CMake before any check runs (`cmake --build --preset <preset>`), in
+# two builds, because the two are different programs: the release one is what
+# ships and the checking one is what says whether it was right. What is held
+# here is that what was built is there and answers. A build that made no
+# binary, or one that cannot start, is every check below this reporting its own
+# confusing failure, and a probe that passes when a command fails would pass
+# for the wrong reason.
+for built in $build_dir/kest $build_dir/kest-debug $build_dir/examples/embed $build_dir/examples/embed-debug $build_dir/examples/engine $build_dir/examples/engine-debug $build_dir/examples/least $build_dir/tools/inward $build_dir/bench/measure $build_dir/bench/frame; do
     if [ ! -x "$built" ]; then
         complain "build" "$built was built and is not there"
         exit 1
     fi
 done
-if ! ./kest help >/dev/null 2>&1 || ! ./kest-debug help >/dev/null 2>&1; then
+if ! $build_dir/kest help >/dev/null 2>&1 || ! $build_dir/kest-debug help >/dev/null 2>&1; then
     complain "build" "what was built does not answer"
     exit 1
 fi
@@ -106,7 +99,7 @@ every_walked=0
 not_walked=0
 for file in $sources; do
     if ! grep -q '^fn main(' "$file"; then
-        if ./kest check "$file" >/dev/null 2>&1; then
+        if $build_dir/kest check "$file" >/dev/null 2>&1; then
             resolved=$((resolved + 1))
         else
             complain "examples" "$file does not resolve"
@@ -117,11 +110,11 @@ for file in $sources; do
     # would get from an empty file rather than what somebody's terminal
     # happens to have in it. An example is a program that answers the same
     # thing every time or it is not one.
-    out=$(./kest run "$file" 2>&1 </dev/null)
+    out=$($build_dir/kest run "$file" 2>&1 </dev/null)
     status=$?
     case "$out" in
     *"has no \`main\` to run"*)
-        if ./kest check "$file" >/dev/null 2>&1; then
+        if $build_dir/kest check "$file" >/dev/null 2>&1; then
             resolved=$((resolved + 1))
         else
             complain "examples" "$file does not resolve"
@@ -138,7 +131,7 @@ for file in $sources; do
             # report — the byte past the end of a piece of text is a byte the
             # arena handed out for something else — so a run of each and a
             # comparison is what there is. See D409.
-            checked_said=$(./kest-debug run "$file" 2>&1 </dev/null)
+            checked_said=$($build_dir/kest-debug run "$file" 2>&1 </dev/null)
             checked_status=$?
             if [ "$checked_said" != "$out" ] ||
                [ $checked_status -ne $status ]; then
@@ -160,7 +153,7 @@ for file in $sources; do
                 not_walked=$((not_walked + 1))
                 ;;
             *)
-                walked_said=$(KEST_WALK_EVERY=1 ./kest-debug run "$file" \
+                walked_said=$(KEST_WALK_EVERY=1 $build_dir/kest-debug run "$file" \
                                   2>&1 </dev/null)
                 walked_status=$?
                 if [ "$walked_said" != "$out" ] ||
@@ -200,7 +193,7 @@ done
 # tree is in the one form and the one form ends a line with one character.
 returns="$scratch"/check-returns.kest
 printf 'fn main() -> i32 {\r    return nope\r}\r' > "$returns"
-said=$(./kest check "$returns" 2>&1 </dev/null)
+said=$($build_dir/kest check "$returns" 2>&1 </dev/null)
 case "$said" in
 *"$returns:2:12"*) ;;
 *)
@@ -217,7 +210,7 @@ rm -f "$returns"
 inside="$scratch"/check-inside.kest
 printf 'fn main() -> i32 {\n    let s = "a\rb"\n    return len(s) - 3\n}\n' \
     > "$inside"
-said=$(./kest check "$inside" 2>&1 </dev/null)
+said=$($build_dir/kest check "$inside" 2>&1 </dev/null)
 case "$said" in
 *K0109*) ;;
 *)
@@ -234,7 +227,7 @@ rm -f "$inside"
 nought="$scratch"/check-nought.kest
 printf 'fn main() -> i32 {\n    let s = "a\\0b"\n    return len(s) - 3\n}\n' \
     > "$nought"
-if ! ./kest run "$nought" >"$scratch"/nought-said 2>&1 </dev/null; then
+if ! $build_dir/kest run "$nought" >"$scratch"/nought-said 2>&1 </dev/null; then
     complain "returns" "a nought written inside text is not text"
     sed 's/^/    /' "$scratch"/nought-said | head -3
 fi
@@ -254,7 +247,7 @@ fn main() -> i32 {
     return len(text(a))
 }
 EOF
-said=$(./kest run "$gathered" 2>&1 </dev/null)
+said=$($build_dir/kest run "$gathered" 2>&1 </dev/null)
 case "$said" in
 *K0604*"begins no character"*) ;;
 *)
@@ -272,7 +265,7 @@ fn main() -> i32 {
     return len(text(a))
 }
 EOF
-said=$(./kest run "$gathered" 2>&1 </dev/null)
+said=$($build_dir/kest run "$gathered" 2>&1 </dev/null)
 case "$said" in
 *K0604*"byte 10 begins no character"*) ;;
 *)
@@ -294,7 +287,7 @@ fn main() -> i32 {
     return len(text(a)) - 3
 }
 EOF
-if ! ./kest run "$held" >"$scratch"/held-said 2>&1 </dev/null; then
+if ! $build_dir/kest run "$held" >"$scratch"/held-said 2>&1 </dev/null; then
     complain "returns" "a nought gathered into text is not three bytes"
     sed 's/^/    /' "$scratch"/held-said | head -3
 fi
@@ -353,7 +346,7 @@ copies="$scratch"/check-copies.kest
     done
     printf '    return sum\n}\n'
 } > "$copies"
-made=$(./kest emit "$copies" 2>/dev/null | grep -c '^fn .*two#') || made=0
+made=$($build_dir/kest emit "$copies" 2>/dev/null | grep -c '^fn .*two#') || made=0
 
 cat > "$asking.c" <<'EOF'
 #include <stdio.h>
@@ -417,7 +410,7 @@ int main(int argc, char **argv) {
     return 0;
 }
 EOF
-if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$asking" "$asking.c"         libkest.a -lm 2>"$scratch"/check-why; then
+if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$asking" "$asking.c"         $build_dir/libkest.a -lm 2>"$scratch"/check-why; then
     complain "asking" "the host that asks before calling does not build"
     sed 's/^/    /' "$scratch"/check-why | head -3
 elif ! asked=$("$asking" "$asking.kest" 2>/dev/null); then
@@ -634,7 +627,7 @@ int main(int argc, char **argv) {
 }
 EOF
 if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$identity" "$identity.c" \
-        libkest.a -lm 2>"$scratch"/check-why; then
+        $build_dir/libkest.a -lm 2>"$scratch"/check-why; then
     complain "identity" "the host that asks what a reference names does not build"
     sed 's/^/    /' "$scratch"/check-why | head -3
 elif ! said=$("$identity" "$identity.kest" 2>&1); then
@@ -702,7 +695,7 @@ fn main() -> i32 {
     return quiet(log)
 }
 EOF
-said=$(./kest check "$deferred" 2>&1 </dev/null)
+said=$($build_dir/kest check "$deferred" 2>&1 </dev/null)
 case "$said" in
 *K0401*"promises \`no.alloc\`"*)
     # And the path is the whole of it: what allocates, where the promise was
@@ -753,7 +746,7 @@ fn main() -> i32 {
     return takes(xs, $at)
 }
 EOF
-    said=$(./kest run "$faulting" 2>&1 </dev/null)
+    said=$($build_dir/kest run "$faulting" 2>&1 </dev/null)
     faulting_wrong=""
     case "$said" in
     *"the block was entered"*) ;;
@@ -819,7 +812,7 @@ fn main() -> i32 {
     return 0
 }
 EOF
-said=$(./kest run "$forever" 2>&1 </dev/null)
+said=$($build_dir/kest run "$forever" 2>&1 </dev/null)
 case "$said" in
 *"8 and 4"*) ;;
 *)
@@ -877,7 +870,7 @@ fn main() -> i32 {
     return len(joined) - 400000
 }
 KEST
-for which in ./kest ./kest-debug; do
+for which in $build_dir/kest $build_dir/kest-debug; do
     if "$which" run --fuel 2000 "$scratch"/spin.kest \
             >"$scratch"/spun 2>&1 </dev/null; then
         complain "budget" "$which ran a loop that never ends to the end"
@@ -1130,7 +1123,7 @@ int main(int argc, char **argv) {
 #endif
 EOF
 if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$threads" "$threads".c \
-        libkest.a -lm 2>"$scratch"/check-why; then
+        $build_dir/libkest.a -lm 2>"$scratch"/check-why; then
     complain "threads" "the host that runs two machines at once does not build"
     sed 's/^/    /' "$scratch"/check-why | head -3
 elif ! said=$("$threads" "$threads".kest 2>&1); then
@@ -1355,11 +1348,11 @@ if ! cc -fsanitize=thread -o "$scratch"/watching "$scratch"/watching.c \
         2>/dev/null; then
     say "races" "this compiler cannot watch threads, so two machines of one \
 build were not watched"
-elif ! make -s races >"$scratch"/check-why 2>&1; then
-    complain "races" "the library does not build under the thread sanitiser"
-    sed 's/^/    /' "$scratch"/check-why | head -3
+elif [ ! -f $build_dir/build/races/vm.o ]; then
+    say "races" "this build has no objects for the thread sanitiser \
+(KEST_RACES), so two machines of one build were not watched"
 elif ! cc -std=c11 -Wall -Wextra -Werror -O1 -g -fsanitize=thread \
-        -Iinclude -o "$races" "$races".c build/races/*.o -lm -lpthread \
+        -Iinclude -o "$races" "$races".c $build_dir/build/races/*.o -lm -lpthread \
         2>"$scratch"/check-why; then
     complain "races" "the host that watches two machines does not build"
     sed 's/^/    /' "$scratch"/check-why | head -3
@@ -1502,7 +1495,7 @@ int main(int argc, char **argv) {
 }
 EOF
 if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$sharing" "$sharing".c \
-        libkest.a -lm 2>"$scratch"/check-why; then
+        $build_dir/libkest.a -lm 2>"$scratch"/check-why; then
     complain "sharing" "the host that debugs one machine of two does not build"
     sed 's/^/    /' "$scratch"/check-why | head -3
 elif ! said=$("$sharing" "$sharing".kest 2>&1); then
@@ -1623,7 +1616,7 @@ int main(int argc, char **argv) {
 }
 EOF
 if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$stopped" "$stopped".c \
-        libkest.a -lm 2>"$scratch"/check-why; then
+        $build_dir/libkest.a -lm 2>"$scratch"/check-why; then
     complain "stopped" "the host that asks a stopped machine for its heap \
 does not build"
     sed 's/^/    /' "$scratch"/check-why | head -3
@@ -1663,7 +1656,7 @@ rm -f "$stopped" "$stopped".c "$stopped".kest
 # the rounds and a hundred times the rounds have to answer the same figure,
 # under a room tight enough that nothing can hide in it.
 memory_most() {
-    ./kest profile --room 2M examples/churn.kest -- "$2" "$1" 2>&1 >/dev/null |
+    $build_dir/kest profile --room 2M examples/churn.kest -- "$2" "$1" 2>&1 >/dev/null |
         sed -n '1s/.*heap and \([0-9]*\) at most.*/\1/p'
 }
 for shape in replace reuse keep turn nest burst; do
@@ -1698,7 +1691,7 @@ hundred times"
 # in the same room however many rounds it is given. Said of the one that used
 # to be the counter-example, in a room a tenth of the one it ran out of.
 for turns in 100 1000 10000; do
-    if ! ./kest run --room 4M examples/churn.kest -- "$turns" replace \
+    if ! $build_dir/kest run --room 4M examples/churn.kest -- "$turns" replace \
             >/dev/null 2>&1; then
         complain "memory" "$turns rounds of \`replace\` would not run in four \
 megabytes"
@@ -1760,7 +1753,7 @@ for word in $keywords; do
         # A while to answer in, because what this is looking for is a compiler
         # that does not. Every one of these answers in milliseconds; the number
         # is a wall, not a measurement.
-        said=$(timeout 10 ./kest check "$kept" 2>&1 </dev/null)
+        said=$(timeout 10 $build_dir/kest check "$kept" 2>&1 </dev/null)
         why=$?
         tried=$((tried + 1))
         if [ "$why" -eq 124 ]; then
@@ -1811,7 +1804,7 @@ for promise in no.alloc no.host deterministic; do
     # See D1052.
     refused=0
     while true; do
-        said=$(KEST_LIB="$promised" ./kest check "$promised"/std/*.kest 2>&1 \
+        said=$(KEST_LIB="$promised" $build_dir/kest check "$promised"/std/*.kest 2>&1 \
             </dev/null | grep "^error\[K040[12]\].*promises \`$promise\`" \
             || true)
         found=$(printf '%s' "$said" | grep -c . || true)
@@ -1865,7 +1858,7 @@ $((without - refused)) could promise it and do not"
     # says whose door it is, is the name the refusal gives it. See D1269.
     entered=0
     for one in $(find "$scratch"/side/examples -name '*.kest' | sort); do
-        entered=$((entered + $(./kest check --json "$one" 2>/dev/null \
+        entered=$((entered + $($build_dir/kest check --json "$one" 2>/dev/null \
             </dev/null | python3 -c '
 import json
 import sys
@@ -1914,8 +1907,8 @@ ${promise_kept#, }"
 # file is otherwise only ever compiled as part of something else.
 quiet=0
 for file in $sources $instruments; do
-    said=$( { ./kest check "$file" 2>&1 </dev/null;
-              ./kest emit "$file" 2>&1 </dev/null; } |
+    said=$( { $build_dir/kest check "$file" 2>&1 </dev/null;
+              $build_dir/kest emit "$file" 2>&1 </dev/null; } |
             grep '^warning\[\|^error\[' | head -3)
     if [ -n "$said" ]; then
         complain "warnings" "$file says something about itself"
@@ -1938,7 +1931,7 @@ fn main() {
     let n = 1 + 1
 }
 EOF
-if ! ./kest run "$gives_nothing" >/dev/null 2>&1; then
+if ! $build_dir/kest run "$gives_nothing" >/dev/null 2>&1; then
     complain "examples" "a \`main\` that gives nothing back does not exit 0"
 fi
 rm -f "$gives_nothing"
@@ -1967,8 +1960,10 @@ say "modules" "every file is where its \`module\` line says it is"
 #
 # The examples are not one project: they are thirty programs that live in one
 # directory, and two of them may put their names under the same one without
-# either being wrong. `lib/std` is a project, so it is read as one.
-if ! ./kest check lib/std/*.kest >"$scratch"/check-why 2>&1; then
+# either being wrong. `lib/std` is a project, so it is read as one, with the
+# library named by the same path as the files, so an import and a file named
+# here are one path the way they are in an install.
+if ! KEST_LIB=lib/ $build_dir/kest check lib/std/*.kest >"$scratch"/check-why 2>&1; then
     complain "project" "the library does not check as one project"
     grep -m 4 -E '^(error|warning)' "$scratch"/check-why | sed 's/^/    /'
 fi
@@ -1981,11 +1976,11 @@ fi
 # files one at a time is what the sweeps above do; this is the other question,
 # which is whether the project is a project. See D1066.
 tree=$(pwd)
-if ! (cd "$tree"/examples/slice && "$tree"/kest build) >"$scratch"/check-why 2>&1; then
+if ! (cd "$tree"/examples/slice && "$build_dir"/kest build) >"$scratch"/check-why 2>&1; then
     complain "project" "\`kest build\` does not work in examples/slice"
     sed 's/^/    /' "$scratch"/check-why | head -6
 fi
-if ! (cd "$tree"/examples/slice && "$tree"/kest test tests/rounds.kest) \
+if ! (cd "$tree"/examples/slice && "$build_dir"/kest test tests/rounds.kest) \
         >"$scratch"/check-why 2>&1; then
     complain "project" "\`kest test\` does not work in examples/slice"
     sed 's/^/    /' "$scratch"/check-why | head -6
@@ -1994,7 +1989,7 @@ fi
 # project is a thing to be inside rather than a thing to name at every command.
 # The line was read and nothing asked for it until D1082, so `kest test` in a
 # project ran nothing and said so as though that were a pass.
-if ! (cd "$tree"/examples/slice && "$tree"/kest test) \
+if ! (cd "$tree"/examples/slice && "$build_dir"/kest test) \
         >"$scratch"/check-why 2>&1; then
     complain "project" "\`kest test\` with nothing named does not run what \
 the project says its tests are"
@@ -2022,7 +2017,7 @@ fn main() -> i32 {
     return 0
 }
 KEST
-if (cd "$empty_project" && "$tree"/kest test) >"$scratch"/check-why 2>&1; then
+if (cd "$empty_project" && "$build_dir"/kest test) >"$scratch"/check-why 2>&1; then
     complain "project" "a project with no program where it says its tests are \
 answered as though its tests had passed"
     sed 's/^/    /' "$scratch"/check-why | head -4
@@ -2047,8 +2042,11 @@ refused rather than passed"
 # would be, and there is no widening it into eight. See D553.
 python3 - $sources <<'LAYOUTS' > "$scratch"/layouts 2>&1
 import json
+import os
 import subprocess
 import sys
+
+BUILD_DIR = os.environ['KEST_BUILD']
 
 slots = 0
 bytes_of = 0
@@ -2056,7 +2054,7 @@ packed = 0
 shapes = 0
 widest = None
 for path in sys.argv[1:]:
-    said = subprocess.run(['./kest', 'check', path, '--json'],
+    said = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'check', path, '--json'],
                           capture_output=True, text=True,
                           stdin=subprocess.DEVNULL).stdout
     try:
@@ -2097,7 +2095,7 @@ if shapes == 0 or widest is None:
 told = 0
 twice = 0
 for path in sys.argv[1:]:
-    said = subprocess.run(['./kest', 'emit', path, '--json'],
+    said = subprocess.run([os.path.join(BUILD_DIR, 'kest'), 'emit', path, '--json'],
                           capture_output=True, text=True,
                           stdin=subprocess.DEVNULL).stdout
     try:
@@ -2168,16 +2166,16 @@ for file in $sources; do
     if ! grep -q '^fn main(' "$file"; then
         continue
     fi
-    fused_said=$(./kest run "$file" 2>&1 </dev/null)
+    fused_said=$($build_dir/kest run "$file" 2>&1 </dev/null)
     fused_was=$?
-    plain_said=$(KEST_PLAIN=1 ./kest run "$file" 2>&1 </dev/null)
+    plain_said=$(KEST_PLAIN=1 $build_dir/kest run "$file" 2>&1 </dev/null)
     plain_was=$?
     # And the same again with the optimizer turned off, which is the other
     # half of the same test: `KEST_PLAIN` holds the lowering's fusions and
     # `KEST_NOOPT` holds what the optimizer does to a body before the lowering
     # reads it. A pass that changes what a program answers is a pass that is
     # wrong, whatever it saved. See D1025.
-    bare_said=$(KEST_NOOPT=1 ./kest run "$file" 2>&1 </dev/null)
+    bare_said=$(KEST_NOOPT=1 $build_dir/kest run "$file" 2>&1 </dev/null)
     bare_was=$?
     case "$fused_said" in
     *"has no \`main\` to run"*) continue ;;
@@ -2208,13 +2206,13 @@ done
 # are meant to: what `emit` prints is the instructions, and a body the lowering
 # fused is fewer of them. A differential test that could not tell the two
 # builds apart would be one comparing a thing with itself.
-fused_code=$(./kest emit bench/kernel.kest 2>/dev/null | grep -c '^ ')
-plain_code=$(KEST_PLAIN=1 ./kest emit bench/kernel.kest 2>/dev/null | grep -c '^ ')
+fused_code=$($build_dir/kest emit bench/kernel.kest 2>/dev/null | grep -c '^ ')
+plain_code=$(KEST_PLAIN=1 $build_dir/kest emit bench/kernel.kest 2>/dev/null | grep -c '^ ')
 # The optimizer is read the same way and on another program, because the
 # kernel has no copy in it to take: what a pass does not fire on says nothing
 # about whether it fires.
-kept_code=$(./kest emit bench/agents.kest 2>/dev/null | grep -c '^ ')
-bare_code=$(KEST_NOOPT=1 ./kest emit bench/agents.kest 2>/dev/null | grep -c '^ ')
+kept_code=$($build_dir/kest emit bench/agents.kest 2>/dev/null | grep -c '^ ')
+bare_code=$(KEST_NOOPT=1 $build_dir/kest emit bench/agents.kest 2>/dev/null | grep -c '^ ')
 if [ "$kept_code" -ge "$bare_code" ]; then
     complain "optimized" "a body compiled with the optimizer and without it \
 writes the same number of instructions, so the optimizer is not happening"
@@ -2230,19 +2228,19 @@ against $bare_code not"
 fi
 
 # An instrument is checked, and then run for its answer rather than for its
-# number. `make check` does not read a duration — a duration is not a pass or a
-# fail, which is why `make time` is a target of its own — but what the one
+# number. The gate does not read a duration (a duration is not a pass or a
+# fail, which is why the `time` target is a target of its own), but what the one
 # measurement answers with is whether it did the work: every entity alive in
 # every step of every round, counted, and compared with what that comes to. An
 # instrument that stopped measuring would go on printing a number, and a
 # smaller number reads like a faster machine. See D549.
 for file in $instruments; do
-    if ! ./kest check "$file" >/dev/null 2>"$scratch"/check-why; then
+    if ! $build_dir/kest check "$file" >/dev/null 2>"$scratch"/check-why; then
         complain "instruments" "$file does not resolve"
         sed 's/^/    /' "$scratch"/check-why | head -6
         continue
     fi
-    if ! measured=$(./kest run "$file" 2>"$scratch"/check-why </dev/null); then
+    if ! measured=$($build_dir/kest run "$file" 2>"$scratch"/check-why </dev/null); then
         complain "instruments" "$file ran and says it did not do its work"
         sed 's/^/    /' "$scratch"/check-why | head -6
         continue
@@ -2386,7 +2384,7 @@ int main(int argc, char **argv) {
 }
 HOST
 if ! ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude \
-        -o "$scratch"/steady "$scratch"/steady.c libkest.a -lm \
+        -o "$scratch"/steady "$scratch"/steady.c $build_dir/libkest.a -lm \
         2>"$scratch"/check-why; then
     complain "instruments" "the host that holds a clock does not build"
     sed 's/^/    /' "$scratch"/check-why | head -5
@@ -2400,7 +2398,7 @@ else
     # asks rather than of what it writes: `Io.write` is the library's and no
     # instrument names it.
     asked_for=$(for file in $instruments; do
-        ./kest emit "$file" 2>/dev/null </dev/null | sed -n 's/^host //p'
+        $build_dir/kest emit "$file" 2>/dev/null </dev/null | sed -n 's/^host //p'
     done | sort -u)
     for name in Host.clock Io.write Math.floor; do
         case "$asked_for" in
@@ -2438,9 +2436,9 @@ fi
 # cannot measure a call into itself, so what measures one is C. It is built with
 # everything else at the top, where everything this gate reaches for is built;
 # what is read here is whether it did its work and what shape its line is. The
-# number is for `make time`, like the other two. See D859.
+# number is for the `time` target, like the other two. See D859.
 inward_said=""
-if ! inward_said=$(./tools/inward 2>"$scratch"/check-why </dev/null); then
+if ! inward_said=$($build_dir/tools/inward 2>"$scratch"/check-why </dev/null); then
     complain "instruments" "the host that measures a call in says it did not \
 do its work"
     sed 's/^/    /' "$scratch"/check-why | head -6
@@ -2487,7 +2485,7 @@ fi
 # is handed. A host writer copies this one, so it is held to working and to
 # saying no. See D624.
 least_wrong=0
-if ! ./examples/least >"$scratch"/least-said 2>&1; then
+if ! $build_dir/examples/least >"$scratch"/least-said 2>&1; then
     complain "least" "the smallest host did not run"
     sed 's/^/    /' "$scratch"/least-said | head -4
     least_wrong=1
@@ -2496,7 +2494,7 @@ elif ! grep -q "hello, host" "$scratch"/least-said ||
     complain "least" "the smallest host ran and did not say what crossed"
     sed 's/^/    /' "$scratch"/least-said | head -4
     least_wrong=1
-elif ./examples/least examples/embed.kest >"$scratch"/least-other 2>&1; then
+elif $build_dir/examples/least examples/embed.kest >"$scratch"/least-other 2>&1; then
     complain "least" "the smallest host ran a program asking for names it has \
 not got"
     sed 's/^/    /' "$scratch"/least-other | head -4
@@ -2552,7 +2550,7 @@ KEST
 # And what a call answers, which a host reads the same way whatever it is: a
 # number, or text, or an answer the language has no text of its own for — and
 # the last of those says so rather than being written wrongly.
-if ! ./examples/least examples/least.kest motto >"$scratch"/least-text 2>&1 ||
+if ! $build_dir/examples/least examples/least.kest motto >"$scratch"/least-text 2>&1 ||
    ! grep -q "whatever it is" "$scratch"/least-text; then
     complain "least" "the smallest host did not read back an answer that is \
 not a number"
@@ -2561,7 +2559,7 @@ not a number"
 fi
 # A shape is written the way a program writes one since D876, so this is the
 # host reading one back rather than being refused it.
-if ! ./examples/least examples/least.kest pair >"$scratch"/least-shape 2>&1 ||
+if ! $build_dir/examples/least examples/least.kest pair >"$scratch"/least-shape 2>&1 ||
    ! grep -q "gave back Pair(1, 2)" "$scratch"/least-shape; then
     complain "least" "the smallest host did not read back a shape written the \
 way a program writes one"
@@ -2570,7 +2568,7 @@ way a program writes one"
 fi
 # And what still has none, which is a handle: what it says as text is what is
 # behind it, and reaching through one is the host's question.
-if ! ./examples/least examples/least.kest held >"$scratch"/least-held 2>&1 ||
+if ! $build_dir/examples/least examples/least.kest held >"$scratch"/least-held 2>&1 ||
    ! grep -q "K0646" "$scratch"/least-held; then
     complain "least" "the smallest host wrote an answer the language has no \
 text of its own for"
@@ -2581,14 +2579,14 @@ fi
 # And what to call something with, handed over as words. A function that takes
 # text called with one answers; called with none, the frame is noughts and the
 # machine refuses it rather than letting the program read no address at all.
-if ! ./examples/least examples/least.kest greeting world \
+if ! $build_dir/examples/least examples/least.kest greeting world \
         >"$scratch"/least-word 2>&1 ||
    ! grep -q "hello, world" "$scratch"/least-word; then
     complain "least" "the smallest host did not call with a word what takes one"
     sed 's/^/    /' "$scratch"/least-word | head -4
     least_wrong=1
 fi
-if ./examples/least examples/least.kest greeting >"$scratch"/least-empty 2>&1 ||
+if $build_dir/examples/least examples/least.kest greeting >"$scratch"/least-empty 2>&1 ||
    ! grep -q "\[greeting\] error\[K0636\]" "$scratch"/least-empty; then
     complain "least" "a frame nobody filled was not refused in this host's \
 own words"
@@ -2610,7 +2608,7 @@ fn main() -> i32 {
     return 0
 }
 KEST
-if ! ./examples/least "$scratch"/least/warned.kest \
+if ! $build_dir/examples/least "$scratch"/least/warned.kest \
         >"$scratch"/least-warned 2>&1 ||
    ! grep -q "\] warning\[K0509\]" "$scratch"/least-warned; then
     complain "least" "the smallest host said nothing of its own about a \
@@ -2623,7 +2621,7 @@ fi
 # binds nothing, `kest_start` is handed NULL, and what is left is a build, a
 # call and what came back. A host writer meeting Kest with a program of their
 # own writes that much and no more.
-if ! ./examples/least examples/frame.kest >"$scratch"/least-none 2>&1; then
+if ! $build_dir/examples/least examples/frame.kest >"$scratch"/least-none 2>&1; then
     complain "least" "the smallest host would not run a program that asks for \
 nothing"
     sed 's/^/    /' "$scratch"/least-none | head -4
@@ -2631,7 +2629,7 @@ nothing"
 fi
 
 for shape in answering numbering; do
-    if ./examples/least "$scratch"/least/$shape.kest \
+    if $build_dir/examples/least "$scratch"/least/$shape.kest \
             >"$scratch"/least-shape 2>&1; then
         complain "least" "the smallest host bound its own name out of \
 \`$shape.kest\`, which asks for another shape of it"
@@ -2655,8 +2653,8 @@ fi
 # frame at a time and reloads the program under it. Both under both builds,
 # because a host is where the public boundary is crossed in both directions and
 # the sanitised build is the only thing that can say whether that went right.
-for host in ./examples/embed ./examples/embed-debug ./examples/engine \
-        ./examples/engine-debug; do
+for host in $build_dir/examples/embed $build_dir/examples/embed-debug $build_dir/examples/engine \
+        $build_dir/examples/engine-debug; do
     if ! "$host" >/dev/null 2>"$scratch"/check-why; then
         complain "host" "$host failed"
         sed 's/^/    /' "$scratch"/check-why | head -10
@@ -2678,7 +2676,7 @@ and the engine that drives a world and reloads under it"
 # happens.
 alone_at_once() {
     command=$1
-    out=$(./kest-debug "$command" $sources 2>&1 </dev/null)
+    out=$($build_dir/kest-debug "$command" $sources 2>&1 </dev/null)
     case "$out" in
     *"unknown command"*)
         complain "sanitisers" "there is no \`$command\`"
@@ -2691,7 +2689,7 @@ alone_at_once() {
         ;;
     esac
     for file in $sources; do
-        out=$(./kest-debug "$command" "$file" 2>&1 </dev/null)
+        out=$($build_dir/kest-debug "$command" "$file" 2>&1 </dev/null)
         sweep=$((sweep + 1))
         case "$out" in
         *ERROR:*|*"runtime error"*|*Sanitizer*)
@@ -2706,7 +2704,7 @@ alone_at_once() {
 sanitise_one() {
     file=$1
     for command in check run emit; do
-        out=$(./kest-debug "$command" "$file" 2>&1 </dev/null)
+        out=$($build_dir/kest-debug "$command" "$file" 2>&1 </dev/null)
         case "$out" in
         *"unknown command"*)
             echo "there is no \`$command\`"
@@ -2718,7 +2716,7 @@ sanitise_one() {
             ;;
         esac
     done
-    out=$(./kest-debug tick "$file" 8 2>&1 </dev/null)
+    out=$($build_dir/kest-debug tick "$file" 8 2>&1 </dev/null)
     case "$out" in
     *ERROR:*|*"runtime error"*)
         echo "tick $file"
@@ -2767,8 +2765,8 @@ rm -rf "$swept"
 # another answers a question about: a build where it stopped matching would run
 # every file above, find nothing, and print this same line. So the two builds
 # are asked what they are, and each has to give the other's answer back.
-checked=$(./kest-debug --version 2>&1)
-shipped=$(./kest --version 2>&1)
+checked=$($build_dir/kest-debug --version 2>&1)
+shipped=$($build_dir/kest --version 2>&1)
 case "$checked" in
 *checked*) ;;
 *)
@@ -2784,117 +2782,9 @@ esac
 say "sanitisers" "$sweep runs over $count file(s), under a build that says it \
 checks itself"
 
-run() {
-    what=$1
-    shift
-    out=$("$@" 2>&1)
-    if [ $? -eq 0 ]; then
-        say "$what" "$(printf '%s' "$out" | tail -1)"
-    else
-        complain "$what" "refused"
-        printf '%s\n' "$out" | sed 's/^/    /' | head -12
-    fi
-}
-
-# The tools are asked at once. None of them writes anything the others read:
-# each has a scratch of its own, and the one that used to write over a file in
-# the tree — `fmt -w`, to see whether a formatted file still says the same
-# thing — does it to a copy. What each says is kept and read back in the order
-# they are written here, which is the order somebody reads a failure in.
-asked="$scratch"/asked
-mkdir "$asked"
-at=0
-# What was asked is written down where it is asked, and what was heard is read
-# out of what the asking wrote. A check whose run never started — a shell that
-# could not fork, a file nothing could be written to — leaves no answer, and an
-# answer nobody left reads exactly like a check that had nothing to say. So the
-# two lists are held to each other at the end.
-ask() {
-    at=$((at + 1))
-    what=$1
-    shift
-    printf '%s\n' "$what" >> "$asked/asked"
-    {
-        out=$("$@" 2>&1)
-        code=$?
-        printf '%s\n' "$what"
-        printf '%s\n' "$code"
-        printf '%s\n' "$out"
-    } > "$asked/$(printf %02d $at)" 2>&1 &
-}
-
-heard() {
-    for mine in "$asked"/*; do
-        [ -f "$mine" ] || continue
-        case $mine in
-            */asked) continue ;;
-        esac
-        what=$(sed -n 1p "$mine")
-        code=$(sed -n 2p "$mine")
-        out=$(sed -n '3,$p' "$mine")
-        if [ "$code" -eq 0 ]; then
-            # What a check says it did is its last line, so a check that says
-            # nothing leaves a blank where a sentence goes, and one that says
-            # what it did and then says something else is read as the
-            # something else. What a detail looks like here is a line that
-            # begins with a space; what a summary looks like is a line that
-            # does not.
-            last=$(printf '%s' "$out" | tail -1)
-            case "$last" in
-            "")
-                complain "$what" "passed and said nothing about what it did"
-                ;;
-            " "*)
-                complain "$what" "said what it did and then said more"
-                printf '%s\n' "$out" | tail -3 | sed 's/^/    /'
-                ;;
-            *)
-                say "$what" "$last"
-                ;;
-            esac
-        elif [ -z "$out" ]; then
-            # The other half of the sentence above it. A check that passes says
-            # what it did; a check that refuses says what is wrong — and one
-            # that refuses with nothing to say leaves a reader a word and no
-            # reason. It is what `failed = 1` under a condition whose two
-            # complaints both found nothing looks like from here: twelve
-            # conditions in `check-tables.sh` compare two lists that differ by
-            # order alone if anything ever stops sorting them, and that is
-            # exactly this. See D878.
-            complain "$what" "refused and said nothing about why"
-        else
-            complain "$what" "refused"
-            printf '%s\n' "$out" | sed 's/^/    /' | head -12
-        fi
-    done
-    # Every one that was asked, answered. The order they finished in is not the
-    # order they were asked in, so it is the names that are compared and not
-    # the two files.
-    : > "$asked/answered"
-    for mine in "$asked"/*; do
-        [ -f "$mine" ] || continue
-        case $mine in
-            */asked|*/answered) continue ;;
-        esac
-        sed -n 1p "$mine" >> "$asked/answered"
-    done
-    for what in $(sort "$asked/asked"); do
-        if ! grep -qx "$what" "$asked/answered"; then
-            complain "$what" "was asked and said nothing"
-        fi
-    done
-    rm -rf "$asked"
-}
-
-# shellcheck disable=SC2086
-ask "formatting" tools/check-fmt.sh $sources $instruments
-# shellcheck disable=SC2086
-ask "commands" tools/check-commands.sh $sources
-ask "tables" tools/check-tables.sh
-ask "header" tools/check-header.sh
-ask "declarations" tools/check-dead.sh
-# shellcheck disable=SC2086
-ask "backend" tools/check-c.sh $sources $workloads
+# The checks in `tools` are tests of their own, run beside this one by ctest
+# (cmake/Tests.cmake) through `tools/ask.sh`, which holds each to saying what
+# it did or why it refused.
 # And the checks that read what they are handed, handed nothing. Every sweep in
 # one of those runs no times over an empty list and the count it prints is
 # nought, which reads like a success; nothing in this tree is an empty list, so
@@ -2911,20 +2801,6 @@ for tool in check-fmt.sh check-commands.sh check-c.sh; do
 done
 say "nothing" "three checks handed no files"
 
-ask "lends" tools/check-lends.sh
-ask "regressions" tools/check-regress.sh
-
-ask "verifier" tools/check-verifier.sh
-ask "guide" tools/check_guide.py
-ask "costs" tools/check-costs.sh
-ask "ceilings" tools/check-ceilings.sh
-ask "work" tools/check-work.sh
-ask "doors" tools/check-doors.sh
-ask "wasm" tools/check-wasm.sh
-
-wait
-heard
-
 # The edits a reload has to have an answer for, each one driven through the
 # host that does the whole protocol. What is held is not that every edit
 # reloads -- most of them must not -- but that every one of them ends with a
@@ -2940,7 +2816,7 @@ reload_wrong=""
 # frames after it ran, and the only way to hold it is to run them and look. A
 # host that published its candidate before it found out it could not use it
 # says the same sentence and ends somewhere else. See D1127.
-unmoved=$(./examples/engine examples/engine.kest examples/engine.kest 2>&1 |
+unmoved=$($build_dir/examples/engine examples/engine.kest examples/engine.kest 2>&1 |
     sed -n 's/^a reload kept the ring, and .*first body is at //p')
 if [ -z "$unmoved" ]; then
     complain "reload" "a run with no edit in it said nothing about where it \
@@ -2965,7 +2841,7 @@ for edit in \
     wanted=${rest_of##*|}
     cp examples/engine.kest "$scratch"/reloading/after.kest
     sed -i "$doing" "$scratch"/reloading/after.kest 2>/dev/null
-    said=$(./examples/engine examples/engine.kest \
+    said=$($build_dir/examples/engine examples/engine.kest \
         "$scratch"/reloading/after.kest 2>&1)
     status=$?
     if [ $status -ne 0 ]; then
@@ -3000,107 +2876,19 @@ host was holding where it did -- held by running the frames after a refusal \
 and finding them where a run with no edit in it ends, $unmoved"
 fi
 
-# The boundaries a stranger's bytes arrive through, sanitised. Eight seeds and
-# four hundred inputs each, which is a minute rather than an afternoon: a gate
-# can afford a short campaign and a long one is the same command with other
-# numbers.
-#
-# Six of them, because a compiler is not the only thing here somebody else's
-# bytes reach. The doors a host hands a handle to are reached by a host, and so
-# are the life of a lend, a reference into a world being changed underneath it,
-# bytes handed over as text, and a program edited under a world that is already
-# running. What each holds is written where it is written; what they share is
-# that every input ends in an answer or a refusal, which is what not crashing
-# looks like from outside. See D984 and D997.
-if [ ! -x tools/fuzz-debug ]; then
-    complain "fuzzing" "there is no sanitised fuzzer to run"
-else
-    fuzzed=0
-    fuzz_wrong=""
-    for what in source handles lends refs text migrate chunks; do
-        for seed in 1 2 3 4 5 6 7 8; do
-            said=$(./tools/fuzz-debug "$seed" 400 "$scratch"/fuzz.kest \
-                "$what" 2>&1) || fuzz_wrong="$what at seed $seed stopped it"
-            case "$said" in
-            *"none of them stopped this"*) fuzzed=$((fuzzed + 400)) ;;
-            *) fuzz_wrong="$what at seed $seed: \
-$(printf '%s' "$said" | head -3)" ;;
-            esac
-        done
-    done
-    # And the same seeds compiled the other way. What the source boundary
-    # folds is what every one of those programs answered, so two runs that
-    # fold to the same number are two runs where the lowering's fusions
-    # changed nothing a program can see -- over thousands of programs nobody
-    # wrote, which is where a miscompilation would hide rather than in the
-    # thirty-seven somebody did. See D1015.
-    fuzzer=./tools/fuzz-debug
-    fuzz_one="$scratch"/fuzz-fused.kest
-    fuzz_two="$scratch"/fuzz-plain.kest
-    fuzz_three="$scratch"/fuzz-bare.kest
-    folded_fused=""
-    folded_plain=""
-    folded_bare=""
-    for seed in 1 2 3 4 5 6 7 8; do
-        folded_fused="$folded_fused$("$fuzzer" "$seed" 400 "$fuzz_one" \
-            source 2>/dev/null | sed -n 's|.*folds to ||p')"
-        folded_plain="$folded_plain$(KEST_PLAIN=1 "$fuzzer" "$seed" 400 \
-            "$fuzz_two" source 2>/dev/null | sed -n 's|.*folds to ||p')"
-        folded_bare="$folded_bare$(KEST_NOOPT=1 "$fuzzer" "$seed" 400 \
-            "$fuzz_three" source 2>/dev/null | sed -n 's|.*folds to ||p')"
-    done
-    if [ -z "$folded_fused" ] || [ "$folded_fused" != "$folded_plain" ]; then
-        complain "fuzzing" "programs nobody wrote answer something else when \
-the lowering's fusions are turned off"
-    fi
-    # And the optimizer read the same way. A pass that reads a whole body and
-    # decides a slot is written once is a pass whose mistake is a program
-    # nobody wrote rather than one of the thirty-seven somebody did: the first
-    # thing this one did was take `let at = from` out of `text.trim`. See
-    # D1025.
-    if [ -z "$folded_fused" ] || [ "$folded_fused" != "$folded_bare" ]; then
-        complain "fuzzing" "programs nobody wrote answer something else when \
-the optimizer is turned off"
-    fi
-    if [ -n "$fuzz_wrong" ]; then
-        complain "fuzzing" "bytes this compiler was not written for stopped \
-it: $fuzz_wrong"
-    else
-        say "fuzzing" "$fuzzed input(s) made from eight seeds over seven \
-boundaries -- what a program is written in, the handles a host hands over, the \
-life of a lend, a reference into a world being changed underneath it, bytes \
-handed over as text, a program edited under a world that is running, and \
-instructions nobody's compiler wrote, handed to the verifier and run where it \
-let them through -- \
-every one of them an answer or a refusal, under a build that checks itself, \
-and the source ones answer the same folded over compiled the other way"
-    fi
-fi
-
 # And what is in the tree that a compiler made. A repository carrying a built
 # thing is one where somebody's `git add -A` swept up what their last build
-# left: this one carried a ten-megabyte sanitised fuzzer and two caches of
-# another language's compiler, and nothing anywhere looked. What makes a built
-# thing tellable from a written one is its first bytes -- an executable, a
-# library and an object all say what they are in the first four.
+# left. What makes a built thing tellable from a written one is its first bytes:
+# an executable, a library and an object all say what they are in the first
+# four.
 #
-# What a build may leave is the list `make clean` takes away, read from there
-# rather than written again here: two lists of the same names are one list the
-# day somebody adds to the other. Anything else with those first bytes is
-# something nobody meant to keep. See D999.
+# Every build goes to `out/<preset>`, so a built thing anywhere else is one
+# nobody meant to keep.
 what_a_compiler_made() {
-    allowed=$(sed -n '/^clean:/,/^$/p' "$1"/Makefile |
-              tr -d '\\' | tr ' \t' '\n\n' |
-              sed -n 's/^rm$//;s/^-rf$//;s/^-f$//;/^$/d;/^clean:$/d;p' |
-              tr '\n' ' ')
     found=""
     for file in $(cd "$1" && find . -type f \
-            -not -path './build/*' -not -path './.git/*' \
-            -not -name '*.d' | sort); do
+            -not -path './out/*' -not -path './.git/*' | sort); do
         here=${file#./}
-        case " $allowed " in
-        *" $here "*) continue ;;
-        esac
         case "$here" in
         *.o|*.a|*.obj|*.lib|*.pdb|*.exe|*.dll|*.so|*.dylib|*.dascache|core|core.*)
             found="$found $here"
@@ -3117,20 +2905,15 @@ what_a_compiler_made() {
         esac
     done
     if [ -n "$found" ]; then
-        printf 'something a compiler made is in the tree and `make clean` '
-        printf 'does not take it away:%s\n' "$found"
+        printf 'something a compiler made is in the tree outside out/:%s\n' \
+            "$found"
     fi
 }
 
 # And the other way a file arrives in a tree that nobody meant: a name with a
-# space in it, which is what an unquoted redirect leaves behind. `> $places`
-# with `places` unset writes a file called whatever the next two words were,
-# and a check that did it once left `extern fn` in the root of this tree for
-# nine days -- 1774 bytes of a program written to hold every keyword, committed,
-# shipped in nothing, read by nothing, and invisible to every sweep here
-# because the sweeps are over `*.kest` and it had no extension. The walk above
-# could not see it either: it reads `$(find ...)`, and a name with a space in
-# it is two words to a shell. So this one reads a line at a time.
+# space in it, which is what an unquoted redirect leaves behind, and which a
+# sweep over `$(find ...)` reads as two words. So this one reads a line at a
+# time.
 #
 # No file in this tree has a space in its name, and none is meant to.
 a_name_nobody_meant() {
@@ -3142,7 +2925,7 @@ a_name_nobody_meant() {
     $here" ;;
         esac
     done <<INNER
-$(cd "$1" && find . -type f -not -path './build/*' -not -path './.git/*' |
+$(cd "$1" && find . -type f -not -path './out/*' -not -path './.git/*' |
       sort)
 INNER
     if [ -n "$found" ]; then
@@ -3152,10 +2935,9 @@ INNER
 }
 
 # And the third way something built gets into a tree: not left in it, but
-# committed to it. `make clean` takes `bench/measure` away, so the walk above
-# is right to allow it in a working tree -- and it was committed anyway, by a
-# `git add -A` after a build, and sat there for five commits. What the walk
-# above cannot see is which files are in the repository, so this asks.
+# committed to it. What a run may leave is what `.gitignore` ignores, so a
+# committed file it ignores is one a `git add -f` or an older ignore list let
+# in.
 #
 # Nothing here needs git to work: a tree without it is a tree this says
 # nothing about, which is what a release archive is.
@@ -3164,40 +2946,22 @@ what_was_committed() {
         ! git -C "$1" rev-parse --git-dir >/dev/null 2>&1; then
         return 0
     fi
-    found=""
-    for name in $(sed -n '/^clean:/,/^$/p' "$1"/Makefile |
-                  tr -d '\\' | tr ' \t' '\n\n' |
-                  sed -n 's/^rm$//;s/^-rf$//;s/^-f$//;/^$/d;/^clean:$/d;p'); do
-        case "$name" in
-        *[*?[]*) continue ;;
-        esac
-        if git -C "$1" ls-files --error-unmatch "$name" >/dev/null 2>&1; then
-            found="$found $name"
-        fi
-    done
+    found=$(git -C "$1" ls-files -ci --exclude-standard | tr '\n' ' ')
     if [ -n "$found" ]; then
-        printf 'something `make clean` takes away is committed:%s\n' "$found"
+        printf 'something .gitignore ignores is committed: %s\n' "$found"
     fi
 }
 
-# And the fourth way: a file a run left behind. What `make clean` takes away
-# is allowed, because that is what naming it there means.
+# And the fourth way: a file a run left behind. What `.gitignore` ignores is
+# allowed, because that is what naming it there means.
 left_behind() {
-    taken_away=$(sed -n '/^clean:/,/^$/p' Makefile | tr -d '\\' |
-                 tr ' \t' '\n\n' |
-                 sed '/^$/d;/^clean:$/d;/^rm$/d;/^-rf$/d;/^-f$/d')
     found=""
     while IFS= read -r file; do
         [ -n "$file" ] || continue
         here=${file#./}
-        case "
-$taken_away" in
-        *"
-$here") continue ;;
-        *"
-$here
-"*) continue ;;
-        esac
+        if git check-ignore -q "$here" 2>/dev/null; then
+            continue
+        fi
         case "
 $tree_before" in
         *"
@@ -3209,11 +2973,11 @@ $file
         found="$found
     $here"
     done <<LEFT
-$(find . -type f -not -path './build/*' -not -path './.git/*' | sort)
+$(find . -type f -not -path './out/*' -not -path './.git/*' | sort)
 LEFT
     if [ -n "$found" ]; then
-        printf 'a run left a file in the tree that `make clean` does not take '
-        printf 'away:%s\n' "$found"
+        printf 'a run left a file in the tree that .gitignore does not '
+        printf 'name:%s\n' "$found"
     fi
 }
 
@@ -3238,8 +3002,7 @@ else
     # nothing. This is the gate's own guard, which is what a check written
     # here has instead of a hole. See D999.
     mkdir -p "$scratch"/tree/tools
-    cp Makefile "$scratch"/tree/Makefile
-    cp kest "$scratch"/tree/tools/left-behind
+    cp $build_dir/kest "$scratch"/tree/tools/left-behind
     printf 'module places\n' > "$scratch"/tree/"extern fn"
     if ! what_a_compiler_made "$scratch"/tree |
             grep -q "something a compiler made is in the tree"; then
@@ -3250,9 +3013,8 @@ nothing was said about it"
         complain "tree" "a room with a file nobody meant in it was walked and \
 nothing was said about it"
     else
-        say "tree" "nothing a compiler made is in the tree but what \
-\`make clean\` takes away, no file in it has a name nobody meant, and a room \
-with one of each in it is named"
+        say "tree" "nothing a compiler made is in the tree outside out/, no \
+file in it has a name nobody meant, and a room with one of each in it is named"
     fi
 fi
 
@@ -3278,7 +3040,7 @@ fn main() -> i32 {
     return sum % 7
 }
 MOVED
-moved_said=$(KEST_DEEP=1 ./kest-debug run "$scratch"/moved.kest 2>&1 >/dev/null)
+moved_said=$(KEST_DEEP=1 $build_dir/kest-debug run "$scratch"/moved.kest 2>&1 >/dev/null)
 if ! printf '%s' "$moved_said" | grep -q '^moved '; then
     complain "moved" "the build that counts instructions said nothing about \
 what it moved"

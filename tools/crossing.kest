@@ -18,9 +18,9 @@ import std.io
 // crossing: the frame the machine writes for a host, the arguments weighed on
 // the way out and the answer weighed on the way back.
 //
-// It is not a benchmark suite and there is nowhere it is written down. `make
-// check` does not touch it, because a duration is not a pass or a fail; `make
-// time` runs it beside the frame.
+// It is not a benchmark suite and there is nowhere it is written down. The
+// gate does not touch it, because a duration is not a pass or a fail; the
+// `time` target runs it beside the frame.
 //
 // What it reads on a quiet machine is a few nanoseconds for a call and rather
 // more for a crossing. Read both in one sitting and against each other rather

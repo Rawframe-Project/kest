@@ -2,7 +2,7 @@
 # The other backend, held to answering what the first one does. `kest emit --c`
 # writes the same bodies as C for the compiler a release is built with, and
 # what says the two are one program is that a program compiled both ways
-# answers the same thing. `make check` runs this. See D1093.
+# answers the same thing. The gate runs this. See D1093.
 #
 # Two halves. Every program it is given is written as C and handed to the
 # host's compiler, because C that will not compile is the one kind of wrongness
@@ -13,6 +13,11 @@
 # than kept in the tree for the reason `check-lends.sh` writes its own: what
 # they are for is this check, and a program in `examples` is for a reader.
 set -u
+
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+build_dir=${KEST_BUILD:-out/dev}
+case $build_dir in /*) ;; *) build_dir=$(pwd)/$build_dir ;; esac
 cc=${CC:-cc}
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -22,7 +27,7 @@ if [ $# -eq 0 ]; then
     echo "without reading a file"
     exit 1
 fi
-if [ ! -x ./kest ] || [ ! -f libkest.a ]; then
+if [ ! -x $build_dir/kest ] || [ ! -f $build_dir/libkest.a ]; then
     echo "the compiler and the library are not built"
     exit 1
 fi
@@ -36,39 +41,81 @@ wrong=0
 # comes before the list of it.
 said="$work"/said
 : >"$said"
-for file in "$@"; do
-    if ! ./kest emit --c "$file" >"$work"/wrote.c 2>"$work"/why; then
-        continue
+# One file of the sweep, in a room of its own so eight run at once: what it
+# found is written to its own file as lines of a count and a word, and read
+# back in the order the files were given.
+writes_c() {
+    room="$work/sweep/$2"
+    mkdir -p "$room"
+    if ! $build_dir/kest emit --c "$1" >"$room"/wrote.c 2>"$room"/why; then
+        return
     fi
     # How much of the file it wrote, read out of the file itself. A count of
     # bodies rather than of files: a module of generic functions nothing has
     # used yet has no bodies at all, and a file with none of them written and
     # a file with nothing in it read the same from outside.
     counted=$(sed -n 's,^// \([0-9]*\) of \([0-9]*\) bodies written$,\1 \2,p' \
-              "$work"/wrote.c)
+              "$room"/wrote.c)
     if [ -z "$counted" ]; then
-        echo "    the C written for $file does not say how much of it was \
-written" >>"$said"
-        wrong=$((wrong + 1))
-        continue
+        {
+            echo "wrong 1"
+            echo "said     the C written for $1 does not say how much of it \
+was written"
+        } >"$room"/found
+        return
     fi
-    written=$((written + ${counted% *}))
-    bodies=$((bodies + ${counted#* }))
+    {
+        echo "written ${counted% *}"
+        echo "bodies ${counted#* }"
+    } >"$room"/found
     # A function that says it gives back a value and can run off its end is
     # one the host's compiler only warns about, and what it gives back then is
     # whatever was in a register: refused here, where the one program in the
     # tree that ends in a loop is. See D1274.
-    if $cc -O1 -Werror=return-type -Iinclude -c -o "$work"/wrote.o \
-            "$work"/wrote.c 2>"$work"/why; then
-        compiled=$((compiled + 1))
-        continue
+    if $cc -O1 -Werror=return-type -Iinclude -c -o "$room"/wrote.o \
+            "$room"/wrote.c 2>"$room"/why; then
+        echo "compiled 1" >>"$room"/found
+        return
     fi
     {
-        echo "    the C written for $file will not compile:"
-        sed 's/^/        /' "$work"/why | head -5
-    } >>"$said"
-    wrong=$((wrong + 1))
+        echo "wrong 1"
+        echo "said     the C written for $1 will not compile:"
+        sed 's/^/said         /' "$room"/why | head -5
+    } >>"$room"/found
+}
+
+# What a sweep found, added up: every `name number` line adds its number to the
+# count of that name, and every `said` line is something wrong, kept in the
+# order the files were given.
+sweep_count() {
+    cat "$work"/sweep/*/found 2>/dev/null |
+        awk -v name="$1" '$1 == name {n += $2} END {print n + 0}'
+}
+read_sweep() {
+    at=0
+    while [ "$at" -lt "$1" ]; do
+        at=$((at + 1))
+        if [ -f "$work/sweep/$at/found" ]; then
+            sed -n 's/^said //p' "$work/sweep/$at/found" >>"$said"
+        fi
+    done
+    rm -rf "$work"/sweep
+}
+
+at=0
+for file in "$@"; do
+    at=$((at + 1))
+    writes_c "$file" "$at" &
+    if [ $((at % 8)) -eq 0 ]; then
+        wait
+    fi
 done
+wait
+written=$(sweep_count written)
+bodies=$(sweep_count bodies)
+compiled=$(sweep_count compiled)
+wrong=$((wrong + $(sweep_count wrong)))
+read_sweep "$at"
 
 # And that the sweep above was about anything. A backend that wrote nothing
 # would hand the host's compiler a file of comments and pass. It used to be
@@ -1315,7 +1362,7 @@ PROGRAM
 both=0
 for file in "$work"/programs/*.kest; do
     name=$(basename "$file")
-    ./kest emit --c "$file" >"$work"/one.c 2>"$work"/why
+    $build_dir/kest emit --c "$file" >"$work"/one.c 2>"$work"/why
     # Every one of these is written whole on purpose: a program half of which
     # the machine runs would be a differential test of the half that is left.
     if ! grep -q '^int main' "$work"/one.c; then
@@ -1343,7 +1390,7 @@ for file in "$work"/programs/*.kest; do
         wrong=$((wrong + 1))
         continue
     fi
-    if ! $cc -O2 -Iinclude -o "$work"/one "$work"/one.c libkest.a -lm \
+    if ! $cc -O2 -Iinclude -o "$work"/one "$work"/one.c $build_dir/libkest.a -lm \
             2>"$work"/why; then
         {
             echo "    the C written for $name will not compile:"
@@ -1356,7 +1403,7 @@ for file in "$work"/programs/*.kest; do
     # both what it said: the program that stops while it runs is here to hold
     # a compiled body's refusal to being the machine's refusal, word for word
     # and with the same line under it.
-    machine_said=$(./kest run "$file" 2>&1 </dev/null)
+    machine_said=$($build_dir/kest run "$file" 2>&1 </dev/null)
     machine_was=$?
     c_said=$(KEST_LIB=lib/ "$work"/one "$file" 2>&1 </dev/null)
     c_was=$?
@@ -1435,9 +1482,9 @@ fn main() -> i32 {
     return 0
 }
 PROGRAM
-    ./kest emit --c "$work"/fused.kest >"$work"/fused.c 2>"$work"/why
+    $build_dir/kest emit --c "$work"/fused.kest >"$work"/fused.c 2>"$work"/why
     # shellcheck disable=SC2086
-    if ! $cc $fusing -Iinclude -o "$work"/fused "$work"/fused.c libkest.a \
+    if ! $cc $fusing -Iinclude -o "$work"/fused "$work"/fused.c $build_dir/libkest.a \
             -lm 2>"$work"/why; then
         {
             echo "    fused.kest will not compile with $fusing:"
@@ -1445,7 +1492,7 @@ PROGRAM
         } >>"$said"
         wrong=$((wrong + 1))
     else
-        machine_said=$(./kest run "$work"/fused.kest 2>&1 </dev/null)
+        machine_said=$($build_dir/kest run "$work"/fused.kest 2>&1 </dev/null)
         c_said=$(KEST_LIB=lib/ "$work"/fused 2>&1 </dev/null)
         if [ "$machine_said" != "$c_said" ]; then
             echo "    fused.kest answers $machine_said run by the machine and \
@@ -1610,11 +1657,11 @@ int main(int argc, char **argv) {
                : 1;
 }
 HOST
-if ! ./kest emit --c "$work"/reentry.kest >"$work"/reentry.c 2>"$work"/why ||
+if ! $build_dir/kest emit --c "$work"/reentry.kest >"$work"/reentry.c 2>"$work"/why ||
         ! $cc -O1 -Iinclude -DKEST_NO_MAIN -c -o "$work"/reentry.o \
             "$work"/reentry.c 2>>"$work"/why ||
         ! $cc -O1 -Iinclude -o "$work"/twice "$work"/twice.c "$work"/reentry.o \
-            libkest.a -lm 2>>"$work"/why; then
+            $build_dir/libkest.a -lm 2>>"$work"/why; then
     {
         echo "    a host of its own will not build against the C this wrote:"
         sed 's/^/        /' "$work"/why | head -5
@@ -1739,11 +1786,11 @@ int main(int argc, char **argv) {
     return compiled == 0 && machine == 0 ? 0 : 1;
 }
 HOST
-if ! ./kest emit --c "$work"/spinning.kest >"$work"/spinning.c 2>"$work"/why ||
+if ! $build_dir/kest emit --c "$work"/spinning.kest >"$work"/spinning.c 2>"$work"/why ||
         ! $cc -O1 -Iinclude -DKEST_NO_MAIN -c -o "$work"/spinning.o \
             "$work"/spinning.c 2>>"$work"/why ||
         ! $cc -O1 -Iinclude -o "$work"/stopper "$work"/stopper.c \
-            "$work"/spinning.o libkest.a -lm -lpthread 2>>"$work"/why; then
+            "$work"/spinning.o $build_dir/libkest.a -lm -lpthread 2>>"$work"/why; then
     {
         echo "    a host stopping a loop will not build against the C this wrote:"
         sed 's/^/        /' "$work"/why | head -5
@@ -1866,11 +1913,11 @@ int main(int argc, char **argv) {
     return 0;
 }
 HOST
-if ! ./kest emit --c "$work"/hostwalk.kest >"$work"/hostwalk.c 2>"$work"/why ||
+if ! $build_dir/kest emit --c "$work"/hostwalk.kest >"$work"/hostwalk.c 2>"$work"/why ||
         ! $cc -O1 -Iinclude -DKEST_NO_MAIN -c -o "$work"/hostwalk.o \
             "$work"/hostwalk.c 2>>"$work"/why ||
         ! $cc -O1 -Iinclude -o "$work"/walked "$work"/walked.c \
-            "$work"/hostwalk.o libkest.a -lm 2>>"$work"/why; then
+            "$work"/hostwalk.o $build_dir/libkest.a -lm 2>>"$work"/why; then
     {
         echo "    a host walking an array it shortens will not build:"
         sed 's/^/        /' "$work"/why | head -5
@@ -1895,16 +1942,11 @@ fi
 # program that asks the host for something a file this backend wrote does not
 # provide -- a clock, a file, whatever an engine offers -- cannot be run this
 # way, and is counted rather than passed over quietly.
-alike=0
-wants_a_host=0
-walked=0
-not_walked=0
 # And each again built under the sanitisers, where the host's compiler has
 # them: what this backend writes is C, and C's undefined arithmetic is a
 # wrapped number in a build that does not look and a report in one that does.
 # The count of an unsigned walk was one more than the top of `int64_t` in the
 # generated C and answered right for as long as nothing looked. See D1218.
-sanitised=0
 sanitisers=""
 printf 'int main(void) { return 0; }\n' >"$work"/probe.c
 if $cc -fsanitize=undefined,address -fno-sanitize-recover=undefined \
@@ -1912,40 +1954,49 @@ if $cc -fsanitize=undefined,address -fno-sanitize-recover=undefined \
         "$work"/probe 2>/dev/null; then
     sanitisers="-fsanitize=undefined,address -fno-sanitize-recover=undefined"
 fi
-for file in "$@"; do
+# One program of the tree run both ways, in a room of its own so eight run at
+# once; what it found is written the way the first sweep writes it.
+runs_both_ways() {
+    file=$1
+    room="$work/sweep/$2"
+    mkdir -p "$room"
+    found="$room"/found
+    : >"$found"
     if ! grep -q '^fn main(' "$file"; then
-        continue
+        return
     fi
-    if ! ./kest emit --c "$file" >"$work"/one.c 2>/dev/null; then
-        continue
+    if ! $build_dir/kest emit --c "$file" >"$room"/one.c 2>/dev/null; then
+        return
     fi
-    if ! grep -q '^int main' "$work"/one.c; then
-        continue
+    if ! grep -q '^int main' "$room"/one.c; then
+        return
     fi
-    if ! $cc -O2 -Iinclude -o "$work"/one "$work"/one.c libkest.a -lm \
-            2>"$work"/why; then
+    if ! $cc -O2 -Iinclude -o "$room"/one "$room"/one.c $build_dir/libkest.a -lm \
+            2>"$room"/why; then
         {
-            echo "    the C written for $file will not link:"
-            sed 's/^/        /' "$work"/why | head -5
-        } >>"$said"
-        wrong=$((wrong + 1))
-        continue
+            echo "wrong 1"
+            echo "said     the C written for $file will not link:"
+            sed 's/^/said         /' "$room"/why | head -5
+        } >>"$found"
+        return
     fi
-    machine_said=$(./kest run "$file" 2>&1 </dev/null)
+    machine_said=$($build_dir/kest run "$file" 2>&1 </dev/null)
     machine_was=$?
-    c_said=$(KEST_LIB=lib/ "$work"/one "$file" 2>&1 </dev/null)
+    c_said=$(KEST_LIB=lib/ "$room"/one "$file" 2>&1 </dev/null)
     c_was=$?
     case "$c_said" in
     *"the host does not provide"*)
-        wants_a_host=$((wants_a_host + 1))
-        continue
+        echo "wants_a_host 1" >>"$found"
+        return
         ;;
     esac
     if [ "$machine_was" -ne "$c_was" ] || [ "$machine_said" != "$c_said" ]; then
-        echo "    $file answers $machine_was run by the machine and $c_was \
-with what was written as C, or says something else" >>"$said"
-        wrong=$((wrong + 1))
-        continue
+        {
+            echo "wrong 1"
+            echo "said     $file answers $machine_was run by the machine and \
+$c_was with what was written as C, or says something else"
+        } >>"$found"
+        return
     fi
     # And the C again walking the heap before every allocation, which is what
     # finds a handle the collector's reach stops short of: a call to a body
@@ -1957,42 +2008,61 @@ with what was written as C, or says something else" >>"$said"
     # are not walked for the same reason. See D1179.
     case "$file" in
     examples/churn.kest | examples/holding.kest)
-        not_walked=$((not_walked + 1))
+        echo "not_walked 1" >>"$found"
         ;;
     examples/*)
-        walked_said=$(KEST_LIB=lib/ KEST_WALK_EVERY=1 "$work"/one "$file" \
+        walked_said=$(KEST_LIB=lib/ KEST_WALK_EVERY=1 "$room"/one "$file" \
                           2>&1 </dev/null)
         walked_was=$?
         if [ "$walked_was" -ne "$c_was" ] || [ "$walked_said" != "$c_said" ]; then
-            echo "    $file answers $c_was written as C and $walked_was \
-walking the heap before every allocation, or says something else" >>"$said"
-            wrong=$((wrong + 1))
-            continue
+            {
+                echo "wrong 1"
+                echo "said     $file answers $c_was written as C and \
+$walked_was walking the heap before every allocation, or says something else"
+            } >>"$found"
+            return
         fi
-        walked=$((walked + 1))
+        echo "walked 1" >>"$found"
         ;;
     esac
     # shellcheck disable=SC2086
     if [ -n "$sanitisers" ] &&
-            $cc -O1 -g $sanitisers -Iinclude -o "$work"/one-sane "$work"/one.c \
-                libkest.a -lm 2>/dev/null; then
-        sane_said=$(KEST_LIB=lib/ "$work"/one-sane "$file" 2>&1 </dev/null)
+            $cc -O1 -g $sanitisers -Iinclude -o "$room"/one-sane "$room"/one.c \
+                $build_dir/libkest.a -lm 2>/dev/null; then
+        sane_said=$(KEST_LIB=lib/ "$room"/one-sane "$file" 2>&1 </dev/null)
         sane_was=$?
         if [ "$sane_was" -ne "$c_was" ] || [ "$sane_said" != "$c_said" ]; then
             {
-                echo "    $file answers $c_was written as C and $sane_was \
-under the sanitisers, or says something else:"
+                echo "wrong 1"
+                echo "said     $file answers $c_was written as C and \
+$sane_was under the sanitisers, or says something else:"
                 printf '%s\n' "$sane_said" |
                     grep 'runtime error\|ERROR: AddressSanitizer' | head -2 |
-                    sed 's/^/        /'
-            } >>"$said"
-            wrong=$((wrong + 1))
-            continue
+                    sed 's/^/said         /'
+            } >>"$found"
+            return
         fi
-        sanitised=$((sanitised + 1))
+        echo "sanitised 1" >>"$found"
     fi
-    alike=$((alike + 1))
+    echo "alike 1" >>"$found"
+}
+
+at=0
+for file in "$@"; do
+    at=$((at + 1))
+    runs_both_ways "$file" "$at" &
+    if [ $((at % 8)) -eq 0 ]; then
+        wait
+    fi
 done
+wait
+alike=$(sweep_count alike)
+wants_a_host=$(sweep_count wants_a_host)
+walked=$(sweep_count walked)
+not_walked=$(sweep_count not_walked)
+sanitised=$(sweep_count sanitised)
+wrong=$((wrong + $(sweep_count wrong)))
+read_sweep "$at"
 
 # Four of them are programs that stop while they are running, and both halves
 # have to stop: a backend that wrote a division by nought as one the host's machine
@@ -2000,7 +2070,7 @@ done
 # something else. Counted rather than assumed, because a program that stops is
 # one whose answer is the same either way for the wrong reason.
 for stopping in stopped shifted outside deep crossed runoff shrunk taken handed shorter swapped popped cleared throughvalue below onepast; do
-    stops=$(./kest run "$work"/programs/$stopping.kest 2>/dev/null </dev/null
+    stops=$($build_dir/kest run "$work"/programs/$stopping.kest 2>/dev/null </dev/null
             echo $?)
     if [ "$stops" -eq 0 ]; then
         echo "    $stopping.kest is written to stop while it runs and does \

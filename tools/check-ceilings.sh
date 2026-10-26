@@ -13,6 +13,11 @@
 # a wrap, a truncation, or a machine that stops.
 set -u
 
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+build_dir=${KEST_BUILD:-out/dev}
+case $build_dir in /*) ;; *) build_dir=$(pwd)/$build_dir ;; esac
+
 # A scratch of this run's own. Two of these run at once when the backstops put
 # one out of order while another is being asked, and fixed names in `/tmp` are
 # two runs writing to one file.
@@ -20,15 +25,8 @@ scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT
 cd "$(dirname "$0")/.." || exit 1
 
-# The tree's own objects come along, so that lowering one number rebuilds one
-# file rather than sixteen. What makes that safe is the `.d` files beside them:
-# the build says what each object was made from, so an object older than what
-# it was made from is made again. The tree is built first for the same reason,
-# since objects that are behind the source they were made from would be a copy
-# that is neither.
-if ! make -s kest >"$scratch"/ceilings-why 2>&1; then
-    echo "ceilings: the tree does not build"
-    sed 's/^/    /' "$scratch"/ceilings-why | head -5
+if [ ! -x $build_dir/kest ] || [ ! -f $build_dir/libkest.a ]; then
+    echo "ceilings: the tree is not built in $build_dir"
     exit 1
 fi
 
@@ -44,14 +42,9 @@ mkdir "$work"
 # its output and cuts it short. The number below is lowered with `sed -i`,
 # which writes a new file and moves it over the old name rather than opening
 # that name, so the tree's own is left as it is either way.
-for what in src include lib Makefile; do
+for what in src include lib examples tools bench cmake CMakeLists.txt; do
     cp -al "$what" "$work" 2>/dev/null || cp -a "$what" "$work" || exit 1
 done
-# Only the objects this builds: `kest` is a release build, and the sanitised
-# ones are nine megabytes of something nothing here asks for.
-mkdir -p "$work/build"
-cp -a build/release "$work/build/release" || exit 1
-cp -a libkest.a "$work" || exit 1
 
 # Every ceiling this lowers goes through one door. Three of them were three
 # copies of four lines with a sentence each, and a sentence per copy is three
@@ -76,7 +69,7 @@ lower src/vm.c '#define MAX_COUNTED INT32_MAX' '#define MAX_COUNTED 100'
 # is for says which host it was.
 builds() {
     if ${CC:-cc} -std=c11 -Wall -Wextra -Werror -Iinclude -o "$work/$1" \
-            "$work/$1.c" libkest.a -lm 2>"$scratch"/ceilings-why; then
+            "$work/$1.c" $build_dir/libkest.a -lm 2>"$scratch"/ceilings-why; then
         return 0
     fi
     echo "ceilings: the host that $2 does not build"
@@ -100,7 +93,11 @@ lower src/vm.c '#define MOST_STAMPS 1099511627775ull' \
 # sixty-five thousand externs in it takes longer to write down than anybody
 # will wait for, and what is being watched is the refusal rather than the size.
 lower src/compile.c '#define MAX_EXTERNS 65536' '#define MAX_EXTERNS 4'
-if ! make -C "$work" -s kest >"$scratch"/ceilings-why 2>&1; then
+# Only `kest` is built in the copy: it is a release build, and the checking
+# build is something nothing here asks for.
+if ! { cmake -S "$work" -B "$work/out" -DKEST_CHECKED=OFF &&
+       cmake --build "$work/out" --target kest -j 4; } \
+        >"$scratch"/ceilings-why 2>&1; then
     echo "ceilings: the tree with a lower ceiling does not build"
     sed 's/^/    /' "$scratch"/ceilings-why | head -5
     exit 1
@@ -153,13 +150,15 @@ KEST
 # nothing runs into is a message nobody has seen — and each message has to say
 # the number the table prints, which keeps the define, the table and the words
 # in step.
-python3 - "$PWD" > "$scratch/limits" 2>&1 <<'LIMITS'
+python3 - "$PWD" "$build_dir" "$scratch" > "$scratch/limits" 2>&1 <<'LIMITS'
 import os
 import re
 import subprocess
 import sys
 
 WHERE = sys.argv[1]
+BUILD_DIR = sys.argv[2]
+SCRATCH = sys.argv[3]
 
 
 def defers():
@@ -386,9 +385,9 @@ for phrase, program, code, how in PROBES:
         failed = 1
         continue
     number = written[0]
-    path = os.path.join(WHERE, "one-too-many.kest")
+    path = os.path.join(SCRATCH, "one-too-many.kest")
     open(path, "w").write(program())
-    said = subprocess.run([os.path.join(WHERE, "kest"), how, path],
+    said = subprocess.run([os.path.join(BUILD_DIR, "kest"), how, path],
                           capture_output=True, text=True,
                           stdin=subprocess.DEVNULL)
     out = said.stdout + said.stderr
@@ -461,12 +460,12 @@ for reading in examples/*.kest lib/std/*.kest; do
         # Unquoted, because what is walked is a command and the words that go
         # with it: `tick --reset` is one way of asking and `tick` is another,
         # and the two answer differently by the whole of what this is about.
-        whole=$(./kest $asking "$reading" 2>&1 </dev/null) || continue
+        whole=$($build_dir/kest $asking "$reading" 2>&1 </dev/null) || continue
         # What it cost, which is where the ladder starts: twice that is a
         # ceiling every program here fits inside, and halving reaches one byte.
         # A number read out of the run rather than written here, because what a
         # program costs to read is a thing that moves.
-        costs=$(./kest check --json "$reading" 2>/dev/null </dev/null |
+        costs=$($build_dir/kest check --json "$reading" 2>/dev/null </dev/null |
             sed -n 's/.*"cost":\([0-9]*\).*/\1/p')
         if [ -z "$costs" ] || [ "$costs" -le 0 ]; then
             echo "ceilings: \`$reading\` says nothing about what reading it" \
@@ -477,7 +476,7 @@ for reading in examples/*.kest lib/std/*.kest; do
         walked_over=$((walked_over + 1))
         rung=$((costs * 2))
         while [ "$rung" -gt 0 ]; do
-            said=$(./kest $asking --room "$rung" "$reading" 2>&1 </dev/null)
+            said=$($build_dir/kest $asking --room "$rung" "$reading" 2>&1 </dev/null)
             why=$?
             walked_down=$((walked_down + 1))
             if [ "$why" -eq 0 ]; then
@@ -592,7 +591,7 @@ KEST
 # through one door, because two readings of one number is one of them quietly
 # stopping.
 costs_of() {
-    ./kest emit --json "$1" 2>/dev/null </dev/null |
+    $build_dir/kest emit --json "$1" 2>/dev/null </dev/null |
         sed -n 's/.*"cost":\([0-9]*\).*/\1/p'
 }
 hungry_costs=$(costs_of "$work/hungry.kest")
@@ -606,7 +605,7 @@ else
     step=$hungry_costs
     while [ "$step" -ge 1 ]; do
         rung=$((hungry_costs + step))
-        said=$(./kest run --room $rung "$work/hungry.kest" 2>&1 </dev/null)
+        said=$($build_dir/kest run --room $rung "$work/hungry.kest" 2>&1 </dev/null)
         why=$?
         if [ "$why" -eq 0 ]; then
             echo "ceilings: a program wanting sixteen megabytes of heap ran" \
@@ -638,7 +637,7 @@ else
     while [ "$step" -ge $((framed_costs * 2)) ]; do
         rung=$((framed_costs + step))
         framed_rungs=$((framed_rungs + 1))
-        answered=$(./kest tick --json --room $rung "$work/framed.kest" 200 \
+        answered=$($build_dir/kest tick --json --room $rung "$work/framed.kest" 200 \
             2>/dev/null </dev/null)
         kept=$?
         # And what the whole of it came to: what reading and compiling took,
@@ -655,7 +654,7 @@ else
         # does the sum come up against what the command was given. The one
         # that finishes never reaches its ceiling at all, because what it made
         # is given back. See D996.
-        refused=$(./kest tick --json --room $rung "$work/greedy.kest" 200 \
+        refused=$($build_dir/kest tick --json --room $rung "$work/greedy.kest" 200 \
             2>/dev/null </dev/null)
         spent=$(printf '%s' "$refused" | sed -n 's/.*"cost":\([0-9]*\).*/\1/p')
         grew=$(printf '%s' "$refused" |
@@ -692,7 +691,7 @@ else
         # nothing between events runs either way, so what tells the two apart
         # is the machine saying how many times it threw the heap away. See
         # D996.
-        threw=$(./kest tick --reset --json --room $rung "$work/framed.kest" \
+        threw=$($build_dir/kest tick --reset --json --room $rung "$work/framed.kest" \
             200 2>/dev/null </dev/null |
             sed -n 's/.*"thrown":\([0-9]*\).*/\1/p')
         kept_it=$(printf '%s' "$answered" |
@@ -709,7 +708,7 @@ else
                  "made is kept nowhere it can be given back from"
             failed=1
         fi
-        ./kest tick --reset --room $rung "$work/greedy.kest" 200 \
+        $build_dir/kest tick --reset --room $rung "$work/greedy.kest" 200 \
             >/dev/null 2>&1 </dev/null
         greedy_thrown=$?
         if [ -z "$(printf '%s' "$refused" | grep -o '"errors":[1-9]')" ] ||
@@ -756,7 +755,7 @@ else
         # Read by what it said rather than by what it answered: what a run of
         # a program answers is the program's, and a refusal is the only thing
         # a status has to say that this is about.
-        said=$(./kest run --room $rung "$work/calls-itself.kest" 2>&1 </dev/null)
+        said=$($build_dir/kest run --room $rung "$work/calls-itself.kest" 2>&1 </dev/null)
         case "$said" in
         *"error[K0"*) ;;
         *)
@@ -796,7 +795,7 @@ else
     told=0
     rung=$wrong_costs
     while [ "$rung" -gt 0 ]; do
-        said=$(./kest check --room $rung "$work/wrong.kest" 2>&1 </dev/null)
+        said=$($build_dir/kest check --room $rung "$work/wrong.kest" 2>&1 </dev/null)
         case "$said" in
         *"K0301"*"K06"*) told=$((told + 1)) ;;
         esac
@@ -838,7 +837,7 @@ for one in "stamping:this process has handed out 1000 places in stores" \
            "joining:this text would hold 128"; do
     file=${one%%:*}
     said_it=${one#*:}
-    out=$("$work/kest" run "$work/$file.kest" 2>&1 </dev/null)
+    out=$("$work/out/kest" run "$work/$file.kest" 2>&1 </dev/null)
     printf '%s' "$out" > "$scratch"/rung-said
     if grep -q K0630 "$scratch"/rung-said &&
        grep -qF "$said_it" "$scratch"/rung-said; then
@@ -932,7 +931,7 @@ fn main() -> i32 {
 }
 KEST
 
-out=$("$work/kest" emit "$work/asking-names.kest" 2>&1 </dev/null)
+out=$("$work/out/kest" emit "$work/asking-names.kest" 2>&1 </dev/null)
 if printf '%s' "$out" | grep -q K0502 &&
    printf '%s' "$out" | grep -qF "at most 4 names"; then
     # Counted with the ones the compiler refuses, because that is what this is:
@@ -1038,7 +1037,7 @@ for one in "nesting:calls nest more than 1024 deep" \
            "holding-through:more than the 65536 slots of stack there are"; do
     file=${one%%:*}
     said_it=${one#*:}
-    out=$(./kest run "$work/$file.kest" 2>&1 </dev/null)
+    out=$($build_dir/kest run "$work/$file.kest" 2>&1 </dev/null)
     if printf '%s' "$out" | grep -q K0602 &&
        printf '%s' "$out" | grep -qF "$said_it"; then
         reached=$((reached + 1))
@@ -1310,7 +1309,7 @@ KEST
 
 ran_out() {
     out=$(ulimit -v 40000 2>/dev/null;
-          exec ./kest run "$work/$1.kest" 2>&1 </dev/null)
+          exec $build_dir/kest run "$work/$1.kest" 2>&1 </dev/null)
     used=$(printf '%s\n' "$out" |
            sed -n 's/.*has used \([0-9][0-9]*\) bytes.*/\1/p')
     more=$(printf '%s\n' "$out" |
@@ -1422,7 +1421,7 @@ walk_the_ladder() {
     level=4000
     while [ $level -le 65536 ]; do
         out=$(ulimit -v $level 2>/dev/null;
-              exec ./kest run "$program" 2>&1 </dev/null)
+              exec $build_dir/kest run "$program" 2>&1 </dev/null)
         # A level the loader cannot map this binary in is not a level the
         # program ran in, and it does not say `error` -- so a walk that read
         # only for that word took the bottom of the ladder for the top of it
@@ -1452,7 +1451,7 @@ walk_the_ladder() {
     level=$runnable
     while [ $level -ge 1000 ]; do
         out=$(ulimit -v $level 2>/dev/null;
-              exec ./kest run "$program" 2>&1 </dev/null)
+              exec $build_dir/kest run "$program" 2>&1 </dev/null)
         answered=$?
         # Below some level the C library cannot be mapped and this program
         # never starts. That is the machine refusing rather than this compiler,
@@ -1663,7 +1662,7 @@ said_nothing=0
 # cannot weigh is still a program somebody wrote.
 dearest=0
 for program in examples/*.kest; do
-    cost=$(./kest emit --json "$program" 2>/dev/null |
+    cost=$($build_dir/kest emit --json "$program" 2>/dev/null |
            grep -o '"cost":[0-9]*' | head -1 | cut -d: -f2)
     if [ -n "$cost" ] && [ "$cost" -gt "$dearest" ]; then
         dearest=$cost
@@ -1750,7 +1749,7 @@ chains=$((dearest * 11 / 12900 + 1))
 : >"$scratch"/rungs-machine
 : >"$scratch"/first-refusals
 for program in examples/*.kest "$scratch"/steps.kest "$scratch"/chains.kest; do
-    said=$(./kest emit --json "$program" 2>/dev/null)
+    said=$($build_dir/kest emit --json "$program" 2>/dev/null)
     case "$said" in
     *'"needs":{"slots":null'*)
         # No answer for what it needs, so its machine is the default one
@@ -1781,7 +1780,7 @@ for program in examples/*.kest "$scratch"/steps.kest "$scratch"/chains.kest; do
     high=$runnable
     low=$((library_goes + 100))
     out=$(ulimit -v $high 2>/dev/null;
-          exec ./kest run "$program" 2>&1 </dev/null)
+          exec $build_dir/kest run "$program" 2>&1 </dev/null)
     # A program dearer than the ladder's own refuses where the ladder runs, so
     # the top of the search is found rather than taken: doubled until the
     # program runs in it, and a program that runs nowhere is one this cannot
@@ -1792,7 +1791,7 @@ for program in examples/*.kest "$scratch"/steps.kest "$scratch"/chains.kest; do
         fi
         high=$((high * 2))
         out=$(ulimit -v $high 2>/dev/null;
-              exec ./kest run "$program" 2>&1 </dev/null)
+              exec $build_dir/kest run "$program" 2>&1 </dev/null)
     done
     if printf '%s' "$out" | grep -q 'error\[K'; then
         at_the_top=1
@@ -1803,7 +1802,7 @@ for program in examples/*.kest "$scratch"/steps.kest "$scratch"/chains.kest; do
         # is nothing on a day the ladder found it and the whole search on a day
         # it did not.
         out=$(ulimit -v $low 2>/dev/null;
-              exec ./kest run "$program" 2>&1 </dev/null)
+              exec $build_dir/kest run "$program" 2>&1 </dev/null)
         while [ $low -lt $high ]; do
             case "$out" in
             *"loading shared libraries"*|*"TLS data structures"*) ;;
@@ -1811,13 +1810,13 @@ for program in examples/*.kest "$scratch"/steps.kest "$scratch"/chains.kest; do
             esac
             low=$((low + 100))
             out=$(ulimit -v $low 2>/dev/null;
-                  exec ./kest run "$program" 2>&1 </dev/null)
+                  exec $build_dir/kest run "$program" 2>&1 </dev/null)
         done
         if printf '%s' "$out" | grep -q 'error\[K'; then
             while [ $((high - low)) -gt 100 ]; do
                 middle=$(((high + low) / 200 * 100))
                 said_there=$(ulimit -v $middle 2>/dev/null;
-                             exec ./kest run "$program" 2>&1 </dev/null)
+                             exec $build_dir/kest run "$program" 2>&1 </dev/null)
                 there=$?
                 # A rung that was killed reads as a rung that ran, because
                 # what this looks at is whether it refused in words and a run
@@ -2022,7 +2021,7 @@ allocations_of() {
     high=200000
     while [ $((high - low)) -gt 1 ]; do
         middle=$(((high + low) / 2))
-        if KEST_REFUSE_AT=$middle ./kest-debug "$1" "$2" \
+        if KEST_REFUSE_AT=$middle $build_dir/kest-debug "$1" "$2" \
                 >/dev/null 2>&1 </dev/null; then
             high=$middle
         else
@@ -2057,7 +2056,7 @@ for aimed_at in "check examples/inventory.kest" "run examples/queue.kest" \
     while [ $step -le 40 ]; do
         at_one=$((from_one + (span * step) / 41))
         [ $at_one -lt 1 ] && at_one=1
-        said=$(KEST_REFUSE_AT=$at_one ./kest-debug "$how" "$what" \
+        said=$(KEST_REFUSE_AT=$at_one $build_dir/kest-debug "$how" "$what" \
                2>&1 </dev/null)
         answered=$?
         step=$((step + 1))
@@ -2120,11 +2119,11 @@ for aimed_at in "run examples/vectors.kest" "emit examples/boxes.kest" \
                 "check lib/std/text.kest" "run examples/queue.kest"; do
     how=${aimed_at%% *}
     what=${aimed_at#* }
-    whole=$(./kest-debug "$how" "$what" 2>&1 </dev/null)
+    whole=$($build_dir/kest-debug "$how" "$what" 2>&1 </dev/null)
     at_one=1
     past=0
     while [ $past -lt 3 ] && [ $at_one -le 64 ]; do
-        said=$(KEST_REFUSE_ARENA=$at_one ./kest-debug "$how" "$what" \
+        said=$(KEST_REFUSE_ARENA=$at_one $build_dir/kest-debug "$how" "$what" \
                2>&1 </dev/null)
         answered=$?
         if [ $answered -eq 0 ] && [ "$said" = "$whole" ]; then

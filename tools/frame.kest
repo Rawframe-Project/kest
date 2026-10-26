@@ -12,7 +12,7 @@ import std.io
 // This is not a benchmark suite and there is nowhere it is written down. It
 // answers one question — did the thing this language exists for get slower —
 // and it is run when somebody wants to know rather than on every change.
-// `make check` does not touch it, because a duration is not a pass or a fail.
+// The gate does not touch it, because a duration is not a pass or a fail.
 //
 // What it measures is the shape the language is for: an array of value structs
 // walked in order and handed one at a time to helpers that take one and give

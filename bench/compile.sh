@@ -7,7 +7,7 @@
 # worth of scripts and more, in every engine here; the generic taken 3,200 ways
 # is in the languages that write a copy per type, C++ and Rust compiled to an
 # object as a game's build would. Written to `bench/compile.tsv` for
-# `bench/chart.py`. Not part of `make check`, for the reason none of `bench`
+# `bench/chart.py`. Not part of the gate, for the reason none of `bench`
 # is. See D1273.
 #
 # Where each comparator is, the way `bench/compare.sh` takes them, and

@@ -24,8 +24,8 @@
  * machine reaching an instruction that starts a call. The way out, which
  * `tools/crossing.kest` measures, is the dearer direction.
  *
- * It is not a benchmark suite and `make check` reads only whether it ran and
- * what shape its line is. `make time` runs it beside the other two. */
+ * It is not a benchmark suite and the gate reads only whether it ran and
+ * what shape its line is. The `time` target runs it beside the other two. */
 
 #include <stdio.h>
 #include <stdlib.h>

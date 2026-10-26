@@ -10,11 +10,16 @@
 # compiling doubles with every line it adds is a count that doubles too, so a
 # ceiling is a bound on the time and not only on the words. See D1248.
 set -u
+
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+build_dir=${KEST_BUILD:-out/dev}
+case $build_dir in /*) ;; *) build_dir=$(pwd)/$build_dir ;; esac
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT
 cd "$(dirname "$0")/.." || exit 1
 
-if [ ! -x ./kest ]; then
+if [ ! -x $build_dir/kest ]; then
     echo "work: the compiler is not built"
     exit 1
 fi
@@ -28,7 +33,7 @@ complain() {
 # What `emit --json` says compiling took, which is the whole of compiling: a
 # check stops before the instructions are laid down and proved.
 work_of() {
-    ./kest emit --json "$@" 2>/dev/null </dev/null |
+    $build_dir/kest emit --json "$@" 2>/dev/null </dev/null |
         sed -n 's/.*"work":\([0-9]*\).*/\1/p' | head -1
 }
 
@@ -45,8 +50,8 @@ for program in examples/*.kest; do
         complain "\`$program\` took $counted units once and $again again"
         continue
     fi
-    whole=$(./kest emit "$program" 2>&1 </dev/null)
-    within=$(./kest emit --work "$counted" "$program" 2>&1 </dev/null)
+    whole=$($build_dir/kest emit "$program" 2>&1 </dev/null)
+    within=$($build_dir/kest emit --work "$counted" "$program" 2>&1 </dev/null)
     if [ "$within" != "$whole" ]; then
         complain "\`$program\` given the $counted units it takes said" \
                  "something else than with no ceiling:" \
@@ -64,7 +69,7 @@ for program in examples/*.kest; do
             rung=$((counted * step / 16))
         fi
         [ "$rung" -le 0 ] && rung=1
-        said=$(./kest emit --work "$rung" "$program" 2>&1 </dev/null)
+        said=$($build_dir/kest emit --work "$rung" "$program" 2>&1 </dev/null)
         why=$?
         rungs=$((rungs + 1))
         case "$said" in
@@ -81,7 +86,7 @@ for program in examples/*.kest; do
         esac
         step=$((step + 1))
     done
-    told=$(./kest emit --json --work "$short" "$program" 2>/dev/null \
+    told=$($build_dir/kest emit --json --work "$short" "$program" 2>/dev/null \
                </dev/null | sed -n 's/.*"work":\([0-9]*\).*/\1/p' | head -1)
     if [ "$told" != "$short" ]; then
         complain "\`$program\` refused at $short units says it took" \
@@ -124,7 +129,7 @@ fi
 # host that compiles what it was sent would give: refused, in words, at the
 # units it was given, and before it had done anything like the whole.
 deep 22
-said=$(./kest check --json --work 1000000 "$scratch/deep22.kest" 2>/dev/null \
+said=$($build_dir/kest check --json --work 1000000 "$scratch/deep22.kest" 2>/dev/null \
            </dev/null)
 case "$said" in
 *'"code":"K0666"'*'"work":1000000'*) ;;
@@ -142,7 +147,7 @@ for asking in "--work@\`--work\` says how many units, and there is nothing after
     words=${asking%%@*}
     refused_with=${asking#*@}
     # shellcheck disable=SC2086
-    said=$(./kest check examples/boxes.kest $words 2>&1 </dev/null)
+    said=$($build_dir/kest check examples/boxes.kest $words 2>&1 </dev/null)
     case "$said" in
     *"K0649"*"$refused_with"*) ;;
     *)

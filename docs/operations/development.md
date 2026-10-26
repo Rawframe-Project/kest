@@ -4,39 +4,51 @@ Setting up, building, running one check, and the conventions of the source.
 
 ## Toolchain
 
-A C11 compiler and `make`; that is all the library and the command line need. The checks also use `python3`, `clang` (for the libFuzzer target and the WebAssembly build), `lld`, `wasi-libc` and clang's WebAssembly runtime library, and Node (to run the WebAssembly build). The raylib games need raylib 5.5 built from source and X11 and OpenGL headers. The documentation site needs Python's `markdown` package; the CI image has every one of these.
-
-On Windows the build is `tools\build.bat` from a Developer Command Prompt; the Makefile is for Linux and macOS.
+A C11 compiler and CMake 3.25 or newer; that is all the library and the command line need. The presets use Ninja on Linux and macOS and Visual Studio on Windows; `release` uses each platform's default generator, so a release runner needs nothing beyond CMake. The checks also use `python3`, and `clang`, `lld`, `wasi-libc`, clang's WebAssembly runtime library and Node for the WebAssembly build. The raylib games need raylib 5.5 built from source and X11 and OpenGL headers. The documentation site needs Python's `markdown` package. The CI image (`ghcr.io/rawframe-project/ci-cpp`) has every one of these.
 
 ## Builds
 
-| Target | What it builds |
-| --- | --- |
-| `make` | `kest` and `libkest.a`, optimized |
-| `make kest-debug` | the command line with the library's own checks and AddressSanitizer and UndefinedBehaviorSanitizer; it counts every instruction and is told where every host allocation ends |
-| `make races` | objects built for ThreadSanitizer |
-| `make kest.wasm` | the library and command line as WebAssembly (WASI); `node tools/wasi-run.mjs kest.wasm run examples/math.kest` runs it |
-| `make least engine embed` | the example hosts; `embed-debug` and `engine-debug` are the sanitized ones |
-| `make tetris RAYLIB=<raylib/src>` and `make colony RAYLIB=<raylib/src>` | the raylib games |
-| `make playground` | the browser playground in `build/playground` |
-| `python3 tools/build_site.py` | the documentation site in `_site/docs`, with the standard library reference, `llms.txt` and `llms-full.txt`; `pages.yml` publishes it beside the playground |
-| `make install PREFIX=...`, `make uninstall` | install and remove |
-| `make release` | the release archive and its checksum, see [Release](release.md) |
-| `make clean` | removes everything built |
+A preset configures a build into `out/<preset>`, and everything it makes lands there at a fixed path: `kest`, `kest-debug`, `libkest.a`, `examples/embed`, `tools/inward`, `bench/measure` and the rest, beside links to the standard library in `lib/std` and the header in `include` (copies on Windows). The checks find a build through `KEST_BUILD`, which is `out/dev` unless set.
 
-Objects go in `build/release`, `build/debug`, `build/races` and `build/wasm`. Header dependencies are tracked, so changing a header rebuilds every object that includes it in every build.
+| Preset | Builds |
+| --- | --- |
+| `dev` | this machine's compiler: the release build, the checking build and every host |
+| `linux-gcc` | GCC 14, plus the ThreadSanitizer objects |
+| `linux-clang` | Clang 20, plus the libFuzzer target and the WebAssembly playground |
+| `linux-arm64` | GCC 14 on arm64, where every processor fuses a multiply and an add |
+| `macos-clang` | Apple Clang |
+| `windows-msvc` | MSVC through Visual Studio: the release build and the hosts |
+| `release` | the release build with the sources, documentation and editor extension installed, for `cpack` |
+
+| Target or option | Builds |
+| --- | --- |
+| `kest`, `libkest` | the command line and `libkest.a`, optimized |
+| `kest-debug` (`KEST_CHECKED`, on except with MSVC) | the command line with the library's own checks and AddressSanitizer and UndefinedBehaviorSanitizer; it counts every instruction and is told where every host allocation ends. `embed-debug`, `engine-debug` and `fuzz-debug` are built the same way |
+| `least`, `embed`, `engine` | the example hosts |
+| `inward`, `measure`, `frame`, `fuzz` | the instruments and the seeded fuzzer |
+| `KEST_RACES` | the library's objects for ThreadSanitizer, in `build/races` |
+| `KEST_FUZZ` (Clang) | `tools/fuzz-cover`, the libFuzzer target |
+| `KEST_WASM` | `kest.wasm` and the browser playground in `playground/` (`node tools/wasi-run.mjs out/<preset>/kest.wasm run examples/math.kest` runs it) |
+| `KEST_RAYLIB=<raylib/src>` | `tetris` and `colony`, the raylib games |
+| `time` | runs the four timing programs and prints one number each |
+| `cmake --install`, `cpack` | install, and the release archive (see [Release](release.md)) |
+| `python3 tools/build_site.py` | the documentation site in `_site/docs`, with the standard library reference, `llms.txt` and `llms-full.txt`; `pages.yml` publishes it beside the playground |
+
+Header dependencies are tracked, so changing a header rebuilds every object that includes it in every build.
 
 ## Running things
 
 ```sh
-./kest run examples/math.kest           # one program
-./kest check --json examples/math.kest  # what the compiler says, for a tool
-sh tools/check-verifier.sh              # one check on its own
-make fast                               # the loop: seconds
-make check                              # everything: run before saying a change is done
+cmake --preset dev && cmake --build --preset dev   # configure once, build after every change
+out/dev/kest run examples/math.kest                # one program
+out/dev/kest check --json examples/math.kest       # what the compiler says, for a tool
+sh tools/check-verifier.sh                         # one check on its own
+cmake --workflow --preset dev-fast                 # the loop: build and the fast tests
+cmake --workflow --preset dev                      # everything: run before saying a change is done
+ctest --preset dev -R regressions                  # one test of the gate
 ```
 
-Every check script runs on its own from the root of the tree after `make`. On the shared development server, run `make check`, fuzzing and the benchmarks through the workspace's heavy-job wrapper.
+Every check script runs on its own from the root of the tree after a build, reading the build from `KEST_BUILD` (`out/dev` by default). On the shared development server, run the `dev` workflow, fuzzing and the benchmarks through the workspace's heavy-job wrapper.
 
 ## Environment switches
 

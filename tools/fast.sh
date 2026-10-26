@@ -1,16 +1,21 @@
 #!/bin/sh
-# The fast tier. `make check` is the whole gate and takes minutes; this is what
+# The fast tier. The whole gate takes minutes; this is what
 # a change is tried against while it is being written, and it takes seconds.
 #
 # It is not a gate and it is not held by `check-tables.sh` the way the ten
 # checks are, because it proves nothing about itself: everything here is also
-# done by `make check`, in more shapes and under more builds. What this is for
+# done by the gate, in more shapes and under more builds. What this is for
 # is the loop — a build, the language run, the boundary crossed, a diagnostic
 # said — so that a change that breaks one of those is known about in the second
 # after it is made rather than in the minute.
 #
-# Run by `make fast`. `make check` is what "it passes" means.
+# ctest runs it as the test `fast`. The whole gate is what "it passes" means.
 set -u
+
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+build_dir=${KEST_BUILD:-out/dev}
+case $build_dir in /*) ;; *) build_dir=$(pwd)/$build_dir ;; esac
 
 # Nothing here is given the terminal: an example that reads what it was handed
 # waits forever when a check is run from one, which is a tier that hangs rather
@@ -23,13 +28,14 @@ say() {
     printf '%-14s %s\n' "$1" "$2"
 }
 
-# The build, which is the first thing a change breaks.
-if ! make -j"$(nproc 2>/dev/null || echo 4)" kest libkest.a examples/embed \
-        >"$scratch"/built 2>&1 </dev/null; then
-    say build "refused"
-    cat "$scratch"/built
-    exit 1
-fi
+# The build, which is the first thing a change breaks: CMake made it before
+# this ran, and what is held here is that it is there.
+for built in $build_dir/kest $build_dir/libkest.a $build_dir/examples/embed; do
+    if [ ! -e "$built" ]; then
+        say build "$built is not there: cmake --build --preset dev first"
+        exit 1
+    fi
+done
 say build "release and the other host"
 
 # Every example, run for the answer it is written to give. An example checks
@@ -43,14 +49,14 @@ ran=0
 driven=0
 for one in examples/*.kest; do
     if ! grep -q '^fn main(' "$one"; then
-        if ! ./kest check "$one" >"$scratch"/said 2>&1 </dev/null; then
+        if ! $build_dir/kest check "$one" >"$scratch"/said 2>&1 </dev/null; then
             say examples "$one: $(head -3 "$scratch"/said)"
             failed=1
         fi
         driven=$((driven + 1))
         continue
     fi
-    if ! ./kest run "$one" >"$scratch"/said 2>"$scratch"/why </dev/null; then
+    if ! $build_dir/kest run "$one" >"$scratch"/said 2>"$scratch"/why </dev/null; then
         say examples "$one answered $(cat "$scratch"/why | head -3)"
         failed=1
     fi
@@ -63,7 +69,7 @@ say examples "$ran run, each answering nought, and $driven a host drives"
 # that stopped checking is a library nothing can import.
 resolved=0
 for one in lib/std/*.kest tools/*.kest; do
-    if ! ./kest check "$one" >"$scratch"/said 2>&1 </dev/null; then
+    if ! $build_dir/kest check "$one" >"$scratch"/said 2>&1 </dev/null; then
         say library "$one: $(head -3 "$scratch"/said)"
         failed=1
     fi
@@ -76,7 +82,7 @@ say library "$resolved file(s) resolve"
 # reads, and found the same way: this said `examples/*.kest lib/std/*.kest
 # tools/*.kest` and a task file out of form went unseen here and stopped a gate
 # thirty minutes later, which is the opposite of what a fast gate is for.
-if ! ./kest fmt --check $(find examples lib test tools -name '*.kest' | sort) \
+if ! $build_dir/kest fmt --check $(find examples lib test tools -name '*.kest' | sort) \
         >"$scratch"/formed 2>&1 </dev/null; then
     say formatting "these are not in the one form:"
     cat "$scratch"/formed
@@ -103,7 +109,7 @@ fn main() -> i32 {
     return x
 }
 KEST
-./kest check "$scratch"/wrong.kest >"$scratch"/said 2>&1 </dev/null
+$build_dir/kest check "$scratch"/wrong.kest >"$scratch"/said 2>&1 </dev/null
 if [ $? -eq 0 ]; then
     say diagnostics "a file with three mistakes in it checked"
     failed=1
@@ -114,7 +120,7 @@ else
         cat "$scratch"/said
         failed=1
     else
-        ./kest check --json "$scratch"/wrong.kest >"$scratch"/json 2>&1 \
+        $build_dir/kest check --json "$scratch"/wrong.kest >"$scratch"/json 2>&1 \
                                                           </dev/null
         if ! python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \
                 "$scratch"/json 2>/dev/null; then
@@ -169,7 +175,7 @@ fn main() -> i32 {
     return len(joined) - 400000
 }
 KEST
-if ./kest run --fuel 2000 "$scratch"/spin.kest >"$scratch"/spun 2>&1 </dev/null; then
+if $build_dir/kest run --fuel 2000 "$scratch"/spin.kest >"$scratch"/spun 2>&1 </dev/null; then
     say fuel "a program with a loop that never ends ran to the end"
     failed=1
 elif ! grep -q 'K0659' "$scratch"/spun; then
@@ -179,17 +185,17 @@ elif ! grep -q 'K0659' "$scratch"/spun; then
 # And to the number rather than only to stopping: a budget that stops
 # everything is a budget nobody can use. A thousand turns of a `for` and the
 # call that reaches them is a thousand steps, and one fewer is not enough.
-elif ! ./kest run --fuel 1000 "$scratch"/turns.kest >/dev/null 2>&1 </dev/null; then
+elif ! $build_dir/kest run --fuel 1000 "$scratch"/turns.kest >/dev/null 2>&1 </dev/null; then
     say fuel "a thousand turns would not run inside a thousand steps"
     failed=1
-elif ./kest run --fuel 999 "$scratch"/turns.kest >/dev/null 2>&1 </dev/null; then
+elif $build_dir/kest run --fuel 999 "$scratch"/turns.kest >/dev/null 2>&1 </dev/null; then
     say fuel "a thousand turns ran inside nine hundred and ninety-nine steps"
     failed=1
-elif ./kest run --fuel 100 "$scratch"/weighs.kest >/dev/null 2>&1 </dev/null; then
+elif $build_dir/kest run --fuel 100 "$scratch"/weighs.kest >/dev/null 2>&1 </dev/null; then
     say fuel "four hundred thousand bytes of text were copied inside a \
 hundred steps"
     failed=1
-elif ! ./kest run --fuel 40000 "$scratch"/weighs.kest >/dev/null 2>&1 \
+elif ! $build_dir/kest run --fuel 40000 "$scratch"/weighs.kest >/dev/null 2>&1 \
         </dev/null; then
     say fuel "the same work would not run inside forty thousand"
     failed=1
@@ -202,7 +208,7 @@ fi
 # program beside it frame by frame, so it crosses in both directions. It is
 # also where the budget is asked of the library rather than of the command
 # line: exhausted, replenished, spent to a number, cancelled and taken back.
-if ! ./examples/embed >"$scratch"/crossed 2>&1 </dev/null; then
+if ! $build_dir/examples/embed >"$scratch"/crossed 2>&1 </dev/null; then
     say embedding "the other host refused"
     tail -5 "$scratch"/crossed
     failed=1
@@ -221,7 +227,7 @@ else
 fi
 
 if [ "$failed" -ne 0 ]; then
-    printf 'fast: something above is wrong. `make check` is the whole of it.\n'
+    printf 'fast: something above is wrong. The whole gate is ctest over the build.\n'
     exit 1
 fi
-printf 'fast: everything here passes. `make check` is the whole of it.\n'
+printf 'fast: everything here passes. The whole gate is ctest over the build.\n'

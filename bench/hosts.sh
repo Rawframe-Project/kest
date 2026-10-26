@@ -3,7 +3,7 @@
 # host in `bench/hosts` built against its engine's own library, run five times,
 # and the best of the five written to `bench/hosts.tsv` with the date, the
 # commit, the machine and how busy it was, for `bench/chart.py` to draw. Not
-# part of `make check`, for the reason none of `bench` is.
+# part of the gate, for the reason none of `bench` is.
 #
 # Where each comparator's source tree is built is said by an environment
 # variable; a host whose engine is not given is left out rather than guessed:
@@ -17,6 +17,10 @@
 # the measure counts and the answer the work summed to, which has to be the
 # same for every engine; a run whose answers differ is refused. See D1272.
 set -eu
+
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+build_dir=${KEST_BUILD:-out/dev}
 
 best=${BEST:-5}
 out=${OUT:-bench/hosts.tsv}
@@ -50,9 +54,9 @@ cxx=${CXX:-c++}
 game=bench/hosts/tetromino.lua
 churn=bench/hosts/churn.lua
 hosts=""
-./kest emit --c bench/hosts/bodies.kest >"$room/bodies-native.c"
+$build_dir/kest emit --c bench/hosts/bodies.kest >"$room/bodies-native.c"
 $cc -O2 $linked -DKEST_NO_MAIN -Iinclude -Ibench/hosts -o "$room/kest" \
-    bench/hosts/kest.c "$room/bodies-native.c" libkest.a -lm
+    bench/hosts/kest.c "$room/bodies-native.c" $build_dir/libkest.a -lm
 hosts="$room/kest"
 if [ -n "${KEST_LUA_SRC:-}" ]; then
     $cc -O2 $linked -Ibench/hosts -I"$KEST_LUA_SRC/src" -o "$room/lua" \

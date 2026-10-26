@@ -17,7 +17,7 @@ What a host may hold of the program's memory, how it lends the program its own, 
 
 A machine's heap belongs to the machine. Text, arrays and stores the program makes live there, and a host holds them as handles in `KestValue` slots. A handle is a pointer and carries no stamp, so the machine cannot tell a handle that is still good from one into memory it has since reused. Most of this page is the consequences of that one fact. A reference into a store is the exception: it is a place and a stamp, so a stale one is always caught.
 
-The build that checks itself (`make kest-debug`, or a library built with the sanitizers) is told where every host block begins and ends, and catches several host mistakes that a release library cannot see. A host is worth running against it once.
+The build that checks itself (`kest-debug` in every build, or a library built with the sanitizers) is told where every host block begins and ends, and catches several host mistakes that a release library cannot see. A host is worth running against it once.
 
 ## Text
 

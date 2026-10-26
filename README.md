@@ -69,17 +69,17 @@ turn 4: Ada is Task.Fetch(1)
 
 ## Quick start
 
-From the source, with a C compiler and `make`:
+From the source, with a C compiler, CMake and Ninja:
 
 ```sh
 git clone https://github.com/Rawframe-Project/kest.git
 cd kest
-make
-./kest run examples/math.kest
-./kest new game && cd game && ../kest run
+cmake --preset dev && cmake --build --preset dev
+out/dev/kest run examples/math.kest
+out/dev/kest new game && cd game && ../out/dev/kest run
 ```
 
-On Windows, run `tools\build.bat` from a Developer Command Prompt and use `build\win\kest.exe`. Each release on the [releases page](https://github.com/Rawframe-Project/kest/releases) has an archive for every platform below, checksummed in `SHA256SUMS` and attested; unpack it anywhere and put its `bin` on the path. The [playground](https://rawframe-project.github.io/kest/) runs the command line in the browser.
+On Windows, with Visual Studio, use the `windows-msvc` preset and `out\windows-msvc\kest.exe`. Each release on the [releases page](https://github.com/Rawframe-Project/kest/releases) has an archive for every platform below, checksummed in `SHA256SUMS` and attested; unpack it anywhere and put its `bin` on the path. The [playground](https://rawframe-project.github.io/kest/) runs the command line in the browser.
 
 A host builds a program, starts a machine and calls into it:
 

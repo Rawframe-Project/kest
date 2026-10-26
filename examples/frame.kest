@@ -6,7 +6,7 @@ module examples.frame
 //
 // `tools/frame.kest` has the same name and a different job: it is the one
 // measurement, a frame step timed per entity, and it runs only when somebody
-// asks with `make time`.
+// asks with the `time` target.
 
 struct Vec3 {
     x: f32

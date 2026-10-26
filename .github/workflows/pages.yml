@@ -35,13 +35,13 @@ jobs:
           persist-credentials: false
       - name: The playground, held to the machine
         run: |
-          make -j
-          make playground
-          sh tools/check-wasm.sh
+          cmake --preset linux-clang
+          cmake --build --preset linux-clang
+          KEST_BUILD=out/linux-clang sh tools/check-wasm.sh
       - name: The site
         run: |
-          python3 tools/build_site.py
-          cp -r build/playground/. _site/
+          KEST_BUILD=out/linux-clang python3 tools/build_site.py
+          cp -r out/linux-clang/playground/. _site/
           test -f _site/index.html && test -f _site/llms.txt
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:

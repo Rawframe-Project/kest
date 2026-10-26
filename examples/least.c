@@ -4,7 +4,7 @@
 // else there is, and it is here rather than in the reference because a host in
 // a document is a host nobody has run.
 //
-//   make least && ./examples/least examples/least.kest
+//   cmake --build --preset dev && out/dev/examples/least examples/least.kest
 //
 // `examples/embed.c` is the other kind of host: it crosses every part of this
 // boundary and counts the bytes both sides spend, because this project holds

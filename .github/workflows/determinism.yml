@@ -45,7 +45,11 @@ jobs:
           persist-credentials: false
       - name: Kest, and the comparators built from their own source
         run: |
-          make -j kest
+          if ! command -v ninja >/dev/null; then
+            if [ "$(uname)" = Darwin ]; then brew install ninja; else sudo apt-get install -y -q ninja-build; fi
+          fi
+          cmake --preset dev -DKEST_CHECKED=OFF
+          cmake --build --preset dev --target kest
           # Asked again when the far end drops the connection, which it did.
           curl -fsSL --retry 5 --retry-all-errors --retry-delay 10 \
             -o lua.tar.gz https://www.lua.org/ftp/lua-5.4.9.tar.gz
@@ -65,7 +69,7 @@ jobs:
       - name: the answers
         run: |
           export KEST_LIB=lib/
-          PLATFORM=${{ matrix.platform }} KEST=./kest \
+          PLATFORM=${{ matrix.platform }} KEST=out/dev/kest \
             LUA=lua-5.4.9/src/lua LUAJIT=luajit/src/luajit \
             LUAU=$( [ -x luau-bin/luau ] && echo luau-bin/luau ) NODE=node \
             OUT=answers-${{ matrix.platform }}.tsv sh bench/determinism.sh
@@ -85,8 +89,9 @@ jobs:
           persist-credentials: false
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
       - name: Kest
-        shell: cmd # zizmor: ignore[misfeature] a batch file runs where it was written to run
-        run: tools\build.bat
+        run: |
+          cmake --preset windows-msvc
+          cmake --build --preset windows-msvc --target kest
       - name: Lua 5.4 and LuaJIT from their own source, and Luau's release
         shell: pwsh
         run: |
@@ -109,7 +114,7 @@ jobs:
         shell: bash
         run: |
           export KEST_LIB=lib/
-          PLATFORM=windows-x86_64 KEST=./build/win/kest.exe LUA=./lua.exe \
+          PLATFORM=windows-x86_64 KEST=./out/windows-msvc/kest.exe LUA=./lua.exe \
             LUAJIT=./luajit/src/luajit.exe LUAU=./luau-bin/luau.exe NODE=node \
             OUT=answers-windows-x86_64.tsv sh bench/determinism.sh
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

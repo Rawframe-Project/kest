@@ -23,7 +23,7 @@ Numbers are from one sitting on an 8-processor Haswell virtual machine, best of 
 - **A reference read** costs about twice an index read: the stamp comparison and the optional it answers in. A world of removable entities costs about a sixth of a frame step more than a run of entities that cannot be removed.
 - **A crossing into the host** costs a few nanoseconds more than a call inside the program; a crossing in from the host costs less than a turn of a loop. A host processes a batch in one call (a lent array) rather than calling per item.
 
-Instruction counts are taken from the checking build with `KEST_DEEP=1`, which counts every instruction; durations from `make time` (`tools/frame.kest`, `tools/crossing.kest`, `tools/reference.kest` and `tools/inward.c`), which print a spread so a run on a busy machine is recognizable.
+Instruction counts are taken from the checking build with `KEST_DEEP=1`, which counts every instruction; durations from the `time` target (`cmake --build --preset dev --target time`) (`tools/frame.kest`, `tools/crossing.kest`, `tools/reference.kest` and `tools/inward.c`), which print a spread so a run on a busy machine is recognizable.
 
 ## Open
 

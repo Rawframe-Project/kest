@@ -6,11 +6,16 @@
 # that it said the same thing.
 #
 # It takes the command to run as its first argument, because on Windows that is
-# not `./kest`, and the place to write as its second.
+# not `./kest`, and the place to write as its second. Given a third, the trace
+# every platform has to write (`test/conformance.trace`), it fails with the
+# difference when this platform wrote anything else. After a change that is
+# meant to change what an example says, the trace is written again with the
+# first two arguments alone and committed.
 set -eu
 
 kest=${1:?say which kest to run}
 out=${2:?say where to write}
+expected=${3:-}
 
 : >"$out"
 for one in examples/*.kest; do
@@ -22,3 +27,8 @@ for one in examples/*.kest; do
     printf '%s\n' "$said" >>"$out"
     printf 'answered %s\n' "$answer" >>"$out"
 done
+
+if [ -n "$expected" ] && ! diff -u "$expected" "$out"; then
+    echo "conformance: this platform said something else than $expected"
+    exit 1
+fi

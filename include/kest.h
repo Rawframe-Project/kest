@@ -6,9 +6,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
-// The library version, said in one place. The Makefile reads the string for
-// the name of a release archive, and release-please moves all four between
-// the markers.
+// The library version, said in one place. CMakeLists.txt reads it for the
+// project's version and the name of a release archive, and release-please
+// moves all four between the markers.
 // x-release-please-start-major
 #define KEST_VERSION_MAJOR 0
 // x-release-please-end

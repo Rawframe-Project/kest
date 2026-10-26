@@ -50,7 +50,7 @@ The verified machine costs nothing extra over a trusted one running the same pro
 
 **Its doors.** What a door does with the values it is handed is the host's to get right, and it is where most real bugs will be. `kest hostile file.kest [seed]` writes the file back with a function after it for every call of every door it declares, with the values a hostile program could pass: numbers at the ends of every width, floats that are not numbers, empty text and very long text, text with a zero in it, every case of every enum. The host builds that file, binds its doors as usual, calls `hostile0`, `hostile1` and so on (`hostile` answers how many there are), and runs under its own sanitizers. Each call must answer, or be refused by the door in words with `kest_native_failed`. The engine in this tree is held to it; the first run found two of its doors turning an infinite float into a number.
 
-**A second wall.** For a host that wants a fault in the machine kept out of its own memory regardless, the library builds as WebAssembly (`make kest.wasm`) and runs inside a WebAssembly runtime. Every example answers the same there, at three to four times the cost of the native machine.
+**A second wall.** For a host that wants a fault in the machine kept out of its own memory regardless, the library builds as WebAssembly (`kest.wasm`, with `-DKEST_WASM=ON`) and runs inside a WebAssembly runtime. Every example answers the same there, at three to four times the cost of the native machine.
 
 ## Reporting a vulnerability
 

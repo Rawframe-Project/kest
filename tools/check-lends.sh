@@ -7,6 +7,11 @@
 # written here.
 set -u
 
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+build_dir=${KEST_BUILD:-out/dev}
+case $build_dir in /*) ;; *) build_dir=$(pwd)/$build_dir ;; esac
+
 # A scratch of this run's own, because two runs of this can happen at once when
 # the backstops put one out of order while another is being asked.
 scratch=$(mktemp -d)
@@ -94,7 +99,7 @@ int main(int argc, char **argv) {
 }
 EOF
 if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$naming.host" \
-        "$naming.c" libkest.a -lm 2>"$scratch"/why; then
+        "$naming.c" $build_dir/libkest.a -lm 2>"$scratch"/why; then
     complain "the host that lends by name does not build"
     sed 's/^/    /' "$scratch"/why | head -3
 elif ! out=$("$naming.host" "$naming/both.kest" 2>&1 </dev/null); then
@@ -261,7 +266,7 @@ int main(int argc, char **argv) {
 }
 EOF
 if ! cc -std=c11 -Wall -Wextra -Werror -Iinclude -o "$holding.host" \
-        "$holding.c" libkest.a -lm 2>"$scratch"/why; then
+        "$holding.c" $build_dir/libkest.a -lm 2>"$scratch"/why; then
     complain "the host that lends what the machine keeps does not build"
     sed 's/^/    /' "$scratch"/why | head -3
 elif ! out=$("$holding.host" "$holding/holds.kest" 2>&1 </dev/null); then

@@ -13,24 +13,23 @@ It never compromises on:
 ## Commands
 
 ```sh
-make                        # kest and libkest.a, optimized
-make fast                   # the loop while writing a change (about a minute)
-make check                  # the whole gate: what "it passes" means (several minutes)
-make fuzz                   # the seeded fuzzer, short, sanitized
-sh tools/check-verifier.sh  # any one check, from the root after make
-python3 tools/check_guide.py   # every example in docs/user checked and run
-python3 tools/build_site.py    # the documentation site, llms.txt and llms-full.txt, in _site (needs markdown)
-make kest-debug && ./kest-debug run file.kest   # the checking, sanitized build
+cmake --preset dev && cmake --build --preset dev   # configure once into out/dev, then build
+cmake --workflow --preset dev-fast   # build and the fast tests: the loop while writing a change (about a minute)
+cmake --workflow --preset dev        # build and every test: what "it passes" means (several minutes)
+ctest --preset dev -R gate           # one test; `ctest --preset dev -N` lists them
+sh tools/check-verifier.sh           # any one check, from the root after a build (KEST_BUILD, default out/dev)
+out/dev/kest-debug run file.kest     # the checking, sanitized build
+python3 tools/build_site.py          # the documentation site, llms.txt and llms-full.txt, in _site (needs markdown)
 ```
 
-Run `make check`, `make fuzz`, long fuzzing and every benchmark through the workspace's heavy-job wrapper on the shared machine (`/home/rawframe-project/tools/heavy.sh make check`). The sweeps already run eight files at a time; do not raise that. [docs/operations/checks.md](docs/operations/checks.md) says what each check holds and what each CI job runs.
+Run the `dev` workflow, long fuzzing and every benchmark through the workspace's heavy-job wrapper on the shared machine, at parallelism 8 at most (`/home/rawframe-project/tools/heavy.sh cmake --workflow --preset dev`). The sweeps inside the gate run eight files at a time; do not raise that. Every build goes to `out/<preset>`, and CI runs the same presets (`CMakePresets.json`); add a cell as a preset, never as commands in a workflow. [docs/operations/checks.md](docs/operations/checks.md) says what each check holds and what each CI job runs.
 
 ## Ways to hurt yourself
 
 - **Killing by pattern.** Never `pkill -f`, `pgrep | kill` or `kill` a PID found by matching a name or path: other sessions build, fuzz and run hosts named `kest`, `fuzz` and `engine` on the same machine. Kill only a PID you started.
 - **Endless fuzzing.** `tools/fuzz-cover` is libFuzzer and runs until it finds something. Always pass `-max_total_time`, and stop what you started. CI runs it only through `tools/fuzz_target.sh`, which prints neither the seed nor a finding's input; never print one, upload a corpus or a crash, or restore the corpus cache on a pull request.
 - **Running the games headless and forgetting them.** `tetris` and `colony` under Xvfb take `--frames`; always pass it.
-- **Files a run writes.** `examples/settlement.kest` writes `kest-settlement-day.txt` in the current directory. Every check works in a scratch directory under `TMPDIR` and gives it back; the gate's `room` and `tree` steps fail when anything is left behind or a built file is committed.
+- **Files a run writes.** Builds go to `out/`, and `examples/settlement.kest` writes `kest-settlement-day.txt` in the current directory; `.gitignore` names both and nothing else a run may leave. Every check works in a scratch directory under `TMPDIR` and gives it back; the gate's `room` and `tree` steps fail when anything else is left behind or a built file is committed.
 - **Copies held to their source.** `editors/vscode/LICENSE` is the same bytes as `LICENSE`. `bench/hosts/tetromino.lua` is a third party's file kept unchanged under its own license. `tools/fuzz_target.sh` is the organization's copy from its `.github` repository: change it there first.
 - **Benchmark results.** `bench/*.tsv` and `bench/chart-*.svg` are regenerated only when a release changes them, on a quiet machine; never commit a sitting taken on a busy one.
 
@@ -42,7 +41,7 @@ Run `make check`, `make fuzz`, long fuzzing and every benchmark through the work
 - **Diagnostics.** Every diagnostic has a stable code (`K01xx` lexer, `K02xx` parser, `K03xx` types and bodies, `K04xx` promises, `K05xx` what the compiler cannot emit, `K06xx` running and the command line, `K07xx` reading). A code is never reused for another meaning, and every code is asked for by a check that makes it happen; `check-tables.sh` refuses one nothing asks for. A compiler fault is said only through `kest_diags_fault`. Never stop at the first error.
 - **Limits.** Every limit is a named constant with a diagnostic that says the number; `tools/check-ceilings.sh` reaches each one.
 - **Versions.** In `include/kest.h`: `KEST_ABI_VERSION` moves when anything a compiled host could see changes; `KEST_JSON_SCHEMA` when a JSON field changes meaning, is removed, or is added to a list a reader was told was complete; `KEST_PROFILE_VERSION` when anything a deterministic program observes changes; `KEST_EDITION` when the language changes in a way an existing program notices. Each move is named in the changelog. The library version (`KEST_VERSION_*` between the release-please markers, and `editors/vscode/package.json`) is changed only by release-please.
-- **Determinism.** Arithmetic, NaN spelling, hashing and iteration order are the language's, implemented once and shared by the folder, the machine and the C backend. Mathematics is Kest in `lib/std/fdlibm.kest`; only `sqrt`, `floor` and `ceil` are host doors. Nothing a program reads comes from an address, a clock or the environment.
+- **Determinism.** Arithmetic, NaN spelling, hashing and iteration order are the language's, implemented once and shared by the folder, the machine and the C backend. Mathematics is Kest in `lib/std/fdlibm.kest`; only `sqrt`, `floor` and `ceil` are host doors. Nothing a program reads comes from an address, a clock or the environment. `test/conformance.trace` is what every example prints and answers, and every platform's build has to write it byte for byte; after a change meant to alter an example's output, write it again with `sh tools/conformance.sh out/dev/kest test/conformance.trace` and say so in the pull request.
 - **No global mutable state** except the process-wide reference stamp counter. Every module hangs off a context the caller owns.
 - **Public API.** A host includes `include/kest.h` and nothing else; it compiles as strict C11 on its own (`tools/check-header.sh`). Every door says when it refuses and what it writes into the report, is called from `examples/embed.c`, and `tools/check-dead.sh` holds every declared function to existing and being called from outside its file.
 - **Workflows.** Every action is pinned by commit SHA with its version in a comment. Every workflow sets `permissions: {}` and `defaults.run.shell: bash` (`scorecard.yml` excepted, which Scorecard requires) and grants each job the least it needs; event data reaches a script only through `env`. The `required` job in `ci.yml` needs every other job; a new job is added to its `needs`. `zizmor` audits them on every pull request.
@@ -69,7 +68,7 @@ C11, `-Wall -Wextra -Wshadow -Wconversion -Werror` for the library; `.clang-form
 ## Kest conventions
 
 - A file's `module` line matches its path; `lib/std/<name>.kest` is `std.<name>`.
-- Every Kest file in the tree is in the one form: run `./kest fmt -w` on what you touched. `make fast` refuses anything else.
+- Every Kest file in the tree is in the one form: run `out/dev/kest fmt -w` on what you touched. The fast tests refuse anything else.
 - Every Kest file compiles without warnings.
 - A keyword is added only when a program using the word as a name would be ambiguous; everything else is a word that means something only where it stands.
 - A standard library function is written in Kest, with every promise it can keep, and in both widths where its module has both.
@@ -78,7 +77,7 @@ C11, `-Wall -Wextra -Wshadow -Wconversion -Werror` for the library; `.clang-form
 
 Follow the [repository standard's Tests section](https://github.com/Rawframe-Project/.github/blob/main/docs/repository-standard.md#tests); in this repository:
 
-- An example under `examples/` checks its own answers and returns 0, or the number of the check that failed. `make check` runs every example under the release build, the sanitized build, the heap walked at every allocation, `KEST_PLAIN=1` and `KEST_NOOPT=1`, and compiled to C, and holds every run to the same output.
+- An example under `examples/` checks its own answers and returns 0, or the number of the check that failed. The gate runs every example under the release build, the sanitized build, the heap walked at every allocation, `KEST_PLAIN=1` and `KEST_NOOPT=1`, and compiled to C, and holds every run to the same output.
 - A defect gets a program that shows it, with a comment naming the defect: a self-checking program in `test/regress`, or one in `test/refused` whose first line names the code it is refused with. `tools/check-regress.sh` runs each under both builds, the heap walked at every allocation, `KEST_PLAIN`, `KEST_NOOPT` and compiled to C. A case that needs a host or a command goes in the check of its area. Do not add checks that break the tree on purpose to see another check catch it.
 - A new diagnostic needs the program that makes it happen, in the check of its area (usually `tools/check-commands.sh`).
 - A fuzz finding is a seed, a count and a target; reduce the input and add it to `test/regress` or `test/refused`.

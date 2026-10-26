@@ -23,7 +23,7 @@
  * instrument the gate runs everywhere and holds itself to ISO C. This is a
  * bench tool, run by whoever is optimizing, and it says which clock it read.
  *
- * It is not part of `make check`. A duration is not a pass or a fail. */
+ * It is not part of the gate. A duration is not a pass or a fail. */
 
 /* A monotonic clock is not in ISO C, so this one file asks for the POSIX one
    by name, before anything is included. `include/kest.h` is held to the

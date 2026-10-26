@@ -8,12 +8,17 @@
 # compiler proves the header stands on its own and the linker proves the
 # library keeps every promise the header makes.
 set -u
+
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+build_dir=${KEST_BUILD:-out/dev}
+case $build_dir in /*) ;; *) build_dir=$(pwd)/$build_dir ;; esac
 cc=${CC:-cc}
 header=include/kest.h
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-if [ ! -f libkest.a ]; then
+if [ ! -f $build_dir/libkest.a ]; then
     echo "the library is not built"
     exit 1
 fi
@@ -51,7 +56,7 @@ count=$(printf '%s\n' "$names" | grep -c .)
 # No `-lm` and nothing else: the library is meant to need libc and nothing
 # beyond it, and this is where that is either true or not.
 if ! "$cc" -std=c11 -Wall -Wextra -Werror -pedantic -Iinclude \
-        -o "$work/host" "$work/host.c" libkest.a 2>"$work/why"; then
+        -o "$work/host" "$work/host.c" $build_dir/libkest.a 2>"$work/why"; then
     echo "a host cannot be written against the header and libc alone:"
     cat "$work/why"
     exit 1

@@ -2,7 +2,7 @@
 # The five workloads against the languages beside this one, in every mode
 # each of them ships, written down where the front page reads them: a table in
 # `bench/results.tsv`, with the date, the commit and the machine it was taken
-# on, and the charts `bench/chart.py` draws from it. Not part of `make check`,
+# on, and the charts `bench/chart.py` draws from it. Not part of the gate,
 # for the reason none of `bench` is.
 #
 # What is measured is the process's own time on the processor and the
@@ -23,7 +23,11 @@
 # engine is not there is left out rather than guessed. See D1180 and D1272.
 set -eu
 
-kest=${KEST:-./kest}
+# What the build made: the preset's build directory, out/dev unless
+# KEST_BUILD names another.
+build_dir=${KEST_BUILD:-out/dev}
+
+kest=${KEST:-$build_dir/kest}
 best=${BEST:-5}
 cc=${CC:-cc}
 built=$(mktemp -d)
@@ -94,7 +98,7 @@ once() {
 for one in kernel control graph words rules; do
     row "$one" "Kest" "$kest" run "bench/$one.kest"
     if "$kest" emit --c "bench/$one.kest" >"$built/$one.c" 2>/dev/null &&
-            $cc -O2 -Iinclude -o "$built/$one" "$built/$one.c" libkest.a \
+            $cc -O2 -Iinclude -o "$built/$one" "$built/$one.c" $build_dir/libkest.a \
                 -lm 2>/dev/null; then
         row "$one" "Kest, compiled" "$built/$one" "bench/$one.kest"
     fi
