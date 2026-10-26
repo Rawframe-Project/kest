@@ -26,6 +26,10 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
+# MSVC's static C runtime, which is what `cl` links when it is told nothing,
+# so a host built with a plain `cl host.c kest.lib` links against the archive.
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded")
+
 if(MSVC)
   set(kest_sanitizers_default OFF)
 else()
