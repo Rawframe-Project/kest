@@ -264,11 +264,11 @@ static const char *path_of_import(KestArena *arena, const char *directory,
     if (path == NULL) {
         return NULL;
     }
-    size_t used = (size_t)snprintf(path, room, "%s", directory);
+    size_t used = kest_put(path, room, 0, "%s", directory);
     for (size_t i = 0; i < length; i++) {
         path[used++] = dotted[i] == '.' ? '/' : dotted[i];
     }
-    snprintf(path + used, room - used, ".kest");
+    kest_put(path, room, used, ".kest");
     return path;
 }
 
@@ -289,7 +289,7 @@ static const char *root_of(KestArena *arena, const char *path,
     for (size_t i = 0; i < length; i++) {
         suffix[i] = dotted[i] == '.' ? '/' : dotted[i];
     }
-    snprintf(suffix + length, room - length, ".kest");
+    kest_put(suffix, room, length, ".kest");
 
     size_t path_length = strlen(path);
     size_t suffix_length = strlen(suffix);
@@ -532,9 +532,9 @@ static const char *beneath(KestArena *arena, const char *where,
     if (joined == NULL) {
         return source;
     }
-    size_t used = (size_t)snprintf(joined, room, "%s%s", where, source);
+    size_t used = kest_put(joined, room, 0, "%s%s", where, source);
     if (used > 0 && joined[used - 1] != '/') {
-        snprintf(joined + used, room - used, "/");
+        kest_put(joined, room, used, "/");
     }
     return joined;
 }

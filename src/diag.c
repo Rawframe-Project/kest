@@ -979,3 +979,23 @@ FILE *kest_scratch_file(void) {
     return tmpfile();
 #endif
 }
+
+size_t kest_put(char *out, size_t room, size_t at, const char *format, ...) {
+    if (room == 0) {
+        return 0;
+    }
+    if (at >= room - 1) {
+        out[room - 1] = '\0';
+        return room - 1;
+    }
+    va_list args;
+    va_start(args, format);
+    int wrote = vsnprintf(out + at, room - at, format, args);
+    va_end(args);
+    if (wrote < 0) {
+        out[at] = '\0';
+        return at;
+    }
+    size_t end = at + (size_t)wrote;
+    return end < room ? end : room - 1;
+}

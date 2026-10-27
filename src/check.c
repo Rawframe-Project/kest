@@ -2435,10 +2435,10 @@ static const char *instance_symbol(KestProgram *program, const char *base,
     if (written == NULL) {
         return base;
     }
-    size_t used = (size_t)snprintf(written, room, "%s", base);
+    size_t used = kest_put(written, room, 0, "%s", base);
     for (uint32_t i = 0; i < count; i++) {
-        used += (size_t)snprintf(written + used, room - used, "$%s",
-                                 kest_type_name(program->arena, bindings[i]));
+        used = kest_put(written, room, used, "$%s",
+                        kest_type_name(program->arena, bindings[i]));
     }
     return written;
 }
@@ -4751,10 +4751,10 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
                     if (which >= subjects[i]->case_count) {
                         continue;
                     }
-                    at += (size_t)snprintf(
-                        one + at, sizeof(one) - at, "%s%s",
-                        at > 0 ? ", " : "", subjects[i]->cases[which].name);
-                    if (at >= sizeof(one)) {
+                    at = kest_put(one, sizeof(one), at, "%s%s",
+                                  at > 0 ? ", " : "",
+                                  subjects[i]->cases[which].name);
+                    if (at + 1 >= sizeof(one)) {
                         break;
                     }
                 }
@@ -4762,9 +4762,8 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
                 // stopped helping, so what is left over is counted instead.
                 if (named < NAMED_AT_MOST &&
                     used + at + 8 < sizeof(missing)) {
-                    used += (size_t)snprintf(missing + used,
-                                             sizeof(missing) - used, "%s`%s`",
-                                             used > 0 ? ", " : "", one);
+                    used = kest_put(missing, sizeof(missing), used, "%s`%s`",
+                                    used > 0 ? ", " : "", one);
                     named++;
                 }
             }
@@ -6453,12 +6452,11 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
                 room = 0;
             }
             for (uint32_t b = 0; which != NULL && b < instance->count; b++) {
-                used += (size_t)snprintf(
-                    which + used, room - used, "%s`%s` is `%s`",
+                used = kest_put(
+                    which, room, used, "%s`%s` is `%s`",
                     b == 0 ? "" : (b + 1 == instance->count ? " and " : ", "),
                     instance->names[b],
-                    kest_type_name_read(program->arena,
-                                        instance->bindings[b]));
+                    kest_type_name_read(program->arena, instance->bindings[b]));
             }
             for (uint32_t d = before;
                  instance->site.length > 0 && d < program->diags->count; d++) {
