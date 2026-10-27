@@ -1656,6 +1656,40 @@ what its program answers"
         printf '%s\n' "$release_refused" | sed 's/^/    /' | head -4
         ;;
     esac
+    # A release is named after its program, and only in the characters every
+    # shell, `cmd.exe` and file system read the same; a name with a space in
+    # it is refused by name, and nothing is left behind.
+    cp "$elsewhere/asking.kest" "$elsewhere/two words.kest"
+    release_named=$(cd "$elsewhere" &&
+                    "$put/usr/local/bin/kest" build --release "two words.kest" \
+                        2>&1 </dev/null)
+    case "$release_named" in
+    *K0663*"\`two words\` cannot name a release"*) ;;
+    *)
+        complain "release: a name with a space in it was not refused by name"
+        printf '%s\n' "$release_named" | sed 's/^/    /' | head -4
+        ;;
+    esac
+    if [ -e "$elsewhere/two words" ] ||
+       [ -e "$elsewhere/two words.release.c" ]; then
+        complain "release: a name that was refused left a file behind"
+    fi
+    rm -f "$elsewhere/two words.kest" "$elsewhere/two words" \
+          "$elsewhere/two words.release.c"
+    # And a command line installed under a path with a quote in it, which is a
+    # path like any other: the header and the library are found and used.
+    quoted_put="$scratch/check-put's"
+    rm -rf "$quoted_put"
+    cp -r "$put/usr/local" "$quoted_put"
+    if ! release_quoted=$(cd "$elsewhere" &&
+                          "$quoted_put/bin/kest" build --release asking.kest \
+                              2>&1 </dev/null) ||
+       [ ! -x "$elsewhere/asking" ]; then
+        complain "release: a command line installed under a path with a quote \
+in it did not make a release"
+        printf '%s\n' "$release_quoted" | sed 's/^/    /' | head -4
+    fi
+    rm -rf "$quoted_put"
     rm -rf "$release_room" "$release_bare" "$elsewhere/asking"
     # The manifest ends its last line without a newline, so a `read` that
     # stopped at the end of the file would leave that file behind.
