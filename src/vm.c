@@ -6843,28 +6843,31 @@ KestRuntime *kest_runtime_new(KestArena *own, KestModule *stamped,
         // number too big for the machine and a host with a program that would
         // not compile got the same nothing, and only one of them is about the
         // program. Which of them could not be had is said, because a host that
-        // halves the wrong number is a host halving it forever.
+        // halves the wrong number is a host halving it forever. Everything
+        // else here is sized by the program and not by any number a host
+        // picked, so when only that could not be had there is nothing a host
+        // could halve, and what happened is that there was no memory.
         KestSpan nowhere = {0, 0};
         kest_diags_in(diags, NULL);
-        if (rt->stack == NULL) {
+        if (rt->stack != NULL && rt->frames != NULL) {
+            kest_diags_starve(diags);
+        } else if (rt->stack == NULL) {
             kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0638", nowhere,
                            "this host asked for %u slots of stack and this "
                            "machine cannot have that much",
                            rt->stack_slots);
-        } else if (rt->frames == NULL) {
+        } else {
             kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0638", nowhere,
                            "this host asked for calls %u deep and this machine "
                            "cannot have that many",
                            rt->call_depth);
-        } else {
-            kest_diags_add(diags, KEST_SEVERITY_ERROR, "K0638", nowhere,
-                           "this machine has nowhere to put what a program "
-                           "needs before it runs");
         }
-        kest_diags_suggest(diags,
-                           "`kest_needs` says what the program wants; a "
-                           "number a host picks over that is a number this "
-                           "machine has to be able to take");
+        if (rt->stack == NULL || rt->frames == NULL) {
+            kest_diags_suggest(diags,
+                               "`kest_needs` says what the program wants; a "
+                               "number a host picks over that is a number "
+                               "this machine has to be able to take");
+        }
         kest_ground_free(rt->ground);
         kest_arena_free(rt->heap);
         return NULL;

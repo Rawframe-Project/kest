@@ -260,6 +260,8 @@ bool kest_build_emit(KestBuild *build) {
         if (build->c_wrote == NULL) {
             kest_diags_starve(&build->diags);
         }
+    } else if (both.c != NULL) {
+        build->c_writer->drop(both.c);
     }
     kest_arena_free(bodies);
     if (!compiled || build->module.out_of_room) {

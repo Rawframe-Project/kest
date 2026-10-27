@@ -2009,7 +2009,7 @@ allocations_of() {
     high=200000
     while [ $((high - low)) -gt 1 ]; do
         middle=$(((high + low) / 2))
-        if KEST_REFUSE_AT=$middle $build_dir/kest-debug "$1" "$2" \
+        if KEST_REFUSE_AT=$middle $build_dir/kest-debug "$@" \
                 >/dev/null 2>&1 </dev/null; then
             high=$middle
         else
@@ -2027,24 +2027,49 @@ aimed=0
 # the compiler. These two are the machine's own life and nothing else: the heap
 # it hands arrays and text out of, the frames it stands them on, and what it
 # needs to say any of it went wrong.
+# `tail` is `emit` with every one of its last allocations refused in turn. What
+# a build does once the bodies are compiled -- proving what was emitted against
+# what was promised -- takes a handful of allocations at the very end, where a
+# spread lands one refusal or none: the proof's first one was refused there,
+# answered nothing, and the build went on as though the module had been proved.
+# `emit --c` writes C beside the bytecode from an arena the build does not
+# own, which a build stopped partway never gave back.
 for aimed_at in "check examples/inventory.kest" "run examples/queue.kest" \
                 "check lib/std/text.kest" "run examples/flags.kest" \
                 "emit examples/boxes.kest" "machine examples/words.kest" \
-                "machine examples/pieces.kest"; do
+                "machine examples/pieces.kest" "tail examples/boxes.kest" \
+                "emit --c examples/boxes.kest"; do
     how=${aimed_at%% *}
     what=${aimed_at#* }
     from_one=0
+    every=0
     if [ "$how" = machine ]; then
         how=run
-        from_one=$(allocations_of check "$what")
+        # shellcheck disable=SC2086
+        from_one=$(allocations_of check $what)
     fi
-    takes=$(allocations_of "$how" "$what")
+    if [ "$how" = tail ]; then
+        how=emit
+        every=1
+    fi
+    # shellcheck disable=SC2086
+    takes=$(allocations_of "$how" $what)
+    steps=40
+    if [ $every -eq 1 ]; then
+        from_one=$((takes > 256 ? takes - 256 : 0))
+        steps=$((takes - from_one - 1))
+    fi
     span=$((takes - from_one))
     step=1
-    while [ $step -le 40 ]; do
-        at_one=$((from_one + (span * step) / 41))
+    while [ $step -le $steps ]; do
+        if [ $every -eq 1 ]; then
+            at_one=$((from_one + step))
+        else
+            at_one=$((from_one + (span * step) / 41))
+        fi
         [ $at_one -lt 1 ] && at_one=1
-        said=$(KEST_REFUSE_AT=$at_one $build_dir/kest-debug "$how" "$what" \
+        # shellcheck disable=SC2086
+        said=$(KEST_REFUSE_AT=$at_one $build_dir/kest-debug "$how" $what \
                2>&1 </dev/null)
         answered=$?
         step=$((step + 1))
@@ -2101,19 +2126,31 @@ fi
 # and a build whose trees had nowhere to go read nothing, said nothing, and ran
 # as though it had run the program. Walked until one is refused that changes
 # nothing, and then past it, because an arena refused and quietly done without
-# is the thing this is looking for and looks the same as the end. `fmt` and
-# `doc` take an arena of their own outside any build, so they are walked too.
+# is the thing this is looking for and looks the same as the end. Every
+# command that takes an arena is walked, because each takes its first one
+# somewhere of its own: `lsp` and `dap` came back with nothing said, `new` and
+# `doctor` with the machine's word for a heap that was full, `hostile` blamed
+# the file, and a machine with nowhere for its bookkeeping told the host to
+# ask for less stack. A command with no memory says it has none, and nothing
+# else: no code but those three is an answer here.
 arenas=0
 for aimed_at in "run examples/vectors.kest" "emit examples/boxes.kest" \
                 "check lib/std/text.kest" "run examples/queue.kest" \
-                "fmt examples/boxes.kest" "doc examples/inventory.kest"; do
+                "fmt examples/boxes.kest" "doc examples/inventory.kest" \
+                "tick examples/events.kest 3" "call examples/vectors.kest steps" \
+                "profile examples/queue.kest" "test examples/flags.kest" \
+                "hostile examples/host.kest" "emit --c examples/boxes.kest" \
+                "doctor ." "lsp" "dap"; do
     how=${aimed_at%% *}
-    what=${aimed_at#* }
-    whole=$($build_dir/kest-debug "$how" "$what" 2>&1 </dev/null)
+    what=${aimed_at#"$how"}
+    what=${what# }
+    # shellcheck disable=SC2086
+    whole=$($build_dir/kest-debug "$how" $what 2>&1 </dev/null)
     at_one=1
     past=0
     while [ $past -lt 3 ] && [ $at_one -le 64 ]; do
-        said=$(KEST_REFUSE_ARENA=$at_one $build_dir/kest-debug "$how" "$what" \
+        # shellcheck disable=SC2086
+        said=$(KEST_REFUSE_ARENA=$at_one $build_dir/kest-debug "$how" $what \
                2>&1 </dev/null)
         answered=$?
         if [ $answered -eq 0 ] && [ "$said" = "$whole" ]; then
@@ -2145,6 +2182,15 @@ for aimed_at in "run examples/vectors.kest" "emit examples/boxes.kest" \
             if [ $answered -ge 128 ] || [ $answered -eq 0 ]; then
                 echo "ceilings: refusing arena $at_one of" \
                      "\`kest $how $what\` came back $answered"
+                failed=1
+            fi
+            blamed=$(printf '%s' "$said" | grep -o 'K[0-9][0-9][0-9][0-9]' |
+                     grep -v -e K0639 -e K0658 -e K0705 | sort -u |
+                     tr '\n' ' ')
+            if [ -n "$blamed" ]; then
+                echo "ceilings: refusing arena $at_one of" \
+                     "\`kest $how $what\` made it say ${blamed}rather than" \
+                     "that it had no memory"
                 failed=1
             fi
             ;;
