@@ -207,8 +207,8 @@ static const char *piece(KestArena *arena, const char *bytes, size_t length) {
     return text.failed ? NULL : text.bytes == NULL ? "" : text.bytes;
 }
 
-bool kest_doc(const KestUnitInfo *file, KestArena *arena, bool json,
-              FILE *out) {
+bool kest_doc(const KestUnitInfo *file, KestArena *arena,
+              const KestDiags *diags, bool json, FILE *out) {
     const KestSource *source = &file->source;
     const KestUnit *unit = &file->unit;
     Remarks remarks;
@@ -269,7 +269,9 @@ bool kest_doc(const KestUnitInfo *file, KestArena *arena, bool json,
     const char *called = file->module[0] != '\0' ? file->module : source->path;
 
     if (json) {
-        fputs("{\"module\":", out);
+        fputc('{', out);
+        kest_diags_write_json(diags, out);
+        fputs(",\"module\":", out);
         kest_json_text(file->module, out);
         fputs(",\"file\":", out);
         kest_json_text(source->path, out);

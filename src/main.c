@@ -199,9 +199,12 @@ static void help(FILE *out) {
             "                    `check` what the program holds, for `emit`\n"
             "                    the instructions, for `lex` the tokens and\n"
             "                    the comments, for `call` what came back,\n"
-            "                    for `tick` the crossings and the heap, and\n"
-            "                    for `fmt` whether the file is in the one\n"
-            "                    form\n"
+            "                    for `tick` the crossings and the heap, for\n"
+            "                    `fmt` whether the file is in the one form,\n"
+            "                    for `doc` the declarations and for\n"
+            "                    `hostile` the file it writes. `debug` talks\n"
+            "                    with a person and has none: `dap` is that\n"
+            "                    for an editor\n"
             "  -w                fmt writes each file it is given\n"
             "  --check           fmt names the files it would rewrite, without\n"
             "                    writing them, and exits non-zero\n"
@@ -2087,12 +2090,38 @@ static int write_hostile(const char *path, uint64_t seed, bool json) {
                            KEST_STARVED_SAYS);
         return 1;
     }
-    fwrite(source, 1, used, stdout);
-    fputs(calls, stdout);
-    fprintf(stderr, "hostile: %u call(s) of the doors `%s` declares, from "
-                    "seed %llu, and %u door(s) taking what a program cannot "
-                    "make\n",
-            called, path, (unsigned long long)seed, passed);
+    if (!json) {
+        fwrite(source, 1, used, stdout);
+        fputs(calls, stdout);
+        fprintf(stderr, "hostile: %u call(s) of the doors `%s` declares, from "
+                        "seed %llu, and %u door(s) taking what a program "
+                        "cannot make\n",
+                called, path, (unsigned long long)seed, passed);
+        kest_arena_free(arena);
+        return 0;
+    }
+    // One object, as every command writes: the file a host runs is its `text`,
+    // as `fmt`'s is, beside the counts the words form says on the standard
+    // error.
+    size_t added = strlen(calls);
+    char *text = kest_arena_alloc(arena, used + added + 1, 1);
+    if (text == NULL) {
+        kest_arena_free(arena);
+        kest_diags_say_one(stdout, json, KEST_STARVED_CODE, KEST_STARVED_SAYS);
+        return 1;
+    }
+    memcpy(text, source, used);
+    memcpy(text + used, calls, added + 1);
+    KestDiags diags;
+    kest_diags_init(&diags, arena);
+    fputc('{', stdout);
+    kest_diags_write_json(&diags, stdout);
+    fputs(",\"file\":", stdout);
+    kest_json_text(path, stdout);
+    printf(",\"seed\":%llu,\"calls\":%u,\"unmakeable\":%u,\"text\":",
+           (unsigned long long)seed, called, passed);
+    kest_json_text(text, stdout);
+    fputs("}\n", stdout);
     kest_arena_free(arena);
     return 0;
 }
@@ -2122,7 +2151,7 @@ static int write_doc(const char *executable, const char *path, bool json) {
         kest_diags_init(&diags, arena);
         said = kest_read_unit(arena, &diags, path, &units) &&
                units.count > 0 &&
-               kest_doc(&units.items[0], arena, json, stdout);
+               kest_doc(&units.items[0], arena, &diags, json, stdout);
     }
     kest_arena_free(arena);
     if (!said) {
@@ -3885,6 +3914,17 @@ int main(int argc, char **argv) {
         }
         // A release is a build that leaves something behind, and is asked of
         // `build` alone: a run, a check or an emit leave nothing.
+        // `debug` is a conversation with a person, in words; what an editor
+        // drives is `dap`, whose messages are its JSON.
+        if (json && strcmp(argv[1], "debug") == 0) {
+            free(from_project);
+            free(paths);
+            free(given);
+            return refused_at_the_words(json, "K0649",
+                                        "`debug` talks with a person and "
+                                        "has no JSON; `dap` is the debugger "
+                                        "an editor drives");
+        }
         if (releasing && strcmp(argv[1], "build") != 0) {
             free(from_project);
             free(paths);
