@@ -36,6 +36,61 @@ static void send(Adapter *adapter, KestSaid *said) {
     kest_wire_let_go(said);
 }
 
+// A command's name as it can be written back with no escaping and no memory,
+// or the empty one: every name the protocol has is short and plain.
+static const char *plain_name(const KestJson *command, int *length) {
+    *length = 0;
+    if (command == NULL || command->kind != KEST_JSON_TEXT ||
+        command->length > 64) {
+        return "";
+    }
+    for (size_t i = 0; i < command->length; i++) {
+        char c = command->text[i];
+        if (c < ' ' || c > '~' || c == '"' || c == '\\') {
+            return "";
+        }
+    }
+    *length = (int)command->length;
+    return command->text;
+}
+
+// The reply to a request when there was no memory to write the one it was
+// owed: refused, so the editor is not left waiting, and written where no
+// memory is needed.
+static void answer_without_room(Adapter *adapter, const KestJson *request) {
+    const KestJson *seq = kest_wire_member(request, "seq");
+    int length = 0;
+    const char *name =
+        plain_name(kest_wire_member(request, "command"), &length);
+    char said[384];
+    int written =
+        snprintf(said, sizeof said,
+                 "{\"seq\":%u,\"type\":\"response\",\"request_seq\":%u,"
+                 "\"success\":false,\"command\":\"%.*s\",\"message\":"
+                 "\"" KEST_STARVED_CODE ": " KEST_STARVED_SAYS "\"}",
+                 ++adapter->sent, seq == NULL ? 0u : (unsigned)seq->number,
+                 length, name);
+    if (written > 0 && (size_t)written < sizeof said) {
+        kest_wire_send(adapter->out, said, (size_t)written);
+    }
+}
+
+// A message that could not be read cannot be answered, because a reply names
+// the request it answers and that is in what was not read. What is left is to
+// tell the person at the editor, in the console, written where no memory is
+// needed.
+static void unread(Adapter *adapter, const char *why) {
+    char said[384];
+    int written = snprintf(
+        said, sizeof said,
+        "{\"seq\":%u,\"type\":\"event\",\"event\":\"output\",\"body\":{"
+        "\"category\":\"important\",\"output\":\"%s\\n\"}}",
+        ++adapter->sent, why);
+    if (written > 0 && (size_t)written < sizeof said) {
+        kest_wire_send(adapter->out, said, (size_t)written);
+    }
+}
+
 // A reply to one request, with what goes in its body already written as JSON,
 // or NULL for none.
 static void answer(Adapter *adapter, const KestJson *request, bool success,
@@ -59,6 +114,11 @@ static void answer(Adapter *adapter, const KestJson *request, bool success,
         kest_wire_say(&said, body);
     }
     kest_wire_char(&said, '}');
+    if (said.broke) {
+        kest_wire_let_go(&said);
+        answer_without_room(adapter, request);
+        return;
+    }
     send(adapter, &said);
 }
 
@@ -411,15 +471,27 @@ int kest_dap_serve(const char *library, KestHostMaker make, FILE *in,
         return 1;
     }
     while (!adapter.over) {
+        char *body = NULL;
         size_t length = 0;
-        char *body = kest_wire_next(in, &length);
-        if (body == NULL) {
+        KestWireNext next = kest_wire_next(in, &body, &length);
+        if (next == KEST_WIRE_ENDED) {
             break;
         }
+        if (next == KEST_WIRE_UNHELD) {
+            unread(&adapter, KEST_STARVED_CODE
+                   ": a message was not read: " KEST_STARVED_SAYS);
+            continue;
+        }
         KestMark before = kest_arena_mark(arena);
-        KestJson *request = kest_wire_read(arena, body, length);
-        if (request != NULL) {
+        KestJson *request = NULL;
+        KestWireRead read = kest_wire_read(arena, body, length, &request);
+        if (read == KEST_WIRE_JSON) {
             handle(&adapter, request);
+        } else if (read == KEST_WIRE_NO_ROOM) {
+            unread(&adapter, KEST_STARVED_CODE
+                   ": a message was not read: " KEST_STARVED_SAYS);
+        } else {
+            unread(&adapter, "a message that is not JSON was not read");
         }
         kest_arena_rewind(arena, before);
         free(body);

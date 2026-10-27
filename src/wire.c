@@ -9,6 +9,9 @@ typedef struct {
     const char *end;
     KestArena *arena;
     bool broke;
+    // Broken by having no room rather than by what was sent, which is a
+    // different thing to tell the client.
+    bool starved;
 } Reading;
 
 static KestJson *read_value(Reading *reading);
@@ -25,6 +28,7 @@ static KestJson *made(Reading *reading, KestJsonKind kind) {
     KestJson *one = KEST_ARENA_ARRAY(reading->arena, KestJson, 1);
     if (one == NULL) {
         reading->broke = true;
+        reading->starved = true;
         return NULL;
     }
     memset(one, 0, sizeof(*one));
@@ -42,6 +46,7 @@ static bool room_for_one(Reading *reading, KestJson *held) {
     size_t *lengths = KEST_ARENA_ARRAY(reading->arena, size_t, grown);
     if (items == NULL || names == NULL || lengths == NULL) {
         reading->broke = true;
+        reading->starved = true;
         return false;
     }
     for (uint32_t i = 0; i < held->count; i++) {
@@ -104,6 +109,7 @@ static KestJson *read_text(Reading *reading) {
     char *out = kest_arena_alloc(reading->arena, most, 1);
     if (out == NULL) {
         reading->broke = true;
+        reading->starved = true;
         return NULL;
     }
     size_t used = 0;
@@ -273,14 +279,20 @@ const KestJson *kest_wire_down(const KestJson *object, const char *first,
     return kest_wire_member(kest_wire_member(object, first), second);
 }
 
-
-KestJson *kest_wire_read(KestArena *arena, const char *bytes, size_t length) {
-    Reading reading = {bytes, bytes + length, arena, false};
+KestWireRead kest_wire_read(KestArena *arena, const char *bytes, size_t length,
+                            KestJson **value) {
+    Reading reading = {bytes, bytes + length, arena, false, false};
     KestJson *message = read_value(&reading);
-    return reading.broke ? NULL : message;
+    *value = reading.broke ? NULL : message;
+    if (reading.starved) {
+        return KEST_WIRE_NO_ROOM;
+    }
+    return reading.broke ? KEST_WIRE_NOT_JSON : KEST_WIRE_JSON;
 }
 
-char *kest_wire_next(FILE *in, size_t *length) {
+KestWireNext kest_wire_next(FILE *in, char **body, size_t *length) {
+    *body = NULL;
+    *length = 0;
     char header[512];
     size_t wanted = 0;
     bool saw_length = false;
@@ -297,20 +309,33 @@ char *kest_wire_next(FILE *in, size_t *length) {
             saw_length = true;
         }
     }
-    if (!saw_length || wanted == 0) {
-        return NULL;
+    // A length with no room for the nought after it cannot be held, and the
+    // one more byte asked for would come round to none at all.
+    if (!saw_length || wanted == 0 || wanted == SIZE_MAX) {
+        return KEST_WIRE_ENDED;
     }
-    char *body = malloc(wanted + 1);
-    if (body == NULL) {
-        return NULL;
+    char *held = malloc(wanted + 1);
+    if (held == NULL) {
+        // Read past rather than left in the stream, where its bytes would be
+        // taken for the next header and every message after it lost too.
+        char past[512];
+        while (wanted > 0) {
+            size_t step = wanted < sizeof(past) ? wanted : sizeof(past);
+            if (fread(past, 1, step, in) != step) {
+                return KEST_WIRE_ENDED;
+            }
+            wanted -= step;
+        }
+        return KEST_WIRE_UNHELD;
     }
-    if (fread(body, 1, wanted, in) != wanted) {
-        free(body);
-        return NULL;
+    if (fread(held, 1, wanted, in) != wanted) {
+        free(held);
+        return KEST_WIRE_ENDED;
     }
-    body[wanted] = '\0';
+    held[wanted] = '\0';
+    *body = held;
     *length = wanted;
-    return body;
+    return KEST_WIRE_HELD;
 }
 
 void kest_wire_send(FILE *out, const char *body, size_t length) {

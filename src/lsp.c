@@ -52,6 +52,9 @@ typedef struct {
     KestBuild *build;
     char *built;
     bool shutting_down;
+    // The id of the request being answered, for the answer that could not be
+    // written: it is answered all the same, with an error.
+    const KestJson *asking;
 } Server;
 
 // The file the message in hand is about. `handle` chooses it out of the open
@@ -388,10 +391,55 @@ static void start_answer(KestSaid *out, const KestJson *id) {
     kest_wire_say(out, ",\"result\":");
 }
 
+// What a client is told when there was no memory to write what it asked
+// for, or to read what it sent, written where no memory is needed. A client
+// that sent a request waits for its answer, so one goes whatever happened.
+#define NO_ROOM_ERROR                                                          \
+    "\"error\":{\"code\":-32603,\"message\":\"" KEST_STARVED_CODE              \
+    ": " KEST_STARVED_SAYS "\"}}"
+
+static const char NO_ROOM_TO_READ[] =
+    "{\"jsonrpc\":\"2.0\",\"id\":null," NO_ROOM_ERROR;
+static const char NOT_JSON[] =
+    "{\"jsonrpc\":\"2.0\",\"id\":null,\"error\":{\"code\":-32700,"
+    "\"message\":\"this message is not JSON\"}}";
+
+// The id is written back as it came only when it needs no escaping and fits;
+// a client's ids are numbers or short names, and one that is neither is
+// answered with no id, which is what JSON-RPC answers an id it cannot read.
+static void answer_without_room(Server *server, const KestJson *id) {
+    char said[256];
+    int written = -1;
+    if (id != NULL && id->kind == KEST_JSON_NUMBER) {
+        written = snprintf(said, sizeof said,
+                           "{\"jsonrpc\":\"2.0\",\"id\":%lld," NO_ROOM_ERROR,
+                           (long long)id->number);
+    } else if (id != NULL && id->kind == KEST_JSON_TEXT && id->length <= 64) {
+        bool plain = true;
+        for (size_t i = 0; i < id->length; i++) {
+            char c = id->text[i];
+            plain = plain && c >= ' ' && c <= '~' && c != '"' && c != '\\';
+        }
+        if (plain) {
+            written =
+                snprintf(said, sizeof said,
+                         "{\"jsonrpc\":\"2.0\",\"id\":\"%.*s\"," NO_ROOM_ERROR,
+                         (int)id->length, id->text);
+        }
+    }
+    if (written < 0 || (size_t)written >= sizeof said) {
+        send(server, NO_ROOM_TO_READ, sizeof NO_ROOM_TO_READ - 1);
+        return;
+    }
+    send(server, said, (size_t)written);
+}
+
 static void finish_answer(Server *server, KestSaid *out) {
     kest_wire_char(out, '}');
     if (!out->broke && out->bytes != NULL) {
         send(server, out->bytes, out->used);
+    } else {
+        answer_without_room(server, server->asking);
     }
     kest_wire_let_go(out);
 }
@@ -774,6 +822,7 @@ static void handle(Server *server, const KestJson *message) {
     const KestJson *method = kest_wire_member(message, "method");
     const KestJson *id = kest_wire_member(message, "id");
     const KestJson *params = kest_wire_member(message, "params");
+    server->asking = id;
 
     if (method_is(method, "initialize")) {
         answer(server, id,
@@ -886,18 +935,30 @@ int kest_lsp_serve(const char *library, FILE *in, FILE *out) {
     server.out = out;
 
     while (true) {
+        char *body = NULL;
         size_t length = 0;
-        char *body = kest_wire_next(in, &length);
-        if (body == NULL) {
+        KestWireNext next = kest_wire_next(in, &body, &length);
+        if (next == KEST_WIRE_ENDED) {
             break;
+        }
+        if (next == KEST_WIRE_UNHELD) {
+            send(&server, NO_ROOM_TO_READ, sizeof NO_ROOM_TO_READ - 1);
+            continue;
         }
 
         // One arena per message, rewound after it: a message is read into a
         // tree and the tree is no use once it is answered.
         KestMark before = kest_arena_mark(server.arena);
-        KestJson *message = kest_wire_read(server.arena, body, length);
-        if (message != NULL) {
+        KestJson *message = NULL;
+        KestWireRead read =
+            kest_wire_read(server.arena, body, length, &message);
+        if (read == KEST_WIRE_JSON) {
             handle(&server, message);
+            server.asking = NULL;
+        } else if (read == KEST_WIRE_NO_ROOM) {
+            send(&server, NO_ROOM_TO_READ, sizeof NO_ROOM_TO_READ - 1);
+        } else {
+            send(&server, NOT_JSON, sizeof NOT_JSON - 1);
         }
         kest_arena_rewind(server.arena, before);
         free(body);
