@@ -2077,6 +2077,95 @@ not stop" >>"$said"
     fi
 done
 
+# And a host this writes, starting a program that asks for a door it does not
+# provide, with every allocation refused in turn. A machine that cannot start
+# hands what it said to the build and gives its own memory back, and a sentence
+# whose copy was refused was handed over as it stood: a pointer into the memory
+# just given back, which the report then printed. Built against the library
+# that checks itself, where a refusal can be aimed, when the build made one.
+refused_walked=0
+if [ -f $build_dir/libkest-checked.a ] && [ -n "$sanitisers" ]; then
+    mkdir -p "$work"/unbound
+    cat >"$work"/unbound/unbound.kest <<'KEST'
+module unbound
+
+extern fn Lamp.glow(level: i32)
+
+fn main() -> i32 {
+    Lamp.glow(3)
+    return 0
+}
+KEST
+    # shellcheck disable=SC2086
+    if ! $build_dir/kest emit --c "$work"/unbound/unbound.kest \
+            >"$work"/unbound/unbound.c 2>"$work"/why ||
+            ! $cc -O0 -g $sanitisers -Iinclude -o "$work"/unbound/host \
+                "$work"/unbound/unbound.c $build_dir/libkest-checked.a -lm \
+                2>>"$work"/why; then
+        echo "    the host for a program with a door it does not provide was \
+not built:" >>"$said"
+        sed 's/^/        /' "$work"/why | head -5 >>"$said"
+        wrong=$((wrong + 1))
+    else
+        unbound_whole=$(KEST_LIB=lib/ "$work"/unbound/host \
+                            "$work"/unbound/unbound.kest 2>&1 </dev/null)
+        case "$unbound_whole" in
+        *K0606*) ;;
+        *)
+            echo "    a host without the door its program asks for did not \
+say so: $unbound_whole" >>"$said"
+            wrong=$((wrong + 1))
+            ;;
+        esac
+        # Walked until three in a row change nothing, which is past the
+        # last allocation the run takes: one refusal that changes nothing on
+        # its own is a refusal quietly done without, not the end.
+        at_one=1
+        alike_after=0
+        while [ $alike_after -lt 3 ] && [ $at_one -le 100000 ]; do
+            unbound_said=$(KEST_LIB=lib/ KEST_REFUSE_AT=$at_one \
+                               "$work"/unbound/host \
+                               "$work"/unbound/unbound.kest 2>&1 </dev/null)
+            unbound_was=$?
+            if [ "$unbound_said" = "$unbound_whole" ]; then
+                alike_after=$((alike_after + 1))
+                at_one=$((at_one + 1))
+                continue
+            fi
+            alike_after=0
+            refused_walked=$((refused_walked + 1))
+            others=$(printf '%s' "$unbound_said" |
+                         grep -o 'K[0-9][0-9][0-9][0-9]' |
+                         grep -v -e K0606 -e K0639 -e K0705 | sort -u |
+                         tr '\n' ' ')
+            case "$unbound_said" in
+            *Sanitizer*|*"runtime error"*)
+                echo "    the host for a program with a door it does not \
+provide died with allocation $at_one refused:" >>"$said"
+                printf '%s\n' "$unbound_said" |
+                    grep 'runtime error\|ERROR: AddressSanitizer' | head -2 |
+                    sed 's/^/        /' >>"$said"
+                wrong=$((wrong + 1))
+                break
+                ;;
+            esac
+            if [ "$unbound_was" -eq 0 ] || [ -n "$others" ]; then
+                echo "    the host for a program with a door it does not \
+provide came back $unbound_was with allocation $at_one refused, saying \
+${others:-nothing}" >>"$said"
+                wrong=$((wrong + 1))
+                break
+            fi
+            at_one=$((at_one + 1))
+        done
+        if [ "$refused_walked" -eq 0 ]; then
+            echo "    no allocation of the host for a program with a door it \
+does not provide could be refused" >>"$said"
+            wrong=$((wrong + 1))
+        fi
+    fi
+fi
+
 # A walk before every allocation that walked nothing is a pass nobody took.
 if [ "$alike" -gt 0 ] && [ "$walked" -eq 0 ]; then
     echo "    no program written as C was run walking the heap before every \
@@ -2094,5 +2183,6 @@ host compiler takes, $both program(s) written here and $alike of this tree's \
 own run both ways for the same answer and the same words, $walked of those \
 again walking the heap before every allocation with $not_walked left out for \
 growing worlds, $sanitised again under the sanitisers, $fused_said, \
-$inside_said, $stopped_said, and \
-$wants_a_host that ask the host for what a file this wrote does not provide"
+$inside_said, $stopped_said, \
+$wants_a_host that ask the host for what a file this wrote does not provide, \
+and $refused_walked allocation(s) of a host without its door refused in turn"

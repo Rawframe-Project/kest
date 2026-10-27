@@ -486,13 +486,19 @@ void kest_diags_note_at(KestDiags *diags, uint32_t which,
 // is a machine's, and what a machine says is written in the room it owns and
 // handed back when the machine goes: a diagnostic carried over as it
 // stands is a sentence pointing into memory that went with the machine it came
-// from. The code is this compiler's own and is never in that room.
-static const char *said_again(KestArena *arena, const char *words) {
-    if (words == NULL) {
-        return NULL;
+// from. The code is this compiler's own and is never in that room. False when
+// there was no room for the copy, and then the words are not carried at all:
+// the ones it was asked about are about to be given back.
+static bool said_again(KestArena *arena, const char **words) {
+    if (*words == NULL) {
+        return true;
     }
-    const char *copy = kest_arena_strndup(arena, words, strlen(words));
-    return copy == NULL ? words : copy;
+    const char *copy = kest_arena_strndup(arena, *words, strlen(*words));
+    if (copy == NULL) {
+        return false;
+    }
+    *words = copy;
+    return true;
 }
 
 void kest_diags_absorb(KestDiags *into, const KestDiags *from) {
@@ -508,11 +514,14 @@ void kest_diags_absorb(KestDiags *into, const KestDiags *from) {
             return;
         }
         KestDiag carried = from->items[i];
-        carried.message = said_again(into->arena, carried.message);
-        carried.suggestion = said_again(into->arena, carried.suggestion);
-        for (uint8_t n = 0; n < carried.note_count; n++) {
-            carried.notes[n].label =
-                said_again(into->arena, carried.notes[n].label);
+        bool kept = said_again(into->arena, &carried.message) &&
+                    said_again(into->arena, &carried.suggestion);
+        for (uint8_t n = 0; kept && n < carried.note_count; n++) {
+            kept = said_again(into->arena, &carried.notes[n].label);
+        }
+        if (!kept) {
+            kest_diags_starve(into);
+            return;
         }
         into->items[into->count++] = carried;
         if (carried.severity == KEST_SEVERITY_ERROR) {
