@@ -1632,20 +1632,25 @@ else
 what its program answers"
         printf '%s\n' "$release_said" | sed 's/^/    /' | head -4
     fi
-    # And the two ways one cannot be made, each said in the words a release
-    # says: a compiler that refuses, and a command line with its library
-    # beside it and nothing to make a binary with.
+    # And the three ways one cannot be made, each said in the words a release
+    # says: a compiler that refuses, a compiler that is not there, and a
+    # command line with its library beside it and nothing to make a binary
+    # with.
     release_bare="$scratch"/check-release-bare
     mkdir -p "$release_bare/lib"
     cp "$put/usr/local/bin/kest" "$release_bare/kest"
     cp -r "$here/lib/std" "$release_bare/lib/std"
     release_refused=$(cd "$elsewhere" &&
-                      CC=false "$put/usr/local/bin/kest" build --release \
+                      CC=false \
+                          "$put/usr/local/bin/kest" build --release \
+                          asking.kest 2>&1 </dev/null
+                      CC=no-compiler-here \
+                          "$put/usr/local/bin/kest" build --release \
                           asking.kest 2>&1 </dev/null
                       "$release_bare/kest" build --release asking.kest 2>&1 \
                           </dev/null)
     case "$release_refused" in
-    *K0663*"could not make a release"*K0663*"needs \`kest.h\`"*) ;;
+    *K0663*"could not make a release"*K0663*"no-compiler-here"*"could not make a release"*K0663*"needs \`kest.h\`"*) ;;
     *)
         complain "release: a release that could not be made did not say why"
         printf '%s\n' "$release_refused" | sed 's/^/    /' | head -4
@@ -1671,17 +1676,20 @@ what its program answers"
     fi
     rm -f "$elsewhere/two words.kest" "$elsewhere/two words" \
           "$elsewhere/two words.release.c"
-    # And a command line installed under a path with a quote in it, which is a
-    # path like any other: the header and the library are found and used.
-    quoted_put="$scratch/check-put's"
+    # And a command line installed under a path with a space and a quote in
+    # it, which is a path like any other: the header and the library are
+    # found and used. `CC` with a flag after the compiler is a compiler and a
+    # flag, and both reach it.
+    quoted_put="$scratch/check put's"
     rm -rf "$quoted_put"
     cp -r "$put/usr/local" "$quoted_put"
     if ! release_quoted=$(cd "$elsewhere" &&
-                          "$quoted_put/bin/kest" build --release asking.kest \
-                              2>&1 </dev/null) ||
+                          CC="${CC:-cc} -O1" \
+                              "$quoted_put/bin/kest" build --release \
+                              asking.kest 2>&1 </dev/null) ||
        [ ! -x "$elsewhere/asking" ]; then
-        complain "release: a command line installed under a path with a quote \
-in it did not make a release"
+        complain "release: a command line installed under a path with a space \
+and a quote in it, or a \`CC\` with a flag, did not make a release"
         printf '%s\n' "$release_quoted" | sed 's/^/    /' | head -4
     fi
     rm -rf "$quoted_put"

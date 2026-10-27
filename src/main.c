@@ -65,6 +65,14 @@ __declspec(dllimport) int __stdcall QueryPerformanceFrequency(long long *rate);
 #include <stdlib.h>
 #if defined(__wasi__)
 #include <unistd.h>
+#elif defined(_WIN32)
+#include <process.h>
+#else
+// A release's compiler is started as a program with its arguments, not as a
+// line for a shell to read, so nothing in a path has to be quoted for one.
+#include <spawn.h>
+#include <sys/wait.h>
+extern char **environ;
 #endif
 #include <string.h>
 #include "kest.h"
@@ -2358,39 +2366,140 @@ static bool portable_name(const char *name, size_t length) {
     return true;
 }
 
-// `text` in single quotes for a POSIX shell, with a quote inside it written as
-// `'\''`, so that a path holding one is still the one path it is. Answers how
-// many bytes that is, and writes them only when `to` is not NULL.
-static size_t shell_quoted(char *to, const char *text) {
+// The words `CC` is made of, split at spaces and tabs, with a run in double
+// quotes kept in one word and the quotes taken off, so `gcc -m32` is a compiler
+// and a flag and `"C:/Program Files/LLVM/bin/clang"` is one compiler. Answers
+// how many words there are, and writes them into `into` (a nought after each)
+// and points `words` at them when those are not NULL.
+static size_t compiler_words(const char *text, char *into, char **words) {
+    size_t count = 0;
+    size_t at = 0;
+    const char *c = text;
+    for (;;) {
+        while (*c == ' ' || *c == '\t') {
+            c++;
+        }
+        if (*c == '\0') {
+            return count;
+        }
+        if (words != NULL) {
+            words[count] = into + at;
+        }
+        bool quoted = false;
+        for (; *c != '\0' && (quoted || (*c != ' ' && *c != '\t')); c++) {
+            if (*c == '"') {
+                quoted = !quoted;
+            } else if (into != NULL) {
+                into[at++] = *c;
+            } else {
+                at++;
+            }
+        }
+        if (into != NULL) {
+            into[at] = '\0';
+        }
+        at++;
+        count++;
+    }
+}
+
+#if defined(_WIN32)
+// `text` as one argument the way a Windows program's C library splits its
+// command line: as it is when nothing in it splits, and otherwise in double
+// quotes, with a quote inside written as `\"` and the backslashes before a
+// quote, or before the closing one, doubled. `_spawnvp` joins its arguments
+// with spaces and nothing else, so this is what keeps each one whole. Answers
+// how many bytes that is, and writes them only when `to` is not NULL.
+static size_t windows_argument(char *to, const char *text) {
+    if (text[0] != '\0' && strpbrk(text, " \t\n\v\"") == NULL) {
+        if (to != NULL) {
+            memcpy(to, text, strlen(text));
+        }
+        return strlen(text);
+    }
     size_t at = 0;
     if (to != NULL) {
-        to[at] = '\'';
+        to[at] = '"';
     }
     at++;
-    for (const char *c = text; *c != '\0'; c++) {
-        if (*c == '\'') {
+    for (const char *c = text;; c++) {
+        size_t slashes = 0;
+        while (*c == '\\') {
+            slashes++;
+            c++;
+        }
+        size_t times = *c == '\0' ? slashes * 2
+                       : *c == '"' ? slashes * 2 + 1
+                                   : slashes;
+        for (size_t i = 0; i < times; i++) {
             if (to != NULL) {
-                memcpy(to + at, "'\\''", 4);
-            }
-            at += 4;
-        } else {
-            if (to != NULL) {
-                to[at] = *c;
+                to[at] = '\\';
             }
             at++;
         }
+        if (*c == '\0') {
+            break;
+        }
+        if (to != NULL) {
+            to[at] = *c;
+        }
+        at++;
     }
     if (to != NULL) {
-        to[at] = '\'';
+        to[at] = '"';
     }
     return at + 1;
 }
+#endif
 
-// `text` written at `at`, answering where it ends.
-static size_t put_plain(char *to, size_t at, const char *text) {
-    size_t length = strlen(text);
-    memcpy(to + at, text, length);
-    return at + length;
+// What the program `words[0]` answered when started with `words` (a NULL after
+// the last), found the way a shell finds a command but with no shell between,
+// so each word reaches it as itself. Answers -1 for one that could not be
+// started or that did not end on its own.
+static int ran_program(char **words) {
+#if defined(__wasi__)
+    // A command line built as WebAssembly has no other program to run, so
+    // the C compiler a release is made with is out of its reach, and it says
+    // so the way a compiler that is not there is said.
+    (void)words;
+    return -1;
+#elif defined(_WIN32)
+    size_t count = 0;
+    size_t room = 0;
+    while (words[count] != NULL) {
+        room += windows_argument(NULL, words[count]) + 1;
+        count++;
+    }
+    char **arguments = malloc((count + 1) * sizeof(char *));
+    char *held = malloc(room);
+    intptr_t answered = -1;
+    if (arguments != NULL && held != NULL) {
+        size_t at = 0;
+        for (size_t i = 0; i < count; i++) {
+            arguments[i] = held + at;
+            at += windows_argument(held + at, words[i]);
+            held[at++] = '\0';
+        }
+        arguments[count] = NULL;
+        answered = _spawnvp(_P_WAIT, words[0],
+                            (const char *const *)arguments);
+    }
+    free(arguments);
+    free(held);
+    return answered < 0 || answered > INT_MAX ? -1 : (int)answered;
+#else
+    pid_t child;
+    if (posix_spawnp(&child, words[0], NULL, NULL, words, environ) != 0) {
+        return -1;
+    }
+    int status;
+    while (waitpid(child, &status, 0) < 0) {
+        if (errno != EINTR) {
+            return -1;
+        }
+    }
+    return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+#endif
 }
 
 // A release of the program at `program`: the C that carries it, written beside
@@ -2441,40 +2550,31 @@ static char *made_release(const char *executable, const char *program,
         wrote = false;
     }
     const char *compiler = getenv("CC");
-    if (compiler == NULL || compiler[0] == '\0') {
+    size_t extra = compiler == NULL ? 0 : compiler_words(compiler, NULL, NULL);
+    if (extra == 0) {
         compiler = "cc";
+        extra = 1;
     }
-    // Sized to what it holds rather than to a guess, so that a long `CC` or a
-    // deep install is never cut short.
-    const char *paths[] = {header, out, source, archive};
-    const char *between[] = {" -std=c11 -O2 -I", " -o ", " ", " "};
-    size_t room = strlen(compiler) + strlen(" -lm") + 1;
-    for (size_t i = 0; i < 4; i++) {
-        room += strlen(between[i]) + shell_quoted(NULL, paths[i]);
-    }
-    char *command = malloc(room);
-    if (command == NULL) {
-        remove(source);
-        free(out);
-        return NULL;
-    }
-    size_t at = put_plain(command, 0, compiler);
-    for (size_t i = 0; i < 4; i++) {
-        at = put_plain(command, at, between[i]);
-        at += shell_quoted(command + at, paths[i]);
-    }
-    at = put_plain(command, at, " -lm");
-    command[at] = '\0';
-    // A command line built as WebAssembly has no other program to run, so
-    // the C compiler a release is made with is out of its reach, and it says
-    // so the way a compiler that is not there is said.
-#if defined(__wasi__)
+    // Each path is one word of its own, so a space or a quote in one is a
+    // character of that path and nothing more.
+    char include[1030];
+    snprintf(include, sizeof(include), "-I%s", header);
+    const char *after[] = {"-std=c11", "-O2", include, "-o",  out,
+                           source,     archive, "-lm"};
+    size_t fixed = sizeof(after) / sizeof(after[0]);
+    char **words = malloc((extra + fixed + 1) * sizeof(char *));
+    char *split = malloc(strlen(compiler) + 1);
     int status = -1;
-    (void)wrote;
-#else
-    int status = wrote && strchr(command, '\n') == NULL ? system(command) : -1;
-#endif
-    free(command);
+    if (words != NULL && split != NULL) {
+        compiler_words(compiler, split, words);
+        for (size_t i = 0; i < fixed; i++) {
+            words[extra + i] = (char *)after[i];
+        }
+        words[extra + fixed] = NULL;
+        status = wrote ? ran_program(words) : -1;
+    }
+    free(words);
+    free(split);
     remove(source);
     if (status != 0) {
         kest_diags_in(diags, NULL);
