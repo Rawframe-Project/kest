@@ -209,6 +209,14 @@ void kest_diags_mute(KestDiags *diags, bool muted);
 #define KEST_SAYS(words, first)
 #endif
 
+// Writes what `format` makes into `out`, which holds `room` bytes, starting at
+// `at`, and answers where the text now ends. It never ends past the last byte,
+// which stays a nought: a run of these into a buffer that was measured too
+// small is a shorter text rather than a write past the end, and an `at` that
+// came back from one is always a place inside `out`.
+size_t kest_put(char *out, size_t room, size_t at, const char *format, ...)
+    KEST_SAYS(4, 5);
+
 // Formats and records a diagnostic. The message is copied into the arena and
 // is as long as it is: a caller that wrote it into a buffer of its own first
 // would cut it off in the middle of a name.

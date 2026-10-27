@@ -1505,14 +1505,12 @@ static const char *written_shape(KestArena *arena, const KestType *type) {
     size_t at = 0;
     for (uint32_t i = 0; i < shown; i++) {
         const KestMember *member = &type->members[i];
-        at += (size_t)snprintf(out + at, room - at, "%s`%s: %s` at %u",
-                               at == 0 ? "" : ", ", member->name,
-                               kest_type_name(arena, member->type),
-                               member->byte_offset);
+        at = kest_put(out, room, at, "%s`%s: %s` at %u", at == 0 ? "" : ", ",
+                      member->name, kest_type_name(arena, member->type),
+                      member->byte_offset);
     }
     if (type->member_count > shown) {
-        snprintf(out + at, room - at, ", and %u more",
-                 type->member_count - shown);
+        kest_put(out, room, at, ", and %u more", type->member_count - shown);
     }
     return out;
 }
@@ -7835,9 +7833,8 @@ static bool explain_entry(KestRuntime *runtime, const char *name) {
     }
     size_t at = 0;
     for (uint32_t i = 0; i < shown; i++) {
-        at += (size_t)snprintf(list + at, room - at, "%s`%s`",
-                               at == 0 ? "" : ", ",
-                               module->functions[copies[i]]->name);
+        at = kest_put(list, room, at, "%s`%s`", at == 0 ? "" : ", ",
+                      module->functions[copies[i]]->name);
     }
     // Two functions may share a name when they take different things, and a
     // generic is compiled once for each set of types it is used with. Both

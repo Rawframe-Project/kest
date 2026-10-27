@@ -2107,8 +2107,8 @@ static const char *type_names(KestArena *arena, const KestType *type) {
         const char *before = i == 0                                ? ""
                              : i + 1 == type->type_param_count     ? " and "
                                                                    : ", ";
-        used += (size_t)snprintf(out + used, room - used, "%s`%s`", before,
-                                 held == NULL ? "T" : held);
+        used = kest_put(out, room, used, "%s`%s`", before,
+                        held == NULL ? "T" : held);
     }
     return out;
 }
@@ -2574,13 +2574,12 @@ KestType *kest_struct_of(KestProgram *program, KestType *shape, KestType **args,
     if (written == NULL) {
         return error_type(program);
     }
-    size_t used = (size_t)snprintf(written, room, "%s<", shape->name);
+    size_t used = kest_put(written, room, 0, "%s<", shape->name);
     for (uint32_t i = 0; i < count; i++) {
-        used += (size_t)snprintf(written + used, room - used, "%s%s",
-                                 i == 0 ? "" : ", ",
-                                 kest_type_name(program->arena, args[i]));
+        used = kest_put(written, room, used, "%s%s", i == 0 ? "" : ", ",
+                        kest_type_name(program->arena, args[i]));
     }
-    snprintf(written + used, room - used, ">");
+    kest_put(written, room, used, ">");
 
     KestType *made = kest_find_type(program, written, strlen(written));
     if (made != NULL) {
@@ -3047,17 +3046,15 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
             return "?";
         }
 
-        size_t used = (size_t)snprintf(written, room,
-                                       type->block ? "block(" : "fn(");
+        size_t used =
+            kest_put(written, room, 0, type->block ? "block(" : "fn(");
         for (uint32_t i = 0; i < type->param_count; i++) {
-            used += (size_t)snprintf(written + used, room - used, "%s%s",
-                                     i == 0 ? "" : ", ",
-                                     kest_type_name(arena, type->params[i]));
+            used = kest_put(written, room, used, "%s%s", i == 0 ? "" : ", ",
+                            kest_type_name(arena, type->params[i]));
         }
-        used += (size_t)snprintf(written + used, room - used, ")");
+        used = kest_put(written, room, used, ")");
         if (result != NULL) {
-            used += (size_t)snprintf(written + used, room - used, " -> %s",
-                                     result);
+            used = kest_put(written, room, used, " -> %s", result);
         }
         // All three, in the order the library writes them. A word left out
         // here names a shape that promised it as one that did not, in a
@@ -3065,13 +3062,13 @@ const char *kest_type_name(KestArena *arena, const KestType *type) {
         // what `check` prints, and in the name a copy of a generic is compiled
         // under.
         if (type->no_alloc) {
-            used += (size_t)snprintf(written + used, room - used, " no.alloc");
+            used = kest_put(written, room, used, " no.alloc");
         }
         if (type->no_host) {
-            used += (size_t)snprintf(written + used, room - used, " no.host");
+            used = kest_put(written, room, used, " no.host");
         }
         if (type->deterministic) {
-            snprintf(written + used, room - used, " deterministic");
+            kest_put(written, room, used, " deterministic");
         }
         return written;
     }
@@ -3532,12 +3529,10 @@ static const char *symbol_of(KestProgram *program, const char *name,
         return name;
     }
 
-    size_t used = (size_t)snprintf(out, room, "%s", name);
+    size_t used = kest_put(out, room, 0, "%s", name);
     for (uint32_t i = 0; i < type->param_count; i++) {
-        used += (size_t)snprintf(out + used, room - used, "%c%s",
-                                 i == 0 ? '#' : ',',
-                                 kest_type_name(program->arena,
-                                                type->params[i]));
+        used = kest_put(out, room, used, "%c%s", i == 0 ? '#' : ',',
+                        kest_type_name(program->arena, type->params[i]));
     }
     return out;
 }
@@ -5591,11 +5586,7 @@ static const char *where_it_stands(KestArena *arena, const char *written,
             out[put++] = written[at++];
             continue;
         }
-        int said = snprintf(out + put, room - put, "#%u", which);
-        if (said < 0) {
-            return written;
-        }
-        put += (size_t)said;
+        put = kest_put(out, room, put, "#%u", which);
         at += length;
     }
     out[put] = '\0';
@@ -5635,15 +5626,15 @@ void kest_program_costs(const KestProgram *program, FILE *out) {
         char could[64];
         size_t used = 0;
         if (!heap && !symbol->type->no_alloc) {
-            used += (size_t)snprintf(could + used, sizeof(could) - used,
-                                     "%sno.alloc", used == 0 ? "" : " ");
+            used = kest_put(could, sizeof(could), used, "%sno.alloc",
+                            used == 0 ? "" : " ");
         }
         if (!host && !symbol->type->no_host) {
-            used += (size_t)snprintf(could + used, sizeof(could) - used,
-                                     "%sno.host", used == 0 ? "" : " ");
+            used = kest_put(could, sizeof(could), used, "%sno.host",
+                            used == 0 ? "" : " ");
         }
         if (!varies && !symbol->type->deterministic) {
-            snprintf(could + used, sizeof(could) - used, "%sdeterministic",
+            kest_put(could, sizeof(could), used, "%sdeterministic",
                      used == 0 ? "" : " ");
         } else if (used == 0) {
             snprintf(could, sizeof(could), "%s", "");

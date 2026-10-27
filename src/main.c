@@ -1653,9 +1653,8 @@ static const char *takes_written(KestArena *arena, const KestType *fn) {
     size_t used = 1;
     out[0] = '(';
     for (uint32_t p = 0; p < fn->param_count; p++) {
-        used += (size_t)snprintf(out + used, room - used, "%s%s",
-                                 p == 0 ? "" : ", ",
-                                 kest_type_name(arena, fn->params[p]));
+        used = kest_put(out, room, used, "%s%s", p == 0 ? "" : ", ",
+                        kest_type_name(arena, fn->params[p]));
     }
     out[used++] = ')';
     out[used] = '\0';
@@ -1677,9 +1676,8 @@ static const char *all_of_them(KestArena *arena, KestSymbol **candidates,
     }
     size_t used = 0;
     for (uint32_t i = 0; i < found; i++) {
-        used += (size_t)snprintf(out + used, room - used, "%s`%s`",
-                                 i == 0 ? "" : ", ",
-                                 takes_written(arena, candidates[i]->type));
+        used = kest_put(out, room, used, "%s`%s`", i == 0 ? "" : ", ",
+                        takes_written(arena, candidates[i]->type));
     }
     out[used] = '\0';
     return out;

@@ -2307,9 +2307,9 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
         // have taken alone: `pick(1)` is a whole number, and calling it `i32`
         // would be this compiler answering a question nobody asked.
         char passed[256];
-        int wrote = 0;
-        for (uint32_t i = 0; i < argument_count && wrote >= 0 &&
-                             (size_t)wrote < sizeof(passed);
+        size_t wrote = 0;
+        passed[0] = '\0';
+        for (uint32_t i = 0; i < argument_count && wrote + 1 < sizeof(passed);
              i++) {
             const KestExpr *literal = literal_of(expr->call.args[i]);
             // `none` is written as `none` and has no type of its own until
@@ -2323,16 +2323,13 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
                                                       : "a number with a "
                                                         "fraction")
                     : kest_type_name(checker->program->arena, given[i]);
-            wrote += snprintf(passed + wrote, sizeof(passed) - (size_t)wrote,
-                              "%s%s", i == 0 ? "" : ", ", what);
+            wrote = kest_put(passed, sizeof(passed), wrote, "%s%s",
+                             i == 0 ? "" : ", ", what);
         }
-        if (wrote >= 0 && expr->call.arg_count > argument_count &&
-            (size_t)wrote < sizeof(passed)) {
-            wrote += snprintf(passed + wrote, sizeof(passed) - (size_t)wrote,
-                              ", and %u more",
-                              expr->call.arg_count - argument_count);
+        if (expr->call.arg_count > argument_count) {
+            kest_put(passed, sizeof(passed), wrote, ", and %u more",
+                     expr->call.arg_count - argument_count);
         }
-        passed[wrote < 0 ? 0 : wrote] = '\0';
         // And which of the two happened. A pass over the families can find
         // several where a pass over the exact types finds none -- two `pick`s
         // taking `u8` and `u16`, called with `1` -- and what a reader was told
@@ -2396,16 +2393,15 @@ static KestType *check_overloaded(Checker *checker, KestExpr *expr,
             }
             const KestSymbol *one = candidates[order[c]];
             char shape[256];
-            int used = 0;
-            for (uint32_t p = 0; p < one->type->param_count && used >= 0 &&
-                                 (size_t)used < sizeof(shape);
-                 p++) {
-                used += snprintf(shape + used, sizeof(shape) - (size_t)used,
-                                 "%s%s", p == 0 ? "" : ", ",
-                                 kest_type_name(checker->program->arena,
-                                                one->type->params[p]));
+            size_t used = 0;
+            shape[0] = '\0';
+            for (uint32_t p = 0;
+                 p < one->type->param_count && used + 1 < sizeof(shape); p++) {
+                used = kest_put(shape, sizeof(shape), used, "%s%s",
+                                p == 0 ? "" : ", ",
+                                kest_type_name(checker->program->arena,
+                                               one->type->params[p]));
             }
-            shape[used < 0 ? 0 : used] = '\0';
             kest_diags_note(diags, one->source, one->span,
                             "this one takes (%s)", shape);
         }
@@ -2435,10 +2431,10 @@ static const char *instance_symbol(KestProgram *program, const char *base,
     if (written == NULL) {
         return base;
     }
-    size_t used = (size_t)snprintf(written, room, "%s", base);
+    size_t used = kest_put(written, room, 0, "%s", base);
     for (uint32_t i = 0; i < count; i++) {
-        used += (size_t)snprintf(written + used, room - used, "$%s",
-                                 kest_type_name(program->arena, bindings[i]));
+        used = kest_put(written, room, used, "$%s",
+                        kest_type_name(program->arena, bindings[i]));
     }
     return written;
 }
@@ -4751,10 +4747,10 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
                     if (which >= subjects[i]->case_count) {
                         continue;
                     }
-                    at += (size_t)snprintf(
-                        one + at, sizeof(one) - at, "%s%s",
-                        at > 0 ? ", " : "", subjects[i]->cases[which].name);
-                    if (at >= sizeof(one)) {
+                    at = kest_put(one, sizeof(one), at, "%s%s",
+                                  at > 0 ? ", " : "",
+                                  subjects[i]->cases[which].name);
+                    if (at + 1 >= sizeof(one)) {
                         break;
                     }
                 }
@@ -4762,9 +4758,8 @@ static KestType *check_match(Checker *checker, KestExpr *expr,
                 // stopped helping, so what is left over is counted instead.
                 if (named < NAMED_AT_MOST &&
                     used + at + 8 < sizeof(missing)) {
-                    used += (size_t)snprintf(missing + used,
-                                             sizeof(missing) - used, "%s`%s`",
-                                             used > 0 ? ", " : "", one);
+                    used = kest_put(missing, sizeof(missing), used, "%s`%s`",
+                                    used > 0 ? ", " : "", one);
                     named++;
                 }
             }
@@ -6453,12 +6448,11 @@ bool kest_check_bodies(KestProgram *program, KestUnits *units) {
                 room = 0;
             }
             for (uint32_t b = 0; which != NULL && b < instance->count; b++) {
-                used += (size_t)snprintf(
-                    which + used, room - used, "%s`%s` is `%s`",
+                used = kest_put(
+                    which, room, used, "%s`%s` is `%s`",
                     b == 0 ? "" : (b + 1 == instance->count ? " and " : ", "),
                     instance->names[b],
-                    kest_type_name_read(program->arena,
-                                        instance->bindings[b]));
+                    kest_type_name_read(program->arena, instance->bindings[b]));
             }
             for (uint32_t d = before;
                  instance->site.length > 0 && d < program->diags->count; d++) {
