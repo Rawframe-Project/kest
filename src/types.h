@@ -796,6 +796,9 @@ bool kest_type_holds_own(const KestType *type, const KestType **what);
 
 // The spelling used in diagnostics: `i32`, `[Player]`, `ref<Npc>?`.
 const char *kest_type_name(KestArena *arena, const KestType *type);
+// Whether a name it gave back is one: false for the one it gives when there was
+// no room to write it, which reads as `?` and is no type's.
+bool kest_type_named(const char *name);
 
 // The same, cut where a reader stops reading, for a message that names a type
 // it cannot promise is short.
@@ -817,7 +820,9 @@ const char *kest_retired(KestProgram *program, const char *alias,
 // Prints what was resolved, for seeing what the checker built.
 // What the program holds, for a person. The file that was named is written out
 // in full and what it imported is a line each, because a reader came for the
-// one in front of them; `--json` holds all of it either way.
+// one in front of them; `--json` holds all of it either way. False when there
+// was no room to work out all of it, and then what was written is not the
+// program's and is not to be shown.
 bool kest_program_dump(const KestProgram *program, KestArena *arena,
                        const char *root, FILE *out);
 
@@ -829,7 +834,8 @@ bool kest_program_dump(const KestProgram *program, KestArena *arena,
 // time, and one printed as though it were is a number nobody measured.
 void kest_program_costs(const KestProgram *program, FILE *out);
 
-void kest_program_dump_json(const KestProgram *program, KestArena *arena,
+// False as the one above is.
+bool kest_program_dump_json(const KestProgram *program, KestArena *arena,
                             FILE *out);
 
 #endif

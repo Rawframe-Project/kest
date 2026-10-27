@@ -2003,14 +2003,22 @@ fi
 # and nobody told.
 # How many allocations one way of reading one program takes, found rather than
 # written down: a number here would be one more thing to keep in step with the
-# compiler, and the answer moves every time anything in the tree does.
+# compiler, and the answer moves every time anything in the tree does. Where a
+# run ends is where refusing changes nothing, in what it says and in what it
+# comes back as. It was where a run first came back nought, which is also what
+# a wrong answer comes back as: `check` with no room to write a type's name
+# said `?` for it and came back nought, and that was where every walk of it
+# stopped looking.
 allocations_of() {
+    whole=$($build_dir/kest-debug "$@" 2>&1 </dev/null)
+    whole_was=$?
     low=1
     high=200000
     while [ $((high - low)) -gt 1 ]; do
         middle=$(((high + low) / 2))
-        if KEST_REFUSE_AT=$middle $build_dir/kest-debug "$@" \
-                >/dev/null 2>&1 </dev/null; then
+        said=$(KEST_REFUSE_AT=$middle $build_dir/kest-debug "$@" 2>&1 \
+                   </dev/null)
+        if [ $? -eq $whole_was ] && [ "$said" = "$whole" ]; then
             high=$middle
         else
             low=$middle
@@ -2033,16 +2041,19 @@ aimed=0
 # spread lands one refusal or none: the proof's first one was refused there,
 # answered nothing, and the build went on as though the module had been proved.
 # `emit --c` writes C beside the bytecode from an arena the build does not
-# own, which a build stopped partway never gave back. `every` is `run` with
-# each of its allocations refused in turn, over a program small enough to walk
-# whole: a local whose name could not be copied was left in the compiler's
-# list without one, three allocations wide in a thousand, and a body that
-# resumes from a `wait` looked it up by name and read through it.
+# own, which a build stopped partway never gave back. `every` is a command
+# with each of its allocations refused in turn, over a program small enough to
+# walk whole: a local whose name could not be copied was left in the
+# compiler's list without one, three allocations wide in a thousand of `run`,
+# and a body that resumes from a `wait` looked it up by name and read through
+# it; and `check` wrote `?` for a type whose name it had no room to write and
+# came back nought, in eight places of fifteen hundred.
 for aimed_at in "check examples/inventory.kest" "run examples/queue.kest" \
                 "check lib/std/text.kest" "run examples/flags.kest" \
                 "emit examples/boxes.kest" "machine examples/words.kest" \
                 "machine examples/pieces.kest" "tail examples/boxes.kest" \
-                "emit --c examples/boxes.kest" "every examples/chores.kest"; do
+                "emit --c examples/boxes.kest" "every run examples/chores.kest" \
+                "every check examples/borrow.kest"; do
     how=${aimed_at%% *}
     what=${aimed_at#* }
     from_one=0
@@ -2058,7 +2069,8 @@ for aimed_at in "check examples/inventory.kest" "run examples/queue.kest" \
         every=1
     fi
     if [ "$how" = every ]; then
-        how=run
+        how=${what%% *}
+        what=${what#* }
         every=1
         last=0
     fi
@@ -2104,9 +2116,19 @@ for aimed_at in "check examples/inventory.kest" "run examples/queue.kest" \
             continue
         fi
         if [ $answered -eq 0 ]; then
-            echo "ceilings: refusing allocation $at_one of $takes in" \
-                 "\`kest $how $what\` changed nothing it said, so a piece of" \
-                 "the work went missing and the answer came back anyway"
+            # shellcheck disable=SC2086
+            if [ "$said" = "$($build_dir/kest-debug "$how" $what 2>&1 \
+                                  </dev/null)" ]; then
+                echo "ceilings: refusing allocation $at_one of $takes in" \
+                     "\`kest $how $what\` changed nothing it said, so a" \
+                     "piece of the work went missing and the answer came" \
+                     "back anyway"
+            else
+                echo "ceilings: refusing allocation $at_one of $takes in" \
+                     "\`kest $how $what\` came back nought saying something" \
+                     "a whole run does not, which is a wrong answer"
+                printf '%s\n' "$said" | head -3 | sed 's/^/    /'
+            fi
             failed=1
             continue
         fi

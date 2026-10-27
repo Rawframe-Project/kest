@@ -1031,7 +1031,9 @@ uint32_t kest_chunk_constant_run(KestModule *module, KestChunk *chunk,
 // The instructions, for a person. `entries` is a NULL-terminated list of the
 // names whose own cost is worth printing beside the program's, which is the
 // caller's to say: a library does not know which functions a host will call.
-void kest_module_disassemble(const KestModule *module,
+// False when there was no room to work out all of it, and then what was
+// written has lines missing and is not to be shown.
+bool kest_module_disassemble(const KestModule *module,
                              const char *const *entries, FILE *out);
 // The same thing for whatever is reading it rather than for a person: what is
 // laid out, what the host must provide, and every function with its
@@ -1043,7 +1045,8 @@ void kest_module_disassemble(const KestModule *module,
 // function when it is not. Every part of this project that says this in JSON
 // says it through here, so the shape a tool reads for a program and the shape
 // it reads for a function are the same shape, nulls and all.
-void kest_module_needs_json(const KestModule *module, int32_t only, FILE *out);
+// False when there was no room to work the answer out, which it then says.
+bool kest_module_needs_json(const KestModule *module, int32_t only, FILE *out);
 
 // The same, as one object. `entries` is the names to answer about beside the
 // program, and every one of them the program has is in the answer whether or
@@ -1052,7 +1055,8 @@ void kest_module_needs_json(const KestModule *module, int32_t only, FILE *out);
 // when only where it was written does.
 uint64_t kest_module_mark(const KestModule *module);
 
-void kest_module_disassemble_json(const KestModule *module,
+// False as the text form is.
+bool kest_module_disassemble_json(const KestModule *module,
                                   const char *const *entries, FILE *out);
 
 #endif

@@ -2993,7 +2993,7 @@ const char *kest_reach_name(KestReach reach) {
     return "not worked out";
 }
 
-void kest_module_needs_json(const KestModule *module, int32_t only,
+bool kest_module_needs_json(const KestModule *module, int32_t only,
                             FILE *out) {
     uint32_t stack = 0;
     uint32_t deep = 0;
@@ -3001,7 +3001,7 @@ void kest_module_needs_json(const KestModule *module, int32_t only,
     if (kest_module_needs(module, module->arena, only, &stack, &deep, NULL,
                           NULL, NULL, &why)) {
         fprintf(out, "\"slots\":%u,\"frames\":%u", stack, deep);
-        return;
+        return true;
     }
     fputs("\"slots\":null,\"frames\":null,\"why\":", out);
     kest_json_text(kest_reach_name(why.reach), out);
@@ -3011,6 +3011,7 @@ void kest_module_needs_json(const KestModule *module, int32_t only,
     } else {
         kest_json_text(why.where, out);
     }
+    return why.reach != KEST_REACH_NO_ROOM;
 }
 
 // The fold is `kest_mark_bytes`, which is the one arithmetic every mark here is
@@ -3199,8 +3200,9 @@ uint64_t kest_module_mark(const KestModule *module) {
     return mark;
 }
 
-void kest_module_disassemble_json(const KestModule *module,
+bool kest_module_disassemble_json(const KestModule *module,
                                   const char *const *entries, FILE *out) {
+    bool whole = true;
     fputs("\"layouts\":[", out);
     for (uint32_t i = 0; i < module->layout_count; i++) {
         const KestLayout *layout = &module->layouts[i];
@@ -3218,7 +3220,9 @@ void kest_module_disassemble_json(const KestModule *module,
         // and to ask whether a value holds its own memory, so `[i32]` and
         // `[text]` are one shape and two layouts.
         if (layout->type != NULL) {
-            kest_json_text(kest_type_name(module->arena, layout->type), out);
+            const char *of = kest_type_name(module->arena, layout->type);
+            whole = whole && kest_type_named(of);
+            kest_json_text(of, out);
         } else {
             fputs("null", out);
         }
@@ -3251,7 +3255,7 @@ void kest_module_disassemble_json(const KestModule *module,
     // and a call through a value reaches what is not known until it runs, so
     // `why` says which of the two it was.
     fputs("],\"needs\":{", out);
-    kest_module_needs_json(module, -1, out);
+    whole = kest_module_needs_json(module, -1, out) && whole;
 
     // And one for each name the caller asked about that the program has,
     // whether or not it differs from the whole. The text form leaves out the
@@ -3268,7 +3272,7 @@ void kest_module_disassemble_json(const KestModule *module,
         first_entry = false;
         kest_json_text(entries[e], out);
         fputc(',', out);
-        kest_module_needs_json(module, at, out);
+        whole = kest_module_needs_json(module, at, out) && whole;
         fputc('}', out);
     }
     fputs("]}", out);
@@ -3290,6 +3294,12 @@ void kest_module_disassemble_json(const KestModule *module,
     }
     (void)kest_module_needs(module, module->arena, -1, &reached, &deep, NULL,
                             NULL, reasons, &why);
+    // With no room for the reasons, or for the walk, every function below
+    // would read as one the walk did not stop at.
+    if ((module->count > 0 && reasons == NULL) ||
+        why.reach == KEST_REACH_NO_ROOM) {
+        whole = false;
+    }
 
     fputs(",\"functions\":[", out);
     for (uint32_t i = 0; i < module->count; i++) {
@@ -3376,10 +3386,12 @@ void kest_module_disassemble_json(const KestModule *module,
         fputs("]}", out);
     }
     fputc(']', out);
+    return whole;
 }
 
-void kest_module_disassemble(const KestModule *module,
+bool kest_module_disassemble(const KestModule *module,
                              const char *const *entries, FILE *out) {
+    bool whole = true;
     // A file of nothing but generic functions has no bodies: a copy exists
     // where one is called, and nothing here called any. A file that declares
     // nothing has none either, and the sentence has to be true of both. It is
@@ -3427,6 +3439,11 @@ void kest_module_disassemble(const KestModule *module,
     if (reasons != NULL) {
         memset(reasons, 0, sizeof(KestNoLeast) * module->count);
     }
+    // With no room for the reasons, or for the walk, the lines below that
+    // say what a machine takes would be left out with nothing said.
+    if (module->count > 0 && reasons == NULL) {
+        whole = false;
+    }
     if (kest_module_needs(module, module->arena, -1, &stack, &deep, NULL, NULL,
                           reasons, &why)) {
         fprintf(out, "needs %u slot%s and %u frame%s\n", stack,
@@ -3448,7 +3465,12 @@ void kest_module_disassemble(const KestModule *module,
                 fprintf(out, "     %u and %u for `%s` on its own\n",
                         alone_slots, alone_deep, entries[e]);
             }
+            if (alone.reach == KEST_REACH_NO_ROOM) {
+                whole = false;
+            }
         }
+    } else if (why.reach == KEST_REACH_NO_ROOM) {
+        whole = false;
     } else if (why.reach == KEST_REACH_ITSELF ||
                why.reach == KEST_REACH_VALUE) {
         // The two a host answers by picking a number. The others are not about
@@ -3527,6 +3549,7 @@ void kest_module_disassemble(const KestModule *module,
             offset = disassemble_one(module, chunk, offset, out);
         }
     }
+    return whole;
 }
 
 // `std.fdlibm`'s sine and cosine, from `lib/std/fdlibm.kest` a line at a time:
