@@ -2408,8 +2408,13 @@ static size_t compiler_words(const char *text, char *into, char **words) {
 // command line: as it is when nothing in it splits, and otherwise in double
 // quotes, with a quote inside written as `\"` and the backslashes before a
 // quote, or before the closing one, doubled. `_spawnvp` joins its arguments
-// with spaces and nothing else, so this is what keeps each one whole. Answers
-// how many bytes that is, and writes them only when `to` is not NULL.
+// with spaces and nothing else, so this is what keeps each one whole. A `CC`
+// naming a `.bat` or `.cmd` is the one exception to there being no shell:
+// Windows runs it through `cmd.exe`, which reads `%`, `^` and `&` in a line
+// this quoting does not guard. Such wrappers are common and are not refused;
+// what reaches one is the install's paths and a release name `portable_name`
+// has checked. Answers how many bytes that is, and writes them only when `to`
+// is not NULL.
 static size_t windows_argument(char *to, const char *text) {
     if (text[0] != '\0' && strpbrk(text, " \t\n\v\"") == NULL) {
         if (to != NULL) {
